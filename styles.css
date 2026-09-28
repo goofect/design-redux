@@ -272,6 +272,82 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   border-top: 1px solid var(--background-modifier-border);
 }
 
+/* -- grip and remove ---------------------------------------------------
+ *
+ * Both quiet until the row is pointed at or being edited, so the list
+ * reads as a list; on touch, where nothing is pointed at, faintly there.
+ * The grip sits out in the panel's margin, keeping the label column put.
+ */
+
+.dr-props-popup .dr-row {
+  position: relative;
+}
+
+.dr-props-popup .dr-row-grip {
+  position: absolute;
+  top: 10px;
+  left: -13px;
+  display: flex;
+  color: var(--text-faint);
+  opacity: 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.dr-props-popup .dr-row-grip .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-props-popup .dr-row-remove {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 1px;
+  padding: 3px;
+  opacity: 0;
+}
+
+.dr-props-popup .dr-row-remove .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-props-popup .dr-row:focus-within .dr-row-remove,
+.dr-props-popup .dr-row-remove:focus-visible {
+  opacity: 0.6;
+}
+
+.dr-props-popup .dr-row.is-dragging .dr-row-grip {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-row:hover .dr-row-grip {
+    opacity: 1;
+  }
+
+  .dr-props-popup .dr-row:hover .dr-row-remove {
+    opacity: 0.6;
+  }
+
+  .dr-props-popup .dr-row-remove:hover {
+    opacity: 1;
+    color: var(--text-error, var(--color-red));
+  }
+
+  .dr-props-popup .dr-row-grip:hover {
+    color: var(--text-normal);
+  }
+}
+
+body.is-mobile .dr-props-popup .dr-row-grip {
+  opacity: 0.6;
+}
+
+body.is-mobile .dr-props-popup .dr-row-remove {
+  opacity: 0.5;
+}
+
 /* -- label ------------------------------------------------------------- */
 
 .dr-props-popup .dr-key {
@@ -1921,16 +1997,73 @@ body.dr-single-area .workspace-split.mod-root .view-header {
  */
 
 .dr-props-head {
-  padding: 0 2px 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 2px 12px;
   margin-bottom: 4px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* The cover, as an info sheet shows the artwork beside the title. */
+.dr-props-art {
+  position: relative;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: var(--background-modifier-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.dr-props-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-props-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.dr-props-art .dr-card-glyph .svg-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.dr-props-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .dr-props-title {
-  font-size: 1.25em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 1.2em;
   font-weight: var(--font-bold, 700);
   line-height: 1.2;
   color: var(--text-normal);
+}
+
+.dr-props-meta {
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.dr-props-meta:empty {
+  display: none;
 }
 
 .dr-props-lead {
@@ -2115,246 +2248,6 @@ body.dr-strip-active .workspace-split.mod-root .markdown-source-view .cm-sizer,
 body.dr-strip-active .workspace-split.mod-root .markdown-preview-sizer,
 body.dr-strip-active .dr-browse .view-content {
   padding-bottom: 80px;
-}
-
-/* Up Next -------------------------------------------------------------------
- *
- * The queue, opened above the strip from its list button: a card of the
- * same glass, a heading with Clear, and the notes to come — each with a
- * grip to put it in order and a cross to take it out. The button is lit
- * while anything is queued.
- */
-
-.dr-strip-btn.has-queue {
-  color: var(--text-accent);
-}
-
-.dr-queue {
-  position: fixed;
-  z-index: calc(var(--layer-menu, 65) - 19);
-  display: flex;
-  flex-direction: column;
-  width: min(360px, calc(100vw - 24px));
-  max-height: min(460px, 62vh);
-  padding: 10px 6px 6px;
-  border-radius: 18px;
-  background-color: var(--glass-solid, var(--background-secondary));
-  backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
-  -webkit-backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
-  border: 1px solid var(--background-modifier-border);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-  outline: none;
-}
-
-.dr-queue-head {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 2px 10px 8px;
-}
-
-.dr-queue-title {
-  font-size: var(--font-ui-medium);
-  font-weight: var(--font-bold, 700);
-  color: var(--text-normal);
-}
-
-.dr-queue-count {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.dr-queue-clear {
-  margin-left: auto;
-  padding: 2px 6px;
-  border-radius: var(--radius-s, 4px);
-  font-size: var(--font-ui-small);
-  color: var(--text-accent);
-  cursor: pointer;
-}
-
-.dr-queue-clear:focus-visible {
-  background-color: var(--background-modifier-hover);
-  outline: none;
-}
-
-.dr-queue-list {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.dr-queue-list.is-album {
-  flex: 0 0 auto;
-}
-
-.dr-queue-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
-.dr-queue-row:focus-visible {
-  background-color: var(--background-modifier-hover);
-  outline: none;
-}
-
-.dr-queue-row.is-dragging {
-  background-color: var(--background-modifier-hover);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
-}
-
-.dr-queue-list.is-sorting,
-.dr-queue-list.is-sorting * {
-  cursor: grabbing;
-  user-select: none;
-  -webkit-user-select: none;
-}
-
-.dr-queue-grip {
-  display: flex;
-  flex: 0 0 auto;
-  margin-right: -4px;
-  color: var(--text-faint);
-  cursor: grab;
-  touch-action: none;
-}
-
-.dr-queue-grip .svg-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.dr-queue-art {
-  position: relative;
-  flex: 0 0 38px;
-  width: 38px;
-  height: 38px;
-  overflow: hidden;
-  border-radius: 6px;
-  background-color: var(--background-secondary);
-}
-
-.dr-queue-art img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-queue-art.is-blank {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--background-modifier-hover);
-}
-
-.dr-queue-art .dr-card-glyph .svg-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.dr-queue-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.dr-queue-name,
-.dr-queue-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-queue-name {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium, 500);
-  color: var(--text-normal);
-}
-
-.dr-queue-sub {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.dr-queue-remove {
-  flex: 0 0 auto;
-  padding: 4px;
-  opacity: 0.45;
-}
-
-.dr-queue-remove:focus-visible {
-  opacity: 1;
-}
-
-.dr-queue-section {
-  padding: 12px 10px 4px;
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-muted);
-}
-
-.dr-queue-empty {
-  padding: 16px 12px 18px;
-  text-align: center;
-}
-
-.dr-queue-empty-title {
-  font-weight: var(--font-medium, 500);
-  color: var(--text-normal);
-}
-
-.dr-queue-empty-hint {
-  margin-top: 4px;
-  font-size: var(--font-ui-small);
-  color: var(--text-muted);
-}
-
-@media (any-hover: hover) {
-  .dr-queue-row:hover,
-  .dr-queue-clear:hover {
-    background-color: var(--background-modifier-hover);
-  }
-
-  .dr-queue-row:hover .dr-queue-remove {
-    opacity: 0.8;
-  }
-
-  .dr-queue-remove:hover {
-    opacity: 1;
-  }
-
-  .dr-queue-grip:hover {
-    color: var(--text-normal);
-  }
-}
-
-/* On a phone it spans the screen above the strip, as the strip does, and
-   is opened from the command or Home rather than a button of its own:
-   the strip has room only for the note and its main controls. */
-
-body.is-phone .dr-queue {
-  left: 8px;
-  right: 8px;
-  width: auto;
-}
-
-body.is-phone .dr-strip-btn[data-action="queue"] {
-  display: none;
-}
-
-body.is-phone .dr-queue-row {
-  padding: 8px;
-}
-
-body.is-mobile .dr-queue-row:active {
-  background-color: var(--background-modifier-hover);
-}
-
-body.is-mobile .dr-queue-remove {
-  opacity: 0.7;
 }
 
 /* One content area, continued ---------------------------------------------

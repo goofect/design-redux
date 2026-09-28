@@ -207,6 +207,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Object.keys(stored.fm), ['status', 'parent', 'domain', 'tags', 'added']);
   });
 
+  await t('× takes a property off, and Undo puts it back in its place, value and all', async () => {
+    const { section, list, stored } = setup();
+    let undo = null;
+    section.plugin.offerUndo = (message, fn) => { undo = fn; };
+    list.querySelector('.dr-row[data-key="parent"] .dr-row-remove').click();
+    await settle();
+    assert.deepStrictEqual(Object.keys(stored.fm), ['domain', 'status', 'tags']);
+    await undo();
+    assert.deepStrictEqual(Object.keys(stored.fm), ['parent', 'domain', 'status', 'tags']);
+    assert.strictEqual(stored.fm.parent, '[[Judiciary]]');
+  });
+
   await t('the handle says what it does', () => {
     const { list } = setup();
     const handle = icon(list, 'domain');

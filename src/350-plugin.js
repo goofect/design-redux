@@ -10,14 +10,12 @@ class DesignRedux extends Plugin {
     this.pins = new Pins(this);
     this.orders = new Orders(this);
     this.lengths = new Lengths(this);
-    this.queue = new Queue(this);
     this.bulk = new BulkEdits(this);
     this.features = [
       new Library(this),
       new ActionsMenu(this),
       new PropertiesPanel(this),
       new ContextStrip(this),
-      new UpNext(this),
       new OnePage(this),
       new MenuFilter(this),
       new SettingsButton(this),
@@ -76,18 +74,8 @@ class DesignRedux extends Plugin {
         if (!this.unloading) this.pruneLeftovers();
       }, 15000);
       // Arrangements follow the files they name.
-      this.registerEvent(
-        this.app.vault.on('rename', (file, oldPath) => {
-          this.orders.followRename(file, oldPath);
-          this.queue.followRename(file, oldPath);
-        })
-      );
-      this.registerEvent(
-        this.app.vault.on('delete', (file) => {
-          this.orders.followDelete(file);
-          this.queue.followDelete(file);
-        })
-      );
+      this.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.orders.followRename(file, oldPath)));
+      this.registerEvent(this.app.vault.on('delete', (file) => this.orders.followDelete(file)));
       this.registerEvent(
         this.app.workspace.on('active-leaf-change', () => this.queueSync())
       );
@@ -140,12 +128,6 @@ class DesignRedux extends Plugin {
       .getLastOpenFiles()
       .map((path) => this.app.vault.getFileByPath(path))
       .filter(Boolean);
-  }
-
-  /** Up Next changed: the strip, Home and the list follow. */
-  queueChanged() {
-    const upNext = this.feature(UpNext);
-    if (upNext) upNext.refresh();
   }
 
   togglePin(target) {

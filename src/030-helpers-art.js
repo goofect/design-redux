@@ -700,8 +700,6 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
       .setIcon(pinned ? 'pin-off' : 'pin')
       .onClick(() => plugin.togglePin(target))
   );
-  const upNext = plugin.feature(UpNext);
-  if (upNext && upNext.enabled) upNext.addMenuItems(menu, target, sectioned);
   // Where pins are being put in order: a step either way, for touch
   // and for anyone who'd rather not drag.
   if (opts.arrange) {

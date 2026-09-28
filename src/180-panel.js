@@ -225,17 +225,49 @@ class PropertiesPanel extends Feature {
   }
 
   /**
-   * The note named, with one property raised to sit under it — the
-   * title-and-artist shape an album page opens with. It tells you what
-   * you're looking at before the details, which a bare list of fields
-   * never does.
+   * The note as an info sheet opens: its cover beside its name, one
+   * property raised beneath in the accent — the title-and-artist shape
+   * an album page opens with — and a line on where it lives, how long it
+   * is and when it last changed. It says what you're looking at before
+   * the details, which a bare list of fields never does.
    */
   renderHead() {
+    const file = this.file;
     const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
-    head.createDiv({ cls: 'dr-props-title', text: this.file.basename });
+    const art = head.createDiv({ cls: 'dr-props-art' });
+    fillArt(
+      art,
+      resolveCover(this.app, file, this.settings.coverProperty),
+      iconForFile(file),
+      coverGen(this.settings, file.basename, file.path)
+    );
 
-    const lead = leadProperty(this.app, this.file, false);
-    if (lead) head.createDiv({ cls: 'dr-props-lead', text: lead });
+    const info = head.createDiv({ cls: 'dr-props-info' });
+    info.createDiv({ cls: 'dr-props-title', text: file.basename });
+    const lead = leadProperty(this.app, file, false);
+    if (lead) info.createDiv({ cls: 'dr-props-lead', text: lead });
+    this.fillMeta(info.createDiv({ cls: 'dr-props-meta' }), file);
+  }
+
+  /** "Folder · 4 min read · Edited Yesterday". The length arrives once it's counted. */
+  fillMeta(meta, file) {
+    const parts = [];
+    const folder = file.parent;
+    if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
+    const style = this.settings.trackLength;
+    const lengths = this.plugin.lengths;
+    const counts = !!lengths && style !== 'none';
+    const length = counts ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
+    if (length) parts.push(style === 'words' ? length : `${length} read`);
+    if (file.stat) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
+    meta.setText(parts.join('  ·  '));
+    if (!counts || lengths.words(file) !== null) return;
+    lengths.measure([file]).then(
+      (changed) => {
+        if (changed && meta.isConnected && this.file === file) this.fillMeta(meta, file);
+      },
+      () => {}
+    );
   }
 
   /** Switching notes moves the panel rather than closing it. */
