@@ -40,6 +40,13 @@ Coffee N' Christmas.
 - Hover styles only inside `@media (any-hover: hover)`.
 - Don't give a `Modal` subclass a field called `scope`: Obsidian uses it for the
   dialog's keys.
+- Obsidian 1.13 opens Settings in a window of its own: settings code must use the
+  tab's own elements (`containerEl.ownerDocument`), never the main `document`.
+- Menu entries need a section (`setSection('action')` etc.), or Obsidian sorts
+  them after its own.
+- Newer Obsidian outranks plain rules on some of its own blocks (the note's
+  properties): hiding them needs `!important`.
+- A canvas can open before its cards are loaded; count them again when they arrive.
 
 ## Working here
 
@@ -49,5 +56,7 @@ Coffee N' Christmas.
   to the default branch.
 - CI results (summary, test output, screenshots from real Obsidian, and a
   compatibility report of the internals the plugin uses) are published to the
-  `ci-results` branch: `git fetch origin ci-results` and read them from there.
+  `ci-results` branch: `git fetch origin +ci-results:refs/remotes/origin/ci-results`
+  (the clone is single-branch), then `git show origin/ci-results:summary.txt`.
+  Look at the screenshots after UI changes: they're the real app.
 - Replies to the author: short, plain, no version-number bookkeeping.
