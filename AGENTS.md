@@ -7,9 +7,16 @@ Coffee N' Christmas.
 
 ## Files
 
-- `main.js` — the source. Plain JavaScript (CommonJS), not built: what's here is
-  what Obsidian runs. `obsidian`, `@codemirror/view` and `@codemirror/state` are
-  provided by Obsidian at runtime.
+- `src/NNN-name.js` — the source: one plain-JavaScript script cut into pieces at
+  its section headings. **Not modules**: `build.mjs` joins them in name order
+  into `main.js`, and they share one scope — a piece uses anything declared in
+  an earlier one directly, and (inside functions) anything in a later one. A
+  class extending another must come after it. New pieces get a number between
+  their neighbours'. `obsidian`, `@codemirror/view` and `@codemirror/state` are
+  provided by Obsidian at runtime (required in `010-imports.js`).
+- `main.js` — built, not committed. `npm run build` (tests build it first).
+  Never edit it: edit `src/`. The build refuses a name declared twice or a
+  script that won't parse.
 - `styles.css` — all styles.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself.

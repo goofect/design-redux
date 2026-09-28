@@ -2,8 +2,8 @@
 # (oldest supported version and latest). Results, screenshots and a
 # compatibility report go to the ci-results branch, where they can be read
 # without opening Actions. On the default branch, if the simulation tests pass
-# and main.js or styles.css changed since the last release, a new release is
-# published for BRAT: the patch version goes up by one automatically.
+# and src/ or styles.css changed since the last release, main.js is built and
+# a new release is published for BRAT: the patch version goes up by one.
 name: Test and release
 
 on:
@@ -115,7 +115,7 @@ jobs:
         id: changed
         run: |
           last=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          if [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- main.js styles.css; then
+          if [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- src styles.css; then
             echo "release=yes" >> "$GITHUB_OUTPUT"
           fi
 
@@ -144,6 +144,10 @@ jobs:
             next=$current
           fi
           echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Build main.js
+        if: steps.changed.outputs.release == 'yes'
+        run: node build.mjs
 
       - name: Publish the release
         if: steps.changed.outputs.release == 'yes'

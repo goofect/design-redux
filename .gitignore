@@ -8,7 +8,8 @@
 # npm
 node_modules
 
-# main.js is the source here, not a build, so it is committed.
+# Built from src/ by build.mjs; releases carry it, the repository doesn't.
+main.js
 
 # Scratch copies the test suites write and delete as they run
 tests/_*.js

@@ -1,0 +1,63 @@
+/* ------------------------------------------------------------------ */
+/* Feature base                                                        */
+/*                                                                     */
+/* Deliberately thin. Some features own DOM and need setting up and    */
+/* tearing down; others are only commands. Everything here is optional */
+/* so a feature implements what it actually has, rather than carrying  */
+/* empty methods to satisfy a shape.                                   */
+/*                                                                     */
+/* Commands are declared, not registered: Obsidian has no public way   */
+/* to remove a command, so registering them per feature on enable      */
+/* would leave entries in the palette for features later switched off. */
+/* The plugin registers every declared command once, at load.          */
+/* ------------------------------------------------------------------ */
+
+class Feature {
+  constructor(plugin) {
+    this.plugin = plugin;
+  }
+
+  get app() {
+    return this.plugin.app;
+  }
+
+  get settings() {
+    return this.plugin.settings;
+  }
+
+  /**
+   * Features with no settingKey are always on. A desktopOnly feature
+   * rearranges chrome the mobile app doesn't have, so it's off there
+   * whatever the setting says — the setting is shared through the vault.
+   */
+  get enabled() {
+    if (this.constructor.desktopOnly && Platform.isMobile) return false;
+    const key = this.constructor.settingKey;
+    return !key || !!this.settings[key];
+  }
+
+  /** [{ id, name, check?, run }] — check gates palette visibility. */
+  commands() {
+    return [];
+  }
+
+  /** Rows for the settings tab, in order. */
+  settingsSchema() {
+    return [];
+  }
+
+  /**
+   * Registrations that must happen at load: view types and anything
+   * else Obsidian needs before it restores the workspace. Kept apart
+   * from register(), which runs once the vault is ready.
+   */
+  registerTypes() {}
+
+  /** Called once after layout is ready, whether enabled or not. */
+  register() {}
+
+  enable() {}
+  disable() {}
+  sync() {}
+}
+

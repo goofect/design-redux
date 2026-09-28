@@ -3,7 +3,10 @@
   "private": true,
   "description": "An Obsidian plugin: browse your vault as a library, folders as albums.",
   "scripts": {
+    "build": "node build.mjs",
+    "pretest": "node build.mjs",
     "test": "node tests/run.js",
+    "pretest:obsidian": "node build.mjs",
     "test:obsidian": "wdio run ./wdio.conf.mjs"
   },
   "devDependencies": {
