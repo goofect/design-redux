@@ -19,6 +19,10 @@ concurrency:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # bash with pipefail, so a failure piped through tee still fails the step.
+    defaults:
+      run:
+        shell: bash
     permissions:
       contents: write
     outputs:
