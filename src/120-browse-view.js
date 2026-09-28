@@ -2159,17 +2159,7 @@ class BrowseView extends ItemView {
       });
     }
 
-    // The number, or — on the note you last had open — a mark where it
-    // would be, as a list marks the track that's playing. The number
-    // stays underneath, for anything reading the row.
-    const num = row.createDiv({ cls: 'dr-track-num' });
-    num.createSpan({ cls: 'dr-track-index', text: String(index) });
-    if (this.isLastOpened(file)) {
-      row.addClass('is-current');
-      const mark = num.createSpan({ cls: 'dr-track-mark' });
-      mark.setAttribute('aria-label', 'Last opened');
-      setIcon(mark, 'book-open');
-    }
+    row.createDiv({ cls: 'dr-track-num', text: String(index) });
 
     const name = row.createDiv({ cls: 'dr-track-name' });
     if (this.isPinned(file)) {
@@ -2264,7 +2254,6 @@ class BrowseView extends ItemView {
   beginDrawing() {
     this.toMeasure = [];
     this.pinMemo = null;
-    this.lastMemo = undefined;
   }
 
   /**
@@ -2320,15 +2309,6 @@ class BrowseView extends ItemView {
       this.pinMemo = new Set(all.map((t) => t.path));
     }
     return this.pinMemo.has(file.path);
-  }
-
-  /** Whether this is the note last opened — where you were. Once per drawing. */
-  isLastOpened(file) {
-    if (this.lastMemo === undefined) {
-      const recent = typeof this.plugin.recentFiles === 'function' ? this.plugin.recentFiles() : [];
-      this.lastMemo = recent[0] ? recent[0].path : null;
-    }
-    return this.lastMemo === file.path;
   }
 
   /** Short, in the spirit of a track length: a glance, not a date. */
