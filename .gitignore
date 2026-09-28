@@ -8,9 +8,10 @@
 # npm
 node_modules
 
-# Don't include the compiled main.js file in the repo.
-# They should be uploaded to GitHub releases instead.
-main.js
+# main.js is the source here, not a build, so it is committed.
+
+# Scratch copies the test suites write and delete as they run
+tests/_*.js
 
 # Exclude sourcemaps
 *.map
@@ -20,3 +21,7 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# Real-Obsidian test downloads and logs
+.obsidian-cache
+logs

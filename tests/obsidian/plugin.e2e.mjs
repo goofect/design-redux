@@ -1,0 +1,238 @@
+// Design Redux inside the real Obsidian app.
+//
+// The simulation suites in tests/ can't see Obsidian's own code — its menus,
+// dialogs and canvas — so this checks the plugin where those are real: that it
+// loads cleanly, that the unofficial parts of Obsidian it leans on are there,
+// and that its main screens draw. Screenshots and a compatibility report go to
+// ci-output/, which the workflow publishes to the ci-results branch.
+import { browser, expect } from '@wdio/globals';
+import { obsidianPage } from 'wdio-obsidian-service';
+import fs from 'fs';
+import path from 'path';
+
+const OUT = path.resolve('ci-output');
+let version = 'unknown';
+
+async function shot(name) {
+  fs.mkdirSync(OUT, { recursive: true });
+  await browser.pause(400);
+  await browser.saveScreenshot(path.join(OUT, `${version}-${name}.png`));
+}
+
+/** Click the first element matching a selector whose text is exactly `text`, in the page. */
+async function clickText(selector, text) {
+  const found = await browser.execute(
+    (sel, want) => {
+      const el = Array.from(document.querySelectorAll(sel)).find((e) => e.textContent.trim() === want);
+      if (el) el.click();
+      return !!el;
+    },
+    selector,
+    text
+  );
+  expect(found).toBe(true);
+}
+
+async function menuTitles() {
+  return browser.execute(() =>
+    Array.from(document.querySelectorAll('.menu .menu-item-title')).map((e) => e.textContent.trim())
+  );
+}
+
+async function closeMenus() {
+  await browser.keys('Escape');
+  await browser.pause(200);
+}
+
+describe('Design Redux in Obsidian', function () {
+  before(async function () {
+    version = await browser.executeObsidian(({ obsidian }) => obsidian.apiVersion);
+    // Watch for errors for the rest of the run, then load the plugin afresh
+    // so its start-up is watched too.
+    await browser.executeObsidian(async ({ app }) => {
+      window.__drErrors = [];
+      const original = console.error;
+      console.error = (...args) => {
+        window.__drErrors.push(args.map((a) => (a && a.stack) || String(a)).join(' '));
+        original.apply(console, args);
+      };
+      window.addEventListener('error', (e) => window.__drErrors.push(String((e.error && e.error.stack) || e.message)));
+      window.addEventListener('unhandledrejection', (e) =>
+        window.__drErrors.push(String((e.reason && e.reason.stack) || e.reason))
+      );
+      await app.plugins.disablePlugin('design-redux');
+      await app.plugins.enablePlugin('design-redux');
+    });
+    await browser.pause(1500);
+  });
+
+  it('loads, with its features running', async function () {
+    const state = await browser.executeObsidian(({ plugins }) => {
+      const p = plugins.designRedux;
+      return p ? p.features.map((f) => [f.constructor.name, !!f.enabled]) : null;
+    });
+    expect(state).not.toBeNull();
+    const on = Object.fromEntries(state);
+    // Switched on by default.
+    for (const name of ['Library', 'ContextStrip', 'CoverImages', 'Scripts', 'CanvasLegend', 'CanvasAlign', 'BulkEditing']) {
+      expect([name, on[name]]).toEqual([name, true]);
+    }
+  });
+
+  it('finds the unofficial parts of Obsidian it relies on', async function () {
+    const compat = await browser.executeObsidian(({ app, obsidian }) => {
+      const has = (fn) => {
+        try {
+          return !!fn();
+        } catch (err) {
+          return false;
+        }
+      };
+      return {
+        submenus: has(() => typeof obsidian.MenuItem.prototype.setSubmenu === 'function'),
+        inputSuggest: has(() => typeof obsidian.AbstractInputSuggest === 'function'),
+        propertyTypes: has(() => typeof app.metadataTypeManager.getAllProperties === 'function'),
+        corePlugins: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
+        canvasOn: has(() => app.internalPlugins.getEnabledPluginById('canvas')),
+        settingsWindow: has(() => typeof app.setting.openTabById === 'function'),
+        modalKeys: has(() => new obsidian.Modal(app).scope instanceof obsidian.Scope),
+        menuItems: has(() => Array.isArray(new obsidian.Menu().items)),
+      };
+    });
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, `${version}-compat.json`), JSON.stringify(compat, null, 2));
+    for (const [part, ok] of Object.entries(compat)) expect([part, ok]).toEqual([part, true]);
+  });
+
+  it('draws its settings as four tabs', async function () {
+    await browser.executeObsidian(({ app }) => {
+      app.setting.open();
+      app.setting.openTabById('design-redux');
+    });
+    await browser.$('.dr-settings .dr-set-tabs').waitForExist({ timeout: 10000 });
+    const tabs = await browser.$$('.dr-settings .dr-set-tab');
+    expect(tabs.length).toBe(4);
+    await shot('settings-library');
+    await clickText('.dr-settings .dr-set-tab', 'Browsing');
+    await shot('settings-browsing');
+    await browser.executeObsidian(({ app }) => app.setting.close());
+  });
+
+  it('opens a folder as an album, with an Edit mode', async function () {
+    await browser.executeObsidian(async ({ plugins }) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+    });
+    await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+    const rows = await browser.$$('.dr-track');
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    await shot('album');
+    await clickText('.dr-detail-action', 'Edit');
+    await browser.$('.dr-edit-grip').waitForExist({ timeout: 5000 });
+    await shot('album-edit');
+    await clickText('.dr-detail-action', 'Done');
+  });
+
+  it('groups its right-click entries, with New canvas under New', async function () {
+    const disc = await browser.$('.dr-disc[data-folder="Politics/Theories"]');
+    await disc.waitForExist({ timeout: 5000 });
+    await disc.click({ button: 'right' });
+    await browser.$('.menu').waitForExist({ timeout: 5000 });
+    const titles = await menuTitles();
+    for (const want of ['New', 'Cover', 'Pin', 'Properties…']) expect(titles).toContain(want);
+    // The New entry opens beside the menu.
+    const opened = await browser.execute(() => {
+      const item = Array.from(document.querySelectorAll('.menu .menu-item')).find(
+        (e) => e.querySelector('.menu-item-title') && e.querySelector('.menu-item-title').textContent.trim() === 'New'
+      );
+      if (!item) return false;
+      item.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      return true;
+    });
+    expect(opened).toBe(true);
+    await browser.pause(500);
+    await shot('menu');
+    expect(await menuTitles()).toContain('Canvas');
+    await closeMenus();
+    await closeMenus();
+  });
+
+  it('opens the Properties window with tabs, and Escape closes it', async function () {
+    await browser.executeObsidianCommand('design-redux:add-properties-to-folders');
+    await browser.$('.dr-props-modal').waitForExist({ timeout: 5000 });
+    const tabs = await browser.$$('.dr-props-modal .dr-set-tab');
+    expect(tabs.length).toBeGreaterThanOrEqual(3);
+    await clickText('.dr-props-modal .dr-set-tab', 'Remove');
+    await shot('properties-window');
+    await browser.keys('Escape');
+    await browser.pause(400);
+    expect(await browser.$('.dr-props-modal').isExisting()).toBe(false);
+  });
+
+  it('shows a legend on a canvas, and centres a card', async function () {
+    await obsidianPage.openFile('Map.canvas');
+    await browser.$('.dr-legend').waitForExist({ timeout: 10000 });
+    await browser.pause(800);
+    const keys = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.dr-legend-row')).map((r) => r.dataset.key)
+    );
+    expect(keys).toEqual(['1', '4', '#aa2222', 'none']);
+
+    const inner = await browser.executeObsidian(({ app }) => {
+      const view = app.workspace.getLeavesOfType('canvas')[0].view;
+      const canvas = view.canvas;
+      const ok = {
+        nodes: !!canvas && canvas.nodes instanceof Map,
+        getData: !!canvas && typeof canvas.getData === 'function',
+        selection: !!canvas && canvas.selection instanceof Set,
+      };
+      // Mark the cards so the test can find them on screen.
+      if (ok.nodes) canvas.nodes.forEach((node, id) => node.nodeEl && node.nodeEl.setAttribute('data-test-id', id));
+      return ok;
+    });
+    expect(inner).toEqual({ nodes: true, getData: true, selection: true });
+
+    // Picking green fades the rest.
+    await browser.$('.dr-legend-row[data-key="4"] .dr-legend-dot').click();
+    await browser.pause(300);
+    expect(await browser.$('[data-test-id="green1"]').getAttribute('class')).toContain('dr-legend-match');
+    await shot('canvas-legend');
+    await browser.$('.dr-legend-row[data-key="4"] .dr-legend-dot').click();
+
+    // Select a card: the bar above it gets the Center text button.
+    await browser.$('[data-test-id="red1"]').click();
+    const button = await browser.$('.canvas-menu .dr-align-button');
+    await button.waitForExist({ timeout: 5000 });
+    await button.click();
+    await browser.pause(300);
+    expect(await browser.$('[data-test-id="red1"]').getAttribute('class')).toContain('dr-text-center');
+    await shot('canvas-centred');
+
+    // Its right-click menu offers to undo that.
+    await browser.$('[data-test-id="red1"]').click({ button: 'right' });
+    await browser.pause(400);
+    expect(await menuTitles()).toContain('Stop centering text');
+    await closeMenus();
+  });
+
+  it('puts « » either side of the note in the strip', async function () {
+    await obsidianPage.openFile('Politics/Balance of power.md');
+    await browser.$('.dr-strip .dr-strip-center').waitForExist({ timeout: 10000 });
+    const skips = await browser.$$('.dr-strip-center .dr-strip-skip');
+    expect(skips.length).toBe(2);
+    await shot('note-and-strip');
+  });
+
+  after(async function () {
+    const errors = await browser.executeObsidian(() => window.__drErrors || []);
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, `${version}-errors.txt`), errors.join('\n\n') || 'none');
+  });
+
+  it('logged no errors of its own along the way', async function () {
+    const errors = await browser.executeObsidian(() => window.__drErrors || []);
+    const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));
+    expect(ours).toEqual([]);
+  });
+});

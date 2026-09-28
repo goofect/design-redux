@@ -1,0 +1,151 @@
+# On every push: the simulation tests, then the plugin inside the real Obsidian
+# (oldest supported version and latest). Results, screenshots and a
+# compatibility report go to the ci-results branch, where they can be read
+# without opening Actions. On the default branch, if the simulation tests pass
+# and main.js or styles.css changed since the last release, a new release is
+# published for BRAT: the patch version goes up by one automatically.
+name: Test and release
+
+on:
+  push:
+    branches-ignore: [ci-results]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      unit: ${{ steps.unit.outcome }}
+      obsidian: ${{ steps.obsidian.outcome }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Simulation tests
+        id: unit
+        continue-on-error: true
+        run: |
+          mkdir -p ci-output
+          npm test 2>&1 | tee ci-output/simulation-tests.txt
+
+      - name: Cache Obsidian downloads
+        uses: actions/cache@v4
+        with:
+          path: .obsidian-cache
+          key: obsidian-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: obsidian-${{ runner.os }}-
+
+      - name: Virtual display
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/*.list
+          sudo apt-get update -q
+          sudo apt-get install -q -y herbstluftwm dzen2 x11-xserver-utils
+          export DISPLAY=:99
+          echo "DISPLAY=$DISPLAY" >> "$GITHUB_ENV"
+          Xvfb $DISPLAY -screen 0 1280x1024x24 +extension GLX -noreset &
+          sleep 1
+          herbstluftwm &
+
+      - name: Tests in Obsidian
+        id: obsidian
+        continue-on-error: true
+        env:
+          WDIO_MAX_INSTANCES: 2
+        run: npm run test:obsidian 2>&1 | tee ci-output/obsidian-tests.txt
+
+      - name: Publish results to the ci-results branch
+        if: always() && github.event_name != 'pull_request'
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ci-output
+          {
+            echo "commit: $GITHUB_SHA"
+            echo "branch: $GITHUB_REF_NAME"
+            echo "simulation tests: ${{ steps.unit.outcome }}"
+            echo "obsidian tests: ${{ steps.obsidian.outcome }}"
+            echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > ci-output/summary.txt
+          cd ci-output
+          git init -q
+          git checkout -q -b ci-results
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Results for ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-results
+
+      - name: Fail if any tests failed
+        if: steps.unit.outcome != 'success' || steps.obsidian.outcome != 'success'
+        run: exit 1
+
+  release:
+    needs: test
+    # Gated on the simulation tests for now; the Obsidian run is reported but
+    # doesn't block until it has proven reliable.
+    if: >-
+      always() && needs.test.outputs.unit == 'success' &&
+      github.event_name == 'push' &&
+      github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Anything to release?
+        id: changed
+        run: |
+          last=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- main.js styles.css; then
+            echo "release=yes" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Version
+        if: steps.changed.outputs.release == 'yes'
+        id: version
+        run: |
+          current=$(node -p "require('./manifest.json').version")
+          if git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
+            node -e "
+              const fs = require('fs');
+              const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+              const [a, b, c] = m.version.split('.').map(Number);
+              m.version = [a, b, c + 1].join('.');
+              fs.writeFileSync('manifest.json', JSON.stringify(m, null, 2) + '\n');
+              const v = JSON.parse(fs.readFileSync('versions.json', 'utf8'));
+              v[m.version] = m.minAppVersion;
+              fs.writeFileSync('versions.json', JSON.stringify(v, null, 2) + '\n');
+            "
+            next=$(node -p "require('./manifest.json').version")
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -q -am "Release $next"
+            git push -q origin "HEAD:$GITHUB_REF_NAME"
+          else
+            next=$current
+          fi
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        if: steps.changed.outputs.release == 'yes'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          gh release create "$v" main.js manifest.json styles.css \
+            --target "$(git rev-parse HEAD)" --title "$v" --generate-notes

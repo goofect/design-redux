@@ -1,8 +1,4421 @@
-/*
+/* Design Redux
+ *
+ * Only the chrome this plugin adds is styled here. Property rows are
+ * Obsidian's own editor, hosted as-is, so app.css and the active theme
+ * render them exactly as they render the native block.
+ */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* Shared --------------------------------------------------------------- */
 
-If your plugin does not need CSS, delete this file.
+.dr-trigger.is-active, .dr-props-trigger.is-active {
+  background-color: var(--background-modifier-hover);
+}
 
-*/
+/* These are divs acting as buttons, so they get no focus ring of their
+   own. Keyboard users need to see where they are. */
+
+.dr-trigger:focus-visible, .dr-props-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  border-radius: var(--radius-s, 4px);
+}
+
+/* Obsidian's own header icons sit inside wrapper divs that size them;
+   these are direct children of the flex row, so without this they
+   stretch to its full height and their hover backdrop looks oversized. */
+
+.workspace-tab-header-container .dr-trigger, .workspace-tab-header-container .dr-settings-moved {
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 4px 6px;
+  cursor: grab;
+}
+
+.workspace-tab-header-container .dr-trigger .svg-icon, .workspace-tab-header-container .dr-settings-moved .svg-icon {
+  width: var(--icon-s, 16px);
+  height: var(--icon-s, 16px);
+}
+
+/* Parked button rows ---------------------------------------------------
+ *
+ * The real buttons stay where Obsidian put them so their click handlers
+ * keep working, but they're moved under the trigger and made invisible.
+ * Not display:none: a button that opens its own submenu anchors to its
+ * bounding box, and an unrenderable element measures as 0,0.
+ */
+
+body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-buttons-container, body.dr-ribbon-active .workspace-ribbon.mod-left .side-dock-actions {
+  position: fixed;
+  left: var(--dr-park-x, -9999px);
+  top: var(--dr-park-y, -9999px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-header {
+  padding: 0;
+  min-height: 0;
+}
+
+/* Collapsed ribbon ------------------------------------------------------ */
+
+body.dr-ribbon-active {
+  --ribbon-width: 0px;
+}
+
+body.dr-ribbon-active .workspace-ribbon.mod-left {
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* Everything except the parked actions, which stay measurable. */
+
+body.dr-ribbon-active .workspace-ribbon.mod-left > *:not(.side-dock-actions) {
+  display: none;
+}
+
+/* Properties panel ------------------------------------------------------
+ *
+ * The panel owns its markup, so nothing here is fighting Obsidian's own
+ * layout. Only four things are taken from the theme — accent, border,
+ * muted and normal text — so it inherits the palette without inheriting
+ * rules meant for a note's full-width column.
+ */
+
+body.dr-props-active .workspace-leaf-content[data-type="markdown"] .metadata-container {
+  display: none;
+}
+
+.dr-props-popup {
+  --dr-label-width: 84px;
+  --dr-gutter: 10px;
+  position: fixed;
+  z-index: calc(var(--layer-menu, 65) - 10);
+  display: none;
+  width: max-content;
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 56vh;
+  overflow-y: auto;
+  padding: 14px 16px 12px;
+  background-color: var(--glass-solid, var(--background-secondary));
+  backdrop-filter: blur(var(--glass-blur, 10px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 10px));
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  font-family: var(--font-interface);
+}
+
+.dr-props-popup.is-open {
+  display: block;
+  animation: dr-appear 90ms ease-out;
+}
+
+@keyframes dr-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-props-popup.is-open {
+    animation: none;
+  }
+}
+
+/* Sections --------------------------------------------------------------- */
+
+.dr-section + .dr-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-section-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 4px;
+  border-radius: var(--radius-s, 4px);
+}
+
+.dr-empty {
+  margin-left: calc(var(--dr-label-width, 84px) + var(--dr-gutter, 10px));
+  padding: 3px 6px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-section-title {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-section-count {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Property rows ---------------------------------------------------------
+ *
+ * Apple's info panels: a narrow column of right-aligned muted labels,
+ * values left of a shared axis, nothing boxed. Every selector here is
+ * prefixed with the panel because Obsidian's global input rules
+ * (input[type="text"] and friends) otherwise outrank a bare class and
+ * put a form-field background behind the labels.
+ *
+ * The value cell holds whatever Obsidian's widget rendered — an input,
+ * a contenteditable div, or a pill container — so all three are reset
+ * together rather than assuming one shape.
+ */
+
+.dr-props-popup .dr-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dr-gutter);
+  padding: 7px 2px;
+}
+
+.dr-props-popup .dr-rows .dr-row + .dr-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+/* -- label ------------------------------------------------------------- */
+
+.dr-props-popup .dr-key {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  flex: 0 0 var(--dr-label-width);
+  min-width: 0;
+  padding-top: 3px;
+}
+
+.dr-props-popup input.dr-key-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  width: auto;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+  text-align: right;
+  text-overflow: ellipsis;
+}
+
+.dr-props-popup input.dr-key-name:focus,
+.dr-props-popup input.dr-key-name:active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-normal);
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup input.dr-key-name:hover {
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-normal);
+  }
+}
+
+/* Out of the way until the row is pointed at. */
+
+.dr-props-popup .dr-key-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  order: -1;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+.dr-props-popup .dr-key-icon:focus-visible {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-row:hover .dr-key-icon {
+    opacity: 1;
+  }
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-key-icon:hover {
+    color: var(--text-accent);
+  }
+}
+
+.dr-props-popup .dr-key-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* -- moving a property -------------------------------------------------
+ *
+ * The type icon is the handle. It takes the pointer outright, so a
+ * finger dragging it moves the property rather than scrolling the
+ * panel; the row being moved lifts, and the list says what's happening
+ * with the cursor until it's let go.
+ */
+
+.dr-props-popup .dr-key-icon {
+  touch-action: none;
+  cursor: grab;
+}
+
+.dr-props-popup .dr-rows.is-sorting,
+.dr-props-popup .dr-rows.is-sorting * {
+  cursor: grabbing;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.dr-props-popup .dr-row.is-dragging {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-modifier-hover);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+}
+
+.dr-props-popup .dr-row.is-dragging .dr-key-icon {
+  opacity: 1;
+  color: var(--text-accent);
+}
+
+/* The hairlines either side of a lifted row would cut through it. */
+.dr-props-popup .dr-rows .dr-row.is-dragging,
+.dr-props-popup .dr-rows .dr-row.is-dragging + .dr-row {
+  border-top-color: transparent;
+}
+
+/* -- value ------------------------------------------------------------- */
+
+.dr-props-popup .dr-value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Every shape a widget might render, flattened to plain text. */
+
+.dr-props-popup .dr-value input[type="text"], .dr-props-popup .dr-value input[type="number"], .dr-props-popup .dr-value input[type="date"], .dr-props-popup .dr-value input[type="datetime-local"], .dr-props-popup .dr-value textarea, .dr-props-popup .dr-value .metadata-input-longtext, .dr-props-popup .dr-value .multi-select-container, .dr-props-popup .dr-input {
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-s, 4px);
+  box-shadow: none;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal, 400);
+  line-height: 1.4;
+  transition: background-color 100ms ease;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-value input[type="text"]:hover,
+  .dr-props-popup .dr-value textarea:hover,
+  .dr-props-popup .dr-value .metadata-input-longtext:hover,
+  .dr-props-popup .dr-value .multi-select-container:hover,
+  .dr-props-popup .dr-input:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-props-popup .dr-value input:focus, .dr-props-popup .dr-value textarea:focus, .dr-props-popup .dr-value .metadata-input-longtext:focus, .dr-props-popup .dr-value .multi-select-container:focus-within, .dr-props-popup .dr-input:focus {
+  background-color: var(--background-modifier-form-field);
+  box-shadow: none;
+  outline: none;
+}
+
+.dr-props-popup .dr-value .metadata-input-longtext:empty::before {
+  content: attr(placeholder);
+  color: var(--text-faint);
+}
+
+/* -- pills ------------------------------------------------------------- */
+
+.dr-props-popup .dr-value .multi-select-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.dr-props-popup .dr-value .multi-select-pill {
+  --pill-background: color-mix(in srgb, var(--text-accent) 14%, transparent);
+  --pill-color: var(--text-accent);
+  --pill-border-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 4px 1px 9px;
+  border-radius: 100px;
+  font-size: var(--font-ui-smaller);
+  line-height: 1.6;
+}
+
+.dr-props-popup .dr-value .multi-select-pill-remove-button {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-value .multi-select-pill:hover .multi-select-pill-remove-button {
+    opacity: 0.6;
+  }
+}
+
+.dr-props-popup .dr-value .multi-select-input {
+  flex: 1 1 50px;
+  min-width: 50px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-props-popup .dr-value input[type="checkbox"] {
+  width: auto;
+  margin: 2px 0 0 6px;
+}
+
+/* -- add --------------------------------------------------------------- */
+
+.dr-props-popup .dr-add {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 6px 4px;
+  color: var(--text-faint);
+}
+
+.dr-props-popup .dr-add-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: calc(var(--dr-label-width) + var(--dr-gutter));
+  justify-content: flex-end;
+  padding-right: 6px;
+}
+
+.dr-props-popup .dr-add-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-props-popup .dr-add .dr-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-props-popup .dr-add input[type="text"] {
+  width: 100%;
+  height: auto;
+  padding: 2px 6px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-s, 4px);
+  box-shadow: none;
+  color: var(--text-normal);
+  font-family: inherit;
+  font-size: var(--font-ui-small);
+}
+
+.dr-props-popup .dr-add input[type="text"]::placeholder {
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-add input[type="text"]:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-props-popup .dr-add input[type="text"]:focus {
+  background-color: var(--background-modifier-form-field);
+  box-shadow: none;
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-props-popup .dr-key-icon,
+  .dr-props-popup .dr-value input,
+  .dr-props-popup .dr-value .metadata-input-longtext,
+  .dr-props-popup .dr-value .multi-select-pill-remove-button {
+    transition: none;
+  }
+}
+
+/* Mentions --------------------------------------------------------------- */
+
+.dr-mention-list {
+  max-height: 22vh;
+  overflow-y: auto;
+}
+
+.dr-mention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-left: calc(var(--dr-label-width) + var(--dr-gutter));
+  padding: 3px 6px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-mention:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-mention:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-mention-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-mention-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+/* Suggestions ------------------------------------------------------------ */
+
+.dr-field {
+  position: relative;
+}
+
+.dr-suggest {
+  position: fixed;
+  z-index: var(--layer-menu);
+  display: none;
+  max-height: 176px;
+  overflow-y: auto;
+  padding: 3px;
+  background-color: var(--glass-solid, var(--background-secondary));
+  backdrop-filter: blur(var(--glass-blur, 10px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 10px));
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+.dr-suggest.is-open {
+  display: block;
+}
+
+.dr-suggest-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dr-suggest-item.is-selected {
+  background-color: var(--background-modifier-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-suggest-item:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-suggest-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.dr-suggest-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* Obsidian's own editor, when borrowed --------------------------------
+ *
+ * Built for a note's column: drop the page-level margin, width cap and
+ * the nudge it carries, and keep it expanded regardless of the note's
+ * own collapse state since there's no indicator here to reopen it.
+ */
+
+.dr-props-popup .metadata-properties-heading .collapse-indicator {
+  display: none;
+}
+
+/* Collapsible section headings ---------------------------------------- */
+
+.dr-section-head[role="button"] {
+  cursor: pointer;
+  border-radius: var(--radius-s, 4px);
+}
+
+.dr-section-head[role="button"]:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-section-head[role="button"]:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-section-chevron {
+  display: inline-flex;
+  color: var(--text-faint);
+  transition: transform 100ms ease;
+}
+
+.dr-section-chevron .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-mention-group.is-collapsed .dr-section-chevron {
+  transform: rotate(-90deg);
+}
+
+.dr-mention-group.is-collapsed .dr-mention-body {
+  display: none;
+}
+
+/* Linked, then unlinked, as the note's own footer had them. */
+.dr-mention-group + .dr-mention-group {
+  margin-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-section-chevron {
+    transition: none;
+  }
+}
+
+/* Library editor, in settings -------------------------------------------
+ *
+ * Items are indented under their section so the shape of the list is
+ * legible at a glance, and each row is compact since there are many.
+ */
+
+.dr-set-section {
+  border-top: 1px solid var(--background-modifier-border);
+  padding-top: 12px;
+}
+
+.dr-set-section .setting-item-info {
+  display: none;
+}
+
+.dr-set-item {
+  padding: 4px 0 4px 20px;
+  border: none;
+}
+
+.dr-set-item .setting-item-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-set-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-set-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-set-add {
+  padding: 4px 0 12px 20px;
+  border: none;
+}
+
+.dr-set-add .setting-item-info {
+  display: none;
+}
+
+/* Browse ----------------------------------------------------------------
+ *
+ * A folder as an album page: large art, a title block, two actions,
+ * then the notes as a numbered list. Subfolders keep the grid, since
+ * a collection of collections reads better as tiles.
+ */
+
+.dr-browse .view-content {
+  padding: 16px 20px 40px;
+  overflow-y: auto;
+}
+
+.dr-detail-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.dr-browse-up {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-browse-up:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-browse-up .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-browse-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 5px 12px;
+  min-width: 220px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 100px;
+}
+
+.dr-browse-search-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-browse-search-icon .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.dr-browse-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-browse-search input:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* -- the title block ---------------------------------------------------- */
+
+.dr-detail {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 26px;
+}
+
+.dr-detail-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 300px;
+  height: 300px;
+  overflow: hidden;
+  border-radius: var(--radius-l, 10px);
+  background-color: var(--background-secondary);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.dr-detail-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-detail-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
+}
+
+.dr-detail-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.dr-detail-title {
+  font-size: 2.3em;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.15;
+  color: var(--text-normal);
+}
+
+/* The one accented line, as the artist name is in the reference. */
+
+.dr-detail-sub {
+  margin-top: 2px;
+  font-size: 1.3em;
+  font-weight: var(--font-medium, 500);
+  color: var(--text-accent);
+}
+
+.dr-detail-meta {
+  margin-top: 10px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-muted);
+}
+
+.dr-detail-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.dr-detail-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 172px;
+  padding: 12px 20px;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-hover);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  cursor: pointer;
+}
+
+.dr-detail-action:focus-visible {
+  background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-detail-action:hover {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    outline: none;
+  }
+}
+
+.dr-detail-action-icon {
+  display: inline-flex;
+}
+
+.dr-detail-action-icon .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* -- the list ----------------------------------------------------------- */
+
+.dr-tracks {
+  margin-top: 6px;
+}
+
+.dr-track {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 10px;
+  border-radius: var(--radius-m, 8px);
+  cursor: pointer;
+}
+
+/* The rule starts at the title, not at the number, so the numbers sit
+   outside the list's left edge as they do in the reference. A
+   pseudo-element rather than a border, since a border can't be inset
+   from one side only. */
+
+.dr-track + .dr-track::before {
+  content: "";
+  position: absolute;
+  left: 46px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+@media (any-hover: hover) {
+  .dr-track:hover::before,
+  .dr-track:hover + .dr-track::before {
+    opacity: 0;
+  }
+}
+
+.dr-track:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-track:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-track-num {
+  flex: 0 0 22px;
+  text-align: right;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.dr-track-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-track-sub {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-track-time {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Present on every row, quiet until pointed at, so a row never changes
+   width on hover. */
+
+.dr-track-more {
+  flex: 0 0 auto;
+  padding: 2px;
+  opacity: 0.45;
+}
+
+.dr-track-more:focus-visible {
+  opacity: 0.85;
+}
+
+@media (any-hover: hover) {
+  .dr-track:hover .dr-track-more {
+    opacity: 0.85;
+  }
+}
+
+@media (any-hover: hover) {
+  .dr-track-more:hover {
+    opacity: 1;
+  }
+}
+
+/* -- two panes -----------------------------------------------------------
+ *
+ * Subfolders listed on the left, the selected one opened out on the
+ * right as stacked blocks. The panes scroll independently so a long
+ * list doesn't drag the detail with it.
+ */
+
+.dr-split {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.dr-split-list {
+  flex: 0 0 330px;
+  min-width: 0;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: 18px;
+  border-right: 1px solid var(--background-modifier-border);
+}
+
+.dr-split-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 10px;
+  border-radius: var(--radius-m, 8px);
+  cursor: pointer;
+}
+
+/* Indented past the thumbnail, as the artist list's dividers are. */
+
+.dr-split-row + .dr-split-row::before {
+  content: "";
+  position: absolute;
+  left: 69px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+.dr-split-row.is-selected::before,
+.dr-split-row.is-selected + .dr-split-row::before {
+  opacity: 0;
+}
+
+@media (any-hover: hover) {
+  .dr-split-row:hover::before,
+  .dr-split-row:hover + .dr-split-row::before {
+    opacity: 0;
+  }
+}
+
+.dr-split-row:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-split-row:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+/* The selection is the one filled row, as in the reference. */
+
+.dr-split-row.is-selected {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-split-thumb {
+  position: relative;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 100px;
+  background-color: var(--background-secondary);
+}
+
+.dr-split-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-split-thumb.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-split-thumb .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.dr-split-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-medium);
+}
+
+.dr-split-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-left: 22px;
+}
+
+/* -- an album block ------------------------------------------------------ */
+
+.dr-album + .dr-album {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-album-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.dr-album-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-album-name {
+  font-size: 1.25em;
+  font-weight: var(--font-bold, 700);
+  color: var(--text-normal);
+}
+
+.dr-album-name.is-primary {
+  font-size: 1.7em;
+}
+
+.dr-album-meta {
+  margin-top: 2px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-album-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.dr-album-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 168px;
+  height: 168px;
+  overflow: hidden;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-secondary);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.dr-album-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-album-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
+}
+
+.dr-album-art .dr-card-glyph .svg-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.dr-album-body .dr-tracks {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+}
+
+/* -- subfolder tiles ---------------------------------------------------- */
+
+.dr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 22px 20px;
+  margin-bottom: 8px;
+}
+
+.dr-card {
+  cursor: pointer;
+  border-radius: var(--radius-s, 4px);
+}
+
+.dr-card-art {
+  position: relative;
+  aspect-ratio: 1;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-secondary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 120ms ease;
+}
+
+@media (any-hover: hover) {
+  .dr-card:hover .dr-card-art {
+    transform: translateY(-2px);
+  }
+}
+
+.dr-card:focus-visible {
+  outline: none;
+}
+
+.dr-card:focus-visible .dr-card-art {
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-card-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
+}
+
+.dr-card-glyph {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-card-glyph .svg-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.dr-detail-art .dr-card-glyph .svg-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.dr-card-title {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dr-card-sub {
+  margin-top: 2px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-browse-title {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-medium);
+  color: var(--text-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-card-art {
+    transition: none;
+  }
+  .dr-card:hover .dr-card-art {
+    transform: none;
+  }
+}
+
+.workspace-tab-header-container .dr-trigger.is-dragging, .workspace-tab-header-container .dr-settings-moved.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* A line where the icon would land, drawn on the element it precedes. */
+
+.dr-header-dropping .dr-drop-before {
+  position: relative;
+}
+
+.dr-header-dropping .dr-drop-before::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -3px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--interactive-accent);
+}
+
+/* Show more --------------------------------------------------------------- */
+
+.dr-track-more-row {
+  cursor: pointer;
+}
+
+.dr-more-label {
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+}
+
+/* Note table ------------------------------------------------------------
+ *
+ * Dense rows, quiet hairlines, columns from settings. Closer to a
+ * spreadsheet than the album lists, because that's what it's for.
+ */
+
+.dr-table {
+  margin-top: 4px;
+}
+
+.dr-tr {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 5px 10px;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+/* No rule between rows — a song list separates its columns, not its
+   rows, and relies on a plain hover band instead. */
+
+.dr-tr:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-tr:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+/* The header sorts, so its cells are controls — each divided from the
+   next, with the arrow on whichever column is ordering the table. */
+
+.dr-th {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: default;
+}
+
+@media (any-hover: hover) {
+  .dr-th:hover {
+    background: transparent;
+  }
+}
+
+.dr-th .dr-td {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-s, 4px);
+  border-left: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.dr-th .dr-td:first-child {
+  border-left: none;
+}
+
+@media (any-hover: hover) {
+  .dr-th .dr-td:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+.dr-th .dr-td.is-sorted {
+  color: var(--text-normal);
+}
+
+.dr-th-arrow {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.dr-th-arrow .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-td {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.dr-td-title {
+  flex: 2 1 0;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dr-td-time {
+  flex: 0 0 110px;
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.dr-td-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-td-more {
+  flex: 0 0 auto;
+  padding: 1px;
+  opacity: 0.35;
+}
+
+.dr-td-more .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+@media (any-hover: hover) {
+  .dr-tr:hover .dr-td-more {
+    opacity: 0.8;
+  }
+}
+
+@media (any-hover: hover) {
+  .dr-td-more:hover {
+    opacity: 1;
+  }
+}
+
+/* Property values -------------------------------------------------------- */
+
+.dr-split-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-split-row.is-selected .dr-split-count {
+  color: var(--text-on-accent);
+  opacity: 0.8;
+}
+
+/* Filter button -----------------------------------------------------------
+ *
+ * Round, beside the search field, as in the reference. It takes the
+ * accent when a sort or folder filter is in effect, so a filtered screen
+ * never looks like the whole of something.
+ */
+
+.dr-filter-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-left: auto;
+  padding: 0;
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.dr-filter-btn + .dr-browse-search {
+  margin-left: 8px;
+}
+
+.dr-filter-btn.is-active {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.dr-filter-btn .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Discs -------------------------------------------------------------------- */
+
+.dr-disc {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 0 10px 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-tracks > .dr-disc:first-child {
+  margin-top: 4px;
+}
+
+/* The first track after a heading needs no rule of its own. */
+
+.dr-disc + .dr-track::before {
+  display: none;
+}
+
+.dr-disc-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-disc-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-disc-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+}
+
+.dr-disc-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-weight: var(--font-normal, 400);
+}
+
+/* Settings ------------------------------------------------------------------ */
+
+/* Four tabs along the top, as a segmented control. */
+.dr-set-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 20px;
+  padding: 3px;
+  overflow-x: auto;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-hover);
+  scrollbar-width: none;
+}
+
+.dr-set-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.dr-set-tabs .dr-set-tab {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: max-content;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: calc(var(--radius-m, 8px) - 2px);
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-set-tabs .dr-set-tab:hover {
+    background: none;
+    color: var(--text-normal);
+  }
+}
+
+.dr-set-tabs .dr-set-tab.is-active {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.dr-set-tabs .dr-set-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-set-tab-icon {
+  display: flex;
+}
+
+.dr-set-tab-icon .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+body.is-phone .dr-set-tab-icon {
+  display: none;
+}
+
+.dr-set-pane.is-hidden {
+  display: none;
+}
+
+.dr-settings .setting-item-heading {
+  margin-top: 26px;
+}
+
+.dr-set-pane > .setting-item-heading:first-child {
+  margin-top: 0;
+}
+
+/* Settings that only apply while another is on sit beneath it, indented. */
+.dr-set-children {
+  margin: 0 0 6px 10px;
+  padding-left: 16px;
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+.dr-set-children:empty {
+  display: none;
+}
+
+.dr-set-children > .setting-item {
+  border-top: none;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.dr-set-number input[type='number'] {
+  width: 84px;
+  text-align: right;
+}
+
+/* A word at the top of a tab whose settings wait on another. */
+.dr-set-callout {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-set-callout button {
+  flex: 0 0 auto;
+}
+
+/* Moving notes between discs ---------------------------------------------
+ *
+ * A dragged row fades; the disc it would land in is outlined whole, so
+ * the target is the disc rather than the particular row under the
+ * cursor.
+ */
+
+.dr-track[draggable="true"] {
+  cursor: pointer;
+}
+
+.dr-track.is-dragging {
+  opacity: 0.4;
+}
+
+.dr-track.is-drop-target, .dr-disc.is-drop-target {
+  background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+  box-shadow: none;
+}
+
+.dr-disc.is-drop-target {
+  border-bottom-color: var(--interactive-accent);
+}
+
+/* A subfolder being dragged onto another, in Edit mode. */
+.dr-disc.is-dragging {
+  opacity: 0.4;
+}
+
+/* The Properties window: its tools as tabs, above whichever is open. */
+.dr-props-modal .dr-props-tabs {
+  margin-bottom: 16px;
+}
+
+/* Nothing chosen yet ------------------------------------------------------
+ *
+ * The detail pane says what to do rather than sitting blank, and the
+ * left column reads as the chooser it is.
+ */
+
+.dr-split-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: var(--text-muted);
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-medium, 500);
+}
+
+/* A screen with nothing to show says so in its own space, not indented
+ * under a properties-panel label column it doesn't have. */
+.dr-browse .dr-empty {
+  margin: 0;
+  padding: 48px 4px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+}
+
+/* Navigation ---------------------------------------------------------------
+ *
+ * Back and forward sit together at the top left, as the only way
+ * through the app. A direction with nothing behind it stays in place
+ * rather than disappearing, so the pair doesn't shift as you move.
+ */
+
+.dr-browse-up.is-disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.dr-browse-up:not(.dr-sidebar-toggle) + .dr-browse-up {
+  margin-left: -4px;
+}
+
+/* One content area ---------------------------------------------------------
+ *
+ * The main split's tab bar is hidden, leaving a single page moved
+ * through with back and forward. Tabs still exist — they're just not
+ * shown, so nothing else in Obsidian breaks.
+ */
+
+body.dr-single-area .workspace-split.mod-root > .workspace-tabs > .workspace-tab-header-container {
+  display: none;
+}
+
+/* The view header carries the note's name instead, since the tab that
+   used to show it is gone. */
+
+body.dr-single-area .workspace-split.mod-root .view-header {
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+/* The panel's title block --------------------------------------------------
+ *
+ * The note's name, with one property raised beneath it in the accent —
+ * the shape an album page opens with, so the panel says what it's about
+ * before it lists anything.
+ */
+
+.dr-props-head {
+  padding: 0 2px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-props-title {
+  font-size: 1.25em;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.2;
+  color: var(--text-normal);
+}
+
+.dr-props-lead {
+  margin-top: 1px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Context strip ------------------------------------------------------------
+ *
+ * A floating bar centred over the content, clear of the status bar. It
+ * is the one thing on screen that doesn't change as you move, so it
+ * stays quiet: one line of text, one accent, everything else muted
+ * until pointed at.
+ */
+
+.dr-strip {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: calc(var(--layer-menu, 65) - 20);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: min(680px, 72vw);
+  padding: 8px 14px;
+  border-radius: 100px;
+  background-color: var(--glass-solid, var(--background-secondary));
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dr-strip.is-empty {
+  display: none;
+}
+
+.dr-strip-nav,
+.dr-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.dr-strip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 100px;
+  color: var(--text-muted);
+}
+
+@media (any-hover: hover) {
+  .dr-strip-btn:hover {
+    color: var(--text-normal);
+  }
+}
+
+.dr-strip-btn.is-active {
+  color: var(--text-accent);
+}
+
+.dr-strip-btn.is-disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.dr-strip-btn .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* The middle: « the note » — back and on through its album either side,
+ * as a player's skip buttons sit around what's playing. */
+.dr-strip-center {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-strip-skip {
+  flex: 0 0 auto;
+  color: var(--text-normal);
+}
+
+.dr-strip-skip .svg-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.25;
+}
+
+/* The note itself, as the now-playing block. */
+.dr-strip-now {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 8px;
+  border-radius: 100px;
+  cursor: pointer;
+}
+
+.dr-strip-now:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-strip-now:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-strip-art {
+  position: relative;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-secondary);
+}
+
+.dr-strip-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-strip-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-strip-art .dr-card-glyph .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-strip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-strip-title,
+.dr-strip-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-strip-title {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-strip-sub {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Room for it, so the last line of a note isn't underneath. */
+body.dr-strip-active .workspace-split.mod-root .markdown-source-view .cm-sizer,
+body.dr-strip-active .workspace-split.mod-root .markdown-preview-sizer,
+body.dr-strip-active .dr-browse .view-content {
+  padding-bottom: 80px;
+}
+
+/* One content area, continued ---------------------------------------------
+ *
+ * The browse view draws its own title and navigation, so Obsidian's
+ * header above it is a second copy of both.
+ */
+
+body.dr-single-area
+  .workspace-leaf-content[data-type="design-redux-browse"]
+  .view-header {
+  display: none;
+}
+
+/* Doubled controls ---------------------------------------------------------
+ *
+ * With the strip up, a note's header repeats its buttons — back and
+ * forward, properties, the reading toggle and More — so they're
+ * hidden. The reading toggle and More are marked by the strip, which
+ * finds them by the view's own references rather than guessing from
+ * icons. The properties panel keeps its header trigger as its anchor
+ * and switch; opened from the strip, it places itself against the
+ * strip's button, since a hidden trigger has no position.
+ *
+ * On a phone the strip steps aside while the keyboard is up, and these
+ * come back for as long as it's away.
+ */
+
+body.dr-strip-active:not(.is-phone) .view-header-nav-buttons,
+body.dr-strip-active:not(.is-phone) .view-header .dr-props-trigger,
+body.dr-strip-active:not(.dr-typing) .dr-strip-dupe {
+  display: none;
+}
+
+/* The note's own mentions --------------------------------------------------
+ *
+ * The panel lists them, so the block at the foot of the note is a
+ * second copy. Scoped to markdown leaves, leaving Obsidian's own
+ * Backlinks pane in the sidebar alone.
+ */
+
+body.dr-mentions-active
+  .workspace-leaf-content[data-type="markdown"]
+  .embedded-backlinks {
+  display: none;
+}
+
+/* Search results ----------------------------------------------------------- */
+
+.dr-search-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 0 2px;
+}
+
+.dr-search-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Names and properties are searched here; note bodies are handed to
+   Obsidian's own search, which this opens. */
+.dr-search-full {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-search-full:focus-visible {
+  background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-search-full:hover {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    outline: none;
+  }
+}
+
+.dr-search-full-icon {
+  display: inline-flex;
+}
+
+.dr-search-full-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Home shelves -------------------------------------------------------------
+ *
+ * A titled row of tiles, the heading doubling as the way through to all
+ * of whatever it holds.
+ */
+
+.dr-shelf-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 22px 0 12px;
+  padding: 2px 4px;
+  width: max-content;
+  border-radius: var(--radius-s, 4px);
+}
+
+:is(.dr-detail-bar, .dr-filter-chips) + .dr-shelf-head {
+  margin-top: 4px;
+}
+
+.dr-shelf-head.is-linked {
+  cursor: pointer;
+}
+
+.dr-shelf-head.is-linked:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-shelf-head.is-linked:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-shelf-title {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-shelf-more {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-shelf-head.is-linked:hover .dr-shelf-more {
+    color: var(--text-accent);
+  }
+}
+
+.dr-shelf-more .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* The status bar duplicates counts the strip and panel already carry. */
+body.dr-single-area .status-bar {
+  display: none;
+}
+
+/* Search: sections ---------------------------------------------------------- */
+
+.dr-search-section {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 24px 0 12px;
+  padding: 0 2px;
+}
+
+:is(.dr-detail-bar, .dr-filter-chips) + .dr-search-section {
+  margin-top: 4px;
+}
+
+.dr-search-section-title {
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-bold, 700);
+  color: var(--text-normal);
+}
+
+.dr-search-clear {
+  margin-left: auto;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-search-clear:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-search-clear:hover {
+    text-decoration: underline;
+    outline: none;
+  }
+}
+
+/* Recently searched --------------------------------------------------------- */
+
+.dr-recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.dr-recent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.dr-recent:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-recent:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-recent-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-modifier-hover);
+  color: var(--text-faint);
+}
+
+.dr-recent-art .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dr-recent-text {
+  min-width: 0;
+}
+
+.dr-recent-title,
+.dr-recent-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-recent-title {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-recent-sub {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Browse categories --------------------------------------------------------
+ *
+ * Landscape tiles with the name over the artwork. A vault has no genre
+ * art, so the colour is derived from the name and stays with it; where
+ * a note under that value carries a cover, it sits behind, dimmed
+ * enough to keep the name readable.
+ */
+
+.dr-cat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dr-cat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  aspect-ratio: 16 / 9;
+  padding: 12px 14px;
+  overflow: hidden;
+  border-radius: var(--radius-m, 8px);
+  background-image: linear-gradient(
+    150deg,
+    hsl(var(--dr-cat-hue, 210) 58% 42%),
+    hsl(var(--dr-cat-hue, 210) 52% 26%)
+  );
+  cursor: pointer;
+}
+
+.dr-cat:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-cat:hover {
+    filter: brightness(1.08);
+    outline: none;
+  }
+}
+
+.dr-cat-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.4;
+  mix-blend-mode: luminosity;
+}
+
+.dr-cat-name,
+.dr-cat-count {
+  position: relative;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.dr-cat-name {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-bold, 700);
+}
+
+.dr-cat-count {
+  font-size: var(--font-ui-smaller);
+  opacity: 0.85;
+}
+
+/* One content area, completed ---------------------------------------------
+ *
+ * With the strip carrying navigation, properties, reading mode and the
+ * file menu, the note's own header has nothing left that isn't
+ * duplicated — so the content area becomes the content and nothing
+ * else. This only applies with both switched on, since the strip is
+ * where those controls went.
+ */
+
+body.dr-single-area.dr-strip-active
+  .workspace-split.mod-root
+  .workspace-leaf-content[data-type="markdown"]
+  > .view-header {
+  display: none;
+}
+
+/* The sidebar holds one view, so its tab chip names something you
+   can't switch away from. The action icons beside it stay. */
+body.dr-single-area
+  .workspace-split.mod-left-split
+  .workspace-tab-header-container-inner {
+  display: none;
+}
+
+/* The strip while browsing -------------------------------------------------
+ *
+ * A screen isn't a thing you can open, so its block doesn't invite a
+ * click the way a note's does.
+ */
+
+.dr-strip-now.is-screen {
+  cursor: default;
+}
+
+@media (any-hover: hover) {
+  .dr-strip-now.is-screen:hover {
+    background: transparent;
+  }
+}
+
+/* Library sidebar ----------------------------------------------------------
+ *
+ * Shaped after the reference: compact rows, one neutral pill marking
+ * where you are with the accent on its icon and label, small grey
+ * section labels, and a gutter left of every icon holding a disclosure
+ * chevron where there's something to open out — kept even where empty,
+ * so all the icons line up.
+ */
+
+.dr-library .view-content {
+  padding: 6px 8px 12px;
+}
+
+.dr-lib-group {
+  margin-top: 18px;
+  padding: 0 10px 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-lib-group:first-child {
+  margin-top: 2px;
+}
+
+.dr-lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dr-lib-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 0 10px 0 4px;
+  border-radius: var(--radius-m, 8px);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Neutral rather than tinted, so the accent on the active row is the
+   only colour in the list. */
+@media (any-hover: hover) {
+  .dr-lib-row:hover {
+    background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
+  }
+}
+
+.dr-lib-row.is-active {
+  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  color: var(--text-accent);
+}
+
+.dr-lib-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Pins opened out sit one gutter in. */
+.dr-lib-row.is-nested {
+  padding-left: 22px;
+}
+
+.dr-lib-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  height: 20px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-muted);
+}
+
+@media (any-hover: hover) {
+  .dr-lib-disclosure.is-expandable:hover {
+    color: var(--text-normal);
+  }
+}
+
+.dr-lib-disclosure .svg-icon {
+  width: 12px;
+  height: 12px;
+  transition: transform 120ms ease;
+}
+
+.dr-lib-disclosure.is-open .svg-icon {
+  transform: rotate(90deg);
+}
+
+.dr-lib-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--text-normal);
+}
+
+.dr-lib-row.is-active .dr-lib-icon {
+  color: var(--text-accent);
+}
+
+.dr-lib-icon .svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+/* Artwork, as a playlist with a cover shows it. */
+.dr-lib-icon.has-art {
+  overflow: hidden;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-lib-icon.has-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-lib-icon.has-art.is-blank {
+  background-color: transparent;
+}
+
+.dr-lib-icon .dr-card-glyph {
+  display: inline-flex;
+  color: inherit;
+}
+
+.dr-lib-icon .dr-card-glyph .svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.dr-lib-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-lib-empty {
+  padding: 4px 10px 6px 50px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* The panel -----------------------------------------------------------------
+ *
+ * A floating rounded card, as the reference's sidebar is, applied only
+ * while the library is the view showing in the left sidebar. Collapsed,
+ * it takes no room at all rather than leaving a sliver of border.
+ */
+
+body:not(.dr-left-collapsed)
+  .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
+  margin: 8px 0 8px 8px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-xl, 12px);
+  background-color: var(--background-secondary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.dr-apple-sidebar .workspace-tab-header-container {
+  border-bottom: none;
+  background-color: transparent;
+}
+
+.dr-apple-sidebar .workspace-leaf-content[data-type="design-redux-library"] {
+  background-color: transparent;
+}
+
+/* The vault row as the account row: an initial in a circle where the
+   avatar would be, in place of the switcher arrows. */
+.dr-apple-sidebar .workspace-sidedock-vault-profile {
+  padding: 8px 12px 10px;
+  border-top: none;
+  background-color: transparent;
+}
+
+.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial]::before {
+  content: attr(data-dr-initial);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 100px;
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--interactive-accent) 60%, white),
+    var(--interactive-accent)
+  );
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-apple-sidebar
+  .workspace-drawer-vault-switcher[data-dr-initial]
+  .workspace-drawer-vault-switcher-icon {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-lib-disclosure .svg-icon {
+    transition: none;
+  }
+}
+
+/* Getting the sidebar back ------------------------------------------------
+ *
+ * Obsidian's own reopen buttons live in the tab bar and the note
+ * header, both hidden in single content area. These appear in the strip
+ * and the browse view's top bar only while the sidebar is closed, so
+ * they're never a second copy of the one in the sidebar itself.
+ */
+
+.dr-browse-up.dr-sidebar-toggle,
+.dr-strip-btn.dr-sidebar-toggle {
+  display: none;
+}
+
+body.dr-left-collapsed .dr-browse-up.dr-sidebar-toggle,
+body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
+  display: flex;
+}
+
+/* The name prompt for a new folder. */
+.dr-name-input {
+  width: 100%;
+}
+
+/* Touch -----------------------------------------------------------------------
+ *
+ * The mobile app, phone or tablet (Obsidian's is-mobile). There's no
+ * pointer, so controls that waited to be pointed at are shown outright
+ * and a press shows where the finger is instead of a hover. Rows are
+ * sized for a thumb, and holding one — which opens its menu — doesn't
+ * also select its text or raise iOS's callout.
+ */
+
+body.is-mobile .dr-track-more,
+body.is-mobile .dr-td-more {
+  opacity: 0.6;
+}
+
+body.is-mobile .dr-props-popup .dr-key-icon {
+  opacity: 1;
+}
+
+body.is-mobile .dr-props-popup .dr-value .multi-select-pill-remove-button {
+  opacity: 0.6;
+}
+
+body.is-mobile .dr-browse .view-content,
+body.is-mobile .dr-library .view-content,
+body.is-mobile .dr-strip {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS won't type into a field whose ancestor turns selection off. */
+body.is-mobile .dr-browse .view-content input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body.is-mobile .dr-lib-row:active,
+body.is-mobile .dr-track:active,
+body.is-mobile .dr-tr:not(.dr-th):active,
+body.is-mobile .dr-split-row:not(.is-selected):active,
+body.is-mobile .dr-recent:active,
+body.is-mobile .dr-shelf-head.is-linked:active,
+body.is-mobile .dr-detail-action:active,
+body.is-mobile .dr-strip-now:not(.is-screen):active {
+  background-color: var(--background-modifier-hover);
+}
+
+body.is-mobile .dr-card:active .dr-card-art,
+body.is-mobile .dr-cat:active {
+  transform: scale(0.97);
+}
+
+body.is-mobile .dr-cat {
+  transition: transform 120ms ease;
+}
+
+body.is-mobile .dr-browse-up,
+body.is-mobile .dr-filter-btn {
+  width: 36px;
+  height: 36px;
+}
+
+/* The library, as the Library tab's list: full-size rows and icons. */
+body.is-mobile .dr-lib-row {
+  gap: 10px;
+  min-height: 44px;
+  font-size: var(--font-ui-medium);
+}
+
+body.is-mobile .dr-lib-disclosure {
+  flex-basis: 24px;
+  height: 36px;
+}
+
+body.is-mobile .dr-lib-disclosure .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+body.is-mobile .dr-lib-icon {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+body.is-mobile .dr-lib-icon .svg-icon,
+body.is-mobile .dr-lib-icon .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+body.is-mobile .dr-lib-row.is-nested {
+  padding-left: 30px;
+}
+
+body.is-mobile .dr-lib-group {
+  margin-top: 22px;
+  font-size: var(--font-ui-small);
+}
+
+body.is-mobile .dr-lib-empty {
+  padding-left: 68px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-mobile .dr-card:active .dr-card-art,
+  body.is-mobile .dr-cat:active {
+    transform: none;
+  }
+}
+
+/* Phone -------------------------------------------------------------------------
+ *
+ * One column, as the iPhone app is laid out: a large title, the search
+ * field on a line of its own, album art centred above its title, lists
+ * that show the name and nothing that would crowd it, and the
+ * properties screen showing its list or one property's values in turn.
+ * Back and forward are on Obsidian's bottom bar, so a page carries only
+ * back, the way an iOS page does.
+ */
+
+body.is-phone .dr-browse .view-content {
+  padding-top: 12px;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+/* History's forward is on the bottom bar; a folder's step further in
+   isn't, so that one stays. */
+body.is-phone .dr-browse-forward:not(.is-folder-step) {
+  display: none;
+}
+
+body.is-phone .dr-detail-bar {
+  flex-wrap: wrap;
+  row-gap: 12px;
+  margin-bottom: 16px;
+}
+
+body.is-phone .dr-browse-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.7em;
+  font-weight: var(--font-bold, 700);
+}
+
+body.is-phone .dr-browse-search,
+body.is-phone .dr-filter-btn + .dr-browse-search {
+  order: 1;
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-left: 0;
+  padding: 8px 12px;
+}
+
+/* 16px, below which iOS zooms the page into a field being typed in. */
+body.is-phone .dr-browse-search input {
+  font-size: 16px;
+}
+
+/* -- the album page ------------------------------------------------------- */
+
+body.is-phone .dr-detail {
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+body.is-phone .dr-detail-art {
+  width: min(250px, 66vw);
+  height: min(250px, 66vw);
+}
+
+body.is-phone .dr-detail-info {
+  align-items: center;
+  width: 100%;
+}
+
+body.is-phone .dr-detail-title {
+  font-size: 1.5em;
+}
+
+body.is-phone .dr-detail-sub {
+  font-size: 1.1em;
+}
+
+body.is-phone .dr-detail-meta {
+  margin-top: 6px;
+}
+
+body.is-phone .dr-detail-actions {
+  width: 100%;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+body.is-phone .dr-detail-action {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 12px;
+}
+
+body.is-phone .dr-track {
+  gap: 12px;
+  padding: 12px 6px;
+}
+
+body.is-phone .dr-track + .dr-track::before {
+  left: 40px;
+}
+
+body.is-phone .dr-track-sub,
+body.is-phone .dr-track-time {
+  display: none;
+}
+
+body.is-phone .dr-track-more {
+  margin: -6px -4px -6px 0;
+  padding: 8px;
+}
+
+body.is-phone .dr-album-body {
+  flex-direction: column;
+  gap: 12px;
+}
+
+body.is-phone .dr-album-art {
+  width: 120px;
+  height: 120px;
+}
+
+body.is-phone .dr-album-body .dr-tracks {
+  width: 100%;
+}
+
+/* -- tiles ------------------------------------------------------------------ */
+
+body.is-phone .dr-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 18px 14px;
+}
+
+/* Home's shelves scroll sideways, a little of the next tile showing so
+   it's plain there's more. */
+body.is-phone .dr-shelf-head + .dr-grid {
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  grid-auto-columns: calc((100% - 14px) / 2.3);
+  margin-inline: -16px;
+  padding: 4px 16px 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 16px;
+  scrollbar-width: none;
+}
+
+body.is-phone .dr-shelf-head + .dr-grid::-webkit-scrollbar {
+  display: none;
+}
+
+body.is-phone .dr-shelf-head + .dr-grid > .dr-card {
+  scroll-snap-align: start;
+}
+
+body.is-phone .dr-cat-grid {
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 12px;
+}
+
+/* -- the notes table: name and date ------------------------------------------ */
+
+body.is-phone .dr-tr {
+  gap: 10px;
+  padding: 11px 6px;
+  font-size: var(--font-ui-medium);
+}
+
+body.is-phone .dr-tr.dr-th {
+  padding: 6px;
+  font-size: var(--font-ui-smaller);
+}
+
+body.is-phone .dr-tr > .dr-td:not(.dr-td-title):not(.dr-td-time) {
+  display: none;
+}
+
+body.is-phone .dr-td-time {
+  flex-basis: 96px;
+}
+
+body.is-phone .dr-td-more {
+  padding: 6px;
+}
+
+/* -- properties: the list, or one property ------------------------------------ */
+
+.dr-split-heading {
+  display: none;
+}
+
+body.is-phone .dr-split {
+  display: block;
+}
+
+body.is-phone .dr-split-list,
+body.is-phone .dr-split-detail {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: none;
+}
+
+body.is-phone .dr-split.has-selection .dr-split-list,
+body.is-phone .dr-split:not(.has-selection) .dr-split-detail {
+  display: none;
+}
+
+body.is-phone .dr-split-heading {
+  display: block;
+  margin: 0 0 14px;
+  font-size: 1.5em;
+  font-weight: var(--font-bold, 700);
+  color: var(--text-normal);
+}
+
+body.is-phone .dr-split-row {
+  padding: 8px 6px;
+}
+
+/* -- the strip as a mini player -----------------------------------------------
+ *
+ * Full width above Obsidian's bottom bar — measured, since its height
+ * depends on the phone — holding the note and the two things a mini
+ * player holds: its main control (Read or Edit) and More. Pin is in
+ * More, and the properties button stays in the note's header. It steps
+ * aside while the keyboard is up.
+ */
+
+body.is-phone .dr-strip {
+  left: 8px;
+  right: 8px;
+  bottom: var(--dr-strip-bottom, calc(env(safe-area-inset-bottom, 0px) + 64px));
+  z-index: var(--dr-strip-z, var(--layer-status-bar, 15));
+  max-width: none;
+  gap: 6px;
+  padding: 6px 8px 6px 6px;
+  transform: none;
+}
+
+body.is-phone .dr-strip-nav,
+body.is-phone .dr-strip-btn[data-action="pin"],
+body.is-phone .dr-strip-btn[data-action="properties"] {
+  display: none;
+}
+
+body.is-phone.dr-typing .dr-strip {
+  display: none;
+}
+
+body.is-phone .dr-strip-now {
+  padding: 0 4px 0 0;
+}
+
+/* A mini player keeps its art at the edge: « » sit together after it. */
+body.is-phone .dr-strip-now {
+  order: 1;
+}
+
+body.is-phone .dr-strip-skip[data-action="previous"] {
+  order: 2;
+}
+
+body.is-phone .dr-strip-skip[data-action="next"] {
+  order: 3;
+}
+
+body.is-phone .dr-strip-art {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+
+body.is-phone .dr-strip-btn {
+  width: 38px;
+  height: 38px;
+}
+
+body.is-phone .dr-strip-btn .svg-icon {
+  width: 19px;
+  height: 19px;
+}
+
+/* -- the properties panel, across the screen ---------------------------------- */
+
+body.is-phone .dr-props-popup {
+  right: 8px;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: 60vh;
+  border-radius: 14px;
+}
+
+.dr-settings-note {
+  padding-bottom: 12px;
+}
+
+/* -- phone refinements ---------------------------------------------------------
+ *
+ * Recent searches as the iPhone lists them — rows on hairlines rather
+ * than cards; a property's values without an empty frame where a cover
+ * would go, since on one column that's a screenful of nothing; and the
+ * notes table's menu at the row's end.
+ */
+
+body.is-phone .dr-recent-grid {
+  gap: 0;
+}
+
+body.is-phone .dr-recent {
+  position: relative;
+  padding: 8px 4px;
+  border: none;
+  border-radius: var(--radius-m, 8px);
+  background-color: transparent;
+}
+
+body.is-phone .dr-recent + .dr-recent::before {
+  content: "";
+  position: absolute;
+  left: 58px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+body.is-phone .dr-album-art.is-blank {
+  display: none;
+}
+
+body.is-phone .dr-album-name {
+  font-size: 1.15em;
+}
+
+body.is-phone .dr-album-name.is-primary {
+  font-size: 1.3em;
+}
+
+body.is-phone .dr-album + .dr-album {
+  margin-top: 22px;
+  padding-top: 18px;
+}
+
+body.is-phone .dr-th .dr-td {
+  border-left: none;
+}
+
+body.is-phone .dr-td-title .dr-td-more {
+  margin-left: auto;
+}
+
+/* Lettered and roman numeral lists --------------------------------------------
+ *
+ * In reading view the letter or numeral is shown as written,
+ * right-aligned in the list's gutter and in the list marker colour, the
+ * way a numbered list's are; the gutter is sized to the longest one.
+ * In the editor the marker takes the same colour, and the line a
+ * hanging indent so a long item wraps under its text — both as Obsidian
+ * does for its own numbered lists.
+ */
+
+.markdown-rendered ol.dr-marked-list {
+  list-style: none;
+  padding-inline-start: var(--dr-list-gutter, var(--list-indent, 2.25em));
+}
+
+.markdown-rendered ol.dr-marked-list > li.dr-marked-item {
+  position: relative;
+}
+
+.markdown-rendered .dr-marked-item > .dr-list-marker {
+  position: absolute;
+  inset-inline-end: 100%;
+  margin-inline-end: 0.45em;
+  color: var(--list-marker-color, var(--text-muted));
+  white-space: nowrap;
+}
+
+.markdown-source-view.mod-cm6 .cm-line.dr-marked-line {
+  text-indent: calc(var(--dr-list-hang, 0px) * -1);
+  padding-inline-start: var(--dr-list-hang, 0px);
+}
+
+.markdown-source-view.mod-cm6 .dr-list-marker {
+  color: var(--list-marker-color, var(--text-muted));
+}
+
+/* Property filters in the graph ------------------------------------------------
+ *
+ * A section of the graph's own settings panel, in its markup, so it
+ * folds and reads like Filters beside it. Each condition is two short
+ * lines — the property, then how it's matched — to fit the panel's
+ * width; a count in the heading says how many are in effect while
+ * it's folded.
+ */
+
+.dr-graph-props.is-collapsed > .tree-item-children {
+  display: none;
+}
+
+.dr-gp-count {
+  display: none;
+  margin-inline-start: auto;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 100px;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  line-height: 18px;
+  text-align: center;
+}
+
+.dr-gp-count.is-shown {
+  display: inline-block;
+}
+
+.dr-graph-props > .tree-item-children {
+  padding: 2px 0 8px;
+}
+
+.dr-gp-rule {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  grid-template-areas:
+    "key key remove"
+    "op value value";
+  gap: 4px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.dr-gp-rule + .dr-gp-rule {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-gp-rule.is-valueless {
+  grid-template-areas:
+    "key key remove"
+    "op op op";
+}
+
+.dr-gp-rule.is-valueless .dr-gp-value {
+  display: none;
+}
+
+.dr-gp-key {
+  grid-area: key;
+}
+
+.dr-gp-op {
+  grid-area: op;
+}
+
+.dr-gp-value {
+  grid-area: value;
+}
+
+.dr-gp-remove {
+  grid-area: remove;
+  padding: 3px;
+}
+
+.dr-gp-rule .dropdown,
+.dr-gp-rule .dr-gp-value {
+  width: 100%;
+  min-width: 0;
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-gp-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.dr-gp-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-gp-add-icon {
+  display: inline-flex;
+}
+
+.dr-gp-add-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+@media (any-hover: hover) {
+  .dr-gp-add:hover {
+    text-decoration: underline;
+  }
+}
+
+.dr-gp-add:focus-visible {
+  outline: none;
+  text-decoration: underline;
+}
+
+.dr-gp-foot .dr-gp-mode {
+  margin-inline-start: auto;
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-gp-note {
+  padding-top: 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Filters in effect ------------------------------------------------------------
+ *
+ * Under the bar, one chip for each: its name changes it, its cross
+ * takes it off. Accent-tinted like the filter button they answer to,
+ * so a narrowed screen never passes for the whole of something.
+ */
+
+.dr-filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: -8px 0 16px;
+}
+
+.dr-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border-radius: 100px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 3px 4px 3px 11px;
+  border-radius: 100px 0 0 100px;
+  cursor: pointer;
+}
+
+.dr-chip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px 3px 4px;
+  border-radius: 0 100px 100px 0;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.dr-chip-clear .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+@media (any-hover: hover) {
+  .dr-chip-label:hover {
+    text-decoration: underline;
+  }
+
+  .dr-chip-clear:hover {
+    opacity: 1;
+  }
+}
+
+.dr-chip-label:focus-visible,
+.dr-chip-clear:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* A count beside each choice in the tag and value pickers. */
+.dr-choice-note {
+  float: right;
+  margin-left: 12px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+body.is-mobile .dr-chip-label,
+body.is-mobile .dr-chip-clear {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Bulk edits -----------------------------------------------------------------
+ *
+ * Add properties, Rename property and Rename tag. One column of
+ * labelled fields, then a summary of what will happen that follows the
+ * typing, then the button — which names how many notes it changes.
+ */
+
+.dr-bulk-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dr-bulk-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dr-bulk-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dr-bulk-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.02em;
+}
+
+.dr-bulk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dr-bulk-field + .dr-bulk-field {
+  margin-top: 6px;
+}
+
+.dr-bulk-input {
+  position: relative;
+}
+
+.dr-bulk-input input,
+.dr-bulk-name input,
+.dr-bulk-value input[type="text"],
+.dr-bulk-value input[type="date"],
+.dr-bulk-value input[type="datetime-local"] {
+  width: 100%;
+}
+
+/* A tag's # is shown, not typed. */
+.dr-bulk-input.has-hash::before {
+  content: '#';
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.dr-bulk-input.has-hash input {
+  padding-left: 22px;
+}
+
+.dr-bulk-hint {
+  min-height: 1em;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-bulk-hint:empty {
+  display: none;
+}
+
+/* Where: the folders and notes, as chips. */
+.dr-bulk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dr-bulk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 6px 4px 10px;
+  border-radius: 100px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-bulk-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-chip-icon,
+.dr-bulk-chip-remove {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.dr-bulk-chip-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-bulk-chip-remove {
+  padding: 2px;
+  border-radius: 100px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.dr-bulk-chip-remove .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-bulk-chip.is-add {
+  padding-right: 12px;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-bulk-option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.dr-bulk-option.is-hidden {
+  display: none;
+}
+
+.dr-bulk-option-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-option select {
+  max-width: 100%;
+}
+
+/* What: one row per property — type, name, value, remove. */
+.dr-bulk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dr-bulk-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.4fr) 26px;
+  align-items: center;
+  gap: 6px;
+}
+
+.dr-bulk-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-bulk-type .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.dr-bulk-type.is-locked {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.dr-bulk-remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+}
+
+.dr-bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 4px 6px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-bulk-add-icon {
+  display: inline-flex;
+}
+
+.dr-bulk-add-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* What will happen. */
+.dr-bulk-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-secondary);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+}
+
+.dr-bulk-summary.is-empty {
+  display: none;
+}
+
+.dr-bulk-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-normal);
+}
+
+.dr-bulk-line-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--text-accent);
+}
+
+.dr-bulk-line-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-bulk-line-text {
+  min-width: 0;
+}
+
+.dr-bulk-line.is-muted,
+.dr-bulk-line.is-muted .dr-bulk-line-icon {
+  color: var(--text-muted);
+}
+
+.dr-bulk-line.is-warning .dr-bulk-line-icon {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-bulk-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 4px;
+}
+
+.dr-bulk-note {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-bulk-more {
+  color: var(--text-faint);
+}
+
+.dr-bulk-modal .modal-button-container button.is-disabled,
+.dr-bulk-modal .modal-button-container button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Undo, in the notice that says what was done. */
+.dr-bulk-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.dr-bulk-undo {
+  font-size: var(--font-ui-small);
+}
+
+/* Above the dialog, which sits above everything else. */
+.dr-suggest.dr-bulk-suggest {
+  z-index: calc(var(--layer-modal, 50) + 20);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-chip-remove:hover {
+    opacity: 1;
+    background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+  }
+
+  .dr-bulk-chip.is-add:hover,
+  .dr-bulk-add:hover,
+  .dr-bulk-type:not(.is-locked):hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  .dr-bulk-note:hover {
+    text-decoration: underline;
+  }
+}
+
+.dr-bulk-chip.is-add:focus-visible,
+.dr-bulk-chip-remove:focus-visible,
+.dr-bulk-add:focus-visible,
+.dr-bulk-type:focus-visible,
+.dr-bulk-note:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* On a phone the value goes under its name, full width. */
+body.is-phone .dr-bulk-row {
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  row-gap: 4px;
+}
+
+body.is-phone .dr-bulk-value {
+  grid-column: 2 / 3;
+  grid-row: 2;
+}
+
+body.is-phone .dr-bulk-remove {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+body.is-mobile .dr-bulk-chip {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Superscript and subscript --------------------------------------------------
+ *
+ * In the editor, raised and lowered as reading view draws <sup> and
+ * <sub>, without opening up the line. Their markers, where shown, are
+ * as faint as bold's asterisks.
+ */
+
+.dr-sup,
+.dr-sub {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.dr-sup {
+  vertical-align: super;
+}
+
+.dr-sub {
+  vertical-align: sub;
+}
+
+.dr-script-mark {
+  color: var(--text-faint);
+}
+
+/* Generated covers -------------------------------------------------------------
+ *
+ * For a folder or note without art: a gradient chosen by its name — the
+ * same name, the same colours — with its initials, the way a playlist
+ * without artwork gets one made for it.
+ */
+
+.is-generated {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: inline-size;
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--dr-gen-h, 210) 62% 60%),
+    hsl(calc(var(--dr-gen-h, 210) + 40) 58% 36%)
+  );
+}
+
+.dr-gen-initials {
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 2em;
+  font-size: 36cqi;
+  font-weight: var(--font-bold, 700);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dr-detail-art.is-generated {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+/* A colour of its own, or one for all: lighter to darker in that colour,
+ * rather than the drift between two hues a name gets. */
+.is-generated.is-tinted {
+  background-color: hsl(var(--dr-gen-h), var(--dr-gen-s), var(--dr-gen-l));
+  background-image: linear-gradient(
+    135deg,
+    hsl(var(--dr-gen-h), var(--dr-gen-s), calc(var(--dr-gen-l) + 10%)),
+    hsl(var(--dr-gen-h), var(--dr-gen-s), calc(var(--dr-gen-l) - 14%))
+  );
+}
+
+/* The theme's accent, read live, so changing it repaints them. */
+.is-generated.is-accent {
+  --dr-gen-h: var(--accent-h, 352);
+  --dr-gen-s: var(--accent-s, 95%);
+  --dr-gen-l: var(--accent-l, 58%);
+}
+
+.is-generated.is-light .dr-gen-initials {
+  color: rgba(0, 0, 0, 0.72);
+  text-shadow: none;
+}
+
+/* Choosing a cover colour ----------------------------------------------------- */
+
+.dr-color-modal {
+  width: min(420px, 100vw);
+}
+
+.dr-color-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.dr-color-preview {
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.dr-color-text {
+  min-width: 0;
+}
+
+.dr-color-name {
+  overflow: hidden;
+  font-weight: var(--font-semibold, 600);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-color-label {
+  margin-top: 2px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-color-hint {
+  margin-top: 2px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-color-swatches {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(36px, 1fr));
+  gap: 10px;
+}
+
+.dr-color-swatches .dr-color-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 100px;
+  background: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+/* Obsidian's buttons take a fill on hover; a swatch is its colour alone. */
+@media (any-hover: hover) {
+  .dr-color-swatches .dr-color-swatch:hover {
+    background: none;
+  }
+
+  .dr-color-swatches .dr-color-swatch:hover .dr-color-dot {
+    transform: scale(1.08);
+  }
+}
+
+.dr-color-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 100px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.dr-color-swatches .dr-color-swatch.is-selected {
+  box-shadow: 0 0 0 2px var(--text-normal);
+}
+
+.dr-color-swatches .dr-color-swatch:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-color-swatches .dr-color-swatch.is-selected:focus-visible {
+  box-shadow: 0 0 0 2px var(--text-normal), 0 0 0 4px var(--background-modifier-border-focus);
+}
+
+.dr-color-mark {
+  display: flex;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.is-light .dr-color-mark {
+  color: rgba(0, 0, 0, 0.72);
+}
+
+.dr-color-mark .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Automatic, where that means the plain icon: the icon on a plain dot. */
+.dr-color-dot.is-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-color-dot.is-icon .dr-color-mark {
+  color: var(--text-muted);
+}
+
+.dr-color-preview.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-muted);
+  box-shadow: none;
+}
+
+.dr-color-preview .dr-card-glyph .svg-icon {
+  width: 30px;
+  height: 30px;
+}
+
+/* The custom swatch starts empty: a ring with a plus, until a colour is picked. */
+.dr-color-swatch.is-custom .dr-color-dot:not(.is-tinted) {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--text-faint);
+}
+
+.dr-color-swatch.is-custom .dr-color-dot:not(.is-tinted) .dr-color-mark {
+  color: var(--text-muted);
+}
+
+.dr-color-swatches .dr-color-input {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Arranging by drag ------------------------------------------------------------
+ *
+ * A line shows where a dragged note or pin will land, before or after
+ * the one it's over.
+ */
+
+.dr-track.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--interactive-accent);
+}
+
+.dr-track.is-drop-after {
+  box-shadow: inset 0 -2px 0 var(--interactive-accent);
+}
+
+.dr-card.is-drop-before {
+  box-shadow: -3px 0 0 var(--interactive-accent);
+}
+
+.dr-card.is-drop-after {
+  box-shadow: 3px 0 0 var(--interactive-accent);
+}
+
+.dr-card.is-dragging {
+  opacity: 0.4;
+}
+
+/* Editing an album ---------------------------------------------------------------
+ *
+ * The page stays itself, with its names turned into fields: the title,
+ * each note, each subfolder's heading. A handle to drag by leads each
+ * row, and moving and deleting sit at its end.
+ */
+
+.dr-detail.is-editing .dr-detail-title.dr-edit-name {
+  width: 100%;
+  height: auto;
+  margin: -4px 0 0 -8px;
+  padding: 2px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-form-field, transparent);
+  font-family: inherit;
+}
+
+.dr-art-tools {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.dr-art-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 100px;
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dr-art-edit .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dr-detail-action.is-primary {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+}
+
+.dr-track.is-editing {
+  gap: 10px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  cursor: default;
+}
+
+.dr-track.is-editing .dr-edit-name,
+.dr-disc.is-editing .dr-edit-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s, 4px);
+  background-color: transparent;
+  font-family: inherit;
+}
+
+.dr-track.is-editing .dr-edit-name:focus,
+.dr-disc.is-editing .dr-edit-name:focus {
+  border-color: var(--background-modifier-border-focus);
+  background-color: var(--background-modifier-form-field, transparent);
+}
+
+.dr-disc.is-editing .dr-edit-name {
+  height: 28px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-edit-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  height: 32px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-faint);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dr-edit-grip .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-tracks.is-sorting,
+.dr-tracks.is-sorting * {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dr-edit-tools {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.dr-edit-tool {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.dr-edit-tool.mod-warning {
+  color: var(--text-error, var(--color-red));
+}
+
+.dr-track.is-editing + .dr-track::before {
+  left: 80px;
+}
+
+@media (any-hover: hover) {
+  .dr-track.is-editing:hover {
+    background-color: transparent;
+  }
+
+  .dr-edit-grip:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-art-edit:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.dr-edit-grip:focus-visible,
+.dr-art-edit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Property tools ------------------------------------------------------------------ */
+
+.dr-bulk-section.is-hidden {
+  display: none;
+}
+
+.dr-bulk-intro {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-bulk-checks {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+}
+
+.dr-bulk-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-bulk-check-row + .dr-bulk-check-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-bulk-check-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-bulk-check-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-bulk-check-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-check-count {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-bulk-missing {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dr-bulk-missing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-missing-row .dr-bulk-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-missing-row input {
+  width: 100%;
+}
+
+.dr-bulk-missing-row.is-done input {
+  opacity: 0.5;
+}
+
+.dr-bulk-missing-row.is-done .dr-bulk-note::after {
+  content: "  \2713";
+  color: var(--text-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-check-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+body.is-phone .dr-bulk-missing-row {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+/* Editing on a phone: the tools stay, the album columns go. */
+body.is-phone .dr-track.is-editing .dr-track-num {
+  display: none;
+}
+
+/* Canvas legend -------------------------------------------------------------------
+ *
+ * A glass card in the canvas's top-left corner: each colour the cards
+ * use, a name typed beside it, and how many cards have it. Picking one
+ * fades the rest of the canvas back.
+ */
+
+.dr-canvas-host {
+  position: relative;
+}
+
+.dr-legend {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  width: 232px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 14px;
+  background-color: var(--glass-solid, var(--background-secondary));
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  font-size: var(--font-ui-small);
+}
+
+.dr-legend.is-hidden {
+  display: none;
+}
+
+.dr-legend.is-collapsed {
+  width: auto;
+}
+
+.dr-legend-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 8px;
+  border-radius: 9px;
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  cursor: pointer;
+}
+
+.dr-legend-head:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-legend-title {
+  flex: 1 1 auto;
+}
+
+.dr-legend-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.dr-legend-dots .dr-legend-dot {
+  width: 9px;
+  height: 9px;
+}
+
+.dr-legend-chevron {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.dr-legend-chevron .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-legend-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.dr-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dr-legend-row.is-focused {
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-legend-dot {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 100px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+.dr-legend-dot.is-none {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--text-faint);
+}
+
+.dr-legend-row .dr-legend-dot:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-legend-row.is-focused .dr-legend-dot {
+  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 3.5px var(--text-normal);
+}
+
+/* A name reads as plain text until it's clicked into. */
+.dr-legend .dr-legend-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-legend .dr-legend-name:focus {
+  border-color: var(--background-modifier-border-focus);
+  background-color: var(--background-modifier-form-field);
+}
+
+.dr-legend .dr-legend-name::placeholder {
+  color: var(--text-faint);
+}
+
+.dr-legend-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-legend-empty,
+.dr-legend-all {
+  padding: 6px 8px 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-legend-all {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-legend-row:hover,
+  .dr-legend-head:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-legend-all:hover {
+    text-decoration: underline;
+  }
+}
+
+/* A colour picked: every other card, and the arrows, fade back. */
+.dr-canvas-focus .canvas-node {
+  transition: opacity 160ms ease;
+}
+
+.dr-canvas-focus .canvas-node:not(.dr-legend-match) {
+  opacity: 0.18;
+}
+
+.dr-canvas-focus .canvas-edges {
+  opacity: 0.3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-canvas-focus .canvas-node {
+    transition: none;
+  }
+}
+
+.dr-legend-control .canvas-control-item.is-active {
+  color: var(--text-accent);
+}
+
+/* Centred text in a canvas card: read, and while it's being written. */
+.canvas-node.dr-text-center .markdown-rendered,
+.canvas-node.dr-text-center .markdown-preview-view,
+.canvas-node.dr-text-center .cm-content,
+.canvas-node.dr-text-center .cm-line {
+  text-align: center;
+}
+
+.canvas-node.dr-text-center .markdown-rendered img {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.dr-align-button.is-active {
+  color: var(--text-accent);
+}
