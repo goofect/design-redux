@@ -220,6 +220,26 @@ function onActivate(el, handler, space = true) {
   });
 }
 
+/** When, in the spirit of a track length: a glance, not a date. */
+function relativeDay(time) {
+  const day = 86400000;
+  const now = new Date();
+  const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  if (time >= midnight) return 'Today';
+  if (time >= midnight - day) return 'Yesterday';
+  const days = Math.floor((midnight - time) / day) + 1;
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) {
+    const weeks = Math.round(days / 7);
+    return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+  }
+  return new Date(time).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 /** The icon for a file, by what kind of thing it is. */
 function iconForFile(file) {
   if (file.extension === 'base') return 'layout-list';

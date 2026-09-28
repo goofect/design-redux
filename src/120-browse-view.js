@@ -2277,22 +2277,7 @@ class BrowseView extends ItemView {
 
   /** Short, in the spirit of a track length: a glance, not a date. */
   relative(mtime) {
-    const day = 86400000;
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    if (mtime >= midnight) return 'Today';
-    if (mtime >= midnight - day) return 'Yesterday';
-    const days = Math.floor((midnight - mtime) / day) + 1;
-    if (days < 7) return `${days} days ago`;
-    if (days < 30) {
-      const weeks = Math.round(days / 7);
-      return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-    }
-    return new Date(mtime).toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return relativeDay(mtime);
   }
 
   /** A note's property values, flattened for matching against. */

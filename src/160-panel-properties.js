@@ -37,6 +37,13 @@ class PropertiesSection extends PanelSection {
     row.setAttribute('data-property-type', type);
     row.dataset.key = key;
 
+    // A grip at the row's edge, shown when pointed at: the plain way to
+    // move it. The type icon still drags too, as in Obsidian's own block.
+    const grip = row.createDiv({ cls: 'dr-row-grip' });
+    grip.setAttribute('aria-hidden', 'true');
+    setIcon(grip, 'grip-vertical');
+    this.makeDraggable(parentEl, row, grip);
+
     const keyEl = row.createDiv({ cls: 'dr-key' });
     // The type icon is the row's handle, as in Obsidian's own block:
     // press and drag to move the property, click for its menu.
@@ -76,6 +83,52 @@ class PropertiesSection extends PanelSection {
     const valueEl = row.createDiv({ cls: 'dr-value' });
     if (!this.renderWidget(valueEl, key, value, type)) {
       this.renderFallback(valueEl, key, value);
+    }
+
+    // Taken off in one press, with an Undo, rather than from a menu.
+    const remove = row.createDiv({ cls: 'clickable-icon dr-row-remove' });
+    remove.setAttribute('role', 'button');
+    remove.setAttribute('tabindex', '0');
+    remove.setAttribute('aria-label', `Remove ${key}`);
+    setIcon(remove, 'x');
+    onActivate(remove, () => this.remove(key));
+  }
+
+  /**
+   * Take a property off the note, saying so with an Undo that puts it
+   * back — its value and its place — since the note has no undo of its
+   * own for this.
+   */
+  async remove(key) {
+    const file = this.file;
+    const fm = this.frontmatter;
+    const order = Object.keys(fm).filter((k) => k !== 'position');
+    const value = fm[key] === undefined ? null : JSON.parse(JSON.stringify(fm[key]));
+    await this.write(key, undefined);
+    if (typeof this.plugin.offerUndo !== 'function') return;
+    this.plugin.offerUndo(`Removed “${key}”.`, () => this.putBack(file, key, value, order));
+  }
+
+  /** A removed property back, where it was — unless one of that name has been added since. */
+  async putBack(file, key, value, order) {
+    try {
+      await this.app.fileManager.processFrontMatter(file, (fm) => {
+        if (Object.keys(fm).some((k) => k.toLowerCase() === key.toLowerCase())) return;
+        fm[key] = value;
+        const keys = Object.keys(fm).filter((k) => k !== 'position');
+        const sorted = order
+          .filter((k) => keys.indexOf(k) !== -1)
+          .concat(keys.filter((k) => order.indexOf(k) === -1));
+        const entries = sorted.map((k) => [k, fm[k]]);
+        keys.forEach((k) => delete fm[k]);
+        entries.forEach(([k, v]) => {
+          fm[k] = v;
+        });
+      });
+      if (this.file === file) this.afterWrite(file);
+    } catch (err) {
+      console.error('Design Redux: could not put the property back', err);
+      new Notice('Could not put the property back.');
     }
   }
 
@@ -346,7 +399,7 @@ class PropertiesSection extends PanelSection {
       item
         .setTitle('Remove property')
         .setIcon('trash-2')
-        .onClick(() => this.write(key, undefined))
+        .onClick(() => this.remove(key))
     );
 
     const r = anchorEl.getBoundingClientRect();
