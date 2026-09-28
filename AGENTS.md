@@ -25,7 +25,8 @@ Coffee N' Christmas.
   in for). `npm test`, or `node tests/run.js qol album` for just some.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest. They can't run in a sandbox without Obsidian's downloads.
+  and the latest. They run in a sandbox too wherever GitHub's release downloads
+  are reachable (that's where Obsidian comes from): under `xvfb-run -a`.
 
 ## How the code is laid out
 
@@ -57,8 +58,9 @@ Coffee N' Christmas.
 
 ## Working here
 
-- Keep testing light: run only the suites a change touches. The author has
-  asked for less testing to save usage.
+- Test fully: every simulation suite (`npm test`) and the Obsidian tests, on
+  the oldest supported version and the latest, for each change. CI keeps only a
+  few screenshots.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
 - CI results (summary, test output, a few screenshots from the latest real

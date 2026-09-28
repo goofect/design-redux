@@ -269,22 +269,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 }
 
 .dr-props-popup .dr-rows .dr-row + .dr-row {
-  border-top: 1px solid color-mix(in srgb, var(--text-normal) 8%, transparent);
-}
-
-/* The properties as one rounded card, as an info sheet groups its fields,
-   with Add property as the card's last line. */
-.dr-props-popup .dr-properties {
-  margin-top: 10px;
-  padding: 0 12px;
-  border-radius: 12px;
-  background-color: color-mix(in srgb, var(--text-normal) 4.5%, transparent);
-}
-
-.dr-props-popup .dr-properties + .dr-section {
-  margin-top: 12px;
-  padding-top: 0;
-  border-top: none;
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 /* -- grip and remove ---------------------------------------------------
@@ -301,7 +286,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 .dr-props-popup .dr-row-grip {
   position: absolute;
   top: 10px;
-  left: -11px;
+  left: -13px;
   display: flex;
   color: var(--text-faint);
   opacity: 0;
@@ -580,15 +565,9 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 7px 2px;
-  border-top: 1px solid color-mix(in srgb, var(--text-normal) 8%, transparent);
-  color: var(--text-accent);
-}
-
-/* With nothing above it, it's the card's first line. */
-.dr-props-popup .dr-rows:empty + .dr-add,
-.dr-props-popup .dr-rows:has(> .dr-empty:only-child) + .dr-add {
-  border-top: none;
+  margin-top: 2px;
+  padding: 6px 4px;
+  color: var(--text-faint);
 }
 
 .dr-props-popup .dr-add-icon {
@@ -623,8 +602,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-props-popup .dr-add input[type="text"]::placeholder {
-  color: var(--text-accent);
-  opacity: 0.85;
+  color: var(--text-faint);
 }
 
 @media (any-hover: hover) {
@@ -655,61 +633,17 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   overflow-y: auto;
 }
 
-/* Each a small row with its artwork, as tracks are listed with theirs. */
 .dr-mention {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 4px 6px;
-  border-radius: 8px;
+  justify-content: space-between;
+  gap: 8px;
+  margin-left: calc(var(--dr-label-width) + var(--dr-gutter));
+  padding: 3px 6px;
+  border-radius: var(--radius-s, 4px);
   color: var(--text-normal);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
-}
-
-.dr-mention-art {
-  position: relative;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  overflow: hidden;
-  border-radius: 5px;
-  background-color: var(--background-modifier-hover);
-}
-
-.dr-mention-art img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-mention-art.is-blank {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dr-mention-art .dr-card-glyph .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.dr-mention-art .dr-gen-initials {
-  font-size: 11px;
-}
-
-.dr-mention-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.dr-mention-where {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-  font-size: 0.92em;
 }
 
 .dr-mention:focus-visible {
@@ -728,7 +662,6 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: var(--font-medium, 500);
 }
 
 .dr-mention-count {
@@ -1019,11 +952,6 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.dr-detail-glow.is-mosaic {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
 }
 
 .dr-detail-glow .dr-card-glyph,
@@ -2148,7 +2076,9 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 2px 2px;
+  padding: 0 2px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* The cover, as an info sheet shows the artwork beside the title. */
@@ -5167,12 +5097,10 @@ body.dr-strip-flat .dr-strip {
 
 /* Artwork where there's none, and the finishing touches ----------------------
  *
- * A note or folder with no cover gets its album's, a mosaic of its notes',
- * or — only with nothing at all to go on — its glyph on a soft gradient in a
- * colour from its album's name, so a shelf of notes never reads as a row of
- * grey boxes. The rest follows the reference: round buttons over a cover
- * when it's pointed at, an album's small print under its last track, and a
- * line along the strip's foot for how far through the note you are.
+ * 'The icon on a soft colour': a glyph on a gentle gradient in a colour
+ * picked from the note or folder's name, rather than a grey box. The rest
+ * follows the reference: round buttons over a cover when it's pointed at,
+ * and an album's small print under its last track.
  */
 
 [class].is-blank.is-hued {
@@ -5201,21 +5129,6 @@ body.dr-strip-flat .dr-strip {
 .theme-dark [class].is-blank.is-hued .dr-card-glyph {
   color: hsl(var(--dr-gen-h, 210) 40% 78%);
   opacity: 0.75;
-}
-
-/* Four covers, two by two, as a playlist's artwork is made. */
-.is-mosaic {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-}
-
-.is-mosaic img {
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  object-fit: cover;
 }
 
 /* -- round buttons on a tile's cover -- */
@@ -5308,77 +5221,8 @@ body.is-phone .dr-td-length {
   display: none;
 }
 
-/* -- how far through the note: a line along the strip's foot -- */
-
-.dr-strip-progress {
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: 4px;
-  height: 2px;
-  overflow: hidden;
-  border-radius: 2px;
-  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
-  opacity: 0;
-  transition: opacity 200ms ease;
-  pointer-events: none;
-}
-
-.dr-strip-progress::after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(var(--dr-progress, 0) * 100%);
-  border-radius: 2px;
-  background-color: var(--interactive-accent);
-}
-
-.dr-strip.has-progress .dr-strip-progress {
-  opacity: 1;
-}
-
-/* -- the popup's cover, which changes the note's -- */
-
-.dr-props-art {
-  cursor: pointer;
-}
-
-.dr-props-art-edit {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.4);
-  color: #fff;
-  opacity: 0;
-  transition: opacity 120ms ease;
-}
-
-.dr-props-art-edit .svg-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.dr-props-art:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-.dr-props-art:focus-visible .dr-props-art-edit {
-  opacity: 1;
-}
-
-@media (any-hover: hover) {
-  .dr-props-art:hover .dr-props-art-edit {
-    opacity: 1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .dr-card-buttons,
-  .dr-strip-progress,
-  .dr-props-art-edit,
   .dr-detail-action {
     transition: none;
   }
@@ -5386,24 +5230,20 @@ body.is-phone .dr-td-length {
 
 /* Quiet links ------------------------------------------------------------------
  *
- * A link the graph isn't told about: still the link colour, so it reads as
- * one, but dotted and a shade softer, so it's plain which kind it is.
+ * A link kept off the graph and out of backlinks: drawn as any link is,
+ * but with a dotted underline, so it's plain which kind it is. Where
+ * Obsidian would list its stand-in as a note to create, that's hidden.
  */
 
-.dr-quiet-link,
 .markdown-rendered .internal-link.dr-quiet-link,
-.cm-s-obsidian span.cm-hmd-internal-link.dr-quiet-link {
-  color: color-mix(in srgb, var(--link-color, var(--text-accent)) 78%, var(--text-muted));
+.cm-s-obsidian span.cm-hmd-internal-link.dr-quiet-link,
+.dr-quiet-link {
   text-decoration-line: underline;
   text-decoration-style: dotted;
-  text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
   cursor: pointer;
 }
 
-@media (any-hover: hover) {
-  .dr-quiet-link:hover,
-  .markdown-rendered .internal-link.dr-quiet-link:hover {
-    color: var(--link-color-hover, var(--text-accent-hover));
-  }
+.outgoing-link-item.dr-quiet-hidden {
+  display: none !important;
 }

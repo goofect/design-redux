@@ -24,12 +24,18 @@ class CoverImages extends Feature {
         suggest: 'property',
       },
       {
+        key: 'coverFromFolder',
+        name: 'Use the folder\'s cover',
+        desc: 'A note without a cover of its own shows the cover of the folder it\'s in, as a song shows its album\'s.',
+      },
+      {
         key: 'coverFallback',
         type: 'dropdown',
         name: 'Without a cover',
         desc: 'What a note or folder without a cover image shows. One can still have a colour of its own: right-click it and choose Cover colour.',
         options: {
           icon: 'The icon',
+          soft: 'The icon on a soft colour',
           name: 'A colour from each name',
           accent: 'The accent colour',
           custom: 'One colour for all',

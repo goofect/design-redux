@@ -143,92 +143,41 @@ function blankArt(el, glyph, hue) {
   setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph);
 }
 
-/* -- artwork, found the way the reference finds it ------------------- */
+/* -- artwork, as the settings ask for it -------------------------------- */
 
-/**
- * The cover of the album a note is on: its folder's, or — for a folder
- * that's a disc of a bigger album — the nearest one above it that has
- * one, as a song shows its album's art.
- */
-function albumCover(plugin, folder) {
-  for (let f = folder, depth = 0; f && !(f.isRoot && f.isRoot()) && depth < 8; f = f.parent, depth++) {
-    const src = plugin.folderCoverSrc(f);
-    if (src) return src;
-  }
-  return null;
+/** The name a placeholder's soft colour comes from — only when that's the choice. */
+function softHue(settings, name) {
+  return settings.coverFallback === 'soft' ? name : null;
 }
 
 /**
- * For a folder with no cover of its own: the covers of the notes in it,
- * and in the folders inside it — up to four, as a playlist's artwork is
- * made from the albums on it. Only the first few dozen notes are read.
- */
-function mosaicCovers(plugin, folder, max = 4) {
-  const found = [];
-  let looked = 0;
-  const key = plugin.settings.coverProperty;
-  const walk = (f) => {
-    const kids = (f.children || []).slice().sort((a, b) => byName(a.name, b.name));
-    for (const c of kids) {
-      if (found.length >= max || looked >= 60) return;
-      if (!(c instanceof TFile) || c.extension !== 'md' || plugin.isFolderNote(c)) continue;
-      looked++;
-      const src = resolveCover(plugin.app, c, key);
-      if (src && found.indexOf(src) === -1) found.push(src);
-    }
-    kids.forEach((c) => {
-      if (c instanceof TFolder && found.length < max && looked < 60) walk(c);
-    });
-  };
-  walk(folder);
-  return found;
-}
-
-/**
- * A note's artwork: its own cover, or a colour chosen for it; else its
- * album's cover; else a placeholder in its album's colour, so the notes
- * of one folder look like they belong together.
+ * A note's artwork: its own cover, or a colour chosen for it; then, with
+ * 'Use the folder's cover' on, the cover of the folder it's directly in,
+ * as a song shows its album's; then the icon — on a soft colour picked
+ * from the note's own name, where that's the choice.
  */
 function drawNoteArt(plugin, el, file) {
   const settings = plugin.settings;
   const md = file.extension === 'md';
-  const album = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
-  const hue = album ? album.name : file.basename;
+  const hue = softHue(settings, file.basename);
   const src = md ? resolveCover(plugin.app, file, settings.coverProperty) : null;
   const gen = md ? coverGen(settings, file.basename, file.path) : null;
   if (src || gen) {
     fillArt(el, src, iconForFile(file), gen, hue);
     return;
   }
-  const shared = album ? albumCover(plugin, album) : null;
-  if (shared) el.addClass('is-album-art');
-  fillArt(el, shared, iconForFile(file), null, hue);
+  const folder = settings.coverFromFolder && file.parent && !(file.parent.isRoot && file.parent.isRoot())
+    ? file.parent
+    : null;
+  fillArt(el, folder ? plugin.folderCoverSrc(folder) : null, iconForFile(file), null, hue);
 }
 
-/**
- * A folder's artwork: its cover, or a colour chosen for it; else a
- * mosaic of its notes' covers; else one of them; else a placeholder.
- */
+/** A folder's artwork: its cover, or a colour chosen for it, or the icon as the settings say. */
 function drawFolderArt(plugin, el, folder) {
   const root = !!(folder.isRoot && folder.isRoot());
   const name = root ? plugin.app.vault.getName() : folder.name;
-  const src = plugin.folderCoverSrc(folder);
   const gen = coverGen(plugin.settings, name, folder.path);
-  if (src || gen) {
-    fillArt(el, src, 'folder', gen, name);
-    return;
-  }
-  const covers = mosaicCovers(plugin, folder);
-  if (covers.length < 4) {
-    fillArt(el, covers[0] || null, 'folder', null, name);
-    return;
-  }
-  el.addClass('is-mosaic');
-  covers.forEach((c) => {
-    const img = el.createEl('img');
-    img.src = c;
-    img.alt = '';
-  });
+  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, softHue(plugin.settings, name));
 }
 
 /** A number from a name, stable between runs: the same name, the same colour. */
@@ -338,8 +287,9 @@ function ownTint(settings, path) {
 }
 
 /**
- * What a missing cover gets from settings alone: 'icon' for the plain
- * icon, 'accent', a colour, or null for a colour picked from the name.
+ * What a missing cover gets from settings alone: 'icon' for the icon —
+ * plain, or on a soft colour, which is drawn with it rather than made
+ * into a cover — 'accent', a colour, or null for a colour from the name.
  */
 function fallbackTint(settings) {
   const style = settings.coverFallback || 'icon';

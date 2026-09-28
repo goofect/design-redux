@@ -26,7 +26,7 @@ const SETTINGS_TABS = [
       { title: 'Lists', keys: ['defaultSort', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tableColumns', 'categoryProperty'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
-      { title: 'Covers', keys: ['coverProperty', 'coverFallback', 'generatedCoverColor'] },
+      { title: 'Covers', keys: ['coverProperty', 'coverFromFolder', 'coverFallback', 'generatedCoverColor'] },
     ],
   },
   {

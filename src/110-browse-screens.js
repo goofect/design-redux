@@ -614,9 +614,11 @@ class HomeScreen extends BrowseScreen {
       card.setAttribute('aria-label', `${caption}: ${file.basename}`);
       card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
-      const body = card.createDiv({ cls: 'dr-pick-body is-lit' });
+      const body = card.createDiv({ cls: 'dr-pick-body' });
       const glow = body.createDiv({ cls: 'dr-pick-glow' });
       drawNoteArt(this.plugin, glow, file);
+      // White type on the cover's colours; a plain icon has none to give.
+      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued')));
       const art = body.createDiv({ cls: 'dr-pick-art' });
       drawNoteArt(this.plugin, art, file);
 

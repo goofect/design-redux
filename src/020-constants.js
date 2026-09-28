@@ -77,8 +77,11 @@ const DEFAULTS = {
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
   // What stands in for a missing cover: 'icon', the folder or note's
-  // icon; or a gradient with initials, coloured 'name', 'accent' or 'custom'.
+  // icon; 'soft', that icon on a soft colour from its name; or a gradient
+  // with initials, coloured 'name', 'accent' or 'custom'.
   coverFallback: 'icon',
+  // A note without a cover shows the cover of the folder it's in.
+  coverFromFolder: false,
   // The one colour used when the fallback is 'custom'.
   generatedCoverColor: '#fa2d48',
   // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
@@ -96,8 +99,9 @@ const DEFAULTS = {
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 1,
   graphProperties: true,
-  // Links written [[Note|~]] work as links but aren't drawn in the graph.
-  quietLinks: true,
+  // Links written [[[Note]]] open their note but stay off the graph and
+  // out of backlinks.
+  quietLinks: false,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
 };

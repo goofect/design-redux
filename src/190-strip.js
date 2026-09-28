@@ -40,15 +40,6 @@ class ContextStrip extends Feature {
   constructor(plugin) {
     super(plugin);
     this.el = null;
-    this.scrollHost = null;
-    this.scrollFrame = 0;
-    this.onScroll = () => {
-      if (this.scrollFrame) return;
-      this.scrollFrame = window.requestAnimationFrame(() => {
-        this.scrollFrame = 0;
-        this.measureScroll();
-      });
-    };
   }
 
   settingsSchema() {
@@ -181,7 +172,6 @@ class ContextStrip extends Feature {
   }
 
   disable() {
-    this.watchScroll(null);
     document.body.removeClass('dr-strip-active');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
     if (this.el) this.el.remove();
@@ -240,41 +230,9 @@ class ContextStrip extends Feature {
     if (file) {
       this.renderNow(this.el, file);
       this.renderActions(this.el, file, leaf);
-      this.el.createDiv({ cls: 'dr-strip-progress' });
     } else {
       this.renderScreen(this.el, view);
     }
-    this.watchScroll(file ? view : null);
-  }
-
-  /**
-   * How far down the note the page is, as a line along the strip's foot
-   * — the way a player's bar shows how far into the song it is. The
-   * note's scrolling is listened to where it happens, inside its view.
-   */
-  watchScroll(view) {
-    const host = view && view.containerEl ? view.containerEl : null;
-    if (this.scrollHost !== host) {
-      if (this.scrollHost) this.scrollHost.removeEventListener('scroll', this.onScroll, true);
-      this.scrollHost = host;
-      if (host) host.addEventListener('scroll', this.onScroll, true);
-    }
-    this.measureScroll();
-    // A note just opened hasn't been laid out yet: measured again once it has.
-    if (host) window.setTimeout(() => this.measureScroll(), 400);
-  }
-
-  measureScroll() {
-    if (!this.el) return;
-    const host = this.scrollHost;
-    // Reading view and the editor each scroll themselves; whichever is showing.
-    const scroller = host
-      ? Array.from(host.querySelectorAll('.markdown-preview-view, .cm-scroller')).find((el) => el.clientHeight > 0)
-      : null;
-    const room = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
-    this.el.toggleClass('has-progress', room > 8);
-    const part = room > 8 ? Math.min(1, Math.max(0, scroller.scrollTop / room)) : 0;
-    this.el.style.setProperty('--dr-progress', part.toFixed(4));
   }
 
   /**

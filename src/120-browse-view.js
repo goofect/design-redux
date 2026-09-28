@@ -606,7 +606,7 @@ class BrowseView extends ItemView {
 
     const body = block.createDiv({ cls: 'dr-album-body' });
     const art = body.createDiv({ cls: 'dr-album-art' });
-    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), String(group.value));
+    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), softHue(this.plugin.settings, String(group.value)));
 
     const list = body.createDiv({ cls: 'dr-tracks' });
     roveFocus(list, '.dr-track');
@@ -921,7 +921,7 @@ class BrowseView extends ItemView {
     const art = head.createDiv({ cls: 'dr-detail-art' });
     [glow, art].forEach((el) => {
       if (folder) drawFolderArt(this.plugin, el, folder);
-      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, spec.title);
+      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, softHue(this.plugin.settings, spec.title));
     });
     if (spec.onArtMenu) {
       onContextMenu(art, (evt) => spec.onArtMenu(evt));

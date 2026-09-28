@@ -219,13 +219,7 @@ class MentionsSection extends PanelSection {
     const row = list.createDiv({ cls: 'dr-mention' });
     row.setAttribute('role', 'button');
     row.setAttribute('tabindex', '0');
-    // Each note with its artwork and where it lives, as a list of tracks
-    // shows each one's album.
-    drawNoteArt(this.plugin, row.createDiv({ cls: 'dr-mention-art' }), item.file);
-    const text = row.createDiv({ cls: 'dr-mention-text' });
-    text.createDiv({ cls: 'dr-mention-name', text: item.file.basename });
-    const where = item.file.parent && !(item.file.parent.isRoot && item.file.parent.isRoot()) ? item.file.parent.name : '';
-    if (where) text.createDiv({ cls: 'dr-mention-where', text: where });
+    row.createSpan({ cls: 'dr-mention-name', text: item.file.basename });
     if (item.count > 1) {
       row.createSpan({ cls: 'dr-mention-count', text: String(item.count) });
     }

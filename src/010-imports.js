@@ -21,6 +21,7 @@ const {
   editorInfoField,
   Scope,
   AbstractInputSuggest,
+  EditorSuggest,
   MenuItem,
   apiVersion,
 } = require('obsidian');

@@ -234,43 +234,14 @@ class PropertiesPanel extends Feature {
   renderHead() {
     const file = this.file;
     const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
-    // The cover stands for the cover property, whose row is left out:
-    // clicking it changes it, as artwork is changed in an info window.
     const art = head.createDiv({ cls: 'dr-props-art' });
     drawNoteArt(this.plugin, art, file);
-    art.setAttribute('role', 'button');
-    art.setAttribute('tabindex', '0');
-    art.setAttribute('aria-label', 'Cover');
-    setIcon(art.createDiv({ cls: 'dr-props-art-edit' }), 'image');
-    onActivate(art, (evt) => this.coverMenu(evt, file));
 
     const info = head.createDiv({ cls: 'dr-props-info' });
     info.createDiv({ cls: 'dr-props-title', text: file.basename });
     const lead = leadProperty(this.app, file, false);
     if (lead) info.createDiv({ cls: 'dr-props-lead', text: lead });
     this.fillMeta(info.createDiv({ cls: 'dr-props-meta' }), file);
-  }
-
-  /** Set, change or take off the note's cover, or choose its colour. */
-  coverMenu(evt, file) {
-    const menu = new Menu();
-    const own = resolveCover(this.app, file, this.settings.coverProperty);
-    menu.addItem((item) =>
-      item
-        .setTitle(own ? 'Change cover image…' : 'Set cover image…')
-        .setIcon('image')
-        .onClick(() => this.plugin.setNoteCover(file))
-    );
-    if (own) {
-      menu.addItem((item) =>
-        item.setTitle('Remove cover image').setIcon('image-off').onClick(() => this.plugin.clearNoteCover(file))
-      );
-    } else {
-      menu.addItem((item) =>
-        item.setTitle('Cover colour…').setIcon('palette').onClick(() => this.plugin.chooseCoverColor(file))
-      );
-    }
-    showMenuAt(menu, evt);
   }
 
   /** "Folder · 4 min read · Edited Yesterday". The length arrives once it's counted. */

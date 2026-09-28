@@ -235,6 +235,7 @@ class CoverColorModal extends Modal {
     if (style === 'accent') return ' · the accent colour';
     if (style === 'custom') return ' · the colour in settings';
     if (style === 'name') return ' · picked from the name';
+    if (style === 'soft') return ' · the icon on a soft colour';
     return ' · the icon';
   }
 

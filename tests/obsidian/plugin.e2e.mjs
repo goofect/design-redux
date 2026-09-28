@@ -110,6 +110,7 @@ describe('Design Redux in Obsidian', function () {
         corePlugins: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
         canvasOn: has(() => app.internalPlugins.getEnabledPluginById('canvas')),
         settingsWindow: has(() => typeof app.setting.openTabById === 'function'),
+        editorSuggestList: has(() => Array.isArray(app.workspace.editorSuggest.suggests)),
         modalKeys: has(() => new obsidian.Modal(app).scope instanceof obsidian.Scope),
         menuItems: has(() => Array.isArray(new obsidian.Menu().items)),
       };
@@ -341,21 +342,160 @@ describe('Design Redux in Obsidian', function () {
     await shot('home');
   });
 
-  it('leaves quiet links out of the graph', async function () {
-    const lines = await browser.executeObsidian(async ({ app }) => {
-      const note = await app.vault.create('Quiet.md', 'In passing [[Anarchy|~]], and plainly [[Deterrence]].\n');
+  it('draws quiet links, keeps them off the graph and backlinks, and follows renames', async function () {
+    this.timeout(180000);
+    const backlinked = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      plugin.settings.quietLinks = true;
+      await plugin.saveSettings();
+      await app.vault.create('Target one.md', 'One.\n');
+      await app.vault.create('Target two.md', 'Two.\n');
+      await app.vault.create(
+        'Quiet.md',
+        '---\nrelated: "[[[Target two]]]"\n---\nIn passing [[[Politics/Anarchy]]], with words [[[Target one|the first]]], [[[Not yet written]]], and plainly [[Politics/Deterrence]].\n'
+      );
+      await new Promise((r) => setTimeout(r, 1500));
+      const found = app.metadataCache.getBacklinksForFile(app.vault.getFileByPath('Politics/Anarchy.md'));
+      const from = found && found.data ? (found.data instanceof Map ? Array.from(found.data.keys()) : Object.keys(found.data)) : [];
+      return from.includes('Quiet.md');
+    });
+    expect(backlinked).toBe(false);
+
+    // Reading view: the note each names, dotted, and no stray bracket.
+    const reading = await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.setViewState({ type: 'markdown', state: { file: 'Quiet.md', mode: 'preview' } });
+      await new Promise((r) => setTimeout(r, 1200));
+      const p = leaf.view.containerEl.querySelector('.markdown-preview-view p');
+      return {
+        links: Array.from(p.querySelectorAll('a.internal-link')).map((a) => [a.getAttribute('data-href'), a.textContent, a.classList.contains('dr-quiet-link')]),
+        text: p.textContent,
+      };
+    });
+    expect(reading.links).toEqual([
+      ['Politics/Anarchy', 'Politics/Anarchy', true],
+      ['Target one', 'the first', true],
+      ['Not yet written', 'Not yet written', true],
+      ['Politics/Deterrence', 'Politics/Deterrence', false],
+    ]);
+    expect(reading.text).not.toContain(']');
+
+    // Live Preview: drawn the same, and a missing note is made on click.
+    const live = await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.setViewState({ type: 'markdown', state: { file: 'Quiet.md', mode: 'source', source: false } });
+      await new Promise((r) => setTimeout(r, 1000));
+      leaf.view.editor.setCursor({ line: 0, ch: 0 });
+      await new Promise((r) => setTimeout(r, 400));
+      return Array.from(leaf.view.containerEl.querySelectorAll('.cm-content .dr-quiet-link')).map((e) => e.textContent);
+    });
+    expect(live).toEqual(['Politics/Anarchy', 'the first', 'Not yet written']);
+    const missing = await browser.$('.cm-content .dr-quiet-link[data-href="Not yet written"]');
+    await missing.click();
+    await browser.pause(1000);
+    const made = await browser.executeObsidian(({ app }) => (app.workspace.getActiveFile() || {}).path);
+    expect(made).toBe('Not yet written.md');
+    await browser.executeObsidian(async ({ app }) => {
+      await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
       await new Promise((r) => setTimeout(r, 800));
+    });
+
+    // Obsidian's own properties block names the note, not the stand-in.
+    const property = await browser.executeObsidian(({ app }) => {
+      const leaf = app.workspace.getMostRecentLeaf(app.workspace.rootSplit);
+      const link = leaf.view.containerEl.querySelector('.metadata-container .internal-link.dr-quiet-link');
+      return link ? [link.getAttribute('data-href'), link.textContent] : null;
+    });
+    expect(property).toEqual(['Target two', 'Target two']);
+
+    // The graph: no quiet line, and no "[Name" stand-in.
+    const graph = await browser.executeObsidian(async ({ app }) => {
       app.commands.executeCommandById('graph:open');
       await new Promise((r) => setTimeout(r, 2500));
       const leaf = app.workspace.getLeavesOfType('graph')[0];
-      const found = leaf.view.renderer.links
-        .map((l) => `${l.source.id} -> ${l.target.id}`)
-        .filter((l) => l.startsWith('Quiet.md'));
+      const drawing = leaf.view.renderer;
+      const out = {
+        lines: drawing.links.map((l) => `${l.source.id} -> ${l.target.id}`).filter((l) => l.startsWith('Quiet.md')),
+        standIns: drawing.nodes.map((n) => n.id).filter((id) => id.startsWith('[')),
+      };
       leaf.detach();
-      await app.vault.delete(note);
-      return found;
+      return out;
     });
-    expect(lines).toEqual(['Quiet.md -> Politics/Deterrence.md']);
+    expect(graph).toEqual({ lines: ['Quiet.md -> Politics/Deterrence.md'], standIns: [] });
+
+    // The Outgoing links pane doesn't offer to make "[Name" notes.
+    const outgoing = await browser.executeObsidian(async ({ app }) => {
+      await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
+      const leaf = app.workspace.getRightLeaf(false);
+      await leaf.setViewState({ type: 'outgoing-link', state: { file: 'Quiet.md' } });
+      await new Promise((r) => setTimeout(r, 1500));
+      const shown = Array.from(leaf.view.containerEl.querySelectorAll('.outgoing-link-item'))
+        .filter((i) => getComputedStyle(i).display !== 'none')
+        .map((i) => i.textContent.trim());
+      leaf.detach();
+      return shown;
+    });
+    expect(outgoing.filter((t) => t.startsWith('['))).toEqual([]);
+
+    // After [[[, the plugin's own list; picking writes a quiet link.
+    await browser.executeObsidian(async ({ app, obsidian }) => {
+      await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
+      await new Promise((r) => setTimeout(r, 600));
+      const editor = app.workspace.getActiveViewOfType(obsidian.MarkdownView).editor;
+      const last = editor.lastLine();
+      editor.setCursor({ line: last, ch: editor.getLine(last).length });
+      editor.replaceSelection('\nTyped ');
+      editor.focus();
+    });
+    await browser.keys(['[', '[', '[', 'D', 'e', 't']);
+    await browser.pause(900);
+    const listed = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.suggestion-container .dr-quiet-suggest')).map((e) => e.textContent)
+    );
+    expect(listed.length).toBeGreaterThan(0);
+    await browser.keys(['Enter']);
+    await browser.pause(600);
+    const typed = await browser.executeObsidian(({ app, obsidian }) => {
+      const editor = app.workspace.getActiveViewOfType(obsidian.MarkdownView).editor;
+      return editor.getLine(editor.lastLine());
+    });
+    expect(typed).toBe('Typed [[[Deterrence]]]');
+
+    // Renames: at once where Obsidian updates links itself…
+    const updated = await browser.executeObsidian(async ({ app }) => {
+      const before = app.vault.getConfig('alwaysUpdateLinks');
+      app.vault.setConfig('alwaysUpdateLinks', true);
+      await app.fileManager.renameFile(app.vault.getFileByPath('Target one.md'), 'Target first.md');
+      await new Promise((r) => setTimeout(r, 1500));
+      app.vault.setConfig('alwaysUpdateLinks', before);
+      return app.vault.read(app.vault.getFileByPath('Quiet.md'));
+    });
+    expect(updated).toContain('[[[Target first|the first]]]');
+
+    // …and otherwise from a notice, when asked.
+    await browser.executeObsidian(async ({ app }) => {
+      app.vault.setConfig('alwaysUpdateLinks', false);
+      await app.fileManager.renameFile(app.vault.getFileByPath('Target two.md'), 'Target second.md');
+      await new Promise((r) => setTimeout(r, 1200));
+    });
+    const asked = await browser.execute(() => {
+      const button = Array.from(document.querySelectorAll('.notice .dr-undo')).find((a) => a.textContent === 'Update them');
+      if (button) button.click();
+      return !!button;
+    });
+    expect(asked).toBe(true);
+    await browser.pause(1200);
+    const updatedLater = await browser.executeObsidian(async ({ app, plugins }) => {
+      const text = await app.vault.read(app.vault.getFileByPath('Quiet.md'));
+      for (const p of ['Quiet.md', 'Target first.md', 'Target second.md', 'Not yet written.md']) {
+        const f = app.vault.getFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      plugins.designRedux.settings.quietLinks = false;
+      await plugins.designRedux.saveSettings();
+      return text;
+    });
+    expect(updatedLater).toContain('related: "[[[Target second]]]"');
   });
 
   after(async function () {
