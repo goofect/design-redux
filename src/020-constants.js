@@ -35,6 +35,9 @@ const DEFAULTS = {
   albumNoteLimit: 8,
   discNoteLimit: 10,
   albumColumns: 'domain, modified',
+  // What an album row ends with, where a track's length would be:
+  // 'time' to read it, 'words', or 'none'.
+  trackLength: 'time',
   defaultSort: 'name',
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
@@ -73,6 +76,9 @@ const DEFAULTS = {
   albumOrders: {},
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
+  // Up Next: notes queued to read, and the queue itself, by path.
+  upNext: true,
+  queue: [],
   // What stands in for a missing cover: 'icon', the folder or note's
   // icon; or a gradient with initials, coloured 'name', 'accent' or 'custom'.
   coverFallback: 'icon',

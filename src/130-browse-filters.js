@@ -109,6 +109,14 @@ class Library extends Feature {
         suggestExtra: ['modified', 'created', 'folder'],
       },
       {
+        key: 'trackLength',
+        type: 'dropdown',
+        showIf: 'library',
+        name: 'Note length',
+        desc: 'How long each note is, at the end of its row in a list. An album\'s header gives the total.',
+        options: LENGTH_STYLES,
+      },
+      {
         key: 'discNoteLimit',
         type: 'number',
         name: 'Notes per disc',
