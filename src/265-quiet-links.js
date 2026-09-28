@@ -37,6 +37,20 @@ function quietMatches(text) {
   return out;
 }
 
+/** A stand-in's name: one opening bracket, as a quiet link leaves in Obsidian's lists. */
+function isStandIn(name) {
+  const text = String(name || '');
+  return text.startsWith('[') && !text.startsWith('[[');
+}
+
+/** Whether an entry of Obsidian's [[ list or Quick switcher is a stand-in it offers to make. */
+function offersStandIn(item) {
+  if (!item) return false;
+  if (item.type === 'linktext') return isStandIn(item.path);
+  if (item.type === 'unresolved') return isStandIn(item.linktext);
+  return false;
+}
+
 /** "Note|words" or "Note#Heading" → { target, path, subpath, words }. */
 function splitQuiet(inner) {
   const bar = inner.indexOf('|');
@@ -510,6 +524,7 @@ class QuietLinks extends Feature {
     this.plugin.register(() => {
       this.unwrapGraphs();
       this.unwatchPanes();
+      this.unfilterLists();
     });
   }
 
@@ -540,6 +555,7 @@ class QuietLinks extends Feature {
     if (switched) this.refreshEditors();
     this.wrapGraphs(switched);
     this.watchPanes();
+    this.filterLists();
     if (switched) this.rerenderReading();
   }
 
@@ -549,7 +565,54 @@ class QuietLinks extends Feature {
     if (switched) this.refreshEditors();
     this.unwrapGraphs();
     this.unwatchPanes();
+    this.unfilterLists();
     if (switched && !this.plugin.unloading) this.rerenderReading();
+  }
+
+  /**
+   * Obsidian's own [[ list and its Quick switcher offer each stand-in —
+   * "[Anarchy" — as a note to make; with quiet links on, those entries
+   * are left out of what the lists are given, so they can't be chosen,
+   * not just hidden. Not public API: each list is filtered only where
+   * it's found, and put back as it was when quiet links are switched off.
+   */
+  filterLists() {
+    if (!this.enabled || this.listUndo) return;
+    this.listUndo = [];
+    const wrap = (owner, name) => {
+      const original = owner && owner[name];
+      if (typeof original !== 'function') return;
+      const own = Object.prototype.hasOwnProperty.call(owner, name);
+      owner[name] = function (...args) {
+        const found = original.apply(this, args);
+        const keep = (list) => (Array.isArray(list) ? list.filter((item) => !offersStandIn(item)) : list);
+        return found && typeof found.then === 'function' ? found.then(keep) : keep(found);
+      };
+      this.listUndo.push(() => {
+        if (own) owner[name] = original;
+        else delete owner[name];
+      });
+    };
+    try {
+      const lists = this.app.workspace.editorSuggest && this.app.workspace.editorSuggest.suggests;
+      (Array.isArray(lists) ? lists : []).forEach((list) => {
+        if (list !== this.suggest) wrap(list, 'getSuggestions');
+      });
+    } catch (err) {
+      /* Obsidian's [[ list as it is, then */
+    }
+    try {
+      const switcher = this.app.internalPlugins.getPluginById('switcher');
+      const Modal = switcher && switcher.instance && switcher.instance.QuickSwitcherModal;
+      if (Modal && Modal.prototype) wrap(Modal.prototype, 'getSuggestions');
+    } catch (err) {
+      /* the Quick switcher as it is, then */
+    }
+  }
+
+  unfilterLists() {
+    (this.listUndo || []).forEach((undo) => undo());
+    this.listUndo = null;
   }
 
   refreshEditors() {

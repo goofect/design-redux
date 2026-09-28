@@ -461,6 +461,34 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(typed).toBe('Typed [[[Deterrence]]]');
 
+    // Obsidian's own [[ list and Quick switcher don't offer "[Name" notes.
+    await browser.executeObsidian(({ app, obsidian }) => {
+      const editor = app.workspace.getActiveViewOfType(obsidian.MarkdownView).editor;
+      const last = editor.lastLine();
+      editor.setCursor({ line: last, ch: editor.getLine(last).length });
+      editor.replaceSelection('\nPlain ');
+      editor.focus();
+    });
+    await browser.keys(['[', '[', 'A', 'n', 'a']);
+    await browser.pause(900);
+    const plainList = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.suggestion-container .suggestion-item')).map((e) => e.textContent)
+    );
+    await browser.keys(['Escape']);
+    expect(plainList.length).toBeGreaterThan(0);
+    expect(plainList.filter((t) => t.includes('[Politics'))).toEqual([]);
+    await browser.executeObsidianCommand('switcher:open');
+    await browser.pause(500);
+    await browser.keys(['A', 'n', 'a']);
+    await browser.pause(800);
+    const switched = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.prompt .suggestion-item')).map((e) => e.textContent)
+    );
+    await browser.keys(['Escape']);
+    await browser.pause(300);
+    expect(switched.length).toBeGreaterThan(0);
+    expect(switched.filter((t) => t.includes('[Politics'))).toEqual([]);
+
     // Renames: at once where Obsidian updates links itself…
     const updated = await browser.executeObsidian(async ({ app }) => {
       const before = app.vault.getConfig('alwaysUpdateLinks');
