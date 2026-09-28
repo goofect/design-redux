@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, withoutQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, withoutQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -392,6 +392,34 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     suggest.selectSuggestion(found[1]);
     assert.strictEqual(line, 'Typed [[[Deterrence]]]');
     assert.deepStrictEqual(editor.cursor, { line: 0, ch: 22 });
+  });
+
+  await t("with quiet links on, Obsidian's [[ list and Quick switcher don't offer the stand-ins; off, they're as they were", async () => {
+    class LinkList {
+      getSuggestions() {
+        return [{ type: 'file', path: 'Anarchy' }, { type: 'linktext', path: '[Anarchy' }, { type: 'linktext', path: 'Idea' }];
+      }
+    }
+    class Base {
+      getSuggestions() {
+        return Promise.resolve([{ type: 'unresolved', linktext: '[Anarchy' }, { type: 'unresolved', linktext: 'Idea' }, { type: 'file' }]);
+      }
+    }
+    class QuickSwitcherModal extends Base {}
+    const list = new LinkList();
+    const plugin = { settings: { quietLinks: true } };
+    plugin.app = {
+      workspace: { editorSuggest: { suggests: [list] } },
+      internalPlugins: { getPluginById: () => ({ instance: { QuickSwitcherModal } }) },
+    };
+    const quiet = new G.QuietLinks(plugin);
+    quiet.filterLists();
+    assert.deepStrictEqual(list.getSuggestions().map((i) => i.path), ['Anarchy', 'Idea']);
+    const switched = await new QuickSwitcherModal().getSuggestions();
+    assert.deepStrictEqual(switched.map((i) => i.linktext || i.type), ['Idea', 'file']);
+    quiet.unfilterLists();
+    assert.strictEqual(list.getSuggestions().length, 3, 'the [[ list stayed filtered');
+    assert.ok(!Object.prototype.hasOwnProperty.call(QuickSwitcherModal.prototype, 'getSuggestions'), 'the switcher stayed changed');
   });
 
   await t('a rename rewrites the quiet links to the note, heading and words kept, and nothing else', () => {
