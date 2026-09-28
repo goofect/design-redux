@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -573,6 +573,24 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const lengths = Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"] .dr-track-length')).map((e) => e.textContent);
     assert.deepStrictEqual(lengths, ['2 min', '5 min', '<1 min', '']);
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
+  });
+
+  await t("a note with no cover shows its album's, and a folder with none a mosaic of its notes'", () => {
+    const { view, plugin, app } = setup();
+    plugin.folderCoverSrc = (folder) => (folder.path === 'IR' ? 'ir.png' : null);
+    plugin.recentFiles = () => [f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')];
+    Object.assign(view, { mode: 'recents' });
+    view.render();
+    const art = Array.from(view.contentEl.querySelectorAll('.dr-card-art img')).map((img) => img.getAttribute('src'));
+    assert.deepStrictEqual(art, ['ir.png', 'ir.png'], "a disc's note didn't take the album's cover");
+    plugin.folderCoverSrc = () => null;
+    app.metadataCache.getFileCache = (file) => ({ frontmatter: { cover: `${file.basename}.png` } });
+    app.metadataCache.getFirstLinkpathDest = (p) => ({ path: p });
+    app.vault.getResourcePath = (file) => `res/${file.path}`;
+    const el = document.createElement('div');
+    R.drawFolderArt(plugin, el, app.vault.getFolderByPath('IR'));
+    assert.ok(el.classList.contains('is-mosaic'));
+    assert.strictEqual(el.querySelectorAll('img').length, 4);
   });
 
   await t('Home leads with large cards, then shelves that scroll sideways', async () => {

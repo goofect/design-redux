@@ -19,6 +19,9 @@ function compatibility(app) {
     }
   };
   const open = app.workspace.getLeavesOfType('canvas').map((leaf) => leaf.view).find((v) => v && v.canvas);
+  const graph = GRAPH_TYPES.reduce((all, t) => all.concat(app.workspace.getLeavesOfType(t)), [])
+    .map((leaf) => leaf.view)
+    .find((v) => v && v.renderer);
   return [
     {
       what: 'Grouped right-click entries (New ▸, Cover ▸)',
@@ -50,6 +53,12 @@ function compatibility(app) {
       ok: open ? has(() => open.canvas.nodes instanceof Map && typeof open.canvas.getData === 'function') : null,
       without: 'the legend reads the saved file, and text can’t be centred',
       pending: 'Checked while a canvas is open.',
+    },
+    {
+      what: 'Leaving quiet links out of the graph',
+      ok: graph ? has(() => typeof graph.renderer.setData === 'function') : null,
+      without: 'quiet links are drawn in the graph like any other',
+      pending: 'Checked while a graph is open.',
     },
   ];
 }

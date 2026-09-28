@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'menu', 'settings-library', 'properties-add', 'note-and-strip'];
+const SHOTS = ['album', 'home', 'note-and-strip'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -295,7 +295,11 @@ describe('Design Redux in Obsidian', function () {
     await browser.$('.dr-strip .dr-strip-center').waitForExist({ timeout: 10000 });
     const skips = await browser.$$('.dr-strip-center .dr-strip-skip');
     expect(skips.length).toBe(2);
+    // With its properties open over it: the popup is judged from this.
+    await browser.executeObsidianCommand('design-redux:open-properties');
+    await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
     await shot('note-and-strip');
+    await browser.keys('Escape');
 
     // What this version draws for the note's own properties, which the
     // Properties panel setting hides.
@@ -326,6 +330,32 @@ describe('Design Redux in Obsidian', function () {
     fs.writeFileSync(path.join(OUT, `${version}-properties-facts.json`), JSON.stringify(facts, null, 2));
     // With the Properties panel on (the default), the note's own block is hidden.
     expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
+  });
+
+  it('draws Home with its shelves', async function () {
+    await browser.executeObsidian(async ({ plugins }) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'home' });
+    });
+    await browser.$('.dr-shelf-row .dr-card').waitForExist({ timeout: 10000 });
+    await shot('home');
+  });
+
+  it('leaves quiet links out of the graph', async function () {
+    const lines = await browser.executeObsidian(async ({ app }) => {
+      const note = await app.vault.create('Quiet.md', 'In passing [[Anarchy|~]], and plainly [[Deterrence]].\n');
+      await new Promise((r) => setTimeout(r, 800));
+      app.commands.executeCommandById('graph:open');
+      await new Promise((r) => setTimeout(r, 2500));
+      const leaf = app.workspace.getLeavesOfType('graph')[0];
+      const found = leaf.view.renderer.links
+        .map((l) => `${l.source.id} -> ${l.target.id}`)
+        .filter((l) => l.startsWith('Quiet.md'));
+      leaf.detach();
+      await app.vault.delete(note);
+      return found;
+    });
+    expect(lines).toEqual(['Quiet.md -> Politics/Deterrence.md']);
   });
 
   after(async function () {

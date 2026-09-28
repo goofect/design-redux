@@ -25,6 +25,7 @@ class DesignRedux extends Plugin {
       new MarkedLists(this),
       new Scripts(this),
       new GraphPropertyFilter(this),
+      new QuietLinks(this),
       new CanvasLegend(this),
       new CanvasAlign(this),
       new Diagnostics(this),

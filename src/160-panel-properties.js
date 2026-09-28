@@ -20,7 +20,9 @@ class PropertiesSection extends PanelSection {
   render() {
     this.dropSuggests();
     const fm = this.frontmatter;
-    const keys = Object.keys(fm).filter((k) => k !== 'position');
+    // The cover is the artwork at the top of the panel, so it isn't a row too.
+    const cover = String(this.settings.coverProperty || 'cover').toLowerCase();
+    const keys = Object.keys(fm).filter((k) => k !== 'position' && k.toLowerCase() !== cover);
 
     const list = this.containerEl.createDiv({ cls: 'dr-rows' });
     if (!keys.length) {
@@ -84,6 +86,8 @@ class PropertiesSection extends PanelSection {
     if (!this.renderWidget(valueEl, key, value, type)) {
       this.renderFallback(valueEl, key, value);
     }
+    const quiet = typeof this.plugin.feature === 'function' ? this.plugin.feature(QuietLinks) : null;
+    if (quiet && quiet.enabled) quietenLinksIn(valueEl);
 
     // Taken off in one press, with an Undo, rather than from a menu.
     const remove = row.createDiv({ cls: 'clickable-icon dr-row-remove' });

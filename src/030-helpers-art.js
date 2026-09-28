@@ -107,16 +107,16 @@ function resolveCover(app, file, key) {
 
 /**
  * Artwork into an element: the image if there is one, a glyph if not,
- * and the glyph as well if the image turns out to be missing.
+ * and the glyph as well if the image turns out to be missing. `hue`
+ * names what the glyph's backdrop takes its colour from.
  */
-function fillArt(el, src, glyph, gen) {
+function fillArt(el, src, glyph, gen, hue) {
   const blank = () => {
     // With a name to go on, a cover is made from it: a gradient chosen
     // by the name, so it's always the same one, and its initials. A
     // colour can be given with it: { name, tint }.
     if (gen) return generatedArt(el, typeof gen === 'string' ? { name: gen } : gen);
-    el.addClass('is-blank');
-    setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph);
+    blankArt(el, glyph, hue);
   };
   if (!src) return blank();
 
@@ -126,6 +126,108 @@ function fillArt(el, src, glyph, gen) {
   img.addEventListener('error', () => {
     img.remove();
     blank();
+  });
+}
+
+/**
+ * Where there's no artwork at all: the glyph for what it is on a soft
+ * gradient in a colour picked from a name, rather than a grey box — so
+ * a vault of notes without covers still reads as a shelf of records.
+ */
+function blankArt(el, glyph, hue) {
+  el.addClass('is-blank');
+  if (hue) {
+    el.addClass('is-hued');
+    el.style.setProperty('--dr-gen-h', String(nameHue(String(hue))));
+  }
+  setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph);
+}
+
+/* -- artwork, found the way the reference finds it ------------------- */
+
+/**
+ * The cover of the album a note is on: its folder's, or — for a folder
+ * that's a disc of a bigger album — the nearest one above it that has
+ * one, as a song shows its album's art.
+ */
+function albumCover(plugin, folder) {
+  for (let f = folder, depth = 0; f && !(f.isRoot && f.isRoot()) && depth < 8; f = f.parent, depth++) {
+    const src = plugin.folderCoverSrc(f);
+    if (src) return src;
+  }
+  return null;
+}
+
+/**
+ * For a folder with no cover of its own: the covers of the notes in it,
+ * and in the folders inside it — up to four, as a playlist's artwork is
+ * made from the albums on it. Only the first few dozen notes are read.
+ */
+function mosaicCovers(plugin, folder, max = 4) {
+  const found = [];
+  let looked = 0;
+  const key = plugin.settings.coverProperty;
+  const walk = (f) => {
+    const kids = (f.children || []).slice().sort((a, b) => byName(a.name, b.name));
+    for (const c of kids) {
+      if (found.length >= max || looked >= 60) return;
+      if (!(c instanceof TFile) || c.extension !== 'md' || plugin.isFolderNote(c)) continue;
+      looked++;
+      const src = resolveCover(plugin.app, c, key);
+      if (src && found.indexOf(src) === -1) found.push(src);
+    }
+    kids.forEach((c) => {
+      if (c instanceof TFolder && found.length < max && looked < 60) walk(c);
+    });
+  };
+  walk(folder);
+  return found;
+}
+
+/**
+ * A note's artwork: its own cover, or a colour chosen for it; else its
+ * album's cover; else a placeholder in its album's colour, so the notes
+ * of one folder look like they belong together.
+ */
+function drawNoteArt(plugin, el, file) {
+  const settings = plugin.settings;
+  const md = file.extension === 'md';
+  const album = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
+  const hue = album ? album.name : file.basename;
+  const src = md ? resolveCover(plugin.app, file, settings.coverProperty) : null;
+  const gen = md ? coverGen(settings, file.basename, file.path) : null;
+  if (src || gen) {
+    fillArt(el, src, iconForFile(file), gen, hue);
+    return;
+  }
+  const shared = album ? albumCover(plugin, album) : null;
+  if (shared) el.addClass('is-album-art');
+  fillArt(el, shared, iconForFile(file), null, hue);
+}
+
+/**
+ * A folder's artwork: its cover, or a colour chosen for it; else a
+ * mosaic of its notes' covers; else one of them; else a placeholder.
+ */
+function drawFolderArt(plugin, el, folder) {
+  const root = !!(folder.isRoot && folder.isRoot());
+  const name = root ? plugin.app.vault.getName() : folder.name;
+  const src = plugin.folderCoverSrc(folder);
+  const gen = coverGen(plugin.settings, name, folder.path);
+  if (src || gen) {
+    fillArt(el, src, 'folder', gen, name);
+    return;
+  }
+  const covers = mosaicCovers(plugin, folder);
+  if (covers.length < 4) {
+    fillArt(el, covers[0] || null, 'folder', null, name);
+    return;
+  }
+  el.addClass('is-mosaic');
+  covers.forEach((c) => {
+    const img = el.createEl('img');
+    img.src = c;
+    img.alt = '';
   });
 }
 

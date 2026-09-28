@@ -269,7 +269,22 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 }
 
 .dr-props-popup .dr-rows .dr-row + .dr-row {
-  border-top: 1px solid var(--background-modifier-border);
+  border-top: 1px solid color-mix(in srgb, var(--text-normal) 8%, transparent);
+}
+
+/* The properties as one rounded card, as an info sheet groups its fields,
+   with Add property as the card's last line. */
+.dr-props-popup .dr-properties {
+  margin-top: 10px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--text-normal) 4.5%, transparent);
+}
+
+.dr-props-popup .dr-properties + .dr-section {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: none;
 }
 
 /* -- grip and remove ---------------------------------------------------
@@ -286,7 +301,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 .dr-props-popup .dr-row-grip {
   position: absolute;
   top: 10px;
-  left: -13px;
+  left: -11px;
   display: flex;
   color: var(--text-faint);
   opacity: 0;
@@ -565,9 +580,15 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin-top: 2px;
-  padding: 6px 4px;
-  color: var(--text-faint);
+  padding: 7px 2px;
+  border-top: 1px solid color-mix(in srgb, var(--text-normal) 8%, transparent);
+  color: var(--text-accent);
+}
+
+/* With nothing above it, it's the card's first line. */
+.dr-props-popup .dr-rows:empty + .dr-add,
+.dr-props-popup .dr-rows:has(> .dr-empty:only-child) + .dr-add {
+  border-top: none;
 }
 
 .dr-props-popup .dr-add-icon {
@@ -602,7 +623,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-props-popup .dr-add input[type="text"]::placeholder {
-  color: var(--text-faint);
+  color: var(--text-accent);
+  opacity: 0.85;
 }
 
 @media (any-hover: hover) {
@@ -633,17 +655,61 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   overflow-y: auto;
 }
 
+/* Each a small row with its artwork, as tracks are listed with theirs. */
 .dr-mention {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-left: calc(var(--dr-label-width) + var(--dr-gutter));
-  padding: 3px 6px;
-  border-radius: var(--radius-s, 4px);
+  gap: 9px;
+  padding: 4px 6px;
+  border-radius: 8px;
   color: var(--text-normal);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
+}
+
+.dr-mention-art {
+  position: relative;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 5px;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-mention-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-mention-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dr-mention-art .dr-card-glyph .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-mention-art .dr-gen-initials {
+  font-size: 11px;
+}
+
+.dr-mention-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-mention-where {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.92em;
 }
 
 .dr-mention:focus-visible {
@@ -662,6 +728,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: var(--font-medium, 500);
 }
 
 .dr-mention-count {
@@ -922,20 +989,66 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 /* -- the title block ---------------------------------------------------- */
 
 .dr-detail {
+  position: relative;
+  isolation: isolate;
   display: flex;
+  align-items: flex-end;
   gap: 30px;
-  margin-bottom: 26px;
+  margin-bottom: 30px;
+}
+
+/* The artwork again, blurred to its colours and faded out downwards,
+   behind the header and the bar above it: the page takes on the album's
+   colour, as the reference's does. */
+.dr-detail-glow {
+  position: absolute;
+  z-index: -1;
+  top: -90px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  overflow: hidden;
+  opacity: 0.45;
+  filter: blur(60px) saturate(1.5);
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  pointer-events: none;
+}
+
+.dr-detail-glow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-detail-glow.is-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.dr-detail-glow .dr-card-glyph,
+.dr-detail-glow .dr-gen-initials {
+  display: none;
+}
+
+/* A plain grey stand-in gives the page no colour to take on. */
+.dr-detail-glow.is-blank:not(.is-hued) {
+  display: none;
+}
+
+.theme-dark .dr-detail-glow {
+  opacity: 0.55;
 }
 
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 300px);
-  height: var(--dr-album-art-size, 300px);
+  width: var(--dr-album-art-size, 260px);
+  height: var(--dr-album-art-size, 260px);
   overflow: hidden;
   border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
   background-color: var(--background-secondary);
-  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .dr-detail-art img {
@@ -950,43 +1063,66 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   align-items: center;
   justify-content: center;
   background-color: var(--background-modifier-hover);
-  box-shadow: none;
 }
 
 .dr-detail-info {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-end;
   min-width: 0;
+  padding-bottom: 4px;
 }
 
 .dr-detail-title {
-  font-size: 2.3em;
+  font-size: 2.5em;
   font-weight: var(--font-bold, 700);
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
   color: var(--text-normal);
 }
 
-/* The one accented line, as the artist name is in the reference. */
+/* The one accented line, as the artist name is in the reference — and,
+   where it names the folder this one is in, a way there. */
 
 .dr-detail-sub {
-  margin-top: 2px;
-  font-size: 1.3em;
-  font-weight: var(--font-medium, 500);
+  margin-top: 4px;
+  font-size: 1.35em;
+  font-weight: var(--font-semibold, 600);
   color: var(--text-accent);
 }
 
+.dr-detail-sub.is-link {
+  align-self: flex-start;
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+}
+
+.dr-detail-sub.is-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-detail-sub.is-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Small capitals, as the genre and year are under an album's title. */
 .dr-detail-meta {
-  margin-top: 10px;
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium, 500);
+  margin-top: 8px;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 
 .dr-detail-actions {
   display: flex;
-  gap: 14px;
-  margin-top: 26px;
+  gap: 12px;
+  margin-top: 22px;
 }
 
 .dr-detail-action {
@@ -994,14 +1130,19 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  min-width: 172px;
-  padding: 12px 20px;
-  border-radius: var(--radius-m, 8px);
-  background-color: var(--background-modifier-hover);
+  min-width: 128px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--text-normal) 7%, transparent);
   color: var(--text-accent);
   font-size: var(--font-ui-small);
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-semibold, 600);
   cursor: pointer;
+  transition: transform 80ms ease;
+}
+
+.dr-detail-action:active {
+  transform: scale(0.97);
 }
 
 .dr-detail-action:focus-visible {
@@ -1490,10 +1631,17 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   white-space: nowrap;
 }
 
+/* A screen's name, large and heavy, as the reference names its pages. */
 .dr-browse-title {
-  flex: 0 0 auto;
-  font-size: var(--font-ui-large);
-  font-weight: var(--font-medium);
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.9em;
+  font-weight: var(--font-bold, 700);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--text-normal);
 }
 
@@ -2000,9 +2148,7 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 2px 12px;
-  margin-bottom: 4px;
-  border-bottom: 1px solid var(--background-modifier-border);
+  padding: 0 2px 2px;
 }
 
 /* The cover, as an info sheet shows the artwork beside the title. */
@@ -2411,6 +2557,11 @@ body.dr-mentions-active
 
 .dr-pick-body.is-lit .dr-pick-glow {
   display: block;
+}
+
+/* A soft placeholder is pale; darkened further so white type stays readable on it. */
+.dr-pick-glow.is-blank {
+  filter: blur(30px) saturate(1.8) brightness(0.5);
 }
 
 .dr-pick-glow img {
@@ -2877,8 +3028,9 @@ body.dr-single-area
   user-select: none;
 }
 
-/* Neutral rather than tinted, so the accent on the active row is the
-   only colour in the list. */
+/* As the reference's sidebar: every icon in the accent, the labels
+   plain, and where you are a soft grey block with its label a touch
+   heavier. */
 @media (any-hover: hover) {
   .dr-lib-row:hover {
     background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
@@ -2887,7 +3039,7 @@ body.dr-single-area
 
 .dr-lib-row.is-active {
   background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
-  color: var(--text-accent);
+  font-weight: var(--font-semibold, 600);
 }
 
 .dr-lib-row:focus-visible {
@@ -2933,10 +3085,6 @@ body.dr-single-area
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  color: var(--text-normal);
-}
-
-.dr-lib-row.is-active .dr-lib-icon {
   color: var(--text-accent);
 }
 
@@ -3227,6 +3375,7 @@ body.is-phone .dr-detail-bar {
 body.is-phone .dr-browse-title {
   flex: 1 1 auto;
   min-width: 0;
+  font-size: 1.5em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3261,6 +3410,10 @@ body.is-phone .dr-detail {
 body.is-phone .dr-detail-art {
   width: min(250px, 66vw);
   height: min(250px, 66vw);
+}
+
+body.is-phone .dr-detail-sub.is-link {
+  align-self: center;
 }
 
 body.is-phone .dr-detail-info {
@@ -5010,4 +5163,247 @@ body.dr-strip-flat .dr-strip {
 .dr-bulk-chip.is-add.is-icon .svg-icon {
   width: 14px;
   height: 14px;
+}
+
+/* Artwork where there's none, and the finishing touches ----------------------
+ *
+ * A note or folder with no cover gets its album's, a mosaic of its notes',
+ * or — only with nothing at all to go on — its glyph on a soft gradient in a
+ * colour from its album's name, so a shelf of notes never reads as a row of
+ * grey boxes. The rest follows the reference: round buttons over a cover
+ * when it's pointed at, an album's small print under its last track, and a
+ * line along the strip's foot for how far through the note you are.
+ */
+
+[class].is-blank.is-hued {
+  background-color: hsl(var(--dr-gen-h, 210) 30% 84%);
+  background-image: linear-gradient(
+    145deg,
+    hsl(var(--dr-gen-h, 210) 42% 88%),
+    hsl(calc(var(--dr-gen-h, 210) + 28) 32% 74%)
+  );
+}
+
+[class].is-blank.is-hued .dr-card-glyph {
+  color: hsl(var(--dr-gen-h, 210) 32% 38%);
+  opacity: 0.7;
+}
+
+.theme-dark [class].is-blank.is-hued {
+  background-color: hsl(var(--dr-gen-h, 210) 18% 24%);
+  background-image: linear-gradient(
+    145deg,
+    hsl(var(--dr-gen-h, 210) 24% 32%),
+    hsl(calc(var(--dr-gen-h, 210) + 28) 20% 19%)
+  );
+}
+
+.theme-dark [class].is-blank.is-hued .dr-card-glyph {
+  color: hsl(var(--dr-gen-h, 210) 40% 78%);
+  opacity: 0.75;
+}
+
+/* Four covers, two by two, as a playlist's artwork is made. */
+.is-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+.is-mosaic img {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  object-fit: cover;
+}
+
+/* -- round buttons on a tile's cover -- */
+
+.dr-card-buttons {
+  position: absolute;
+  inset: auto 8px 8px 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.dr-card-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 100px;
+  background-color: rgba(20, 20, 20, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.dr-card-button.is-more {
+  margin-left: auto;
+}
+
+.dr-card-button .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+@media (any-hover: hover) {
+  .dr-card:hover .dr-card-buttons,
+  .dr-card:focus-within .dr-card-buttons {
+    opacity: 1;
+  }
+
+  .dr-card-button:hover {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent, #fff);
+  }
+
+  .dr-card:hover .dr-card-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent 55%);
+    pointer-events: none;
+  }
+}
+
+/* Not on touch: there, the tile itself is the button and a long press its menu. */
+@media (any-hover: none) {
+  .dr-card-buttons {
+    display: none;
+  }
+}
+
+/* -- an album's small print -- */
+
+.dr-album-foot {
+  margin: 18px 0 8px 46px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.6;
+}
+
+body.is-phone .dr-album-foot {
+  margin-left: 40px;
+}
+
+/* -- the Notes table's lengths -- */
+
+.dr-td-length {
+  flex: 0 0 90px;
+  justify-content: flex-end;
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+body.is-phone .dr-td-length {
+  display: none;
+}
+
+/* -- how far through the note: a line along the strip's foot -- */
+
+.dr-strip-progress {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 4px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.dr-strip-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--dr-progress, 0) * 100%);
+  border-radius: 2px;
+  background-color: var(--interactive-accent);
+}
+
+.dr-strip.has-progress .dr-strip-progress {
+  opacity: 1;
+}
+
+/* -- the popup's cover, which changes the note's -- */
+
+.dr-props-art {
+  cursor: pointer;
+}
+
+.dr-props-art-edit {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.dr-props-art-edit .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dr-props-art:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-props-art:focus-visible .dr-props-art-edit {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .dr-props-art:hover .dr-props-art-edit {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-card-buttons,
+  .dr-strip-progress,
+  .dr-props-art-edit,
+  .dr-detail-action {
+    transition: none;
+  }
+}
+
+/* Quiet links ------------------------------------------------------------------
+ *
+ * A link the graph isn't told about: still the link colour, so it reads as
+ * one, but dotted and a shade softer, so it's plain which kind it is.
+ */
+
+.dr-quiet-link,
+.markdown-rendered .internal-link.dr-quiet-link,
+.cm-s-obsidian span.cm-hmd-internal-link.dr-quiet-link {
+  color: color-mix(in srgb, var(--link-color, var(--text-accent)) 78%, var(--text-muted));
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-quiet-link:hover,
+  .markdown-rendered .internal-link.dr-quiet-link:hover {
+    color: var(--link-color-hover, var(--text-accent-hover));
+  }
 }

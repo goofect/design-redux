@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, linkAtCursor, toggledLink, withoutQuietLinks };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -287,6 +287,62 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const h = graphLeaf('localgraph', 'x [status]');
     feature([h], { localgraph: { mode: 'all', rules: [{ key: 'status', op: 'has' }], clause: '[status]', open: true } }).f.sync();
     assert.deepStrictEqual(h.told, []);
+  });
+
+  /* -- quiet links ------------------------------------------------------------ */
+
+  await t('a quiet link reads as its note, and switches back and forth keeping its words', () => {
+    assert.strictEqual(G.quietLabel('Ideas/Entropy', ''), 'Entropy');
+    assert.strictEqual(G.quietLabel('Entropy#Heat death', ''), 'Entropy > Heat death');
+    assert.strictEqual(G.quietLabel('Entropy', ' disorder '), 'disorder');
+    const editor = (line, ch) => ({ getCursor: () => ({ line: 0, ch }), getLine: () => line });
+    let hit = G.linkAtCursor(editor('See [[Entropy]] and [[Order|chaos]].', 8));
+    assert.strictEqual(G.toggledLink(hit), '[[Entropy|~]]');
+    hit = G.linkAtCursor(editor('See [[Entropy]] and [[Order|chaos]].', 25));
+    assert.strictEqual(G.toggledLink(hit), '[[Order|~chaos]]');
+    hit = G.linkAtCursor(editor('[[Order|~chaos]] and [[Heat|~]]', 3));
+    assert.ok(hit.quiet);
+    assert.strictEqual(G.toggledLink(hit), '[[Order|chaos]]');
+    assert.strictEqual(G.toggledLink(G.linkAtCursor(editor('[[Order|~chaos]] and [[Heat|~]]', 24))), '[[Heat]]');
+    assert.strictEqual(G.linkAtCursor(editor('no link here', 3)), null);
+  });
+
+  await t("the graph is handed every line but the quiet ones; a note linked both ways keeps its line", () => {
+    const caches = {
+      'Home.md': { links: [
+        { link: 'Stoicism', original: '[[Stoicism]]' },
+        { link: 'Entropy', original: '[[Entropy|~]]' },
+        { link: 'Order', original: '[[Order|~]]' },
+        { link: 'Order', original: '[[Order]]' },
+      ] },
+      'Lone.md': { links: [{ link: 'Home', original: '[[Home|~a start]]' }] },
+    };
+    const app = {
+      vault: { getFileByPath: (p) => (caches[p] || /\.md$/.test(p) ? { path: p, extension: 'md' } : null) },
+      metadataCache: {
+        getFileCache: (f) => caches[f.path] || null,
+        getFirstLinkpathDest: (p) => ({ path: `${p}.md` }),
+      },
+    };
+    const data = {
+      nodes: {
+        'Home.md': { type: '', links: { 'Stoicism.md': true, 'Entropy.md': true, 'Order.md': true } },
+        'Lone.md': { type: '', links: { 'Home.md': true } },
+        'Stoicism.md': { type: '', links: {} },
+        'Entropy.md': { type: '', links: {} },
+        'Order.md': { type: '', links: {} },
+      },
+      numLinks: 4,
+    };
+    const out = G.withoutQuietLinks(app, data);
+    assert.deepStrictEqual(Object.keys(out.nodes['Home.md'].links), ['Stoicism.md', 'Order.md']);
+    assert.deepStrictEqual(out.nodes['Lone.md'].links, {});
+    assert.strictEqual(out.numLinks, 2);
+    assert.deepStrictEqual(Object.keys(data.nodes['Home.md'].links).length, 3, 'the data handed in was changed');
+    // Where a lone note wouldn't be shown, one left alone by quiet lines goes.
+    const local = G.withoutQuietLinks(app, data, { dropLoners: true, keep: 'Home.md' });
+    assert.ok(!local.nodes['Entropy.md'] && !local.nodes['Lone.md']);
+    assert.ok(local.nodes['Stoicism.md'] && local.nodes['Home.md']);
   });
 
   console.log(`\n${passed} passed`);

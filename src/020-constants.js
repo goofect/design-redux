@@ -96,6 +96,8 @@ const DEFAULTS = {
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 1,
   graphProperties: true,
+  // Links written [[Note|~]] work as links but aren't drawn in the graph.
+  quietLinks: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
 };
