@@ -3628,11 +3628,10 @@ body.is-mobile .dr-chip-clear {
 .dr-bulk-summary {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   margin-top: 18px;
-  padding: 12px 14px;
-  border-radius: var(--radius-m, 8px);
-  background-color: var(--background-secondary);
+  padding-top: 14px;
+  border-top: 1px solid var(--background-modifier-border);
   font-size: var(--font-ui-small);
   line-height: 1.45;
 }
@@ -3667,6 +3666,11 @@ body.is-mobile .dr-chip-clear {
 .dr-bulk-line.is-muted,
 .dr-bulk-line.is-muted .dr-bulk-line-icon {
   color: var(--text-muted);
+}
+
+/* A hint reads as a quiet line of text, not a notice. */
+.dr-bulk-line.is-muted .dr-bulk-line-icon {
+  display: none;
 }
 
 .dr-bulk-line.is-warning .dr-bulk-line-icon {
@@ -4560,4 +4564,51 @@ body.dr-flat-covers .dr-detail-art.is-generated {
 
 body.dr-strip-flat .dr-strip {
   box-shadow: none;
+}
+
+/* The Properties window, tidied ------------------------------------------------
+ *
+ * One width for every tab, so switching doesn't make it jump; the tabs as
+ * words; and where a tool works — the folders, and which of their notes —
+ * on one line under them rather than three.
+ */
+
+.dr-props-modal {
+  width: min(600px, calc(100vw - 32px));
+}
+
+.dr-props-modal .dr-props-tabs .dr-set-tab {
+  padding: 0 10px;
+}
+
+.dr-bulk-section.is-where {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.dr-bulk-section.is-where > .dr-bulk-label {
+  margin-right: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal, 400);
+  letter-spacing: 0;
+}
+
+.dr-bulk-section.is-where .dr-bulk-option select.dropdown {
+  height: 28px;
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-chip.is-add.is-icon {
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.dr-bulk-chip.is-add.is-icon .svg-icon {
+  width: 14px;
+  height: 14px;
 }

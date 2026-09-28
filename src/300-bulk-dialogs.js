@@ -48,6 +48,7 @@ class BulkModal extends Modal {
   /** A section of chips for the folders and notes, and which of their notes. */
   targetsSection(label) {
     const where = this.section(label);
+    where.addClass('is-where');
     this.targetsEl = where.createDiv({ cls: 'dr-bulk-chips' });
     this.scopeEl = where.createDiv({ cls: 'dr-bulk-option' });
     this.renderTargets();
@@ -78,8 +79,11 @@ class BulkModal extends Modal {
     const pick = el.createDiv({ cls: 'dr-bulk-chip is-add' });
     pick.setAttribute('role', 'button');
     pick.setAttribute('tabindex', '0');
-    setIcon(pick.createSpan({ cls: 'dr-bulk-chip-icon' }), 'folder-plus');
-    pick.createSpan({ text: this.targets.length ? 'Add folder' : 'Choose a folder' });
+    // With folders chosen, just a round + beside them; with none, it says what it's for.
+    pick.toggleClass('is-icon', this.targets.length > 0);
+    setIcon(pick.createSpan({ cls: 'dr-bulk-chip-icon' }), this.targets.length ? 'plus' : 'folder-plus');
+    if (this.targets.length) pick.setAttribute('aria-label', 'Add a folder');
+    else pick.createSpan({ text: 'Choose a folder' });
     onActivate(pick, () =>
       new FolderPicker(this.app, (folder) => {
         this.addTarget(folder);
@@ -98,9 +102,9 @@ class BulkModal extends Modal {
     if (!folders) return;
     const select = el.createEl('select', { cls: 'dropdown' });
     [
-      ['deep', 'Every note in them, subfolders included'],
-      ['direct', 'Only the notes directly in them'],
-      ['folder-notes', 'Only their folder notes'],
+      ['deep', 'Including subfolders'],
+      ['direct', 'Not their subfolders'],
+      ['folder-notes', 'Folder notes only'],
     ].forEach(([value, label]) => {
       const option = select.createEl('option', { text: label });
       option.value = value;
@@ -225,9 +229,7 @@ class AddPropertiesModal extends BulkModal {
 
   onOpen() {
     this.frame('Add properties');
-    const where = this.section('To the notes in');
-    this.targetsEl = where.createDiv({ cls: 'dr-bulk-chips' });
-    this.scopeEl = where.createDiv({ cls: 'dr-bulk-option' });
+    this.targetsSection('Add to');
 
     const what = this.section('Properties');
     this.rowsEl = what.createDiv({ cls: 'dr-bulk-rows' });
@@ -1013,7 +1015,7 @@ class RemovePropertiesModal extends BulkModal {
 
   onOpen() {
     this.frame('Remove properties');
-    this.targetsSection('From the notes in');
+    this.targetsSection('Remove from');
     const what = this.section('Properties');
     this.listEl = what.createDiv({ cls: 'dr-bulk-checks' });
     this.update();
@@ -1183,7 +1185,7 @@ class MissingPropertyModal extends BulkModal {
 
   onOpen() {
     this.frame('Find missing properties');
-    this.targetsSection('In the notes in');
+    this.targetsSection('Look in');
     const section = this.section();
     const key = this.field(section, 'Property', 'The property they should have');
     this.keyInput = key.input;
@@ -1441,10 +1443,9 @@ class PropertyToolsModal extends Modal {
 
   onOpen() {
     this.modalEl.addClass('dr-bulk-modal', 'dr-props-modal');
-    const names = this.targets.map((t) => (t instanceof TFolder ? t.name || this.app.vault.getName() : t.basename));
-    this.titleEl.setText(
-      names.length === 1 ? `Properties · ${names[0]}` : names.length ? `Properties · ${names.length} items` : 'Properties'
-    );
+    // Which folders it's working on shows in each tab's first line, so
+    // the title needn't repeat it.
+    this.titleEl.setText('Properties');
     const bar = this.contentEl.createDiv({ cls: 'dr-set-tabs dr-props-tabs' });
     bar.setAttribute('role', 'tablist');
     roveFocus(bar, '.dr-set-tab');
@@ -1452,7 +1453,6 @@ class PropertyToolsModal extends Modal {
     this.tabs().forEach(([id, label, icon]) => {
       const button = bar.createEl('button', { cls: 'dr-set-tab' });
       button.setAttribute('role', 'tab');
-      setIcon(button.createSpan({ cls: 'dr-set-tab-icon' }), icon);
       button.createSpan({ text: label });
       button.addEventListener('click', () => this.show(id));
       this.buttons[id] = button;

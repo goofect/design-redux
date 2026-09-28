@@ -240,12 +240,26 @@ function attachSuggest(field, input, opts) {
     list.addClass('is-open');
   };
 
+  // Open when asked — a click, typing, or ArrowDown — not whenever the
+  // field gets focus: a window focusing its first field would otherwise
+  // open with a list over the top of it.
+  let pressed = false;
+  input.addEventListener('pointerdown', () => (pressed = true));
   input.addEventListener('input', show);
-  input.addEventListener('focus', show);
+  input.addEventListener('focus', () => {
+    if (pressed) show();
+    pressed = false;
+  });
   input.addEventListener('blur', () => window.setTimeout(hide, 120));
 
   input.addEventListener('keydown', (evt) => {
-    if (!list.hasClass('is-open')) return;
+    if (!list.hasClass('is-open')) {
+      if (evt.key === 'ArrowDown' && !evt.altKey) {
+        evt.preventDefault();
+        show();
+      }
+      return;
+    }
     if (evt.key === 'ArrowDown') {
       evt.preventDefault();
       active = Math.min(active + 1, items.length - 1);
