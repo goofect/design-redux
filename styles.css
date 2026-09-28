@@ -1194,31 +1194,6 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   flex-basis: 7em;
 }
 
-/* The note last opened: a mark where its number was, and its title in
-   the accent, as a list shows what's playing. */
-
-.dr-track-mark {
-  display: none;
-  color: var(--text-accent);
-}
-
-.dr-track.is-current .dr-track-index {
-  display: none;
-}
-
-.dr-track.is-current .dr-track-mark {
-  display: inline-flex;
-}
-
-.dr-track-mark .svg-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.dr-track.is-current .dr-track-name {
-  color: var(--text-accent);
-}
-
 /* Pinned, beside the title. */
 
 .dr-track-name.has-mark {

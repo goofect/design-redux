@@ -575,6 +575,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
   });
 
+  await t('the note last opened keeps its number and colour in the list, with no mark', () => {
+    const { view, plugin, app } = setup();
+    plugin.recentFiles = () => [f(app, 'IR/Cooperation.md')];
+    view.render();
+    const row = view.contentEl.querySelector('.dr-track[data-path="IR/Cooperation.md"]');
+    assert.strictEqual(row.querySelector('.dr-track-num').textContent, '3');
+    assert.strictEqual(row.querySelector('.dr-track-num').children.length, 0, 'a mark was drawn over its number');
+    assert.ok(!row.classList.contains('is-current'));
+  });
+
   await t("without a cover: the plain icon by default, the folder's cover when asked, or the icon on a soft colour", () => {
     const { view, plugin, app } = setup();
     plugin.folderCoverSrc = (folder) => (folder.path === 'IR' ? 'ir.png' : null);
