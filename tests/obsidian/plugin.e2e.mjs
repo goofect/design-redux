@@ -191,8 +191,12 @@ describe('Design Redux in Obsidian', function () {
     await browser.$('.dr-props-modal').waitForExist({ timeout: 5000 });
     const tabs = await browser.$$('.dr-props-modal .dr-set-tab');
     expect(tabs.length).toBeGreaterThanOrEqual(3);
-    await clickText('.dr-props-modal .dr-set-tab', 'Remove');
-    await shot('properties-window');
+    // Each tab, as it looks: the window's design is judged from these.
+    await shot('properties-add');
+    for (const [tab, name] of [['Remove', 'remove'], ['Find missing', 'missing'], ['Defaults', 'defaults']]) {
+      await clickText('.dr-props-modal .dr-set-tab', tab);
+      await shot(`properties-${name}`);
+    }
     await browser.keys('Escape');
     await browser.pause(400);
     expect(await browser.$('.dr-props-modal').isExisting()).toBe(false);
