@@ -66,6 +66,13 @@ describe('Design Redux in Obsidian', function () {
     await browser.pause(1500);
   });
 
+  afterEach(async function () {
+    if (this.currentTest && this.currentTest.state === 'failed') {
+      const name = this.currentTest.title.replace(/[^a-z0-9]+/gi, '-').slice(0, 50);
+      await shot(`FAILED-${name}`);
+    }
+  });
+
   it('loads, with its features running', async function () {
     const state = await browser.executeObsidian(({ plugins }) => {
       const p = plugins.designRedux;
@@ -109,6 +116,34 @@ describe('Design Redux in Obsidian', function () {
       app.setting.open();
       app.setting.openTabById('design-redux');
     });
+    await browser.pause(1000);
+    const facts = await browser.executeObsidian(({ app }) => {
+      const out = {};
+      try {
+        const s = app.setting;
+        out.activeTab = s.activeTab ? s.activeTab.id : null;
+        out.pluginTab = !!(s.pluginTabs || []).find((t) => t.id === 'design-redux');
+        const content = document.querySelector('.vertical-tab-content');
+        out.contentClass = content ? content.className : null;
+        out.contentStart = content ? content.innerHTML.slice(0, 600) : null;
+        out.ourTab = document.querySelectorAll('.dr-settings').length;
+        const tab = (s.pluginTabs || []).find((t) => t.id === 'design-redux');
+        if (tab) {
+          try {
+            tab.display();
+            out.displayAgain = 'ok';
+            out.afterDisplay = tab.containerEl ? tab.containerEl.className + ' / ' + tab.containerEl.children.length + ' children / attached ' + tab.containerEl.isConnected : null;
+          } catch (err) {
+            out.displayAgain = String((err && err.stack) || err);
+          }
+        }
+      } catch (err) {
+        out.error = String(err);
+      }
+      return out;
+    });
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(facts, null, 2));
     await browser.$('.dr-settings .dr-set-tabs').waitForExist({ timeout: 10000 });
     const tabs = await browser.$$('.dr-settings .dr-set-tab');
     expect(tabs.length).toBe(4);
@@ -140,18 +175,15 @@ describe('Design Redux in Obsidian', function () {
     await browser.$('.menu').waitForExist({ timeout: 5000 });
     const titles = await menuTitles();
     for (const want of ['New', 'Cover', 'Pin', 'Properties…']) expect(titles).toContain(want);
-    // The New entry opens beside the menu.
-    const opened = await browser.execute(() => {
-      const item = Array.from(document.querySelectorAll('.menu .menu-item')).find(
-        (e) => e.querySelector('.menu-item-title') && e.querySelector('.menu-item-title').textContent.trim() === 'New'
-      );
-      if (!item) return false;
-      item.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-      item.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-      return true;
-    });
-    expect(opened).toBe(true);
-    await browser.pause(500);
+    // The New entry opens beside the menu, under a real pointer.
+    const items = await browser.$$('.menu .menu-item');
+    let newItem = null;
+    for (const item of items) {
+      if ((await item.getText()).trim() === 'New') newItem = item;
+    }
+    expect(newItem).not.toBeNull();
+    await newItem.moveTo();
+    await browser.pause(700);
     await shot('menu');
     expect(await menuTitles()).toContain('Canvas');
     await closeMenus();
@@ -173,7 +205,10 @@ describe('Design Redux in Obsidian', function () {
   it('shows a legend on a canvas, and centres a card', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$('.dr-legend').waitForExist({ timeout: 10000 });
-    await browser.pause(800);
+    await browser.waitUntil(async () => (await browser.$$('.dr-legend-row')).length > 0, {
+      timeout: 10000,
+      timeoutMsg: 'the legend never listed any colours',
+    });
     const keys = await browser.execute(() =>
       Array.from(document.querySelectorAll('.dr-legend-row')).map((r) => r.dataset.key)
     );
@@ -201,16 +236,16 @@ describe('Design Redux in Obsidian', function () {
     await browser.$('.dr-legend-row[data-key="4"] .dr-legend-dot').click();
 
     // Select a card: the bar above it gets the Center text button.
-    await browser.$('[data-test-id="red1"]').click();
+    await browser.$('[data-test-id="green2"]').click();
     const button = await browser.$('.canvas-menu .dr-align-button');
     await button.waitForExist({ timeout: 5000 });
     await button.click();
     await browser.pause(300);
-    expect(await browser.$('[data-test-id="red1"]').getAttribute('class')).toContain('dr-text-center');
+    expect(await browser.$('[data-test-id="green2"]').getAttribute('class')).toContain('dr-text-center');
     await shot('canvas-centred');
 
     // Its right-click menu offers to undo that.
-    await browser.$('[data-test-id="red1"]').click({ button: 'right' });
+    await browser.$('[data-test-id="green2"]').click({ button: 'right' });
     await browser.pause(400);
     expect(await menuTitles()).toContain('Stop centering text');
     await closeMenus();
@@ -222,6 +257,30 @@ describe('Design Redux in Obsidian', function () {
     const skips = await browser.$$('.dr-strip-center .dr-strip-skip');
     expect(skips.length).toBe(2);
     await shot('note-and-strip');
+
+    // What this version draws for the note's own properties, which the
+    // Properties panel setting hides.
+    const facts = await browser.execute(() => {
+      const chain = (el) => {
+        const out = [];
+        for (let at = el, i = 0; at && i < 8; at = at.parentElement, i++) {
+          out.push(`${at.tagName.toLowerCase()}.${String(at.className).trim().replace(/\s+/g, '.')}`);
+        }
+        return out;
+      };
+      const add = Array.from(document.querySelectorAll('.workspace-leaf.mod-active *')).find(
+        (e) => e.children.length === 0 && e.textContent.trim() === 'Add property'
+      );
+      return {
+        bodyHasPanelClass: document.body.classList.contains('dr-props-active'),
+        metadataContainers: Array.from(document.querySelectorAll('.metadata-container')).map((e) => [
+          e.className,
+          getComputedStyle(e).display,
+        ]),
+        addPropertyChain: add ? chain(add) : null,
+      };
+    });
+    fs.writeFileSync(path.join(OUT, `${version}-properties-facts.json`), JSON.stringify(facts, null, 2));
   });
 
   after(async function () {

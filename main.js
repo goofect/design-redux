@@ -791,13 +791,20 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
   const redraw = opts.redraw || (() => plugin.refreshBrowse());
 
   // Ours first, a few lines long: each group opens beside the menu.
+  // Obsidian orders a menu by section, and puts entries with none last,
+  // so ours are given the sections its own open and action entries use.
+  const sectioned = (item, name) => {
+    if (typeof item.setSection === 'function') item.setSection(name);
+    return item;
+  };
   if (isFolder && !opts.here && opts.open) {
     menu.addItem((item) =>
-      item.setTitle('Open folder').setIcon('folder-open').onClick(opts.open)
+      sectioned(item, 'open').setTitle('Open folder').setIcon('folder-open').onClick(opts.open)
     );
   }
   if (isFolder) {
     menuGroup(menu, 'New', 'plus', (m, nested) => {
+      if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
       m.addItem((item) =>
         item.setTitle(nested ? 'Note' : 'New note').setIcon('file-plus').onClick(() => plugin.newNote(target))
       );
@@ -812,7 +819,7 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
             .onClick(() => plugin.newCanvas(target))
         );
       }
-    });
+    }, 'action');
   }
 
   // The vault's root can hold new things but isn't a thing to cover,
@@ -827,6 +834,7 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
       ? plugin.folderCoverSrc(target)
       : resolveCover(app, target, plugin.settings.coverProperty);
     menuGroup(menu, 'Cover', 'image', (m, nested) => {
+      if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
       m.addItem((item) =>
         item
           .setTitle(src ? (nested ? 'Change image…' : 'Change cover image') : nested ? 'Set image…' : 'Set cover image')
@@ -852,12 +860,12 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
             .onClick(() => plugin.chooseCoverColor(target))
         );
       }
-    });
+    }, 'action');
   }
 
   const pinned = plugin.pins.has(target);
   menu.addItem((item) =>
-    item
+    sectioned(item, 'action')
       .setTitle(pinned ? 'Unpin' : 'Pin')
       .setIcon(pinned ? 'pin-off' : 'pin')
       .onClick(() => plugin.togglePin(target))
@@ -871,13 +879,15 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
         [nested ? 'Later' : 'Move later', 'arrow-right', opts.arrange.later],
       ].forEach(([title, icon, run]) =>
         m.addItem((item) => {
+          if (!nested) sectioned(item, 'action');
           item.setTitle(title).setIcon(icon);
           if (typeof item.setDisabled === 'function') item.setDisabled(!run);
           item.onClick(() => {
             if (run) run();
           });
         })
-      )
+      ),
+      'action'
     );
   }
   menu.addSeparator();
@@ -13328,8 +13338,22 @@ class CanvasLegend extends Feature {
     const host = view.contentEl;
     host.addClass('dr-canvas-host');
     const panel = host.createDiv({ cls: 'dr-legend' });
-    const state = { panel, file: view.file, focus: null, observer: null, control: null, stale: false };
+    const state = { panel, file: view.file, focus: null, observer: null, control: null, stale: false, count: -1, watch: null };
     this.mounted.set(view, state);
+    // A canvas can open before its cards are loaded, and cards come and
+    // go without the file being saved yet: when their number changes,
+    // the legend is counted again. Once a frame at most.
+    if (typeof MutationObserver === 'function') {
+      let frame = 0;
+      state.watch = new MutationObserver(() => {
+        if (frame) return;
+        frame = window.requestAnimationFrame(() => {
+          frame = 0;
+          if (this.mounted.get(view) === state && this.cardCount(view) !== state.count) this.refresh(view);
+        });
+      });
+      state.watch.observe(view.contentEl, { childList: true, subtree: true });
+    }
 
     // Beside the canvas's own zoom and help buttons, to hide and show it.
     const controls = view.containerEl.querySelector('.canvas-controls');
@@ -13350,6 +13374,7 @@ class CanvasLegend extends Feature {
     const state = this.mounted.get(view);
     if (!state) return;
     if (state.observer) state.observer.disconnect();
+    if (state.watch) state.watch.disconnect();
     state.panel.remove();
     if (state.control) state.control.remove();
     const host = view.contentEl;
@@ -13379,9 +13404,19 @@ class CanvasLegend extends Feature {
     }
   }
 
+  /** How many cards the canvas holds now, where it can be asked. */
+  cardCount(view) {
+    try {
+      return view.canvas && view.canvas.nodes ? view.canvas.nodes.size : -2;
+    } catch (err) {
+      return -2;
+    }
+  }
+
   async refresh(view) {
     const state = this.mounted.get(view);
     if (!state) return;
+    state.count = this.cardCount(view);
     // Not while a colour is being named: that would take the field away.
     if (state.panel.contains(state.panel.ownerDocument.activeElement)) {
       state.stale = true;
