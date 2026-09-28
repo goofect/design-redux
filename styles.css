@@ -96,8 +96,14 @@ body.dr-ribbon-active .workspace-ribbon.mod-left > *:not(.side-dock-actions) {
  * rules meant for a note's full-width column.
  */
 
-body.dr-props-active .workspace-leaf-content[data-type="markdown"] .metadata-container {
-  display: none;
+/* A note's own properties, hidden while the panel shows them. Newer
+   Obsidian versions give this block a display of their own that outranks
+   a plain rule, so this one insists; it's also matched through the
+   editor and reading views, in case the leaf around them changes. */
+body.dr-props-active .workspace-leaf-content[data-type="markdown"] .metadata-container,
+body.dr-props-active .workspace-split.mod-root .markdown-source-view .metadata-container,
+body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-container {
+  display: none !important;
 }
 
 .dr-props-popup {

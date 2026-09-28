@@ -117,40 +117,36 @@ describe('Design Redux in Obsidian', function () {
       app.setting.openTabById('design-redux');
     });
     await browser.pause(1000);
-    const facts = await browser.executeObsidian(({ app }) => {
-      const out = {};
-      try {
-        const s = app.setting;
-        out.activeTab = s.activeTab ? s.activeTab.id : null;
-        out.pluginTab = !!(s.pluginTabs || []).find((t) => t.id === 'design-redux');
-        const content = document.querySelector('.vertical-tab-content');
-        out.contentClass = content ? content.className : null;
-        out.contentStart = content ? content.innerHTML.slice(0, 600) : null;
-        out.ourTab = document.querySelectorAll('.dr-settings').length;
-        const tab = (s.pluginTabs || []).find((t) => t.id === 'design-redux');
-        if (tab) {
-          try {
-            tab.display();
-            out.displayAgain = 'ok';
-            out.afterDisplay = tab.containerEl ? tab.containerEl.className + ' / ' + tab.containerEl.children.length + ' children / attached ' + tab.containerEl.isConnected : null;
-          } catch (err) {
-            out.displayAgain = String((err && err.stack) || err);
-          }
-        }
-      } catch (err) {
-        out.error = String(err);
-      }
-      return out;
+    // Newer Obsidian can show settings in a window of their own, so the
+    // tab is asked where it is rather than looked for in the main window.
+    const where = await browser.executeObsidian(({ app }) => {
+      const tab = (app.setting.pluginTabs || []).find((t) => t.id === 'design-redux');
+      const doc = tab && tab.containerEl ? tab.containerEl.ownerDocument : null;
+      return {
+        sameWindow: doc === document,
+        title: doc ? doc.title : null,
+        tabs: doc ? doc.querySelectorAll('.dr-settings .dr-set-tab').length : 0,
+      };
     });
     fs.mkdirSync(OUT, { recursive: true });
-    fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(facts, null, 2));
-    await browser.$('.dr-settings .dr-set-tabs').waitForExist({ timeout: 10000 });
-    const tabs = await browser.$$('.dr-settings .dr-set-tab');
-    expect(tabs.length).toBe(4);
+    fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
+    expect(where.tabs).toBe(4);
+
+    // A screenshot from whichever window they're in.
+    const main = await browser.getWindowHandle();
+    if (!where.sameWindow) {
+      for (const handle of await browser.getWindowHandles()) {
+        if (handle === main) continue;
+        await browser.switchToWindow(handle);
+        if ((await browser.$$('.dr-settings').length) > 0) break;
+      }
+    }
     await shot('settings-library');
     await clickText('.dr-settings .dr-set-tab', 'Browsing');
     await shot('settings-browsing');
+    await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
+    await browser.pause(500);
   });
 
   it('opens a folder as an album, with an Edit mode', async function () {
@@ -271,7 +267,11 @@ describe('Design Redux in Obsidian', function () {
       const add = Array.from(document.querySelectorAll('.workspace-leaf.mod-active *')).find(
         (e) => e.children.length === 0 && e.textContent.trim() === 'Add property'
       );
+      const box = document.querySelector('.workspace-leaf.mod-active .metadata-container');
       return {
+        style: box ? box.getAttribute('style') : null,
+        leafType: box && box.closest('.workspace-leaf-content') ? box.closest('.workspace-leaf-content').dataset.type : null,
+        inRootSplit: !!(box && box.closest('.workspace-split.mod-root')),
         bodyHasPanelClass: document.body.classList.contains('dr-props-active'),
         metadataContainers: Array.from(document.querySelectorAll('.metadata-container')).map((e) => [
           e.className,
@@ -281,6 +281,8 @@ describe('Design Redux in Obsidian', function () {
       };
     });
     fs.writeFileSync(path.join(OUT, `${version}-properties-facts.json`), JSON.stringify(facts, null, 2));
+    // With the Properties panel on (the default), the note's own block is hidden.
+    expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
   });
 
   after(async function () {
