@@ -26,6 +26,8 @@ class BrowseView extends ItemView {
     this.columnSort = null;
     // Folder paths, or property values, whose full list is showing.
     this.expanded = new Set();
+    // Notes a drawing found with no length yet, counted once it's done.
+    this.toMeasure = [];
     // Filters, each narrowing every screen until cleared: notes under
     // one folder, with one tag, with a property value, from a period.
     this.clearFilters();
@@ -353,6 +355,7 @@ class BrowseView extends ItemView {
     this.stale = false;
     const root = this.contentEl;
     root.empty();
+    this.beginDrawing();
 
     // A screen that throws should say so rather than leave a blank
     // pane: the rest of the view still works, and the console carries
@@ -367,6 +370,7 @@ class BrowseView extends ItemView {
         text: 'This screen could not be drawn. See the console for details.',
       });
     }
+    this.measureLater();
   }
 
   /** The screen this mode draws, built fresh so it holds no state. */
@@ -943,6 +947,9 @@ class BrowseView extends ItemView {
 
     const files = spec.files || [];
     const meta = [files.length === 1 ? '1 item' : `${files.length} items`];
+    // How long the album is, as an album gives its running time.
+    const length = this.totalLength(files);
+    if (length) meta.push(length);
     const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
     if (newest) meta.push(`Updated ${this.relative(newest)}`);
     info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
@@ -1437,12 +1444,14 @@ class BrowseView extends ItemView {
     }
 
     const scratch = root.ownerDocument.createElement('div');
+    this.beginDrawing();
     try {
       this.screen().render(scratch);
     } catch (err) {
       this.render();
       return;
     }
+    this.measureLater();
 
     const fresh = Array.from(scratch.children);
     if (fresh[0] && fresh[0].classList.contains('dr-detail-bar')) fresh.shift();
@@ -2126,8 +2135,29 @@ class BrowseView extends ItemView {
       });
     }
 
-    row.createDiv({ cls: 'dr-track-num', text: String(index) });
-    row.createDiv({ cls: 'dr-track-name', text: file.basename });
+    // The number, or — on the note you last had open — a mark where it
+    // would be, as a list marks the track that's playing. The number
+    // stays underneath, for anything reading the row.
+    const num = row.createDiv({ cls: 'dr-track-num' });
+    num.createSpan({ cls: 'dr-track-index', text: String(index) });
+    if (this.isLastOpened(file)) {
+      row.addClass('is-current');
+      const mark = num.createSpan({ cls: 'dr-track-mark' });
+      mark.setAttribute('aria-label', 'Last opened');
+      setIcon(mark, 'book-open');
+    }
+
+    const name = row.createDiv({ cls: 'dr-track-name' });
+    if (this.isPinned(file)) {
+      // Pinned is this list's favourite: a mark beside the title.
+      name.addClass('has-mark');
+      name.createSpan({ cls: 'dr-track-title', text: file.basename });
+      const pin = name.createSpan({ cls: 'dr-track-pin' });
+      pin.setAttribute('aria-label', 'Pinned');
+      setIcon(pin, 'pin');
+    } else {
+      name.setText(file.basename);
+    }
 
     this.albumColumns().forEach((key) =>
       row.createDiv({
@@ -2135,6 +2165,13 @@ class BrowseView extends ItemView {
         text: this.columnValue(file, key),
       })
     );
+
+    // Its length, where a track's would be: the last column, lined up.
+    const style = this.lengthStyle();
+    if (style) {
+      const length = row.createDiv({ cls: 'dr-track-length', text: this.lengthLabel(file) });
+      if (style === 'words') length.addClass('is-words');
+    }
 
     const more = row.createDiv({ cls: 'clickable-icon dr-track-more' });
     more.setAttribute('aria-label', 'More');
@@ -2167,6 +2204,75 @@ class BrowseView extends ItemView {
     if (key === 'folder') return file.parent ? file.parent.name : '';
     if (file.extension !== 'md') return '';
     return this.valueOf(file, key);
+  }
+
+  /* -- lengths, marks -------------------------------------------- */
+
+  /** How lengths are written here — 'time' or 'words' — or null for none. */
+  lengthStyle() {
+    const style = this.plugin.settings.trackLength;
+    if (!this.plugin.lengths || !LENGTH_STYLES[style] || style === 'none') return null;
+    return style;
+  }
+
+  /** A note's length for its row. One not yet counted is counted once the page is drawn. */
+  lengthLabel(file) {
+    const lengths = this.plugin.lengths;
+    if (lengths.measurable(file) && lengths.words(file) === null) this.toMeasure.push(file);
+    return lengths.label(file, this.lengthStyle());
+  }
+
+  /**
+   * An album's length, all its notes together. Not for a very large
+   * one — the vault's root holds every note — which would mean reading
+   * the whole vault to write one line.
+   */
+  totalLength(files) {
+    const style = this.lengthStyle();
+    if (!style || files.length > 400) return '';
+    const total = this.plugin.lengths.total(files, style);
+    if (total !== null) return total;
+    files.forEach((f) => this.toMeasure.push(f));
+    return '';
+  }
+
+  /** What one drawing works out once, forgotten before the next. */
+  beginDrawing() {
+    this.toMeasure = [];
+    this.pinMemo = null;
+    this.lastMemo = undefined;
+  }
+
+  /** Count what the drawing found uncounted, and draw again once it's known. */
+  measureLater() {
+    const files = this.toMeasure || [];
+    this.toMeasure = [];
+    if (!files.length || !this.plugin.lengths) return;
+    this.plugin.lengths.measure(files).then(
+      (changed) => {
+        if (changed) this.queueRender();
+      },
+      (err) => console.error('Design Redux: could not count words', err)
+    );
+  }
+
+  /** Whether a note is pinned. The pins are gathered once per drawing. */
+  isPinned(file) {
+    if (!this.pinMemo) {
+      const pins = this.plugin.pins;
+      const all = pins && typeof pins.all === 'function' ? pins.all() : [];
+      this.pinMemo = new Set(all.map((t) => t.path));
+    }
+    return this.pinMemo.has(file.path);
+  }
+
+  /** Whether this is the note last opened — where you were. Once per drawing. */
+  isLastOpened(file) {
+    if (this.lastMemo === undefined) {
+      const recent = typeof this.plugin.recentFiles === 'function' ? this.plugin.recentFiles() : [];
+      this.lastMemo = recent[0] ? recent[0].path : null;
+    }
+    return this.lastMemo === file.path;
   }
 
   /** Short, in the spirit of a track length: a glance, not a date. */
@@ -2221,7 +2327,7 @@ class BrowseView extends ItemView {
   }
 
   /** A single file as a tile: its cover, or an icon for its type. */
-  fileCard(grid, file) {
+  fileCard(grid, file, open) {
     const card = this.card(
       grid,
       file.basename,
@@ -2236,7 +2342,7 @@ class BrowseView extends ItemView {
       file.extension === 'md' ? this.genName(file.basename, file.path) : null
     );
 
-    onActivate(card, (evt) => this.openFile(file, evt));
+    onActivate(card, (evt) => (open ? open(file, evt) : this.openFile(file, evt)));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
   }
 

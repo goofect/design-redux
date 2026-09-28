@@ -533,8 +533,18 @@ class HomeScreen extends BrowseScreen {
     const home = this.app.vault.getFileByPath(this.settings.homePath || 'Home.md');
     const note = home && keep(home) ? home : null;
 
-    const recents = this.plugin.recentFiles().filter(keep).slice(0, 12);
+    const recents = this.plugin.recentFiles().filter(keep);
+    const queued = this.upNext() ? this.plugin.queue.files().filter(keep) : [];
     const pinned = this.plugin.pins.files().filter(keep).slice(0, 12);
+    const notes = this.app.vault
+      .getMarkdownFiles()
+      .filter((f) => !this.plugin.isFolderNote(f))
+      .filter(keep);
+    const added = notes
+      .slice()
+      .sort((a, b) => b.stat.ctime - a.stat.ctime)
+      .slice(0, 12);
+    const older = this.rediscover(notes, recents);
     const folders = view.sortFolders(
       view
         .visibleFolders(this.app.vault.getRoot())
@@ -542,40 +552,174 @@ class HomeScreen extends BrowseScreen {
         .filter((f) => view.matches(f.name))
     );
 
-    if (note) this.shelf(root, 'Continue', [note], null);
-    if (recents.length) this.shelf(root, 'Recently opened', recents, 'recents');
-    if (pinned.length) this.shelf(root, 'Pinned', pinned, 'pinned');
-    if (folders.length) this.shelf(root, 'Folders', folders, 'folders');
+    // Up front, large: where you were, what's next, the home note, and
+    // one to come back to — each captioned with why it's there.
+    const picks = [];
+    const pick = (caption, file, open) => {
+      if (file && !picks.some((p) => p.file === file)) picks.push({ caption, file, open });
+    };
+    pick('Last opened', recents.find((f) => f.extension === 'md' && f !== note));
+    pick('Up next', queued[0], (evt) => this.openQueued(queued[0], evt));
+    pick('Home', note);
+    pick('Rediscover', older[0]);
+    if (picks.length) this.picks(root, picks);
 
-    if (!note && !recents.length && !pinned.length && !folders.length) {
+    if (queued.length) {
+      this.shelf(root, 'Up Next', queued, {
+        head: () => this.upNext().show(),
+        open: (file, evt) => this.openQueued(file, evt),
+      });
+    }
+    if (recents.length) this.shelf(root, 'Recently opened', recents.slice(0, 12), { mode: 'recents' });
+    if (added.length) this.shelf(root, 'Recently added', added);
+    if (pinned.length) this.shelf(root, 'Pinned', pinned, { mode: 'pinned' });
+    if (older.length > 1) this.shelf(root, 'Rediscover', older.slice(1));
+    if (folders.length) this.shelf(root, 'Folders', folders, { mode: 'folders' });
+
+    if (!note && !recents.length && !pinned.length && !folders.length && !notes.length) {
       root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
     }
   }
 
+  /** The Up Next feature, while it's on. */
+  upNext() {
+    const feature = typeof this.plugin.feature === 'function' ? this.plugin.feature(UpNext) : null;
+    return feature && feature.enabled && this.plugin.queue ? feature : null;
+  }
+
+  openQueued(file, evt) {
+    const upNext = this.upNext();
+    if (upNext) upNext.open(file, !!(evt && (evt.ctrlKey || evt.metaKey)));
+    else this.view.openFile(file, evt);
+  }
+
   /**
-   * A titled row of tiles. The heading is the way through to the whole
-   * of whatever it's showing, as a section header is on a home screen.
+   * Notes you haven't been in for a while — not opened lately, not
+   * changed in a month. A different handful each day, the same one all
+   * day, so the shelf doesn't reshuffle on every visit.
    */
-  shelf(root, title, items, mode) {
+  rediscover(notes, recents) {
+    const day = 86400000;
+    const now = Date.now();
+    const seen = new Set(recents.map((f) => f.path));
+    const today = Math.floor(now / day);
+    return notes
+      .filter((f) => !seen.has(f.path) && now - f.stat.mtime > 30 * day)
+      .map((f) => ({ file: f, order: stableHash(`${today}:${f.path}`) }))
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 13)
+      .map((x) => x.file);
+  }
+
+  /**
+   * The large cards: a caption above each, its cover, and a band of
+   * that cover's colour — the cover itself, blurred — under the title.
+   */
+  picks(root, picks) {
     const view = this.view;
-    const head = root.createDiv({ cls: 'dr-shelf-head' });
+    const row = root.createDiv({ cls: 'dr-picks' });
+    roveFocus(row, '.dr-pick');
+    picks.forEach(({ caption, file, open }) => {
+      const card = row.createDiv({ cls: 'dr-pick' });
+      card.dataset.path = file.path;
+      card.setAttribute('role', 'button');
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', `${caption}: ${file.basename}`);
+      card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
-    if (mode) {
-      head.setAttribute('role', 'button');
-      head.setAttribute('tabindex', '0');
-      head.addClass('is-linked');
-      onActivate(head, () => view.navigate({ mode: mode, property: null }));
-    }
-    head.createSpan({ cls: 'dr-shelf-title', text: title });
-    if (mode) setIcon(head.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
+      const body = card.createDiv({ cls: 'dr-pick-body' });
+      const src = file.extension === 'md' ? view.coverFor(file) : null;
+      const gen = file.extension === 'md' ? view.genName(file.basename, file.path) : null;
+      const glow = body.createDiv({ cls: 'dr-pick-glow' });
+      view.fillArt(glow, src, iconForFile(file), gen);
+      body.toggleClass('is-lit', !!(src || gen));
+      const art = body.createDiv({ cls: 'dr-pick-art' });
+      view.fillArt(art, src, iconForFile(file), gen);
 
-    const grid = root.createDiv({ cls: 'dr-grid' });
-    roveFocus(grid, '.dr-card');
-    items.forEach((item) => {
-      if (item instanceof TFolder) view.folderCard(grid, item);
-      else view.fileCard(grid, item);
+      const text = body.createDiv({ cls: 'dr-pick-text' });
+      text.createDiv({ cls: 'dr-pick-title', text: file.basename });
+      const where = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent.name : '';
+      const length = this.plugin.lengths ? this.plugin.lengths.label(file, 'time') : '';
+      if (this.plugin.lengths && this.plugin.lengths.measurable(file) && this.plugin.lengths.words(file) === null) {
+        view.toMeasure.push(file);
+      }
+      const sub = [where, length].filter(Boolean).join('  ·  ');
+      if (sub) text.createDiv({ cls: 'dr-pick-sub', text: sub });
+
+      onActivate(card, (evt) => (open ? open(evt) : view.openFile(file, evt)));
+      onContextMenu(card, (evt) => view.fileMenu(evt, file));
     });
   }
+
+  /**
+   * A titled row of tiles that scrolls sideways. The heading is the way
+   * through to the whole of whatever it's showing, as a section header
+   * is on a home screen; arrows beside it page through the row.
+   */
+  shelf(root, title, items, opts = {}) {
+    const view = this.view;
+    const head = root.createDiv({ cls: 'dr-shelf-head' });
+    const label = head.createDiv({ cls: 'dr-shelf-label' });
+    const through = opts.head || (opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null);
+    if (through) {
+      label.setAttribute('role', 'button');
+      label.setAttribute('tabindex', '0');
+      label.addClass('is-linked');
+      onActivate(label, through);
+    }
+    label.createSpan({ cls: 'dr-shelf-title', text: title });
+    if (through) setIcon(label.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
+
+    const row = root.createDiv({ cls: 'dr-shelf-row' });
+    roveFocus(row, '.dr-card');
+    items.forEach((item) => {
+      if (item instanceof TFolder) view.folderCard(row, item);
+      else view.fileCard(row, item, opts.open);
+    });
+    this.arrows(head, row);
+  }
+
+  /** ‹ and ›, paging a shelf that runs past the edge. Swiped on touch instead. */
+  arrows(head, row) {
+    const arrows = head.createDiv({ cls: 'dr-shelf-arrows' });
+    const button = (icon, label, dir) => {
+      const el = arrows.createDiv({ cls: 'clickable-icon dr-shelf-arrow' });
+      el.setAttribute('aria-label', label);
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '-1');
+      setIcon(el, icon);
+      onActivate(el, () => {
+        const by = Math.max(row.clientWidth * 0.85, 160) * dir;
+        if (typeof row.scrollBy === 'function') row.scrollBy({ left: by, behavior: 'smooth' });
+        else row.scrollLeft += by;
+      });
+      return el;
+    };
+    const back = button('chevron-left', 'Scroll back', -1);
+    const on = button('chevron-right', 'Scroll on', 1);
+    const sync = () => {
+      const room = row.scrollWidth - row.clientWidth;
+      head.toggleClass('has-overflow', room > 2);
+      back.toggleClass('is-disabled', row.scrollLeft <= 2);
+      on.toggleClass('is-disabled', row.scrollLeft >= room - 2);
+    };
+    row.addEventListener('scroll', sync, { passive: true });
+    // Its width is only known once it's on the page, and changes with
+    // the page's; pointing at the shelf is when the arrows matter.
+    head.addEventListener('pointerenter', sync);
+    row.addEventListener('pointerenter', sync);
+    window.setTimeout(sync, 0);
+  }
+}
+
+/** A number from text, the same every time: an order that holds for a day. */
+function stableHash(text) {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
 }
 
 /* Screens you start from, rather than arrive at. */

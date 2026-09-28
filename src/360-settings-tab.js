@@ -24,7 +24,7 @@ const SETTINGS_TABS = [
     icon: 'layout-grid',
     sections: [
       { title: 'Lists', keys: ['defaultSort', 'discNoteLimit', 'albumNoteLimit'] },
-      { title: 'Screens', keys: ['albumColumns', 'tableColumns', 'categoryProperty'] },
+      { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tableColumns', 'categoryProperty'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
       { title: 'Covers', keys: ['coverProperty', 'coverFallback', 'generatedCoverColor'] },
     ],
@@ -45,7 +45,7 @@ const SETTINGS_TABS = [
     title: 'Interface',
     icon: 'app-window',
     sections: [
-      { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
+      { title: 'Page', keys: ['contextStrip', 'upNext', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties'] },
       { title: 'Canvas', keys: ['canvasLegend', 'canvasTextAlign'] },
