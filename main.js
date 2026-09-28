@@ -13494,8 +13494,26 @@ class CanvasLegend extends Feature {
   swatch(el, key) {
     el.addClass('dr-legend-dot');
     if (key === 'none') el.addClass('is-none');
-    else if (CANVAS_COLOURS[key]) el.style.setProperty('background-color', `rgb(var(--canvas-color-${key}))`);
+    else if (CANVAS_COLOURS[key]) el.style.setProperty('background-color', this.presetColour(el, key));
     else el.style.setProperty('background-color', key);
+  }
+
+  /**
+   * One of Obsidian's six card colours. Older versions keep them as
+   * "r, g, b", to go inside rgb(); newer ones as colours in their own
+   * right. Read as the theme has it, so either works.
+   */
+  presetColour(el, key) {
+    const name = `--canvas-color-${key}`;
+    let raw = '';
+    try {
+      const at = el.parentElement || el;
+      raw = at.ownerDocument.defaultView.getComputedStyle(at).getPropertyValue(name).trim();
+    } catch (err) {
+      raw = '';
+    }
+    if (!raw) return `rgb(var(${name}))`;
+    return /^\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?$/.test(raw) ? `rgb(${raw})` : raw;
   }
 
   colourName(key) {

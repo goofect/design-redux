@@ -209,6 +209,11 @@ describe('Design Redux in Obsidian', function () {
       Array.from(document.querySelectorAll('.dr-legend-row')).map((r) => r.dataset.key)
     );
     expect(keys).toEqual(['1', '4', '#aa2222', 'none']);
+    // Obsidian's own colours are drawn, not left empty, whatever form this version keeps them in.
+    const red = await browser.execute(
+      () => getComputedStyle(document.querySelector('.dr-legend-row[data-key="1"] .dr-legend-dot')).backgroundColor
+    );
+    expect(red).not.toBe('rgba(0, 0, 0, 0)');
 
     const inner = await browser.executeObsidian(({ app }) => {
       const view = app.workspace.getLeavesOfType('canvas')[0].view;
