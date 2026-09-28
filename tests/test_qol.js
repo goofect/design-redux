@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -437,6 +437,33 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       assert.ok(keys.indexOf(k) !== -1, k + ' has a row');
       assert.ok(k in R.DEFAULTS, k + ' has a default');
     });
+  });
+
+  await t('settings for things deleted while the plugin was off are let go; not while the vault is loading', () => {
+    const existing = new Set(['A', 'A/n.md', 'Map.canvas']);
+    const fake = {
+      settings: {
+        coverColors: { A: '#123456', Gone: '#000000' },
+        canvasLegends: { 'Map.canvas': {}, 'Old.canvas': {} },
+        canvasAlignments: { 'Old.canvas': { x: 'center' } },
+        albumOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
+        folderDefaults: { Gone: [] },
+      },
+      saved: 0,
+      saveData() { this.saved++; },
+      app: { vault: { getAllLoadedFiles: () => Array.from(existing), getAbstractFileByPath: (p) => (existing.has(p) ? {} : null) } },
+    };
+    assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), true);
+    assert.deepStrictEqual(Object.keys(fake.settings.coverColors), ['A']);
+    assert.deepStrictEqual(Object.keys(fake.settings.canvasLegends), ['Map.canvas']);
+    assert.deepStrictEqual(fake.settings.canvasAlignments, {});
+    assert.deepStrictEqual(Object.keys(fake.settings.albumOrders), ['/', 'A']);
+    assert.deepStrictEqual(fake.settings.folderDefaults, {});
+    assert.strictEqual(fake.saved, 1);
+    fake.app.vault.getAllLoadedFiles = () => [];
+    fake.settings.coverColors.Gone = '#000000';
+    assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), undefined);
+    assert.ok('Gone' in fake.settings.coverColors, 'pruned while the vault looked empty');
   });
 
   console.log(`\n${passed} passed`);

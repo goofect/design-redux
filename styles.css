@@ -1,3 +1,73 @@
+/* @settings
+
+name: Design Redux
+id: design-redux
+settings:
+    -
+        id: dr-covers-heading
+        title: Covers and tiles
+        type: heading
+        level: 2
+        collapsed: false
+    -
+        id: dr-cover-radius
+        title: Cover corners
+        description: How rounded album and note covers are. Unset follows your theme.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 40
+        step: 1
+        format: px
+    -
+        id: dr-tile-size
+        title: Tile size
+        description: The narrowest a folder or note tile gets in a grid.
+        type: variable-number-slider
+        default: 170
+        min: 110
+        max: 280
+        step: 10
+        format: px
+    -
+        id: dr-album-art-size
+        title: Album cover size
+        description: The large cover at the top of an album.
+        type: variable-number-slider
+        default: 300
+        min: 160
+        max: 440
+        step: 10
+        format: px
+    -
+        id: dr-flat-covers
+        title: Flat covers
+        description: No shadow under covers.
+        type: class-toggle
+    -
+        id: dr-strip-heading
+        title: Context strip
+        type: heading
+        level: 2
+        collapsed: false
+    -
+        id: dr-strip-blur
+        title: Glass blur
+        description: How much the strip blurs what's behind it.
+        type: variable-number-slider
+        default: 14
+        min: 0
+        max: 40
+        step: 1
+        format: px
+    -
+        id: dr-strip-flat
+        title: Flat strip
+        description: No shadow under the strip.
+        type: class-toggle
+
+*/
+
 /* Design Redux
  *
  * Only the chrome this plugin adds is styled here. Property rows are
@@ -784,10 +854,10 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: 300px;
-  height: 300px;
+  width: var(--dr-album-art-size, 300px);
+  height: var(--dr-album-art-size, 300px);
   overflow: hidden;
-  border-radius: var(--radius-l, 10px);
+  border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
   background-color: var(--background-secondary);
   box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
 }
@@ -1158,7 +1228,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   width: 168px;
   height: 168px;
   overflow: hidden;
-  border-radius: var(--radius-m, 8px);
+  border-radius: var(--dr-cover-radius, var(--radius-m, 8px));
   background-color: var(--background-secondary);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
@@ -1193,7 +1263,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 
 .dr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--dr-tile-size, 170px), 1fr));
   gap: 22px 20px;
   margin-bottom: 8px;
 }
@@ -1208,7 +1278,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   aspect-ratio: 1;
   margin-bottom: 8px;
   overflow: hidden;
-  border-radius: var(--radius-m, 8px);
+  border-radius: var(--dr-cover-radius, var(--radius-m, 8px));
   background-color: var(--background-secondary);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   transition: transform 120ms ease;
@@ -1828,8 +1898,8 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   padding: 8px 14px;
   border-radius: 100px;
   background-color: var(--glass-solid, var(--background-secondary));
-  backdrop-filter: blur(var(--glass-blur, 14px));
-  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
+  backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
+  -webkit-backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
   border: 1px solid var(--background-modifier-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
@@ -4424,4 +4494,70 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 
 .dr-align-button.is-active {
   color: var(--text-accent);
+}
+
+/* The Undo in a notice after a move or rename. */
+.notice .dr-undo {
+  margin-left: 4px;
+  color: var(--text-accent);
+  font-weight: var(--font-semibold, 600);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Compatibility, in settings: a tick or a cross for each unofficial part. */
+.dr-compat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0 8px;
+}
+
+.dr-compat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.dr-compat-mark {
+  display: flex;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-green, var(--text-success, #3fb950));
+}
+
+.dr-compat-mark .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-compat-row.is-missing .dr-compat-mark {
+  color: var(--text-error, #e5484d);
+}
+
+.dr-compat-row.is-pending .dr-compat-mark {
+  color: var(--text-faint);
+}
+
+.dr-compat-what {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-compat-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Style Settings switches: covers and the strip without their shadows. */
+body.dr-flat-covers .dr-card-art,
+body.dr-flat-covers .dr-album-art,
+body.dr-flat-covers .dr-detail-art,
+body.dr-flat-covers .dr-detail-art.is-generated {
+  box-shadow: none;
+}
+
+body.dr-strip-flat .dr-strip {
+  box-shadow: none;
 }

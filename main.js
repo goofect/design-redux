@@ -21,6 +21,7 @@ const {
   Scope,
   AbstractInputSuggest,
   MenuItem,
+  apiVersion,
 } = require('obsidian');
 // Provided by Obsidian at runtime, as 'obsidian' is.
 const { Decoration, EditorView, ViewPlugin, keymap } = require('@codemirror/view');
@@ -119,6 +120,8 @@ const DEFAULTS = {
   canvasAlignments: {},
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
+  // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
+  settingsVersion: 1,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
@@ -1043,6 +1046,51 @@ function collapseSearches(list) {
  * anywhere else. One handler on the container walks its rows, so the
  * rows themselves stay unaware of it.
  */
+/**
+ * Scroll whatever holds an element while a drag is held near its top or
+ * bottom edge — faster the nearer — so a long list can be dragged
+ * through. `moved` is told the pointer's height after each step, since
+ * what's under it has changed.
+ */
+function edgeScroll(el, moved) {
+  let box = null;
+  for (let at = el; at && at.ownerDocument && at !== at.ownerDocument.body; at = at.parentElement) {
+    const view = at.ownerDocument.defaultView;
+    const style = view ? view.getComputedStyle(at) : null;
+    if (style && /(auto|scroll)/.test(style.overflowY) && at.scrollHeight > at.clientHeight) {
+      box = at;
+      break;
+    }
+  }
+  let frame = 0;
+  let speed = 0;
+  let lastY = 0;
+  const step = () => {
+    frame = 0;
+    if (!speed || !box) return;
+    const before = box.scrollTop;
+    box.scrollTop += speed;
+    if (box.scrollTop !== before && moved) moved(lastY);
+    frame = window.requestAnimationFrame(step);
+  };
+  return {
+    at(y) {
+      lastY = y;
+      if (!box) return;
+      const r = box.getBoundingClientRect();
+      const zone = Math.min(64, r.height / 4);
+      const depth = y < r.top + zone ? y - (r.top + zone) : y > r.bottom - zone ? y - (r.bottom - zone) : 0;
+      speed = Math.max(-40, Math.min(40, Math.round((depth / zone) * 16)));
+      if (speed && !frame) frame = window.requestAnimationFrame(step);
+    },
+    stop() {
+      speed = 0;
+      if (frame) window.cancelAnimationFrame(frame);
+      frame = 0;
+    },
+  };
+}
+
 function roveFocus(container, selector) {
   container.addEventListener('keydown', (evt) => {
     const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
@@ -1564,6 +1612,14 @@ function moveBefore(list, item, before) {
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
 const PATH_KEYED = ['coverColors', 'canvasLegends', 'canvasAlignments'];
+
+/*
+ * Changes to how settings are saved, in order. When a setting is renamed
+ * or reshaped, a step here carries the old value across, so a choice
+ * isn't lost to the change. Each step gets the saved data as it was and
+ * edits it in place: { to: 2, run(saved) { ... } }.
+ */
+const SETTINGS_MIGRATIONS = [];
 
 function movedPath(p, oldPath, newPath) {
   if (p === oldPath) return newPath;
@@ -3738,9 +3794,7 @@ class BrowseView extends ItemView {
 
       const file = this.app.vault.getFileByPath(path);
       if (!file) return;
-      if (await this.plugin.moveFile(file, folder)) {
-        new Notice(`Moved "${file.basename}" to ${folder.split('/').pop()}.`);
-      }
+      await this.plugin.moveFile(file, folder, { announce: true });
     });
   }
 
@@ -4508,15 +4562,18 @@ class BrowseView extends ItemView {
       this.render();
       return false;
     }
+    const oldPath = entry.path;
+    const oldName = entry instanceof TFile ? entry.basename : entry.name;
     try {
       await this.app.fileManager.renameFile(entry, target);
-      return true;
     } catch (err) {
       console.error('Design Redux: could not rename', err);
       new Notice(`Could not rename “${entry.name}”.`);
       this.render();
       return false;
     }
+    this.plugin.offerUndo(`Renamed “${oldName}” to “${name}”.`, () => this.plugin.putBack(entry, oldPath));
+    return true;
   }
 
   /** Delete the way Obsidian does: its confirmation, and its trash setting. */
@@ -4564,7 +4621,7 @@ class BrowseView extends ItemView {
       onActivate(el, run);
     };
     tool('folder-input', 'Move to another folder', () =>
-      new FolderPicker(this.app, (folder) => this.plugin.moveFile(file, folder.path)).open()
+      new FolderPicker(this.app, (folder) => this.plugin.moveFile(file, folder.path, { announce: true })).open()
     );
     tool('trash-2', 'Delete', () => this.deleteEntry(file), 'mod-warning');
 
@@ -4614,13 +4671,7 @@ class BrowseView extends ItemView {
   }
 
   async moveFolderInto(folder, targetPath) {
-    const name = folder.name;
-    if (await this.plugin.moveFile(folder, targetPath)) {
-      const where = targetPath === '/' ? this.app.vault.getName() : targetPath.split('/').pop();
-      new Notice(`Moved “${name}” into ${where}.`);
-      return true;
-    }
-    return false;
+    return !!(await this.plugin.moveFile(folder, targetPath, { announce: true }));
   }
 
   /**
@@ -4649,6 +4700,14 @@ class BrowseView extends ItemView {
         target = el;
         if (target) target.addClass('is-drop-target');
       };
+      let lastX = startX;
+      const hover = (x, y) => {
+        const doc = head.ownerDocument;
+        const under = doc.elementFromPoint ? doc.elementFromPoint(x, y) : null;
+        const over = under && typeof under.closest === 'function' ? under.closest('.dr-disc[data-folder]') : null;
+        mark(over && list.contains(over) && allowed(over.dataset.folder) ? over : null);
+      };
+      const scroller = edgeScroll(list, (y) => hover(lastX, y));
       const move = (evt) => {
         if (!dragging) {
           if (Math.abs(evt.clientY - startY) < 4 && Math.abs(evt.clientX - startX) < 4) return;
@@ -4657,16 +4716,16 @@ class BrowseView extends ItemView {
           list.addClass('is-sorting');
         }
         if (evt.cancelable) evt.preventDefault();
-        const doc = head.ownerDocument;
-        const under = doc.elementFromPoint ? doc.elementFromPoint(evt.clientX, evt.clientY) : null;
-        const over = under && typeof under.closest === 'function' ? under.closest('.dr-disc[data-folder]') : null;
-        mark(over && list.contains(over) && allowed(over.dataset.folder) ? over : null);
+        lastX = evt.clientX;
+        hover(evt.clientX, evt.clientY);
+        scroller.at(evt.clientY);
       };
       const finish = (keep) => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', cancel);
         window.removeEventListener('keydown', escape, true);
+        scroller.stop();
         const chosen = target;
         mark(null);
         head.removeClass('is-dragging');
@@ -4804,6 +4863,8 @@ class BrowseView extends ItemView {
       const startY = down.clientY;
       const before = Array.from(list.children);
       let dragging = false;
+      // Near the album's top or bottom edge, it scrolls, and the row follows.
+      const scroller = edgeScroll(list, (y) => place(y));
 
       const place = (y) => {
         const others = items(list).filter((el) => el !== row);
@@ -4834,12 +4895,14 @@ class BrowseView extends ItemView {
         }
         if (evt.cancelable) evt.preventDefault();
         place(evt.clientY);
+        scroller.at(evt.clientY);
       };
       const finish = (keep) => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
         window.removeEventListener('pointercancel', cancel);
         window.removeEventListener('keydown', escape, true);
+        scroller.stop();
         if (!dragging) return;
         row.removeClass('is-dragging');
         list.removeClass('is-sorting');
@@ -4872,14 +4935,12 @@ class BrowseView extends ItemView {
   async commitRow(list, row, file, home, disc) {
     const folder = disc ? disc.dataset.folder : home;
     if (folder !== home) {
-      const name = file.basename;
-      if (!(await this.plugin.moveFile(file, folder))) {
+      if (!(await this.plugin.moveFile(file, folder, { announce: true }))) {
         this.render();
         return;
       }
       row.dataset.folder = folder;
       row.dataset.path = file.path;
-      new Notice(`Moved “${name}” to ${folder === '/' ? this.app.vault.getName() : folder.split('/').pop()}.`);
     }
     this.saveRowOrder(list, folder);
     const again = this.contentEl.querySelector(`.dr-track[data-path="${CSS.escape(file.path)}"] .dr-edit-grip`);
@@ -13817,6 +13878,154 @@ class CanvasAlign extends Feature {
 CanvasAlign.settingKey = 'canvasTextAlign';
 
 /* ------------------------------------------------------------------ */
+/* Diagnostics                                                         */
+/*                                                                     */
+/* What this Obsidian offers of the unofficial parts the plugin leans  */
+/* on, shown in settings; and a report to paste into a bug report:     */
+/* versions, what's switched on, and recent errors.                    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Each unofficial part, whether this version has it, and what goes
+ * without if it doesn't. `ok` is null where it can't be told yet.
+ */
+function compatibility(app) {
+  const has = (fn) => {
+    try {
+      return !!fn();
+    } catch (err) {
+      return false;
+    }
+  };
+  const open = app.workspace.getLeavesOfType('canvas').map((leaf) => leaf.view).find((v) => v && v.canvas);
+  return [
+    {
+      what: 'Grouped right-click entries (New ▸, Cover ▸)',
+      ok: canNest(),
+      without: 'the entries sit in the menu one per line',
+    },
+    {
+      what: 'Taking unwanted entries out of menus',
+      ok: has(() => Array.isArray(new Menu().items)),
+      without: 'they are hidden from sight only',
+    },
+    {
+      what: 'Suggestions in settings fields',
+      ok: typeof AbstractInputSuggest === 'function',
+      without: 'the fields are plain text',
+    },
+    {
+      what: 'Property names and types in the property tools',
+      ok: has(() => typeof app.metadataTypeManager.getAllProperties === 'function'),
+      without: 'properties are read from the notes alone',
+    },
+    {
+      what: 'Knowing whether Canvas is switched on',
+      ok: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
+      without: 'New canvas is always offered',
+    },
+    {
+      what: 'Canvas legend counts, and centred text',
+      ok: open ? has(() => open.canvas.nodes instanceof Map && typeof open.canvas.getData === 'function') : null,
+      without: 'the legend reads the saved file, and text can’t be centred',
+      pending: 'Checked while a canvas is open.',
+    },
+  ];
+}
+
+class Diagnostics extends Feature {
+  settingsSchema() {
+    return [
+      {
+        key: 'compatibility',
+        type: 'custom',
+        name: 'Compatibility',
+        render: (containerEl) => this.render(containerEl),
+      },
+    ];
+  }
+
+  commands() {
+    return [
+      {
+        id: 'copy-diagnostics',
+        name: 'Copy diagnostics for a bug report',
+        icon: 'clipboard-copy',
+        run: () => this.copy(),
+      },
+    ];
+  }
+
+  register() {
+    // Errors from the plugin's own code, wherever they happen: Obsidian
+    // runs it as "plugin:<id>", which is how its stack traces name it.
+    const ours = (text) => /plugin:design-redux/.test(String(text));
+    this.plugin.registerDomEvent(window, 'error', (evt) => {
+      const text = (evt.error && evt.error.stack) || evt.message;
+      if (ours(text)) this.plugin.noteError(String(text));
+    });
+    this.plugin.registerDomEvent(window, 'unhandledrejection', (evt) => {
+      const text = (evt.reason && evt.reason.stack) || evt.reason;
+      if (ours(text)) this.plugin.noteError(String(text));
+    });
+  }
+
+  render(containerEl) {
+    const list = containerEl.createDiv({ cls: 'dr-compat' });
+    compatibility(this.app).forEach((part) => {
+      const row = list.createDiv({ cls: 'dr-compat-row' });
+      row.toggleClass('is-missing', part.ok === false);
+      row.toggleClass('is-pending', part.ok === null);
+      setIcon(row.createSpan({ cls: 'dr-compat-mark' }), part.ok === null ? 'circle-dashed' : part.ok ? 'check' : 'x');
+      const text = row.createDiv({ cls: 'dr-compat-text' });
+      text.createDiv({ cls: 'dr-compat-what', text: part.what });
+      text.createDiv({
+        cls: 'dr-compat-note',
+        text: part.ok === null ? part.pending : part.ok ? 'Working.' : `Not on this version: ${part.without}.`,
+      });
+    });
+    new Setting(containerEl)
+      .setName('Diagnostics')
+      .setDesc('Versions, what’s switched on, and any recent errors, to paste into a bug report.')
+      .addButton((button) => button.setButtonText('Copy diagnostics').onClick(() => this.copy()));
+  }
+
+  report() {
+    const plugin = this.plugin;
+    const version = (plugin.manifest && plugin.manifest.version) || '?';
+    const where = [
+      Platform.isMobile ? (Platform.isPhone ? 'phone' : 'tablet') : 'desktop',
+      Platform.isMacOS ? 'macOS' : Platform.isWin ? 'Windows' : Platform.isLinux ? 'Linux' : Platform.isIosApp ? 'iOS' : Platform.isAndroidApp ? 'Android' : '',
+    ].filter(Boolean);
+    const features = plugin.features || [];
+    const lines = [
+      `Design Redux ${version}`,
+      `Obsidian ${apiVersion || '?'} on ${where.join(', ')}`,
+      `On: ${features.filter((f) => f.enabled).map((f) => f.constructor.name).join(', ')}`,
+      `Off: ${features.filter((f) => !f.enabled).map((f) => f.constructor.name).join(', ') || 'none'}`,
+      '',
+      'Compatibility:',
+      ...compatibility(this.app).map((p) => `  ${p.ok === null ? '·' : p.ok ? '✓' : '✗'} ${p.what}`),
+      '',
+      `Recent errors: ${(plugin.errors || []).length ? '' : 'none'}`,
+      ...(plugin.errors || []).map((e) => `  ${e}`),
+    ];
+    return lines.join('\n');
+  }
+
+  async copy() {
+    const text = this.report();
+    try {
+      await navigator.clipboard.writeText(text);
+      new Notice('Diagnostics copied. Paste them into your message.');
+    } catch (err) {
+      console.log(text);
+      new Notice('Couldn’t copy; the diagnostics are in the developer console.');
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Plugin: lifecycle only                                              */
 /* ------------------------------------------------------------------ */
 
@@ -13844,6 +14053,7 @@ class DesignRedux extends Plugin {
       new GraphPropertyFilter(this),
       new CanvasLegend(this),
       new CanvasAlign(this),
+      new Diagnostics(this),
       new BulkEditing(this),
     ];
 
@@ -13885,6 +14095,10 @@ class DesignRedux extends Plugin {
       });
 
       this.registerEvent(this.app.workspace.on('layout-change', () => this.queueSync()));
+      // Later, once the vault is surely all there.
+      window.setTimeout(() => {
+        if (!this.unloading) this.pruneLeftovers();
+      }, 15000);
       // Arrangements follow the files they name.
       this.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.orders.followRename(file, oldPath)));
       this.registerEvent(this.app.vault.on('delete', (file) => this.orders.followDelete(file)));
@@ -14066,10 +14280,19 @@ class DesignRedux extends Plugin {
    * link to the file as part of it. A name already taken in the
    * destination gets a numbered suffix instead of overwriting.
    */
-  async moveFile(file, folderPath) {
+  /**
+   * Move a file or folder into another folder, keeping its name unless
+   * that's taken there. Resolves to where it was — or false if it didn't
+   * move. With { announce: true } it says so, with an Undo.
+   */
+  async moveFile(file, folderPath, opts = {}) {
     const dir = !folderPath || folderPath === '/' ? '' : folderPath;
     const current = file.parent ? file.parent.path : '/';
     if (current === (dir || '/')) return false;
+    const from = file.path;
+    // The order of the album it leaves, to restore if it comes back.
+    const order = (this.settings.albumOrders || {})[current];
+    const kept = order ? JSON.parse(JSON.stringify(order)) : null;
     // A folder can't go inside itself, or inside anything in it.
     const isFolder = file instanceof TFolder;
     if (isFolder && (dir === file.path || dir.startsWith(file.path + '/'))) return false;
@@ -14084,12 +14307,64 @@ class DesignRedux extends Plugin {
 
     try {
       await this.app.fileManager.renameFile(file, candidate);
-      return true;
     } catch (err) {
       console.error('Design Redux: could not move the file', err);
       new Notice(`Could not move "${file.name}".`);
       return false;
     }
+    if (opts.announce) {
+      const name = file instanceof TFile ? file.basename : file.name;
+      const where = dir ? dir.split('/').pop() : this.app.vault.getName();
+      this.offerUndo(`Moved “${name}” to ${where}.`, () => this.putBack(file, from, current, kept));
+    }
+    return from;
+  }
+
+  /**
+   * A notice saying what was done, with an Undo that reverses it —
+   * Obsidian has none for moving or renaming files.
+   */
+  offerUndo(message, undo) {
+    const fragment = document.createDocumentFragment();
+    const text = document.createElement('span');
+    text.textContent = `${message} `;
+    const link = document.createElement('a');
+    link.className = 'dr-undo';
+    link.setAttribute('href', '#');
+    link.textContent = 'Undo';
+    fragment.append(text, link);
+    const notice = new Notice(fragment, 8000);
+    link.addEventListener('click', (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      if (notice && typeof notice.hide === 'function') notice.hide();
+      undo();
+    });
+    return notice;
+  }
+
+  /**
+   * A file or folder back where it was, and the order of the album it
+   * came from as it was then. Not if something else has taken its place.
+   */
+  async putBack(entry, oldPath, parentPath, order) {
+    if (this.app.vault.getAbstractFileByPath(oldPath)) {
+      new Notice(`Something else is at “${oldPath}” now, so it can’t go back.`);
+      return false;
+    }
+    try {
+      await this.app.fileManager.renameFile(entry, oldPath);
+    } catch (err) {
+      console.error('Design Redux: could not undo', err);
+      new Notice('Could not undo that.');
+      return false;
+    }
+    if (order && parentPath) {
+      this.settings.albumOrders = Object.assign({}, this.settings.albumOrders, { [parentPath]: order });
+      await this.saveData(this.settings);
+    }
+    this.refreshBrowse();
+    return true;
   }
 
   /**
@@ -14183,8 +14458,37 @@ class DesignRedux extends Plugin {
         fn(f);
       } catch (err) {
         console.error(`Design Redux: ${f.constructor.name} failed`, err);
+        this.noteError(`${f.constructor.name}: ${(err && err.stack) || err}`);
       }
     });
+  }
+
+  /**
+   * Settings kept for files and folders that no longer exist — deleted
+   * or renamed while the plugin was off, so nothing followed them — are
+   * let go. Not if the vault looks empty: that's a vault still loading.
+   */
+  pruneLeftovers() {
+    const vault = this.app.vault;
+    if (typeof vault.getAllLoadedFiles === 'function' && vault.getAllLoadedFiles().length < 2) return;
+    const exists = (p) => p === '/' || !!vault.getAbstractFileByPath(p);
+    let changed = false;
+    PATH_KEYED.concat(['albumOrders', 'folderDefaults']).forEach((key) => {
+      const kept = this.settings[key];
+      if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return;
+      Object.keys(kept).forEach((p) => {
+        if (exists(p)) return;
+        delete kept[p];
+        changed = true;
+      });
+    });
+    if (changed) this.saveData(this.settings);
+    return changed;
+  }
+
+  /** The last few errors, for Copy diagnostics. Kept in memory only. */
+  noteError(text) {
+    this.errors = (this.errors || []).concat([`${new Date().toISOString()}  ${text}`]).slice(-20);
   }
 
   refresh() {
@@ -14208,6 +14512,27 @@ class DesignRedux extends Plugin {
 
   async loadSettings() {
     const saved = (await this.loadData()) || {};
+    // Older saved settings are brought up to date first, keeping a copy
+    // of them as they were in case a step goes wrong.
+    const from = saved.settingsVersion || 1;
+    const steps = SETTINGS_MIGRATIONS.filter((m) => m.to > from).sort((a, b) => a.to - b.to);
+    if (steps.length) {
+      try {
+        const dir = this.manifest && this.manifest.dir;
+        if (dir) await this.app.vault.adapter.write(`${dir}/data.before-v${steps[0].to}.json`, JSON.stringify(saved, null, 2));
+      } catch (err) {
+        console.error('Design Redux: could not back up settings before updating them', err);
+      }
+      steps.forEach((m) => {
+        try {
+          m.run(saved);
+          saved.settingsVersion = m.to;
+        } catch (err) {
+          console.error(`Design Redux: settings step ${m.to} failed`, err);
+        }
+      });
+    }
+
     // Cloned: some defaults are objects, and sharing the reference
     // would let a change to settings edit DEFAULTS itself.
     const settings = JSON.parse(JSON.stringify(DEFAULTS));
@@ -14295,6 +14620,11 @@ const SETTINGS_TABS = [
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties'] },
       { title: 'Canvas', keys: ['canvasLegend', 'canvasTextAlign'] },
+      {
+        title: 'Compatibility',
+        desc: 'Parts of Obsidian that Design Redux uses but plugins aren’t officially meant to. If an Obsidian update changes one, this shows what stops working.',
+        keys: ['compatibility'],
+      },
     ],
   },
 ];

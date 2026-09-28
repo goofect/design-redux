@@ -247,6 +247,32 @@ describe('Design Redux in Obsidian', function () {
     await closeMenus();
   });
 
+  it('offers Undo after a move, and it puts the note back', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const file = app.vault.getFileByPath('Politics/Deterrence.md');
+      await plugins.designRedux.moveFile(file, 'Politics/Theories', { announce: true });
+    });
+    const undo = await browser.$('.notice .dr-undo');
+    await undo.waitForExist({ timeout: 5000 });
+    await shot('undo-notice');
+    await undo.click();
+    await browser.pause(800);
+    const back = await browser.executeObsidian(({ app }) => !!app.vault.getFileByPath('Politics/Deterrence.md'));
+    expect(back).toBe(true);
+  });
+
+  it('reports what works on this version, and copies diagnostics', async function () {
+    const report = await browser.executeObsidian(({ plugins }) => {
+      const d = plugins.designRedux.features.find((f) => f.constructor.name === 'Diagnostics');
+      return d.report();
+    });
+    fs.mkdirSync(OUT, { recursive: true });
+    fs.writeFileSync(path.join(OUT, `${version}-diagnostics.txt`), report);
+    expect(report).toContain('Design Redux');
+    expect(report).toContain(`Obsidian ${version}`);
+    expect(report).not.toContain('✗');
+  });
+
   it('puts « » either side of the note in the strip', async function () {
     await obsidianPage.openFile('Politics/Balance of power.md');
     await browser.$('.dr-strip .dr-strip-center').waitForExist({ timeout: 10000 });

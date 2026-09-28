@@ -106,7 +106,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -200,6 +200,7 @@ function setup() {
     },
     setFolderCover: () => {},
     propertyLabel: (k) => k,
+    offerUndo: () => {},
   };
   plugin.pins = { files: () => [], folders: () => [], all: () => [], has: () => false };
   plugin.orders = new R.Orders(plugin);
@@ -456,6 +457,35 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await settle();
     assert.ok(app.vault.getFileByPath('IR/Theories/Deterrence.md'), 'not moved');
     assert.strictEqual(plugin.settings.albumOrders['IR/Theories'].names[0], 'Deterrence.md');
+  });
+
+  await t('a move says so with an Undo, which puts it back, album order and all', async () => {
+    const { plugin, app } = setup();
+    ['moveFile', 'offerUndo', 'putBack'].forEach((m) => (plugin[m] = R.DesignRedux.prototype[m].bind(plugin)));
+    plugin.orders.setAlbum(app.vault.getFolderByPath('IR'), ['Deterrence.md', 'Balance.md', 'Anarchy.md', 'Cooperation.md']);
+    const before = JSON.parse(JSON.stringify(plugin.settings.albumOrders.IR));
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    notices.length = 0;
+    assert.strictEqual(await plugin.moveFile(file, 'IR/Theories', { announce: true }), 'IR/Balance.md');
+    assert.strictEqual(file.path, 'IR/Theories/Balance.md');
+    const note = notices.pop();
+    assert.ok(note.textContent.startsWith('Moved “Balance” to Theories.'), note.textContent);
+    note.querySelector('.dr-undo').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+    await settle();
+    assert.strictEqual(file.path, 'IR/Balance.md', 'not put back');
+    assert.deepStrictEqual(plugin.settings.albumOrders.IR, before, 'its place in the album was lost');
+  });
+
+  await t('a rename made in Edit mode can be undone too', async () => {
+    const { plugin, app, view } = setup();
+    ['offerUndo', 'putBack'].forEach((m) => (plugin[m] = R.DesignRedux.prototype[m].bind(plugin)));
+    const file = app.vault.getFileByPath('IR/Anarchy.md');
+    notices.length = 0;
+    assert.strictEqual(await view.renameEntry(file, 'Anarchy and order'), true);
+    assert.strictEqual(file.path, 'IR/Anarchy and order.md');
+    notices.pop().querySelector('.dr-undo').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await settle();
+    assert.strictEqual(file.path, 'IR/Anarchy.md');
   });
 
   await t('Escape mid-drag puts the row back, and saves nothing', () => {
