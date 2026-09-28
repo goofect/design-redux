@@ -84,6 +84,9 @@ class PropertiesSection extends PanelSection {
     if (!this.renderWidget(valueEl, key, value, type)) {
       this.renderFallback(valueEl, key, value);
     }
+    // A quiet link in a property shows as the note it names.
+    const quiet = typeof this.plugin.feature === 'function' ? this.plugin.feature(QuietLinks) : null;
+    if (quiet && quiet.enabled) quiet.quietenProperties(valueEl, this.file.path);
 
     // Taken off in one press, with an Undo, rather than from a menu.
     const remove = row.createDiv({ cls: 'clickable-icon dr-row-remove' });

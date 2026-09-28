@@ -402,6 +402,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       pins: { has: () => false },
       orders: { arrangeAlbum: (f, files, fallback) => fallback(files), albumOn: () => false, hasAlbum: () => false, pinOrder: () => [], arrangePins: (x) => x },
       isFolderNote: () => false,
+      folderCoverSrc: () => null,
       feature: () => null,
       registerEvent() {},
       registerDomEvent: (el, type, fn) => el.addEventListener(type, fn),

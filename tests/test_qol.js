@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -464,6 +464,13 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     fake.settings.coverColors.Gone = '#000000';
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), undefined);
     assert.ok('Gone' in fake.settings.coverColors, 'pruned while the vault looked empty');
+  });
+
+  await t('a canvas with no file — one closing, or not loaded — is passed over, not an error', () => {
+    const align = new R.CanvasAlign({ settings: { canvasAlignments: { 'Map.canvas': { a: 'center' } } } });
+    assert.deepStrictEqual(align.alignments(null), {});
+    assert.deepStrictEqual(align.alignments({ path: 'Map.canvas' }), { a: 'center' });
+    assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
   });
 
   console.log(`\n${passed} passed`);

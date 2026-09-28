@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, withoutQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -287,6 +287,123 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const h = graphLeaf('localgraph', 'x [status]');
     feature([h], { localgraph: { mode: 'all', rules: [{ key: 'status', op: 'has' }], clause: '[status]', open: true } }).f.sync();
     assert.deepStrictEqual(h.told, []);
+  });
+
+  /* -- quiet links ------------------------------------------------------------ */
+
+  await t('[[[Note]]] is found — back to back too — read for its target, heading and words, and switched with [[Note]]', () => {
+    const found = G.quietMatches('[[[A]]][[[B|b]]] and [[[[C]]]] and [[D]] and [[[E#F]]]').map((q) => q.inner);
+    assert.deepStrictEqual(found, ['A', 'B|b', 'E#F'], 'four brackets or two are not quiet links');
+    assert.deepStrictEqual(G.splitQuiet('Balance of power#x|the balance'),
+      { target: 'Balance of power#x', path: 'Balance of power', subpath: '#x', words: 'the balance' });
+    assert.strictEqual(G.quietLabel('Ideas/Entropy', ''), 'Ideas/Entropy', 'shown other than as written');
+    assert.strictEqual(G.quietLabel('Entropy#Heat death', ''), 'Entropy > Heat death');
+    assert.strictEqual(G.quietLabel('Entropy', ' disorder '), 'disorder');
+    const editor = (line, ch) => ({ getCursor: () => ({ line: 0, ch }), getLine: () => line });
+    assert.strictEqual(G.toggledLink(G.linkAtCursor(editor('See [[Entropy]] now', 8))), '[[[Entropy]]]');
+    assert.strictEqual(G.toggledLink(G.linkAtCursor(editor('See [[[Order|chaos]]] now', 9))), '[[Order|chaos]]');
+    assert.strictEqual(G.linkAtCursor(editor('no link here', 3)), null);
+  });
+
+  await t("what Obsidian makes of a quiet link — a missing \"[Name\" — is read back as the note it names", () => {
+    const refs = G.quietRefs({
+      links: [
+        { link: '[Anarchy', original: '[[[Anarchy]]' },
+        { link: '[Balance of power#x', original: '[[[Balance of power#x]]' },
+        { link: 'Realism', original: '[[Realism]]' },
+        { link: '[Anarchy', original: '[[[[Anarchy]]' },
+      ],
+      frontmatterLinks: [{ key: 'related', link: '[Realism]', original: '[[[Realism]]]' }],
+    });
+    assert.deepStrictEqual(refs.map((r) => [r.standIn, r.path]), [
+      ['[Anarchy', 'Anarchy'],
+      ['[Balance of power', 'Balance of power'],
+      ['[Realism]', 'Realism'],
+    ]);
+  });
+
+  await t('the graph is handed no line and no stand-in for a quiet link; plain lines stay', () => {
+    const caches = {
+      'Triple.md': {
+        links: [{ link: '[Anarchy', original: '[[[Anarchy]]' }, { link: 'Deterrence', original: '[[Deterrence]]' }],
+        frontmatterLinks: [{ key: 'related', link: '[Realism]', original: '[[[Realism]]]' }],
+      },
+      'Lone.md': { links: [{ link: '[Triple', original: '[[[Triple]]' }] },
+    };
+    const app = {
+      vault: { getFileByPath: (p) => (/\.md$/.test(p) ? { path: p, extension: 'md' } : null) },
+      metadataCache: { getFileCache: (f) => caches[f.path] || null },
+    };
+    const data = {
+      nodes: {
+        'Triple.md': { type: '', links: { '[Anarchy': true, '[Realism]': true, 'Deterrence.md': true } },
+        'Lone.md': { type: '', links: { '[Triple': true } },
+        'Deterrence.md': { type: '', links: {} },
+        '[Anarchy': { type: 'unresolved', links: {} },
+        '[Realism]': { type: 'unresolved', links: {} },
+        '[Triple': { type: 'unresolved', links: {} },
+      },
+      numLinks: 4,
+    };
+    const out = G.withoutQuietLinks(app, data);
+    assert.deepStrictEqual(Object.keys(out.nodes['Triple.md'].links), ['Deterrence.md']);
+    assert.ok(!out.nodes['[Anarchy'] && !out.nodes['[Realism]'] && !out.nodes['[Triple'], 'a stand-in was left in');
+    assert.ok(out.nodes['Lone.md'], 'a note was taken out where orphans are shown');
+    assert.strictEqual(out.numLinks, 1);
+    assert.strictEqual(Object.keys(data.nodes['Triple.md'].links).length, 3, 'the data handed in was changed');
+    const local = G.withoutQuietLinks(app, data, { dropLoners: true, keep: 'Triple.md' });
+    assert.ok(!local.nodes['Lone.md'] && local.nodes['Triple.md']);
+  });
+
+  await t('[[[ opens the list, [[ and [[[[ do not; picking writes the link and closes it once', () => {
+    const files = [
+      { path: 'Politics/Deterrence.md', basename: 'Deterrence', extension: 'md', parent: { path: 'Politics' } },
+      { path: 'Detours.md', basename: 'Detours', extension: 'md', parent: { path: '/' } },
+    ];
+    const feature = {
+      enabled: true,
+      app: {
+        vault: { getMarkdownFiles: () => files },
+        metadataCache: {
+          getFileCache: (f) => (f.basename === 'Detours' ? { frontmatter: { aliases: ['Deterrent walk'] } } : null),
+          fileToLinktext: (f) => f.basename,
+        },
+      },
+    };
+    const suggest = new G.QuietLinkSuggest(feature);
+    let line = 'Typed [[[Det';
+    const editor = {
+      getLine: () => line,
+      replaceRange: (text, from, to) => { line = line.slice(0, from.ch) + text + line.slice(to.ch); },
+      setCursor: (c) => { editor.cursor = c; },
+    };
+    const trigger = (text) => { line = text; return suggest.onTrigger({ line: 0, ch: text.length }, editor); };
+    const hit = trigger('Typed [[[Det');
+    assert.deepStrictEqual([hit.start.ch, hit.query], [9, 'Det']);
+    assert.strictEqual(trigger('Typed [[Det'), null);
+    assert.strictEqual(trigger('Typed [[[[Det'), null);
+    assert.strictEqual(trigger('Typed [[[Det|words'), null, 'still listing after the words began');
+    const found = suggest.getSuggestions({ query: 'Det', file: null });
+    assert.deepStrictEqual(found.map((f) => f.alias || f.file.basename), ['Detours', 'Deterrence', 'Deterrent walk'], 'shortest match first');
+    // Obsidian has already paired the brackets: they're kept, not doubled.
+    line = 'Typed [[[Det]]]';
+    suggest.context = { editor, file: null, start: { line: 0, ch: 9 }, end: { line: 0, ch: 12 } };
+    suggest.close = () => {};
+    suggest.selectSuggestion(found[1]);
+    assert.strictEqual(line, 'Typed [[[Deterrence]]]');
+    assert.deepStrictEqual(editor.cursor, { line: 0, ch: 22 });
+  });
+
+  await t('a rename rewrites the quiet links to the note, heading and words kept, and nothing else', () => {
+    assert.ok(G.quietPointsAt('Anarchy', 'Politics/Anarchy.md'));
+    assert.ok(G.quietPointsAt('politics/anarchy', 'Politics/Anarchy.md'));
+    assert.ok(!G.quietPointsAt('Anarchy2', 'Politics/Anarchy.md'));
+    const text = 'A [[[Anarchy]]], [[[Anarchy#Order|words]]] and [[[Politics/Anarchy]]]; [[Anarchy]] and [[[Anarchy2]]] stay.';
+    const out = G.renameQuietLinks(text, 'Politics/Anarchy.md', 'Anarchism');
+    assert.strictEqual(out.count, 3);
+    assert.strictEqual(out.text, 'A [[[Anarchism]]], [[[Anarchism#Order|words]]] and [[[Anarchism]]]; [[Anarchy]] and [[[Anarchy2]]] stay.');
+    const kept = G.renameQuietLinks(text, 'Politics/Anarchy.md', 'Anarchism', () => true);
+    assert.strictEqual(kept.count, 0, 'rewrote a link that still names a note');
   });
 
   console.log(`\n${passed} passed`);

@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -573,6 +573,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const lengths = Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"] .dr-track-length')).map((e) => e.textContent);
     assert.deepStrictEqual(lengths, ['2 min', '5 min', '<1 min', '']);
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
+  });
+
+  await t("without a cover: the plain icon by default, the folder's cover when asked, or the icon on a soft colour", () => {
+    const { view, plugin, app } = setup();
+    plugin.folderCoverSrc = (folder) => (folder.path === 'IR' ? 'ir.png' : null);
+    plugin.recentFiles = () => [f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')];
+    Object.assign(view, { mode: 'recents' });
+    const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-card-art')).map((el) => {
+      const img = el.querySelector('img');
+      if (img) return img.getAttribute('src');
+      return el.classList.contains('is-hued') ? 'soft' : el.classList.contains('is-blank') ? 'icon' : '?';
+    });
+    view.render();
+    assert.deepStrictEqual(tiles(), ['icon', 'icon'], 'the default is no longer the plain icon');
+    plugin.settings.coverFromFolder = true;
+    view.render();
+    assert.deepStrictEqual(tiles(), ['ir.png', 'icon'], "only the note's own folder counts, not one above it");
+    plugin.settings.coverFromFolder = false;
+    plugin.settings.coverFallback = 'soft';
+    view.render();
+    assert.deepStrictEqual(tiles(), ['soft', 'soft']);
+    const hues = Array.from(view.contentEl.querySelectorAll('.dr-card-art')).map((el) => el.style.getPropertyValue('--dr-gen-h'));
+    assert.notStrictEqual(hues[0], hues[1], 'each note should take its own colour');
+    const folder = document.createElement('div');
+    R.drawFolderArt(plugin, folder, app.vault.getFolderByPath('IR/Theories'));
+    assert.ok(folder.classList.contains('is-hued'), 'a folder without a cover took no soft colour');
   });
 
   await t('Home leads with large cards, then shelves that scroll sideways', async () => {

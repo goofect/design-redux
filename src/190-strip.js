@@ -313,12 +313,7 @@ class ContextStrip extends Feature {
     now.setAttribute('tabindex', '0');
 
     const art = now.createDiv({ cls: 'dr-strip-art' });
-    fillArt(
-      art,
-      resolveCover(this.app, file, this.settings.coverProperty),
-      iconForFile(file),
-      file.extension === 'md' ? coverGen(this.settings, file.basename, file.path) : null
-    );
+    drawNoteArt(this.plugin, art, file);
 
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: file.basename });

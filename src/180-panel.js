@@ -235,12 +235,7 @@ class PropertiesPanel extends Feature {
     const file = this.file;
     const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
     const art = head.createDiv({ cls: 'dr-props-art' });
-    fillArt(
-      art,
-      resolveCover(this.app, file, this.settings.coverProperty),
-      iconForFile(file),
-      coverGen(this.settings, file.basename, file.path)
-    );
+    drawNoteArt(this.plugin, art, file);
 
     const info = head.createDiv({ cls: 'dr-props-info' });
     info.createDiv({ cls: 'dr-props-title', text: file.basename });

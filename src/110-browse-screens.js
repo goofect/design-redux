@@ -74,9 +74,13 @@ class FolderScreen extends BrowseScreen {
     view.renderHeader(root, folder, all);
     if (!all.length && !view.editing) {
       root.createDiv({ cls: 'dr-empty', text: 'Nothing here' });
+      view.renderMoreIn(root, folder);
       return;
     }
     view.renderDiscs(root, discs, folder);
+    if (view.editing) return;
+    view.renderAlbumFoot(root, all);
+    view.renderMoreIn(root, folder);
   }
 
 }
@@ -146,6 +150,9 @@ class NotesScreen extends BrowseScreen {
     const head = table.createDiv({ cls: 'dr-tr dr-th' });
     view.headerCell(head, 'title', 'Title', 'dr-td-title');
     columns.forEach((key) => view.headerCell(head, key, view.columnLabel(key)));
+    if (view.lengthStyle()) {
+      head.createDiv({ cls: 'dr-td dr-td-length', text: view.lengthStyle() === 'words' ? 'Words' : 'Length' });
+    }
     view.headerCell(head, 'modified', 'Modified', 'dr-td-time');
 
     // Hundreds of rows are drawn at once; thousands wait to be asked for.
@@ -558,15 +565,15 @@ class HomeScreen extends BrowseScreen {
       if (file && !picks.some((p) => p.file === file)) picks.push({ caption, file });
     };
     pick('Last opened', recents.find((f) => f.extension === 'md' && f !== note));
-    pick('Home', note);
+    pick('Home note', note);
     pick('Rediscover', older[0]);
     if (picks.length) this.picks(root, picks);
 
-    if (recents.length) this.shelf(root, 'Recently opened', recents.slice(0, 12), { mode: 'recents' });
-    if (added.length) this.shelf(root, 'Recently added', added);
-    if (pinned.length) this.shelf(root, 'Pinned', pinned, { mode: 'pinned' });
-    if (older.length > 1) this.shelf(root, 'Rediscover', older.slice(1));
-    if (folders.length) this.shelf(root, 'Folders', folders, { mode: 'folders' });
+    if (recents.length) view.shelf(root, 'Recently opened', recents.slice(0, 12), { mode: 'recents' });
+    if (added.length) view.shelf(root, 'Recently added', added);
+    if (pinned.length) view.shelf(root, 'Pinned', pinned, { mode: 'pinned' });
+    if (older.length > 1) view.shelf(root, 'Rediscover', older.slice(1));
+    if (folders.length) view.shelf(root, 'Folders', folders, { mode: 'folders' });
 
     if (!note && !recents.length && !pinned.length && !folders.length && !notes.length) {
       root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
@@ -608,21 +615,18 @@ class HomeScreen extends BrowseScreen {
       card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
       const body = card.createDiv({ cls: 'dr-pick-body' });
-      const src = file.extension === 'md' ? view.coverFor(file) : null;
-      const gen = file.extension === 'md' ? view.genName(file.basename, file.path) : null;
       const glow = body.createDiv({ cls: 'dr-pick-glow' });
-      view.fillArt(glow, src, iconForFile(file), gen);
-      body.toggleClass('is-lit', !!(src || gen));
+      drawNoteArt(this.plugin, glow, file);
+      // White type on the cover's colours; a plain icon has none to give.
+      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued')));
       const art = body.createDiv({ cls: 'dr-pick-art' });
-      view.fillArt(art, src, iconForFile(file), gen);
+      drawNoteArt(this.plugin, art, file);
 
       const text = body.createDiv({ cls: 'dr-pick-text' });
       text.createDiv({ cls: 'dr-pick-title', text: file.basename });
       const where = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent.name : '';
-      const length = this.plugin.lengths ? this.plugin.lengths.label(file, 'time') : '';
-      if (this.plugin.lengths && this.plugin.lengths.measurable(file) && this.plugin.lengths.words(file) === null) {
-        view.toMeasure.push(file);
-      }
+      // Its length as the setting writes it, everywhere a length is shown.
+      const length = view.lengthStyle() ? view.lengthLabel(file) : '';
       const sub = [where, length].filter(Boolean).join('  ·  ');
       if (sub) text.createDiv({ cls: 'dr-pick-sub', text: sub });
 
@@ -631,65 +635,6 @@ class HomeScreen extends BrowseScreen {
     });
   }
 
-  /**
-   * A titled row of tiles that scrolls sideways. The heading is the way
-   * through to the whole of whatever it's showing, as a section header
-   * is on a home screen; arrows beside it page through the row.
-   */
-  shelf(root, title, items, opts = {}) {
-    const view = this.view;
-    const head = root.createDiv({ cls: 'dr-shelf-head' });
-    const label = head.createDiv({ cls: 'dr-shelf-label' });
-    const through = opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null;
-    if (through) {
-      label.setAttribute('role', 'button');
-      label.setAttribute('tabindex', '0');
-      label.addClass('is-linked');
-      onActivate(label, through);
-    }
-    label.createSpan({ cls: 'dr-shelf-title', text: title });
-    if (through) setIcon(label.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
-
-    const row = root.createDiv({ cls: 'dr-shelf-row' });
-    roveFocus(row, '.dr-card');
-    items.forEach((item) => {
-      if (item instanceof TFolder) view.folderCard(row, item);
-      else view.fileCard(row, item);
-    });
-    this.arrows(head, row);
-  }
-
-  /** ‹ and ›, paging a shelf that runs past the edge. Swiped on touch instead. */
-  arrows(head, row) {
-    const arrows = head.createDiv({ cls: 'dr-shelf-arrows' });
-    const button = (icon, label, dir) => {
-      const el = arrows.createDiv({ cls: 'clickable-icon dr-shelf-arrow' });
-      el.setAttribute('aria-label', label);
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '-1');
-      setIcon(el, icon);
-      onActivate(el, () => {
-        const by = Math.max(row.clientWidth * 0.85, 160) * dir;
-        if (typeof row.scrollBy === 'function') row.scrollBy({ left: by, behavior: 'smooth' });
-        else row.scrollLeft += by;
-      });
-      return el;
-    };
-    const back = button('chevron-left', 'Scroll back', -1);
-    const on = button('chevron-right', 'Scroll on', 1);
-    const sync = () => {
-      const room = row.scrollWidth - row.clientWidth;
-      head.toggleClass('has-overflow', room > 2);
-      back.toggleClass('is-disabled', row.scrollLeft <= 2);
-      on.toggleClass('is-disabled', row.scrollLeft >= room - 2);
-    };
-    row.addEventListener('scroll', sync, { passive: true });
-    // Its width is only known once it's on the page, and changes with
-    // the page's; pointing at the shelf is when the arrows matter.
-    head.addEventListener('pointerenter', sync);
-    row.addEventListener('pointerenter', sync);
-    window.setTimeout(sync, 0);
-  }
 }
 
 /** A number from text, the same every time: an order that holds for a day. */

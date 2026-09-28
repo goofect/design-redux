@@ -84,6 +84,10 @@ class BrowseView extends ItemView {
     if (state && result && JSON.stringify(this.getState()) !== before) result.history = true;
     this.render();
     if (this.contentEl) this.contentEl.scrollTop = 0;
+    // A move within the same tab changes neither the leaf nor the file,
+    // so nothing else tells the strip it's on another screen now.
+    const strip = typeof this.plugin.feature === 'function' ? this.plugin.feature(ContextStrip) : null;
+    if (strip && strip.enabled) strip.update();
     return super.setState(state, result);
   }
 
@@ -399,6 +403,7 @@ class BrowseView extends ItemView {
     columns.forEach((key) =>
       row.createDiv({ cls: 'dr-td', text: this.valueOf(file, key) })
     );
+    if (this.lengthStyle()) row.createDiv({ cls: 'dr-td dr-td-length', text: this.lengthLabel(file) });
     row.createDiv({
       cls: 'dr-td dr-td-time',
       text: this.relative(file.stat.mtime),
@@ -601,7 +606,7 @@ class BrowseView extends ItemView {
 
     const body = block.createDiv({ cls: 'dr-album-body' });
     const art = body.createDiv({ cls: 'dr-album-art' });
-    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)));
+    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), softHue(this.plugin.settings, String(group.value)));
 
     const list = body.createDiv({ cls: 'dr-tracks' });
     roveFocus(list, '.dr-track');
@@ -910,8 +915,14 @@ class BrowseView extends ItemView {
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
+    // The cover's own colours, blurred, behind the header — as the
+    // reference tints an album's page with its artwork.
+    const glow = head.createDiv({ cls: 'dr-detail-glow' });
     const art = head.createDiv({ cls: 'dr-detail-art' });
-    this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName);
+    [glow, art].forEach((el) => {
+      if (folder) drawFolderArt(this.plugin, el, folder);
+      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, softHue(this.plugin.settings, spec.title));
+    });
     if (spec.onArtMenu) {
       onContextMenu(art, (evt) => spec.onArtMenu(evt));
     }
@@ -943,10 +954,22 @@ class BrowseView extends ItemView {
     } else {
       info.createDiv({ cls: 'dr-detail-title', text: spec.title });
     }
-    if (spec.sub) info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
+    // The accented line under the title, as the artist is: the folder
+    // note's own lead property, or else the folder this one is in —
+    // which it opens, as the artist's name does.
+    const parent = folder && folder.parent && !(folder.isRoot && folder.isRoot()) ? folder.parent : null;
+    if (spec.sub) {
+      info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
+    } else if (parent && !(parent.isRoot && parent.isRoot())) {
+      const up = info.createDiv({ cls: 'dr-detail-sub is-link', text: parent.name });
+      up.setAttribute('role', 'button');
+      up.setAttribute('tabindex', '0');
+      onActivate(up, () => this.openFolder(parent));
+    }
 
     const files = spec.files || [];
-    const meta = [files.length === 1 ? '1 item' : `${files.length} items`];
+    const notes = files.every((f) => f.extension === 'md');
+    const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
     // How long the album is, as an album gives its running time.
     const length = this.totalLength(files);
     if (length) meta.push(length);
@@ -961,10 +984,11 @@ class BrowseView extends ItemView {
       this.action(actions, 'folder-plus', 'New folder', () => this.editNewFolder(folder));
       return;
     }
+    // Open leads, filled, as Play does.
     this.action(actions, 'book-open', 'Open', () => {
       const target = files[0];
       if (target) this.app.workspace.getLeaf(false).openFile(target);
-    });
+    }).addClass('is-primary');
     this.action(actions, 'shuffle', 'Random', () => {
       if (!files.length) return;
       const pick = files[Math.floor(Math.random() * files.length)];
@@ -1005,8 +1029,8 @@ class BrowseView extends ItemView {
       .sort((a, b) => byName(a.name, b.name));
   }
 
-  fillArt(el, src, glyph, name) {
-    fillArt(el, src, glyph, name);
+  fillArt(el, src, glyph, name, hue) {
+    fillArt(el, src, glyph, name, hue);
   }
 
   /* -- shared actions --------------------------------------------- */
@@ -2243,6 +2267,38 @@ class BrowseView extends ItemView {
     this.lastMemo = undefined;
   }
 
+  /**
+   * The end of an album, as the reference ends one: when it began, and
+   * how much there is — small, under the last track.
+   */
+  renderAlbumFoot(root, files) {
+    if (!files.length) return;
+    const first = files.reduce((t, f) => Math.min(t, f.stat.ctime || Infinity), Infinity);
+    const foot = root.createDiv({ cls: 'dr-album-foot' });
+    if (Number.isFinite(first) && first > 0) {
+      foot.createDiv({
+        text: `Started ${new Date(first).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      });
+    }
+    const count = files.length === 1 ? '1 note' : `${files.length} notes`;
+    const length = this.totalLength(files);
+    foot.createDiv({ text: length ? `${count}, ${length.replace(/ read$/, '')}` : count });
+  }
+
+  /**
+   * The folders beside this one, as an album page ends with more by the
+   * same artist. Not while Find or a filter narrows the page.
+   */
+  renderMoreIn(root, folder) {
+    if (!folder || (folder.isRoot && folder.isRoot()) || !folder.parent) return;
+    if (this.query.trim() || this.hasFilters()) return;
+    const parent = folder.parent;
+    const others = this.sortFolders(this.visibleFolders(parent).filter((f) => f !== folder));
+    if (!others.length) return;
+    const top = !!(parent.isRoot && parent.isRoot());
+    this.shelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent) });
+  }
+
   /** Count what the drawing found uncounted, and draw again once it's known. */
   measureLater() {
     const files = this.toMeasure || [];
@@ -2299,13 +2355,82 @@ class BrowseView extends ItemView {
     return !q || name.toLowerCase().includes(q);
   }
 
+  /* -- shelves ---------------------------------------------------- */
+
+  /**
+   * A titled row of tiles that scrolls sideways. The heading is the way
+   * through to the whole of whatever it's showing, as a section header
+   * is on a home screen; arrows beside it page through the row.
+   */
+  shelf(root, title, items, opts = {}) {
+    const view = this;
+    const head = root.createDiv({ cls: 'dr-shelf-head' });
+    const label = head.createDiv({ cls: 'dr-shelf-label' });
+    const through = opts.head || (opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null);
+    if (through) {
+      label.setAttribute('role', 'button');
+      label.setAttribute('tabindex', '0');
+      label.addClass('is-linked');
+      onActivate(label, through);
+    }
+    label.createSpan({ cls: 'dr-shelf-title', text: title });
+    if (through) setIcon(label.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
+
+    const row = root.createDiv({ cls: 'dr-shelf-row' });
+    roveFocus(row, '.dr-card');
+    items.forEach((item) => {
+      if (item instanceof TFolder) view.folderCard(row, item);
+      else view.fileCard(row, item);
+    });
+    this.arrows(head, row);
+  }
+
+  /** ‹ and ›, paging a shelf that runs past the edge. Swiped on touch instead. */
+  arrows(head, row) {
+    const arrows = head.createDiv({ cls: 'dr-shelf-arrows' });
+    const button = (icon, label, dir) => {
+      const el = arrows.createDiv({ cls: 'clickable-icon dr-shelf-arrow' });
+      el.setAttribute('aria-label', label);
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '-1');
+      setIcon(el, icon);
+      onActivate(el, () => {
+        const by = Math.max(row.clientWidth * 0.85, 160) * dir;
+        if (typeof row.scrollBy === 'function') row.scrollBy({ left: by, behavior: 'smooth' });
+        else row.scrollLeft += by;
+      });
+      return el;
+    };
+    const back = button('chevron-left', 'Scroll back', -1);
+    const on = button('chevron-right', 'Scroll on', 1);
+    const sync = () => {
+      const room = row.scrollWidth - row.clientWidth;
+      head.toggleClass('has-overflow', room > 2);
+      back.toggleClass('is-disabled', row.scrollLeft <= 2);
+      on.toggleClass('is-disabled', row.scrollLeft >= room - 2);
+    };
+    row.addEventListener('scroll', sync, { passive: true });
+    // Its width is only known once it's on the page, and changes with
+    // the page's; pointing at the shelf is when the arrows matter.
+    head.addEventListener('pointerenter', sync);
+    row.addEventListener('pointerenter', sync);
+    window.setTimeout(sync, 0);
+  }
+
   /* -- cards ------------------------------------------------------ */
 
   folderCard(grid, folder, subtitle) {
     const card = this.card(grid, folder.name, subtitle || this.countLabel(folder));
     card.dataset.path = folder.path;
     const src = this.folderCover(folder);
-    this.fillArt(card.querySelector('.dr-card-art'), src, 'folder', this.genName(folder.name, folder.path));
+    drawFolderArt(this.plugin, card.querySelector('.dr-card-art'), folder);
+    // On the cover, when pointed at: straight into its first note, and
+    // its menu — as a tile offers Play and More.
+    this.cardButtons(card, () => {
+      const first = this.notesIn(folder)[0] || this.allNotesIn(folder)[0];
+      if (first) this.openFile(first);
+      else this.openFolder(folder);
+    }, (evt) => this.folderMenu(evt, folder, src));
 
     onActivate(card, () => this.openFolder(folder));
     onContextMenu(card, (evt) => this.folderMenu(evt, folder, src));
@@ -2319,16 +2444,36 @@ class BrowseView extends ItemView {
       file.parent && file.parent.path !== '/' ? file.parent.name : ''
     );
     card.dataset.path = file.path;
-    const src = file.extension === 'md' ? this.coverFor(file) : null;
-    this.fillArt(
-      card.querySelector('.dr-card-art'),
-      src,
-      iconForFile(file),
-      file.extension === 'md' ? this.genName(file.basename, file.path) : null
-    );
+    drawNoteArt(this.plugin, card.querySelector('.dr-card-art'), file);
+    this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
 
     onActivate(card, (evt) => this.openFile(file, evt));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
+  }
+
+  /**
+   * Round buttons over a tile's cover, shown when it's pointed at: one
+   * to open straight away where there's something to open, and More.
+   * Their clicks are theirs, not the tile's.
+   */
+  cardButtons(card, open, menu) {
+    const art = card.querySelector('.dr-card-art');
+    if (!art) return;
+    const bar = art.createDiv({ cls: 'dr-card-buttons' });
+    const button = (icon, label, run, cls) => {
+      const el = bar.createDiv({ cls: `dr-card-button ${cls}` });
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '-1');
+      el.setAttribute('aria-label', label);
+      setIcon(el, icon);
+      el.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        evt.preventDefault();
+        run(evt);
+      });
+    };
+    if (open) button('book-open', 'Open the first note', open, 'is-open');
+    if (menu) button('ellipsis', 'More', menu, 'is-more');
   }
 
   card(grid, title, subtitle) {

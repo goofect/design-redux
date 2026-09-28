@@ -99,8 +99,9 @@ class CanvasAlign extends Feature {
     }
   }
 
+  /** A canvas's centred cards; none for a canvas with no file — one closing, or not yet loaded. */
   alignments(file) {
-    return (this.settings.canvasAlignments || {})[file.path] || {};
+    return (file && (this.settings.canvasAlignments || {})[file.path]) || {};
   }
 
   isCentred(view, node) {
