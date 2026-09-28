@@ -61,9 +61,11 @@ Coffee N' Christmas.
   asked for less testing to save usage.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
-- CI results (summary, test output, screenshots from real Obsidian, and a
-  compatibility report of the internals the plugin uses) are published to the
-  `ci-results` branch: `git fetch origin +ci-results:refs/remotes/origin/ci-results`
-  (the clone is single-branch), then `git show origin/ci-results:summary.txt`.
-  Look at the screenshots after UI changes: they're the real app.
+- CI results (summary, test output, a few screenshots from the latest real
+  Obsidian, and a compatibility report of the internals the plugin uses) are
+  published to the `ci-results` branch:
+  `git fetch origin +ci-results:refs/remotes/origin/ci-results` (the clone is
+  single-branch), then `git show origin/ci-results:summary.txt`. The
+  screenshots are the real app, but look at one only when a UI change needs
+  checking: the author wants usage kept down.
 - Replies to the author: short, plain, no version-number bookkeeping.

@@ -1,7 +1,7 @@
 // Albums, against the real main.js: their own order by drag, the edit
 // mode (rename, move, delete, add, arrange), the strip's skip buttons,
 // arrangements that follow renames and deletions, each note's length,
-// Up Next, and the Home screen.
+// and the Home screen.
 const fs = require('fs');
 const path = require('path');
 const Module = require('module');
@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Queue, UpNext, Lengths, countWords, readingTime };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -558,19 +558,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(cmds['next-in-album'].check(), false, 'offered past the last note');
   });
 
-  /* -- lengths, Up Next, Home ---------------------------------------------- */
+  /* -- lengths, Home ------------------------------------------------------- */
 
   const f = (app, p) => app.vault.getFileByPath(p);
-  const withQueue = (ctx) => {
-    const { plugin, app } = ctx;
-    plugin.queue = new R.Queue(plugin);
-    const upNext = new R.UpNext(plugin);
-    plugin.feature = (C) => (C === R.UpNext ? upNext : null);
-    plugin.queueChanged = () => upNext.refresh();
-    app.vault.on('rename', (file, old) => plugin.queue.followRename(file, old));
-    return upNext;
-  };
-
   await t("rows end with each note's length once counted, and the header gives the total", async () => {
     assert.strictEqual(R.countWords('---\ntitle: x\n---\n# Heading\n\n- one two\n'), 3);
     assert.strictEqual(R.readingTime(230 * 65), '1 hr 5 min');
@@ -585,48 +575,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
   });
 
-  await t("the strip's » goes to Up Next first and takes the note off it; the queue follows renames", async () => {
-    const ctx = setup();
-    const { plugin, app } = ctx;
-    withQueue(ctx);
-    plugin.queue.add([f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')], false);
-    plugin.queue.add([f(app, 'IR/Deterrence.md')], true);
-    plugin.queue.add([f(app, 'IR/Anarchy.md')], false);
-    assert.deepStrictEqual(plugin.queue.files().map((x) => x.basename), ['Deterrence', 'Realism', 'Anarchy']);
-    await app.fileManager.renameFile(app.vault.getFolderByPath('IR/Theories'), 'IR/Ideas');
-    assert.strictEqual(plugin.settings.queue[1], 'IR/Ideas/Realism.md');
-    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file: f(app, 'IR/Balance.md'), getMode: () => 'source' }), openFile(x) { this.view.file = x; } };
-    app.workspace.rootSplit = {};
-    app.workspace.getMostRecentLeaf = () => leaf;
-    app.commands = { executeCommandById() {} };
-    plugin.pins.has = () => false;
-    const strip = new R.ContextStrip(plugin);
-    strip.el = document.body.createDiv({ cls: 'dr-strip' });
-    strip.update();
-    const next = strip.el.querySelector('[data-action="next"]');
-    assert.strictEqual(next.getAttribute('aria-label'), 'Next: Deterrence (Up Next)');
-    click(next);
-    assert.strictEqual(leaf.view.file.basename, 'Deterrence');
-    assert.deepStrictEqual(plugin.settings.queue, ['IR/Ideas/Realism.md', 'IR/Anarchy.md']);
-    strip.el.remove();
-  });
-
-  await t('Home leads with large cards, then shelves; a queued note opens off the queue', async () => {
-    const ctx = setup();
-    const { view, plugin, app } = ctx;
-    withQueue(ctx);
+  await t('Home leads with large cards, then shelves that scroll sideways', async () => {
+    const { view, plugin, app, opened } = setup();
     plugin.recentFiles = () => [f(app, 'IR/Balance.md')];
-    plugin.queue.add([f(app, 'IR/Deterrence.md')], false);
-    const leaf = { isDeferred: false, view: view, openFile(x) { this.opened = x; } };
-    app.workspace.rootSplit = {};
-    app.workspace.getMostRecentLeaf = () => leaf;
     await view.setState({ mode: 'home' }, {});
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((e) => e.textContent);
-    assert.deepStrictEqual(text('.dr-pick-caption'), ['Last opened', 'Up next', 'Rediscover']);
-    assert.deepStrictEqual(text('.dr-shelf-title'), ['Up Next', 'Recently opened', 'Recently added', 'Rediscover', 'Folders']);
-    click(view.contentEl.querySelector('.dr-pick[data-path="IR/Deterrence.md"]'));
-    assert.strictEqual(leaf.opened.basename, 'Deterrence');
-    assert.deepStrictEqual(plugin.settings.queue, []);
+    assert.deepStrictEqual(text('.dr-pick-caption'), ['Last opened', 'Rediscover']);
+    assert.deepStrictEqual(text('.dr-shelf-title'), ['Recently opened', 'Recently added', 'Rediscover', 'Folders']);
+    click(view.contentEl.querySelector('.dr-pick[data-path="IR/Balance.md"]'));
+    assert.strictEqual(opened[0].basename, 'Balance');
   });
 
   console.log(`\n${passed} passed`);

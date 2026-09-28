@@ -76,9 +76,6 @@ const DEFAULTS = {
   albumOrders: {},
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
-  // Up Next: notes queued to read, and the queue itself, by path.
-  upNext: true,
-  queue: [],
   // What stands in for a missing cover: 'icon', the folder or note's
   // icon; or a gradient with initials, coloured 'name', 'accent' or 'custom'.
   coverFallback: 'icon',

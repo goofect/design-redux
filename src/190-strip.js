@@ -83,30 +83,15 @@ class ContextStrip extends Feature {
     return view && !(view instanceof BrowseView) && view.file instanceof TFile ? view.file : null;
   }
 
-  /**
-   * The note before or after this one in its album, opened in the same
-   * page. The strip's » goes to Up Next first, when anything is queued;
-   * the commands keep to the album, as their names say.
-   */
-  skip(dir, withQueue) {
+  /** The note before or after this one in its album, opened in the same page. */
+  skip(dir) {
     const file = this.pageFile();
     if (!file) return false;
-    const near = withQueue ? this.neighbours(file) : albumNeighbours(this.plugin, file);
-    const target = near[dir];
+    const target = albumNeighbours(this.plugin, file)[dir];
     const leaf = pageLeaf(this.app);
     if (!target || !leaf) return false;
-    // Reaching a queued note reads it off the queue.
-    if (dir === 'next' && near.queued) this.plugin.queue.remove(target);
     leaf.openFile(target);
     return true;
-  }
-
-  /** Before and after this note: the album's, with Up Next's first note as the next one. */
-  neighbours(file) {
-    const near = albumNeighbours(this.plugin, file);
-    const upNext = this.plugin.feature(UpNext);
-    const queued = upNext && upNext.enabled && this.plugin.queue ? this.plugin.queue.peek(file) : null;
-    return queued ? Object.assign({}, near, { next: queued, queued: true }) : near;
   }
 
   register() {
@@ -272,11 +257,8 @@ class ContextStrip extends Feature {
     text.createDiv({ cls: 'dr-strip-sub', text: this.app.vault.getName() });
 
     const folder = browse && browse.mode === 'folder' ? browse.folder() : null;
-    const upNext = this.plugin.feature(UpNext);
-    if (!folder && !(upNext && upNext.enabled)) return;
-    const actions = strip.createDiv({ cls: 'dr-strip-actions' });
-    this.queueButton(actions);
     if (!folder) return;
+    const actions = strip.createDiv({ cls: 'dr-strip-actions' });
     const more = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
     more.setAttribute('aria-label', 'More');
     more.setAttribute('role', 'button');
@@ -324,7 +306,7 @@ class ContextStrip extends Feature {
     // The middle of the strip, as a player's: back a note through the
     // album, the note itself, and on a note.
     const center = strip.createDiv({ cls: 'dr-strip-center' });
-    const near = this.neighbours(file);
+    const near = albumNeighbours(this.plugin, file);
     this.skipButton(center, near, 'previous');
     const now = center.createDiv({ cls: 'dr-strip-now' });
     now.setAttribute('role', 'button');
@@ -360,36 +342,15 @@ class ContextStrip extends Feature {
     const el = parent.createDiv({ cls: 'clickable-icon dr-strip-btn dr-strip-skip' });
     el.dataset.action = dir;
     setIcon(el, dir === 'previous' ? 'chevrons-left' : 'chevrons-right');
-    const from = dir === 'next' && near.queued ? ' (Up Next)' : '';
-    el.setAttribute('aria-label', target ? `${word}: ${target.basename}${from}` : `${word}: none`);
+    el.setAttribute('aria-label', target ? `${word}: ${target.basename}` : `${word}: none`);
     if (!target) {
       el.addClass('is-disabled');
       return el;
     }
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
-    onActivate(el, () => this.skip(dir, true));
+    onActivate(el, () => this.skip(dir));
     return el;
-  }
-
-  /**
-   * Up Next, as a player keeps it in its corner: the list of what's
-   * queued opens above the strip. Lit while anything is queued.
-   */
-  queueButton(actions) {
-    const upNext = this.plugin.feature(UpNext);
-    if (!upNext || !upNext.enabled) return;
-    const count = this.plugin.queue.files().length;
-    const el = actions.createDiv({ cls: 'clickable-icon dr-strip-btn dr-strip-queue' });
-    el.dataset.action = 'queue';
-    el.setAttribute('aria-label', count ? `Up Next (${count})` : 'Up Next');
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('aria-expanded', upNext.isOpen() ? 'true' : 'false');
-    setIcon(el, 'list-ordered');
-    if (count) el.addClass('has-queue');
-    if (upNext.isOpen()) el.addClass('is-active');
-    onActivate(el, () => upNext.toggle(el));
   }
 
   renderActions(strip, file, leaf) {
@@ -436,8 +397,6 @@ class ContextStrip extends Feature {
       const panel = this.plugin.feature(PropertiesPanel);
       if (panel && panel.enabled && leaf) panel.toggleFrom(leaf, evt.currentTarget);
     }, false, 'properties');
-
-    this.queueButton(actions);
 
     // The page menu the note's own header had — Find, Replace, Export
     // to PDF, version history — followed by the file's entries, which

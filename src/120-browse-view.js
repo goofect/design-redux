@@ -2327,7 +2327,7 @@ class BrowseView extends ItemView {
   }
 
   /** A single file as a tile: its cover, or an icon for its type. */
-  fileCard(grid, file, open) {
+  fileCard(grid, file) {
     const card = this.card(
       grid,
       file.basename,
@@ -2342,7 +2342,7 @@ class BrowseView extends ItemView {
       file.extension === 'md' ? this.genName(file.basename, file.path) : null
     );
 
-    onActivate(card, (evt) => (open ? open(file, evt) : this.openFile(file, evt)));
+    onActivate(card, (evt) => this.openFile(file, evt));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
   }
 

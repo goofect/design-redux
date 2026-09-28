@@ -45,7 +45,7 @@ const SETTINGS_TABS = [
     title: 'Interface',
     icon: 'app-window',
     sections: [
-      { title: 'Page', keys: ['contextStrip', 'upNext', 'onePage', 'singleArea'] },
+      { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties'] },
       { title: 'Canvas', keys: ['canvasLegend', 'canvasTextAlign'] },

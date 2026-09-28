@@ -534,7 +534,6 @@ class HomeScreen extends BrowseScreen {
     const note = home && keep(home) ? home : null;
 
     const recents = this.plugin.recentFiles().filter(keep);
-    const queued = this.upNext() ? this.plugin.queue.files().filter(keep) : [];
     const pinned = this.plugin.pins.files().filter(keep).slice(0, 12);
     const notes = this.app.vault
       .getMarkdownFiles()
@@ -552,24 +551,17 @@ class HomeScreen extends BrowseScreen {
         .filter((f) => view.matches(f.name))
     );
 
-    // Up front, large: where you were, what's next, the home note, and
-    // one to come back to — each captioned with why it's there.
+    // Up front, large: where you were, the home note, and one to come
+    // back to — each captioned with why it's there.
     const picks = [];
-    const pick = (caption, file, open) => {
-      if (file && !picks.some((p) => p.file === file)) picks.push({ caption, file, open });
+    const pick = (caption, file) => {
+      if (file && !picks.some((p) => p.file === file)) picks.push({ caption, file });
     };
     pick('Last opened', recents.find((f) => f.extension === 'md' && f !== note));
-    pick('Up next', queued[0], (evt) => this.openQueued(queued[0], evt));
     pick('Home', note);
     pick('Rediscover', older[0]);
     if (picks.length) this.picks(root, picks);
 
-    if (queued.length) {
-      this.shelf(root, 'Up Next', queued, {
-        head: () => this.upNext().show(),
-        open: (file, evt) => this.openQueued(file, evt),
-      });
-    }
     if (recents.length) this.shelf(root, 'Recently opened', recents.slice(0, 12), { mode: 'recents' });
     if (added.length) this.shelf(root, 'Recently added', added);
     if (pinned.length) this.shelf(root, 'Pinned', pinned, { mode: 'pinned' });
@@ -579,18 +571,6 @@ class HomeScreen extends BrowseScreen {
     if (!note && !recents.length && !pinned.length && !folders.length && !notes.length) {
       root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
     }
-  }
-
-  /** The Up Next feature, while it's on. */
-  upNext() {
-    const feature = typeof this.plugin.feature === 'function' ? this.plugin.feature(UpNext) : null;
-    return feature && feature.enabled && this.plugin.queue ? feature : null;
-  }
-
-  openQueued(file, evt) {
-    const upNext = this.upNext();
-    if (upNext) upNext.open(file, !!(evt && (evt.ctrlKey || evt.metaKey)));
-    else this.view.openFile(file, evt);
   }
 
   /**
@@ -619,7 +599,7 @@ class HomeScreen extends BrowseScreen {
     const view = this.view;
     const row = root.createDiv({ cls: 'dr-picks' });
     roveFocus(row, '.dr-pick');
-    picks.forEach(({ caption, file, open }) => {
+    picks.forEach(({ caption, file }) => {
       const card = row.createDiv({ cls: 'dr-pick' });
       card.dataset.path = file.path;
       card.setAttribute('role', 'button');
@@ -646,7 +626,7 @@ class HomeScreen extends BrowseScreen {
       const sub = [where, length].filter(Boolean).join('  ·  ');
       if (sub) text.createDiv({ cls: 'dr-pick-sub', text: sub });
 
-      onActivate(card, (evt) => (open ? open(evt) : view.openFile(file, evt)));
+      onActivate(card, (evt) => view.openFile(file, evt));
       onContextMenu(card, (evt) => view.fileMenu(evt, file));
     });
   }
@@ -660,7 +640,7 @@ class HomeScreen extends BrowseScreen {
     const view = this.view;
     const head = root.createDiv({ cls: 'dr-shelf-head' });
     const label = head.createDiv({ cls: 'dr-shelf-label' });
-    const through = opts.head || (opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null);
+    const through = opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null;
     if (through) {
       label.setAttribute('role', 'button');
       label.setAttribute('tabindex', '0');
@@ -674,7 +654,7 @@ class HomeScreen extends BrowseScreen {
     roveFocus(row, '.dr-card');
     items.forEach((item) => {
       if (item instanceof TFolder) view.folderCard(row, item);
-      else view.fileCard(row, item, opts.open);
+      else view.fileCard(row, item);
     });
     this.arrows(head, row);
   }

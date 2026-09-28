@@ -13,7 +13,15 @@ import path from 'path';
 const OUT = path.resolve('ci-output');
 let version = 'unknown';
 
+// Screenshots are kept few, to keep the runs and the ci-results branch
+// small: these, on the latest Obsidian only (not the oldest, the first
+// entry in wdio.conf.mjs), plus any test that fails, on either.
+const OLDEST = '1.7.7';
+const SHOTS = ['album', 'menu', 'settings-library', 'properties-add', 'note-and-strip'];
+
 async function shot(name) {
+  const failed = name.startsWith('FAILED-');
+  if (!failed && (version === OLDEST || SHOTS.indexOf(name) === -1)) return;
   fs.mkdirSync(OUT, { recursive: true });
   await browser.pause(400);
   await browser.saveScreenshot(path.join(OUT, `${version}-${name}.png`));

@@ -6,15 +6,18 @@
 # a new release is published for BRAT: the patch version goes up by one.
 name: Test and release
 
+# Not on pull requests: a branch's own push already runs it. Not for changes
+# to the docs alone. A newer push to a branch cancels its run still going,
+# except on the default branch, where each run may release.
 on:
   push:
     branches-ignore: [ci-results]
-  pull_request:
+    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md']
   workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.ref_name != github.event.repository.default_branch }}
 
 jobs:
   test:
@@ -71,7 +74,7 @@ jobs:
         run: npm run test:obsidian 2>&1 | tee ci-output/obsidian-tests.txt
 
       - name: Publish results to the ci-results branch
-        if: always() && github.event_name != 'pull_request'
+        if: always()
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
