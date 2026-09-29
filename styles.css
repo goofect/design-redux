@@ -1037,13 +1037,11 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   }
 }
 
-/* Small capitals, as the genre and year are under an album's title. */
+/* Quiet and small, as the genre and year are under an album's title. */
 .dr-detail-meta {
   margin-top: 8px;
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
   color: var(--text-muted);
 }
 
