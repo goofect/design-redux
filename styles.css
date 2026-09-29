@@ -5222,3 +5222,16 @@ body.is-phone .dr-td-length {
 .outgoing-link-item.dr-quiet-hidden {
   display: none !important;
 }
+
+/* Notes made by quiet links elsewhere: the list to fold them in. */
+.dr-stray-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dr-stray-intro {
+  margin-bottom: 8px;
+}
+
+.dr-stray-list .setting-item-name {
+  overflow-wrap: anywhere;
+}

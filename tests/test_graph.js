@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -420,6 +420,47 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(mc.unresolvedLinks['Triple.md'], { '[Anarchy': 2 });
     assert.deepStrictEqual(mc.resolvedLinks['Stray.md'], { '[Realism.md': 1 });
     assert.deepStrictEqual(caches['Triple.md'].links.map((r) => r.original), ['[[[Anarchy]]', '[[[Anarchy|words]]', '[[Idea]]']);
+  });
+
+  await t('quiet links become ordinary ones with a hidden mark, for sharing, and back — code and edits left alone', () => {
+    const text = 'See [[[Anarchy]]] and [[[Deterrence|deterrence]]].\n```\nx = a[[[1]]]\n```\n';
+    const at = (s) => text.indexOf(s);
+    const span = (s) => ({ position: { start: { offset: at(s) }, end: { offset: at(s) + s.length - 1 } } });
+    const cache = {
+      drQuietLinks: [
+        Object.assign({ link: '[Anarchy', original: '[[[Anarchy]]' }, span('[[[Anarchy]]]')),
+        Object.assign({ link: '[Deterrence', original: '[[[Deterrence|deterrence]]' }, span('[[[Deterrence|deterrence]]]')),
+        // Where the text has moved on since Obsidian read it: left alone.
+        { link: '[Stale', original: '[[[Stale]]', position: { start: { offset: 0 }, end: { offset: 9 } } },
+      ],
+    };
+    const spans = G.quietSpans(text, cache);
+    assert.deepStrictEqual(spans.map((s) => s.inner), ['Anarchy', 'Deterrence|deterrence']);
+    const shared = G.rewriteSpans(text, spans, (inner) => `[[${inner}]]%%quiet%%`);
+    assert.strictEqual(shared, 'See [[Anarchy]]%%quiet%% and [[Deterrence|deterrence]]%%quiet%%.\n```\nx = a[[[1]]]\n```\n');
+    const back = G.rewriteSpans(shared, G.portableSpans(shared), (inner) => `[[[${inner}]]]`);
+    assert.strictEqual(back, text);
+  });
+
+  await t('a note made by a quiet link elsewhere is known by its bracket, and only when a quiet link points at it', () => {
+    assert.strictEqual(G.strayLinkpath('[Anarchy.md'), 'Anarchy');
+    assert.strictEqual(G.strayLinkpath('Inbox/[Anarchy.md'), 'Anarchy');
+    assert.strictEqual(G.strayLinkpath('[Politics/Anarchy.md'), 'Politics/Anarchy');
+    assert.strictEqual(G.strayLinkpath('[[Odd.md'), null);
+    assert.strictEqual(G.strayLinkpath('Notes/Plain.md'), null);
+    assert.strictEqual(G.strayLinkpath('[Anarchy.png'), null);
+    const files = ['[Anarchy.md', '[Draft] Essay.md', 'Anarchy.md', 'Quiet.md', '[Missing.md'].map((p) => ({ path: p, basename: p.replace(/\.md$/, '') }));
+    const caches = { 'Quiet.md': { drQuietLinks: [{ link: '[Anarchy', original: '[[[Anarchy]]' }, { link: '[Missing', original: '[[[Missing]]' }] } };
+    const plugin = { settings: { quietLinks: true } };
+    plugin.app = {
+      vault: { getMarkdownFiles: () => files },
+      metadataCache: {
+        getFileCache: (f) => caches[f.path] || null,
+        getFirstLinkpathDest: (name) => files.find((f) => f.path === `${name}.md`) || null,
+      },
+    };
+    const found = new G.QuietLinks(plugin).strays().map((s) => [s.file.path, s.real && s.real.path]);
+    assert.deepStrictEqual(found, [['[Anarchy.md', 'Anarchy.md'], ['[Missing.md', null]]);
   });
 
   await t('a rename rewrites the quiet links to the note, heading and words kept, and nothing else', () => {

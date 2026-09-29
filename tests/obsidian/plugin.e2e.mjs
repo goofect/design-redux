@@ -553,6 +553,73 @@ describe('Design Redux in Obsidian', function () {
     fs.writeFileSync(path.join(OUT, `${version}-errors.txt`), errors.join('\n\n') || 'none');
   });
 
+  it('makes quiet links normal for sharing and back, and folds in notes they made elsewhere', async function () {
+    this.timeout(120000);
+    const original = 'See [[[Politics/Anarchy]]] and [[[Politics/Deterrence|deterrence]]].\n\n```\nx = a[[[1]]]\n```\n';
+    await browser.executeObsidian(async ({ app, plugins }, text) => {
+      plugins.designRedux.settings.quietLinks = true;
+      await plugins.designRedux.saveSettings();
+      await app.vault.create('Share.md', text);
+      await new Promise((r) => setTimeout(r, 1500));
+      const quiet = plugins.designRedux.features.find((f) => f.constructor.name === 'QuietLinks');
+      quiet.makePortable();
+    }, original);
+    await browser.$('.modal .mod-cta').waitForExist({ timeout: 5000 });
+    await clickText('.modal .mod-cta', 'Make them normal');
+    await browser.pause(1500);
+    const shared = await browser.executeObsidian(async ({ app }) => {
+      const text = await app.vault.read(app.vault.getFileByPath('Share.md'));
+      const found = app.metadataCache.getBacklinksForFile(app.vault.getFileByPath('Politics/Anarchy.md'));
+      const from = found && found.data ? (found.data instanceof Map ? Array.from(found.data.keys()) : Object.keys(found.data)) : [];
+      return { text, backlinked: from.includes('Share.md') };
+    });
+    expect(shared.text).toBe('See [[Politics/Anarchy]]%%quiet%% and [[Politics/Deterrence|deterrence]]%%quiet%%.\n\n```\nx = a[[[1]]]\n```\n');
+    expect(shared.backlinked).toBe(true);
+
+    const back = await browser.executeObsidian(async ({ app, plugins }) => {
+      const quiet = plugins.designRedux.features.find((f) => f.constructor.name === 'QuietLinks');
+      await quiet.makeQuietAgain(true);
+      await new Promise((r) => setTimeout(r, 800));
+      return app.vault.read(app.vault.getFileByPath('Share.md'));
+    });
+    expect(back).toBe(original);
+
+    // A device without the plugin made "[Politics/Anarchy" from the link; "[Draft] Essay" is just a name.
+    const folded = await browser.executeObsidian(async ({ app, plugins }) => {
+      await app.vault.createFolder('[Politics');
+      await app.vault.create('[Politics/Anarchy.md', 'Written elsewhere.');
+      await app.vault.create('[Draft] Essay.md', 'Just a name.');
+      await new Promise((r) => setTimeout(r, 1500));
+      const quiet = plugins.designRedux.features.find((f) => f.constructor.name === 'QuietLinks');
+      const strays = quiet.strays();
+      const listed = strays.map((s) => [s.file.path, s.real ? s.real.path : null]);
+      for (const stray of strays) await quiet.fold(stray);
+      await new Promise((r) => setTimeout(r, 800));
+      const anarchy = await app.vault.read(app.vault.getFileByPath('Politics/Anarchy.md'));
+      const result = {
+        listed,
+        added: anarchy.trim().endsWith('Written elsewhere.'),
+        strayGone: !app.vault.getAbstractFileByPath('[Politics/Anarchy.md'),
+        folderGone: !app.vault.getAbstractFileByPath('[Politics'),
+        draftKept: !!app.vault.getFileByPath('[Draft] Essay.md'),
+      };
+      for (const p of ['Share.md', '[Draft] Essay.md']) {
+        const f = app.vault.getFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      plugins.designRedux.settings.quietLinks = false;
+      await plugins.designRedux.saveSettings();
+      return result;
+    });
+    expect(folded).toEqual({
+      listed: [['[Politics/Anarchy.md', 'Politics/Anarchy.md']],
+      added: true,
+      strayGone: true,
+      folderGone: true,
+      draftKept: true,
+    });
+  });
+
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));

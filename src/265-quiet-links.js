@@ -211,6 +211,75 @@ function renameQuietLinks(text, oldPath, linktext, stillResolves) {
   return { text: out + text.slice(at), count };
 }
 
+/* -- sharing, and stray notes ---------------------------------------- */
+
+/* The comment a portable quiet link carries: hidden by Obsidian when read. */
+const PORTABLE_MARK = '%%quiet%%';
+
+/**
+ * Where a note's quiet links are in its text — from where Obsidian found
+ * them, so none in code or maths — each over "[[[…]]]": { from, to, inner }.
+ * One whose text no longer matches (an edit since it was read) is left out.
+ */
+function quietSpans(text, cache) {
+  const refs = []
+    .concat((cache && cache.drQuietLinks) || [])
+    .concat(((cache && cache.links) || []).filter(isQuietRef))
+    .filter((ref) => !ref.fromProperty && ref.position);
+  const out = [];
+  refs.forEach((ref) => {
+    const from = ref.position.start.offset;
+    // Obsidian's link ends before the last bracket.
+    const to = ref.position.end.offset + 1;
+    const m = /^\[\[\[([^[\]\n]+?)\]\]\]$/.exec(text.slice(from, to));
+    if (m) out.push({ from, to, inner: m[1] });
+  });
+  return out.sort((a, b) => a.from - b.from);
+}
+
+/**
+ * Where a note's shared quiet links are: an ordinary link with the mark
+ * straight after. Found in the text itself — the mark is its own sign —
+ * so it works even before Obsidian has read the note again.
+ */
+function portableSpans(text) {
+  const out = [];
+  const re = /(^|[^[])\[\[([^[\]\n]+?)\]\]%%quiet%%/g;
+  let m;
+  while ((m = re.exec(text))) {
+    const from = m.index + m[1].length;
+    out.push({ from, to: from + m[2].length + 4 + PORTABLE_MARK.length, inner: m[2] });
+  }
+  return out;
+}
+
+/** Text with each span written another way, back to front so the places hold. */
+function rewriteSpans(text, spans, write) {
+  let out = text;
+  spans
+    .slice()
+    .sort((a, b) => b.from - a.from)
+    .forEach((span) => {
+      out = out.slice(0, span.from) + write(span.inner) + out.slice(span.to);
+    });
+  return out;
+}
+
+/**
+ * A note made by following a quiet link on a device without this plugin:
+ * "[Anarchy.md", or "[Politics/Anarchy.md" as a folder and a note. The
+ * link it was made for — "Anarchy", "Politics/Anarchy" — or null.
+ */
+function strayLinkpath(path) {
+  const parts = String(path || '').split('/');
+  const at = parts.findIndex((part) => part.startsWith('[') && !part.startsWith('[['));
+  if (at === -1 || !/\.md$/i.test(path)) return null;
+  const rest = parts.slice(at);
+  rest[0] = rest[0].slice(1);
+  const linkpath = rest.join('/').replace(/\.md$/i, '');
+  return linkpath.trim() ? linkpath : null;
+}
+
 /** A quiet link in Live Preview: its name, dotted, opening where it points. */
 class QuietLinkWidget extends WidgetType {
   constructor(feature, label, target, sourcePath, missing) {
@@ -441,6 +510,27 @@ class QuietLinks extends Feature {
         check: () => this.enabled && !!linkAtCursor(this.editor()),
         run: () => this.toggle(this.editor()),
       },
+      {
+        id: 'make-quiet-links-portable',
+        name: 'Make quiet links normal, for sharing',
+        icon: 'share',
+        check: () => this.enabled,
+        run: () => this.makePortable(),
+      },
+      {
+        id: 'make-shared-links-quiet',
+        name: 'Make shared links quiet again',
+        icon: 'link-2-off',
+        check: () => this.enabled,
+        run: () => this.makeQuietAgain(),
+      },
+      {
+        id: 'fold-stray-quiet-notes',
+        name: 'Fold in notes made by quiet links elsewhere',
+        icon: 'merge',
+        check: () => this.enabled,
+        run: () => this.reviewStrays(true),
+      },
     ];
   }
 
@@ -523,6 +613,15 @@ class QuietLinks extends Feature {
         if (this.enabled) this.queueSweep();
       })
     );
+
+    // A note made from a quiet link on a device without this plugin
+    // arrives by sync; one look at start-up, and one as each arrives.
+    this.plugin.registerEvent(
+      this.app.vault.on('create', (file) => {
+        if (this.enabled && file instanceof TFile && strayLinkpath(file.path)) this.queueStrayCheck();
+      })
+    );
+    this.queueStrayCheck(5000);
 
     const follow = () => this.watchPanes();
     this.plugin.registerEvent(this.app.workspace.on('layout-change', follow));
@@ -888,6 +987,276 @@ class QuietLinks extends Feature {
       }
     }
   }
+
+  /* -- sharing ----------------------------------------------------------- */
+
+  /**
+   * Every quiet link in the vault written as an ordinary link with a
+   * hidden mark, [[Anarchy]]%%quiet%%, so notes shared or published work
+   * anywhere; the mark is how they're found to make quiet again.
+   * Properties are left as they are: a property can't hold the mark.
+   */
+  async makePortable() {
+    const found = [];
+    this.app.vault.getMarkdownFiles().forEach((file) => {
+      const cache = this.app.metadataCache.getFileCache(file);
+      const refs = quietRefs(cache);
+      if (refs.length) found.push({ file, body: refs.filter((r) => !r.key).length, property: refs.filter((r) => r.key).length });
+    });
+    const body = found.reduce((n, f) => n + f.body, 0);
+    const property = found.reduce((n, f) => n + f.property, 0);
+    if (!body) {
+      new Notice(property ? 'The only quiet links are in properties, which stay as they are.' : 'There are no quiet links to share.');
+      return 0;
+    }
+    const notes = found.filter((f) => f.body).length;
+    const ok = await confirmAction(this.app, {
+      title: 'Make quiet links normal?',
+      text:
+        `${body} quiet ${body === 1 ? 'link' : 'links'} in ${notes} ${notes === 1 ? 'note' : 'notes'} become ordinary links, ` +
+        'each with a hidden mark, so they work wherever the notes go. Make shared links quiet again turns them back.' +
+        (property ? ` ${property} in properties stay as they are.` : ''),
+      button: 'Make them normal',
+    });
+    if (!ok) return 0;
+    const changed = await this.rewriteAll(found.map((f) => f.file), quietSpans, (inner) => `[[${inner}]]${PORTABLE_MARK}`);
+    this.plugin.offerUndo(
+      `Made ${changed} quiet ${changed === 1 ? 'link' : 'links'} normal, for sharing.`,
+      () => this.makeQuietAgain(true)
+    );
+    return changed;
+  }
+
+  /** The other way: each [[Note]]%%quiet%% quiet again, as [[[Note]]]. */
+  async makeQuietAgain(silent) {
+    const files = [];
+    for (const file of this.app.vault.getMarkdownFiles()) {
+      const text = await this.app.vault.cachedRead(file);
+      if (text.includes(PORTABLE_MARK)) files.push(file);
+    }
+    const changed = await this.rewriteAll(files, portableSpans, (inner) => `[[[${inner}]]]`);
+    if (!silent) {
+      new Notice(changed ? `Made ${changed} shared ${changed === 1 ? 'link' : 'links'} quiet again.` : 'There are no shared links to make quiet.');
+    }
+    return changed;
+  }
+
+  /** Each note rewritten from where Obsidian found its links, checked against the text as it is now. */
+  async rewriteAll(files, spansOf, write) {
+    let changed = 0;
+    for (const file of files) {
+      const cache = this.app.metadataCache.getFileCache(file);
+      try {
+        await this.app.vault.process(file, (text) => {
+          const spans = spansOf(text, cache);
+          changed += spans.length;
+          return spans.length ? rewriteSpans(text, spans, write) : text;
+        });
+      } catch (err) {
+        console.error('Design Redux: could not rewrite quiet links', err);
+        new Notice(`Could not change the links in “${file.basename}”.`);
+      }
+    }
+    return changed;
+  }
+
+  /* -- stray notes --------------------------------------------------------- */
+
+  /**
+   * Notes made by following a quiet link somewhere without this plugin:
+   * each with the note it was meant to be, if that exists.
+   */
+  strays() {
+    // Only a note some quiet link points at: "[Draft] Essay" is just a name.
+    const meant = new Set();
+    this.app.vault.getMarkdownFiles().forEach((file) =>
+      quietRefs(this.app.metadataCache.getFileCache(file)).forEach((ref) => meant.add(ref.path.toLowerCase()))
+    );
+    if (!meant.size) return [];
+    return this.app.vault
+      .getMarkdownFiles()
+      .map((file) => {
+        const linkpath = strayLinkpath(file.path);
+        if (!linkpath || !meant.has(linkpath.toLowerCase())) return null;
+        const real = this.app.metadataCache.getFirstLinkpathDest(linkpath, '');
+        return real && real !== file ? { file, linkpath, real } : { file, linkpath, real: null };
+      })
+      .filter(Boolean);
+  }
+
+  queueStrayCheck(delay) {
+    window.clearTimeout(this.strayTimer);
+    this.strayTimer = window.setTimeout(() => {
+      if (this.enabled) this.reviewStrays(false);
+    }, delay || 1500);
+  }
+
+  /** Said once in a notice, with a way to look; or, asked for, the list itself. */
+  reviewStrays(asked) {
+    const strays = this.strays();
+    if (!strays.length) {
+      if (asked) new Notice('There are no notes made by quiet links elsewhere.');
+      return strays;
+    }
+    if (asked) {
+      new StrayNotesModal(this, strays).open();
+      return strays;
+    }
+    const key = strays.map((s) => s.file.path).sort().join('|');
+    if (key === this.strayNoticed) return strays;
+    this.strayNoticed = key;
+    const fragment = document.createDocumentFragment();
+    const text = document.createElement('span');
+    text.textContent =
+      strays.length === 1
+        ? `“${strays[0].file.basename}” was made by a quiet link on a device without Design Redux. `
+        : `${strays.length} notes were made by quiet links on a device without Design Redux. `;
+    const link = document.createElement('a');
+    link.className = 'dr-undo';
+    link.setAttribute('href', '#');
+    link.textContent = 'Review';
+    fragment.append(text, link);
+    const notice = new Notice(fragment, 15000);
+    link.addEventListener('click', (evt) => {
+      evt.preventDefault();
+      if (notice && typeof notice.hide === 'function') notice.hide();
+      new StrayNotesModal(this, this.strays()).open();
+    });
+    return strays;
+  }
+
+  /**
+   * A stray note put right: its writing added to the end of the note it
+   * was meant to be, and it goes to the trash; or, where that note
+   * doesn't exist yet, it's simply renamed to be it.
+   */
+  async fold(stray) {
+    const { file, linkpath, real } = stray;
+    try {
+      if (!real) {
+        await this.app.fileManager.renameFile(file, normalizePath(`${linkpath}.md`));
+      } else {
+        const own = (await this.app.vault.read(file)).trim();
+        if (own) {
+          await this.app.vault.process(real, (text) => `${text.replace(/\s*$/, '')}\n\n${own}\n`);
+        }
+        await this.toTrash(file);
+      }
+    } catch (err) {
+      console.error('Design Redux: could not fold in a stray note', err);
+      new Notice(`Could not fold in “${file.basename}”.`);
+      return false;
+    }
+    // A "[Folder" left empty goes too.
+    const dir = file.parent;
+    if (dir && dir.name.startsWith('[') && !dir.children.length) {
+      try {
+        await this.toTrash(dir);
+      } catch (err) {
+        /* an empty folder, left */
+      }
+    }
+    this.strayNoticed = null;
+    return true;
+  }
+
+  /** The trash, as Obsidian's setting says; its own .trash folder where the system's can't be reached. */
+  async toTrash(entry) {
+    try {
+      await this.app.fileManager.trashFile(entry);
+    } catch (err) {
+      await this.app.vault.trash(entry, false);
+    }
+  }
 }
 
 QuietLinks.settingKey = 'quietLinks';
+
+/**
+ * The notes made by quiet links elsewhere, each with what folding it in
+ * does: added to the note it was meant to be, or renamed to be it.
+ */
+class StrayNotesModal extends Modal {
+  constructor(feature, strays) {
+    super(feature.app);
+    this.feature = feature;
+    this.strays = strays;
+  }
+
+  onOpen() {
+    this.modalEl.addClass('dr-stray-modal');
+    this.titleEl.setText('Notes made by quiet links');
+    this.contentEl.createDiv({
+      cls: 'setting-item-description dr-stray-intro',
+      text: 'On a device without Design Redux, following [[[Note]]] makes a note called “[Note”. Fold each into the note it was meant to be.',
+    });
+    this.list = this.contentEl.createDiv({ cls: 'dr-stray-list' });
+    this.render();
+    const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
+    this.allButton = buttons.createEl('button', { cls: 'mod-cta', text: 'Fold in all' });
+    this.allButton.addEventListener('click', async () => {
+      for (const stray of this.strays.slice()) await this.foldOne(stray);
+      this.close();
+    });
+    buttons.createEl('button', { text: 'Close' }).addEventListener('click', () => this.close());
+  }
+
+  render() {
+    this.list.empty();
+    if (!this.strays.length) {
+      this.list.createDiv({ cls: 'setting-item-description', text: 'All folded in.' });
+      if (this.allButton) this.allButton.disabled = true;
+      return;
+    }
+    this.strays.forEach((stray) => {
+      const row = new Setting(this.list)
+        .setName(stray.file.path)
+        .setDesc(stray.real ? `Its writing goes at the end of “${stray.real.basename}”, and it goes to the trash.` : `Renamed to “${stray.linkpath}”, which doesn’t exist yet.`);
+      row.addButton((b) =>
+        b
+          .setButtonText(stray.real ? 'Fold in' : 'Rename')
+          .onClick(async () => {
+            await this.foldOne(stray);
+            this.render();
+          })
+      );
+    });
+  }
+
+  async foldOne(stray) {
+    if (await this.feature.fold(stray)) this.strays.splice(this.strays.indexOf(stray), 1);
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
+/** Ask before a change to many notes: resolves true to go ahead. */
+function confirmAction(app, opts) {
+  return new Promise((resolve) => {
+    const modal = new Modal(app);
+    let answered = false;
+    const answer = (yes) => {
+      if (answered) return;
+      answered = true;
+      resolve(yes);
+      modal.close();
+    };
+    modal.onOpen = () => {
+      modal.titleEl.setText(opts.title);
+      modal.contentEl.createEl('p', { text: opts.text });
+      const buttons = modal.contentEl.createDiv({ cls: 'modal-button-container' });
+      buttons.createEl('button', { cls: 'mod-cta', text: opts.button || 'Go ahead' }).addEventListener('click', () => answer(true));
+      buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => answer(false));
+    };
+    modal.onClose = () => {
+      modal.contentEl.empty();
+      if (!answered) {
+        answered = true;
+        resolve(false);
+      }
+    };
+    modal.open();
+  });
+}
