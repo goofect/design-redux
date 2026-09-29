@@ -1132,6 +1132,8 @@ class QuietLinks extends Feature {
    */
   async fold(stray) {
     const { file, linkpath, real } = stray;
+    // Read now: once the note is moved or trashed it no longer has a folder.
+    const dirPath = file.parent && file.parent.path && file.parent.path !== '/' ? file.parent.path : null;
     try {
       if (!real) {
         await this.app.fileManager.renameFile(file, normalizePath(`${linkpath}.md`));
@@ -1148,16 +1150,31 @@ class QuietLinks extends Feature {
       return false;
     }
     // A "[Folder" left empty goes too.
-    const dir = file.parent;
-    if (dir && dir.name.startsWith('[') && !dir.children.length) {
-      try {
-        await this.toTrash(dir);
-      } catch (err) {
-        /* an empty folder, left */
-      }
-    }
+    await this.dropEmptyStrayFolder(dirPath, file);
     this.strayNoticed = null;
     return true;
+  }
+
+  /**
+   * The "[Folder" a stray note was in, to the trash if nothing's left in it.
+   * What's on disk decides: the vault's own list can lag a moment behind.
+   */
+  async dropEmptyStrayFolder(dirPath, gone) {
+    if (!dirPath || !dirPath.split('/').pop().startsWith('[')) return;
+    const dir = this.app.vault.getAbstractFileByPath(dirPath);
+    if (!(dir instanceof TFolder)) return;
+    try {
+      const adapter = this.app.vault.adapter;
+      if (adapter && typeof adapter.list === 'function') {
+        const listed = await adapter.list(dirPath);
+        if (listed.files.length || listed.folders.length) return;
+      } else if (dir.children.some((child) => child !== gone && child.path !== gone.path)) {
+        return;
+      }
+      await this.toTrash(dir);
+    } catch (err) {
+      /* an empty folder, left */
+    }
   }
 
   /** The trash, as Obsidian's setting says; its own .trash folder where the system's can't be reached. */
