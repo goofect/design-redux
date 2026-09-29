@@ -9,12 +9,13 @@
 /* something.                                                          */
 /*                                                                     */
 /* Obsidian has no such link. It reads [[[Anarchy]]] as a link to a    */
-/* note called "[Anarchy" that doesn't exist — which is why it's not a */
-/* backlink of Anarchy — so everything that shows that stand-in is put */
-/* right here: reading view and Live Preview draw the real note with a */
-/* dotted underline; the graph and the Outgoing links pane leave the   */
-/* stand-in out; properties show it as the note it names. Renames are  */
-/* followed here too, since Obsidian doesn't know to.                  */
+/* note called "[Anarchy" that doesn't exist. So as each note is read, */
+/* its quiet links are taken out of the links Obsidian counts — before */
+/* it counts them — and kept beside them for this plugin: the graph,   */
+/* backlinks, Outgoing links, the [[ list and the Quick switcher never */
+/* hear of the stand-in, with nothing patched in any of them. What's   */
+/* left is drawing: reading view, Live Preview and properties show the */
+/* note it names, dotted; and renames, which Obsidian can't follow.    */
 /* ------------------------------------------------------------------ */
 
 /* [[[target]]], [[[target|words]]], [[[target#heading]]] — the character before is captured, not looked behind at. */
@@ -35,20 +36,6 @@ function quietMatches(text) {
     re.lastIndex = to - 1;
   }
   return out;
-}
-
-/** A stand-in's name: one opening bracket, as a quiet link leaves in Obsidian's lists. */
-function isStandIn(name) {
-  const text = String(name || '');
-  return text.startsWith('[') && !text.startsWith('[[');
-}
-
-/** Whether an entry of Obsidian's [[ list or Quick switcher is a stand-in it offers to make. */
-function offersStandIn(item) {
-  if (!item) return false;
-  if (item.type === 'linktext') return isStandIn(item.path);
-  if (item.type === 'unresolved') return isStandIn(item.linktext);
-  return false;
 }
 
 /** "Note|words" or "Note#Heading" → { target, path, subpath, words }. */
@@ -98,56 +85,68 @@ function quietRefs(cache) {
   };
   (cache.links || []).forEach((ref) => add(ref, false));
   (cache.frontmatterLinks || []).forEach((ref) => add(ref, true));
+  (cache.drQuietLinks || []).forEach((ref) => add(ref, !!ref.fromProperty));
   return out;
 }
 
+/** Whether a link Obsidian recorded is a quiet link's stand-in. */
+function isQuietRef(ref) {
+  return (
+    !!ref &&
+    typeof ref.original === 'string' &&
+    typeof ref.link === 'string' &&
+    ref.original.startsWith('[[[') &&
+    !ref.original.startsWith('[[[[') &&
+    ref.link.startsWith('[')
+  );
+}
+
+/** The name Obsidian counts a link under: its target, without a heading. */
+function linkCountKey(ref) {
+  return ref.link.split('#')[0].split('|')[0];
+}
+
 /**
- * The graph's data without quiet links: the lines to the stand-ins, and
- * the stand-ins themselves where nothing else links to them. A note left
- * with no line to anything goes too, where the graph wouldn't show it on
- * its own — in a local graph, or with orphans off.
+ * A note's quiet links, taken out of the links Obsidian counts and kept
+ * beside them as drQuietLinks. Run as the note is read, before Obsidian
+ * counts its links, it never counts the stand-ins at all. Returns what
+ * moved.
  */
-function withoutQuietLinks(app, data, opts = {}) {
-  if (!data || !data.nodes) return data;
-  const nodes = Object.assign({}, data.nodes);
-  const standIns = new Set();
-  const touched = new Set();
-  let removed = 0;
-  Object.keys(nodes).forEach((id) => {
-    const node = nodes[id];
-    if (!node || !node.links) return;
-    const file = app.vault.getFileByPath(id);
-    if (!file || file.extension !== 'md') return;
-    const refs = quietRefs(app.metadataCache.getFileCache(file));
-    if (!refs.length) return;
-    let links = null;
-    refs.forEach((ref) => {
-      standIns.add(ref.standIn);
-      if (!node.links[ref.standIn] || (links && !links[ref.standIn])) return;
-      if (!links) links = Object.assign({}, node.links);
-      delete links[ref.standIn];
-      touched.add(id);
-      removed++;
+function settleQuietLinks(cache) {
+  if (!cache) return [];
+  const moved = [];
+  [
+    ['links', false],
+    ['frontmatterLinks', true],
+  ].forEach(([field, fromProperty]) => {
+    const list = cache[field];
+    if (!Array.isArray(list) || !list.some(isQuietRef)) return;
+    cache[field] = list.filter((ref) => {
+      if (!isQuietRef(ref)) return true;
+      moved.push(Object.assign({}, ref, { fromProperty }));
+      return false;
     });
-    if (links) nodes[id] = Object.assign({}, node, { links });
+    if (!cache[field].length) delete cache[field];
   });
-  if (!standIns.size) return data;
+  if (moved.length) cache.drQuietLinks = (cache.drQuietLinks || []).concat(moved);
+  return moved;
+}
 
-  const linkedTo = new Set();
-  Object.keys(nodes).forEach((id) => Object.keys((nodes[id] && nodes[id].links) || {}).forEach((t) => linkedTo.add(t)));
-  standIns.forEach((id) => {
-    if (nodes[id] && nodes[id].type === 'unresolved' && !linkedTo.has(id)) delete nodes[id];
+/** The other way, for when quiet links are switched off: put back where Obsidian keeps them. */
+function unsettleQuietLinks(cache) {
+  if (!cache || !Array.isArray(cache.drQuietLinks)) return [];
+  const back = cache.drQuietLinks;
+  const at = (ref) => (ref.position && ref.position.start ? ref.position.start.offset : 0);
+  back.forEach((ref) => {
+    const field = ref.fromProperty ? 'frontmatterLinks' : 'links';
+    const plain = Object.assign({}, ref);
+    delete plain.fromProperty;
+    (cache[field] = cache[field] || []).push(plain);
   });
-
-  if (opts.dropLoners) {
-    touched.forEach((id) => {
-      const own = nodes[id] && Object.keys(nodes[id].links || {}).length;
-      if (!own && !linkedTo.has(id) && id !== opts.keep) delete nodes[id];
-    });
-  }
-  const out = Object.assign({}, data, { nodes });
-  if (typeof data.numLinks === 'number') out.numLinks = Math.max(0, data.numLinks - removed);
-  return out;
+  // In the order they're written, as Obsidian lists them.
+  if (cache.links) cache.links.sort((a, b) => at(a) - at(b));
+  delete cache.drQuietLinks;
+  return back;
 }
 
 /**
@@ -509,10 +508,23 @@ class QuietLinks extends Feature {
       })
     );
 
-    const follow = () => {
-      this.wrapGraphs();
-      this.watchPanes();
-    };
+    // Each note as Obsidian reads it: its quiet links set aside before
+    // it counts them. It counts a note's links just after telling of it.
+    const mc = this.app.metadataCache;
+    this.plugin.registerEvent(
+      mc.on('changed', (file, data, cache) => {
+        if (this.enabled && file) this.settle(file.path, cache);
+      })
+    );
+    // What Obsidian remembered from last time, it counts without reading
+    // again; those are set aside once it has.
+    this.plugin.registerEvent(
+      mc.on('resolved', () => {
+        if (this.enabled) this.queueSweep();
+      })
+    );
+
+    const follow = () => this.watchPanes();
     this.plugin.registerEvent(this.app.workspace.on('layout-change', follow));
     this.plugin.registerEvent(this.app.workspace.on('active-leaf-change', follow));
     this.plugin.registerEvent(this.app.workspace.on('file-open', follow));
@@ -522,10 +534,99 @@ class QuietLinks extends Feature {
       })
     );
     this.plugin.register(() => {
-      this.unwrapGraphs();
+      window.clearTimeout(this.sweepTimer);
       this.unwatchPanes();
-      this.unfilterLists();
+      this.restoreAll();
     });
+  }
+
+  /* -- Obsidian's count of links --------------------------------------- */
+
+  /**
+   * One note's quiet links set aside. Obsidian usually hasn't counted
+   * them yet; where it has (a note it remembered), the count is taken
+   * back too. True if anything moved.
+   */
+  settle(path, cache) {
+    const moved = settleQuietLinks(cache);
+    if (!moved.length) return false;
+    this.recount(path, moved, -1);
+    return true;
+  }
+
+  /**
+   * Obsidian's counts of a note's links, up or down by the ones given:
+   * resolved if the stand-in names a real file (a stray "[Name" note),
+   * unresolved otherwise. Only what was counted is taken back.
+   */
+  recount(path, refs, by) {
+    const mc = this.app.metadataCache;
+    refs.forEach((ref) => {
+      const key = linkCountKey(ref);
+      const dest = mc.getFirstLinkpathDest(key, path);
+      const table = dest ? mc.resolvedLinks : mc.unresolvedLinks;
+      if (!table) return;
+      const name = dest ? dest.path : key;
+      if (by < 0 && !(table[path] && table[path][name])) return;
+      const own = table[path] || (table[path] = {});
+      own[name] = (own[name] || 0) + by;
+      if (own[name] <= 0) delete own[name];
+    });
+  }
+
+  queueSweep() {
+    window.clearTimeout(this.sweepTimer);
+    this.sweepTimer = window.setTimeout(() => this.sweep(), 200);
+  }
+
+  /**
+   * Every note Obsidian counted a stand-in for — "[Name" among its
+   * unresolved links, or a stray "[Name" note among its resolved ones —
+   * settled, and the panes that show links told to look again.
+   */
+  sweep() {
+    const mc = this.app.metadataCache;
+    const paths = new Set();
+    const scan = (table, standIn) =>
+      Object.keys(table || {}).forEach((p) => {
+        if (Object.keys(table[p] || {}).some(standIn)) paths.add(p);
+      });
+    scan(mc.unresolvedLinks, (k) => k.startsWith('['));
+    scan(mc.resolvedLinks, (k) => k.split('/').pop().startsWith('['));
+    let changed = 0;
+    paths.forEach((p) => {
+      const file = this.app.vault.getFileByPath(p);
+      const cache = file ? mc.getFileCache(file) : null;
+      if (cache && this.settle(p, cache)) changed++;
+    });
+    if (changed) this.announceCounts();
+    return changed;
+  }
+
+  /** Switched off: every note's quiet links back where Obsidian keeps them. */
+  restoreAll() {
+    const mc = this.app.metadataCache;
+    const paths = typeof mc.getCachedFiles === 'function' ? mc.getCachedFiles() : Object.keys(mc.resolvedLinks || {});
+    let changed = 0;
+    paths.forEach((p) => {
+      const file = this.app.vault.getFileByPath(p);
+      const cache = file ? mc.getFileCache(file) : null;
+      const back = unsettleQuietLinks(cache);
+      if (!back.length) return;
+      this.recount(p, back, 1);
+      changed++;
+    });
+    if (changed && !this.plugin.unloading) this.announceCounts();
+    return changed;
+  }
+
+  /** The graph, backlinks and Outgoing links redraw when Obsidian says its links are counted. */
+  announceCounts() {
+    try {
+      this.app.metadataCache.trigger('resolved');
+    } catch (err) {
+      /* they catch up on the next change */
+    }
   }
 
   /**
@@ -552,67 +653,23 @@ class QuietLinks extends Feature {
   enable() {
     const switched = this.on !== true;
     this.on = true;
-    if (switched) this.refreshEditors();
-    this.wrapGraphs(switched);
+    if (switched) {
+      this.refreshEditors();
+      this.sweep();
+    }
     this.watchPanes();
-    this.filterLists();
     if (switched) this.rerenderReading();
   }
 
   disable() {
     const switched = this.on === true;
     this.on = false;
-    if (switched) this.refreshEditors();
-    this.unwrapGraphs();
+    if (switched) {
+      this.refreshEditors();
+      this.restoreAll();
+    }
     this.unwatchPanes();
-    this.unfilterLists();
     if (switched && !this.plugin.unloading) this.rerenderReading();
-  }
-
-  /**
-   * Obsidian's own [[ list and its Quick switcher offer each stand-in —
-   * "[Anarchy" — as a note to make; with quiet links on, those entries
-   * are left out of what the lists are given, so they can't be chosen,
-   * not just hidden. Not public API: each list is filtered only where
-   * it's found, and put back as it was when quiet links are switched off.
-   */
-  filterLists() {
-    if (!this.enabled || this.listUndo) return;
-    this.listUndo = [];
-    const wrap = (owner, name) => {
-      const original = owner && owner[name];
-      if (typeof original !== 'function') return;
-      const own = Object.prototype.hasOwnProperty.call(owner, name);
-      owner[name] = function (...args) {
-        const found = original.apply(this, args);
-        const keep = (list) => (Array.isArray(list) ? list.filter((item) => !offersStandIn(item)) : list);
-        return found && typeof found.then === 'function' ? found.then(keep) : keep(found);
-      };
-      this.listUndo.push(() => {
-        if (own) owner[name] = original;
-        else delete owner[name];
-      });
-    };
-    try {
-      const lists = this.app.workspace.editorSuggest && this.app.workspace.editorSuggest.suggests;
-      (Array.isArray(lists) ? lists : []).forEach((list) => {
-        if (list !== this.suggest) wrap(list, 'getSuggestions');
-      });
-    } catch (err) {
-      /* Obsidian's [[ list as it is, then */
-    }
-    try {
-      const switcher = this.app.internalPlugins.getPluginById('switcher');
-      const Modal = switcher && switcher.instance && switcher.instance.QuickSwitcherModal;
-      if (Modal && Modal.prototype) wrap(Modal.prototype, 'getSuggestions');
-    } catch (err) {
-      /* the Quick switcher as it is, then */
-    }
-  }
-
-  unfilterLists() {
-    (this.listUndo || []).forEach((undo) => undo());
-    this.listUndo = null;
   }
 
   refreshEditors() {
@@ -713,25 +770,21 @@ class QuietLinks extends Feature {
     );
   }
 
-  /* -- panes that would show the stand-in ------------------------------ */
+  /* -- Obsidian's properties block ------------------------------------- */
 
   /**
-   * Obsidian's own properties block and its Outgoing links pane are
-   * watched while quiet links are on, and put right whenever they're
-   * drawn. Neither is public API, so each is looked for, and left as it
-   * is where it isn't found.
+   * It draws a value written [[[Note]]] from the text, as a link to the
+   * stand-in; watched while quiet links are on, and put right whenever
+   * it's drawn. Not public API, so it's looked for, and left as it is
+   * where it isn't found.
    */
   watchPanes() {
     if (!this.enabled || typeof MutationObserver !== 'function') return;
     this.app.workspace.iterateAllLeaves((leaf) => {
       const view = leaf.isDeferred ? null : leaf.view;
-      if (!view || !view.containerEl) return;
-      if (view instanceof MarkdownView) {
-        const box = view.containerEl.querySelector('.metadata-container');
-        if (box) this.watch(box, () => this.quietenProperties(box, view.file ? view.file.path : ''));
-      } else if (typeof view.getViewType === 'function' && view.getViewType() === 'outgoing-link') {
-        this.watch(view.containerEl, () => this.hideOutgoing(view));
-      }
+      if (!(view instanceof MarkdownView) || !view.containerEl) return;
+      const box = view.containerEl.querySelector('.metadata-container');
+      if (box) this.watch(box, () => this.quietenProperties(box, view.file ? view.file.path : ''));
     });
   }
 
@@ -753,19 +806,6 @@ class QuietLinks extends Feature {
   unwatchPanes() {
     this.watched.forEach((observer) => observer.disconnect());
     this.watched.clear();
-  }
-
-  /** The stand-ins a note's Outgoing links pane lists as notes to create, taken out. */
-  hideOutgoing(view) {
-    const file = view.file || this.app.workspace.getActiveFile();
-    if (!file) return;
-    const standIns = new Set(quietRefs(this.app.metadataCache.getFileCache(file)).map((r) => r.standIn));
-    if (!standIns.size) return;
-    view.containerEl.querySelectorAll('.outgoing-link-item').forEach((item) => {
-      const text = item.querySelector('.tree-item-inner-text, .tree-item-inner');
-      const name = text ? text.textContent.trim() : '';
-      if (standIns.has(name)) item.addClass('dr-quiet-hidden');
-    });
   }
 
   /* -- renames ----------------------------------------------------------- */
@@ -846,76 +886,6 @@ class QuietLinks extends Feature {
         console.error('Design Redux: could not update quiet links', err);
         new Notice(`Could not update the quiet links in “${change.source.basename}”.`);
       }
-    }
-  }
-
-  /* -- the graph ---------------------------------------------------------- */
-
-  graphViews() {
-    const ws = this.app.workspace;
-    if (typeof ws.getLeavesOfType !== 'function') return [];
-    return GRAPH_TYPES.reduce(
-      (all, type) => all.concat(ws.getLeavesOfType(type).filter((l) => !l.isDeferred).map((l) => l.view)),
-      []
-    ).filter(Boolean);
-  }
-
-  /**
-   * Each graph's drawing is handed its data through setData; that's
-   * where quiet links are taken out, on the way in. Not public API, so
-   * it's only done where setData is there to wrap; a graph without it
-   * shows the stand-ins, as it would without the plugin.
-   */
-  wrapGraphs(redraw) {
-    if (!this.enabled) return;
-    this.graphViews().forEach((view) => {
-      const drawing = view.renderer;
-      if (!drawing || typeof drawing.setData !== 'function') return;
-      if (drawing.drQuietSetData) {
-        if (redraw) this.redraw(view);
-        return;
-      }
-      const original = drawing.setData;
-      const feature = this;
-      drawing.drQuietSetData = original;
-      drawing.setData = function (data) {
-        return original.call(this, feature.enabled ? feature.strip(view, data) : data);
-      };
-      this.redraw(view);
-    });
-  }
-
-  unwrapGraphs() {
-    this.graphViews().forEach((view) => {
-      const drawing = view.renderer;
-      if (!drawing || !drawing.drQuietSetData) return;
-      drawing.setData = drawing.drQuietSetData;
-      delete drawing.drQuietSetData;
-      if (!this.plugin.unloading) this.redraw(view);
-    });
-  }
-
-  strip(view, data) {
-    try {
-      const local = typeof view.getViewType === 'function' && view.getViewType() === 'localgraph';
-      const engine = view.dataEngine || view.engine;
-      const options = engine && typeof engine.getOptions === 'function' ? engine.getOptions() : null;
-      return withoutQuietLinks(this.app, data, {
-        dropLoners: local || !!(options && options.showOrphans === false),
-        keep: local && view.file ? view.file.path : null,
-      });
-    } catch (err) {
-      console.error('Design Redux: could not leave quiet links out of the graph', err);
-      return data;
-    }
-  }
-
-  redraw(view) {
-    const engine = view.dataEngine || view.engine;
-    try {
-      if (engine && typeof engine.render === 'function') engine.render();
-    } catch (err) {
-      /* it redraws itself on the next change */
     }
   }
 }

@@ -19,9 +19,6 @@ function compatibility(app) {
     }
   };
   const open = app.workspace.getLeavesOfType('canvas').map((leaf) => leaf.view).find((v) => v && v.canvas);
-  const graph = GRAPH_TYPES.reduce((all, t) => all.concat(app.workspace.getLeavesOfType(t)), [])
-    .map((leaf) => leaf.view)
-    .find((v) => v && v.renderer);
   return [
     {
       what: 'Grouped right-click entries (New ▸, Cover ▸)',
@@ -55,10 +52,14 @@ function compatibility(app) {
       pending: 'Checked while a canvas is open.',
     },
     {
-      what: 'Leaving quiet links out of the graph',
-      ok: graph ? has(() => typeof graph.renderer.setData === 'function') : null,
-      without: 'the graph shows each quiet link as a missing note called "[Name"',
-      pending: 'Checked while a graph is open.',
+      what: 'Keeping quiet links out of Obsidian’s count of links',
+      ok: has(
+        () =>
+          typeof app.metadataCache.getFileCache === 'function' &&
+          typeof app.metadataCache.unresolvedLinks === 'object' &&
+          typeof app.metadataCache.resolvedLinks === 'object'
+      ),
+      without: 'the graph and link lists show each quiet link as a missing note called "[Name"',
     },
     {
       what: 'The list after [[[ ahead of Obsidian’s',

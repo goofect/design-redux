@@ -361,6 +361,27 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(backlinked).toBe(false);
 
+    // Obsidian never counts the stand-ins: set aside as the note is read.
+    // Off, they're counted again, as Obsidian would; on again — as when
+    // Obsidian starts with what it remembered — they're set aside again.
+    const counts = await browser.executeObsidian(async ({ app, plugins }) => {
+      const standIns = () =>
+        Object.keys(app.metadataCache.unresolvedLinks['Quiet.md'] || {}).filter((k) => k.startsWith('['));
+      const plugin = plugins.designRedux;
+      const on = standIns();
+      plugin.settings.quietLinks = false;
+      await plugin.saveSettings();
+      await new Promise((r) => setTimeout(r, 800));
+      const off = standIns();
+      plugin.settings.quietLinks = true;
+      await plugin.saveSettings();
+      await new Promise((r) => setTimeout(r, 800));
+      return { on, off, again: standIns() };
+    });
+    expect(counts.on).toEqual([]);
+    expect(counts.off.length).toBeGreaterThan(0);
+    expect(counts.again).toEqual([]);
+
     // Reading view: the note each names, dotted, and no stray bracket.
     const reading = await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.getLeaf(false);

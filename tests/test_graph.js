@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, withoutQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -322,37 +322,28 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     ]);
   });
 
-  await t('the graph is handed no line and no stand-in for a quiet link; plain lines stay', () => {
-    const caches = {
-      'Triple.md': {
-        links: [{ link: '[Anarchy', original: '[[[Anarchy]]' }, { link: 'Deterrence', original: '[[Deterrence]]' }],
-        frontmatterLinks: [{ key: 'related', link: '[Realism]', original: '[[[Realism]]]' }],
-      },
-      'Lone.md': { links: [{ link: '[Triple', original: '[[[Triple]]' }] },
+  await t("a note's quiet links are set aside from the links Obsidian counts, and put back as they were", () => {
+    const cache = {
+      links: [
+        { link: '[Anarchy', original: '[[[Anarchy]]', position: { start: { offset: 4 } } },
+        { link: 'Deterrence', original: '[[Deterrence]]', position: { start: { offset: 30 } } },
+        { link: '[Anarchy#Heading', original: '[[[Anarchy#Heading]]', position: { start: { offset: 60 } } },
+        { link: '[[Odd', original: '[[[[Odd]]', position: { start: { offset: 90 } } },
+      ],
+      frontmatterLinks: [{ key: 'related', link: '[Realism]', original: '[[[Realism]]]' }],
     };
-    const app = {
-      vault: { getFileByPath: (p) => (/\.md$/.test(p) ? { path: p, extension: 'md' } : null) },
-      metadataCache: { getFileCache: (f) => caches[f.path] || null },
-    };
-    const data = {
-      nodes: {
-        'Triple.md': { type: '', links: { '[Anarchy': true, '[Realism]': true, 'Deterrence.md': true } },
-        'Lone.md': { type: '', links: { '[Triple': true } },
-        'Deterrence.md': { type: '', links: {} },
-        '[Anarchy': { type: 'unresolved', links: {} },
-        '[Realism]': { type: 'unresolved', links: {} },
-        '[Triple': { type: 'unresolved', links: {} },
-      },
-      numLinks: 4,
-    };
-    const out = G.withoutQuietLinks(app, data);
-    assert.deepStrictEqual(Object.keys(out.nodes['Triple.md'].links), ['Deterrence.md']);
-    assert.ok(!out.nodes['[Anarchy'] && !out.nodes['[Realism]'] && !out.nodes['[Triple'], 'a stand-in was left in');
-    assert.ok(out.nodes['Lone.md'], 'a note was taken out where orphans are shown');
-    assert.strictEqual(out.numLinks, 1);
-    assert.strictEqual(Object.keys(data.nodes['Triple.md'].links).length, 3, 'the data handed in was changed');
-    const local = G.withoutQuietLinks(app, data, { dropLoners: true, keep: 'Triple.md' });
-    assert.ok(!local.nodes['Lone.md'] && local.nodes['Triple.md']);
+    const moved = G.settleQuietLinks(cache);
+    assert.deepStrictEqual(moved.map((r) => r.link), ['[Anarchy', '[Anarchy#Heading', '[Realism]']);
+    assert.deepStrictEqual(cache.links.map((r) => r.link), ['Deterrence', '[[Odd'], 'a plain link, or [[[[, was taken');
+    assert.ok(!('frontmatterLinks' in cache), 'an emptied list was left behind');
+    // Still read as quiet links, from where they were set aside.
+    assert.deepStrictEqual(G.quietRefs(cache).map((r) => r.path), ['Anarchy', 'Anarchy', 'Realism']);
+    assert.deepStrictEqual(G.settleQuietLinks(cache), [], 'settling twice moved them again');
+    const back = G.unsettleQuietLinks(cache);
+    assert.strictEqual(back.length, 3);
+    assert.deepStrictEqual(cache.links.map((r) => r.link), ['[Anarchy', 'Deterrence', '[Anarchy#Heading', '[[Odd']);
+    assert.deepStrictEqual(cache.frontmatterLinks.map((r) => r.key), ['related']);
+    assert.ok(!('drQuietLinks' in cache) && !('fromProperty' in cache.links[0]));
   });
 
   await t('[[[ opens the list, [[ and [[[[ do not; picking writes the link and closes it once', () => {
@@ -394,32 +385,41 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(editor.cursor, { line: 0, ch: 22 });
   });
 
-  await t("with quiet links on, Obsidian's [[ list and Quick switcher don't offer the stand-ins; off, they're as they were", async () => {
-    class LinkList {
-      getSuggestions() {
-        return [{ type: 'file', path: 'Anarchy' }, { type: 'linktext', path: '[Anarchy' }, { type: 'linktext', path: 'Idea' }];
-      }
-    }
-    class Base {
-      getSuggestions() {
-        return Promise.resolve([{ type: 'unresolved', linktext: '[Anarchy' }, { type: 'unresolved', linktext: 'Idea' }, { type: 'file' }]);
-      }
-    }
-    class QuickSwitcherModal extends Base {}
-    const list = new LinkList();
-    const plugin = { settings: { quietLinks: true } };
-    plugin.app = {
-      workspace: { editorSuggest: { suggests: [list] } },
-      internalPlugins: { getPluginById: () => ({ instance: { QuickSwitcherModal } }) },
+  await t("what Obsidian already counted is taken back — a stray \"[Name\" note too — and counted again when switched off", () => {
+    const caches = {
+      'Triple.md': {
+        links: [
+          { link: '[Anarchy', original: '[[[Anarchy]]', position: { start: { offset: 0 } } },
+          { link: '[Anarchy', original: '[[[Anarchy|words]]', position: { start: { offset: 20 } } },
+          { link: 'Idea', original: '[[Idea]]', position: { start: { offset: 40 } } },
+        ],
+      },
+      'Stray.md': { links: [{ link: '[Realism', original: '[[[Realism]]' }] },
+      'Plain.md': { links: [{ link: 'Idea', original: '[[Idea]]' }] },
     };
+    const files = { '[Realism.md': { path: '[Realism.md' }, 'Idea.md': { path: 'Idea.md' } };
+    let announced = 0;
+    const mc = {
+      resolvedLinks: { 'Triple.md': { 'Idea.md': 1 }, 'Stray.md': { '[Realism.md': 1 }, 'Plain.md': { 'Idea.md': 1 } },
+      unresolvedLinks: { 'Triple.md': { '[Anarchy': 2 }, 'Stray.md': {}, 'Plain.md': {} },
+      getFileCache: (f) => caches[f.path] || null,
+      getCachedFiles: () => Object.keys(caches),
+      getFirstLinkpathDest: (name) => files[name + '.md'] || null,
+      trigger: (name) => { if (name === 'resolved') announced++; },
+    };
+    const plugin = { settings: { quietLinks: true }, unloading: false };
+    plugin.app = { metadataCache: mc, vault: { getFileByPath: (p) => (caches[p] ? { path: p } : null) } };
     const quiet = new G.QuietLinks(plugin);
-    quiet.filterLists();
-    assert.deepStrictEqual(list.getSuggestions().map((i) => i.path), ['Anarchy', 'Idea']);
-    const switched = await new QuickSwitcherModal().getSuggestions();
-    assert.deepStrictEqual(switched.map((i) => i.linktext || i.type), ['Idea', 'file']);
-    quiet.unfilterLists();
-    assert.strictEqual(list.getSuggestions().length, 3, 'the [[ list stayed filtered');
-    assert.ok(!Object.prototype.hasOwnProperty.call(QuickSwitcherModal.prototype, 'getSuggestions'), 'the switcher stayed changed');
+    assert.strictEqual(quiet.sweep(), 2);
+    assert.deepStrictEqual(mc.unresolvedLinks['Triple.md'], {});
+    assert.deepStrictEqual(mc.resolvedLinks['Triple.md'], { 'Idea.md': 1 }, 'a plain link was uncounted');
+    assert.deepStrictEqual(mc.resolvedLinks['Stray.md'], {}, 'the stray note is still linked');
+    assert.strictEqual(announced, 1);
+    assert.strictEqual(quiet.sweep(), 0, 'swept twice');
+    assert.strictEqual(quiet.restoreAll(), 2);
+    assert.deepStrictEqual(mc.unresolvedLinks['Triple.md'], { '[Anarchy': 2 });
+    assert.deepStrictEqual(mc.resolvedLinks['Stray.md'], { '[Realism.md': 1 });
+    assert.deepStrictEqual(caches['Triple.md'].links.map((r) => r.original), ['[[[Anarchy]]', '[[[Anarchy|words]]', '[[Idea]]']);
   });
 
   await t('a rename rewrites the quiet links to the note, heading and words kept, and nothing else', () => {
