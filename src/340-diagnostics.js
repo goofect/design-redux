@@ -19,6 +19,10 @@ function compatibility(app) {
     }
   };
   const open = app.workspace.getLeavesOfType('canvas').map((leaf) => leaf.view).find((v) => v && v.canvas);
+  const graph = GRAPH_TYPES.map((type) => app.workspace.getLeavesOfType(type))
+    .reduce((all, leaves) => all.concat(leaves), [])
+    .map((leaf) => leaf.view)
+    .find((v) => v && v.renderer);
   return [
     {
       what: 'Grouped right-click entries (New ▸, Cover ▸)',
@@ -50,6 +54,27 @@ function compatibility(app) {
       ok: open ? has(() => open.canvas.nodes instanceof Map && typeof open.canvas.getData === 'function') : null,
       without: 'the legend reads the saved file, and text can’t be centred',
       pending: 'Checked while a canvas is open.',
+    },
+    {
+      what: 'Graph links through the notes between',
+      ok: graph
+        ? has(() => {
+            const r = graph.renderer;
+            const engine = graph.dataEngine || graph.engine;
+            const parts = r.nodes.concat(r.links);
+            return (
+              typeof r.setData === 'function' &&
+              typeof r.getHighlightNode === 'function' &&
+              Array.isArray(r.nodes) &&
+              Array.isArray(r.links) &&
+              typeof engine.render === 'function' &&
+              parts.every((p) => typeof p.render === 'function') &&
+              r.nodes.every((n) => typeof n.forward === 'object' && typeof n.reverse === 'object')
+            );
+          })
+        : null,
+      without: 'the graph draws every link straight across, and its switch does nothing',
+      pending: 'Checked while a graph is open.',
     },
     {
       what: 'Keeping quiet links out of Obsidian’s count of links',

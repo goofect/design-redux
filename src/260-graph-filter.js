@@ -172,14 +172,24 @@ class GraphPropertyFilter extends Feature {
 
   /**
    * The graph's search field. Obsidian's own markup, so looked for more
-   * than one way: in the Filters section, then any search field.
+   * than one way: in the Filters section, then any search field. A folded
+   * section's rows are taken out of the page, so while Filters is folded
+   * the field is found through the section itself.
    */
-  filterInput(controls) {
-    return (
+  filterInput(controls, leaf) {
+    const shown =
       controls.querySelector('.mod-filter input[type="search"]') ||
       controls.querySelector('.mod-filter input') ||
-      controls.querySelector('input[type="search"]')
-    );
+      controls.querySelector('input[type="search"]');
+    if (shown) return shown;
+    const view = leaf && leaf.view;
+    const engine = view && (view.dataEngine || view.engine);
+    const section = engine && engine.filterOptions;
+    if (!section) return null;
+    if (section.search && section.search.inputEl) return section.search.inputEl;
+    const rows = section.childrenEl;
+    if (!rows || typeof rows.querySelector !== 'function') return null;
+    return rows.querySelector('input[type="search"]') || rows.querySelector('input');
   }
 
   mount(leaf) {
@@ -207,7 +217,7 @@ class GraphPropertyFilter extends Feature {
    */
   stateFor(leaf, controls) {
     const type = leaf.view.getViewType();
-    const input = this.filterInput(controls);
+    const input = this.filterInput(controls, leaf);
     const saved = (this.settings.graphFilters || {})[type];
     const live = this.states.get(leaf);
     const current = input ? input.value.trim() : '';
@@ -385,7 +395,7 @@ class GraphPropertyFilter extends Feature {
       });
     }
 
-    if (!this.filterInput(controls)) {
+    if (!this.filterInput(controls, leaf)) {
       body.createDiv({
         cls: 'dr-gp-note',
         text: 'The graph\'s search field wasn\'t found, so these can\'t be applied.',
@@ -428,7 +438,7 @@ class GraphPropertyFilter extends Feature {
    * of it rather than to its last alternative.
    */
   apply(leaf, controls, state) {
-    const input = this.filterInput(controls);
+    const input = this.filterInput(controls, leaf);
     if (!input) return;
     let own = searchWithout(input.value, state.clause);
     const clause = graphClause(state);

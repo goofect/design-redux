@@ -38,7 +38,7 @@ Coffee N' Christmas.
   `SETTINGS_TABS`; a new row's key must be added there.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
-- Obsidian's unofficial internals (submenus, canvas internals, menu item lists,
+- Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback.
 

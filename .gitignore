@@ -23,6 +23,7 @@ data.json
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
 
-# Real-Obsidian test downloads and logs
+# Real-Obsidian test downloads, logs and screenshots
 .obsidian-cache
 logs
+ci-output

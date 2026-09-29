@@ -48,7 +48,7 @@ const SETTINGS_TABS = [
     sections: [
       { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
-      { title: 'Graph', keys: ['graphProperties'] },
+      { title: 'Graph', keys: ['graphProperties', 'graphRoutes'] },
       { title: 'Canvas', keys: ['canvasLegend', 'canvasTextAlign'] },
       {
         title: 'Compatibility',

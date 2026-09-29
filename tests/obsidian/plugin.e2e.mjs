@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip'];
+const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -618,6 +618,119 @@ describe('Design Redux in Obsidian', function () {
       folderGone: true,
       draftKept: true,
     });
+  });
+
+  it('draws graph links through the notes between, and lights the routes on hover', async function () {
+    const setUp = await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getAbstractFileByPath('Routes')) await app.vault.createFolder('Routes');
+      const notes = {
+        'Routes/Westminster system.md': '[[Ministerial responsibility]], [[Individual responsibility]] and [[Collective responsibility]].',
+        'Routes/Ministerial responsibility.md': '[[Individual responsibility]] and [[Collective responsibility]].',
+        'Routes/Individual responsibility.md': 'Can end in [[Resignation]].',
+        'Routes/Collective responsibility.md': 'Cabinet speaks as one.',
+        'Routes/Resignation.md': 'Going.',
+      };
+      for (const [p, text] of Object.entries(notes)) await app.vault.create(p, text);
+      await new Promise((r) => setTimeout(r, 1500));
+      app.commands.executeCommandById('graph:open');
+      await new Promise((r) => setTimeout(r, 2500));
+      const view = app.workspace.getLeavesOfType('graph')[0].view;
+      const rows = view.dataEngine.displayOptions.childrenEl;
+      const row = rows.querySelector('.dr-graph-routes');
+      // Filters starts folded, with its search field out of the page;
+      // the Properties section finds it all the same.
+      const filters = app.plugins.plugins['design-redux'].features.find((f) => f.constructor.name === 'GraphPropertyFilter');
+      const leaf = app.workspace.getLeavesOfType('graph')[0];
+      const controls = view.containerEl.querySelector('.graph-controls');
+      return {
+        switch: !!row,
+        besideArrows: !!row && !!row.previousElementSibling && row.previousElementSibling.matches('.setting-item.mod-toggle'),
+        filtersFolded: !controls.querySelector('.mod-filter input'),
+        searchFound: !!filters.filterInput(controls, leaf),
+        noWarning: !view.containerEl.querySelector('.dr-graph-props .dr-gp-note'),
+      };
+    });
+    expect(setUp).toEqual({ switch: true, besideArrows: true, filtersFolded: true, searchFound: true, noWarning: true });
+
+    const W = 'Routes/Westminster system.md';
+    const M = 'Routes/Ministerial responsibility.md';
+    const I = 'Routes/Individual responsibility.md';
+    const C = 'Routes/Collective responsibility.md';
+    const R = 'Routes/Resignation.md';
+
+    const drawn = await browser.executeObsidian(async ({ app }, names) => {
+      const view = app.workspace.getLeavesOfType('graph')[0].view;
+      // Settings open, Display unfolded, and the switch clicked.
+      view.dataEngine.controlsEl.removeClass('is-close');
+      await view.dataEngine.displayOptions.setCollapsed(false, false);
+      const row = view.dataEngine.displayOptions.childrenEl.querySelector('.dr-graph-routes');
+      row.querySelector('.checkbox-container').click();
+      await new Promise((r) => setTimeout(r, 1500));
+      const has = (a, b) => view.renderer.links.some((l) => l.source.id === a && l.target.id === b);
+      const [W, M, I, C] = names;
+      return {
+        saved: !!app.plugins.plugins['design-redux'].settings.graphRouting.graph,
+        straight: [has(W, I), has(W, C)],
+        routed: [has(W, M), has(M, I), has(M, C)],
+      };
+    }, [W, M, I, C]);
+    expect(drawn).toEqual({ saved: true, straight: [false, false], routed: [true, true, true] });
+
+    // Hovered, as the pointer would: Obsidian's own drawing fades what's
+    // not linked to 0.2 and brings what is up to full.
+    const lit = await browser.executeObsidian(async ({ app }, names) => {
+      const [W, M, I, C, R] = names;
+      const view = app.workspace.getLeavesOfType('graph')[0].view;
+      const r = view.renderer;
+      const hover = async (id) => {
+        r.highlightNode = r.nodeLookup[id];
+        for (let i = 0; i < 90; i++) {
+          r.changed();
+          await new Promise((res) => requestAnimationFrame(res));
+        }
+      };
+      const line = (a, b) => r.links.find((l) => l.source.id === a && l.target.id === b);
+      const alpha = (link) => (link && link.line ? Math.round(link.line.alpha * 10) / 10 : null);
+      const fade = (id) => Math.round(r.nodeLookup[id].fadeAlpha * 10) / 10;
+      await hover(W);
+      const fromWestminster = {
+        notes: [M, I, C, R].map(fade),
+        lines: [alpha(line(M, I)), alpha(line(M, C)), alpha(line(I, R))],
+      };
+      await hover(C);
+      const fromCollective = { notes: [W, M, I].map(fade), lines: [alpha(line(W, M)), alpha(line(M, I))] };
+      await hover(W);
+      return { fromWestminster, fromCollective };
+    }, [W, M, I, C, R]);
+    await shot('graph-routes');
+    const full = (n) => n >= 0.9;
+    expect(lit.fromWestminster.notes.map(full)).toEqual([true, true, true, false]);
+    expect(lit.fromWestminster.lines.map((a) => a !== null && a > 0.5)).toEqual([true, true, false]);
+    expect(lit.fromCollective.notes.map(full)).toEqual([true, true, false]);
+    expect(lit.fromCollective.lines.map((a) => a !== null && a > 0.5)).toEqual([true, false]);
+
+    // Off again, from the command: every line straight across.
+    const off = await browser.executeObsidian(async ({ app }, names) => {
+      const [W, M, I, C] = names;
+      const leaf = app.workspace.getLeavesOfType('graph')[0];
+      app.workspace.setActiveLeaf(leaf, { focus: true });
+      app.commands.executeCommandById('design-redux:toggle-graph-routes');
+      await new Promise((r) => setTimeout(r, 1500));
+      const r = leaf.view.renderer;
+      r.highlightNode = null;
+      const has = (a, b) => r.links.some((l) => l.source.id === a && l.target.id === b);
+      const result = {
+        saved: !!app.plugins.plugins['design-redux'].settings.graphRouting.graph,
+        straight: [has(W, I), has(W, C)],
+        switchShows: leaf.view.dataEngine.displayOptions.childrenEl.querySelector('.dr-graph-routes .checkbox-container').classList.contains('is-enabled'),
+        leftBehind: !!r.drRoutes || r.nodes.some((n) => Object.prototype.hasOwnProperty.call(n, 'render')),
+      };
+      leaf.detach();
+      const folder = app.vault.getAbstractFileByPath('Routes');
+      if (folder) await app.vault.delete(folder, true);
+      return result;
+    }, [W, M, I, C]);
+    expect(off).toEqual({ saved: false, straight: [true, true], switchShows: false, leftBehind: false });
   });
 
   it('logged no errors of its own along the way', async function () {

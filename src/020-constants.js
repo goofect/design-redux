@@ -104,6 +104,10 @@ const DEFAULTS = {
   quietLinks: false,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
+  // A switch in the graph's Display settings: links drawn through the
+  // note in between. Which graphs have it on: { graph | localgraph: bool }
+  graphRoutes: true,
+  graphRouting: {},
 };
 
 /* Obsidian's property types, with the icon it shows for each. */
