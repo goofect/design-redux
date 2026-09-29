@@ -324,6 +324,10 @@ class DesignRedux extends Plugin {
    * came from as it was then. Not if something else has taken its place.
    */
   async putBack(entry, oldPath, parentPath, order) {
+    if (this.app.vault.getAbstractFileByPath(entry.path) !== entry) {
+      new Notice(`“${entry.name}” isn’t there any more, so it can’t go back.`);
+      return false;
+    }
     if (this.app.vault.getAbstractFileByPath(oldPath)) {
       new Notice(`Something else is at “${oldPath}” now, so it can’t go back.`);
       return false;

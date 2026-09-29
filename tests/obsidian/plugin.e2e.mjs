@@ -193,18 +193,27 @@ describe('Design Redux in Obsidian', function () {
     await browser.action('pointer').move({ origin: done }).down().pause(200).up().perform();
     await browser.pause(800);
 
-    const after = await browser.executeObsidian(async ({ app }) => {
-      const page = app.workspace.getMostRecentLeaf().view.contentEl;
+    const after = await browser.executeObsidian(async ({ app, plugins }) => {
+      const leaf = app.workspace.getMostRecentLeaf();
+      const page = leaf.view.contentEl;
       const result = {
         renamed: !!app.vault.getAbstractFileByPath('Renamed/Inside.md'),
         stillEditing: !!page.querySelector('.dr-edit-name'),
         shows: (page.querySelector('.dr-detail-title') || {}).textContent || null,
+        tab: leaf.tabHeaderInnerTitleEl ? leaf.tabHeaderInnerTitleEl.textContent : 'Renamed',
       };
+      // Back to Politics, where the tests after this one expect to be.
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
       const folder = app.vault.getAbstractFileByPath('Renamed') || app.vault.getAbstractFileByPath('Renaming');
       if (folder) await app.vault.delete(folder, true);
+      // Its Undo, which a later test would otherwise find first.
+      document.querySelectorAll('.notice').forEach((n) => {
+        if (n.textContent.includes('Renaming')) n.remove();
+      });
       return result;
     });
-    expect(after).toEqual({ renamed: true, stillEditing: false, shows: 'Renamed' });
+    expect(after).toEqual({ renamed: true, stillEditing: false, shows: 'Renamed', tab: 'Renamed' });
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
@@ -222,7 +231,10 @@ describe('Design Redux in Obsidian', function () {
     }
     expect(newItem).not.toBeNull();
     await newItem.moveTo();
-    await browser.pause(700);
+    // Opened on hover, after a moment — longer on a busy machine.
+    await browser
+      .waitUntil(async () => (await menuTitles()).includes('Canvas'), { timeout: 4000, interval: 200 })
+      .catch(() => {});
     await shot('menu');
     expect(await menuTitles()).toContain('Canvas');
     await closeMenus();

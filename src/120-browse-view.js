@@ -405,6 +405,13 @@ class BrowseView extends ItemView {
       });
     }
     this.measureLater();
+    // The tab's name follows the screen's — as when the folder shown is
+    // renamed, which Obsidian doesn't tell the tab about.
+    const title = this.getDisplayText();
+    if (title !== this.shownTitle) {
+      this.shownTitle = title;
+      if (this.leaf && typeof this.leaf.updateHeader === 'function') this.leaf.updateHeader();
+    }
   }
 
   /** The screen this mode draws, built fresh so it holds no state. */
