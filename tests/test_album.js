@@ -489,6 +489,40 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(file.path, 'IR/Anarchy.md');
   });
 
+  await t('a folder renamed takes its folder note, and so its cover, with it', async () => {
+    const v = makeVault();
+    const folder = v.folder('Parliament');
+    const note = v.file('Parliament/Parliament.md');
+    v.file('Parliament/Commons.md');
+    const plugin = {
+      settings: JSON.parse(JSON.stringify(R.DEFAULTS)),
+      app: { vault: v.vault, fileManager: v.fileManager },
+      unloading: false,
+    };
+    plugin.folderNote = R.DesignRedux.prototype.folderNote.bind(plugin);
+    plugin.followFolderNote = R.DesignRedux.prototype.followFolderNote.bind(plugin);
+    plugin.renameFolderNote = R.DesignRedux.prototype.renameFolderNote.bind(plugin);
+    v.vault.on('rename', (file, oldPath) => plugin.followFolderNote(file, oldPath));
+
+    await v.fileManager.renameFile(folder, 'Parliamentarism');
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(note.path, 'Parliamentarism/Parliamentarism.md');
+    assert.strictEqual(plugin.folderNote(folder), note);
+
+    // Moved, not renamed: its note stays as it is.
+    v.folder('Politics');
+    await v.fileManager.renameFile(folder, 'Politics/Parliamentarism');
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(note.path, 'Politics/Parliamentarism/Parliamentarism.md');
+
+    // A name already taken inside is left alone.
+    const other = v.file('Politics/Parliamentarism/Westminster.md');
+    await v.fileManager.renameFile(folder, 'Politics/Westminster');
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(note.path, 'Politics/Westminster/Parliamentarism.md');
+    assert.strictEqual(other.path, 'Politics/Westminster/Westminster.md');
+  });
+
   await t('Escape mid-drag puts the row back, and saves nothing', () => {
     const { view, plugin } = setup();
     view.setEditing(true);

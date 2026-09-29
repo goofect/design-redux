@@ -76,7 +76,12 @@ class DesignRedux extends Plugin {
         if (!this.unloading) this.pruneLeftovers();
       }, 15000);
       // Arrangements follow the files they name.
-      this.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.orders.followRename(file, oldPath)));
+      this.registerEvent(
+        this.app.vault.on('rename', (file, oldPath) => {
+          this.orders.followRename(file, oldPath);
+          this.followFolderNote(file, oldPath);
+        })
+      );
       this.registerEvent(this.app.vault.on('delete', (file) => this.orders.followDelete(file)));
       this.registerEvent(
         this.app.workspace.on('active-leaf-change', () => this.queueSync())
@@ -247,6 +252,54 @@ class DesignRedux extends Plugin {
     const pattern = this.settings.folderNoteName || '{{folder}}';
     const name = pattern.replace(/\{\{folder\}\}/g, folder.name);
     return this.app.vault.getFileByPath(`${folder.path}/${name}.md`);
+  }
+
+  /**
+   * A folder renamed takes its folder note's name with it — the note is
+   * found by the folder's name, and holds its cover and properties, so
+   * left behind it would stop being the folder's note. Renamed as
+   * Obsidian renames, so links to it follow; not if the new name is
+   * taken. A folder that's only moved keeps its name, and its note.
+   *
+   * Obsidian tells of the folder first and of what's inside it after,
+   * a moment later, so the note is looked for then too.
+   */
+  followFolderNote(entry, oldPath) {
+    if (!oldPath) return;
+    const jobs = (this.folderNoteJobs || []).filter((j) => j.until > Date.now());
+    this.folderNoteJobs = jobs;
+    if (entry instanceof TFolder) {
+      const oldName = oldPath.split('/').pop();
+      const pattern = this.settings.folderNoteName || '{{folder}}';
+      if (oldName === entry.name || pattern.indexOf('{{folder}}') === -1) return;
+      const job = {
+        folder: entry,
+        was: pattern.replace(/\{\{folder\}\}/g, oldName),
+        now: pattern.replace(/\{\{folder\}\}/g, entry.name),
+        until: Date.now() + 10000,
+      };
+      jobs.push(job);
+      window.setTimeout(() => this.renameFolderNote(job), 0);
+    } else if (entry instanceof TFile && jobs.length) {
+      const job = jobs.find((j) => entry.parent === j.folder && entry.name === `${j.was}.md`);
+      if (job) window.setTimeout(() => this.renameFolderNote(job), 0);
+    }
+  }
+
+  async renameFolderNote(job) {
+    const jobs = this.folderNoteJobs || [];
+    if (this.unloading || jobs.indexOf(job) === -1) return;
+    const note = this.app.vault.getFileByPath(`${job.folder.path}/${job.was}.md`);
+    // Not moved in yet: its own rename comes later, and asks again.
+    if (!note) return;
+    jobs.splice(jobs.indexOf(job), 1);
+    const target = normalizePath(`${job.folder.path}/${job.now}.md`);
+    if (this.app.vault.getAbstractFileByPath(target)) return;
+    try {
+      await this.app.fileManager.renameFile(note, target);
+    } catch (err) {
+      console.error('Design Redux: could not rename the folder note', err);
+    }
   }
 
   /**

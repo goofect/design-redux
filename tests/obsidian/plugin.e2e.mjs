@@ -177,6 +177,14 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       await app.vault.createFolder('Renaming');
       await app.vault.create('Renaming/Inside.md', 'Hello.');
+      // A cover, kept on the folder's note.
+      const png = Uint8Array.from(
+        atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='),
+        (c) => c.charCodeAt(0)
+      );
+      await app.vault.createBinary('Renaming/pic.png', png.buffer);
+      await app.vault.create('Renaming/Renaming.md', '---\ncover: "[[pic.png]]"\n---\n');
+      await new Promise((r) => setTimeout(r, 800));
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode({ mode: 'folder', path: 'Renaming' });
     });
@@ -191,7 +199,7 @@ describe('Design Redux in Obsidian', function () {
     // Pressed as a hand does: down, a moment, up.
     const done = await browser.$('.dr-detail-action.is-primary');
     await browser.action('pointer').move({ origin: done }).down().pause(200).up().perform();
-    await browser.pause(800);
+    await browser.pause(1500);
 
     const after = await browser.executeObsidian(async ({ app, plugins }) => {
       const leaf = app.workspace.getMostRecentLeaf();
@@ -201,6 +209,9 @@ describe('Design Redux in Obsidian', function () {
         stillEditing: !!page.querySelector('.dr-edit-name'),
         shows: (page.querySelector('.dr-detail-title') || {}).textContent || null,
         tab: leaf.tabHeaderInnerTitleEl ? leaf.tabHeaderInnerTitleEl.textContent : 'Renamed',
+        folderNote: !!app.vault.getFileByPath('Renamed/Renamed.md'),
+        cover: !!page.querySelector('.dr-detail-art img[src*="pic.png"]'),
+        noteAsTrack: !!page.querySelector('.dr-track[data-path$="Renamed.md"], .dr-track[data-path$="Renaming.md"]'),
       };
       // Back to Politics, where the tests after this one expect to be.
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -213,7 +224,15 @@ describe('Design Redux in Obsidian', function () {
       });
       return result;
     });
-    expect(after).toEqual({ renamed: true, stillEditing: false, shows: 'Renamed', tab: 'Renamed' });
+    expect(after).toEqual({
+      renamed: true,
+      stillEditing: false,
+      shows: 'Renamed',
+      tab: 'Renamed',
+      folderNote: true,
+      cover: true,
+      noteAsTrack: false,
+    });
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
