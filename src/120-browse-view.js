@@ -114,6 +114,30 @@ class BrowseView extends ItemView {
       /* the keydown alone still covers focus inside the page */
     }
 
+    // A press on the page holds off redrawing it until it's let go.
+    // Drawn over mid-press, the button under the pointer is gone before
+    // the click lands — as Done was, pressed straight after typing a new
+    // name: leaving the name renames, and the rename redraws the page.
+    this.registerDomEvent(
+      this.contentEl,
+      'pointerdown',
+      () => {
+        this.pressedAt = Date.now();
+        const doc = this.contentEl.ownerDocument;
+        const release = () => {
+          doc.removeEventListener('pointerup', release, true);
+          doc.removeEventListener('pointercancel', release, true);
+          this.pressedAt = 0;
+          if (!this.renderAfterPress) return;
+          this.renderAfterPress = false;
+          this.queueRender();
+        };
+        doc.addEventListener('pointerup', release, true);
+        doc.addEventListener('pointercancel', release, true);
+      },
+      true
+    );
+
     this.registerEvent(this.app.vault.on('create', () => this.queueRender()));
     this.registerEvent(this.app.vault.on('delete', () => this.queueRender()));
     this.registerEvent(
@@ -165,6 +189,12 @@ class BrowseView extends ItemView {
       if (!this.contentEl || !this.contentEl.isConnected) return;
       if (typeof this.containerEl.isShown === 'function' && !this.containerEl.isShown()) {
         this.stale = true;
+        return;
+      }
+      // Not while something on the page is held down (a press held long
+      // is a drag or a mistake, and waits no longer).
+      if (this.pressedAt && Date.now() - this.pressedAt < 1500) {
+        this.renderAfterPress = true;
         return;
       }
       const doc = this.contentEl.ownerDocument;

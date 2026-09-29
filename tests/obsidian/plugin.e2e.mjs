@@ -173,6 +173,40 @@ describe('Design Redux in Obsidian', function () {
     await clickText('.dr-detail-action', 'Done');
   });
 
+  it('renames a folder in Edit mode, and one press of Done finishes', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      await app.vault.createFolder('Renaming');
+      await app.vault.create('Renaming/Inside.md', 'Hello.');
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Renaming' });
+    });
+    await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+    await clickText('.dr-detail-action', 'Edit');
+    const title = await browser.$('.dr-detail-title.dr-edit-name');
+    await title.waitForExist({ timeout: 5000 });
+    await title.click();
+    await browser.execute((el) => el.select(), title);
+    await browser.keys('Renamed'.split(''));
+
+    // Pressed as a hand does: down, a moment, up.
+    const done = await browser.$('.dr-detail-action.is-primary');
+    await browser.action('pointer').move({ origin: done }).down().pause(200).up().perform();
+    await browser.pause(800);
+
+    const after = await browser.executeObsidian(async ({ app }) => {
+      const page = app.workspace.getMostRecentLeaf().view.contentEl;
+      const result = {
+        renamed: !!app.vault.getAbstractFileByPath('Renamed/Inside.md'),
+        stillEditing: !!page.querySelector('.dr-edit-name'),
+        shows: (page.querySelector('.dr-detail-title') || {}).textContent || null,
+      };
+      const folder = app.vault.getAbstractFileByPath('Renamed') || app.vault.getAbstractFileByPath('Renaming');
+      if (folder) await app.vault.delete(folder, true);
+      return result;
+    });
+    expect(after).toEqual({ renamed: true, stillEditing: false, shows: 'Renamed' });
+  });
+
   it('groups its right-click entries, with New canvas under New', async function () {
     const disc = await browser.$('.dr-disc[data-folder="Politics/Theories"]');
     await disc.waitForExist({ timeout: 5000 });
