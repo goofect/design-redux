@@ -632,15 +632,17 @@ class RenamePropertyModal extends BulkModal {
 
     let problem = '';
     if (!from) problem = 'Choose the property to rename.';
-    else if (!to || to === from) problem = 'Type the new name.';
+    else if (!to) problem = 'Type the new name.';
     else problem = propertyNameProblem(to);
+    // The name as it is: something to do only where notes spell it otherwise.
+    const plan = problem ? null : this.bulk.planPropertyRename(from, to);
+    if (!problem && to === from && !plan.total) problem = 'Type the new name.';
     this.toHint.setText('');
     if (problem) {
       lines.push({ icon: 'info', cls: 'is-muted', text: problem });
       return this.showSummary(lines, null);
     }
 
-    const plan = this.bulk.planPropertyRename(from, to);
     const key = `${from}\u0000${to}`;
     if (this.basesKey !== key) {
       this.basesKey = key;
@@ -718,7 +720,7 @@ class RenamePropertyModal extends BulkModal {
               const bases = (record.bases || []).length;
               bulkNotice(
                 this.bulk,
-                `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}` +
+                (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
                   (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
                   '.' +
                   bulkTail(record),

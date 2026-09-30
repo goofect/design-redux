@@ -1593,12 +1593,18 @@ class BrowseView extends ItemView {
    * A field that changes a name: Enter or leaving it saves, Escape puts
    * it back. Only a real change is saved.
    */
-  editField(input, original, commit) {
+  editField(input, original, commit, opts = {}) {
     let settled = false;
-    const finish = (keep) => {
+    const finish = (keep, entered) => {
       if (settled) return;
       settled = true;
       const value = input.value.trim();
+      // Enter on a name left as it was can still ask for something:
+      // a property written other ways in some notes, made one.
+      if (keep && entered && value === original && opts.enterSame) {
+        opts.enterSame(value);
+        return;
+      }
       if (!keep || !value || value === original) {
         input.value = original;
         return;
@@ -1612,7 +1618,7 @@ class BrowseView extends ItemView {
       if (composing(evt)) return;
       if (evt.key === 'Enter') {
         evt.preventDefault();
-        finish(true);
+        finish(true, true);
         input.blur();
       } else if (evt.key === 'Escape') {
         evt.preventDefault();

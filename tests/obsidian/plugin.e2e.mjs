@@ -942,6 +942,48 @@ describe('Design Redux in Obsidian', function () {
     expect(merged).toEqual({ one: 'Law', two: ['Politics', 'Law'], three: 'History', left: [] });
   });
 
+  it('writes a property the same way in every note, where Obsidian lists it one way and notes another', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      // Listed as "parent", since that's how it was first met; most notes write "Parent".
+      await app.vault.createFolder('Spelling');
+      await app.vault.create('Spelling/C.md', '---\nparent: "[[Home]]"\n---\nC\n');
+      await new Promise((r) => setTimeout(r, 800));
+      await app.vault.create('Spelling/A.md', '---\nParent: "[[Home]]"\n---\nA\n');
+      await app.vault.create('Spelling/B.md', '---\nParent: "[[Home]]"\ntitle: b\n---\nB\n');
+      await new Promise((r) => setTimeout(r, 1200));
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'properties' });
+    });
+    const edit = await browser.$('.dr-bar-edit');
+    await edit.waitForExist({ timeout: 10000 });
+    await edit.click();
+    await browser.$('.dr-split-row.is-editing').waitForExist({ timeout: 5000 });
+    const shown = await browser.execute(() => {
+      const row = Array.from(document.querySelectorAll('.dr-split-row.is-editing')).find(
+        (r) => r.querySelector('input.dr-edit-name').value.toLowerCase() === 'parent'
+      );
+      const fix = row && row.querySelector('.dr-prop-spelling');
+      if (fix) fix.dataset.test = 'fix';
+      return row ? [row.querySelector('input.dr-edit-name').value, fix ? fix.textContent : null] : null;
+    });
+    expect(shown).toEqual(['parent', '“Parent” in 2']);
+    await (await browser.$('[data-test="fix"]')).click();
+    await browser.pause(1500);
+    const after = await browser.executeObsidian(async ({ app, plugins }) => {
+      const texts = [];
+      for (const n of ['A', 'B', 'C']) texts.push(await app.vault.read(app.vault.getFileByPath(`Spelling/${n}.md`)));
+      const view = app.workspace.getMostRecentLeaf().view;
+      const fixLeft = !!view.contentEl.querySelector('.dr-prop-spelling');
+      if (view.editing) view.setEditing(false);
+      const folder = app.vault.getAbstractFileByPath('Spelling');
+      if (folder) await app.vault.delete(folder, true);
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      return { capitals: texts.filter((t) => t.includes('Parent:')).length, lower: texts.filter((t) => t.includes('parent:')).length, fixLeft };
+    });
+    expect(after).toEqual({ capitals: 0, lower: 3, fixLeft: false });
+  });
+
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));

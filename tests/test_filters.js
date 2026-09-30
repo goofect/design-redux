@@ -526,11 +526,16 @@ t('Properties, in Edit: names to change, circles to pick, and Merge for two or m
   plugin.feature = () => tools;
   plugin.bulk = {
     last: null,
-    planPropertyRename: () => ({ conflicts: clash ? [files[0]] : [], merged: [] }),
+    planPropertyRename: () => ({ conflicts: clash ? [files[0]] : [], merged: [], total: 1 }),
     renameProperty: async (from, to) => {
       renamed.push([from, to]);
       return { files: [], bases: [], failed: [] };
     },
+    // Some notes write status with a capital.
+    propertySpellings: () => new Map([
+      ['status', new Map([['status', 2], ['Status', 1]])],
+      ['domain', new Map([['domain', 3]])],
+    ]),
   };
   try {
     const view = page({ mode: 'properties' });
@@ -564,6 +569,25 @@ t('Properties, in Edit: names to change, circles to pick, and Merge for two or m
     status.value = 'state';
     status.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert.deepStrictEqual(opened.pop(), ['rename', 'status', 'state']);
+    assert.strictEqual(renamed.length, 0);
+
+    // Written two ways: shown, and one press writes it as listed.
+    clash = false;
+    view.propPicks = new Set();
+    view.render();
+    const spelled = Array.from(view.contentEl.querySelectorAll('.dr-prop-spelling'));
+    assert.deepStrictEqual(spelled.map((b) => b.textContent), ['“Status” in 1']);
+    spelled[0].click();
+    assert.deepStrictEqual(renamed.pop(), ['status', 'status']);
+    assert.ok(!view.contentEl.querySelector('.dr-split-row.is-picked'), 'the press picks nothing');
+    // Enter on the name as it is does the same; on one written one way, nothing.
+    const same = fields()[1];
+    same.dispatchEvent(new window.Event('focus'));
+    same.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    assert.deepStrictEqual(renamed.pop(), ['status', 'status']);
+    const plain = fields()[0];
+    plain.dispatchEvent(new window.Event('focus'));
+    plain.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert.strictEqual(renamed.length, 0);
 
     view.contentEl.querySelector('.dr-bar-edit').click();

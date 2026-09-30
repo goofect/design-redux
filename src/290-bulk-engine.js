@@ -826,6 +826,23 @@ class BulkEdits {
     return out.sort((a, b) => byName(a.path, b.path));
   }
 
+  /**
+   * How each property's name is written across the notes: for each, by
+   * its name in small letters, every spelling and how many notes use it.
+   */
+  propertySpellings() {
+    const all = new Map();
+    this.app.vault.getMarkdownFiles().forEach((file) => {
+      Object.keys(this.frontmatterOf(file)).forEach((key) => {
+        const low = key.toLowerCase();
+        if (!all.has(low)) all.set(low, new Map());
+        const counts = all.get(low);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      });
+    });
+    return all;
+  }
+
   frontmatterOf(file) {
     const cache = this.app.metadataCache.getFileCache(file);
     const fm = Object.assign({}, (cache && cache.frontmatter) || {});

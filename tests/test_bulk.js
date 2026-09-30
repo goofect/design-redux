@@ -885,6 +885,21 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.match(lastNotice().text, /Renamed “domain” to “field” in 2 notes and 2 bases\. 1 note kept both, as the values differ: c\./);
   });
 
+  await t('Rename property: the same name, where some notes write it otherwise, makes them one', async () => {
+    const v = vaultForRename();
+    const { plugin } = makePlugin(v);
+    const modal = new R.RenamePropertyModal(plugin, 'domain', 'domain');
+    modal.open();
+    await settle(150);
+    const el = modal.contentEl;
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /Changes its capitals in 1 note/);
+    assert.strictEqual(el.querySelector('.mod-cta').disabled, false);
+    click(el.querySelector('.mod-cta'));
+    await settle(200);
+    assert.ok('domain' in v.fm('IR/b.md') && !('Domain' in v.fm('IR/b.md')));
+    assert.match(lastNotice().text, /Wrote “domain” the same way in 1 note/);
+  });
+
   await t("Rename property: a clashing note's name opens it", async () => {
     const v = vaultForRename();
     const { plugin } = makePlugin(v);

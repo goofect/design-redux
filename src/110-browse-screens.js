@@ -299,6 +299,10 @@ class PropertiesScreen extends BrowseScreen {
       if (tools) tools.openMerge(props.filter((p) => picks.has(p.name)).map((p) => p.name));
     });
 
+    const spellings =
+      this.plugin.bulk && typeof this.plugin.bulk.propertySpellings === 'function'
+        ? this.plugin.bulk.propertySpellings()
+        : new Map();
     const list = wrap.createDiv({ cls: 'dr-split-list dr-prop-edit-list' });
     props.forEach((prop) => {
       const row = list.createDiv({ cls: 'dr-split-row is-editing' });
@@ -327,7 +331,34 @@ class PropertiesScreen extends BrowseScreen {
       const name = row.createEl('input', { cls: 'dr-edit-name dr-split-name', type: 'text' });
       name.value = prop.name;
       name.setAttribute('spellcheck', 'false');
-      view.editField(name, prop.name, (value) => this.renameProperty(prop.name, value));
+      // Notes can write a property's name differently — Parent and
+      // parent are one property to Obsidian, which lists it one way.
+      // Enter on the name as shown writes it that way in all of them.
+      const others = Array.from((spellings.get(prop.name.toLowerCase()) || new Map()).entries()).filter(
+        ([spelling]) => spelling !== prop.name
+      );
+      view.editField(name, prop.name, (value) => this.renameProperty(prop.name, value), {
+        enterSame: others.length ? (value) => this.renameProperty(prop.name, value) : null,
+      });
+
+      if (others.length) {
+        const count = others.reduce((n, [, c]) => n + c, 0);
+        const fix = row.createEl('button', {
+          cls: 'dr-prop-spelling',
+          text: `${others.map(([spelling]) => `“${spelling}”`).join(', ')} in ${count}`,
+        });
+        fix.setAttribute(
+          'aria-label',
+          `${bulkCount(count, 'note')} ${count === 1 ? 'writes' : 'write'} it ${others.map(([spelling]) => `“${spelling}”`).join(' or ')}. Change ${count === 1 ? 'it' : 'them'} to “${prop.name}”`
+        );
+        const icon = fix.createSpan({ cls: 'dr-prop-spelling-icon' });
+        setIcon(icon, 'wand-2');
+        fix.prepend(icon);
+        fix.addEventListener('click', (evt) => {
+          evt.stopPropagation();
+          this.renameProperty(prop.name, name.value.trim() || prop.name);
+        });
+      }
 
       row.createDiv({ cls: 'dr-split-count', text: String(prop.count) });
       // The row itself picks too, except where the name is typed.
@@ -357,6 +388,10 @@ class PropertiesScreen extends BrowseScreen {
       return;
     }
     const plan = bulk.planPropertyRename(from, to);
+    if (from === to && !plan.total && !plan.conflicts.length) {
+      view.render();
+      return;
+    }
     const special = ['tags', 'aliases', 'cssclasses'];
     const changing = from.toLowerCase() !== to.toLowerCase();
     if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
@@ -379,7 +414,7 @@ class PropertiesScreen extends BrowseScreen {
     const bases = (record.bases || []).length;
     bulkNotice(
       bulk,
-      `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}` +
+      (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
         (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
         '.' +
         (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
