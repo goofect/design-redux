@@ -180,6 +180,45 @@ function renamePropertyIn(fm, from, to) {
   return involved.length > 1 ? 'merged' : 'renamed';
 }
 
+/**
+ * Several properties made one in a note's frontmatter, under `to`, at
+ * the place the first of them had. Their values become one as a rename
+ * would make them; where they differ, `mode` 'list' puts them together
+ * in a list, and otherwise the note is left as it was.
+ *
+ * Returns 'absent', 'same', 'renamed', 'merged', 'combined' or 'conflict'.
+ */
+function mergePropertiesIn(fm, froms, to, mode) {
+  const low = (s) => String(s).toLowerCase();
+  const names = new Set(froms.map(low));
+  const keys = Object.keys(fm).filter((k) => k !== 'position');
+  if (!keys.some((k) => names.has(low(k)) && low(k) !== low(to))) {
+    // Only the name kept is here, perhaps in other capitals.
+    const olds = keys.filter((k) => names.has(low(k)));
+    if (!olds.length) return 'absent';
+    return olds.length === 1 && olds[0] === to ? 'same' : renamePropertyIn(fm, olds[0], to);
+  }
+  const involved = keys.filter((k) => names.has(low(k)) || low(k) === low(to));
+  // The kept property's value leads, then the rest in the order chosen.
+  const rank = (k) => (low(k) === low(to) ? -1 : froms.map(low).indexOf(low(k)));
+  const values = involved.slice().sort((a, b) => rank(a) - rank(b)).map((k) => fm[k]);
+  let merged = mergeValues(values);
+  let how = involved.length > 1 ? 'merged' : 'renamed';
+  if (merged === CONFLICT) {
+    if (mode !== 'list') return 'conflict';
+    merged = uniqueList([].concat(...values.filter((v) => !isBlank(v))));
+    how = 'combined';
+  }
+  const first = keys.find((k) => involved.indexOf(k) !== -1);
+  const entries = keys.map((k) => [k, fm[k]]);
+  keys.forEach((k) => delete fm[k]);
+  entries.forEach(([k, v]) => {
+    if (k === first) fm[to] = merged;
+    else if (involved.indexOf(k) === -1) fm[k] = v;
+  });
+  return how;
+}
+
 /** Whether a tag is `from` or nested beneath it, ignoring case and #. */
 function tagUnder(tag, from) {
   const t = String(tag).trim().replace(/^#/, '').toLowerCase();
@@ -844,6 +883,39 @@ class BulkEdits {
     return { renamed, merged, conflicts, settings, total: renamed.length + merged.length };
   }
 
+  /**
+   * A merge worked out from the cache: the notes it changes, those
+   * where the values differ (put together in a list, or left as they
+   * are), and the settings that name any of them.
+   */
+  planPropertyMerge(froms, to, mode) {
+    const changed = [];
+    const combined = [];
+    const conflicts = [];
+    const seen = new Set();
+    froms.forEach((name) =>
+      this.notesWithProperty(name).forEach((file) => {
+        if (seen.has(file)) return;
+        seen.add(file);
+        const result = mergePropertiesIn(JSON.parse(JSON.stringify(this.frontmatterOf(file))), froms, to, mode);
+        if (result === 'conflict') conflicts.push(file);
+        else if (result === 'combined') {
+          combined.push(file);
+          changed.push(file);
+        } else if (result !== 'absent' && result !== 'same') changed.push(file);
+      })
+    );
+    const copy = JSON.parse(JSON.stringify(this.plugin.settings));
+    const settings = [];
+    froms.forEach((name) => {
+      if (name.toLowerCase() === to.toLowerCase()) return;
+      renamePropertyInSettings(copy, name, to).changed.forEach((label) => {
+        if (settings.indexOf(label) === -1) settings.push(label);
+      });
+    });
+    return { changed, combined, conflicts, settings, total: changed.length };
+  }
+
   /** Notes with a tag or one beneath it, where it is, and nested tags met on the way. */
   planTagRename(from, to) {
     from = String(from).replace(/^#/, '');
@@ -1181,6 +1253,71 @@ class BulkEdits {
     }
     this.followRename({ property: [from, to] });
     record.undoFollow = () => this.followRename({ property: [to, from] });
+    return record;
+  }
+
+  /**
+   * Several properties made one, in every note that has any of them, in
+   * bases and in this plugin's settings. Where a note's values differ,
+   * `mode` 'list' puts them together; otherwise it's left and reported.
+   */
+  async mergeProperties(froms, to, mode) {
+    const app = this.app;
+    const others = froms.filter((name) => name.toLowerCase() !== to.toLowerCase());
+    const type = assignedType(app, to) || froms.map((name) => assignedType(app, name)).find(Boolean) || null;
+    const label = `Merging ${nameList(froms)} into “${to}”`;
+    const record = await this.run(label, async (touch, step, rec) => {
+      const plan = this.planPropertyMerge(froms, to, mode);
+      rec.conflicts = plan.conflicts.slice();
+      rec.combined = plan.combined.slice();
+      let done = 0;
+      for (const file of plan.changed) {
+        let result = 'absent';
+        await touch(file, () =>
+          app.fileManager.processFrontMatter(file, (data) => {
+            result = mergePropertiesIn(data, froms, to, mode);
+          })
+        );
+        if (result === 'conflict' && rec.conflicts.indexOf(file) === -1) rec.conflicts.push(file);
+        step(++done, plan.changed.length);
+      }
+      rec.bases = [];
+      for (const name of others) {
+        (await this.rewriteBases({ property: [name, to] }, touch)).forEach((file) => {
+          if (rec.bases.indexOf(file) === -1) rec.bases.push(file);
+        });
+      }
+
+      const undo = [];
+      rec.settings = [];
+      others.forEach((name) => {
+        const settings = renamePropertyInSettings(this.plugin.settings, name, to);
+        if (!settings.changed.length) return;
+        settings.changed.forEach((l) => rec.settings.indexOf(l) === -1 && rec.settings.push(l));
+        undo.unshift(() => {
+          settings.undo();
+          this.afterSettings(to, name);
+        });
+      });
+      if (undo.length) {
+        rec.undoSettings = () => undo.forEach((fn) => fn());
+        await this.plugin.saveData(this.plugin.settings);
+        others.forEach((name) => this.afterSettings(name, to));
+      }
+    });
+    if (!record) return null;
+    // Values put together in lists make it a list property.
+    const listType = record.combined && record.combined.length && (!type || type === 'text') ? 'multitext' : null;
+    const want = listType || type;
+    if (want && want !== assignedType(app, to)) {
+      try {
+        app.metadataTypeManager.setType(to, want);
+      } catch (err) {
+        /* Obsidian infers it again from the values */
+      }
+    }
+    others.forEach((name) => this.followRename({ property: [name, to] }));
+    record.undoFollow = () => others.forEach((name) => this.followRename({ property: [to, name] }));
     return record;
   }
 

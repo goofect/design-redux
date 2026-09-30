@@ -175,8 +175,13 @@ class PropertiesScreen extends BrowseScreen {
     view.renderTitleBar(root, this.title());
 
     const props = view.propertyList().filter((p) => view.matches(p.name));
+    this.editButton(root, props.length > 0);
     if (!props.length) {
       root.createDiv({ cls: 'dr-empty', text: 'No properties' });
+      return;
+    }
+    if (view.editing) {
+      this.renderEditing(root, props);
       return;
     }
 
@@ -240,6 +245,149 @@ class PropertiesScreen extends BrowseScreen {
     ordered.forEach((group, i) => view.renderGroup(detail, group, i === 0));
   }
 
+  /** Edit, beside Find, as an album has it; Done while editing. */
+  editButton(root, any) {
+    const view = this.view;
+    const bar = root.querySelector('.dr-detail-bar');
+    if (!bar || (!any && !view.editing) || !this.plugin.feature(BulkEditing)) return;
+    const button = bar.createEl('button', {
+      cls: `dr-bar-edit${view.editing ? ' is-done' : ''}`,
+      text: view.editing ? 'Done' : 'Edit',
+    });
+    button.setAttribute('aria-label', view.editing ? 'Stop editing properties' : 'Rename and merge properties');
+    button.addEventListener('click', () => {
+      view.propPicks = new Set();
+      view.setEditing(!view.editing);
+    });
+    const next = bar.querySelector('.dr-filter-btn') || bar.querySelector('.dr-browse-search');
+    if (next) next.before(button);
+  }
+
+  /**
+   * Every property as a name to change, and a circle to pick it by:
+   * changing a name renames it everywhere, and two or more picked can
+   * be merged into one.
+   */
+  renderEditing(root, props) {
+    const view = this.view;
+    const picks = view.propPicks instanceof Set ? view.propPicks : (view.propPicks = new Set());
+    // Picks renamed or gone since are let go.
+    Array.from(picks).forEach((name) => {
+      if (!props.some((p) => p.name === name)) picks.delete(name);
+    });
+
+    const wrap = root.createDiv({ cls: 'dr-prop-edit' });
+    const bar = wrap.createDiv({ cls: 'dr-prop-edit-bar' });
+    const said = bar.createDiv({ cls: 'dr-prop-edit-said' });
+    const merge = bar.createEl('button', { cls: 'mod-cta dr-prop-merge' });
+    const refresh = () => {
+      const n = picks.size;
+      said.setText(
+        n === 0
+          ? 'Change a name to rename it everywhere. Pick two or more to merge them.'
+          : n === 1
+          ? '1 picked. Pick another to merge them.'
+          : `${n} picked.`
+      );
+      merge.setText(n > 1 ? `Merge ${n}…` : 'Merge…');
+      merge.disabled = n < 2;
+      merge.toggleClass('is-disabled', n < 2);
+    };
+    merge.addEventListener('click', () => {
+      if (picks.size < 2) return;
+      const tools = this.plugin.feature(BulkEditing);
+      if (tools) tools.openMerge(props.filter((p) => picks.has(p.name)).map((p) => p.name));
+    });
+
+    const list = wrap.createDiv({ cls: 'dr-split-list dr-prop-edit-list' });
+    props.forEach((prop) => {
+      const row = list.createDiv({ cls: 'dr-split-row is-editing' });
+      const pick = row.createDiv({ cls: 'dr-prop-pick' });
+      pick.setAttribute('role', 'checkbox');
+      pick.setAttribute('tabindex', '0');
+      const paint = () => {
+        const on = picks.has(prop.name);
+        row.toggleClass('is-picked', on);
+        pick.setAttribute('aria-checked', String(on));
+        pick.empty();
+        if (on) setIcon(pick, 'check');
+      };
+      const flip = () => {
+        if (picks.has(prop.name)) picks.delete(prop.name);
+        else picks.add(prop.name);
+        paint();
+        refresh();
+      };
+      onActivate(pick, flip);
+      paint();
+
+      const thumb = row.createDiv({ cls: 'dr-split-thumb is-blank' });
+      setIcon(thumb.createSpan({ cls: 'dr-card-glyph' }), TYPE_ICONS[prop.type] || 'tag');
+
+      const name = row.createEl('input', { cls: 'dr-edit-name dr-split-name', type: 'text' });
+      name.value = prop.name;
+      name.setAttribute('spellcheck', 'false');
+      view.editField(name, prop.name, (value) => this.renameProperty(prop.name, value));
+
+      row.createDiv({ cls: 'dr-split-count', text: String(prop.count) });
+      // The row itself picks too, except where the name is typed.
+      row.addEventListener('click', (evt) => {
+        if (evt.target === name || pick.contains(evt.target)) return;
+        flip();
+      });
+      onContextMenu(row, (evt) => this.propertyMenu(evt, prop.name));
+    });
+    refresh();
+  }
+
+  /**
+   * A name changed in the list: renamed everywhere, with Undo. One that
+   * needs a look first — notes where both names hold different values,
+   * or tags, aliases or CSS classes — opens the rename, filled in.
+   */
+  async renameProperty(from, to) {
+    const view = this.view;
+    const tools = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.bulk;
+    if (!tools || !bulk) return;
+    const problem = propertyNameProblem(to);
+    if (problem) {
+      new Notice(problem);
+      view.render();
+      return;
+    }
+    const plan = bulk.planPropertyRename(from, to);
+    const special = ['tags', 'aliases', 'cssclasses'];
+    const changing = from.toLowerCase() !== to.toLowerCase();
+    if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
+      view.render();
+      tools.openRenameProperty(from, to);
+      return;
+    }
+    const picks = view.propPicks;
+    const record = await bulk.renameProperty(from, to);
+    if (!record) {
+      view.render();
+      return;
+    }
+    // A picked property stays picked under its new name.
+    if (picks instanceof Set && picks.has(from)) {
+      picks.delete(from);
+      picks.add(to);
+    }
+    const done = notesChanged(record);
+    const bases = (record.bases || []).length;
+    bulkNotice(
+      bulk,
+      `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}` +
+        (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
+        '.' +
+        (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
+        bulkTail(record),
+      record
+    );
+  }
+
   /** A property's own menu, from its row or its heading: rename it everywhere. */
   propertyMenu(evt, name) {
     const bulk = this.plugin.feature(BulkEditing);
@@ -249,6 +397,7 @@ class PropertiesScreen extends BrowseScreen {
     const root = this.app.vault.getRoot();
     [
       ['Rename everywhere…', 'pencil', () => bulk.openRenameProperty(name)],
+      ['Merge with…', 'git-merge', () => bulk.openMerge([name])],
       ['Change type…', 'shapes', () => bulk.openChangeType(name)],
       ['Find notes missing it…', 'list-checks', () => bulk.openMissing([root], name)],
       ['Remove from every note…', 'list-minus', () => bulk.openRemove([root], [name])],

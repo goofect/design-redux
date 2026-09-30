@@ -127,7 +127,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn };\n');
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -582,6 +582,92 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(plugin.settings.albumColumns, 'domain, modified');
   });
 
+  /* -- merging properties ------------------------------------------------ */
+
+  await t('properties merged in a note: in the first one’s place, the kept one’s value first', () => {
+    const fm = { title: 'x', area: 'Law', domain: 'Law', status: 1 };
+    assert.strictEqual(R.mergePropertiesIn(fm, ['domain', 'area'], 'domain'), 'merged');
+    assert.deepStrictEqual(Object.keys(fm), ['title', 'domain', 'status']);
+    assert.strictEqual(fm.domain, 'Law');
+    const lists = { area: ['Law'], Domain: ['Politics'] };
+    R.mergePropertiesIn(lists, ['domain', 'area'], 'domain');
+    assert.deepStrictEqual(lists, { domain: ['Politics', 'Law'] });
+    const differ = { area: 'Law', domain: 'Politics' };
+    assert.strictEqual(R.mergePropertiesIn(JSON.parse(JSON.stringify(differ)), ['area', 'domain'], 'domain'), 'conflict');
+    assert.strictEqual(R.mergePropertiesIn(differ, ['area', 'domain'], 'domain', 'list'), 'combined');
+    assert.deepStrictEqual(differ, { domain: ['Politics', 'Law'] });
+    const one = { field: 'x' };
+    assert.strictEqual(R.mergePropertiesIn(one, ['field', 'area'], 'domain'), 'renamed');
+    assert.deepStrictEqual(one, { domain: 'x' });
+    assert.strictEqual(R.mergePropertiesIn({ domain: 1 }, ['domain', 'area'], 'domain'), 'same');
+    assert.strictEqual(R.mergePropertiesIn({ other: 1 }, ['area'], 'domain'), 'absent');
+    const caps = { Domain: 'x' };
+    assert.strictEqual(R.mergePropertiesIn(caps, ['Domain', 'area'], 'domain'), 'renamed', 'a change of capitals');
+    assert.deepStrictEqual(caps, { domain: 'x' });
+  });
+
+  await t('merging properties: every note, bases and settings; different values in a list, and the type a list', async () => {
+    const v = vaultForRename();
+    const { plugin, bulk } = makePlugin(v);
+    v.types.field = 'text';
+    const plan = bulk.planPropertyMerge(['domain', 'field'], 'field', 'list');
+    assert.deepStrictEqual(plan.changed.map((f) => f.path).sort(), ['IR/a.md', 'IR/b.md', 'IR/c.md']);
+    assert.deepStrictEqual(plan.combined.map((f) => f.path), ['IR/c.md']);
+    const record = await bulk.mergeProperties(['domain', 'field'], 'field', 'list');
+    assert.strictEqual(v.fm('IR/a.md').field, 'Law');
+    assert.deepStrictEqual(v.fm('IR/b.md').field, ['Politics', 'Law']);
+    assert.deepStrictEqual(v.fm('IR/c.md'), { field: ['Politics', 'Law'], position: {} });
+    assert.ok(v.text('Reading.base').includes('field == "Law"'));
+    assert.strictEqual(plugin.settings.categoryProperty, 'field');
+    assert.strictEqual(v.types.field, 'multitext', 'a list property now');
+    assert.deepStrictEqual(record.combined.map((f) => f.path), ['IR/c.md']);
+    assert.ok(!v.writes.includes('IR/d.md'));
+
+    await bulk.undo();
+    assert.deepStrictEqual(v.fm('IR/c.md'), { domain: 'Law', field: 'Politics', position: {} });
+    assert.strictEqual(plugin.settings.categoryProperty, 'domain');
+  });
+
+  await t('merging, leaving notes whose values differ as they are', async () => {
+    const v = vaultForRename();
+    const { bulk } = makePlugin(v);
+    const record = await bulk.mergeProperties(['domain', 'field'], 'field', 'skip');
+    assert.deepStrictEqual(v.fm('IR/c.md'), { domain: 'Law', field: 'Politics', position: {} });
+    assert.deepStrictEqual(record.conflicts.map((f) => f.path), ['IR/c.md']);
+    assert.strictEqual(v.fm('IR/a.md').field, 'Law');
+  });
+
+  await t('Merge properties: chips, the name most used kept, what differs shown, and Merge merges', async () => {
+    const v = vaultForRename();
+    const { plugin } = makePlugin(v);
+    const modal = new R.MergePropertiesModal(plugin, ['field']);
+    modal.open();
+    await settle(20);
+    const el = modal.contentEl;
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-bulk-chip-name')).map((c) => c.textContent), ['field']);
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /Add another property to merge it with/);
+    assert.strictEqual(el.querySelector('.mod-cta').disabled, true);
+
+    const add = el.querySelector('.dr-merge-add input');
+    type(add, 'domain');
+    enter(add);
+    await settle(150);
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-bulk-chip-name')).map((c) => c.textContent), ['field', 'domain']);
+    const into = el.querySelectorAll('.dr-bulk-field input')[0];
+    assert.strictEqual(into.value, 'domain', 'the one in the most notes');
+    const text = el.querySelector('.dr-bulk-summary').textContent;
+    assert.match(text, /Brings “field” and “domain” together as “domain” in 2 notes/);
+    assert.match(text, /1 note has different values in more than one; they’re put together in a list/);
+    assert.ok(!el.querySelector('.dr-merge-mode').hasClass('is-hidden'), 'the choice for differing values shows');
+    assert.strictEqual(el.querySelector('.mod-cta').textContent, 'Merge into “domain”');
+
+    click(el.querySelector('.mod-cta'));
+    await settle(200);
+    assert.deepStrictEqual(v.fm('IR/c.md').domain, ['Law', 'Politics']);
+    assert.ok(!('field' in v.fm('IR/b.md')));
+    assert.match(lastNotice().text, /Merged “field” and “domain” into “domain” in 2 notes\. 1 note now has a list of the different values\./);
+  });
+
   /* -- renaming a tag ------------------------------------------------------ */
 
   await t('a tag renamed, keeping its # and what is nested beneath', () => {
@@ -918,14 +1004,14 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.ok(opened instanceof R.PropertyToolsModal);
     assert.ok(opened.tool instanceof R.AddPropertiesModal);
     assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md']);
-    assert.deepStrictEqual(Object.keys(opened.buttons), ['add', 'remove', 'missing'], 'no Defaults for several');
+    assert.deepStrictEqual(Object.keys(opened.buttons), ['add', 'remove', 'rename', 'merge', 'missing'], 'no Defaults for several');
     opened.show('remove');
     assert.ok(opened.tool instanceof R.RemovePropertiesModal);
     assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md'], 'the choice carries across');
     opened.close();
     folderMenu.items[0].click();
     const one = modals.pop();
-    assert.deepStrictEqual(Object.keys(one.buttons), ['add', 'remove', 'missing', 'defaults']);
+    assert.deepStrictEqual(Object.keys(one.buttons), ['add', 'remove', 'rename', 'merge', 'missing', 'defaults']);
     one.close();
 
     const onTag = menu();
@@ -958,7 +1044,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const v = makeVault({ 'F/a.md': '' });
     const { bulk, editing } = makePlugin(v);
     const cmds = Object.fromEntries(editing.commands().map((c) => [c.id, c]));
-    assert.deepStrictEqual(Object.keys(cmds), ['add-properties-to-folders', 'rename-property-everywhere', 'rename-tag-everywhere',
+    assert.deepStrictEqual(Object.keys(cmds), ['add-properties-to-folders', 'rename-property-everywhere', 'merge-properties', 'rename-tag-everywhere',
       'remove-properties-from-folders', 'rename-value-everywhere', 'change-property-type', 'find-missing-properties',
       'folder-default-properties', 'undo-bulk-change']);
     assert.strictEqual(cmds['undo-bulk-change'].check(), false);

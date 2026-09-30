@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box'];
+const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -867,6 +867,79 @@ describe('Design Redux in Obsidian', function () {
       return { boxGone: !document.querySelector('.dr-fn-box'), text };
     });
     expect(tidied).toEqual({ boxGone: true, text: 'A.[^1] B.[^2]\n\n[^1]: Two.\n[^2]: One.\n' });
+  });
+
+  it('renames and merges properties from Edit on the Properties screen', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      await app.vault.createFolder('Merging');
+      await app.vault.create('Merging/One.md', '---\narena: Law\n---\nOne.\n');
+      await app.vault.create('Merging/Two.md', '---\narena: Law\nfield: Politics\n---\nTwo.\n');
+      await app.vault.create('Merging/Three.md', '---\nfield: History\n---\nThree.\n');
+      await new Promise((r) => setTimeout(r, 1200));
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'properties' });
+    });
+    const edit = await browser.$('.dr-bar-edit');
+    await edit.waitForExist({ timeout: 10000 });
+    await edit.click();
+    await browser.$('.dr-split-row.is-editing').waitForExist({ timeout: 5000 });
+
+    // A name changed in place, and Enter: renamed everywhere.
+    const field = await browser.execute(() => {
+      const input = Array.from(document.querySelectorAll('.dr-split-row.is-editing input.dr-edit-name')).find((i) => i.value === 'arena');
+      if (input) input.dataset.test = 'arena';
+      return !!input;
+    });
+    expect(field).toBe(true);
+    const arena = await browser.$('input[data-test="arena"]');
+    await arena.click();
+    await browser.execute((el) => el.select(), arena);
+    await browser.keys('venue'.split(''));
+    await browser.keys('Enter');
+    await browser.pause(1500);
+    const renamed = await browser.executeObsidian(({ app }) => {
+      const fm = (p) => (app.metadataCache.getFileCache(app.vault.getFileByPath(p)) || {}).frontmatter || {};
+      return { one: fm('Merging/One.md').venue, two: fm('Merging/Two.md').venue, arenaLeft: 'arena' in fm('Merging/One.md') };
+    });
+    expect(renamed).toEqual({ one: 'Law', two: 'Law', arenaLeft: false });
+
+    // Picked, and merged.
+    await browser.execute(() => {
+      Array.from(document.querySelectorAll('.dr-split-row.is-editing')).forEach((row) => {
+        const input = row.querySelector('input.dr-edit-name');
+        if (input && (input.value === 'venue' || input.value === 'field')) row.querySelector('.dr-prop-pick').click();
+      });
+    });
+    await shot('properties-edit');
+    const merge = await browser.$('.dr-prop-merge');
+    expect(await merge.getText()).toBe('Merge 2…');
+    await merge.click();
+    const into = await browser.$('.dr-bulk-modal .dr-bulk-field input');
+    await into.waitForExist({ timeout: 5000 });
+    await browser.execute((el) => el.select(), into);
+    await browser.keys('topic'.split(''));
+    await browser.pause(400);
+    await browser.execute(() => document.querySelector('.dr-bulk-modal .mod-cta').click());
+    await browser.pause(1500);
+
+    const merged = await browser.executeObsidian(async ({ app, plugins }) => {
+      const fm = (p) => (app.metadataCache.getFileCache(app.vault.getFileByPath(p)) || {}).frontmatter || {};
+      const result = {
+        one: fm('Merging/One.md').topic,
+        two: fm('Merging/Two.md').topic,
+        three: fm('Merging/Three.md').topic,
+        left: ['venue', 'field'].filter((k) => ['One', 'Two', 'Three'].some((n) => k in fm(`Merging/${n}.md`))),
+      };
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      const view = app.workspace.getMostRecentLeaf().view;
+      if (view && view.editing && typeof view.setEditing === 'function') view.setEditing(false);
+      const folder = app.vault.getAbstractFileByPath('Merging');
+      if (folder) await app.vault.delete(folder, true);
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      return result;
+    });
+    // Picked in the list's order, field before venue, so its value leads.
+    expect(merged).toEqual({ one: 'Law', two: ['Politics', 'Law'], three: 'History', left: [] });
   });
 
   it('logged no errors of its own along the way', async function () {

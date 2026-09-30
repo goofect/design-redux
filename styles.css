@@ -5312,3 +5312,133 @@ body.is-phone .dr-td-length {
   gap: 6px;
   flex-shrink: 0;
 }
+
+/* Editing properties ---------------------------------------------------------- */
+
+/* Edit and Done, in the bar beside Find: a word, as the album's are. */
+.dr-bar-edit {
+  flex: 0 0 auto;
+  margin-left: auto;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: none;
+  color: var(--text-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-bar-edit.is-done {
+  background-color: var(--interactive-accent);
+  border-color: transparent;
+  color: var(--text-on-accent);
+}
+
+.dr-bar-edit + .dr-filter-btn,
+.dr-bar-edit + .dr-browse-search {
+  margin-left: 8px;
+}
+
+.dr-prop-edit {
+  max-width: 760px;
+}
+
+/* What picking does, and Merge, kept in view while the list scrolls. */
+.dr-prop-edit-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 12px;
+  margin-bottom: 4px;
+  background-color: var(--background-primary);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-prop-edit-said {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-prop-merge {
+  flex: 0 0 auto;
+}
+
+.dr-prop-edit .dr-prop-edit-list {
+  flex: none;
+  max-height: none;
+  overflow: visible;
+  padding-right: 0;
+  border-right: 0;
+}
+
+.dr-split-row.is-editing {
+  cursor: default;
+}
+
+.dr-split-row.is-editing + .dr-split-row::before {
+  left: 104px;
+}
+
+.dr-split-row.is-picked {
+  background-color: var(--background-modifier-hover);
+}
+
+/* The circle to pick a property by, filled with a tick once picked. */
+.dr-prop-pick {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dr-split-row.is-picked .dr-prop-pick {
+  background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-prop-pick .svg-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3px;
+}
+
+.dr-split-row.is-editing .dr-edit-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s, 4px);
+  background-color: transparent;
+  font-family: inherit;
+  font-size: var(--font-ui-medium);
+}
+
+.dr-split-row.is-editing .dr-edit-name:focus {
+  border-color: var(--background-modifier-border-focus);
+  background-color: var(--background-modifier-form-field, transparent);
+}
+
+@media (any-hover: hover) {
+  .dr-split-row.is-editing .dr-edit-name:hover {
+    border-color: var(--background-modifier-border);
+  }
+}
+
+/* The properties to merge, and where the one to add is typed. */
+.dr-merge-chips .dr-merge-add {
+  flex: 1 1 140px;
+  min-width: 140px;
+}

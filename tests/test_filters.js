@@ -515,6 +515,66 @@ t("the Properties screen's list and a property's values follow it", () => {
   assert.deepStrictEqual(values(), ['draft', 'Done'], 'draft has the newest note (Contract)');
 });
 
+t('Properties, in Edit: names to change, circles to pick, and Merge for two or more', () => {
+  const opened = [];
+  const renamed = [];
+  let clash = false;
+  const tools = {
+    openMerge: (names) => opened.push(['merge', names]),
+    openRenameProperty: (from, to) => opened.push(['rename', from, to]),
+  };
+  plugin.feature = () => tools;
+  plugin.bulk = {
+    last: null,
+    planPropertyRename: () => ({ conflicts: clash ? [files[0]] : [], merged: [] }),
+    renameProperty: async (from, to) => {
+      renamed.push([from, to]);
+      return { files: [], bases: [], failed: [] };
+    },
+  };
+  try {
+    const view = page({ mode: 'properties' });
+    const edit = view.contentEl.querySelector('.dr-bar-edit');
+    assert.strictEqual(edit.textContent, 'Edit');
+    edit.click();
+    assert.strictEqual(view.editing, true);
+    const fields = () => Array.from(view.contentEl.querySelectorAll('.dr-split-row.is-editing input.dr-edit-name'));
+    assert.deepStrictEqual(fields().map((i) => i.value), ['domain', 'status']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-bar-edit').textContent, 'Done');
+    const merge = () => view.contentEl.querySelector('.dr-prop-merge');
+    assert.strictEqual(merge().disabled, true);
+
+    // Picked by the circle or the row; Merge takes them.
+    const rows = Array.from(view.contentEl.querySelectorAll('.dr-split-row.is-editing'));
+    rows[0].querySelector('.dr-prop-pick').click();
+    rows[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.deepStrictEqual(rows.map((r) => r.classList.contains('is-picked')), [true, true]);
+    assert.strictEqual(merge().disabled, false);
+    assert.strictEqual(merge().textContent, 'Merge 2…');
+    merge().click();
+    assert.deepStrictEqual(opened.pop(), ['merge', ['domain', 'status']]);
+
+    // A name changed renames it everywhere; one that needs a look opens the rename.
+    fields()[0].value = 'area';
+    fields()[0].dispatchEvent(new window.Event('blur'));
+    assert.deepStrictEqual(renamed.pop(), ['domain', 'area']);
+    clash = true;
+    const status = fields()[1];
+    status.dispatchEvent(new window.Event('focus'));
+    status.value = 'state';
+    status.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    assert.deepStrictEqual(opened.pop(), ['rename', 'status', 'state']);
+    assert.strictEqual(renamed.length, 0);
+
+    view.contentEl.querySelector('.dr-bar-edit').click();
+    assert.strictEqual(view.editing, false);
+    assert.ok(view.contentEl.querySelector('.dr-split-name:not(input)'));
+  } finally {
+    plugin.feature = () => null;
+    delete plugin.bulk;
+  }
+});
+
 t('the Notes Title column sets the order everywhere; a property column stays in the table', () => {
   const notesTable = page({ mode: 'notes' });
   const tiles = page({ mode: 'folders' }, { keep: true });

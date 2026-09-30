@@ -15,6 +15,11 @@ class BulkEditing extends Feature {
         run: () => this.openRenameProperty(),
       },
       {
+        id: 'merge-properties',
+        name: 'Merge properties…',
+        run: () => this.openMerge(),
+      },
+      {
         id: 'rename-tag-everywhere',
         name: 'Rename a tag everywhere…',
         run: () => this.openRenameTag(),
@@ -160,8 +165,12 @@ class BulkEditing extends Feature {
     this.openTools(targets, 'add');
   }
 
-  openRenameProperty(from) {
-    new RenamePropertyModal(this.plugin, from).open();
+  openRenameProperty(from, to) {
+    new RenamePropertyModal(this.plugin, from, to).open();
+  }
+
+  openMerge(names) {
+    new MergePropertiesModal(this.plugin, names || []).open();
   }
 
   openRenameTag(from) {
