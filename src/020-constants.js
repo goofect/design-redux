@@ -108,6 +108,9 @@ const DEFAULTS = {
   // note in between. Which graphs have it on: { graph | localgraph: bool }
   graphRoutes: true,
   graphRouting: {},
+  // A box at the cursor for footnotes, and their numbers kept in order.
+  footnotes: true,
+  footnoteOrder: true,
 };
 
 /* Obsidian's property types, with the icon it shows for each. */

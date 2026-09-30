@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes'];
+const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -796,6 +796,77 @@ describe('Design Redux in Obsidian', function () {
       return result;
     }, [W, M, I, C]);
     expect(off).toEqual({ saved: false, straight: [true, true], switchShows: false, leftBehind: false });
+  });
+
+  it('adds a footnote in place from a box at the cursor, keeping numbers in order', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const file = await app.vault.create(
+        'Footnotes.md',
+        'Parliament is sovereign.[^1] It can make any law. No court may set one aside.[^2]\n\n[^1]: Dicey, 38.\n[^2]: Dicey, 40.\n'
+      );
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'source' } });
+      await new Promise((r) => setTimeout(r, 800));
+      const editor = leaf.view.editor;
+      editor.focus();
+      editor.setCursor(editor.offsetToPos(editor.getValue().indexOf(' No court')));
+    });
+    await browser.executeObsidianCommand('design-redux:add-footnote');
+    const box = await browser.$('.dr-fn-box');
+    await box.waitForExist({ timeout: 5000 });
+    expect(await browser.$('.dr-fn-box .dr-fn-num').getText()).toBe('2');
+    await browser.keys('Bagehot, 12.'.split(''));
+    await shot('footnote-box');
+    await browser.keys('Enter');
+    await browser.pause(400);
+
+    const added = await browser.executeObsidian(({ app }) => {
+      const editor = app.workspace.getMostRecentLeaf().view.editor;
+      const text = editor.getValue();
+      return {
+        boxGone: !document.querySelector('.dr-fn-box'),
+        text,
+        before: text.slice(0, editor.posToOffset(editor.getCursor())),
+      };
+    });
+    expect(added).toEqual({
+      boxGone: true,
+      text:
+        'Parliament is sovereign.[^1] It can make any law.[^2] No court may set one aside.[^3]\n\n[^1]: Dicey, 38.\n[^2]: Bagehot, 12.\n[^3]: Dicey, 40.\n',
+      before: 'Parliament is sovereign.[^1] It can make any law.[^2]',
+    });
+
+    // On a footnote, the editor's menu offers to change it; the box shows its citation.
+    const onOne = await browser.executeObsidian(({ app, obsidian }) => {
+      const view = app.workspace.getMostRecentLeaf().view;
+      const editor = view.editor;
+      editor.setCursor(editor.offsetToPos(editor.getValue().indexOf('[^3]') + 2));
+      const menu = new obsidian.Menu();
+      app.workspace.trigger('editor-menu', menu, editor, view);
+      const titles = menu.items.map((i) => (i.titleEl ? i.titleEl.textContent : '')).filter(Boolean);
+      menu.hide && menu.hide();
+      return titles;
+    });
+    expect(onOne).toContain('Change footnote');
+    await browser.executeObsidianCommand('design-redux:add-footnote');
+    await browser.$('.dr-fn-box').waitForExist({ timeout: 5000 });
+    expect(await browser.execute(() => document.querySelector('.dr-fn-input').value)).toBe('Dicey, 40.');
+    await browser.keys('Escape');
+    await browser.pause(300);
+
+    const tidied = await browser.executeObsidian(async ({ app }) => {
+      const editor = app.workspace.getMostRecentLeaf().view.editor;
+      editor.setValue('A.[^2] B.[^1]\n\n[^1]: One.\n[^2]: Two.\n[^3]: Spare.\n');
+      app.commands.executeCommandById('design-redux:tidy-footnotes');
+      await new Promise((r) => setTimeout(r, 300));
+      const text = editor.getValue();
+      const file = app.vault.getFileByPath('Footnotes.md');
+      app.workspace.getMostRecentLeaf().detach();
+      await new Promise((r) => setTimeout(r, 300));
+      if (file) await app.vault.delete(file);
+      return { boxGone: !document.querySelector('.dr-fn-box'), text };
+    });
+    expect(tidied).toEqual({ boxGone: true, text: 'A.[^1] B.[^2]\n\n[^1]: Two.\n[^2]: One.\n' });
   });
 
   it('logged no errors of its own along the way', async function () {

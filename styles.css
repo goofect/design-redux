@@ -5233,3 +5233,82 @@ body.is-phone .dr-td-length {
 .dr-stray-list .setting-item-name {
   overflow-wrap: anywhere;
 }
+
+/* Footnotes in place --------------------------------------------------------- */
+
+/* The box at the cursor: a number, the citation, and a way out. */
+.dr-fn-box {
+  position: fixed;
+  z-index: var(--layer-popover);
+  width: min(440px, calc(100vw - 24px));
+  padding: 10px 12px 10px;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 10px);
+  box-shadow: var(--shadow-l);
+}
+
+.dr-fn-box.is-mobile {
+  top: calc(var(--safe-area-inset-top, 0px) + 56px);
+  left: 12px;
+  right: 12px;
+  width: auto;
+}
+
+.dr-fn-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-fn-num {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-fn-num:empty {
+  display: none;
+}
+
+.dr-fn-input {
+  display: block;
+  width: 100%;
+  min-height: 2.4em;
+  max-height: 40vh;
+  resize: none;
+  padding: 6px 8px;
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+}
+
+.dr-fn-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.dr-fn-hint {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.dr-fn-buttons {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}

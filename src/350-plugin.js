@@ -24,6 +24,7 @@ class DesignRedux extends Plugin {
       new PropertyClipboard(this),
       new MarkedLists(this),
       new Scripts(this),
+      new Footnotes(this),
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
       new QuietLinks(this),
