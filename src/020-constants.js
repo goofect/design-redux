@@ -113,6 +113,8 @@ const DEFAULTS = {
   // A box at the cursor for footnotes, and their numbers kept in order.
   footnotes: true,
   footnoteOrder: true,
+  // The citations off the page, listed in a Footnotes view instead.
+  footnotesAside: true,
 };
 
 /* Obsidian's property types, with the icon it shows for each. */

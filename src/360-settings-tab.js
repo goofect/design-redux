@@ -38,7 +38,7 @@ const SETTINGS_TABS = [
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
       { title: 'Properties', keys: ['propertiesDropdown', 'showMentions'] },
       { title: 'Links', keys: ['quietLinks'] },
-      { title: 'Footnotes', keys: ['footnotes', 'footnoteOrder'] },
+      { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
       { title: 'Images', keys: ['routeImages', 'imageFolder'] },
     ],
   },

@@ -23,10 +23,11 @@ const {
   AbstractInputSuggest,
   EditorSuggest,
   MenuItem,
+  MarkdownRenderer,
   apiVersion,
 } = require('obsidian');
 // Provided by Obsidian at runtime, as 'obsidian' is.
 const { Decoration, EditorView, ViewPlugin, WidgetType, keymap } = require('@codemirror/view');
-const { EditorSelection, Prec, RangeSetBuilder } = require('@codemirror/state');
+const { EditorSelection, Prec, RangeSetBuilder, StateField } = require('@codemirror/state');
 const { syntaxTree } = require('@codemirror/language');
 

@@ -30,14 +30,32 @@ P.createEl = function (tag, o) { return apply(this.appendChild(document.createEl
 P.createDiv = function (o) { return this.createEl('div', o); };
 P.createSpan = function (o) { return this.createEl('span', o); };
 P.addClass = function (...c) { this.classList.add(...c); };
+P.removeClass = function (...c) { this.classList.remove(...c); };
+P.toggleClass = function (c, on) { this.classList.toggle(c, !!on); };
+P.hasClass = function (c) { return this.classList.contains(c); };
+P.empty = function () { while (this.firstChild) this.removeChild(this.firstChild); };
+P.setText = function (t) { this.textContent = t; };
 
-const { EditorState, EditorSelection } = require('@codemirror/state');
+const { EditorState, EditorSelection, StateField } = require('@codemirror/state');
 const { EditorView } = require('@codemirror/view');
 
+// Obsidian's Live Preview switch, as a field the test can set.
+const livePreview = StateField.define({ create: () => true, update: (v) => v });
+
 class MarkdownView {}
+class ItemView {
+  constructor(leaf) {
+    this.leaf = leaf;
+    this.containerEl = document.createElement('div');
+    this.contentEl = this.containerEl.appendChild(document.createElement('div'));
+  }
+  registerEvent() {}
+}
 const notices = [];
 const obsidian = new Proxy({
   MarkdownView,
+  ItemView,
+  editorLivePreviewField: livePreview,
   setIcon: () => {},
   Notice: class { constructor(m) { notices.push(m); } },
   Platform: { isMobile: false },
@@ -48,20 +66,24 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_footnotes_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { scanFootnotes, planFootnotes, applyFootnoteChanges, footnoteBody, footnoteAt, Footnotes, DEFAULTS };\n');
+  '\nmodule.exports.__test = { scanFootnotes, planFootnotes, applyFootnoteChanges, footnoteBody, footnoteAt, Footnotes, DEFAULTS, footnoteDefRanges, footnoteHider, FootnotesView };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
 let passed = 0;
+// One after another, waiting for any that take a moment.
+let chain = Promise.resolve();
 const t = (name, fn) => {
-  try {
-    fn();
-    passed++;
-    console.log('  ok  ' + name);
-  } catch (err) {
-    console.log('  FAIL ' + name + '\n' + err.stack);
-    process.exitCode = 1;
-  }
+  chain = chain.then(async () => {
+    try {
+      await fn();
+      passed++;
+      console.log('  ok  ' + name);
+    } catch (err) {
+      console.log('  FAIL ' + name + '\n' + err.stack);
+      process.exitCode = 1;
+    }
+  });
 };
 
 /** A plan, applied; changes in order and not overlapping, as CodeMirror needs them. */
@@ -337,4 +359,82 @@ t('Put footnotes in order, from the command, says what it did', () => {
   cm.destroy();
 });
 
-console.log(`${passed} passed`);
+/* -- the citations off the page, and the view of them ------------------ */
+
+t('what’s hidden: the list at the end with the blank lines before it, and a citation kept by its paragraph', () => {
+  const text = 'A.[^1]\n\n[^1]: One.\n\nB.[^2]\n\n\n[^2]: Two.\n    Two, on.\n';
+  const ranges = R.footnoteDefRanges(text);
+  assert.deepStrictEqual(ranges.map(([a, b]) => text.slice(a, b)), [
+    '[^1]: One.',
+    '\n\n[^2]: Two.\n    Two, on.\n',
+  ]);
+  assert.deepStrictEqual(R.footnoteDefRanges('No footnotes.\n'), []);
+});
+
+t('in Live Preview the citations are out of sight, and back while the cursor is in them', () => {
+  const doc = 'Parliament is sovereign.[^1]\n\n[^1]: Dicey, 38.\n';
+  const shown = (state) => {
+    const field = state.field(hider);
+    const out = [];
+    field.between(0, state.doc.length, (from, to) => { out.push(state.doc.sliceString(from, to)); });
+    return out;
+  };
+  const hider = R.footnoteHider(() => true);
+  let state = EditorState.create({ doc, extensions: [livePreview, hider], selection: EditorSelection.cursor(5) });
+  assert.deepStrictEqual(shown(state), ['\n[^1]: Dicey, 38.\n']);
+  state = state.update({ selection: EditorSelection.cursor(doc.length - 3) }).state;
+  assert.deepStrictEqual(shown(state), [], 'shown while the cursor is in them');
+  const source = StateField.define({ create: () => false, update: (v) => v });
+  const off = R.footnoteHider(() => true);
+  const inSource = EditorState.create({ doc, extensions: [livePreview.init(() => false), off] });
+  assert.deepStrictEqual((() => { const r = []; inSource.field(off).between(0, doc.length, (a, b) => r.push([a, b])); return r; })(), [], 'source mode shows everything');
+  void source;
+});
+
+t('removing a footnote from the view takes every mention of it, and its citation', () => {
+  const text = 'A.[^1] B.[^2] again[^1]\n\n[^1]: One.\n[^2]: Two.\n';
+  const plan = R.planFootnotes(text, { type: 'remove', label: '1', all: true });
+  assert.strictEqual(R.applyFootnoteChanges(text, plan.changes), 'A. B.[^1] again\n\n[^1]: Two.\n');
+});
+
+t('the Footnotes view: each number, its citation, the words it follows; change and remove in place', async () => {
+  const text = 'The Crown in Parliament is sovereign.[^1] Courts defer.[^2]\n\n[^1]: Dicey, 38.\n[^2]: Bagehot, 12.\n[^3]: Spare.\n';
+  const cm = new EditorView({ state: EditorState.create({ doc: text }), parent: document.body });
+  const note = new MarkdownView();
+  note.file = { path: 'Note.md', basename: 'Note' };
+  note.editor = { getValue: () => cm.state.doc.toString(), cm };
+  note.getMode = () => 'source';
+  note.leaf = { view: note, parent: {} };
+  const settings = JSON.parse(JSON.stringify(R.DEFAULTS));
+  const app = {
+    workspace: { getActiveViewOfType: () => note, on: () => ({}), setActiveLeaf: () => {} },
+    metadataCache: { on: () => ({}) },
+  };
+  const feature = new R.Footnotes({ app, settings, registerEvent: () => {} });
+  const view = new R.FootnotesView({}, feature);
+  view.app = app;
+  document.body.appendChild(view.containerEl);
+  view.render();
+  const items = () => Array.from(view.contentEl.querySelectorAll('.dr-fn-item'));
+  assert.deepStrictEqual(items().map((i) => i.querySelector('.dr-fn-num').textContent), ['1', '2', '3']);
+  assert.strictEqual(items()[0].querySelector('.dr-fn-item-body').textContent, 'Dicey, 38.');
+  assert.match(items()[0].querySelector('.dr-fn-where').textContent, /Parliament is sovereign\.$/);
+  assert.ok(items()[2].classList.contains('is-unused'));
+  assert.strictEqual(items()[2].querySelector('.dr-fn-where').textContent, 'Not cited in the text');
+
+  // Changed in place.
+  items()[0].querySelector('[aria-label="Change"]').click();
+  const input = view.contentEl.querySelector('.dr-fn-item textarea');
+  input.value = 'Dicey, 40.';
+  input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  await new Promise((r) => setTimeout(r, 10));
+  assert.ok(cm.state.doc.toString().includes('[^1]: Dicey, 40.'));
+  // Removed: its numbers and its citation.
+  items()[0].querySelector('[aria-label="Remove"]').click();
+  await new Promise((r) => setTimeout(r, 10));
+  assert.strictEqual(cm.state.doc.toString(), 'The Crown in Parliament is sovereign. Courts defer.[^1]\n\n[^1]: Bagehot, 12.\n[^2]: Spare.\n');
+  assert.deepStrictEqual(items().map((i) => i.querySelector('.dr-fn-num').textContent), ['1', '2']);
+  cm.destroy();
+});
+
+chain.then(() => console.log(`${passed} passed`));

@@ -5803,3 +5803,163 @@ body.is-phone .dr-td-length {
   }
 }
 
+
+/* Footnotes in their own view ------------------------------------------------- */
+
+/* Off the page in reading view: the list at the end, and the rule above it. */
+body.dr-footnotes-aside .markdown-reading-view .footnotes,
+body.dr-footnotes-aside .markdown-reading-view hr.footnotes-sep,
+body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
+  display: none;
+}
+
+.dr-fn-view .view-content {
+  padding: 10px 12px 24px;
+}
+
+.dr-fn-view-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 2px 12px;
+}
+
+.dr-fn-view-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-fn-view-tools {
+  display: flex;
+  gap: 2px;
+}
+
+.dr-fn-view-empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.dr-fn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* One footnote: its number, what it cites, and the words it follows. */
+.dr-fn-item {
+  padding: 8px 8px 9px;
+  border-radius: var(--radius-m, 8px);
+  cursor: pointer;
+}
+
+.dr-fn-item.is-unused,
+.dr-fn-item.is-editing {
+  cursor: default;
+}
+
+.dr-fn-item:focus-visible {
+  outline: none;
+  background-color: var(--background-modifier-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-fn-item:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-fn-item.is-highlighted {
+  background-color: hsla(var(--interactive-accent-hsl), 0.12);
+}
+
+.dr-fn-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.dr-fn-item .dr-fn-num {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.dr-fn-item.is-unused .dr-fn-num {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.dr-fn-item-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.dr-fn-item-body p {
+  margin: 0;
+}
+
+.dr-fn-item-body p + p {
+  margin-top: 4px;
+}
+
+.dr-fn-missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.dr-fn-item-body .dr-fn-input {
+  min-height: 3.2em;
+  font-size: var(--font-ui-small);
+}
+
+.dr-fn-item-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0;
+  margin: -3px -4px 0 0;
+}
+
+.dr-fn-item-actions .clickable-icon {
+  padding: 3px;
+}
+
+.dr-fn-item-actions .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The actions show on the footnote under the pointer; always, without one. */
+@media (any-hover: hover) {
+  .dr-fn-item-actions {
+    opacity: 0;
+  }
+
+  .dr-fn-item:hover .dr-fn-item-actions,
+  .dr-fn-item:focus-within .dr-fn-item-actions {
+    opacity: 1;
+  }
+}
+
+.dr-fn-where {
+  margin: 4px 0 0 29px;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-fn-item.is-unused .dr-fn-where {
+  font-style: italic;
+}

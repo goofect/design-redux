@@ -388,6 +388,12 @@ class ContextStrip extends Feature {
       this.update();
     }, pinned, 'pin');
 
+    // The note's footnotes, kept off the page, a press away.
+    const footnotes = typeof Footnotes === 'function' ? this.plugin.feature(Footnotes) : null;
+    if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
+      button('file-signature', `Footnotes (${footnotes.countIn(file)})`, () => footnotes.showView(), false, 'footnotes');
+    }
+
     button('info', 'Properties', (evt) => {
       const panel = this.plugin.feature(PropertiesPanel);
       if (panel && panel.enabled && leaf) panel.toggleFrom(leaf, evt.currentTarget);

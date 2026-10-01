@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet'];
+const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -907,6 +907,72 @@ describe('Design Redux in Obsidian', function () {
       return { boxGone: !document.querySelector('.dr-fn-box'), text };
     });
     expect(tidied).toEqual({ boxGone: true, text: 'A.[^1] B.[^2]\n\n[^1]: Two.\n[^2]: One.\n' });
+  });
+
+  it('keeps citations off the page and lists them in a Footnotes view', async function () {
+    const page = await browser.executeObsidian(async ({ app }) => {
+      const file = await app.vault.create(
+        'Cited.md',
+        'Parliament is sovereign.[^1] Courts defer to it.[^2]\n\n[^1]: Dicey, *Law of the Constitution*, 38.\n[^2]: Bagehot, 12.\n'
+      );
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      await new Promise((r) => setTimeout(r, 1200));
+      const editor = leaf.view.editor;
+      editor.setCursor({ line: 0, ch: 3 });
+      await new Promise((r) => setTimeout(r, 400));
+      const shown = leaf.view.contentEl.querySelector('.cm-content').textContent;
+      return { citesShown: shown.includes('Dicey'), textShown: shown.includes('Parliament is sovereign') };
+    });
+    expect(page).toEqual({ citesShown: false, textShown: true });
+
+    // The footnote button along the bottom opens the view.
+    const button = await browser.$('.dr-strip-btn[data-action="footnotes"]');
+    await button.waitForExist({ timeout: 5000 });
+    expect(await button.getAttribute('aria-label')).toBe('Footnotes (2)');
+    await button.click();
+    await browser.$('.dr-fn-view .dr-fn-item').waitForExist({ timeout: 5000 });
+    const listed = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.dr-fn-view .dr-fn-item')).map((i) => [
+        i.querySelector('.dr-fn-num').textContent,
+        i.querySelector('.dr-fn-item-body').textContent.trim(),
+        i.querySelector('.dr-fn-where').textContent,
+      ])
+    );
+    expect(listed).toEqual([
+      ['1', 'Dicey, Law of the Constitution, 38.', '…Parliament is sovereign.'],
+      ['2', 'Bagehot, 12.', '…Parliament is sovereign. Courts defer to it.'],
+    ]);
+    await shot('footnotes-view');
+
+    // A footnote clicked in the view selects its number in the note.
+    await browser.execute(() => document.querySelectorAll('.dr-fn-view .dr-fn-item')[1].click());
+    await browser.pause(400);
+    const selected = await browser.executeObsidian(({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('markdown').find((l) => l.view.file && l.view.file.path === 'Cited.md');
+      return leaf.view.editor.getSelection();
+    });
+    expect(selected).toBe('[^2]');
+
+    // Reading view: the list out of sight too, and a number opens the view at it.
+    const reading = await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('markdown').find((l) => l.view.file && l.view.file.path === 'Cited.md');
+      await leaf.setViewState({ type: 'markdown', state: { file: 'Cited.md', mode: 'preview' } });
+      await new Promise((r) => setTimeout(r, 1200));
+      const root = leaf.view.containerEl.querySelector('.markdown-reading-view');
+      const list = root.querySelector('.footnotes');
+      const link = root.querySelector('sup.footnote-ref a, a.footnote-link');
+      const out = { listHidden: !list || getComputedStyle(list).display === 'none', hasLink: !!link };
+      if (link) link.click();
+      await new Promise((r) => setTimeout(r, 600));
+      out.highlighted = Array.from(document.querySelectorAll('.dr-fn-view .dr-fn-item.is-highlighted')).map((i) => i.dataset.label);
+      for (const l of app.workspace.getLeavesOfType('design-redux-footnotes')) l.detach();
+      leaf.detach();
+      const file = app.vault.getFileByPath('Cited.md');
+      if (file) await app.vault.delete(file);
+      return out;
+    });
+    expect(reading).toEqual({ listHidden: true, hasLink: true, highlighted: ['1'] });
   });
 
   it('renames and merges properties from Edit on the Properties screen', async function () {
