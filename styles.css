@@ -5512,8 +5512,8 @@ body.is-phone .dr-td-length {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 50px;
-  padding: 6px 10px 6px 12px;
+  min-height: 56px;
+  padding: 7px 10px 7px 12px;
 }
 
 /* Dividers begin past the circle and the icon, as a list's do. */
@@ -5628,10 +5628,18 @@ body.is-phone .dr-td-length {
   height: 15px;
 }
 
-.dr-plist-name {
-  flex: 0 1 auto;
+/* The name over its values, as a track's title over its artist. */
+.dr-plist-text {
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 34%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.dr-plist-name {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -5654,21 +5662,24 @@ body.is-phone .dr-td-length {
 }
 
 .dr-props-modal input.dr-plist-name-edit {
-  flex: 0 1 180px;
-  min-width: 90px;
+  width: min(260px, 100%);
   height: 30px;
   padding: 2px 8px;
   font-weight: var(--font-semibold, 600);
 }
 
 .dr-plist-values {
-  flex: 1 1 auto;
-  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-plist-values.is-none {
   color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  font-style: italic;
 }
 
 .dr-props-modal .dr-plist-fill {
@@ -5792,12 +5803,3 @@ body.is-phone .dr-td-length {
   }
 }
 
-/* On a phone, the values give way to the name and the count. */
-body.is-phone .dr-plist-values {
-  display: none;
-}
-
-body.is-phone .dr-plist-name {
-  flex: 1 1 auto;
-  max-width: none;
-}

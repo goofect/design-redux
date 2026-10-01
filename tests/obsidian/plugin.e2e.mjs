@@ -267,13 +267,22 @@ describe('Design Redux in Obsidian', function () {
     });
     await browser.$('.dr-props-modal .dr-plist-row').waitForExist({ timeout: 5000 });
     const listed = await browser.execute(() =>
-      Array.from(document.querySelectorAll('.dr-props-modal .dr-plist-row')).map((r) => [
-        r.querySelector('.dr-plist-name').textContent,
-        r.querySelector('.dr-plist-cover').textContent,
-      ])
+      Array.from(document.querySelectorAll('.dr-props-modal .dr-plist-row')).map((r) => {
+        const values = r.querySelector('.dr-plist-values');
+        return [
+          r.querySelector('.dr-plist-name').textContent,
+          r.querySelector('.dr-plist-cover').textContent,
+          values ? values.textContent : null,
+          values ? values.getBoundingClientRect().width > 20 : false,
+        ];
+      })
     );
     expect(listed.length).toBeGreaterThanOrEqual(2);
     expect(listed[0][1]).toMatch(/^\d+ of \d+$/);
+    // Each property's values, shown under its name.
+    const domain = listed.find((r) => r[0] === 'domain');
+    expect(domain[2]).toContain('Politics');
+    expect(domain[3]).toBe(true);
     // Under the pointer, a row lights up and shows its •••.
     const look = () =>
       browser.execute(() => {

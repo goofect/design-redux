@@ -1687,22 +1687,23 @@ function propertyOverview(app, files) {
     Object.keys(fm).forEach((key) => {
       if (key === 'position') return;
       const low = key.toLowerCase();
-      if (!all.has(low)) all.set(low, { name: key, count: 0, values: [], seen: new Set() });
+      if (!all.has(low)) all.set(low, { name: key, count: 0, values: [], seen: new Set(), more: false });
       const entry = all.get(low);
       entry.count++;
       const raw = fm[key];
       (Array.isArray(raw) ? raw : [raw]).forEach((v) => {
-        if (entry.values.length >= 4 || v === null || v === undefined || v === '') return;
+        if (v === null || v === undefined || v === '' || typeof v === 'object') return;
         const text = plainValue(v);
         const k = String(text).toLowerCase();
         if (!text || entry.seen.has(k)) return;
         entry.seen.add(k);
-        entry.values.push(text);
+        if (entry.values.length < 4) entry.values.push(text);
+        else entry.more = true;
       });
     });
   });
   return Array.from(all.values())
-    .map((e) => ({ name: e.name, count: e.count, values: e.values }))
+    .map((e) => ({ name: e.name, count: e.count, values: e.values, more: e.more }))
     .sort((a, b) => b.count - a.count || byName(a.name, b.name));
 }
 
@@ -1785,12 +1786,18 @@ class PropertyListTool extends BulkModal {
       const icon = row.createDiv({ cls: 'dr-plist-icon' });
       setIcon(icon, TYPE_ICONS[propertyType(this.app, prop.name)] || 'text');
 
-      const name = row.createDiv({ cls: 'dr-plist-name', text: prop.name });
+      // The name, and under it the values it holds — as a track's
+      // artist sits under its title.
+      const text = row.createDiv({ cls: 'dr-plist-text' });
+      const name = text.createDiv({ cls: 'dr-plist-name', text: prop.name });
       name.setAttribute('role', 'button');
       name.setAttribute('tabindex', '0');
       onActivate(name, () => this.startRename(row, name, prop));
-
-      row.createDiv({ cls: 'dr-plist-values', text: prop.values.join(', ') });
+      const values = text.createDiv({
+        cls: 'dr-plist-values',
+        text: prop.values.length ? prop.values.join(', ') + (prop.more ? ', …' : '') : 'No values yet',
+      });
+      if (!prop.values.length) values.addClass('is-none');
 
       const missing = total - prop.count;
       if (missing > 0) {
@@ -1877,7 +1884,7 @@ class PropertyListTool extends BulkModal {
    */
   startRename(row, nameEl, prop) {
     if (row.querySelector('input.dr-plist-name-edit')) return;
-    const input = row.createEl('input', { cls: 'dr-plist-name-edit', type: 'text' });
+    const input = nameEl.parentElement.createEl('input', { cls: 'dr-plist-name-edit', type: 'text' });
     input.value = prop.name;
     input.setAttribute('spellcheck', 'false');
     input.setAttribute('aria-label', `Rename ${prop.name}`);
