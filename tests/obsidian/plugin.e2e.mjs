@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit'];
+const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -260,17 +260,34 @@ describe('Design Redux in Obsidian', function () {
     await closeMenus();
   });
 
-  it('opens the Properties window with tabs, and Escape closes it', async function () {
-    await browser.executeObsidianCommand('design-redux:add-properties-to-folders');
-    await browser.$('.dr-props-modal').waitForExist({ timeout: 5000 });
-    const tabs = await browser.$$('.dr-props-modal .dr-set-tab');
-    expect(tabs.length).toBeGreaterThanOrEqual(3);
-    // Each tab, as it looks: the window's design is judged from these.
-    await shot('properties-add');
-    for (const [tab, name] of [['Remove', 'remove'], ['Find missing', 'missing'], ['Defaults', 'defaults']]) {
-      await clickText('.dr-props-modal .dr-set-tab', tab);
-      await shot(`properties-${name}`);
-    }
+  it('opens the Properties window as a list of properties, each tool a sheet over it', async function () {
+    await browser.executeObsidian(({ app, plugins }) => {
+      const tools = plugins.designRedux.features.find((f) => f.constructor.name === 'BulkEditing');
+      tools.openTools([app.vault.getAbstractFileByPath('Politics')]);
+    });
+    await browser.$('.dr-props-modal .dr-plist-row').waitForExist({ timeout: 5000 });
+    const listed = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.dr-props-modal .dr-plist-row')).map((r) => [
+        r.querySelector('.dr-plist-name').textContent,
+        r.querySelector('.dr-plist-cover').textContent,
+      ])
+    );
+    expect(listed.length).toBeGreaterThanOrEqual(2);
+    expect(listed[0][1]).toMatch(/^\d+ of \d+$/);
+    await shot('properties-list');
+
+    // Add property opens over the list, and Back returns to it.
+    await clickText('.dr-props-modal .dr-plist-foot button', 'Add property');
+    await browser.$('.dr-props-modal .dr-sheet-back').waitForExist({ timeout: 5000 });
+    expect(await browser.$('.dr-props-modal .modal-title .dr-sheet-title').getText()).toBe('Add properties');
+    await shot('properties-sheet');
+    await browser.execute(() => document.querySelector('.dr-props-modal .dr-sheet-back').click());
+    await browser.$('.dr-props-modal .dr-plist-row').waitForExist({ timeout: 5000 });
+    const chips = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.dr-props-modal .dr-bulk-chip-name')).map((c) => c.textContent)
+    );
+    expect(chips).toEqual(['Politics']);
+
     await browser.keys('Escape');
     await browser.pause(400);
     expect(await browser.$('.dr-props-modal').isExisting()).toBe(false);

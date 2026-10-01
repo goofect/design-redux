@@ -127,7 +127,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn };\n');
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -992,6 +992,67 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
 
   /* -- where they're reached from ---------------------------------------------- */
 
+  await t('the Properties window lists the properties: values, how many have each, fill in, pick, rename in place', async () => {
+    const v = vaultForRename();
+    const { plugin } = makePlugin(v);
+    const modal = new R.PropertyToolsModal(plugin, [v.folders.IR]);
+    modal.open();
+    await settle(20);
+    const el = modal.contentEl;
+    const rows = () => Array.from(el.querySelectorAll('.dr-plist-row'));
+    const foot = () => Array.from(el.querySelectorAll('.dr-plist-foot button')).map((b) => b.textContent);
+    assert.deepStrictEqual(rows().map((r) => r.querySelector('.dr-plist-name').textContent), ['domain', 'field', 'other', 'status']);
+    const first = rows()[0];
+    assert.strictEqual(first.querySelector('.dr-plist-values').textContent, 'Law');
+    assert.strictEqual(first.querySelector('.dr-plist-cover').textContent, '3 of 4');
+    assert.strictEqual(first.querySelector('.dr-plist-fill').textContent, 'Fill in 1');
+    assert.strictEqual(el.querySelector('.dr-plist-count').textContent, '4 notes');
+    assert.deepStrictEqual(foot(), ['Add property', 'Defaults for new notes']);
+
+    // Fill in opens as a sheet, for that property; back returns to the list.
+    click(first.querySelector('.dr-plist-fill'));
+    assert.ok(modal.tool instanceof R.MissingPropertyModal);
+    assert.strictEqual(modal.tool.key, 'domain');
+    click(modal.titleEl.querySelector('.dr-sheet-back'));
+    assert.ok(modal.tool instanceof R.PropertyListTool);
+
+    // Two picked: Remove, and Merge.
+    click(rows()[1].querySelector('.dr-plist-pick'));
+    assert.deepStrictEqual(foot(), ['Clear', 'Remove', 'Merge…']);
+    assert.strictEqual(el.querySelector('.dr-plist-merge').disabled, true, 'one is not enough to merge');
+    click(rows()[3].querySelector('.dr-plist-pick'));
+    assert.strictEqual(el.querySelector('.dr-plist-merge').disabled, false);
+    click(el.querySelector('.dr-plist-merge'));
+    assert.ok(modal.tool instanceof R.MergePropertiesModal);
+    assert.deepStrictEqual(modal.tool.names, ['field', 'status']);
+    click(modal.titleEl.querySelector('.dr-sheet-back'));
+
+    // A name renamed where it's shown.
+    click(rows()[0].querySelector('.dr-plist-name'));
+    const input = el.querySelector('input.dr-plist-name-edit');
+    assert.ok(input, 'the name became a field');
+    input.value = 'area';
+    enter(input);
+    await settle(200);
+    assert.strictEqual(v.fm('IR/a.md').area, 'Law');
+    assert.ok(!('domain' in v.fm('IR/a.md')));
+    assert.match(lastNotice().text, /Renamed “domain” to “area”/);
+    modal.close();
+  });
+
+  await t('with nothing chosen, the window lists every note’s properties', async () => {
+    const v = vaultForRename();
+    const { plugin } = makePlugin(v);
+    const modal = new R.PropertyToolsModal(plugin, []);
+    modal.open();
+    await settle(20);
+    const el = modal.contentEl;
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-bulk-chip-name')).map((c) => c.textContent), ['All notes']);
+    assert.ok(el.querySelectorAll('.dr-plist-row').length >= 4);
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-plist-foot button')).map((b) => b.textContent), ['Add property']);
+    modal.close();
+  });
+
   await t("menus: a folder's, several chosen, and a tag under the cursor", () => {
     const v = makeVault({ 'IR/a.md': 'Some #law/court text\n', 'b.md': '', 'img.png': '' });
     const { editing } = makePlugin(v);
@@ -1015,18 +1076,27 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
       ['Properties of 1 folder and 1 note…']);
     several.items[0].click();
     const opened = modals.pop();
-    // One window, its tools as tabs, opening on Add for what was chosen.
+    // One window: the properties in what was chosen, each tool a sheet over them.
     assert.ok(opened instanceof R.PropertyToolsModal);
-    assert.ok(opened.tool instanceof R.AddPropertiesModal);
+    assert.ok(opened.tool instanceof R.PropertyListTool);
     assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md']);
-    assert.deepStrictEqual(Object.keys(opened.buttons), ['add', 'remove', 'rename', 'merge', 'missing'], 'no Defaults for several');
-    opened.show('remove');
+    const foot = () => Array.from(opened.contentEl.querySelectorAll('.dr-plist-foot button')).map((b) => b.textContent);
+    assert.deepStrictEqual(foot(), ['Add property'], 'no Defaults for several');
+    opened.openSheet('remove', { keys: ['x'] });
     assert.ok(opened.tool instanceof R.RemovePropertiesModal);
-    assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md'], 'the choice carries across');
+    assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md'], 'the choice carries into a sheet');
+    assert.strictEqual(opened.titleEl.querySelector('.dr-sheet-title').textContent, 'Remove properties');
+    click(opened.titleEl.querySelector('.dr-sheet-back'));
+    assert.ok(opened.tool instanceof R.PropertyListTool, 'back to the list');
+    opened.openSheet('merge', { keys: ['x'] });
+    assert.ok(opened.tool instanceof R.MergePropertiesModal);
+    opened.showList();
+    assert.deepStrictEqual(opened.tool.targets.map((x) => x.path), ['IR', 'b.md'], 'and back again past Merge, which has none');
     opened.close();
     folderMenu.items[0].click();
     const one = modals.pop();
-    assert.deepStrictEqual(Object.keys(one.buttons), ['add', 'remove', 'rename', 'merge', 'missing', 'defaults']);
+    assert.deepStrictEqual(Array.from(one.contentEl.querySelectorAll('.dr-plist-foot button')).map((b) => b.textContent),
+      ['Add property', 'Defaults for new notes']);
     one.close();
 
     const onTag = menu();

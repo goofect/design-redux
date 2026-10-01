@@ -192,7 +192,7 @@ class BulkEditing extends Feature {
           section(item, 'action')
             .setTitle('Properties…')
             .setIcon('list')
-            .onClick(() => this.openTools([file], 'add'))
+            .onClick(() => this.openTools([file]))
         );
       })
     );
@@ -217,7 +217,7 @@ class BulkEditing extends Feature {
           section(item, 'action')
             .setTitle(`Properties of ${parts.join(' and ')}…`)
             .setIcon('list')
-            .onClick(() => this.openTools(targets, 'add'))
+            .onClick(() => this.openTools(targets))
         );
       })
     );

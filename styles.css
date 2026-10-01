@@ -1972,11 +1972,6 @@ body.is-phone .dr-set-tab-icon {
   opacity: 0.4;
 }
 
-/* The Properties window: its tools as tabs, above whichever is open. */
-.dr-props-modal .dr-props-tabs {
-  margin-bottom: 16px;
-}
-
 /* Nothing chosen yet ------------------------------------------------------
  *
  * The detail pane says what to do rather than sitting blank, and the
@@ -5028,13 +5023,6 @@ body.dr-strip-flat .dr-strip {
  * on one line under them rather than three.
  */
 
-.dr-props-modal {
-  width: min(600px, calc(100vw - 32px));
-}
-
-.dr-props-modal .dr-props-tabs .dr-set-tab {
-  padding: 0 10px;
-}
 
 .dr-bulk-section.is-where {
   flex-direction: row;
@@ -5467,4 +5455,303 @@ body.is-phone .dr-td-length {
 .dr-prop-spelling-icon .svg-icon {
   width: 12px;
   height: 12px;
+}
+
+/* The Properties window ---------------------------------------------------
+ *
+ * The properties in the notes chosen, listed as a note lists its own:
+ * each with its values, how many notes have it, and what to do with it.
+ * Every tool opens over the list as a sheet, with the way back at its top.
+ */
+
+.dr-props-modal {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.dr-plist {
+  gap: 14px;
+}
+
+.dr-plist-where {
+  align-items: center;
+}
+
+.dr-plist-count {
+  margin-left: auto;
+  font-size: var(--font-ui-small);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.dr-bulk-chip.is-all {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  cursor: default;
+}
+
+.dr-plist-list {
+  max-height: min(420px, calc(100vh - 300px));
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 12px);
+}
+
+.dr-plist-list.is-empty {
+  border-style: dashed;
+}
+
+.dr-plist-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-plist-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 50px;
+  padding: 6px 10px 6px 12px;
+}
+
+/* Dividers begin past the circle and the icon, as a list's do. */
+.dr-plist-row + .dr-plist-row::before {
+  content: "";
+  position: absolute;
+  left: 76px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+.dr-plist-row.is-picked {
+  background-color: hsla(var(--interactive-accent-hsl), 0.08);
+}
+
+.dr-plist-row.is-picked::before,
+.dr-plist-row.is-picked + .dr-plist-row::before {
+  opacity: 0;
+}
+
+.dr-plist-row:focus-visible {
+  outline: none;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-plist-pick {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--text-faint);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.dr-plist-row.is-picked .dr-plist-pick {
+  background-color: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-plist-pick .svg-icon {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3px;
+}
+
+.dr-plist-icon {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-hover);
+  color: var(--text-muted);
+}
+
+.dr-plist-icon .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.dr-plist-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 34%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--font-semibold, 600);
+  cursor: text;
+  border-radius: var(--radius-s, 4px);
+  padding: 2px 4px;
+  margin: 0 -4px;
+}
+
+.dr-plist-name:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-plist-name:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-props-modal input.dr-plist-name-edit {
+  flex: 0 1 180px;
+  min-width: 90px;
+  height: 30px;
+  padding: 2px 8px;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-plist-values {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.dr-props-modal .dr-plist-fill {
+  flex: 0 0 auto;
+  height: auto;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-props-modal .dr-plist-fill:hover {
+    text-decoration: underline;
+  }
+}
+
+.dr-plist-cover {
+  flex: 0 0 auto;
+  min-width: 56px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.dr-plist-more {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+}
+
+.dr-plist-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  margin-top: 14px;
+}
+
+.dr-plist-foot button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dr-plist-btn-icon {
+  display: inline-flex;
+}
+
+.dr-plist-btn-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-props-modal .dr-plist-defaults {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-accent);
+}
+
+.dr-plist-picked {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-props-modal .dr-plist-clear {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--text-muted);
+}
+
+.dr-plist-remove {
+  margin-left: auto;
+}
+
+.dr-plist-foot button.is-disabled,
+.dr-plist-foot button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* A sheet: the tool's name for the title, the way back to the list before it. */
+.dr-props-modal.is-sheet .modal-title {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: -8px;
+}
+
+.dr-props-modal .dr-sheet-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-m, 8px);
+  background: none;
+  box-shadow: none;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-props-modal .dr-sheet-back .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+@media (any-hover: hover) {
+  .dr-props-modal .dr-sheet-back:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* On a phone, the values give way to the name and the count. */
+body.is-phone .dr-plist-values {
+  display: none;
+}
+
+body.is-phone .dr-plist-name {
+  flex: 1 1 auto;
+  max-width: none;
 }

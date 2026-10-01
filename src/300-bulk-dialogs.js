@@ -1673,97 +1673,404 @@ const DEFAULTS_DELAY = 800;
  * rather than opening its own, so switching is instant and the folders
  * chosen carry across.
  */
+/**
+ * Each property in some notes, as a note's properties would be listed:
+ * the values it holds, how many of the notes have it, and a way to fill
+ * it in for the rest. A name is renamed where it's shown; its menu has
+ * the rest; several picked can be merged or removed together.
+ */
+function propertyOverview(app, files) {
+  const all = new Map();
+  files.forEach((file) => {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = (cache && cache.frontmatter) || {};
+    Object.keys(fm).forEach((key) => {
+      if (key === 'position') return;
+      const low = key.toLowerCase();
+      if (!all.has(low)) all.set(low, { name: key, count: 0, values: [], seen: new Set() });
+      const entry = all.get(low);
+      entry.count++;
+      const raw = fm[key];
+      (Array.isArray(raw) ? raw : [raw]).forEach((v) => {
+        if (entry.values.length >= 4 || v === null || v === undefined || v === '') return;
+        const text = plainValue(v);
+        const k = String(text).toLowerCase();
+        if (!text || entry.seen.has(k)) return;
+        entry.seen.add(k);
+        entry.values.push(text);
+      });
+    });
+  });
+  return Array.from(all.values())
+    .map((e) => ({ name: e.name, count: e.count, values: e.values }))
+    .sort((a, b) => b.count - a.count || byName(a.name, b.name));
+}
+
+class PropertyListTool extends BulkModal {
+  constructor(plugin, targets, host) {
+    super(plugin);
+    (targets || []).forEach((t) => this.addTarget(t));
+    this.host = host;
+    this.picks = new Set();
+  }
+
+  /** The notes listed: those chosen, or every note while none are. */
+  files() {
+    return this.targets.length ? this.bulk.notesFor(this.targets, this.reach) : this.app.vault.getMarkdownFiles();
+  }
+
+  onOpen() {
+    this.modalEl.addClass('dr-bulk-modal');
+    this.contentEl.empty();
+    this.body = this.contentEl.createDiv({ cls: 'dr-bulk-body dr-plist' });
+    const where = this.targetsSection('');
+    where.addClass('dr-plist-where');
+    this.countEl = where.createSpan({ cls: 'dr-plist-count' });
+    this.listEl = this.body.createDiv({ cls: 'dr-plist-list' });
+    this.footEl = this.contentEl.createDiv({ cls: 'dr-plist-foot' });
+    this.update();
+  }
+
+  /** With none chosen, every note: said so, with the + beside it to narrow it. */
+  renderTargets() {
+    super.renderTargets();
+    if (this.targets.length || !this.targetsEl) return;
+    const all = this.targetsEl.createDiv({ cls: 'dr-bulk-chip is-all' });
+    setIcon(all.createSpan({ cls: 'dr-bulk-chip-icon' }), 'library');
+    all.createSpan({ cls: 'dr-bulk-chip-name', text: 'All notes' });
+    this.targetsEl.prepend(all);
+    const pick = this.targetsEl.querySelector('.dr-bulk-chip.is-add');
+    if (pick) {
+      pick.addClass('is-icon');
+      pick.empty();
+      setIcon(pick.createSpan({ cls: 'dr-bulk-chip-icon' }), 'plus');
+      pick.setAttribute('aria-label', 'Choose a folder');
+    }
+  }
+
+  update() {
+    if (!this.listEl) return;
+    const files = this.files();
+    const total = files.length;
+    const props = propertyOverview(this.app, files);
+    this.countEl.setText(bulkCount(total, 'note'));
+    Array.from(this.picks).forEach((name) => {
+      if (!props.some((p) => p.name === name)) this.picks.delete(name);
+    });
+
+    const list = this.listEl;
+    list.empty();
+    if (!props.length) {
+      list.addClass('is-empty');
+      list.createDiv({ cls: 'dr-plist-empty', text: total ? 'These notes have no properties yet.' : 'There are no notes here.' });
+    } else list.removeClass('is-empty');
+    roveFocus(list, '.dr-plist-row');
+
+    props.forEach((prop) => {
+      const row = list.createDiv({ cls: 'dr-plist-row' });
+      row.setAttribute('tabindex', '-1');
+      row.toggleClass('is-picked', this.picks.has(prop.name));
+
+      const pick = row.createDiv({ cls: 'dr-plist-pick' });
+      pick.setAttribute('role', 'checkbox');
+      pick.setAttribute('tabindex', '0');
+      pick.setAttribute('aria-checked', String(this.picks.has(prop.name)));
+      if (this.picks.has(prop.name)) setIcon(pick, 'check');
+      onActivate(pick, () => {
+        if (this.picks.has(prop.name)) this.picks.delete(prop.name);
+        else this.picks.add(prop.name);
+        this.update();
+      });
+
+      const icon = row.createDiv({ cls: 'dr-plist-icon' });
+      setIcon(icon, TYPE_ICONS[propertyType(this.app, prop.name)] || 'text');
+
+      const name = row.createDiv({ cls: 'dr-plist-name', text: prop.name });
+      name.setAttribute('role', 'button');
+      name.setAttribute('tabindex', '0');
+      onActivate(name, () => this.startRename(row, name, prop));
+
+      row.createDiv({ cls: 'dr-plist-values', text: prop.values.join(', ') });
+
+      const missing = total - prop.count;
+      if (missing > 0) {
+        const fill = row.createEl('button', { cls: 'dr-plist-fill', text: `Fill in ${missing}` });
+        fill.addEventListener('click', () => this.host.openSheet('missing', { key: prop.name }));
+      }
+      row.createDiv({ cls: 'dr-plist-cover', text: `${prop.count} of ${total}` });
+
+      const more = row.createDiv({ cls: 'clickable-icon dr-plist-more' });
+      more.setAttribute('role', 'button');
+      more.setAttribute('tabindex', '0');
+      more.setAttribute('aria-label', `More for ${prop.name}`);
+      setIcon(more, 'more-horizontal');
+      const menu = (evt) => this.propertyMenu(evt, row, name, prop, missing);
+      more.addEventListener('click', menu);
+      onContextMenu(row, menu);
+    });
+
+    this.renderFoot();
+  }
+
+  renderFoot() {
+    const foot = this.footEl;
+    foot.empty();
+    const n = this.picks.size;
+    if (n) {
+      foot.createSpan({ cls: 'dr-plist-picked', text: `${n} picked` });
+      const clear = foot.createEl('button', { cls: 'dr-plist-clear', text: 'Clear' });
+      clear.addEventListener('click', () => {
+        this.picks.clear();
+        this.update();
+      });
+      const names = Array.from(this.picks);
+      const remove = foot.createEl('button', { cls: 'mod-warning dr-plist-remove', text: 'Remove' });
+      remove.addEventListener('click', () => this.host.openSheet('remove', { keys: names }));
+      const merge = foot.createEl('button', { cls: 'mod-cta dr-plist-merge' });
+      setIcon(merge.createSpan({ cls: 'dr-plist-btn-icon' }), 'git-merge');
+      merge.createSpan({ text: 'Merge…' });
+      merge.disabled = n < 2;
+      merge.toggleClass('is-disabled', n < 2);
+      if (n < 2) merge.setAttribute('aria-label', 'Pick another to merge them');
+      merge.addEventListener('click', () => {
+        if (this.picks.size > 1) this.host.openSheet('merge', { keys: names });
+      });
+      return;
+    }
+    const add = foot.createEl('button', { cls: 'dr-plist-add' });
+    setIcon(add.createSpan({ cls: 'dr-plist-btn-icon' }), 'plus');
+    add.createSpan({ text: 'Add property' });
+    add.addEventListener('click', () => this.host.openSheet('add'));
+    const folder = this.host.folderOf(this.targets);
+    if (folder) {
+      const defaults = foot.createEl('button', { cls: 'dr-plist-defaults' });
+      setIcon(defaults.createSpan({ cls: 'dr-plist-btn-icon' }), 'file-cog');
+      defaults.createSpan({ text: 'Defaults for new notes' });
+      defaults.addEventListener('click', () => this.host.openSheet('defaults'));
+    }
+  }
+
+  propertyMenu(evt, row, name, prop, missing) {
+    evt.preventDefault();
+    evt.stopPropagation();
+    const menu = new Menu();
+    const item = (title, icon, run, warn) =>
+      menu.addItem((i) => {
+        i.setTitle(title).setIcon(icon).onClick(run);
+        if (warn && typeof i.setWarning === 'function') i.setWarning(true);
+      });
+    item('Rename', 'pencil', () => this.startRename(row, name, prop));
+    item('Merge with…', 'git-merge', () => this.host.openSheet('merge', { keys: [prop.name] }));
+    if (missing > 0) {
+      item(`Fill in the ${missing} without it…`, 'list-checks', () => this.host.openSheet('missing', { key: prop.name }));
+    }
+    item('Change type…', 'shapes', () => this.host.openSheet('type', { key: prop.name }));
+    menu.addSeparator();
+    item('Remove from these notes…', 'trash-2', () => this.host.openSheet('remove', { keys: [prop.name] }), true);
+    showMenuAt(menu, evt);
+  }
+
+  /**
+   * The name as a field, where it's shown. Enter renames it in every
+   * note — or, left as it is, writes it that way in notes that spell it
+   * otherwise; Escape puts it back.
+   */
+  startRename(row, nameEl, prop) {
+    if (row.querySelector('input.dr-plist-name-edit')) return;
+    const input = row.createEl('input', { cls: 'dr-plist-name-edit', type: 'text' });
+    input.value = prop.name;
+    input.setAttribute('spellcheck', 'false');
+    input.setAttribute('aria-label', `Rename ${prop.name}`);
+    nameEl.replaceWith(input);
+    input.focus();
+    input.select();
+    let done = false;
+    const finish = (keep) => {
+      if (done) return;
+      done = true;
+      const value = input.value.trim();
+      if (!keep || !value) {
+        input.replaceWith(nameEl);
+        return;
+      }
+      this.rename(prop.name, value);
+    };
+    input.addEventListener('keydown', (evt) => {
+      if (composing(evt)) return;
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        finish(true);
+      } else if (evt.key === 'Escape') {
+        evt.preventDefault();
+        evt.stopPropagation();
+        finish(false);
+      }
+    });
+    input.addEventListener('blur', () => finish(input.value.trim() !== prop.name));
+  }
+
+  /** Renamed everywhere, with Undo; one that needs a look first opens the rename. */
+  async rename(from, to) {
+    const problem = propertyNameProblem(to);
+    if (problem) {
+      new Notice(problem);
+      this.update();
+      return;
+    }
+    const plan = this.bulk.planPropertyRename(from, to);
+    if (from === to && !plan.total && !plan.conflicts.length) {
+      this.update();
+      return;
+    }
+    const special = ['tags', 'aliases', 'cssclasses'];
+    const changing = from.toLowerCase() !== to.toLowerCase();
+    if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
+      this.host.openSheet('rename', { key: from, to });
+      return;
+    }
+    if (this.picks.has(from)) {
+      this.picks.delete(from);
+      this.picks.add(to);
+    }
+    const record = await this.bulk.renameProperty(from, to);
+    this.update();
+    if (!record) return;
+    const done = notesChanged(record);
+    const bases = (record.bases || []).length;
+    bulkNotice(
+      this.bulk,
+      (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
+        (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
+        '.' +
+        (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
+        bulkTail(record),
+      record
+    );
+  }
+}
+
+/**
+ * The Properties window: the list of properties in some notes, and
+ * each tool — adding, removing, filling in, defaults, renaming, merging,
+ * changing a type — opening over it as a sheet, with a way back.
+ */
 class PropertyToolsModal extends Modal {
   constructor(plugin, targets, tab, args) {
     super(plugin.app);
     this.plugin = plugin;
     this.targets = (targets || []).slice();
-    this.tab = tab || 'add';
+    this.reach = 'deep';
+    this.tab = tab || null;
     this.args = args || {};
     this.tool = null;
-    // Defaults belong to one folder, so the tab is there only for one.
-    const only = this.targets.length === 1 ? this.targets[0] : null;
-    this.folder = only instanceof TFolder && !only.isRoot() ? only : null;
+    this.sheet = null;
   }
 
-  tabs() {
-    const list = [
-      ['add', 'Add', 'list-plus'],
-      ['remove', 'Remove', 'list-minus'],
-      ['rename', 'Rename', 'pencil'],
-      ['merge', 'Merge', 'git-merge'],
-      ['missing', 'Find missing', 'list-checks'],
-    ];
-    if (this.folder) list.push(['defaults', 'Defaults', 'file-cog']);
-    return list;
+  /** The one folder the notes are, for its defaults. */
+  folderOf(targets) {
+    const only = targets.length === 1 ? targets[0] : null;
+    return only instanceof TFolder && !only.isRoot() ? only : null;
   }
 
-  make(id) {
-    const targets = this.tool ? this.tool.targets.slice() : this.targets;
-    if (id === 'remove') return new RemovePropertiesModal(this.plugin, targets, this.args.keys);
-    if (id === 'missing') return new MissingPropertyModal(this.plugin, targets, this.args.key);
-    if (id === 'defaults') return new FolderDefaultsModal(this.plugin, this.folder);
-    if (id === 'rename') return new RenamePropertyModal(this.plugin, this.args.key);
-    if (id === 'merge') return new MergePropertiesModal(this.plugin, this.args.keys || (this.args.key ? [this.args.key] : []));
-    return new AddPropertiesModal(this.plugin, targets);
+  make(id, args) {
+    const targets = this.targets;
+    args = args || {};
+    if (id === 'add') return new AddPropertiesModal(this.plugin, targets);
+    if (id === 'remove') return new RemovePropertiesModal(this.plugin, targets, args.keys);
+    if (id === 'missing') return new MissingPropertyModal(this.plugin, targets, args.key);
+    if (id === 'defaults') {
+      const folder = this.folderOf(targets);
+      return folder ? new FolderDefaultsModal(this.plugin, folder) : null;
+    }
+    if (id === 'rename') return new RenamePropertyModal(this.plugin, args.key, args.to);
+    if (id === 'merge') return new MergePropertiesModal(this.plugin, args.keys || (args.key ? [args.key] : []));
+    if (id === 'type') return new ChangeTypeModal(this.plugin, args.key);
+    return null;
   }
 
   onOpen() {
     this.modalEl.addClass('dr-bulk-modal', 'dr-props-modal');
-    // Which folders it's working on shows in each tab's first line, so
-    // the title needn't repeat it.
     this.titleEl.setText('Properties');
-    const bar = this.contentEl.createDiv({ cls: 'dr-set-tabs dr-props-tabs' });
-    bar.setAttribute('role', 'tablist');
-    roveFocus(bar, '.dr-set-tab');
-    this.buttons = {};
-    this.tabs().forEach(([id, label, icon]) => {
-      const button = bar.createEl('button', { cls: 'dr-set-tab' });
-      button.setAttribute('role', 'tab');
-      button.createSpan({ text: label });
-      button.addEventListener('click', () => this.show(id));
-      this.buttons[id] = button;
-    });
     this.panel = this.contentEl.createDiv({ cls: 'dr-props-panel' });
-    this.panel.setAttribute('role', 'tabpanel');
-    this.show(this.buttons[this.tab] ? this.tab : 'add');
+    // The list keeps up with the notes as changes land in them.
+    this.watch = this.app.metadataCache.on('changed', () => {
+      window.clearTimeout(this.watchTimer);
+      this.watchTimer = window.setTimeout(() => {
+        if (!this.sheet && this.tool && typeof this.tool.update === 'function') this.tool.update();
+      }, 250);
+    });
+    if (this.tab && this.make(this.tab, this.args)) this.openSheet(this.tab, this.args);
+    else this.showList();
   }
 
-  /** Draw one tool in the panel, closing the last one properly first. */
-  show(id) {
-    if (this.tool) {
-      try {
-        this.tool.onClose();
-      } catch (err) {
-        /* it was only drawing */
-      }
+  /** The folders and notes, and which of their notes, from whatever showed them last. */
+  keepChoice() {
+    const tool = this.tool;
+    if (!tool || !Array.isArray(tool.targets) || !tool.targetsEl) return;
+    this.targets = tool.targets.slice();
+    if (tool.reach) this.reach = tool.reach;
+  }
+
+  closeTool() {
+    if (!this.tool) return;
+    this.keepChoice();
+    try {
+      this.tool.onClose();
+    } catch (err) {
+      /* it was only drawing */
     }
-    Object.keys(this.buttons).forEach((key) => {
-      this.buttons[key].toggleClass('is-active', key === id);
-      this.buttons[key].setAttribute('aria-selected', String(key === id));
-    });
-    this.tab = id;
-    this.panel.empty();
-    const tool = this.make(id);
-    // Its window is this one: the panel for its content, a spare for its
-    // title (the tab says what it is), and closing closes this.
+    this.tool = null;
+  }
+
+  mount(tool, container, asSheet) {
+    tool.reach = this.reach;
     tool.modalEl = this.modalEl;
     tool.titleEl = document.createElement('div');
-    tool.contentEl = this.panel;
-    tool.close = () => this.close();
+    tool.contentEl = container;
+    // A sheet's Cancel, or its change once made, goes back to the list.
+    tool.close = asSheet ? () => this.showList() : () => this.close();
     this.tool = tool;
     tool.onOpen();
   }
 
+  showList() {
+    this.closeTool();
+    this.sheet = null;
+    this.modalEl.removeClass('is-sheet');
+    this.titleEl.empty();
+    this.titleEl.setText('Properties');
+    this.panel.empty();
+    this.mount(new PropertyListTool(this.plugin, this.targets, this), this.panel, false);
+    // Opened, nothing in particular is focused — not the first chip's ×,
+    // which Obsidian would pick once the window is up.
+    window.setTimeout(() => {
+      const active = this.contentEl.ownerDocument.activeElement;
+      if (active && active.matches && active.matches('.dr-bulk-chip-remove') && typeof active.blur === 'function') active.blur();
+    }, 0);
+  }
+
+  /** A tool over the list: its name for the title, with the way back before it. */
+  openSheet(id, args) {
+    const tool = this.make(id, args);
+    if (!tool) return;
+    this.closeTool();
+    this.sheet = id;
+    this.modalEl.addClass('is-sheet');
+    this.panel.empty();
+    this.mount(tool, this.panel, true);
+    const name = tool.titleEl.textContent || 'Properties';
+    this.titleEl.empty();
+    const back = this.titleEl.createEl('button', { cls: 'dr-sheet-back' });
+    setIcon(back, 'chevron-left');
+    back.setAttribute('aria-label', 'Back to the properties');
+    back.addEventListener('click', () => this.showList());
+    this.titleEl.createSpan({ cls: 'dr-sheet-title', text: name });
+  }
+
   onClose() {
-    if (this.tool) {
-      try {
-        this.tool.onClose();
-      } catch (err) {
-        /* nothing more to tidy */
-      }
-    }
-    this.tool = null;
+    window.clearTimeout(this.watchTimer);
+    if (this.watch) this.app.metadataCache.offref(this.watch);
+    this.closeTool();
     this.contentEl.empty();
   }
 }
