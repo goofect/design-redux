@@ -274,6 +274,20 @@ describe('Design Redux in Obsidian', function () {
     );
     expect(listed.length).toBeGreaterThanOrEqual(2);
     expect(listed[0][1]).toMatch(/^\d+ of \d+$/);
+    // Under the pointer, a row lights up and shows its •••.
+    const look = () =>
+      browser.execute(() => {
+        const row = document.querySelector('.dr-props-modal .dr-plist-row');
+        return [getComputedStyle(row).backgroundColor, getComputedStyle(row.querySelector('.dr-plist-more')).opacity];
+      });
+    await (await browser.$('.dr-props-modal .modal-title')).moveTo();
+    await browser.pause(300);
+    const resting = await look();
+    await (await browser.$('.dr-props-modal .dr-plist-row .dr-plist-values')).moveTo();
+    await browser.pause(300);
+    const hovered = await look();
+    expect(hovered[0]).not.toBe(resting[0]);
+    expect([resting[1], hovered[1]]).toEqual(['0', '1']);
     await shot('properties-list');
 
     // Add property opens over the list, and Back returns to it.

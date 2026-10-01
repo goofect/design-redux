@@ -5541,6 +5541,52 @@ body.is-phone .dr-td-length {
   background-color: var(--background-modifier-hover);
 }
 
+/* A row lights as the pointer crosses it, as a list's rows do, and the
+   dividers either side of it give way; its ••• shows then too. Without a
+   pointer that hovers, the ••• is always there. */
+@media (any-hover: hover) {
+  .dr-plist-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-plist-row:hover::before,
+  .dr-plist-row:hover + .dr-plist-row::before {
+    opacity: 0;
+  }
+
+  .dr-plist-row.is-picked:hover {
+    background-color: hsla(var(--interactive-accent-hsl), 0.14);
+  }
+
+  .dr-plist-more {
+    opacity: 0;
+  }
+
+  .dr-plist-row:hover .dr-plist-more,
+  .dr-plist-row:focus-within .dr-plist-more,
+  .dr-plist-more:focus-visible {
+    opacity: 1;
+  }
+
+  .dr-plist-row:hover .dr-plist-pick {
+    border-color: var(--text-muted);
+  }
+
+  .dr-plist-row.is-picked:hover .dr-plist-pick {
+    border-color: var(--interactive-accent);
+  }
+
+  .dr-props-modal .dr-plist-more:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-props-modal .dr-plist-defaults:hover,
+  .dr-props-modal .dr-plist-clear:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
 .dr-plist-pick {
   flex: 0 0 20px;
   width: 20px;
@@ -5603,7 +5649,7 @@ body.is-phone .dr-td-length {
 
 @media (any-hover: hover) {
   .dr-plist-name:hover {
-    background-color: var(--background-modifier-hover);
+    background-color: var(--background-modifier-border);
   }
 }
 
