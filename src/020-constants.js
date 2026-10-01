@@ -108,6 +108,8 @@ const DEFAULTS = {
   // note in between. Which graphs have it on: { graph | localgraph: bool }
   graphRoutes: true,
   graphRouting: {},
+  // Where a note names the note it sits under; the routes go by it.
+  graphRouteProperty: 'parent',
   // A box at the cursor for footnotes, and their numbers kept in order.
   footnotes: true,
   footnoteOrder: true,

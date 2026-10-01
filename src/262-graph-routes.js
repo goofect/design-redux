@@ -117,7 +117,7 @@ function rankNotes(ids, near, stats) {
  * lines a–c and c–b stay, or are themselves left out for a note between
  * them in turn — so a route always remains, each step narrower.
  */
-function routeGraph(nodes, stats) {
+function routeGraph(nodes, stats, parents) {
   const ids = Object.keys(nodes).filter((id) => isRoutedNode(nodes[id]));
   const near = new Map(ids.map((id) => [id, new Set()]));
   ids.forEach((id) => {
@@ -139,6 +139,26 @@ function routeGraph(nodes, stats) {
     hidden.get(a).add(b);
     hidden.get(b).add(a);
   };
+
+  // Where the notes say what they sit under, that decides, and nothing
+  // is guessed: a line goes through the notes between when one note is
+  // above the other by way of them — and their own lines are there to
+  // carry it.
+  const tree = parents ? parentTree(parents, near) : null;
+  if (tree) {
+    const routes = new Map();
+    ids.forEach((a) => {
+      near.get(a).forEach((b) => {
+        if (a >= b) return;
+        const route = tree.route(a, b) || tree.route(b, a);
+        if (!route) return;
+        hide(a, b);
+        routes.set(routeKey(a, b), route);
+      });
+    });
+    return finishRoutes(nodes, near, hidden, rank, routes);
+  }
+
   order.forEach((a) => {
     const ra = rank.get(a);
     near.get(a).forEach((b) => {
@@ -156,6 +176,11 @@ function routeGraph(nodes, stats) {
     });
   });
 
+  return finishRoutes(nodes, near, hidden, rank, null);
+}
+
+/** The lines kept, and the graph's data without the ones left out. */
+function finishRoutes(nodes, near, hidden, rank, routes) {
   const kept = new Map();
   near.forEach((set, id) => {
     const gone = hidden.get(id);
@@ -177,7 +202,87 @@ function routeGraph(nodes, stats) {
     drawn[id] = Object.assign({}, node, { links });
   });
 
-  return { nodes: drawn, hidden, kept, rank };
+  return { nodes: drawn, hidden, kept, rank, routes };
+}
+
+/**
+ * The notes each note sits under, as a property names them, among the
+ * notes shown: what's above a note and how far, and the way down from
+ * one note to another. Null when no note shown names one.
+ */
+function parentTree(parents, near) {
+  const up = new Map();
+  const down = new Map();
+  let any = false;
+  near.forEach((links, id) => {
+    const above = (parents.get(id) || []).filter((p) => p !== id && near.has(p));
+    if (!above.length) return;
+    any = true;
+    up.set(id, above);
+    above.forEach((p) => {
+      if (!down.has(p)) down.set(p, []);
+      down.get(p).push(id);
+    });
+  });
+  if (!any) return null;
+
+  const memo = new Map();
+  /** Every note above `id`, and how many steps up. */
+  const above = (id) => {
+    if (memo.has(id)) return memo.get(id);
+    const dist = new Map();
+    const queue = [id];
+    const seen = new Set([id]);
+    for (let i = 0; i < queue.length; i++) {
+      const u = queue[i];
+      (up.get(u) || []).forEach((p) => {
+        if (seen.has(p)) return;
+        seen.add(p);
+        dist.set(p, (u === id ? 0 : dist.get(u)) + 1);
+        queue.push(p);
+      });
+    }
+    memo.set(id, dist);
+    return dist;
+  };
+
+  /**
+   * From `low` up to `high`, two or more steps above it: the notes and
+   * lines of the shortest ways up — or null, where `high` isn't above
+   * `low` that way, or a step of the way has no line to show it.
+   */
+  const route = (low, high) => {
+    const total = above(low).get(high);
+    if (!total || total < 2) return null;
+    const toHigh = new Map([[high, 0]]);
+    const queue = [high];
+    for (let i = 0; i < queue.length; i++) {
+      const u = queue[i];
+      (down.get(u) || []).forEach((c) => {
+        if (toHigh.has(c)) return;
+        toHigh.set(c, toHigh.get(u) + 1);
+        queue.push(c);
+      });
+    }
+    const fromLow = above(low);
+    const lit = { nodes: new Set(), links: new Set() };
+    [low].concat(Array.from(fromLow.keys())).forEach((u) => {
+      const du = u === low ? 0 : fromLow.get(u);
+      (up.get(u) || []).forEach((p) => {
+        if (!toHigh.has(p) || du + 1 + toHigh.get(p) !== total) return;
+        lit.links.add(routeKey(u, p));
+        lit.nodes.add(u);
+        lit.nodes.add(p);
+      });
+    });
+    for (const key of lit.links) {
+      const [a, b] = key.split(ROUTE_SEP);
+      if (!near.get(a) || !near.get(a).has(b)) return null;
+    }
+    return lit;
+  };
+
+  return { route };
 }
 
 /**
@@ -190,6 +295,19 @@ function routeLight(plan, id) {
   const partners = plan && plan.hidden.get(id);
   if (!partners) return lit;
   const { kept, rank } = plan;
+
+  // Routes a property set out: already known, the way up the tree.
+  if (plan.routes) {
+    partners.forEach((p) => {
+      lit.nodes.add(p);
+      const route = plan.routes.get(routeKey(id, p));
+      if (!route) return;
+      route.nodes.forEach((n) => lit.nodes.add(n));
+      route.links.forEach((k) => lit.links.add(k));
+    });
+    lit.nodes.delete(id);
+    return lit;
+  }
 
   const walk = (from, lo, hi, down) => {
     const dist = new Map([[from, 0]]);
@@ -355,6 +473,16 @@ class GraphRoutes extends Feature {
         name: 'Links through notes between',
         desc: 'Add a switch to the graph\'s Display settings that draws a link through the note in between — Westminster system → Ministerial responsibility → Individual responsibility — rather than straight across. Hovering a note still lights up everything it links to.',
       },
+      {
+        key: 'graphRouteProperty',
+        type: 'text',
+        showIf: 'graphRoutes',
+        name: 'Decided by a property',
+        desc: 'The property in which a note names the note it sits under — parent: [[Ministerial responsibility]] — and the graph goes by it: a link between two notes goes through the notes between them in that order. Left empty, or where no note shown has it, the graph works it out from how the notes link.',
+        placeholder: 'parent',
+        fallback: '',
+        suggest: 'property',
+      },
     ];
   }
 
@@ -387,6 +515,41 @@ class GraphRoutes extends Feature {
 
   enable() {
     this.sync();
+    // A different property to go by: graphs drawn by the old one, again.
+    const by = (this.settings.graphRouteProperty || '').trim().toLowerCase();
+    if (this.routedBy !== undefined && this.routedBy !== by) {
+      this.graphs.forEach((renderer) => renderer.drRoutes && this.redraw(renderer.drRoutes.engine));
+    }
+    this.routedBy = by;
+  }
+
+  /**
+   * What each note shown sits under, as the property names it: the notes
+   * its links there lead to. Null with no property set, or none naming one.
+   */
+  parentsFor(nodes) {
+    const prop = (this.settings.graphRouteProperty || '').trim();
+    if (!prop) return null;
+    const mc = this.app.metadataCache;
+    if (typeof mc.getCache !== 'function' || typeof mc.getFirstLinkpathDest !== 'function') return null;
+    const parents = new Map();
+    Object.keys(nodes).forEach((id) => {
+      if (!isRoutedNode(nodes[id])) return;
+      const cache = mc.getCache(id);
+      const raw = cache && fmGet(cache.frontmatter, prop);
+      if (raw === undefined || raw === null || raw === '') return;
+      const found = [];
+      (Array.isArray(raw) ? raw : [raw]).forEach((value) => {
+        if (value === null || typeof value === 'object') return;
+        const m = /^\s*!?\[\[([^\]|#]+)/.exec(String(value));
+        const linkpath = (m ? m[1] : String(value)).trim();
+        if (!linkpath) return;
+        const dest = mc.getFirstLinkpathDest(linkpath, id);
+        if (dest && dest.path !== id && found.indexOf(dest.path) === -1) found.push(dest.path);
+      });
+      if (found.length) parents.set(id, found);
+    });
+    return parents.size ? parents : null;
   }
 
   sync() {
@@ -623,7 +786,7 @@ class GraphRoutes extends Feature {
       });
     }
 
-    const plan = routeGraph(nodes, linkStats(resolved));
+    const plan = routeGraph(nodes, linkStats(resolved), this.parentsFor(nodes));
 
     if (added.size) {
       const used = routeLines(plan);

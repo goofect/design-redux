@@ -196,6 +196,51 @@ test('sizes stay as they were: counted as Obsidian counts a note’s lines', () 
   assert.deepStrictEqual(R.linkWeights(nodes), { [W]: 3, [M]: 3, [I]: 2 });
 });
 
+/* -- decided by a property ------------------------------------------- */
+
+// Ministerial responsibility is linked with many notes, Westminster with
+// few: guessing from the links, Ministerial would be the broader. The
+// notes say otherwise: Individual sits under Ministerial, Ministerial
+// under Westminster.
+const X = (n) => `Politics/Other ${n}.md`;
+const told = {
+  [W]: { [M]: 1, [I]: 1 },
+  [M]: { [W]: 1, [I]: 1, [X(1)]: 1, [X(2)]: 1, [X(3)]: 1 },
+  [I]: { [M]: 1 },
+};
+const sitsUnder = new Map([[I, [M]], [M, [W]]]);
+
+test('a property decides: Westminster reaches Individual through Ministerial, whatever the links suggest', () => {
+  const guessed = R.routeGraph(graphData(told), R.linkStats(told));
+  assert.ok(!(guessed.hidden.get(W) || new Set()).has(I), 'guessing from the links gets this one wrong');
+  const plan = R.routeGraph(graphData(told), R.linkStats(told), sitsUnder);
+  assert.deepStrictEqual(sorted(plan.hidden.get(W)), [I]);
+  const drawn = lines(plan.nodes);
+  assert.ok(drawn.has(key(W, M)) && drawn.has(key(M, I)) && !drawn.has(key(W, I)));
+  const lit = R.routeLight(plan, W);
+  assert.deepStrictEqual(sorted(lit.nodes), sorted([M, I]));
+  assert.deepStrictEqual(sorted(lit.links), sorted([key(W, M), key(M, I)]));
+  const back = R.routeLight(plan, I);
+  assert.deepStrictEqual(sorted(back.nodes), sorted([W, M]));
+});
+
+test('a property decides only what it says: no line through a note not shown, or a step with no line', () => {
+  // Ministerial filtered out of the graph: nothing to go through.
+  const nodes = graphData(told);
+  delete nodes[M];
+  let plan = R.routeGraph(nodes, R.linkStats(told), sitsUnder);
+  assert.ok(lines(plan.nodes).has(key(W, I)));
+  // Individual names Ministerial, but no line joins them.
+  const unlinked = { [W]: { [M]: 1, [I]: 1 }, [M]: { [W]: 1 } };
+  plan = R.routeGraph(graphData(unlinked), R.linkStats(unlinked), sitsUnder);
+  assert.ok(lines(plan.nodes).has(key(W, I)), 'the line stays');
+  assert.strictEqual(plan.hidden.size, 0);
+  // A triangle the property says nothing about is left as it is.
+  const other = { [W]: { [C]: 1, [I]: 1 }, [C]: { [I]: 1 } };
+  plan = R.routeGraph(graphData(other), R.linkStats(other), new Map([[X(1), [W]]]));
+  assert.ok(!lines(plan.nodes).has(key(W, I)), 'no note shown names one: worked out from the links');
+});
+
 /* -- a graph drawn the way Obsidian's is ------------------------------ */
 
 class FakeNode {
@@ -393,6 +438,27 @@ test('a graph drawn differently is left alone', () => {
   feature.settings.graphRouting.graph = true;
   feature.enable();
   assert.ok(!leaf.view.renderer.drRoutes);
+  feature.disable();
+});
+
+test('the feature reads the property from the notes, and can be told to go by the links', () => {
+  const g = makeGraph('graph', () => ({ nodes: graphData(told) }));
+  const feature = makeFeature(() => [g.leaf], told);
+  feature.settings.graphRouting.graph = true;
+  feature.settings.graphRouteProperty = 'parent';
+  const fm = { [I]: { Parent: '[[Ministerial responsibility]]' }, [M]: { parent: ['[[Westminster system|Westminster]]'] } };
+  feature.app.metadataCache.getCache = (p) => (fm[p] ? { frontmatter: fm[p] } : {});
+  feature.app.metadataCache.getFirstLinkpathDest = (lp) => {
+    const hit = [W, M, I, C].find((p) => p.endsWith(`/${lp}.md`));
+    return hit ? { path: hit } : null;
+  };
+  feature.enable();
+  assert.ok(!linkBetween(g, W, I), 'through Ministerial, as the notes say');
+  assert.ok(linkBetween(g, M, I));
+
+  feature.settings.graphRouteProperty = '';
+  feature.enable();
+  assert.ok(linkBetween(g, W, I), 'by the links, Ministerial looks the broader, and Westminster–Individual stays');
   feature.disable();
 });
 

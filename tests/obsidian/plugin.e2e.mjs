@@ -1024,6 +1024,55 @@ describe('Design Redux in Obsidian', function () {
     expect(after).toEqual({ capitals: 0, lower: 3, fixLeft: false });
   });
 
+  it('routes graph links by a property where notes name what they sit under', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      // Cabinet is linked with the most notes, so guessing from the links
+      // would put it above Crown; the parent property says otherwise.
+      await app.vault.createFolder('Tree');
+      const notes = {
+        'Tree/Crown.md': 'The [[Cabinet]] and each [[Minister]].',
+        'Tree/Cabinet.md': '---\nparent: "[[Crown]]"\n---\nEach [[Minister]]; [[Other 1]], [[Other 2]], [[Other 3]].',
+        'Tree/Minister.md': '---\nparent: "[[Cabinet]]"\n---\nAnswers to Parliament.',
+        'Tree/Other 1.md': 'One.',
+        'Tree/Other 2.md': 'Two.',
+        'Tree/Other 3.md': 'Three.',
+      };
+      for (const [p, text] of Object.entries(notes)) await app.vault.create(p, text);
+      await new Promise((r) => setTimeout(r, 1500));
+      const plugin = plugins.designRedux;
+      const routes = plugin.features.find((f) => f.constructor.name === 'GraphRoutes');
+      plugin.settings.graphRouting = Object.assign({}, plugin.settings.graphRouting, { graph: true });
+      plugin.settings.graphRouteProperty = 'parent';
+      app.commands.executeCommandById('graph:open');
+      await new Promise((r) => setTimeout(r, 2500));
+      const leaf = app.workspace.getLeavesOfType('graph')[0];
+      routes.sync();
+      await new Promise((r) => setTimeout(r, 1500));
+      const has = (a, b) =>
+        leaf.view.renderer.links.some(
+          (l) => (l.source.id === `Tree/${a}.md` && l.target.id === `Tree/${b}.md`) || (l.source.id === `Tree/${b}.md` && l.target.id === `Tree/${a}.md`)
+        );
+      const byProperty = { crownMinister: has('Crown', 'Minister'), cabinetMinister: has('Cabinet', 'Minister'), crownCabinet: has('Crown', 'Cabinet') };
+      plugin.settings.graphRouteProperty = '';
+      routes.enable();
+      await new Promise((r) => setTimeout(r, 1500));
+      const byLinks = { crownMinister: has('Crown', 'Minister') };
+      plugin.settings.graphRouteProperty = 'parent';
+      routes.enable();
+      plugin.settings.graphRouting.graph = false;
+      routes.sync();
+      leaf.detach();
+      const folder = app.vault.getAbstractFileByPath('Tree');
+      if (folder) await app.vault.delete(folder, true);
+      await plugin.saveSettings();
+      return { byProperty, byLinks };
+    });
+    expect(result).toEqual({
+      byProperty: { crownMinister: false, cabinetMinister: true, crownCabinet: true },
+      byLinks: { crownMinister: true },
+    });
+  });
+
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));

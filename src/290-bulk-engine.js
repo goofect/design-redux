@@ -718,6 +718,7 @@ function renamePropertyInSettings(settings, from, to) {
   [
     ['coverProperty', 'Cover image property'],
     ['categoryProperty', 'Search categories'],
+    ['graphRouteProperty', 'Graph links decided by'],
   ].forEach(([key, label]) => {
     if (typeof settings[key] === 'string' && settings[key].trim().toLowerCase() === low) {
       keep(label, () => settings[key], (v) => (settings[key] = v))(to);
