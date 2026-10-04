@@ -538,6 +538,11 @@ class CanvasFold extends CanvasFeature {
     }
     if (!group) {
       group = controls.createDiv({ cls: 'canvas-control-group dr-fold-control' });
+      // Above the outline's button, which may have been put there first:
+      // added once the cards have loaded, it would otherwise go below it,
+      // where a short window cuts the column off.
+      const outline = controls.querySelector(':scope > .dr-outline-control');
+      if (outline) controls.insertBefore(group, outline);
       const item = group.createDiv({ cls: 'canvas-control-item' });
       item.setAttribute('role', 'button');
       item.setAttribute('tabindex', '0');
