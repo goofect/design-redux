@@ -64,9 +64,11 @@ Coffee N' Christmas.
 
 ## Working here
 
-- Test fully: every simulation suite (`npm test`) and the Obsidian tests, on
-  the oldest supported version and the latest, for each change. CI keeps only a
-  few screenshots.
+- Test lightly, the author wants it quick: before pushing, run the simulation
+  suites the change touches (`node tests/run.js qol album`), and an Obsidian
+  test only for what can't be checked otherwise — just the tests for it
+  (`--mochaOpts.grep`), on the latest version. CI runs everything on both
+  versions after the push; fix what it finds. CI keeps only a few screenshots.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
 - CI results (summary, test output, a few screenshots from the latest real

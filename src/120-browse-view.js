@@ -951,9 +951,14 @@ class BrowseView extends ItemView {
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
+    // The cover's own colours, blurred, behind the header — as the
+    // reference tints an album's page with its artwork.
+    const glow = head.createDiv({ cls: 'dr-detail-glow' });
     const art = head.createDiv({ cls: 'dr-detail-art' });
-    if (folder) drawFolderArt(this.plugin, art, folder);
-    else this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
+    [glow, art].forEach((el) => {
+      if (folder) drawFolderArt(this.plugin, el, folder);
+      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
+    });
     if (spec.onArtMenu) {
       onContextMenu(art, (evt) => spec.onArtMenu(evt));
     }

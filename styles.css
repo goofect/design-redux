@@ -12,9 +12,9 @@ settings:
     -
         id: dr-cover-radius
         title: Cover corners
-        description: How rounded album and note covers are.
+        description: How rounded album and note covers are. Unset follows your theme.
         type: variable-number-slider
-        default: 6
+        default: 8
         min: 0
         max: 40
         step: 1
@@ -34,11 +34,16 @@ settings:
         title: Album cover size
         description: The large cover at the top of an album.
         type: variable-number-slider
-        default: 220
+        default: 300
         min: 160
         max: 440
         step: 10
         format: px
+    -
+        id: dr-flat-covers
+        title: Flat covers
+        description: No shadow under covers.
+        type: class-toggle
     -
         id: dr-strip-heading
         title: Context strip
@@ -55,6 +60,11 @@ settings:
         max: 40
         step: 1
         format: px
+    -
+        id: dr-strip-flat
+        title: Flat strip
+        description: No shadow under the strip.
+        type: class-toggle
 
 */
 
@@ -64,26 +74,24 @@ settings:
  * Obsidian's own editor, hosted as-is, so app.css and the active theme
  * render them exactly as they render the native block.
  *
- * The look is a quiet one: content first, chrome only where it's
- * needed. Surfaces are flat, edged with a hairline rather than lifted
- * by a shadow; one small radius; icons in the muted text colour; the
- * accent once on a page, on the button that matters; type in the
- * theme's own face, at calm weights. The tokens below hold it together.
+ * The browsing screens take after a music library: covers with depth,
+ * the album's colours behind its page, the accent on icons and actions,
+ * bold titles. Lists, windows and settings stay quiet — hairlines, a
+ * soft band under the pointer, controls shown where they're wanted. The
+ * tokens below are what the quiet parts share.
  */
 
 /* Shared --------------------------------------------------------------- */
 
 body {
-  /* One radius for rows, buttons and tiles; covers have their own,
-     which Style Settings can change. */
+  /* Rows and buttons in lists and windows. */
   --dr-r: 6px;
-  --dr-cover-r: var(--dr-cover-radius, 6px);
-  /* The hairline that edges covers and divides lists. */
+  /* The hairline that divides lists and edges windows. */
   --dr-line: var(--background-modifier-border);
   /* A row under the pointer, and one that's chosen or pressed. */
   --dr-hover: color-mix(in srgb, var(--text-normal) 5%, transparent);
   --dr-press: color-mix(in srgb, var(--text-normal) 9%, transparent);
-  /* Floating things — the strip, popups — over the page. */
+  /* Floating things — popups, suggestions — over the page. */
   --dr-float-bg: color-mix(in srgb, var(--background-primary) 90%, transparent);
   --dr-float-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
 }
@@ -280,7 +288,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 }
 
 .dr-props-popup .dr-rows .dr-row + .dr-row {
-  border-top: 1px solid var(--dr-line);
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 /* -- grip and remove ---------------------------------------------------
@@ -874,16 +882,15 @@ body.is-mobile .dr-props-popup .dr-row-remove {
  */
 
 .dr-browse .view-content {
-  padding: 14px 32px 40px;
+  padding: 16px 20px 40px;
   overflow-y: auto;
 }
 
-/* Along the top: plain icons, the screen's name, a quiet field. */
 .dr-detail-bar {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 26px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 .dr-browse-up {
@@ -891,17 +898,18 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--dr-r);
-  color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
   cursor: pointer;
 }
 
 @media (any-hover: hover) {
   .dr-browse-up:hover {
-    background-color: var(--dr-hover);
-    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
   }
 }
 
@@ -915,10 +923,11 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  padding: 4px 10px;
-  min-width: 200px;
-  background-color: var(--dr-hover);
-  border-radius: var(--dr-r);
+  padding: 5px 12px;
+  min-width: 220px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 100px;
 }
 
 .dr-browse-search-icon {
@@ -952,22 +961,60 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 .dr-detail {
   position: relative;
+  isolation: isolate;
   display: flex;
   align-items: flex-end;
-  gap: 28px;
-  margin-bottom: 34px;
+  gap: 30px;
+  margin-bottom: 30px;
+}
+
+/* The artwork again, blurred to its colours and faded out downwards,
+   behind the header and the bar above it: the page takes on the album's
+   colour, as the reference's does. */
+.dr-detail-glow {
+  position: absolute;
+  z-index: -1;
+  top: -90px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  overflow: hidden;
+  opacity: 0.45;
+  filter: blur(60px) saturate(1.5);
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  pointer-events: none;
+}
+
+.dr-detail-glow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-detail-glow .dr-card-glyph,
+.dr-detail-glow .dr-gen-initials {
+  display: none;
+}
+
+/* A plain grey stand-in gives the page no colour to take on. */
+.dr-detail-glow.is-blank:not(.is-hued) {
+  display: none;
+}
+
+.theme-dark .dr-detail-glow {
+  opacity: 0.55;
 }
 
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 220px);
-  height: var(--dr-album-art-size, 220px);
+  width: var(--dr-album-art-size, 260px);
+  height: var(--dr-album-art-size, 260px);
   overflow: hidden;
-  border-radius: var(--dr-cover-r);
+  border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
   background-color: var(--background-secondary);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), 0 14px 34px rgba(0, 0, 0, 0.24);
 }
 
 .dr-detail-art img {
@@ -981,7 +1028,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
 }
 
 .dr-detail-info {
@@ -993,20 +1040,21 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-detail-title {
-  font-size: 2.1em;
-  font-weight: var(--font-semibold, 600);
-  letter-spacing: -0.015em;
+  font-size: 2.5em;
+  font-weight: var(--font-bold, 700);
+  letter-spacing: -0.02em;
   line-height: 1.1;
   color: var(--text-normal);
 }
 
-/* The line under the title — and, where it names the folder this one is
-   in, a way there. */
+/* The one accented line, as the artist name is in the reference — and,
+   where it names the folder this one is in, a way there. */
 
 .dr-detail-sub {
   margin-top: 4px;
-  font-size: 1em;
-  color: var(--text-muted);
+  font-size: 1.35em;
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-accent);
 }
 
 .dr-detail-sub.is-link {
@@ -1022,35 +1070,37 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 @media (any-hover: hover) {
   .dr-detail-sub.is-link:hover {
-    color: var(--text-normal);
     text-decoration: underline;
     text-underline-offset: 3px;
   }
 }
 
+/* Quiet and small, as the genre and year are under an album's title. */
 .dr-detail-meta {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: var(--font-ui-small);
-  color: var(--text-faint);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-muted);
 }
 
-/* The actions: one filled — Open, or Done — the rest plain words. */
 .dr-detail-actions {
   display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 18px;
+  gap: 12px;
+  margin-top: 22px;
 }
 
 .dr-detail-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--dr-r);
-  color: var(--text-muted);
+  gap: 7px;
+  min-width: 128px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--text-normal) 7%, transparent);
+  color: var(--text-accent);
   font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
   cursor: pointer;
   transition: transform 80ms ease;
 }
@@ -1060,29 +1110,14 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-detail-action:focus-visible {
-  background-color: var(--dr-hover);
-  color: var(--text-normal);
+  background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-detail-action:hover {
-    background-color: var(--dr-hover);
-    color: var(--text-normal);
-  }
-}
-
-.dr-detail-action.is-primary {
-  margin-right: 8px;
-  padding: 6px 16px;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent, #fff);
-}
-
-@media (any-hover: hover) {
-  .dr-detail-action.is-primary:hover {
-    background-color: var(--interactive-accent-hover, var(--interactive-accent));
-    color: var(--text-on-accent, #fff);
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    outline: none;
   }
 }
 
@@ -1091,8 +1126,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-detail-action-icon .svg-icon {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 
 /* -- the list -----------------------------------------------------------
@@ -1143,6 +1178,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   white-space: nowrap;
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
 }
 
 .dr-track-sub {
@@ -1241,50 +1277,75 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-split-list {
-  flex: 0 0 300px;
+  flex: 0 0 330px;
   min-width: 0;
   max-height: calc(100vh - 160px);
   overflow-y: auto;
   padding-right: 18px;
-  border-right: 1px solid var(--dr-line);
+  border-right: 1px solid var(--background-modifier-border);
 }
 
 .dr-split-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 8px;
-  border-radius: var(--dr-r);
+  gap: 13px;
+  padding: 9px 10px;
+  border-radius: var(--radius-m, 8px);
   cursor: pointer;
 }
 
+/* Indented past the thumbnail, as the artist list's dividers are. */
+
+.dr-split-row + .dr-split-row::before {
+  content: "";
+  position: absolute;
+  left: 69px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+.dr-split-row.is-selected::before,
+.dr-split-row.is-selected + .dr-split-row::before {
+  opacity: 0;
+}
+
+@media (any-hover: hover) {
+  .dr-split-row:hover::before,
+  .dr-split-row:hover + .dr-split-row::before {
+    opacity: 0;
+  }
+}
+
 .dr-split-row:focus-visible {
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-split-row:hover {
-    background-color: var(--dr-hover);
+    background-color: var(--background-modifier-hover);
     outline: none;
   }
 }
 
-/* The selection: a soft grey block, as in the sidebar. */
+/* The selection is the one filled row, as in the reference. */
 
 .dr-split-row.is-selected {
-  background-color: var(--dr-press);
-  color: var(--text-normal);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
 }
 
 .dr-split-thumb {
   position: relative;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
   overflow: hidden;
-  border-radius: var(--dr-r);
+  border-radius: 100px;
+  background-color: var(--background-secondary);
 }
 
 .dr-split-thumb img {
@@ -1298,11 +1359,12 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: var(--background-modifier-hover);
 }
 
 .dr-split-thumb .dr-card-glyph .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 .dr-split-name {
@@ -1311,7 +1373,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-medium);
 }
 
 .dr-split-detail {
@@ -1327,7 +1389,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 .dr-album + .dr-album {
   margin-top: 34px;
   padding-top: 26px;
-  border-top: 1px solid var(--dr-line);
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 .dr-album-head {
@@ -1343,19 +1405,19 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-album-name {
-  font-size: 1.15em;
-  font-weight: var(--font-semibold, 600);
+  font-size: 1.25em;
+  font-weight: var(--font-bold, 700);
   color: var(--text-normal);
 }
 
 .dr-album-name.is-primary {
-  font-size: 1.6em;
+  font-size: 1.7em;
 }
 
 .dr-album-meta {
   margin-top: 2px;
   font-size: var(--font-ui-small);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-album-body {
@@ -1367,13 +1429,12 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 .dr-album-art {
   position: relative;
   flex: 0 0 auto;
-  width: 160px;
-  height: 160px;
+  width: 168px;
+  height: 168px;
   overflow: hidden;
-  border-radius: var(--dr-cover-r);
+  border-radius: var(--dr-cover-radius, var(--radius-m, 8px));
   background-color: var(--background-secondary);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .dr-album-art img {
@@ -1387,12 +1448,13 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
 }
 
 .dr-album-art .dr-card-glyph .svg-icon {
-  width: 30px;
-  height: 30px;
+  width: 44px;
+  height: 44px;
 }
 
 .dr-album-body .dr-tracks {
@@ -1406,30 +1468,29 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 .dr-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--dr-tile-size, 170px), 1fr));
-  gap: 28px 22px;
+  gap: 22px 20px;
   margin-bottom: 8px;
 }
 
 .dr-card {
   cursor: pointer;
-  border-radius: var(--dr-r);
+  border-radius: var(--radius-s, 4px);
 }
 
 .dr-card-art {
   position: relative;
   aspect-ratio: 1;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   overflow: hidden;
-  border-radius: var(--dr-cover-r);
+  border-radius: var(--dr-cover-radius, var(--radius-m, 8px));
   background-color: var(--background-secondary);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
-  transition: filter 120ms ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+  transition: transform 120ms ease;
 }
 
 @media (any-hover: hover) {
   .dr-card:hover .dr-card-art {
-    filter: brightness(1.06);
+    transform: translateY(-2px);
   }
 }
 
@@ -1438,8 +1499,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-card:focus-visible .dr-card-art {
-  outline: 2px solid var(--background-modifier-border-focus);
-  outline-offset: 0;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
 .dr-card-art img {
@@ -1453,7 +1513,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
 }
 
 .dr-card-glyph {
@@ -1462,14 +1523,13 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-card-glyph .svg-icon {
-  width: 26px;
-  height: 26px;
-  stroke-width: 1.5;
+  width: 34px;
+  height: 34px;
 }
 
 .dr-detail-art .dr-card-glyph .svg-icon {
-  width: 40px;
-  height: 40px;
+  width: 58px;
+  height: 58px;
 }
 
 .dr-card-title {
@@ -1486,22 +1546,22 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 .dr-card-sub {
   margin-top: 2px;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* A screen's name. */
+/* A screen's name, large and heavy, as the reference names its pages. */
 .dr-browse-title {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1.6em;
-  font-weight: var(--font-semibold, 600);
-  letter-spacing: -0.01em;
+  font-size: 1.9em;
+  font-weight: var(--font-bold, 700);
+  letter-spacing: -0.02em;
   line-height: 1.2;
   color: var(--text-normal);
 }
@@ -1509,6 +1569,9 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 @media (prefers-reduced-motion: reduce) {
   .dr-card-art {
     transition: none;
+  }
+  .dr-card:hover .dr-card-art {
+    transform: none;
   }
 }
 
@@ -1541,7 +1604,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-more-label {
-  color: var(--text-muted);
+  color: var(--text-accent);
   font-size: var(--font-ui-small);
 }
 
@@ -1698,9 +1761,9 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 /* Filter button -----------------------------------------------------------
  *
- * A plain icon beside the search field. It's marked while a sort or
- * folder filter is in effect, so a filtered screen never looks like the
- * whole of something.
+ * Round, beside the search field, as in the reference. It takes the
+ * accent when a sort or folder filter is in effect, so a filtered screen
+ * never looks like the whole of something.
  */
 
 .dr-filter-btn {
@@ -1708,15 +1771,13 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   margin-left: auto;
   padding: 0;
-  border: none;
-  border-radius: var(--dr-r);
-  background-color: transparent;
-  box-shadow: none;
-  color: var(--text-muted);
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
 }
 
 .dr-filter-btn + .dr-browse-search {
@@ -1724,8 +1785,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-filter-btn.is-active {
-  background-color: var(--dr-press);
   color: var(--text-accent);
+  border-color: var(--text-accent);
 }
 
 .dr-filter-btn .svg-icon {
@@ -1956,34 +2017,35 @@ body.dr-single-area .workspace-split.mod-root > .workspace-tabs > .workspace-tab
    used to show it is gone. */
 
 body.dr-single-area .workspace-split.mod-root .view-header {
-  border-bottom: 1px solid var(--dr-line);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* The panel's title block --------------------------------------------------
  *
- * The note's name, with one property raised beneath it — the shape an
- * album page opens with, so the panel says what it's about before it
- * lists anything.
+ * The note's name, with one property raised beneath it in the accent —
+ * the shape an album page opens with, so the panel says what it's about
+ * before it lists anything.
  */
 
 .dr-props-head {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 0 2px 11px;
+  gap: 12px;
+  padding: 0 2px 12px;
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--dr-line);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 /* The cover, as an info sheet shows the artwork beside the title. */
 .dr-props-art {
   position: relative;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 40px;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
   overflow: hidden;
-  border-radius: 4px;
-  background-color: var(--dr-hover);
+  border-radius: 8px;
+  background-color: var(--background-modifier-hover);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .dr-props-art img {
@@ -1997,11 +2059,12 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: none;
 }
 
 .dr-props-art .dr-card-glyph .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
 }
 
 .dr-props-info {
@@ -2015,9 +2078,9 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: var(--font-ui-medium);
-  font-weight: var(--font-semibold, 600);
-  line-height: 1.25;
+  font-size: 1.2em;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.2;
   color: var(--text-normal);
 }
 
@@ -2027,7 +2090,7 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-props-meta:empty {
@@ -2037,7 +2100,8 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 .dr-props-lead {
   margin-top: 1px;
   font-size: var(--font-ui-small);
-  color: var(--text-muted);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2045,28 +2109,29 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 
 /* Context strip ------------------------------------------------------------
  *
- * A small floating bar centred over the content, clear of the status
- * bar, edged with a hairline. It is the one thing on screen that doesn't
- * change as you move, so it stays quiet: one line of text, everything
- * else muted until pointed at.
+ * A floating bar centred over the content, clear of the status bar. It
+ * is the one thing on screen that doesn't change as you move, so it
+ * stays quiet: one line of text, one accent, everything else muted
+ * until pointed at.
  */
 
 .dr-strip {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: 26px;
   transform: translateX(-50%);
   z-index: calc(var(--layer-menu, 65) - 20);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
   max-width: min(680px, 72vw);
-  padding: 5px 8px;
-  border-radius: 10px;
-  background-color: var(--dr-float-bg);
+  padding: 8px 14px;
+  border-radius: 100px;
+  background-color: var(--glass-solid, var(--background-secondary));
   backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
   -webkit-backdrop-filter: blur(var(--dr-strip-blur, var(--glass-blur, 14px)));
-  border: 1px solid var(--dr-line);
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
 }
 
 .dr-strip.is-empty {
@@ -2085,16 +2150,15 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  border-radius: var(--dr-r);
-  color: var(--text-faint);
+  border-radius: 100px;
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
   .dr-strip-btn:hover {
-    background-color: var(--dr-hover);
     color: var(--text-normal);
   }
 }
@@ -2109,8 +2173,8 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 }
 
 .dr-strip-btn .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* The middle: « the note » — back and on through its album either side,
@@ -2125,46 +2189,46 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 
 .dr-strip-skip {
   flex: 0 0 auto;
-  color: var(--text-muted);
+  color: var(--text-normal);
 }
 
 .dr-strip-skip .svg-icon {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2;
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.25;
 }
 
 /* The note itself, as the now-playing block. */
 .dr-strip-now {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 2px 8px 2px 4px;
-  border-radius: var(--dr-r);
+  padding: 2px 8px;
+  border-radius: 100px;
   cursor: pointer;
 }
 
 .dr-strip-now:focus-visible {
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-strip-now:hover {
-    background-color: var(--dr-hover);
+    background-color: var(--background-modifier-hover);
     outline: none;
   }
 }
 
 .dr-strip-art {
   position: relative;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: var(--radius-s, 4px);
   background-color: var(--background-secondary);
 }
 
@@ -2179,12 +2243,12 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
 }
 
 .dr-strip-art .dr-card-glyph .svg-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 .dr-strip-text {
@@ -2201,12 +2265,13 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 
 .dr-strip-title {
   font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
   color: var(--text-normal);
 }
 
 .dr-strip-sub {
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 /* Room for it, so the last line of a note isn't underneath. */
@@ -2283,24 +2348,22 @@ body.dr-mentions-active
   align-items: center;
   gap: 6px;
   margin-left: auto;
-  padding: 4px 10px;
-  border-radius: var(--dr-r);
-  background-color: var(--dr-hover);
-  color: var(--text-muted);
+  padding: 4px 12px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-accent);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
 }
 
 .dr-search-full:focus-visible {
-  background-color: var(--dr-press);
-  color: var(--text-normal);
+  background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-search-full:hover {
-    background-color: var(--dr-press);
-    color: var(--text-normal);
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
     outline: none;
   }
 }
@@ -2316,8 +2379,8 @@ body.dr-mentions-active
 
 /* Home ------------------------------------------------------------------------
  *
- * A row of wide cards first — where you were, the home note, one to come
- * back to — each saying why it's there above what it is. Then titled
+ * Large cards first — where you were, what's next, the home note, one to
+ * come back to — each under a caption saying why it's there. Then titled
  * shelves that scroll sideways, the heading doubling as the way through
  * to all of whatever it holds, with arrows beside it on a desktop.
  */
@@ -2325,12 +2388,14 @@ body.dr-mentions-active
 .dr-picks {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(250px, 1fr);
-  gap: 12px;
-  margin: 0 0 4px;
+  grid-auto-columns: minmax(190px, 230px);
+  gap: 20px;
+  margin: 4px -4px 8px;
+  padding: 4px 4px 10px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 4px;
   scrollbar-width: none;
 }
 
@@ -2339,37 +2404,66 @@ body.dr-mentions-active
 }
 
 .dr-pick {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-  padding: 10px;
-  border-radius: var(--dr-r);
-  background-color: var(--dr-hover);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
   scroll-snap-align: start;
   cursor: pointer;
+  outline: none;
 }
 
-.dr-pick:focus-visible {
-  outline: 2px solid var(--background-modifier-border-focus);
+.dr-pick-caption {
+  margin: 0 2px 6px;
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
 }
 
-@media (any-hover: hover) {
-  .dr-pick:hover {
-    background-color: var(--dr-press);
-  }
+.dr-pick-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: var(--background-secondary);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+  transition: transform 120ms ease;
+}
+
+.dr-pick:focus-visible .dr-pick-body {
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* The cover again, blurred and darkened behind everything: the band under
+   the title takes on the cover's colours without anything measuring them. */
+.dr-pick-glow {
+  position: absolute;
+  inset: -30px;
+  display: none;
+  filter: blur(30px) saturate(1.5) brightness(0.72);
+}
+
+.dr-pick-body.is-lit .dr-pick-glow {
+  display: block;
+}
+
+/* A soft placeholder is pale; darkened further so white type stays readable on it. */
+.dr-pick-glow.is-blank {
+  filter: blur(30px) saturate(1.8) brightness(0.5);
+}
+
+.dr-pick-glow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-pick-glow .dr-gen-initials,
+.dr-pick-glow .dr-card-glyph {
+  display: none;
 }
 
 .dr-pick-art {
   position: relative;
-  flex: 0 0 64px;
-  width: 64px;
-  height: 64px;
+  aspect-ratio: 1;
   overflow: hidden;
-  border-radius: 4px;
-  background-color: var(--dr-hover);
 }
 
 .dr-pick-art img {
@@ -2383,49 +2477,60 @@ body.dr-mentions-active
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: var(--background-modifier-hover);
 }
 
 .dr-pick-art .dr-card-glyph .svg-icon {
-  width: 22px;
-  height: 22px;
+  width: 52px;
+  height: 52px;
 }
 
 .dr-pick-text {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.dr-pick-caption,
-.dr-pick-title,
-.dr-pick-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-pick-caption {
-  margin-bottom: 2px;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  position: relative;
+  min-height: 62px;
+  padding: 10px 12px 12px;
 }
 
 .dr-pick-title {
-  font-size: var(--font-ui-medium);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
   line-height: 1.3;
   color: var(--text-normal);
 }
 
 .dr-pick-sub {
-  margin-top: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
+}
+
+.dr-pick-body.is-lit .dr-pick-title {
+  color: #fff;
+}
+
+.dr-pick-body.is-lit .dr-pick-sub {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+@media (any-hover: hover) {
+  .dr-pick:hover .dr-pick-body {
+    transform: translateY(-2px);
+  }
 }
 
 .dr-shelf-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 34px 0 12px;
+  margin: 22px 0 10px;
 }
 
 :is(.dr-detail-bar, .dr-filter-chips) + .dr-shelf-head {
@@ -2445,19 +2550,19 @@ body.dr-mentions-active
 }
 
 .dr-shelf-label.is-linked:focus-visible {
-  background-color: var(--dr-hover);
+  background-color: var(--background-modifier-hover);
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-shelf-label.is-linked:hover {
-    background-color: var(--dr-hover);
+    background-color: var(--background-modifier-hover);
     outline: none;
   }
 }
 
 .dr-shelf-title {
-  font-size: var(--font-ui-medium);
+  font-size: var(--font-ui-large);
   font-weight: var(--font-semibold, 600);
   color: var(--text-normal);
 }
@@ -2469,13 +2574,13 @@ body.dr-mentions-active
 
 @media (any-hover: hover) {
   .dr-shelf-label.is-linked:hover .dr-shelf-more {
-    color: var(--text-normal);
+    color: var(--text-accent);
   }
 }
 
 .dr-shelf-more .svg-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Paging arrows: only where there's more than fits, and only for a
@@ -2497,7 +2602,7 @@ body.dr-mentions-active
   height: 28px;
   padding: 0;
   justify-content: center;
-  border-radius: var(--dr-r);
+  border-radius: 100px;
 }
 
 .dr-shelf-arrow.is-disabled {
@@ -2509,7 +2614,7 @@ body.dr-mentions-active
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--dr-tile-size, 170px);
-  gap: 22px;
+  gap: 20px;
   margin: 0 -4px 8px;
   padding: 4px 4px 8px;
   overflow-x: auto;
@@ -2525,6 +2630,15 @@ body.dr-mentions-active
 
 .dr-shelf-row > .dr-card {
   scroll-snap-align: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-pick-body {
+    transition: none;
+  }
+  .dr-pick:hover .dr-pick-body {
+    transform: none;
+  }
 }
 
 /* The status bar duplicates counts the strip and panel already carry. */
@@ -2547,14 +2661,14 @@ body.dr-single-area .status-bar {
 }
 
 .dr-search-section-title {
-  font-size: var(--font-ui-medium);
-  font-weight: var(--font-semibold, 600);
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-bold, 700);
   color: var(--text-normal);
 }
 
 .dr-search-clear {
   margin-left: auto;
-  color: var(--text-muted);
+  color: var(--text-accent);
   font-size: var(--font-ui-small);
   cursor: pointer;
 }
@@ -2583,22 +2697,22 @@ body.dr-single-area .status-bar {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px;
-  border-radius: var(--dr-r);
-  background-color: var(--dr-hover);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
+  padding: 10px 12px;
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
   cursor: pointer;
 }
 
 .dr-recent:focus-visible {
-  background-color: var(--dr-press);
-  outline: 2px solid var(--background-modifier-border-focus);
+  background-color: var(--background-modifier-hover);
+  outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-recent:hover {
-    background-color: var(--dr-press);
+    background-color: var(--background-modifier-hover);
+    outline: none;
   }
 }
 
@@ -2606,17 +2720,17 @@ body.dr-single-area .status-bar {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  border-radius: 4px;
-  background-color: var(--dr-hover);
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-modifier-hover);
   color: var(--text-faint);
 }
 
 .dr-recent-art .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .dr-recent-text {
@@ -2632,25 +2746,27 @@ body.dr-single-area .status-bar {
 
 .dr-recent-title {
   font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
   color: var(--text-normal);
 }
 
 .dr-recent-sub {
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 /* Browse categories --------------------------------------------------------
  *
- * Named, not painted: a plain tile with a small square in a muted colour
- * derived from the name — so it stays with it — or, where a note under
- * that value carries a cover, that cover.
+ * Landscape tiles with the name over the artwork. A vault has no genre
+ * art, so the colour is derived from the name and stays with it; where
+ * a note under that value carries a cover, it sits behind, dimmed
+ * enough to keep the name readable.
  */
 
 .dr-cat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
   margin-bottom: 24px;
 }
 
@@ -2658,49 +2774,39 @@ body.dr-single-area .status-bar {
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  min-height: 64px;
-  padding: 12px 14px 12px 70px;
+  justify-content: flex-end;
+  aspect-ratio: 16 / 9;
+  padding: 12px 14px;
   overflow: hidden;
-  border-radius: var(--dr-r);
-  background-color: var(--dr-hover);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
+  border-radius: var(--radius-m, 8px);
+  background-image: linear-gradient(
+    150deg,
+    hsl(var(--dr-cat-hue, 210) 58% 42%),
+    hsl(var(--dr-cat-hue, 210) 52% 26%)
+  );
   cursor: pointer;
 }
 
-.dr-cat::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  bottom: 12px;
-  aspect-ratio: 1;
-  border-radius: 4px;
-  background-color: hsl(var(--dr-cat-hue, 210) 22% 38%);
-}
-
 .dr-cat:focus-visible {
-  background-color: var(--dr-press);
-  outline: 2px solid var(--background-modifier-border-focus);
+  filter: brightness(1.08);
+  outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-cat:hover {
-    background-color: var(--dr-press);
+    filter: brightness(1.08);
+    outline: none;
   }
 }
 
 .dr-cat-art {
   position: absolute;
-  z-index: 1;
-  left: 12px;
-  top: 12px;
-  width: auto;
-  height: calc(100% - 24px);
-  aspect-ratio: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border-radius: 4px;
+  opacity: 0.4;
+  mix-blend-mode: luminosity;
 }
 
 .dr-cat-name,
@@ -2709,17 +2815,18 @@ body.dr-single-area .status-bar {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 .dr-cat-name {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium, 500);
-  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-bold, 700);
 }
 
 .dr-cat-count {
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  opacity: 0.85;
 }
 
 /* One content area, completed ---------------------------------------------
@@ -2772,16 +2879,15 @@ body.dr-single-area
  */
 
 .dr-library .view-content {
-  padding: 4px 8px 12px;
+  padding: 6px 8px 12px;
 }
 
-/* Section names lined up with the labels below them, quiet. */
 .dr-lib-group {
-  margin-top: 22px;
-  padding: 0 10px 6px 30px;
-  color: var(--text-faint);
+  margin-top: 18px;
+  padding: 0 10px 4px;
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal, 400);
+  font-weight: var(--font-semibold, 600);
 }
 
 .dr-lib-group:first-child {
@@ -2798,31 +2904,27 @@ body.dr-single-area
   display: flex;
   align-items: center;
   gap: 7px;
-  min-height: 30px;
+  min-height: 32px;
   padding: 0 10px 0 4px;
-  border-radius: var(--dr-r);
-  color: var(--text-muted);
+  border-radius: var(--radius-m, 8px);
+  color: var(--text-normal);
   font-size: var(--font-ui-small);
   cursor: pointer;
   user-select: none;
 }
 
-/* Labels and icons muted; where you are, a soft grey block with them at
-   full strength. */
+/* As the reference's sidebar: every icon in the accent, the labels
+   plain, and where you are a soft grey block with its label a touch
+   heavier. */
 @media (any-hover: hover) {
   .dr-lib-row:hover {
-    background-color: var(--dr-hover);
-    color: var(--text-normal);
+    background-color: color-mix(in srgb, var(--text-normal) 5%, transparent);
   }
 }
 
 .dr-lib-row.is-active {
-  background-color: var(--dr-press);
-  color: var(--text-normal);
-}
-
-.dr-lib-row.is-active .dr-lib-icon {
-  color: var(--text-normal);
+  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
+  font-weight: var(--font-semibold, 600);
 }
 
 .dr-lib-row:focus-visible {
@@ -2868,22 +2970,19 @@ body.dr-single-area
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  color: var(--text-faint);
+  color: var(--text-accent);
 }
 
 .dr-lib-icon .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
 }
 
 /* Artwork, as a playlist with a cover shows it. */
 .dr-lib-icon.has-art {
-  width: 18px;
-  height: 18px;
-  margin: 0 1px;
   overflow: hidden;
-  border-radius: 3px;
-  background-color: var(--dr-hover);
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-modifier-hover);
 }
 
 .dr-lib-icon.has-art img {
@@ -2903,8 +3002,8 @@ body.dr-single-area
 }
 
 .dr-lib-icon .dr-card-glyph .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
 }
 
 .dr-lib-label {
@@ -2923,9 +3022,20 @@ body.dr-single-area
 
 /* The panel -----------------------------------------------------------------
  *
- * While the library is the view showing in the left sidebar, the sidebar
- * takes its plain background and the vault row becomes the account row.
+ * A floating rounded card, as the reference's sidebar is, applied only
+ * while the library is the view showing in the left sidebar. Collapsed,
+ * it takes no room at all rather than leaving a sliver of border.
  */
+
+body:not(.dr-left-collapsed)
+  .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
+  margin: 8px 0 8px 8px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-xl, 12px);
+  background-color: var(--background-secondary);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
 
 .dr-apple-sidebar .workspace-tab-header-container {
   border-bottom: none;
@@ -2950,6 +3060,7 @@ body.dr-single-area
   gap: 10px;
   color: var(--text-normal);
   font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
 }
 
 .dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial]::before {
@@ -2957,14 +3068,18 @@ body.dr-single-area
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
   border-radius: 100px;
-  background-color: var(--dr-press);
-  color: var(--text-muted);
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--interactive-accent) 60%, white),
+    var(--interactive-accent)
+  );
+  color: var(--text-on-accent);
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-semibold, 600);
 }
 
 .dr-apple-sidebar
@@ -3145,10 +3260,12 @@ body.is-phone .dr-detail-bar {
 body.is-phone .dr-browse-title {
   flex: 1 1 auto;
   min-width: 0;
+  font-size: 1.5em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 1.5em;
+  font-size: 1.7em;
+  font-weight: var(--font-bold, 700);
 }
 
 body.is-phone .dr-browse-search,
@@ -3203,22 +3320,14 @@ body.is-phone .dr-detail-meta {
 
 body.is-phone .dr-detail-actions {
   width: 100%;
-  gap: 10px;
+  gap: 12px;
   margin-top: 18px;
 }
 
-/* Side by side, each a full button: on a phone a plain word is too
-   small a thing to aim at. */
 body.is-phone .dr-detail-action {
   flex: 1 1 0;
   min-width: 0;
-  margin: 0;
-  padding: 11px;
-  background-color: var(--dr-hover);
-}
-
-body.is-phone .dr-detail-action.is-primary {
-  background-color: var(--interactive-accent);
+  padding: 12px;
 }
 
 body.is-phone .dr-track {
@@ -3268,20 +3377,20 @@ body.is-phone .dr-shelf-row {
 }
 
 body.is-phone .dr-picks {
-  grid-auto-columns: calc(100% - 40px);
-  gap: 10px;
+  grid-auto-columns: calc((100% - 32px) / 1.6);
+  gap: 14px;
   margin-inline: -16px;
-  padding: 1px 16px 4px;
+  padding: 4px 16px 10px;
   scroll-padding-inline: 16px;
 }
 
-body.is-mobile .dr-pick:active {
+body.is-mobile .dr-pick:active .dr-pick-body {
   transform: scale(0.98);
 }
 
 body.is-phone .dr-cat-grid {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: 12px;
 }
 
 /* -- the notes table: name and date ------------------------------------------ */
@@ -3395,7 +3504,7 @@ body.is-phone .dr-strip-art {
   flex-basis: 40px;
   width: 40px;
   height: 40px;
-  border-radius: var(--dr-r);
+  border-radius: 6px;
 }
 
 body.is-phone .dr-strip-btn {
@@ -3416,7 +3525,7 @@ body.is-phone .dr-props-popup {
   min-width: 0;
   max-width: none;
   max-height: 60vh;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .dr-settings-note {
@@ -3439,8 +3548,7 @@ body.is-phone .dr-recent {
   position: relative;
   padding: 8px 4px;
   border: none;
-  outline: none;
-  border-radius: var(--dr-r);
+  border-radius: var(--radius-m, 8px);
   background-color: transparent;
 }
 
@@ -3451,7 +3559,7 @@ body.is-phone .dr-recent + .dr-recent::before {
   right: 0;
   top: 0;
   height: 1px;
-  background-color: var(--dr-line);
+  background-color: var(--background-modifier-border);
 }
 
 body.is-phone .dr-album-art.is-blank {
@@ -3561,7 +3669,7 @@ body.is-phone .dr-td-title .dr-td-more {
 }
 
 .dr-gp-rule + .dr-gp-rule {
-  border-top: 1px solid var(--dr-line);
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 .dr-gp-rule.is-valueless {
@@ -3663,18 +3771,19 @@ body.is-phone .dr-td-title .dr-td-more {
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  border-radius: var(--dr-r);
-  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  border-radius: 100px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium, 500);
 }
 
 .dr-chip-label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 3px 4px 3px 9px;
-  border-radius: var(--dr-r) 0 0 var(--dr-r);
+  padding: 3px 4px 3px 11px;
+  border-radius: 100px 0 0 100px;
   cursor: pointer;
 }
 
@@ -3682,8 +3791,8 @@ body.is-phone .dr-td-title .dr-td-more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px 7px 3px 4px;
-  border-radius: 0 var(--dr-r) var(--dr-r) 0;
+  padding: 3px 8px 3px 4px;
+  border-radius: 0 100px 100px 0;
   cursor: pointer;
   opacity: 0.75;
 }
@@ -3955,7 +4064,7 @@ body.is-mobile .dr-chip-clear {
   gap: 6px;
   margin-top: 18px;
   padding-top: 14px;
-  border-top: 1px solid var(--dr-line);
+  border-top: 1px solid var(--background-modifier-border);
   font-size: var(--font-ui-small);
   line-height: 1.45;
 }
@@ -4144,6 +4253,10 @@ body.is-mobile .dr-bulk-chip {
   -webkit-user-select: none;
 }
 
+.dr-detail-art.is-generated {
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
 /* A colour of its own, or one for all: lighter to darker in that colour,
  * rather than the drift between two hues a name gets. */
 .is-generated.is-tinted {
@@ -4186,9 +4299,8 @@ body.is-mobile .dr-bulk-chip {
   width: 76px;
   height: 76px;
   overflow: hidden;
-  border-radius: var(--dr-r);
-  outline: 1px solid var(--dr-line);
-  outline-offset: -1px;
+  border-radius: var(--radius-m, 8px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .dr-color-text {
@@ -4367,8 +4479,8 @@ body.is-mobile .dr-bulk-chip {
   height: auto;
   margin: -4px 0 0 -8px;
   padding: 2px 8px;
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-r);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
   background-color: var(--background-modifier-form-field, transparent);
   font-family: inherit;
 }
@@ -4398,6 +4510,11 @@ body.is-mobile .dr-bulk-chip {
 .dr-art-edit .svg-icon {
   width: 18px;
   height: 18px;
+}
+
+.dr-detail-action.is-primary {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
 }
 
 .dr-track.is-editing {
@@ -4514,8 +4631,8 @@ body.is-mobile .dr-bulk-chip {
   flex-direction: column;
   max-height: 260px;
   overflow-y: auto;
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-r);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
 }
 
 .dr-bulk-check-row {
@@ -4528,7 +4645,7 @@ body.is-mobile .dr-bulk-chip {
 }
 
 .dr-bulk-check-row + .dr-bulk-check-row {
-  border-top: 1px solid var(--dr-line);
+  border-top: 1px solid var(--background-modifier-border);
 }
 
 .dr-bulk-check-icon {
@@ -4607,7 +4724,7 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 
 /* Canvas legend -------------------------------------------------------------------
  *
- * A small card in the canvas's top-left corner: each colour the cards
+ * A glass card in the canvas's top-left corner: each colour the cards
  * use, a name typed beside it, and how many cards have it. Picking one
  * fades the rest of the canvas back.
  */
@@ -4872,6 +4989,18 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   font-size: var(--font-ui-smaller);
 }
 
+/* Style Settings switches: covers and the strip without their shadows. */
+body.dr-flat-covers .dr-card-art,
+body.dr-flat-covers .dr-album-art,
+body.dr-flat-covers .dr-detail-art,
+body.dr-flat-covers .dr-detail-art.is-generated {
+  box-shadow: none;
+}
+
+body.dr-strip-flat .dr-strip {
+  box-shadow: none;
+}
+
 /* The Properties window, tidied ------------------------------------------------
  *
  * One width for every tab, so switching doesn't make it jump; the tabs as
@@ -4916,23 +5045,23 @@ body.is-phone .dr-track.is-editing .dr-track-num {
  * 'Its name, set as a title': on a cover big enough to read, the note or
  * folder's name set at the top like a title page, with a short rule at
  * the foot; smaller ones keep the icon. 'The icon on a soft colour': a
- * glyph on a gentle gradient in a colour picked from the name. Then
- * buttons over a cover when it's pointed at, and an album's small print
- * under its last track.
+ * glyph on a gentle gradient in a colour picked from the name. The rest
+ * follows the reference: round buttons over a cover when it's pointed at,
+ * and an album's small print under its last track.
  */
 
 .dr-type-cover {
   display: none;
 }
 
-:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-color-preview).is-titled > .dr-type-cover {
+:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-type-cover {
   display: block;
   position: absolute;
   inset: 0;
   padding: 12px 13px;
 }
 
-:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-color-preview).is-titled > .dr-card-glyph {
+:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-card-glyph {
   display: none;
 }
 
@@ -4979,6 +5108,19 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   font-size: 18px;
 }
 
+.dr-pick-art .dr-type-cover {
+  padding: 16px 18px;
+}
+
+.dr-pick-art .dr-type-title {
+  font-size: 20px;
+}
+
+.dr-pick-art .dr-type-cover::after {
+  left: 18px;
+  bottom: 16px;
+}
+
 .dr-color-preview .dr-type-cover {
   padding: 8px 9px;
 }
@@ -5019,7 +5161,7 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   opacity: 0.75;
 }
 
-/* -- buttons on a tile's cover -- */
+/* -- round buttons on a tile's cover -- */
 
 .dr-card-buttons {
   position: absolute;
@@ -5035,10 +5177,10 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--dr-r);
-  background-color: rgba(20, 20, 20, 0.5);
+  width: 30px;
+  height: 30px;
+  border-radius: 100px;
+  background-color: rgba(20, 20, 20, 0.55);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: #fff;
@@ -5051,8 +5193,8 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 }
 
 .dr-card-button .svg-icon {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
 }
 
 @media (any-hover: hover) {
@@ -5062,15 +5204,15 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   }
 
   .dr-card-button:hover {
-    background-color: rgba(20, 20, 20, 0.75);
-    color: #fff;
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent, #fff);
   }
 
   .dr-card:hover .dr-card-art::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.25), transparent 50%);
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent 55%);
     pointer-events: none;
   }
 }
@@ -5085,8 +5227,8 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 /* -- an album's small print -- */
 
 .dr-album-foot {
-  margin: 18px 0 8px 42px;
-  color: var(--text-faint);
+  margin: 18px 0 8px 46px;
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1.6;
 }
@@ -5101,7 +5243,7 @@ body.is-phone .dr-album-foot {
   flex: 0 0 90px;
   justify-content: flex-end;
   text-align: right;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -5188,8 +5330,8 @@ body.is-phone .dr-td-length {
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: var(--dr-press);
-  color: var(--text-muted);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
   font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
 }
@@ -5231,32 +5373,22 @@ body.is-phone .dr-td-length {
 /* Editing properties ---------------------------------------------------------- */
 
 /* Edit and Done, in the bar beside Find: a word, as the album's are. */
-/* Edit, a plain word in the bar; Done, the one filled button. Written
-   under the bar, to outrank Obsidian's own button styles. */
-.dr-detail-bar .dr-bar-edit {
+.dr-bar-edit {
   flex: 0 0 auto;
   margin-left: auto;
-  height: 28px;
-  padding: 0 12px;
-  border: none;
-  border-radius: var(--dr-r);
-  background-color: transparent;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 100px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
   box-shadow: none;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-normal, 400);
+  color: var(--text-accent);
+  font-weight: var(--font-semibold, 600);
 }
 
-@media (any-hover: hover) {
-  .dr-detail-bar .dr-bar-edit:hover {
-    background-color: var(--dr-hover);
-    color: var(--text-normal);
-  }
-}
-
-.dr-detail-bar .dr-bar-edit.is-done,
-.dr-detail-bar .dr-bar-edit.is-done:hover {
+.dr-bar-edit.is-done {
   background-color: var(--interactive-accent);
+  border-color: transparent;
   color: var(--text-on-accent);
 }
 
@@ -5280,7 +5412,7 @@ body.is-phone .dr-td-length {
   padding: 10px 10px 12px;
   margin-bottom: 4px;
   background-color: var(--background-primary);
-  border-bottom: 1px solid var(--dr-line);
+  border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .dr-prop-edit-said {
@@ -5358,7 +5490,7 @@ body.is-phone .dr-td-length {
 
 @media (any-hover: hover) {
   .dr-split-row.is-editing .dr-edit-name:hover {
-    border-color: var(--dr-line);
+    border-color: var(--background-modifier-border);
   }
 }
 
@@ -5375,12 +5507,12 @@ body.is-phone .dr-td-length {
   align-items: center;
   gap: 5px;
   height: 24px;
-  padding: 0 8px;
-  border-radius: var(--dr-r);
-  border: 1px solid var(--dr-line);
-  background-color: transparent;
+  padding: 0 9px;
+  border-radius: 100px;
+  border: 1px solid var(--background-modifier-border);
+  background-color: var(--background-modifier-form-field);
   box-shadow: none;
-  color: var(--text-muted);
+  color: var(--text-accent);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
 }
@@ -5843,7 +5975,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 }
 
 .dr-fn-item.is-unused .dr-fn-num {
-  background-color: var(--dr-line);
+  background-color: var(--background-modifier-border);
   color: var(--text-muted);
 }
 
