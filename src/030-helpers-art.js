@@ -108,11 +108,14 @@ function resolveCover(app, file, key) {
 /**
  * Artwork into an element: the image if there is one, a glyph if not,
  * and the glyph as well if the image turns out to be missing. `look`
- * says how the glyph is drawn: { hue } for a backdrop coloured from a
- * name, { title } for the name set as a title page (see blankLook).
+ * says how the glyph is drawn: { art } for an album cover drawn for the
+ * name, { hue } for a backdrop coloured from a name, { title } for the
+ * name set as a title page (see blankLook).
  */
 function fillArt(el, src, glyph, gen, look) {
   const blank = () => {
+    // A cover drawn for the name, in its own colours or one chosen for it.
+    if (look && look.art) return drawnArt(el, look, gen && typeof gen === 'object' ? gen.tint : null);
     // With a name to go on, a cover is made from it: a gradient chosen
     // by the name, so it's always the same one, and its initials. A
     // colour can be given with it: { name, tint }.
@@ -152,9 +155,16 @@ function blankArt(el, glyph, look) {
 
 /* -- artwork, as the settings ask for it -------------------------------- */
 
-/** How a placeholder named `name` is drawn, as the settings ask: see blankArt. */
-function blankLook(settings, name) {
+/**
+ * How a placeholder named `name` is drawn, as the settings ask: see
+ * fillArt. `path` is what it's for, which may have a design of its own.
+ */
+function blankLook(settings, name, path) {
   if (name == null || name === '') return null;
+  if (settings.coverFallback === 'art') {
+    const design = path && settings.coverDesigns ? settings.coverDesigns[path] : null;
+    return design ? { art: name, design } : { art: name };
+  }
   if (settings.coverFallback === 'soft') return { hue: name };
   if (settings.coverFallback === 'title') return { title: name };
   return null;
@@ -169,7 +179,7 @@ function blankLook(settings, name) {
 function drawNoteArt(plugin, el, file) {
   const settings = plugin.settings;
   const md = file.extension === 'md';
-  const look = blankLook(settings, file.basename);
+  const look = blankLook(settings, file.basename, file.path);
   const src = md ? resolveCover(plugin.app, file, settings.coverProperty) : null;
   const gen = md ? coverGen(settings, file.basename, file.path) : null;
   if (src || gen) {
@@ -187,7 +197,7 @@ function drawFolderArt(plugin, el, folder) {
   const root = !!(folder.isRoot && folder.isRoot());
   const name = root ? plugin.app.vault.getName() : folder.name;
   const gen = coverGen(plugin.settings, name, folder.path);
-  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, blankLook(plugin.settings, name));
+  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, blankLook(plugin.settings, name, folder.path));
 }
 
 /** A number from a name, stable between runs: the same name, the same colour. */
@@ -746,9 +756,10 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
             )
         );
       } else {
+        const drawn = plugin.settings.coverFallback === 'art';
         m.addItem((item) =>
           item
-            .setTitle(nested ? 'Colour…' : 'Cover colour…')
+            .setTitle(drawn ? (nested ? 'Design and colour…' : 'Cover design…') : nested ? 'Colour…' : 'Cover colour…')
             .setIcon('palette')
             .onClick(() => plugin.chooseCoverColor(target))
         );

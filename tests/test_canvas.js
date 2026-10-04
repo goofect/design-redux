@@ -63,7 +63,8 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, foldRecord, unfoldRecord, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, GROUP_FOLD_HEIGHT, foldFace, faceHeight, FOLD_TITLE_HEIGHT, FOLD_GLIMPSE_HEIGHT };\n');
+  'tuckedBBox, GROUP_FOLD_HEIGHT, foldFace, faceHeight, FOLD_TITLE_HEIGHT, FOLD_GLIMPSE_HEIGHT, ' +
+  'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -502,6 +503,148 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     fold.pass(view);
     assert.deepStrictEqual([n('t1').height, n('t3').y, n('g').height, n('below').y], [200, 240, 520, 560]);
     assert.ok(!n('t1').unknownData.drFold);
+  });
+
+  await t('a branch folded down inside a group gives the group its room back, and takes it again when it opens', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', 0, 0, 400, 300, { type: 'group', label: 'Treasury Board' }),
+        card('pres', 20, 20, 200, 80),
+        card('sec', 20, 180, 200, 80),
+        card('out', 0, 340, 200, 60),
+      ],
+      edges: [edge('pres', 'sec', 'bottom', 'top')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    await fold.foldBranches(view, [n('pres')], true);
+    assert.deepStrictEqual(at(R.canvasModel(view.canvas), 'g'), [0, 0, 400, 140], 'the group closed up round what it still shows');
+    assert.strictEqual(n('out').y, 180, 'and what was below it followed');
+    await fold.foldBranches(view, [n('pres')], false);
+    assert.deepStrictEqual([n('g').height, n('sec').y, n('out').y], [300, 180, 340]);
+  });
+
+  await t('a branch folded across to a group’s edge narrows the group; groups inside groups follow a card, and all come back', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', 0, 0, 520, 200, { type: 'group', label: 'PMO' }),
+        card('r', 20, 20, 200, 80),
+        card('k', 280, 20, 200, 80),
+        card('right', 600, 0, 100, 60),
+        card('outer', 1000, 0, 600, 360, { type: 'group', label: 'Outer' }),
+        card('inner', 1020, 20, 300, 300, { type: 'group', label: 'Inner' }),
+        card('a', 1040, 40, 200, 200, { text: '# A\nwords' }),
+        card('b', 1040, 260, 200, 40),
+        card('c', 1360, 40, 200, 100),
+        card('z', 1000, 400, 100, 50),
+      ],
+      edges: [edge('r', 'k', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    const sizes = () => ['g', 'right', 'outer', 'inner', 'b', 'z'].map((id) => [n(id).x, n(id).y, n(id).width, n(id).height]);
+    const start = sizes();
+    await fold.foldBranches(view, [n('r')], true);
+    assert.strictEqual(n('g').width, 260, 'the group narrowed to what it shows');
+    assert.strictEqual(n('right').x, 340, 'and what was beside it moved in');
+    await fold.fold(view, [n('a')], true);
+    assert.strictEqual(n('inner').height, 178);
+    assert.strictEqual(n('outer').height, 238);
+    assert.strictEqual(n('z').y, 278);
+    await fold.fold(view, [n('a')], false);
+    await fold.foldBranches(view, [n('r')], false);
+    assert.deepStrictEqual(sizes(), start);
+  });
+
+  await t('arrows with square corners run out of one card, across, and into the other; sides that face each other are found', () => {
+    const box = (x, y, w, h) => ({ minX: x, minY: y, maxX: x + w, maxY: y + h });
+    const pts = (list) => list.map((p) => [p.x, p.y]);
+    const A = box(0, 0, 100, 50);
+    const B = box(300, 200, 100, 50);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 300, y: 225 }, 'left', A, B)), [[100, 25], [200, 25], [200, 225], [300, 225]]);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 350, y: 200 }, 'top', A, B)), [[100, 25], [350, 25], [350, 200]]);
+    // Close together, one above the other: straight down, not round the side.
+    const close = box(0, 80, 100, 50);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 50, y: 50 }, 'bottom', { x: 50, y: 80 }, 'top', A, close)), [[50, 50], [50, 80]]);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 50, y: 50 }, 'bottom', { x: 70, y: 80 }, 'top', A, box(20, 80, 100, 50))), [[50, 50], [50, 65], [70, 65], [70, 80]]);
+    // Facing away, side by side: round the far side of both.
+    const C = box(0, 100, 100, 50);
+    const round = pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 100, y: 125 }, 'right', A, C));
+    assert.deepStrictEqual(round, [[100, 25], [124, 25], [124, 125], [100, 125]]);
+    assert.deepStrictEqual(R.nearestSides(A, B), { from: 'right', to: 'left' }, 'further apart across than down');
+    assert.deepStrictEqual(R.nearestSides(A, box(40, 200, 100, 50)), { from: 'bottom', to: 'top' });
+    assert.deepStrictEqual(R.nearestSides(B, A), { from: 'left', to: 'right' });
+    const d = R.roundedPath([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }], 14);
+    assert.strictEqual(d, 'M0 0 L86 0 Q100 0 100 14 L100 100');
+    assert.deepStrictEqual(R.polylineMiddle([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }]), { x: 100, y: 0 });
+  });
+
+  await t('an arrow takes a style of its own — shape, line, head, sides — kept in its data, and back to the default', () => {
+    // An arrow as the canvas draws one: a curve, and heads square to the card.
+    class FakeEdge {
+      constructor(canvas, id, from, to) {
+        Object.assign(this, { canvas, id, from, to, unknownData: {} });
+        this.lineGroupEl = document.createElement('div');
+        const svg = (tag) => document.createElementNS('http://www.w3.org/2000/svg', tag);
+        this.path = { display: svg('path'), interaction: svg('path') };
+        const end = svg('g');
+        end.appendChild(svg('polygon')).setAttribute('points', '0,0 6.5,10.4 -6.5,10.4');
+        this.toLineEnd = { el: end, type: 'arrow' };
+        this.fromLineEnd = null;
+      }
+      updatePath() {
+        this.bezier = { from: 'curve' };
+        this.path.display.setAttribute('d', 'M curve');
+        this.path.interaction.setAttribute('d', 'M curve');
+        this.toLineEnd.el.style.transform = 'square';
+      }
+      getCenter() { return { x: -1, y: -1 }; }
+      getBBox() { return { minX: 0, minY: 0, maxX: 1, maxY: 1 }; }
+      render() { this.updatePath(); }
+    }
+    const drawnByCanvas = FakeEdge.prototype.updatePath;
+    const view = fakeCanvas({ nodes: [card('a', 0, 0, 100, 50), card('b', 300, 200, 100, 50)], edges: [] });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
+    const edge = new FakeEdge(view.canvas, 'e', { node: view.canvas.nodes.get('a'), side: 'right' }, { node: view.canvas.nodes.get('b'), side: 'left' });
+    view.canvas.edges.set('e', edge);
+    const arrows = new R.CanvasArrows({ settings: { canvasArrows: true, canvasArrowShape: 'curve', canvasArrowSides: false }, app: {} });
+    arrows.watched.set(view, { file: view.file });
+    arrows.mount(view);
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M curve', 'left as the canvas draws it by default');
+    view.canvas.selection.add(edge);
+    arrows.pass(view);
+    assert.strictEqual(bar.querySelector('.dr-arrow-button').getAttribute('aria-label'), 'Arrow style');
+    const menu = new Menu();
+    arrows.addMenuItems(menu, [edge]);
+    assert.ok(menu.items.some((i) => i.title === 'Arrow: square corners'));
+
+    arrows.setStyle(view, [edge], { shape: 'elbow', line: 'dashed', head: 'dot' });
+    assert.deepStrictEqual(edge.unknownData.drArrow, { shape: 'elbow', line: 'dashed', head: 'dot' });
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M100 25 L186 25 Q200 25 200 39 L200 211 Q200 225 214 225 L293 225');
+    assert.ok(edge.lineGroupEl.classList.contains('dr-line-dashed'));
+    assert.strictEqual(edge.toLineEnd.el.querySelector('polygon').getAttribute('points'), R.ARROW_HEAD_POINTS.dot);
+    assert.deepStrictEqual(edge.getCenter(), { x: 200, y: 121.5 });
+    assert.strictEqual(view.canvas.saves, 1, 'by hand: saved, a step of Undo');
+
+    // Straight: the head turns to the line.
+    arrows.setStyle(view, [edge], { shape: 'straight' });
+    assert.ok(/rotate\(/.test(edge.toLineEnd.el.style.transform));
+    // Joined at the sides facing each other, as the cards now lie.
+    edge.from.side = 'top';
+    edge.to.side = 'bottom';
+    arrows.setStyle(view, [edge], { sides: 'near' });
+    assert.deepStrictEqual([edge.from.side, edge.to.side], ['right', 'left']);
+
+    arrows.setStyle(view, [edge], null);
+    assert.ok(!edge.unknownData.drArrow);
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M curve');
+    assert.strictEqual(edge.toLineEnd.el.querySelector('polygon').getAttribute('points'), R.ARROW_HEAD_POINTS.arrow);
+    assert.ok(!edge.lineGroupEl.classList.contains('dr-line-dashed'));
+    assert.notStrictEqual(FakeEdge.prototype.updatePath, drawnByCanvas);
+    arrows.disable();
+    assert.strictEqual(FakeEdge.prototype.updatePath, drawnByCanvas, 'the canvas draws its own arrows again');
   });
 
   await t('the folding menu offers what can be done now, and how folding works', () => {

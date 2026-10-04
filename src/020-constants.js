@@ -76,16 +76,19 @@ const DEFAULTS = {
   albumOrders: {},
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
-  // What stands in for a missing cover: 'icon', the folder or note's
-  // icon; 'soft', that icon on a soft colour from its name; or a gradient
-  // with initials, coloured 'name', 'accent' or 'custom'.
-  coverFallback: 'title',
+  // What stands in for a missing cover: 'art', an album cover drawn for
+  // its name; 'title', its name set as a title; 'icon', the folder or
+  // note's icon; 'soft', that icon on a soft colour from its name; or a
+  // gradient with initials, coloured 'name', 'accent' or 'custom'.
+  coverFallback: 'art',
   // A note without a cover shows the cover of the folder it's in.
   coverFromFolder: false,
   // The one colour used when the fallback is 'custom'.
   generatedCoverColor: '#fa2d48',
   // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
   coverColors: {},
+  // { path: designId } — a drawn cover's design, picked for one album or note.
+  coverDesigns: {},
   // A legend in the corner of each canvas, naming what its colours mean.
   canvasLegend: true,
   // { canvasPath: { labels: { colour: name }, collapsed, hidden } }
@@ -106,10 +109,16 @@ const DEFAULTS = {
   canvasOutline: true,
   // { canvasPath: { cardId: 'center' } }
   canvasAlignments: {},
+  // Arrows in a style of their own, from their menu or the bar above them.
+  canvasArrows: true,
+  // How arrows without a style of their own are drawn: 'curve', 'straight' or 'elbow'.
+  canvasArrowShape: 'curve',
+  // Arrows without a style of their own join cards at the sides facing each other.
+  canvasArrowSides: false,
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 2,
+  settingsVersion: 3,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

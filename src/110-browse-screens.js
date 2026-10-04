@@ -769,7 +769,7 @@ class HomeScreen extends BrowseScreen {
       const glow = body.createDiv({ cls: 'dr-pick-glow' });
       drawNoteArt(this.plugin, glow, file);
       // White type on the cover's colours; a plain icon has none to give.
-      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued')));
+      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued') || glow.hasClass('is-drawn')));
       const art = body.createDiv({ cls: 'dr-pick-art' });
       drawNoteArt(this.plugin, art, file);
 

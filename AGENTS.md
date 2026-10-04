@@ -62,6 +62,10 @@ Coffee N' Christmas.
   that, undone, would only start the pass again. Folds and tidies glide
   (`glideCanvasModel`); no pass runs while `state.gliding`, and anything new
   calls `settle(view)` first so it starts from where the cards are going.
+- Arrow styles (`332`): the canvas edge prototype's `updatePath`, `getCenter`
+  and `getBBox` are wrapped once with `around()`, and an arrow is redrawn
+  after Obsidian draws it; anything unexpected falls back to Obsidian's own
+  drawing. An arrow's style is in its data as `drArrow`.
 - Quiet links: Obsidian reads `[[[X]]]` as a link to a missing "[X". They're
   set aside from each note's cache in `metadataCache` 'changed' — which fires
   before Obsidian counts the note's links — and swept once after 'resolved'

@@ -623,6 +623,34 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
+    await obsidianPage.openFile('Map.canvas');
+    await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });
+    const style = (change) =>
+      browser.executeObsidian(({ app, plugins }, change) => {
+        const view = app.workspace.activeLeaf.view;
+        const edge = view.canvas.edges.get('e1');
+        const arrows = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasArrows');
+        arrows.setStyle(view, [edge], change);
+        return { d: edge.path.display.getAttribute('d'), dashed: edge.lineGroupEl.classList.contains('dr-line-dashed') };
+      }, change);
+    // Square corners, between cards side by side: a straight line, not the canvas's curve.
+    const styled = await style({ shape: 'elbow', line: 'dashed' });
+    expect(styled.d).not.toContain('C');
+    expect(styled.dashed).toBe(true);
+    await browser.waitUntil(
+      async () =>
+        browser.executeObsidian(async ({ app }) => {
+          const edge = JSON.parse(await app.vault.read(app.vault.getFileByPath('Map.canvas'))).edges.find((e) => e.id === 'e1');
+          return !!(edge && edge.drArrow && edge.drArrow.shape === 'elbow' && edge.drArrow.line === 'dashed');
+        }),
+      { timeout: 6000, interval: 300, timeoutMsg: 'the style was never saved' }
+    );
+    const plain = await style(null);
+    expect(plain.d).toContain('C');
+    expect(plain.dashed).toBe(false);
+  });
+
   it('offers Undo after a move, and it puts the note back', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       const file = app.vault.getFileByPath('Politics/Deterrence.md');

@@ -326,6 +326,94 @@ function tuckedCount(model, id) {
   return model.nodes.filter((n) => n.tuck && n.tuck.by === id).length;
 }
 
+/* -- groups round what they hold ---------------------------------------- */
+
+/**
+ * Each record's group, for fitting groups after folds: as it was before
+ * them for what was shown then; and for what was tucked away then, the
+ * group of what it was tucked into — or that group itself — so a card
+ * brought out of a fold belongs where its fold does, wherever it lands.
+ */
+function foldHomes(model, before) {
+  const shown = homesBefore(model, before);
+  const memo = new Map();
+  const homeOf = (id, seen) => {
+    if (memo.has(id)) return memo.get(id);
+    const was = before.get(id);
+    let home = null;
+    if (was && !was.tucked) home = shown.get(id) || null;
+    else if (was && !seen.has(id)) {
+      seen.add(id);
+      let by = null;
+      try {
+        by = JSON.parse(was.tuck).by;
+      } catch (err) {
+        by = null;
+      }
+      const holder = by ? model.byId.get(by) : null;
+      if (holder) home = isGroupRecord(holder) ? holder.id : homeOf(holder.id, seen);
+    }
+    memo.set(id, home);
+    return home;
+  };
+  return (id) => homeOf(id, new Set());
+}
+
+/**
+ * Every open group fitted round what it holds after folds and unfolds:
+ * the margin it had round its cards before, on every side, kept — so a
+ * branch folded down or across inside a group gives the group's room back
+ * as a card folding does, and takes it again when it opens. Innermost
+ * groups first; each one that changes size makes room beyond it, or
+ * gives it back, in the group it's in.
+ */
+function fitGroups(model, before) {
+  const homeOf = foldHomes(model, before);
+  const groups = model.nodes
+    .filter((g) => {
+      const was = before.get(g.id);
+      // Open before and now: a group folding or opening is sized by its fold.
+      return isGroupRecord(g) && !g.tuck && !g.fold && was && !was.tucked && !was.fold;
+    })
+    .sort((a, b) => {
+      const wa = before.get(a.id);
+      const wb = before.get(b.id);
+      return wa.width * wa.height - wb.width * wb.height;
+    });
+  let changed = false;
+  groups.forEach((g) => {
+    const members = model.nodes.filter((n) => n !== g && homeOf(n.id) === g.id);
+    const was = members.map((n) => before.get(n.id)).filter((r) => r && !r.tucked);
+    const now = members.filter((n) => !n.tuck);
+    if (!was.length || !now.length) return;
+    const box = before.get(g.id);
+    const home = homeOf(g.id);
+    ['y', 'x'].forEach((axis) => {
+      const p = axisParts(axis);
+      const farWas = Math.max(...was.map(p.far));
+      const nearWas = Math.min(...was.map(p.near));
+      const targetFar = Math.max(...now.map(p.far)) + (p.far(box) - farWas);
+      const targetNear = Math.min(...now.map(p.near)) - (nearWas - p.near(box));
+      const oldNear = p.near(g);
+      const oldFar = p.far(g);
+      const newFar = Math.abs(targetFar - oldFar) > 0.5 ? targetFar : oldFar;
+      const newNear = Math.abs(targetNear - oldNear) > 0.5 ? targetNear : oldNear;
+      if (newFar === oldFar && newNear === oldNear) return;
+      g[axis] = newNear;
+      g[p.size] = newFar - newNear;
+      changed = true;
+      const span = [p.lo(g), p.hi(g)];
+      if (newFar !== oldFar) {
+        makeRoom(model, before, { origin: new Set([g.id]), home, axis, side: 'after', at: oldFar, delta: newFar - oldFar, span });
+      }
+      if (newNear !== oldNear) {
+        makeRoom(model, before, { origin: new Set([g.id]), home, axis, side: 'before', at: oldNear, delta: newNear - oldNear, span });
+      }
+    });
+  });
+  return changed;
+}
+
 /* -- tidying ----------------------------------------------------------- */
 
 /**

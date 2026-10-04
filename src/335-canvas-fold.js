@@ -442,6 +442,8 @@ class CanvasFold extends CanvasFeature {
       };
       if (!any) return end(false);
       this.popover.hide();
+      // The groups round what changed, fitted to it again on every side.
+      if (this.closing) fitGroups(model, before);
       this.prepare(view, model, before);
       glideCanvasModel(view, model, before, state, end);
     });

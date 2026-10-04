@@ -75,6 +75,25 @@ function compatibility(app) {
       pending: 'Checked while a canvas is open.',
     },
     {
+      what: 'Arrow styles on a canvas',
+      ok: open
+        ? has(() => {
+            const edge = open.canvas.edges.values().next().value;
+            if (!edge) return true;
+            const proto = Object.getPrototypeOf(edge);
+            return (
+              typeof proto.updatePath === 'function' &&
+              typeof proto.getCenter === 'function' &&
+              typeof proto.getBBox === 'function' &&
+              !!edge.path &&
+              !!edge.path.display
+            );
+          })
+        : null,
+      without: 'arrows are drawn as the canvas draws them',
+      pending: 'Checked while a canvas is open.',
+    },
+    {
       what: 'Graph links through the notes between',
       ok: graph
         ? has(() => {

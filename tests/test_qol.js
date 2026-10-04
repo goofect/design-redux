@@ -183,7 +183,21 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok(view.contentEl.querySelectorAll('.dr-card-art.is-generated').length >= 2);
   });
 
-  await t('a cover can be the name set as a title, the default; older settings move to it, a choice made stays', () => {
+  await t('a cover can be drawn for its name, the default, or the name set as a title; older settings move on, a choice made stays', () => {
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art' }, 'Realism'), { art: 'Realism' });
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art', coverDesigns: { 'IR/Realism.md': 'pines' } }, 'Realism', 'IR/Realism.md'), { art: 'Realism', design: 'pines' });
+    const drawn = document.createElement('div');
+    R.fillArt(drawn, null, 'file-text', null, { art: 'Balance of power' });
+    const again = document.createElement('div');
+    R.fillArt(again, null, 'file-text', null, { art: 'Balance of power' });
+    assert.ok(drawn.classList.contains('is-drawn') && drawn.querySelector('svg.dr-drawn').children.length > 0);
+    assert.strictEqual(drawn.innerHTML, again.innerHTML, 'the same name, the same cover');
+    assert.ok(!drawn.querySelector('.dr-card-glyph'));
+    const picked = document.createElement('div');
+    R.fillArt(picked, null, 'file-text', { name: 'Balance of power', tint: '#30a46c' }, { art: 'Balance of power', design: 'pines' });
+    assert.strictEqual(picked.dataset.design, 'pines');
+    assert.ok(/hsl\(151/.test(picked.style.backgroundImage), 'drawn in the colour chosen for it');
+
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'title' }, 'Realism'), { title: 'Realism' });
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'soft' }, 'Realism'), { hue: 'Realism' });
     assert.strictEqual(R.blankLook({ coverFallback: 'icon' }, 'Realism'), null);
@@ -201,18 +215,18 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const titled = Array.from(view.contentEl.querySelectorAll('.dr-card-art.is-titled .dr-type-title')).map((e) => e.textContent);
     assert.ok(titled.includes('IR'), 'a folder without a cover shows its name');
 
-    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 2);
-    const fresh = {};
-    step.run(fresh);
-    assert.strictEqual(fresh.coverFallback, 'title');
-    const old = { coverFallback: 'icon' };
-    step.run(old);
-    assert.strictEqual(old.coverFallback, 'title');
-    const chosen = { coverFallback: 'name' };
-    step.run(chosen);
-    assert.strictEqual(chosen.coverFallback, 'name');
-    assert.strictEqual(R.DEFAULTS.coverFallback, 'title');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 2);
+    const steps = R.SETTINGS_MIGRATIONS.filter((m) => m.to >= 2).sort((a, b) => a.to - b.to);
+    const run = (saved) => {
+      steps.forEach((m) => m.run(saved));
+      return saved.coverFallback;
+    };
+    assert.strictEqual(run({}), 'art');
+    assert.strictEqual(run({ coverFallback: 'icon' }), 'art');
+    assert.strictEqual(run({ coverFallback: 'title' }), 'art');
+    assert.strictEqual(run({ coverFallback: 'name' }), 'name');
+    assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
+    assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 3);
   });
 
   /* -- pins in your own order ------------------------------------------------ */

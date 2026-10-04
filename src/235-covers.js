@@ -32,8 +32,9 @@ class CoverImages extends Feature {
         key: 'coverFallback',
         type: 'dropdown',
         name: 'Without a cover',
-        desc: 'What a note or folder without a cover image shows. One can still have a colour of its own: right-click it and choose Cover colour.',
+        desc: 'What a note or folder without a cover image shows. One can have a design or colour of its own: right-click it and choose Cover.',
         options: {
+          art: 'An album cover drawn for it',
           title: 'Its name, set as a title',
           icon: 'The icon',
           soft: 'The icon on a soft colour',
