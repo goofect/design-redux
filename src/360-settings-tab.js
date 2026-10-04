@@ -8,7 +8,6 @@ const SETTINGS_TABS = [
   {
     id: 'library',
     title: 'Library',
-    icon: 'library',
     sections: [
       { keys: ['library', 'homePath', 'hideEmptyFolders'] },
       {
@@ -21,7 +20,6 @@ const SETTINGS_TABS = [
   {
     id: 'browsing',
     title: 'Browsing',
-    icon: 'layout-grid',
     sections: [
       { title: 'Lists', keys: ['defaultSort', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tableColumns', 'categoryProperty'] },
@@ -32,7 +30,6 @@ const SETTINGS_TABS = [
   {
     id: 'notes',
     title: 'Notes',
-    icon: 'file-text',
     sections: [
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
@@ -45,7 +42,6 @@ const SETTINGS_TABS = [
   {
     id: 'interface',
     title: 'Interface',
-    icon: 'app-window',
     sections: [
       { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
@@ -186,8 +182,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
       button.setAttribute('aria-selected', String(on));
       button.id = `dr-set-tab-${spec.id}`;
       button.toggleClass('is-active', on);
-      setIcon(button.createSpan({ cls: 'dr-set-tab-icon' }), spec.icon);
-      button.createSpan({ text: spec.title });
+      button.setText(spec.title);
 
       const pane = containerEl.createDiv({ cls: 'dr-set-pane' });
       pane.setAttribute('role', 'tabpanel');

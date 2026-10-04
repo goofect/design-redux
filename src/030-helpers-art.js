@@ -107,16 +107,17 @@ function resolveCover(app, file, key) {
 
 /**
  * Artwork into an element: the image if there is one, a glyph if not,
- * and the glyph as well if the image turns out to be missing. `hue`
- * names what the glyph's backdrop takes its colour from.
+ * and the glyph as well if the image turns out to be missing. `look`
+ * says how the glyph is drawn: { hue } for a backdrop coloured from a
+ * name, { title } for the name set as a title page (see blankLook).
  */
-function fillArt(el, src, glyph, gen, hue) {
+function fillArt(el, src, glyph, gen, look) {
   const blank = () => {
     // With a name to go on, a cover is made from it: a gradient chosen
     // by the name, so it's always the same one, and its initials. A
     // colour can be given with it: { name, tint }.
     if (gen) return generatedArt(el, typeof gen === 'string' ? { name: gen } : gen);
-    blankArt(el, glyph, hue);
+    blankArt(el, glyph, look);
   };
   if (!src) return blank();
 
@@ -130,24 +131,33 @@ function fillArt(el, src, glyph, gen, hue) {
 }
 
 /**
- * Where there's no artwork at all: the glyph for what it is on a soft
- * gradient in a colour picked from a name, rather than a grey box — so
- * a vault of notes without covers still reads as a shelf of records.
+ * Where there's no artwork at all: the glyph for what it is — on a soft
+ * gradient in a colour picked from a name, or with the name itself set
+ * as a title page, which the larger covers show in its place — so a
+ * vault of notes without covers still reads as a shelf of records.
  */
-function blankArt(el, glyph, hue) {
+function blankArt(el, glyph, look) {
   el.addClass('is-blank');
+  const { hue, title } = look || {};
   if (hue) {
     el.addClass('is-hued');
     el.style.setProperty('--dr-gen-h', String(nameHue(String(hue))));
+  }
+  if (title) {
+    el.addClass('is-titled');
+    el.createDiv({ cls: 'dr-type-cover' }).createDiv({ cls: 'dr-type-title', text: String(title) });
   }
   setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph);
 }
 
 /* -- artwork, as the settings ask for it -------------------------------- */
 
-/** The name a placeholder's soft colour comes from — only when that's the choice. */
-function softHue(settings, name) {
-  return settings.coverFallback === 'soft' ? name : null;
+/** How a placeholder named `name` is drawn, as the settings ask: see blankArt. */
+function blankLook(settings, name) {
+  if (name == null || name === '') return null;
+  if (settings.coverFallback === 'soft') return { hue: name };
+  if (settings.coverFallback === 'title') return { title: name };
+  return null;
 }
 
 /**
@@ -159,17 +169,17 @@ function softHue(settings, name) {
 function drawNoteArt(plugin, el, file) {
   const settings = plugin.settings;
   const md = file.extension === 'md';
-  const hue = softHue(settings, file.basename);
+  const look = blankLook(settings, file.basename);
   const src = md ? resolveCover(plugin.app, file, settings.coverProperty) : null;
   const gen = md ? coverGen(settings, file.basename, file.path) : null;
   if (src || gen) {
-    fillArt(el, src, iconForFile(file), gen, hue);
+    fillArt(el, src, iconForFile(file), gen, look);
     return;
   }
   const folder = settings.coverFromFolder && file.parent && !(file.parent.isRoot && file.parent.isRoot())
     ? file.parent
     : null;
-  fillArt(el, folder ? plugin.folderCoverSrc(folder) : null, iconForFile(file), null, hue);
+  fillArt(el, folder ? plugin.folderCoverSrc(folder) : null, iconForFile(file), null, look);
 }
 
 /** A folder's artwork: its cover, or a colour chosen for it, or the icon as the settings say. */
@@ -177,7 +187,7 @@ function drawFolderArt(plugin, el, folder) {
   const root = !!(folder.isRoot && folder.isRoot());
   const name = root ? plugin.app.vault.getName() : folder.name;
   const gen = coverGen(plugin.settings, name, folder.path);
-  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, softHue(plugin.settings, name));
+  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, blankLook(plugin.settings, name));
 }
 
 /** A number from a name, stable between runs: the same name, the same colour. */
@@ -288,8 +298,9 @@ function ownTint(settings, path) {
 
 /**
  * What a missing cover gets from settings alone: 'icon' for the icon —
- * plain, or on a soft colour, which is drawn with it rather than made
- * into a cover — 'accent', a colour, or null for a colour from the name.
+ * plain, on a soft colour, or with the name as a title, which are drawn
+ * with it rather than made into a cover — 'accent', a colour, or null
+ * for a colour from the name.
  */
 function fallbackTint(settings) {
   const style = settings.coverFallback || 'icon';

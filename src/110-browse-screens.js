@@ -783,8 +783,8 @@ class HomeScreen extends BrowseScreen {
   }
 
   /**
-   * The large cards: a caption above each, its cover, and a band of
-   * that cover's colour — the cover itself, blurred — under the title.
+   * The wide cards up top: a small cover, then why it's there — the
+   * caption — over what it is.
    */
   picks(root, picks) {
     const view = this.view;
@@ -796,17 +796,12 @@ class HomeScreen extends BrowseScreen {
       card.setAttribute('role', 'button');
       card.setAttribute('tabindex', '0');
       card.setAttribute('aria-label', `${caption}: ${file.basename}`);
-      card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
-      const body = card.createDiv({ cls: 'dr-pick-body' });
-      const glow = body.createDiv({ cls: 'dr-pick-glow' });
-      drawNoteArt(this.plugin, glow, file);
-      // White type on the cover's colours; a plain icon has none to give.
-      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued')));
-      const art = body.createDiv({ cls: 'dr-pick-art' });
+      const art = card.createDiv({ cls: 'dr-pick-art' });
       drawNoteArt(this.plugin, art, file);
 
-      const text = body.createDiv({ cls: 'dr-pick-text' });
+      const text = card.createDiv({ cls: 'dr-pick-text' });
+      text.createDiv({ cls: 'dr-pick-caption', text: caption });
       text.createDiv({ cls: 'dr-pick-title', text: file.basename });
       const where = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent.name : '';
       // Its length as the setting writes it, everywhere a length is shown.

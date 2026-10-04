@@ -643,7 +643,7 @@ class BrowseView extends ItemView {
 
     const body = block.createDiv({ cls: 'dr-album-body' });
     const art = body.createDiv({ cls: 'dr-album-art' });
-    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), softHue(this.plugin.settings, String(group.value)));
+    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), blankLook(this.plugin.settings, String(group.value)));
 
     const list = body.createDiv({ cls: 'dr-tracks' });
     roveFocus(list, '.dr-track');
@@ -885,7 +885,6 @@ class BrowseView extends ItemView {
     shown.forEach((disc) => {
       const head = list.createDiv({ cls: 'dr-disc' });
       if (disc.folder) head.dataset.folder = disc.folder.path;
-      setIcon(head.createSpan({ cls: 'dr-disc-icon' }), 'disc');
       if (this.editing && disc.folder && album && disc.folder !== album) {
         this.editDiscHead(head, disc, album);
         this.renderLimited(list, disc.files, `disc:${disc.folder.path}`, 0);
@@ -952,14 +951,9 @@ class BrowseView extends ItemView {
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
-    // The cover's own colours, blurred, behind the header — as the
-    // reference tints an album's page with its artwork.
-    const glow = head.createDiv({ cls: 'dr-detail-glow' });
     const art = head.createDiv({ cls: 'dr-detail-art' });
-    [glow, art].forEach((el) => {
-      if (folder) drawFolderArt(this.plugin, el, folder);
-      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, softHue(this.plugin.settings, spec.title));
-    });
+    if (folder) drawFolderArt(this.plugin, art, folder);
+    else this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
     if (spec.onArtMenu) {
       onContextMenu(art, (evt) => spec.onArtMenu(evt));
     }
@@ -1066,8 +1060,8 @@ class BrowseView extends ItemView {
       .sort((a, b) => byName(a.name, b.name));
   }
 
-  fillArt(el, src, glyph, name, hue) {
-    fillArt(el, src, glyph, name, hue);
+  fillArt(el, src, glyph, name, look) {
+    fillArt(el, src, glyph, name, look);
   }
 
   /* -- shared actions --------------------------------------------- */

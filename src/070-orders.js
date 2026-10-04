@@ -38,7 +38,16 @@ const PATH_KEYED = ['coverColors', 'canvasLegends', 'canvasAlignments'];
  * isn't lost to the change. Each step gets the saved data as it was and
  * edits it in place: { to: 2, run(saved) { ... } }.
  */
-const SETTINGS_MIGRATIONS = [];
+const SETTINGS_MIGRATIONS = [
+  {
+    // The quieter look: a note or folder without a cover shows its name,
+    // set as a title, where the old default showed a file icon.
+    to: 2,
+    run(saved) {
+      if (saved.coverFallback === undefined || saved.coverFallback === 'icon') saved.coverFallback = 'title';
+    },
+  },
+];
 
 function movedPath(p, oldPath, newPath) {
   if (p === oldPath) return newPath;

@@ -34,6 +34,7 @@ class CoverImages extends Feature {
         name: 'Without a cover',
         desc: 'What a note or folder without a cover image shows. One can still have a colour of its own: right-click it and choose Cover colour.',
         options: {
+          title: 'Its name, set as a title',
           icon: 'The icon',
           soft: 'The icon on a soft colour',
           name: 'A colour from each name',

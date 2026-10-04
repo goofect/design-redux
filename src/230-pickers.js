@@ -106,7 +106,13 @@ class CoverColorModal extends Modal {
     this.preview.empty();
     this.preview.className = 'dr-color-preview';
     this.preview.removeAttribute('style');
-    fillArt(this.preview, null, this.glyph, tint === 'icon' ? null : { name: this.name, tint: tint });
+    fillArt(
+      this.preview,
+      null,
+      this.glyph,
+      tint === 'icon' ? null : { name: this.name, tint: tint },
+      tint === 'icon' ? blankLook(this.plugin.settings, this.name) : null
+    );
   }
 
   onOpen() {
@@ -236,6 +242,7 @@ class CoverColorModal extends Modal {
     if (style === 'custom') return ' · the colour in settings';
     if (style === 'name') return ' · picked from the name';
     if (style === 'soft') return ' · the icon on a soft colour';
+    if (style === 'title') return ' · its name, set as a title';
     return ' · the icon';
   }
 

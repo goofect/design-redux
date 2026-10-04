@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf, blankLook, SETTINGS_MIGRATIONS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -181,6 +181,38 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     plugin.settings.coverFallback = 'name';
     view.render();
     assert.ok(view.contentEl.querySelectorAll('.dr-card-art.is-generated').length >= 2);
+  });
+
+  await t('a cover can be the name set as a title, the default; older settings move to it, a choice made stays', () => {
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'title' }, 'Realism'), { title: 'Realism' });
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'soft' }, 'Realism'), { hue: 'Realism' });
+    assert.strictEqual(R.blankLook({ coverFallback: 'icon' }, 'Realism'), null);
+    assert.strictEqual(R.blankLook({ coverFallback: 'title' }, ''), null);
+
+    const el = document.createElement('div');
+    R.fillArt(el, null, 'file-text', null, { title: 'Balance of power' });
+    assert.ok(el.classList.contains('is-blank') && el.classList.contains('is-titled'));
+    assert.strictEqual(el.querySelector('.dr-type-title').textContent, 'Balance of power');
+    assert.ok(el.querySelector('.dr-card-glyph'), 'the icon too, for covers too small for a title');
+
+    plugin.settings.coverFallback = 'title';
+    Object.assign(view, { mode: 'folders', path: '/' });
+    view.render();
+    const titled = Array.from(view.contentEl.querySelectorAll('.dr-card-art.is-titled .dr-type-title')).map((e) => e.textContent);
+    assert.ok(titled.includes('IR'), 'a folder without a cover shows its name');
+
+    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 2);
+    const fresh = {};
+    step.run(fresh);
+    assert.strictEqual(fresh.coverFallback, 'title');
+    const old = { coverFallback: 'icon' };
+    step.run(old);
+    assert.strictEqual(old.coverFallback, 'title');
+    const chosen = { coverFallback: 'name' };
+    step.run(chosen);
+    assert.strictEqual(chosen.coverFallback, 'name');
+    assert.strictEqual(R.DEFAULTS.coverFallback, 'title');
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 2);
   });
 
   /* -- pins in your own order ------------------------------------------------ */

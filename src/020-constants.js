@@ -79,7 +79,7 @@ const DEFAULTS = {
   // What stands in for a missing cover: 'icon', the folder or note's
   // icon; 'soft', that icon on a soft colour from its name; or a gradient
   // with initials, coloured 'name', 'accent' or 'custom'.
-  coverFallback: 'icon',
+  coverFallback: 'title',
   // A note without a cover shows the cover of the folder it's in.
   coverFromFolder: false,
   // The one colour used when the fallback is 'custom'.
@@ -99,7 +99,7 @@ const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 1,
+  settingsVersion: 2,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
