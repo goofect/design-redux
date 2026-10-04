@@ -289,27 +289,38 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
   };
   const settings = { canvasFold: true, canvasBranches: true, canvasCloseGaps: true, canvasTidy: true, canvasSelectBranch: true };
 
-  await t('a knob folds a card’s branch: its cards hidden, arrows from elsewhere ending at the fold', () => {
+  await t('Fold branch, above a selected card, tucks its branch away: arrows from elsewhere end at the fold', () => {
     const view = fakeCanvas({
       nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('b', 400, 0, 100, 50), card('x', 200, 300, 100, 50), card('y', 0, 300, 100, 50)],
       edges: [edge('r', 'a', 'right', 'left'), edge('a', 'b', 'right', 'left'), edge('x', 'b', 'top', 'bottom'), edge('y', 'x', 'right', 'left')],
     });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
     const fold = new R.CanvasFold({ settings, app: {} });
     fold.watched.set(view, { file: view.file });
     fold.pass(view);
     const r = view.canvas.nodes.get('r');
-    const knob = r.nodeEl.querySelector('.dr-branch-knob');
-    assert.ok(knob && knob.classList.contains('is-right'));
+    // Nothing on the canvas for an open branch: nothing among its arrows.
+    assert.ok(!view.contentEl.querySelector('.dr-branch-knob, .dr-fold-btn'));
+    assert.ok(!bar.querySelector('.dr-branch-button'));
+    view.canvas.selection.add(r);
+    fold.pass(view);
+    assert.strictEqual(bar.querySelector('.dr-fold-button').getAttribute('aria-label'), 'Fold card');
+    const button = bar.querySelector('.dr-branch-button');
+    assert.strictEqual(button.getAttribute('aria-label'), 'Fold branch');
     // x leads to b too, so b isn't r's alone: only a is tucked away.
-    knob.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     const a = view.canvas.nodes.get('a');
     const b = view.canvas.nodes.get('b');
     assert.deepStrictEqual(a.unknownData.drTuck, { by: 'r', dx: 200, dy: 0 });
     assert.ok(!b.unknownData.drTuck);
     assert.ok(a.nodeEl.classList.contains('dr-tucked'));
     assert.deepStrictEqual(a.getBBox(), r.getBBox());
+    assert.strictEqual(button.getAttribute('aria-label'), 'Unfold branch');
+    // Folded, it says how many cards it holds, where its arrows left it.
+    const knob = r.nodeEl.querySelector('.dr-branch-knob');
     assert.strictEqual(knob.textContent, '+1');
-    assert.ok(knob.classList.contains('is-folded'));
+    assert.ok(knob.classList.contains('is-right') && knob.classList.contains('is-folded'));
+    view.canvas.selection.clear();
     // r → a is inside the fold: not drawn. a → b now starts at r.
     assert.ok(view.canvas.edges.get('r-a').lineGroupEl.classList.contains('dr-tucked-edge'));
     assert.ok(!view.canvas.edges.get('a-b').lineGroupEl.classList.contains('dr-tucked-edge'));
@@ -443,7 +454,8 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(r.height, R.FOLD_GLIMPSE_HEIGHT);
     const face = r.nodeEl.querySelector('.dr-fold-face');
     assert.deepStrictEqual([face.firstElementChild.textContent, face.lastElementChild.textContent], ['Root', 'words']);
-    fold.fold(view, [r], false);
+    // The arrow by its title, inside the card, opens it.
+    face.querySelector('.dr-fold-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     assert.strictEqual(r.height, 160);
     assert.ok(view.canvas.nodes.get('a').unknownData.drTuck, 'its branch still folded');
     assert.ok(!r.nodeEl.querySelector('.dr-fold-face'));

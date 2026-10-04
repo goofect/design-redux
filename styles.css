@@ -6049,67 +6049,86 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 
 /* Folding canvas cards --------------------------------------------------------- */
 
-/* The fold arrow: just left of a card's or group's top edge, as a fold
-   arrow sits beside a heading — pointing down while it's open, right
-   while it's folded. Clear of the canvas's own handles for resizing,
-   which sit on the edges and corners, and the same size on screen at
-   any zoom, as the canvas's labels are. Shown on the card under the
-   pointer and the one selected; always on a folded one. */
-.canvas-node .dr-fold-btn {
+/* A group's fold arrow: in its label, before its name, as a heading's
+   fold arrow sits — pointing down while it's open, right while it's
+   folded. It sits where the label sits, the same height, zooming with
+   it, and the label makes room for it; it takes the label's colours. */
+.canvas-node-group > .dr-fold-btn {
   position: absolute;
-  top: 14px;
-  right: calc(100% + 12px * var(--zoom-multiplier, 1));
+  left: 0;
+  top: calc(-1 * var(--size-4-1) * var(--zoom-multiplier, 1));
   z-index: 3;
-  width: 24px;
-  height: 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  width: calc(1em + var(--size-4-1));
+  height: calc(1em + 2 * var(--size-4-1));
+  font-size: 1.5em;
+  line-height: 1;
   border-radius: var(--radius-s, 4px);
   color: var(--text-muted);
-  opacity: 0;
+  opacity: 0.75;
   cursor: pointer;
-  transform: scale(var(--zoom-multiplier, 1));
-  transform-origin: top right;
-  transition: opacity 120ms ease 250ms;
+  pointer-events: auto;
+  transform: translate(0, -100%) scale(var(--zoom-multiplier, 1));
+  transform-origin: bottom left;
 }
 
-/* A group lets presses through to the canvas behind it; its arrow takes its own. */
+body:not(.is-ios) .canvas-wrapper.mod-animating .canvas-node-group > .dr-fold-btn {
+  transition: transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.canvas-node-group > .dr-fold-btn .svg-icon {
+  width: 0.8em;
+  height: 0.8em;
+  stroke-width: 2.5;
+}
+
+.canvas-node-group.dr-labelled-fold > .canvas-group-label {
+  padding-left: calc(1em + 2 * var(--size-4-1));
+}
+
+/* A group with no name: the arrow on a chip of its own, where a name would be. */
+.canvas-node-group:not(.dr-labelled-fold) > .dr-fold-btn {
+  width: calc(1em + 2 * var(--size-4-1));
+  justify-content: center;
+  background-color: color-mix(in srgb, var(--text-normal) 6%, transparent);
+}
+
+.canvas-node-group.is-themed.dr-labelled-fold > .canvas-group-label.mod-foreground-light ~ .dr-fold-btn {
+  color: var(--text-on-accent);
+}
+
+.canvas-node-group.is-themed.dr-labelled-fold > .canvas-group-label.mod-foreground-dark ~ .dr-fold-btn {
+  color: var(--text-on-accent-inverted);
+}
+
+/* Renaming the group: the label's its own again. */
+.canvas-node-group.dr-labelled-fold > .canvas-group-label[contenteditable="true"] {
+  padding-left: var(--size-4-2);
+}
+
+.canvas-node-group > .canvas-group-label[contenteditable="true"] ~ .dr-fold-btn {
+  display: none;
+}
+
+.canvas-node-group.dr-folded > .dr-fold-btn {
+  opacity: 1;
+}
+
+/* A group lets presses through to the canvas behind it; what's ours on it takes its own. */
 .canvas-node .dr-fold-btn,
 .canvas-node .dr-branch-knob {
   pointer-events: auto;
 }
 
-.canvas-node .dr-fold-btn .svg-icon {
-  width: 18px;
-  height: 18px;
-  stroke-width: 2.5;
-}
-
-/* A group isn't pointed at as a card is, so its arrow stays in sight. */
-.canvas-node-group .dr-fold-btn {
-  opacity: 0.6;
-}
-
-.canvas-node.is-focused .dr-fold-btn,
-.canvas-node.is-selected .dr-fold-btn,
-.canvas-node.dr-folded .dr-fold-btn {
-  opacity: 1;
-  transition-delay: 0s;
-}
-
-.canvas-node.dr-folded .dr-fold-btn {
-  color: var(--text-normal);
-}
-
 @media (any-hover: hover) {
-  .canvas-node:hover .dr-fold-btn {
+  .canvas-node-group > .dr-fold-btn:hover {
     opacity: 1;
-    transition-delay: 0s;
   }
 
-  .canvas-node .dr-fold-btn:hover {
-    opacity: 1;
+  .canvas-node .dr-fold-face .dr-fold-btn:hover {
     color: var(--text-normal);
     background-color: var(--background-modifier-hover);
   }
@@ -6130,7 +6149,9 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .canvas-node.dr-folded:not(.is-editing) .dr-fold-face {
   position: absolute;
   inset: 0;
-  z-index: 1;
+  /* Over the cover the canvas lays on a card to catch its presses: the
+     face lets them through, all but its arrow's. */
+  z-index: calc(var(--layer-cover, 5) + 1);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -6141,13 +6162,41 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 }
 
 .dr-fold-face-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
   color: var(--text-normal);
   font-size: 22px;
   font-weight: var(--font-bold, 700);
   line-height: 1.25;
+}
+
+.dr-fold-face-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A folded card's arrow, before its title, inside the card: it opens it. */
+.dr-fold-face .dr-fold-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-left: -5px;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-fold-face .dr-fold-btn .svg-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
 }
 
 .dr-fold-face-glimpse {
@@ -6235,10 +6284,8 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   display: none !important;
 }
 
-/* The knob where a card's arrows leave it, just past the edge so the
-   canvas's own handle for drawing an arrow stays free. Open, it shows
-   on the card under the pointer or selected; folded, always, with how
-   many cards it holds. */
+/* A folded branch's count, where its arrows left the card, just past the
+   edge so the canvas's own handle for drawing an arrow stays free. */
 .canvas-node .dr-branch-knob {
   position: absolute;
   z-index: 3;
@@ -6249,22 +6296,14 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   height: 20px;
   padding: 0 4px;
   box-sizing: border-box;
-  border: 1px solid var(--background-modifier-border);
   border-radius: 10px;
-  background-color: var(--background-primary);
-  color: var(--text-muted);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
   font-size: 11px;
   font-weight: var(--font-semibold, 600);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  opacity: 0;
   cursor: pointer;
-  transition: opacity 120ms ease;
-}
-
-.canvas-node .dr-branch-knob .svg-icon {
-  width: 12px;
-  height: 12px;
 }
 
 .canvas-node .dr-branch-knob.is-bottom {
@@ -6295,29 +6334,8 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   transform-origin: right center;
 }
 
-.canvas-node.is-focused .dr-branch-knob,
-.canvas-node.is-selected .dr-branch-knob,
-.canvas-node .dr-branch-knob.is-folded {
-  opacity: 1;
-}
-
-.canvas-node .dr-branch-knob.is-folded {
-  border-color: transparent;
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
 @media (any-hover: hover) {
-  .canvas-node:hover .dr-branch-knob {
-    opacity: 1;
-  }
-
-  .canvas-node .dr-branch-knob:not(.is-folded):hover {
-    color: var(--text-normal);
-    background-color: var(--background-modifier-hover);
-  }
-
-  .canvas-node .dr-branch-knob.is-folded:hover {
+  .canvas-node .dr-branch-knob:hover {
     background-color: var(--interactive-accent-hover);
   }
 }
