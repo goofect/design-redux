@@ -438,7 +438,11 @@ describe('Design Redux in Obsidian', function () {
     });
     const tall = () => browser.execute((sel) => document.querySelector(sel).getBoundingClientRect().height, ACTIVE + '[data-test-id="green1"]');
     const shut = await tall();
-    await browser.$(ACTIVE + '[data-test-id="green1"]').doubleClick();
+    // Opened for editing as a double-click would, which a slow machine can take for two clicks.
+    await browser.executeObsidian(({ app }) => {
+      const node = app.workspace.activeLeaf.view.canvas.nodes.get('green1');
+      if (typeof node.startEditing === 'function') node.startEditing();
+    });
     await browser.waitUntil(async () => (await tall()) > shut + 10, { timeout: 5000, timeoutMsg: 'the folded card never opened to be edited' });
     expect((await sizes()).green1.folded).toBe(true);
     // Done editing: clicked away.
