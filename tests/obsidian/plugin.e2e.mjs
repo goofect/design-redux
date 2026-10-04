@@ -609,8 +609,15 @@ describe('Design Redux in Obsidian', function () {
       { timeout: 6000, interval: 300, timeoutMsg: 'the folds were never saved' }
     );
 
-    // The outline, from the button among the canvas controls: folds shown with their counts.
-    await browser.$(ACTIVE + '.dr-outline-control .canvas-control-item').click();
+    // The outline, from the button among the canvas controls — pressed as
+    // the page has it, since in a short window the column runs under the
+    // status bar — with folds shown with their counts.
+    const pressed = await browser.execute((sel) => {
+      const button = document.querySelector(sel);
+      if (button) button.click();
+      return !!button;
+    }, ACTIVE + '.dr-outline-control .canvas-control-item');
+    expect(pressed).toBe(true);
     await browser.$('.dr-canvas-outline .dr-outline-row').waitForExist({ timeout: 5000 });
     const rows = await browser.execute(() =>
       Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).map((r) => r.textContent.trim())
