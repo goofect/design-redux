@@ -10,12 +10,8 @@
 /* when it unfolds. A folded card resized by hand is simply that size; */
 /* one opened for editing unfolds.                                     */
 /*                                                                     */
-/* The canvas can be changed from outside while it's open — by an AI   */
-/* writing to it, say — so nothing here saves on its own: the file is  */
-/* written only when something is folded or unfolded by hand. A        */
-/* rewrite that drops a fold's record, leaving the card at its folded  */
-/* size, gets the record back from memory, so it still unfolds to its  */
-/* size.                                                               */
+/* The file is written only when something is folded or unfolded by   */
+/* hand; what a redraw changes is saved with the canvas's next change. */
 /*                                                                     */
 /* The settings decide what can be folded; a fold already made can     */
 /* always be undone, so nothing stays tucked away out of reach.        */
@@ -312,51 +308,10 @@ class CanvasFold extends CanvasFeature {
   /** Changes onto the canvas — saved, which also makes them one step of Undo — and everything redrawn. */
   finish(view, model, before, any) {
     if (any && applyCanvasModel(model, before)) this.save(view);
-    // Each fold at the size it's written at, which a rewrite may bring
-    // back; one unfolded, forgotten.
-    const memory = this.memoryOf(view);
-    model.nodes.forEach((rec) => {
-      const was = before.get(rec.id);
-      if (!was || was.fold === (rec.fold ? JSON.stringify(rec.fold) : '')) return;
-      if (rec.fold) memory.set(rec.id, Object.assign({}, rec.fold, { saved: rec.height }));
-      else memory.delete(rec.id);
-    });
     this.pass(view);
     // The outline follows.
     const ws = this.app && this.app.workspace;
     if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:canvas-changed', view);
-  }
-
-  /**
-   * Folds as they were made in one open canvas, by card, outliving a
-   * rewrite. Each open copy of a canvas has cards of its own, so each
-   * keeps its own.
-   */
-  memoryOf(view) {
-    const state = this.watched.get(view);
-    if (!state) return new Map();
-    if (!state.memory) state.memory = new Map();
-    return state.memory;
-  }
-
-  /**
-   * A record dropped by a rewrite, from a card still at its folded size —
-   * as drawn, or as last written, which a fold measured since can differ
-   * from.
-   */
-  recall(view, node) {
-    const memory = this.memoryOf(view);
-    const was = memory.get(node.id);
-    if (!was) return null;
-    const near = (h) => typeof h === 'number' && Math.abs(node.height - h) <= 3;
-    if (node.isEditing || !(near(was.folded) || near(was.saved))) {
-      memory.delete(node.id);
-      return null;
-    }
-    if (!node.unknownData) node.unknownData = {};
-    // At the size written, it's measured again once drawn.
-    node.unknownData[FOLD_KEY] = { height: was.height, folded: node.height, measured: !!was.measured && near(was.folded) };
-    return node.unknownData[FOLD_KEY];
   }
 
   save(view) {
@@ -368,18 +323,14 @@ class CanvasFold extends CanvasFeature {
   }
 
   /**
-   * Each redraw — the user's changes and outside ones alike — in memory
-   * only: what changes here is saved with the canvas's next change. That
+   * Each redraw, in memory only: what changes here is saved with the
+   * canvas's next change. That
    * also keeps it out of Undo: a step of its own, undone, would only
    * bring the canvas back here to be changed again.
    */
   pass(view, state) {
     if (!view || !view.canvas) return;
     state = state || this.watched.get(view);
-    // Folds whose record a rewrite dropped, still at their folded size: back from memory.
-    this.allNodes(view).forEach((node) => {
-      if (node && !foldOf(node) && (foldable(node) || isGroupNode(node))) this.recall(view, node);
-    });
     const model = canvasModel(view.canvas);
     const before = snapshotModel(model);
     let changed = state ? restoreOrphans(model, state, this.closing) : false;
@@ -395,7 +346,7 @@ class CanvasFold extends CanvasFeature {
       const group = isGroupRecord(rec);
       if (!group && !foldable(node)) return;
       // A group holding cards with no record of its fold — dropped by a
-      // rewrite, and not remembered: folded still, to open out round them.
+      // rewrite: folded still, to open out round them.
       if (group && !rec.fold && counts.get(rec.id)) {
         rec.fold = { height: groupOpenHeight(model, rec), folded: rec.height, measured: true };
         changed = true;
@@ -405,14 +356,12 @@ class CanvasFold extends CanvasFeature {
         if (!group && node.isEditing) {
           // Opened to edit: unfolded, to be seen whole.
           unfoldRecord(model, rec, this.closing);
-          this.memoryOf(view).delete(rec.id);
           kept = null;
           changed = true;
         } else if (Math.abs(rec.height - kept.folded) > 3) {
-          // Resized, by hand or from outside: a card is that size now; a group opens out.
+          // Resized: a card is that size now; a group opens out.
           if (group) unfoldRecord(model, rec, this.closing);
           else rec.fold = null;
-          this.memoryOf(view).delete(rec.id);
           kept = null;
           changed = true;
         } else if (!group && !kept.measured) {
@@ -421,8 +370,6 @@ class CanvasFold extends CanvasFeature {
           if (fit.measured) {
             refitRecord(model, rec, fit.height, this.closing);
             kept = rec.fold;
-            const was = this.memoryOf(view).get(rec.id);
-            this.memoryOf(view).set(rec.id, Object.assign({}, kept, was ? { saved: was.saved } : {}));
             changed = true;
           }
         }
