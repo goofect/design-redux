@@ -470,6 +470,41 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(Array.from(view.canvas.selection).map((n) => n.id), ['b']);
   });
 
+  await t('a folded card in a group, pulled open by hand, gives the group back the room it took', () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', -40, -60, 680, 520, { type: 'group', label: 'G' }),
+        card('t1', 0, 0, 280, 200, { text: '# One\nwords' }),
+        card('t3', 0, 240, 280, 180),
+        card('below', -40, 560, 300, 100),
+      ],
+      edges: [],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    fold.fold(view, [n('t1')], true);
+    assert.ok(n('g').height < 520, 'the group closed up');
+    // Caught by the edge's handle and pulled: opened out, as unfolding opens it.
+    n('t1').moveAndResize({ x: 0, y: 0, width: 280, height: n('t1').height + 20 });
+    fold.pass(view);
+    assert.deepStrictEqual([n('t1').height, n('t3').y, n('g').height, n('below').y], [200, 240, 520, 560]);
+    assert.ok(!n('t1').unknownData.drFold);
+  });
+
+  await t('the folding menu offers what can be done now, and how folding works', () => {
+    const view = fakeCanvas({
+      nodes: [card('g', 0, 0, 400, 300, { type: 'group', label: 'G' }), card('a', 20, 20, 100, 50), card('r', 600, 0, 100, 50), card('k', 800, 0, 100, 50)],
+      edges: [edge('r', 'k', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const titles = () => fold.foldMenu(view, view.containerEl, null).items.map((i) => i.title);
+    assert.deepStrictEqual(titles(), ['Fold every card', 'Fold every group', 'Fold every branch', 'How folding works']);
+    fold.foldEverything(view, 'groups');
+    assert.deepStrictEqual(titles(), ['Fold every card', 'Unfold every group', 'Fold every branch', 'Unfold everything', 'How folding works']);
+  });
+
   await t('everything at once: inner groups fold first, and unfolding everything opens folds within folds', () => {
     const view = fakeCanvas({
       nodes: [

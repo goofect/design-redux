@@ -506,9 +506,14 @@ class CanvasFold extends CanvasFeature {
       let face = null;
       if (kept) {
         if (Math.abs(rec.height - kept.folded) > 3) {
-          // Resized: a card is that size now; a group opens out.
-          if (group) unfoldRecord(model, rec, this.closing);
-          else rec.fold = null;
+          // Pulled to another height by hand: opened out — to the size it
+          // was, or taller if it was pulled taller — with room made below
+          // it as unfolding makes, rather than left small and the room
+          // it gave up lost.
+          const hand = rec.height;
+          rec.height = kept.folded;
+          rec.fold = Object.assign({}, kept, { height: Math.max(kept.height, hand) });
+          unfoldRecord(model, rec, this.closing);
           kept = null;
           changed = true;
         } else if (!group) {
@@ -649,7 +654,7 @@ class CanvasFold extends CanvasFeature {
     }
   }
 
-  /** The arrow in a card's or group's corner, which folds it. */
+  /** The arrow beside a card's or group's top, which folds it. */
   button(view, node, folded, group) {
     let button = node.nodeEl.querySelector(':scope > .dr-fold-btn');
     if (!folded && !this.canFold) {
@@ -670,8 +675,9 @@ class CanvasFold extends CanvasFeature {
     if (button.dataset.folded === state) return;
     button.dataset.folded = state;
     button.empty();
-    setIcon(button, folded ? 'chevron-down' : 'chevron-up');
-    button.setAttribute('aria-label', `${folded ? 'Unfold' : 'Fold'}${group ? ' group' : ''}`);
+    setIcon(button, folded ? 'chevron-right' : 'chevron-down');
+    button.setAttribute('aria-label', `${folded ? 'Unfold' : 'Fold'} ${group ? 'group' : 'card'}`);
+    button.setAttribute('data-tooltip-position', 'left');
   }
 
   /**
@@ -757,7 +763,8 @@ class CanvasFold extends CanvasFeature {
       knob.empty();
       if (count) knob.createSpan({ cls: 'dr-branch-count', text: `+${count}` });
       else setIcon(knob, 'minus');
-      knob.setAttribute('aria-label', count ? `Unfold branch: ${count === 1 ? '1 card' : `${count} cards`}` : 'Fold branch');
+      const cards = (n) => (n === 1 ? '1 card' : `${n} cards`);
+      knob.setAttribute('aria-label', count ? `Unfold branch: ${cards(count)}` : `Fold branch: ${cards(branchOf(model, rec.id, links).length)}`);
     });
   }
 
@@ -808,12 +815,20 @@ class CanvasFold extends CanvasFeature {
     if (this.canBranch && s.roots) add('Fold every branch', 'chevrons-down-up', 'branches');
     if (s.anything) add('Unfold everything', 'chevrons-up-down', 'everything');
     if (!count) add('Nothing to fold', 'fold-vertical', 'none');
+    if (typeof menu.addSeparator === 'function') menu.addSeparator();
+    menu.addItem((item) =>
+      item
+        .setTitle('How folding works')
+        .setIcon('help-circle')
+        .onClick(() => new FoldingHelpModal(this.app, this.closing).open())
+    );
     if (evt && typeof evt.clientX === 'number' && evt.clientX && typeof menu.showAtMouseEvent === 'function') {
       menu.showAtMouseEvent(evt);
     } else if (typeof menu.showAtPosition === 'function') {
       const r = anchor.getBoundingClientRect();
       menu.showAtPosition({ x: r.left, y: r.bottom });
     }
+    return menu;
   }
 
   cleanup(view) {
@@ -840,3 +855,37 @@ function stopCanvasPointer(el) {
 
 /* Looked over after a drag or Undo, too: tucked cards' arrows follow their fold. */
 CanvasFold.watchInput = true;
+
+/* What folding does, said plainly, from the folding menu. */
+class FoldingHelpModal extends Modal {
+  constructor(app, closing) {
+    super(app);
+    this.closing = closing;
+  }
+
+  onOpen() {
+    this.modalEl.addClass('dr-fold-help');
+    this.titleEl.setText('Folding on a canvas');
+    const list = this.contentEl.createEl('ul');
+    [
+      ['Cards', 'The arrow just left of a card’s top folds it down to its title. Point at a folded card to read all of it; double-click to edit it as usual.'],
+      ['Branches', 'The round knob where a card’s arrows leave it tucks away everything they lead to. Folded, it says how many cards it holds — point at it to see which, and pick one to open the branch there.'],
+      ['Groups', 'The arrow just left of a group’s top folds it to a bar, its cards inside. Point at the bar to see them; press it to open the group.'],
+      [
+        'Room',
+        this.closing
+          ? 'What’s below a fold moves up into the room it leaves, and back down when it opens; a group the fold is in shrinks and grows with it. Pulling a folded card taller opens it.'
+          : 'Folds leave their room as it was: nothing else moves. Switch on “Close the gaps” in settings to have what’s below move up.',
+      ],
+      ['Kept', 'Folds are saved with the canvas, and Undo puts one back.'],
+    ].forEach(([what, how]) => {
+      const li = list.createEl('li');
+      li.createEl('strong', { text: `${what}. ` });
+      li.appendChild(li.ownerDocument.createTextNode(how));
+    });
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}

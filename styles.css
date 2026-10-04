@@ -6049,24 +6049,29 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 
 /* Folding canvas cards --------------------------------------------------------- */
 
-/* The arrow in a card's corner: shown on the card under the pointer, the
-   one selected, and always on a folded card, so it can be unfolded. */
+/* The fold arrow: just left of a card's or group's top edge, as a fold
+   arrow sits beside a heading — pointing down while it's open, right
+   while it's folded. Clear of the canvas's own handles for resizing,
+   which sit on the edges and corners, and the same size on screen at
+   any zoom, as the canvas's labels are. Shown on the card under the
+   pointer and the one selected; always on a folded one. */
 .canvas-node .dr-fold-btn {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 14px;
+  right: calc(100% + 12px * var(--zoom-multiplier, 1));
   z-index: 3;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-s, 4px);
-  background-color: var(--background-primary);
-  color: var(--text-faint);
+  color: var(--text-muted);
   opacity: 0;
   cursor: pointer;
-  transition: opacity 120ms ease;
+  transform: scale(var(--zoom-multiplier, 1));
+  transform-origin: top right;
+  transition: opacity 120ms ease 250ms;
 }
 
 /* A group lets presses through to the canvas behind it; its arrow takes its own. */
@@ -6075,25 +6080,32 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   pointer-events: auto;
 }
 
+.canvas-node .dr-fold-btn .svg-icon {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
 /* A group isn't pointed at as a card is, so its arrow stays in sight. */
 .canvas-node-group .dr-fold-btn {
   opacity: 0.6;
-}
-
-.canvas-node .dr-fold-btn .svg-icon {
-  width: 14px;
-  height: 14px;
 }
 
 .canvas-node.is-focused .dr-fold-btn,
 .canvas-node.is-selected .dr-fold-btn,
 .canvas-node.dr-folded .dr-fold-btn {
   opacity: 1;
+  transition-delay: 0s;
+}
+
+.canvas-node.dr-folded .dr-fold-btn {
+  color: var(--text-normal);
 }
 
 @media (any-hover: hover) {
   .canvas-node:hover .dr-fold-btn {
     opacity: 1;
+    transition-delay: 0s;
   }
 
   .canvas-node .dr-fold-btn:hover {
@@ -6123,7 +6135,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   flex-direction: column;
   justify-content: center;
   gap: 4px;
-  padding: 0 40px 0 18px;
+  padding: 0 18px;
   font-family: var(--font-text);
   pointer-events: none;
 }
@@ -6256,27 +6268,31 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 }
 
 .canvas-node .dr-branch-knob.is-bottom {
-  top: calc(100% + 10px);
+  top: calc(100% + 12px * var(--zoom-multiplier, 1));
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--zoom-multiplier, 1));
+  transform-origin: top center;
 }
 
 .canvas-node .dr-branch-knob.is-top {
-  bottom: calc(100% + 10px);
+  bottom: calc(100% + 12px * var(--zoom-multiplier, 1));
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--zoom-multiplier, 1));
+  transform-origin: bottom center;
 }
 
 .canvas-node .dr-branch-knob.is-right {
-  left: calc(100% + 10px);
+  left: calc(100% + 12px * var(--zoom-multiplier, 1));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
+  transform-origin: left center;
 }
 
 .canvas-node .dr-branch-knob.is-left {
-  right: calc(100% + 10px);
+  right: calc(100% + 12px * var(--zoom-multiplier, 1));
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
+  transform-origin: right center;
 }
 
 .canvas-node.is-focused .dr-branch-knob,
@@ -6456,4 +6472,14 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
+}
+
+/* How folding works. */
+.dr-fold-help ul {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.dr-fold-help li + li {
+  margin-top: 8px;
 }

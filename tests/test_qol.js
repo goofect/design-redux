@@ -546,14 +546,20 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(R.foldOf(text), null);
     assert.ok(!text.nodeEl.classList.contains('dr-folded'));
 
-    // Resized by hand while folded: that's its size. Opened to edit: as
-    // tall as it was while it's edited, and folded still.
+    // Pulled taller by hand while folded: opened out, to the size it was —
+    // or taller, pulled taller. Opened to edit: as tall as it was while
+    // it's edited, and folded still.
     fold.fold(view, [text, note], true);
     text.height = 90;
     note.isEditing = true;
     fold.pass(view);
     assert.strictEqual(R.foldOf(text), null);
-    assert.strictEqual(text.height, 90);
+    assert.strictEqual(text.height, 120);
+    fold.fold(view, [text], true);
+    text.height = 300;
+    fold.pass(view);
+    assert.strictEqual(text.height, 300);
+    text.height = 90;
     assert.strictEqual(note.height, 52);
     assert.ok(R.foldOf(note));
     assert.strictEqual(note.nodeEl.style.getPropertyValue('--dr-open-height'), '200px');
