@@ -451,12 +451,17 @@ describe('Design Redux in Obsidian', function () {
   it('copes with the canvas being rewritten from outside, and writes nothing back', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-node .dr-fold-btn').waitForExist({ timeout: 10000 });
+    // Past any save still to come from the test before, which a canvas
+    // makes a couple of seconds after a change.
+    await browser.pause(2500);
     const original = await browser.executeObsidian(async ({ app, plugins }) => {
       const file = app.vault.getFileByPath('Map.canvas');
       const text = await app.vault.read(file);
       const view = app.workspace.activeLeaf.view;
       const fold = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasFold');
-      fold.fold(view, [view.canvas.nodes.get('note1')], true);
+      const note = view.canvas.nodes.get('note1');
+      fold.fold(view, [note], false);
+      fold.fold(view, [note], true);
       return text;
     });
     await browser.waitUntil(

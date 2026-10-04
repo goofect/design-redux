@@ -559,6 +559,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     // the card, still at its folded size, gets it back from memory, and
     // nothing is saved over what was written.
     view.file = { path: 'Map.canvas' };
+    fold.watched.set(view, { file: view.file });
     text.isEditing = false;
     text.height = 120;
     fold.fold(view, [text], true);

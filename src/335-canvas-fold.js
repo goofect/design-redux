@@ -118,12 +118,6 @@ function foldedHeight(node) {
 }
 
 class CanvasFold extends CanvasFeature {
-  constructor(plugin) {
-    super(plugin);
-    // Folds as they were made, by canvas and card, outliving a rewrite.
-    this.memory = new Map();
-  }
-
   settingsSchema() {
     return [
       {
@@ -186,11 +180,24 @@ class CanvasFold extends CanvasFeature {
       if (on ? this.foldOne(view, node) : this.unfoldOne(view, node)) changed = true;
     });
     if (changed) this.save(view);
+    // The size each fold is written at, which a rewrite may bring back.
+    (nodes || []).forEach((node) => {
+      const kept = this.memoryOf(view).get(node.id);
+      if (kept) kept.saved = node.height;
+    });
     this.pass(view);
   }
 
-  memoryKey(view, node) {
-    return `${view.file ? view.file.path : ''}\u0000${node.id}`;
+  /**
+   * Folds as they were made in one open canvas, by card, outliving a
+   * rewrite. Each open copy of a canvas has cards of its own, so each
+   * keeps its own.
+   */
+  memoryOf(view) {
+    const state = this.watched.get(view);
+    if (!state) return new Map();
+    if (!state.memory) state.memory = new Map();
+    return state.memory;
   }
 
   foldOne(view, node) {
@@ -199,7 +206,7 @@ class CanvasFold extends CanvasFeature {
     if (height >= node.height - 2) return false;
     if (!node.unknownData) node.unknownData = {};
     node.unknownData[FOLD_KEY] = { height: node.height, folded: height, measured };
-    this.memory.set(this.memoryKey(view, node), Object.assign({}, node.unknownData[FOLD_KEY]));
+    this.memoryOf(view).set(node.id, Object.assign({}, node.unknownData[FOLD_KEY]));
     node.moveAndResize({ x: node.x, y: node.y, width: node.width, height });
     return true;
   }
@@ -208,22 +215,28 @@ class CanvasFold extends CanvasFeature {
     const kept = foldOf(node);
     if (!kept || typeof node.moveAndResize !== 'function') return false;
     delete node.unknownData[FOLD_KEY];
-    this.memory.delete(this.memoryKey(view, node));
+    this.memoryOf(view).delete(node.id);
     node.moveAndResize({ x: node.x, y: node.y, width: node.width, height: Math.max(kept.height, node.height) });
     return true;
   }
 
-  /** A record dropped by a rewrite, from a card still at its folded size. */
+  /**
+   * A record dropped by a rewrite, from a card still at its folded size —
+   * as drawn, or as last written, which a fold measured since can differ
+   * from.
+   */
   recall(view, node) {
-    const key = this.memoryKey(view, node);
-    const was = this.memory.get(key);
+    const memory = this.memoryOf(view);
+    const was = memory.get(node.id);
     if (!was) return null;
-    if (node.isEditing || Math.abs(node.height - was.folded) > 3) {
-      this.memory.delete(key);
+    const near = (h) => typeof h === 'number' && Math.abs(node.height - h) <= 3;
+    if (node.isEditing || !(near(was.folded) || near(was.saved))) {
+      memory.delete(node.id);
       return null;
     }
     if (!node.unknownData) node.unknownData = {};
-    node.unknownData[FOLD_KEY] = Object.assign({}, was);
+    // At the size written, it's measured again once drawn.
+    node.unknownData[FOLD_KEY] = { height: was.height, folded: node.height, measured: !!was.measured && near(was.folded) };
     return node.unknownData[FOLD_KEY];
   }
 
@@ -254,7 +267,7 @@ class CanvasFold extends CanvasFeature {
         } else if (Math.abs(node.height - kept.folded) > 3) {
           // Resized, by hand or from outside: that's its size now.
           delete node.unknownData[FOLD_KEY];
-          this.memory.delete(this.memoryKey(view, node));
+          this.memoryOf(view).delete(node.id);
           kept = null;
         } else if (!kept.measured) {
           // Folded before it was drawn: to its first line, now it is.
@@ -262,7 +275,8 @@ class CanvasFold extends CanvasFeature {
           if (fit.measured) {
             kept.measured = true;
             kept.folded = fit.height;
-            this.memory.set(this.memoryKey(view, node), Object.assign({}, kept));
+            const was = this.memoryOf(view).get(node.id);
+            this.memoryOf(view).set(node.id, Object.assign({}, kept, was ? { saved: was.saved } : {}));
             node.moveAndResize({ x: node.x, y: node.y, width: node.width, height: fit.height });
           }
         }
