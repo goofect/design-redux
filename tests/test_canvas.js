@@ -63,7 +63,7 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, foldRecord, unfoldRecord, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, GROUP_FOLD_HEIGHT };\n');
+  'tuckedBBox, GROUP_FOLD_HEIGHT, foldFace, faceHeight, FOLD_TITLE_HEIGHT, FOLD_GLIMPSE_HEIGHT };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -413,6 +413,88 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const menu = new Menu();
     branches.addMenuItems(menu, [view.canvas.nodes.get('r')]);
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Tidy branch', 'Select branch']);
+  });
+
+  await t('a folded card shows its title and a glimpse of the rest; a note’s heading that repeats its name is skipped', () => {
+    const face = R.foldFace({ type: 'text', text: '---\ntag: x\n---\n# **Realism**\nStates seek [[Power|power]].\n\n- in a world\n' });
+    assert.deepStrictEqual(face, { title: 'Realism', glimpse: 'States seek power. in a world', pending: false });
+    assert.strictEqual(R.faceHeight(face), R.FOLD_GLIMPSE_HEIGHT);
+    const bare = R.foldFace({ type: 'text', text: '## Only a title' });
+    assert.strictEqual(bare.glimpse, '');
+    assert.strictEqual(R.faceHeight(bare), R.FOLD_TITLE_HEIGHT);
+    const note = { type: 'file', file: 'Politics/Anarchy.md' };
+    assert.deepStrictEqual(R.foldFace(note), { title: 'Anarchy', glimpse: '', pending: true });
+    assert.strictEqual(R.faceHeight(R.foldFace(note)), R.FOLD_GLIMPSE_HEIGHT, 'room kept for a note not read yet');
+    assert.strictEqual(R.foldFace(note, '---\na: 1\n---\n# Anarchy\nNo government above.').glimpse, 'No government above.');
+  });
+
+  await t('opening a card leaves its branch folded; folding a card shows its face and a stack for what it holds', () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 200, 160, { text: '# Root\nwords' }), card('a', 300, 0, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const r = view.canvas.nodes.get('r');
+    fold.foldBranches(view, [r], true);
+    assert.ok(r.nodeEl.classList.contains('dr-holds'));
+    assert.strictEqual(r.nodeEl.querySelectorAll(':scope > .dr-stack').length, 2);
+    fold.fold(view, [r], true);
+    assert.strictEqual(r.height, R.FOLD_GLIMPSE_HEIGHT);
+    const face = r.nodeEl.querySelector('.dr-fold-face');
+    assert.deepStrictEqual([face.firstElementChild.textContent, face.lastElementChild.textContent], ['Root', 'words']);
+    fold.fold(view, [r], false);
+    assert.strictEqual(r.height, 160);
+    assert.ok(view.canvas.nodes.get('a').unknownData.drTuck, 'its branch still folded');
+    assert.ok(!r.nodeEl.querySelector('.dr-fold-face'));
+  });
+
+  await t('the tucked cards of a fold listed by name; one picked opens the fold', async () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('b', 200, 100, 100, 50, { text: '# Second' }), card('a', 200, 0, 100, 50, { text: 'First', color: '4' })],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const r = view.canvas.nodes.get('r');
+    fold.foldBranches(view, [r], true);
+    const pop = document.createElement('div');
+    fold.fillTucked(view, 'r', pop);
+    assert.strictEqual(pop.querySelector('.dr-fold-list-head').textContent, '2 cards tucked away');
+    const rows = Array.from(pop.querySelectorAll('.dr-fold-list-row'));
+    assert.deepStrictEqual(rows.map((row) => row.textContent), ['First', 'Second']);
+    view.canvas.selectOnly = (n) => { view.canvas.selection = new Set([n]); };
+    rows[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 0));
+    assert.ok(!view.canvas.nodes.get('b').unknownData.drTuck);
+    assert.deepStrictEqual(Array.from(view.canvas.selection).map((n) => n.id), ['b']);
+  });
+
+  await t('everything at once: inner groups fold first, and unfolding everything opens folds within folds', () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('outer', 0, 0, 600, 500, { type: 'group', label: 'Outer' }),
+        card('inner', 20, 40, 300, 200, { type: 'group', label: 'Inner' }),
+        card('x', 40, 80, 100, 50),
+        card('r', 40, 300, 100, 50),
+        card('k', 300, 300, 100, 50),
+      ],
+      edges: [edge('r', 'k', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    fold.foldEverything(view, 'branches');
+    assert.ok(view.canvas.nodes.get('k').unknownData.drTuck);
+    fold.foldEverything(view, 'groups');
+    const ud = (id) => view.canvas.nodes.get(id).unknownData;
+    assert.strictEqual(ud('x').drTuck.by, 'inner');
+    assert.strictEqual(ud('inner').drTuck.by, 'outer');
+    const model = R.canvasModel(view.canvas);
+    assert.deepStrictEqual(fold.foldStatus(model).foldedGroups, 1, 'only the outer one shows');
+    fold.foldEverything(view, 'everything');
+    ['x', 'inner', 'r', 'k'].forEach((id) => assert.ok(!ud(id).drTuck, `${id} out`));
+    ['outer', 'inner'].forEach((id) => assert.ok(!ud(id).drFold, `${id} open`));
+    assert.strictEqual(view.canvas.nodes.get('outer').height, 500);
   });
 
   console.log(`\n${passed} passed`);

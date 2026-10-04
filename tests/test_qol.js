@@ -505,7 +505,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
   });
 
-  await t('canvas cards fold to a line and back, keeping the size they were in the card', () => {
+  await t('canvas cards fold to their title and back, keeping the size they were in the card', () => {
     const containerEl = document.createElement('div');
     containerEl.createDiv({ cls: 'canvas-controls' });
     const contentEl = containerEl.createDiv();
@@ -527,33 +527,36 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const fold = new R.CanvasFold({ settings: { canvasFold: true, canvasCloseGaps: true } });
 
     fold.fold(view, [text], true);
+    // A card with only a title folds to the title's height.
     assert.strictEqual(text.height, 52);
-    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: false });
+    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: true });
     assert.ok(text.nodeEl.classList.contains('dr-folded'));
+    assert.ok(text.nodeEl.querySelector('.dr-fold-face'));
     assert.strictEqual(saves, 1);
     const control = containerEl.querySelector('.dr-fold-control .canvas-control-item');
-    assert.strictEqual(control.getAttribute('aria-label'), 'Fold every card');
+    assert.strictEqual(control.getAttribute('aria-label'), 'Folding');
 
     // Every card — not the picture — then all of them back.
     fold.foldAll(view);
     assert.strictEqual(note.height, 52);
     assert.strictEqual(pic.height, 200);
     assert.ok(!pic.nodeEl.querySelector('.dr-fold-btn'));
-    assert.strictEqual(control.getAttribute('aria-label'), 'Unfold every card');
     fold.foldAll(view);
     assert.deepStrictEqual([text.height, note.height], [120, 200]);
     assert.strictEqual(R.foldOf(text), null);
     assert.ok(!text.nodeEl.classList.contains('dr-folded'));
 
-    // Resized by hand while folded: that's its size. Opened to edit: unfolded.
+    // Resized by hand while folded: that's its size. Opened to edit: as
+    // tall as it was while it's edited, and folded still.
     fold.fold(view, [text, note], true);
     text.height = 90;
     note.isEditing = true;
     fold.pass(view);
     assert.strictEqual(R.foldOf(text), null);
     assert.strictEqual(text.height, 90);
-    assert.strictEqual(note.height, 200);
-    assert.strictEqual(R.foldOf(note), null);
+    assert.strictEqual(note.height, 52);
+    assert.ok(R.foldOf(note));
+    assert.strictEqual(note.nodeEl.style.getPropertyValue('--dr-open-height'), '200px');
 
     // Turned off: what it added is gone.
     fold.cleanup(view);

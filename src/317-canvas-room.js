@@ -205,7 +205,11 @@ function foldRecord(model, rec, height, measured, close) {
   return true;
 }
 
-/** Back to the size it was — a group's contents back where they were in it — and room made below. */
+/**
+ * Back to the size it was — a group's contents back where they were in
+ * it — and room made below. A card's own fold and its branch's are two
+ * things: opening the card leaves its branch folded.
+ */
 function unfoldRecord(model, rec, close) {
   if (!rec || !rec.fold) return false;
   const before = snapshotModel(model);
@@ -214,7 +218,7 @@ function unfoldRecord(model, rec, close) {
   const height = Math.max(rec.fold.height, rec.height);
   rec.fold = null;
   rec.height = height;
-  const back = untuckFrom(model, rec);
+  const back = isGroupRecord(rec) ? untuckFrom(model, rec) : [];
   if (close) {
     makeRoom(model, before, {
       origin: new Set([rec.id].concat(back.map((n) => n.id))),

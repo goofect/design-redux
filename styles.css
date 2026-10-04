@@ -6103,41 +6103,80 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   }
 }
 
-/* Folded: its first line, and nothing scrolling beneath it. */
-.canvas-node.dr-folded .canvas-node-content,
-.canvas-node.dr-folded .markdown-embed-content {
-  overflow: hidden !important;
+/* Folded: the card's own words put away, and a strip in their place —
+   its title, and a glimpse of the rest fading out — the same for every
+   card. Opened to be edited, it's as tall as it was again, over what's
+   below it, until the editing's done. */
+.canvas-node.dr-folded:not(.is-editing) .canvas-node-content {
+  visibility: hidden;
 }
 
-.canvas-node.dr-folded .metadata-container,
-.canvas-node.dr-folded .mod-frontmatter {
-  display: none !important;
+.dr-fold-face {
+  display: none;
 }
 
-/* Folded, a card keeps one line: what follows it is put away. */
-.canvas-node.dr-folded .dr-fold-line ~ div {
-  display: none !important;
+.canvas-node.dr-folded:not(.is-editing) .dr-fold-face {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 40px 0 18px;
+  font-family: var(--font-text);
+  pointer-events: none;
 }
 
-.canvas-node.dr-folded .dr-fold-line :is(p, h1, h2, h3, h4, h5, h6, li),
-.canvas-node.dr-folded .dr-fold-line .inline-title {
-  white-space: nowrap;
+.dr-fold-face-title {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+  font-size: 22px;
+  font-weight: var(--font-bold, 700);
+  line-height: 1.25;
 }
 
-.canvas-node.dr-folded .dr-fold-line li ~ li,
-.canvas-node.dr-folded .dr-fold-line li :is(ul, ol) {
+.dr-fold-face-glimpse {
   display: none;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1.3;
+  -webkit-mask-image: linear-gradient(to right, #000 65%, transparent);
+  mask-image: linear-gradient(to right, #000 65%, transparent);
 }
 
-.canvas-node.dr-folded .dr-fold-line {
-  padding-right: 20px;
+.dr-fold-face.has-glimpse .dr-fold-face-glimpse {
+  display: block;
 }
 
-/* A folded card keeps one line, without a scrollbar's end showing beside it. */
-.canvas-node.dr-folded ::-webkit-scrollbar {
-  display: none;
+.canvas-node.dr-folded.is-editing {
+  height: var(--dr-open-height) !important;
+  z-index: 1000 !important;
+}
+
+/* Holding tucked cards — a folded branch, a folded group — it sits on a
+   little stack of them. */
+.canvas-node > .dr-stack {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-primary);
+  pointer-events: none;
+}
+
+.canvas-node > .dr-stack.is-near {
+  transform: translate(5px, 5px);
+}
+
+.canvas-node > .dr-stack.is-far {
+  transform: translate(10px, 10px);
+  opacity: 0.6;
 }
 
 /* A folded group: its label above, a slim bar saying how many cards it
@@ -6148,12 +6187,31 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 
 .canvas-node-group .dr-group-summary {
   position: absolute;
-  left: 14px;
+  left: 10px;
   top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: var(--radius-s, 4px);
   transform: translateY(-50%);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .canvas-node-group .dr-group-summary:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-group-dots {
+  display: flex;
+  gap: 3px;
 }
 
 /* Tucked into a fold: not drawn, nor the arrows inside the fold. */
@@ -6246,6 +6304,94 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   .canvas-node .dr-branch-knob.is-folded:hover {
     background-color: var(--interactive-accent-hover);
   }
+}
+
+/* What a fold holds, pointed at: a folded card read whole, or the cards
+   tucked into a fold, by name. */
+.popover.dr-fold-pop {
+  position: fixed;
+  flex-direction: column;
+}
+
+/* Obsidian sizes a preview's insides by --popover-width. */
+.popover.dr-fold-peek {
+  --popover-width: min(420px, 80vw);
+}
+
+.dr-fold-peek-body {
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  padding: 12px 18px 14px;
+}
+
+.dr-fold-peek-title {
+  margin-bottom: 8px;
+  font-size: 1.3em;
+  font-weight: var(--font-bold, 700);
+}
+
+.popover.dr-fold-list {
+  --popover-width: 252px;
+  padding: 6px;
+}
+
+.dr-fold-list-head {
+  padding: 4px 8px 6px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-fold-list-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--radius-s, 4px);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-fold-list-row:focus-visible {
+  outline: none;
+  background-color: var(--background-modifier-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-fold-list-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-fold-list-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-fold-list-count,
+.dr-fold-list-more {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-fold-list-more {
+  padding: 4px 8px 2px;
+}
+
+.dr-fold-pop-mark {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--text-faint);
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.dr-fold-pop-mark.is-colour {
+  border-color: transparent;
+  background-color: var(--dr-mark-colour);
 }
 
 /* Canvas outline -------------------------------------------------------------

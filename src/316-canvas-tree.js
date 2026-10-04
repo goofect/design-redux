@@ -368,18 +368,31 @@ function canvasCardLabel(rec) {
     return (name || 'File') + (rec.subpath ? ` › ${String(rec.subpath).replace(/^#+/, '')}` : '');
   }
   if (rec.type === 'link') return String(rec.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || 'Link';
-  const body = String(rec.text || '').replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '');
-  const line = body.split('\n').map((l) => l.trim()).find((l) => l) || '';
-  const plain = line
+  const line = markdownLines(rec.text)[0] || '';
+  const plain = plainMarkdownLine(line);
+  return plain.length > 120 ? plain.slice(0, 119) + '…' : plain || 'Empty card';
+}
+
+/** Markdown's lines that hold something, its front matter left out. */
+function markdownLines(text) {
+  return String(text || '')
+    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l);
+}
+
+/** One line of markdown as the words it shows: no marks, links as their text. */
+function plainMarkdownLine(line) {
+  return String(line || '')
     .replace(/^#{1,6}\s+/, '')
-    .replace(/^>\s*/, '')
+    .replace(/^>\s*(\[![^\]]*\][+-]?\s*)?/, '')
     .replace(/^[-*+]\s+(\[.\]\s+)?/, '')
     .replace(/^\d+[.)]\s+/, '')
     .replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, '$2')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[*_`~=]/g, '')
     .trim();
-  return plain.length > 120 ? plain.slice(0, 119) + '…' : plain || 'Empty card';
 }
 
 /**
