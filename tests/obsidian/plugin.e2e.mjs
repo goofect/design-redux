@@ -437,9 +437,13 @@ describe('Design Redux in Obsidian', function () {
     const after = await sizes();
     Object.keys(before).forEach((id) => expect(after[id].height).toBe(before[id].height));
 
-    // A card's right-click menu offers it too.
-    await browser.$(ACTIVE + '[data-test-id="red1"]').click({ button: 'right' });
-    await browser.pause(400);
+    // A card's right-click menu offers it too — one in the middle, clear of the legend.
+    await browser.$(ACTIVE + '[data-test-id="green1"]').click();
+    await browser.pause(300);
+    await browser.$(ACTIVE + '[data-test-id="green1"]').click({ button: 'right' });
+    await browser
+      .waitUntil(async () => (await menuTitles()).includes('Fold card'), { timeout: 4000, interval: 200 })
+      .catch(() => {});
     expect(await menuTitles()).toContain('Fold card');
     await closeMenus();
   });
