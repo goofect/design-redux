@@ -4,7 +4,9 @@
 /* Each open canvas is watched while it's open: cards are drawn as they */
 /* come into view and the bar above a selection is rebuilt as it        */
 /* changes, so a feature looks its canvas over again whenever the       */
-/* canvas redraws — once a frame at most. The canvas's own menus, which */
+/* canvas redraws — once a frame at most — and again when its file is   */
+/* changed from outside, by an AI writing to it, say, which can move or */
+/* recolour cards without redrawing them. The canvas's own menus, which */
 /* it announces for plugins, get the feature's entries.                 */
 /*                                                                     */
 /* The canvas's insides aren't public: they're asked carefully.         */
@@ -29,6 +31,20 @@ class CanvasFeature extends Feature {
       })
     );
     this.plugin.registerEvent(ws.on('file-open', () => this.plugin.queueSync()));
+    // The canvas reads the file again a moment after it changes.
+    this.plugin.registerEvent(
+      this.app.vault.on('modify', (file) => {
+        if (!this.enabled) return;
+        this.watched.forEach((state, view) => {
+          if (state.file !== file) return;
+          window.clearTimeout(state.timer);
+          state.timer = window.setTimeout(() => {
+            state.timer = 0;
+            if (this.watched.get(view) === state) this.pass(view, state);
+          }, 300);
+        });
+      })
+    );
   }
 
   enable() {
@@ -75,7 +91,7 @@ class CanvasFeature extends Feature {
   }
 
   watch(view) {
-    const state = { file: view.file, frame: 0, observer: null };
+    const state = { file: view.file, frame: 0, timer: 0, observer: null };
     this.watched.set(view, state);
     const pass = () => {
       state.frame = 0;
@@ -96,6 +112,7 @@ class CanvasFeature extends Feature {
     if (!state) return;
     if (state.observer) state.observer.disconnect();
     if (state.frame) window.cancelAnimationFrame(state.frame);
+    if (state.timer) window.clearTimeout(state.timer);
     this.watched.delete(view);
     if (view.contentEl) this.cleanup(view, state);
   }

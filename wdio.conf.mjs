@@ -8,7 +8,8 @@ const cacheDir = path.resolve('.obsidian-cache');
 // [app version, installer version]: the oldest public release the plugin
 // supports, and the newest. (The manifest's minAppVersion, 1.7.2, was an
 // Insiders-only beta, which can't be downloaded without an Insiders account.)
-const versions = [
+// WDIO_LATEST_ONLY=1 runs the newest alone, for a quick check.
+const versions = process.env.WDIO_LATEST_ONLY ? [['latest', 'latest']] : [
   ['1.7.7', 'earliest'],
   ['latest', 'latest'],
 ];

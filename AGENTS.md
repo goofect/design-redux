@@ -67,7 +67,7 @@ Coffee N' Christmas.
 - Test lightly, the author wants it quick: before pushing, run the simulation
   suites the change touches (`node tests/run.js qol album`), and an Obsidian
   test only for what can't be checked otherwise — just the tests for it
-  (`--mochaOpts.grep`), on the latest version. CI runs everything on both
+  (`--mochaOpts.grep`), on the latest version (`WDIO_LATEST_ONLY=1`). CI runs everything on both
   versions after the push; fix what it finds. CI keeps only a few screenshots.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.

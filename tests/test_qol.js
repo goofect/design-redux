@@ -555,6 +555,28 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(note.height, 200);
     assert.strictEqual(R.foldOf(note), null);
 
+    // Rewritten from outside — by an AI, say — without the fold's record:
+    // the card, still at its folded size, gets it back from memory, and
+    // nothing is saved over what was written.
+    view.file = { path: 'Map.canvas' };
+    text.isEditing = false;
+    text.height = 120;
+    fold.fold(view, [text], true);
+    const saved = saves;
+    text.unknownData = {};
+    fold.pass(view);
+    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: false });
+    assert.ok(text.nodeEl.classList.contains('dr-folded'));
+    // Rewritten at another size: that's its size, and the memory goes.
+    text.unknownData = {};
+    text.height = 140;
+    fold.pass(view);
+    assert.strictEqual(R.foldOf(text), null);
+    text.height = 52;
+    fold.pass(view);
+    assert.strictEqual(R.foldOf(text), null, 'forgotten once resized');
+    assert.strictEqual(saves, saved, 'nothing saved on its own');
+
     // Turned off: what it added is gone.
     fold.cleanup(view);
     assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-fold-btn, .dr-folded'));

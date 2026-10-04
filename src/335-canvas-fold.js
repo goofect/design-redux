@@ -6,6 +6,12 @@
 /* kept in the card's own data in the canvas file, which Obsidian       */
 /* keeps as it is, so a fold travels with the canvas. A folded card     */
 /* resized by hand is simply that size; one opened for editing unfolds. */
+/*                                                                     */
+/* The canvas can be changed from outside while it's open — by an AI   */
+/* writing to it, say — so nothing here saves on its own: the file is  */
+/* written only when a card is folded or unfolded by hand. A rewrite   */
+/* that drops a fold's record, leaving the card at its folded size,    */
+/* gets the record back from memory, so it still unfolds to its size.  */
 /* ------------------------------------------------------------------ */
 
 const FOLD_KEY = 'drFold';
@@ -112,6 +118,12 @@ function foldedHeight(node) {
 }
 
 class CanvasFold extends CanvasFeature {
+  constructor(plugin) {
+    super(plugin);
+    // Folds as they were made, by canvas and card, outliving a rewrite.
+    this.memory = new Map();
+  }
+
   settingsSchema() {
     return [
       {
@@ -166,32 +178,53 @@ class CanvasFold extends CanvasFeature {
     this.fold(view, cards, cards.some((n) => !foldOf(n)));
   }
 
+  /** Folded or unfolded by hand: the one time the file is written. */
   fold(view, nodes, on) {
     if (!view || !view.canvas) return;
     let changed = false;
     (nodes || []).filter(foldable).forEach((node) => {
-      if (on ? this.foldOne(node) : this.unfoldOne(node)) changed = true;
+      if (on ? this.foldOne(view, node) : this.unfoldOne(view, node)) changed = true;
     });
     if (changed) this.save(view);
     this.pass(view);
   }
 
-  foldOne(node) {
+  memoryKey(view, node) {
+    return `${view.file ? view.file.path : ''}\u0000${node.id}`;
+  }
+
+  foldOne(view, node) {
     if (foldOf(node) || typeof node.moveAndResize !== 'function') return false;
     const { height, measured } = foldedHeight(node);
     if (height >= node.height - 2) return false;
     if (!node.unknownData) node.unknownData = {};
     node.unknownData[FOLD_KEY] = { height: node.height, folded: height, measured };
+    this.memory.set(this.memoryKey(view, node), Object.assign({}, node.unknownData[FOLD_KEY]));
     node.moveAndResize({ x: node.x, y: node.y, width: node.width, height });
     return true;
   }
 
-  unfoldOne(node) {
+  unfoldOne(view, node) {
     const kept = foldOf(node);
     if (!kept || typeof node.moveAndResize !== 'function') return false;
     delete node.unknownData[FOLD_KEY];
+    this.memory.delete(this.memoryKey(view, node));
     node.moveAndResize({ x: node.x, y: node.y, width: node.width, height: Math.max(kept.height, node.height) });
     return true;
+  }
+
+  /** A record dropped by a rewrite, from a card still at its folded size. */
+  recall(view, node) {
+    const key = this.memoryKey(view, node);
+    const was = this.memory.get(key);
+    if (!was) return null;
+    if (node.isEditing || Math.abs(node.height - was.folded) > 3) {
+      this.memory.delete(key);
+      return null;
+    }
+    if (!node.unknownData) node.unknownData = {};
+    node.unknownData[FOLD_KEY] = Object.assign({}, was);
+    return node.unknownData[FOLD_KEY];
   }
 
   save(view) {
@@ -202,24 +235,26 @@ class CanvasFold extends CanvasFeature {
     }
   }
 
+  /**
+   * Each redraw — the user's changes and outside ones alike — in memory
+   * only: what changes here is saved with the canvas's next change.
+   */
   pass(view) {
-    let changed = false;
     let anyOpen = false;
     let any = false;
     this.allNodes(view).forEach((node) => {
       if (!node || !node.nodeEl || !foldable(node)) return;
       any = true;
-      let kept = foldOf(node);
+      let kept = foldOf(node) || this.recall(view, node);
       if (kept) {
-        // Opened to edit: unfolded, to be seen whole.
         if (node.isEditing) {
-          this.unfoldOne(node);
-          changed = true;
+          // Opened to edit: unfolded, to be seen whole.
+          this.unfoldOne(view, node);
           kept = null;
         } else if (Math.abs(node.height - kept.folded) > 3) {
-          // Resized by hand: that's its size now.
+          // Resized, by hand or from outside: that's its size now.
           delete node.unknownData[FOLD_KEY];
-          changed = true;
+          this.memory.delete(this.memoryKey(view, node));
           kept = null;
         } else if (!kept.measured) {
           // Folded before it was drawn: to its first line, now it is.
@@ -227,8 +262,8 @@ class CanvasFold extends CanvasFeature {
           if (fit.measured) {
             kept.measured = true;
             kept.folded = fit.height;
+            this.memory.set(this.memoryKey(view, node), Object.assign({}, kept));
             node.moveAndResize({ x: node.x, y: node.y, width: node.width, height: fit.height });
-            changed = true;
           }
         }
       }
@@ -244,7 +279,6 @@ class CanvasFold extends CanvasFeature {
       }
       this.button(view, node, !!kept);
     });
-    if (changed) this.save(view);
     this.control(view, any, anyOpen);
   }
 
