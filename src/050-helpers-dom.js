@@ -282,3 +282,11 @@ function attachSuggest(field, input, opts) {
   return list;
 }
 
+
+/** The editor of the note being edited, if one is: a CodeMirror view. */
+function activeEditorView(app) {
+  const view = app.workspace.getActiveViewOfType(MarkdownView);
+  if (!view || (typeof view.getMode === 'function' && view.getMode() !== 'source')) return null;
+  const cm = view.editor && view.editor.cm;
+  return cm && cm.state && typeof cm.dispatch === 'function' ? cm : null;
+}

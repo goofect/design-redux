@@ -1542,6 +1542,54 @@ function bulkTail(record) {
   return parts.length ? ' ' + parts.join(' ') : '';
 }
 
+/**
+ * A property renamed everywhere from a name typed into a list, with Undo.
+ * One that needs a look first — notes where both names hold different
+ * values, or tags, aliases or CSS classes — goes to `review` instead;
+ * `redraw` puts the list back when nothing changes. A picked property
+ * stays picked under its new name. The record, when it ran.
+ */
+async function renamePropertyInPlace(bulk, from, to, { redraw, review, picks }) {
+  const problem = propertyNameProblem(to);
+  if (problem) {
+    new Notice(problem);
+    redraw();
+    return null;
+  }
+  const plan = bulk.planPropertyRename(from, to);
+  if (from === to && !plan.total && !plan.conflicts.length) {
+    redraw();
+    return null;
+  }
+  const special = ['tags', 'aliases', 'cssclasses'];
+  const changing = from.toLowerCase() !== to.toLowerCase();
+  if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
+    review();
+    return null;
+  }
+  if (picks instanceof Set && picks.has(from)) {
+    picks.delete(from);
+    picks.add(to);
+  }
+  const record = await bulk.renameProperty(from, to);
+  if (!record) {
+    redraw();
+    return null;
+  }
+  const done = notesChanged(record);
+  const bases = (record.bases || []).length;
+  bulkNotice(
+    bulk,
+    (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
+      (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
+      '.' +
+      (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
+      bulkTail(record),
+    record
+  );
+  return record;
+}
+
 /** Notes changed by a record, leaving out the bases it changed too. */
 function notesChanged(record) {
   const bases = record.bases || [];

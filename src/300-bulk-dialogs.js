@@ -1918,41 +1918,12 @@ class PropertyListTool extends BulkModal {
 
   /** Renamed everywhere, with Undo; one that needs a look first opens the rename. */
   async rename(from, to) {
-    const problem = propertyNameProblem(to);
-    if (problem) {
-      new Notice(problem);
-      this.update();
-      return;
-    }
-    const plan = this.bulk.planPropertyRename(from, to);
-    if (from === to && !plan.total && !plan.conflicts.length) {
-      this.update();
-      return;
-    }
-    const special = ['tags', 'aliases', 'cssclasses'];
-    const changing = from.toLowerCase() !== to.toLowerCase();
-    if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
-      this.host.openSheet('rename', { key: from, to });
-      return;
-    }
-    if (this.picks.has(from)) {
-      this.picks.delete(from);
-      this.picks.add(to);
-    }
-    const record = await this.bulk.renameProperty(from, to);
-    this.update();
-    if (!record) return;
-    const done = notesChanged(record);
-    const bases = (record.bases || []).length;
-    bulkNotice(
-      this.bulk,
-      (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
-        (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
-        '.' +
-        (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
-        bulkTail(record),
-      record
-    );
+    const record = await renamePropertyInPlace(this.bulk, from, to, {
+      redraw: () => this.update(),
+      review: () => this.host.openSheet('rename', { key: from, to }),
+      picks: this.picks,
+    });
+    if (record) this.update();
   }
 }
 

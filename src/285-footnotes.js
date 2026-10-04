@@ -826,10 +826,7 @@ class Footnotes extends Feature {
 
   /** The editor of the note being edited, if one is. */
   editorView() {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view || (typeof view.getMode === 'function' && view.getMode() !== 'source')) return null;
-    const cm = view.editor && view.editor.cm;
-    return cm && cm.state && typeof cm.dispatch === 'function' ? cm : null;
+    return activeEditorView(this.app);
   }
 
   registerTypes() {

@@ -379,48 +379,15 @@ class PropertiesScreen extends BrowseScreen {
   async renameProperty(from, to) {
     const view = this.view;
     const tools = this.plugin.feature(BulkEditing);
-    const bulk = this.plugin.bulk;
-    if (!tools || !bulk) return;
-    const problem = propertyNameProblem(to);
-    if (problem) {
-      new Notice(problem);
-      view.render();
-      return;
-    }
-    const plan = bulk.planPropertyRename(from, to);
-    if (from === to && !plan.total && !plan.conflicts.length) {
-      view.render();
-      return;
-    }
-    const special = ['tags', 'aliases', 'cssclasses'];
-    const changing = from.toLowerCase() !== to.toLowerCase();
-    if (plan.conflicts.length || (changing && (special.indexOf(from.toLowerCase()) !== -1 || special.indexOf(to.toLowerCase()) !== -1))) {
-      view.render();
-      tools.openRenameProperty(from, to);
-      return;
-    }
-    const picks = view.propPicks;
-    const record = await bulk.renameProperty(from, to);
-    if (!record) {
-      view.render();
-      return;
-    }
-    // A picked property stays picked under its new name.
-    if (picks instanceof Set && picks.has(from)) {
-      picks.delete(from);
-      picks.add(to);
-    }
-    const done = notesChanged(record);
-    const bases = (record.bases || []).length;
-    bulkNotice(
-      bulk,
-      (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
-        (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
-        '.' +
-        (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
-        bulkTail(record),
-      record
-    );
+    if (!tools || !this.plugin.bulk) return;
+    await renamePropertyInPlace(this.plugin.bulk, from, to, {
+      redraw: () => view.render(),
+      review: () => {
+        view.render();
+        tools.openRenameProperty(from, to);
+      },
+      picks: view.propPicks,
+    });
   }
 
   /** A property's own menu, from its row or its heading: rename it everywhere. */
