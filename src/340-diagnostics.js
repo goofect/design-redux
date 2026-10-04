@@ -56,6 +56,25 @@ function compatibility(app) {
       pending: 'Checked while a canvas is open.',
     },
     {
+      what: 'Folding groups and branches on a canvas, and its outline',
+      ok: open
+        ? has(() => {
+            const c = open.canvas;
+            const node = c.nodes.values().next().value;
+            return (
+              c.edges instanceof Map &&
+              typeof c.select === 'function' &&
+              typeof c.deselect === 'function' &&
+              typeof c.zoomToSelection === 'function' &&
+              (!node || (typeof node.getBBox === 'function' && typeof node.moveAndResize === 'function')) &&
+              Array.from(c.edges.values()).every((e) => typeof e.render === 'function' && e.from && e.to)
+            );
+          })
+        : null,
+      without: 'arrows to tucked cards aren’t drawn to their fold, and a box dragged round a fold can take its cards',
+      pending: 'Checked while a canvas is open.',
+    },
+    {
       what: 'Graph links through the notes between',
       ok: graph
         ? has(() => {

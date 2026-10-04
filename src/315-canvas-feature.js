@@ -91,20 +91,33 @@ class CanvasFeature extends Feature {
   }
 
   watch(view) {
-    const state = { file: view.file, frame: 0, timer: 0, observer: null };
+    const state = { file: view.file, frame: 0, timer: 0, observer: null, inputs: null };
     this.watched.set(view, state);
     const pass = () => {
       state.frame = 0;
       if (this.watched.get(view) === state) this.pass(view, state);
     };
+    state.schedule = () => {
+      if (!state.frame) state.frame = window.requestAnimationFrame(pass);
+    };
     if (typeof MutationObserver === 'function') {
-      state.observer = new MutationObserver(() => {
-        if (!state.frame) state.frame = window.requestAnimationFrame(pass);
-      });
+      state.observer = new MutationObserver(state.schedule);
       state.observer.observe(view.contentEl, { childList: true, subtree: true });
+    }
+    // Cards dragged, resized or put back with Undo change no element the
+    // watcher sees: the canvas is looked over again once the hand's off.
+    if (this.constructor.watchInput && view.containerEl) {
+      state.inputs = ['pointerup', 'keyup'];
+      state.inputs.forEach((type) => view.containerEl.addEventListener(type, state.schedule));
     }
     this.mount(view, state);
     pass();
+  }
+
+  /** Look a canvas over again, on the next frame. */
+  schedule(view) {
+    const state = view && this.watched.get(view);
+    if (state) state.schedule();
   }
 
   unwatch(view) {
@@ -113,6 +126,7 @@ class CanvasFeature extends Feature {
     if (state.observer) state.observer.disconnect();
     if (state.frame) window.cancelAnimationFrame(state.frame);
     if (state.timer) window.clearTimeout(state.timer);
+    if (state.inputs && view.containerEl) state.inputs.forEach((type) => view.containerEl.removeEventListener(type, state.schedule));
     this.watched.delete(view);
     if (view.contentEl) this.cleanup(view, state);
   }

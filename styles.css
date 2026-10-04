@@ -6069,6 +6069,17 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   transition: opacity 120ms ease;
 }
 
+/* A group lets presses through to the canvas behind it; its arrow takes its own. */
+.canvas-node .dr-fold-btn,
+.canvas-node .dr-branch-knob {
+  pointer-events: auto;
+}
+
+/* A group isn't pointed at as a card is, so its arrow stays in sight. */
+.canvas-node-group .dr-fold-btn {
+  opacity: 0.6;
+}
+
 .canvas-node .dr-fold-btn .svg-icon {
   width: 14px;
   height: 14px;
@@ -6086,6 +6097,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   }
 
   .canvas-node .dr-fold-btn:hover {
+    opacity: 1;
     color: var(--text-normal);
     background-color: var(--background-modifier-hover);
   }
@@ -6121,4 +6133,181 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 
 .canvas-node.dr-folded .dr-fold-line {
   padding-right: 20px;
+}
+
+/* A folded card keeps one line, without a scrollbar's end showing beside it. */
+.canvas-node.dr-folded ::-webkit-scrollbar {
+  display: none;
+}
+
+/* A folded group: its label above, a slim bar saying how many cards it
+   holds, and its arrow to open it out again. */
+.canvas-node-group.dr-folded .canvas-node-container {
+  background-color: color-mix(in srgb, var(--text-normal) 4%, transparent);
+}
+
+.canvas-node-group .dr-group-summary {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  pointer-events: none;
+}
+
+/* Tucked into a fold: not drawn, nor the arrows inside the fold. */
+.canvas-node.dr-tucked {
+  display: none !important;
+}
+
+.dr-tucked-edge {
+  display: none !important;
+}
+
+/* The knob where a card's arrows leave it, just past the edge so the
+   canvas's own handle for drawing an arrow stays free. Open, it shows
+   on the card under the pointer or selected; folded, always, with how
+   many cards it holds. */
+.canvas-node .dr-branch-knob {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 10px;
+  background-color: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: var(--font-semibold, 600);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.canvas-node .dr-branch-knob .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.canvas-node .dr-branch-knob.is-bottom {
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.canvas-node .dr-branch-knob.is-top {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.canvas-node .dr-branch-knob.is-right {
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.canvas-node .dr-branch-knob.is-left {
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.canvas-node.is-focused .dr-branch-knob,
+.canvas-node.is-selected .dr-branch-knob,
+.canvas-node .dr-branch-knob.is-folded {
+  opacity: 1;
+}
+
+.canvas-node .dr-branch-knob.is-folded {
+  border-color: transparent;
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+@media (any-hover: hover) {
+  .canvas-node:hover .dr-branch-knob {
+    opacity: 1;
+  }
+
+  .canvas-node .dr-branch-knob:not(.is-folded):hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  .canvas-node .dr-branch-knob.is-folded:hover {
+    background-color: var(--interactive-accent-hover);
+  }
+}
+
+/* Canvas outline -------------------------------------------------------------
+ *
+ * The canvas as a tree in the right sidebar, in Obsidian's own tree rows.
+ */
+
+.dr-canvas-outline .view-content {
+  padding: 8px 6px 24px;
+}
+
+.dr-outline-title {
+  padding: 4px 8px 8px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-outline-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dr-outline-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+}
+
+.dr-outline-mark .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-outline-mark.is-colour::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: var(--dr-outline-colour);
+}
+
+.dr-outline-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-outline-count {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
 }

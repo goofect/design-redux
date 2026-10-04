@@ -524,6 +524,118 @@ describe('Design Redux in Obsidian', function () {
     await browser.pause(800);
   });
 
+  it('folds a branch and a group, closing the gaps; the outline follows; Undo puts it back', async function () {
+    // A small tree growing right, and a group with a card below it.
+    const tree = {
+      nodes: [
+        { id: 'root', type: 'text', text: '# Theory', x: 0, y: 120, width: 200, height: 60 },
+        { id: 'a', type: 'text', text: 'Realism', x: 300, y: 0, width: 180, height: 60 },
+        { id: 'b', type: 'text', text: 'Liberalism', x: 300, y: 240, width: 180, height: 60 },
+        { id: 'a1', type: 'text', text: 'Anarchy', x: 560, y: -60, width: 180, height: 60 },
+        { id: 'a2', type: 'text', text: 'Power', x: 560, y: 60, width: 180, height: 60 },
+        { id: 'g', type: 'group', label: 'Reading', x: -40, y: 400, width: 560, height: 200 },
+        { id: 'g1', type: 'text', text: 'Waltz', x: 0, y: 440, width: 200, height: 60 },
+        { id: 'below', type: 'text', text: 'Below', x: -40, y: 640, width: 560, height: 60 },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'root', fromSide: 'right', toNode: 'a', toSide: 'left' },
+        { id: 'e2', fromNode: 'root', fromSide: 'right', toNode: 'b', toSide: 'left' },
+        { id: 'e3', fromNode: 'a', fromSide: 'right', toNode: 'a1', toSide: 'left' },
+        { id: 'e4', fromNode: 'a', fromSide: 'right', toNode: 'a2', toSide: 'left' },
+        { id: 'e5', fromNode: 'g1', fromSide: 'right', toNode: 'a1', toSide: 'bottom' },
+      ],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const old = app.vault.getFileByPath('Tree.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Tree.canvas', JSON.stringify(data));
+    }, tree);
+    await obsidianPage.openFile('Tree.canvas');
+    await browser.$(ACTIVE + '.canvas-node .dr-branch-knob').waitForExist({ timeout: 10000 });
+    const cards = () =>
+      browser.executeObsidian(({ app }) => {
+        const out = {};
+        app.workspace.activeLeaf.view.canvas.nodes.forEach((node, id) => {
+          node.nodeEl.setAttribute('data-test-id', id);
+          out[id] = { y: node.y, height: node.height, hidden: node.nodeEl.classList.contains('dr-tucked') };
+        });
+        return out;
+      });
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.deselectAll();
+      canvas.zoomToFit();
+    });
+    await browser.pause(600);
+    const before = await cards();
+
+    // Realism's knob: Power is tucked away; Anarchy, which Waltz leads to too, stays out.
+    await browser.$(ACTIVE + '[data-test-id="a"]').moveTo();
+    await browser.$(ACTIVE + '[data-test-id="a"] .dr-branch-knob').click();
+    await browser.waitUntil(async () => (await cards()).a2.hidden, { timeout: 5000, timeoutMsg: 'the branch never folded' });
+    let now = await cards();
+    expect(now.a1.hidden).toBe(false);
+    expect(await browser.$(ACTIVE + '[data-test-id="a"] .dr-branch-knob').getText()).toBe('+1');
+    // Its room closed up: Liberalism, the group and what's below it move up by Power's overhang.
+    expect(before.b.y - now.b.y).toBe(60);
+    expect(before.below.y - now.below.y).toBe(60);
+    expect(now.root.y).toBe(before.root.y);
+
+    // The group folds from its arrow, its card tucked inside, and what's below closes up.
+    await browser.$(ACTIVE + '[data-test-id="g"] .dr-fold-btn').click();
+    await browser.waitUntil(async () => (await cards()).g1.hidden, { timeout: 5000, timeoutMsg: 'the group never folded' });
+    now = await cards();
+    expect(now.g.height).toBe(48);
+    expect(now.below.y).toBe(before.below.y - 60 - 152);
+    // Waltz's arrow to Anarchy now starts at the folded group.
+    const fromBar = await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      const g = canvas.nodes.get('g').getBBox();
+      const d = canvas.edges.get('e5').path.display.getAttribute('d');
+      const start = d.match(/^M\s*(-?[\d.]+)[ ,](-?[\d.]+)/);
+      return Number(start[1]) >= g.minX && Number(start[1]) <= g.maxX + 1 && Number(start[2]) >= g.minY - 1 && Number(start[2]) <= g.maxY + 1;
+    });
+    expect(fromBar).toBe(true);
+    await shot('canvas-tree-folded');
+
+    // Kept in the file.
+    await browser.waitUntil(
+      async () =>
+        browser.executeObsidian(async ({ app }) => {
+          const nodes = JSON.parse(await app.vault.read(app.vault.getFileByPath('Tree.canvas'))).nodes;
+          const find = (id) => nodes.find((n) => n.id === id);
+          return !!(find('a2').drTuck && find('a2').drTuck.by === 'a' && find('g1').drTuck && find('g').drFold);
+        }),
+      { timeout: 6000, interval: 300, timeoutMsg: 'the folds were never saved' }
+    );
+
+    // The outline, from the button among the canvas controls: folds shown with their counts.
+    await browser.$(ACTIVE + '.dr-outline-control .canvas-control-item').click();
+    await browser.$('.dr-canvas-outline .dr-outline-row').waitForExist({ timeout: 5000 });
+    const rows = await browser.execute(() =>
+      Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).map((r) => r.textContent.trim())
+    );
+    expect(rows).toEqual(['Anarchy', 'Theory', 'Realism+1', 'Liberalism', 'Reading+1', 'Below']);
+
+    // Unfolded from the outline: the group opens and what's below moves back down.
+    await browser.execute(() => {
+      const row = Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).find((r) => r.textContent.startsWith('Reading'));
+      row.querySelector('.collapse-icon').click();
+    });
+    await browser.waitUntil(async () => !(await cards()).g1.hidden, { timeout: 5000, timeoutMsg: 'the group never unfolded' });
+    expect((await cards()).below.y).toBe(before.below.y - 60);
+
+    // Undo folds it again.
+    await browser.pause(2500);
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.undo());
+    await browser.$(ACTIVE + '.canvas-wrapper').click();
+    await browser.waitUntil(async () => (await cards()).g1.hidden, { timeout: 5000, timeoutMsg: 'Undo didn’t fold the group again' });
+
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('design-redux-canvas-outline').forEach((leaf) => leaf.detach());
+    });
+  });
+
   it('offers Undo after a move, and it puts the note back', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       const file = app.vault.getFileByPath('Politics/Deterrence.md');

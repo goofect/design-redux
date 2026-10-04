@@ -1,0 +1,162 @@
+/* ------------------------------------------------------------------ */
+/* Tidying and selecting a branch                                      */
+/*                                                                     */
+/* A card's branch — what its arrows lead to, and on — laid out as a   */
+/* tidy tree growing the way its arrows leave it, with the cards round */
+/* it kept as far off as they were; or selected with the card, to move */
+/* or colour together. From the card's right-click menu, or commands.  */
+/* ------------------------------------------------------------------ */
+
+const OPPOSITE_SIDE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+
+class CanvasBranches extends CanvasFeature {
+  settingsSchema() {
+    return [
+      {
+        key: 'canvasTidy',
+        name: 'Tidy a branch',
+        desc: 'Lay out everything a card’s arrows lead to as a neat tree, growing the way the arrows leave it, from the card’s right-click menu.',
+      },
+      {
+        key: 'canvasSelectBranch',
+        name: 'Select a branch',
+        desc: 'Select a card with everything its arrows lead to, to move or colour them together, from the card’s right-click menu.',
+      },
+    ];
+  }
+
+  get enabled() {
+    return !!(this.settings.canvasTidy || this.settings.canvasSelectBranch);
+  }
+
+  // Only the menus: nothing is drawn on the canvas.
+  sync() {}
+
+  commands() {
+    return [
+      {
+        id: 'tidy-canvas-branch',
+        name: 'Tidy the selected card’s branch',
+        icon: 'network',
+        check: () => !!this.settings.canvasTidy && !!this.target(this.pageCanvas()),
+        run: () => this.tidy(this.pageCanvas(), this.target(this.pageCanvas())),
+      },
+      {
+        id: 'select-canvas-branch',
+        name: 'Select the selected card’s branch',
+        icon: 'git-branch',
+        check: () => !!this.settings.canvasSelectBranch && !!this.target(this.pageCanvas()),
+        run: () => this.selectBranch(this.pageCanvas(), this.target(this.pageCanvas())),
+      },
+    ];
+  }
+
+  /** The one selected card, if it has cards below it by its arrows. */
+  target(view) {
+    const selected = this.selectedNodes(view);
+    if (selected.length !== 1) return null;
+    return this.hasBranch(view, selected[0]) ? selected[0] : null;
+  }
+
+  hasBranch(view, node) {
+    if (!view || !view.canvas || !node) return false;
+    const model = canvasModel(view.canvas);
+    const rec = model.byId.get(node.id);
+    return !!rec && !rec.tuck && !isGroupRecord(rec) && shownChildren(model, arrowLinks(model), rec.id).length > 0;
+  }
+
+  addMenuItems(menu, nodes) {
+    if (nodes.length !== 1) return;
+    const node = nodes[0];
+    const view = node && node.canvas && node.canvas.view;
+    if (!this.hasBranch(view, node)) return;
+    if (this.settings.canvasTidy) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Tidy branch')
+          .setIcon('network')
+          .onClick(() => this.tidy(view, node))
+      );
+    }
+    if (this.settings.canvasSelectBranch) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Select branch')
+          .setIcon('git-branch')
+          .onClick(() => this.selectBranch(view, node))
+      );
+    }
+  }
+
+  /** The branch laid out as a tree, and its arrows leaving and arriving on the sides the tree grows by. */
+  tidy(view, node) {
+    if (!view || !view.canvas || !node) return;
+    const model = canvasModel(view.canvas);
+    const rec = model.byId.get(node.id);
+    if (!rec || rec.tuck) return;
+    const before = snapshotModel(model);
+    const links = arrowLinks(model);
+    const side = branchSide(model, rec.id, links);
+    const placed = new Set(tidyBranch(model, rec.id, side, links).keys());
+    const moved = tidyRecords(model, rec, this.settings.canvasCloseGaps !== false, links);
+    let changed = moved && applyCanvasModel(model, before);
+    // The arrows within the tree, from the side it grows by to the side facing back.
+    placed.add(rec.id);
+    model.edges.forEach((e) => {
+      const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
+      const parent = reversed ? e.to : e.from;
+      const child = reversed ? e.from : e.to;
+      if (!placed.has(parent) || !placed.has(child) || (links.children.get(parent) || []).indexOf(child) === -1) return;
+      const fromSide = reversed ? OPPOSITE_SIDE[side] : side;
+      const toSide = reversed ? side : OPPOSITE_SIDE[side];
+      if (e.fromSide === fromSide && e.toSide === toSide) return;
+      if (setEdgeSides(e.edge, fromSide, toSide)) changed = true;
+    });
+    if (changed) {
+      try {
+        view.canvas.requestSave();
+      } catch (err) {
+        /* saved with the canvas's next change */
+      }
+    }
+    const fold = this.plugin.feature(CanvasFold);
+    if (fold) fold.schedule(view);
+    this.app.workspace.trigger('design-redux:canvas-changed', view);
+  }
+
+  /** The card and every shown card below it by its arrows, selected. */
+  selectBranch(view, node) {
+    if (!view || !view.canvas || !node) return;
+    const canvas = view.canvas;
+    const model = canvasModel(canvas);
+    const links = arrowLinks(model);
+    const seen = new Set([node.id]);
+    const queue = [node.id];
+    while (queue.length) {
+      shownChildren(model, links, queue.shift()).forEach((c) => {
+        if (seen.has(c.id)) return;
+        seen.add(c.id);
+        queue.push(c.id);
+      });
+    }
+    const cards = Array.from(seen).map((id) => (model.byId.get(id) || {}).node).filter(Boolean);
+    try {
+      if (typeof canvas.deselectAll === 'function') canvas.deselectAll();
+      cards.forEach((n) => canvas.select(n));
+    } catch (err) {
+      /* left as it was */
+    }
+  }
+}
+
+/** An arrow's ends moved to other sides of its cards. */
+function setEdgeSides(edge, fromSide, toSide) {
+  try {
+    if (!edge || typeof edge.getData !== 'function' || typeof edge.setData !== 'function') return false;
+    edge.setData(Object.assign({}, edge.getData(), { fromSide, toSide }));
+    if (typeof edge.render === 'function') edge.render();
+    return true;
+  } catch (err) {
+    return false;
+  }
+}

@@ -38,6 +38,24 @@ function canvasColorCounts(nodes) {
   return keys.map((key) => ({ key, count: counts.get(key) }));
 }
 
+/**
+ * One of Obsidian's six card colours. Older versions keep them as
+ * "r, g, b", to go inside rgb(); newer ones as colours in their own
+ * right. Read as the theme has it, so either works.
+ */
+function canvasPresetColour(el, key) {
+  const name = `--canvas-color-${key}`;
+  let raw = '';
+  try {
+    const at = el.parentElement || el;
+    raw = at.ownerDocument.defaultView.getComputedStyle(at).getPropertyValue(name).trim();
+  } catch (err) {
+    raw = '';
+  }
+  if (!raw) return `rgb(var(${name}))`;
+  return /^\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?$/.test(raw) ? `rgb(${raw})` : raw;
+}
+
 class CanvasLegend extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -238,22 +256,8 @@ class CanvasLegend extends Feature {
     else el.style.setProperty('background-color', key);
   }
 
-  /**
-   * One of Obsidian's six card colours. Older versions keep them as
-   * "r, g, b", to go inside rgb(); newer ones as colours in their own
-   * right. Read as the theme has it, so either works.
-   */
   presetColour(el, key) {
-    const name = `--canvas-color-${key}`;
-    let raw = '';
-    try {
-      const at = el.parentElement || el;
-      raw = at.ownerDocument.defaultView.getComputedStyle(at).getPropertyValue(name).trim();
-    } catch (err) {
-      raw = '';
-    }
-    if (!raw) return `rgb(var(${name}))`;
-    return /^\d+(\.\d+)?\s*,\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?$/.test(raw) ? `rgb(${raw})` : raw;
+    return canvasPresetColour(el, key);
   }
 
   colourName(key) {

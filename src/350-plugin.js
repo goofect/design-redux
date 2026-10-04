@@ -31,6 +31,8 @@ class DesignRedux extends Plugin {
       new CanvasLegend(this),
       new CanvasAlign(this),
       new CanvasFold(this),
+      new CanvasBranches(this),
+      new CanvasOutline(this),
       new Diagnostics(this),
       new BulkEditing(this),
     ];

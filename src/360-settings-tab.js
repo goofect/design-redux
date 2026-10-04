@@ -46,7 +46,10 @@ const SETTINGS_TABS = [
       { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
-      { title: 'Canvas', keys: ['canvasLegend', 'canvasTextAlign', 'canvasFold'] },
+      {
+        title: 'Canvas',
+        keys: ['canvasLegend', 'canvasTextAlign', 'canvasFold', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasSelectBranch', 'canvasOutline'],
+      },
       {
         title: 'Compatibility',
         desc: 'Parts of Obsidian that Design Redux uses but plugins aren’t officially meant to. If an Obsidian update changes one, this shows what stops working.',

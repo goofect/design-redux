@@ -55,6 +55,11 @@ Coffee N' Christmas.
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
 - A canvas can open before its cards are loaded; count them again when they arrive.
+- Canvas folds (`316`, `317`, `335`–`339`): a tucked card keeps its own place in
+  the file and only answers `getBBox` with its fold's box, so arrows end at the
+  fold. A pass never saves — only a fold, unfold or tidy by hand does: a canvas
+  can be rewritten from outside while open, and each save is a step of Undo
+  that, undone, would only start the pass again.
 - Quiet links: Obsidian reads `[[[X]]]` as a link to a missing "[X". They're
   set aside from each note's cache in `metadataCache` 'changed' — which fires
   before Obsidian counts the note's links — and swept once after 'resolved'

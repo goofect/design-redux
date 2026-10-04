@@ -524,7 +524,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const note = card('n', { type: 'file', file: 'A.md' }, 200);
     const pic = card('p', { type: 'file', file: 'a.png' }, 200);
     const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), selection: new Set(), requestSave: () => saves++ } };
-    const fold = new R.CanvasFold({ settings: {} });
+    const fold = new R.CanvasFold({ settings: { canvasFold: true, canvasCloseGaps: true } });
 
     fold.fold(view, [text], true);
     assert.strictEqual(text.height, 52);
