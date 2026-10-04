@@ -41,6 +41,9 @@ async function clickText(selector, text) {
   expect(found).toBe(true);
 }
 
+/** Inside the tab in use — another tab may show the same file. */
+const ACTIVE = '.workspace-leaf.mod-active ';
+
 async function menuTitles() {
   return browser.execute(() =>
     Array.from(document.querySelectorAll('.menu .menu-item-title')).map((e) => e.textContent.trim())
@@ -367,6 +370,77 @@ describe('Design Redux in Obsidian', function () {
     await browser.$('[data-test-id="green2"]').click({ button: 'right' });
     await browser.pause(400);
     expect(await menuTitles()).toContain('Stop centering text');
+    await closeMenus();
+  });
+
+  it('folds a canvas card to its first line, and every card at once', async function () {
+    await obsidianPage.openFile('Map.canvas');
+    await browser.$(ACTIVE + '.canvas-node .dr-fold-btn').waitForExist({ timeout: 10000 });
+    const sizes = () =>
+      browser.executeObsidian(({ app }) => {
+        const canvas = app.workspace.activeLeaf.view.canvas;
+        const out = {};
+        canvas.nodes.forEach((node, id) => {
+          node.nodeEl.setAttribute('data-test-id', id);
+          out[id] = { height: node.height, folded: node.nodeEl.classList.contains('dr-folded') };
+        });
+        return out;
+      });
+    // Every card in view, none selected, whatever the test before left.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      if (typeof canvas.deselectAll === 'function') canvas.deselectAll();
+      if (typeof canvas.zoomToFit === 'function') canvas.zoomToFit();
+    });
+    await browser.pause(600);
+    const before = await sizes();
+    expect(before.note1.height).toBe(200);
+    await browser.$(ACTIVE + '[data-test-id="note1"]').waitForExist({ timeout: 5000 });
+
+    // The note card's arrow folds it to its first line.
+    await browser.$(ACTIVE + '[data-test-id="note1"]').moveTo();
+    await browser.$(ACTIVE + '[data-test-id="note1"] .dr-fold-btn').click();
+    await browser.waitUntil(async () => (await sizes()).note1.folded, { timeout: 5000, timeoutMsg: 'the card never folded' });
+    const folded = await sizes();
+    expect(folded.note1.height).toBeLessThan(120);
+    expect(folded.note1.height).toBeGreaterThan(30);
+    expect(folded.red1.folded).toBe(false);
+    await shot('canvas-folded');
+
+    // The fold is kept in the canvas file.
+    await browser.waitUntil(
+      async () =>
+        browser.executeObsidian(async ({ app }) => {
+          const text = await app.vault.read(app.vault.getFileByPath('Map.canvas'));
+          const node = JSON.parse(text).nodes.find((n) => n.id === 'note1');
+          return !!(node.drFold && node.drFold.height === 200);
+        }),
+      { timeout: 6000, interval: 300, timeoutMsg: 'the fold was never saved' }
+    );
+
+    // Pressed again, it's back to the size it was.
+    await browser.$(ACTIVE + '[data-test-id="note1"] .dr-fold-btn').click();
+    await browser.waitUntil(async () => !(await sizes()).note1.folded, { timeout: 5000 });
+    expect((await sizes()).note1.height).toBe(200);
+
+    // The control beside the zoom buttons folds every card, then unfolds them.
+    const control = await browser.$(ACTIVE + '.canvas-controls .dr-fold-control .canvas-control-item');
+    expect(await control.getAttribute('aria-label')).toBe('Fold every card');
+    await control.click();
+    await browser.waitUntil(async () => Object.values(await sizes()).every((s) => s.folded), {
+      timeout: 5000,
+      timeoutMsg: 'not every card folded',
+    });
+    expect(await control.getAttribute('aria-label')).toBe('Unfold every card');
+    await control.click();
+    await browser.waitUntil(async () => Object.values(await sizes()).every((s) => !s.folded), { timeout: 5000 });
+    const after = await sizes();
+    Object.keys(before).forEach((id) => expect(after[id].height).toBe(before[id].height));
+
+    // A card's right-click menu offers it too.
+    await browser.$(ACTIVE + '[data-test-id="red1"]').click({ button: 'right' });
+    await browser.pause(400);
+    expect(await menuTitles()).toContain('Fold card');
     await closeMenus();
   });
 

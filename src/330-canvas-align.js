@@ -19,12 +19,7 @@ function alignable(node) {
   }
 }
 
-class CanvasAlign extends Feature {
-  constructor(plugin) {
-    super(plugin);
-    this.watched = new Map();
-  }
-
+class CanvasAlign extends CanvasFeature {
   settingsSchema() {
     return [
       {
@@ -50,53 +45,9 @@ class CanvasAlign extends Feature {
     ];
   }
 
-  register() {
-    const ws = this.app.workspace;
-    // The canvas's own menus, which it announces for plugins to add to.
-    this.plugin.registerEvent(
-      ws.on('canvas:node-menu', (menu, node) => {
-        if (this.enabled) this.addMenuItem(menu, [node]);
-      })
-    );
-    this.plugin.registerEvent(
-      ws.on('canvas:selection-menu', (menu, canvas) => {
-        if (this.enabled && canvas) this.addMenuItem(menu, Array.from(canvas.selection || []));
-      })
-    );
-    this.plugin.registerEvent(ws.on('file-open', () => this.plugin.queueSync()));
-  }
-
-  enable() {
-    this.sync();
-  }
-
-  disable() {
-    Array.from(this.watched.keys()).forEach((view) => this.unwatch(view));
-  }
-
-  sync() {
-    this.watched.forEach((state, view) => {
-      if (!view.contentEl || !view.contentEl.isConnected || view.file !== state.file) this.unwatch(view);
-    });
-    this.app.workspace.getLeavesOfType('canvas').forEach((leaf) => {
-      const view = leaf.isDeferred ? null : leaf.view;
-      if (view && view.file && view.contentEl && view.canvas && !this.watched.has(view)) this.watch(view);
-    });
-  }
-
-  pageCanvas() {
-    const leaf = pageLeaf(this.app);
-    const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    return view && view.canvas && view.file && view.file.extension === 'canvas' ? view : null;
-  }
-
-  /** The selected cards that can be centred. The selection isn't public, so it's asked carefully. */
+  /** The selected cards that can be centred. */
   selected(view) {
-    try {
-      return view ? Array.from(view.canvas.selection || []).filter(alignable) : [];
-    } catch (err) {
-      return [];
-    }
+    return this.selectedNodes(view).filter(alignable);
   }
 
   /** A canvas's centred cards; none for a canvas with no file — one closing, or not yet loaded. */
@@ -123,11 +74,10 @@ class CanvasAlign extends Feature {
     else delete all[view.file.path];
     this.settings.canvasAlignments = all;
     this.plugin.saveData(this.settings);
-    this.apply(view);
-    this.decorateMenu(view);
+    this.pass(view);
   }
 
-  addMenuItem(menu, nodes) {
+  addMenuItems(menu, nodes) {
     const first = nodes[0];
     const view = first && first.canvas && first.canvas.view;
     const cards = nodes.filter(alignable);
@@ -141,49 +91,21 @@ class CanvasAlign extends Feature {
     );
   }
 
-  /**
-   * Cards are drawn as they come into view, and the bar above a
-   * selection is rebuilt as it changes, so both are looked over again
-   * whenever the canvas redraws — once a frame at most.
-   */
-  watch(view) {
-    const state = { file: view.file, frame: 0, observer: null };
-    this.watched.set(view, state);
-    const pass = () => {
-      state.frame = 0;
-      this.apply(view);
-      this.decorateMenu(view);
-    };
-    if (typeof MutationObserver === 'function') {
-      state.observer = new MutationObserver(() => {
-        if (!state.frame) state.frame = window.requestAnimationFrame(pass);
-      });
-      state.observer.observe(view.contentEl, { childList: true, subtree: true });
-    }
-    pass();
+  pass(view) {
+    this.apply(view);
+    this.decorateMenu(view);
   }
 
-  unwatch(view) {
-    const state = this.watched.get(view);
-    if (!state) return;
-    if (state.observer) state.observer.disconnect();
-    if (state.frame) window.cancelAnimationFrame(state.frame);
-    if (view.contentEl) {
-      view.contentEl.querySelectorAll('.dr-text-center').forEach((el) => el.removeClass('dr-text-center'));
-      view.contentEl.querySelectorAll('.dr-align-button').forEach((el) => el.remove());
-    }
-    this.watched.delete(view);
+  cleanup(view) {
+    view.contentEl.querySelectorAll('.dr-text-center').forEach((el) => el.removeClass('dr-text-center'));
+    view.contentEl.querySelectorAll('.dr-align-button').forEach((el) => el.remove());
   }
 
   apply(view) {
     const mine = this.alignments(view.file);
-    try {
-      view.canvas.nodes.forEach((node) => {
-        if (node && node.nodeEl) node.nodeEl.toggleClass('dr-text-center', mine[node.id] === 'center');
-      });
-    } catch (err) {
-      /* nothing to mark */
-    }
+    this.allNodes(view).forEach((node) => {
+      if (node && node.nodeEl) node.nodeEl.toggleClass('dr-text-center', mine[node.id] === 'center');
+    });
   }
 
   /**
@@ -218,4 +140,3 @@ class CanvasAlign extends Feature {
 }
 
 CanvasAlign.settingKey = 'canvasTextAlign';
-

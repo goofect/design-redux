@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -471,6 +471,61 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(align.alignments(null), {});
     assert.deepStrictEqual(align.alignments({ path: 'Map.canvas' }), { a: 'center' });
     assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
+  });
+
+  await t('canvas cards fold to a line and back, keeping the size they were in the card', () => {
+    const containerEl = document.createElement('div');
+    containerEl.createDiv({ cls: 'canvas-controls' });
+    const contentEl = containerEl.createDiv();
+    let saves = 0;
+    const card = (id, data, height) => {
+      const node = {
+        id, x: 0, y: 0, width: 200, height, unknownData: {}, isEditing: false,
+        nodeEl: contentEl.createDiv({ cls: 'canvas-node' }),
+        getData: () => data,
+        moveAndResize(r) { this.height = r.height; },
+      };
+      node.nodeEl.createDiv({ cls: 'canvas-node-content' });
+      return node;
+    };
+    const text = card('t', { type: 'text' }, 120);
+    const note = card('n', { type: 'file', file: 'A.md' }, 200);
+    const pic = card('p', { type: 'file', file: 'a.png' }, 200);
+    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), selection: new Set(), requestSave: () => saves++ } };
+    const fold = new R.CanvasFold({ settings: {} });
+
+    fold.fold(view, [text], true);
+    assert.strictEqual(text.height, 52);
+    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: false });
+    assert.ok(text.nodeEl.classList.contains('dr-folded'));
+    assert.strictEqual(saves, 1);
+    const control = containerEl.querySelector('.dr-fold-control .canvas-control-item');
+    assert.strictEqual(control.getAttribute('aria-label'), 'Fold every card');
+
+    // Every card — not the picture — then all of them back.
+    fold.foldAll(view);
+    assert.strictEqual(note.height, 52);
+    assert.strictEqual(pic.height, 200);
+    assert.ok(!pic.nodeEl.querySelector('.dr-fold-btn'));
+    assert.strictEqual(control.getAttribute('aria-label'), 'Unfold every card');
+    fold.foldAll(view);
+    assert.deepStrictEqual([text.height, note.height], [120, 200]);
+    assert.strictEqual(R.foldOf(text), null);
+    assert.ok(!text.nodeEl.classList.contains('dr-folded'));
+
+    // Resized by hand while folded: that's its size. Opened to edit: unfolded.
+    fold.fold(view, [text, note], true);
+    text.height = 90;
+    note.isEditing = true;
+    fold.pass(view);
+    assert.strictEqual(R.foldOf(text), null);
+    assert.strictEqual(text.height, 90);
+    assert.strictEqual(note.height, 200);
+    assert.strictEqual(R.foldOf(note), null);
+
+    // Turned off: what it added is gone.
+    fold.cleanup(view);
+    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-fold-btn, .dr-folded'));
   });
 
   console.log(`\n${passed} passed`);

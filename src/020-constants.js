@@ -92,6 +92,8 @@ const DEFAULTS = {
   canvasLegends: {},
   // Centred text in canvas cards, and which cards have it.
   canvasTextAlign: true,
+  // Cards folded to their first line, from an arrow in their corner.
+  canvasFold: true,
   // { canvasPath: { cardId: 'center' } }
   canvasAlignments: {},
   // { folderPath: [{ key, value, type }] } — given to notes made there.

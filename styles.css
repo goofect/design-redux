@@ -5963,3 +5963,79 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-fn-item.is-unused .dr-fn-where {
   font-style: italic;
 }
+
+/* Folding canvas cards --------------------------------------------------------- */
+
+/* The arrow in a card's corner: shown on the card under the pointer, the
+   one selected, and always on a folded card, so it can be unfolded. */
+.canvas-node .dr-fold-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-s, 4px);
+  background-color: var(--background-primary);
+  color: var(--text-faint);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease;
+}
+
+.canvas-node .dr-fold-btn .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.canvas-node.is-focused .dr-fold-btn,
+.canvas-node.is-selected .dr-fold-btn,
+.canvas-node.dr-folded .dr-fold-btn {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .canvas-node:hover .dr-fold-btn {
+    opacity: 1;
+  }
+
+  .canvas-node .dr-fold-btn:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* Folded: its first line, and nothing scrolling beneath it. */
+.canvas-node.dr-folded .canvas-node-content,
+.canvas-node.dr-folded .markdown-embed-content {
+  overflow: hidden !important;
+}
+
+.canvas-node.dr-folded .metadata-container,
+.canvas-node.dr-folded .mod-frontmatter {
+  display: none !important;
+}
+
+/* Folded, a card keeps one line: what follows it is put away. */
+.canvas-node.dr-folded .dr-fold-line ~ div {
+  display: none !important;
+}
+
+.canvas-node.dr-folded .dr-fold-line :is(p, h1, h2, h3, h4, h5, h6, li),
+.canvas-node.dr-folded .dr-fold-line .inline-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.canvas-node.dr-folded .dr-fold-line li ~ li,
+.canvas-node.dr-folded .dr-fold-line li :is(ul, ol) {
+  display: none;
+}
+
+.canvas-node.dr-folded .dr-fold-line {
+  padding-right: 20px;
+}
