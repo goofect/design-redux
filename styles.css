@@ -4480,6 +4480,11 @@ body.dr-flat-covers .dr-detail-art.is-drawn {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
   gap: 8px;
+  /* Many designs: a few rows in sight, the rest a scroll away. */
+  max-height: min(240px, 36vh);
+  overflow-y: auto;
+  padding: 4px;
+  margin: -4px;
 }
 
 .dr-design-grid .dr-design-swatch {
