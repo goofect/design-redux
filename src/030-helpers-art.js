@@ -51,6 +51,27 @@ function fmGet(fm, key) {
   return name === undefined ? undefined : fm[name];
 }
 
+/**
+ * How many notes carry each property, as Obsidian counts them: kept with
+ * each property's info before Obsidian 1.14, asked for on their own
+ * since. A function of a property's key and its info.
+ */
+function propertyCounter(app) {
+  const m = app && app.metadataTypeManager;
+  let occ = null;
+  try {
+    if (m && typeof m.getPropertyOccurrences === 'function') occ = m.getPropertyOccurrences();
+  } catch (err) {
+    occ = null;
+  }
+  return (key, info) => {
+    const own = info && (info.count || info.occurrences);
+    if (own) return own;
+    const lower = String(key || '').toLowerCase();
+    return occ && typeof occ[lower] === 'number' ? occ[lower] : 0;
+  };
+}
+
 /** A frontmatter value as one line of text, lists included. */
 function valueText(value) {
   if (value === undefined || value === null || value === '') return '';

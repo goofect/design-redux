@@ -546,11 +546,12 @@ class BrowseView extends ItemView {
   propertyList() {
     try {
       const all = this.app.metadataTypeManager.getAllProperties();
+      const count = propertyCounter(this.app);
       return Object.keys(all)
         .map((key) => ({
           key: key,
           name: (all[key] && all[key].name) || key,
-          count: (all[key] && (all[key].count || all[key].occurrences)) || 0,
+          count: count(key, all[key]),
           type: (all[key] && (all[key].type || all[key].widget)) || 'text',
         }))
         .filter((p) => p.count > 0)

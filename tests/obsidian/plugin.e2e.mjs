@@ -1430,7 +1430,8 @@ describe('Design Redux in Obsidian', function () {
 
   it('writes a property the same way in every note, where Obsidian lists it one way and notes another', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
-      // Listed as "parent", since that's how it was first met; most notes write "Parent".
+      // One note writes "parent", two "Parent". Obsidian lists it one way — the first met
+      // until 1.14, the most used since — and the other is offered to be put right.
       await app.vault.createFolder('Spelling');
       await app.vault.create('Spelling/C.md', '---\nparent: "[[Home]]"\n---\nC\n');
       await new Promise((r) => setTimeout(r, 800));
@@ -1452,7 +1453,10 @@ describe('Design Redux in Obsidian', function () {
       if (fix) fix.dataset.test = 'fix';
       return row ? [row.querySelector('input.dr-edit-name').value, fix ? fix.textContent : null] : null;
     });
-    expect(shown).toEqual(['parent', '“Parent” in 2']);
+    const listed = shown && shown[0];
+    expect(['parent', 'Parent']).toContain(listed);
+    const other = listed === 'parent' ? 'Parent' : 'parent';
+    expect(shown).toEqual([listed, `“${other}” in ${listed === 'parent' ? 2 : 1}`]);
     await (await browser.$('[data-test="fix"]')).click();
     await browser.pause(1500);
     const after = await browser.executeObsidian(async ({ app, plugins }) => {
@@ -1467,7 +1471,8 @@ describe('Design Redux in Obsidian', function () {
       await library.browseMode({ mode: 'folder', path: 'Politics' });
       return { capitals: texts.filter((t) => t.includes('Parent:')).length, lower: texts.filter((t) => t.includes('parent:')).length, fixLeft };
     });
-    expect(after).toEqual({ capitals: 0, lower: 3, fixLeft: false });
+    // Every note now writes it as Obsidian lists it.
+    expect(after).toEqual(listed === 'parent' ? { capitals: 0, lower: 3, fixLeft: false } : { capitals: 3, lower: 0, fixLeft: false });
   });
 
   it('routes graph links by a property where notes name what they sit under', async function () {

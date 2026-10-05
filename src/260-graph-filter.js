@@ -27,10 +27,11 @@ function knownPropertyNames(app) {
       (m && typeof m.getAllProperties === 'function' && m.getAllProperties()) ||
       (m && m.properties) ||
       {};
+    const count = propertyCounter(app);
     return Object.keys(all)
       .map((k) => ({
         name: (all[k] && all[k].name) || k,
-        count: (all[k] && (all[k].count || all[k].occurrences)) || 0,
+        count: count(k, all[k]),
       }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
       .map((e) => e.name);
