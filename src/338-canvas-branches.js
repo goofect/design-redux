@@ -7,15 +7,13 @@
 /* or colour together. From the card's right-click menu, or commands.  */
 /* ------------------------------------------------------------------ */
 
-const OPPOSITE_SIDE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
-
 class CanvasBranches extends CanvasFeature {
   settingsSchema() {
     return [
       {
         key: 'canvasTidy',
         name: 'Tidy a branch',
-        desc: 'Lay out everything a card’s arrows lead to as a neat tree, growing the way the arrows leave it, from the card’s right-click menu.',
+        desc: 'Lay out everything a card’s arrows lead to as a neat tree, from the card’s right-click menu: growing the way the arrows leave it — both ways, for a mind map spreading both ways — with each level lined up, branches packed close, and the groups they’re in fitted round them.',
       },
       {
         key: 'canvasSelectBranch',
@@ -99,7 +97,9 @@ class CanvasBranches extends CanvasFeature {
     const before = snapshotModel(model);
     const links = arrowLinks(model);
     const side = branchSide(model, rec.id, links);
-    const placed = new Set(tidyBranch(model, rec.id, side, links).keys());
+    const plan = tidyBranch(model, rec.id, side, links);
+    const placed = new Set(plan.keys());
+    placed.sides = plan.sides;
     const moved = tidyRecords(model, rec, this.settings.canvasCloseGaps !== false, links);
     // Glided there, the fold feature's look-over held off till they're in place.
     const state = fold ? fold.watched.get(view) : null;
@@ -118,8 +118,10 @@ class CanvasBranches extends CanvasFeature {
       const parent = reversed ? e.to : e.from;
       const child = reversed ? e.from : e.to;
       if (!placed.has(parent) || !placed.has(child) || (links.children.get(parent) || []).indexOf(child) === -1) return;
-      const fromSide = reversed ? OPPOSITE_SIDE[side] : side;
-      const toSide = reversed ? side : OPPOSITE_SIDE[side];
+      // The way this card's branch grows: a tree may grow both ways from its root.
+      const way = (placed.sides && placed.sides.get(child)) || side;
+      const fromSide = reversed ? OPPOSITE_SIDE[way] : way;
+      const toSide = reversed ? way : OPPOSITE_SIDE[way];
       if (e.fromSide === fromSide && e.toSide === toSide) return;
       if (setEdgeSides(e.edge, fromSide, toSide)) changed = true;
     });

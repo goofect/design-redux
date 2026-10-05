@@ -220,6 +220,58 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(places.get('c'), { x: -45, y: 260 });
   });
 
+  await t('a tidy tree packs a small branch in beside a big one, and lines each level up', () => {
+    const m = R.modelFromData({
+      nodes: [
+        card('r', 0, 0, 100, 50),
+        card('a', -200, 200, 100, 50),
+        card('a1', -400, 400, 100, 50),
+        card('a2', -200, 400, 100, 50),
+        card('a3', 0, 400, 100, 50),
+        card('b', 200, 200, 100, 50),
+      ],
+      edges: [edge('r', 'a', 'bottom', 'top'), edge('r', 'b', 'bottom', 'top'), edge('a', 'a1', 'bottom', 'top'), edge('a', 'a2', 'bottom', 'top'), edge('a', 'a3', 'bottom', 'top')],
+    });
+    const places = R.tidyBranch(m, 'r', 'bottom');
+    // b sits just beside a: a's children spread out under both, a centred on them.
+    assert.deepStrictEqual(['a', 'b', 'a1', 'a2', 'a3'].map((id) => [places.get(id).x, places.get(id).y]), [
+      [-65, 130], [65, 130], [-195, 260], [-65, 260], [65, 260],
+    ]);
+    // Growing right, with a wide card on the first level: the next level lines up past it.
+    const w = R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('wide', 300, -100, 300, 50), card('thin', 300, 100, 100, 50), card('w1', 700, -100, 100, 50), card('t1', 500, 100, 100, 50)],
+      edges: [edge('r', 'wide', 'right', 'left'), edge('r', 'thin', 'right', 'left'), edge('wide', 'w1', 'right', 'left'), edge('thin', 't1', 'right', 'left')],
+    });
+    const across = R.tidyBranch(w, 'r', 'right');
+    assert.deepStrictEqual([across.get('wide').x, across.get('thin').x, across.get('w1').x, across.get('t1').x], [180, 180, 560, 560]);
+  });
+
+  await t('a mind map spreading both ways is tidied both ways', () => {
+    const m = R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('k', 300, 30, 100, 50), card('k2', 300, 200, 100, 50), card('l', -400, -20, 100, 50), card('l1', -700, -20, 100, 50)],
+      edges: [edge('r', 'k', 'right', 'left'), edge('r', 'k2', 'right', 'left'), edge('r', 'l', 'left', 'right'), edge('l', 'l1', 'left', 'right')],
+    });
+    const places = R.tidyBranch(m, 'r', 'right');
+    assert.ok(places.both);
+    assert.deepStrictEqual(['k', 'k2', 'l', 'l1'].map((id) => [places.get(id).x, places.get(id).y]), [[180, -40], [180, 40], [-180, 0], [-360, 0]]);
+    assert.deepStrictEqual(['k', 'l', 'l1'].map((id) => places.sides.get(id)), ['right', 'left', 'left']);
+  });
+
+  await t('a tidied branch takes the group its cards are in along, fitted round them', () => {
+    const m = R.modelFromData({
+      nodes: [
+        card('r', 0, 0, 100, 50),
+        card('g', 300, -100, 300, 400, { type: 'group', label: 'Ministers' }),
+        card('c1', 320, -80, 100, 50),
+        card('c2', 320, 200, 100, 50),
+      ],
+      edges: [edge('r', 'c1', 'right', 'left'), edge('r', 'c2', 'right', 'left')],
+    });
+    assert.ok(R.tidyRecords(m, m.byId.get('r'), true));
+    assert.deepStrictEqual([at(m, 'c1').slice(0, 2), at(m, 'c2').slice(0, 2)], [[180, -40], [180, 40]]);
+    assert.deepStrictEqual(at(m, 'g'), [160, -60, 300, 200]);
+  });
+
   await t('tidying moves a card caught where the tree now lies out beyond it', () => {
     const m = R.modelFromData({
       nodes: [card('r', 0, 0, 200, 60), card('a', -300, 200, 160, 60), card('b', 400, 50, 160, 60), card('c', 100, 400, 160, 60), card('n', 140, 140, 160, 60)],

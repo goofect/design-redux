@@ -419,7 +419,10 @@ function fitGroups(model, before) {
 /**
  * A branch tidied into a tree, and the cards round it kept as far from
  * it as they were: the room it takes across, and beyond its deepest
- * cards, made or given back. Returns whether anything moved.
+ * cards, made or given back — both ways, for a tree growing both ways.
+ * Cards caught where the tree now lies move out of its way, and the
+ * groups its cards are in fit round them again. Returns whether
+ * anything moved.
  */
 function tidyRecords(model, rec, close, links) {
   links = links || arrowLinks(model);
@@ -447,12 +450,13 @@ function tidyRecords(model, rec, close, links) {
   });
   if (!changed) return changed;
   const origin = new Set([rec.id].concat(ids));
-  const axes = sideAxes(side);
+  const axes = Object.assign(sideAxes(side), { both: places.both });
   if (close) {
     const now = boundsOf([own].concat(ids.map((id) => model.byId.get(id))));
     roomAroundTidy(model, before, { origin, home, axes, was, now });
   }
   moveStrays(model, before, rec, ids, axes, home);
+  if (close) fitGroups(model, before);
   return true;
 }
 
@@ -461,7 +465,7 @@ function roomAroundTidy(model, before, { origin, home, axes, was, now }) {
   [axes.across, axes.depth].forEach((axis) => {
     const p = axisParts(axis);
     const span = [Math.min(p.lo(was), p.lo(now)), Math.max(p.hi(was), p.hi(now))];
-    const deep = axis === axes.depth;
+    const deep = axis === axes.depth && !axes.both;
     if (!deep || axes.forward) {
       makeRoom(model, before, { origin, home, axis, side: 'after', at: p.far(was), delta: p.far(now) - p.far(was), span });
     }
@@ -473,8 +477,9 @@ function roomAroundTidy(model, before, { origin, home, axes, was, now }) {
 
 /**
  * Cards caught where the tree now lies, that aren't part of it: moved
- * out beyond its deepest cards, one after another, where they're in
- * nobody's way.
+ * out beyond its deepest cards on their side of the root, one after
+ * another, where they're in nobody's way. A group caught there moves
+ * with all it holds; one holding any of the tree stays, and fits round it.
  */
 function moveStrays(model, before, rec, ids, axes, home) {
   const tree = [rec].concat(ids.map((id) => model.byId.get(id)));
@@ -482,17 +487,28 @@ function moveStrays(model, before, rec, ids, axes, home) {
   const homes = homesBefore(model, before);
   const overlap = (a, b) =>
     Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x) > 1 && Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y) > 1;
+  const holdsTree = (g) => tree.some((c) => withinRect(c, g) || withinRect(before.get(c.id) || c, before.get(g.id) || g));
   const strays = model.nodes.filter(
-    (n) => !n.tuck && !inTree.has(n.id) && !isGroupRecord(n) && homes.get(n.id) === home && tree.some((c) => overlap(c, n))
+    (n) =>
+      !n.tuck &&
+      !inTree.has(n.id) &&
+      homes.get(n.id) === home &&
+      (!isGroupRecord(n) || !holdsTree(n)) &&
+      tree.some((c) => overlap(c, n))
   );
   if (!strays.length) return;
   const p = axisParts(axes.depth);
   const region = boundsOf(tree);
-  let next = axes.forward ? p.far(region) + TIDY_SIBLING_GAP : p.near(region) - TIDY_SIBLING_GAP;
+  const middle = p.near(rec) + rec[p.size] / 2;
+  let ahead = p.far(region) + TIDY_SIBLING_GAP;
+  let behind = p.near(region) - TIDY_SIBLING_GAP;
   strays.forEach((n) => {
-    const target = axes.forward ? next : next - n[p.size];
+    // Beyond the tree the way it grows — or, growing both ways, on the side the card was.
+    const forward = axes.both ? p.near(n) + n[p.size] / 2 >= middle : axes.forward;
+    const target = forward ? ahead : behind - n[p.size];
     shiftRecord(model, n, axes.depth, target - p.near(n), new Set());
-    next = axes.forward ? target + n[p.size] + TIDY_SIBLING_GAP : target - TIDY_SIBLING_GAP;
+    if (forward) ahead = target + n[p.size] + TIDY_SIBLING_GAP;
+    else behind = target - TIDY_SIBLING_GAP;
   });
 }
 
