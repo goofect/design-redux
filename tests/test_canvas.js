@@ -64,7 +64,8 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, foldRecord, unfoldRecord, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, GROUP_FOLD_HEIGHT, foldFace, faceHeight, FOLD_TITLE_HEIGHT, FOLD_GLIMPSE_HEIGHT, ' +
-  'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS };\n');
+  'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -645,6 +646,148 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.notStrictEqual(FakeEdge.prototype.updatePath, drawnByCanvas);
     arrows.disable();
     assert.strictEqual(FakeEdge.prototype.updatePath, drawnByCanvas, 'the canvas draws its own arrows again');
+  });
+
+  const plugin = (extra) => {
+    const fold = new R.CanvasFold({ settings, app: {} });
+    const p = { settings: Object.assign({}, settings, { canvasArrange: true, canvasMindMap: true }, extra), app: { workspace: { trigger() {} } }, feature: (C) => (C === R.CanvasFold ? fold : null) };
+    fold.plugin = p;
+    return { p, fold };
+  };
+
+  await t('selected cards line up, space out evenly, match sizes, and fall into a grid — a group with its cards, one step of Undo', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('a', 0, 0, 100, 50),
+        card('b', 220, 30, 140, 60),
+        card('c', 400, 10, 100, 80),
+        card('g', 600, 100, 300, 200, { type: 'group', label: 'G' }),
+        card('in', 620, 140, 100, 50),
+        card('other', 0, 500, 100, 50),
+      ],
+      edges: [],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const arrange = new R.CanvasArrange(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    const box = (id) => [n(id).x, n(id).y, n(id).width, n(id).height];
+    ['a', 'b', 'c', 'g', 'in'].forEach((id) => view.canvas.selection.add(n(id)));
+    assert.deepStrictEqual(arrange.cards(view).map((r) => r.id), ['a', 'b', 'c', 'g'], 'a card inside a selected group moves with it');
+    await arrange.arrange(view, 'top');
+    assert.deepStrictEqual([box('a')[1], box('b')[1], box('c')[1], box('g')[1]], [0, 0, 0, 0]);
+    assert.deepStrictEqual(box('in'), [620, 40, 100, 50], 'carried along with its group');
+    assert.strictEqual(view.canvas.saves, 1);
+    await arrange.arrange(view, 'right');
+    assert.deepStrictEqual([box('a')[0], box('b')[0], box('g')[0]], [800, 760, 600]);
+    view.canvas.selection.delete(n('g'));
+    view.canvas.selection.delete(n('in'));
+    // Back to a row, then spaced evenly between the first and last.
+    n('a').moveAndResize({ x: 0, y: 0, width: 100, height: 50 });
+    n('b').moveAndResize({ x: 120, y: 0, width: 140, height: 60 });
+    n('c').moveAndResize({ x: 500, y: 0, width: 100, height: 80 });
+    await arrange.arrange(view, 'space-across');
+    assert.deepStrictEqual([box('a')[0], box('b')[0], box('c')[0]], [0, 230, 500]);
+    await arrange.arrange(view, 'width');
+    assert.deepStrictEqual([box('a')[2], box('b')[2], box('c')[2]], [140, 140, 140]);
+    await arrange.arrange(view, 'column');
+    assert.deepStrictEqual([box('a'), box('b'), box('c')].map((b) => [b[0], b[1]]), [[0, 0], [0, 90], [0, 190]]);
+    assert.deepStrictEqual(
+      R.arrangePlaces([card('w', 0, 0, 100, 50), card('x', 300, 0, 100, 50), card('y', 0, 200, 100, 50), card('z', 300, 200, 100, 80)], 'grid').get('x'),
+      { x: 140, y: 0, width: 100, height: 50 }
+    );
+    view.canvas.selection.delete(n('c'));
+    const menu = new Menu();
+    arrange.addMenuItems(menu, [n('a'), n('b')]);
+    assert.ok(menu.items.some((i) => i.title === 'Align left edges'));
+    assert.ok(!menu.items.some((i) => i.title === 'Space evenly across'), 'spacing out takes three');
+  });
+
+  const mindCanvas = (data) => {
+    const view = fakeCanvas(data);
+    const canvas = view.canvas;
+    let made = 0;
+    canvas.config = { defaultTextNodeDimensions: { width: 250, height: 60 } };
+    canvas.createTextNode = ({ pos, size }) => {
+      const node = new FakeNode(canvas, { id: `new${++made}`, type: 'text', text: '', x: pos.x, y: pos.y, width: size.width, height: size.height });
+      node.setColor = (c) => { node.color = c; node.data.color = c; };
+      node.startEditing = () => { node.isEditing = true; };
+      canvas.nodes.set(node.id, node);
+      return node;
+    };
+    canvas.importData = ({ edges }) => edges.forEach((e) => {
+      const g = view.containerEl.createDiv();
+      canvas.edges.set(e.id, {
+        id: e.id,
+        from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' },
+        to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' },
+        lineGroupEl: g, lineEndGroupEl: g, render() {},
+      });
+    });
+    canvas.selectOnly = (n) => { canvas.selection = new Set([n]); };
+    return view;
+  };
+
+  await t('Tab adds a card the selected one leads to, in line after the others; Enter adds one beside it, room made below', async () => {
+    const view = mindCanvas({
+      nodes: [
+        card('g', -40, -40, 700, 400, { type: 'group', label: 'Theories' }),
+        card('root', 0, 100, 200, 60),
+        card('k1', 300, 0, 200, 60, { color: '4' }),
+        card('k2', 300, 100, 200, 60),
+        card('next', 300, 200, 200, 60),
+      ],
+      edges: [edge('root', 'k1', 'right', 'left'), edge('root', 'k2', 'right', 'left'), edge('root', 'next', 'right', 'left')],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    // Tab on the root: after its last child, joined to it.
+    const child = await mind.addChild(view, n('root'));
+    assert.deepStrictEqual([child.x, child.y, child.width, child.height], [300, 290, 200, 60]);
+    const joined = Array.from(view.canvas.edges.values()).find((e) => e.to.node === child);
+    assert.deepStrictEqual([joined.from.node.id, joined.from.side, joined.to.side], ['root', 'right', 'left']);
+    assert.ok(child.isEditing && view.canvas.selection.has(child), 'opened to type in');
+    assert.strictEqual(n('g').height, 400, 'it fits in its group as it is');
+    // Enter on the first child: the next one along, in its colour; what was below it moves down.
+    const sibling = await mind.addSibling(view, n('k1'));
+    assert.deepStrictEqual([sibling.x, sibling.y, sibling.color], [300, 90, '4']);
+    assert.deepStrictEqual([n('k2').y, n('next').y, child.y], [180, 280, 370]);
+    assert.strictEqual(n('g').height, 480, 'pushed out of its group, the group grows round them');
+    // A card with nothing after it grows the way its branch does.
+    const grand = await mind.addChild(view, n('k2'));
+    assert.deepStrictEqual([grand.x, grand.y], [580, 180]);
+    assert.ok(n('g').width > 700);
+    // Alt and an arrow: the next card that way.
+    view.canvas.selectOnly(n('k2'));
+    assert.strictEqual(mind.step(view, 'left'), n('root'));
+    view.canvas.selectOnly(n('k2'));
+    assert.strictEqual(mind.step(view, 'right').id, grand.id);
+    assert.ok(view.canvas.selection.has(grand));
+  });
+
+  await t('the keys only answer a selected card that isn’t being typed in', () => {
+    const view = mindCanvas({ nodes: [card('root', 0, 0, 200, 60)], edges: [] });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const state = { file: view.file };
+    mind.watched.set(view, state);
+    mind.mount(view, state);
+    const press = (key, target, extra) => {
+      const evt = new window.KeyboardEvent('keydown', Object.assign({ key, bubbles: true, cancelable: true }, extra));
+      (target || view.containerEl).dispatchEvent(evt);
+      return evt.defaultPrevented;
+    };
+    assert.strictEqual(press('Tab'), false, 'nothing selected');
+    view.canvas.selectOnly(view.canvas.nodes.get('root'));
+    const editor = view.contentEl.createDiv({ cls: 'cm-editor' });
+    assert.strictEqual(press('Tab', editor), false, 'typing');
+    assert.strictEqual(press('Tab', undefined, { ctrlKey: true }), false);
+    assert.strictEqual(press('Tab'), true);
+    assert.strictEqual(view.canvas.nodes.size, 2);
+    mind.cleanup(view, state);
   });
 
   await t('the folding menu offers what can be done now, and how folding works', () => {

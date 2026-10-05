@@ -623,6 +623,99 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('grows a mind map by keys — Tab, typing, Escape, Enter — and arranges cards in one step', async function () {
+    const data = {
+      nodes: [
+        { id: 'root', type: 'text', text: '# Government', x: 0, y: 0, width: 260, height: 70 },
+        { id: 'k1', type: 'text', text: 'Executive', x: 360, y: -60, width: 220, height: 60 },
+        { id: 'k2', type: 'text', text: 'Legislature', x: 360, y: 40, width: 220, height: 60 },
+        { id: 'x1', type: 'text', text: 'One', x: 0, y: 300, width: 160, height: 60 },
+        { id: 'x2', type: 'text', text: 'Two', x: 230, y: 330, width: 120, height: 90 },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'root', fromSide: 'right', toNode: 'k1', toSide: 'left' },
+        { id: 'e2', fromNode: 'root', fromSide: 'right', toNode: 'k2', toSide: 'left' },
+      ],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const old = app.vault.getFileByPath('Mind.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Mind.canvas', JSON.stringify(data));
+    }, data);
+    await obsidianPage.openFile('Mind.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const cards = () =>
+      browser.executeObsidian(({ app }) => {
+        const canvas = app.workspace.activeLeaf.view.canvas;
+        const out = {};
+        canvas.nodes.forEach((n, id) => {
+          n.nodeEl.setAttribute('data-test-id', id);
+          out[id] = { x: n.x, y: n.y, editing: !!n.isEditing, selected: canvas.selection.has(n), text: n.getData().text || '' };
+        });
+        return { nodes: out, edges: canvas.edges.size };
+      });
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.deselectAll();
+      canvas.zoomToFit();
+    });
+    await browser.pause(600);
+    await cards();
+    const fresh = (now) => Object.keys(now.nodes).filter((id) => !data.nodes.some((n) => n.id === id));
+
+    // Tab on the root: a card after its others, joined to it, open to type in.
+    await browser.$(ACTIVE + '[data-test-id="root"]').click();
+    await browser.pause(300);
+    await browser.keys('Tab');
+    await browser.waitUntil(async () => fresh(await cards()).length === 1, { timeout: 5000, timeoutMsg: 'Tab added no card' });
+    let now = await cards();
+    const child = fresh(now)[0];
+    // Grown out of the root, then opened to type in.
+    await browser.waitUntil(async () => (await cards()).nodes[child].editing, { timeout: 5000, timeoutMsg: 'the new card never opened' });
+    now = await cards();
+    expect(now.edges).toBe(3);
+    expect(now.nodes[child].x).toBe(360);
+    expect(now.nodes[child].y).toBe(130);
+    await browser.keys('Judiciary'.split(''));
+    await browser.pause(300);
+    // Escape: done typing, still selected — and Enter adds the next one beside it.
+    await browser.keys('Escape');
+    await browser.waitUntil(async () => !(await cards()).nodes[child].editing, { timeout: 5000, timeoutMsg: 'Escape never ended the typing' });
+    now = await cards();
+    expect(now.nodes[child].text).toBe('Judiciary');
+    expect(now.nodes[child].selected).toBe(true);
+    await browser.keys('Enter');
+    await browser.waitUntil(async () => fresh(await cards()).length === 2, { timeout: 5000, timeoutMsg: 'Enter added no card' });
+    const sibling = fresh(await cards()).find((id) => id !== child);
+    await browser.waitUntil(async () => (await cards()).nodes[sibling].editing, { timeout: 5000, timeoutMsg: 'the next card never opened' });
+    now = await cards();
+    expect(now.edges).toBe(4);
+    expect(now.nodes[sibling].y).toBe(220);
+    await browser.keys('Escape');
+    await browser.pause(300);
+
+    // Two loose cards lined up along their tops, saved.
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const view = app.workspace.activeLeaf.view;
+      const canvas = view.canvas;
+      canvas.deselectAll();
+      canvas.select(canvas.nodes.get('x1'));
+      canvas.select(canvas.nodes.get('x2'));
+      const arrange = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasArrange');
+      await arrange.arrange(view, 'top');
+    });
+    now = await cards();
+    expect([now.nodes.x1.y, now.nodes.x2.y]).toEqual([300, 300]);
+    await browser.waitUntil(
+      async () =>
+        browser.executeObsidian(async ({ app }) => {
+          const nodes = JSON.parse(await app.vault.read(app.vault.getFileByPath('Mind.canvas'))).nodes;
+          return nodes.find((n) => n.id === 'x2').y === 300 && nodes.length === 7;
+        }),
+      { timeout: 6000, interval: 300, timeoutMsg: 'never saved' }
+    );
+  });
+
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });

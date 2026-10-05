@@ -6148,6 +6148,12 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   font-style: italic;
 }
 
+/* Arranging cards: newer Obsidian's own Align button stands aside for
+   Arrange, which does what it does and more. */
+.canvas-menu.dr-arranging > button:not(.dr-arrange-button):has(> svg.lucide-align-start-vertical) {
+  display: none;
+}
+
 /* Arrow styles ------------------------------------------------------------------
  *
  * Dashes and dots that keep their size on screen at any zoom, as the

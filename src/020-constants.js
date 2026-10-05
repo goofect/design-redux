@@ -109,6 +109,10 @@ const DEFAULTS = {
   canvasOutline: true,
   // { canvasPath: { cardId: 'center' } }
   canvasAlignments: {},
+  // Selected cards lined up, spaced, sized alike, or laid out in a grid.
+  canvasArrange: true,
+  // Tab and Enter on a selected card add one after it or beside it.
+  canvasMindMap: true,
   // Arrows in a style of their own, from their menu or the bar above them.
   canvasArrows: true,
   // How arrows without a style of their own are drawn: 'curve', 'straight' or 'elbow'.
