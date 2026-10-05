@@ -4,8 +4,8 @@
 /* The canvas in use as a tree, in the right sidebar, as Obsidian's    */
 /* own Outline shows a note's headings: groups holding what's inside   */
 /* them, cards holding what their arrows lead to. A row goes to its    */
-/* card on the canvas; its arrow folds the group or branch there, and   */
-/* the outline follows what's folded.                                   */
+/* card on the canvas. A card's arrow folds its branch there, and the  */
+/* outline follows what's folded; a group's only closes it here.       */
 /* ------------------------------------------------------------------ */
 
 const CANVAS_OUTLINE_VIEW = 'design-redux-canvas-outline';
@@ -17,6 +17,8 @@ class CanvasOutlineView extends ItemView {
     this.plugin = feature.plugin;
     this.canvasView = null;
     this.timer = 0;
+    // Groups closed in the outline, by canvas: the canvas itself isn't changed.
+    this.closed = new Map();
   }
 
   getViewType() {
@@ -93,15 +95,17 @@ class CanvasOutlineView extends ItemView {
     const self = wrap.createDiv({ cls: 'tree-item-self is-clickable dr-outline-row' });
     self.setAttribute('tabindex', '0');
     self.dataset.id = item.id;
+    const group = item.type === 'group';
+    const shut = group ? this.closedIn(view).has(item.id) : item.folded;
     const foldable = item.folded || item.children.length > 0;
-    // A group folds with its cards; a card's branch folds when it has one.
-    const canToggle = item.folded || (item.type === 'group' ? fold && fold.canFold : fold && fold.canBranch);
+    // A group closes here, in the outline; a card's branch folds on the canvas, when it has one.
+    const canToggle = item.folded || group || (fold && fold.canBranch);
     if (foldable && canToggle) {
       self.addClass('mod-collapsible');
       const toggle = self.createDiv({ cls: 'tree-item-icon collapse-icon' });
-      toggle.toggleClass('is-collapsed', item.folded);
+      toggle.toggleClass('is-collapsed', shut);
       setIcon(toggle, 'right-triangle');
-      toggle.setAttribute('aria-label', item.folded ? 'Unfold' : 'Fold');
+      toggle.setAttribute('aria-label', group ? (shut ? 'Open' : 'Close') : shut ? 'Unfold' : 'Fold');
       toggle.addEventListener('click', (evt) => {
         evt.stopPropagation();
         this.toggle(view, item);
@@ -119,7 +123,7 @@ class CanvasOutlineView extends ItemView {
     inner.createSpan({ cls: 'dr-outline-label', text: item.label });
     if (item.folded && item.count) inner.createSpan({ cls: 'dr-outline-count', text: `+${item.count}` });
     onActivate(self, () => this.reveal(view, item.id));
-    if (item.children.length && !item.folded) {
+    if (item.children.length && !shut) {
       const kids = wrap.createDiv({ cls: 'tree-item-children' });
       item.children.forEach((child) => this.row(kids, child, view));
     }
@@ -139,12 +143,24 @@ class CanvasOutlineView extends ItemView {
     }
   }
 
+  /** The groups closed in the outline of a canvas. */
+  closedIn(view) {
+    const key = view && view.file ? view.file.path : '';
+    if (!this.closed.has(key)) this.closed.set(key, new Set());
+    return this.closed.get(key);
+  }
+
   toggle(view, item) {
+    if (item.type === 'group') {
+      const closed = this.closedIn(view);
+      if (closed.has(item.id)) closed.delete(item.id);
+      else closed.add(item.id);
+      this.render();
+      return;
+    }
     const fold = this.plugin.feature(CanvasFold);
     const node = view.canvas.nodes.get(item.id);
-    if (!fold || !node) return;
-    if (item.type === 'group') fold.fold(view, [node], !item.folded);
-    else fold.foldBranches(view, [node], !item.folded);
+    if (fold && node) fold.foldBranches(view, [node], !item.folded);
   }
 }
 
@@ -154,7 +170,7 @@ class CanvasOutline extends CanvasFeature {
       {
         key: 'canvasOutline',
         name: 'Canvas outline',
-        desc: 'The canvas as a tree in the right sidebar: groups holding their cards, cards holding what their arrows lead to. Click a row to go to its card; its arrow folds the group or branch. Opened from the button among the canvas controls, or a command.',
+        desc: 'The canvas as a tree in the right sidebar: groups holding their cards, cards holding what their arrows lead to. Click a row to go to its card; a card’s arrow folds its branch, a group’s closes it in the outline. Opened from the button among the canvas controls, or a command.',
       },
     ];
   }

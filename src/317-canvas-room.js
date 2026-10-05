@@ -1,20 +1,17 @@
 /* ------------------------------------------------------------------ */
 /* Folds, and the room they leave                                      */
 /*                                                                     */
-/* Folding a card, a group or a branch, and unfolding it, as changes   */
-/* to a canvas's records — then the cards beyond it close up the room  */
-/* it left, or move back out of the way of the room it takes, and the  */
-/* groups they're in keep the margin they had round their cards. The   */
-/* changes are made to the records; `applyCanvasModel` puts them on    */
-/* the live canvas.                                                    */
+/* Folding a branch and unfolding it — and opening a card or group     */
+/* folded by an earlier version — as changes to a canvas's records:    */
+/* then the cards beyond close up the room it left, or move back out   */
+/* of the way of the room it takes, and the groups they're in keep the */
+/* margin they had round their cards. The changes are made to the     */
+/* records; `applyCanvasModel` puts them on the live canvas.           */
 /*                                                                     */
 /* A tucked card keeps its own place in the file — it's only drawn as  */
 /* though it were the fold — and where it sits beside what it's tucked */
 /* into, so it comes back there even after that's been moved.          */
 /* ------------------------------------------------------------------ */
-
-/* A folded group: its label, and a bar this tall. */
-const GROUP_FOLD_HEIGHT = 48;
 
 /** Each record's place and whether it's tucked, to compare with later. */
 function snapshotModel(model) {
@@ -172,43 +169,13 @@ function homesBefore(model, before) {
   return canvasHomes(indexModel({ nodes, edges: [] }));
 }
 
-/* -- folding cards and groups ----------------------------------------- */
+/* -- folds an earlier version made of cards and groups ---------------- */
 
 /**
- * A card or group folded to `height` — a group's contents tucked into
- * it — and the cards below it closing up, if `close`. Returns false if
- * there was nothing to fold.
- */
-function foldRecord(model, rec, height, measured, close) {
-  if (!rec || rec.fold || height >= rec.height - 2) return false;
-  const before = snapshotModel(model);
-  const home = homeIn(model, rec.id);
-  const old = rec.height;
-  if (isGroupRecord(rec)) {
-    groupContents(model, rec, false).forEach((n) => {
-      n.tuck = { by: rec.id, dx: n.x - rec.x, dy: n.y - rec.y };
-    });
-  }
-  rec.fold = { height: old, folded: height, measured: !!measured };
-  rec.height = height;
-  if (close) {
-    makeRoom(model, before, {
-      origin: new Set([rec.id]),
-      home,
-      axis: 'y',
-      side: 'after',
-      at: rec.y + old,
-      delta: height - old,
-      span: [rec.x, rec.x + rec.width],
-    });
-  }
-  return true;
-}
-
-/**
- * Back to the size it was — a group's contents back where they were in
- * it — and room made below. A card's own fold and its branch's are two
- * things: opening the card leaves its branch folded.
+ * A card or group an earlier version folded, back to the size it was —
+ * a group's contents back where they were in it — and room made below.
+ * A card's own fold and its branch's are two things: opening the card
+ * leaves its branch folded.
  */
 function unfoldRecord(model, rec, close) {
   if (!rec || !rec.fold) return false;
@@ -362,8 +329,8 @@ function foldHomes(model, before) {
 /**
  * Every open group fitted round what it holds after folds and unfolds:
  * the margin it had round its cards before, on every side, kept — so a
- * branch folded down or across inside a group gives the group's room back
- * as a card folding does, and takes it again when it opens. Innermost
+ * branch folded down or across inside a group gives the group's room
+ * back, and takes it again when it opens. Innermost
  * groups first; each one that changes size makes room beyond it, or
  * gives it back, in the group it's in.
  */
@@ -372,7 +339,7 @@ function fitGroups(model, before) {
   const groups = model.nodes
     .filter((g) => {
       const was = before.get(g.id);
-      // Open before and now: a group folding or opening is sized by its fold.
+      // Open before and now: a group an earlier version folded is sized by its fold.
       return isGroupRecord(g) && !g.tuck && !g.fold && was && !was.tucked && !was.fold;
     })
     .sort((a, b) => {
@@ -543,24 +510,4 @@ function applyCanvasModel(model, before) {
     }
   });
   return changed;
-}
-
-/** A folded card fitted to its first line once that's drawn, and the room it gives back closed up. */
-function refitRecord(model, rec, height, close) {
-  const before = snapshotModel(model);
-  const home = homeIn(model, rec.id);
-  const old = rec.height;
-  rec.height = height;
-  rec.fold = Object.assign({}, rec.fold, { folded: height, measured: true });
-  if (close) {
-    makeRoom(model, before, {
-      origin: new Set([rec.id]),
-      home,
-      axis: 'y',
-      side: 'after',
-      at: rec.y + old,
-      delta: height - old,
-      span: [rec.x, rec.x + rec.width],
-    });
-  }
 }

@@ -96,7 +96,6 @@ const DEFAULTS = {
   // Centred text in canvas cards, and which cards have it.
   canvasTextAlign: true,
   // Cards folded to their first line, and groups to their label, from an arrow in their corner.
-  canvasFold: true,
   // A card's branch — what its arrows lead to — tucked into it, from a knob where they leave.
   canvasBranches: true,
   // What's beyond a fold moves in to close up the room it left, and back out when it unfolds.

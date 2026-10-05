@@ -373,132 +373,62 @@ describe('Design Redux in Obsidian', function () {
     await closeMenus();
   });
 
-  it('folds a canvas card to its title, peeks at it, and folds every card at once', async function () {
-    await obsidianPage.openFile('Map.canvas');
-    await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });
-    const sizes = () =>
+  it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
+    // As an earlier version left them: a card folded to its title, and a
+    // group folded with its card tucked inside, what's below closed up.
+    const old = {
+      nodes: [
+        { id: 'c', type: 'text', text: '# Anarchy\nNo government above them.', x: 0, y: 0, width: 260, height: 52, drFold: { height: 200, folded: 52, measured: true } },
+        { id: 'under', type: 'text', text: 'Under', x: 0, y: 92, width: 260, height: 60 },
+        { id: 'g', type: 'group', label: 'Shelf', x: 400, y: 0, width: 400, height: 48, drFold: { height: 300, folded: 48, measured: true } },
+        { id: 'g1', type: 'text', text: 'Waltz', x: 420, y: 20, width: 200, height: 60, drTuck: { by: 'g', dx: 20, dy: 40 } },
+        { id: 'past', type: 'text', text: 'Past the shelf', x: 400, y: 88, width: 400, height: 60 },
+      ],
+      edges: [],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const was = app.vault.getFileByPath('Old folds.canvas');
+      if (was) await app.vault.delete(was);
+      await app.vault.create('Old folds.canvas', JSON.stringify(data));
+    }, old);
+    await obsidianPage.openFile('Old folds.canvas');
+    const cards = () =>
       browser.executeObsidian(({ app }) => {
-        const canvas = app.workspace.activeLeaf.view.canvas;
         const out = {};
-        canvas.nodes.forEach((node, id) => {
+        app.workspace.activeLeaf.view.canvas.nodes.forEach((node, id) => {
           node.nodeEl.setAttribute('data-test-id', id);
-          const face = node.nodeEl.querySelector('.dr-fold-face-title');
-          out[id] = { height: node.height, folded: node.nodeEl.classList.contains('dr-folded'), face: face ? face.textContent : null };
+          out[id] = { y: node.y, height: node.height, hidden: node.nodeEl.classList.contains('dr-tucked') };
         });
         return out;
       });
-    // Every card in view, none selected, whatever the test before left.
-    await browser.executeObsidian(({ app }) => {
-      const canvas = app.workspace.activeLeaf.view.canvas;
-      if (typeof canvas.deselectAll === 'function') canvas.deselectAll();
-      if (typeof canvas.zoomToFit === 'function') canvas.zoomToFit();
-    });
-    await browser.pause(600);
-    const before = await sizes();
-    expect(before.note1.height).toBe(200);
-    await browser.$(ACTIVE + '[data-test-id="note1"]').waitForExist({ timeout: 5000 });
-
-    // Selected, the bar above the note card folds it to its title — and
-    // nothing of folding sits on the canvas round a card that's open.
-    expect(await browser.$(ACTIVE + '[data-test-id="note1"] .dr-fold-btn').isExisting()).toBe(false);
-    await browser.$(ACTIVE + '[data-test-id="note1"]').click();
-    const foldButton = await browser.$(ACTIVE + '.canvas-menu .dr-fold-button');
-    await foldButton.waitForExist({ timeout: 5000 });
-    expect(await foldButton.getAttribute('aria-label')).toBe('Fold card');
-    await foldButton.click();
-    await browser.waitUntil(async () => (await sizes()).note1.folded, { timeout: 5000, timeoutMsg: 'the card never folded' });
-    await browser.waitUntil(async () => (await sizes()).note1.height < 120, { timeout: 5000, timeoutMsg: 'the card never got shorter' });
-    const folded = await sizes();
-    expect(folded.note1.height).toBeGreaterThan(30);
-    expect(folded.note1.face).toBe('Anarchy');
-    expect(folded.red1.folded).toBe(false);
-    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.deselectAll());
-    await shot('canvas-folded');
-
-    // Pointed at, it shows all of it.
-    await browser.$(ACTIVE + '[data-test-id="green1"]').moveTo();
-    await browser.$(ACTIVE + '[data-test-id="note1"]').moveTo();
-    await browser.$('.dr-fold-peek').waitForExist({ timeout: 5000, timeoutMsg: 'no peek at the folded card' });
-    await browser.waitUntil(async () => (await browser.$('.dr-fold-peek').getText()).includes('no government above them'), {
-      timeout: 5000,
-      timeoutMsg: 'the peek never showed the note',
-    });
-    await browser.keys('Escape');
-
-    // The fold is kept in the canvas file.
-    await browser.waitUntil(
-      async () =>
-        browser.executeObsidian(async ({ app }) => {
-          const text = await app.vault.read(app.vault.getFileByPath('Map.canvas'));
-          const node = JSON.parse(text).nodes.find((n) => n.id === 'note1');
-          return !!(node.drFold && node.drFold.height === 200);
-        }),
-      { timeout: 6000, interval: 300, timeoutMsg: 'the fold was never saved' }
-    );
-
-    // Opened to edit, a folded card is as tall as it was while it's edited, and folded still.
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      const view = app.workspace.activeLeaf.view;
-      const fold = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasFold');
-      await fold.fold(view, [view.canvas.nodes.get('green1')], true);
-    });
-    const tall = () => browser.execute((sel) => document.querySelector(sel).getBoundingClientRect().height, ACTIVE + '[data-test-id="green1"]');
-    const shut = await tall();
-    // Opened for editing as a double-click would, which a slow machine can take for two clicks.
-    await browser.executeObsidian(({ app }) => {
-      const node = app.workspace.activeLeaf.view.canvas.nodes.get('green1');
-      if (typeof node.startEditing === 'function') node.startEditing();
-    });
-    await browser.waitUntil(async () => (await tall()) > shut + 10, { timeout: 5000, timeoutMsg: 'the folded card never opened to be edited' });
-    expect((await sizes()).green1.folded).toBe(true);
-    // Done editing: clicked away.
-    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.deselectAll());
-    await browser.waitUntil(async () => Math.abs((await tall()) - shut) < 2, { timeout: 5000, timeoutMsg: 'it never folded again after editing' });
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      const view = app.workspace.activeLeaf.view;
-      const fold = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasFold');
-      await fold.fold(view, [view.canvas.nodes.get('green1')], false);
-    });
-
-    // The arrow by its title opens it, back to the size it was.
-    await browser.$(ACTIVE + '[data-test-id="note1"] .dr-fold-face .dr-fold-btn').click();
-    await browser.waitUntil(async () => (await sizes()).note1.height === 200, { timeout: 5000, timeoutMsg: 'never back to its size' });
-    expect((await sizes()).note1.folded).toBe(false);
-
-    // The control beside the zoom buttons: a menu, to fold every card, then unfold them.
-    const control = await browser.$(ACTIVE + '.canvas-controls .dr-fold-control .canvas-control-item');
-    expect(await control.getAttribute('aria-label')).toBe('Folding');
-    const pick = async (title) => {
-      await control.click();
-      await browser.waitUntil(async () => (await menuTitles()).includes(title), { timeout: 4000, timeoutMsg: `no ${title} in the menu` });
-      await clickText('.menu .menu-item', title);
-    };
-    await pick('Fold every card');
-    await browser.waitUntil(async () => Object.values(await sizes()).every((s) => s.folded), {
-      timeout: 5000,
-      timeoutMsg: 'not every card folded',
-    });
-    await pick('Unfold every card');
     await browser.waitUntil(
       async () => {
-        const now = await sizes();
-        return Object.keys(before).every((id) => !now[id].folded && now[id].height === before[id].height);
+        const now = await cards();
+        return now.c && now.c.height === 200 && now.g.height === 300 && !now.g1.hidden;
       },
-      { timeout: 5000, timeoutMsg: 'not every card back as it was' }
+      { timeout: 10000, timeoutMsg: 'the old folds never opened' }
     );
+    const now = await cards();
+    expect([now.under.y, now.g1.y, now.past.y]).toEqual([240, 40, 340]);
 
-    // A card's right-click menu offers it too — one in the middle, clear of the legend.
-    await browser.$(ACTIVE + '[data-test-id="green1"]').click();
-    await browser.pause(300);
-    await browser.$(ACTIVE + '[data-test-id="green1"]').click({ button: 'right' });
-    await browser
-      .waitUntil(async () => (await menuTitles()).includes('Fold card'), { timeout: 4000, interval: 200 })
-      .catch(() => {});
-    expect(await menuTitles()).toContain('Fold card');
+    // Selected, a card has nothing to fold in the bar above it, nor in its menu.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.zoomToFit();
+      canvas.selectOnly(canvas.nodes.get('c'));
+    });
+    await browser.$(ACTIVE + '.canvas-menu').waitForExist({ timeout: 5000 });
+    await browser.pause(400);
+    expect(await browser.$(ACTIVE + '.canvas-menu .dr-branch-button').isExisting()).toBe(false);
+    expect(await browser.$(ACTIVE + '.canvas-menu .dr-fold-button').isExisting()).toBe(false);
+    await browser.$(ACTIVE + '[data-test-id="c"]').click({ button: 'right' });
+    await browser.waitUntil(async () => (await menuTitles()).length > 0, { timeout: 4000 }).catch(() => {});
+    expect((await menuTitles()).some((t) => /fold/i.test(t))).toBe(false);
     await closeMenus();
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.deselectAll());
   });
 
-  it('folds a branch and a group, closing the gaps; the outline follows; Undo puts it back', async function () {
+  it('folds a branch, closing the gaps; the outline follows, closing a group there only; Undo puts it back', async function () {
     // A small tree growing right, and a group with a card below it.
     const tree = {
       nodes: [
@@ -525,7 +455,7 @@ describe('Design Redux in Obsidian', function () {
       await app.vault.create('Tree.canvas', JSON.stringify(data));
     }, tree);
     await obsidianPage.openFile('Tree.canvas');
-    await browser.$(ACTIVE + '.canvas-node-group .dr-fold-btn').waitForExist({ timeout: 10000 });
+    await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });
     const cards = () =>
       browser.executeObsidian(({ app }) => {
         const out = {};
@@ -559,21 +489,6 @@ describe('Design Redux in Obsidian', function () {
     expect(before.below.y - now.below.y).toBe(60);
     expect(now.root.y).toBe(before.root.y);
 
-    // The group folds from the arrow in its label, its card tucked inside, and what's below closes up.
-    await browser.$(ACTIVE + '[data-test-id="g"] .dr-fold-btn').click();
-    await browser.waitUntil(async () => (await cards()).g1.hidden, { timeout: 5000, timeoutMsg: 'the group never folded' });
-    now = await cards();
-    expect(now.g.height).toBe(48);
-    expect(now.below.y).toBe(before.below.y - 60 - 152);
-    // Waltz's arrow to Anarchy now starts at the folded group.
-    const fromBar = await browser.executeObsidian(({ app }) => {
-      const canvas = app.workspace.activeLeaf.view.canvas;
-      const g = canvas.nodes.get('g').getBBox();
-      const d = canvas.edges.get('e5').path.display.getAttribute('d');
-      const start = d.match(/^M\s*(-?[\d.]+)[ ,](-?[\d.]+)/);
-      return Number(start[1]) >= g.minX && Number(start[1]) <= g.maxX + 1 && Number(start[2]) >= g.minY - 1 && Number(start[2]) <= g.maxY + 1;
-    });
-    expect(fromBar).toBe(true);
     await shot('canvas-tree-folded');
 
     // Kept in the file.
@@ -582,7 +497,7 @@ describe('Design Redux in Obsidian', function () {
         browser.executeObsidian(async ({ app }) => {
           const nodes = JSON.parse(await app.vault.read(app.vault.getFileByPath('Tree.canvas'))).nodes;
           const find = (id) => nodes.find((n) => n.id === id);
-          return !!(find('a2').drTuck && find('a2').drTuck.by === 'a' && find('g1').drTuck && find('g').drFold);
+          return !!(find('a2').drTuck && find('a2').drTuck.by === 'a');
         }),
       { timeout: 6000, interval: 300, timeoutMsg: 'the folds were never saved' }
     );
@@ -600,23 +515,34 @@ describe('Design Redux in Obsidian', function () {
     const rows = await browser.execute(() =>
       Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).map((r) => r.textContent.trim())
     );
-    expect(rows).toEqual(['Anarchy', 'Theory', 'Realism+1', 'Liberalism', 'Reading+1', 'Below']);
+    expect(rows).toEqual(['Anarchy', 'Theory', 'Realism+1', 'Liberalism', 'Reading', 'Waltz', 'Below']);
+    const outlineRows = () =>
+      browser.execute(() => Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).map((r) => r.textContent.trim()));
+    const toggleRow = (label) =>
+      browser.execute((label) => {
+        const row = Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).find((r) => r.textContent.startsWith(label));
+        row.querySelector('.collapse-icon').click();
+      }, label);
 
-    // Unfolded from the outline: the group opens and what's below moves back down.
-    await browser.execute(() => {
-      const row = Array.from(document.querySelectorAll('.dr-canvas-outline .dr-outline-row')).find((r) => r.textContent.startsWith('Reading'));
-      row.querySelector('.collapse-icon').click();
-    });
-    await browser.waitUntil(async () => !(await cards()).g1.hidden && (await cards()).below.y === before.below.y - 60, {
+    // A group closes in the outline only: the canvas is left as it is.
+    await toggleRow('Reading');
+    await browser.waitUntil(async () => !(await outlineRows()).includes('Waltz'), { timeout: 5000, timeoutMsg: 'the group never closed in the outline' });
+    now = await cards();
+    expect(now.g1.hidden).toBe(false);
+    expect(now.g.height).toBe(before.g.height);
+
+    // Unfolded from the outline: Power comes back and what's below moves back down.
+    await toggleRow('Realism');
+    await browser.waitUntil(async () => !(await cards()).a2.hidden && (await cards()).below.y === before.below.y, {
       timeout: 5000,
-      timeoutMsg: 'the group never unfolded',
+      timeoutMsg: 'the branch never unfolded',
     });
 
     // Undo folds it again.
     await browser.pause(2500);
     await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.undo());
     await browser.$(ACTIVE + '.canvas-wrapper').click();
-    await browser.waitUntil(async () => (await cards()).g1.hidden, { timeout: 5000, timeoutMsg: 'Undo didn’t fold the group again' });
+    await browser.waitUntil(async () => (await cards()).a2.hidden, { timeout: 5000, timeoutMsg: 'Undo didn’t fold the branch again' });
 
     await browser.executeObsidian(async ({ app }) => {
       app.workspace.getLeavesOfType('design-redux-canvas-outline').forEach((leaf) => leaf.detach());

@@ -56,7 +56,7 @@ function compatibility(app) {
       pending: 'Checked while a canvas is open.',
     },
     {
-      what: 'Folding groups and branches on a canvas, and its outline',
+      what: 'Folding branches on a canvas, and its outline',
       ok: open
         ? has(() => {
             const c = open.canvas;

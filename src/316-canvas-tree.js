@@ -510,7 +510,7 @@ function outlineTree(model, links) {
       type: n.type,
       label: canvasCardLabel(n),
       color: n.color,
-      folded: isGroupRecord(n) ? !!n.fold : count > 0,
+      folded: !isGroupRecord(n) && count > 0,
       count,
       children: under.filter((c) => !placed.has(c.id)).map(item),
     };

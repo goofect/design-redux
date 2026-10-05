@@ -1,86 +1,32 @@
 /* ------------------------------------------------------------------ */
-/* Folding on a canvas                                                 */
+/* Folding branches on a canvas                                        */
 /*                                                                     */
-/* A card folds down to a strip with its title, and a glimpse of what  */
-/* follows fading out — every folded card alike, whatever's in it. A   */
-/* group folds down to its label, its cards tucked inside; a card's    */
-/* branch, everything its arrows lead to, tucks into the card. What a  */
-/* fold took is kept in the cards' own data in the canvas file, which  */
-/* Obsidian keeps as it is, so a fold travels with the canvas. What's   */
-/* beyond a fold closes up the room it left, and moves back out when   */
-/* it unfolds — gliding, not jumping. A folded card resized by hand is  */
-/* simply that size; one opened for editing opens out while it's being */
-/* edited, and folds again after. Something holding tucked cards looks  */
-/* like a little stack of them.                                        */
+/* A card's branch — everything its arrows lead to — tucks into the    */
+/* card, which then shows how many cards it holds where its arrows     */
+/* left it, and sits on a little stack of them. What a fold took is    */
+/* kept in the cards' own data in the canvas file, which Obsidian keeps */
+/* as it is, so a fold travels with the canvas. What's beyond a fold    */
+/* closes up the room it left, and moves back out when it unfolds —    */
+/* gliding, not jumping.                                               */
 /*                                                                     */
 /* The file is written only when something is folded or unfolded by   */
 /* hand; what a redraw changes is saved with the canvas's next change. */
 /*                                                                     */
-/* The settings decide what can be folded; a fold already made can     */
-/* always be undone, so nothing stays tucked away out of reach.        */
+/* Cards and groups folded on their own by an earlier version open     */
+/* again when the canvas is opened, so nothing stays folded out of     */
+/* reach; a branch already folded can always be unfolded, whatever the */
+/* settings say.                                                       */
 /* ------------------------------------------------------------------ */
 
 const FOLD_KEY = 'drFold';
 
-/* A folded card's height: its title alone, or its title over a glimpse of the rest. */
-const FOLD_TITLE_HEIGHT = 52;
-const FOLD_GLIMPSE_HEIGHT = 78;
-
-/** Cards with words to fold to: text cards, and notes. */
-function foldable(node) {
-  try {
-    const data = node && typeof node.getData === 'function' ? node.getData() : node;
-    if (!data) return false;
-    if (data.type === 'text') return true;
-    return data.type === 'file' && /\.md$/i.test(String(data.file || ''));
-  } catch (err) {
-    return false;
-  }
-}
-
-/** A folded card's sizes — as it was, and folded — or null. */
+/** A card or group folded on its own by an earlier version: its sizes, or null. */
 function foldOf(node) {
   const kept = node && node.unknownData && node.unknownData[FOLD_KEY];
   return kept && typeof kept.height === 'number' ? kept : null;
 }
 
-/**
- * What a folded card shows: its title — a text card's first line, a
- * note's name — and a glimpse of the words after it. `noteText` is the
- * note's for a note card; without it yet, the glimpse is still to come.
- */
-function foldFace(rec, noteText) {
-  const title = canvasCardLabel(rec);
-  let lines;
-  if (rec.type === 'file') {
-    if (noteText === undefined || noteText === null) return { title, glimpse: '', pending: true };
-    lines = markdownLines(noteText);
-    // A heading that only repeats the note's name says nothing new.
-    if (lines.length && /^#{1,6}\s/.test(lines[0]) && plainMarkdownLine(lines[0]).toLowerCase() === title.toLowerCase()) {
-      lines = lines.slice(1);
-    }
-  } else {
-    lines = markdownLines(rec.text).slice(1);
-  }
-  const words = [];
-  let size = 0;
-  for (const line of lines) {
-    if (/^(```|~~~|\||<)/.test(line)) continue;
-    const plain = plainMarkdownLine(line);
-    if (!plain) continue;
-    words.push(plain);
-    size += plain.length;
-    if (size > 160) break;
-  }
-  return { title, glimpse: words.join(' ').slice(0, 220), pending: false };
-}
-
-/** How tall a folded card is: room for its title, and for its glimpse if it has one. */
-function faceHeight(face) {
-  return face.glimpse || face.pending ? FOLD_GLIMPSE_HEIGHT : FOLD_TITLE_HEIGHT;
-}
-
-/** How tall a folded group opens out: room round the cards tucked inside it, as they sit in it. */
+/** How tall a group folded by an earlier version opens out: room round the cards tucked inside it, as they sit in it. */
 function groupOpenHeight(model, rec) {
   const inside = model.nodes.filter((n) => n.tuck && n.tuck.by === rec.id);
   const bottom = Math.max(0, ...inside.map((n) => n.tuck.dy + n.height));
@@ -104,26 +50,43 @@ function tuckedInto(model, id) {
     .sort((a, b) => a.tuck.dy - b.tuck.dy || a.tuck.dx - b.tuck.dx);
 }
 
+/**
+ * Folds an earlier version made of single cards and groups, opened on the
+ * records: largest first, until none is left, since what comes out of
+ * one may hold another. Returns whether any was.
+ */
+function openOldFolds(model, close) {
+  let any = false;
+  for (let round = 0; round < 50; round++) {
+    let more = false;
+    model.nodes
+      .filter((r) => !r.tuck && (r.fold || (isGroupRecord(r) && tuckedCount(model, r.id) > 0)))
+      .sort((a, b) => b.width * b.height - a.width * a.height)
+      .forEach((r) => {
+        if (r.tuck) return;
+        // A group holding cards with no record of its fold: rewritten
+        // without it, folded still, to open round them.
+        if (!r.fold && isGroupRecord(r)) r.fold = { height: groupOpenHeight(model, r), folded: r.height, measured: true };
+        if (unfoldRecord(model, r, close)) more = true;
+      });
+    if (!more) break;
+    any = true;
+  }
+  return any;
+}
+
 class CanvasFold extends CanvasFeature {
   constructor(plugin) {
     super(plugin);
     this.popover = new FoldPopover();
-    // A note card's glimpse, by the note's path: { mtime, text }.
-    this.notes = new Map();
-    this.reading = new Set();
   }
 
   settingsSchema() {
     return [
       {
-        key: 'canvasFold',
-        name: 'Fold cards and groups',
-        desc: 'Fold a selected canvas card down to its title from the bar above it, and a group down to its label from the arrow beside its name, its cards tucked inside. Point at a folded card to read all of it. A button beside the zoom controls folds or unfolds every card, group or branch.',
-      },
-      {
         key: 'canvasBranches',
         name: 'Fold branches',
-        desc: 'Fold branch, in the bar above a selected card, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold.',
+        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold. A button beside the zoom controls folds or unfolds every branch.',
       },
       {
         key: 'canvasCloseGaps',
@@ -131,10 +94,6 @@ class CanvasFold extends CanvasFeature {
         desc: 'What’s beyond a fold moves in to fill the room it left, and back out when it unfolds. The groups it’s in shrink and grow to match.',
       },
     ];
-  }
-
-  get canFold() {
-    return !!this.settings.canvasFold;
   }
 
   get canBranch() {
@@ -148,51 +107,6 @@ class CanvasFold extends CanvasFeature {
   commands() {
     return [
       {
-        id: 'fold-canvas-cards',
-        name: 'Fold or unfold the selected cards',
-        icon: 'fold-vertical',
-        check: () => this.foldTargets(this.selectedNodes(this.pageCanvas())).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          const cards = this.foldTargets(this.selectedNodes(view));
-          this.fold(view, cards, !cards.every((n) => foldOf(n)));
-        },
-      },
-      {
-        id: 'fold-all-canvas-cards',
-        name: 'Fold or unfold every card on the canvas',
-        icon: 'fold-vertical',
-        check: () => {
-          const view = this.pageCanvas();
-          return !!view && (this.canFold || this.allNodes(view).some((n) => foldable(n) && foldOf(n)));
-        },
-        run: () => this.foldAll(this.pageCanvas()),
-      },
-      {
-        id: 'fold-all-canvas-groups',
-        name: 'Fold or unfold every group on the canvas',
-        icon: 'box-select',
-        check: () => {
-          const view = this.pageCanvas();
-          return !!view && this.allNodes(view).some((n) => isGroupNode(n) && !tuckOf(n) && (this.canFold || foldOf(n)));
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          const s = this.foldStatus(canvasModel(view.canvas));
-          this.foldEverything(view, this.canFold && s.openGroups ? 'groups' : 'groups-open');
-        },
-      },
-      {
-        id: 'unfold-canvas-everything',
-        name: 'Unfold everything on the canvas',
-        icon: 'unfold-vertical',
-        check: () => {
-          const view = this.pageCanvas();
-          return !!view && this.foldStatus(canvasModel(view.canvas)).anything;
-        },
-        run: () => this.foldEverything(this.pageCanvas(), 'everything'),
-      },
-      {
         id: 'fold-canvas-branch',
         name: 'Fold or unfold the selected card’s branch',
         icon: 'chevrons-down-up',
@@ -204,12 +118,27 @@ class CanvasFold extends CanvasFeature {
           this.foldBranches(view, cards, !cards.every((n) => tuckedCount(model, n.id) > 0));
         },
       },
+      {
+        id: 'fold-every-canvas-branch',
+        name: 'Fold every branch on the canvas',
+        icon: 'chevrons-down-up',
+        check: () => {
+          const view = this.pageCanvas();
+          return !!view && this.canBranch && this.foldStatus(canvasModel(view.canvas)).roots > 0;
+        },
+        run: () => this.foldEverything(this.pageCanvas(), 'branches'),
+      },
+      {
+        id: 'unfold-canvas-everything',
+        name: 'Unfold every branch on the canvas',
+        icon: 'chevrons-up-down',
+        check: () => {
+          const view = this.pageCanvas();
+          return !!view && this.foldStatus(canvasModel(view.canvas)).anything;
+        },
+        run: () => this.foldEverything(this.pageCanvas(), 'everything'),
+      },
     ];
-  }
-
-  /** Of these cards, the ones that can be folded or unfolded now. */
-  foldTargets(nodes) {
-    return (nodes || []).filter((n) => (foldable(n) || isGroupNode(n)) && !tuckOf(n) && (this.canFold || foldOf(n)));
   }
 
   /** The selected cards whose branch can be folded, or is. */
@@ -229,18 +158,7 @@ class CanvasFold extends CanvasFeature {
   addMenuItems(menu, nodes) {
     const first = nodes[0];
     const view = first && first.canvas && first.canvas.view;
-    if (!view || !view.canvas) return;
-    const cards = this.foldTargets(nodes);
-    if (cards.length) {
-      const what = foldWording(cards);
-      menu.addItem((item) =>
-        item
-          .setTitle(what.title)
-          .setIcon(what.icon)
-          .onClick(() => this.fold(view, cards, !what.folded))
-      );
-    }
-    if (nodes.length !== 1) return;
+    if (!view || !view.canvas || nodes.length !== 1) return;
     const model = canvasModel(view.canvas);
     const rec = model.byId.get(first.id);
     if (!rec || rec.tuck || isGroupRecord(rec)) return;
@@ -260,60 +178,7 @@ class CanvasFold extends CanvasFeature {
     if (state && state.glide) state.glide.finish();
   }
 
-  /** What a folded card shows, and the note's words read in for a note card if they aren't yet. */
-  faceOf(view, rec) {
-    if (rec.type !== 'file') return foldFace(rec);
-    const file = this.app && this.app.vault && typeof this.app.vault.getAbstractFileByPath === 'function'
-      ? this.app.vault.getAbstractFileByPath(String(rec.file || ''))
-      : null;
-    if (!(file instanceof TFile)) return foldFace(rec, '');
-    const known = this.notes.get(file.path);
-    if (known && known.mtime === file.stat.mtime) return foldFace(rec, known.text);
-    if (!this.reading.has(file.path)) {
-      this.reading.add(file.path);
-      this.app.vault
-        .cachedRead(file)
-        .then((text) => this.notes.set(file.path, { mtime: file.stat.mtime, text }))
-        .catch(() => this.notes.set(file.path, { mtime: file.stat.mtime, text: '' }))
-        .finally(() => {
-          this.reading.delete(file.path);
-          if (view) this.schedule(view);
-        });
-    }
-    return known ? foldFace(rec, known.text) : foldFace(rec);
-  }
-
-  /** Every card folded — or, if they all are, every card unfolded. Groups are left as they are. */
-  foldAll(view) {
-    if (!view) return Promise.resolve(false);
-    this.settle(view);
-    const cards = this.allNodes(view).filter((n) => foldable(n) && !tuckOf(n));
-    return this.fold(view, cards, this.canFold && cards.some((n) => !foldOf(n)));
-  }
-
-  /** Cards to their title and groups to their label, or back. By hand: one of the times the file is written. */
-  fold(view, nodes, on) {
-    if (!view || !view.canvas) return Promise.resolve(false);
-    this.settle(view);
-    const model = canvasModel(view.canvas);
-    const before = snapshotModel(model);
-    let any = false;
-    (nodes || []).forEach((node) => {
-      const rec = model.byId.get(node.id);
-      if (!rec || rec.tuck) return;
-      let done = false;
-      if (isGroupRecord(rec)) {
-        done = on ? foldRecord(model, rec, GROUP_FOLD_HEIGHT, true, this.closing) : unfoldRecord(model, rec, this.closing);
-      } else if (foldable(node)) {
-        if (!on) done = unfoldRecord(model, rec, this.closing);
-        else if (!rec.fold) done = foldRecord(model, rec, faceHeight(this.faceOf(view, rec)), true, this.closing);
-      }
-      any = any || done;
-    });
-    return this.finish(view, model, before, any);
-  }
-
-  /** A card's branch tucked into it, or back out. By hand, too: the file is written. */
+  /** A card's branch tucked into it, or back out. By hand: one of the times the file is written. */
   foldBranches(view, nodes, on) {
     if (!view || !view.canvas) return Promise.resolve(false);
     this.settle(view);
@@ -333,35 +198,24 @@ class CanvasFold extends CanvasFeature {
   /** What there is to fold and unfold on a canvas, for the button and its menu. */
   foldStatus(model) {
     const links = arrowLinks(model);
-    const s = { openCards: 0, foldedCards: 0, openGroups: 0, foldedGroups: 0, roots: 0, tucked: 0, anything: false };
+    const s = { roots: 0, tucked: 0, anything: false };
     model.nodes.forEach((rec) => {
       if (rec.tuck) {
         s.tucked++;
         return;
       }
-      if (isGroupRecord(rec)) {
-        if (rec.fold) s.foldedGroups++;
-        else s.openGroups++;
-        return;
-      }
-      if (!rec.node || !foldable(rec.node)) return;
-      if (rec.fold) s.foldedCards++;
-      else s.openCards++;
+      if (isGroupRecord(rec)) return;
       const parents = (links.parents.get(rec.id) || []).filter((p) => {
         const r = model.byId.get(p);
         return r && !r.tuck;
       });
       if (!parents.length && branchOf(model, rec.id, links).length) s.roots++;
     });
-    s.anything = !!(s.foldedCards || s.foldedGroups || s.tucked);
+    s.anything = s.tucked > 0;
     return s;
   }
 
-  /**
-   * Everything of one kind folded or unfolded at once: 'cards',
-   * 'cards-open', 'groups' (inner ones first), 'groups-open', 'branches'
-   * (from the cards at the top of each tree), or 'everything' unfolded.
-   */
+  /** Every branch folded, from the cards at the top of each tree ('branches'), or every one unfolded ('everything'). */
   foldEverything(view, what) {
     if (!view || !view.canvas) return Promise.resolve(false);
     this.settle(view);
@@ -369,57 +223,28 @@ class CanvasFold extends CanvasFeature {
     const before = snapshotModel(model);
     const close = this.closing;
     const shown = () => model.nodes.filter((n) => !n.tuck);
-    const area = (n) => n.width * n.height;
     let any = false;
-    const did = (x) => {
-      if (x) any = true;
-      return x;
-    };
-    if (what === 'cards') {
-      shown()
-        .filter((r) => !isGroupRecord(r) && r.node && foldable(r.node) && !r.fold)
-        .forEach((r) => did(foldRecord(model, r, faceHeight(this.faceOf(view, r)), true, close)));
-    } else if (what === 'cards-open') {
-      shown()
-        .filter((r) => !isGroupRecord(r) && r.fold)
-        .forEach((r) => did(unfoldRecord(model, r, close)));
-    } else if (what === 'groups') {
-      shown()
-        .filter((r) => isGroupRecord(r) && !r.fold)
-        .sort((a, b) => area(a) - area(b))
-        .forEach((r) => {
-          if (!r.tuck) did(foldRecord(model, r, GROUP_FOLD_HEIGHT, true, close));
-        });
-    } else if (what === 'branches') {
-      const status = (r) => {
+    if (what === 'branches') {
+      const top = (r) => {
         const links = arrowLinks(model);
-        const parents = (links.parents.get(r.id) || []).filter((p) => model.byId.get(p) && !model.byId.get(p).tuck);
-        return !parents.length;
+        return !(links.parents.get(r.id) || []).some((p) => model.byId.get(p) && !model.byId.get(p).tuck);
       };
       shown()
-        .filter((r) => !isGroupRecord(r) && status(r))
+        .filter((r) => !isGroupRecord(r) && top(r))
         .forEach((r) => {
-          if (!r.tuck) did(foldBranch(model, r, close, arrowLinks(model)).length > 0);
+          if (!r.tuck && foldBranch(model, r, close, arrowLinks(model)).length) any = true;
         });
-    } else if (what === 'everything' || what === 'groups-open') {
-      // Unfolded until nothing's left folded: what comes out of one fold may hold another.
+    } else if (what === 'everything') {
+      // Unfolded until nothing's left folded: what comes out of one may hold another.
       for (let round = 0; round < 50; round++) {
         let more = false;
-        const groupsOnly = what === 'groups-open';
         shown()
-          .filter((r) => (groupsOnly ? isGroupRecord(r) && r.fold : r.fold))
-          .sort((a, b) => area(b) - area(a))
+          .filter((r) => !isGroupRecord(r) && tuckedCount(model, r.id))
           .forEach((r) => {
-            if (!r.tuck && did(unfoldRecord(model, r, close))) more = true;
+            if (!r.tuck && unfoldBranch(model, r, close, arrowLinks(model)).length) more = true;
           });
-        if (!groupsOnly) {
-          shown()
-            .filter((r) => !isGroupRecord(r) && tuckedCount(model, r.id))
-            .forEach((r) => {
-              if (!r.tuck && did(unfoldBranch(model, r, close, arrowLinks(model)).length > 0)) more = true;
-            });
-        }
         if (!more) break;
+        any = true;
       }
     }
     return this.finish(view, model, before, any);
@@ -444,21 +269,7 @@ class CanvasFold extends CanvasFeature {
       this.popover.hide();
       // The groups round what changed, fitted to it again on every side.
       if (this.closing) fitGroups(model, before);
-      this.prepare(view, model, before);
       glideCanvasModel(view, model, before, state, end);
-    });
-  }
-
-  /** Cards about to fold or unfold, drawn as they'll be, so they glide as themselves. */
-  prepare(view, model, before) {
-    model.nodes.forEach((rec) => {
-      const node = rec.node;
-      const was = before.get(rec.id);
-      if (!node || !node.nodeEl || !was || rec.tuck) return;
-      const folded = !!rec.fold;
-      if (folded === !!was.fold) return;
-      node.nodeEl.toggleClass('dr-folded', folded);
-      if (!isGroupRecord(rec)) this.face(view, node, rec, folded);
     });
   }
 
@@ -483,138 +294,24 @@ class CanvasFold extends CanvasFeature {
     const model = canvasModel(view.canvas);
     const before = snapshotModel(model);
     let changed = state ? restoreOrphans(model, state, this.closing) : false;
-    let anyCard = false;
-    let anyGroup = false;
+    if (openOldFolds(model, this.closing)) changed = true;
+    if (changed) applyCanvasModel(model, before);
     const counts = new Map();
     model.nodes.forEach((n) => {
       if (n.tuck) counts.set(n.tuck.by, (counts.get(n.tuck.by) || 0) + 1);
     });
+    let anyBranch = false;
+    const links = arrowLinks(model);
     model.nodes.forEach((rec) => {
       const node = rec.node;
       if (!node || !node.nodeEl || rec.tuck) return;
-      const group = isGroupRecord(rec);
-      const el = node.nodeEl;
       this.stack(node, (counts.get(rec.id) || 0) > 0);
-      if (!group && !foldable(node)) return;
-      // A group holding cards with no record of its fold — dropped by a
-      // rewrite: folded still, to open out round them.
-      if (group && !rec.fold && counts.get(rec.id)) {
-        rec.fold = { height: groupOpenHeight(model, rec), folded: rec.height, measured: true };
-        changed = true;
-      }
-      let kept = rec.fold;
-      let face = null;
-      if (kept) {
-        if (Math.abs(rec.height - kept.folded) > 3) {
-          // Pulled to another height by hand: opened out — to the size it
-          // was, or taller if it was pulled taller — with room made below
-          // it as unfolding makes, rather than left small and the room
-          // it gave up lost.
-          const hand = rec.height;
-          rec.height = kept.folded;
-          rec.fold = Object.assign({}, kept, { height: Math.max(kept.height, hand) });
-          unfoldRecord(model, rec, this.closing);
-          kept = null;
-          changed = true;
-        } else if (!group) {
-          // Folded as cards fold now, its title's height — a glimpse come or gone, an older fold.
-          face = this.faceOf(view, rec);
-          const fits = faceHeight(face);
-          if (!node.isEditing && Math.abs(kept.folded - fits) > 3 && fits < kept.height - 2) {
-            refitRecord(model, rec, fits, this.closing);
-            kept = rec.fold;
-            changed = true;
-          }
-        }
-      }
-      if (group) anyGroup = true;
-      else anyCard = true;
-      el.toggleClass('dr-folded', !!kept);
-      if (!group) {
-        this.face(view, node, rec, !!kept, face);
-        // Opened to edit: as tall as it was, while it's being edited.
-        if (kept) el.style.setProperty('--dr-open-height', `${Math.max(kept.height, rec.height)}px`);
-        else el.style.removeProperty('--dr-open-height');
-        this.peek(view, node);
-      } else {
-        this.summary(view, node, rec, model, kept ? counts.get(rec.id) || 0 : -1);
-        this.button(view, node, !!kept);
-      }
+      if (!anyBranch && !isGroupRecord(rec) && ((counts.get(rec.id) || 0) > 0 || (links.children.get(rec.id) || []).length)) anyBranch = true;
     });
-    if (changed) applyCanvasModel(model, before);
     this.knobs(view, model, counts);
     if (state) drawTucks(view, model, state);
-    this.control(view, anyCard || anyGroup);
+    this.control(view, anyBranch);
     this.decorateMenu(view);
-  }
-
-  /**
-   * The strip a folded card shows: an arrow to open it, its title, and a
-   * glimpse of the rest fading out — all inside the card, so nothing of
-   * it sits out among the arrows between cards.
-   */
-  face(view, node, rec, on, face) {
-    const host = node.nodeEl.querySelector(':scope > .canvas-node-container') || node.nodeEl;
-    let el = host.querySelector(':scope > .dr-fold-face');
-    if (!on) {
-      if (el) el.remove();
-      return;
-    }
-    face = face || this.faceOf(view, rec);
-    if (!el) {
-      el = host.createDiv({ cls: 'dr-fold-face' });
-      const row = el.createDiv({ cls: 'dr-fold-face-title' });
-      const open = row.createSpan({ cls: 'dr-fold-btn' });
-      open.setAttribute('role', 'button');
-      open.setAttribute('aria-label', 'Unfold card');
-      open.setAttribute('data-tooltip-position', 'top');
-      setIcon(open, 'chevron-right');
-      stopCanvasPointer(open);
-      open.addEventListener('click', (evt) => {
-        evt.stopPropagation();
-        evt.preventDefault();
-        this.fold(view, [node], false);
-      });
-      row.createSpan({ cls: 'dr-fold-face-text' });
-      el.createDiv({ cls: 'dr-fold-face-glimpse' });
-    }
-    const title = el.querySelector('.dr-fold-face-text');
-    const glimpse = el.lastElementChild;
-    if (title.textContent !== face.title) title.textContent = face.title;
-    if (glimpse.textContent !== face.glimpse) glimpse.textContent = face.glimpse;
-    el.toggleClass('has-glimpse', !!face.glimpse);
-  }
-
-  /** Pointing at a folded card shows all of it. */
-  peek(view, node) {
-    this.popover.attach(
-      node.nodeEl,
-      () => !!foldOf(node) && !node.isEditing && !tuckOf(node) && this.watched.has(view),
-      (pop, component) => this.fillPeek(view, node, pop, component)
-    );
-  }
-
-  fillPeek(view, node, pop, component) {
-    pop.addClass('dr-fold-peek');
-    let data = {};
-    try {
-      data = node.getData() || {};
-    } catch (err) {
-      data = {};
-    }
-    const body = pop.createDiv({ cls: 'markdown-preview-view markdown-rendered dr-fold-peek-body' });
-    if (data.type === 'file') {
-      const file = this.app.vault.getAbstractFileByPath(String(data.file || ''));
-      body.createDiv({ cls: 'dr-fold-peek-title', text: canvasCardLabel(data) });
-      if (!(file instanceof TFile)) return;
-      const into = body.createDiv();
-      this.app.vault.cachedRead(file).then((text) => {
-        if (!into.isConnected) return;
-        renderPeekMarkdown(this.app, String(text).replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, ''), into, file.path, component);
-      });
-      return;
-    }
-    renderPeekMarkdown(this.app, String(data.text || ''), body, view.file ? view.file.path : '', component);
   }
 
   /** The cards tucked into a fold, by name: one picked opens the fold and goes to it. */
@@ -638,14 +335,13 @@ class CanvasFold extends CanvasFeature {
     if (inside.length > most) list.createDiv({ cls: 'dr-fold-list-more', text: `and ${inside.length - most} more` });
   }
 
-  /** A fold opened, and the canvas brought round to one of the cards that came out of it. */
+  /** A branch opened, and the canvas brought round to one of the cards that came out of it. */
   async openTo(view, holderId, cardId) {
     this.popover.hide();
     const canvas = view.canvas;
     const holder = canvas.nodes.get(holderId);
     if (!holder) return;
-    if (isGroupNode(holder)) await this.fold(view, [holder], false);
-    else await this.foldBranches(view, [holder], false);
+    await this.foldBranches(view, [holder], false);
     const node = canvas.nodes.get(cardId);
     if (!node) return;
     try {
@@ -669,82 +365,6 @@ class CanvasFold extends CanvasFeature {
     } else if (!on && has) {
       el.querySelectorAll(':scope > .dr-stack').forEach((s) => s.remove());
     }
-  }
-
-  /**
-   * A group's arrow, which folds it: in its label, before its name, as a
-   * heading's fold arrow sits — not out among the arrows between cards.
-   * Right after the label, so it can take the label's colours; the label
-   * makes room for it.
-   */
-  button(view, node, folded) {
-    const el = node.nodeEl;
-    let button = el.querySelector(':scope > .dr-fold-btn');
-    if (!folded && !this.canFold) {
-      if (button) button.remove();
-      el.removeClass('dr-labelled-fold');
-      return;
-    }
-    if (!button) {
-      button = el.createDiv({ cls: 'dr-fold-btn' });
-      button.setAttribute('role', 'button');
-      button.setAttribute('data-tooltip-position', 'top');
-      stopCanvasPointer(button);
-      button.addEventListener('click', (evt) => {
-        evt.stopPropagation();
-        evt.preventDefault();
-        this.fold(view, [node], !foldOf(node));
-      });
-    }
-    const label = el.querySelector(':scope > .canvas-group-label');
-    if (label && button.previousElementSibling !== label) label.after(button);
-    const named = !!label && label.style.display !== 'none' && !!label.textContent.trim();
-    el.toggleClass('dr-labelled-fold', named);
-    const state = `${folded}`;
-    if (button.dataset.folded === state) return;
-    button.dataset.folded = state;
-    button.empty();
-    setIcon(button, folded ? 'chevron-right' : 'chevron-down');
-    button.setAttribute('aria-label', `${folded ? 'Unfold' : 'Fold'} group`);
-  }
-
-  /**
-   * A folded group's bar: how many cards it holds, with a dot for each
-   * colour among them. Pointed at, it names them; pressed, it opens.
-   */
-  summary(view, node, rec, model, count) {
-    let el = node.nodeEl.querySelector(':scope > .dr-group-summary');
-    if (count < 0) {
-      if (el) el.remove();
-      return;
-    }
-    if (!el) {
-      el = node.nodeEl.createDiv({ cls: 'dr-group-summary' });
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-      stopCanvasPointer(el);
-      onActivate(el, (evt) => {
-        evt.stopPropagation();
-        this.fold(view, [node], false);
-      });
-      this.popover.attach(el, () => !!foldOf(node), (pop) => this.fillTucked(view, node.id, pop), 'below');
-    }
-    const colours = [];
-    tuckedInto(model, rec.id).forEach((n) => {
-      const key = canvasColorKey(n.color);
-      if (key !== 'none' && colours.indexOf(key) === -1) colours.push(key);
-    });
-    const text = count === 1 ? '1 card' : `${count} cards`;
-    const key = `${text}|${colours.slice(0, 6).join(',')}`;
-    if (el.dataset.key === key) return;
-    el.dataset.key = key;
-    el.empty();
-    if (colours.length) {
-      const dots = el.createSpan({ cls: 'dr-group-dots' });
-      colours.slice(0, 6).forEach((c) => colourMark(dots, c));
-    }
-    el.createSpan({ text });
-    el.setAttribute('aria-label', `Unfold group: ${text}`);
   }
 
   /**
@@ -787,18 +407,13 @@ class CanvasFold extends CanvasFeature {
   }
 
   /**
-   * Fold, and Fold branch, in the bar above the selected cards, beside
-   * Obsidian's own buttons. Redrawn only when what they show changes,
-   * since drawing them is itself a change the watcher sees.
+   * Fold branch in the bar above the selected cards, beside Obsidian's
+   * own buttons. Redrawn only when what it shows changes, since drawing
+   * it is itself a change the watcher sees.
    */
   decorateMenu(view) {
     const bar = view.contentEl.querySelector('.canvas-menu');
     if (!bar) return;
-    const cards = this.foldTargets(this.selectedNodes(view));
-    menuButton(bar, 'dr-fold-button', cards.length ? foldWording(cards) : null, () => {
-      const now = this.foldTargets(this.selectedNodes(view));
-      if (now.length) this.fold(view, now, !now.every((n) => foldOf(n)));
-    });
     const roots = this.branchTargets(view);
     let branch = null;
     if (roots.length) {
@@ -813,7 +428,7 @@ class CanvasFold extends CanvasFeature {
     });
   }
 
-  /** Beside the canvas's zoom controls: folding, for everything at once. */
+  /** Beside the canvas's zoom controls: folding, for every branch at once. */
   control(view, any) {
     const controls = view.containerEl.querySelector('.canvas-controls');
     if (!controls) return;
@@ -834,7 +449,7 @@ class CanvasFold extends CanvasFeature {
     item.setAttribute('tabindex', '0');
     item.setAttribute('data-tooltip-position', 'left');
     item.setAttribute('aria-label', 'Folding');
-    setIcon(item, 'fold-vertical');
+    setIcon(item, 'chevrons-down-up');
     onActivate(item, (evt) => this.foldMenu(view, item, evt));
   }
 
@@ -853,13 +468,9 @@ class CanvasFold extends CanvasFeature {
           .onClick(() => this.foldEverything(view, what))
       );
     };
-    if (this.canFold && s.openCards) add('Fold every card', 'fold-vertical', 'cards');
-    if (s.foldedCards) add('Unfold every card', 'unfold-vertical', 'cards-open');
-    if (this.canFold && s.openGroups) add('Fold every group', 'box-select', 'groups');
-    if (s.foldedGroups) add('Unfold every group', 'box-select', 'groups-open');
     if (this.canBranch && s.roots) add('Fold every branch', 'chevrons-down-up', 'branches');
-    if (s.anything) add('Unfold everything', 'chevrons-up-down', 'everything');
-    if (!count) add('Nothing to fold', 'fold-vertical', 'none');
+    if (s.anything) add('Unfold every branch', 'chevrons-up-down', 'everything');
+    if (!count) add('Nothing to fold', 'chevrons-down-up', 'none');
     if (typeof menu.addSeparator === 'function') menu.addSeparator();
     menu.addItem((item) =>
       item
@@ -878,24 +489,11 @@ class CanvasFold extends CanvasFeature {
 
   cleanup(view) {
     this.popover.hide();
-    view.contentEl
-      .querySelectorAll('.dr-fold-btn, .dr-branch-knob, .dr-group-summary, .dr-fold-face, .dr-stack, .dr-fold-button, .dr-branch-button')
-      .forEach((el) => el.remove());
-    view.contentEl.querySelectorAll('.dr-folded, .dr-holds, .dr-labelled-fold').forEach((el) => {
-      el.removeClass('dr-folded', 'dr-holds', 'dr-labelled-fold');
-      el.style.removeProperty('--dr-open-height');
-    });
+    view.contentEl.querySelectorAll('.dr-branch-knob, .dr-stack, .dr-branch-button').forEach((el) => el.remove());
+    view.contentEl.querySelectorAll('.dr-holds').forEach((el) => el.removeClass('dr-holds'));
     undrawTucks(view);
     if (view.containerEl) view.containerEl.querySelectorAll('.dr-fold-control').forEach((el) => el.remove());
   }
-}
-
-/** What folding these cards would do — 'Fold card', 'Unfold groups' — and its icon. */
-function foldWording(cards) {
-  const folded = cards.every((n) => foldOf(n));
-  const groups = cards.every(isGroupNode);
-  const noun = groups ? (cards.length > 1 ? 'groups' : 'group') : cards.length > 1 ? 'cards' : 'card';
-  return { folded, title: `${folded ? 'Unfold' : 'Fold'} ${noun}`, icon: folded ? 'unfold-vertical' : 'fold-vertical' };
 }
 
 /** A button of ours in the canvas's selection bar: `what` gives its title and icon, or null for none. */
@@ -944,14 +542,16 @@ class FoldingHelpModal extends Modal {
     this.titleEl.setText('Folding on a canvas');
     const list = this.contentEl.createEl('ul');
     [
-      ['Cards', 'Select a card and press Fold in the bar above it — or right-click it — to fold it down to its title. The arrow by its title opens it again. Point at a folded card to read all of it; double-click to edit it as usual.'],
-      ['Branches', 'Fold branch, in the same bar, tucks everything a card’s arrows lead to into the card. Where the arrows were, it then says how many cards it holds — point at the number to see which, and pick one to open the branch there.'],
-      ['Groups', 'The arrow beside a group’s name folds it to a bar, its cards inside. Point at the bar to see them; press it, or the arrow, to open the group.'],
+      [
+        'Branches',
+        'Select a card and press Fold branch in the bar above it — or right-click it — to tuck everything its arrows lead to into the card. Where the arrows were, it then says how many cards it holds: point at the number to see which, and pick one to open the branch there.',
+      ],
+      ['Everything', 'The button beside the zoom controls folds every branch at once, from the top of each tree, or unfolds them all.'],
       [
         'Room',
         this.closing
-          ? 'What’s below a fold moves up into the room it leaves, and back down when it opens; a group the fold is in shrinks and grows with it. Pulling a folded card taller opens it.'
-          : 'Folds leave their room as it was: nothing else moves. Switch on “Close the gaps” in settings to have what’s below move up.',
+          ? 'What’s beyond a fold moves in to the room it leaves, and back out when it opens; the groups it’s in shrink and grow with it.'
+          : 'Folds leave their room as it was: nothing else moves. Switch on “Close the gaps” in settings to have what’s beyond move in.',
       ],
       ['Kept', 'Folds are saved with the canvas, and Undo puts one back.'],
     ].forEach(([what, how]) => {

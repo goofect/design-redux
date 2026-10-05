@@ -519,68 +519,36 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
   });
 
-  await t('canvas cards fold to their title and back, keeping the size they were in the card', () => {
+  await t('canvas cards folded by an earlier version open to the size they were; nothing else folds a card', () => {
     const containerEl = document.createElement('div');
     containerEl.createDiv({ cls: 'canvas-controls' });
     const contentEl = containerEl.createDiv();
     let saves = 0;
-    const card = (id, data, height) => {
+    const card = (id, data, x, height, fold) => {
       const node = {
-        id, x: 0, y: 0, width: 200, height, unknownData: {}, isEditing: false,
+        id, x, y: 0, width: 200, height, unknownData: fold ? { drFold: fold } : {}, isEditing: false,
         nodeEl: contentEl.createDiv({ cls: 'canvas-node' }),
         getData: () => data,
-        moveAndResize(r) { this.height = r.height; },
+        moveAndResize(r) { Object.assign(this, r); },
       };
       node.nodeEl.createDiv({ cls: 'canvas-node-content' });
       return node;
     };
-    const text = card('t', { type: 'text' }, 120);
-    const note = card('n', { type: 'file', file: 'A.md' }, 200);
-    const pic = card('p', { type: 'file', file: 'a.png' }, 200);
-    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), selection: new Set(), requestSave: () => saves++ } };
-    const fold = new R.CanvasFold({ settings: { canvasFold: true, canvasCloseGaps: true } });
-
-    fold.fold(view, [text], true);
-    // A card with only a title folds to the title's height.
-    assert.strictEqual(text.height, 52);
-    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: true });
-    assert.ok(text.nodeEl.classList.contains('dr-folded'));
-    assert.ok(text.nodeEl.querySelector('.dr-fold-face'));
-    assert.strictEqual(saves, 1);
-    const control = containerEl.querySelector('.dr-fold-control .canvas-control-item');
-    assert.strictEqual(control.getAttribute('aria-label'), 'Folding');
-
-    // Every card — not the picture — then all of them back.
-    fold.foldAll(view);
-    assert.strictEqual(note.height, 52);
-    assert.strictEqual(pic.height, 200);
-    assert.ok(!pic.nodeEl.querySelector('.dr-fold-btn'));
-    fold.foldAll(view);
-    assert.deepStrictEqual([text.height, note.height], [120, 200]);
-    assert.strictEqual(R.foldOf(text), null);
-    assert.ok(!text.nodeEl.classList.contains('dr-folded'));
-
-    // Pulled taller by hand while folded: opened out, to the size it was —
-    // or taller, pulled taller. Opened to edit: as tall as it was while
-    // it's edited, and folded still.
-    fold.fold(view, [text, note], true);
-    text.height = 90;
-    note.isEditing = true;
+    const text = card('t', { type: 'text' }, 0, 52, { height: 120, folded: 52, measured: true });
+    const note = card('n', { type: 'file', file: 'A.md' }, 300, 52, { height: 200, folded: 52, measured: true });
+    const pic = card('p', { type: 'file', file: 'a.png' }, 600, 200);
+    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), edges: new Map(), selection: new Set(), requestSave: () => saves++ } };
+    const fold = new R.CanvasFold({ settings: { canvasBranches: true, canvasCloseGaps: true } });
     fold.pass(view);
+    assert.deepStrictEqual([text.height, note.height, pic.height], [120, 200, 200]);
     assert.strictEqual(R.foldOf(text), null);
-    assert.strictEqual(text.height, 120);
-    fold.fold(view, [text], true);
-    text.height = 300;
-    fold.pass(view);
-    assert.strictEqual(text.height, 300);
-    text.height = 90;
-    assert.strictEqual(note.height, 52);
-    assert.ok(R.foldOf(note));
-    assert.strictEqual(note.nodeEl.style.getPropertyValue('--dr-open-height'), '200px');
-
-    // Turned off: what it added is gone.
+    assert.ok(!('drFold' in note.unknownData));
+    assert.strictEqual(saves, 0, 'saved with the canvas’s next change');
+    // No arrows, no branches: nothing to fold, so no folding button.
+    assert.ok(!containerEl.querySelector('.dr-fold-control'));
+    assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything']);
     fold.cleanup(view);
-    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-fold-btn, .dr-folded'));
+    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-stack, .dr-branch-knob'));
   });
 
   console.log(`\n${passed} passed`);

@@ -1,11 +1,10 @@
 /* ------------------------------------------------------------------ */
 /* What a fold holds, at a glance                                      */
 /*                                                                     */
-/* Pointing at a folded card shows all of it, as a link's preview does. */
-/* Pointing at what a fold says it holds — a branch's +3, a group's     */
-/* bar — lists the cards tucked into it, and picking one opens the fold */
-/* and goes to it. Only where there's a pointer to point with: a touch  */
-/* opens the fold instead.                                              */
+/* Pointing at what a folded branch says it holds — its +3 — lists the */
+/* cards tucked into it, and picking one opens the fold and goes to it. */
+/* Only where there's a pointer to point with: a touch opens the fold   */
+/* instead.                                                             */
 /* ------------------------------------------------------------------ */
 
 const PEEK_DELAY = 450;
@@ -125,20 +124,6 @@ class FoldPopover {
     if (this.component && typeof this.component.unload === 'function') this.component.unload();
     this.component = null;
   }
-}
-
-/** Markdown drawn into an element as a note draws it, or as plain text where it can't be. */
-function renderPeekMarkdown(app, text, el, sourcePath, component) {
-  if (component && MarkdownRenderer) {
-    try {
-      if (typeof MarkdownRenderer.render === 'function') return MarkdownRenderer.render(app, text, el, sourcePath, component);
-      if (typeof MarkdownRenderer.renderMarkdown === 'function') return MarkdownRenderer.renderMarkdown(text, el, sourcePath, component);
-    } catch (err) {
-      /* plain text, below */
-    }
-  }
-  el.setText(text);
-  return null;
 }
 
 /** A card's colour, as a small mark: its own colour, or none. */
