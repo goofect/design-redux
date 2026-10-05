@@ -664,7 +664,13 @@ describe('Design Redux in Obsidian', function () {
     const fresh = (now) => Object.keys(now.nodes).filter((id) => !data.nodes.some((n) => n.id === id));
 
     // Tab on the root: a card after its others, joined to it, open to type in.
-    await browser.$(ACTIVE + '[data-test-id="root"]').click();
+    // Selected as a click would, with the keys going to the canvas — the
+    // legend can sit over the card in a small window.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.selectOnly(canvas.nodes.get('root'));
+      canvas.wrapperEl.focus();
+    });
     await browser.pause(300);
     await browser.keys('Tab');
     await browser.waitUntil(async () => fresh(await cards()).length === 1, { timeout: 5000, timeoutMsg: 'Tab added no card' });
