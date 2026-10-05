@@ -10,13 +10,18 @@
 /* every note it links to, as a direct link would, and the lines of    */
 /* the routes it takes to them.                                        */
 /*                                                                     */
-/* Nothing is set up by hand: it's read from the links. Of three notes */
-/* all linked to one another, the one in between is the one broader   */
-/* than one and narrower than the other, where broader means linked    */
-/* with more notes. Notes linked with as many are told apart by which  */
-/* way their one-way links run, read the way the vault mostly uses     */
-/* them, then by how deep in folders they sit. Only notes take part:   */
-/* tags, attachments and missing notes keep their lines as they are.   */
+/* Nothing is set up by hand: it's read from the links. The notes are  */
+/* put in order, broadest first: a one-way link puts the note it runs  */
+/* from above the note it runs to (or below, in a vault whose notes    */
+/* mostly link up to what they're part of); what that leaves open goes */
+/* by how many notes each is linked with, then the lean of its one-way */
+/* links, then how shallow in folders it sits. A line between two      */
+/* notes is drawn through the notes between when they link one to the */
+/* next, each narrower — one note between, or two. Notes nothing tells */
+/* apart are left as they are rather than guessed at. Where notes name */
+/* what they sit under in a property, that decides for them; the rest  */
+/* are still worked out. Only notes take part: tags, attachments and   */
+/* missing notes keep their lines as they are.                         */
 /*                                                                     */
 /* The graph itself is Obsidian's. What it's given to draw passes      */
 /* through here first, and its notes and lines are told, as they draw, */
@@ -89,22 +94,136 @@ function linkStats(resolvedLinks) {
   const sign = down >= up ? 1 : -1;
   const lean = new Map();
   outward.forEach((n, id) => lean.set(id, n * sign));
-  return { breadth, lean };
+  return { breadth, lean, sign };
 }
 
-/** The notes from broadest to narrowest. */
-function rankNotes(ids, near, stats) {
-  const breadth = (id) =>
-    stats && stats.breadth && stats.breadth.has(id) ? stats.breadth.get(id) : near.get(id).size;
+/**
+ * How two notes compare apart from where links put them: by how many
+ * notes each is linked with, the lean of their one-way links, and how
+ * shallow in folders they sit. Positive when `a` is the broader, 0 when
+ * nothing tells them apart.
+ */
+function compareBreadth(a, b, near, stats) {
+  const breadth = (id) => (stats && stats.breadth && stats.breadth.has(id) ? stats.breadth.get(id) : near.get(id).size);
   const lean = (id) => (stats && stats.lean && stats.lean.get(id)) || 0;
   const depth = (id) => id.split('/').length;
-  return ids.slice().sort(
-    (a, b) =>
-      breadth(b) - breadth(a) ||
-      lean(b) - lean(a) ||
-      depth(a) - depth(b) ||
-      (a < b ? -1 : a > b ? 1 : 0)
-  );
+  return breadth(a) - breadth(b) || lean(a) - lean(b) || depth(b) - depth(a);
+}
+
+/**
+ * Which note is above which by a link that runs one way only, read the
+ * way the vault mostly uses them: id -> the notes directly below it.
+ */
+function oneWayAbove(ids, nodes, near, stats) {
+  const below = new Map(ids.map((id) => [id, new Set()]));
+  const sign = stats && stats.sign ? stats.sign : 1;
+  ids.forEach((a) => {
+    const links = nodes[a].links || {};
+    Object.keys(links).forEach((b) => {
+      if (a === b || !near.has(b)) return;
+      const back = nodes[b].links || {};
+      if (hasOwn(back, a)) return;
+      if (sign > 0) below.get(a).add(b);
+      else below.get(b).add(a);
+    });
+  });
+  return below;
+}
+
+/**
+ * The notes from broadest to narrowest: every note above the notes its
+ * one-way links — and a property's parents — put below it, and among
+ * those free to go either way, the broader first. Where links go round
+ * in a circle, the broadest of it is taken first and the circle opened
+ * there. `above` (optional) adds more: id -> notes it must be above.
+ */
+function rankNotes(ids, near, stats, nodes, above) {
+  const below = nodes ? oneWayAbove(ids, nodes, near, stats) : new Map(ids.map((id) => [id, new Set()]));
+  if (above) {
+    above.forEach((kids, id) => {
+      if (!below.has(id)) return;
+      kids.forEach((k) => {
+        if (below.has(k) && k !== id) below.get(id).add(k);
+      });
+    });
+  }
+  const better = (a, b) => {
+    const c = compareBreadth(a, b, near, stats);
+    return c > 0 || (c === 0 && a < b);
+  };
+  const waiting = new Map(ids.map((id) => [id, 0]));
+  below.forEach((kids) => kids.forEach((k) => waiting.set(k, waiting.get(k) + 1)));
+  // A heap of the notes nothing left is above, the broadest on top.
+  const heap = [];
+  const push = (id) => {
+    heap.push(id);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const up = (i - 1) >> 1;
+      if (!better(heap[i], heap[up])) break;
+      [heap[i], heap[up]] = [heap[up], heap[i]];
+      i = up;
+    }
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        const r = l + 1;
+        let m = i;
+        if (l < heap.length && better(heap[l], heap[m])) m = l;
+        if (r < heap.length && better(heap[r], heap[m])) m = r;
+        if (m === i) break;
+        [heap[i], heap[m]] = [heap[m], heap[i]];
+        i = m;
+      }
+    }
+    return top;
+  };
+  ids.forEach((id) => {
+    if (!waiting.get(id)) push(id);
+  });
+  const order = [];
+  const done = new Set();
+  let rest = null;
+  while (order.length < ids.length) {
+    let id = null;
+    while (heap.length && id === null) {
+      const next = pop();
+      if (!done.has(next)) id = next;
+    }
+    if (id === null) {
+      // A circle: its broadest note first.
+      if (!rest) rest = ids.slice().sort((a, b) => (better(a, b) ? -1 : better(b, a) ? 1 : 0));
+      id = rest.find((x) => !done.has(x));
+    }
+    done.add(id);
+    order.push(id);
+    below.get(id).forEach((k) => {
+      if (done.has(k)) return;
+      waiting.set(k, waiting.get(k) - 1);
+      if (waiting.get(k) === 0) push(k);
+    });
+  }
+  return order;
+}
+
+/**
+ * Whether anything tells two linked notes apart: a link one way only, a
+ * property's parent, or how broad they are. Two notes nothing tells
+ * apart don't put one between the others: a guess would be a route the
+ * notes don't mean.
+ */
+function toldApart(a, b, nodes, near, stats, parents) {
+  const la = nodes[a].links || {};
+  const lb = nodes[b].links || {};
+  if (hasOwn(la, b) !== hasOwn(lb, a)) return true;
+  if (parents && (((parents.get(a) || []).indexOf(b) !== -1) || (parents.get(b) || []).indexOf(a) !== -1)) return true;
+  return compareBreadth(a, b, near, stats) !== 0;
 }
 
 /**
@@ -112,10 +231,15 @@ function rankNotes(ids, near, stats) {
  * is the graph's own data — { id: { type, links: { id: true } } } —
  * and isn't changed; what comes back has the long lines left out.
  *
- * A line a–b is left out when some note c is linked with both and sits
- * between them, broader than one and narrower than the other. The
- * lines a–c and c–b stay, or are themselves left out for a note between
+ * A line a–b is left out when notes between them, each narrower than
+ * the last, link one to the next from a to b: one note between, or
+ * two. Those lines stay, or are themselves left out for notes between
  * them in turn — so a route always remains, each step narrower.
+ *
+ * Where notes name what they sit under (`parents`), that decides for
+ * them: a line between two of them goes through the notes between when
+ * one is above the other by way of them, and is left as it is when not.
+ * Lines with a note the property doesn't place are still worked out.
  */
 function routeGraph(nodes, stats, parents) {
   const ids = Object.keys(nodes).filter((id) => isRoutedNode(nodes[id]));
@@ -129,7 +253,8 @@ function routeGraph(nodes, stats, parents) {
     });
   });
 
-  const order = rankNotes(ids, near, stats);
+  const tree = parents ? parentTree(parents, near) : null;
+  const order = rankNotes(ids, near, stats, nodes, tree ? tree.below : null);
   const rank = new Map(order.map((id, i) => [id, i]));
 
   const hidden = new Map();
@@ -140,43 +265,65 @@ function routeGraph(nodes, stats, parents) {
     hidden.get(b).add(a);
   };
 
-  // Where the notes say what they sit under, that decides, and nothing
-  // is guessed: a line goes through the notes between when one note is
-  // above the other by way of them — and their own lines are there to
-  // carry it.
-  const tree = parents ? parentTree(parents, near) : null;
+  // What the property says, first: the way up the tree, where there is one.
+  const routes = tree ? new Map() : null;
   if (tree) {
-    const routes = new Map();
     ids.forEach((a) => {
       near.get(a).forEach((b) => {
-        if (a >= b) return;
+        if (a >= b || !tree.places(a) || !tree.places(b)) return;
         const route = tree.route(a, b) || tree.route(b, a);
         if (!route) return;
         hide(a, b);
         routes.set(routeKey(a, b), route);
       });
     });
-    return finishRoutes(nodes, near, hidden, rank, routes);
   }
 
+  // The rest, from the links. Steps must be told apart, so nothing is guessed.
+  const apart = (x, y) => toldApart(x, y, nodes, near, stats, parents);
+  const between = (lo, hi) => (id) => {
+    const r = rank.get(id);
+    return r > lo && r < hi;
+  };
+  // Long ways round are only looked for while the graph is small enough to look quickly.
+  let budget = 400000;
   order.forEach((a) => {
     const ra = rank.get(a);
     near.get(a).forEach((b) => {
       const rb = rank.get(b);
       if (rb <= ra) return;
-      const fewer = near.get(a).size <= near.get(b).size ? near.get(a) : near.get(b);
-      const more = fewer === near.get(a) ? near.get(b) : near.get(a);
+      if (tree && tree.places(a) && tree.places(b)) return;
+      const inside = between(ra, rb);
+      // One note between.
+      const na = near.get(a);
+      const nb = near.get(b);
+      const fewer = na.size <= nb.size ? na : nb;
+      const more = fewer === na ? nb : na;
       for (const c of fewer) {
-        const rc = rank.get(c);
-        if (rc > ra && rc < rb && more.has(c)) {
+        if (inside(c) && more.has(c) && apart(a, c) && apart(c, b)) {
           hide(a, b);
           return;
+        }
+      }
+      // Two: a–c–d–b, each narrower.
+      if (budget <= 0) return;
+      for (const d of nb) {
+        if (!inside(d) || !apart(d, b)) continue;
+        const nd = near.get(d);
+        const small = na.size <= nd.size ? na : nd;
+        const large = small === na ? nd : na;
+        budget -= small.size;
+        for (const c of small) {
+          if (c !== d && large.has(c) && rank.get(c) > ra && rank.get(c) < rank.get(d) && apart(a, c) && apart(c, d)) {
+            hide(a, b);
+            return;
+          }
         }
       }
     });
   });
 
-  return finishRoutes(nodes, near, hidden, rank, null);
+  return finishRoutes(nodes, near, hidden, rank, routes);
 }
 
 /** The lines kept, and the graph's data without the ones left out. */
@@ -282,7 +429,12 @@ function parentTree(parents, near) {
     return lit;
   };
 
-  return { route };
+  /** Whether the property places a note: it names what it sits under, or something names it. */
+  const places = (id) => up.has(id) || down.has(id);
+  const below = new Map();
+  down.forEach((kids, id) => below.set(id, new Set(kids)));
+
+  return { route, places, below };
 }
 
 /**
@@ -295,19 +447,6 @@ function routeLight(plan, id) {
   const partners = plan && plan.hidden.get(id);
   if (!partners) return lit;
   const { kept, rank } = plan;
-
-  // Routes a property set out: already known, the way up the tree.
-  if (plan.routes) {
-    partners.forEach((p) => {
-      lit.nodes.add(p);
-      const route = plan.routes.get(routeKey(id, p));
-      if (!route) return;
-      route.nodes.forEach((n) => lit.nodes.add(n));
-      route.links.forEach((k) => lit.links.add(k));
-    });
-    lit.nodes.delete(id);
-    return lit;
-  }
 
   const walk = (from, lo, hi, down) => {
     const dist = new Map([[from, 0]]);
@@ -328,6 +467,13 @@ function routeLight(plan, id) {
 
   partners.forEach((p) => {
     lit.nodes.add(p);
+    // Routes a property set out: already known, the way up the tree.
+    const known = plan.routes && plan.routes.get(routeKey(id, p));
+    if (known) {
+      known.nodes.forEach((n) => lit.nodes.add(n));
+      known.links.forEach((k) => lit.links.add(k));
+      return;
+    }
     const [top, bottom] = rank.get(id) < rank.get(p) ? [id, p] : [p, id];
     const lo = rank.get(top);
     const hi = rank.get(bottom);
@@ -471,14 +617,14 @@ class GraphRoutes extends Feature {
       {
         key: 'graphRoutes',
         name: 'Links through notes between',
-        desc: 'Add a switch to the graph\'s Display settings that draws a link through the note in between — Westminster system → Ministerial responsibility → Individual responsibility — rather than straight across. Hovering a note still lights up everything it links to.',
+        desc: 'Add a switch to the graph\'s Display settings that draws a link through the notes in between — Westminster system → Ministerial responsibility → Individual responsibility — rather than straight across. Which note is broader is read from which way links run, then how many notes each links with; notes nothing tells apart are left as they are. Hovering a note still lights up everything it links to.',
       },
       {
         key: 'graphRouteProperty',
         type: 'text',
         showIf: 'graphRoutes',
         name: 'Decided by a property',
-        desc: 'The property in which a note names the note it sits under — parent: [[Ministerial responsibility]] — and the graph goes by it: a link between two notes goes through the notes between them in that order. Left empty, or where no note shown has it, the graph works it out from how the notes link.',
+        desc: 'The property in which a note names the note it sits under — parent: [[Ministerial responsibility]] — and the graph goes by it for the notes it places: a link between two of them goes through the notes between in that order. Notes without it are still worked out from how they link.',
         placeholder: 'parent',
         fallback: '',
         suggest: 'property',
@@ -665,7 +811,7 @@ class GraphRoutes extends Feature {
     setting.settingEl.drToggle = made;
     graph.renderer.drRouteToggle = made;
     const tip =
-      'Where a note links to two that link to each other, draw its link to the narrower one through the broader.';
+      'Where notes link one to the next, each narrower, draw a link from the first to the last through them rather than straight across.';
     if (typeof setting.setTooltip === 'function') setting.setTooltip(tip);
     else setting.settingEl.setAttribute('aria-label', tip);
 
