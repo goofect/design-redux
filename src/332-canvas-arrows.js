@@ -301,7 +301,10 @@ class CanvasArrows extends CanvasFeature {
       return original.apply(edge, args);
     }
     const style = this.styleOf(edge);
-    if (style.sides === 'near' && edge.from.node !== edge.to.node) {
+    // Not while either end is folded away: sides picked for the fold would
+    // stay with the arrow, and its branch be read the wrong way once it's out.
+    const away = (n) => !!n && n.getBBox === tuckedBBox;
+    if (style.sides === 'near' && edge.from.node !== edge.to.node && !away(edge.from.node) && !away(edge.to.node)) {
       try {
         const sides = nearestSides(edge.from.node.getBBox(), edge.to.node.getBBox());
         if (edge.from.side !== sides.from) edge.from.side = sides.from;

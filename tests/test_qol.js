@@ -546,7 +546,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(saves, 0, 'saved with the canvas’s next change');
     // No arrows, no branches: nothing to fold, so no folding button.
     assert.ok(!containerEl.querySelector('.dr-fold-control'));
-    assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything']);
+    assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'toggle-canvas-master-card', 'unfold-canvas-everything']);
     fold.cleanup(view);
     assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-stack, .dr-branch-knob'));
   });

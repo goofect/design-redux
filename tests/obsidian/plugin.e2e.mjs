@@ -489,6 +489,56 @@ describe('Design Redux in Obsidian', function () {
     expect(before.below.y - now.below.y).toBe(60);
     expect(now.root.y).toBe(before.root.y);
 
+    // A folded card joins up with arrows like any other — even with what's
+    // tucked into it listed by the canvas at the fold, and on top of it.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      const a = canvas.nodes.get('a');
+      const a2 = canvas.nodes.get('a2');
+      a2.zIndex = Math.max(a2.zIndex || 0, (a.zIndex || 0) + 1);
+      canvas.markMoved(a2);
+    });
+    await browser.pause(300);
+    const found = await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      const a = canvas.nodes.get('a');
+      const hit = canvas.hitTestNode({ x: a.x + a.width / 2, y: a.y + a.height / 2 });
+      return hit && hit.id;
+    });
+    expect(found).toBe('a');
+    const middle = (sel) =>
+      browser.execute((sel) => {
+        const r = document.querySelector(sel).getBoundingClientRect();
+        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      }, sel);
+    const drawArrow = async (fromId, side, toId) => {
+      const from = await middle(ACTIVE + `[data-test-id="${fromId}"]`);
+      await browser.action('pointer').move({ x: from.x, y: from.y }).perform();
+      await browser.pause(300);
+      const point = await middle(ACTIVE + `.canvas-node-interaction-layer .canvas-node-connection-point[data-side="${side}"]`);
+      const to = await middle(ACTIVE + `[data-test-id="${toId}"]`);
+      await browser
+        .action('pointer')
+        .move({ x: point.x, y: point.y })
+        .down()
+        .move({ x: point.x, y: point.y + 12, duration: 60 })
+        .move({ x: to.x, y: to.y, duration: 250 })
+        .up()
+        .perform();
+      await browser.pause(400);
+      return browser.executeObsidian(({ app }, ends) => {
+        const canvas = app.workspace.activeLeaf.view.canvas;
+        const made = Array.from(canvas.edges.values()).find((e) => !/^e\d$/.test(e.id));
+        const out = made ? [made.from.node.id, made.to.node.id] : null;
+        if (made) canvas.removeEdge(made);
+        return out;
+      });
+    };
+    // From the folded card, and onto it.
+    expect(await drawArrow('a', 'bottom', 'b')).toEqual(['a', 'b']);
+    expect(await drawArrow('below', 'top', 'a')).toEqual(['below', 'a']);
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.deselectAll());
+
     await shot('canvas-tree-folded');
 
     // Kept in the file.
@@ -547,6 +597,69 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(async ({ app }) => {
       app.workspace.getLeavesOfType('design-redux-canvas-outline').forEach((leaf) => leaf.detach());
     });
+  });
+
+  it('keeps a master card, and what hangs from it, out of the fold above it', async function () {
+    const data = {
+      nodes: [
+        { id: 'top', type: 'text', text: '# Politics', x: 0, y: 0, width: 220, height: 60 },
+        { id: 'mid', type: 'text', text: 'Theories', x: 300, y: 0, width: 200, height: 60 },
+        { id: 'boss', type: 'text', text: 'Realism', x: 580, y: 0, width: 200, height: 60 },
+        { id: 'kid', type: 'text', text: 'Waltz', x: 860, y: 0, width: 200, height: 60 },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'top', fromSide: 'right', toNode: 'mid', toSide: 'left' },
+        { id: 'e2', fromNode: 'mid', fromSide: 'right', toNode: 'boss', toSide: 'left' },
+        { id: 'e3', fromNode: 'boss', fromSide: 'right', toNode: 'kid', toSide: 'left' },
+      ],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const old = app.vault.getFileByPath('Master.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Master.canvas', JSON.stringify(data));
+    }, data);
+    await obsidianPage.openFile('Master.canvas');
+    await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });
+    const hidden = () =>
+      browser.executeObsidian(({ app }) => {
+        const out = {};
+        app.workspace.activeLeaf.view.canvas.nodes.forEach((node, id) => {
+          node.nodeEl.setAttribute('data-test-id', id);
+          out[id] = node.nodeEl.classList.contains('dr-tucked');
+        });
+        return out;
+      });
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.deselectAll();
+      canvas.zoomToFit();
+    });
+    await browser.pause(500);
+    await hidden();
+
+    // Made a master card from its right-click menu: a crown marks it, and it's kept in the file.
+    await browser.$(ACTIVE + '[data-test-id="boss"]').click({ button: 'right' });
+    await browser.waitUntil(async () => (await menuTitles()).includes('Master card'), { timeout: 4000, timeoutMsg: 'no Master card in the menu' });
+    await clickText('.menu .menu-item', 'Master card');
+    await browser.$(ACTIVE + '[data-test-id="boss"] .dr-master-mark').waitForExist({ timeout: 5000 });
+    await browser.waitUntil(
+      async () =>
+        browser.executeObsidian(async ({ app }) => {
+          const nodes = JSON.parse(await app.vault.read(app.vault.getFileByPath('Master.canvas'))).nodes;
+          return nodes.find((n) => n.id === 'boss').drMaster === true;
+        }),
+      { timeout: 6000, interval: 300, timeoutMsg: 'the master card was never saved' }
+    );
+
+    // Folding every branch: Theories folds away with the top; Realism stays out and holds Waltz.
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:fold-every-canvas-branch'));
+    await browser.waitUntil(async () => (await hidden()).mid && (await hidden()).kid, { timeout: 5000, timeoutMsg: 'the branches never folded' });
+    expect((await hidden()).boss).toBe(false);
+    expect(await browser.$(ACTIVE + '[data-test-id="top"] .dr-branch-knob').getText()).toBe('+1');
+    expect(await browser.$(ACTIVE + '[data-test-id="boss"] .dr-branch-knob').getText()).toBe('+1');
+    await shot('canvas-master');
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:unfold-canvas-everything'));
+    await browser.waitUntil(async () => !Object.values(await hidden()).some(Boolean), { timeout: 5000, timeoutMsg: 'never all unfolded' });
   });
 
   it('grows a mind map by keys — Tab, typing, Escape, Enter — and arranges cards in one step', async function () {

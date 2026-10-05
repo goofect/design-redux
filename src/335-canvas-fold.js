@@ -7,7 +7,9 @@
 /* kept in the cards' own data in the canvas file, which Obsidian keeps */
 /* as it is, so a fold travels with the canvas. What's beyond a fold    */
 /* closes up the room it left, and moves back out when it unfolds —    */
-/* gliding, not jumping.                                               */
+/* gliding, not jumping; unfolding moves back exactly what folding    */
+/* moved. A master card stays out of the folds above it, with what     */
+/* hangs from it, and folds its own branch.                            */
 /*                                                                     */
 /* The file is written only when something is folded or unfolded by   */
 /* hand; what a redraw changes is saved with the canvas's next change. */
@@ -86,12 +88,12 @@ class CanvasFold extends CanvasFeature {
       {
         key: 'canvasBranches',
         name: 'Fold branches',
-        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold. A button beside the zoom controls folds or unfolds every branch.',
+        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — set from its right-click menu — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
       },
       {
         key: 'canvasCloseGaps',
         name: 'Close the gaps',
-        desc: 'What’s beyond a fold moves in to fill the room it left, and back out when it unfolds. The groups it’s in shrink and grow to match.',
+        desc: 'What’s beyond a fold moves in to fill the room it left — never onto another card — and back out exactly as it was when it unfolds. The groups it’s in shrink and grow to match.',
       },
     ];
   }
@@ -129,6 +131,18 @@ class CanvasFold extends CanvasFeature {
         run: () => this.foldEverything(this.pageCanvas(), 'branches'),
       },
       {
+        id: 'toggle-canvas-master-card',
+        name: 'Make the selected card a master card, or not',
+        icon: 'crown',
+        check: () => this.masterTargets(this.pageCanvas()).length > 0,
+        run: () => {
+          const view = this.pageCanvas();
+          const cards = this.masterTargets(view);
+          const model = canvasModel(view.canvas);
+          this.setMaster(view, cards, !cards.every((n) => (model.byId.get(n.id) || {}).master));
+        },
+      },
+      {
         id: 'unfold-canvas-everything',
         name: 'Unfold every branch on the canvas',
         icon: 'chevrons-up-down',
@@ -151,8 +165,33 @@ class CanvasFold extends CanvasFeature {
       const rec = model.byId.get(n.id);
       if (!rec || rec.tuck || isGroupRecord(rec)) return false;
       if (tuckedCount(model, rec.id)) return true;
-      return this.canBranch && branchOf(model, rec.id, links).length > 0;
+      return this.canBranch && foldableBranch(model, rec.id, links).length > 0;
     });
+  }
+
+  /** The selected cards that can be master cards, or are: shown cards that aren't groups. */
+  masterTargets(view) {
+    if (!view || !this.canBranch) return [];
+    const model = canvasModel(view.canvas);
+    return this.selectedNodes(view).filter((n) => {
+      const rec = model.byId.get(n.id);
+      return rec && !rec.tuck && !isGroupRecord(rec);
+    });
+  }
+
+  /** Cards made master cards, or not. Kept in their data: saved, and a step of Undo. */
+  setMaster(view, nodes, on) {
+    if (!view || !view.canvas || !nodes.length) return;
+    this.settle(view);
+    nodes.forEach((node) => {
+      if (!node.unknownData) node.unknownData = {};
+      if (on) node.unknownData[MASTER_KEY] = true;
+      else delete node.unknownData[MASTER_KEY];
+    });
+    this.save(view);
+    this.pass(view);
+    const ws = this.app && this.app.workspace;
+    if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:canvas-changed', view);
   }
 
   addMenuItems(menu, nodes) {
@@ -162,14 +201,31 @@ class CanvasFold extends CanvasFeature {
     const model = canvasModel(view.canvas);
     const rec = model.byId.get(first.id);
     if (!rec || rec.tuck || isGroupRecord(rec)) return;
+    const links = arrowLinks(model);
     const count = tuckedCount(model, rec.id);
-    if (!count && !(this.canBranch && branchOf(model, rec.id).length)) return;
-    menu.addItem((item) =>
-      item
-        .setTitle(count ? 'Unfold branch' : 'Fold branch')
-        .setIcon(count ? 'chevrons-up-down' : 'chevrons-down-up')
-        .onClick(() => this.foldBranches(view, [first], !count))
-    );
+    const section = (item) => (typeof item.setSection === 'function' ? item.setSection('action') : item);
+    if (count || (this.canBranch && foldableBranch(model, rec.id, links).length)) {
+      menu.addItem((item) =>
+        section(item)
+          .setTitle(count ? 'Unfold branch' : 'Fold branch')
+          .setIcon(count ? 'chevrons-up-down' : 'chevrons-down-up')
+          .onClick(() => this.foldBranches(view, [first], !count))
+      );
+    }
+    // A master card matters only where there's a fold above it to stay out of.
+    if (this.canBranch && (rec.master || (links.parents.get(rec.id) || []).length)) {
+      menu.addItem((item) => {
+        section(item)
+          .setIcon('crown')
+          .onClick(() => this.setMaster(view, [first], !rec.master));
+        if (typeof item.setChecked === 'function') {
+          item.setTitle('Master card');
+          item.setChecked(rec.master);
+        } else {
+          item.setTitle(rec.master ? 'No longer a master card' : 'Make master card');
+        }
+      });
+    }
   }
 
   /** A canvas still gliding from the last fold, put where it's going: what's next starts from there. */
@@ -209,13 +265,16 @@ class CanvasFold extends CanvasFeature {
         const r = model.byId.get(p);
         return r && !r.tuck;
       });
-      if (!parents.length && branchOf(model, rec.id, links).length) s.roots++;
+      if ((!parents.length || rec.master) && foldableBranch(model, rec.id, links).length) s.roots++;
     });
     s.anything = s.tucked > 0;
     return s;
   }
 
-  /** Every branch folded, from the cards at the top of each tree ('branches'), or every one unfolded ('everything'). */
+  /**
+   * Every branch folded, from the cards at the top of each tree and every
+   * master card ('branches'), or every one unfolded ('everything').
+   */
   foldEverything(view, what) {
     if (!view || !view.canvas) return Promise.resolve(false);
     this.settle(view);
@@ -230,7 +289,7 @@ class CanvasFold extends CanvasFeature {
         return !(links.parents.get(r.id) || []).some((p) => model.byId.get(p) && !model.byId.get(p).tuck);
       };
       shown()
-        .filter((r) => !isGroupRecord(r) && top(r))
+        .filter((r) => !isGroupRecord(r) && (top(r) || r.master))
         .forEach((r) => {
           if (!r.tuck && foldBranch(model, r, close, arrowLinks(model)).length) any = true;
         });
@@ -267,8 +326,6 @@ class CanvasFold extends CanvasFeature {
       };
       if (!any) return end(false);
       this.popover.hide();
-      // The groups round what changed, fitted to it again on every side.
-      if (this.closing) fitGroups(model, before);
       glideCanvasModel(view, model, before, state, end);
     });
   }
@@ -306,6 +363,7 @@ class CanvasFold extends CanvasFeature {
       const node = rec.node;
       if (!node || !node.nodeEl || rec.tuck) return;
       this.stack(node, (counts.get(rec.id) || 0) > 0);
+      this.crown(node, this.canBranch && rec.master && !isGroupRecord(rec));
       if (!anyBranch && !isGroupRecord(rec) && ((counts.get(rec.id) || 0) > 0 || (links.children.get(rec.id) || []).length)) anyBranch = true;
     });
     this.knobs(view, model, counts);
@@ -349,6 +407,20 @@ class CanvasFold extends CanvasFeature {
       if (typeof canvas.panIntoView === 'function') canvas.panIntoView(node.getBBox());
     } catch (err) {
       /* left where it was */
+    }
+  }
+
+  /** A master card: a crown on its top edge. */
+  crown(node, on) {
+    const el = node.nodeEl;
+    const has = el.querySelector(':scope > .dr-master-mark');
+    if (on && !has) {
+      const mark = el.createDiv({ cls: 'dr-master-mark' });
+      mark.setAttribute('aria-label', 'Master card: stays out of the folds above it');
+      mark.setAttribute('data-tooltip-position', 'top');
+      setIcon(mark, 'crown');
+    } else if (!on && has) {
+      has.remove();
     }
   }
 
@@ -489,7 +561,7 @@ class CanvasFold extends CanvasFeature {
 
   cleanup(view) {
     this.popover.hide();
-    view.contentEl.querySelectorAll('.dr-branch-knob, .dr-stack, .dr-branch-button').forEach((el) => el.remove());
+    view.contentEl.querySelectorAll('.dr-branch-knob, .dr-stack, .dr-branch-button, .dr-master-mark').forEach((el) => el.remove());
     view.contentEl.querySelectorAll('.dr-holds').forEach((el) => el.removeClass('dr-holds'));
     undrawTucks(view);
     if (view.containerEl) view.containerEl.querySelectorAll('.dr-fold-control').forEach((el) => el.remove());
@@ -546,11 +618,16 @@ class FoldingHelpModal extends Modal {
         'Branches',
         'Select a card and press Fold branch in the bar above it — or right-click it — to tuck everything its arrows lead to into the card. Where the arrows were, it then says how many cards it holds: point at the number to see which, and pick one to open the branch there.',
       ],
-      ['Everything', 'The button beside the zoom controls folds every branch at once, from the top of each tree, or unfolds them all.'],
+      [
+        'Master cards',
+        'Right-click a card and pick Master card to keep it out of the folds above it: folding a card it hangs from leaves it, and what hangs from it, out. Its own branch still folds into it. A crown marks it.',
+      ],
+      ['Arrows', 'A folded card joins up with arrows like any other: draw one from it, or drop one on it.'],
+      ['Everything', 'The button beside the zoom controls folds every branch at once — from the top of each tree, and from each master card — or unfolds them all.'],
       [
         'Room',
         this.closing
-          ? 'What’s beyond a fold moves in to the room it leaves, and back out when it opens; the groups it’s in shrink and grow with it.'
+          ? 'What’s beyond a fold moves in to the room it leaves — never onto another card — and back exactly where it was when it opens; the groups it’s in shrink and grow with it.'
           : 'Folds leave their room as it was: nothing else moves. Switch on “Close the gaps” in settings to have what’s beyond move in.',
       ],
       ['Kept', 'Folds are saved with the canvas, and Undo puts one back.'],

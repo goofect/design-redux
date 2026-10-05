@@ -2,12 +2,12 @@
 /* A canvas as a hierarchy                                             */
 /*                                                                     */
 /* Cards hang under cards by their arrows and sit inside groups; a     */
-/* fold tucks some of them away into the card or group folded. All of  */
-/* this works on the canvas as plain records — { id, type, x, y,       */
-/* width, height, label, text, file, color, tuck, fold } and arrows    */
-/* { from, to, fromSide, toSide, fromEnd, toEnd } — so it's the same   */
-/* for a live canvas, its file and a test. Nothing here changes the    */
-/* records unless it says so.                                          */
+/* fold tucks some of them away into the card folded. All of this     */
+/* works on the canvas as plain records — { id, type, x, y, width,     */
+/* height, label, text, file, color, tuck, fold, room, master } and    */
+/* arrows { from, to, fromSide, toSide, fromEnd, toEnd } — so it's the */
+/* same for a live canvas, its file and a test. Nothing here changes   */
+/* the records unless it says so.                                      */
 /* ------------------------------------------------------------------ */
 
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
@@ -17,6 +17,28 @@ const TUCK_KEY = 'drTuck';
 function tuckOf(node) {
   const kept = node && node.unknownData && node.unknownData[TUCK_KEY];
   return kept && typeof kept.by === 'string' && typeof kept.dx === 'number' && typeof kept.dy === 'number' ? kept : null;
+}
+
+/*
+ * Kept on a card whose branch is folded: what the fold moved to close up
+ * the room it left — id -> [dx, dy, dw, dh] — so unfolding puts exactly
+ * that back, whatever else was folded or opened in between.
+ */
+const ROOM_KEY = 'drRoom';
+
+/* Kept on a master card: folds above it leave it, and what hangs from it, out. */
+const MASTER_KEY = 'drMaster';
+
+/** A fold's room — id -> [dx, dy, dw, dh] — or null for a fold that noted none. */
+function roomOf(kept) {
+  if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return null;
+  // Empty, it's a fold that moved nothing: there's nothing to put back.
+  const room = {};
+  Object.keys(kept).forEach((id) => {
+    const d = kept[id];
+    if (Array.isArray(d) && d.length === 4 && d.every((v) => typeof v === 'number' && isFinite(v))) room[id] = d.slice();
+  });
+  return room;
 }
 
 /** A canvas's cards and arrows as records, read from the live canvas. */
@@ -46,6 +68,8 @@ function canvasModel(canvas) {
         color: node.color !== undefined ? node.color : data.color,
         tuck: tuckOf(node),
         fold: foldOf(node),
+        room: roomOf(node.unknownData && node.unknownData[ROOM_KEY]),
+        master: !!(node.unknownData && node.unknownData[MASTER_KEY]),
         node,
       });
     });
@@ -80,6 +104,8 @@ function modelFromData(data) {
     Object.assign({}, n, {
       tuck: n[TUCK_KEY] && typeof n[TUCK_KEY].by === 'string' ? n[TUCK_KEY] : null,
       fold: n[FOLD_KEY] && typeof n[FOLD_KEY].height === 'number' ? n[FOLD_KEY] : null,
+      room: roomOf(n[ROOM_KEY]),
+      master: !!n[MASTER_KEY],
     })
   );
   const edges = ((data && data.edges) || []).map((e) => ({
@@ -194,11 +220,12 @@ function shownChildren(model, links, id) {
 }
 
 /**
- * The cards a card's branch fold tucks away: everything below it by its
- * arrows, but not a card that also hangs from a shown card outside the
- * branch — that one's still reached another way. Ids, in reach order.
+ * A card's branch: everything below it by its arrows, but not a card
+ * that also hangs from a shown card outside the branch — that one's
+ * still reached another way. For a fold (`folding`), a master card stops
+ * it: the master, and what hangs from it, stay out. Ids, in reach order.
  */
-function branchOf(model, rootId, links) {
+function branchOf(model, rootId, links, folding) {
   links = links || arrowLinks(model);
   const found = [];
   const set = new Set();
@@ -207,7 +234,7 @@ function branchOf(model, rootId, links) {
     const id = queue.shift();
     (links.children.get(id) || []).forEach((c) => {
       const rec = model.byId.get(c);
-      if (!rec || rec.tuck || c === rootId || set.has(c)) return;
+      if (!rec || rec.tuck || c === rootId || set.has(c) || (folding && rec.master)) return;
       set.add(c);
       found.push(c);
       queue.push(c);
@@ -270,6 +297,11 @@ function childrenLie(model, id, kids) {
   const dy = shown.reduce((s, k) => s + cy(k) - cy(root), 0);
   if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'right' : 'left';
   return dy >= 0 ? 'bottom' : 'top';
+}
+
+/** What a card's branch fold would tuck away: its branch, stopping at master cards. */
+function foldableBranch(model, rootId, links) {
+  return branchOf(model, rootId, links, true);
 }
 
 /** The side one card's branch grows from. */

@@ -5,8 +5,10 @@
 /* at the fold it's in: the card answers the canvas, when asked for    */
 /* its box, with the fold's. Arrows between cards in the same fold     */
 /* aren't drawn. A tucked card can't be selected — a box dragged round  */
-/* the fold would otherwise take it along, and Delete with it — and    */
-/* one whose fold is gone, deleted, comes back where it was.           */
+/* the fold would otherwise take it along, and Delete with it — nor     */
+/* found by the canvas under the pointer, so an arrow drawn from or to  */
+/* the fold, or a card where a tucked one was, joins the card that's    */
+/* there. One whose fold is gone, deleted, comes back where it was.     */
 /* ------------------------------------------------------------------ */
 
 /* A tucked card's box: the fold's. */
@@ -25,10 +27,59 @@ function boxKey(node) {
   }
 }
 
-/** Tucked cards hidden, their arrows sent to their folds, and kept out of the selection. */
+/** Whether a canvas card is tucked away, as drawn. */
+function isTuckedNode(node) {
+  return !!node && node.getBBox === tuckedBBox;
+}
+
+/**
+ * The canvas finds cards under the pointer — to show a card's handles
+ * for drawing an arrow, and to join an arrow to the card it's dropped
+ * on — in an index of their boxes, where a tucked card is still listed:
+ * where it was, or at its fold. Asked, it leaves tucked cards out.
+ */
+function keepTuckedUnfound(canvas) {
+  if (!canvas || canvas.drFinding) return;
+  const find = canvas.getIntersectingNodes;
+  const hit = canvas.hitTestNode;
+  if (typeof find !== 'function') return;
+  const own = {
+    find: Object.prototype.hasOwnProperty.call(canvas, 'getIntersectingNodes') ? find : null,
+    hit: Object.prototype.hasOwnProperty.call(canvas, 'hitTestNode') ? hit : null,
+  };
+  canvas.drFinding = own;
+  canvas.getIntersectingNodes = function (...args) {
+    const found = find.apply(this, args);
+    return Array.isArray(found) ? found.filter((n) => !isTuckedNode(n)) : found;
+  };
+  if (typeof hit !== 'function') return;
+  canvas.hitTestNode = function (pos, pad) {
+    const first = hit.call(this, pos, pad);
+    if (!isTuckedNode(first) || !pos) return first;
+    // Under the pointer, the shown card on top.
+    const r = pad || 0;
+    const found = this.getIntersectingNodes({ minX: pos.x - r, minY: pos.y - r, maxX: pos.x + r, maxY: pos.y + r });
+    if (!Array.isArray(found) || !found.length) return null;
+    return found.slice().sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))[0];
+  };
+}
+
+/** The canvas finding cards as it did. */
+function findTuckedAgain(canvas) {
+  const own = canvas && canvas.drFinding;
+  if (!own) return;
+  if (own.find) canvas.getIntersectingNodes = own.find;
+  else delete canvas.getIntersectingNodes;
+  if (own.hit) canvas.hitTestNode = own.hit;
+  else delete canvas.hitTestNode;
+  delete canvas.drFinding;
+}
+
+/** Tucked cards hidden, their arrows sent to their folds, and kept out of the selection and the canvas's finding. */
 function drawTucks(view, model, state) {
   const canvas = view.canvas;
   if (!state.edgeKeys) state.edgeKeys = new Map();
+  if (model.nodes.some((rec) => rec.tuck)) keepTuckedUnfound(canvas);
   model.nodes.forEach((rec) => {
     const node = rec.node;
     if (!node) return;
@@ -40,6 +91,12 @@ function drawTucks(view, model, state) {
     } else if (node.getBBox === tuckedBBox) {
       delete node.getBBox;
       delete node.drInto;
+      // Listed again where it is, for the canvas to find.
+      try {
+        if (typeof canvas.markMoved === 'function') canvas.markMoved(node);
+      } catch (err) {
+        /* listed with its next move */
+      }
     }
   });
   model.edges.forEach((e) => {
@@ -80,12 +137,14 @@ function undrawTucks(view) {
       if (node.getBBox === tuckedBBox) {
         delete node.getBBox;
         delete node.drInto;
+        if (typeof view.canvas.markMoved === 'function') view.canvas.markMoved(node);
       }
       if (node.nodeEl) node.nodeEl.removeClass('dr-tucked');
     });
   } catch (err) {
     /* no cards */
   }
+  findTuckedAgain(view.canvas);
   if (view.contentEl) view.contentEl.querySelectorAll('.dr-tucked-edge').forEach((el) => el.classList.remove('dr-tucked-edge'));
 }
 
@@ -116,6 +175,11 @@ function restoreOrphans(model, state, close) {
       moved.clear();
       if (dy) shiftRecord(model, n, 'y', dy, moved);
     });
+    // What the fold moved, moved back; or, for one that noted nothing, room made as unfolding it would.
+    if (was && was.room) {
+      giveRoomBack(model, was.room);
+      return;
+    }
     if (!was || !close) return;
     const home = was.home && model.byId.has(was.home) ? was.home : null;
     const ids = cards.map((n) => n.id);
@@ -156,6 +220,7 @@ function rememberTuckers(model, state) {
       full: rec.fold ? rec.fold.height : rec.height,
       side: sides.get(id) || 'right',
       home: homes.get(id) || null,
+      room: rec.room,
     });
   });
 }

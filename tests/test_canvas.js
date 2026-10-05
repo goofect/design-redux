@@ -658,6 +658,16 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     edge.to.side = 'bottom';
     arrows.setStyle(view, [edge], { sides: 'near' });
     assert.deepStrictEqual([edge.from.side, edge.to.side], ['right', 'left']);
+    // Not while an end is folded away: drawn to the fold, it keeps the sides it has.
+    const tucked = view.canvas.nodes.get('a');
+    tucked.drInto = view.canvas.nodes.get('b');
+    tucked.getBBox = R.tuckedBBox;
+    edge.from.side = 'bottom';
+    edge.to.side = 'top';
+    edge.render();
+    assert.deepStrictEqual([edge.from.side, edge.to.side], ['bottom', 'top']);
+    delete tucked.getBBox;
+    delete tucked.drInto;
 
     arrows.setStyle(view, [edge], null);
     assert.ok(!edge.unknownData.drArrow);
@@ -846,6 +856,109 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(fold.foldStatus(R.canvasModel(view.canvas)).roots, 0);
     fold.foldEverything(view, 'everything');
     ['k', 'kk', 'y'].forEach((id) => assert.ok(!ud(id).drTuck, `${id} out`));
+  });
+
+  await t('a master card stays out of the folds above it, with what hangs from it, and folds its own branch', () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('m', 400, 0, 100, 50), card('k', 600, 0, 100, 50), card('b', 200, 100, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'm', 'right', 'left'), edge('m', 'k', 'right', 'left'), edge('r', 'b', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    // Offered for a card hanging from another, from its right-click menu.
+    let menu = new Menu();
+    fold.addMenuItems(menu, [n('m')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch', 'Master card']);
+    menu.items[1].click();
+    assert.strictEqual(n('m').unknownData.drMaster, true);
+    assert.strictEqual(view.canvas.saves, 1, 'saved, a step of Undo');
+    assert.ok(n('m').nodeEl.querySelector('.dr-master-mark'));
+    // Not for one at the top of its tree: there's no fold above it.
+    menu = new Menu();
+    fold.addMenuItems(menu, [n('r')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch']);
+    fold.foldBranches(view, [n('r')], true);
+    assert.deepStrictEqual(['a', 'b', 'm', 'k'].map((id) => !!n(id).unknownData.drTuck), [true, true, false, false]);
+    assert.strictEqual(n('r').nodeEl.querySelector('.dr-branch-knob').textContent, '+2');
+    // Everything at once: from the top of each tree, and from each master card.
+    fold.foldEverything(view, 'everything');
+    fold.foldEverything(view, 'branches');
+    assert.deepStrictEqual(['a', 'b', 'm', 'k'].map((id) => (n(id).unknownData.drTuck || {}).by || null), ['r', 'r', null, 'm']);
+    fold.foldEverything(view, 'everything');
+    fold.setMaster(view, [n('m')], false);
+    assert.ok(!('drMaster' in n('m').unknownData));
+    assert.ok(!n('m').nodeEl.querySelector('.dr-master-mark'));
+  });
+
+  await t('unfolding moves back exactly what folding moved, whatever came between; closing up stops short of a card in the way', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('r', 0, 100, 100, 50),
+        card('a', 200, 100, 100, 50),
+        card('a1', 400, 0, 100, 50),
+        card('a2', 400, 200, 100, 50),
+        card('b', 100, 300, 150, 50),
+        card('b1', 400, 300, 100, 50),
+        card('fixed', 100, 200, 60, 40),
+      ],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    const where = () => Array.from(view.canvas.nodes.values()).map((c) => [c.id, c.x, c.y]);
+    const start = where();
+    await fold.foldBranches(view, [n('a')], true);
+    // a's branch gave back 100 below it, but b closes up only to 20 short of the card in its way.
+    assert.deepStrictEqual([n('b').y, n('b1').y, n('fixed').y], [260, 260, 200]);
+    assert.deepStrictEqual(n('a').unknownData.drRoom, { b: [0, -40, 0, 0], b1: [0, -40, 0, 0] });
+    await fold.foldBranches(view, [n('b')], true);
+    // a opened while b's still folded: b1 comes out where it would have been.
+    await fold.foldBranches(view, [n('a')], false);
+    assert.ok(!('drRoom' in n('a').unknownData));
+    await fold.foldBranches(view, [n('b')], false);
+    assert.deepStrictEqual(where(), start);
+  });
+
+  await t('a fold that moved nothing moves nothing back, even with closing the gaps switched on since', async () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('b', 0, 100, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left')],
+    });
+    const off = new R.CanvasFold({ settings: Object.assign({}, settings, { canvasCloseGaps: false }), app: {} });
+    off.watched.set(view, { file: view.file });
+    await off.foldBranches(view, [view.canvas.nodes.get('r')], true);
+    assert.deepStrictEqual(view.canvas.nodes.get('r').unknownData.drRoom, {});
+    const on = new R.CanvasFold({ settings, app: {} });
+    on.watched.set(view, { file: view.file });
+    await on.foldBranches(view, [view.canvas.nodes.get('r')], false);
+    assert.deepStrictEqual([view.canvas.nodes.get('a').x, view.canvas.nodes.get('b').y], [200, 100]);
+  });
+
+  await t('the canvas finds the folded card under the pointer, not one tucked into it: arrows join the card that’s there', () => {
+    const view = fakeCanvas({ nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50)], edges: [edge('r', 'a', 'right', 'left')] });
+    const c = view.canvas;
+    view.canvas.nodes.get('r').zIndex = 1;
+    view.canvas.nodes.get('a').zIndex = 2;
+    // As the canvas does it: from an index of the cards' boxes, the one on top.
+    const inBox = (n, b) => { const o = n.getBBox(); return o.minX <= b.maxX && o.maxX >= b.minX && o.minY <= b.maxY && o.maxY >= b.minY; };
+    Object.setPrototypeOf(c, {
+      getIntersectingNodes(b) { return Array.from(this.nodes.values()).filter((n) => inBox(n, b)); },
+      hitTestNode(pos) {
+        const found = this.getIntersectingNodes({ minX: pos.x, minY: pos.y, maxX: pos.x, maxY: pos.y });
+        return found.sort((x, y) => y.zIndex - x.zIndex)[0] || null;
+      },
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    fold.foldBranches(view, [c.nodes.get('r')], true);
+    assert.strictEqual(c.nodes.get('a').getBBox, R.tuckedBBox);
+    assert.strictEqual(c.hitTestNode({ x: 50, y: 25 }).id, 'r');
+    assert.deepStrictEqual(c.getIntersectingNodes({ minX: -10, minY: -10, maxX: 400, maxY: 100 }).map((n) => n.id), ['r']);
+    fold.cleanup(view);
+    assert.ok(!Object.prototype.hasOwnProperty.call(c, 'hitTestNode'), 'the canvas finds cards as it did');
+    assert.ok(!Object.prototype.hasOwnProperty.call(c, 'getIntersectingNodes'));
   });
 
   console.log(`\n${passed} passed`);

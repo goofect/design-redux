@@ -6202,6 +6202,33 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   opacity: 0.6;
 }
 
+/* A master card: a crown on its top edge, near its right corner,
+   keeping its size on screen as the knobs do. */
+.canvas-node > .dr-master-mark {
+  position: absolute;
+  top: 0;
+  right: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
+  border-radius: 11px;
+  background-color: var(--background-primary);
+  color: var(--color-yellow, var(--text-accent));
+  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
+  pointer-events: auto;
+}
+
+.canvas-node > .dr-master-mark .svg-icon {
+  width: 13px;
+  height: 13px;
+  stroke-width: 2.25;
+}
+
 /* Tucked into a fold: not drawn, nor the arrows inside the fold. */
 .canvas-node.dr-tucked {
   display: none !important;
