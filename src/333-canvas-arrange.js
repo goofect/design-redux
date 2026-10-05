@@ -11,6 +11,9 @@
 /* The room left between cards laid out in a grid, a row or a column. */
 const ARRANGE_GAP = 40;
 
+/* Arrange's own icon: cards lined up on an edge, as the menu's icons each show their arrangement. */
+const ARRANGE_ICON = 'align-start-vertical';
+
 /* What can be done, in the order the menu shows it; a blank line between sets. */
 const ARRANGE_ACTIONS = [
   { id: 'left', title: 'Align left edges', icon: 'align-start-vertical' },
@@ -28,8 +31,8 @@ const ARRANGE_ACTIONS = [
   { id: 'height', title: 'Same height', icon: 'stretch-vertical' },
   null,
   { id: 'grid', title: 'Arrange in a grid', icon: 'layout-grid' },
-  { id: 'row', title: 'Arrange in a row', icon: 'columns' },
-  { id: 'column', title: 'Arrange in a column', icon: 'rows' },
+  { id: 'row', title: 'Arrange in a row', icon: 'align-horizontal-justify-start' },
+  { id: 'column', title: 'Arrange in a column', icon: 'align-vertical-justify-start' },
 ];
 
 /** Cards in the order they're read: in rows, top to bottom, each left to right. */
@@ -205,7 +208,7 @@ class CanvasArrange extends CanvasFeature {
   addMenuItems(menu, nodes) {
     const view = nodes[0] && nodes[0].canvas && nodes[0].canvas.view;
     if (!view || this.cards(view).length < 2) return;
-    menuGroup(menu, 'Arrange', 'layout-grid', (m, nested) => this.fillMenu(m, view, nested), 'action');
+    menuGroup(menu, 'Arrange', ARRANGE_ICON, (m, nested) => this.fillMenu(m, view, nested), 'action');
   }
 
   /** What can be done with the selected cards, in sets. */
@@ -234,7 +237,7 @@ class CanvasArrange extends CanvasFeature {
     const many = this.cards(view).length >= 2;
     // Newer Obsidian has an Align of its own there; Arrange does all it does, and stands in for it.
     bar.toggleClass('dr-arranging', many);
-    menuButton(bar, 'dr-arrange-button', many ? { title: 'Arrange', icon: 'layout-grid' } : null, () => {
+    menuButton(bar, 'dr-arrange-button', many ? { title: 'Arrange', icon: ARRANGE_ICON } : null, () => {
       const button = bar.querySelector('.dr-arrange-button');
       if (!button || this.cards(view).length < 2) return;
       const menu = new Menu();
