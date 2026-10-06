@@ -29,6 +29,11 @@ class CoverImages extends Feature {
         desc: 'A note without a cover of its own shows the cover of the folder it\'s in, as a song shows its album\'s.',
       },
       {
+        key: 'coverFromFirstImage',
+        name: 'Use the first image',
+        desc: 'A note without a cover shows the first image in it, and a folder without one the first image in its folder note.',
+      },
+      {
         key: 'coverFallback',
         type: 'dropdown',
         name: 'Without a cover',
@@ -139,18 +144,7 @@ class CoverImages extends Feature {
 
   /** The first embedded image in a note, resolved to a real file. */
   firstImageIn(file) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    const embeds = (cache && cache.embeds) || [];
-    for (const embed of embeds) {
-      const target = this.app.metadataCache.getFirstLinkpathDest(
-        embed.link.split('#')[0],
-        file.path
-      );
-      if (target && IMAGE_EXTENSIONS.indexOf(target.extension.toLowerCase()) !== -1) {
-        return target;
-      }
-    }
-    return null;
+    return firstImageFile(this.app, file);
   }
 
   async setCover(file, value) {

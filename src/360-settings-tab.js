@@ -9,7 +9,7 @@ const SETTINGS_TABS = [
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'homePath', 'hideEmptyFolders'] },
+      { keys: ['library', 'homePath', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
         desc: 'What the library lists, under headings of your own.',
@@ -21,10 +21,10 @@ const SETTINGS_TABS = [
     id: 'browsing',
     title: 'Browsing',
     sections: [
-      { title: 'Lists', keys: ['defaultSort', 'discNoteLimit', 'albumNoteLimit'] },
+      { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tableColumns', 'categoryProperty'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
-      { title: 'Covers', keys: ['coverProperty', 'coverFromFolder', 'coverFallback', 'generatedCoverColor'] },
+      { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor'] },
     ],
   },
   {
@@ -43,12 +43,12 @@ const SETTINGS_TABS = [
     id: 'interface',
     title: 'Interface',
     sections: [
-      { title: 'Page', keys: ['contextStrip', 'onePage', 'singleArea'] },
+      { title: 'Page', keys: ['contextStrip', 'stripPlace', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
       {
         title: 'Canvas',
-        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasSelectBranch', 'canvasOutline'],
+        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasFocus', 'canvasDuplicate'],
       },
       {
         title: 'Compatibility',
@@ -173,6 +173,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
     const rest = rows.filter((row) => !placed.has(row));
     if (rest.length) tabs[tabs.length - 1].sections.push({ title: 'Other', rows: rest });
 
+    this.renderTools(containerEl);
     const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
     bar.setAttribute('role', 'tablist');
     roveFocus(bar, '.dr-set-tab');
@@ -193,6 +194,8 @@ class DesignReduxSettingTab extends PluginSettingTab {
       pane.dataset.tab = spec.id;
       pane.toggleClass('is-hidden', !on);
       panes.push(pane);
+      // Named over its rows while searching, when every tab's are shown at once.
+      pane.createDiv({ cls: 'dr-set-pane-title', text: spec.title });
       this.renderPane(pane, spec, sections);
 
       button.addEventListener('click', () => {
@@ -206,8 +209,134 @@ class DesignReduxSettingTab extends PluginSettingTab {
       });
     });
 
+    containerEl.createDiv({ cls: 'dr-set-nothing', text: 'No settings match.' });
+    this.search(this.query || '');
     containerEl.scrollTop = tops[0];
     if (scroller) scroller.scrollTop = tops[1];
+  }
+
+  /** Above the tabs: a search through every tab's settings, and the settings out to a file and back. */
+  renderTools(containerEl) {
+    const tools = containerEl.createDiv({ cls: 'dr-set-tools' });
+    const field = tools.createDiv({ cls: 'dr-set-search' });
+    setIcon(field.createSpan({ cls: 'dr-set-search-icon' }), 'search');
+    const input = field.createEl('input', { type: 'search' });
+    input.placeholder = 'Search settings';
+    input.setAttribute('aria-label', 'Search settings');
+    input.value = this.query || '';
+    input.addEventListener('input', () => {
+      this.query = input.value;
+      this.search(this.query);
+    });
+    input.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Escape' && input.value) {
+        evt.preventDefault();
+        evt.stopPropagation();
+        input.value = '';
+        this.query = '';
+        this.search('');
+      }
+    });
+
+    const exportBtn = tools.createEl('button', { text: 'Export…' });
+    exportBtn.setAttribute('aria-label', 'Save these settings to a file in the vault');
+    exportBtn.addEventListener('click', () => this.exportSettings());
+
+    const importBtn = tools.createEl('button', { text: 'Import…' });
+    importBtn.setAttribute('aria-label', 'Replace these settings with ones from a file');
+    // The settings window's own document: Obsidian 1.13 opens settings in a window of its own.
+    const picker = containerEl.ownerDocument.createElement('input');
+    picker.type = 'file';
+    picker.accept = '.json,application/json';
+    picker.className = 'dr-set-file';
+    tools.appendChild(picker);
+    picker.addEventListener('change', async () => {
+      const file = picker.files && picker.files[0];
+      picker.value = '';
+      if (file) await this.importSettings(await file.text());
+    });
+    importBtn.addEventListener('click', () => picker.click());
+  }
+
+  /**
+   * Rows whose name or description has every word typed, from every tab
+   * at once; a section shows if its heading matches, or any of its rows.
+   */
+  search(query) {
+    const containerEl = this.containerEl;
+    const words = String(query || '').toLowerCase().split(/\s+/).filter(Boolean);
+    const on = words.length > 0;
+    containerEl.toggleClass('is-searching', on);
+    const matches = (text) => words.every((w) => text.indexOf(w) !== -1);
+    let any = false;
+    containerEl.querySelectorAll('.dr-set-pane').forEach((pane) => {
+      let paneAny = false;
+      pane.querySelectorAll('.dr-set-block').forEach((section) => {
+        const titled = on && matches(section.dataset.drSearch || '');
+        let sectionAny = false;
+        section.querySelectorAll('[data-dr-search]').forEach((el) => {
+          if (el === section) return;
+          const show = !on || titled || matches(el.dataset.drSearch);
+          el.toggleClass('dr-set-unmatched', !show);
+          if (show) sectionAny = true;
+        });
+        // A row shown beneath one it depends on shows that one too.
+        section.querySelectorAll('.dr-set-children').forEach((kids) => {
+          if (kids.querySelector('[data-dr-search]:not(.dr-set-unmatched)') && kids.previousElementSibling) {
+            kids.previousElementSibling.removeClass('dr-set-unmatched');
+          }
+        });
+        section.toggleClass('dr-set-unmatched', on && !sectionAny);
+        if (sectionAny) paneAny = true;
+      });
+      pane.toggleClass('is-hidden', on ? !paneAny : pane.dataset.tab !== this.tab);
+      if (paneAny) any = true;
+    });
+    containerEl.toggleClass('dr-set-none', on && !any);
+  }
+
+  /** The settings, as they are, to a file at the top of the vault. */
+  async exportSettings() {
+    const vault = this.app.vault;
+    let path = 'Design Redux settings.json';
+    for (let n = 2; vault.getAbstractFileByPath(path); n++) path = `Design Redux settings ${n}.json`;
+    try {
+      await vault.create(path, JSON.stringify(this.settings, null, 2));
+      new Notice(`Settings saved to “${path}”.`);
+    } catch (err) {
+      console.error('Design Redux: could not export the settings', err);
+      new Notice('Could not save the settings.');
+    }
+  }
+
+  /** Settings from a file, in place of these — brought up to date and checked as on loading. */
+  async importSettings(text) {
+    let data = null;
+    try {
+      data = JSON.parse(text);
+    } catch (err) {
+      data = null;
+    }
+    if (!data || typeof data !== 'object' || Array.isArray(data) || !Object.keys(data).some((k) => DEFAULTS[k] !== undefined)) {
+      new Notice('That file doesn\'t hold Design Redux settings.');
+      return;
+    }
+    const yes = await confirmAction(this.app, {
+      title: 'Import settings',
+      text: 'Replace all of Design Redux\'s settings with the ones in this file? Anything the file leaves out goes back to its default.',
+      button: 'Replace them',
+    });
+    if (!yes) return;
+    try {
+      await this.plugin.saveData(data);
+      await this.plugin.loadSettings();
+      await this.plugin.saveSettings();
+      new Notice('Settings imported.');
+    } catch (err) {
+      console.error('Design Redux: could not import the settings', err);
+      new Notice('Could not import the settings.');
+    }
+    this.display();
   }
 
   renderPane(pane, spec, sections) {
@@ -225,21 +354,25 @@ class DesignReduxSettingTab extends PluginSettingTab {
     sections.forEach((sec) => {
       const visible = sec.rows.filter((row) => this.shown(row));
       if (!visible.length) return;
+      // Each section in a block of its own, so a search can hide what has nothing to show.
+      const section = pane.createDiv({ cls: 'dr-set-block' });
+      section.dataset.drSearch = `${sec.title || ''} ${sec.desc || ''}`.toLowerCase();
       if (sec.title) {
-        const head = new Setting(pane).setName(sec.title).setHeading();
+        const head = new Setting(section).setName(sec.title).setHeading();
         if (sec.desc) head.setDesc(sec.desc);
       }
       // A row sits beneath the one it depends on, when that's here too.
       const blocks = {};
       visible.forEach((row) => {
         const parent = row.parent || (typeof row.showIf === 'string' ? row.showIf : null);
-        const host = parent && blocks[parent] ? blocks[parent]() : pane;
+        const host = parent && blocks[parent] ? blocks[parent]() : section;
         const el = this.row(host, row);
+        if (el) el.dataset.drSearch = `${row.name || ''} ${row.desc || ''} ${row.key || ''}`.toLowerCase();
         if (row.key && el) {
           let children = null;
           blocks[row.key] = () => {
             if (!children) {
-              children = document.createElement('div');
+              children = el.ownerDocument.createElement('div');
               children.className = 'dr-set-children';
               el.after(children);
             }

@@ -49,6 +49,12 @@ class ContextStrip extends Feature {
         name: 'Context strip',
         desc: 'A bar along the bottom with the note you\'re in: its cover, « » through its album, and its actions.',
       },
+      {
+        key: 'stripPlace',
+        name: 'Place in album',
+        desc: 'Where the note falls in its album, as "3 of 12", under its name on the strip.',
+        showIf: 'contextStrip',
+      },
     ];
   }
 
@@ -314,11 +320,18 @@ class ContextStrip extends Feature {
 
     const art = now.createDiv({ cls: 'dr-strip-art' });
     drawNoteArt(this.plugin, art, file);
+    if (file.extension === 'md') art.dataset.coverNote = file.path;
 
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: file.basename });
     const lead = this.leadOf(file);
-    if (lead) text.createDiv({ cls: 'dr-strip-sub', text: lead });
+    // Where it falls in its album, as a player says "3 of 12".
+    const place = this.settings.stripPlace !== false && near.index >= 0 && near.total > 1 ? `${near.index + 1} of ${near.total}` : '';
+    if (lead || place) {
+      const sub = text.createDiv({ cls: 'dr-strip-sub' });
+      if (place) sub.createSpan({ cls: 'dr-strip-place', text: place });
+      if (lead) sub.createSpan({ text: lead });
+    }
 
     // Clicking it goes to where the note lives, as the now-playing
     // bar goes to the album.

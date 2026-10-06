@@ -126,6 +126,25 @@ function resolveCover(app, file, key) {
   return target ? app.vault.getResourcePath(target) : null;
 }
 
+/** The first image embedded in a note, resolved to a file in the vault, or null. */
+function firstImageFile(app, file) {
+  if (!file || file.extension !== 'md') return null;
+  const cache = app.metadataCache.getFileCache(file);
+  for (const embed of (cache && cache.embeds) || []) {
+    const target = app.metadataCache.getFirstLinkpathDest(String(embed.link || '').split('#')[0], file.path);
+    if (target && IMAGE_EXTENSIONS.indexOf(String(target.extension).toLowerCase()) !== -1) return target;
+  }
+  return null;
+}
+
+/** A note's artwork: its cover, or — where the setting has it — the first image in it. */
+function noteCoverSrc(plugin, file) {
+  const src = resolveCover(plugin.app, file, plugin.settings.coverProperty);
+  if (src || !plugin.settings.coverFromFirstImage) return src;
+  const image = firstImageFile(plugin.app, file);
+  return image ? plugin.app.vault.getResourcePath(image) : null;
+}
+
 /**
  * Artwork into an element: the image if there is one, a glyph if not,
  * and the glyph as well if the image turns out to be missing. `look`
@@ -201,7 +220,7 @@ function drawNoteArt(plugin, el, file) {
   const settings = plugin.settings;
   const md = file.extension === 'md';
   const look = blankLook(settings, file.basename, file.path);
-  const src = md ? resolveCover(plugin.app, file, settings.coverProperty) : null;
+  const src = md ? noteCoverSrc(plugin, file) : null;
   const gen = md ? coverGen(settings, file.basename, file.path) : null;
   if (src || gen) {
     fillArt(el, src, iconForFile(file), gen, look);

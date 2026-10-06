@@ -236,6 +236,11 @@ class PropertiesPanel extends Feature {
     const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
     const art = head.createDiv({ cls: 'dr-props-art' });
     drawNoteArt(this.plugin, art, file);
+    // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
+    if (file.extension === 'md') {
+      art.dataset.coverNote = file.path;
+      art.setAttribute('tabindex', '-1');
+    }
 
     const info = head.createDiv({ cls: 'dr-props-info' });
     info.createDiv({ cls: 'dr-props-title', text: file.basename });

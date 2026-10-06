@@ -159,7 +159,77 @@ function edgeScroll(el, moved) {
   };
 }
 
+/* Typing a name jumps to it, and Space previews the note in focus —
+   switched on and off by the List keys feature. */
+const listKeys = { on: false, preview: null };
+
+/* Where a row says what it's called: the start of a name to jump to. */
+const ROW_NAMES = '.dr-track-name, .dr-card-title, .dr-lib-label, .dr-td-text, .dr-recent-title, .dr-pick-title, .dr-plist-name';
+
+function rowName(row) {
+  const label = row.querySelector(ROW_NAMES);
+  return ((label && label.textContent) || row.getAttribute('aria-label') || row.textContent || '').trim().toLowerCase();
+}
+
+/**
+ * Keys typed in quick succession spell the start of a name: the first row
+ * from the one in focus on whose name starts that way gets focus. Typing
+ * one letter again moves on to the next row starting with it.
+ */
+function typeToJump(container, selector, evt) {
+  // "/" is the page's way to Find.
+  if (evt.key.length !== 1 || evt.key === '/' || evt.altKey || evt.metaKey || evt.ctrlKey) return false;
+  const state = container.drTyped || (container.drTyped = { text: '', at: 0 });
+  const now = Date.now();
+  if (now - state.at > 800) state.text = '';
+  state.at = now;
+  if (evt.key === ' ' && !state.text) return false;
+  const typed = (state.text + evt.key).toLowerCase();
+  state.text = typed;
+  const rows = Array.from(container.querySelectorAll(selector));
+  if (!rows.length) return false;
+  const active = container.ownerDocument.activeElement;
+  const at = active && typeof active.closest === 'function' ? rows.indexOf(active.closest(selector)) : -1;
+  const repeat = typed.length > 1 && typed.split('').every((c) => c === typed[0]);
+  const want = repeat ? typed[0] : typed;
+  const from = repeat || typed.length === 1 ? at + 1 : Math.max(at, 0);
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[(from + i) % rows.length];
+    if (rowName(row).startsWith(want)) {
+      row.focus();
+      if (typeof row.scrollIntoView === 'function') row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      return true;
+    }
+  }
+  return true;
+}
+
 function roveFocus(container, selector) {
+  // Before the row's own keys: Space previews rather than opens, and a
+  // letter typed goes to the list, not the row.
+  container.addEventListener(
+    'keydown',
+    (evt) => {
+      if (!listKeys.on) return;
+      const target = evt.target;
+      if (target && typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+      const typing = container.drTyped && container.drTyped.text && Date.now() - container.drTyped.at <= 800;
+      if (evt.key === ' ' && !typing && !evt.altKey && !evt.metaKey && !evt.ctrlKey && listKeys.preview) {
+        const row = target && typeof target.closest === 'function' ? target.closest(selector) : null;
+        const path = row && row.dataset.path;
+        if (path && listKeys.preview(row, path, evt)) {
+          evt.preventDefault();
+          evt.stopPropagation();
+        }
+        return;
+      }
+      if (typeToJump(container, selector, evt)) {
+        evt.preventDefault();
+        evt.stopPropagation();
+      }
+    },
+    true
+  );
   container.addEventListener('keydown', (evt) => {
     const keys = ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
     if (keys.indexOf(evt.key) === -1) return;

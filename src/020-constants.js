@@ -30,6 +30,8 @@ const DEFAULTS = {
   library: true,
   singleArea: false,
   contextStrip: true,
+  // The strip says where the note falls in its album: "3 of 12".
+  stripPlace: true,
   onePage: false,
   pinsExpanded: false,
   albumNoteLimit: 8,
@@ -42,6 +44,14 @@ const DEFAULTS = {
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
   keepOwnOrder: { recents: true, pinned: true },
+  // An album sorted from its filter button keeps that order, by its path.
+  albumSortMemory: true,
+  // { folderPath: sort key }
+  albumSorts: {},
+  // In lists, typing a name jumps to it and Space previews the note in focus.
+  typeToJump: true,
+  // A note dragged onto a folder in the library, or from a list onto the file list's, moves there.
+  sidebarDrop: true,
   tableColumns: 'domain, status',
   categoryProperty: 'domain',
   recentSearches: [],
@@ -83,6 +93,10 @@ const DEFAULTS = {
   coverFallback: 'art',
   // A note without a cover shows the cover of the folder it's in.
   coverFromFolder: false,
+  // A note without a cover shows the first image in it; a folder, its folder note's.
+  coverFromFirstImage: false,
+  // An image dropped on a cover becomes it.
+  coverDrop: true,
   // The one colour used when the fallback is 'custom'.
   generatedCoverColor: '#fa2d48',
   // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
@@ -106,6 +120,12 @@ const DEFAULTS = {
   canvasSelectBranch: true,
   // The canvas as a tree, in the right sidebar.
   canvasOutline: true,
+  // A command to go to a card by its words, opening the folds it's in.
+  canvasFind: true,
+  // Dim everything but a card's branch.
+  canvasFocus: true,
+  // Copy a card with everything its arrows lead to.
+  canvasDuplicate: true,
   // { canvasPath: { cardId: 'center' } }
   canvasAlignments: {},
   // Selected cards lined up, spaced, sized alike, or laid out in a grid.

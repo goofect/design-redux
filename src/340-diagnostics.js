@@ -45,6 +45,11 @@ function compatibility(app) {
       without: 'properties are read from the notes alone',
     },
     {
+      what: 'Dropping a note or image from the file list onto the library or a cover',
+      ok: has(() => typeof app.dragManager === 'object' && app.dragManager !== null),
+      without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
+    },
+    {
       what: 'Knowing whether Canvas is switched on',
       ok: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
       without: 'New canvas is always offered',

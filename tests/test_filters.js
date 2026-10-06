@@ -168,6 +168,7 @@ plugin.orders = new Orders(plugin);
 function page(state, { keep = false } = {}) {
   if (!keep) {
     plugin.settings.defaultSort = 'name';
+    plugin.settings.albumSorts = {};
     plugin.settings.keepOwnOrder = { recents: true, pinned: true };
     app.workspace.open = [];
     document.body.innerHTML = '';
@@ -445,6 +446,30 @@ t('an order chosen on one screen is saved, and every open screen follows it', ()
   assert.strictEqual(plugin.settings.defaultSort, 'name-desc', 'not saved');
   assert.deepStrictEqual(titles(notesTable, '.dr-tr:not(.dr-th) .dr-td-text'),
     ['Tribunal', 'Tort', 'Supreme Court', 'Shopping', 'Realism', 'Contract'], 'the other open screen');
+});
+
+t('an album sorted on its own keeps that order, and the other screens keep theirs', () => {
+  const view = page({ mode: 'folder', path: 'Law' });
+  openMenu(view).find('Alphabetical (Z–A)').click();
+  assert.strictEqual(plugin.settings.defaultSort, 'name', 'the shared order is left alone');
+  assert.deepStrictEqual(plugin.settings.albumSorts, { Law: 'name-desc' });
+  const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
+  assert.deepStrictEqual(tracks().slice(0, 2), ['Tort', 'Contract']);
+  // Another album, and the Notes table, still in the shared order.
+  const other = page({ mode: 'folder', path: 'Politics' }, { keep: true });
+  assert.ok(openMenu(other).find('Alphabetical (A–Z)').checked);
+  // Back to Law later: still Z–A.
+  const again = page({ mode: 'folder', path: 'Law' }, { keep: true });
+  assert.deepStrictEqual(Array.from(again.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent).slice(0, 2), ['Tort', 'Contract']);
+  // Switched off, an album's order is the shared one again, as it was.
+  plugin.settings.albumSortMemory = false;
+  try {
+    const shared = page({ mode: 'folder', path: 'Law' }, { keep: true });
+    openMenu(shared).find('Alphabetical (Z–A)').click();
+    assert.strictEqual(plugin.settings.defaultSort, 'name-desc');
+  } finally {
+    plugin.settings.albumSortMemory = true;
+  }
 });
 
 t('and a page built later — after a note, a new tab, a restart — starts in it', () => {

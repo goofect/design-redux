@@ -156,6 +156,24 @@ describe('Design Redux in Obsidian', function () {
     await shot('settings-library');
     await clickText('.dr-settings .dr-set-tab', 'Browsing');
     await shot('settings-browsing');
+
+    // Searching shows the matching rows from every tab, named as ever, and nothing else.
+    const found = await browser.execute(() => {
+      const input = document.querySelector('.dr-settings .dr-set-search input');
+      input.value = 'cover';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      const rows = Array.from(document.querySelectorAll('.dr-settings .setting-item[data-dr-search]'));
+      const seen = rows.filter((r) => r.offsetParent !== null);
+      const names = seen.map((r) => r.querySelector('.setting-item-name')).filter((n) => n && n.offsetHeight > 0).map((n) => n.textContent);
+      const panes = Array.from(document.querySelectorAll('.dr-settings .dr-set-pane:not(.is-hidden)')).map((p) => p.dataset.tab);
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return { names, all: rows.length, seen: seen.length, panes };
+    });
+    expect(found.names).toContain('Drop an image on a cover');
+    expect(found.names.length).toBe(found.seen);
+    expect(found.seen).toBeLessThan(found.all);
+    expect(found.panes).toContain('browsing');
     await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
     await browser.pause(500);

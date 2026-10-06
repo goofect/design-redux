@@ -94,8 +94,14 @@ class Library extends Feature {
         type: 'dropdown',
         showIf: 'library',
         name: 'Order',
-        desc: 'How every screen orders its lists. A screen\'s filter button changes this too; an album you\'ve arranged keeps its own order.',
+        desc: 'How every screen orders its lists. A screen\'s filter button changes this too; an album you\'ve arranged, or sorted on its own, keeps its own order.',
         options: Object.fromEntries(SORTS),
+      },
+      {
+        key: 'albumSortMemory',
+        showIf: 'library',
+        name: 'Albums keep their own order',
+        desc: 'An album sorted from its filter button keeps that order, and the other screens keep theirs.',
       },
       {
         key: 'albumColumns',

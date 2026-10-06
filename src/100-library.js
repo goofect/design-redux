@@ -203,7 +203,7 @@ class LibraryView extends ItemView {
     this.row(list, {
       depth: depth,
       icon: iconForFile(target),
-      art: resolveCover(this.app, target, this.plugin.settings.coverProperty),
+      art: noteCoverSrc(this.plugin, target),
       label: target.basename,
       path: target.path,
       onClick: () => this.openFile(target),

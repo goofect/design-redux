@@ -6437,3 +6437,146 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-fold-help li + li {
   margin-top: 8px;
 }
+
+/* Covers by dropping ------------------------------------------------------------
+ *
+ * A cover an image is dragged over says it'll take it.
+ */
+
+.dr-cover-drop {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+[data-cover-folder]:focus-visible,
+[data-cover-note]:focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 2px;
+}
+
+/* A folder a note is dragged over, in the library or the file list: it's where the note will go. */
+.dr-lib-row.dr-drop-target,
+.nav-folder-title.dr-drop-target {
+  background-color: color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+  box-shadow: inset 0 0 0 1px var(--interactive-accent);
+}
+
+/* "3 of 12" on the strip, before the note's raised property. */
+.dr-strip-place {
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-strip-place:not(:last-child)::after {
+  content: " · ";
+}
+
+/* Canvas: focus on a branch -------------------------------------------------------
+ *
+ * Everything but the branch dimmed, as the legend dims every other colour.
+ */
+
+.dr-branch-focus .canvas-node:not(.dr-focus-lit) {
+  opacity: 0.15;
+  transition: opacity 150ms ease;
+}
+
+.dr-branch-focus .canvas-edges > g:not(.dr-focus-lit),
+.dr-branch-focus .canvas-edges > svg > g:not(.dr-focus-lit),
+.dr-branch-focus .canvas-path-label-wrapper:not(.dr-focus-lit) {
+  opacity: 0.12;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-branch-focus .canvas-node:not(.dr-focus-lit) {
+    transition: none;
+  }
+}
+
+/* Find a card: where a card is folded away, under its words. */
+.dr-find-where {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Settings: search, and the settings to a file and back ------------------------- */
+
+.dr-set-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dr-set-search {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background-color: var(--background-modifier-form-field);
+}
+
+.dr-set-search-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-set-search-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-set-search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dr-set-search input[type="search"]:focus {
+  box-shadow: none;
+}
+
+.dr-set-tools .dr-set-file {
+  display: none;
+}
+
+/* While searching: every tab's matches at once, each under its tab's name. */
+.dr-set-pane-title,
+.dr-set-nothing {
+  display: none;
+}
+
+.dr-settings.is-searching .dr-set-tabs {
+  display: none;
+}
+
+.dr-settings.is-searching .dr-set-pane-title {
+  display: block;
+  margin: 18px 0 4px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dr-settings.is-searching .dr-set-pane:first-of-type .dr-set-pane-title {
+  margin-top: 0;
+}
+
+.dr-settings .dr-set-unmatched {
+  display: none !important;
+}
+
+.dr-settings.dr-set-none .dr-set-nothing {
+  display: block;
+  padding: 24px 0;
+  color: var(--text-muted);
+  text-align: center;
+}

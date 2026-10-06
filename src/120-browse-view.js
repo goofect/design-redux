@@ -960,6 +960,11 @@ class BrowseView extends ItemView {
       if (folder) drawFolderArt(this.plugin, el, folder);
       else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
     });
+    // An image dropped here — or pasted, once it's clicked — becomes the album's cover.
+    if (folder && folder.path !== '/') {
+      art.dataset.coverFolder = folder.path;
+      art.setAttribute('tabindex', '-1');
+    }
     if (spec.onArtMenu) {
       onContextMenu(art, (evt) => spec.onArtMenu(evt));
     }
@@ -1155,7 +1160,13 @@ class BrowseView extends ItemView {
    * note has been opened and closed, and after a restart.
    */
   get sort() {
-    return this.plugin.settings.defaultSort || 'name';
+    const settings = this.plugin.settings;
+    // An album sorted on its own keeps that order; everywhere else, the shared one.
+    if (this.mode === 'folder' && settings.albumSortMemory !== false) {
+      const kept = (settings.albumSorts || {})[this.path];
+      if (kept && SORTS.some(([key]) => key === kept)) return kept;
+    }
+    return settings.defaultSort || 'name';
   }
 
   /** How the Notes table is sorted: its own column, or the shared order. */
@@ -1201,7 +1212,13 @@ class BrowseView extends ItemView {
         [this.mode]: key === 'own',
       });
     }
-    if (key !== 'own') settings.defaultSort = key;
+    if (key !== 'own') {
+      const folder = this.mode === 'folder' ? this.folder() : null;
+      // An album's order is its own, kept by its path; other screens share one.
+      if (folder && settings.albumSortMemory !== false) {
+        settings.albumSorts = Object.assign({}, settings.albumSorts, { [folder.path]: key });
+      } else settings.defaultSort = key;
+    }
     this.columnSort = null;
     this.plugin.saveData(settings);
 
@@ -2526,7 +2543,7 @@ class BrowseView extends ItemView {
   }
 
   coverFor(file) {
-    return resolveCover(this.app, file, this.plugin.settings.coverProperty);
+    return noteCoverSrc(this.plugin, file);
   }
 }
 
