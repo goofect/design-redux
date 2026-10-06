@@ -878,6 +878,19 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(crown.classList.contains('is-active'));
     crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     assert.ok(!('drMaster' in n('m').unknownData));
+    // Several at once — the one at the top of its tree left out, as nothing folds above it.
+    ['r', 'a', 'k'].forEach((id) => view.canvas.selection.add(n(id)));
+    fold.pass(view);
+    assert.strictEqual(crown.getAttribute('aria-label'), 'Make 3 master cards');
+    crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.deepStrictEqual(['r', 'a', 'm', 'k'].map((id) => !!n(id).unknownData.drMaster), [false, true, true, true]);
+    assert.strictEqual(crown.getAttribute('aria-label'), 'Master cards: on');
+    const several = new Menu();
+    fold.addMenuItems(several, ['a', 'm'].map(n));
+    assert.deepStrictEqual(several.items.map((i) => i.title), ['Master cards']);
+    several.items[0].click();
+    assert.deepStrictEqual(['a', 'm', 'k'].map((id) => !!n(id).unknownData.drMaster), [false, false, true]);
+    fold.setMaster(view, [n('k')], false);
     view.canvas.selection.clear();
     view.canvas.saves = 0;
     // Offered for a card hanging from another, from its right-click menu.
