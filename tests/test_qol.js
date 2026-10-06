@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf, blankLook, SETTINGS_MIGRATIONS };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, listKeys, ListKeys, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf, blankLook, SETTINGS_MIGRATIONS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -549,6 +549,75 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'toggle-canvas-master-card', 'unfold-canvas-everything']);
     fold.cleanup(view);
     assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-stack, .dr-branch-knob'));
+  });
+
+  /* -- type to jump, Space to preview ---------------------------------- */
+
+  const trackList = () => {
+    const el = document.body.createDiv();
+    ['Anarchy', 'Balance of power', 'Contract', 'Realism', 'Tort', 'Tribunal'].forEach((name, i) => {
+      const row = el.createDiv({ cls: 'dr-track' });
+      row.setAttribute('tabindex', '0');
+      row.dataset.path = `Law/${name}.md`;
+      row.createDiv({ cls: 'dr-track-num', text: String(i + 1) });
+      row.createDiv({ cls: 'dr-track-name', text: name });
+      row.addEventListener('keydown', (evt) => {
+        if (evt.key === ' ') row.dataset.opened = 'yes';
+      });
+    });
+    R.roveFocus(el, '.dr-track');
+    return el;
+  };
+  const focusedName = () => document.activeElement.querySelector('.dr-track-name').textContent;
+
+  await t('typing the start of a name jumps to it; the same letter again moves on', () => {
+    const el = trackList();
+    R.listKeys.on = true;
+    try {
+      el.firstChild.focus();
+      key(document.activeElement, 'r');
+      assert.strictEqual(focusedName(), 'Realism');
+      el.drTyped.at = 0;
+      key(document.activeElement, 't');
+      assert.strictEqual(focusedName(), 'Tort');
+      key(document.activeElement, 't');
+      assert.strictEqual(focusedName(), 'Tribunal');
+      el.drTyped.at = 0;
+      ['b', 'a', 'l', ' '].forEach((k) => key(document.activeElement, k));
+      assert.strictEqual(focusedName(), 'Balance of power', 'a space inside a name being typed is part of it');
+      assert.ok(!document.activeElement.dataset.opened);
+      // "/" is still the page's way to Find.
+      el.drTyped.at = 0;
+      const slash = new window.KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+      document.activeElement.dispatchEvent(slash);
+      assert.ok(!slash.defaultPrevented);
+    } finally {
+      R.listKeys.on = false;
+      el.remove();
+    }
+  });
+
+  await t("Space previews the note in focus; switched off, the keys are the row's own again", () => {
+    const el = trackList();
+    const seen = [];
+    const keys = new R.ListKeys({ settings: { typeToJump: true }, app: { vault: { getAbstractFileByPath: () => null } } });
+    keys.enable();
+    R.listKeys.preview = (row, p) => { seen.push(p); return true; };
+    try {
+      el.children[2].focus();
+      key(document.activeElement, ' ');
+      assert.deepStrictEqual(seen, ['Law/Contract.md']);
+      assert.ok(!el.children[2].dataset.opened, 'Space no longer opens it');
+    } finally {
+      keys.disable();
+    }
+    assert.strictEqual(R.listKeys.on, false);
+    el.children[2].focus();
+    key(document.activeElement, ' ');
+    assert.strictEqual(el.children[2].dataset.opened, 'yes');
+    key(document.activeElement, 'r');
+    assert.strictEqual(focusedName(), 'Contract', 'no jumping when off');
+    el.remove();
   });
 
   console.log(`\n${passed} passed`);

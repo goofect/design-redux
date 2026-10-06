@@ -68,7 +68,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_extras_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { roveFocus, listKeys, ListKeys, noteCoverSrc, SidebarDrop, CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
+  '\nmodule.exports.__test = { noteCoverSrc, SidebarDrop, CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -124,74 +124,6 @@ const fakeCanvas = (data) => {
 };
 
 (async () => {
-  /* -- lists ------------------------------------------------------------ */
-
-  const list = () => {
-    document.body.innerHTML = '';
-    const el = document.body.createDiv();
-    ['Anarchy', 'Balance of power', 'Contract', 'Realism', 'Tort', 'Tribunal'].forEach((name, i) => {
-      const row = el.createDiv({ cls: 'dr-track' });
-      row.setAttribute('tabindex', '0');
-      row.dataset.path = `Law/${name}.md`;
-      row.createDiv({ cls: 'dr-track-num', text: String(i + 1) });
-      row.createDiv({ cls: 'dr-track-name', text: name });
-      row.addEventListener('keydown', (evt) => {
-        if (evt.key === ' ') row.dataset.opened = 'yes';
-      });
-    });
-    R.roveFocus(el, '.dr-track');
-    return el;
-  };
-  const focused = () => document.activeElement.querySelector('.dr-track-name').textContent;
-
-  await t('typing the start of a name jumps to it; the same letter again moves on', () => {
-    const el = list();
-    R.listKeys.on = true;
-    try {
-      el.firstChild.focus();
-      key(document.activeElement, 'r');
-      assert.strictEqual(focused(), 'Realism');
-      key(document.activeElement, 't');
-      // "rt" starts nothing; a fresh word starts after a pause.
-      el.drTyped.at = 0;
-      key(document.activeElement, 't');
-      assert.strictEqual(focused(), 'Tort');
-      key(document.activeElement, 't');
-      assert.strictEqual(focused(), 'Tribunal');
-      el.drTyped.at = 0;
-      key(document.activeElement, 'b');
-      key(document.activeElement, 'a');
-      key(document.activeElement, 'l');
-      // A space inside a name being typed is part of it.
-      key(document.activeElement, ' ');
-      assert.strictEqual(focused(), 'Balance of power');
-      assert.ok(!document.activeElement.dataset.opened);
-    } finally {
-      R.listKeys.on = false;
-    }
-  });
-
-  await t('Space previews the note in focus; switched off, the keys are the row\'s own again', () => {
-    const el = list();
-    const seen = [];
-    R.listKeys.on = true;
-    R.listKeys.preview = (row, p) => { seen.push(p); return true; };
-    try {
-      el.children[2].focus();
-      key(document.activeElement, ' ');
-      assert.deepStrictEqual(seen, ['Law/Contract.md']);
-      assert.ok(!el.children[2].dataset.opened, 'Space no longer opens it');
-    } finally {
-      R.listKeys.on = false;
-      R.listKeys.preview = null;
-    }
-    el.children[2].focus();
-    key(document.activeElement, ' ');
-    assert.strictEqual(el.children[2].dataset.opened, 'yes');
-    key(document.activeElement, 'r');
-    assert.strictEqual(focused(), 'Contract', 'no jumping when off');
-  });
-
   /* -- covers --------------------------------------------------------------- */
 
   await t('a note without a cover shows the first image in it, where the setting has it', () => {
