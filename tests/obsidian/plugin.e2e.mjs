@@ -530,6 +530,22 @@ describe('Design Redux in Obsidian', function () {
         return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
       }, sel);
     const drawArrow = async (fromId, side, toId) => {
+      // Both cards framed in the middle of the canvas, clear of the strip
+      // along its foot, however short the window.
+      await browser.executeObsidian(({ app }, ids) => {
+        const canvas = app.workspace.activeLeaf.view.canvas;
+        const boxes = ids.map((id) => canvas.nodes.get(id).getBBox());
+        const minY = Math.min(...boxes.map((b) => b.minY));
+        const maxY = Math.max(...boxes.map((b) => b.maxY));
+        const pad = (maxY - minY) * 0.6;
+        canvas.zoomToBbox({
+          minX: Math.min(...boxes.map((b) => b.minX)),
+          maxX: Math.max(...boxes.map((b) => b.maxX)),
+          minY: minY - pad,
+          maxY: maxY + pad,
+        });
+      }, [fromId, toId]);
+      await browser.pause(400);
       const from = await middle(ACTIVE + `[data-test-id="${fromId}"]`);
       await browser.action('pointer').move({ x: from.x, y: from.y }).perform();
       await browser.pause(300);
