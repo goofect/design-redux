@@ -85,8 +85,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_sidebar_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates };\n');
-const { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates } = require(tmp).__test;
+  '\nmodule.exports.__test = { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates };\n');
+const { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates } = require(tmp).__test;
 
 /* -- a vault and a plugin ----------------------------------------- */
 
@@ -571,6 +571,56 @@ t('switching the strip off gives the buttons back', () => {
   cs.el = null;
   cs.disable();
   assert.deepStrictEqual(marked(note.buttons), []);
+});
+
+t('a track dropped on a folder in the library, or in the file list, moves there with an Undo', () => {
+  const file = new TFile('Law/Tort.md');
+  const moves = [];
+  const plugin = {
+    settings: { sidebarDrop: true },
+    app: {
+      vault: {
+        getFolderByPath: (p) => (p === 'Politics' ? new TFolder('Politics') : null),
+        getAbstractFileByPath: (p) => (p === file.path ? file : null),
+      },
+    },
+    moveFile: (f, to, opts) => moves.push([f.path, to, opts]),
+  };
+  const drop = new SidebarDrop(plugin);
+  const transfer = { types: ['text/dr-file'], getData: (type) => (type === 'text/dr-file' ? file.path : '') };
+  const event = (target, dataTransfer) => ({ target, dataTransfer, preventDefault() { this.prevented = true; }, stopPropagation() {} });
+
+  const row = document.body.createDiv({ cls: 'dr-lib-row' });
+  row.dataset.path = 'Politics';
+  const over = event(row, transfer);
+  drop.onDragOver(over);
+  assert.ok(over.prevented && row.classList.contains('dr-drop-target'), 'the folder says it will take it');
+  drop.onDrop(event(row, transfer));
+  assert.deepStrictEqual(moves, [['Law/Tort.md', 'Politics', { announce: true }]]);
+  assert.ok(!row.classList.contains('dr-drop-target'));
+
+  // A folder in Obsidian's file list takes a track from a list too — not its own drags, which it takes itself.
+  const explorer = document.body.createDiv({ cls: 'nav-folder-title' });
+  explorer.dataset.path = 'Politics';
+  const fromList = event(explorer, transfer);
+  drop.onDragOver(fromList);
+  assert.ok(fromList.prevented);
+  plugin.app.dragManager = { draggable: { file } };
+  const ownDrag = event(explorer, { types: [], getData: () => '' });
+  drop.onDragOver(ownDrag);
+  assert.ok(!ownDrag.prevented);
+
+  // A note's row isn't somewhere to drop; and switched off, nothing is.
+  const noteRow = document.body.createDiv({ cls: 'dr-lib-row' });
+  noteRow.dataset.path = 'Law/Tort.md';
+  const onNote = event(noteRow, transfer);
+  drop.onDragOver(onNote);
+  assert.ok(!onNote.prevented);
+  plugin.settings.sidebarDrop = false;
+  const off = event(row, transfer);
+  drop.onDragOver(off);
+  assert.ok(!off.prevented);
+  [row, explorer, noteRow].forEach((el) => el.remove());
 });
 
 fs.unlinkSync(tmp);

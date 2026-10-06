@@ -68,7 +68,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_extras_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { noteCoverSrc, SidebarDrop, CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
+  '\nmodule.exports.__test = { noteCoverSrc, CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -159,49 +159,6 @@ const fakeCanvas = (data) => {
     await drop.onDrop({ target: art, dataTransfer: { files: [] }, preventDefault: () => (prevented = true), stopPropagation() {} });
     assert.ok(prevented);
     assert.deepStrictEqual(set, [['Law/Law.md', '[[view.png]]']]);
-  });
-
-  /* -- the library ------------------------------------------------------------- */
-
-  await t('a track dropped on a folder in the library moves there, with an Undo', async () => {
-    const file = new TFile('Law/Tort.md');
-    const moves = [];
-    const plugin = {
-      settings: { sidebarDrop: true },
-      app: {
-        vault: {
-          getFolderByPath: (p) => (p === 'Politics' ? new TFolder('Politics') : null),
-          getAbstractFileByPath: (p) => (p === file.path ? file : null),
-        },
-      },
-      moveFile: async (f, to, opts) => moves.push([f.path, to, opts]),
-    };
-    const drop = new R.SidebarDrop(plugin);
-    const row = document.body.createDiv({ cls: 'dr-lib-row' });
-    row.dataset.path = 'Politics';
-    const transfer = { types: ['text/dr-file'], getData: (type) => (type === 'text/dr-file' ? file.path : '') };
-    const over = { target: row, dataTransfer: transfer, preventDefault() { this.prevented = true; } };
-    drop.onDragOver(over);
-    assert.ok(over.prevented && row.classList.contains('dr-drop-target'));
-    await drop.onDrop({ target: row, dataTransfer: transfer, preventDefault() {}, stopPropagation() {} });
-    assert.deepStrictEqual(moves, [['Law/Tort.md', 'Politics', { announce: true }]]);
-    assert.ok(!row.classList.contains('dr-drop-target'));
-    // A folder in Obsidian's file list takes a track from a list too — not its own drags, which it takes itself.
-    const explorer = document.body.createDiv({ cls: 'nav-folder-title' });
-    explorer.dataset.path = 'Politics';
-    const fromList = { target: explorer, dataTransfer: transfer, preventDefault() { this.prevented = true; } };
-    drop.onDragOver(fromList);
-    assert.ok(fromList.prevented);
-    plugin.app.dragManager = { draggable: { file } };
-    const ownDrag = { target: explorer, dataTransfer: { types: [], getData: () => '' }, preventDefault() { this.prevented = true; } };
-    drop.onDragOver(ownDrag);
-    assert.ok(!ownDrag.prevented);
-    // A note row isn't somewhere to drop.
-    const noteRow = document.body.createDiv({ cls: 'dr-lib-row' });
-    noteRow.dataset.path = 'Law/Tort.md';
-    const onNote = { target: noteRow, dataTransfer: transfer, preventDefault() { this.prevented = true; } };
-    drop.onDragOver(onNote);
-    assert.ok(!onNote.prevented);
   });
 
   /* -- the canvas ---------------------------------------------------------------- */
