@@ -65,7 +65,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasDuplicate };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -959,6 +959,85 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     fold.cleanup(view);
     assert.ok(!Object.prototype.hasOwnProperty.call(c, 'hitTestNode'), 'the canvas finds cards as it did');
     assert.ok(!Object.prototype.hasOwnProperty.call(c, 'getIntersectingNodes'));
+  });
+
+  class ExtrasNode {
+    constructor(canvas, data) {
+      Object.assign(this, { id: data.id, x: data.x, y: data.y, width: data.width, height: data.height, color: data.color, unknownData: {}, isEditing: false, canvas });
+      const extra = Object.keys(data).filter((k) => /^dr/.test(k));
+      extra.forEach((k) => (this.unknownData[k] = data[k]));
+      this.data = data;
+      this.nodeEl = canvas.view.contentEl.createDiv({ cls: 'canvas-node' });
+    }
+    getData() { return Object.assign({}, this.data, this.unknownData, { x: this.x, y: this.y, width: this.width, height: this.height }); }
+    moveAndResize(r) { Object.assign(this, r); }
+    getBBox() { return { minX: this.x, minY: this.y, maxX: this.x + this.width, maxY: this.y + this.height }; }
+  }
+  const extrasCanvas = (data) => {
+    const containerEl = document.createElement('div');
+    document.body.appendChild(containerEl);
+    const view = { containerEl, contentEl: containerEl.createDiv(), file: { path: 'Map.canvas', extension: 'canvas' } };
+    const canvas = { view, nodes: new Map(), edges: new Map(), selection: new Set(), saves: 0 };
+    canvas.requestSave = () => canvas.saves++;
+    canvas.selectOnly = (n) => { canvas.selection = new Set([n]); };
+    canvas.select = (n) => canvas.selection.add(n);
+    view.canvas = canvas;
+    const addEdge = (e) => {
+      const g = containerEl.createDiv();
+      canvas.edges.set(e.id, {
+        id: e.id,
+        from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' },
+        to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' },
+        lineGroupEl: g, lineEndGroupEl: g,
+        getData: () => Object.assign({}, e),
+      });
+    };
+    data.nodes.forEach((n) => canvas.nodes.set(n.id, new ExtrasNode(canvas, n)));
+    data.edges.forEach(addEdge);
+    canvas.getData = () => ({
+      nodes: Array.from(canvas.nodes.values()).map((n) => n.getData()),
+      edges: Array.from(canvas.edges.values()).map((e) => e.getData()),
+    });
+    canvas.importData = (more) => {
+      (more.nodes || []).forEach((n) => canvas.nodes.set(n.id, new ExtrasNode(canvas, n)));
+      (more.edges || []).forEach(addEdge);
+    };
+    return view;
+  };
+
+  const pressKey = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+
+  /* -- the canvas ---------------------------------------------------------------- */
+
+  const extrasPlugin = (settings) => ({ settings, app: {}, feature: () => null });
+
+  await t('Duplicate branch copies a card with what it leads to, arrows and folds included, beside it', () => {
+    const view = extrasCanvas({
+      nodes: [
+        card('r', 0, 0, 100, 50),
+        card('a', 200, 0, 100, 50),
+        card('b', 200, 100, 100, 50),
+        card('t', 200, 100, 100, 50, { drTuck: { by: 'b', dx: 200, dy: 0 } }),
+        card('elsewhere', 0, 400, 100, 50),
+      ],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('b', 't', 'right', 'left'), edge('elsewhere', 'r', 'top', 'bottom')],
+    });
+    const dup = new R.CanvasDuplicate(extrasPlugin({ canvasDuplicate: true }));
+    const c = view.canvas;
+    const menu = new Menu();
+    dup.addMenuItems(menu, [c.nodes.get('r')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Duplicate branch']);
+    menu.items[0].click();
+    assert.strictEqual(c.nodes.size, 9);
+    const copies = Array.from(c.nodes.values()).slice(5);
+    // Laid below the original, as its children line up down the page.
+    assert.deepStrictEqual(copies.map((n) => [n.data.text, n.x, n.y]), [['r', 0, 230], ['a', 200, 230], ['b', 200, 330], ['t', 200, 330]]);
+    const copyOf = (text) => copies.find((n) => n.data.text === text);
+    assert.deepStrictEqual(copyOf('t').unknownData.drTuck, { by: copyOf('b').id, dx: 200, dy: 0 }, 'the copy is folded as the original');
+    const copiedEdges = Array.from(c.edges.values()).slice(4).map((e) => [e.from.node.data.text, e.to.node.data.text]);
+    assert.deepStrictEqual(copiedEdges, [['r', 'a'], ['r', 'b'], ['b', 't']], 'the arrow from outside stays with the original');
+    assert.deepStrictEqual(Array.from(c.selection), [copyOf('r')]);
+    assert.strictEqual(c.saves, 1);
   });
 
   console.log(`\n${passed} passed`);
