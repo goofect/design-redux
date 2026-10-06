@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -610,6 +610,50 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.getFileCache = () => ({ frontmatter: { cover: '[[own.png]]' }, embeds: [{ link: 'view.png' }] });
     app.metadataCache.getFirstLinkpathDest = (link) => (link === 'own.png' ? new TFile('own.png') : image);
     assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://own.png');
+  });
+
+  await t("an image dropped on an album's cover becomes its folder note's cover; one from outside is saved first", async () => {
+    const image = new TFile('Pictures/view.png');
+    const note = new TFile('Law/Law.md');
+    const set = [];
+    const saved = [];
+    const plugin = {
+      settings: { coverDrop: true },
+      app: {
+        dragManager: { draggable: { type: 'file', file: image } },
+        vault: {
+          getFolderByPath: (p) => (p === 'Law' ? new TFolder('Law') : null),
+          createBinary: async (p) => { saved.push(p); return new TFile(p); },
+        },
+        fileManager: { getAvailablePathForAttachment: async (name, from) => `Attachments/${name}` },
+      },
+      ensureFolderNote: async () => note,
+      feature: () => ({ setCover: async (file, value) => set.push([file.path, value]), linkTo: (img) => `[[${img.name}]]` }),
+    };
+    const drop = new R.CoverDrop(plugin);
+    const art = document.body.createDiv();
+    art.dataset.coverFolder = 'Law';
+    const event = (files) => ({ target: art, dataTransfer: { files, types: ['Files'] }, preventDefault() { this.prevented = true; }, stopPropagation() {} });
+    const fromVault = event([]);
+    await drop.onDrop(fromVault);
+    assert.ok(fromVault.prevented);
+    assert.deepStrictEqual(set, [['Law/Law.md', '[[view.png]]']]);
+    // From outside the vault: saved as an attachment, then linked.
+    plugin.app.dragManager = { draggable: null };
+    const blob = { name: 'photo.jpg', type: 'image/jpeg', arrayBuffer: async () => new ArrayBuffer(4) };
+    await drop.onDrop(event([blob]));
+    assert.deepStrictEqual(saved, ['Attachments/photo.jpg']);
+    assert.deepStrictEqual(set[1], ['Law/Law.md', '[[photo.jpg]]']);
+    // Not an image, or switched off: left alone.
+    const text = event([{ name: 'notes.txt', type: 'text/plain' }]);
+    await drop.onDrop(text);
+    assert.ok(!text.prevented);
+    plugin.settings.coverDrop = false;
+    const off = event([blob]);
+    await drop.onDrop(off);
+    assert.ok(!off.prevented);
+    assert.strictEqual(set.length, 2);
+    art.remove();
   });
 
   /* -- lengths, Home ------------------------------------------------------- */

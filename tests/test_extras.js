@@ -68,7 +68,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_extras_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
+  '\nmodule.exports.__test = { CanvasDuplicate, CanvasFocus, CanvasFind };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -125,25 +125,6 @@ const fakeCanvas = (data) => {
 
 (async () => {
   /* -- covers --------------------------------------------------------------- */
-
-  await t('an image from the vault dropped on an album\'s cover becomes its folder note\'s cover', async () => {
-    const image = new TFile('Pictures/view.png');
-    const note = new TFile('Law/Law.md');
-    const set = [];
-    const plugin = {
-      settings: { coverDrop: true },
-      app: { dragManager: { draggable: { type: 'file', file: image } }, vault: { getFolderByPath: (p) => (p === 'Law' ? new TFolder('Law') : null) } },
-      ensureFolderNote: async () => note,
-      feature: () => ({ setCover: async (file, value) => set.push([file.path, value]), linkTo: (img) => `[[${img.name}]]` }),
-    };
-    const drop = new R.CoverDrop(plugin);
-    const art = document.body.createDiv();
-    art.dataset.coverFolder = 'Law';
-    let prevented = false;
-    await drop.onDrop({ target: art, dataTransfer: { files: [] }, preventDefault: () => (prevented = true), stopPropagation() {} });
-    assert.ok(prevented);
-    assert.deepStrictEqual(set, [['Law/Law.md', '[[view.png]]']]);
-  });
 
   /* -- the canvas ---------------------------------------------------------------- */
 
