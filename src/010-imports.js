@@ -24,6 +24,7 @@ const {
   EditorSuggest,
   MenuItem,
   MarkdownRenderer,
+  Component,
   apiVersion,
 } = require('obsidian');
 // Provided by Obsidian at runtime, as 'obsidian' is.

@@ -619,7 +619,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!row.classList.contains('is-current'));
   });
 
-  await t("without a cover: the plain icon by default, the folder's cover when asked, or the icon on a soft colour", () => {
+  await t("without a cover: a cover drawn for it by default, the folder's cover when asked, or the icon on a soft colour", () => {
     const { view, plugin, app } = setup();
     plugin.folderCoverSrc = (folder) => (folder.path === 'IR' ? 'ir.png' : null);
     plugin.recentFiles = () => [f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')];
@@ -627,13 +627,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-card-art')).map((el) => {
       const img = el.querySelector('img');
       if (img) return img.getAttribute('src');
+      if (el.classList.contains('is-drawn')) return 'drawn';
       return el.classList.contains('is-hued') ? 'soft' : el.classList.contains('is-blank') ? 'icon' : '?';
     });
     view.render();
-    assert.deepStrictEqual(tiles(), ['icon', 'icon'], 'the default is no longer the plain icon');
+    assert.deepStrictEqual(tiles(), ['drawn', 'drawn'], 'the default is a cover drawn for each');
     plugin.settings.coverFromFolder = true;
     view.render();
-    assert.deepStrictEqual(tiles(), ['ir.png', 'icon'], "only the note's own folder counts, not one above it");
+    assert.deepStrictEqual(tiles(), ['ir.png', 'drawn'], "only the note's own folder counts, not one above it");
     plugin.settings.coverFromFolder = false;
     plugin.settings.coverFallback = 'soft';
     view.render();

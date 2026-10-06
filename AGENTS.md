@@ -55,11 +55,23 @@ Coffee N' Christmas.
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
 - A canvas can open before its cards are loaded; count them again when they arrive.
-- Canvas folds (`316`, `317`, `335`–`339`): a tucked card keeps its own place in
+- Canvas folds (`316`–`318`, `335`–`339`): a tucked card keeps its own place in
   the file and only answers `getBBox` with its fold's box, so arrows end at the
   fold. A pass never saves — only a fold, unfold or tidy by hand does: a canvas
   can be rewritten from outside while open, and each save is a step of Undo
-  that, undone, would only start the pass again.
+  that, undone, would only start the pass again. Folds and tidies glide
+  (`glideCanvasModel`); no pass runs while `state.gliding`, and anything new
+  calls `settle(view)` first so it starts from where the cards are going.
+  A fold notes what its closing-up moved (`drRoom` on the folded card) and
+  unfolding moves exactly that back — never make room again by guessing, or
+  layouts drift. A tucked card only moves with its fold. Obsidian finds cards
+  under the pointer from an index that still lists tucked ones, so the
+  canvas's `getIntersectingNodes` and `hitTestNode` are wrapped (`336`) to
+  leave them out.
+- Arrow styles (`332`): the canvas edge prototype's `updatePath`, `getCenter`
+  and `getBBox` are wrapped once with `around()`, and an arrow is redrawn
+  after Obsidian draws it; anything unexpected falls back to Obsidian's own
+  drawing. An arrow's style is in its data as `drArrow`.
 - Quiet links: Obsidian reads `[[[X]]]` as a link to a missing "[X". They're
   set aside from each note's cache in `metadataCache` 'changed' — which fires
   before Obsidian counts the note's links — and swept once after 'resolved'

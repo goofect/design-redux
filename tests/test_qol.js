@@ -183,7 +183,21 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok(view.contentEl.querySelectorAll('.dr-card-art.is-generated').length >= 2);
   });
 
-  await t('a cover can be the name set as a title, the default; older settings move to it, a choice made stays', () => {
+  await t('a cover can be drawn for its name, the default, or the name set as a title; older settings move on, a choice made stays', () => {
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art' }, 'Realism'), { art: 'Realism' });
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art', coverDesigns: { 'IR/Realism.md': 'pines' } }, 'Realism', 'IR/Realism.md'), { art: 'Realism', design: 'pines' });
+    const drawn = document.createElement('div');
+    R.fillArt(drawn, null, 'file-text', null, { art: 'Balance of power' });
+    const again = document.createElement('div');
+    R.fillArt(again, null, 'file-text', null, { art: 'Balance of power' });
+    assert.ok(drawn.classList.contains('is-drawn') && drawn.querySelector('svg.dr-drawn').children.length > 0);
+    assert.strictEqual(drawn.innerHTML, again.innerHTML, 'the same name, the same cover');
+    assert.ok(!drawn.querySelector('.dr-card-glyph'));
+    const picked = document.createElement('div');
+    R.fillArt(picked, null, 'file-text', { name: 'Balance of power', tint: '#30a46c' }, { art: 'Balance of power', design: 'pines' });
+    assert.strictEqual(picked.dataset.design, 'pines');
+    assert.ok(/hsl\(151/.test(picked.style.backgroundImage), 'drawn in the colour chosen for it');
+
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'title' }, 'Realism'), { title: 'Realism' });
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'soft' }, 'Realism'), { hue: 'Realism' });
     assert.strictEqual(R.blankLook({ coverFallback: 'icon' }, 'Realism'), null);
@@ -201,18 +215,18 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const titled = Array.from(view.contentEl.querySelectorAll('.dr-card-art.is-titled .dr-type-title')).map((e) => e.textContent);
     assert.ok(titled.includes('IR'), 'a folder without a cover shows its name');
 
-    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 2);
-    const fresh = {};
-    step.run(fresh);
-    assert.strictEqual(fresh.coverFallback, 'title');
-    const old = { coverFallback: 'icon' };
-    step.run(old);
-    assert.strictEqual(old.coverFallback, 'title');
-    const chosen = { coverFallback: 'name' };
-    step.run(chosen);
-    assert.strictEqual(chosen.coverFallback, 'name');
-    assert.strictEqual(R.DEFAULTS.coverFallback, 'title');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 2);
+    const steps = R.SETTINGS_MIGRATIONS.filter((m) => m.to >= 2).sort((a, b) => a.to - b.to);
+    const run = (saved) => {
+      steps.forEach((m) => m.run(saved));
+      return saved.coverFallback;
+    };
+    assert.strictEqual(run({}), 'art');
+    assert.strictEqual(run({ coverFallback: 'icon' }), 'art');
+    assert.strictEqual(run({ coverFallback: 'title' }), 'art');
+    assert.strictEqual(run({ coverFallback: 'name' }), 'name');
+    assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
+    assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 3);
   });
 
   /* -- pins in your own order ------------------------------------------------ */
@@ -505,82 +519,36 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
   });
 
-  await t('canvas cards fold to a line and back, keeping the size they were in the card', () => {
+  await t('canvas cards folded by an earlier version open to the size they were; nothing else folds a card', () => {
     const containerEl = document.createElement('div');
     containerEl.createDiv({ cls: 'canvas-controls' });
     const contentEl = containerEl.createDiv();
     let saves = 0;
-    const card = (id, data, height) => {
+    const card = (id, data, x, height, fold) => {
       const node = {
-        id, x: 0, y: 0, width: 200, height, unknownData: {}, isEditing: false,
+        id, x, y: 0, width: 200, height, unknownData: fold ? { drFold: fold } : {}, isEditing: false,
         nodeEl: contentEl.createDiv({ cls: 'canvas-node' }),
         getData: () => data,
-        moveAndResize(r) { this.height = r.height; },
+        moveAndResize(r) { Object.assign(this, r); },
       };
       node.nodeEl.createDiv({ cls: 'canvas-node-content' });
       return node;
     };
-    const text = card('t', { type: 'text' }, 120);
-    const note = card('n', { type: 'file', file: 'A.md' }, 200);
-    const pic = card('p', { type: 'file', file: 'a.png' }, 200);
-    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), selection: new Set(), requestSave: () => saves++ } };
-    const fold = new R.CanvasFold({ settings: { canvasFold: true, canvasCloseGaps: true } });
-
-    fold.fold(view, [text], true);
-    assert.strictEqual(text.height, 52);
-    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: false });
-    assert.ok(text.nodeEl.classList.contains('dr-folded'));
-    assert.strictEqual(saves, 1);
-    const control = containerEl.querySelector('.dr-fold-control .canvas-control-item');
-    assert.strictEqual(control.getAttribute('aria-label'), 'Fold every card');
-
-    // Every card — not the picture — then all of them back.
-    fold.foldAll(view);
-    assert.strictEqual(note.height, 52);
-    assert.strictEqual(pic.height, 200);
-    assert.ok(!pic.nodeEl.querySelector('.dr-fold-btn'));
-    assert.strictEqual(control.getAttribute('aria-label'), 'Unfold every card');
-    fold.foldAll(view);
-    assert.deepStrictEqual([text.height, note.height], [120, 200]);
+    const text = card('t', { type: 'text' }, 0, 52, { height: 120, folded: 52, measured: true });
+    const note = card('n', { type: 'file', file: 'A.md' }, 300, 52, { height: 200, folded: 52, measured: true });
+    const pic = card('p', { type: 'file', file: 'a.png' }, 600, 200);
+    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), edges: new Map(), selection: new Set(), requestSave: () => saves++ } };
+    const fold = new R.CanvasFold({ settings: { canvasBranches: true, canvasCloseGaps: true } });
+    fold.pass(view);
+    assert.deepStrictEqual([text.height, note.height, pic.height], [120, 200, 200]);
     assert.strictEqual(R.foldOf(text), null);
-    assert.ok(!text.nodeEl.classList.contains('dr-folded'));
-
-    // Resized by hand while folded: that's its size. Opened to edit: unfolded.
-    fold.fold(view, [text, note], true);
-    text.height = 90;
-    note.isEditing = true;
-    fold.pass(view);
-    assert.strictEqual(R.foldOf(text), null);
-    assert.strictEqual(text.height, 90);
-    assert.strictEqual(note.height, 200);
-    assert.strictEqual(R.foldOf(note), null);
-
-    // Rewritten from outside — by an AI, say — without the fold's record:
-    // the card, still at its folded size, gets it back from memory, and
-    // nothing is saved over what was written.
-    view.file = { path: 'Map.canvas' };
-    fold.watched.set(view, { file: view.file });
-    text.isEditing = false;
-    text.height = 120;
-    fold.fold(view, [text], true);
-    const saved = saves;
-    text.unknownData = {};
-    fold.pass(view);
-    assert.deepStrictEqual(R.foldOf(text), { height: 120, folded: 52, measured: false });
-    assert.ok(text.nodeEl.classList.contains('dr-folded'));
-    // Rewritten at another size: that's its size, and the memory goes.
-    text.unknownData = {};
-    text.height = 140;
-    fold.pass(view);
-    assert.strictEqual(R.foldOf(text), null);
-    text.height = 52;
-    fold.pass(view);
-    assert.strictEqual(R.foldOf(text), null, 'forgotten once resized');
-    assert.strictEqual(saves, saved, 'nothing saved on its own');
-
-    // Turned off: what it added is gone.
+    assert.ok(!('drFold' in note.unknownData));
+    assert.strictEqual(saves, 0, 'saved with the canvas’s next change');
+    // No arrows, no branches: nothing to fold, so no folding button.
+    assert.ok(!containerEl.querySelector('.dr-fold-control'));
+    assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'toggle-canvas-master-card', 'unfold-canvas-everything']);
     fold.cleanup(view);
-    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-fold-btn, .dr-folded'));
+    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-stack, .dr-branch-knob'));
   });
 
   console.log(`\n${passed} passed`);

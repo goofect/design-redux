@@ -61,9 +61,11 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, foldRecord, unfoldRecord, ' +
+  '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, GROUP_FOLD_HEIGHT };\n');
+  'tuckedBBox, ' +
+  'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -116,70 +118,62 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(homes.get('c'), null);
   });
 
-  await t('a folded card closes up what is below it, in its column — and unfolding puts it all back', () => {
+  // A card or group folded by an earlier version: its open height kept in drFold.
+  const folded = (height, extra) => Object.assign({ drFold: { height, folded: 52, measured: true } }, extra);
+
+  await t('a card folded by an earlier version opens, and what is below it in its column moves back down', () => {
     const m = R.modelFromData({
-      nodes: [card('a', 0, 0, 200, 200), card('below', 0, 240, 200, 100), card('under', 50, 400, 230, 100), card('beside', 300, 240, 100, 100), card('far', 600, 600, 100, 100)],
+      nodes: [card('a', 0, 0, 200, 52, folded(200)), card('below', 0, 92, 200, 100), card('under', 50, 252, 230, 100), card('beside', 300, 240, 100, 100), card('far', 600, 600, 100, 100)],
       edges: [],
     });
-    const start = ['a', 'below', 'under', 'beside', 'far'].map((id) => at(m, id));
-    assert.ok(R.foldRecord(m, m.byId.get('a'), 52, true, true));
-    assert.deepStrictEqual(at(m, 'a'), [0, 0, 200, 52]);
-    assert.deepStrictEqual(at(m, 'below'), [0, 92, 200, 100]);
+    assert.ok(R.unfoldRecord(m, m.byId.get('a'), true));
+    assert.deepStrictEqual(at(m, 'a'), [0, 0, 200, 200]);
+    assert.deepStrictEqual(at(m, 'below'), [0, 240, 200, 100]);
     // Under the one that moved: it moves too, though it's wider than the card.
-    assert.deepStrictEqual(at(m, 'under'), [50, 252, 230, 100]);
+    assert.deepStrictEqual(at(m, 'under'), [50, 400, 230, 100]);
     assert.deepStrictEqual(at(m, 'beside'), [300, 240, 100, 100]);
     assert.deepStrictEqual(at(m, 'far'), [600, 600, 100, 100]);
-    assert.ok(R.unfoldRecord(m, m.byId.get('a'), true));
-    assert.deepStrictEqual(['a', 'below', 'under', 'beside', 'far'].map((id) => at(m, id)), start);
+    assert.ok(!m.byId.get('a').fold);
   });
 
   await t('what is below takes along what its arrows lead to, and what would otherwise be run into', () => {
     const m = R.modelFromData({
-      nodes: [card('a', 0, 0, 200, 200), card('b', 0, 240, 200, 60), card('kid', 400, 240, 100, 60), card('side', 600, 100, 100, 60), card('wide', 300, 400, 500, 60)],
+      nodes: [card('a', 0, 0, 200, 52, folded(200)), card('b', 0, 92, 200, 60), card('kid', 400, 92, 100, 60), card('side', 600, 100, 100, 60), card('wide', 300, 252, 500, 60)],
       edges: [edge('b', 'kid', 'right', 'left')],
     });
-    R.foldRecord(m, m.byId.get('a'), 52, true, true);
+    R.unfoldRecord(m, m.byId.get('a'), true);
     // kid comes along with b, and wide, under kid, with it; side is above the fold and stays.
-    assert.deepStrictEqual(['b', 'kid', 'wide', 'side'].map((id) => m.byId.get(id).y), [92, 92, 252, 100]);
+    assert.deepStrictEqual(['b', 'kid', 'wide', 'side'].map((id) => m.byId.get(id).y), [240, 240, 400, 100]);
   });
 
-  await t('the group a fold is in keeps its margin, and what is below the group closes up too', () => {
+  await t('the group an old fold is in keeps its margin, and what is below the group moves too', () => {
     const m = R.modelFromData({
       nodes: [
-        card('g', 0, 0, 400, 400, { type: 'group' }),
-        card('a', 20, 20, 200, 200),
-        card('b', 20, 260, 200, 100),
-        card('after', 0, 450, 400, 100),
+        card('g', 0, 0, 400, 252, { type: 'group' }),
+        card('a', 20, 20, 200, 52, folded(200)),
+        card('b', 20, 112, 200, 100),
+        card('after', 0, 302, 400, 100),
       ],
       edges: [],
     });
-    R.foldRecord(m, m.byId.get('a'), 52, true, true);
-    assert.deepStrictEqual(at(m, 'b'), [20, 112, 200, 100]);
-    assert.deepStrictEqual(at(m, 'g'), [0, 0, 400, 252]);
-    assert.deepStrictEqual(at(m, 'after'), [0, 302, 400, 100]);
     R.unfoldRecord(m, m.byId.get('a'), true);
     assert.deepStrictEqual([at(m, 'g'), at(m, 'b'), at(m, 'after')], [[0, 0, 400, 400], [20, 260, 200, 100], [0, 450, 400, 100]]);
   });
 
-  await t('a folded group tucks its cards in, and they come back beside it even after it has moved', () => {
+  await t('a group folded by an earlier version opens, its cards back beside it even after it has moved', () => {
     const m = R.modelFromData({
-      nodes: [card('g', 0, 0, 400, 300, { type: 'group' }), card('a', 20, 20, 100, 50), card('b', 20, 120, 100, 50), card('after', 0, 340, 400, 100)],
+      nodes: [
+        card('g', 1000, 0, 400, 48, { type: 'group', drFold: { height: 300, folded: 48, measured: true } }),
+        card('a', 1000, 0, 100, 50, { drTuck: { by: 'g', dx: 20, dy: 20 } }),
+        card('b', 1000, 0, 100, 50, { drTuck: { by: 'g', dx: 20, dy: 120 } }),
+        card('after', 1000, 88, 400, 100),
+      ],
       edges: [],
     });
-    R.foldRecord(m, m.byId.get('g'), R.GROUP_FOLD_HEIGHT, true, true);
-    assert.deepStrictEqual(m.byId.get('a').tuck, { by: 'g', dx: 20, dy: 20 });
-    assert.strictEqual(m.byId.get('g').height, 48);
-    assert.deepStrictEqual(at(m, 'after'), [0, 88, 400, 100]);
-    // Unfolded, it opens out over the room it gave back: what's below moves back down.
-    R.unfoldRecord(m, m.byId.get('g'), true);
-    assert.deepStrictEqual(at(m, 'after'), [0, 340, 400, 100]);
-    R.foldRecord(m, m.byId.get('g'), R.GROUP_FOLD_HEIGHT, true, true);
-    // Moved while folded.
-    m.byId.get('g').x = 1000;
-    R.unfoldRecord(m, m.byId.get('g'), true);
+    assert.ok(R.openOldFolds(m, true));
     assert.strictEqual(m.byId.get('a').tuck, null);
-    assert.deepStrictEqual(at(m, 'a'), [1020, 20, 100, 50]);
-    assert.deepStrictEqual(at(m, 'g'), [1000, 0, 400, 300]);
+    assert.deepStrictEqual([at(m, 'g'), at(m, 'a'), at(m, 'b'), at(m, 'after')], [[1000, 0, 400, 300], [1020, 20, 100, 50], [1020, 120, 100, 50], [1000, 340, 400, 100]]);
+    assert.ok(!R.openOldFolds(m, true), 'nothing left to open');
   });
 
   await t('a folded branch tucks into its card, and the siblings round it close in from both sides', () => {
@@ -216,6 +210,58 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(places.get('a'), { x: -65, y: 130 });
     assert.deepStrictEqual(places.get('b'), { x: 65, y: 130 });
     assert.deepStrictEqual(places.get('c'), { x: -45, y: 260 });
+  });
+
+  await t('a tidy tree packs a small branch in beside a big one, and lines each level up', () => {
+    const m = R.modelFromData({
+      nodes: [
+        card('r', 0, 0, 100, 50),
+        card('a', -200, 200, 100, 50),
+        card('a1', -400, 400, 100, 50),
+        card('a2', -200, 400, 100, 50),
+        card('a3', 0, 400, 100, 50),
+        card('b', 200, 200, 100, 50),
+      ],
+      edges: [edge('r', 'a', 'bottom', 'top'), edge('r', 'b', 'bottom', 'top'), edge('a', 'a1', 'bottom', 'top'), edge('a', 'a2', 'bottom', 'top'), edge('a', 'a3', 'bottom', 'top')],
+    });
+    const places = R.tidyBranch(m, 'r', 'bottom');
+    // b sits just beside a: a's children spread out under both, a centred on them.
+    assert.deepStrictEqual(['a', 'b', 'a1', 'a2', 'a3'].map((id) => [places.get(id).x, places.get(id).y]), [
+      [-65, 130], [65, 130], [-195, 260], [-65, 260], [65, 260],
+    ]);
+    // Growing right, with a wide card on the first level: the next level lines up past it.
+    const w = R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('wide', 300, -100, 300, 50), card('thin', 300, 100, 100, 50), card('w1', 700, -100, 100, 50), card('t1', 500, 100, 100, 50)],
+      edges: [edge('r', 'wide', 'right', 'left'), edge('r', 'thin', 'right', 'left'), edge('wide', 'w1', 'right', 'left'), edge('thin', 't1', 'right', 'left')],
+    });
+    const across = R.tidyBranch(w, 'r', 'right');
+    assert.deepStrictEqual([across.get('wide').x, across.get('thin').x, across.get('w1').x, across.get('t1').x], [180, 180, 560, 560]);
+  });
+
+  await t('a mind map spreading both ways is tidied both ways', () => {
+    const m = R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('k', 300, 30, 100, 50), card('k2', 300, 200, 100, 50), card('l', -400, -20, 100, 50), card('l1', -700, -20, 100, 50)],
+      edges: [edge('r', 'k', 'right', 'left'), edge('r', 'k2', 'right', 'left'), edge('r', 'l', 'left', 'right'), edge('l', 'l1', 'left', 'right')],
+    });
+    const places = R.tidyBranch(m, 'r', 'right');
+    assert.ok(places.both);
+    assert.deepStrictEqual(['k', 'k2', 'l', 'l1'].map((id) => [places.get(id).x, places.get(id).y]), [[180, -40], [180, 40], [-180, 0], [-360, 0]]);
+    assert.deepStrictEqual(['k', 'l', 'l1'].map((id) => places.sides.get(id)), ['right', 'left', 'left']);
+  });
+
+  await t('a tidied branch takes the group its cards are in along, fitted round them', () => {
+    const m = R.modelFromData({
+      nodes: [
+        card('r', 0, 0, 100, 50),
+        card('g', 300, -100, 300, 400, { type: 'group', label: 'Ministers' }),
+        card('c1', 320, -80, 100, 50),
+        card('c2', 320, 200, 100, 50),
+      ],
+      edges: [edge('r', 'c1', 'right', 'left'), edge('r', 'c2', 'right', 'left')],
+    });
+    assert.ok(R.tidyRecords(m, m.byId.get('r'), true));
+    assert.deepStrictEqual([at(m, 'c1').slice(0, 2), at(m, 'c2').slice(0, 2)], [[180, -40], [180, 40]]);
+    assert.deepStrictEqual(at(m, 'g'), [160, -60, 300, 200]);
   });
 
   await t('tidying moves a card caught where the tree now lies out beyond it', () => {
@@ -287,29 +333,40 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     });
     return view;
   };
-  const settings = { canvasFold: true, canvasBranches: true, canvasCloseGaps: true, canvasTidy: true, canvasSelectBranch: true };
+  const settings = { canvasBranches: true, canvasCloseGaps: true, canvasTidy: true, canvasSelectBranch: true };
 
-  await t('a knob folds a card’s branch: its cards hidden, arrows from elsewhere ending at the fold', () => {
+  await t('Fold branch, above a selected card, tucks its branch away: arrows from elsewhere end at the fold', () => {
     const view = fakeCanvas({
       nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('b', 400, 0, 100, 50), card('x', 200, 300, 100, 50), card('y', 0, 300, 100, 50)],
       edges: [edge('r', 'a', 'right', 'left'), edge('a', 'b', 'right', 'left'), edge('x', 'b', 'top', 'bottom'), edge('y', 'x', 'right', 'left')],
     });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
     const fold = new R.CanvasFold({ settings, app: {} });
     fold.watched.set(view, { file: view.file });
     fold.pass(view);
     const r = view.canvas.nodes.get('r');
-    const knob = r.nodeEl.querySelector('.dr-branch-knob');
-    assert.ok(knob && knob.classList.contains('is-right'));
+    // Nothing on the canvas for an open branch: nothing among its arrows.
+    assert.ok(!view.contentEl.querySelector('.dr-branch-knob'));
+    assert.ok(!bar.querySelector('.dr-branch-button'));
+    view.canvas.selection.add(r);
+    fold.pass(view);
+    assert.strictEqual(bar.querySelectorAll('button').length, 1, 'only Fold branch: a card has no fold of its own');
+    const button = bar.querySelector('.dr-branch-button');
+    assert.strictEqual(button.getAttribute('aria-label'), 'Fold branch');
     // x leads to b too, so b isn't r's alone: only a is tucked away.
-    knob.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     const a = view.canvas.nodes.get('a');
     const b = view.canvas.nodes.get('b');
     assert.deepStrictEqual(a.unknownData.drTuck, { by: 'r', dx: 200, dy: 0 });
     assert.ok(!b.unknownData.drTuck);
     assert.ok(a.nodeEl.classList.contains('dr-tucked'));
     assert.deepStrictEqual(a.getBBox(), r.getBBox());
+    assert.strictEqual(button.getAttribute('aria-label'), 'Unfold branch');
+    // Folded, it says how many cards it holds, where its arrows left it.
+    const knob = r.nodeEl.querySelector('.dr-branch-knob');
     assert.strictEqual(knob.textContent, '+1');
-    assert.ok(knob.classList.contains('is-folded'));
+    assert.ok(knob.classList.contains('is-right') && knob.classList.contains('is-folded'));
+    view.canvas.selection.clear();
     // r → a is inside the fold: not drawn. a → b now starts at r.
     assert.ok(view.canvas.edges.get('r-a').lineGroupEl.classList.contains('dr-tucked-edge'));
     assert.ok(!view.canvas.edges.get('a-b').lineGroupEl.classList.contains('dr-tucked-edge'));
@@ -348,28 +405,25 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(!a.nodeEl.classList.contains('dr-tucked'));
   });
 
-  await t('a group folds from its arrow, and says how many cards it holds', () => {
+  await t('a group has no fold of its own: nothing on it, nothing in its menu', () => {
     const view = fakeCanvas({
       nodes: [card('g', 0, 0, 400, 300, { type: 'group', label: 'G' }), card('a', 20, 20, 100, 50), card('b', 20, 120, 100, 50)],
       edges: [],
     });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
     const fold = new R.CanvasFold({ settings, app: {} });
     fold.watched.set(view, { file: view.file });
-    fold.pass(view);
     const g = view.canvas.nodes.get('g');
-    g.nodeEl.querySelector('.dr-fold-btn').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert.strictEqual(g.height, R.GROUP_FOLD_HEIGHT);
-    assert.strictEqual(g.nodeEl.querySelector('.dr-group-summary').textContent, '2 cards');
-    assert.ok(view.canvas.nodes.get('a').nodeEl.classList.contains('dr-tucked'));
+    view.canvas.selection.add(g);
+    fold.pass(view);
+    assert.strictEqual(g.nodeEl.children.length, 0);
+    assert.ok(!bar.querySelector('button'));
     const menu = new Menu();
     fold.addMenuItems(menu, [g]);
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Unfold group']);
-    menu.items[0].click();
-    assert.strictEqual(g.height, 300);
-    assert.ok(!g.nodeEl.querySelector('.dr-group-summary'));
+    assert.deepStrictEqual(menu.items, []);
   });
 
-  await t('a group rewritten without its fold’s record still opens out round its cards — nothing saved', () => {
+  await t('a group folded by an earlier version opens when the canvas is drawn — even rewritten without its fold’s record — nothing saved', () => {
     const view = fakeCanvas({
       nodes: [card('g', 0, 0, 400, 48, { type: 'group', label: 'G' }), card('a', 900, 900, 100, 50), card('b', 900, 900, 100, 160)],
       edges: [],
@@ -381,9 +435,9 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     fold.pass(view);
     const g = view.canvas.nodes.get('g');
     assert.strictEqual(view.canvas.saves, 0);
-    assert.ok(g.nodeEl.classList.contains('dr-folded'));
-    fold.fold(view, [g], false);
     assert.deepStrictEqual([g.height, view.canvas.nodes.get('b').x, view.canvas.nodes.get('b').y], [260, 200, 60]);
+    assert.ok(!view.canvas.nodes.get('b').unknownData.drTuck);
+    assert.ok(!g.unknownData.drFold);
   });
 
   await t('with folding switched off, nothing new folds, but what is folded can still be opened', () => {
@@ -391,12 +445,12 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
       nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50)],
       edges: [edge('r', 'a', 'right', 'left')],
     });
-    const off = Object.assign({}, settings, { canvasFold: false, canvasBranches: false });
+    const off = Object.assign({}, settings, { canvasBranches: false });
     const fold = new R.CanvasFold({ settings: off, app: {} });
     fold.watched.set(view, { file: view.file });
     fold.pass(view);
     const r = view.canvas.nodes.get('r');
-    assert.ok(!r.nodeEl.querySelector('.dr-branch-knob, .dr-fold-btn'));
+    assert.ok(!r.nodeEl.querySelector('.dr-branch-knob'));
     view.canvas.nodes.get('a').unknownData.drTuck = { by: 'r', dx: 200, dy: 0 };
     fold.pass(view);
     assert.strictEqual(r.nodeEl.querySelector('.dr-branch-knob').textContent, '+1');
@@ -413,6 +467,498 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const menu = new Menu();
     branches.addMenuItems(menu, [view.canvas.nodes.get('r')]);
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Tidy branch', 'Select branch']);
+  });
+
+  await t('a card holding its folded branch sits on a stack of them, gone when it opens', () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 200, 160, { text: '# Root\nwords' }), card('a', 300, 0, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const r = view.canvas.nodes.get('r');
+    fold.foldBranches(view, [r], true);
+    assert.ok(r.nodeEl.classList.contains('dr-holds'));
+    assert.strictEqual(r.nodeEl.querySelectorAll(':scope > .dr-stack').length, 2);
+    assert.strictEqual(r.height, 160, 'the card itself as it was');
+    fold.foldBranches(view, [r], false);
+    assert.ok(!r.nodeEl.classList.contains('dr-holds'));
+    assert.ok(!r.nodeEl.querySelector('.dr-stack'));
+  });
+
+  await t('the tucked cards of a fold listed by name; one picked opens the fold', async () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('b', 200, 100, 100, 50, { text: '# Second' }), card('a', 200, 0, 100, 50, { text: 'First', color: '4' })],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const r = view.canvas.nodes.get('r');
+    fold.foldBranches(view, [r], true);
+    const pop = document.createElement('div');
+    fold.fillTucked(view, 'r', pop);
+    assert.strictEqual(pop.querySelector('.dr-fold-list-head').textContent, '2 cards tucked away');
+    const rows = Array.from(pop.querySelectorAll('.dr-fold-list-row'));
+    assert.deepStrictEqual(rows.map((row) => row.textContent), ['First', 'Second']);
+    view.canvas.selectOnly = (n) => { view.canvas.selection = new Set([n]); };
+    rows[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 0));
+    assert.ok(!view.canvas.nodes.get('b').unknownData.drTuck);
+    assert.deepStrictEqual(Array.from(view.canvas.selection).map((n) => n.id), ['b']);
+  });
+
+  await t('a card folded by an earlier version, in a group, opens when the canvas is drawn and takes its room back', () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', -40, -60, 680, 372, { type: 'group', label: 'G' }),
+        card('t1', 0, 0, 280, 52, { text: '# One\nwords' }),
+        card('t3', 0, 92, 280, 180),
+        card('below', -40, 412, 300, 100),
+      ],
+      edges: [],
+    });
+    const n = (id) => view.canvas.nodes.get(id);
+    n('t1').unknownData.drFold = { height: 200, folded: 52, measured: true };
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    fold.pass(view);
+    assert.deepStrictEqual([n('t1').height, n('t3').y, n('g').height, n('below').y], [200, 240, 520, 560]);
+    assert.ok(!n('t1').unknownData.drFold);
+    assert.strictEqual(view.canvas.saves, 0, 'saved with the canvas’s next change');
+  });
+
+  await t('a branch folded down inside a group gives the group its room back, and takes it again when it opens', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', 0, 0, 400, 300, { type: 'group', label: 'Treasury Board' }),
+        card('pres', 20, 20, 200, 80),
+        card('sec', 20, 180, 200, 80),
+        card('out', 0, 340, 200, 60),
+      ],
+      edges: [edge('pres', 'sec', 'bottom', 'top')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    await fold.foldBranches(view, [n('pres')], true);
+    assert.deepStrictEqual(at(R.canvasModel(view.canvas), 'g'), [0, 0, 400, 140], 'the group closed up round what it still shows');
+    assert.strictEqual(n('out').y, 180, 'and what was below it followed');
+    await fold.foldBranches(view, [n('pres')], false);
+    assert.deepStrictEqual([n('g').height, n('sec').y, n('out').y], [300, 180, 340]);
+  });
+
+  await t('a branch folded across to a group’s edge narrows the group; groups inside groups follow a card, and all come back', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', 0, 0, 520, 200, { type: 'group', label: 'PMO' }),
+        card('r', 20, 20, 200, 80),
+        card('k', 280, 20, 200, 80),
+        card('right', 600, 0, 100, 60),
+        card('outer', 1000, 0, 600, 360, { type: 'group', label: 'Outer' }),
+        card('inner', 1020, 20, 300, 300, { type: 'group', label: 'Inner' }),
+        card('a', 1040, 40, 200, 200, { text: '# A\nwords' }),
+        card('b', 1040, 260, 200, 40),
+        card('c', 1360, 40, 200, 100),
+        card('z', 1000, 400, 100, 50),
+      ],
+      edges: [edge('r', 'k', 'right', 'left'), edge('a', 'b', 'bottom', 'top')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    const sizes = () => ['g', 'right', 'outer', 'inner', 'b', 'z'].map((id) => [n(id).x, n(id).y, n(id).width, n(id).height]);
+    const start = sizes();
+    await fold.foldBranches(view, [n('r')], true);
+    assert.strictEqual(n('g').width, 260, 'the group narrowed to what it shows');
+    assert.strictEqual(n('right').x, 340, 'and what was beside it moved in');
+    await fold.foldBranches(view, [n('a')], true);
+    assert.strictEqual(n('inner').height, 240);
+    assert.strictEqual(n('outer').height, 300);
+    assert.strictEqual(n('z').y, 340);
+    await fold.foldBranches(view, [n('a')], false);
+    await fold.foldBranches(view, [n('r')], false);
+    assert.deepStrictEqual(sizes(), start);
+  });
+
+  await t('arrows with square corners run out of one card, across, and into the other; sides that face each other are found', () => {
+    const box = (x, y, w, h) => ({ minX: x, minY: y, maxX: x + w, maxY: y + h });
+    const pts = (list) => list.map((p) => [p.x, p.y]);
+    const A = box(0, 0, 100, 50);
+    const B = box(300, 200, 100, 50);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 300, y: 225 }, 'left', A, B)), [[100, 25], [200, 25], [200, 225], [300, 225]]);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 350, y: 200 }, 'top', A, B)), [[100, 25], [350, 25], [350, 200]]);
+    // Close together, one above the other: straight down, not round the side.
+    const close = box(0, 80, 100, 50);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 50, y: 50 }, 'bottom', { x: 50, y: 80 }, 'top', A, close)), [[50, 50], [50, 80]]);
+    assert.deepStrictEqual(pts(R.elbowPoints({ x: 50, y: 50 }, 'bottom', { x: 70, y: 80 }, 'top', A, box(20, 80, 100, 50))), [[50, 50], [50, 65], [70, 65], [70, 80]]);
+    // Facing away, side by side: round the far side of both.
+    const C = box(0, 100, 100, 50);
+    const round = pts(R.elbowPoints({ x: 100, y: 25 }, 'right', { x: 100, y: 125 }, 'right', A, C));
+    assert.deepStrictEqual(round, [[100, 25], [124, 25], [124, 125], [100, 125]]);
+    assert.deepStrictEqual(R.nearestSides(A, B), { from: 'right', to: 'left' }, 'further apart across than down');
+    assert.deepStrictEqual(R.nearestSides(A, box(40, 200, 100, 50)), { from: 'bottom', to: 'top' });
+    assert.deepStrictEqual(R.nearestSides(B, A), { from: 'left', to: 'right' });
+    const d = R.roundedPath([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }], 14);
+    assert.strictEqual(d, 'M0 0 L86 0 Q100 0 100 14 L100 100');
+    assert.deepStrictEqual(R.polylineMiddle([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }]), { x: 100, y: 0 });
+  });
+
+  await t('an arrow takes a style of its own — shape, line, head, sides — kept in its data, and back to the default', () => {
+    // An arrow as the canvas draws one: a curve, and heads square to the card.
+    class FakeEdge {
+      constructor(canvas, id, from, to) {
+        Object.assign(this, { canvas, id, from, to, unknownData: {} });
+        this.lineGroupEl = document.createElement('div');
+        const svg = (tag) => document.createElementNS('http://www.w3.org/2000/svg', tag);
+        this.path = { display: svg('path'), interaction: svg('path') };
+        const end = svg('g');
+        end.appendChild(svg('polygon')).setAttribute('points', '0,0 6.5,10.4 -6.5,10.4');
+        this.toLineEnd = { el: end, type: 'arrow' };
+        this.fromLineEnd = null;
+      }
+      updatePath() {
+        this.bezier = { from: 'curve' };
+        this.path.display.setAttribute('d', 'M curve');
+        this.path.interaction.setAttribute('d', 'M curve');
+        this.toLineEnd.el.style.transform = 'square';
+      }
+      getCenter() { return { x: -1, y: -1 }; }
+      getBBox() { return { minX: 0, minY: 0, maxX: 1, maxY: 1 }; }
+      render() { this.updatePath(); }
+    }
+    const drawnByCanvas = FakeEdge.prototype.updatePath;
+    const view = fakeCanvas({ nodes: [card('a', 0, 0, 100, 50), card('b', 300, 200, 100, 50)], edges: [] });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
+    const edge = new FakeEdge(view.canvas, 'e', { node: view.canvas.nodes.get('a'), side: 'right' }, { node: view.canvas.nodes.get('b'), side: 'left' });
+    view.canvas.edges.set('e', edge);
+    const arrows = new R.CanvasArrows({ settings: { canvasArrows: true, canvasArrowShape: 'curve', canvasArrowSides: false }, app: {} });
+    arrows.watched.set(view, { file: view.file });
+    arrows.mount(view);
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M curve', 'left as the canvas draws it by default');
+    view.canvas.selection.add(edge);
+    arrows.pass(view);
+    assert.strictEqual(bar.querySelector('.dr-arrow-button').getAttribute('aria-label'), 'Arrow style');
+    const menu = new Menu();
+    arrows.addMenuItems(menu, [edge]);
+    assert.ok(menu.items.some((i) => i.title === 'Arrow: square corners'));
+
+    arrows.setStyle(view, [edge], { shape: 'elbow', line: 'dashed', head: 'dot' });
+    assert.deepStrictEqual(edge.unknownData.drArrow, { shape: 'elbow', line: 'dashed', head: 'dot' });
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M100 25 L186 25 Q200 25 200 39 L200 211 Q200 225 214 225 L293 225');
+    assert.ok(edge.lineGroupEl.classList.contains('dr-line-dashed'));
+    assert.strictEqual(edge.toLineEnd.el.querySelector('polygon').getAttribute('points'), R.ARROW_HEAD_POINTS.dot);
+    assert.deepStrictEqual(edge.getCenter(), { x: 200, y: 121.5 });
+    assert.strictEqual(view.canvas.saves, 1, 'by hand: saved, a step of Undo');
+
+    // Straight: the head turns to the line.
+    arrows.setStyle(view, [edge], { shape: 'straight' });
+    assert.ok(/rotate\(/.test(edge.toLineEnd.el.style.transform));
+    // Joined at the sides facing each other, as the cards now lie.
+    edge.from.side = 'top';
+    edge.to.side = 'bottom';
+    arrows.setStyle(view, [edge], { sides: 'near' });
+    assert.deepStrictEqual([edge.from.side, edge.to.side], ['right', 'left']);
+    // Not while an end is folded away: drawn to the fold, it keeps the sides it has.
+    const tucked = view.canvas.nodes.get('a');
+    tucked.drInto = view.canvas.nodes.get('b');
+    tucked.getBBox = R.tuckedBBox;
+    edge.from.side = 'bottom';
+    edge.to.side = 'top';
+    edge.render();
+    assert.deepStrictEqual([edge.from.side, edge.to.side], ['bottom', 'top']);
+    delete tucked.getBBox;
+    delete tucked.drInto;
+
+    arrows.setStyle(view, [edge], null);
+    assert.ok(!edge.unknownData.drArrow);
+    assert.strictEqual(edge.path.display.getAttribute('d'), 'M curve');
+    assert.strictEqual(edge.toLineEnd.el.querySelector('polygon').getAttribute('points'), R.ARROW_HEAD_POINTS.arrow);
+    assert.ok(!edge.lineGroupEl.classList.contains('dr-line-dashed'));
+    assert.notStrictEqual(FakeEdge.prototype.updatePath, drawnByCanvas);
+    arrows.disable();
+    assert.strictEqual(FakeEdge.prototype.updatePath, drawnByCanvas, 'the canvas draws its own arrows again');
+  });
+
+  const plugin = (extra) => {
+    const fold = new R.CanvasFold({ settings, app: {} });
+    const p = { settings: Object.assign({}, settings, { canvasArrange: true, canvasMindMap: true }, extra), app: { workspace: { trigger() {} } }, feature: (C) => (C === R.CanvasFold ? fold : null) };
+    fold.plugin = p;
+    return { p, fold };
+  };
+
+  await t('selected cards line up, space out evenly, match sizes, and fall into a grid — a group with its cards, one step of Undo', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('a', 0, 0, 100, 50),
+        card('b', 220, 30, 140, 60),
+        card('c', 400, 10, 100, 80),
+        card('g', 600, 100, 300, 200, { type: 'group', label: 'G' }),
+        card('in', 620, 140, 100, 50),
+        card('other', 0, 500, 100, 50),
+      ],
+      edges: [],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const arrange = new R.CanvasArrange(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    const box = (id) => [n(id).x, n(id).y, n(id).width, n(id).height];
+    ['a', 'b', 'c', 'g', 'in'].forEach((id) => view.canvas.selection.add(n(id)));
+    assert.deepStrictEqual(arrange.cards(view).map((r) => r.id), ['a', 'b', 'c', 'g'], 'a card inside a selected group moves with it');
+    await arrange.arrange(view, 'top');
+    assert.deepStrictEqual([box('a')[1], box('b')[1], box('c')[1], box('g')[1]], [0, 0, 0, 0]);
+    assert.deepStrictEqual(box('in'), [620, 40, 100, 50], 'carried along with its group');
+    assert.strictEqual(view.canvas.saves, 1);
+    await arrange.arrange(view, 'right');
+    assert.deepStrictEqual([box('a')[0], box('b')[0], box('g')[0]], [800, 760, 600]);
+    view.canvas.selection.delete(n('g'));
+    view.canvas.selection.delete(n('in'));
+    // Back to a row, then spaced evenly between the first and last.
+    n('a').moveAndResize({ x: 0, y: 0, width: 100, height: 50 });
+    n('b').moveAndResize({ x: 120, y: 0, width: 140, height: 60 });
+    n('c').moveAndResize({ x: 500, y: 0, width: 100, height: 80 });
+    await arrange.arrange(view, 'space-across');
+    assert.deepStrictEqual([box('a')[0], box('b')[0], box('c')[0]], [0, 230, 500]);
+    await arrange.arrange(view, 'width');
+    assert.deepStrictEqual([box('a')[2], box('b')[2], box('c')[2]], [140, 140, 140]);
+    await arrange.arrange(view, 'column');
+    assert.deepStrictEqual([box('a'), box('b'), box('c')].map((b) => [b[0], b[1]]), [[0, 0], [0, 90], [0, 190]]);
+    assert.deepStrictEqual(
+      R.arrangePlaces([card('w', 0, 0, 100, 50), card('x', 300, 0, 100, 50), card('y', 0, 200, 100, 50), card('z', 300, 200, 100, 80)], 'grid').get('x'),
+      { x: 140, y: 0, width: 100, height: 50 }
+    );
+    view.canvas.selection.delete(n('c'));
+    const menu = new Menu();
+    arrange.addMenuItems(menu, [n('a'), n('b')]);
+    assert.ok(menu.items.some((i) => i.title === 'Align left edges'));
+    assert.ok(!menu.items.some((i) => i.title === 'Space evenly across'), 'spacing out takes three');
+  });
+
+  const mindCanvas = (data) => {
+    const view = fakeCanvas(data);
+    const canvas = view.canvas;
+    let made = 0;
+    canvas.config = { defaultTextNodeDimensions: { width: 250, height: 60 } };
+    canvas.createTextNode = ({ pos, size }) => {
+      const node = new FakeNode(canvas, { id: `new${++made}`, type: 'text', text: '', x: pos.x, y: pos.y, width: size.width, height: size.height });
+      node.setColor = (c) => { node.color = c; node.data.color = c; };
+      node.startEditing = () => { node.isEditing = true; };
+      canvas.nodes.set(node.id, node);
+      return node;
+    };
+    canvas.importData = ({ edges }) => edges.forEach((e) => {
+      const g = view.containerEl.createDiv();
+      canvas.edges.set(e.id, {
+        id: e.id,
+        from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' },
+        to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' },
+        lineGroupEl: g, lineEndGroupEl: g, render() {},
+      });
+    });
+    canvas.selectOnly = (n) => { canvas.selection = new Set([n]); };
+    return view;
+  };
+
+  await t('Tab adds a card the selected one leads to, in line after the others; Enter adds one beside it, room made below', async () => {
+    const view = mindCanvas({
+      nodes: [
+        card('g', -40, -40, 700, 400, { type: 'group', label: 'Theories' }),
+        card('root', 0, 100, 200, 60),
+        card('k1', 300, 0, 200, 60, { color: '4' }),
+        card('k2', 300, 100, 200, 60),
+        card('next', 300, 200, 200, 60),
+      ],
+      edges: [edge('root', 'k1', 'right', 'left'), edge('root', 'k2', 'right', 'left'), edge('root', 'next', 'right', 'left')],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    // Tab on the root: after its last child, joined to it.
+    const child = await mind.addChild(view, n('root'));
+    assert.deepStrictEqual([child.x, child.y, child.width, child.height], [300, 290, 200, 60]);
+    const joined = Array.from(view.canvas.edges.values()).find((e) => e.to.node === child);
+    assert.deepStrictEqual([joined.from.node.id, joined.from.side, joined.to.side], ['root', 'right', 'left']);
+    assert.ok(child.isEditing && view.canvas.selection.has(child), 'opened to type in');
+    assert.strictEqual(n('g').height, 400, 'it fits in its group as it is');
+    // Enter on the first child: the next one along, in its colour; what was below it moves down.
+    const sibling = await mind.addSibling(view, n('k1'));
+    assert.deepStrictEqual([sibling.x, sibling.y, sibling.color], [300, 90, '4']);
+    assert.deepStrictEqual([n('k2').y, n('next').y, child.y], [180, 280, 370]);
+    assert.strictEqual(n('g').height, 480, 'pushed out of its group, the group grows round them');
+    // A card with nothing after it grows the way its branch does.
+    const grand = await mind.addChild(view, n('k2'));
+    assert.deepStrictEqual([grand.x, grand.y], [580, 180]);
+    assert.ok(n('g').width > 700);
+    // Alt and an arrow: the next card that way.
+    view.canvas.selectOnly(n('k2'));
+    assert.strictEqual(mind.step(view, 'left'), n('root'));
+    view.canvas.selectOnly(n('k2'));
+    assert.strictEqual(mind.step(view, 'right').id, grand.id);
+    assert.ok(view.canvas.selection.has(grand));
+  });
+
+  await t('the keys only answer a selected card that isn’t being typed in', () => {
+    const view = mindCanvas({ nodes: [card('root', 0, 0, 200, 60)], edges: [] });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const state = { file: view.file };
+    mind.watched.set(view, state);
+    mind.mount(view, state);
+    const press = (key, target, extra) => {
+      const evt = new window.KeyboardEvent('keydown', Object.assign({ key, bubbles: true, cancelable: true }, extra));
+      (target || view.containerEl).dispatchEvent(evt);
+      return evt.defaultPrevented;
+    };
+    assert.strictEqual(press('Tab'), false, 'nothing selected');
+    view.canvas.selectOnly(view.canvas.nodes.get('root'));
+    const editor = view.contentEl.createDiv({ cls: 'cm-editor' });
+    assert.strictEqual(press('Tab', editor), false, 'typing');
+    assert.strictEqual(press('Tab', undefined, { ctrlKey: true }), false);
+    assert.strictEqual(press('Tab'), true);
+    assert.strictEqual(view.canvas.nodes.size, 2);
+    mind.cleanup(view, state);
+  });
+
+  await t('the folding menu offers what can be done now, and how folding works', () => {
+    const view = fakeCanvas({
+      nodes: [card('g', 0, 0, 400, 300, { type: 'group', label: 'G' }), card('a', 20, 20, 100, 50), card('r', 600, 0, 100, 50), card('k', 800, 0, 100, 50)],
+      edges: [edge('r', 'k', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const titles = () => fold.foldMenu(view, view.containerEl, null).items.map((i) => i.title);
+    assert.deepStrictEqual(titles(), ['Fold every branch', 'How folding works']);
+    fold.foldEverything(view, 'branches');
+    assert.deepStrictEqual(titles(), ['Unfold every branch', 'How folding works']);
+  });
+
+  await t('every branch at once, from the top of each tree, and every one unfolded — folds within folds too', () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('g', 0, 0, 600, 500, { type: 'group', label: 'G' }),
+        card('r', 40, 300, 100, 50),
+        card('k', 300, 300, 100, 50),
+        card('kk', 450, 300, 100, 50),
+        card('x', 40, 80, 100, 50),
+        card('y', 300, 80, 100, 50),
+      ],
+      edges: [edge('r', 'k', 'right', 'left'), edge('k', 'kk', 'right', 'left'), edge('x', 'y', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const ud = (id) => view.canvas.nodes.get(id).unknownData;
+    // k's own branch folded first: it goes into r's fold with it.
+    fold.foldBranches(view, [view.canvas.nodes.get('k')], true);
+    fold.foldEverything(view, 'branches');
+    assert.deepStrictEqual(['k', 'kk', 'y'].map((id) => ud(id).drTuck.by), ['r', 'k', 'x']);
+    assert.strictEqual(fold.foldStatus(R.canvasModel(view.canvas)).roots, 0);
+    fold.foldEverything(view, 'everything');
+    ['k', 'kk', 'y'].forEach((id) => assert.ok(!ud(id).drTuck, `${id} out`));
+  });
+
+  await t('a master card stays out of the folds above it, with what hangs from it, and folds its own branch', () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('m', 400, 0, 100, 50), card('k', 600, 0, 100, 50), card('b', 200, 100, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'm', 'right', 'left'), edge('m', 'k', 'right', 'left'), edge('r', 'b', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    // Offered for a card hanging from another, from its right-click menu.
+    let menu = new Menu();
+    fold.addMenuItems(menu, [n('m')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch', 'Master card']);
+    menu.items[1].click();
+    assert.strictEqual(n('m').unknownData.drMaster, true);
+    assert.strictEqual(view.canvas.saves, 1, 'saved, a step of Undo');
+    assert.ok(n('m').nodeEl.querySelector('.dr-master-mark'));
+    // Not for one at the top of its tree: there's no fold above it.
+    menu = new Menu();
+    fold.addMenuItems(menu, [n('r')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch']);
+    fold.foldBranches(view, [n('r')], true);
+    assert.deepStrictEqual(['a', 'b', 'm', 'k'].map((id) => !!n(id).unknownData.drTuck), [true, true, false, false]);
+    assert.strictEqual(n('r').nodeEl.querySelector('.dr-branch-knob').textContent, '+2');
+    // Everything at once: from the top of each tree, and from each master card.
+    fold.foldEverything(view, 'everything');
+    fold.foldEverything(view, 'branches');
+    assert.deepStrictEqual(['a', 'b', 'm', 'k'].map((id) => (n(id).unknownData.drTuck || {}).by || null), ['r', 'r', null, 'm']);
+    fold.foldEverything(view, 'everything');
+    fold.setMaster(view, [n('m')], false);
+    assert.ok(!('drMaster' in n('m').unknownData));
+    assert.ok(!n('m').nodeEl.querySelector('.dr-master-mark'));
+  });
+
+  await t('unfolding moves back exactly what folding moved, whatever came between; closing up stops short of a card in the way', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('r', 0, 100, 100, 50),
+        card('a', 200, 100, 100, 50),
+        card('a1', 400, 0, 100, 50),
+        card('a2', 400, 200, 100, 50),
+        card('b', 100, 300, 150, 50),
+        card('b1', 400, 300, 100, 50),
+        card('fixed', 100, 200, 60, 40),
+      ],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    const where = () => Array.from(view.canvas.nodes.values()).map((c) => [c.id, c.x, c.y]);
+    const start = where();
+    await fold.foldBranches(view, [n('a')], true);
+    // a's branch gave back 100 below it, but b closes up only to 20 short of the card in its way.
+    assert.deepStrictEqual([n('b').y, n('b1').y, n('fixed').y], [260, 260, 200]);
+    assert.deepStrictEqual(n('a').unknownData.drRoom, { b: [0, -40, 0, 0], b1: [0, -40, 0, 0] });
+    await fold.foldBranches(view, [n('b')], true);
+    // a opened while b's still folded: b1 comes out where it would have been.
+    await fold.foldBranches(view, [n('a')], false);
+    assert.ok(!('drRoom' in n('a').unknownData));
+    await fold.foldBranches(view, [n('b')], false);
+    assert.deepStrictEqual(where(), start);
+  });
+
+  await t('a fold that moved nothing moves nothing back, even with closing the gaps switched on since', async () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('b', 0, 100, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left')],
+    });
+    const off = new R.CanvasFold({ settings: Object.assign({}, settings, { canvasCloseGaps: false }), app: {} });
+    off.watched.set(view, { file: view.file });
+    await off.foldBranches(view, [view.canvas.nodes.get('r')], true);
+    assert.deepStrictEqual(view.canvas.nodes.get('r').unknownData.drRoom, {});
+    const on = new R.CanvasFold({ settings, app: {} });
+    on.watched.set(view, { file: view.file });
+    await on.foldBranches(view, [view.canvas.nodes.get('r')], false);
+    assert.deepStrictEqual([view.canvas.nodes.get('a').x, view.canvas.nodes.get('b').y], [200, 100]);
+  });
+
+  await t('the canvas finds the folded card under the pointer, not one tucked into it: arrows join the card that’s there', () => {
+    const view = fakeCanvas({ nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50)], edges: [edge('r', 'a', 'right', 'left')] });
+    const c = view.canvas;
+    view.canvas.nodes.get('r').zIndex = 1;
+    view.canvas.nodes.get('a').zIndex = 2;
+    // As the canvas does it: from an index of the cards' boxes, the one on top.
+    const inBox = (n, b) => { const o = n.getBBox(); return o.minX <= b.maxX && o.maxX >= b.minX && o.minY <= b.maxY && o.maxY >= b.minY; };
+    Object.setPrototypeOf(c, {
+      getIntersectingNodes(b) { return Array.from(this.nodes.values()).filter((n) => inBox(n, b)); },
+      hitTestNode(pos) {
+        const found = this.getIntersectingNodes({ minX: pos.x, minY: pos.y, maxX: pos.x, maxY: pos.y });
+        return found.sort((x, y) => y.zIndex - x.zIndex)[0] || null;
+      },
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    fold.foldBranches(view, [c.nodes.get('r')], true);
+    assert.strictEqual(c.nodes.get('a').getBBox, R.tuckedBBox);
+    assert.strictEqual(c.hitTestNode({ x: 50, y: 25 }).id, 'r');
+    assert.deepStrictEqual(c.getIntersectingNodes({ minX: -10, minY: -10, maxX: 400, maxY: 100 }).map((n) => n.id), ['r']);
+    fold.cleanup(view);
+    assert.ok(!Object.prototype.hasOwnProperty.call(c, 'hitTestNode'), 'the canvas finds cards as it did');
+    assert.ok(!Object.prototype.hasOwnProperty.call(c, 'getIntersectingNodes'));
   });
 
   console.log(`\n${passed} passed`);

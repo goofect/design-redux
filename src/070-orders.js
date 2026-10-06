@@ -30,7 +30,7 @@ function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-const PATH_KEYED = ['coverColors', 'canvasLegends', 'canvasAlignments'];
+const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'albumSorts'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -45,6 +45,14 @@ const SETTINGS_MIGRATIONS = [
     to: 2,
     run(saved) {
       if (saved.coverFallback === undefined || saved.coverFallback === 'icon') saved.coverFallback = 'title';
+    },
+  },
+  {
+    // Album covers drawn for each name, where the name set as a title
+    // was the default.
+    to: 3,
+    run(saved) {
+      if (saved.coverFallback === undefined || saved.coverFallback === 'title') saved.coverFallback = 'art';
     },
   },
 ];
@@ -134,6 +142,21 @@ class Orders {
     this.settings.coverColors = colors;
     // Through saveSettings, so the strip and open screens repaint too.
     return this.plugin.saveSettings();
+  }
+
+  /** The drawn cover's design picked for one folder or note, or null for the one its name gives it. */
+  coverDesign(target) {
+    const saved = target ? (this.settings.coverDesigns || {})[target.path] : null;
+    return saved && coverDesignById(saved) ? saved : null;
+  }
+
+  /** A design and a colour together, saved once. */
+  setCover(target, design, color) {
+    const designs = Object.assign({}, this.settings.coverDesigns || {});
+    if (design && coverDesignById(design)) designs[target.path] = design;
+    else delete designs[target.path];
+    this.settings.coverDesigns = designs;
+    return this.setCoverColor(target, color);
   }
 
   /** A file or folder renamed or moved: every arrangement naming it follows. */

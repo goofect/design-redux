@@ -2,12 +2,12 @@
 /* A canvas as a hierarchy                                             */
 /*                                                                     */
 /* Cards hang under cards by their arrows and sit inside groups; a     */
-/* fold tucks some of them away into the card or group folded. All of  */
-/* this works on the canvas as plain records — { id, type, x, y,       */
-/* width, height, label, text, file, color, tuck, fold } and arrows    */
-/* { from, to, fromSide, toSide, fromEnd, toEnd } — so it's the same   */
-/* for a live canvas, its file and a test. Nothing here changes the    */
-/* records unless it says so.                                          */
+/* fold tucks some of them away into the card folded. All of this     */
+/* works on the canvas as plain records — { id, type, x, y, width,     */
+/* height, label, text, file, color, tuck, fold, room, master } and    */
+/* arrows { from, to, fromSide, toSide, fromEnd, toEnd } — so it's the */
+/* same for a live canvas, its file and a test. Nothing here changes   */
+/* the records unless it says so.                                      */
 /* ------------------------------------------------------------------ */
 
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
@@ -17,6 +17,28 @@ const TUCK_KEY = 'drTuck';
 function tuckOf(node) {
   const kept = node && node.unknownData && node.unknownData[TUCK_KEY];
   return kept && typeof kept.by === 'string' && typeof kept.dx === 'number' && typeof kept.dy === 'number' ? kept : null;
+}
+
+/*
+ * Kept on a card whose branch is folded: what the fold moved to close up
+ * the room it left — id -> [dx, dy, dw, dh] — so unfolding puts exactly
+ * that back, whatever else was folded or opened in between.
+ */
+const ROOM_KEY = 'drRoom';
+
+/* Kept on a master card: folds above it leave it, and what hangs from it, out. */
+const MASTER_KEY = 'drMaster';
+
+/** A fold's room — id -> [dx, dy, dw, dh] — or null for a fold that noted none. */
+function roomOf(kept) {
+  if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return null;
+  // Empty, it's a fold that moved nothing: there's nothing to put back.
+  const room = {};
+  Object.keys(kept).forEach((id) => {
+    const d = kept[id];
+    if (Array.isArray(d) && d.length === 4 && d.every((v) => typeof v === 'number' && isFinite(v))) room[id] = d.slice();
+  });
+  return room;
 }
 
 /** A canvas's cards and arrows as records, read from the live canvas. */
@@ -46,6 +68,8 @@ function canvasModel(canvas) {
         color: node.color !== undefined ? node.color : data.color,
         tuck: tuckOf(node),
         fold: foldOf(node),
+        room: roomOf(node.unknownData && node.unknownData[ROOM_KEY]),
+        master: !!(node.unknownData && node.unknownData[MASTER_KEY]),
         node,
       });
     });
@@ -80,6 +104,8 @@ function modelFromData(data) {
     Object.assign({}, n, {
       tuck: n[TUCK_KEY] && typeof n[TUCK_KEY].by === 'string' ? n[TUCK_KEY] : null,
       fold: n[FOLD_KEY] && typeof n[FOLD_KEY].height === 'number' ? n[FOLD_KEY] : null,
+      room: roomOf(n[ROOM_KEY]),
+      master: !!n[MASTER_KEY],
     })
   );
   const edges = ((data && data.edges) || []).map((e) => ({
@@ -194,11 +220,12 @@ function shownChildren(model, links, id) {
 }
 
 /**
- * The cards a card's branch fold tucks away: everything below it by its
- * arrows, but not a card that also hangs from a shown card outside the
- * branch — that one's still reached another way. Ids, in reach order.
+ * A card's branch: everything below it by its arrows, but not a card
+ * that also hangs from a shown card outside the branch — that one's
+ * still reached another way. For a fold (`folding`), a master card stops
+ * it: the master, and what hangs from it, stay out. Ids, in reach order.
  */
-function branchOf(model, rootId, links) {
+function branchOf(model, rootId, links, folding) {
   links = links || arrowLinks(model);
   const found = [];
   const set = new Set();
@@ -207,7 +234,7 @@ function branchOf(model, rootId, links) {
     const id = queue.shift();
     (links.children.get(id) || []).forEach((c) => {
       const rec = model.byId.get(c);
-      if (!rec || rec.tuck || c === rootId || set.has(c)) return;
+      if (!rec || rec.tuck || c === rootId || set.has(c) || (folding && rec.master)) return;
       set.add(c);
       found.push(c);
       queue.push(c);
@@ -272,6 +299,11 @@ function childrenLie(model, id, kids) {
   return dy >= 0 ? 'bottom' : 'top';
 }
 
+/** What a card's branch fold would tuck away: its branch, stopping at master cards. */
+function foldableBranch(model, rootId, links) {
+  return branchOf(model, rootId, links, true);
+}
+
 /** The side one card's branch grows from. */
 function branchSide(model, rootId, links) {
   return branchSides(model, links).get(rootId) || 'right';
@@ -287,74 +319,149 @@ function sideAxes(side) {
 
 const TIDY_DEPTH_GAP = 80;
 const TIDY_SIBLING_GAP = 30;
+/* Between cards that hang from different cards: a little more, so each card's own read as a set. */
+const TIDY_COUSIN_GAP = 50;
 
 /**
- * A branch laid out as a tree, growing from the side its arrows leave:
- * each card's children in a row beyond it, in the order they're in now,
- * centred on it, with room for their own children. The card itself stays
- * where it is. Only the cards its fold would take are moved — one that
- * also hangs from elsewhere is left be. id -> { x, y }.
+ * Whether one of a card's children lies clearly on the far side of it from
+ * the way its branch grows — past its other edge, or joined to that edge —
+ * so a mind map growing both ways keeps both.
+ */
+function liesOpposite(root, child, side, edgeSide) {
+  const cx = child.x + child.width / 2;
+  const cy = child.y + child.height / 2;
+  const beyond =
+    side === 'right' ? cx < root.x : side === 'left' ? cx > root.x + root.width : side === 'bottom' ? cy < root.y : cy > root.y + root.height;
+  if (beyond) return true;
+  const ahead =
+    side === 'right' ? cx > root.x + root.width : side === 'left' ? cx < root.x : side === 'bottom' ? cy > root.y + root.height : cy < root.y;
+  return !ahead && edgeSide === OPPOSITE_SIDE[side];
+}
+
+const OPPOSITE_SIDE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+
+/**
+ * A branch laid out as a tidy tree. Each card's children sit in a row
+ * beyond it, in the order they're in now, with the card centred on them;
+ * cards the same number of steps from the root line up in one column (or
+ * row), each level as deep as its deepest card. Branches are packed as
+ * close as they'll go without touching at any level, so a small branch
+ * tucks in beside a big one rather than waiting till it's past. Children
+ * lying on the root's other side grow the other way, so a mind map
+ * spreading both ways keeps both. The root stays where it is; only the
+ * cards its fold would take are moved — one that also hangs from
+ * elsewhere is left be. id -> { x, y }, with `sides` (id -> the way
+ * each card's branch grows) and `both` (whether it grows both ways).
  */
 function tidyBranch(model, rootId, side, links) {
   links = links || arrowLinks(model);
   const root = model.byId.get(rootId);
   const out = new Map();
+  out.sides = new Map();
+  out.both = false;
   if (!root) return out;
   const mine = new Set(branchOf(model, rootId, links));
-  const vertical = side === 'bottom' || side === 'top';
-  const breadth = (n) => (vertical ? n.width : n.height);
-  const middle = (n) => (vertical ? n.x + n.width / 2 : n.y + n.height / 2);
+  // The tree, each card once, under the first card to reach it.
   const kids = new Map();
   const seen = new Set([rootId]);
   const queue = [root];
   while (queue.length) {
     const n = queue.shift();
     const cs = shownChildren(model, links, n.id).filter((c) => mine.has(c.id) && !seen.has(c.id));
-    cs.sort((a, b) => middle(a) - middle(b));
     cs.forEach((c) => seen.add(c.id));
     kids.set(n.id, cs);
     cs.forEach((c) => queue.push(c));
   }
-  const room = new Map();
-  const measure = (n) => {
-    const cs = kids.get(n.id) || [];
-    const sum = cs.reduce((s, c, i) => s + measure(c) + (i ? TIDY_SIBLING_GAP : 0), 0);
-    const r = Math.max(breadth(n), sum);
-    room.set(n.id, r);
-    return r;
-  };
-  measure(root);
-  const place = (n, nx, ny) => {
-    const cs = kids.get(n.id) || [];
-    if (!cs.length) return;
-    const total = cs.reduce((s, c, i) => s + room.get(c.id) + (i ? TIDY_SIBLING_GAP : 0), 0);
-    let start = (vertical ? nx + n.width / 2 : ny + n.height / 2) - total / 2;
-    cs.forEach((c) => {
-      const across = start + (room.get(c.id) - breadth(c)) / 2;
-      let cx;
-      let cy;
-      if (side === 'bottom') {
-        cx = across;
-        cy = ny + n.height + TIDY_DEPTH_GAP;
-      } else if (side === 'top') {
-        cx = across;
-        cy = ny - TIDY_DEPTH_GAP - c.height;
-      } else if (side === 'right') {
-        cx = nx + n.width + TIDY_DEPTH_GAP;
-        cy = across;
-      } else {
-        cx = nx - TIDY_DEPTH_GAP - c.width;
-        cy = across;
-      }
-      cx = Math.round(cx);
-      cy = Math.round(cy);
-      out.set(c.id, { x: cx, y: cy });
-      place(c, cx, cy);
-      start += room.get(c.id) + TIDY_SIBLING_GAP;
-    });
-  };
-  place(root, root.x, root.y);
+  // The root's children, by the way they grow.
+  const back = OPPOSITE_SIDE[side] || 'left';
+  const ways = { [side]: [], [back]: [] };
+  (kids.get(rootId) || []).forEach((c) => {
+    const edge = model.edges.find((e) => e.from === rootId && e.to === c.id);
+    ways[liesOpposite(root, c, side, edge && edge.fromSide) ? back : side].push(c);
+  });
+  out.both = ways[back].length > 0 && ways[side].length > 0;
+  [side, back].forEach((way) => {
+    if (ways[way].length) tidyOneWay(root, way, ways[way], kids, out);
+  });
   return out;
+}
+
+/** One way of a tidy tree: the root's children that grow that way, and all below them. */
+function tidyOneWay(root, way, first, kids, out) {
+  const vertical = way === 'top' || way === 'bottom';
+  const forward = way === 'bottom' || way === 'right';
+  const across = vertical ? 'x' : 'y';
+  const deep = (n) => (vertical ? n.height : n.width);
+  const breadth = (n) => (vertical ? n.width : n.height);
+  const middle = (n) => n[across] + breadth(n) / 2;
+  const kidsOf = (n) => (n === root ? first : kids.get(n.id) || []).slice().sort((a, b) => middle(a) - middle(b));
+  // How deep each level is: as deep as its deepest card.
+  const depths = [];
+  const measure = (n, level) =>
+    kidsOf(n).forEach((c) => {
+      depths[level] = Math.max(depths[level] || 0, deep(c));
+      measure(c, level + 1);
+    });
+  measure(root, 1);
+  // Each branch's outline, level by level, about its card's middle; and
+  // each child's place across from its parent's middle.
+  const offset = new Map();
+  const outline = (n, level) => {
+    const shape = [];
+    shape[level] = [-breadth(n) / 2, breadth(n) / 2];
+    const cs = kidsOf(n);
+    if (!cs.length) return shape;
+    let merged = null;
+    const at = [];
+    cs.forEach((c) => {
+      const sub = outline(c, level + 1);
+      if (!merged) {
+        at.push(0);
+        merged = sub.map((r) => r && r.slice());
+        return;
+      }
+      // As close as it goes without touching what's beside it at any level.
+      let shift = -Infinity;
+      sub.forEach((r, lv) => {
+        if (!r || !merged[lv]) return;
+        const gap = lv === level + 1 ? TIDY_SIBLING_GAP : TIDY_COUSIN_GAP;
+        shift = Math.max(shift, merged[lv][1] + gap - r[0]);
+      });
+      if (shift === -Infinity) shift = 0;
+      at.push(shift);
+      sub.forEach((r, lv) => {
+        if (!r) return;
+        const moved = [r[0] + shift, r[1] + shift];
+        merged[lv] = merged[lv] ? [Math.min(merged[lv][0], moved[0]), Math.max(merged[lv][1], moved[1])] : moved;
+      });
+    });
+    // The card centred on its children.
+    const centre = (at[0] + at[at.length - 1]) / 2;
+    cs.forEach((c, i) => offset.set(c.id, at[i] - centre));
+    merged.forEach((r, lv) => {
+      if (r && lv !== level) shape[lv] = [r[0] - centre, r[1] - centre];
+    });
+    return shape;
+  };
+  outline(root, 0);
+  // Where each level begins, out from the root.
+  const starts = [];
+  let edge = forward ? (vertical ? root.y + root.height : root.x + root.width) + TIDY_DEPTH_GAP : (vertical ? root.y : root.x) - TIDY_DEPTH_GAP;
+  for (let level = 1; level < depths.length; level++) {
+    starts[level] = edge;
+    edge = forward ? edge + depths[level] + TIDY_DEPTH_GAP : edge - depths[level] - TIDY_DEPTH_GAP;
+  }
+  const place = (n, centre, level) =>
+    kidsOf(n).forEach((c) => {
+      const mid = centre + offset.get(c.id);
+      const a = Math.round(mid - breadth(c) / 2);
+      // Lined up on the edge nearest the root.
+      const d = Math.round(forward ? starts[level + 1] : starts[level + 1] - deep(c));
+      out.set(c.id, vertical ? { x: a, y: d } : { x: d, y: a });
+      out.sides.set(c.id, way);
+      place(c, mid, level + 1);
+    });
+  place(root, middle(root), 0);
 }
 
 /* -- the outline ------------------------------------------------------- */
@@ -368,18 +475,31 @@ function canvasCardLabel(rec) {
     return (name || 'File') + (rec.subpath ? ` › ${String(rec.subpath).replace(/^#+/, '')}` : '');
   }
   if (rec.type === 'link') return String(rec.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') || 'Link';
-  const body = String(rec.text || '').replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '');
-  const line = body.split('\n').map((l) => l.trim()).find((l) => l) || '';
-  const plain = line
+  const line = markdownLines(rec.text)[0] || '';
+  const plain = plainMarkdownLine(line);
+  return plain.length > 120 ? plain.slice(0, 119) + '…' : plain || 'Empty card';
+}
+
+/** Markdown's lines that hold something, its front matter left out. */
+function markdownLines(text) {
+  return String(text || '')
+    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l);
+}
+
+/** One line of markdown as the words it shows: no marks, links as their text. */
+function plainMarkdownLine(line) {
+  return String(line || '')
     .replace(/^#{1,6}\s+/, '')
-    .replace(/^>\s*/, '')
+    .replace(/^>\s*(\[![^\]]*\][+-]?\s*)?/, '')
     .replace(/^[-*+]\s+(\[.\]\s+)?/, '')
     .replace(/^\d+[.)]\s+/, '')
     .replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, '$2')
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/[*_`~=]/g, '')
     .trim();
-  return plain.length > 120 ? plain.slice(0, 119) + '…' : plain || 'Empty card';
 }
 
 /**
@@ -422,7 +542,7 @@ function outlineTree(model, links) {
       type: n.type,
       label: canvasCardLabel(n),
       color: n.color,
-      folded: isGroupRecord(n) ? !!n.fold : count > 0,
+      folded: !isGroupRecord(n) && count > 0,
       count,
       children: under.filter((c) => !placed.has(c.id)).map(item),
     };

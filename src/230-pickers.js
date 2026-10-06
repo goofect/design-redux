@@ -79,8 +79,9 @@ class NamePrompt extends Modal {
 
 /**
  * A colour for a generated cover: a swatch, the theme's accent, one of
- * your own, or back to automatic. The preview is the cover as it will
- * look, so the choice is made by eye rather than by name.
+ * your own, or back to automatic — and, where covers are drawn, which
+ * design is drawn. The preview is the cover as it will look, so the
+ * choice is made by eye rather than by name.
  */
 class CoverColorModal extends Modal {
   constructor(plugin, target, name) {
@@ -90,6 +91,18 @@ class CoverColorModal extends Modal {
     this.name = name;
     // Null is automatic: whatever the settings would give it.
     this.value = plugin.orders.coverColor(target);
+    // Null, too: the design its name gives it.
+    this.design = plugin.orders.coverDesign(target);
+  }
+
+  get drawn() {
+    return this.plugin.settings.coverFallback === 'art';
+  }
+
+  /** How it's drawn without an image: a cover drawn in the design picked, or as the settings say. */
+  look() {
+    if (this.drawn) return this.design ? { art: this.name, design: this.design } : { art: this.name };
+    return blankLook(this.plugin.settings, this.name);
   }
 
   /** What it has without a colour of its own: 'icon', or a tint. */
@@ -111,13 +124,56 @@ class CoverColorModal extends Modal {
       null,
       this.glyph,
       tint === 'icon' ? null : { name: this.name, tint: tint },
-      tint === 'icon' ? blankLook(this.plugin.settings, this.name) : null
+      tint === 'icon' || this.drawn ? this.look() : null
     );
+    if (this.designs) this.paintDesigns(tint);
+  }
+
+  /** Every design, drawn small in the colour chosen, to pick from. */
+  designGrid(contentEl) {
+    contentEl.createDiv({ cls: 'dr-color-section', text: 'Design' });
+    const grid = contentEl.createDiv({ cls: 'dr-design-grid' });
+    grid.setAttribute('role', 'radiogroup');
+    grid.setAttribute('aria-label', 'Cover design');
+    roveFocus(grid, '.dr-design-swatch');
+    this.designs = [null].concat(COVER_DESIGNS.map((d) => d.id)).map((id) => {
+      const design = id ? coverDesignById(id) : namedCoverDesign(this.name);
+      const label = id ? design.name : `Automatic · ${design.name}`;
+      const el = grid.createEl('button', { cls: 'dr-design-swatch' });
+      el.setAttribute('role', 'radio');
+      el.setAttribute('aria-label', label);
+      el.setAttribute('title', label);
+      el.addEventListener('click', () => this.pickDesign(id));
+      el.addEventListener('dblclick', () => {
+        this.pickDesign(id);
+        this.save();
+      });
+      return { id, el };
+    });
+  }
+
+  paintDesigns(tint) {
+    this.designs.forEach(({ id, el }) => {
+      el.empty();
+      el.removeAttribute('style');
+      el.className = 'dr-design-swatch';
+      const art = el.createSpan({ cls: 'dr-design-art' });
+      drawnArt(art, id ? { art: this.name, design: id } : { art: this.name }, tint);
+      if (!id) setIcon(el.createSpan({ cls: 'dr-color-mark' }), 'sparkles');
+      const on = id === this.design;
+      el.setAttribute('aria-checked', String(on));
+      el.toggleClass('is-selected', on);
+    });
+  }
+
+  pickDesign(id) {
+    this.design = id || null;
+    this.paintPreview(this.value || this.automatic());
   }
 
   onOpen() {
     this.modalEl.addClass('dr-color-modal');
-    this.titleEl.setText('Cover colour');
+    this.titleEl.setText(this.drawn ? 'Cover' : 'Cover colour');
     const { contentEl } = this;
 
     const head = contentEl.createDiv({ cls: 'dr-color-head' });
@@ -130,6 +186,10 @@ class CoverColorModal extends Modal {
       text: 'Shown while there is no cover image.',
     });
 
+    if (this.drawn) {
+      this.designGrid(contentEl);
+      contentEl.createDiv({ cls: 'dr-color-section', text: 'Colour' });
+    }
     const grid = contentEl.createDiv({ cls: 'dr-color-swatches' });
     grid.setAttribute('role', 'radiogroup');
     grid.setAttribute('aria-label', 'Cover colour');
@@ -137,7 +197,7 @@ class CoverColorModal extends Modal {
     this.swatches = [];
 
     const auto = this.automatic();
-    this.swatch(grid, null, 'Automatic', auto, auto === 'icon' ? this.glyph : 'sparkles');
+    this.swatch(grid, null, this.drawn ? 'Its own colours' : 'Automatic', auto, auto === 'icon' && !this.drawn ? this.glyph : 'sparkles');
     this.swatch(grid, 'accent', 'Accent colour', 'accent');
     COVER_SWATCHES.forEach(([label, hex]) => this.swatch(grid, hex, label, hex));
     this.customSwatch(grid);
@@ -163,7 +223,11 @@ class CoverColorModal extends Modal {
     el.setAttribute('title', label);
     // The plain icon, where that's what automatic means.
     const dot = el.createSpan({ cls: paint === 'icon' ? 'dr-color-dot is-icon' : 'dr-color-dot is-generated' });
-    if (paint !== 'icon') paintTint(dot, paint, this.name);
+    if (paint === 'icon' && value === null && this.drawn) {
+      // Its own colours: the cover as its name draws it.
+      dot.className = 'dr-color-dot';
+      drawnArt(dot, { art: this.name });
+    } else if (paint !== 'icon') paintTint(dot, paint, this.name);
     if (icon) setIcon(dot.createSpan({ cls: 'dr-color-mark' }), icon);
     // Read when clicked: the custom swatch's colour changes as it's picked.
     const entry = { el, value, label, onPick: null };
@@ -238,6 +302,7 @@ class CoverColorModal extends Modal {
 
   automaticNote() {
     const style = this.plugin.settings.coverFallback || 'icon';
+    if (style === 'art') return ' · its own colours';
     if (style === 'accent') return ' · the accent colour';
     if (style === 'custom') return ' · the colour in settings';
     if (style === 'name') return ' · picked from the name';
@@ -248,8 +313,10 @@ class CoverColorModal extends Modal {
 
   async save() {
     const value = this.value;
+    const design = this.design;
     this.close();
-    await this.plugin.orders.setCoverColor(this.target, value);
+    if (this.drawn) await this.plugin.orders.setCover(this.target, design, value);
+    else await this.plugin.orders.setCoverColor(this.target, value);
   }
 
   onClose() {

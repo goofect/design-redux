@@ -45,6 +45,11 @@ function compatibility(app) {
       without: 'properties are read from the notes alone',
     },
     {
+      what: 'Dropping a note or image from the file list onto the library or a cover',
+      ok: has(() => typeof app.dragManager === 'object' && app.dragManager !== null),
+      without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
+    },
+    {
       what: 'Knowing whether Canvas is switched on',
       ok: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
       without: 'New canvas is always offered',
@@ -56,7 +61,7 @@ function compatibility(app) {
       pending: 'Checked while a canvas is open.',
     },
     {
-      what: 'Folding groups and branches on a canvas, and its outline',
+      what: 'Folding branches on a canvas, and its outline',
       ok: open
         ? has(() => {
             const c = open.canvas;
@@ -72,6 +77,25 @@ function compatibility(app) {
           })
         : null,
       without: 'arrows to tucked cards aren’t drawn to their fold, and a box dragged round a fold can take its cards',
+      pending: 'Checked while a canvas is open.',
+    },
+    {
+      what: 'Arrow styles on a canvas',
+      ok: open
+        ? has(() => {
+            const edge = open.canvas.edges.values().next().value;
+            if (!edge) return true;
+            const proto = Object.getPrototypeOf(edge);
+            return (
+              typeof proto.updatePath === 'function' &&
+              typeof proto.getCenter === 'function' &&
+              typeof proto.getBBox === 'function' &&
+              !!edge.path &&
+              !!edge.path.display
+            );
+          })
+        : null,
+      without: 'arrows are drawn as the canvas draws them',
       pending: 'Checked while a canvas is open.',
     },
     {

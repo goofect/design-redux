@@ -191,6 +191,38 @@ test('every line left out still has a route, each step narrower (random vaults)'
   }
 });
 
+test('which way links run comes before how many there are: a much-linked note stays between the notes it sits between', () => {
+  // Ministerial is linked both ways with many notes, which alone would make it the broadest.
+  const resolved = { [W]: { [M]: 1, [I]: 1 }, [M]: { [I]: 1 } };
+  [1, 2, 3, 4, 5].forEach((n) => {
+    const x = `Politics/Case ${n}.md`;
+    resolved[x] = { [M]: 1 };
+    resolved[M][x] = 1;
+  });
+  const plan = R.routeGraph(graphData(resolved), R.linkStats(resolved));
+  assert.deepStrictEqual(sorted(plan.hidden.get(W) || []), [I], 'Westminster reaches Individual through Ministerial');
+  assert.ok(lines(plan.nodes).has(key(M, I)), 'not Ministerial to Individual through Westminster');
+});
+
+test('notes nothing tells apart are left as they are, not routed by a guess', () => {
+  const a = 'Ideas/Liberty.md';
+  const b = 'Ideas/Equality.md';
+  const c = 'Ideas/Fraternity.md';
+  const resolved = { [a]: { [b]: 1, [c]: 1 }, [b]: { [a]: 1, [c]: 1 }, [c]: { [a]: 1, [b]: 1 } };
+  const plan = R.routeGraph(graphData(resolved), R.linkStats(resolved));
+  assert.strictEqual(plan.hidden.size, 0);
+});
+
+test('a line goes through two notes between, when they link one to the next', () => {
+  const K = 'Politics/Cabinet confidence.md';
+  const resolved = { [W]: { [M]: 1, [K]: 1 }, [M]: { [C]: 1 }, [C]: { [K]: 1 } };
+  const plan = R.routeGraph(graphData(resolved), R.linkStats(resolved));
+  assert.deepStrictEqual(sorted(plan.hidden.get(W)), [K]);
+  const lit = R.routeLight(plan, W);
+  assert.deepStrictEqual(sorted(lit.nodes), sorted([M, C, K]));
+  assert.deepStrictEqual(sorted(lit.links), sorted([key(W, M), key(M, C), key(C, K)]));
+});
+
 test('sizes stay as they were: counted as Obsidian counts a note’s lines', () => {
   const nodes = graphData({ [W]: { [M]: 1, [I]: 1 }, [M]: { [I]: 1, [W]: 1 } });
   assert.deepStrictEqual(R.linkWeights(nodes), { [W]: 3, [M]: 3, [I]: 2 });
@@ -239,6 +271,17 @@ test('a property decides only what it says: no line through a note not shown, or
   const other = { [W]: { [C]: 1, [I]: 1 }, [C]: { [I]: 1 } };
   plan = R.routeGraph(graphData(other), R.linkStats(other), new Map([[X(1), [W]]]));
   assert.ok(!lines(plan.nodes).has(key(W, I)), 'no note shown names one: worked out from the links');
+});
+
+test('a property decides for the notes it places; the rest are still worked out from their links', () => {
+  const A = 'Economics/Markets.md';
+  const B = 'Economics/Prices.md';
+  const D = 'Economics/Inflation.md';
+  const resolved = Object.assign({}, told, { [A]: { [B]: 1, [D]: 1 }, [B]: { [D]: 1 } });
+  const plan = R.routeGraph(graphData(resolved), R.linkStats(resolved), sitsUnder);
+  assert.deepStrictEqual(sorted(plan.hidden.get(W)), [I], 'as the property says');
+  assert.deepStrictEqual(sorted(plan.hidden.get(A)), [D], 'and Markets reaches Inflation through Prices');
+  assert.deepStrictEqual(sorted(R.routeLight(plan, A).links), sorted([key(A, B), key(B, D)]));
 });
 
 /* -- a graph drawn the way Obsidian's is ------------------------------ */

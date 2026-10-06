@@ -13,6 +13,8 @@ class DesignRedux extends Plugin {
     this.bulk = new BulkEdits(this);
     this.features = [
       new Library(this),
+      new ListKeys(this),
+      new SidebarDrop(this),
       new ActionsMenu(this),
       new PropertiesPanel(this),
       new ContextStrip(this),
@@ -20,6 +22,7 @@ class DesignRedux extends Plugin {
       new MenuFilter(this),
       new SettingsButton(this),
       new CoverImages(this),
+      new CoverDrop(this),
       new ImageRouter(this),
       new PropertyClipboard(this),
       new MarkedLists(this),
@@ -30,9 +33,15 @@ class DesignRedux extends Plugin {
       new QuietLinks(this),
       new CanvasLegend(this),
       new CanvasAlign(this),
+      new CanvasArrows(this),
+      new CanvasArrange(this),
+      new CanvasMindMap(this),
       new CanvasFold(this),
       new CanvasBranches(this),
       new CanvasOutline(this),
+      new CanvasFind(this),
+      new CanvasFocus(this),
+      new CanvasDuplicate(this),
       new Diagnostics(this),
       new BulkEditing(this),
     ];
@@ -232,14 +241,15 @@ class DesignRedux extends Plugin {
 
   /**
    * Artwork for a folder, which has no properties of its own: its
-   * folder note's cover, then an image called "cover" inside it. Shared
+   * folder note's cover (or first image, where the setting has it), then
+   * an image called "cover" inside it. Shared
    * by the browse view and the sidebar, so a folder looks the same in
    * both.
    */
   folderCoverSrc(folder) {
     const note = this.folderNote(folder);
     if (note) {
-      const src = resolveCover(this.app, note, this.settings.coverProperty);
+      const src = noteCoverSrc(this, note);
       if (src) return src;
     }
     const named = (folder.children || []).find(

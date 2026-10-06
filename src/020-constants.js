@@ -30,6 +30,8 @@ const DEFAULTS = {
   library: true,
   singleArea: false,
   contextStrip: true,
+  // The strip says where the note falls in its album: "3 of 12".
+  stripPlace: true,
   onePage: false,
   pinsExpanded: false,
   albumNoteLimit: 8,
@@ -42,6 +44,14 @@ const DEFAULTS = {
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
   keepOwnOrder: { recents: true, pinned: true },
+  // An album sorted from its filter button keeps that order, by its path.
+  albumSortMemory: true,
+  // { folderPath: sort key }
+  albumSorts: {},
+  // In lists, typing a name jumps to it and Space previews the note in focus.
+  typeToJump: true,
+  // A note dragged onto a folder in the library, or from a list onto the file list's, moves there.
+  sidebarDrop: true,
   tableColumns: 'domain, status',
   categoryProperty: 'domain',
   recentSearches: [],
@@ -76,16 +86,23 @@ const DEFAULTS = {
   albumOrders: {},
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
-  // What stands in for a missing cover: 'icon', the folder or note's
-  // icon; 'soft', that icon on a soft colour from its name; or a gradient
-  // with initials, coloured 'name', 'accent' or 'custom'.
-  coverFallback: 'title',
+  // What stands in for a missing cover: 'art', an album cover drawn for
+  // its name; 'title', its name set as a title; 'icon', the folder or
+  // note's icon; 'soft', that icon on a soft colour from its name; or a
+  // gradient with initials, coloured 'name', 'accent' or 'custom'.
+  coverFallback: 'art',
   // A note without a cover shows the cover of the folder it's in.
   coverFromFolder: false,
+  // A note without a cover shows the first image in it; a folder, its folder note's.
+  coverFromFirstImage: false,
+  // An image dropped on a cover becomes it.
+  coverDrop: true,
   // The one colour used when the fallback is 'custom'.
   generatedCoverColor: '#fa2d48',
   // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
   coverColors: {},
+  // { path: designId } — a drawn cover's design, picked for one album or note.
+  coverDesigns: {},
   // A legend in the corner of each canvas, naming what its colours mean.
   canvasLegend: true,
   // { canvasPath: { labels: { colour: name }, collapsed, hidden } }
@@ -93,7 +110,6 @@ const DEFAULTS = {
   // Centred text in canvas cards, and which cards have it.
   canvasTextAlign: true,
   // Cards folded to their first line, and groups to their label, from an arrow in their corner.
-  canvasFold: true,
   // A card's branch — what its arrows lead to — tucked into it, from a knob where they leave.
   canvasBranches: true,
   // What's beyond a fold moves in to close up the room it left, and back out when it unfolds.
@@ -104,12 +120,28 @@ const DEFAULTS = {
   canvasSelectBranch: true,
   // The canvas as a tree, in the right sidebar.
   canvasOutline: true,
+  // A command to go to a card by its words, opening the folds it's in.
+  canvasFind: true,
+  // Dim everything but a card's branch.
+  canvasFocus: true,
+  // Copy a card with everything its arrows lead to.
+  canvasDuplicate: true,
   // { canvasPath: { cardId: 'center' } }
   canvasAlignments: {},
+  // Selected cards lined up, spaced, sized alike, or laid out in a grid.
+  canvasArrange: true,
+  // Tab and Enter on a selected card add one after it or beside it.
+  canvasMindMap: true,
+  // Arrows in a style of their own, from their menu or the bar above them.
+  canvasArrows: true,
+  // How arrows without a style of their own are drawn: 'curve', 'straight' or 'elbow'.
+  canvasArrowShape: 'curve',
+  // Arrows without a style of their own join cards at the sides facing each other.
+  canvasArrowSides: false,
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 2,
+  settingsVersion: 3,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
