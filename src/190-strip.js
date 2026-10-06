@@ -92,7 +92,7 @@ class ContextStrip extends Feature {
         name: 'Next note in album',
         icon: 'chevrons-right',
         check: () => !!step('next'),
-        run: () => this.skip('next'),
+        run: () => this.skip('next', true),
       },
     ];
   }
@@ -104,10 +104,18 @@ class ContextStrip extends Feature {
     return view && !(view instanceof BrowseView) && view.file instanceof TFile ? view.file : null;
   }
 
-  /** The note before or after this one in its album, opened in the same page. */
-  skip(dir) {
+  /**
+   * The note before or after this one in its album, opened in the same
+   * page. The strip's » takes Up Next's first before the album's next.
+   */
+  skip(dir, albumOnly) {
     const file = this.pageFile();
     if (!file) return false;
+    const queued = dir === 'next' && !albumOnly ? this.queuedAfter(file) : null;
+    if (queued) {
+      this.plugin.feature(UpNext).open(queued);
+      return true;
+    }
     const target = albumNeighbours(this.plugin, file)[dir];
     const leaf = pageLeaf(this.app);
     if (!target || !leaf) return false;
@@ -396,10 +404,17 @@ class ContextStrip extends Feature {
     this.skipButton(center, near, 'next');
   }
 
-  /** « or »: the note before or after this one in its album. */
+  /** The first note in Up Next, other than this one, while it's on. */
+  queuedAfter(file) {
+    const upNext = typeof UpNext === 'function' ? this.plugin.feature(UpNext) : null;
+    return upNext && upNext.enabled ? upNext.queue.peek(file) : null;
+  }
+
+  /** « or »: the note before or after this one — Up Next's first, for ». */
   skipButton(parent, near, dir) {
-    const target = near[dir];
-    const word = dir === 'previous' ? 'Previous' : 'Next';
+    const queued = dir === 'next' ? this.queuedAfter(this.pageFile()) : null;
+    const target = queued || near[dir];
+    const word = queued ? 'Up Next' : dir === 'previous' ? 'Previous' : 'Next';
     const el = parent.createDiv({ cls: 'clickable-icon dr-strip-btn dr-strip-skip' });
     el.dataset.action = dir;
     setIcon(el, dir === 'previous' ? 'chevrons-left' : 'chevrons-right');
@@ -458,6 +473,13 @@ class ContextStrip extends Feature {
     const footnotes = typeof Footnotes === 'function' ? this.plugin.feature(Footnotes) : null;
     if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
       button('file-signature', `Footnotes (${footnotes.countIn(file)})`, () => footnotes.showView(), false, 'footnotes');
+    }
+
+    // What's lined up, while anything is.
+    const upNext = typeof UpNext === 'function' ? this.plugin.feature(UpNext) : null;
+    const lined = upNext && upNext.enabled ? upNext.queue.files().length : 0;
+    if (lined) {
+      button('list-ordered', `Up Next (${lined})`, (evt) => upNext.showMenu(evt), false, 'up-next');
     }
 
     button('info', 'Properties', (evt) => {

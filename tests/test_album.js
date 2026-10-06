@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -716,6 +716,74 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(strip.scrollHost, null, 'no longer listening');
     strip.disable();
     containerEl.remove();
+  });
+
+  await t("Up Next: notes lined up from their menus come before the album's next, follow renames, and Shuffle lines up the rest", async () => {
+    const { plugin, app, view, v } = setup();
+    plugin.queue = new R.Queue(plugin);
+    const upNext = new R.UpNext(plugin);
+    const strip = new R.ContextStrip(plugin);
+    plugin.feature = (C) => (C === R.UpNext ? upNext : C === R.ContextStrip ? strip : null);
+    v.vault.on('rename', (file, old) => plugin.queue.followRename(file, old));
+    v.vault.on('delete', (file) => plugin.queue.followDelete(file));
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
+    app.workspace.rootSplit = {};
+    app.workspace.getMostRecentLeaf = () => leaf;
+    app.commands = { executeCommandById() {} };
+    strip.el = document.body.createDiv({ cls: 'dr-strip' });
+    assert.strictEqual(R.DEFAULTS.upNext, true);
+
+    // A note's menu: Read next, then Remove once it's in.
+    const titles = (target) => {
+      const menu = new Menu();
+      upNext.addMenuItems(menu, target, (item) => item);
+      return menu.items.map((i) => i.title);
+    };
+    const deterrence = app.vault.getFileByPath('IR/Deterrence.md');
+    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Add to Up Next']);
+    upNext.enqueue([deterrence], true);
+    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Remove from Up Next']);
+    assert.deepStrictEqual(titles(app.vault.getFolderByPath('IR')), ['Add to Up Next', 'Shuffle']);
+
+    // » goes to it before Cooperation, and reading it takes it off.
+    strip.update();
+    const next = strip.el.querySelector('[data-action="next"]');
+    assert.strictEqual(next.getAttribute('aria-label'), 'Up Next: Deterrence');
+    assert.strictEqual(strip.el.querySelector('[data-action="up-next"]').getAttribute('aria-label'), 'Up Next (1)');
+    strip.skip('next');
+    assert.strictEqual(leaf.view.file.basename, 'Deterrence');
+    assert.deepStrictEqual(plugin.settings.queue, []);
+    assert.ok(!strip.el.querySelector('[data-action="up-next"]'), 'nothing lined up, no button');
+
+    // A folder's notes go in album order, and follow a rename and a delete.
+    upNext.enqueue([app.vault.getFolderByPath('IR/Theories')].flatMap((f) => upNext.notesOf(f)), false, 'Theories');
+    assert.deepStrictEqual(plugin.settings.queue, ['IR/Theories/Liberalism.md', 'IR/Theories/Realism.md']);
+    await app.fileManager.renameFile(app.vault.getFolderByPath('IR/Theories'), 'IR/Schools');
+    assert.deepStrictEqual(plugin.settings.queue, ['IR/Schools/Liberalism.md', 'IR/Schools/Realism.md']);
+    await app.fileManager.trashFile(app.vault.getFileByPath('IR/Schools/Realism.md'));
+    assert.deepStrictEqual(plugin.settings.queue, ['IR/Schools/Liberalism.md']);
+
+    // Shuffle on the album page: one opened, the rest lined up in place of what was there.
+    leaf.view.file = file;
+    view.render();
+    const shuffle = Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Shuffle');
+    assert.ok(shuffle, 'Random became Shuffle');
+    click(shuffle);
+    const opened = leaf.view.file;
+    // The album as the page shows it, its disc included.
+    assert.ok(plugin.settings.queue.indexOf(opened.path) === -1);
+    assert.deepStrictEqual(plugin.settings.queue.concat(opened.path).sort(), ['IR/Anarchy.md', 'IR/Balance.md', 'IR/Cooperation.md', 'IR/Deterrence.md', 'IR/Schools/Liberalism.md']);
+
+    // Off: no button, » is the album's again, and the page says Random.
+    plugin.settings.upNext = false;
+    leaf.view.file = file;
+    strip.update();
+    assert.ok(!strip.el.querySelector('[data-action="up-next"]'));
+    assert.strictEqual(strip.el.querySelector('[data-action="next"]').getAttribute('aria-label'), 'Next: Cooperation');
+    view.render();
+    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).some((b) => b.textContent === 'Random'));
+    strip.el.remove();
   });
 
   /* -- lengths, Home ------------------------------------------------------- */

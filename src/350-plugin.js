@@ -9,6 +9,7 @@ class DesignRedux extends Plugin {
     this.unloading = false;
     this.pins = new Pins(this);
     this.orders = new Orders(this);
+    this.queue = new Queue(this);
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
@@ -18,6 +19,7 @@ class DesignRedux extends Plugin {
       new ActionsMenu(this),
       new PropertiesPanel(this),
       new ContextStrip(this),
+      new UpNext(this),
       new OnePage(this),
       new MenuFilter(this),
       new SettingsButton(this),

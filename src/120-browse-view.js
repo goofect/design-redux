@@ -1031,7 +1031,11 @@ class BrowseView extends ItemView {
       const target = files[0];
       if (target) this.app.workspace.getLeaf(false).openFile(target);
     }).addClass('is-primary');
-    this.action(actions, 'shuffle', 'Random', () => {
+    // Shuffle lines the rest up after the one it opens, where Up Next is on.
+    const upNext = this.plugin.feature(UpNext);
+    const shuffling = !!(upNext && upNext.enabled);
+    this.action(actions, 'shuffle', shuffling ? 'Shuffle' : 'Random', () => {
+      if (shuffling && upNext.shuffle(folder, files)) return;
       if (!files.length) return;
       const pick = files[Math.floor(Math.random() * files.length)];
       this.app.workspace.getLeaf(false).openFile(pick);
