@@ -65,7 +65,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasFocus, CanvasDuplicate };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasFind, CanvasFocus, CanvasDuplicate };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1059,6 +1059,27 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     pressKey(view.containerEl, 'Escape');
     assert.ok(!view.contentEl.classList.contains('dr-branch-focus'));
     assert.ok(!lit('r'));
+  });
+
+  await t('Find goes to a card tucked into a fold by opening the fold first', async () => {
+    const view = extrasCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50, { drTuck: { by: 'r', dx: 200, dy: 0 } })],
+      edges: [edge('r', 'a', 'right', 'left')],
+    });
+    const opened = [];
+    const fold = {
+      foldBranches: async (v, nodes) => {
+        opened.push(nodes[0].id);
+        delete view.canvas.nodes.get('a').unknownData.drTuck;
+      },
+    };
+    const find = new R.CanvasFind({ settings: { canvasFind: true }, app: {}, feature: () => fold });
+    let zoomed = false;
+    view.canvas.zoomToSelection = () => (zoomed = true);
+    await find.goTo(view, 'a');
+    assert.deepStrictEqual(opened, ['r']);
+    assert.deepStrictEqual(Array.from(view.canvas.selection).map((n) => n.id), ['a']);
+    assert.ok(zoomed);
   });
 
   console.log(`\n${passed} passed`);
