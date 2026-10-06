@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -590,6 +590,26 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     cmds['next-in-album'].run();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.strictEqual(cmds['next-in-album'].check(), false, 'offered past the last note');
+  });
+
+  await t('a note without a cover shows the first image in it, where the setting has it', () => {
+    const note = new TFile('Notes/Trip.md');
+    const image = new TFile('Pictures/view.png');
+    const app = {
+      metadataCache: {
+        getFileCache: () => ({ embeds: [{ link: 'notes.pdf' }, { link: 'view.png' }] }),
+        getFirstLinkpathDest: (link) => (link === 'view.png' ? image : link === 'notes.pdf' ? new TFile('notes.pdf') : null),
+      },
+      vault: { getResourcePath: (f) => `app://${f.path}` },
+    };
+    const plugin = { app, settings: { coverProperty: 'cover', coverFromFirstImage: R.DEFAULTS.coverFromFirstImage } };
+    assert.strictEqual(R.noteCoverSrc(plugin, note), null, 'off to start');
+    plugin.settings.coverFromFirstImage = true;
+    assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://Pictures/view.png', 'past what isn\'t an image');
+    // A cover of its own still comes first.
+    app.metadataCache.getFileCache = () => ({ frontmatter: { cover: '[[own.png]]' }, embeds: [{ link: 'view.png' }] });
+    app.metadataCache.getFirstLinkpathDest = (link) => (link === 'own.png' ? new TFile('own.png') : image);
+    assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://own.png');
   });
 
   /* -- lengths, Home ------------------------------------------------------- */

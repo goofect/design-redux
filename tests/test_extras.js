@@ -68,7 +68,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_extras_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { noteCoverSrc, CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
+  '\nmodule.exports.__test = { CoverDrop, CanvasDuplicate, CanvasFocus, CanvasFind };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -125,22 +125,6 @@ const fakeCanvas = (data) => {
 
 (async () => {
   /* -- covers --------------------------------------------------------------- */
-
-  await t('a note without a cover shows the first image in it, where the setting has it', () => {
-    const note = new TFile('Notes/Trip.md');
-    const image = new TFile('Pictures/view.png');
-    const app = {
-      metadataCache: {
-        getFileCache: () => ({ embeds: [{ link: 'notes.pdf' }, { link: 'view.png' }] }),
-        getFirstLinkpathDest: (link) => (link === 'view.png' ? image : link === 'notes.pdf' ? new TFile('notes.pdf') : null),
-      },
-      vault: { getResourcePath: (f) => `app://${f.path}` },
-    };
-    const plugin = { app, settings: { coverProperty: 'cover', coverFromFirstImage: false } };
-    assert.strictEqual(R.noteCoverSrc(plugin, note), null, 'off by default');
-    plugin.settings.coverFromFirstImage = true;
-    assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://Pictures/view.png');
-  });
 
   await t('an image from the vault dropped on an album\'s cover becomes its folder note\'s cover', async () => {
     const image = new TFile('Pictures/view.png');
