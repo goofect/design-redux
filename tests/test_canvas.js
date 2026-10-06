@@ -65,7 +65,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasDuplicate };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasFocus, CanvasDuplicate };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1038,6 +1038,27 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(copiedEdges, [['r', 'a'], ['r', 'b'], ['b', 't']], 'the arrow from outside stays with the original');
     assert.deepStrictEqual(Array.from(c.selection), [copyOf('r')]);
     assert.strictEqual(c.saves, 1);
+  });
+
+  await t('Focus on branch dims everything but a card and what its arrows lead to', () => {
+    const view = extrasCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('x', 0, 300, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('x', 'r', 'top', 'bottom')],
+    });
+    const focus = new R.CanvasFocus(extrasPlugin({ canvasFocus: true }));
+    const state = { file: view.file };
+    focus.watched.set(view, state);
+    focus.mount(view, state);
+    focus.setFocus(view, ['r']);
+    const lit = (id) => view.canvas.nodes.get(id).nodeEl.classList.contains('dr-focus-lit');
+    assert.ok(view.contentEl.classList.contains('dr-branch-focus'));
+    assert.deepStrictEqual([lit('r'), lit('a'), lit('x')], [true, true, false]);
+    assert.ok(view.canvas.edges.get('r-a').lineGroupEl.classList.contains('dr-focus-lit'));
+    assert.ok(!view.canvas.edges.get('x-r').lineGroupEl.classList.contains('dr-focus-lit'));
+    // Escape ends it.
+    pressKey(view.containerEl, 'Escape');
+    assert.ok(!view.contentEl.classList.contains('dr-branch-focus'));
+    assert.ok(!lit('r'));
   });
 
   console.log(`\n${passed} passed`);
