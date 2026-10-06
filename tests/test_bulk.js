@@ -127,7 +127,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview };\n');
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1122,6 +1122,58 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.ok(opened instanceof R.RenamePropertyModal);
     assert.strictEqual(opened.from, 'domain');
     opened.close();
+    popupEl.remove();
+  });
+
+  await t("a property's menu sets its value for the whole album, asking before it replaces a note's own, with one Undo", async () => {
+    const v = makeVault({
+      'IR/IR.md': note({ cover: 'x.png' }),
+      'IR/a.md': note({ status: 'done' }),
+      'IR/b.md': 'Nothing yet\n',
+      'IR/c.md': note({ status: 'draft' }),
+      'IR/Sub/d.md': '',
+    });
+    const { plugin, bulk } = makePlugin(v);
+    plugin.isFolderNote = (f) => !!f.parent && f.basename === f.parent.name;
+    const album = new R.AlbumProperty(plugin);
+    plugin.features.push(album);
+    assert.strictEqual(R.DEFAULTS.propertyForAlbum, true);
+
+    // Offered on the row's menu, under the album's name.
+    const popupEl = document.body.appendChild(document.createElement('div'));
+    const section = new R.PropertiesSection({ plugin, popupEl });
+    section.mount(popupEl, v.file('IR/a.md'));
+    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
+    const item = menus.pop().items.find((i) => i.title === 'Set for all of IR');
+    assert.ok(item, 'not offered');
+    const before = v.text('IR/c.md');
+    item.click();
+    await settle();
+    // c has its own: asked first. Cancel leaves everything.
+    let ask = modals.pop();
+    assert.ok(ask.contentEl.textContent.includes('1 note already has a value'));
+    Array.from(ask.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Cancel').click();
+    await settle();
+    assert.strictEqual(v.text('IR/c.md'), before);
+    assert.strictEqual(v.writes.length, 0);
+
+    const done = album.apply(v.file('IR/a.md'), 'status');
+    await settle();
+    ask = modals.pop();
+    Array.from(ask.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Replace').click();
+    const record = await done;
+    assert.strictEqual(v.fm('IR/b.md').status, 'done');
+    assert.strictEqual(v.fm('IR/c.md').status, 'done');
+    assert.strictEqual(v.fm('IR/IR.md').status, undefined, 'the folder note stands for the album');
+    assert.strictEqual(v.fm('IR/Sub/d.md').status, undefined, 'only the album, not the folders in it');
+    assert.strictEqual(bulk.last, record);
+    await bulk.undo();
+    assert.strictEqual(v.text('IR/c.md'), before);
+
+    // Off: not on the menu.
+    plugin.settings.propertyForAlbum = false;
+    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
+    assert.ok(!menus.pop().items.some((i) => i.title === 'Set for all of IR'));
     popupEl.remove();
   });
 

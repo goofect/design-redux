@@ -398,6 +398,16 @@ class PropertiesSection extends PanelSection {
           .onClick(() => bulk.openRenameProperty(key))
       );
     }
+    const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
+    const file = this.file;
+    if (album && album.enabled && file && album.albumNotes(file).length) {
+      menu.addItem((item) =>
+        item
+          .setTitle(`Set for all of ${album.albumName(file)}`)
+          .setIcon('layers')
+          .onClick(() => album.apply(file, key))
+      );
+    }
     menu.addItem((item) =>
       item
         .setTitle('Remove property')

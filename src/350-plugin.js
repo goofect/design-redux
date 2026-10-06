@@ -27,6 +27,7 @@ class DesignRedux extends Plugin {
       new CoverDrop(this),
       new ImageRouter(this),
       new PropertyClipboard(this),
+      new AlbumProperty(this),
       new MarkedLists(this),
       new Scripts(this),
       new Footnotes(this),
