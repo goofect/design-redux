@@ -656,6 +656,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     art.remove();
   });
 
+  await t('the strip says where the note falls in its album, as "2 of 4", unless switched off', () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
+    app.workspace.rootSplit = {};
+    app.workspace.getMostRecentLeaf = () => leaf;
+    app.workspace.on = () => ({});
+    app.metadataCache.on = () => ({});
+    app.commands = { executeCommandById() {} };
+    plugin.pins.has = () => false;
+    const strip = new R.ContextStrip(plugin);
+    strip.el = document.body.createDiv({ cls: 'dr-strip' });
+    strip.update();
+    const place = () => {
+      const el = strip.el.querySelector('.dr-strip-place');
+      return el ? el.textContent : null;
+    };
+    assert.strictEqual(R.DEFAULTS.stripPlace, true);
+    assert.strictEqual(place(), '2 of 4');
+    plugin.settings.stripPlace = false;
+    strip.el.empty();
+    strip.update();
+    assert.strictEqual(place(), null);
+    strip.el.remove();
+  });
+
   /* -- lengths, Home ------------------------------------------------------- */
 
   const f = (app, p) => app.vault.getFileByPath(p);
