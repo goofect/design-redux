@@ -40,6 +40,15 @@ class ContextStrip extends Feature {
   constructor(plugin) {
     super(plugin);
     this.el = null;
+    this.scrollHost = null;
+    this.scrollFrame = 0;
+    this.onScroll = () => {
+      if (this.scrollFrame) return;
+      this.scrollFrame = window.requestAnimationFrame(() => {
+        this.scrollFrame = 0;
+        this.measureScroll();
+      });
+    };
   }
 
   settingsSchema() {
@@ -53,6 +62,12 @@ class ContextStrip extends Feature {
         key: 'stripPlace',
         name: 'Place in album',
         desc: 'Where the note falls in its album, as "3 of 12", under its name on the strip.',
+        showIf: 'contextStrip',
+      },
+      {
+        key: 'stripProgress',
+        name: 'How far you\'ve read',
+        desc: 'A thin line along the foot of the strip, as far across as you are down the note.',
         showIf: 'contextStrip',
       },
     ];
@@ -178,6 +193,7 @@ class ContextStrip extends Feature {
   }
 
   disable() {
+    this.watchScroll(null);
     document.body.removeClass('dr-strip-active');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
     if (this.el) this.el.remove();
@@ -233,12 +249,49 @@ class ContextStrip extends Feature {
     if (!view) return;
 
     this.renderNav(this.el);
+    const reading = !!file && this.settings.stripProgress !== false;
     if (file) {
       this.renderNow(this.el, file);
       this.renderActions(this.el, file, leaf);
+      if (reading) this.el.createDiv({ cls: 'dr-strip-progress' });
     } else {
       this.renderScreen(this.el, view);
     }
+    this.watchScroll(reading ? view : null);
+  }
+
+  /**
+   * How far down the note the page is, as a line along the strip's foot —
+   * the way a player's bar shows how far into the song it is. Scrolling
+   * is listened to where it happens, inside the note's view.
+   */
+  watchScroll(view) {
+    const host = view && view.containerEl ? view.containerEl : null;
+    if (this.scrollHost !== host) {
+      if (this.scrollHost) this.scrollHost.removeEventListener('scroll', this.onScroll, true);
+      this.scrollHost = host;
+      if (host) host.addEventListener('scroll', this.onScroll, true);
+    }
+    if (!host && this.scrollFrame) {
+      window.cancelAnimationFrame(this.scrollFrame);
+      this.scrollFrame = 0;
+    }
+    this.measureScroll();
+    // A note just opened isn't laid out yet: measured again once it is.
+    if (host) window.setTimeout(() => this.measureScroll(), 400);
+  }
+
+  measureScroll() {
+    if (!this.el) return;
+    const host = this.scrollHost;
+    // Reading view and the editor each scroll themselves: whichever is showing.
+    const scroller = host
+      ? Array.from(host.querySelectorAll('.markdown-preview-view, .cm-scroller')).find((el) => el.clientHeight > 0)
+      : null;
+    const room = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
+    this.el.toggleClass('has-progress', room > 8);
+    const part = room > 8 ? Math.min(1, Math.max(0, scroller.scrollTop / room)) : 0;
+    this.el.style.setProperty('--dr-progress', part.toFixed(4));
   }
 
   /**

@@ -682,6 +682,42 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.el.remove();
   });
 
+  await t("the strip's line shows how far down the note you are, and goes when it's switched off", () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const containerEl = document.body.createDiv();
+    const scroller = containerEl.createDiv({ cls: 'markdown-preview-view' });
+    Object.defineProperty(scroller, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scroller, 'scrollHeight', { value: 1400, configurable: true });
+    const view = Object.assign(new MarkdownView(), { file, containerEl, getMode: () => 'preview' });
+    const leaf = { isDeferred: false, view, openFile() {} };
+    app.workspace.rootSplit = {};
+    app.workspace.getMostRecentLeaf = () => leaf;
+    app.workspace.on = () => ({});
+    app.metadataCache.on = () => ({});
+    app.commands = { executeCommandById() {} };
+    plugin.pins.has = () => false;
+    const strip = new R.ContextStrip(plugin);
+    strip.el = document.body.createDiv({ cls: 'dr-strip' });
+    assert.strictEqual(R.DEFAULTS.stripProgress, true);
+    strip.update();
+    assert.ok(strip.el.querySelector('.dr-strip-progress'));
+    scroller.scrollTop = 250;
+    strip.measureScroll();
+    assert.strictEqual(strip.el.style.getPropertyValue('--dr-progress'), '0.2500');
+    assert.ok(strip.el.classList.contains('has-progress'));
+    // A short note has nowhere to go: no line.
+    Object.defineProperty(scroller, 'scrollHeight', { value: 404, configurable: true });
+    strip.measureScroll();
+    assert.ok(!strip.el.classList.contains('has-progress'));
+    plugin.settings.stripProgress = false;
+    strip.update();
+    assert.ok(!strip.el.querySelector('.dr-strip-progress'));
+    assert.strictEqual(strip.scrollHost, null, 'no longer listening');
+    strip.disable();
+    containerEl.remove();
+  });
+
   /* -- lengths, Home ------------------------------------------------------- */
 
   const f = (app, p) => app.vault.getFileByPath(p);

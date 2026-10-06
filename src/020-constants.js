@@ -32,6 +32,8 @@ const DEFAULTS = {
   contextStrip: true,
   // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,
+  // A line along the strip's foot for how far down the note you are.
+  stripProgress: true,
   onePage: false,
   pinsExpanded: false,
   albumNoteLimit: 8,
