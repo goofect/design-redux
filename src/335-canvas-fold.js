@@ -88,7 +88,7 @@ class CanvasFold extends CanvasFeature {
       {
         key: 'canvasBranches',
         name: 'Fold branches',
-        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — set from its right-click menu — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
+        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — the crown in the bar above a selected card, or its right-click menu — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
       },
       {
         key: 'canvasCloseGaps',
@@ -480,8 +480,9 @@ class CanvasFold extends CanvasFeature {
 
   /**
    * Fold branch in the bar above the selected cards, beside Obsidian's
-   * own buttons. Redrawn only when what it shows changes, since drawing
-   * it is itself a change the watcher sees.
+   * own buttons, and Master card for a card hanging from another.
+   * Redrawn only when what it shows changes, since drawing it is itself
+   * a change the watcher sees.
    */
   decorateMenu(view) {
     const bar = view.contentEl.querySelector('.canvas-menu');
@@ -498,6 +499,24 @@ class CanvasFold extends CanvasFeature {
       const model = canvasModel(view.canvas);
       if (now.length) this.foldBranches(view, now, !now.every((n) => tuckedCount(model, n.id) > 0));
     });
+    // Master card beside it, for one card a fold above could take.
+    const one = this.masterCandidate(view);
+    menuButton(bar, 'dr-master-button', one ? { title: one.master ? 'Master card: on' : 'Make master card', icon: 'crown' } : null, () => {
+      const now = this.masterCandidate(view);
+      if (now) this.setMaster(view, [now.node], !now.master);
+    });
+    const crown = bar.querySelector('.dr-master-button');
+    if (crown) crown.toggleClass('is-active', !!(one && one.master));
+  }
+
+  /** The one selected card that could be a master card — it hangs from another — or is one: its record, or null. */
+  masterCandidate(view) {
+    const cards = this.masterTargets(view);
+    if (cards.length !== 1) return null;
+    const model = canvasModel(view.canvas);
+    const rec = model.byId.get(cards[0].id);
+    if (!rec) return null;
+    return rec.master || (arrowLinks(model).parents.get(rec.id) || []).length ? rec : null;
   }
 
   /** Beside the canvas's zoom controls: folding, for every branch at once. */
@@ -561,7 +580,7 @@ class CanvasFold extends CanvasFeature {
 
   cleanup(view) {
     this.popover.hide();
-    view.contentEl.querySelectorAll('.dr-branch-knob, .dr-stack, .dr-branch-button, .dr-master-mark').forEach((el) => el.remove());
+    view.contentEl.querySelectorAll('.dr-branch-knob, .dr-stack, .dr-branch-button, .dr-master-button, .dr-master-mark').forEach((el) => el.remove());
     view.contentEl.querySelectorAll('.dr-holds').forEach((el) => el.removeClass('dr-holds'));
     undrawTucks(view);
     if (view.containerEl) view.containerEl.querySelectorAll('.dr-fold-control').forEach((el) => el.remove());
@@ -620,7 +639,7 @@ class FoldingHelpModal extends Modal {
       ],
       [
         'Master cards',
-        'Right-click a card and pick Master card to keep it out of the folds above it: folding a card it hangs from leaves it, and what hangs from it, out. Its own branch still folds into it. A crown marks it.',
+        'Select a card and press the crown in the bar above it — or right-click it and pick Master card — to keep it out of the folds above it: folding a card it hangs from leaves it, and what hangs from it, out. Its own branch still folds into it. A crown marks it.',
       ],
       ['Arrows', 'A folded card joins up with arrows like any other: draw one from it, or drop one on it.'],
       ['Everything', 'The button beside the zoom controls folds every branch at once — from the top of each tree, and from each master card — or unfolds them all.'],

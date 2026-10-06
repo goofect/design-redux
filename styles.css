@@ -6229,6 +6229,11 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   stroke-width: 2.25;
 }
 
+/* The crown in the bar above a selected card, lit while it's a master card. */
+.canvas-menu .dr-master-button.is-active {
+  color: var(--color-yellow, var(--text-accent));
+}
+
 /* Tucked into a fold: not drawn, nor the arrows inside the fold. */
 .canvas-node.dr-tucked {
   display: none !important;

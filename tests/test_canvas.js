@@ -866,6 +866,20 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const fold = new R.CanvasFold({ settings, app: {} });
     fold.watched.set(view, { file: view.file });
     const n = (id) => view.canvas.nodes.get(id);
+    // In the bar above it when it's selected: a crown, lit once it's a master card.
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
+    view.canvas.selection.add(n('m'));
+    fold.pass(view);
+    const crown = bar.querySelector('.dr-master-button');
+    assert.strictEqual(crown.getAttribute('aria-label'), 'Make master card');
+    crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(n('m').unknownData.drMaster, true);
+    assert.strictEqual(crown.getAttribute('aria-label'), 'Master card: on');
+    assert.ok(crown.classList.contains('is-active'));
+    crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.ok(!('drMaster' in n('m').unknownData));
+    view.canvas.selection.clear();
+    view.canvas.saves = 0;
     // Offered for a card hanging from another, from its right-click menu.
     let menu = new Menu();
     fold.addMenuItems(menu, [n('m')]);
