@@ -240,7 +240,8 @@ class CanvasArrange extends CanvasFeature {
     menuButton(bar, 'dr-arrange-button', many ? { title: 'Arrange', icon: ARRANGE_ICON } : null, () => {
       const button = bar.querySelector('.dr-arrange-button');
       if (!button || this.cards(view).length < 2) return;
-      const menu = new Menu();
+      // Its icons show each arrangement: drawn by Obsidian, so they show with native menus too.
+      const menu = drawnMenu();
       this.fillMenu(menu, view, true);
       const r = button.getBoundingClientRect();
       if (typeof menu.showAtPosition === 'function') menu.showAtPosition({ x: r.left, y: r.bottom + 4 });

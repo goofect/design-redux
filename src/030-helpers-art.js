@@ -698,6 +698,17 @@ function menuGroup(menu, title, icon, fill, section) {
 }
 
 /**
+ * A menu Obsidian draws itself, even with Native menus switched on in
+ * its settings: the system's own menus show no icons, and some menus are
+ * read by their icons.
+ */
+function drawnMenu() {
+  const menu = new Menu();
+  if (typeof menu.setUseNativeMenu === 'function') menu.setUseNativeMenu(false);
+  return menu;
+}
+
+/**
  * A submenu Obsidian already put in this menu, found by its title —
  * so an entry can join Format rather than sit beside it. Null where
  * there's none, or it can't be told.
