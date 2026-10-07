@@ -637,6 +637,95 @@ function renderLists(el, ctx) {
     .forEach((c) => convertListLines(c, sourceAbove(c)));
 }
 
+/* Obsidian's own bullet and number at the start of a line, and a task's box after one. */
+const PLAIN_LIST_MARK = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+/;
+
+/** Each line read as a list item against the one above it at its indent, or null. */
+function readListLines(texts) {
+  const prevAt = new Map();
+  return texts.map((text) => {
+    if (!text.trim()) return null;
+    const indent = leadingSpace(text);
+    // A shallower line ends the deeper lists below the one before it.
+    Array.from(prevAt.keys()).forEach((k) => {
+      if (k.length > indent.length) prevAt.delete(k);
+    });
+    const item = parseListItem(text, prevAt.get(indent) || null);
+    prevAt.set(indent, item);
+    return item;
+  });
+}
+
+/** Whether every line but the blank ones is an item of one kind. */
+function allListOf(texts, kind, read) {
+  read = read || readListLines(texts);
+  const filled = texts.filter((t) => t.trim()).length;
+  const items = read.filter(Boolean);
+  return filled > 0 && items.length === filled && items.every((it) => it.kind === kind);
+}
+
+/**
+ * Lines made a list of one kind — 'alpha' or 'roman' — counted down each
+ * indent: a., b., c. or i., ii., iii., in place of any bullet, number,
+ * letter or numeral they had. If they're all that kind of list already,
+ * they're made plain lines again. Blank lines stay as they are.
+ */
+function relistLines(texts, kind) {
+  const read = readListLines(texts);
+  if (allListOf(texts, kind, read)) return texts.map((text, i) => (read[i] ? read[i].indent + read[i].content : text));
+  const counts = new Map();
+  return texts.map((text, i) => {
+    if (!text.trim()) return text;
+    let indent;
+    let content;
+    if (read[i]) {
+      indent = read[i].indent;
+      content = read[i].content;
+    } else {
+      const plain = PLAIN_LIST_MARK.exec(text);
+      indent = plain ? plain[1] : leadingSpace(text);
+      content = plain ? text.slice(plain[0].length) : text.slice(indent.length);
+    }
+    Array.from(counts.keys()).forEach((k) => {
+      if (k.length > indent.length) counts.delete(k);
+    });
+    const n = (counts.get(indent) || 0) + 1;
+    counts.set(indent, n);
+    return `${indent}${kind === 'alpha' ? toAlpha(n) : toRoman(n)}. ${content}`;
+  });
+}
+
+/** A CodeMirror selection's lines — a selection ending at the start of a line doesn't take that line. */
+function selectedLines(state) {
+  const doc = state.doc;
+  const sel = state.selection.main;
+  const first = doc.lineAt(sel.from);
+  let last = doc.lineAt(sel.to);
+  if (last.number > first.number && sel.to === last.from) last = doc.line(last.number - 1);
+  const texts = [];
+  for (let n = first.number; n <= last.number; n++) texts.push(doc.line(n).text);
+  return { from: first.from, to: last.to, texts };
+}
+
+/** The changes making a CodeMirror selection's lines a list of one kind, or plain again: { changes } or null. */
+function relistSelection(state, kind) {
+  const lines = selectedLines(state);
+  const out = relistLines(lines.texts, kind);
+  if (out.every((t, i) => t === lines.texts[i])) return null;
+  return { changes: { from: lines.from, to: lines.to, insert: out.join('\n') } };
+}
+
+/** Whether a selection's lines are all a list of one kind already. */
+function selectionIsList(state, kind) {
+  return allListOf(selectedLines(state).texts, kind);
+}
+
+/* The right-click entries for each kind. */
+const LIST_MENU = {
+  alpha: { setting: 'letterLists', title: 'Lettered list', icon: 'case-lower' },
+  roman: { setting: 'romanLists', title: 'Roman numeral list', icon: 'list-ordered' },
+};
+
 class MarkedLists extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -664,6 +753,57 @@ class MarkedLists extends Feature {
         desc: 'The same for i., ii) or (iii).',
       },
     ];
+  }
+
+  commands() {
+    return ['alpha', 'roman'].map((kind) => ({
+      id: kind === 'alpha' ? 'make-lettered-list' : 'make-roman-numeral-list',
+      name: kind === 'alpha' ? 'Make the selected lines a lettered list, or plain again' : 'Make the selected lines a roman numeral list, or plain again',
+      icon: LIST_MENU[kind].icon,
+      check: () => !!this.settings[LIST_MENU[kind].setting] && !!activeEditorView(this.app),
+      run: () => this.relist(activeEditorView(this.app), kind),
+    }));
+  }
+
+  /**
+   * In the editor's right-click menu, under Paragraph with Obsidian's own
+   * Bullet list and Numbered list where that can be found; otherwise
+   * beside its other entries for a selection.
+   */
+  register() {
+    this.plugin.registerEvent(
+      this.app.workspace.on('editor-menu', (menu, editor) => {
+        const cm = editor && editor.cm;
+        if (!this.enabled || !cm || !cm.state || typeof cm.dispatch !== 'function') return;
+        // Older Obsidian builds Paragraph as a submenu of its own; newer
+        // gathers a section into it, list entries in 'selection.paragraph.list'.
+        const paragraph = findSubmenu(menu, 'Paragraph');
+        const configs = !paragraph && menu.submenuConfigs && typeof menu.submenuConfigs === 'object' ? menu.submenuConfigs : null;
+        const section = paragraph ? 'selection-list' : configs && configs['selection.paragraph'] ? 'selection.paragraph.list' : 'selection';
+        const into = paragraph || menu;
+        ['alpha', 'roman'].forEach((kind) => {
+          const what = LIST_MENU[kind];
+          if (!this.settings[what.setting]) return;
+          const on = selectionIsList(cm.state, kind);
+          into.addItem((item) => {
+            item
+              .setTitle(on ? `Remove ${what.title.toLowerCase()}` : what.title)
+              .setIcon(what.icon)
+              .onClick(() => this.relist(cm, kind));
+            if (typeof item.setSection === 'function') item.setSection(section);
+          });
+        });
+      })
+    );
+  }
+
+  /** The selected lines — or the cursor's — made a list of one kind, or plain again. */
+  relist(cm, kind) {
+    if (!cm || !cm.state) return;
+    const spec = relistSelection(cm.state, kind);
+    if (!spec) return;
+    cm.dispatch(Object.assign(spec, { scrollIntoView: true, userEvent: 'input' }));
+    if (typeof cm.focus === 'function') cm.focus();
   }
 
   registerTypes() {

@@ -36,7 +36,7 @@ Module._load = function (req, ...rest) {
 const tmp = path.join(__dirname, '_lists_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { toRoman, fromRoman, toAlpha, fromAlpha, parseListItem, ' +
-  'listEnter, renderLists, listEditorExtensions, MarkedLists, LIST_KINDS };\n');
+  'listEnter, renderLists, listEditorExtensions, MarkedLists, LIST_KINDS, relistLines, relistSelection, selectionIsList };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 const { EditorState } = require('@codemirror/state');
@@ -468,6 +468,27 @@ t('the editor colours letters too', () => {
   });
   assert.deepStrictEqual(found, ['a.', 'b.']);
   view.destroy();
+});
+
+t('lines made a lettered or roman list from the menu, down each indent, and plain again', () => {
+  // Bullets, numbers and plain lines become a., b., c.; a nested list counts on its own.
+  assert.deepStrictEqual(R.relistLines(['- one', '2. two', '  sub', '  sub two', '', 'three'], 'alpha'), [
+    'a. one', 'b. two', '  a. sub', '  b. sub two', '', 'c. three',
+  ]);
+  // Ninth item: i after h, not the numeral.
+  const nine = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+  assert.strictEqual(R.relistLines(nine, 'alpha')[8], 'i. 9');
+  // Lettered to roman, in place.
+  assert.deepStrictEqual(R.relistLines(['a. one', 'b. two', 'c. three'], 'roman'), ['i. one', 'ii. two', 'iii. three']);
+  // Already that list: plain again.
+  assert.deepStrictEqual(R.relistLines(['i. one', 'ii. two'], 'roman'), ['one', 'two']);
+  // In an editor: the selected lines, not the one a selection ends at the start of.
+  const state = EditorState.create({ doc: 'Intro\nfirst\nsecond\nafter', selection: { anchor: 6, head: 19 } });
+  assert.strictEqual(R.selectionIsList(state, 'alpha'), false);
+  const spec = R.relistSelection(state, 'alpha');
+  const next = state.update(spec).state;
+  assert.strictEqual(next.doc.toString(), 'Intro\na. first\nb. second\nafter');
+  assert.strictEqual(R.selectionIsList(EditorState.create({ doc: next.doc.toString(), selection: { anchor: 6, head: 25 } }), 'alpha'), true);
 });
 
 console.log(`\n${passed} passed`);
