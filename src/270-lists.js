@@ -715,16 +715,39 @@ function relistSelection(state, kind) {
   return { changes: { from: lines.from, to: lines.to, insert: out.join('\n') } };
 }
 
-/** Whether a selection's lines are all a list of one kind already. */
-function selectionIsList(state, kind) {
-  return allListOf(selectedLines(state).texts, kind);
-}
-
-/* The right-click entries for each kind. */
+/* The right-click entries for each kind: toggles, as Obsidian's own Bullet and Numbered are. */
 const LIST_MENU = {
-  alpha: { setting: 'letterLists', title: 'Lettered list', icon: 'case-lower' },
-  roman: { setting: 'romanLists', title: 'Roman numeral list', icon: 'list-ordered' },
+  alpha: { setting: 'letterLists', title: 'Alphabetical', icon: 'case-lower' },
+  roman: { setting: 'romanLists', title: 'Roman numerals', icon: 'list-ordered' },
 };
+
+/**
+ * The list entries under Paragraph: "list" dropped from each of
+ * Obsidian's own — Bullet, Numbered, Task — and ours put straight after
+ * Numbered. Obsidian lays a menu out section by section, in the order
+ * entries were added, so the order here is the order shown.
+ */
+function arrangeListEntries(host, section, ours) {
+  try {
+    const items = host && Array.isArray(host.items) ? host.items : null;
+    if (!items) return;
+    const theirs = items.filter((it) => it && it.section === section && ours.indexOf(it) === -1);
+    const title = (it) => (it.titleEl ? it.titleEl.textContent || '' : '');
+    theirs.forEach((it) => {
+      const text = title(it);
+      if (/ list$/i.test(text) && typeof it.setTitle === 'function') it.setTitle(text.replace(/ list$/i, ''));
+    });
+    const numbered = theirs.find((it) => /^numbered$/i.test(title(it))) || theirs[1];
+    if (!numbered) return;
+    ours.forEach((it) => {
+      const at = items.indexOf(it);
+      if (at !== -1) items.splice(at, 1);
+    });
+    items.splice(items.indexOf(numbered) + 1, 0, ...ours);
+  } catch (err) {
+    /* left where they were */
+  }
+}
 
 class MarkedLists extends Feature {
   constructor(plugin) {
@@ -758,7 +781,7 @@ class MarkedLists extends Feature {
   commands() {
     return ['alpha', 'roman'].map((kind) => ({
       id: kind === 'alpha' ? 'make-lettered-list' : 'make-roman-numeral-list',
-      name: kind === 'alpha' ? 'Make the selected lines a lettered list, or plain again' : 'Make the selected lines a roman numeral list, or plain again',
+      name: kind === 'alpha' ? 'Make the selected lines an alphabetical list, or plain again' : 'Make the selected lines a Roman numeral list, or plain again',
       icon: LIST_MENU[kind].icon,
       check: () => !!this.settings[LIST_MENU[kind].setting] && !!activeEditorView(this.app),
       run: () => this.relist(activeEditorView(this.app), kind),
@@ -766,9 +789,9 @@ class MarkedLists extends Feature {
   }
 
   /**
-   * In the editor's right-click menu, under Paragraph with Obsidian's own
-   * Bullet list and Numbered list where that can be found; otherwise
-   * beside its other entries for a selection.
+   * In the editor's right-click menu, under Paragraph straight after
+   * Obsidian's own Numbered where that can be found; otherwise beside its
+   * other entries for a selection.
    */
   register() {
     this.plugin.registerEvent(
@@ -781,18 +804,20 @@ class MarkedLists extends Feature {
         const configs = !paragraph && menu.submenuConfigs && typeof menu.submenuConfigs === 'object' ? menu.submenuConfigs : null;
         const section = paragraph ? 'selection-list' : configs && configs['selection.paragraph'] ? 'selection.paragraph.list' : 'selection';
         const into = paragraph || menu;
+        const ours = [];
         ['alpha', 'roman'].forEach((kind) => {
           const what = LIST_MENU[kind];
           if (!this.settings[what.setting]) return;
-          const on = selectionIsList(cm.state, kind);
           into.addItem((item) => {
             item
-              .setTitle(on ? `Remove ${what.title.toLowerCase()}` : what.title)
+              .setTitle(what.title)
               .setIcon(what.icon)
               .onClick(() => this.relist(cm, kind));
             if (typeof item.setSection === 'function') item.setSection(section);
+            ours.push(item);
           });
         });
+        if (section !== 'selection') arrangeListEntries(into, section, ours);
       })
     );
   }

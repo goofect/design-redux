@@ -36,7 +36,7 @@ Module._load = function (req, ...rest) {
 const tmp = path.join(__dirname, '_lists_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { toRoman, fromRoman, toAlpha, fromAlpha, parseListItem, ' +
-  'listEnter, renderLists, listEditorExtensions, MarkedLists, LIST_KINDS, relistLines, relistSelection, selectionIsList };\n');
+  'listEnter, renderLists, listEditorExtensions, MarkedLists, LIST_KINDS, relistLines, relistSelection, arrangeListEntries };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 const { EditorState } = require('@codemirror/state');
@@ -484,11 +484,26 @@ t('lines made a lettered or roman list from the menu, down each indent, and plai
   assert.deepStrictEqual(R.relistLines(['i. one', 'ii. two'], 'roman'), ['one', 'two']);
   // In an editor: the selected lines, not the one a selection ends at the start of.
   const state = EditorState.create({ doc: 'Intro\nfirst\nsecond\nafter', selection: { anchor: 6, head: 19 } });
-  assert.strictEqual(R.selectionIsList(state, 'alpha'), false);
   const spec = R.relistSelection(state, 'alpha');
   const next = state.update(spec).state;
   assert.strictEqual(next.doc.toString(), 'Intro\na. first\nb. second\nafter');
-  assert.strictEqual(R.selectionIsList(EditorState.create({ doc: next.doc.toString(), selection: { anchor: 6, head: 25 } }), 'alpha'), true);
+  // Again on the same lines: plain again, as Obsidian's own Numbered toggles.
+  const again = R.relistSelection(EditorState.create({ doc: next.doc.toString(), selection: { anchor: 6, head: 25 } }), 'alpha');
+  assert.strictEqual(EditorState.create({ doc: next.doc.toString() }).update(again).state.doc.toString(), 'Intro\nfirst\nsecond\nafter');
+});
+
+t('the list entries under Paragraph: "list" dropped, ours straight after Numbered', () => {
+  const item = (title, section) => {
+    const it = { section, titleEl: { textContent: title } };
+    it.setTitle = (v) => { it.titleEl.textContent = v; return it; };
+    return it;
+  };
+  const S = 'selection.paragraph.list';
+  const host = { items: [item('Bold', 'selection.format'), item('Bullet list', S), item('Numbered list', S), item('Task list', S), item('Heading 1', 'selection.paragraph.heading')] };
+  const ours = [item('Alphabetical', S), item('Roman numerals', S)];
+  host.items.push(...ours);
+  R.arrangeListEntries(host, S, ours);
+  assert.deepStrictEqual(host.items.map((i) => i.titleEl.textContent), ['Bold', 'Bullet', 'Numbered', 'Alphabetical', 'Roman numerals', 'Task', 'Heading 1']);
 });
 
 console.log(`\n${passed} passed`);
