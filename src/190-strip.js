@@ -65,6 +65,17 @@ class ContextStrip extends Feature {
         showIf: 'contextStrip',
       },
       {
+        key: 'stripDetail',
+        type: 'text',
+        name: 'Under the note\'s name',
+        desc: 'What the strip shows beside its place in the album: properties, or modified, created or folder, separated by commas — each the note has, in that order. Leave it empty for the first of domain, author, book or status, else its folder; none for nothing.',
+        placeholder: 'domain, status',
+        fallback: '',
+        showIf: 'contextStrip',
+        suggest: 'properties',
+        suggestExtra: ['modified', 'created', 'folder', 'none'],
+      },
+      {
         key: 'stripProgress',
         name: 'How far you\'ve read',
         desc: 'A thin line along the foot of the strip, as far across as you are down the note.',
@@ -503,11 +514,38 @@ class ContextStrip extends Feature {
     }, false, 'more');
   }
 
+  /** What goes beside the note's place in its album: as the setting says, or one property worth showing. */
   leadOf(file) {
-    return leadProperty(this.app, file, true);
+    return stripDetail(this.app, file, this.settings.stripDetail);
   }
 
 }
 
 ContextStrip.settingKey = 'contextStrip';
+
+/**
+ * A note's line on the strip, from a list of what to show: properties,
+ * or modified, created or folder, each the note has, joined by a dot.
+ * Empty, the one property worth showing; "none", nothing.
+ */
+function stripDetail(app, file, spec) {
+  const keys = String(spec || '')
+    .split(',')
+    .map((k) => k.trim())
+    .filter(Boolean);
+  if (!keys.length) return leadProperty(app, file, true);
+  if (keys.some((k) => k.toLowerCase() === 'none')) return '';
+  const cache = file.extension === 'md' ? app.metadataCache.getFileCache(file) : null;
+  const fm = (cache && cache.frontmatter) || {};
+  return keys
+    .map((key) => {
+      const k = key.toLowerCase();
+      if (k === 'modified') return relativeDay(file.stat.mtime);
+      if (k === 'created') return relativeDay(file.stat.ctime);
+      if (k === 'folder') return file.parent && file.parent.path !== '/' ? file.parent.name : '';
+      return valueText(fmGet(fm, key));
+    })
+    .filter(Boolean)
+    .join(' · ');
+}
 

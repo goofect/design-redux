@@ -32,6 +32,8 @@ const DEFAULTS = {
   contextStrip: true,
   // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,
+  // What the strip shows beside that: properties and the like, by name; empty for its pick.
+  stripDetail: '',
   // A line along the strip's foot for how far down the note you are.
   stripProgress: true,
   // Notes lined up to read next, by path; the strip's » goes through them first.

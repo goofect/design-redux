@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -680,6 +680,20 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.update();
     assert.strictEqual(place(), null);
     strip.el.remove();
+  });
+
+  await t("what the strip shows beside that is the setting's: properties, folder and the like, or its own pick", () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    app.metadataCache.getFileCache = () => ({ frontmatter: { status: 'medium touched', domain: '[[Politics]]', tags: ['ir', 'theory'] } });
+    const said = (spec) => R.stripDetail(app, file, spec);
+    // Empty: one property worth showing, as before.
+    assert.strictEqual(said(''), 'Politics');
+    assert.strictEqual(said('tags, status'), 'ir, theory · medium touched');
+    assert.strictEqual(said('author, folder'), 'IR', 'what the note lacks is left out');
+    assert.strictEqual(said('none'), '');
+    assert.strictEqual(R.DEFAULTS.stripDetail, '');
+    assert.ok(JSON.stringify(R.SETTINGS_TABS).includes('"stripDetail"'), 'a row in settings');
   });
 
   await t("the strip's line shows how far down the note you are, and goes when it's switched off", () => {

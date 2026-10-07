@@ -728,6 +728,7 @@ function renamePropertyInSettings(settings, from, to) {
   [
     ['albumColumns', 'Album columns'],
     ['tableColumns', 'Notes table columns'],
+    ['stripDetail', 'Strip: under the note\'s name'],
   ].forEach(([key, label]) => {
     const next = renameInNameList(settings[key], from, to);
     if (next !== null) keep(label, () => settings[key], (v) => (settings[key] = v))(next);
