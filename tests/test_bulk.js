@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_bulk_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyToolsModal, BulkEdits, BulkEditing, AddPropertiesModal, RenamePropertyModal, RenameTagModal, ' +
+  '\nmodule.exports.__test = { PropertyToolsModal, BulkEdits, BulkEditing, AddPropertiesModal, RenamePropertyModal, RenameTagModal, renamedText, ' +
   'addPropertiesTo, renamePropertyIn, mergeValues, renameTagText, renameTagsValue, renameTagIn, tagNameProblem, ' +
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
@@ -580,6 +580,32 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     v.files.forEach((f) => assert.strictEqual(v.texts.get(f), before.get(f), `${f.path} not restored`));
     assert.strictEqual(plugin.settings.categoryProperty, 'domain');
     assert.strictEqual(plugin.settings.albumColumns, 'domain, modified');
+  });
+
+  await t('new capitals for a property change the name Obsidian lists it by too, even with every note written so already', async () => {
+    const v = makeVault({ 'IR/a.md': note({ Parent: '[[Law]]' }), 'IR/b.md': note({ parent: '[[Politics]]' }) });
+    const { bulk } = makePlugin(v);
+    // Obsidian keeps a property's type under the name first written, and lists the property by it.
+    const m = v.app.metadataTypeManager;
+    m.assignedWidgets = { parent: { name: 'Parent', widget: 'text' } };
+    m.unsetType = async (k) => { delete m.assignedWidgets[k.toLowerCase()]; };
+    m.setType = async (k, t) => {
+      const low = k.toLowerCase();
+      if (m.assignedWidgets[low]) m.assignedWidgets[low].widget = t;
+      else m.assignedWidgets[low] = { name: k, widget: t };
+    };
+    const record = await bulk.renameProperty('Parent', 'parent');
+    assert.deepStrictEqual(v.fm('IR/a.md'), { parent: '[[Law]]', position: {} });
+    assert.deepStrictEqual(m.assignedWidgets.parent, { name: 'parent', widget: 'text' });
+    assert.strictEqual(R.renamedText('Parent', 'parent', 1, record), 'Renamed “Parent” to “parent” in 1 note');
+    await bulk.undo();
+    assert.strictEqual(m.assignedWidgets.parent.name, 'Parent');
+    // Every note "parent" already: still a change to make, to the name it's listed by.
+    v.edit('IR/a.md', note({ parent: '[[Law]]' }));
+    assert.strictEqual(bulk.planPropertyRename('Parent', 'parent').total, 0);
+    const again = await bulk.renameProperty('Parent', 'parent');
+    assert.strictEqual(m.assignedWidgets.parent.name, 'parent');
+    assert.strictEqual(R.renamedText('Parent', 'parent', 0, again), '“parent” is written that way now');
   });
 
   /* -- merging properties ------------------------------------------------ */

@@ -636,7 +636,7 @@ class RenamePropertyModal extends BulkModal {
     else problem = propertyNameProblem(to);
     // The name as it is: something to do only where notes spell it otherwise.
     const plan = problem ? null : this.bulk.planPropertyRename(from, to);
-    if (!problem && to === from && !plan.total) problem = 'Type the new name.';
+    if (!problem && to === from && !plan.total && !assignedEntryDiffers(this.app, to)) problem = 'Type the new name.';
     this.toHint.setText('');
     if (problem) {
       lines.push({ icon: 'info', cls: 'is-muted', text: problem });
@@ -657,13 +657,16 @@ class RenamePropertyModal extends BulkModal {
     }
 
     const caseOnly = from.toLowerCase() === to.toLowerCase();
+    const respell = caseOnly && assignedEntryDiffers(this.app, to);
     if (plan.total) {
       lines.push({
         icon: 'pencil',
         text: caseOnly
-          ? `Changes its capitals in ${bulkCount(plan.total, 'note')}.`
+          ? `Changes its capitals in ${bulkCount(plan.total, 'note')}${respell ? ', and in the name Obsidian lists it by' : ''}.`
           : `Renames it in ${bulkCount(plan.total, 'note')}.`,
       });
+    } else if (respell) {
+      lines.push({ icon: 'pencil', text: `Every note writes it “${to}” already; Obsidian still lists it as “${assignedEntry(this.app, to).name}”, and that changes too.` });
     } else if (!holders) {
       lines.push({ icon: 'info', cls: 'is-muted', text: `No note has a property called “${from}”.` });
     }
@@ -707,7 +710,7 @@ class RenamePropertyModal extends BulkModal {
       });
     }
 
-    const reach = plan.total + (this.bases ? this.bases.length : 0) + plan.settings.length;
+    const reach = plan.total + (this.bases ? this.bases.length : 0) + plan.settings.length + (respell ? 1 : 0);
     this.showSummary(
       lines,
       reach
@@ -720,7 +723,7 @@ class RenamePropertyModal extends BulkModal {
               const bases = (record.bases || []).length;
               bulkNotice(
                 this.bulk,
-                (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
+                renamedText(from, to, done, record) +
                   (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
                   '.' +
                   bulkTail(record),

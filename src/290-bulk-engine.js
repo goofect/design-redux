@@ -74,6 +74,56 @@ function assignedType(app, key) {
 }
 
 /**
+ * The name and type Obsidian keeps a property's type under, or null for
+ * none — kept in types.json, by name as first written. It lists the
+ * property by that name, whatever the notes now say.
+ */
+function assignedEntry(app, key) {
+  const m = app && app.metadataTypeManager;
+  const low = String(key).toLowerCase();
+  // Newer Obsidian keeps them as assignedWidgets, older as types.
+  for (const store of [m && m.assignedWidgets, m && m.types]) {
+    if (store && typeof store === 'object' && Object.prototype.hasOwnProperty.call(store, low)) {
+      const entry = store[low];
+      if (entry && typeof entry.name === 'string') return { name: entry.name, type: entry.widget || entry.type || null };
+    }
+  }
+  return null;
+}
+
+/**
+ * A property's type kept under `to` as now spelled, where Obsidian has it
+ * in other capitals: changing a property's capitals changes the name it's
+ * listed by. Returns the spelling it had, or null for no change.
+ */
+async function respellAssignedType(app, to) {
+  const m = app && app.metadataTypeManager;
+  const entry = assignedEntry(app, to);
+  if (!entry || entry.name === to || !entry.type || typeof m.unsetType !== 'function' || typeof m.setType !== 'function') return null;
+  try {
+    await m.unsetType(to);
+    await m.setType(to, entry.type);
+    if (typeof m.rebuildProperties === 'function') m.rebuildProperties();
+    return entry.name;
+  } catch (err) {
+    return null;
+  }
+}
+
+/** Whether Obsidian keeps a property's type under other capitals than `name`. */
+function assignedEntryDiffers(app, name) {
+  const entry = assignedEntry(app, name);
+  return !!entry && entry.name !== name;
+}
+
+/** What a rename did, said plainly: the notes it changed, or just the capitals it's listed by. */
+function renamedText(from, to, done, record) {
+  if (!done && record && record.respelled) return `“${to}” is written that way now`;
+  if (from === to) return `Wrote “${to}” the same way in ${bulkCount(done, 'note')}`;
+  return `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`;
+}
+
+/**
  * What a typed value becomes in the note: a list split at commas, a
  * number, a checkbox's true or false, or text. Nothing typed is an
  * empty property, as Obsidian's own Add property leaves one.
@@ -1270,8 +1320,14 @@ class BulkEdits {
         /* Obsidian infers it again from the values */
       }
     }
+    // New capitals: the name Obsidian lists it by, too — even where every note had them already.
+    const was = await respellAssignedType(app, to);
+    record.respelled = !!was;
     this.followRename({ property: [from, to] });
-    record.undoFollow = () => this.followRename({ property: [to, from] });
+    record.undoFollow = () => {
+      this.followRename({ property: [to, from] });
+      if (was) respellAssignedType(app, was);
+    };
     return record;
   }
 
@@ -1335,8 +1391,12 @@ class BulkEdits {
         /* Obsidian infers it again from the values */
       }
     }
+    const was = await respellAssignedType(app, to);
     others.forEach((name) => this.followRename({ property: [name, to] }));
-    record.undoFollow = () => others.forEach((name) => this.followRename({ property: [to, name] }));
+    record.undoFollow = () => {
+      others.forEach((name) => this.followRename({ property: [to, name] }));
+      if (was) respellAssignedType(app, was);
+    };
     return record;
   }
 
@@ -1558,7 +1618,7 @@ async function renamePropertyInPlace(bulk, from, to, { redraw, review, picks }) 
     return null;
   }
   const plan = bulk.planPropertyRename(from, to);
-  if (from === to && !plan.total && !plan.conflicts.length) {
+  if (from === to && !plan.total && !plan.conflicts.length && !assignedEntryDiffers(bulk.app, to)) {
     redraw();
     return null;
   }
@@ -1581,7 +1641,7 @@ async function renamePropertyInPlace(bulk, from, to, { redraw, review, picks }) 
   const bases = (record.bases || []).length;
   bulkNotice(
     bulk,
-    (from === to ? `Wrote “${to}” the same way in ${bulkCount(done, 'note')}` : `Renamed “${from}” to “${to}” in ${bulkCount(done, 'note')}`) +
+    renamedText(from, to, done, record) +
       (bases ? ` and ${bulkCount(bases, 'base')}` : '') +
       '.' +
       (plan.merged.length ? ` ${bulkCount(plan.merged.length, 'note')} already had “${to}”; the two are one now.` : '') +
