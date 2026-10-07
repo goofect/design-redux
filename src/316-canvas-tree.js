@@ -515,7 +515,7 @@ function outlineTree(model, links) {
   const reading = (a, b) => a.y - b.y || a.x - b.x;
   const tucked = new Map();
   model.nodes.forEach((n) => {
-    if (n.tuck) tucked.set(n.tuck.by, (tucked.get(n.tuck.by) || 0) + 1);
+    if (n.tuck && !isGroupRecord(n)) tucked.set(n.tuck.by, (tucked.get(n.tuck.by) || 0) + 1);
   });
   // A card's place is under a shown parent in the same group — not one
   // whose branch is folded, which shows it closed though this card's

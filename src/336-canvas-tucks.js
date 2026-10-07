@@ -171,9 +171,9 @@ function restoreOrphans(model, state, close) {
       const moved = new Set();
       const dx = was.x + tuck.dx - n.x;
       const dy = was.y + tuck.dy - n.y;
-      if (dx) shiftRecord(model, n, 'x', dx, moved);
+      if (dx) shiftRecord(model, n, 'x', dx, moved, true);
       moved.clear();
-      if (dy) shiftRecord(model, n, 'y', dy, moved);
+      if (dy) shiftRecord(model, n, 'y', dy, moved, true);
     });
     // What the fold moved, moved back; or, for one that noted nothing, room made as unfolding it would.
     if (was && was.room) {

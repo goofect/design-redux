@@ -88,7 +88,7 @@ class CanvasFold extends CanvasFeature {
       {
         key: 'canvasBranches',
         name: 'Fold branches',
-        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — the crown in the bar above selected cards, or the right-click menu; as many as you like — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
+        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it, with any group holding nothing but those cards. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — the crown in the bar above selected cards, or the right-click menu; as many as you like — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
       },
       {
         key: 'canvasCloseGaps',
@@ -378,9 +378,10 @@ class CanvasFold extends CanvasFeature {
     let changed = state ? restoreOrphans(model, state, this.closing) : false;
     if (openOldFolds(model, this.closing)) changed = true;
     if (changed) applyCanvasModel(model, before);
+    // Cards, not the groups folded away with them.
     const counts = new Map();
     model.nodes.forEach((n) => {
-      if (n.tuck) counts.set(n.tuck.by, (counts.get(n.tuck.by) || 0) + 1);
+      if (n.tuck && !isGroupRecord(n)) counts.set(n.tuck.by, (counts.get(n.tuck.by) || 0) + 1);
     });
     let anyBranch = false;
     const links = arrowLinks(model);
@@ -401,7 +402,7 @@ class CanvasFold extends CanvasFeature {
   fillTucked(view, holderId, pop) {
     pop.addClass('dr-fold-list');
     const model = canvasModel(view.canvas);
-    const inside = tuckedInto(model, holderId);
+    const inside = tuckedInto(model, holderId).filter((rec) => !isGroupRecord(rec));
     pop.createDiv({ cls: 'dr-fold-list-head', text: inside.length === 1 ? '1 card tucked away' : `${inside.length} cards tucked away` });
     const list = pop.createDiv({ cls: 'dr-fold-list-rows' });
     const most = 14;
@@ -660,7 +661,7 @@ class FoldingHelpModal extends Modal {
     [
       [
         'Branches',
-        'Select a card and press Fold branch in the bar above it — or right-click it — to tuck everything its arrows lead to into the card. Where the arrows were, it then says how many cards it holds: point at the number to see which, and pick one to open the branch there.',
+        'Select a card and press Fold branch in the bar above it — or right-click it — to tuck everything its arrows lead to into the card, with any group holding nothing but those cards. Where the arrows were, it then says how many cards it holds: point at the number to see which, and pick one to open the branch there.',
       ],
       [
         'Master cards',

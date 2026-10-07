@@ -53,10 +53,12 @@ function axisParts(axis) {
 /**
  * A record and what moves with it: a group's contents, and whatever is
  * tucked into any of them — a tucked card only ever moves with its fold.
+ * `alone`: not what lies in a group, only what's tucked into it — for a
+ * group coming out of a fold, whose own cards come out with it.
  */
-function carriedBy(model, rec) {
+function carriedBy(model, rec, alone) {
   const carried = [rec];
-  if (isGroupRecord(rec)) groupContents(model, rec, false).forEach((n) => carried.push(n));
+  if (isGroupRecord(rec) && !alone) groupContents(model, rec, false).forEach((n) => carried.push(n));
   for (let i = 0; i < carried.length; i++) {
     const id = carried[i].id;
     model.nodes.forEach((n) => {
@@ -67,8 +69,8 @@ function carriedBy(model, rec) {
 }
 
 /** Move a record, and what moves with it. */
-function shiftRecord(model, rec, axis, delta, moved) {
-  carriedBy(model, rec).forEach((n) => {
+function shiftRecord(model, rec, axis, delta, moved, alone) {
+  carriedBy(model, rec, alone).forEach((n) => {
     if (moved.has(n.id)) return;
     moved.add(n.id);
     n[axis] += delta;
@@ -293,9 +295,9 @@ function untuckFrom(model, rec) {
     const dy = rec.y + n.tuck.dy - n.y;
     n.tuck = null;
     const moved = new Set();
-    if (dx) shiftRecord(model, n, 'x', dx, moved);
+    if (dx) shiftRecord(model, n, 'x', dx, moved, true);
     moved.clear();
-    if (dy) shiftRecord(model, n, 'y', dy, moved);
+    if (dy) shiftRecord(model, n, 'y', dy, moved, true);
   });
   return back;
 }
@@ -342,15 +344,37 @@ function branchRoom(model, before, rec, ids, side, home, folding) {
 }
 
 /**
- * A card's branch tucked into it — stopping at master cards — and, if
- * `close`, the room it took closed up and the groups round it fitted;
- * what that moved is noted on the card. The tucked ids, or [].
+ * The groups holding nothing but cards of a branch being folded — or
+ * such groups — innermost first: they fold away with it. Ids.
+ */
+function groupsWithin(model, ids) {
+  const going = new Set(ids);
+  const out = [];
+  model.nodes
+    .filter((g) => isGroupRecord(g) && !g.tuck && !going.has(g.id))
+    .sort((a, b) => a.width * a.height - b.width * b.height)
+    .forEach((g) => {
+      const inside = model.nodes.filter((n) => n !== g && !n.tuck && withinRect(n, g));
+      if (inside.length && inside.every((n) => going.has(n.id))) {
+        going.add(g.id);
+        out.push(g.id);
+      }
+    });
+  return out;
+}
+
+/**
+ * A card's branch tucked into it — stopping at master cards — with the
+ * groups that hold nothing else, and, if `close`, the room it took
+ * closed up and the groups round it fitted; what that moved is noted on
+ * the card. The tucked ids, or [].
  */
 function foldBranch(model, rec, close, links) {
   if (!rec || rec.tuck) return [];
   links = links || arrowLinks(model);
-  const ids = foldableBranch(model, rec.id, links);
-  if (!ids.length) return [];
+  const cards = foldableBranch(model, rec.id, links);
+  if (!cards.length) return [];
+  const ids = cards.concat(groupsWithin(model, cards));
   const side = branchSide(model, rec.id, links);
   const before = snapshotModel(model);
   const home = homeIn(model, rec.id);

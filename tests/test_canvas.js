@@ -953,6 +953,37 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(where(), start);
   });
 
+  await t('a group holding nothing but a branch’s cards folds away with them, and comes back where it was', async () => {
+    const view = fakeCanvas({
+      nodes: [
+        card('outer', -40, -80, 900, 520, { type: 'group', label: 'Theories' }),
+        card('r', 0, 100, 100, 50),
+        card('a', 200, 100, 100, 50),
+        card('kids', 360, -40, 300, 340, { type: 'group', label: 'Readings' }),
+        card('inner', 380, 160, 260, 120, { type: 'group', label: 'Waltz' }),
+        card('a1', 400, 0, 100, 50),
+        card('a2', 400, 200, 100, 50),
+        card('below', -40, 500, 300, 60),
+      ],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left')],
+    });
+    const fold = new R.CanvasFold({ settings, app: {} });
+    fold.watched.set(view, { file: view.file });
+    const n = (id) => view.canvas.nodes.get(id);
+    const where = () => Array.from(view.canvas.nodes.values()).map((c) => [c.id, c.x, c.y, c.width, c.height]);
+    const start = where();
+    await fold.foldBranches(view, [n('a')], true);
+    // Readings and Waltz, inside it, hold only a's cards: folded away with them. Theories holds a too: it stays.
+    assert.deepStrictEqual(['a1', 'a2', 'kids', 'inner', 'outer'].map((id) => (n(id).unknownData.drTuck || {}).by || null), ['a', 'a', 'a', 'a', null]);
+    assert.ok(n('kids').nodeEl.classList.contains('dr-tucked'));
+    // The count is of cards.
+    assert.strictEqual(n('a').nodeEl.querySelector('.dr-branch-knob').textContent, '+2');
+    // Theories closes up round what it still shows, and what's below it follows.
+    assert.ok(n('outer').height < 520 && n('below').y < 500);
+    await fold.foldBranches(view, [n('a')], false);
+    assert.deepStrictEqual(where(), start);
+  });
+
   await t('a fold that moved nothing moves nothing back, even with closing the gaps switched on since', async () => {
     const view = fakeCanvas({
       nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('b', 0, 100, 100, 50)],
