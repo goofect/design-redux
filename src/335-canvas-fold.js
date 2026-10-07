@@ -187,6 +187,16 @@ class CanvasFold extends CanvasFeature {
       if (on) node.unknownData[MASTER_KEY] = true;
       else delete node.unknownData[MASTER_KEY];
     });
+    // Made master with no arrow leading into it: said why nothing above folds it yet.
+    if (on) {
+      const model = canvasModel(view.canvas);
+      const links = arrowLinks(model);
+      const loose = nodes.map((n) => model.byId.get(n.id)).filter((rec) => rec && !(links.parents.get(rec.id) || []).length);
+      if (loose.length && typeof Notice === 'function') {
+        const what = loose.length === 1 ? `“${canvasCardLabel(loose[0])}” has` : `${loose.length} of them have`;
+        new Notice(`Master card set. ${what} no arrow pointing into it yet, so no fold above can take it: point one at it from the card it belongs under.`, 8000);
+      }
+    }
     this.save(view);
     this.pass(view);
     const ws = this.app && this.app.workspace;
@@ -228,8 +238,7 @@ class CanvasFold extends CanvasFeature {
           .onClick(() => this.foldBranches(view, [first], !count))
       );
     }
-    // A master card matters only where there's a fold above it to stay out of.
-    if (this.canBranch && (rec.master || (links.parents.get(rec.id) || []).length)) {
+    if (this.canBranch) {
       menu.addItem((item) => {
         section(item)
           .setIcon('crown')
@@ -496,7 +505,7 @@ class CanvasFold extends CanvasFeature {
 
   /**
    * Fold branch in the bar above the selected cards, beside Obsidian's
-   * own buttons, and Master card for cards hanging from another.
+   * own buttons, and Master card.
    * Redrawn only when what it shows changes, since drawing it is itself
    * a change the watcher sees.
    */
@@ -515,7 +524,7 @@ class CanvasFold extends CanvasFeature {
       const model = canvasModel(view.canvas);
       if (now.length) this.foldBranches(view, now, !now.every((n) => tuckedCount(model, n.id) > 0));
     });
-    // Master card beside it, for the selected cards a fold above could take.
+    // Master card beside it.
     const these = this.masterCandidates(view);
     const on = these.length > 0 && these.every((r) => r.master);
     const many = these.length > 1;
@@ -528,17 +537,11 @@ class CanvasFold extends CanvasFeature {
     if (crown) crown.toggleClass('is-active', on);
   }
 
-  /**
-   * The selected cards — or `nodes` — that could be master cards, as they
-   * hang from another, or are: their records.
-   */
+  /** The selected cards — or `nodes` — that can be master cards: any shown card but a group. Their records. */
   masterCandidates(view, nodes) {
     if (!view || !view.canvas || !this.canBranch) return [];
     const model = canvasModel(view.canvas);
-    const links = arrowLinks(model);
-    return (nodes || this.selectedNodes(view))
-      .map((n) => model.byId.get(n.id))
-      .filter((rec) => rec && !rec.tuck && !isGroupRecord(rec) && (rec.master || (links.parents.get(rec.id) || []).length));
+    return (nodes || this.selectedNodes(view)).map((n) => model.byId.get(n.id)).filter((rec) => rec && !rec.tuck && !isGroupRecord(rec));
   }
 
   /** Beside the canvas's zoom controls: folding, for every branch at once. */

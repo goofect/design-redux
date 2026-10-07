@@ -350,7 +350,11 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(!bar.querySelector('.dr-branch-button'));
     view.canvas.selection.add(r);
     fold.pass(view);
-    assert.strictEqual(bar.querySelectorAll('button').length, 1, 'only Fold branch: a card has no fold of its own');
+    assert.deepStrictEqual(
+      Array.from(bar.querySelectorAll('button')).map((b) => b.getAttribute('aria-label')),
+      ['Fold branch', 'Make master card'],
+      'a card has no fold of its own'
+    );
     const button = bar.querySelector('.dr-branch-button');
     assert.strictEqual(button.getAttribute('aria-label'), 'Fold branch');
     // x leads to b too, so b isn't r's alone: only a is tucked away.
@@ -878,13 +882,14 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(crown.classList.contains('is-active'));
     crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     assert.ok(!('drMaster' in n('m').unknownData));
-    // Several at once — the one at the top of its tree left out, as nothing folds above it.
+    // Several at once, any card — even one at the top of its tree, with nothing above it yet.
     ['r', 'a', 'k'].forEach((id) => view.canvas.selection.add(n(id)));
     fold.pass(view);
-    assert.strictEqual(crown.getAttribute('aria-label'), 'Make 3 master cards');
+    assert.strictEqual(crown.getAttribute('aria-label'), 'Make 4 master cards');
     crown.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert.deepStrictEqual(['r', 'a', 'm', 'k'].map((id) => !!n(id).unknownData.drMaster), [false, true, true, true]);
+    assert.deepStrictEqual(['r', 'a', 'm', 'k'].map((id) => !!n(id).unknownData.drMaster), [true, true, true, true]);
     assert.strictEqual(crown.getAttribute('aria-label'), 'Master cards: on');
+    fold.setMaster(view, [n('r')], false);
     const several = new Menu();
     fold.addMenuItems(several, ['a', 'm'].map(n));
     assert.deepStrictEqual(several.items.map((i) => i.title), ['Master cards']);
@@ -901,10 +906,10 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(n('m').unknownData.drMaster, true);
     assert.strictEqual(view.canvas.saves, 1, 'saved, a step of Undo');
     assert.ok(n('m').nodeEl.querySelector('.dr-master-mark'));
-    // Not for one at the top of its tree: there's no fold above it.
+    // Any card, even one at the top of its tree.
     menu = new Menu();
     fold.addMenuItems(menu, [n('r')]);
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch']);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Fold branch', 'Master card']);
     fold.foldBranches(view, [n('r')], true);
     assert.deepStrictEqual(['a', 'b', 'm', 'k'].map((id) => !!n(id).unknownData.drTuck), [true, true, false, false]);
     assert.strictEqual(n('r').nodeEl.querySelector('.dr-branch-knob').textContent, '+2');
