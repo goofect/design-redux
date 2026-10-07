@@ -169,8 +169,8 @@ class CanvasOutline extends CanvasFeature {
     return [
       {
         key: 'canvasOutline',
-        name: 'Canvas outline',
-        desc: 'The canvas as a tree in the right sidebar: groups holding their cards, cards holding what their arrows lead to. Click a row to go to its card; a card’s arrow folds its branch, a group’s closes it in the outline. Opened from the button among the canvas controls, or a command.',
+        name: 'Outline',
+        desc: 'The canvas as a tree in the right sidebar. Click a row to go to its card.',
       },
     ];
   }

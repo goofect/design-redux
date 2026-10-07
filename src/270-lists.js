@@ -767,8 +767,8 @@ class MarkedLists extends Feature {
     return [
       {
         key: 'letterLists',
-        name: 'Lettered lists',
-        desc: 'Treat lines starting a., b) or (c) as a list: drawn as one in reading view, and continued with the next letter when you press Enter.',
+        name: 'Alphabetical lists',
+        desc: 'Lines starting a., b) or (c) become a list, continued when you press Enter.',
       },
       {
         key: 'romanLists',

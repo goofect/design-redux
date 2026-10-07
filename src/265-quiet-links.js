@@ -496,7 +496,7 @@ class QuietLinks extends Feature {
       {
         key: 'quietLinks',
         name: 'Quiet links',
-        desc: 'Write a link as [[[Note]]] to keep it off the graph and out of backlinks. It still opens the note — making it if it’s missing — previews on hover and follows renames, and shows with a dotted underline. Type [[[ for a list of notes; right-click a link, or use the command, to switch it between quiet and normal.',
+        desc: 'Write [[[Note]]] for a link kept off the graph and backlinks. Right-click a link to switch it.',
       },
     ];
   }

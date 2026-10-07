@@ -56,19 +56,19 @@ class ContextStrip extends Feature {
       {
         key: 'contextStrip',
         name: 'Context strip',
-        desc: 'A bar along the bottom with the note you\'re in: its cover, « » through its album, and its actions.',
+        desc: 'A bar along the bottom with the current note, its cover and actions.',
       },
       {
         key: 'stripPlace',
         name: 'Place in album',
-        desc: 'Where the note falls in its album, as "3 of 12", under its name on the strip.',
+        desc: 'Show where the note falls in its album, as 3 of 12.',
         showIf: 'contextStrip',
       },
       {
         key: 'stripDetail',
         type: 'text',
-        name: 'Under the note\'s name',
-        desc: 'What the strip shows beside its place in the album: properties, or modified, created or folder, separated by commas — each the note has, in that order. Leave it empty for the first of domain, author, book or status, else its folder; none for nothing.',
+        name: 'Detail line',
+        desc: 'What shows beside that: properties, modified, created or folder, separated by commas. Empty for automatic; none for nothing.',
         placeholder: 'domain, status',
         fallback: '',
         showIf: 'contextStrip',
@@ -77,8 +77,8 @@ class ContextStrip extends Feature {
       },
       {
         key: 'stripProgress',
-        name: 'How far you\'ve read',
-        desc: 'A thin line along the foot of the strip, as far across as you are down the note.',
+        name: 'Reading progress',
+        desc: 'A thin line along the bar for how far down the note you are.',
         showIf: 'contextStrip',
       },
     ];

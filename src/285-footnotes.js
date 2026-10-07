@@ -780,20 +780,20 @@ class Footnotes extends Feature {
     return [
       {
         key: 'footnotes',
-        name: 'Footnotes in place',
-        desc: 'Add footnote (a command, and in the editor’s right-click menu) opens a box at the cursor: type the citation, and the number goes in there and the citation at the end of the note while you carry on writing. On a footnote, it opens that one to change or remove.',
+        name: 'Footnote box',
+        desc: 'Add footnote opens a box at the cursor; the citation goes to the end of the note.',
       },
       {
         key: 'footnotesAside',
         showIf: 'footnotes',
-        name: 'Footnotes in their own view',
-        desc: 'Keep the citations at the end of a note off the page, and list them in a Footnotes view in the sidebar — open from the footnote button along the bottom, or the command. The numbers stay in the text; a citation shows again while the cursor is in it.',
+        name: 'Footnotes view',
+        desc: 'Hide the citations at the end of a note and list them in a sidebar view.',
       },
       {
         key: 'footnoteOrder',
         showIf: 'footnotes',
-        name: 'Keep footnotes numbered in order',
-        desc: 'Adding or removing one renumbers the rest by where they appear, and lists the citations at the end in that order. Put footnotes in order does it for a whole note, and clears citations no longer used.',
+        name: 'Renumber footnotes',
+        desc: 'Keep footnotes numbered in the order they appear.',
       },
     ];
   }

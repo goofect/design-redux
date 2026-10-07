@@ -88,12 +88,12 @@ class CanvasFold extends CanvasFeature {
       {
         key: 'canvasBranches',
         name: 'Fold branches',
-        desc: 'Fold branch, in the bar above a selected card or its right-click menu, tucks everything its arrows lead to into it, with any group holding nothing but those cards. The card then shows how many cards it holds — point at the number for their names. Arrows from elsewhere point at the fold, and a folded card joins up with arrows like any other. A master card — the crown in the bar above selected cards, or the right-click menu; as many as you like — stays out of the folds above it, with what hangs from it. A button beside the zoom controls folds or unfolds every branch.',
+        desc: 'Fold everything a card’s arrows lead to into it, from the bar above it or its menu. A crowned master card stays out of folds above it.',
       },
       {
         key: 'canvasCloseGaps',
-        name: 'Close the gaps',
-        desc: 'What’s beyond a fold moves in to fill the room it left — never onto another card — and back out exactly as it was when it unfolds. The groups it’s in shrink and grow to match.',
+        name: 'Close gaps',
+        desc: 'Cards nearby move in when a branch folds, and back when it opens.',
       },
     ];
   }
@@ -673,7 +673,7 @@ class FoldingHelpModal extends Modal {
         'Room',
         this.closing
           ? 'What’s beyond a fold moves in to the room it leaves — never onto another card — and back exactly where it was when it opens; the groups it’s in shrink and grow with it.'
-          : 'Folds leave their room as it was: nothing else moves. Switch on “Close the gaps” in settings to have what’s beyond move in.',
+          : 'Folds leave their room as it was: nothing else moves. Switch on “Close gaps” in settings to have what’s beyond move in.',
       ],
       ['Kept', 'Folds are saved with the canvas, and Undo puts one back.'],
     ].forEach(([what, how]) => {

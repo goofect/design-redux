@@ -189,21 +189,21 @@ class CanvasArrows extends CanvasFeature {
       {
         key: 'canvasArrows',
         name: 'Arrow styles',
-        desc: 'Arrows on a canvas curved, straight or with square corners; solid, dashed or dotted; with a triangle, an open head, a dot or a diamond. Right-click an arrow, or select some and use the bar above them.',
+        desc: 'Give arrows a shape, line and head from their right-click menu or the bar above them.',
       },
       {
         key: 'canvasArrowShape',
         type: 'dropdown',
         showIf: 'canvasArrows',
-        name: 'Arrows are drawn',
+        name: 'Default arrow shape',
         desc: 'For arrows without a style of their own.',
         options: ARROW_SHAPES,
       },
       {
         key: 'canvasArrowSides',
         showIf: 'canvasArrows',
-        name: 'Join cards at the sides facing each other',
-        desc: 'Arrows without a style of their own leave and reach each card on the side facing the other, and follow as cards move.',
+        name: 'Join facing sides',
+        desc: 'Arrows without a style of their own join the sides of cards that face each other.',
       },
     ];
   }

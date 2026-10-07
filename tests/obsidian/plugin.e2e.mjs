@@ -170,7 +170,7 @@ describe('Design Redux in Obsidian', function () {
       input.dispatchEvent(new Event('input', { bubbles: true }));
       return { names, all: rows.length, seen: seen.length, panes };
     });
-    expect(found.names).toContain('Drop an image on a cover');
+    expect(found.names).toContain('Drop to set a cover');
     expect(found.names.length).toBe(found.seen);
     expect(found.seen).toBeLessThan(found.all);
     expect(found.panes).toContain('browsing');

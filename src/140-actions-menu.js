@@ -17,13 +17,13 @@ class ActionsMenu extends Feature {
       {
         key: 'navDropdown',
         name: 'Actions menu',
-        desc: 'Replace the file explorer\'s row of buttons with a menu in the sidebar header.',
+        desc: 'Replace the file explorer’s buttons with a menu in the sidebar header.',
       },
       {
         key: 'ribbonInMenu',
         showIf: 'navDropdown',
-        name: 'Include the ribbon',
-        desc: 'Put the left ribbon\'s buttons in that menu too, and hide the ribbon.',
+        name: 'Ribbon in menu',
+        desc: 'Move the left ribbon’s buttons into that menu.',
       },
     ];
   }

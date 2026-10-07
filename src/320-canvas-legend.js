@@ -68,8 +68,8 @@ class CanvasLegend extends Feature {
     return [
       {
         key: 'canvasLegend',
-        name: 'Canvas legend',
-        desc: 'A card in the corner of each canvas naming what its colours mean. Click a colour to fade out the rest. The legend button among the canvas controls hides it.',
+        name: 'Legend',
+        desc: 'A corner card naming what each colour means. Click a colour to fade the rest.',
       },
     ];
   }

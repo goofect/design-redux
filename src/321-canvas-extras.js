@@ -62,7 +62,7 @@ class CanvasFind extends CanvasFeature {
       {
         key: 'canvasFind',
         name: 'Find a card',
-        desc: 'A command to go to a card on the canvas by its words — its text, its note\'s name or its group\'s label — opening any fold it\'s tucked into.',
+        desc: 'A command to jump to a card by its text, opening any fold it’s in.',
       },
     ];
   }
@@ -133,7 +133,7 @@ class CanvasFocus extends CanvasFeature {
       {
         key: 'canvasFocus',
         name: 'Focus on a branch',
-        desc: 'Dims everything but a card and what its arrows lead to, from the card\'s right-click menu or a command. Escape, or the same again, ends it.',
+        desc: 'Dim everything but a card’s branch, from its right-click menu. Escape ends it.',
       },
     ];
   }
@@ -238,8 +238,8 @@ class CanvasDuplicate extends CanvasFeature {
     return [
       {
         key: 'canvasDuplicate',
-        name: 'Duplicate a branch',
-        desc: 'Copies a card with everything its arrows lead to, arrows and folds included, beside the original — from the card\'s right-click menu or a command.',
+        name: 'Duplicate branch',
+        desc: 'Copy a card and its branch beside the original, from its right-click menu.',
       },
     ];
   }

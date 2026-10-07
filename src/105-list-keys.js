@@ -21,8 +21,8 @@ class ListKeys extends Feature {
     return [
       {
         key: 'typeToJump',
-        name: 'Type to jump, Space to preview',
-        desc: 'In the library and lists of notes, typing the start of a name jumps to it, and Space shows the note in focus in a preview. Enter still opens it.',
+        name: 'Type to jump',
+        desc: 'In lists, type a name to jump to it. Space previews the note; Enter opens it.',
       },
     ];
   }

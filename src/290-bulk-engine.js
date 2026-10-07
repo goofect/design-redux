@@ -766,9 +766,9 @@ function renamePropertyInSettings(settings, from, to) {
   };
 
   [
-    ['coverProperty', 'Cover image property'],
+    ['coverProperty', 'Cover property'],
     ['categoryProperty', 'Search categories'],
-    ['graphRouteProperty', 'Graph links decided by'],
+    ['graphRouteProperty', 'Parent property'],
   ].forEach(([key, label]) => {
     if (typeof settings[key] === 'string' && settings[key].trim().toLowerCase() === low) {
       keep(label, () => settings[key], (v) => (settings[key] = v))(to);
@@ -778,7 +778,7 @@ function renamePropertyInSettings(settings, from, to) {
   [
     ['albumColumns', 'Album columns'],
     ['tableColumns', 'Notes table columns'],
-    ['stripDetail', 'Strip: under the note\'s name'],
+    ['stripDetail', 'Detail line'],
   ].forEach(([key, label]) => {
     const next = renameInNameList(settings[key], from, to);
     if (next !== null) keep(label, () => settings[key], (v) => (settings[key] = v))(next);

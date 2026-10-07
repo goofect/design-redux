@@ -24,8 +24,8 @@ class CanvasAlign extends CanvasFeature {
     return [
       {
         key: 'canvasTextAlign',
-        name: 'Centred text',
-        desc: 'Center the text in a canvas card, from the button in the bar above a selected card or its right-click menu.',
+        name: 'Centre text',
+        desc: 'Centre a card’s text from the bar above it or its right-click menu.',
       },
     ];
   }

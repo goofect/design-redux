@@ -13,8 +13,8 @@ class SidebarDrop extends Feature {
     return [
       {
         key: 'sidebarDrop',
-        name: 'Drag notes onto albums',
-        desc: 'Drag a note from a list onto a folder in the library or in Obsidian\'s file list to move it there, or a note from the file list onto the library\'s folders. An Undo follows.',
+        name: 'Drag to move',
+        desc: 'Drag a note onto a folder in the library or file list to move it, with Undo.',
       },
     ];
   }

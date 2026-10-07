@@ -133,7 +133,7 @@ class GraphPropertyFilter extends Feature {
       {
         key: 'graphProperties',
         name: 'Property filters',
-        desc: 'Add a Properties section to the graph view\'s filters, to show only notes with a property or a value.',
+        desc: 'Filter the graph by a property or its value.',
       },
     ];
   }

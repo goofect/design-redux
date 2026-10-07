@@ -12,7 +12,7 @@ const SETTINGS_TABS = [
       { keys: ['library', 'homePath', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
-        desc: 'What the library lists, under headings of your own.',
+        desc: 'What the library lists, under your own headings.',
         keys: ['librarySections'],
       },
     ],
@@ -52,7 +52,7 @@ const SETTINGS_TABS = [
       },
       {
         title: 'Compatibility',
-        desc: 'Parts of Obsidian that Design Redux uses but plugins aren’t officially meant to. If an Obsidian update changes one, this shows what stops working.',
+        desc: 'Obsidian internals Design Redux relies on, and what stops working if an update changes one.',
         keys: ['compatibility'],
       },
     ],
@@ -342,7 +342,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
   renderPane(pane, spec, sections) {
     if (spec.id === 'browsing' && !this.settings.library) {
       const note = pane.createDiv({ cls: 'dr-set-callout' });
-      note.createSpan({ text: 'The Library view is off, so the settings for its screens are hidden.' });
+      note.createSpan({ text: 'The library is off, so the settings for its screens are hidden.' });
       const on = note.createEl('button', { text: 'Turn it on' });
       on.addEventListener('click', async () => {
         this.settings.library = true;

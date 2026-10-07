@@ -616,15 +616,15 @@ class GraphRoutes extends Feature {
     return [
       {
         key: 'graphRoutes',
-        name: 'Links through notes between',
-        desc: 'Add a switch to the graph\'s Display settings that draws a link through the notes in between — Westminster system → Ministerial responsibility → Individual responsibility — rather than straight across. Which note is broader is read from which way links run, then how many notes each links with; notes nothing tells apart are left as they are. Hovering a note still lights up everything it links to.',
+        name: 'Links through concepts',
+        desc: 'A Display switch that draws links through the notes in between, not straight across.',
       },
       {
         key: 'graphRouteProperty',
         type: 'text',
         showIf: 'graphRoutes',
-        name: 'Decided by a property',
-        desc: 'The property in which a note names the note it sits under — parent: [[Ministerial responsibility]] — and the graph goes by it for the notes it places: a link between two of them goes through the notes between in that order. Notes without it are still worked out from how they link.',
+        name: 'Parent property',
+        desc: 'The property naming a note’s parent, as parent: [[Topic]]. Links follow it where it’s set.',
         placeholder: 'parent',
         fallback: '',
         suggest: 'property',

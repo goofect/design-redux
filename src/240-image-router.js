@@ -7,14 +7,14 @@ class ImageRouter extends Feature {
     return [
       {
         key: 'routeImages',
-        name: 'Move new images to a folder',
-        desc: 'Move images added to the vault into one folder, updating the links to them. Other attachments follow Obsidian\'s own setting.',
+        name: 'Collect new images',
+        desc: 'Move images added to the vault into one folder, updating their links.',
       },
       {
         key: 'imageFolder',
         type: 'text',
         name: 'Image folder',
-        desc: 'Relative to the vault root. Created if missing; images already in it stay put.',
+        desc: 'Relative to the vault root. Created if missing.',
         placeholder: 'attachments',
         showIf: 'routeImages',
         suggest: 'folder',

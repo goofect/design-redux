@@ -138,8 +138,8 @@ class CanvasArrange extends CanvasFeature {
     return [
       {
         key: 'canvasArrange',
-        name: 'Arrange cards',
-        desc: 'Line up selected cards by an edge or their middles, space them evenly, make them the same size, or lay them out in a grid, a row or a column — from the bar above them or their right-click menu.',
+        name: 'Arrange',
+        desc: 'Align, space, size or grid selected cards from the bar above them or their right-click menu.',
       },
     ];
   }

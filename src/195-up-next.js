@@ -21,7 +21,7 @@ class UpNext extends Feature {
       {
         key: 'upNext',
         name: 'Up Next and Shuffle',
-        desc: 'Line notes up to read next from their menus; the strip\'s » goes through them before the rest of the album. Shuffle opens an album at random and lines up the rest.',
+        desc: 'Queue notes from their menus for » to go through first. Shuffle opens an album at random.',
       },
     ];
   }

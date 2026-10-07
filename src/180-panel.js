@@ -23,13 +23,13 @@ class PropertiesPanel extends Feature {
     return [
       {
         key: 'propertiesDropdown',
-        name: 'Properties panel',
-        desc: 'Hide properties in the note and open them from a button in its header instead.',
+        name: 'Properties button',
+        desc: 'Hide properties in the note and open them from a button in its header.',
       },
       {
         key: 'showMentions',
         name: 'Mentions',
-        desc: 'Below the properties, list the notes that link here or name it without linking.',
+        desc: 'Below the properties, list notes that link to or name this one.',
         showIf: 'propertiesDropdown',
       },
     ];

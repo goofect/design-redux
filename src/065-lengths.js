@@ -43,7 +43,7 @@ function wordLabel(words) {
 const LENGTH_STYLES = {
   time: 'Reading time',
   words: 'Word count',
-  none: 'Nothing',
+  none: 'None',
 };
 
 class Lengths {

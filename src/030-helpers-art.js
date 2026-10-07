@@ -212,7 +212,7 @@ function blankLook(settings, name, path) {
 
 /**
  * A note's artwork: its own cover, or a colour chosen for it; then, with
- * 'Use the folder's cover' on, the cover of the folder it's directly in,
+ * 'Folder cover for notes' on, the cover of the folder it's directly in,
  * as a song shows its album's; then the icon — on a soft colour picked
  * from the note's own name, where that's the choice.
  */

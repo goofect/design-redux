@@ -12,7 +12,7 @@ class AlbumProperty extends Feature {
       {
         key: 'propertyForAlbum',
         name: 'Set for the whole album',
-        desc: 'A property\'s menu can give its value to every note in the album the note is in, with an Undo.',
+        desc: 'A property’s menu can give its value to every note in the album, with Undo.',
       },
     ];
   }

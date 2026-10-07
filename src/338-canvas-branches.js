@@ -12,13 +12,13 @@ class CanvasBranches extends CanvasFeature {
     return [
       {
         key: 'canvasTidy',
-        name: 'Tidy a branch',
-        desc: 'Lay out everything a card’s arrows lead to as a neat tree, from the card’s right-click menu: growing the way the arrows leave it — both ways, for a mind map spreading both ways — with each level lined up, branches packed close, and the groups they’re in fitted round them.',
+        name: 'Tidy branch',
+        desc: 'Lay out a card’s branch as a neat tree, from its right-click menu.',
       },
       {
         key: 'canvasSelectBranch',
-        name: 'Select a branch',
-        desc: 'Select a card with everything its arrows lead to, to move or colour them together, from the card’s right-click menu.',
+        name: 'Select branch',
+        desc: 'Select a card and everything below it, from its right-click menu.',
       },
     ];
   }

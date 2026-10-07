@@ -24,7 +24,7 @@ class OnePage extends Feature {
       {
         key: 'onePage',
         name: 'Keep to one page',
-        desc: 'Open what would be a new tab, split or window in the page you are on, and show Home on an empty page. A plugin that expects a new tab will replace the page.',
+        desc: 'Open new tabs, splits and windows in the current page instead.',
       },
     ];
   }

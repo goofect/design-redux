@@ -57,8 +57,8 @@ class CanvasMindMap extends CanvasFeature {
     return [
       {
         key: 'canvasMindMap',
-        name: 'Build a mind map with keys',
-        desc: 'With one card selected, Tab adds a card its arrow leads to and Enter one beside it, each placed in line with the others and opened to type in; Escape finishes typing, ready for the next. Alt and an arrow key moves to the next card that way. Also in a card’s right-click menu.',
+        name: 'Mind map keys',
+        desc: 'Tab adds a card below the selected one, Enter one beside it, and Alt and an arrow moves between cards.',
       },
     ];
   }

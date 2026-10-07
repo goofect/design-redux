@@ -16,8 +16,8 @@ class CoverDrop extends Feature {
     return [
       {
         key: 'coverDrop',
-        name: 'Drop an image on a cover',
-        desc: 'Drag an image onto an album\'s cover, or a note\'s in its properties or on the strip, to make it the cover. Images from outside the vault are saved as attachments first.',
+        name: 'Drop to set a cover',
+        desc: 'Drag an image onto a cover to use it. Images from outside the vault are saved first.',
       },
     ];
   }
