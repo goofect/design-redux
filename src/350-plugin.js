@@ -40,6 +40,8 @@ class DesignRedux extends Plugin {
       new CanvasArrange(this),
       new CanvasMindMap(this),
       new CanvasRestructure(this),
+      new CanvasBranchNote(this),
+      new CanvasOutlineBranch(this),
       new CanvasCards(this),
       new CanvasFold(this),
       new CanvasBranches(this),

@@ -147,6 +147,9 @@ const DEFAULTS = {
   canvasRelink: true,
   // Shift+Enter puts a card before the selected one; Shift+Tab moves it up a level.
   canvasRestructure: true,
+  // A branch written out as a note, and a note's headings or a card's list made into cards.
+  canvasBranchNote: true,
+  canvasOutlineBranch: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

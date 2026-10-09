@@ -70,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -944,6 +944,93 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.canvas.selectOnly(n('c'));
     view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
     assert.strictEqual(view.canvas.nodes.size, count);
+  });
+
+  await t('an outline from markdown: headings by level, lists under them, code and front matter left out; one heading’s part', () => {
+    const shape = (items) => items.map((i) => [i.text, shape(i.children)]);
+    const note = '---\ntags: x\n---\n# Law\nIntro\n## Courts ##\n```\n# not a heading\n```\n### Appeal\n## Statute\n- not in a note with headings\n# Politics\n';
+    assert.deepStrictEqual(shape(R.outlineFromMarkdown(note, { lists: 'fallback' })), [
+      ['Law', [['Courts', [['Appeal', []]]], ['Statute', []]]],
+      ['Politics', []],
+    ]);
+    assert.deepStrictEqual(shape(R.outlineFromMarkdown(note, { lists: 'fallback', subpath: '#Law#Courts' })), [['Appeal', []]]);
+    // No headings: its list, by how far in each item is.
+    assert.deepStrictEqual(shape(R.outlineFromMarkdown('Title\n- a\n    - a1\n    - [ ] a2\n- b\n1. c\n', { lists: 'fallback' })), [
+      ['a', [['a1', []], ['a2', []]]], ['b', []], ['c', []],
+    ]);
+    // A card's list goes under its headings.
+    assert.deepStrictEqual(shape(R.outlineFromMarkdown('Card\n## Part\n- x\n\t- y', { lists: 'always' })), [['Part', [['x', [['y', []]]]]]]);
+  });
+
+  await t('a branch as a note: a heading for each card as deep as it is, past six a list, its other words beneath, a note as a link', () => {
+    const nodes = [card('r', 0, 0, 100, 50, { text: 'Root\nwhat it is' })];
+    const edges = [];
+    let prev = 'r';
+    for (let i = 1; i <= 7; i++) {
+      nodes.push(card(`d${i}`, i * 200, 0, 100, 50, { text: `Depth ${i}` }));
+      edges.push(edge(prev, `d${i}`, 'right', 'left'));
+      prev = `d${i}`;
+    }
+    nodes.push(card('z', 200, 300, 100, 50, { type: 'file', file: 'Notes/Zed.md' }));
+    nodes.push(card('a', 200, -300, 100, 50, { text: '# Alpha\nfirst\n## inner' }));
+    edges.push(edge('r', 'z', 'right', 'left'), edge('r', 'a', 'right', 'left'));
+    const model = R.modelFromData({ nodes, edges });
+    const text = R.branchMarkdown(model, 'r', null, (rec) => `[[${rec.file.replace(/\.md$/, '').split('/').pop()}]]`);
+    assert.strictEqual(text, [
+      'what it is', '',
+      '# Alpha', '', 'first', '**inner**', '',
+      '# Depth 1', '', '## Depth 2', '', '### Depth 3', '', '#### Depth 4', '', '##### Depth 5', '', '###### Depth 6', '',
+      '- Depth 7', '',
+      '# [[Zed]]', '',
+    ].join('\n').replace(/\n+$/, '\n'));
+  });
+
+  await t('a text card’s list becomes cards it leads to, a tidy branch in free space; a branch becomes a note beside the canvas', async () => {
+    const view = mindCanvas({
+      nodes: [card('root', 0, 100, 200, 60, { text: 'Plan\n- one\n  - one a\n- two' }), card('x', 300, 100, 200, 60, { text: 'in the way' })],
+      edges: [],
+    });
+    const canvas = view.canvas;
+    canvas.importData = ({ nodes, edges }) => {
+      (nodes || []).forEach((d) => canvas.nodes.set(d.id, new FakeNode(canvas, d)));
+      (edges || []).forEach((e) => canvas.edges.set(e.id, {
+        id: e.id,
+        from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' },
+        to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' },
+        lineGroupEl: view.containerEl.createDiv(), lineEndGroupEl: view.containerEl.createDiv(), render() {},
+      }));
+    };
+    const { p, fold } = plugin({ canvasOutlineBranch: true, canvasBranchNote: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMindMap ? mind : null);
+    const out = new R.CanvasOutlineBranch(p);
+    const menu = new Menu();
+    out.addMenuItems(menu, [canvas.nodes.get('root')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Make cards from list']);
+    const made = await out.expand(view, canvas.nodes.get('root'));
+    const byText = (t) => Array.from(canvas.nodes.values()).find((n) => n.data.text === t);
+    const [one, oneA, two] = ['one', 'one a', 'two'].map(byText);
+    const parent = (n) => Array.from(canvas.edges.values()).find((e) => e.to.node === n).from.node.id;
+    assert.deepStrictEqual([parent(one), parent(oneA), parent(two)], ['root', one.id, 'root']);
+    assert.ok(one.y < two.y, 'in the list’s order');
+    assert.ok(oneA.x > one.x, 'a level further out');
+    const free = (a, b) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y;
+    made.nodes.forEach((n) => assert.ok(free(canvas.nodes.get(n.id), canvas.nodes.get('x')), `${n.text} is on a card`));
+    assert.ok(canvas.saves >= 1);
+
+    // And back out: the branch written as a note in the canvas's folder.
+    const created = [];
+    p.freeChildPath = (folder, base, ext) => `${base}.${ext}`;
+    p.app = {
+      vault: { create: async (path, text) => { created.push([path, text]); return { path, basename: path.replace(/\.md$/, '') }; }, getFileByPath: () => null },
+      metadataCache: {},
+      workspace: { trigger() {}, getLeaf: () => ({ openFile: async () => {} }) },
+    };
+    const note = new R.CanvasBranchNote(p);
+    const file = await note.makeNote(view, canvas.nodes.get('root'));
+    assert.strictEqual(file.path, 'Plan.md');
+    assert.strictEqual(created[0][1], '- one\n  - one a\n- two\n\n# one\n\n## one a\n\n# two\n');
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
