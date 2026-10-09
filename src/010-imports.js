@@ -27,7 +27,6 @@ const {
   Component,
   apiVersion,
   getAllTags,
-  requestUrl,
 } = require('obsidian');
 // Provided by Obsidian at runtime, as 'obsidian' is.
 const { Decoration, EditorView, ViewPlugin, WidgetType, keymap } = require('@codemirror/view');
