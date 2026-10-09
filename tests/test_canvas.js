@@ -940,6 +940,27 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(before.x + before.width <= 0, 'behind it, the way its branch grows from');
     assert.deepStrictEqual(parentOf('root'), [before.id]);
 
+    // Alt+Shift and an arrow: the card and the one beside it change places, each with its branch.
+    const reorder = mindCanvas({
+      nodes: [card('p', 0, 100, 200, 60), card('s1', 300, 0, 200, 60), card('s2', 300, 120, 200, 60), card('s2a', 600, 120, 200, 60), card('s2b', 600, 200, 200, 60)],
+      edges: [edge('p', 's1', 'right', 'left'), edge('p', 's2', 'right', 'left'), edge('s2', 's2a', 'right', 'left'), edge('s2', 's2b', 'right', 'left')],
+    });
+    const fold2 = new R.CanvasFold({ settings, app: {} });
+    fold2.watched.set(reorder, { file: reorder.file, schedule() {} });
+    p.feature = (C) => (C === R.CanvasFold ? fold2 : C === R.CanvasMindMap ? mind : null);
+    const m = (id) => reorder.canvas.nodes.get(id);
+    assert.strictEqual(re.swapTarget(reorder, m('s1'), -1), null, 'the first has nothing before it');
+    const rs = { file: reorder.file };
+    re.watched.set(reorder, rs);
+    re.mount(reorder, rs);
+    reorder.canvas.selectOnly(m('s2'));
+    reorder.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, shiftKey: true, bubbles: true, cancelable: true }));
+    await new Promise((res) => setTimeout(res, 10));
+    // s2's branch (y 120–260) takes s1's place at y 0; s1 follows after it, the 60 gap kept.
+    assert.deepStrictEqual([m('s2').y, m('s2a').y, m('s2b').y, m('s1').y], [0, 0, 80, 200]);
+    assert.ok(reorder.canvas.saves >= 1);
+    re.cleanup(reorder, rs);
+
     // Switched off, the keys are left alone.
     p.settings.canvasRestructure = false;
     re.cleanup(view, state);

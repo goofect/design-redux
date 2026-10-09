@@ -33,7 +33,7 @@ class CanvasRestructure extends CanvasFeature {
       {
         key: 'canvasRestructure',
         name: 'Restructure branches',
-        desc: 'Shift+Enter puts a new card before the selected one; Shift+Tab moves it up a level. Its menu can also move it under the card above.',
+        desc: 'Shift+Enter puts a new card before the selected one; Shift+Tab moves it up a level; Alt+Shift and an arrow moves it before or after the card beside it. Its menu can also move it under the card above.',
       },
     ];
   }
@@ -54,6 +54,20 @@ class CanvasRestructure extends CanvasFeature {
         icon: 'arrow-up-left',
         check: () => !!one() && !!this.promoteTarget(this.pageCanvas(), one()),
         run: () => this.promote(this.pageCanvas(), one()),
+      },
+      {
+        id: 'canvas-card-earlier',
+        name: 'Move the selected card before the card beside it',
+        icon: 'arrow-up',
+        check: () => !!one() && !!this.swapTarget(this.pageCanvas(), one(), -1),
+        run: () => this.reorder(this.pageCanvas(), one(), -1),
+      },
+      {
+        id: 'canvas-card-later',
+        name: 'Move the selected card after the card beside it',
+        icon: 'arrow-down',
+        check: () => !!one() && !!this.swapTarget(this.pageCanvas(), one(), 1),
+        run: () => this.reorder(this.pageCanvas(), one(), 1),
       },
       {
         id: 'canvas-demote-card',
@@ -89,15 +103,68 @@ class CanvasRestructure extends CanvasFeature {
 
   onKey(view, evt) {
     if (evt.defaultPrevented || evt.isComposing || typingInto(evt.target)) return;
-    if (!evt.shiftKey || evt.ctrlKey || evt.metaKey || evt.altKey) return;
-    if (evt.key !== 'Enter' && evt.key !== 'Tab') return;
+    if (!evt.shiftKey || evt.ctrlKey || evt.metaKey) return;
+    const arrow = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[evt.key];
+    if (evt.altKey ? !arrow : evt.key !== 'Enter' && evt.key !== 'Tab') return;
     if (!view.canvas || view.canvas.readonly) return;
     const node = this.selectedCard(view);
     if (!node || node.isEditing) return;
     evt.preventDefault();
     evt.stopPropagation();
-    if (evt.key === 'Enter') this.addParent(view, node);
+    if (evt.altKey) this.reorder(view, node, arrow);
+    else if (evt.key === 'Enter') this.addParent(view, node);
     else this.promote(view, node);
+  }
+
+  /** The card beside this one under the same parent, before (-1) or after (1) it; or null. */
+  swapTarget(view, node, dir) {
+    if (!view || !view.canvas || !node) return null;
+    const model = canvasModel(view.canvas);
+    const up = hangsFrom(model, node.id);
+    if (!up) return null;
+    const row = siblingsOf(model, arrowLinks(model), up.parent);
+    const at = row.findIndex((r) => r.id === node.id);
+    return at === -1 ? null : row[at + dir] || null;
+  }
+
+  /**
+   * The card and the one beside it change places, each with its branch:
+   * the earlier takes the first one's place, the gap between them kept.
+   * Glides there; one step of Undo.
+   */
+  reorder(view, node, dir) {
+    const other = this.swapTarget(view, node, dir);
+    if (!other) return Promise.resolve(false);
+    const fold = this.plugin.feature(CanvasFold);
+    if (fold) fold.settle(view);
+    const model = canvasModel(view.canvas);
+    const links = arrowLinks(model);
+    const up = hangsFrom(model, node.id);
+    const across = sideAxes(branchSide(model, up.parent.id, links)).across;
+    const p = axisParts(across);
+    const branch = (id) => [model.byId.get(id)].concat(branchOf(model, id, links).map((x) => model.byId.get(x)).filter((r) => r && !r.tuck));
+    const [first, second] = dir < 0 ? [branch(other.id), branch(node.id)] : [branch(node.id), branch(other.id)];
+    const a = boundsOf(first);
+    const b = boundsOf(second);
+    const gap = p.near(b) - p.far(a);
+    const before = snapshotModel(model);
+    const moved = new Set();
+    // The second to where the first began; the first after it.
+    second.forEach((r) => shiftRecord(model, r, across, p.near(a) - p.near(b), moved));
+    first.forEach((r) => shiftRecord(model, r, across, p.near(a) + b[p.size] + gap - p.near(a), moved));
+    const state = fold ? fold.watched.get(view) : null;
+    return new Promise((resolve) => {
+      glideCanvasModel(view, model, before, state, (changed) => {
+        try {
+          if (changed) view.canvas.requestSave();
+        } catch (err) {
+          /* saved with the canvas's next change */
+        }
+        if (fold) fold.schedule(view);
+        this.app.workspace.trigger('design-redux:canvas-changed', view);
+        resolve(changed);
+      });
+    });
   }
 
   addMenuItems(menu, nodes) {
