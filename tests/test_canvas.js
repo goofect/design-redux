@@ -70,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1146,6 +1146,33 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     // The names are the setting's, when there are some.
     p.settings.canvasRelationNames = 'causes, causes, refutes';
     assert.deepStrictEqual(rel.names(), ['causes', 'refutes']);
+  });
+
+  await t('looking a canvas over: loose, empty and twice-named cards, notes gone, and arrows round in a circle', () => {
+    const model = R.modelFromData({
+      nodes: [
+        card('a', 0, 0, 100, 50, { text: 'Rule of law' }),
+        card('b', 200, 0, 100, 50, { text: 'Judicial review' }),
+        card('c', 400, 0, 100, 50, { text: 'judicial review' }),
+        card('e', 0, 200, 100, 50, { text: '  ' }),
+        card('f', 200, 200, 100, 50, { type: 'file', file: 'Gone.md' }),
+        card('x', 0, 400, 100, 50, { text: 'X' }),
+        card('y', 200, 400, 100, 50, { text: 'Y' }),
+        card('l', 400, 400, 100, 50, { text: 'Alone' }),
+        card('g', -50, -50, 700, 600, { type: 'group', label: 'G' }),
+      ],
+      edges: [edge('a', 'b', 'right', 'left'), edge('b', 'c', 'right', 'left'), edge('a', 'f', 'bottom', 'top'), edge('x', 'y', 'right', 'left'), edge('y', 'x', 'left', 'right')],
+    });
+    const found = R.canvasProblems(model, (path) => path !== 'Gone.md').map((p) => `${p.id}: ${p.problem}`);
+    assert.deepStrictEqual(found.sort(), [
+      'b: On the canvas 2 times',
+      'c: On the canvas 2 times',
+      'e: Has nothing in it',
+      'f: Its file is gone',
+      'l: Not joined to anything',
+      'x: Its arrows lead round in a circle',
+      'y: Its arrows lead round in a circle',
+    ].sort().filter((l, i, all) => all.indexOf(l) === i));
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
