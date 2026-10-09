@@ -41,18 +41,29 @@ jobs:
 
       - run: npm ci
 
+      # Built once; both test runs use this main.js.
+      - name: Build
+        run: node build.mjs
+
       - name: Simulation tests
         id: unit
         continue-on-error: true
         run: |
           mkdir -p ci-output
-          npm test 2>&1 | tee ci-output/simulation-tests.txt
+          node tests/run.js 2>&1 | tee ci-output/simulation-tests.txt
+
+      # Saved once a week, not on every run: the downloads rarely change, and
+      # saving takes as long as restoring. A new Obsidian release mid-week is
+      # downloaded until the next week's cache holds it.
+      - name: Week
+        id: week
+        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Obsidian downloads
         uses: actions/cache@v4
         with:
           path: .obsidian-cache
-          key: obsidian-${{ runner.os }}-${{ github.run_id }}
+          key: obsidian-${{ runner.os }}-${{ steps.week.outputs.week }}
           restore-keys: obsidian-${{ runner.os }}-
 
       - name: Virtual display
@@ -71,7 +82,7 @@ jobs:
         continue-on-error: true
         env:
           WDIO_MAX_INSTANCES: 2
-        run: npm run test:obsidian 2>&1 | tee ci-output/obsidian-tests.txt
+        run: npx wdio run ./wdio.conf.mjs 2>&1 | tee ci-output/obsidian-tests.txt
 
       - name: Publish results to the ci-results branch
         if: always()
@@ -93,6 +104,16 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Results for ${GITHUB_SHA::7}"
           git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-results
+
+      # The same results kept with the run itself, for two weeks.
+      - name: Keep results with the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-output
+          path: ci-output
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Fail if any tests failed
         if: steps.unit.outcome != 'success' || steps.obsidian.outcome != 'success'
