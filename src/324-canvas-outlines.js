@@ -188,12 +188,71 @@ function treeCards(root, items, side, newId) {
   return { nodes, edges };
 }
 
-/** Text cards for an outline, each tall enough for its words. */
-function outlineCards(root, items, side, size, newId) {
+/** An outline's items as text cards, each tall enough for its words. */
+function outlineItems(items, size) {
   const height = (text) => Math.max(size.height, 24 * Math.ceil(String(text).length / 28) + 36);
-  const asCards = (list) =>
-    list.map((it) => ({ card: { type: 'text', text: it.text, width: size.width, height: height(it.text) }, children: asCards(it.children) }));
-  return treeCards(root, asCards(items), side, newId);
+  return items.map((it) => ({ card: { type: 'text', text: it.text, width: size.width, height: height(it.text) }, children: outlineItems(it.children, size) }));
+}
+
+/** Text cards for an outline, laid out from `root`. */
+function outlineCards(root, items, side, size, newId) {
+  return treeCards(root, outlineItems(items, size), side, newId);
+}
+
+/**
+ * Cards (items as treeCards takes them) that a card leads to, as a tidy
+ * branch in the nearest free space on the side its branch grows — after
+ * any it leads to already, which stay where they are. Saved, one step of
+ * Undo. `zoom`: brought into view, the card with them; `select`: the
+ * first one made selected. { nodes, edges } as made, or null.
+ */
+function growCards(plugin, view, node, items, opts = {}) {
+  const canvas = view && view.canvas;
+  if (!canvas || !node || !items.length || typeof canvas.importData !== 'function') return null;
+  const fold = plugin.feature(CanvasFold);
+  if (fold) fold.settle(view);
+  const model = canvasModel(canvas);
+  const root = model.byId.get(node.id);
+  if (!root || root.tuck) return null;
+  const links = arrowLinks(model);
+  const mind = plugin.feature(CanvasMindMap);
+  const side = mind ? mind.growthSide(model, links, root) : 'right';
+  const made = treeCards(root, items, side, () => newCanvasId(canvas));
+  // Where they go: the box they make, in the nearest free space that side.
+  const box = boundsOf(made.nodes);
+  const kids = shownChildren(model, links, root.id);
+  const axes = sideAxes(side);
+  const deep = axes.depth === 'x' ? 'width' : 'height';
+  let away = TIDY_DEPTH_GAP;
+  if (kids.length) {
+    const near = axes.forward ? Math.min(...kids.map((k) => k[axes.depth])) - (root[axes.depth] + root[deep]) : root[axes.depth] - Math.max(...kids.map((k) => k[axes.depth] + k[deep]));
+    if (near > 0) away = near;
+  }
+  const spot = freeSpot(model, root, { width: box.width, height: box.height }, side, { away });
+  if (spot) {
+    made.nodes.forEach((n) => {
+      n.x += spot.x - box.x;
+      n.y += spot.y - box.y;
+    });
+  }
+  try {
+    canvas.importData({ nodes: made.nodes, edges: made.edges });
+    canvas.requestSave();
+    const all = boundsOf([root].concat(made.nodes));
+    if (opts.zoom && typeof canvas.zoomToBbox === 'function') {
+      canvas.zoomToBbox({ minX: all.x, minY: all.y, maxX: all.x + all.width, maxY: all.y + all.height });
+    }
+    const first = opts.select && made.nodes[0] ? canvas.nodes.get(made.nodes[0].id) : null;
+    if (first && typeof canvas.selectOnly === 'function') canvas.selectOnly(first);
+    if (first && !opts.zoom && typeof canvas.panIntoView === 'function') canvas.panIntoView(first.getBBox());
+  } catch (err) {
+    console.error('Design Redux: could not make the cards', err);
+    new Notice('Could not make the cards.');
+    return null;
+  }
+  if (fold) fold.schedule(view);
+  plugin.app.workspace.trigger('design-redux:canvas-changed', view);
+  return made;
 }
 
 class CanvasBranchNote extends CanvasFeature {
@@ -358,11 +417,8 @@ class CanvasOutlineBranch extends CanvasFeature {
    */
   async expand(view, node) {
     const canvas = view && view.canvas;
-    if (!canvas || !node || typeof canvas.importData !== 'function') return null;
-    const fold = this.plugin.feature(CanvasFold);
-    if (fold) fold.settle(view);
-    let model = canvasModel(canvas);
-    const root = model.byId.get(node.id);
+    if (!canvas || !node) return null;
+    const root = canvasModel(canvas).byId.get(node.id);
     if (!root || root.tuck) return null;
     const items = await this.outlineOf(root);
     const count = outlineSize(items);
@@ -374,44 +430,8 @@ class CanvasOutlineBranch extends CanvasFeature {
       new Notice(`That would make ${count} cards; ${OUTLINE_CARD_LIMIT} is the most at once.`);
       return null;
     }
-    model = canvasModel(canvas);
-    const links = arrowLinks(model);
-    const mind = this.plugin.feature(CanvasMindMap);
-    const side = mind ? mind.growthSide(model, links, root) : 'right';
     const base = (canvas.config && canvas.config.defaultTextNodeDimensions) || { width: 250, height: 60 };
-    const made = outlineCards(root, items, side, base, () => newCanvasId(canvas));
-    // Where they go: the box they make, in the nearest free space that side.
-    const box = boundsOf(made.nodes);
-    const kids = shownChildren(model, links, root.id);
-    const axes = sideAxes(side);
-    const deep = axes.depth === 'x' ? 'width' : 'height';
-    let away = TIDY_DEPTH_GAP;
-    if (kids.length) {
-      const near = axes.forward ? Math.min(...kids.map((k) => k[axes.depth])) - (root[axes.depth] + root[deep]) : root[axes.depth] - Math.max(...kids.map((k) => k[axes.depth] + k[deep]));
-      if (near > 0) away = near;
-    }
-    const spot = freeSpot(model, root, { width: box.width, height: box.height }, side, { away });
-    if (spot) {
-      made.nodes.forEach((n) => {
-        n.x += spot.x - box.x;
-        n.y += spot.y - box.y;
-      });
-    }
-    try {
-      canvas.importData({ nodes: made.nodes, edges: made.edges });
-      canvas.requestSave();
-      if (typeof canvas.zoomToBbox === 'function') {
-        const all = boundsOf([root].concat(made.nodes));
-        canvas.zoomToBbox({ minX: all.x, minY: all.y, maxX: all.x + all.width, maxY: all.y + all.height });
-      }
-    } catch (err) {
-      console.error('Design Redux: could not make the cards', err);
-      new Notice('Could not make the cards.');
-      return null;
-    }
-    if (fold) fold.schedule(view);
-    this.app.workspace.trigger('design-redux:canvas-changed', view);
-    return made;
+    return growCards(this.plugin, view, node, outlineItems(items, base), { zoom: true });
   }
 }
 

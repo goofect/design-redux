@@ -166,6 +166,8 @@ const DEFAULTS = {
   canvasCompare: true,
   // Cards given a part in an argument: claim, reason, objection, rebuttal, evidence.
   canvasArguments: true,
+  // One box to add a note's card, a new note or a new card, or join to a card already there.
+  canvasQuickAdd: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

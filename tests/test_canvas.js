@@ -60,6 +60,8 @@ const obsidian = new Proxy({
   setIcon: (el, name) => { el.dataset.icon = name; },
   Platform: { isMobile: false },
   getAllTags: (cache) => (cache.tags || []).map((t) => t.tag),
+  SuggestModal: class { constructor(app) { this.app = app; } setPlaceholder() {} open() {} },
+  prepareFuzzySearch: (q) => (text) => (text.toLowerCase().includes(q.toLowerCase()) ? { score: -text.length } : null),
 }, { get: (t, k) => (k in t ? t[k] : class {}) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
@@ -71,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1369,6 +1371,56 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     p.settings.canvasArguments = false;
     arg.pass(view);
     assert.ok(!('drRole' in claim.nodeEl.dataset));
+  });
+
+  await t('add or connect a card: a note comes as its card below the selected one, one on the canvas is joined to, or new words make a card', async () => {
+    const view = mindCanvas({
+      nodes: [card('r', 0, 0, 200, 60), card('kid', 300, 0, 280, 100, { type: 'file', file: 'Politics/Realism.md' }), card('loose', 0, 400, 280, 100, { type: 'file', file: 'Politics/Liberalism.md' })],
+      edges: [edge('r', 'kid', 'right', 'left')],
+    });
+    const canvas = view.canvas;
+    canvas.importData = ({ nodes, edges }) => {
+      (nodes || []).forEach((d) => canvas.nodes.set(d.id, new FakeNode(canvas, d)));
+      (edges || []).forEach((e) => {
+        const live = { id: e.id, from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' }, to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' }, unknownData: {}, lineGroupEl: view.containerEl.createDiv(), render() {} };
+        if (e.drRelated) live.unknownData.drRelated = true;
+        canvas.edges.set(e.id, live);
+      });
+    };
+    canvas.getViewportBBox = () => ({ minX: 1000, minY: 1000, maxX: 1400, maxY: 1300 });
+    const file = (path) => Object.assign(new R.TFile(), { path, basename: path.split('/').pop().replace(/\.md$/, ''), parent: { path: path.split('/')[0] } });
+    const files = ['Politics/Anarchy.md', 'Politics/Realism.md', 'Politics/Liberalism.md', 'Anarchy notes.md'].map(file);
+    const { p, fold } = plugin({ canvasQuickAdd: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMindMap ? mind : null);
+    p.app.vault = { getMarkdownFiles: () => files, getRoot: () => ({ path: '/' }), create: async (path) => file(path) };
+    p.app.fileManager = { getNewFileParent: () => ({ path: 'Inbox' }) };
+    p.freeChildPath = (folder, base, ext) => `${folder.path}/${base}.${ext}`;
+    const add = new R.CanvasQuickAdd(p);
+    const kinds = (q) => add.suggestions(view, q).map((x) => `${x.kind}:${x.title}`);
+    assert.deepStrictEqual(kinds('anarchy'), ['note:Anarchy', 'note:Anarchy notes', 'card:New card “anarchy”'], 'a note by that name already: no new one offered');
+    assert.deepStrictEqual(kinds('liberal'), ['join:Liberalism', 'new-note:New note “liberal”', 'card:New card “liberal”']);
+
+    const parentOf = (id) => Array.from(canvas.edges.values()).filter((e) => e.to.node && e.to.node.id === id).map((e) => [e.from.node.id, !!(e.unknownData || {}).drRelated]);
+    const r = canvas.nodes.get('r');
+    // A note: its card, below the selected one, selected.
+    const made = await add.choose(view, r, add.suggestions(view, 'anarchy')[0]);
+    assert.strictEqual(made.nodes[0].file, 'Politics/Anarchy.md');
+    assert.deepStrictEqual(parentOf(made.nodes[0].id), [['r', false]]);
+    assert.ok(canvas.selection.has(canvas.nodes.get(made.nodes[0].id)));
+    // On the canvas already, hanging from nothing: it hangs from the selected card now.
+    await add.choose(view, r, add.suggestions(view, 'liberal')[0]);
+    assert.deepStrictEqual(parentOf('loose'), [['r', false]]);
+    // Hanging from another already: joined as related, left where it hangs.
+    const other = canvas.nodes.get(made.nodes[0].id);
+    await add.choose(view, other, add.suggestions(view, 'realism')[0]);
+    assert.deepStrictEqual(parentOf('kid'), [['r', false], [other.id, true]]);
+    // A new note, made where Obsidian makes them; and words, as a card in the middle of the screen with nothing selected.
+    const note = await add.choose(view, r, add.suggestions(view, 'Separation of powers').find((x) => x.kind === 'new-note'));
+    assert.strictEqual(note.nodes[0].file, 'Inbox/Separation of powers.md');
+    const loose = await add.choose(view, null, { kind: 'card', text: 'Rule of law' });
+    assert.deepStrictEqual([loose.nodes[0].x, loose.nodes[0].y, loose.nodes[0].text], [1075, 1120, 'Rule of law']);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
