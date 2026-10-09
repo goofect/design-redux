@@ -482,6 +482,33 @@ describe('Design Redux in Obsidian', function () {
     expect(shown.height).toBeGreaterThan(8);
   });
 
+  it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getFileByPath('Paste.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Paste.canvas', JSON.stringify({ nodes: [{ id: 'root', type: 'text', text: 'Government', x: 0, y: 0, width: 250, height: 60 }], edges: [] }));
+    });
+    await obsidianPage.openFile('Paste.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const result = await browser.executeObsidian(async ({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.selectOnly(canvas.nodes.get('root'));
+      const data = new DataTransfer();
+      data.setData('text/plain', 'Constitutionalism\n  Rule of law\nFederalism');
+      const target = document.activeElement || document.body;
+      target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+      const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => canvas.nodes.size >= 4);
+      await new Promise((r) => setTimeout(r, 300));
+      const texts = Array.from(canvas.nodes.values()).map((n) => n.getData().text).sort();
+      const parentOf = {};
+      canvas.edges.forEach((e) => (parentOf[e.to.node.getData().text] = e.from.node.getData().text));
+      return { texts, parentOf };
+    });
+    expect(result.texts).toEqual(['Constitutionalism', 'Federalism', 'Government', 'Rule of law']);
+    expect(result.parentOf).toEqual({ Constitutionalism: 'Government', 'Rule of law': 'Constitutionalism', Federalism: 'Government' });
+  });
+
   it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
     // As an earlier version left them: a card folded to its title, and a
     // group folded with its card tucked inside, what's below closed up.

@@ -14,7 +14,8 @@ const OUTLINE_CARD_LIMIT = 200;
 /**
  * An outline from markdown: headings, by level, and list items, by how
  * far in they are, under the heading they follow. `lists`: 'always', or
- * 'fallback' — only where there are no headings. `subpath` ("#A#B"):
+ * 'fallback' — only where there are no headings. `lines`: plain lines
+ * count as items too. `subpath` ("#A#B"):
  * only what's under that heading. [{ text, children }].
  */
 function outlineFromMarkdown(text, opts) {
@@ -39,6 +40,8 @@ function outlineFromMarkdown(text, opts) {
     }
     const li = /^([ \t]*)(?:[-*+]|\d+[.)])[ \t]+(?:\[.\][ \t]+)?(.+)$/.exec(line);
     if (li) entries.push({ kind: 'item', indent: li[1].replace(/\t/g, '    ').length, text: li[2].trim() });
+    // `lines`: any other line with words is an item too, as far in as it's indented.
+    else if (opts.lines && line.trim()) entries.push({ kind: 'item', indent: /^[ \t]*/.exec(line)[0].replace(/\t/g, '    ').length, text: line.trim() });
   });
   // Only what's under one heading, its levels counted from there.
   let range = entries;

@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1421,6 +1421,40 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(note.nodes[0].file, 'Inbox/Separation of powers.md');
     const loose = await add.choose(view, null, { kind: 'card', text: 'Rule of law' });
     assert.deepStrictEqual([loose.nodes[0].x, loose.nodes[0].y, loose.nodes[0].text], [1075, 1120, 'Rule of law']);
+  });
+
+  await t('several lines pasted onto a selected card become cards below it, nested as indented; one line is left to the canvas', () => {
+    const view = mindCanvas({ nodes: [card('r', 0, 0, 200, 60)], edges: [] });
+    const canvas = view.canvas;
+    canvas.importData = ({ nodes, edges }) => {
+      (nodes || []).forEach((d) => canvas.nodes.set(d.id, new FakeNode(canvas, d)));
+      (edges || []).forEach((e) => canvas.edges.set(e.id, { id: e.id, from: { node: canvas.nodes.get(e.fromNode), side: e.fromSide, end: 'none' }, to: { node: canvas.nodes.get(e.toNode), side: e.toSide, end: 'arrow' }, lineGroupEl: view.containerEl.createDiv(), render() {} }));
+    };
+    const { p, fold } = plugin({ canvasPasteLines: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMindMap ? mind : null);
+    const paste = new R.CanvasPasteLines(p);
+    paste.pageCanvas = () => view;
+    const event = (text) => ({ target: document.body, defaultPrevented: false, clipboardData: { getData: () => text }, preventDefault() { this.prevented = true; }, stopPropagation() {} });
+    canvas.selectOnly(canvas.nodes.get('r'));
+    const one = event('Just one line');
+    paste.onPaste(view, one);
+    assert.ok(!one.prevented, 'one line is the canvas’s to paste');
+    const many = event('Constitutionalism\n  Separation of powers\n  Rule of law\n- Judicial review\n');
+    paste.onPaste(view, many);
+    assert.ok(many.prevented);
+    const text = (id) => canvas.nodes.get(id).data.text;
+    const parent = (t) => {
+      const n = Array.from(canvas.nodes.values()).find((x) => x.data.text === t);
+      return text(Array.from(canvas.edges.values()).find((e) => e.to.node === n).from.node.id);
+    };
+    assert.deepStrictEqual(['Constitutionalism', 'Separation of powers', 'Rule of law', 'Judicial review'].map(parent), ['r', 'Constitutionalism', 'Constitutionalism', 'r']);
+    // Nothing selected, or switched off: the canvas's paste.
+    canvas.selection.clear();
+    const none = event('a\nb');
+    paste.onPaste(view, none);
+    assert.ok(!none.prevented);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
