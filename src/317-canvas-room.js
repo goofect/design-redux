@@ -584,6 +584,21 @@ function tidyRecords(model, rec, close, links) {
  * as sideAxes gives them, `both` for a branch growing more than one way.
  */
 function placeBranch(model, rec, places, axes, close) {
+  // A card kept in place stays, and what hangs from it with it.
+  const kept = new Set();
+  const links = arrowLinks(model);
+  places.forEach((at, id) => {
+    const n = model.byId.get(id);
+    if (!n || !n.pinned) return;
+    kept.add(id);
+    branchOf(model, id, links).forEach((x) => kept.add(x));
+  });
+  if (kept.size) {
+    const free = new Map(Array.from(places.entries()).filter(([id]) => !kept.has(id)));
+    free.sides = places.sides;
+    free.both = places.both;
+    places = free;
+  }
   if (!places.size) return false;
   const before = snapshotModel(model);
   const home = homeIn(model, rec.id);
@@ -605,13 +620,15 @@ function placeBranch(model, rec, places, axes, close) {
     }
   });
   if (!changed) return changed;
-  const origin = new Set([rec.id].concat(ids));
+  // What's kept in place is still the tree's: never moved out of its way.
+  const tree = ids.concat(Array.from(kept));
+  const origin = new Set([rec.id].concat(tree));
   axes = Object.assign({}, axes, { both: !!(axes.both || places.both) });
   if (close) {
     const now = boundsOf([own].concat(ids.map((id) => model.byId.get(id))));
     roomAroundTidy(model, before, { origin, home, axes, was, now });
   }
-  moveStrays(model, before, rec, ids, axes, home);
+  moveStrays(model, before, rec, tree, axes, home);
   if (close) fitGroups(model, before);
   return true;
 }

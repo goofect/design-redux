@@ -16,6 +16,9 @@ const TUCK_KEY = 'drTuck';
 /* On an arrow: a relationship, not a branch — trees, folds and layouts pass it by. */
 const RELATED_KEY = 'drRelated';
 
+/* On a card: kept where it is — layouts and tidying leave it, and what hangs from it. */
+const PIN_KEY = 'drPinned';
+
 /** A card's tuck — { by, dx, dy } — or null. */
 function tuckOf(node) {
   const kept = node && node.unknownData && node.unknownData[TUCK_KEY];
@@ -73,6 +76,7 @@ function canvasModel(canvas) {
         fold: foldOf(node),
         room: roomOf(node.unknownData && node.unknownData[ROOM_KEY]),
         master: !!(node.unknownData && node.unknownData[MASTER_KEY]),
+        pinned: !!(node.unknownData && node.unknownData[PIN_KEY]),
         node,
       });
     });
@@ -110,6 +114,7 @@ function modelFromData(data) {
       fold: n[FOLD_KEY] && typeof n[FOLD_KEY].height === 'number' ? n[FOLD_KEY] : null,
       room: roomOf(n[ROOM_KEY]),
       master: !!n[MASTER_KEY],
+      pinned: !!n[PIN_KEY],
     })
   );
   const edges = ((data && data.edges) || []).map((e) => ({

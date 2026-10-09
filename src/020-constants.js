@@ -172,6 +172,8 @@ const DEFAULTS = {
   canvasPasteLines: true,
   // Dragging a card brings the cards below it along.
   canvasBranchDrag: true,
+  // A card kept where it is: layouts and tidying leave it, and its branch.
+  canvasPins: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

@@ -6872,3 +6872,10 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* -- a card kept in place ------------------------------------------------ */
+
+.canvas-node[data-dr-pinned] > .canvas-node-container {
+  outline: 1.5px dashed var(--text-faint);
+  outline-offset: 3px;
+}

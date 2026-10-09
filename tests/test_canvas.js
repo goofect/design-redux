@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1553,6 +1553,28 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     letGo();
     assert.deepStrictEqual(at('a1'), [600, 100]);
     drag.cleanup(view, state);
+  });
+
+  await t('a card kept in place: layouts leave it and what hangs from it where they are, and it’s marked', async () => {
+    const view = mindCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 700, 400, 100, 50), card('b1', 900, 400, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    const { p, fold } = plugin({ canvasLayouts: true, canvasPins: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const n = (id) => view.canvas.nodes.get(id);
+    const pins = new R.CanvasPins(p);
+    pins.watched.set(view, { file: view.file });
+    const menu = new Menu();
+    pins.addMenuItems(menu, [n('b')]);
+    menu.items[0].click();
+    assert.strictEqual(n('b').unknownData.drPinned, true);
+    assert.ok('drPinned' in n('b').nodeEl.dataset);
+    await new R.CanvasLayouts(p).layout(view, n('r'), 'bottom');
+    assert.deepStrictEqual([[n('b').x, n('b').y], [n('b1').x, n('b1').y]], [[700, 400], [900, 400]], 'kept, with its branch');
+    assert.strictEqual(n('a').y, 130, 'the rest laid out');
+    pins.setPinned(view, [n('b')], false);
+    assert.ok(!('drPinned' in n('b').nodeEl.dataset));
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
