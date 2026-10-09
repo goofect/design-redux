@@ -71,7 +71,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1327,6 +1327,48 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     Array.from(bar.querySelectorAll('button')).find((b) => b.textContent === 'Done').click();
     assert.ok(!view.contentEl.querySelector('.dr-compare-bar'));
     assert.strictEqual(cls('e'), '');
+  });
+
+  await t('arguments: a card given a part shows it above itself; a reason or objection added names its arrow; a claim counts for and against', async () => {
+    const view = mindCanvas({ nodes: [card('c', 0, 0, 250, 60, { text: 'Judicial review constrains legislatures' })], edges: [] });
+    const canvas = view.canvas;
+    const plain = canvas.importData;
+    canvas.importData = (d) => {
+      plain(d);
+      (d.edges || []).forEach((e) => {
+        const live = canvas.edges.get(e.id);
+        live.data = Object.assign({}, e);
+        live.getData = () => Object.assign({}, live.data);
+        live.setData = (x) => { live.data = x; };
+      });
+    };
+    const { p, fold } = plugin({ canvasArguments: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMindMap ? mind : null);
+    const arg = new R.CanvasArguments(p);
+    arg.watched.set(view, { file: view.file });
+    const claim = canvas.nodes.get('c');
+    const menu = new Menu();
+    arg.addMenuItems(menu, [claim]);
+    assert.ok(menu.items.some((i) => /Argument/.test(i.title)), menu.items.map((i) => i.title).join());
+    arg.setRole(view, [claim], 'claim');
+    assert.strictEqual(claim.unknownData.drRole, 'claim');
+    assert.strictEqual(claim.nodeEl.dataset.drRoleLabel, 'Claim');
+    const reason = await arg.addAnswer(view, claim, 'reason');
+    const objection = await arg.addAnswer(view, claim, 'objection');
+    assert.deepStrictEqual([reason.unknownData.drRole, objection.unknownData.drRole], ['reason', 'objection']);
+    const labelTo = (n) => Array.from(canvas.edges.values()).find((e) => e.to.node === n).data.label;
+    assert.deepStrictEqual([labelTo(reason), labelTo(objection)], ['supports', 'opposes']);
+    arg.pass(view);
+    assert.strictEqual(claim.nodeEl.dataset.drRoleLabel, 'Claim · 1 for, 1 against');
+    assert.strictEqual(objection.nodeEl.dataset.drRole, 'objection');
+    // No part, and switched off: nothing shown.
+    arg.setRole(view, [objection], null);
+    assert.ok(!('drRole' in objection.nodeEl.dataset));
+    p.settings.canvasArguments = false;
+    arg.pass(view);
+    assert.ok(!('drRole' in claim.nodeEl.dataset));
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

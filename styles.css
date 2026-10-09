@@ -6829,3 +6829,46 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 .dr-compare-bar button {
   flex: none;
 }
+
+/* -- arguments on a canvas ---------------------------------------------- */
+
+.canvas-node[data-dr-role] {
+  --dr-role-rgb: var(--color-blue-rgb);
+}
+
+.canvas-node[data-dr-role="reason"] {
+  --dr-role-rgb: var(--color-green-rgb);
+}
+
+.canvas-node[data-dr-role="evidence"] {
+  --dr-role-rgb: var(--color-cyan-rgb);
+}
+
+.canvas-node[data-dr-role="objection"] {
+  --dr-role-rgb: var(--color-red-rgb);
+}
+
+.canvas-node[data-dr-role="rebuttal"] {
+  --dr-role-rgb: var(--color-orange-rgb);
+}
+
+.canvas-node[data-dr-role] > .canvas-node-container {
+  box-shadow: inset 4px 0 0 rgba(var(--dr-role-rgb), 0.9);
+}
+
+/* Its part, above its right-hand corner: Obsidian's own label takes the left. */
+.canvas-node[data-dr-role]::after {
+  content: attr(data-dr-role-label);
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background-color: rgba(var(--dr-role-rgb), 0.12);
+  color: rgb(var(--dr-role-rgb));
+  font-size: 12px;
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  pointer-events: none;
+}

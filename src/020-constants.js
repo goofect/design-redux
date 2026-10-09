@@ -164,6 +164,8 @@ const DEFAULTS = {
   canvasMinimap: true,
   // A canvas compared with a snapshot or another canvas; two branches compared.
   canvasCompare: true,
+  // Cards given a part in an argument: claim, reason, objection, rebuttal, evidence.
+  canvasArguments: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

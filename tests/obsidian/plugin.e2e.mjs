@@ -425,6 +425,27 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('shows a card’s part in an argument above it, and a claim’s count', async function () {
+    await obsidianPage.openFile('Map.canvas');
+    const shown = await browser.executeObsidian(async ({ app }) => {
+      const view = app.workspace.getLeavesOfType('canvas')[0].view;
+      const plugin = app.plugins.plugins['design-redux'];
+      const arg = plugin.features.find((f) => f.constructor.name === 'CanvasArguments');
+      const node = Array.from(view.canvas.nodes.values()).find((n) => n.getData().type === 'text');
+      arg.setRole(view, [node], 'claim');
+      await new Promise((r) => setTimeout(r, 300));
+      const after = getComputedStyle(node.nodeEl, '::after');
+      const saved = JSON.parse(JSON.stringify(view.canvas.getData())).nodes.find((n) => n.id === node.id);
+      const out = { content: after.content, overflow: getComputedStyle(node.nodeEl).overflow, saved: saved.drRole, height: parseFloat(after.height) };
+      arg.setRole(view, [node], null);
+      return out;
+    });
+    expect(shown.content).toContain('Claim');
+    expect(shown.overflow).toBe('visible');
+    expect(shown.saved).toBe('claim');
+    expect(shown.height).toBeGreaterThan(8);
+  });
+
   it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
     // As an earlier version left them: a card folded to its title, and a
     // group folded with its card tucked inside, what's below closed up.
