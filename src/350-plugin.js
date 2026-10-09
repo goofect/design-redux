@@ -29,6 +29,7 @@ class DesignRedux extends Plugin {
       new PropertyClipboard(this),
       new AlbumProperty(this),
       new AlbumStructure(this),
+      new SmartAlbums(this),
       new MarkedLists(this),
       new Scripts(this),
       new Footnotes(this),

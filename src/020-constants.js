@@ -24,6 +24,7 @@ const LIBRARY_BUILTINS = {
   folders: { label: 'Folders', icon: 'folder' },
   notes: { label: 'Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
+  smart: { label: 'Smart albums', icon: 'sparkles' },
 };
 
 const DEFAULTS = {
@@ -57,6 +58,9 @@ const DEFAULTS = {
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
   albumStructure: true,
+  // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
+  smartAlbums: true,
+  smartAlbumList: [],
   // { folderPath: sort key }
   albumSorts: {},
   // In lists, typing a name jumps to it and Space previews the note in focus.

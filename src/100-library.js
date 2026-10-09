@@ -164,6 +164,11 @@ class LibraryView extends ItemView {
         this.renderPins(list, spec);
         return;
       }
+      if (id === 'smart') {
+        const smart = this.plugin.feature(SmartAlbums);
+        if (smart) smart.renderRows(this, list);
+        return;
+      }
       this.row(list, {
         icon: spec.icon,
         label: spec.label,

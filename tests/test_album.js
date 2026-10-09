@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -926,6 +926,59 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-detail-kind, .dr-detail-desc, .dr-album-includes'));
     assert.ok(!text('.dr-disc-title').includes('From elsewhere'));
+  });
+
+  await t('a smart album keeps filters, order and grouping; changed chips can be saved back; the library lists it', async () => {
+    const { v, plugin, app, view } = setup();
+    const f = (p) => v.vault.getFileByPath(p);
+    const fms = new Map([[f('IR/Anarchy.md'), { domain: 'Security', status: 'Done' }], [f('IR/Balance.md'), { domain: 'Security' }], [f('IR/Theories/Realism.md'), { domain: 'Theory' }]]);
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    const smart = new R.SmartAlbums(plugin);
+    plugin.feature = (C) => (C === R.SmartAlbums ? smart : null);
+    plugin.settings.librarySections = [{ title: '', items: [{ kind: 'builtin', id: 'home' }] }];
+    const defaultSort = plugin.settings.defaultSort;
+    view.filterFolder = 'IR';
+    view.filterProp = { key: 'domain', value: null };
+    const album = smart.save(view, ' Domains ');
+    assert.deepStrictEqual([album.name, album.folder, album.prop], ['Domains', 'IR', { key: 'domain', value: null }]);
+    assert.ok(plugin.settings.librarySections[0].items.some((i) => i.id === 'smart'), 'listed in the library');
+    const open = () => {
+      Object.assign(view, { mode: 'smart', property: album.id, smartLoaded: null });
+      view.clearFilters();
+      view.render();
+    };
+    const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-path]')).map((r) => r.dataset.path.split('/').pop());
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    open();
+    assert.deepStrictEqual(text('.dr-detail-title'), ['Domains']);
+    assert.deepStrictEqual(tracks(), ['Anarchy.md', 'Balance.md', 'Realism.md']);
+    assert.ok(!action(view, 'Save changes'));
+    // Grouped by a property: a disc per value — the same notes seen another way.
+    smart.change(album, { group: 'domain' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-disc-title'), ['Security', 'Theory']);
+    // Its own order, kept with it.
+    view.setSort('name-desc');
+    assert.strictEqual(album.sort, 'name-desc');
+    assert.strictEqual(plugin.settings.defaultSort, defaultSort, 'the shared order is left alone');
+    view.render();
+    assert.deepStrictEqual(tracks(), ['Balance.md', 'Anarchy.md', 'Realism.md']);
+    // The chips changed, and saved back.
+    view.filterProp = { key: 'status', value: 'Done' };
+    view.render();
+    assert.deepStrictEqual(tracks(), ['Anarchy.md']);
+    click(action(view, 'Save changes'));
+    assert.deepStrictEqual(album.prop, { key: 'status', value: 'Done' });
+    open();
+    assert.deepStrictEqual(tracks(), ['Anarchy.md'], 'opened again, as saved');
+    // In the library, a row each.
+    const rows = [];
+    smart.renderRows({ row: (list, spec) => rows.push(spec), browseMode() {} }, null);
+    assert.deepStrictEqual(rows.map((r) => [r.label, r.screen, r.property]), [['Domains', 'smart', album.id]]);
+    // Gone, or switched off: said so, nothing else.
+    smart.remove(album);
+    open();
+    assert.ok(text('.dr-empty')[0].includes('any more'));
   });
 
   console.log(`\n${passed} passed`);

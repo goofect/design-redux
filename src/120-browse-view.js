@@ -77,6 +77,7 @@ class BrowseView extends ItemView {
       this.selected = null;
       this.query = '';
       this.clearFilters();
+      this.smartLoaded = null;
       this.editing = false;
     }
     // A move to another screen is a step Obsidian's back and forward
@@ -1187,6 +1188,9 @@ class BrowseView extends ItemView {
    */
   get sort() {
     const settings = this.plugin.settings;
+    // A smart album keeps its own order.
+    const smart = this.mode === 'smart' ? this.smartAlbum() : null;
+    if (smart && smart.sort && SORTS.some(([key]) => key === smart.sort)) return smart.sort;
     // An album sorted on its own keeps that order; everywhere else, the shared one.
     if (this.mode === 'folder' && settings.albumSortMemory !== false) {
       const kept = (settings.albumSorts || {})[this.path];
@@ -1238,7 +1242,9 @@ class BrowseView extends ItemView {
         [this.mode]: key === 'own',
       });
     }
-    if (key !== 'own') {
+    const smart = this.mode === 'smart' ? this.smartAlbum() : null;
+    if (smart && key !== 'own') this.plugin.feature(SmartAlbums).change(smart, { sort: key });
+    else if (key !== 'own') {
       const folder = this.mode === 'folder' ? this.folder() : null;
       // An album's order is its own, kept by its path; other screens share one.
       if (folder && settings.albumSortMemory !== false) {
@@ -1254,6 +1260,12 @@ class BrowseView extends ItemView {
       view.columnSort = null;
       view.render();
     });
+  }
+
+  /** The smart album on screen, if it's one. */
+  smartAlbum() {
+    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+    return smart && smart.enabled ? smart.byId(this.property) : null;
   }
 
   /** The order in effect, as the menu names it; null for a column it doesn't list. */
@@ -1411,6 +1423,9 @@ class BrowseView extends ItemView {
       'calendar', !!this.filterDate,
       () => this.pickDate(), () => (this.filterDate = null)
     );
+
+    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+    if (smart) smart.addFilterItems(menu, this);
 
     if (this.hasFilters()) {
       menu.addSeparator();
