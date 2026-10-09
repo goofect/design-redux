@@ -70,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -878,6 +878,72 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     // Not onto its own branch.
     assert.strictEqual(await mind.relink(view, { id: 'x', x: n('x').x, y: n('x').y }, n('x1')), false);
     mind.cleanup(view, state);
+  });
+
+  await t('Shift+Enter puts a card between a card and its parent, its branch a level out; Shift+Tab and the menu move a card up or down a level', async () => {
+    const view = mindCanvas({
+      nodes: [
+        card('root', 0, 100, 200, 60),
+        card('a', 300, 0, 200, 60),
+        card('b', 300, 100, 200, 60, { color: '2' }),
+        card('c', 300, 200, 200, 60),
+        card('a1', 600, 0, 200, 60),
+        card('b1', 600, 100, 200, 60),
+      ],
+      edges: [edge('root', 'a', 'right', 'left'), edge('root', 'b', 'right', 'left'), edge('root', 'c', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    view.canvas.removeEdge = (e) => view.canvas.edges.delete(e.id);
+    const { p, fold } = plugin({ canvasRestructure: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const re = new R.CanvasRestructure(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMindMap ? mind : null);
+    const n = (id) => view.canvas.nodes.get(id);
+    const parentOf = (id) => Array.from(view.canvas.edges.values()).filter((e) => e.to.node === n(id)).map((e) => e.from.node.id);
+    const state = { file: view.file };
+    re.watched.set(view, state);
+    re.mount(view, state);
+
+    // Shift+Enter on b: a new card in its place, joined between; b and its branch a level out.
+    view.canvas.selectOnly(n('b'));
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+    await new Promise((res) => setTimeout(res, 10));
+    const made = Array.from(view.canvas.nodes.values()).find((x) => x.id.startsWith('new'));
+    assert.ok(made, 'no card made');
+    assert.deepStrictEqual([made.x, made.y, made.color], [300, 100, '2']);
+    assert.deepStrictEqual(parentOf(made.id), ['root']);
+    assert.deepStrictEqual(parentOf('b'), [made.id]);
+    assert.deepStrictEqual([n('b').x, n('b1').x], [580, 880], 'b and its branch a level further out');
+    assert.deepStrictEqual([n('a').x, n('a1').x, n('c').x], [300, 600, 300], 'off its line, nothing else moves');
+    assert.ok(made.isEditing, 'open to type in');
+
+    // Under the card above: c hangs from the new card.
+    assert.strictEqual(re.demoteTarget(view, n('a')), null, 'the first has none above it');
+    const menu = new Menu();
+    re.addMenuItems(menu, [n('c')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Add card before', 'Move under the card above']);
+    await re.demote(view, n('c'));
+    assert.deepStrictEqual(parentOf('c'), [made.id]);
+
+    // Shift+Tab on a1: up to hang from root, as a's sibling.
+    view.canvas.selectOnly(n('a1'));
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+    await new Promise((res) => setTimeout(res, 10));
+    assert.deepStrictEqual(parentOf('a1'), ['root']);
+    assert.strictEqual(re.promoteTarget(view, n('a1')), null, 'root hangs from nothing');
+
+    // A card hanging from nothing: the new one goes behind it, leading to it.
+    const before = await re.addParent(view, n('root'));
+    assert.ok(before.x + before.width <= 0, 'behind it, the way its branch grows from');
+    assert.deepStrictEqual(parentOf('root'), [before.id]);
+
+    // Switched off, the keys are left alone.
+    p.settings.canvasRestructure = false;
+    re.cleanup(view, state);
+    const count = view.canvas.nodes.size;
+    view.canvas.selectOnly(n('c'));
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }));
+    assert.strictEqual(view.canvas.nodes.size, count);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

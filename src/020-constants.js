@@ -145,6 +145,8 @@ const DEFAULTS = {
   canvasMindMapPlace: 'free',
   // A card dropped onto another hangs from it.
   canvasRelink: true,
+  // Shift+Enter puts a card before the selected one; Shift+Tab moves it up a level.
+  canvasRestructure: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

@@ -48,7 +48,7 @@ const SETTINGS_TABS = [
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
       {
         title: 'Canvas',
-        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasRelink', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasFocus', 'canvasDuplicate'],
+        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasRelink', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasFocus', 'canvasDuplicate'],
       },
       {
         title: 'Compatibility',
