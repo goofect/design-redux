@@ -162,6 +162,8 @@ const DEFAULTS = {
   canvasVaultMap: true,
   // The whole canvas small in its corner, while the cards don't all fit.
   canvasMinimap: true,
+  // A canvas compared with a snapshot or another canvas; two branches compared.
+  canvasCompare: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

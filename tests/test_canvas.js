@@ -71,7 +71,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1277,6 +1277,56 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(el.classList.contains('is-hidden'));
     mini.cleanup(view, state);
     assert.ok(!view.contentEl.querySelector('.dr-minimap'));
+  });
+
+  await t('a canvas compared with how it was: new, reworded, moved and gone cards, by id or else by title; two branches compared', async () => {
+    const then = {
+      nodes: [card('a', 0, 0, 100, 50, { text: 'Root' }), card('b', 200, 0, 100, 50, { text: 'Courts' }), card('c', 200, 100, 100, 50, { text: 'Appeal' }), card('d', 200, 200, 100, 50, { text: 'Gone one' }), card('old', 0, 300, 100, 50, { text: 'Copied' })],
+      edges: [edge('a', 'b', 'right', 'left'), edge('a', 'c', 'right', 'left'), edge('a', 'd', 'right', 'left')],
+    };
+    const now = {
+      nodes: [card('a', 0, 0, 100, 50, { text: 'Root' }), card('b', 200, 0, 100, 50, { text: 'Law courts' }), card('c', 400, 0, 100, 50, { text: 'Appeal' }), card('e', 200, 200, 100, 50, { text: 'Brand new' }), card('copy', 0, 300, 100, 50, { text: 'Copied' })],
+      edges: [edge('a', 'b', 'right', 'left'), edge('b', 'c', 'right', 'left'), edge('a', 'e', 'right', 'left')],
+    };
+    const found = R.compareCanvases(now, then);
+    const ids = (list) => list.map((r) => r.id);
+    assert.deepStrictEqual(ids(found.added), ['e']);
+    assert.deepStrictEqual(ids(found.removed), ['d']);
+    assert.deepStrictEqual(found.reworded, [{ id: 'b', label: 'Law courts', was: 'Courts' }]);
+    assert.deepStrictEqual(found.moved.map((r) => [r.id, r.was]), [['c', 'hung from “Root”']], 'a new card isn’t moved as well');
+    assert.deepStrictEqual(found.arrows, { added: 2, removed: 2 });
+
+    const tree = R.modelFromData({
+      nodes: [card('x', 0, 0, 100, 50), card('y', 0, 300, 100, 50), card('x1', 200, 0, 100, 50, { text: 'Shared' }), card('x2', 200, 60, 100, 50, { text: 'Only X' }), card('y1', 200, 300, 100, 50, { text: 'shared' }), card('y2', 200, 360, 100, 50, { text: 'Only Y' })],
+      edges: [edge('x', 'x1', 'right', 'left'), edge('x', 'x2', 'right', 'left'), edge('y', 'y1', 'right', 'left'), edge('y', 'y2', 'right', 'left')],
+    });
+    const branches = R.compareBranches(tree, 'x', 'y');
+    assert.deepStrictEqual([ids(branches.onlyA), ids(branches.onlyB), ids(branches.both)], [['x2'], ['y2'], ['x1']]);
+
+    // On the canvas: marked, counted in a bar, and put back with Done.
+    const view = fakeCanvas(now);
+    view.canvas.getData = () => now;
+    const files = {};
+    const p = {
+      settings: { canvasCompare: true },
+      manifest: { dir: '.obsidian/plugins/design-redux' },
+      app: { vault: { adapter: { exists: async (f) => f in files, read: async (f) => files[f], write: async (f, t) => { files[f] = t; } } }, workspace: { trigger() {} } },
+      feature: () => null,
+    };
+    const cmp = new R.CanvasCompare(p);
+    const state = { file: view.file };
+    cmp.watched.set(view, state);
+    view.file.path = 'Map.canvas';
+    await cmp.keepSnapshot(view);
+    assert.ok(JSON.parse(files['.obsidian/plugins/design-redux/canvas-snapshots.json'])['Map.canvas'].data);
+    cmp.showVersions(view, then, 'the snapshot');
+    const cls = (id) => Array.from(view.canvas.nodes.get(id).nodeEl.classList).filter((c) => c.startsWith('dr-diff')).join();
+    assert.deepStrictEqual([cls('e'), cls('b'), cls('c'), cls('a')], ['dr-diff-added', 'dr-diff-reworded', 'dr-diff-moved', '']);
+    const bar = view.contentEl.querySelector('.dr-compare-bar');
+    assert.strictEqual(bar.querySelector('.dr-compare-counts').textContent, '1 new1 gone1 reworded1 moved4 arrows changed');
+    Array.from(bar.querySelectorAll('button')).find((b) => b.textContent === 'Done').click();
+    assert.ok(!view.contentEl.querySelector('.dr-compare-bar'));
+    assert.strictEqual(cls('e'), '');
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

@@ -6738,3 +6738,94 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   stroke: var(--interactive-accent);
   stroke-width: 1.5;
 }
+
+/* -- comparing canvases and branches ------------------------------------ */
+
+.canvas-node.dr-diff-added,
+.canvas-node.dr-diff-onlyA {
+  outline: 3px solid rgba(var(--color-green-rgb), 0.8);
+  outline-offset: 4px;
+}
+
+.canvas-node.dr-diff-reworded {
+  outline: 3px solid rgba(var(--color-yellow-rgb), 0.9);
+  outline-offset: 4px;
+}
+
+.canvas-node.dr-diff-moved {
+  outline: 3px dashed rgba(var(--color-blue-rgb), 0.85);
+  outline-offset: 4px;
+}
+
+.canvas-node.dr-diff-onlyB {
+  outline: 3px solid rgba(var(--color-purple-rgb), 0.8);
+  outline-offset: 4px;
+}
+
+.dr-compare-bar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100% - 24px);
+  padding: 6px 8px 6px 12px;
+  border: 1px solid var(--dr-line);
+  border-radius: 10px;
+  background-color: var(--dr-float-bg);
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
+  box-shadow: var(--dr-float-shadow);
+  font-size: var(--font-ui-small);
+}
+
+.dr-compare-title {
+  font-weight: var(--font-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dr-compare-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  color: var(--text-muted);
+}
+
+.dr-compare-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.dr-diff-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dr-diff-dot.dr-diff-added,
+.dr-diff-dot.dr-diff-onlyA {
+  background-color: rgb(var(--color-green-rgb));
+}
+
+.dr-diff-dot.dr-diff-reworded {
+  background-color: rgb(var(--color-yellow-rgb));
+}
+
+.dr-diff-dot.dr-diff-moved {
+  background-color: rgb(var(--color-blue-rgb));
+}
+
+.dr-diff-dot.dr-diff-onlyB {
+  background-color: rgb(var(--color-purple-rgb));
+}
+
+.dr-compare-bar button {
+  flex: none;
+}
