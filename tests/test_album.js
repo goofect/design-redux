@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -863,6 +863,69 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(text('.dr-shelf-title'), ['Recently opened', 'Recently added', 'Rediscover', 'Folders']);
     click(view.contentEl.querySelector('.dr-pick[data-path="IR/Balance.md"]'));
     assert.strictEqual(opened[0].basename, 'Balance');
+  });
+
+  await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {
+    const { v, plugin, app, view } = setup();
+    const note = v.file('IR/IR.md');
+    v.folder('Elsewhere');
+    const sov = v.file('Elsewhere/Sovereignty.md');
+    v.folder('Law');
+    const law = v.file('Law/Law.md');
+    v.folder('Treaties');
+    v.file('Treaties/Treaties.md');
+    const fms = new Map([[note, { album: 'Project', description: 'How states deal with each other.', includes: ['[[Sovereignty]]', '[[Law]]', '[[Missing]]'], related: '[[Treaties]]' }], [v.vault.getFileByPath('IR/Anarchy.md'), { status: 'Done' }]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    app.metadataCache.fileToLinktext = (f) => f.basename;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    view.render();
+    assert.deepStrictEqual(text('.dr-detail-kind'), ['Project']);
+    assert.deepStrictEqual(text('.dr-detail-desc'), ['How states deal with each other.']);
+    assert.ok(text('.dr-detail-meta')[0].includes('1 of 7 done'), text('.dr-detail-meta')[0]);
+    assert.ok(text('.dr-disc-title').includes('From elsewhere'));
+    assert.ok(view.contentEl.querySelector('.dr-track[data-path="Elsewhere/Sovereignty.md"]'), 'shown in the album, not moved');
+    assert.strictEqual(sov.parent.path, 'Elsewhere');
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-album-includes .dr-card')).map((c) => c.dataset.path), ['Law'], 'an album it takes in, as a tile');
+    assert.ok(text('.dr-shelf-title').includes('Related albums'));
+    assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="Treaties"]'));
+    assert.ok(!action(view, 'Map'));
+    // A concept map opens its map.
+    fms.get(note).album = 'concept map';
+    view.render();
+    assert.deepStrictEqual(text('.dr-detail-kind'), ['Concept map']);
+    assert.ok(action(view, 'Map'));
+    // Further down: the way back up, and no lone parent link under the title.
+    Object.assign(view, { path: 'IR/Theories' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-crumb'), ['IR']);
+    assert.ok(!view.contentEl.querySelector('.dr-detail-sub.is-link'));
+    // On its tile, its kind.
+    Object.assign(view, { path: '/' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-card[data-path="IR"] .dr-card-kind'), ['Concept map']);
+    // A note shown in another album too: listed in its includes, left where it is.
+    let written = null;
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); written = [file, fm]; };
+    fms.set(law, {});
+    assert.strictEqual(await structure.include(v.vault.getFolderByPath('Law'), sov), true);
+    assert.deepStrictEqual([written[0], written[1].includes], [law, ['[[Sovereignty]]']]);
+    assert.strictEqual(await structure.include(v.vault.getFolderByPath('IR'), sov), false, 'there already');
+    // Kind set and taken away from the menu's way in.
+    await structure.setType(v.vault.getFolderByPath('IR'), 'reading list');
+    assert.strictEqual(written[1].album, 'reading list');
+    await structure.setType(v.vault.getFolderByPath('IR'), '');
+    assert.ok(!('album' in written[1]));
+    // Switched off: nothing of it shows.
+    plugin.settings.albumStructure = false;
+    Object.assign(view, { path: 'IR' });
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.dr-detail-kind, .dr-detail-desc, .dr-album-includes'));
+    assert.ok(!text('.dr-disc-title').includes('From elsewhere'));
   });
 
   console.log(`\n${passed} passed`);

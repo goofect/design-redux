@@ -69,17 +69,31 @@ class FolderScreen extends BrowseScreen {
     }
 
     const discs = view.discsOf(folder, view.notesIn(folder));
-    const all = discs.reduce((acc, d) => acc.concat(d.files), []);
+    // What the folder note says belongs too: albums, as tiles; notes kept
+    // elsewhere, as a disc of their own. Shown here, not moved.
+    const structure = view.editing ? null : this.plugin.feature(AlbumStructure);
+    const about = structure ? structure.info(folder) : null;
+    const kept = discs.reduce((acc, d) => acc.concat(d.files), []);
+    const elsewhere = about ? structure.included(folder, kept).filter((f) => view.inFilter(f) && view.matches(f.basename)) : [];
+    if (elsewhere.length) discs.push({ title: 'From elsewhere', folder: null, files: view.sortFiles(elsewhere) });
+    const all = kept.concat(elsewhere);
+    const albums = about ? about.includes.filter((t) => t instanceof TFolder && view.matches(t.name)) : [];
 
     view.renderHeader(root, folder, all);
+    if (albums.length) {
+      const grid = root.createDiv({ cls: 'dr-grid dr-album-includes' });
+      roveFocus(grid, '.dr-card');
+      albums.forEach((f) => view.folderCard(grid, f));
+    }
     if (!all.length && !view.editing) {
-      root.createDiv({ cls: 'dr-empty', text: 'Nothing here' });
+      if (!albums.length) root.createDiv({ cls: 'dr-empty', text: 'Nothing here' });
       view.renderMoreIn(root, folder);
       return;
     }
     view.renderDiscs(root, discs, folder);
     if (view.editing) return;
     view.renderAlbumFoot(root, all);
+    if (about && about.related.length) view.shelf(root, 'Related albums', about.related);
     view.renderMoreIn(root, folder);
   }
 

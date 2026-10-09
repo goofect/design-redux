@@ -987,6 +987,24 @@ class BrowseView extends ItemView {
     }
 
     const info = head.createDiv({ cls: 'dr-detail-info' });
+    // Above the title, small: what kind of album it is, and the way down to it.
+    const structure = folder ? this.plugin.feature(AlbumStructure) : null;
+    const about = structure ? structure.info(folder) : null;
+    const trail = structure && structure.enabled ? structure.trail(folder) : [];
+    if ((about && about.label) || trail.length) {
+      const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
+      if (about && about.label) kicker.createSpan({ cls: 'dr-detail-kind', text: about.label });
+      if (trail.length) {
+        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this album is' } });
+        trail.forEach((f, i) => {
+          if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+          const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
+          crumb.setAttribute('role', 'button');
+          crumb.setAttribute('tabindex', '0');
+          onActivate(crumb, () => this.openFolder(f));
+        });
+      }
+    }
     if (editing && folder.path !== '/') {
       const title = info.createEl('input', { cls: 'dr-detail-title dr-edit-name', type: 'text' });
       title.value = folder.name;
@@ -1002,7 +1020,7 @@ class BrowseView extends ItemView {
     const parent = folder && folder.parent && !(folder.isRoot && folder.isRoot()) ? folder.parent : null;
     if (spec.sub) {
       info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
-    } else if (parent && !(parent.isRoot && parent.isRoot())) {
+    } else if (parent && !(parent.isRoot && parent.isRoot()) && !trail.length) {
       const up = info.createDiv({ cls: 'dr-detail-sub is-link', text: parent.name });
       up.setAttribute('role', 'button');
       up.setAttribute('tabindex', '0');
@@ -1017,7 +1035,10 @@ class BrowseView extends ItemView {
     if (length) meta.push(length);
     const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
     if (newest) meta.push(`Updated ${this.relative(newest)}`);
+    const progress = about ? structure.progress(about, files) : null;
+    if (progress) meta.push(`${progress.done} of ${progress.total} ${progress.word}`);
     info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
+    if (about && about.description) info.createDiv({ cls: 'dr-detail-desc', text: about.description });
 
     const actions = info.createDiv({ cls: 'dr-detail-actions' });
     if (editing) {
@@ -1040,6 +1061,7 @@ class BrowseView extends ItemView {
       const pick = files[Math.floor(Math.random() * files.length)];
       this.app.workspace.getLeaf(false).openFile(pick);
     });
+    if (about && about.type === 'concept map') this.action(actions, 'waypoints', 'Map', () => structure.openMap(folder));
     if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
   }
 
@@ -2466,6 +2488,15 @@ class BrowseView extends ItemView {
   folderCard(grid, folder, subtitle) {
     const card = this.card(grid, folder.name, subtitle || this.countLabel(folder));
     card.dataset.path = folder.path;
+    // What kind of album, small above its name.
+    const structure = this.plugin.feature(AlbumStructure);
+    const kind = structure ? structure.info(folder).label : '';
+    if (kind) {
+      const label = card.ownerDocument.createElement('div');
+      label.className = 'dr-card-kind';
+      label.textContent = kind;
+      card.insertBefore(label, card.querySelector('.dr-card-title'));
+    }
     const src = this.folderCover(folder);
     drawFolderArt(this.plugin, card.querySelector('.dr-card-art'), folder);
     // On the cover, when pointed at: straight into its first note, and

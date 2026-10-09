@@ -55,6 +55,8 @@ const DEFAULTS = {
   keepOwnOrder: { recents: true, pinned: true },
   // An album sorted from its filter button keeps that order, by its path.
   albumSortMemory: true,
+  // A folder note's album, description, includes and related properties, shown.
+  albumStructure: true,
   // { folderPath: sort key }
   albumSorts: {},
   // In lists, typing a name jumps to it and Space previews the note in focus.

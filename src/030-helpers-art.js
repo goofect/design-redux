@@ -776,6 +776,11 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
     }, 'action');
   }
 
+  if (isFolder && typeof AlbumStructure === 'function' && typeof plugin.feature === 'function') {
+    const structure = plugin.feature(AlbumStructure);
+    if (structure) structure.addFolderItems(menu, target, sectioned, redraw);
+  }
+
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.
   if (isFolder && target.isRoot && target.isRoot()) {
