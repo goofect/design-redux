@@ -81,12 +81,20 @@ Coffee N' Christmas.
 
 ## Working here
 
-- Test lightly, the author wants it quick: before pushing, run the simulation
+- Make the smallest complete change: no rewriting files or touching unrelated
+  code. Report changed files and tests run, briefly.
+- Test lightly, the author wants it quick: while working, run the simulation
   suites the change touches (`node tests/run.js qol album`: a line per suite,
-  details only on failure), and a real-Obsidian test only for what can't be
-  checked otherwise: `tests/e2e.sh "test name"` (latest version only, prints
-  just the outcome; the full log is `logs/e2e.log`). CI runs everything on
-  both versions after the push; fix what it finds.
+  details only on failure); before pushing, all of them (`npm test`, ~10 s,
+  a few at once). A real-Obsidian test only for what can't be checked
+  otherwise: `tests/e2e.sh "test name"` (latest version only, prints just the
+  outcome; the full log is `logs/e2e.log`). CI runs everything on both
+  versions after the push; fix what it finds.
+- A real-Obsidian test must pass on its own and after the others: earlier
+  tests leave tabs open, so use the active leaf (`app.workspace.activeLeaf`,
+  the `ACTIVE` selector), never `getLeavesOfType(...)[0]`. Wait for a
+  condition (`readUntil`, `waitUntil`), not a fixed pause. Each test's time
+  is in `ci-output/<version>-timings.txt`.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
 - After pushing, run `tests/ci.sh` once (with a long timeout): it waits for

@@ -50,6 +50,21 @@ async function menuTitles() {
   );
 }
 
+/**
+ * Reads with `read` until `ok` holds of what it got, or `ms` pass — then
+ * what it read last, either way, so the expect after it says what was
+ * wrong. In place of a fixed pause: no longer than it takes.
+ */
+async function readUntil(read, ok, ms = 8000) {
+  const end = Date.now() + ms;
+  let got = await read();
+  while (!ok(got) && Date.now() < end) {
+    await browser.pause(100);
+    got = await read();
+  }
+  return got;
+}
+
 async function closeMenus() {
   await browser.keys('Escape');
   await browser.pause(200);
@@ -77,11 +92,25 @@ describe('Design Redux in Obsidian', function () {
     await browser.pause(1500);
   });
 
+  // How long each test takes, slowest first, beside the other results: what to speed up.
+  const timings = [];
+  let started = 0;
+  beforeEach(function () {
+    started = Date.now();
+  });
+
   afterEach(async function () {
+    if (this.currentTest) timings.push([Date.now() - started, this.currentTest.title]);
     if (this.currentTest && this.currentTest.state === 'failed') {
       const name = this.currentTest.title.replace(/[^a-z0-9]+/gi, '-').slice(0, 50);
       await shot(`FAILED-${name}`);
     }
+  });
+
+  after(function () {
+    fs.mkdirSync(OUT, { recursive: true });
+    const lines = timings.sort((x, y) => y[0] - x[0]).map(([ms, title]) => `${(ms / 1000).toFixed(1).padStart(5)}s  ${title}`);
+    fs.writeFileSync(path.join(OUT, `${version}-timings.txt`), lines.join('\n') + '\n');
   });
 
   it('loads, with its features running', async function () {
@@ -409,9 +438,16 @@ describe('Design Redux in Obsidian', function () {
       const b = app.workspace.activeLeaf.view.canvas.getViewportBBox();
       return [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
     });
-    // Pressed in its far corner: the view goes there.
+    // Pressed in the corner furthest from the part on screen: the view goes there.
+    // (Offsets are from the map's middle.)
+    const far = await browser.execute((active) => {
+      const r = document.querySelector(active + '.dr-minimap-view');
+      const x = Number(r.getAttribute('x')) + Number(r.getAttribute('width')) / 2;
+      const y = Number(r.getAttribute('y')) + Number(r.getAttribute('height')) / 2;
+      return { x: x < 100 ? 85 : -85, y: y < 68 ? 55 : -55 };
+    }, ACTIVE);
     const map = await browser.$(ACTIVE + '.dr-minimap svg');
-    await map.click({ x: 80, y: 50 });
+    await map.click(far);
     await browser.pause(600);
     const after = await browser.executeObsidian(({ app }) => {
       const b = app.workspace.activeLeaf.view.canvas.getViewportBBox();
@@ -981,14 +1017,15 @@ describe('Design Redux in Obsidian', function () {
       const standIns = () =>
         Object.keys(app.metadataCache.unresolvedLinks['Quiet.md'] || {}).filter((k) => k.startsWith('['));
       const plugin = plugins.designRedux;
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
       const on = standIns();
       plugin.settings.quietLinks = false;
       await plugin.saveSettings();
-      await new Promise((r) => setTimeout(r, 800));
+      await until(() => standIns().length > 0);
       const off = standIns();
       plugin.settings.quietLinks = true;
       await plugin.saveSettings();
-      await new Promise((r) => setTimeout(r, 800));
+      await until(() => standIns().length === 0);
       return { on, off, again: standIns() };
     });
     expect(counts.on).toEqual([]);
@@ -999,8 +1036,10 @@ describe('Design Redux in Obsidian', function () {
     const reading = await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.getLeaf(false);
       await leaf.setViewState({ type: 'markdown', state: { file: 'Quiet.md', mode: 'preview' } });
-      await new Promise((r) => setTimeout(r, 1200));
-      const p = leaf.view.containerEl.querySelector('.markdown-preview-view p');
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      const para = () => leaf.view.containerEl.querySelector('.markdown-preview-view p');
+      await until(() => para() && para().querySelectorAll('a.internal-link').length >= 4);
+      const p = para();
       return {
         links: Array.from(p.querySelectorAll('a.internal-link')).map((a) => [a.getAttribute('data-href'), a.textContent, a.classList.contains('dr-quiet-link')]),
         text: p.textContent,
@@ -1018,34 +1057,37 @@ describe('Design Redux in Obsidian', function () {
     const live = await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.getLeaf(false);
       await leaf.setViewState({ type: 'markdown', state: { file: 'Quiet.md', mode: 'source', source: false } });
-      await new Promise((r) => setTimeout(r, 1000));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => leaf.view.editor && leaf.view.containerEl.querySelector('.cm-content'));
       leaf.view.editor.setCursor({ line: 0, ch: 0 });
-      await new Promise((r) => setTimeout(r, 400));
-      return Array.from(leaf.view.containerEl.querySelectorAll('.cm-content .dr-quiet-link')).map((e) => e.textContent);
+      const drawn = () => Array.from(leaf.view.containerEl.querySelectorAll('.cm-content .dr-quiet-link')).map((e) => e.textContent);
+      await until(() => drawn().length >= 3);
+      return drawn();
     });
     expect(live).toEqual(['Politics/Anarchy', 'the first', 'Not yet written']);
     const missing = await browser.$('.cm-content .dr-quiet-link[data-href="Not yet written"]');
     await missing.click();
-    await browser.pause(1000);
-    const made = await browser.executeObsidian(({ app }) => (app.workspace.getActiveFile() || {}).path);
+    const made = await readUntil(() => browser.executeObsidian(({ app }) => (app.workspace.getActiveFile() || {}).path), (p) => p === 'Not yet written.md');
     expect(made).toBe('Not yet written.md');
     await browser.executeObsidian(async ({ app }) => {
       await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
-      await new Promise((r) => setTimeout(r, 800));
     });
 
     // Obsidian's own properties block names the note, not the stand-in.
-    const property = await browser.executeObsidian(({ app }) => {
+    const property = await readUntil(() => browser.executeObsidian(({ app }) => {
       const leaf = app.workspace.getMostRecentLeaf(app.workspace.rootSplit);
       const link = leaf.view.containerEl.querySelector('.metadata-container .internal-link.dr-quiet-link');
       return link ? [link.getAttribute('data-href'), link.textContent] : null;
-    });
+    }), (v) => !!v);
     expect(property).toEqual(['Target two', 'Target two']);
 
     // The graph: no quiet line, and no "[Name" stand-in.
     const graph = await browser.executeObsidian(async ({ app }) => {
       app.commands.executeCommandById('graph:open');
-      await new Promise((r) => setTimeout(r, 2500));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      // Drawn once the note's plain line is.
+      const drawn = () => { const l = app.workspace.getLeavesOfType('graph')[0]; return l && l.view.renderer; };
+      await until(() => drawn() && drawn().links.some((l) => l.source.id === 'Quiet.md'));
       const leaf = app.workspace.getLeavesOfType('graph')[0];
       const drawing = leaf.view.renderer;
       const out = {
@@ -1062,7 +1104,8 @@ describe('Design Redux in Obsidian', function () {
       await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
       const leaf = app.workspace.getRightLeaf(false);
       await leaf.setViewState({ type: 'outgoing-link', state: { file: 'Quiet.md' } });
-      await new Promise((r) => setTimeout(r, 1500));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => leaf.view.containerEl.querySelectorAll('.outgoing-link-item').length > 0);
       const shown = Array.from(leaf.view.containerEl.querySelectorAll('.outgoing-link-item'))
         .filter((i) => getComputedStyle(i).display !== 'none')
         .map((i) => i.textContent.trim());
@@ -1074,7 +1117,8 @@ describe('Design Redux in Obsidian', function () {
     // After [[[, the plugin's own list; picking writes a quiet link.
     await browser.executeObsidian(async ({ app, obsidian }) => {
       await app.workspace.getLeaf(false).openFile(app.vault.getFileByPath('Quiet.md'));
-      await new Promise((r) => setTimeout(r, 600));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => app.workspace.getActiveViewOfType(obsidian.MarkdownView));
       const editor = app.workspace.getActiveViewOfType(obsidian.MarkdownView).editor;
       const last = editor.lastLine();
       editor.setCursor({ line: last, ch: editor.getLine(last).length });
@@ -1082,17 +1126,15 @@ describe('Design Redux in Obsidian', function () {
       editor.focus();
     });
     await browser.keys(['[', '[', '[', 'D', 'e', 't']);
-    await browser.pause(900);
-    const listed = await browser.execute(() =>
+    const listed = await readUntil(() => browser.execute(() =>
       Array.from(document.querySelectorAll('.suggestion-container .dr-quiet-suggest')).map((e) => e.textContent)
-    );
+    ), (l) => l.length > 0);
     expect(listed.length).toBeGreaterThan(0);
     await browser.keys(['Enter']);
-    await browser.pause(600);
-    const typed = await browser.executeObsidian(({ app, obsidian }) => {
+    const typed = await readUntil(() => browser.executeObsidian(({ app, obsidian }) => {
       const editor = app.workspace.getActiveViewOfType(obsidian.MarkdownView).editor;
       return editor.getLine(editor.lastLine());
-    });
+    }), (line) => line === 'Typed [[[Deterrence]]]');
     expect(typed).toBe('Typed [[[Deterrence]]]');
 
     // Obsidian's own [[ list and Quick switcher don't offer "[Name" notes.
@@ -1104,20 +1146,18 @@ describe('Design Redux in Obsidian', function () {
       editor.focus();
     });
     await browser.keys(['[', '[', 'A', 'n', 'a']);
-    await browser.pause(900);
-    const plainList = await browser.execute(() =>
+    const plainList = await readUntil(() => browser.execute(() =>
       Array.from(document.querySelectorAll('.suggestion-container .suggestion-item')).map((e) => e.textContent)
-    );
+    ), (l) => l.length > 0);
     await browser.keys(['Escape']);
     expect(plainList.length).toBeGreaterThan(0);
     expect(plainList.filter((t) => t.includes('[Politics'))).toEqual([]);
     await browser.executeObsidianCommand('switcher:open');
-    await browser.pause(500);
+    await browser.$('.prompt input').waitForExist({ timeout: 5000 });
     await browser.keys(['A', 'n', 'a']);
-    await browser.pause(800);
-    const switched = await browser.execute(() =>
+    const switched = await readUntil(() => browser.execute(() =>
       Array.from(document.querySelectorAll('.prompt .suggestion-item')).map((e) => e.textContent)
-    );
+    ), (l) => l.length > 0 && l.some((x) => x.includes('Ana')));
     await browser.keys(['Escape']);
     await browser.pause(300);
     expect(switched.length).toBeGreaterThan(0);
@@ -1128,7 +1168,8 @@ describe('Design Redux in Obsidian', function () {
       const before = app.vault.getConfig('alwaysUpdateLinks');
       app.vault.setConfig('alwaysUpdateLinks', true);
       await app.fileManager.renameFile(app.vault.getFileByPath('Target one.md'), 'Target first.md');
-      await new Promise((r) => setTimeout(r, 1500));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(async () => (await app.vault.read(app.vault.getFileByPath('Quiet.md'))).includes('[[[Target first|the first]]]'));
       app.vault.setConfig('alwaysUpdateLinks', before);
       return app.vault.read(app.vault.getFileByPath('Quiet.md'));
     });
@@ -1138,7 +1179,8 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(async ({ app }) => {
       app.vault.setConfig('alwaysUpdateLinks', false);
       await app.fileManager.renameFile(app.vault.getFileByPath('Target two.md'), 'Target second.md');
-      await new Promise((r) => setTimeout(r, 1200));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => Array.from(document.querySelectorAll('.notice .dr-undo')).some((a) => a.textContent === 'Update them'));
     });
     const asked = await browser.execute(() => {
       const button = Array.from(document.querySelectorAll('.notice .dr-undo')).find((a) => a.textContent === 'Update them');
@@ -1146,9 +1188,11 @@ describe('Design Redux in Obsidian', function () {
       return !!button;
     });
     expect(asked).toBe(true);
-    await browser.pause(1200);
     const updatedLater = await browser.executeObsidian(async ({ app, plugins }) => {
-      const text = await app.vault.read(app.vault.getFileByPath('Quiet.md'));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      const read = () => app.vault.read(app.vault.getFileByPath('Quiet.md'));
+      await until(async () => (await read()).includes('related: "[[[Target second]]]"'));
+      const text = await read();
       for (const p of ['Quiet.md', 'Target first.md', 'Target second.md', 'Not yet written.md']) {
         const f = app.vault.getFileByPath(p);
         if (f) await app.vault.delete(f);
@@ -1244,9 +1288,16 @@ describe('Design Redux in Obsidian', function () {
         'Routes/Resignation.md': 'Going.',
       };
       for (const [p, text] of Object.entries(notes)) await app.vault.create(p, text);
-      await new Promise((r) => setTimeout(r, 1500));
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      // Read once the last note's link is counted; drawn once the graph has its lines.
+      await until(() => (app.metadataCache.resolvedLinks['Routes/Individual responsibility.md'] || {})['Routes/Resignation.md']);
       app.commands.executeCommandById('graph:open');
-      await new Promise((r) => setTimeout(r, 2500));
+      const graph = () => { const l = app.workspace.getLeavesOfType('graph')[0]; return l && l.view; };
+      await until(() => {
+        const g = graph();
+        return g && g.renderer && g.renderer.links.some((l) => l.source.id === 'Routes/Westminster system.md') &&
+          g.dataEngine && g.dataEngine.displayOptions.childrenEl.querySelector('.dr-graph-routes');
+      });
       const view = app.workspace.getLeavesOfType('graph')[0].view;
       const rows = view.dataEngine.displayOptions.childrenEl;
       const row = rows.querySelector('.dr-graph-routes');
@@ -1278,9 +1329,10 @@ describe('Design Redux in Obsidian', function () {
       await view.dataEngine.displayOptions.setCollapsed(false, false);
       const row = view.dataEngine.displayOptions.childrenEl.querySelector('.dr-graph-routes');
       row.querySelector('.checkbox-container').click();
-      await new Promise((r) => setTimeout(r, 1500));
       const has = (a, b) => view.renderer.links.some((l) => l.source.id === a && l.target.id === b);
       const [W, M, I, C] = names;
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => has(W, M) && has(M, I) && !has(W, I));
       return {
         saved: !!app.plugins.plugins['design-redux'].settings.graphRouting.graph,
         straight: [has(W, I), has(W, C)],
@@ -1328,10 +1380,11 @@ describe('Design Redux in Obsidian', function () {
       const leaf = app.workspace.getLeavesOfType('graph')[0];
       app.workspace.setActiveLeaf(leaf, { focus: true });
       app.commands.executeCommandById('design-redux:toggle-graph-routes');
-      await new Promise((r) => setTimeout(r, 1500));
       const r = leaf.view.renderer;
       r.highlightNode = null;
       const has = (a, b) => r.links.some((l) => l.source.id === a && l.target.id === b);
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      await until(() => has(W, I) && has(W, C));
       const result = {
         saved: !!app.plugins.plugins['design-redux'].settings.graphRouting.graph,
         straight: [has(W, I), has(W, C)],
