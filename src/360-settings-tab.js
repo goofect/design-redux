@@ -48,7 +48,7 @@ const SETTINGS_TABS = [
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
       {
         title: 'Canvas',
-        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationNames', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap'],
+        keys: ['canvasLegend', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationNames', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap'],
       },
       {
         title: 'Compatibility',

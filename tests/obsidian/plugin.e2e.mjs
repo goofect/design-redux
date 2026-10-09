@@ -509,6 +509,60 @@ describe('Design Redux in Obsidian', function () {
     expect(result.parentOf).toEqual({ Constitutionalism: 'Government', 'Rule of law': 'Constitutionalism', Federalism: 'Government' });
   });
 
+  it('drags a card with its branch, selected or not, and keeps where they went', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getFileByPath('Drag.canvas');
+      if (old) await app.vault.delete(old);
+      const card = (id, x, y) => ({ id, type: 'text', text: id, x, y, width: 160, height: 60 });
+      await app.vault.create('Drag.canvas', JSON.stringify({
+        nodes: [card('r', 0, 0), card('a', 240, 0), card('a1', 480, 0), card('x', 0, 240)],
+        edges: [
+          { id: 'e1', fromNode: 'r', fromSide: 'right', toNode: 'a', toSide: 'left' },
+          { id: 'e2', fromNode: 'a', fromSide: 'right', toNode: 'a1', toSide: 'left' },
+        ],
+      }));
+    });
+    await obsidianPage.openFile('Drag.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.nodes.forEach((node, id) => node.nodeEl.setAttribute('data-test-id', id));
+      canvas.zoomToFit();
+    });
+    await browser.pause(500);
+    const where = () => browser.executeObsidian(({ app }) => {
+      const out = {};
+      app.workspace.activeLeaf.view.canvas.nodes.forEach((n, id) => (out[id] = [Math.round(n.x), Math.round(n.y)]));
+      return out;
+    });
+    const drag = async (id, dy) => {
+      const el = await browser.$(ACTIVE + `[data-test-id="${id}"]`);
+      const box = await browser.execute((e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 12 }; }, el);
+      await browser.action('pointer').move({ x: Math.round(box.x), y: Math.round(box.y) }).down()
+        .move({ x: Math.round(box.x), y: Math.round(box.y) + 8, duration: 60 })
+        .move({ x: Math.round(box.x), y: Math.round(box.y) + dy, duration: 250 }).up().perform();
+      await browser.pause(400);
+    };
+    const before = await where();
+    await drag('r', 60);
+    const after = await where();
+    const moved = after.r[1] - before.r[1];
+    expect(moved).toBeGreaterThan(20);
+    expect([after.a[1] - before.a[1], after.a1[1] - before.a1[1], after.x[1] - before.x[1]]).toEqual([moved, moved, 0]);
+    // Again, now that it's selected.
+    await drag('r', 60);
+    const again = await where();
+    const twice = again.r[1] - after.r[1];
+    expect(twice).toBeGreaterThan(20);
+    expect(again.a1[1] - after.a1[1]).toBe(twice);
+    // Kept in the file.
+    const saved = await readUntil(() => browser.executeObsidian(async ({ app }) => {
+      const nodes = JSON.parse(await app.vault.read(app.vault.getFileByPath('Drag.canvas'))).nodes;
+      return Object.fromEntries(nodes.map((n) => [n.id, Math.round(n.y)]));
+    }), (y) => y.a1 === again.a1[1]);
+    expect(saved.a1).toBe(again.a1[1]);
+  });
+
   it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
     // As an earlier version left them: a card folded to its title, and a
     // group folded with its card tucked inside, what's below closed up.

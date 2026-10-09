@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1455,6 +1455,57 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const none = event('a\nb');
     paste.onPaste(view, none);
     assert.ok(!none.prevented);
+  });
+
+  await t('a card dragged brings its branch along; several selected, a resize, or a drop onto a card to hang from leave it to the canvas', () => {
+    const view = mindCanvas({
+      nodes: [card('r', 0, 0, 200, 60), card('a', 300, 0, 200, 60), card('a1', 600, 0, 200, 60), card('other', 0, 300, 200, 60), card('b', 300, 300, 200, 60)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('other', 'b', 'right', 'left')],
+    });
+    const { p, fold } = plugin({ canvasBranchDrag: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    p.feature = (C) => (C === R.CanvasFold ? fold : null);
+    const drag = new R.CanvasBranchDrag(p);
+    const state = { file: view.file };
+    drag.watched.set(view, state);
+    drag.mount(view, state);
+    const n = (id) => view.canvas.nodes.get(id);
+    const at = (id) => [n(id).x, n(id).y];
+    const press = (id) => n(id).nodeEl.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    const moveTo = (id, x, y) => {
+      n(id).moveAndResize({ x, y, width: n(id).width, height: n(id).height });
+      window.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true }));
+    };
+    const letGo = () => window.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }));
+    // r dragged 100 down: a and a1 come along; other cards stay.
+    press('r');
+    moveTo('r', 0, 100);
+    letGo();
+    assert.deepStrictEqual([at('a'), at('a1'), at('b')], [[300, 100], [600, 100], [300, 300]]);
+    assert.ok(view.canvas.saves >= 1);
+    // Resized from its left edge: the branch stays.
+    press('a');
+    n('a').moveAndResize({ x: 250, y: 100, width: 250, height: 60 });
+    window.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true }));
+    letGo();
+    assert.deepStrictEqual(at('a1'), [600, 100]);
+    n('a').moveAndResize({ x: 300, y: 100, width: 200, height: 60 });
+    // Dragged with another selected too: the canvas's to move.
+    view.canvas.selection = new Set([n('a'), n('other')]);
+    press('a');
+    moveTo('a', 300, 200);
+    letGo();
+    assert.deepStrictEqual(at('a1'), [600, 100]);
+    view.canvas.selection = new Set();
+    n('a').moveAndResize({ x: 300, y: 100, width: 200, height: 60 });
+    // Over a card it would hang from when let go: its branch goes back, for the re-linking to take.
+    press('a');
+    n('b').nodeEl.dataset.drDropTarget = '';
+    moveTo('a', 300, 280);
+    delete n('b').nodeEl.dataset.drDropTarget;
+    letGo();
+    assert.deepStrictEqual(at('a1'), [600, 100]);
+    drag.cleanup(view, state);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

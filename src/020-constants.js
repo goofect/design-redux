@@ -170,6 +170,8 @@ const DEFAULTS = {
   canvasQuickAdd: true,
   // Several lines pasted onto a selected card: a card of each below it.
   canvasPasteLines: true,
+  // Dragging a card brings the cards below it along.
+  canvasBranchDrag: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.
