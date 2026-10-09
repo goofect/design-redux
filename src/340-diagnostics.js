@@ -50,6 +50,11 @@ function compatibility(app) {
       without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
     },
     {
+      what: 'Listing tags, for a map of a tag',
+      ok: has(() => typeof app.metadataCache.getTags === 'function'),
+      without: 'tags are gathered from each note instead, a little slower',
+    },
+    {
       what: 'Knowing whether Canvas is switched on',
       ok: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
       without: 'New canvas is always offered',

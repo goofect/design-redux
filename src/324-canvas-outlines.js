@@ -157,21 +157,20 @@ function noteNameFrom(label) {
 }
 
 /**
- * Cards for an outline, as a tidy branch growing from `root` on `side`:
+ * Cards for a tree, as a tidy branch growing from `root` on `side`:
  * { nodes, edges } as a canvas file holds them, new ids from `newId`.
- * Laid out on their own, then moved as a whole to `at` (where its box
- * should begin), if given.
+ * Each item is { card, children }, `card` the card's data without its
+ * id or place — a size, and what it is.
  */
-function outlineCards(root, items, side, size, newId) {
+function treeCards(root, items, side, newId) {
   const nodes = [];
   const edges = [];
   const axes = sideAxes(side);
-  const height = (text) => Math.max(size.height, 24 * Math.ceil(String(text).length / 28) + 36);
   // In order along the way siblings line up, so the tidy keeps that order.
   let order = 0;
   const add = (parentId, item, depth) => {
     const id = newId();
-    const rec = { id, type: 'text', text: item.text, width: size.width, height: height(item.text), x: 0, y: 0 };
+    const rec = Object.assign({ id, x: 0, y: 0 }, item.card);
     const ahead = (axes.forward ? 1 : -1) * depth * 1000;
     rec[axes.depth] = root[axes.depth] + ahead;
     rec[axes.across] = order++ * 1000;
@@ -187,6 +186,14 @@ function outlineCards(root, items, side, size, newId) {
     if (at) Object.assign(n, at);
   });
   return { nodes, edges };
+}
+
+/** Text cards for an outline, each tall enough for its words. */
+function outlineCards(root, items, side, size, newId) {
+  const height = (text) => Math.max(size.height, 24 * Math.ceil(String(text).length / 28) + 36);
+  const asCards = (list) =>
+    list.map((it) => ({ card: { type: 'text', text: it.text, width: size.width, height: height(it.text) }, children: asCards(it.children) }));
+  return treeCards(root, asCards(items), side, newId);
 }
 
 class CanvasBranchNote extends CanvasFeature {

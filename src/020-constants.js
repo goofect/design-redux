@@ -158,6 +158,8 @@ const DEFAULTS = {
   canvasRelationNames: '',
   // A command listing what on a canvas wants a look: loose, empty, twice-named cards.
   canvasCheck: true,
+  // A folder or tag made into a canvas of its notes.
+  canvasVaultMap: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

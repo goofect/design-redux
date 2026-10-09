@@ -59,6 +59,7 @@ const obsidian = new Proxy({
   Notice: class { constructor(m) { notices.push(m); } },
   setIcon: (el, name) => { el.dataset.icon = name; },
   Platform: { isMobile: false },
+  getAllTags: (cache) => (cache.tags || []).map((t) => t.tag),
 }, { get: (t, k) => (k in t ? t[k] : class {}) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
@@ -70,7 +71,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1173,6 +1174,74 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
       'x: Its arrows lead round in a circle',
       'y: Its arrows lead round in a circle',
     ].sort().filter((l, i, all) => all.indexOf(l) === i));
+  });
+
+  await t('a folder or a tag made into a canvas: its folders or narrower tags as branches, notes as cards, links as related arrows', async () => {
+    const folder = (path, parent) => {
+      const f = Object.assign(new R.TFolder(), { path, name: path.split('/').pop(), children: [], parent, isRoot: () => !path });
+      if (parent) parent.children.push(f);
+      return f;
+    };
+    const note = (path, parent, tags) => {
+      const name = path.split('/').pop();
+      const f = Object.assign(new R.TFile(), { path, name, basename: name.replace(/\.md$/, ''), extension: 'md', parent, tags, stat: { mtime: 0, ctime: 0 } });
+      parent.children.push(f);
+      return f;
+    };
+    const root = folder('', null);
+    const law = folder('Law', root);
+    const courts = folder('Law/Courts', law);
+    folder('Law/Empty', law);
+    const files = [
+      note('Law/Law.md', law, []), note('Law/Statute.md', law, ['#law']), note('Law/Equity.md', law, []),
+      note('Law/Courts/Appeal.md', courts, ['#law/court']), note('Law/Courts/Trial.md', courts, ['#law/court', '#law']),
+    ];
+    const created = [];
+    const opened = [];
+    const p = {
+      settings: { canvasVaultMap: true, defaultSort: 'name' },
+      isFolderNote: (f) => !!f.parent && f.basename === f.parent.name,
+      folderNote: (fo) => fo.children.find((c) => c.basename === fo.name) || null,
+      orders: { arrangeAlbum: (fo, list, sorter) => sorter(list) },
+      freeChildPath: (fo, base, ext) => `${fo.path ? fo.path + '/' : ''}${base}.${ext}`,
+      app: {
+        vault: {
+          getName: () => 'Vault', getRoot: () => root, getMarkdownFiles: () => files,
+          create: async (path, text) => { created.push([path, JSON.parse(text)]); return { path }; },
+        },
+        metadataCache: {
+          resolvedLinks: { 'Law/Statute.md': { 'Law/Courts/Appeal.md': 1, 'Elsewhere.md': 1 }, 'Law/Courts/Appeal.md': { 'Law/Statute.md': 2 } },
+          getFileCache: (f) => ({ tags: f.tags.map((tag) => ({ tag })) }),
+        },
+        fileManager: { getNewFileParent: () => root },
+        workspace: { getLeaf: () => ({ openFile: async (f) => opened.push(f.path) }) },
+      },
+    };
+    const map = new R.CanvasVaultMap(p);
+    await map.mapFolder(law);
+    const [path, data] = created[0];
+    assert.strictEqual(path, 'Law/Law map.canvas');
+    assert.deepStrictEqual(opened, ['Law/Law map.canvas']);
+    const byId = new Map(data.nodes.map((n) => [n.id, n]));
+    const name = (n) => (n.type === 'file' ? n.file : n.text);
+    const tree = data.edges.filter((e) => !e.drRelated).map((e) => `${name(byId.get(e.fromNode))} > ${name(byId.get(e.toNode))}`);
+    assert.deepStrictEqual(tree, [
+      'Law/Law.md > Law/Equity.md', 'Law/Law.md > Law/Statute.md', 'Law/Law.md > Courts',
+      'Courts > Law/Courts/Appeal.md', 'Courts > Law/Courts/Trial.md',
+    ], 'the folder note at the root, notes then folders, an empty folder left out');
+    const related = data.edges.filter((e) => e.drRelated).map((e) => [name(byId.get(e.fromNode)), name(byId.get(e.toNode))].sort().join(' ~ '));
+    assert.deepStrictEqual(related, ['Law/Courts/Appeal.md ~ Law/Statute.md'], 'a link both ways is one arrow; one to a note not mapped, none');
+    const meet = data.nodes.some((a, i) => data.nodes.some((b, j) => j > i && a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height));
+    assert.ok(!meet, 'no cards meet');
+
+    await map.mapTag('#law');
+    const [tagPath, tagData] = created[1];
+    assert.strictEqual(tagPath, 'law map.canvas');
+    const tags = new Map(tagData.nodes.map((n) => [n.id, n]));
+    const tagTree = tagData.edges.filter((e) => !e.drRelated).map((e) => `${name(tags.get(e.fromNode))} > ${name(tags.get(e.toNode))}`);
+    assert.deepStrictEqual(tagTree, ['# #law > Law/Statute.md', '# #law > #court', '#court > Law/Courts/Appeal.md', '#court > Law/Courts/Trial.md'],
+      'each note once, under its narrowest tag');
+    assert.strictEqual(tagData.edges.filter((e) => e.drRelated).length, 1);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
