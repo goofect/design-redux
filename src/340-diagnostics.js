@@ -50,6 +50,24 @@ function compatibility(app) {
       without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
     },
     {
+      what: 'Where a canvas is looking, for its minimap',
+      ok: has(() => {
+        const leaf = app.workspace.getLeavesOfType('canvas')[0];
+        const canvas = leaf && leaf.view && leaf.view.canvas;
+        return !canvas || typeof canvas.getViewportBBox === 'function' || typeof canvas.zoom === 'number';
+      }),
+      without: 'the minimap shows the cards but not the part on screen',
+    },
+    {
+      what: 'Moving a canvas’s view, for its minimap',
+      ok: has(() => {
+        const leaf = app.workspace.getLeavesOfType('canvas')[0];
+        const canvas = leaf && leaf.view && leaf.view.canvas;
+        return !canvas || typeof canvas.setViewport === 'function' || typeof canvas.zoomToBbox === 'function';
+      }),
+      without: 'pressing on the minimap doesn’t go there',
+    },
+    {
       what: 'Listing tags, for a map of a tag',
       ok: has(() => typeof app.metadataCache.getTags === 'function'),
       without: 'tags are gathered from each note instead, a little slower',

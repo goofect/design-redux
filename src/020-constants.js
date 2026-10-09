@@ -160,6 +160,8 @@ const DEFAULTS = {
   canvasCheck: true,
   // A folder or tag made into a canvas of its notes.
   canvasVaultMap: true,
+  // The whole canvas small in its corner, while the cards don't all fit.
+  canvasMinimap: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

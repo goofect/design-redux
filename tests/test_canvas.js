@@ -71,7 +71,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasMinimap };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1242,6 +1242,41 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(tagTree, ['# #law > Law/Statute.md', '# #law > #court', '#court > Law/Courts/Appeal.md', '#court > Law/Courts/Trial.md'],
       'each note once, under its narrowest tag');
     assert.strictEqual(tagData.edges.filter((e) => e.drRelated).length, 1);
+  });
+
+  await t('the minimap: the cards small, the part on screen outlined, there only while they don’t all fit; pressing goes there', () => {
+    const view = fakeCanvas({ nodes: [card('a', 0, 0, 100, 50), card('b', 900, 600, 100, 50), card('g', -20, -20, 200, 100, { type: 'group', label: 'G' })], edges: [] });
+    const canvas = view.canvas;
+    let port = { minX: -100, minY: -100, maxX: 1200, maxY: 800 };
+    const looked = [];
+    canvas.getViewportBBox = () => port;
+    canvas.zoom = 0;
+    canvas.setViewport = (x, y, zoom) => looked.push([Math.round(x), Math.round(y), zoom]);
+    const mini = new R.CanvasMinimap({ settings: { canvasMinimap: true }, app: {}, saveSettings() {} });
+    const state = { file: view.file };
+    mini.watched.set(view, state);
+    mini.mount(view, state);
+    mini.pass(view, state);
+    const el = view.contentEl.querySelector('.dr-minimap');
+    assert.ok(el.classList.contains('is-hidden'), 'everything fits: no map');
+    port = { minX: 0, minY: 0, maxX: 400, maxY: 300 };
+    mini.pass(view, state);
+    assert.ok(!el.classList.contains('is-hidden'));
+    assert.strictEqual(el.querySelectorAll('.dr-minimap-card').length, 2);
+    assert.strictEqual(el.querySelectorAll('.dr-minimap-group').length, 1);
+    const rect = el.querySelector('.dr-minimap-view');
+    assert.ok(Number(rect.getAttribute('width')) > 0 && Number(rect.getAttribute('width')) < 200);
+    // Pressing the middle of the map: the canvas looks at the middle of its cards, as near as it was.
+    const svg = el.querySelector('svg');
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 136 });
+    el.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 100, clientY: 68 }));
+    assert.deepStrictEqual(looked, [[490, 315, 0]]);
+    // Off: hidden, and taken away when let go.
+    mini.plugin.settings.canvasMinimap = false;
+    mini.pass(view, state);
+    assert.ok(el.classList.contains('is-hidden'));
+    mini.cleanup(view, state);
+    assert.ok(!view.contentEl.querySelector('.dr-minimap'));
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

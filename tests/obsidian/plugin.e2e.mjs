@@ -391,6 +391,40 @@ describe('Design Redux in Obsidian', function () {
     await closeMenus();
   });
 
+  it('shows a minimap while the cards don’t all fit, and goes where it’s pressed', async function () {
+    await obsidianPage.openFile('Map.canvas');
+    // Close in on one corner, so the rest is off screen.
+    const has = await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.getLeavesOfType('canvas')[0].view.canvas;
+      const box = Array.from(canvas.nodes.values())[0].getBBox();
+      canvas.zoomToBbox({ minX: box.minX, minY: box.minY, maxX: box.minX + 40, maxY: box.minY + 30 });
+      return { viewport: typeof canvas.getViewportBBox === 'function', move: typeof canvas.setViewport === 'function', zoom: typeof canvas.zoom === 'number' };
+    });
+    expect(has).toEqual({ viewport: true, move: true, zoom: true });
+    await browser.waitUntil(async () => browser.execute(() => {
+      const el = document.querySelector('.dr-minimap');
+      return !!el && !el.classList.contains('is-hidden') && Number(el.querySelector('.dr-minimap-view').getAttribute('width')) > 0;
+    }), { timeout: 10000, timeoutMsg: 'the minimap never showed the part on screen' });
+    const before = await browser.executeObsidian(({ app }) => {
+      const b = app.workspace.getLeavesOfType('canvas')[0].view.canvas.getViewportBBox();
+      return [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
+    });
+    // Pressed in its far corner: the view goes there.
+    const map = await browser.$('.dr-minimap svg');
+    await map.click({ x: 80, y: 50 });
+    await browser.pause(600);
+    const after = await browser.executeObsidian(({ app }) => {
+      const b = app.workspace.getLeavesOfType('canvas')[0].view.canvas.getViewportBBox();
+      return [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
+    });
+    expect(Math.hypot(after[0] - before[0], after[1] - before[1])).toBeGreaterThan(20);
+    // Everything in view again: no minimap.
+    await browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('canvas')[0].view.canvas.zoomToFit());
+    await browser.waitUntil(async () => browser.execute(() => document.querySelector('.dr-minimap').classList.contains('is-hidden')), {
+      timeout: 5000, timeoutMsg: 'the minimap stayed with everything in view',
+    });
+  });
+
   it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
     // As an earlier version left them: a card folded to its title, and a
     // group folded with its card tucked inside, what's below closed up.

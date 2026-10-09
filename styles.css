@@ -6687,3 +6687,54 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
     transition: none;
   }
 }
+
+/* -- the canvas minimap -------------------------------------------------- */
+
+.dr-minimap {
+  position: absolute;
+  right: 12px;
+  /* Clear of the status bar, which floats over the corner. */
+  bottom: 40px;
+  z-index: 20;
+  border: 1px solid var(--dr-line);
+  border-radius: 10px;
+  background-color: var(--dr-float-bg);
+  backdrop-filter: blur(var(--glass-blur, 14px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px));
+  box-shadow: var(--dr-float-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.dr-minimap.is-hidden {
+  display: none;
+}
+
+.dr-minimap svg {
+  display: block;
+}
+
+.dr-minimap-card {
+  fill: var(--text-faint);
+  opacity: 0.55;
+}
+
+.dr-minimap-card.is-selected {
+  fill: var(--interactive-accent);
+  opacity: 1;
+}
+
+.dr-minimap-group {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+
+.dr-minimap-view {
+  fill: var(--interactive-accent);
+  fill-opacity: 0.08;
+  stroke: var(--interactive-accent);
+  stroke-width: 1.5;
+}
