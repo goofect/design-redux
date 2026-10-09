@@ -1140,7 +1140,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const menu = new Menu();
     lay.addMenuItems(menu, [n('r')]);
     assert.ok(menu.items.some((i) => /Lay out branch/.test(i.title)), menu.items.map((i) => i.title).join());
-    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial', 'canvas-layout-outline', 'canvas-layout-concept', 'canvas-layout-everything']);
+    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial', 'canvas-layout-outline', 'canvas-layout-concept', 'canvas-spread-overlaps', 'canvas-layout-everything']);
     const saves = view.canvas.saves;
     await lay.layout(view, n('r'), 'bottom');
     assert.deepStrictEqual([n('r').x, n('r').y], [0, 0], 'the card stays');
@@ -1652,6 +1652,26 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     assert.ok(!view.contentEl.classList.contains('dr-branch-focus'));
     focus.cleanup(view, state);
+  });
+
+  await t('overlapping cards spread apart until none touch, kept cards staying; several trees tidied from the selection menu', async () => {
+    const view = mindCanvas({ nodes: [card('a', 0, 0, 200, 60), card('b', 50, 20, 200, 60), card('c', 100, 40, 200, 60, {}), card('far', 900, 0, 200, 60)], edges: [] });
+    view.canvas.nodes.get('a').unknownData.drPinned = true;
+    const { p, fold } = plugin({ canvasLayouts: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const lay = new R.CanvasLayouts(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    const menu = new Menu();
+    lay.addMenuItems(menu, [n('a'), n('b')]);
+    assert.ok(menu.items.some((i) => i.title === 'Spread out overlapping cards'));
+    await lay.spread(view, null);
+    const cards = ['a', 'b', 'c', 'far'].map(n);
+    for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length; j++) {
+      const [x, y] = [cards[i], cards[j]];
+      assert.ok(!(x.x < y.x + y.width && y.x < x.x + x.width && x.y < y.y + y.height && y.y < x.y + x.height), `${x.id} on ${y.id}`);
+    }
+    assert.deepStrictEqual([n('a').x, n('a').y, n('far').x], [0, 0, 900], 'the kept card and one in the clear stay');
+    assert.strictEqual(await lay.spread(view, null), false, 'nothing overlaps now');
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

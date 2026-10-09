@@ -341,6 +341,46 @@ function radialLayout(model, rootId, links) {
   return out;
 }
 
+/**
+ * Cards that overlap eased apart, each pair along the way that's shorter,
+ * a gap between them, until none touch; cards in `still` (and groups)
+ * stay where they are. id -> { x, y } for those that move.
+ */
+function spreadApart(cards, still, gap) {
+  gap = gap === undefined ? TIDY_SIBLING_GAP : gap;
+  const pos = cards.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.width, h: r.height, fixed: still.has(r.id) }));
+  for (let pass = 0; pass < 100; pass++) {
+    let moved = false;
+    for (let i = 0; i < pos.length; i++) {
+      for (let j = i + 1; j < pos.length; j++) {
+        const a = pos[i];
+        const b = pos[j];
+        if (a.fixed && b.fixed) continue;
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + gap;
+        const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + gap;
+        if (ox <= gap || oy <= gap) continue;
+        moved = true;
+        const alongX = ox < oy;
+        const axis = alongX ? 'x' : 'y';
+        const sign = (alongX ? a.x + a.w / 2 <= b.x + b.w / 2 : a.y + a.h / 2 <= b.y + b.h / 2) ? -1 : 1;
+        const amount = alongX ? ox : oy;
+        if (a.fixed) b[axis] -= sign * amount;
+        else if (b.fixed) a[axis] += sign * amount;
+        else {
+          a[axis] += (sign * amount) / 2;
+          b[axis] -= (sign * amount) / 2;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  const out = new Map();
+  pos.forEach((p, i) => {
+    if (Math.round(p.x) !== cards[i].x || Math.round(p.y) !== cards[i].y) out.set(p.id, { x: Math.round(p.x), y: Math.round(p.y) });
+  });
+  return out;
+}
+
 class CanvasLayouts extends CanvasFeature {
   settingsSchema() {
     return [
@@ -368,6 +408,17 @@ class CanvasLayouts extends CanvasFeature {
         this.layoutMany(view, this.rootsOf(view, this.selectedNodes(view)), mode);
       },
     })).concat([
+      {
+        id: 'canvas-spread-overlaps',
+        name: 'Spread out overlapping cards',
+        icon: 'move-diagonal',
+        check: () => this.enabled && !!this.pageCanvas() && !this.pageCanvas().canvas.readonly,
+        run: () => {
+          const view = this.pageCanvas();
+          const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
+          this.spread(view, picked.length > 1 ? picked : null);
+        },
+      },
       {
         id: 'canvas-layout-everything',
         name: 'Lay out the whole canvas…',
@@ -406,6 +457,53 @@ class CanvasLayouts extends CanvasFeature {
       .filter(Boolean);
   }
 
+  /** Whether any two of these cards overlap. */
+  overlapping(view, nodes) {
+    const model = canvasModel(view.canvas);
+    const cards = nodes.map((n) => model.byId.get(n.id)).filter((r) => r && !r.tuck && !isGroupRecord(r));
+    return spreadApart(cards, new Set(), 0).size > 0;
+  }
+
+  /**
+   * Overlapping cards — the ones given, or every card on the canvas —
+   * eased apart until none touch; kept cards stay. Glides; one step of Undo.
+   */
+  spread(view, nodes) {
+    if (!view || !view.canvas) return Promise.resolve(false);
+    const fold = this.plugin.feature(CanvasFold);
+    if (fold) fold.settle(view);
+    const model = canvasModel(view.canvas);
+    const ids = nodes ? new Set(nodes.map((n) => n.id)) : null;
+    const cards = model.nodes.filter((r) => !r.tuck && !isGroupRecord(r) && (!ids || ids.has(r.id)));
+    const places = spreadApart(cards, new Set(cards.filter((r) => r.pinned).map((r) => r.id)));
+    if (!places.size) {
+      new Notice('No cards overlap.');
+      return Promise.resolve(false);
+    }
+    const before = snapshotModel(model);
+    places.forEach((at, id) => {
+      const rec = model.byId.get(id);
+      const moved = new Set();
+      shiftRecord(model, rec, 'x', at.x - rec.x, moved);
+      moved.clear();
+      shiftRecord(model, rec, 'y', at.y - rec.y, moved);
+    });
+    fitGroups(model, before);
+    const state = fold ? fold.watched.get(view) : null;
+    return new Promise((resolve) => {
+      glideCanvasModel(view, model, before, state, (changed) => {
+        try {
+          if (changed) view.canvas.requestSave();
+        } catch (err) {
+          /* saved with the canvas's next change */
+        }
+        if (fold) fold.schedule(view);
+        this.app.workspace.trigger('design-redux:canvas-changed', view);
+        resolve(changed);
+      });
+    });
+  }
+
   /** Several branches laid out the same way, one after another. */
   async layoutMany(view, nodes, mode) {
     let any = false;
@@ -423,6 +521,15 @@ class CanvasLayouts extends CanvasFeature {
 
   addMenuItems(menu, nodes) {
     const view = nodes[0] && nodes[0].canvas && nodes[0].canvas.view;
+    const cards = nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
+    if (view && view.canvas && !view.canvas.readonly && cards.length > 1 && this.overlapping(view, cards)) {
+      menu.addItem((item) =>
+        canvasAction(item)
+          .setTitle('Spread out overlapping cards')
+          .setIcon('move-diagonal')
+          .onClick(() => this.spread(view, cards))
+      );
+    }
     const roots = this.rootsOf(view, nodes.filter((n) => !isCanvasEdge(n)));
     if (!roots.length) return;
     const many = roots.length > 1;
@@ -441,6 +548,18 @@ class CanvasLayouts extends CanvasFeature {
       },
       'action'
     );
+    // Several trees: each tidied as it grows, one after another.
+    const branches = this.plugin.feature(CanvasBranches);
+    if (many && branches && branches.enabled && this.settings.canvasTidy) {
+      menu.addItem((item) =>
+        canvasAction(item)
+          .setTitle('Tidy branches')
+          .setIcon('network')
+          .onClick(async () => {
+            for (const node of roots) await branches.tidy(view, node);
+          })
+      );
+    }
   }
 
   /** Where the branch's cards go for a layout. */
