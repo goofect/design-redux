@@ -16,7 +16,142 @@ const BRANCH_LAYOUTS = [
   ['top', 'Upward', 'arrow-up'],
   ['both', 'Both sides', 'arrow-left-right'],
   ['radial', 'All round', 'sun'],
+  ['outline', 'As an outline', 'list-tree'],
+  ['concept', 'As a concept map', 'waypoints'],
 ];
+
+const OUTLINE_INDENT = 48;
+const OUTLINE_GAP = 16;
+
+/**
+ * A branch as an outline: each card below the one before it, in reading
+ * order, set in by a step for each level below the root. id -> { x, y }.
+ */
+function outlineLayout(model, rootId, links) {
+  links = links || arrowLinks(model);
+  const out = new Map();
+  out.sides = new Map();
+  out.both = false;
+  const root = model.byId.get(rootId);
+  if (!root) return out;
+  const kids = orderedBranch(model, rootId, links, siblingOrder);
+  let y = root.y + root.height + OUTLINE_GAP;
+  const walk = (id, depth) =>
+    (kids.get(id) || []).forEach((c) => {
+      out.set(c.id, { x: Math.round(root.x + depth * OUTLINE_INDENT), y: Math.round(y) });
+      y += c.height + OUTLINE_GAP;
+      walk(c.id, depth + 1);
+    });
+  walk(rootId, 1);
+  return out;
+}
+
+/* A concept map's pull along arrows, and how far apart it would hold two cards. */
+const CONCEPT_ROUNDS = 240;
+
+/**
+ * A branch as a concept map: laid out round its card first, then drawn
+ * together along every arrow among its cards — related ones too — and
+ * pushed apart where they crowd, the card itself staying put; then no two
+ * left touching. The same branch gives the same map. id -> { x, y }.
+ */
+function conceptLayout(model, rootId, links) {
+  links = links || arrowLinks(model);
+  const start = radialLayout(model, rootId, links);
+  const out = new Map();
+  out.sides = new Map();
+  out.both = true;
+  const root = model.byId.get(rootId);
+  if (!root || !start.size) return start;
+  const ids = [rootId].concat(Array.from(start.keys()));
+  const inside = new Set(ids);
+  const pos = new Map(ids.map((id) => {
+    const r = model.byId.get(id);
+    const at = id === rootId ? r : start.get(id);
+    return [id, { x: at.x + r.width / 2, y: at.y + r.height / 2, w: r.width, h: r.height }];
+  }));
+  const pairs = [];
+  model.edges.forEach((e) => {
+    if (inside.has(e.from) && inside.has(e.to) && e.from !== e.to) pairs.push([e.from, e.to]);
+  });
+  // Pushed apart by k²/d, pulled along arrows by d²/k, and a little toward the card at the root.
+  const k = 220;
+  const centre = pos.get(rootId);
+  for (let round = 0; round < CONCEPT_ROUNDS; round++) {
+    const heat = 60 * (1 - round / CONCEPT_ROUNDS) + 1;
+    const push = new Map(ids.map((id) => [id, { x: 0, y: 0 }]));
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = pos.get(ids[i]);
+        const b = pos.get(ids[j]);
+        let dx = a.x - b.x;
+        let dy = a.y - b.y;
+        let d = Math.hypot(dx, dy);
+        if (d < 1) {
+          dx = 1;
+          dy = 0;
+          d = 1;
+        }
+        const f = (k * k) / d / d;
+        push.get(ids[i]).x += dx * f;
+        push.get(ids[i]).y += dy * f;
+        push.get(ids[j]).x -= dx * f;
+        push.get(ids[j]).y -= dy * f;
+      }
+    }
+    pairs.forEach(([x, y]) => {
+      const a = pos.get(x);
+      const b = pos.get(y);
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const f = Math.hypot(dx, dy) / k;
+      push.get(x).x += dx * f;
+      push.get(x).y += dy * f;
+      push.get(y).x -= dx * f;
+      push.get(y).y -= dy * f;
+    });
+    ids.forEach((id) => {
+      if (id === rootId) return;
+      const p = pos.get(id);
+      const m = push.get(id);
+      m.x += (centre.x - p.x) * 0.05;
+      m.y += (centre.y - p.y) * 0.05;
+      const len = Math.hypot(m.x, m.y);
+      const step = Math.min(len, heat);
+      if (len > 0) {
+        p.x += (m.x / len) * step;
+        p.y += (m.y / len) * step;
+      }
+    });
+  }
+  // Then nothing touching: each pair that meets eased apart, the root staying put.
+  const gap = TIDY_SIBLING_GAP;
+  for (let pass = 0; pass < 80; pass++) {
+    let moved = false;
+    for (let i = 0; i < ids.length; i++) {
+      for (let j = i + 1; j < ids.length; j++) {
+        const a = pos.get(ids[i]);
+        const b = pos.get(ids[j]);
+        const ox = (a.w + b.w) / 2 + gap - Math.abs(a.x - b.x);
+        const oy = (a.h + b.h) / 2 + gap - Math.abs(a.y - b.y);
+        if (ox <= 0 || oy <= 0) continue;
+        moved = true;
+        const alongX = ox < oy;
+        const sign = alongX ? (a.x <= b.x ? -1 : 1) : a.y <= b.y ? -1 : 1;
+        const amount = (alongX ? ox : oy) / (ids[i] === rootId || ids[j] === rootId ? 1 : 2);
+        if (ids[i] !== rootId) a[alongX ? 'x' : 'y'] += sign * amount;
+        if (ids[j] !== rootId) b[alongX ? 'x' : 'y'] -= sign * amount;
+      }
+    }
+    if (!moved) break;
+  }
+  ids.forEach((id) => {
+    if (id === rootId) return;
+    const p = pos.get(id);
+    out.set(id, { x: Math.round(p.x - p.w / 2), y: Math.round(p.y - p.h / 2) });
+  });
+  return out;
+}
 
 function centreOf(r) {
   return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -222,18 +357,62 @@ class CanvasLayouts extends CanvasFeature {
   commands() {
     return BRANCH_LAYOUTS.map(([mode, title, icon]) => ({
       id: `canvas-layout-${mode === 'bottom' ? 'down' : mode === 'top' ? 'up' : mode}`,
-      name: `Lay out the selected card’s branch: ${title.toLowerCase()}`,
+      name: `Lay out the selected cards’ branches: ${title.toLowerCase()}`,
       icon,
       check: () => {
         const view = this.pageCanvas();
-        const nodes = this.selectedNodes(view);
-        return this.enabled && nodes.length === 1 && this.hasBranch(view, nodes[0]);
+        return this.enabled && this.rootsOf(view, this.selectedNodes(view)).length > 0;
       },
       run: () => {
         const view = this.pageCanvas();
-        this.layout(view, this.selectedNodes(view)[0], mode);
+        this.layoutMany(view, this.rootsOf(view, this.selectedNodes(view)), mode);
       },
-    }));
+    })).concat([
+      {
+        id: 'canvas-layout-everything',
+        name: 'Lay out the whole canvas…',
+        icon: 'layout-grid',
+        check: () => this.enabled && this.wholeRoots(this.pageCanvas()).length > 0,
+        run: () => {
+          const view = this.pageCanvas();
+          const items = BRANCH_LAYOUTS.map(([mode, title]) => ({ label: title, mode }));
+          new ComparePicker(this.app, items, 'Lay out every tree on the canvas', (item) => this.layoutMany(view, this.wholeRoots(view), item.mode)).open();
+        },
+      },
+    ]);
+  }
+
+  /** Of some cards, those with a branch, less any inside another's branch. */
+  rootsOf(view, nodes) {
+    if (!view || !view.canvas) return [];
+    const withBranch = (nodes || []).filter((n) => this.hasBranch(view, n));
+    if (withBranch.length < 2) return withBranch;
+    const model = canvasModel(view.canvas);
+    const links = arrowLinks(model);
+    const inside = new Set();
+    withBranch.forEach((n) => branchOf(model, n.id, links).forEach((id) => inside.add(id)));
+    return withBranch.filter((n) => !inside.has(n.id));
+  }
+
+  /** Every tree on the canvas: the cards with a branch that hang from nothing, in reading order. */
+  wholeRoots(view) {
+    if (!view || !view.canvas) return [];
+    const model = canvasModel(view.canvas);
+    const links = arrowLinks(model);
+    return model.nodes
+      .filter((n) => !n.tuck && !isGroupRecord(n) && !(links.parents.get(n.id) || []).length && shownChildren(model, links, n.id).length)
+      .sort((a, b) => a.y - b.y || a.x - b.x)
+      .map((n) => n.node)
+      .filter(Boolean);
+  }
+
+  /** Several branches laid out the same way, one after another. */
+  async layoutMany(view, nodes, mode) {
+    let any = false;
+    for (const node of nodes) {
+      if (await this.layout(view, node, mode)) any = true;
+    }
+    return any;
   }
 
   hasBranch(view, node) {
@@ -243,20 +422,20 @@ class CanvasLayouts extends CanvasFeature {
   }
 
   addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!this.hasBranch(view, node)) return;
+    const view = nodes[0] && nodes[0].canvas && nodes[0].canvas.view;
+    const roots = this.rootsOf(view, nodes.filter((n) => !isCanvasEdge(n)));
+    if (!roots.length) return;
+    const many = roots.length > 1;
     menuGroup(
       menu,
-      'Lay out branch',
+      many ? 'Lay out branches' : 'Lay out branch',
       'layout-grid',
       (into, nested) => {
         BRANCH_LAYOUTS.forEach(([mode, title, icon]) => {
           into.addItem((item) => {
-            item.setTitle(nested ? title : `Lay out branch: ${title.toLowerCase()}`).setIcon(icon);
+            item.setTitle(nested ? title : `${many ? 'Lay out branches' : 'Lay out branch'}: ${title.toLowerCase()}`).setIcon(icon);
             if (!nested) canvasAction(item);
-            item.onClick(() => this.layout(view, node, mode));
+            item.onClick(() => this.layoutMany(view, roots, mode));
           });
         });
       },
@@ -266,7 +445,10 @@ class CanvasLayouts extends CanvasFeature {
 
   /** Where the branch's cards go for a layout. */
   places(model, rootId, mode, links) {
-    return mode === 'radial' ? radialLayout(model, rootId, links) : directedLayout(model, rootId, mode, links);
+    if (mode === 'radial') return radialLayout(model, rootId, links);
+    if (mode === 'outline') return outlineLayout(model, rootId, links);
+    if (mode === 'concept') return conceptLayout(model, rootId, links);
+    return directedLayout(model, rootId, mode, links);
   }
 
   /** The branch laid out, gliding there; its arrows then set to the sides that face, and saved. */
@@ -281,9 +463,11 @@ class CanvasLayouts extends CanvasFeature {
     const places = this.places(model, rec.id, mode, links);
     if (!places.size) return Promise.resolve(false);
     const axes =
-      mode === 'radial'
+      mode === 'radial' || mode === 'concept'
         ? { depth: 'x', across: 'y', forward: true, both: true }
-        : Object.assign(sideAxes(mode === 'both' ? 'right' : mode), { both: mode === 'both' });
+        : mode === 'outline'
+          ? { depth: 'y', across: 'x', forward: true, both: false }
+          : Object.assign(sideAxes(mode === 'both' ? 'right' : mode), { both: mode === 'both' });
     const before = snapshotModel(model);
     placeBranch(model, rec, places, axes, this.settings.canvasCloseGaps !== false);
     const state = fold ? fold.watched.get(view) : null;
@@ -302,10 +486,14 @@ class CanvasLayouts extends CanvasFeature {
       if (!inside.has(parent) || !inside.has(child) || (links.children.get(parent) || []).indexOf(child) === -1) return;
       let out;
       let back;
-      if (mode === 'radial') {
+      if (mode === 'radial' || mode === 'concept') {
         const sides = nearestSides(boxEdges(model.byId.get(parent)), boxEdges(model.byId.get(child)));
         out = sides.from;
         back = sides.to;
+      } else if (mode === 'outline') {
+        // Down out of the card, into the side of the one set in below it.
+        out = 'bottom';
+        back = 'left';
       } else {
         out = places.sides.get(child) || mode;
         back = OPPOSITE_SIDE[out];

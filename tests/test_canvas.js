@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1107,6 +1107,27 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     same(R.radialLayout(model, 'r'), places);
   });
 
+  await t('a branch as an outline, each level set in; as a concept map, related cards drawn near, none touching; the same twice', () => {
+    const tree = () => R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 100, 100, 50), card('a1', 400, -100, 100, 50), card('b1', 400, 100, 100, 50), card('b2', 400, 200, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('b', 'b1', 'right', 'left'), edge('b', 'b2', 'right', 'left'), edge('a1', 'b2', 'right', 'left', { drRelated: true })],
+    });
+    let model = tree();
+    const outline = R.outlineLayout(model, 'r');
+    assert.deepStrictEqual(['a', 'a1', 'b', 'b1', 'b2'].map((id) => [outline.get(id).x, outline.get(id).y]), [[48, 66], [96, 132], [48, 198], [96, 264], [96, 330]]);
+    model = tree();
+    const concept = R.conceptLayout(model, 'r');
+    concept.forEach((at, id) => Object.assign(model.byId.get(id), at));
+    const cards = model.nodes;
+    for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length; j++) {
+      const [p, q] = [cards[i], cards[j]];
+      assert.ok(!(p.x < q.x + q.width && q.x < p.x + p.width && p.y < q.y + q.height && q.y < p.y + p.height), `${p.id} on ${q.id}`);
+    }
+    const dist = (x, y) => Math.hypot(model.byId.get(x).x - model.byId.get(y).x, model.byId.get(x).y - model.byId.get(y).y);
+    assert.ok(dist('a1', 'b2') < 400, 'related cards drawn together, nearer than round the root alone (665)');
+    assert.deepStrictEqual(Array.from(R.conceptLayout(tree(), 'r').entries()), Array.from(concept.entries()), 'the same branch, the same map');
+  });
+
   await t('Lay out branch, from a card’s menu: its cards glide there, the card stays, one save', async () => {
     const view = mindCanvas({
       nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50)],
@@ -1119,13 +1140,18 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const menu = new Menu();
     lay.addMenuItems(menu, [n('r')]);
     assert.ok(menu.items.some((i) => /Lay out branch/.test(i.title)), menu.items.map((i) => i.title).join());
-    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial']);
+    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial', 'canvas-layout-outline', 'canvas-layout-concept', 'canvas-layout-everything']);
     const saves = view.canvas.saves;
     await lay.layout(view, n('r'), 'bottom');
     assert.deepStrictEqual([n('r').x, n('r').y], [0, 0], 'the card stays');
     assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).y), [130, 130, 130]);
     assert.ok(view.canvas.saves >= saves, 'saved');
     assert.ok(!lay.hasBranch(view, n('a')), 'a card with nothing below it has nothing to lay out');
+    // Several selected: each tree once — a card inside another's branch isn't laid out again.
+    assert.deepStrictEqual(lay.rootsOf(view, [n('r'), n('a')]).map((x) => x.id), ['r']);
+    assert.deepStrictEqual(lay.wholeRoots(view).map((x) => x.id), ['r']);
+    assert.strictEqual(await lay.layoutMany(view, [n('r')], 'outline'), true);
+    assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).x), [48, 48, 48], 'as an outline: set in under the card');
   });
 
   await t('an arrow named for how its cards relate, as its label; one made related is dashed and out of the branch', () => {
