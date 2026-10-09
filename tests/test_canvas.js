@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1628,6 +1628,30 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     depth.plugin.settings.canvasDepth = false;
     depth.pass(view);
     assert.strictEqual(view.canvas.nodes.get('r').nodeEl.dataset.drDepth, undefined);
+  });
+
+  await t('focus on a neighbourhood: the cards a step away by any arrow, wider and narrower by keys', () => {
+    const model = R.modelFromData({
+      nodes: [card('p', 0, 0, 100, 50), card('c', 200, 0, 100, 50), card('k', 400, 0, 100, 50), card('kk', 600, 0, 100, 50), card('r', 200, 200, 100, 50), card('far', 900, 900, 100, 50)],
+      edges: [edge('p', 'c', 'right', 'left'), edge('c', 'k', 'right', 'left'), edge('k', 'kk', 'right', 'left'), edge('c', 'r', 'bottom', 'top', { drRelated: true })],
+    });
+    assert.deepStrictEqual(R.neighbourhood(model, ['c'], 1).sort(), ['c', 'k', 'p', 'r']);
+    assert.deepStrictEqual(R.neighbourhood(model, ['c'], 2).sort(), ['c', 'k', 'kk', 'p', 'r']);
+    const view = fakeCanvas({ nodes: [card('p', 0, 0, 100, 50), card('c', 200, 0, 100, 50), card('k', 400, 0, 100, 50), card('kk', 600, 0, 100, 50)], edges: [edge('p', 'c', 'right', 'left'), edge('c', 'k', 'right', 'left'), edge('k', 'kk', 'right', 'left')] });
+    const focus = new R.CanvasFocus({ settings: { canvasFocus: true }, app: {} });
+    const state = { file: view.file };
+    focus.watched.set(view, state);
+    focus.mount(view, state);
+    const lit = () => ['p', 'c', 'k', 'kk'].filter((id) => view.canvas.nodes.get(id).nodeEl.classList.contains('dr-focus-lit'));
+    focus.setFocus(view, ['c'], true);
+    assert.deepStrictEqual(lit(), ['p', 'c', 'k']);
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: '+', bubbles: true }));
+    assert.deepStrictEqual(lit(), ['p', 'c', 'k', 'kk']);
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: '-', bubbles: true }));
+    assert.deepStrictEqual(lit(), ['p', 'c', 'k']);
+    view.containerEl.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert.ok(!view.contentEl.classList.contains('dr-branch-focus'));
+    focus.cleanup(view, state);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

@@ -22,6 +22,33 @@ function branchWithin(model, ids, links) {
   return Array.from(seen);
 }
 
+/** The cards within `steps` arrows of some cards, either way, related arrows too. Ids, with them. */
+function neighbourhood(model, ids, steps) {
+  const next = new Map();
+  const join = (a, b) => {
+    if (!next.has(a)) next.set(a, []);
+    next.get(a).push(b);
+  };
+  model.edges.forEach((e) => {
+    join(e.from, e.to);
+    join(e.to, e.from);
+  });
+  const seen = new Set(ids);
+  let ring = ids.slice();
+  for (let s = 0; s < steps && ring.length; s++) {
+    const out = [];
+    ring.forEach((id) =>
+      (next.get(id) || []).forEach((c) => {
+        if (seen.has(c) || !model.byId.has(c)) return;
+        seen.add(c);
+        out.push(c);
+      })
+    );
+    ring = out;
+  }
+  return Array.from(seen);
+}
+
 /** A menu entry in the canvas menu's own actions section. */
 function canvasAction(item) {
   if (typeof item.setSection === 'function') item.setSection('action');
@@ -133,7 +160,7 @@ class CanvasFocus extends CanvasFeature {
       {
         key: 'canvasFocus',
         name: 'Focus on a branch',
-        desc: 'Dim everything but a card’s branch, from its right-click menu. Escape ends it.',
+        desc: 'Dim everything but a card’s branch, or the cards round it, from its right-click menu. + and − widen or narrow it; Escape ends it.',
       },
     ];
   }
@@ -164,7 +191,10 @@ class CanvasFocus extends CanvasFeature {
 
   mount(view, state) {
     state.onKey = (evt) => {
-      if (evt.key === 'Escape' && state.focus && !typingInto(evt.target)) this.setFocus(view, null);
+      if (!state.focus || typingInto(evt.target)) return;
+      if (evt.key === 'Escape') this.setFocus(view, null);
+      else if (state.near && (evt.key === '+' || evt.key === '=')) this.widen(view, 1);
+      else if (state.near && evt.key === '-') this.widen(view, -1);
     };
     view.containerEl.addEventListener('keydown', state.onKey);
   }
@@ -180,13 +210,36 @@ class CanvasFocus extends CanvasFeature {
         .setIcon('focus')
         .onClick(() => this.setFocus(view, on ? null : nodes.map((n) => n.id)))
     );
+    if (!on) {
+      menu.addItem((item) =>
+        canvasAction(item)
+          .setTitle('Focus on neighbourhood')
+          .setIcon('radar')
+          .onClick(() => this.setFocus(view, nodes.map((n) => n.id), true))
+      );
+    }
   }
 
-  /** Focus on these cards' branches — or, given null, on everything again. */
-  setFocus(view, ids) {
+  /** A step further out round the cards focused on, or a step nearer; at least one. */
+  widen(view, by) {
+    const state = view && this.watched.get(view);
+    if (!state || !state.focus || !state.near) return;
+    const near = Math.max(1, Math.min(9, state.near + by));
+    if (near === state.near) return;
+    state.near = near;
+    this.pass(view, state);
+    new Notice(`${near} ${near === 1 ? 'step' : 'steps'} out. + and − widen and narrow it; Escape ends it.`);
+  }
+
+  /**
+   * Focus on these cards' branches — or, `near`, on the cards round them
+   * by any arrow, a step out to start — or, given null, on everything again.
+   */
+  setFocus(view, ids, near) {
     const state = view && this.watched.get(view);
     if (!state) return;
     state.focus = ids && ids.length ? ids : null;
+    state.near = state.focus && near ? 1 : 0;
     this.pass(view, state);
   }
 
@@ -198,7 +251,8 @@ class CanvasFocus extends CanvasFeature {
       return;
     }
     const model = canvasModel(view.canvas);
-    const lit = new Set(branchWithin(model, state.focus.filter((id) => model.byId.has(id))));
+    const ids = state.focus.filter((id) => model.byId.has(id));
+    const lit = new Set(state.near ? neighbourhood(model, ids, state.near) : branchWithin(model, ids));
     if (!lit.size) {
       state.focus = null;
       this.cleanup(view);
