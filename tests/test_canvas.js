@@ -70,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1031,6 +1031,77 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const file = await note.makeNote(view, canvas.nodes.get('root'));
     assert.strictEqual(file.path, 'Plan.md');
     assert.strictEqual(created[0][1], '- one\n  - one a\n- two\n\n# one\n\n## one a\n\n# two\n');
+  });
+
+  await t('a branch laid out down, out both sides or all round: in the order it was, the same again when done twice, no cards meeting', async () => {
+    const tree = () => R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50), card('d', 200, 200, 100, 50), card('a1', 400, -100, 100, 50), card('a2', 400, -30, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('r', 'c', 'right', 'left'), edge('r', 'd', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left')],
+    });
+    const put = (model, places) => places.forEach((at, id) => Object.assign(model.byId.get(id), at));
+    const same = (a, b) => assert.deepStrictEqual(Array.from(a.entries()).sort(), Array.from(b.entries()).sort());
+    const meet = (model) => {
+      const cards = model.nodes;
+      for (let i = 0; i < cards.length; i++) for (let j = i + 1; j < cards.length; j++) {
+        const [p, q] = [cards[i], cards[j]];
+        if (p.x < q.x + q.width && q.x < p.x + p.width && p.y < q.y + q.height && q.y < p.y + p.height) return `${p.id} on ${q.id}`;
+      }
+      return '';
+    };
+
+    // Downward: a level below, left to right in the order they ran top to bottom.
+    let model = tree();
+    let places = R.directedLayout(model, 'r', 'bottom');
+    put(model, places);
+    assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => model.byId.get(id).y), [130, 130, 130, 130]);
+    const xs = ['a', 'b', 'c', 'd'].map((id) => model.byId.get(id).x);
+    assert.deepStrictEqual(xs.slice().sort((p, q) => p - q), xs);
+    assert.ok(model.byId.get('a1').y > 130 && model.byId.get('a1').x < model.byId.get('a2').x);
+    assert.strictEqual(meet(model), '');
+    same(R.directedLayout(model, 'r', 'bottom'), places);
+
+    // Both sides, half the cards each: a and its two right, the rest round the left from the bottom up.
+    model = tree();
+    places = R.directedLayout(model, 'r', 'both');
+    put(model, places);
+    const at = (id) => model.byId.get(id);
+    assert.ok(at('a').x > 100 && at('a1').x > at('a').x, 'a and its branch go right');
+    assert.ok(['b', 'c', 'd'].every((id) => at(id).x < 0), 'b, c and d go left');
+    assert.ok(at('b').y > at('c').y && at('c').y > at('d').y, 'clockwise: from the bottom up');
+    assert.strictEqual(meet(model), '');
+    same(R.directedLayout(model, 'r', 'both'), places);
+
+    // All round: the first straight up, then clockwise.
+    model = tree();
+    places = R.radialLayout(model, 'r');
+    put(model, places);
+    const mid = (id) => [at(id).x + at(id).width / 2, at(id).y + at(id).height / 2];
+    assert.strictEqual(mid('a')[0], 50, 'first straight up');
+    assert.ok(mid('a')[1] < 0);
+    assert.ok(mid('b')[0] > 50 && mid('d')[0] < 50, 'then right, round to the left');
+    assert.strictEqual(meet(model), '');
+    same(R.radialLayout(model, 'r'), places);
+  });
+
+  await t('Lay out branch, from a card’s menu: its cards glide there, the card stays, one save', async () => {
+    const view = mindCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('r', 'c', 'right', 'left')],
+    });
+    const { p, fold } = plugin({ canvasLayouts: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const lay = new R.CanvasLayouts(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    const menu = new Menu();
+    lay.addMenuItems(menu, [n('r')]);
+    assert.ok(menu.items.some((i) => /Lay out branch/.test(i.title)), menu.items.map((i) => i.title).join());
+    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial']);
+    const saves = view.canvas.saves;
+    await lay.layout(view, n('r'), 'bottom');
+    assert.deepStrictEqual([n('r').x, n('r').y], [0, 0], 'the card stays');
+    assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).y), [130, 130, 130]);
+    assert.ok(view.canvas.saves >= saves, 'saved');
+    assert.ok(!lay.hasBranch(view, n('a')), 'a card with nothing below it has nothing to lay out');
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

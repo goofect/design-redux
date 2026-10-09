@@ -150,6 +150,8 @@ const DEFAULTS = {
   // A branch written out as a note, and a note's headings or a card's list made into cards.
   canvasBranchNote: true,
   canvasOutlineBranch: true,
+  // A branch laid out to one side, both sides, or all round its card.
+  canvasLayouts: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.

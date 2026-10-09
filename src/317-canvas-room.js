@@ -574,7 +574,16 @@ function fitGroups(model, before) {
 function tidyRecords(model, rec, close, links) {
   links = links || arrowLinks(model);
   const side = branchSide(model, rec.id, links);
-  const places = tidyBranch(model, rec.id, side, links);
+  return placeBranch(model, rec, tidyBranch(model, rec.id, side, links), sideAxes(side), close);
+}
+
+/**
+ * A branch's cards moved to `places` (id -> { x, y }), what they carry
+ * with them, and — `close` — the cards round it kept as far from it as
+ * they were; any caught where it now lies moved out of its way. `axes`
+ * as sideAxes gives them, `both` for a branch growing more than one way.
+ */
+function placeBranch(model, rec, places, axes, close) {
   if (!places.size) return false;
   const before = snapshotModel(model);
   const home = homeIn(model, rec.id);
@@ -597,7 +606,7 @@ function tidyRecords(model, rec, close, links) {
   });
   if (!changed) return changed;
   const origin = new Set([rec.id].concat(ids));
-  const axes = Object.assign(sideAxes(side), { both: places.both });
+  axes = Object.assign({}, axes, { both: !!(axes.both || places.both) });
   if (close) {
     const now = boundsOf([own].concat(ids.map((id) => model.byId.get(id))));
     roomAroundTidy(model, before, { origin, home, axes, was, now });
