@@ -576,15 +576,17 @@ describe('Design Redux in Obsidian', function () {
     await obsidianPage.openFile('Depth.canvas');
     // In view: older versions draw a card's insides only once it's on screen.
     await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.zoomToFit());
-    const looks = await readUntil(() => browser.executeObsidian(({ app }) => {
+    // Read from the cards as drawn on screen, by their words.
+    const looks = await readUntil(() => browser.execute((active) => {
       const out = {};
-      app.workspace.activeLeaf.view.canvas.nodes.forEach((n, id) => {
-        const content = n.nodeEl.querySelector('.canvas-node-content');
-        const box = n.nodeEl.querySelector('.canvas-node-container');
-        out[id] = content && box ? [n.nodeEl.dataset.drDepth, Number(getComputedStyle(content).fontWeight), getComputedStyle(box).borderTopWidth] : null;
+      document.querySelectorAll(active + '.canvas-node').forEach((el) => {
+        const content = el.querySelector('.canvas-node-content');
+        const box = el.querySelector(':scope > .canvas-node-container');
+        if (!content || !box) return;
+        out[content.textContent.trim()] = [el.dataset.drDepth, Number(getComputedStyle(content).fontWeight), getComputedStyle(box).borderTopWidth];
       });
       return out;
-    }), (v) => v.root && v.root[0] === '0');
+    }, ACTIVE), (v) => v.root && v.root[0] === '0' && v.one && v.two);
     expect(looks.root[0]).toBe('0');
     expect(looks.root[1]).toBeGreaterThanOrEqual(700);
     expect(looks.root[2]).toBe('3px');
