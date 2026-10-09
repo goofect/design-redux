@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1588,6 +1588,30 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(n('a').y, 130, 'the rest laid out');
     pins.setPinned(view, [n('b')], false);
     assert.ok(!('drPinned' in n('b').nodeEl.dataset));
+  });
+
+  await t('zoom to branch fits a card and what’s below it; Back returns to where the canvas looked before each jump', () => {
+    const view = fakeCanvas({ nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('a1', 400, 100, 100, 50), card('x', 2000, 2000, 100, 50)], edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left')] });
+    const canvas = view.canvas;
+    Object.assign(canvas, { x: 0, y: 0, zoom: 0 });
+    const fitted = [];
+    canvas.zoomToBbox = function (b) { fitted.push(b); this.x = (b.minX + b.maxX) / 2; this.y = (b.minY + b.maxY) / 2; this.zoom = -1; };
+    canvas.setViewport = function (x, y, zoom) { Object.assign(this, { x, y, zoom }); };
+    const views = new R.CanvasViews({ settings: { canvasViews: true }, app: {} });
+    const state = { file: view.file };
+    views.watched.set(view, state);
+    views.mount(view, state);
+    views.zoomToBranch(view, canvas.nodes.get('r'));
+    assert.deepStrictEqual(fitted[0], { minX: -40, minY: -40, maxX: 540, maxY: 190 }, 'the card and its branch, not x');
+    canvas.zoomToBbox({ minX: 1900, minY: 1900, maxX: 2200, maxY: 2200 });
+    assert.strictEqual(state.history.length, 2);
+    views.back(view);
+    assert.deepStrictEqual([canvas.x, canvas.y, canvas.zoom], [250, 75, -1]);
+    views.back(view);
+    assert.deepStrictEqual([canvas.x, canvas.y, canvas.zoom], [0, 0, 0]);
+    assert.strictEqual(views.back(view), false, 'nothing further back');
+    views.cleanup(view, state);
+    assert.ok(!/remember/.test(String(canvas.zoomToBbox)), 'the canvas’s own put back');
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

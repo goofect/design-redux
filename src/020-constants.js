@@ -176,6 +176,8 @@ const DEFAULTS = {
   canvasBranchDrag: true,
   // A card kept where it is: layouts and tidying leave it, and its branch.
   canvasPins: true,
+  // Zoom to a branch; back to where the canvas was looking before each jump.
+  canvasViews: true,
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.
