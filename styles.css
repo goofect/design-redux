@@ -6880,6 +6880,45 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   outline-offset: 3px;
 }
 
+/* -- propositions: a claim in your own words ----------------------------- */
+
+.canvas-path-label-wrapper.dr-proposition-edge .canvas-path-label {
+  font-style: italic;
+}
+
+.dr-proposition-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-2);
+  margin-bottom: var(--size-4-3);
+}
+
+.dr-proposition-card {
+  padding: var(--size-2-2) var(--size-4-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  background: var(--background-secondary);
+  font-weight: var(--font-semibold);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.dr-proposition-predicate {
+  flex: 1 1 10em;
+  min-width: 8em;
+}
+
+/* The kinds in settings: several controls a row, wrapping where narrow. */
+.dr-relation-type .setting-item-control {
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.dr-relation-type .setting-item-control input[type="text"] {
+  width: 9em;
+}
+
 /* -- one kind of relationship shown alone ------------------------------- */
 
 .dr-relation-only .canvas-node:not(.dr-relation-lit) {

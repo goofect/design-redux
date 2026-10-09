@@ -258,6 +258,17 @@ function growCards(plugin, view, node, items, opts = {}) {
   return made;
 }
 
+/** A note card as a link from a note at `from`. */
+function canvasCardLink(app, rec, from) {
+  const vault = app.vault;
+  const file = rec.file && typeof vault.getFileByPath === 'function' ? vault.getFileByPath(rec.file) : null;
+  const sub = rec.subpath || '';
+  if (file && app.metadataCache && typeof app.metadataCache.fileToLinktext === 'function') {
+    return `[[${app.metadataCache.fileToLinktext(file, from, true)}${sub}]]`;
+  }
+  return `[[${String(rec.file || '').replace(/\.md$/i, '')}${sub}]]`;
+}
+
 class CanvasBranchNote extends CanvasFeature {
   settingsSchema() {
     return [
@@ -317,15 +328,7 @@ class CanvasBranchNote extends CanvasFeature {
     if (!root) return null;
     const from = view.file && view.file.path ? view.file.path : '';
     const vault = this.app.vault;
-    const linkFor = (rec) => {
-      const file = rec.file && typeof vault.getFileByPath === 'function' ? vault.getFileByPath(rec.file) : null;
-      const sub = rec.subpath || '';
-      if (file && this.app.metadataCache && typeof this.app.metadataCache.fileToLinktext === 'function') {
-        return `[[${this.app.metadataCache.fileToLinktext(file, from, true)}${sub}]]`;
-      }
-      return `[[${String(rec.file || '').replace(/\.md$/i, '')}${sub}]]`;
-    };
-    const text = branchMarkdown(model, root.id, null, linkFor);
+    const text = branchMarkdown(model, root.id, null, (rec) => canvasCardLink(this.app, rec, from));
     const folder = view.file && view.file.parent ? view.file.parent : null;
     const path = this.plugin.freeChildPath(folder, noteNameFrom(canvasCardLabel(root)), 'md');
     let file = null;

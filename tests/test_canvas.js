@@ -1154,7 +1154,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).x), [48, 48, 48], 'as an outline: set in under the card');
   });
 
-  await t('an arrow named for how its cards relate, as its label; one made related is dashed and out of the branch', () => {
+  await t('an arrow given a meaning: a kind — hierarchy in the branch, association out — or a proposition, turned round and listed; one just made related is dashed', async () => {
     // From a file: a related arrow takes no part in the tree.
     const saved = R.modelFromData({
       nodes: [card('a', 0, 0, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50)],
@@ -1181,9 +1181,15 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(titles.some((t) => /causes/.test(t)) || titles.includes('Relationship'), titles.join());
     assert.ok(titles.includes('Make related, not a branch'));
 
-    // A kind: its name as the label, the kind kept apart, its colour; None takes them away.
-    rel.setRelation(view, [ac], { name: 'contrasts with', line: 'dotted', color: '1' });
-    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color], ['contrasts with', 'contrasts with', '1']);
+    // A kind: its name as the label, the meaning kept apart, its colour; association takes it out of the branch; None puts it all back.
+    rel.setRelation(view, [ac], { name: 'contrasts with', category: 'association', line: 'dotted', color: '1' });
+    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color], ['contrasts with', { kind: 'contrasts with', subject: 'a', object: 'c' }, '1']);
+    assert.strictEqual(ac.unknownData.drRelated, true, 'an association is out of the branch');
+    assert.ok(!ac.lineGroupEl.classList.contains('dr-related-edge'), 'drawn with its kind’s line, not as plain related');
+    const kindTitles = new Menu();
+    rel.addEdgeItems(kindTitles, [ac]);
+    assert.ok(!kindTitles.items.some((i) => /Make (related|part)/.test(i.title)), 'the kind decides whether it’s a branch');
+    assert.ok(kindTitles.items.some((i) => i.title === 'Reverse the relationship'));
     rel.show(view, 'contrasts with');
     assert.ok(view.contentEl.classList.contains('dr-relation-only'));
     assert.ok(ac.lineGroupEl.classList.contains('dr-relation-lit') && view.canvas.nodes.get('c').nodeEl.classList.contains('dr-relation-lit'));
@@ -1192,8 +1198,11 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(!view.contentEl.classList.contains('dr-relation-only'));
     p.settings.canvasRelationTypes = [{ name: 'contrasts with', line: 'dotted', color: '1' }];
     rel.setRelation(view, [ac], null);
-    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color], [undefined, undefined, undefined]);
-    rel.setRelation(view, [ac], rel.typeNamed('contrasts with'));
+    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color, ac.unknownData.drRelated], [undefined, undefined, undefined, undefined]);
+    // A kind kept as just its name, as before, still reads as that kind.
+    ac.unknownData.drRelation = 'causes';
+    assert.deepStrictEqual(rel.statements(view).map((x) => [x.subject.id, x.verb, x.object.id]), [['a', 'causes', 'c']]);
+    rel.setRelation(view, [ac], null);
     p.settings.canvasRelationTypes = [];
     const saves = view.canvas.saves;
     rel.setRelated(view, [ac], true);
@@ -1205,10 +1214,45 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     rel.setRelated(view, [ac], false);
     assert.deepStrictEqual(R.arrowLinks(R.canvasModel(view.canvas)).children.get('a'), ['b', 'c']);
     assert.ok(!ac.lineGroupEl.classList.contains('dr-related-edge'));
-    // The kinds: as set; else names set before kinds had looks, each as its default; else the defaults.
+
+    // Hierarchy keeps it in the branch, read along the arrow: a has type b — b is a type of a.
+    const ab = view.canvas.edges.get('a-b');
+    rel.setRelated(view, [ab], true);
+    rel.setRelation(view, [ab], rel.typeNamed('is a type of'));
+    assert.strictEqual(ab.data.label, 'has type');
+    assert.deepStrictEqual(ab.unknownData.drRelation, { kind: 'is a type of', subject: 'b', object: 'a' });
+    assert.ok(!ab.unknownData.drRelated, 'back in the branch');
+    assert.ok(!rel.canReverse(ab), 'a hierarchy holds the branch: not turned round');
+
+    // A proposition: c's words about a, the head at a, out of the branch, its label marked.
+    assert.strictEqual(rel.setProposition(view, ac, ' constrains ', 'c'), true);
+    assert.deepStrictEqual([ac.data.label, ac.data.fromEnd, ac.data.toEnd, ac.from.end, ac.to.end], ['constrains', 'arrow', 'none', 'arrow', 'none']);
+    assert.deepStrictEqual(ac.unknownData.drRelation, { predicate: 'constrains', subject: 'c', object: 'a' });
+    assert.strictEqual(ac.unknownData.drRelated, true);
+    assert.ok(ac.lineGroupEl.classList.contains('dr-proposition-edge'));
+    // Turned round: a constrains c.
+    assert.strictEqual(rel.reverse(view, [ac]), true);
+    assert.deepStrictEqual([ac.from.end, ac.to.end], ['none', 'arrow']);
+    assert.deepStrictEqual(ac.unknownData.drRelation, { predicate: 'constrains', subject: 'a', object: 'c' });
+
+    // What the canvas states, found and written out.
+    assert.deepStrictEqual(rel.statements(view).map((x) => [x.category, x.subject.id, x.verb, x.object.id]), [['hierarchy', 'b', 'is a type of', 'a'], ['proposition', 'a', 'constrains', 'c']]);
+    assert.strictEqual(rel.statementsMarkdown(view, rel.statements(view)), '## Hierarchy\n\n- b is a type of a\n\n## Propositions\n\n- a constrains c\n');
+    view.canvas.selectOnly = (x) => { view.canvas.selection = new Set([x]); };
+    let zoomed = null;
+    view.canvas.zoomToBbox = (b) => { zoomed = b; };
+    await rel.goToStatement(view, rel.statements(view)[1]);
+    assert.ok(view.canvas.selection.has(ac) && zoomed && zoomed.minX < 0 && zoomed.maxX > 300, 'its arrow selected, both cards in view');
+
+    // The kinds: as set, each filled from its default; else names set before kinds had looks; else the defaults.
     assert.strictEqual(rel.names().length, 8);
     p.settings.canvasRelationNames = 'causes, causes, refutes';
-    assert.deepStrictEqual(rel.types(), [{ name: 'causes', line: 'solid', color: '' }, { name: 'refutes', line: 'solid', color: '' }]);
+    assert.deepStrictEqual(rel.types(), [
+      { name: 'causes', inverse: 'is caused by', category: 'association', line: 'solid', color: '' },
+      { name: 'refutes', inverse: '', category: 'association', line: 'solid', color: '' },
+    ]);
+    p.settings.canvasRelationTypes = [{ name: 'is part of', line: 'dashed', color: '2' }];
+    assert.deepStrictEqual(rel.types(), [{ name: 'is part of', inverse: 'has part', category: 'hierarchy', line: 'dashed', color: '2' }]);
   });
 
   await t('looking a canvas over: loose, empty and twice-named cards, notes gone, and arrows round in a circle', () => {

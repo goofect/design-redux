@@ -482,6 +482,45 @@ describe('Design Redux in Obsidian', function () {
     expect(shown.height).toBeGreaterThan(8);
   });
 
+  it('states a proposition on an arrow: head at the object, meaning saved apart, and turned round', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getFileByPath('Relations.canvas');
+      if (old) await app.vault.delete(old);
+      const card = (id, text, x) => ({ id, type: 'text', text, x, y: 0, width: 220, height: 60 });
+      await app.vault.create('Relations.canvas', JSON.stringify({
+        nodes: [card('a', 'Judicial review', 0), card('b', 'Legislative power', 400)],
+        edges: [{ id: 'e', fromNode: 'b', fromSide: 'left', toNode: 'a', toSide: 'right' }],
+      }));
+    });
+    await obsidianPage.openFile('Relations.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const result = await browser.executeObsidian(async ({ app }) => {
+      const view = app.workspace.activeLeaf.view;
+      const rel = app.plugins.plugins['design-redux'].features.find((f) => f.constructor.name === 'CanvasRelations');
+      const edge = view.canvas.edges.get('e');
+      // The box names both cards.
+      const modal = rel.askProposition(view, edge);
+      const cards = Array.from(document.querySelectorAll('.dr-proposition-card')).map((el) => el.textContent);
+      modal.close();
+      rel.setProposition(view, edge, 'constrains', 'a');
+      await new Promise((r) => setTimeout(r, 300));
+      const saved = () => JSON.parse(JSON.stringify(view.canvas.getData())).edges.find((e) => e.id === 'e');
+      const first = { ends: [edge.from.end, edge.to.end], saved: saved(), italic: !!view.contentEl.querySelector('.canvas-path-label-wrapper.dr-proposition-edge') };
+      rel.reverse(view, [edge]);
+      await new Promise((r) => setTimeout(r, 300));
+      const second = { ends: [edge.from.end, edge.to.end], saved: saved() };
+      return { cards, first, second };
+    });
+    expect(result.cards).toEqual(['Legislative power', 'Judicial review']);
+    expect(result.first.ends).toEqual(['arrow', 'none']);
+    expect(result.first.saved.label).toBe('constrains');
+    expect(result.first.saved.drRelation).toEqual({ predicate: 'constrains', subject: 'a', object: 'b' });
+    expect(result.first.saved.drRelated).toBe(true);
+    expect(result.first.italic).toBe(true);
+    expect(result.second.ends).toEqual(['none', 'arrow']);
+    expect(result.second.saved.drRelation).toEqual({ predicate: 'constrains', subject: 'b', object: 'a' });
+  });
+
   it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const old = app.vault.getFileByPath('Paste.canvas');
