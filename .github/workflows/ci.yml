@@ -7,12 +7,12 @@
 name: Test and release
 
 # Not on pull requests: a branch's own push already runs it. Not for changes
-# to the docs alone. A newer push to a branch cancels its run still going,
+# to the docs, agent notes or agent tools alone. A newer push to a branch cancels its run still going,
 # except on the default branch, where each run may release.
 on:
   push:
     branches-ignore: [ci-results]
-    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md']
+    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', '.claude/**', 'tests/map.js', 'tests/tool-log.js']
   workflow_dispatch:
 
 concurrency:
