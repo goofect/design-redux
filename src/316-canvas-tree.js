@@ -13,6 +13,9 @@
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
 const TUCK_KEY = 'drTuck';
 
+/* On an arrow: a relationship, not a branch — trees, folds and layouts pass it by. */
+const RELATED_KEY = 'drRelated';
+
 /** A card's tuck — { by, dx, dy } — or null. */
 function tuckOf(node) {
   const kept = node && node.unknownData && node.unknownData[TUCK_KEY];
@@ -89,6 +92,7 @@ function canvasModel(canvas) {
         toSide: edge.to.side,
         fromEnd: edge.from.end || 'none',
         toEnd: edge.to.end || 'arrow',
+        related: !!(edge.unknownData && edge.unknownData[RELATED_KEY]),
         edge,
       });
     });
@@ -116,6 +120,7 @@ function modelFromData(data) {
     toSide: e.toSide,
     fromEnd: e.fromEnd || 'none',
     toEnd: e.toEnd || 'arrow',
+    related: !!e[RELATED_KEY],
   }));
   return indexModel({ nodes, edges });
 }
@@ -192,7 +197,8 @@ function groupContents(model, group, includeTucked) {
 /**
  * Arrows as parent → child: the way the arrowhead points, or from → to
  * when it points both ways or neither. Groups take no part: they hold
- * cards by placing, not by arrows.
+ * cards by placing, not by arrows. Nor does an arrow marked as a
+ * relationship only (RELATED_KEY).
  */
 function arrowLinks(model) {
   const children = new Map();
@@ -204,7 +210,7 @@ function arrowLinks(model) {
   model.edges.forEach((e) => {
     const a = model.byId.get(e.from);
     const b = model.byId.get(e.to);
-    if (!a || !b || a === b || isGroupRecord(a) || isGroupRecord(b)) return;
+    if (!a || !b || a === b || isGroupRecord(a) || isGroupRecord(b) || e.related) return;
     const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
     const parent = reversed ? b : a;
     const child = reversed ? a : b;

@@ -164,7 +164,7 @@ function arrowsInto(model, id) {
   model.edges.forEach((e) => {
     const a = model.byId.get(e.from);
     const b = model.byId.get(e.to);
-    if (!a || !b || a === b || isGroupRecord(a) || isGroupRecord(b)) return;
+    if (!a || !b || a === b || isGroupRecord(a) || isGroupRecord(b) || e.related) return;
     const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
     const child = reversed ? e.from : e.to;
     if (child === id) out.push([e, reversed ? e.to : e.from]);

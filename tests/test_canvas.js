@@ -70,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, CanvasLayouts, CanvasRelations };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1102,6 +1102,50 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).y), [130, 130, 130]);
     assert.ok(view.canvas.saves >= saves, 'saved');
     assert.ok(!lay.hasBranch(view, n('a')), 'a card with nothing below it has nothing to lay out');
+  });
+
+  await t('an arrow named for how its cards relate, as its label; one made related is dashed and out of the branch', () => {
+    // From a file: a related arrow takes no part in the tree.
+    const saved = R.modelFromData({
+      nodes: [card('a', 0, 0, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50)],
+      edges: [edge('a', 'b', 'right', 'left'), edge('a', 'c', 'right', 'left', { drRelated: true })],
+    });
+    assert.deepStrictEqual(R.arrowLinks(saved).children.get('a'), ['b']);
+
+    const view = fakeCanvas({ nodes: [card('a', 0, 0, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50)], edges: [edge('a', 'b', 'right', 'left'), edge('a', 'c', 'right', 'left')] });
+    view.canvas.edges.forEach((e) => {
+      e.canvas = view.canvas;
+      e.unknownData = {};
+      e.data = { id: e.id, fromNode: e.from.node.id, toNode: e.to.node.id };
+      e.getData = function () { return Object.assign({}, this.data, this.unknownData); };
+      e.setData = function (d) { this.data = Object.assign({}, d); };
+    });
+    const { p, fold } = plugin({ canvasRelations: true, canvasRelationNames: '' });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const rel = new R.CanvasRelations(p);
+    rel.watched.set(view, { file: view.file });
+    const ac = view.canvas.edges.get('a-c');
+    const menu = new Menu();
+    rel.addEdgeItems(menu, [ac]);
+    const titles = menu.items.map((i) => i.title);
+    assert.ok(titles.some((t) => /causes/.test(t)) || titles.includes('Relationship'), titles.join());
+    assert.ok(titles.includes('Make related, not a branch'));
+
+    rel.setLabel(view, [ac], 'contrasts with');
+    assert.strictEqual(ac.data.label, 'contrasts with');
+    const saves = view.canvas.saves;
+    rel.setRelated(view, [ac], true);
+    assert.strictEqual(ac.unknownData.drRelated, true);
+    assert.ok(ac.lineGroupEl.classList.contains('dr-related-edge'));
+    assert.ok(view.canvas.saves > saves);
+    const live = R.canvasModel(view.canvas);
+    assert.deepStrictEqual(R.arrowLinks(live).children.get('a'), ['b'], 'c is out of a’s branch');
+    rel.setRelated(view, [ac], false);
+    assert.deepStrictEqual(R.arrowLinks(R.canvasModel(view.canvas)).children.get('a'), ['b', 'c']);
+    assert.ok(!ac.lineGroupEl.classList.contains('dr-related-edge'));
+    // The names are the setting's, when there are some.
+    p.settings.canvasRelationNames = 'causes, causes, refutes';
+    assert.deepStrictEqual(rel.names(), ['causes', 'refutes']);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

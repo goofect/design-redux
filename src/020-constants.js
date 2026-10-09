@@ -152,6 +152,10 @@ const DEFAULTS = {
   canvasOutlineBranch: true,
   // A branch laid out to one side, both sides, or all round its card.
   canvasLayouts: true,
+  // Arrows named for how their cards relate, or marked related: out of branches.
+  canvasRelations: true,
+  // Empty: the names the plugin starts with.
+  canvasRelationNames: '',
   // A text card grows to fit what's typed in it.
   canvasCardFit: true,
   // A text card's first line reads as its title, the rest as details.
