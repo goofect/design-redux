@@ -904,8 +904,15 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     cards.fitEditing(view, state);
     assert.strictEqual(view.canvas.saves, 1, 'saved once typing ended');
     // Marked as text cards, for their title and details.
+    const sizer = a.nodeEl.createDiv({ cls: 'markdown-preview-sizer' });
+    sizer.createDiv({ cls: 'markdown-preview-pusher' });
+    sizer.createDiv({ cls: 'el-p' }).innerHTML = '<p>Speaker of the House of Commons<br>Chairs the debates</p>';
     cards.pass(view);
     assert.ok(a.nodeEl.classList.contains('dr-text-card'));
+    // Its whole first line is its title, however it wraps; the rest isn't.
+    assert.strictEqual(sizer.querySelector('p').innerHTML, '<span class="dr-card-title">Speaker of the House of Commons</span><br>Chairs the debates');
+    cards.pass(view);
+    assert.strictEqual(sizer.querySelectorAll('.dr-card-title').length, 1, 'wrapped once');
   });
 
   await t('the properties button: a note card’s note, or a text card’s own properties, kept at its top', () => {

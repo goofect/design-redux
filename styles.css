@@ -6289,7 +6289,7 @@ body.dr-card-titles .canvas-node.dr-text-card .markdown-preview-pusher ~ div:not
   color: var(--text-muted);
 }
 
-body.dr-card-titles .canvas-node.dr-text-card :is(.markdown-preview-pusher + .el-p, .markdown-preview-pusher + .mod-frontmatter + .el-p) > p::first-line {
+body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   font-size: 1.25em;
   font-weight: var(--font-semibold, 600);
   color: var(--text-normal);

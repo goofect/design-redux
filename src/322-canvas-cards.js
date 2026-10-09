@@ -61,6 +61,27 @@ function renderedHeight(node) {
   return Math.ceil(last.offsetTop + last.offsetHeight + 4 + (node.height - view.clientHeight));
 }
 
+/**
+ * A text card's title: its first line as typed, up to the first line
+ * break, wrapped so it can be styled whole however it wraps on screen.
+ * Done again whenever Obsidian draws the card's text afresh.
+ */
+function markCardTitle(el) {
+  const sizer = el && el.querySelector('.markdown-preview-sizer');
+  if (!sizer) return;
+  const first = Array.from(sizer.children).find(
+    (c) => !c.classList.contains('markdown-preview-pusher') && !c.classList.contains('mod-frontmatter')
+  );
+  const p = first && first.classList.contains('el-p') ? first.querySelector(':scope > p') : null;
+  if (!p || !p.firstChild) return;
+  const head = p.firstChild;
+  if (head.nodeType === 1 && head.classList.contains('dr-card-title')) return;
+  const title = p.ownerDocument.createElement('span');
+  title.className = 'dr-card-title';
+  while (p.firstChild && p.firstChild.nodeName !== 'BR') title.appendChild(p.firstChild);
+  p.insertBefore(title, p.firstChild);
+}
+
 class CanvasCards extends CanvasFeature {
   settingsSchema() {
     return [
@@ -140,7 +161,10 @@ class CanvasCards extends CanvasFeature {
   pass(view) {
     if (!view.canvas || !view.canvas.nodes) return;
     view.canvas.nodes.forEach((node) => {
-      if (node.nodeEl) node.nodeEl.toggleClass('dr-text-card', isTextCard(node));
+      if (!node.nodeEl) return;
+      const text = isTextCard(node);
+      node.nodeEl.toggleClass('dr-text-card', text);
+      if (text && this.settings.canvasCardTitles) markCardTitle(node.nodeEl);
     });
   }
 
