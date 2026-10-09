@@ -50,8 +50,13 @@ class ItemView extends Component {
   constructor(leaf) { super(); this.leaf = leaf; this.containerEl = document.createElement('div'); this.contentEl = this.containerEl.createDiv({ cls: 'view-content' }); }
 }
 class TFile {}
+const yaml = require('js-yaml');
+const notices = [];
 const obsidian = new Proxy({
   Menu, Component, ItemView, TFile,
+  parseYaml: (t) => yaml.load(t),
+  stringifyYaml: (o) => yaml.dump(o),
+  Notice: class { constructor(m) { notices.push(m); } },
   setIcon: (el, name) => { el.dataset.icon = name; },
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : class {}) });
@@ -65,7 +70,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, CanvasFind, CanvasFocus, CanvasDuplicate };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -685,7 +690,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
 
   const plugin = (extra) => {
     const fold = new R.CanvasFold({ settings, app: {} });
-    const p = { settings: Object.assign({}, settings, { canvasArrange: true, canvasMindMap: true }, extra), app: { workspace: { trigger() {} } }, feature: (C) => (C === R.CanvasFold ? fold : null) };
+    const p = { settings: Object.assign({}, settings, { canvasArrange: true, canvasMindMap: true, canvasRelink: true }, extra), app: { workspace: { trigger() {} } }, feature: (C) => (C === R.CanvasFold ? fold : null) };
     fold.plugin = p;
     return { p, fold };
   };
@@ -774,7 +779,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
       ],
       edges: [edge('root', 'k1', 'right', 'left'), edge('root', 'k2', 'right', 'left'), edge('root', 'next', 'right', 'left')],
     });
-    const { p, fold } = plugin();
+    const { p, fold } = plugin({ canvasMindMapPlace: 'line' });
     fold.watched.set(view, { file: view.file, schedule() {} });
     const mind = new R.CanvasMindMap(p);
     const n = (id) => view.canvas.nodes.get(id);
@@ -800,6 +805,138 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.canvas.selectOnly(n('k2'));
     assert.strictEqual(mind.step(view, 'right').id, grand.id);
     assert.ok(view.canvas.selection.has(grand));
+  });
+
+  await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {
+    const view = mindCanvas({
+      nodes: [
+        card('g', -40, -40, 700, 400, { type: 'group', label: 'Theories' }),
+        card('root', 0, 100, 200, 60),
+        card('k1', 300, 0, 200, 60, { color: '4' }),
+        card('k2', 300, 100, 200, 60),
+        card('next', 300, 200, 200, 60),
+        card('far', 900, 0, 200, 60),
+      ],
+      edges: [edge('root', 'k1', 'right', 'left'), edge('root', 'k2', 'right', 'left'), edge('root', 'next', 'right', 'left')],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    const still = () => ['k1', 'k2', 'next'].map((id) => n(id).y);
+    // Tab on the root: level with its children, in the first gap after them.
+    const child = await mind.addChild(view, n('root'));
+    assert.deepStrictEqual([child.x, child.y], [300, 290]);
+    assert.deepStrictEqual(still(), [0, 100, 200], 'nothing moved for it');
+    const joined = Array.from(view.canvas.edges.values()).find((e) => e.to.node === child);
+    assert.deepStrictEqual([joined.from.node.id, joined.from.side, joined.to.side], ['root', 'right', 'left']);
+    // A card with nothing after it: out its free side, past nothing.
+    const leaf = await mind.addChild(view, n('far'));
+    assert.deepStrictEqual([leaf.x, leaf.y], [1180, 0]);
+    // Enter on a card in a full column: below the column, its group grown round it.
+    const sibling = await mind.addSibling(view, n('k2'));
+    assert.deepStrictEqual([sibling.x, sibling.y], [300, 380]);
+    assert.deepStrictEqual(still(), [0, 100, 200]);
+    assert.ok(n('g').y + n('g').height >= sibling.y + sibling.height, 'its group grew round it');
+    const free = R.freeSpot(R.canvasModel(view.canvas), R.canvasModel(view.canvas).byId.get('root'), { width: 100, height: 40 }, 'left');
+    assert.ok(free && free.x + 100 <= 0 - 30, 'out the side asked for, clear of the card');
+  });
+
+  await t('a card dropped onto another hangs from it instead, its branch coming along into free space; Undo is one save away', async () => {
+    const view = mindCanvas({
+      nodes: [
+        card('a', 0, 0, 200, 60),
+        card('b', 0, 300, 200, 60),
+        card('x', 300, 0, 200, 60),
+        card('x1', 600, 0, 200, 60),
+      ],
+      edges: [edge('a', 'x', 'right', 'left'), edge('x', 'x1', 'right', 'left')],
+    });
+    const { p, fold } = plugin();
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const mind = new R.CanvasMindMap(p);
+    const state = { file: view.file };
+    mind.watched.set(view, state);
+    mind.mount(view, state);
+    const n = (id) => view.canvas.nodes.get(id);
+    view.canvas.removeEdge = (e) => view.canvas.edges.delete(e.id);
+    // Pressed, dragged over b, and let go.
+    n('x').nodeEl.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+    n('x').moveAndResize({ x: 10, y: 300, width: 200, height: 60 });
+    window.dispatchEvent(new window.MouseEvent('pointermove', { bubbles: true }));
+    assert.ok('drDropTarget' in n('b').nodeEl.dataset, 'the card it would hang from is marked');
+    window.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true }));
+    await new Promise((res) => setTimeout(res, 10));
+    assert.ok(!('drDropTarget' in n('b').nodeEl.dataset));
+    const into = Array.from(view.canvas.edges.values()).filter((e) => e.to.node === n('x'));
+    assert.deepStrictEqual(into.map((e) => e.from.node.id), ['b'], 'its arrow from a gone, one from b');
+    // Beside b, out of its way, and its own card along with it, as they were.
+    assert.ok(n('x').x >= 200 + 30, 'clear of b');
+    assert.strictEqual(n('x1').x - n('x').x, 300);
+    assert.strictEqual(n('x1').y - n('x').y, 0);
+    assert.ok(view.canvas.saves >= 1);
+    // Not onto its own branch.
+    assert.strictEqual(await mind.relink(view, { id: 'x', x: n('x').x, y: n('x').y }, n('x1')), false);
+    mind.cleanup(view, state);
+  });
+
+  await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {
+    const view = fakeCanvas({ nodes: [card('a', 0, 0, 200, 60), card('b', 0, 100, 200, 60), card('c', 0, 300, 200, 60), card('side', 300, 70, 100, 60)], edges: [] });
+    const cards = new R.CanvasCards({ settings: { canvasCardFit: true, canvasCardTitles: true }, app: {} });
+    const n = (id) => view.canvas.nodes.get(id);
+    const a = n('a');
+    // Its editor, with text this tall.
+    let text = 40;
+    a.isEditing = true;
+    a.child = { editMode: { cm: { get contentHeight() { return text; }, scrollDOM: { get clientHeight() { return a.height - 2; }, get scrollHeight() { return Math.max(a.height - 2, text + 10); } } } } };
+    const state = { fitting: new Map() };
+    cards.fitEditing(view, state);
+    assert.strictEqual(a.height, 60, 'it fits already');
+    text = 140;
+    cards.fitEditing(view, state);
+    assert.strictEqual(a.height, 152);
+    assert.deepStrictEqual(['b', 'c', 'side'].map((id) => n(id).y), [182, 382, 70], 'b moved just clear of it, what was below with it; off to the side stays');
+    text = 30;
+    cards.fitEditing(view, state);
+    assert.strictEqual(a.height, 60, 'no shorter than when typing began');
+    assert.strictEqual(view.canvas.saves, 0);
+    a.isEditing = false;
+    cards.fitEditing(view, state);
+    assert.strictEqual(view.canvas.saves, 1, 'saved once typing ended');
+    // Marked as text cards, for their title and details.
+    cards.pass(view);
+    assert.ok(a.nodeEl.classList.contains('dr-text-card'));
+  });
+
+  await t('the properties button: a note card’s note, or a text card’s own properties, kept at its top', () => {
+    const view = fakeCanvas({ nodes: [card('t', 0, 0, 200, 60, { text: '---\nstatus: draft\ntags:\n  - ir\n---\nRealism\nStates seek power.' }), card('u', 0, 100, 200, 60)], edges: [] });
+    const t1 = view.canvas.nodes.get('t');
+    t1.setText = (text) => { t1.data.text = text; };
+    const app = { vault: { getAbstractFileByPath: () => null }, workspace: { on: () => ({}) } };
+    const panel = new R.PropertiesPanel({ settings: { propertiesDropdown: true }, app });
+    panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
+    const leaf = { view };
+    assert.deepStrictEqual(panel.targetOf(leaf), { none: 'Select a card to see its properties.' });
+    view.canvas.selection.add(t1);
+    assert.strictEqual(panel.targetOf(leaf).card, t1);
+    const anchor = document.body.createDiv();
+    panel.toggle(leaf, anchor);
+    assert.ok(panel.isOpen());
+    assert.strictEqual(panel.popupEl.querySelector('.dr-props-title').textContent, 'Realism');
+    const rows = () => Array.from(panel.popupEl.querySelectorAll('.dr-card-props-row')).map((r) => [r.querySelector('.dr-card-props-key').textContent, r.querySelector('input').value]);
+    assert.deepStrictEqual(rows(), [['status', 'draft'], ['tags', 'ir']]);
+    // Changed, added, taken away: written at the card's top, its text left as it was.
+    panel.setCardProperty('status', R.cardFrontmatter(t1.data.text).data.status === 'draft' ? 'done' : 'x');
+    panel.setCardProperty('year', 1979);
+    panel.setCardProperty('tags', undefined);
+    assert.deepStrictEqual(R.cardFrontmatter(t1.data.text), { data: { status: 'done', year: 1979 }, body: 'Realism\nStates seek power.' });
+    assert.deepStrictEqual(rows(), [['status', 'done'], ['year', '1979']]);
+    assert.strictEqual(view.canvas.saves, 3);
+    panel.setCardProperty('status', undefined);
+    panel.setCardProperty('year', undefined);
+    assert.strictEqual(t1.data.text, 'Realism\nStates seek power.', 'none left: no --- lines');
+    panel.close();
+    panel.popupEl.remove();
   });
 
   await t('the keys only answer a selected card that isn’t being typed in', () => {

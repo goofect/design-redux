@@ -2,12 +2,14 @@
 /* Growing a mind map                                                  */
 /*                                                                     */
 /* With one card selected: Tab adds a card its arrow leads to, Enter   */
-/* adds one beside it — the next of its parent's — each placed in line */
-/* with the cards already there, the way the branch grows, with room   */
-/* made for it and its group grown round it; it grows out of the card  */
-/* it hangs from, and opens to be typed in. Alt and an arrow key moves */
-/* to the next card that way. The same from the card's right-click     */
-/* menu, and as commands to give other keys.                          */
+/* adds one beside it — the next of its parent's. Each goes in the     */
+/* nearest free space round the card, out the way its branch grows     */
+/* first; or, set so, in line with the cards already there, with room  */
+/* made for it. It grows out of the card it hangs from and opens to be */
+/* typed in. Alt and an arrow key moves to the next card that way.     */
+/* Dropped onto another card, a card hangs from that one instead, its  */
+/* branch coming along. The same from the card's right-click menu, and */
+/* as commands to give other keys.                                    */
 /* ------------------------------------------------------------------ */
 
 /** A new id for a card or arrow, as the canvas makes them. */
@@ -52,6 +54,124 @@ function cardTowards(model, from, way, linked) {
   return best;
 }
 
+/* Between a card placed in free space and the cards round it. */
+const FREE_GAP = 30;
+
+/** A box as the canvas gives them: minX, minY, maxX, maxY. */
+function boxEdges(r) {
+  return { minX: r.x, minY: r.y, maxX: r.x + r.width, maxY: r.y + r.height };
+}
+
+/**
+ * The nearest free place for a box of `size` round `anchor`: out of the
+ * side `prefer` first — `away` from it — then the sides beside it, then
+ * the far one; the place nearest the anchor that comes no nearer than
+ * `gap` to a card, crosses no group's edge but its own group's (which
+ * then grows round it), goes into no other group, and keeps clear of
+ * where a folded card would come out. `skip`: ids that don't count, as
+ * they're moving too; `beside` and `behind`, how much further the sides
+ * beside the one asked for and the far side count; `align`, how much
+ * further a place off the anchor's line counts. { x, y, side }, or null
+ * for nowhere near.
+ */
+function freeSpot(model, anchor, size, prefer, opts) {
+  opts = opts || {};
+  const gap = opts.gap === undefined ? FREE_GAP : opts.gap;
+  const away = opts.away === undefined ? TIDY_DEPTH_GAP : opts.away;
+  const skip = opts.skip || new Set();
+  const home = canvasHomes(model).get(anchor.id) || null;
+  const homeRec = home ? model.byId.get(home) : null;
+  const obstacles = [];
+  const groups = [];
+  model.nodes.forEach((n) => {
+    if (skip.has(n.id) || (n.tuck && skip.has(shownAs(model, n).id))) return;
+    if (n.tuck) obstacles.push(outBox(model, n));
+    else if (isGroupRecord(n)) groups.push(n);
+    else obstacles.push(n);
+  });
+  const free = (b) => {
+    for (const o of obstacles) {
+      if (b.x < o.x + o.width + gap && o.x < b.x + b.width + gap && b.y < o.y + o.height + gap && o.y < b.y + b.height + gap) return false;
+    }
+    for (const g of groups) {
+      const outside = b.x >= g.x + g.width || b.x + b.width <= g.x || b.y >= g.y + g.height || b.y + b.height <= g.y;
+      if (outside) continue;
+      // Across another group's edge, or inside a group the anchor isn't in.
+      const ours = g === homeRec || (homeRec && withinRect(homeRec, g));
+      if (!withinRect(b, g) && g !== homeRec) return false;
+      if (!ours) return false;
+    }
+    return true;
+  };
+  const cx = anchor.x + anchor.width / 2;
+  const cy = anchor.y + anchor.height / 2;
+  const side0 = BRANCH_SIDES.indexOf(prefer) === -1 ? 'right' : prefer;
+  const beside = side0 === 'right' || side0 === 'left' ? ['bottom', 'top'] : ['right', 'left'];
+  const sideways = opts.beside || 4;
+  const sides = [[side0, 1], [beside[0], sideways], [beside[1], sideways], [OPPOSITE_SIDE[side0], opts.behind || 5]];
+  const align = opts.align === undefined ? 0.25 : opts.align;
+  const out = [];
+  sides.forEach(([side, weight]) => {
+    for (let d = 0; d <= 640; d += 20) {
+      for (let a = -640; a <= 640; a += 20) {
+        let x;
+        let y;
+        if (side === 'right') [x, y] = [anchor.x + anchor.width + away + d, cy - size.height / 2 + a];
+        else if (side === 'left') [x, y] = [anchor.x - away - d - size.width, cy - size.height / 2 + a];
+        else if (side === 'bottom') [x, y] = [cx - size.width / 2 + a, anchor.y + anchor.height + away + d];
+        else [x, y] = [cx - size.width / 2 + a, anchor.y - away - d - size.height];
+        const box = { x: Math.round(x), y: Math.round(y), width: size.width, height: size.height };
+        // Across its group's edge, growing it, a little further; outside it, further still.
+        const inHome = !homeRec || withinRect(box, homeRec);
+        const outHome = homeRec && (box.x >= homeRec.x + homeRec.width || box.x + box.width <= homeRec.x || box.y >= homeRec.y + homeRec.height || box.y + box.height <= homeRec.y);
+        const leaves = inHome ? 1 : outHome ? 1.3 : 1.15;
+        const dist = Math.hypot(box.x + size.width / 2 - cx, box.y + size.height / 2 - cy);
+        // Nearest; after the anchor rather than before it, where that's all between them.
+        out.push({ box, side, score: (dist + Math.abs(a) * align + (a < 0 ? 1 : 0)) * weight * leaves });
+      }
+    }
+  });
+  out.sort((p, q) => p.score - q.score);
+  const found = out.find((c) => free(c.box));
+  if (!found) return null;
+  // Then as near as it goes, a step at a time: in line with the anchor, then toward it.
+  const box = Object.assign({}, found.box);
+  const vertical = found.side === 'top' || found.side === 'bottom';
+  const across = vertical ? 'x' : 'y';
+  const depth = vertical ? 'y' : 'x';
+  const lineUp = vertical ? cx - size.width / 2 : cy - size.height / 2;
+  const depthStart =
+    found.side === 'right' ? anchor.x + anchor.width + away
+      : found.side === 'left' ? anchor.x - away - size.width
+        : found.side === 'bottom' ? anchor.y + anchor.height + away
+          : anchor.y - away - size.height;
+  [[across, Math.round(lineUp)], [depth, Math.round(depthStart)]].forEach(([axis, goal]) => {
+    while (box[axis] !== goal) {
+      const step = box[axis] > goal ? -1 : 1;
+      box[axis] += step;
+      if (!free(box)) {
+        box[axis] -= step;
+        break;
+      }
+    }
+  });
+  return { x: box.x, y: box.y, side: found.side };
+}
+
+/** The arrows that make a card hang from another: [edge record, parent id], as arrowLinks reads them. */
+function arrowsInto(model, id) {
+  const out = [];
+  model.edges.forEach((e) => {
+    const a = model.byId.get(e.from);
+    const b = model.byId.get(e.to);
+    if (!a || !b || a === b || isGroupRecord(a) || isGroupRecord(b)) return;
+    const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
+    const child = reversed ? e.from : e.to;
+    if (child === id) out.push([e, reversed ? e.to : e.from]);
+  });
+  return out;
+}
+
 class CanvasMindMap extends CanvasFeature {
   settingsSchema() {
     return [
@@ -60,11 +180,33 @@ class CanvasMindMap extends CanvasFeature {
         name: 'Mind map keys',
         desc: 'Tab adds a card below the selected one, Enter one beside it, and Alt and an arrow moves between cards.',
       },
+      {
+        key: 'canvasMindMapPlace',
+        type: 'dropdown',
+        name: 'New cards go',
+        desc: 'Where Tab and Enter put the new card.',
+        options: { free: 'In the nearest free space', line: 'In line, making room' },
+        showIf: 'canvasMindMap',
+      },
+      {
+        key: 'canvasRelink',
+        name: 'Drop to re-link',
+        desc: 'Drop a card onto another to make it hang from that one, its branch coming along. Undo puts it back.',
+      },
     ];
   }
 
+  /** On with either of its settings: the keys, or dropping onto a card. */
+  get enabled() {
+    return !!(this.settings.canvasMindMap || this.settings.canvasRelink);
+  }
+
+  get keys() {
+    return !!this.settings.canvasMindMap;
+  }
+
   commands() {
-    const one = () => this.selectedCard(this.pageCanvas());
+    const one = () => (this.keys ? this.selectedCard(this.pageCanvas()) : null);
     const ways = [
       ['left', 'Select the card to the left'],
       ['right', 'Select the card to the right'],
@@ -115,16 +257,176 @@ class CanvasMindMap extends CanvasFeature {
     state.win = view.containerEl.ownerDocument.defaultView;
     state.escape = (evt) => this.onEscape(view, evt);
     if (state.win) state.win.addEventListener('keydown', state.escape, true);
+    // A card dragged, and dropped onto another.
+    state.down = (evt) => this.onPointerDown(view, state, evt);
+    state.move = (evt) => this.onPointerMove(view, state, evt);
+    state.up = (evt) => this.onPointerUp(view, state, evt);
+    view.contentEl.addEventListener('pointerdown', state.down, true);
+    if (state.win) {
+      state.win.addEventListener('pointermove', state.move, true);
+      state.win.addEventListener('pointerup', state.up, true);
+    }
   }
 
   cleanup(view, state) {
     if (state && state.keys && view.containerEl) view.containerEl.removeEventListener('keydown', state.keys);
     if (state && state.win && state.escape) state.win.removeEventListener('keydown', state.escape, true);
+    if (state && state.down) view.contentEl.removeEventListener('pointerdown', state.down, true);
+    if (state && state.win && state.move) {
+      state.win.removeEventListener('pointermove', state.move, true);
+      state.win.removeEventListener('pointerup', state.up, true);
+    }
+    if (state) this.markTarget(state, null);
+  }
+
+  /** The card of this canvas an element is part of, or null. */
+  nodeFor(view, el) {
+    const cardEl = el && typeof el.closest === 'function' ? el.closest('.canvas-node') : null;
+    if (!cardEl || !view.canvas || !view.canvas.nodes) return null;
+    let found = null;
+    view.canvas.nodes.forEach((node) => {
+      if (node.nodeEl === cardEl) found = node;
+    });
+    return found;
+  }
+
+  /** A press on a card: where it was, in case it's dragged onto another. */
+  onPointerDown(view, state, evt) {
+    state.drag = null;
+    if (!this.settings.canvasRelink || evt.button !== 0 || (view.canvas && view.canvas.readonly)) return;
+    const node = this.nodeFor(view, evt.target);
+    if (!node || isGroupNode(node) || tuckOf(node) || node.isEditing) return;
+    state.drag = { id: node.id, x: node.x, y: node.y, over: null, branch: null };
+  }
+
+  /** While it's dragged: the card it would hang from, dropped here, marked. */
+  onPointerMove(view, state, evt) {
+    const drag = state.drag;
+    if (!drag) return;
+    const canvas = view.canvas;
+    const node = canvas && canvas.nodes && canvas.nodes.get(drag.id);
+    const moved = !!node && (node.x !== drag.x || node.y !== drag.y);
+    const alone = this.selectedNodes(view).length <= 1;
+    this.markTarget(state, moved && alone ? this.dropTarget(view, node, drag, evt) : null);
+  }
+
+  onPointerUp(view, state) {
+    const drag = state.drag;
+    state.drag = null;
+    const target = drag && drag.over;
+    this.markTarget(state, null);
+    if (!drag || !target) return;
+    // Once the canvas has put the card down where it was dropped.
+    window.setTimeout(() => this.relink(view, drag, target), 0);
+  }
+
+  /** The card under the pointer a dragged card could hang from: not itself, nor in its branch, nor a group. */
+  dropTarget(view, node, drag, evt) {
+    const canvas = view.canvas;
+    if (!drag.branch) {
+      const model = canvasModel(canvas);
+      drag.branch = new Set(branchOf(model, node.id, arrowLinks(model)));
+    }
+    let pos = null;
+    try {
+      if (typeof canvas.posFromEvt === 'function') pos = canvas.posFromEvt(evt);
+    } catch (err) {
+      pos = null;
+    }
+    if (!pos) pos = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
+    let found = null;
+    canvas.nodes.forEach((n) => {
+      if (n === node || drag.branch.has(n.id) || !n.nodeEl || isGroupNode(n) || tuckOf(n)) return;
+      if (pos.x < n.x || pos.x > n.x + n.width || pos.y < n.y || pos.y > n.y + n.height) return;
+      if (!found || (n.zIndex || 0) > (found.zIndex || 0)) found = n;
+    });
+    return found;
+  }
+
+  /** The card a dragged one would hang from, marked — by an attribute, as the canvas redraws a card's classes as it goes. */
+  markTarget(state, target) {
+    if (state.marked !== target && state.marked && state.marked.nodeEl) delete state.marked.nodeEl.dataset.drDropTarget;
+    state.marked = target || null;
+    if (target && target.nodeEl) target.nodeEl.dataset.drDropTarget = '';
+    if (state.drag) state.drag.over = target || null;
+  }
+
+  /**
+   * A card dropped onto another: made to hang from it — the arrows into
+   * it from elsewhere taken away, one from the new card drawn — and put,
+   * with its branch, in the nearest free space by its new card, gliding
+   * there. Saved, so Undo puts it back.
+   */
+  relink(view, drag, targetNode) {
+    const canvas = view.canvas;
+    if (!canvas) return Promise.resolve(false);
+    const fold = this.plugin.feature(CanvasFold);
+    if (fold) fold.settle(view);
+    const model = canvasModel(canvas);
+    const rec = model.byId.get(drag.id);
+    const target = model.byId.get(targetNode.id);
+    if (!rec || !target || rec === target || rec.tuck || target.tuck || isGroupRecord(rec) || isGroupRecord(target)) return Promise.resolve(false);
+    const links = arrowLinks(model);
+    const branch = branchOf(model, rec.id, links);
+    if (branch.indexOf(target.id) !== -1) return Promise.resolve(false);
+    const before = snapshotModel(model);
+    // Its branch stayed where the card was before it was dragged: the two go together.
+    const members = [rec].concat(branch.map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
+    const whole = boundsOf(members.map((r) => (r === rec ? { x: drag.x, y: drag.y, width: r.width, height: r.height } : r)));
+    const spot = freeSpot(model, target, { width: whole.width, height: whole.height }, this.growthSide(model, links, target), {
+      skip: new Set(members.map((r) => r.id)),
+    });
+    const dx = spot ? spot.x - whole.x : 0;
+    const dy = spot ? spot.y - whole.y : 0;
+    const moved = new Set();
+    shiftRecord(model, rec, 'x', drag.x + dx - rec.x, moved);
+    moved.clear();
+    shiftRecord(model, rec, 'y', drag.y + dy - rec.y, moved);
+    members.slice(1).forEach((r) => {
+      const once = new Set();
+      shiftRecord(model, r, 'x', dx, once);
+      once.clear();
+      shiftRecord(model, r, 'y', dy, once);
+    });
+    // Its arrows: from the new card only.
+    const into = arrowsInto(model, rec.id);
+    try {
+      into.forEach(([e, parent]) => {
+        if (parent !== target.id && e.edge && typeof canvas.removeEdge === 'function') canvas.removeEdge(e.edge);
+      });
+      if (!into.some(([, parent]) => parent === target.id) && typeof canvas.importData === 'function') {
+        const sides = spot ? { from: spot.side, to: OPPOSITE_SIDE[spot.side] } : nearestSides(boxEdges(target), boxEdges(rec));
+        canvas.importData({ nodes: [], edges: [{ id: newCanvasId(canvas), fromNode: target.id, fromSide: sides.from, toNode: rec.id, toSide: sides.to }] });
+      }
+    } catch (err) {
+      /* the arrows as they were */
+    }
+    const state = fold ? fold.watched.get(view) : null;
+    return new Promise((resolve) => {
+      glideCanvasModel(view, model, before, state, () => {
+        try {
+          canvas.requestSave();
+        } catch (err) {
+          /* saved with the next change */
+        }
+        if (fold) fold.schedule(view);
+        this.app.workspace.trigger('design-redux:canvas-changed', view);
+        if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
+        resolve(true);
+      });
+    });
+  }
+
+  /** The way a card's branch grows: its own, or the branch it's in, or rightwards. */
+  growthSide(model, links, card) {
+    if (shownChildren(model, links, card.id).length) return branchSide(model, card.id, links);
+    const up = (links.parents.get(card.id) || []).map((id) => model.byId.get(id)).find((r) => r && !r.tuck);
+    return up ? branchSide(model, up.id, links) : 'right';
   }
 
   /** Escape in a card being typed in: done typing, the card still selected, for the next key. */
   onEscape(view, evt) {
-    if (!this.enabled || evt.key !== 'Escape' || evt.isComposing || evt.shiftKey || evt.ctrlKey || evt.metaKey || evt.altKey) return;
+    if (!this.keys || evt.key !== 'Escape' || evt.isComposing || evt.shiftKey || evt.ctrlKey || evt.metaKey || evt.altKey) return;
     const editing = this.editingCard(view, evt.target);
     if (!editing) return;
     evt.preventDefault();
@@ -133,7 +435,7 @@ class CanvasMindMap extends CanvasFeature {
   }
 
   onKey(view, evt) {
-    if (!this.enabled || evt.defaultPrevented || evt.isComposing || typingInto(evt.target)) return;
+    if (!this.keys || evt.defaultPrevented || evt.isComposing || typingInto(evt.target)) return;
     const canvas = view.canvas;
     if (!canvas || canvas.readonly) return;
     const node = this.selectedCard(view);
@@ -188,7 +490,7 @@ class CanvasMindMap extends CanvasFeature {
   }
 
   addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
+    if (!this.keys || nodes.length !== 1) return;
     const node = nodes[0];
     const view = node && node.canvas && node.canvas.view;
     if (!view || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node) || (view.canvas && view.canvas.readonly)) return;
@@ -208,6 +510,11 @@ class CanvasMindMap extends CanvasFeature {
     );
   }
 
+  /** Whether new cards go in free space, rather than in line. */
+  get placesFreely() {
+    return this.settings.canvasMindMapPlace !== 'line';
+  }
+
   /** A card the selected card's arrow leads to, after any it leads to already. */
   addChild(view, node) {
     if (!view || !view.canvas || !node) return Promise.resolve(null);
@@ -225,6 +532,23 @@ class CanvasMindMap extends CanvasFeature {
     }
     const axes = sideAxes(side);
     const size = this.sizeFor(view, kids.length ? kids[kids.length - 1] : null, parent);
+    if (this.placesFreely) {
+      // Level with the cards after it, where it has some.
+      let away = TIDY_DEPTH_GAP;
+      if (kids.length) {
+        const depthSize = axes.depth === 'x' ? 'width' : 'height';
+        away = axes.forward
+          ? Math.min(...kids.map((k) => k[axes.depth])) - (parent[axes.depth] + parent[depthSize])
+          : parent[axes.depth] - Math.max(...kids.map((k) => k[axes.depth] + k[depthSize]));
+        if (!(away > 0)) away = TIDY_DEPTH_GAP;
+      }
+      const spot = freeSpot(model, parent, size, side, { away });
+      if (spot) {
+        const box = { x: spot.x, y: spot.y, width: size.width, height: size.height };
+        // Its arrow out of the side it went out of, as the branch's others.
+        return this.grow(view, parent, box, { from: parent, fromSide: spot.side, toSide: OPPOSITE_SIDE[spot.side] }, null, kids[kids.length - 1], true);
+      }
+    }
     const box = { width: size.width, height: size.height, x: 0, y: 0 };
     const depth = axes.depth;
     const across = axes.across;
@@ -272,6 +596,17 @@ class CanvasMindMap extends CanvasFeature {
     const across = axes.across;
     const aSize = across === 'x' ? 'width' : 'height';
     const size = this.sizeFor(view, card, card);
+    if (this.placesFreely) {
+      // Beside it, after it the way its siblings line up, in the nearest free space.
+      const after = across === 'y' ? 'bottom' : 'right';
+      // In its column, rather than off to one side: beside it is the next of its parent's.
+      const spot = freeSpot(model, card, size, after, { away: TIDY_SIBLING_GAP, beside: 2.5, behind: 2, align: 1 });
+      if (spot) {
+        const box = { x: spot.x, y: spot.y, width: size.width, height: size.height };
+        // Joined as the card beside it is.
+        return this.grow(view, parent || card, box, join, null, card, true);
+      }
+    }
     const box = { x: card.x, y: card.y, width: size.width, height: size.height };
     // Its own branch, if it has one, stays clear: the new card goes past it.
     const own = [card].concat(branchOf(model, card.id, links).map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
@@ -293,7 +628,7 @@ class CanvasMindMap extends CanvasFeature {
    * round it. It comes out of the card it hangs from, as an unfolding
    * card does; saved as one step of Undo, then opened to type in.
    */
-  grow(view, from, box, join, across, like) {
+  grow(view, from, box, join, across, like, free) {
     const canvas = view.canvas;
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
@@ -322,12 +657,11 @@ class CanvasMindMap extends CanvasFeature {
     rec.tuck = { by: holder.id, dx: rec.x - holder.x, dy: rec.y - holder.y };
     const before = snapshotModel(model);
     rec.tuck = null;
+    // In free space nothing's in its way; in line, room is made for it.
     const close = this.settings.canvasCloseGaps !== false;
-    if (close) {
-      this.makeWay(model, before, rec, holder, across || 'y');
-      // Its group grown round it — and round what moved for it — only where something now sticks out.
-      if (this.sticksOut(model, before)) fitGroups(model, before);
-    }
+    if (close && !free) this.makeWay(model, before, rec, holder, across || 'y');
+    // Its group grown round it — and round what moved for it — only where something now sticks out.
+    if ((close || free) && this.sticksOut(model, before)) fitGroups(model, before);
     const state = fold ? fold.watched.get(view) : null;
     return new Promise((resolve) => {
       glideCanvasModel(view, model, before, state, () => resolve(this.opened(view, node, true)));

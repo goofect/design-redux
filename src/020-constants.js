@@ -141,6 +141,14 @@ const DEFAULTS = {
   canvasArrange: true,
   // Tab and Enter on a selected card add one after it or beside it.
   canvasMindMap: true,
+  // Where Tab and Enter put a new card: 'free' for the nearest free space, 'line' in line with room made.
+  canvasMindMapPlace: 'free',
+  // A card dropped onto another hangs from it.
+  canvasRelink: true,
+  // A text card grows to fit what's typed in it.
+  canvasCardFit: true,
+  // A text card's first line reads as its title, the rest as details.
+  canvasCardTitles: true,
   // Arrows in a style of their own, from their menu or the bar above them.
   canvasArrows: true,
   // How arrows without a style of their own are drawn: 'curve', 'straight' or 'elbow'.

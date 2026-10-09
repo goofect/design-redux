@@ -3,8 +3,40 @@
 /*                                                                     */
 /* Stacks sections and keeps them pointed at the active note. Nothing  */
 /* is taken from the view, so the note keeps its own property block    */
-/* and the panel can hold as many sections as it likes.                */
+/* and the panel can hold as many sections as it likes. On a canvas,   */
+/* it's about the one card selected: a note's card shows the note's    */
+/* properties; a text card, those written at its top, between ---      */
+/* lines, which the card itself doesn't show.                          */
 /* ------------------------------------------------------------------ */
+
+/** A text card's properties — written at its top between --- lines — and the rest: { data, body }; data null where they can't be read. */
+function cardFrontmatter(text) {
+  const m = /^---\r?\n([\s\S]*?)\r?\n?---[ \t]*(?:\r?\n|$)/.exec(text || '');
+  if (!m) return { data: {}, body: text || '' };
+  let data = null;
+  try {
+    data = m[1].trim() ? parseYaml(m[1]) : {};
+  } catch (err) {
+    data = null;
+  }
+  if (data !== null && (typeof data !== 'object' || Array.isArray(data))) data = null;
+  return { data, body: (text || '').slice(m[0].length) };
+}
+
+/** A text card's text with these properties at its top, or none. */
+function withCardFrontmatter(data, body) {
+  if (!Object.keys(data).length) return body;
+  return `---\n${stringifyYaml(data)}---\n${body}`;
+}
+
+/** A value typed for a card's property, made the kind it was: a list, a number, true or false, or text. */
+function cardValue(typed, was) {
+  const text = String(typed).trim();
+  if (Array.isArray(was)) return text ? text.split(',').map((t) => t.trim()).filter(Boolean) : [];
+  if (typeof was === 'number' && text !== '' && !isNaN(Number(text))) return Number(text);
+  if (typeof was === 'boolean' && /^(true|false)$/i.test(text)) return text.toLowerCase() === 'true';
+  return text;
+}
 
 class PropertiesPanel extends Feature {
   constructor(plugin) {
@@ -184,14 +216,47 @@ class PropertiesPanel extends Feature {
     this.toggle(leaf, trigger && trigger.isConnected ? trigger : anchor);
   }
 
+  /**
+   * What the panel is about from a page: its note; or on a canvas, the
+   * one card selected — a note's card the note, a text card itself.
+   * { file } or { card }, { none: why not } or null.
+   */
+  targetOf(leaf) {
+    const view = leaf && !leaf.isDeferred ? leaf.view : null;
+    if (view instanceof MarkdownView) return view.file ? { file: view.file } : null;
+    const canvas = view && view.canvas;
+    if (!canvas || !canvas.selection) return null;
+    const picked = Array.from(canvas.selection).filter((n) => n && n.nodeEl && typeof n.getData === 'function');
+    if (picked.length !== 1) return { none: 'Select a card to see its properties.' };
+    const node = picked[0];
+    let data = {};
+    try {
+      data = node.getData() || {};
+    } catch (err) {
+      data = {};
+    }
+    if (data.type === 'file') {
+      const file = typeof data.file === 'string' ? this.app.vault.getAbstractFileByPath(data.file) : null;
+      if (file instanceof TFile && file.extension === 'md') return { file };
+      return { none: 'Only notes and text cards have properties.' };
+    }
+    if ((data.type || 'text') === 'text' && typeof node.setText === 'function') return { card: node };
+    return { none: 'Only notes and text cards have properties.' };
+  }
+
   toggle(leaf, trigger) {
-    const file = leaf.view instanceof MarkdownView ? leaf.view.file : null;
-    if (this.isOpen() && this.file === file) {
+    const target = this.targetOf(leaf);
+    if (target && target.none) {
+      new Notice(target.none);
+      return;
+    }
+    if (!target) return;
+    if (this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
       this.close();
       return;
     }
     this.close();
-    this.open(leaf, trigger);
+    this.open(leaf, trigger, target);
   }
 
   /** Sections in the order they appear, subject to settings. */
@@ -201,14 +266,21 @@ class PropertiesPanel extends Feature {
     return sections;
   }
 
-  open(leaf, trigger) {
+  open(leaf, trigger, target) {
     if (!this.popupEl) return;
-    const file = leaf.view instanceof MarkdownView ? leaf.view.file : null;
-    if (!file) return;
+    target = target || this.targetOf(leaf);
+    if (!target || target.none) return;
 
-    this.file = file;
     this.leaf = leaf;
-    this.mount();
+    if (target.card) {
+      this.card = target.card;
+      this.file = null;
+      this.mountCard();
+    } else {
+      this.card = null;
+      this.file = target.file;
+      this.mount();
+    }
 
     // Shown first: the panel is display:none until then, and an
     // unrendered element measures zero, defeating the edge clamp.
@@ -247,6 +319,85 @@ class PropertiesPanel extends Feature {
     const lead = leadProperty(this.app, file, false);
     if (lead) info.createDiv({ cls: 'dr-props-lead', text: lead });
     this.fillMeta(info.createDiv({ cls: 'dr-props-meta' }), file);
+  }
+
+  /**
+   * A text card's properties: each as a row to change or take away, and
+   * a row to add one. They're kept at the top of its text, which the card
+   * itself doesn't show.
+   */
+  mountCard() {
+    const node = this.card;
+    this.popupEl.empty();
+    this.sections = [];
+    const text = (node.getData() || {}).text || '';
+    const parsed = cardFrontmatter(text);
+    const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
+    const info = head.createDiv({ cls: 'dr-props-info' });
+    const first = parsed.body.split('\n').map((l) => plainMarkdownLine(l)).find(Boolean);
+    info.createDiv({ cls: 'dr-props-title', text: first || 'Card' });
+    info.createDiv({ cls: 'dr-props-meta', text: 'A card on this canvas' });
+    const list = this.popupEl.createDiv({ cls: 'dr-card-props' });
+    if (!parsed.data) {
+      list.createDiv({ cls: 'dr-card-props-note', text: 'Its properties can’t be read: look at the lines between --- at its top.' });
+      return;
+    }
+    const keys = Object.keys(parsed.data);
+    keys.forEach((key) => this.cardRow(list, key, parsed.data[key]));
+    if (!keys.length) list.createDiv({ cls: 'dr-card-props-note', text: 'No properties yet.' });
+    const add = this.popupEl.createDiv({ cls: 'dr-card-props-add' });
+    const keyIn = add.createEl('input', { type: 'text', cls: 'dr-card-props-key-in' });
+    keyIn.placeholder = 'Property';
+    const valIn = add.createEl('input', { type: 'text', cls: 'dr-card-props-value' });
+    valIn.placeholder = 'Value';
+    const button = add.createEl('button', { text: 'Add' });
+    const commit = () => {
+      const key = keyIn.value.trim();
+      if (key) this.setCardProperty(key, cardValue(valIn.value, parsed.data[key]));
+    };
+    button.addEventListener('click', commit);
+    [keyIn, valIn].forEach((input) =>
+      input.addEventListener('keydown', (evt) => {
+        if (evt.key !== 'Enter') return;
+        evt.preventDefault();
+        commit();
+      })
+    );
+  }
+
+  cardRow(list, key, value) {
+    const row = list.createDiv({ cls: 'dr-card-props-row' });
+    row.createDiv({ cls: 'dr-card-props-key', text: key });
+    const input = row.createEl('input', { type: 'text', cls: 'dr-card-props-value' });
+    input.value = Array.isArray(value) ? value.join(', ') : value === null || value === undefined ? '' : String(value);
+    input.addEventListener('change', () => this.setCardProperty(key, cardValue(input.value, value)));
+    const remove = row.createDiv({ cls: 'clickable-icon dr-card-props-remove' });
+    remove.setAttribute('aria-label', 'Remove');
+    setIcon(remove, 'x');
+    remove.addEventListener('click', () => this.setCardProperty(key, undefined));
+  }
+
+  /** A text card's property set, or taken away (undefined), at the top of its text. Saved, a step of Undo. */
+  setCardProperty(key, value) {
+    const node = this.card;
+    if (!node) return;
+    const text = (node.getData() || {}).text || '';
+    const parsed = cardFrontmatter(text);
+    if (!parsed.data) return;
+    const data = Object.assign({}, parsed.data);
+    if (value === undefined) delete data[key];
+    else data[key] = value;
+    const next = withCardFrontmatter(data, parsed.body);
+    if (next !== text) {
+      node.setText(next);
+      try {
+        if (node.canvas && typeof node.canvas.requestSave === 'function') node.canvas.requestSave();
+      } catch (err) {
+        /* saved with the canvas's next change */
+      }
+    }
+    this.mountCard();
+    if (this.trigger && this.trigger.isConnected) this.place(this.trigger);
   }
 
   /** "Folder · 4 min read · Edited Yesterday". The length arrives once it's counted. */
@@ -340,6 +491,7 @@ class PropertiesPanel extends Feature {
     this.sections.forEach((sec) => sec.destroy());
     this.sections = [];
     this.file = null;
+    this.card = null;
     this.leaf = null;
 
     // Each section takes its own suggestion lists with it; other

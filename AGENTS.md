@@ -82,17 +82,23 @@ Coffee N' Christmas.
 ## Working here
 
 - Test lightly, the author wants it quick: before pushing, run the simulation
-  suites the change touches (`node tests/run.js qol album`), and an Obsidian
-  test only for what can't be checked otherwise — just the tests for it
-  (`--mochaOpts.grep`), on the latest version (`WDIO_LATEST_ONLY=1`). CI runs everything on both
-  versions after the push; fix what it finds. CI keeps only a few screenshots.
+  suites the change touches (`node tests/run.js qol album`: a line per suite,
+  details only on failure), and a real-Obsidian test only for what can't be
+  checked otherwise: `tests/e2e.sh "test name"` (latest version only, prints
+  just the outcome; the full log is `logs/e2e.log`). CI runs everything on
+  both versions after the push; fix what it finds.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
-- CI results (summary, test output, a few screenshots from the latest real
-  Obsidian, and a compatibility report of the internals the plugin uses) are
-  published to the `ci-results` branch:
-  `git fetch origin +ci-results:refs/remotes/origin/ci-results` (the clone is
-  single-branch), then `git show origin/ci-results:summary.txt`. The
-  screenshots are the real app, but look at one only when a UI change needs
-  checking: the author wants usage kept down.
+- After pushing, run `tests/ci.sh` once (with a long timeout): it waits for
+  CI and prints how it went, whether it was released, and only the failing
+  lines. Don't check CI by hand in a loop.
+- Keep usage down, the author pays for it:
+  - No throwaway probe scripts in real Obsidian when a simulation or an
+    existing test can show it.
+  - Don't read a large `src/` file whole: grep, then read the lines needed.
+  - Long output goes through `tail`/`grep` or into a file, never in full.
+  - CI results (summary, test output, a few screenshots, a report of the
+    internals used) are on the `ci-results` branch; `tests/ci.sh` reads what
+    matters. Look at a screenshot only when a UI change can't be checked
+    otherwise.
 - Replies to the author: short, plain, no version-number bookkeeping.

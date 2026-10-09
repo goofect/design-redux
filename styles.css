@@ -6234,6 +6234,67 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   color: var(--color-yellow, var(--text-accent));
 }
 
+/* A text card's properties, in the properties panel. */
+.dr-card-props {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 12px 8px;
+}
+
+.dr-card-props-row,
+.dr-card-props-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dr-card-props-key {
+  flex: 0 0 34%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-card-props-row .dr-card-props-value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-card-props-add {
+  padding: 4px 12px 12px;
+}
+
+.dr-card-props-add input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dr-card-props-note {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+/* A card dragged over another it would hang from, dropped there. */
+.canvas-node[data-dr-drop-target] > .canvas-node-container {
+  box-shadow: 0 0 0 3px var(--interactive-accent);
+}
+
+/* Title and details: a text card's first line as its title, the rest
+   smaller beneath it. Headings keep their own size. */
+body.dr-card-titles .canvas-node.dr-text-card .markdown-preview-pusher ~ div:not(.el-h1):not(.el-h2):not(.el-h3):not(.el-h4):not(.el-h5):not(.el-h6) {
+  font-size: 0.88em;
+  color: var(--text-muted);
+}
+
+body.dr-card-titles .canvas-node.dr-text-card :is(.markdown-preview-pusher + .el-p, .markdown-preview-pusher + .mod-frontmatter + .el-p) > p::first-line {
+  font-size: 1.25em;
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-normal);
+}
+
 /* Tucked into a fold: not drawn, nor the arrows inside the fold. */
 .canvas-node.dr-tucked {
   display: none !important;
