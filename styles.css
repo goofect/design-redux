@@ -6898,3 +6898,19 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
     transition: none;
   }
 }
+
+/* -- how deep a card is: weight, not colour ----------------------------- */
+
+.canvas-node[data-dr-depth="0"] > .canvas-node-container {
+  border-width: 3px;
+}
+
+.canvas-node[data-dr-depth="0"] .canvas-node-content {
+  font-size: 1.12em;
+  font-weight: var(--font-bold);
+}
+
+.canvas-node[data-dr-depth="1"] .canvas-node-content {
+  font-size: 1.04em;
+  font-weight: var(--font-semibold);
+}

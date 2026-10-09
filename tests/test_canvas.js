@@ -73,7 +73,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1612,6 +1612,22 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(views.back(view), false, 'nothing further back');
     views.cleanup(view, state);
     assert.ok(!/remember/.test(String(canvas.zoomToBbox)), 'the canvas’s own put back');
+  });
+
+  await t('how deep each card is from its tree’s root, marked for the styles; a card in no tree left be', () => {
+    const view = fakeCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, 0, 100, 50), card('a1', 400, 0, 100, 50), card('a2', 600, 0, 100, 50), card('lone', 0, 300, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a1', 'a2', 'right', 'left'), edge('a2', 'r', 'right', 'left')],
+    });
+    view.canvas.edges.get('a2-r').unknownData = { drRelated: true };
+    assert.deepStrictEqual(Array.from(R.treeDepths(R.canvasModel(view.canvas)).entries()), [['r', 0], ['a', 1], ['a1', 2], ['a2', 3]], 'a related arrow back makes no loop');
+    const depth = new R.CanvasDepth({ settings: { canvasDepth: true }, app: {} });
+    depth.pass(view);
+    const marks = ['r', 'a', 'a1', 'a2', 'lone'].map((id) => view.canvas.nodes.get(id).nodeEl.dataset.drDepth);
+    assert.deepStrictEqual(marks, ['0', '1', '2', '2', undefined]);
+    depth.plugin.settings.canvasDepth = false;
+    depth.pass(view);
+    assert.strictEqual(view.canvas.nodes.get('r').nodeEl.dataset.drDepth, undefined);
   });
 
   await t('a card grows to fit what’s typed in it, a card below moving just far enough, and shrinks back no further than it was', () => {

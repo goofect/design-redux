@@ -563,6 +563,33 @@ describe('Design Redux in Obsidian', function () {
     expect(saved.a1).toBe(again.a1[1]);
   });
 
+  it('gives a tree’s root card, and the cards a step from it, more weight', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getFileByPath('Depth.canvas');
+      if (old) await app.vault.delete(old);
+      const card = (id, x) => ({ id, type: 'text', text: id, x, y: 0, width: 160, height: 60 });
+      await app.vault.create('Depth.canvas', JSON.stringify({
+        nodes: [card('root', 0), card('one', 240), card('two', 480)],
+        edges: [{ id: 'e1', fromNode: 'root', fromSide: 'right', toNode: 'one', toSide: 'left' }, { id: 'e2', fromNode: 'one', fromSide: 'right', toNode: 'two', toSide: 'left' }],
+      }));
+    });
+    await obsidianPage.openFile('Depth.canvas');
+    const looks = await readUntil(() => browser.executeObsidian(({ app }) => {
+      const out = {};
+      app.workspace.activeLeaf.view.canvas.nodes.forEach((n, id) => {
+        const content = n.nodeEl.querySelector('.canvas-node-content');
+        const box = n.nodeEl.querySelector('.canvas-node-container');
+        out[id] = content && box ? [n.nodeEl.dataset.drDepth, Number(getComputedStyle(content).fontWeight), getComputedStyle(box).borderTopWidth] : null;
+      });
+      return out;
+    }), (v) => v.root && v.root[0] === '0');
+    expect(looks.root[0]).toBe('0');
+    expect(looks.root[1]).toBeGreaterThanOrEqual(700);
+    expect(looks.root[2]).toBe('3px');
+    expect(looks.one[0]).toBe('1');
+    expect(looks.one[1]).toBeGreaterThan(looks.two[1]);
+  });
+
   it('opens a card and a group an earlier version folded; a card has no fold of its own', async function () {
     // As an earlier version left them: a card folded to its title, and a
     // group folded with its card tucked inside, what's below closed up.
