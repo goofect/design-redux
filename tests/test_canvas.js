@@ -1181,8 +1181,20 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(titles.some((t) => /causes/.test(t)) || titles.includes('Relationship'), titles.join());
     assert.ok(titles.includes('Make related, not a branch'));
 
-    rel.setLabel(view, [ac], 'contrasts with');
-    assert.strictEqual(ac.data.label, 'contrasts with');
+    // A kind: its name as the label, the kind kept apart, its colour; None takes them away.
+    rel.setRelation(view, [ac], { name: 'contrasts with', line: 'dotted', color: '1' });
+    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color], ['contrasts with', 'contrasts with', '1']);
+    rel.show(view, 'contrasts with');
+    assert.ok(view.contentEl.classList.contains('dr-relation-only'));
+    assert.ok(ac.lineGroupEl.classList.contains('dr-relation-lit') && view.canvas.nodes.get('c').nodeEl.classList.contains('dr-relation-lit'));
+    assert.ok(!view.canvas.edges.get('a-b').lineGroupEl.classList.contains('dr-relation-lit'));
+    rel.show(view, null);
+    assert.ok(!view.contentEl.classList.contains('dr-relation-only'));
+    p.settings.canvasRelationTypes = [{ name: 'contrasts with', line: 'dotted', color: '1' }];
+    rel.setRelation(view, [ac], null);
+    assert.deepStrictEqual([ac.data.label, ac.unknownData.drRelation, ac.data.color], [undefined, undefined, undefined]);
+    rel.setRelation(view, [ac], rel.typeNamed('contrasts with'));
+    p.settings.canvasRelationTypes = [];
     const saves = view.canvas.saves;
     rel.setRelated(view, [ac], true);
     assert.strictEqual(ac.unknownData.drRelated, true);
@@ -1193,9 +1205,10 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     rel.setRelated(view, [ac], false);
     assert.deepStrictEqual(R.arrowLinks(R.canvasModel(view.canvas)).children.get('a'), ['b', 'c']);
     assert.ok(!ac.lineGroupEl.classList.contains('dr-related-edge'));
-    // The names are the setting's, when there are some.
+    // The kinds: as set; else names set before kinds had looks, each as its default; else the defaults.
+    assert.strictEqual(rel.names().length, 8);
     p.settings.canvasRelationNames = 'causes, causes, refutes';
-    assert.deepStrictEqual(rel.names(), ['causes', 'refutes']);
+    assert.deepStrictEqual(rel.types(), [{ name: 'causes', line: 'solid', color: '' }, { name: 'refutes', line: 'solid', color: '' }]);
   });
 
   await t('looking a canvas over: loose, empty and twice-named cards, notes gone, and arrows round in a circle', () => {

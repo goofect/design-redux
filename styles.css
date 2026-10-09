@@ -6879,3 +6879,22 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   outline: 1.5px dashed var(--text-faint);
   outline-offset: 3px;
 }
+
+/* -- one kind of relationship shown alone ------------------------------- */
+
+.dr-relation-only .canvas-node:not(.dr-relation-lit) {
+  opacity: 0.15;
+  transition: opacity 150ms ease;
+}
+
+.dr-relation-only .canvas-edges > g:not(.dr-relation-lit),
+.dr-relation-only .canvas-edges > svg > g:not(.dr-relation-lit),
+.dr-relation-only .canvas-path-label-wrapper:not(.dr-relation-lit) {
+  opacity: 0.12;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-relation-only .canvas-node:not(.dr-relation-lit) {
+    transition: none;
+  }
+}

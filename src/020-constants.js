@@ -156,6 +156,8 @@ const DEFAULTS = {
   canvasRelations: true,
   // Empty: the names the plugin starts with.
   canvasRelationNames: '',
+  // Kinds of relationship, each { name, line, color }; empty: the kinds it starts with.
+  canvasRelationTypes: [],
   // A command listing what on a canvas wants a look: loose, empty, twice-named cards.
   canvasCheck: true,
   // A folder or tag made into a canvas of its notes.
