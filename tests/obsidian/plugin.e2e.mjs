@@ -574,6 +574,8 @@ describe('Design Redux in Obsidian', function () {
       }));
     });
     await obsidianPage.openFile('Depth.canvas');
+    // In view: older versions draw a card's insides only once it's on screen.
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.zoomToFit());
     const looks = await readUntil(() => browser.executeObsidian(({ app }) => {
       const out = {};
       app.workspace.activeLeaf.view.canvas.nodes.forEach((n, id) => {
