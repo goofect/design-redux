@@ -68,6 +68,30 @@ settings:
 
 */
 
+/* Map -------------------------------------------------------------------------
+ *
+ * In this order; search for a heading to go to it.
+ *   Foundation, Shared — the measures, the looks and density; what every part shares
+ *   Properties panel … Collapsible section headings — the properties popup
+ *   Library editor, in settings; Settings; Settings: search… — the settings tab
+ *   Browse … Nothing chosen yet; Home; Search; Browse categories — the browse view
+ *   Navigation; One content area; The panel's title block — the single-area workspace
+ *   Context strip; The strip while browsing — the strip
+ *   Library sidebar; The panel; Getting the sidebar back — the left panel
+ *   Touch; Phone — larger targets, and the phone's own layout
+ *   Lettered and roman numeral lists; Superscript and subscript; Quiet links;
+ *     Footnotes — in notes
+ *   Property filters in the graph; Filters in effect — the graph
+ *   Bulk edits; Property tools; Editing properties; The Properties window
+ *   Generated covers; Drawn covers; Choosing a cover colour; Artwork where
+ *     there's none; Covers by dropping — covers
+ *   Arranging by drag; Editing an album
+ *   Canvas legend; Arrow styles; Folding canvas branches; Canvas outline;
+ *     Canvas: focus on a branch, and the canvas features after it
+ * Each part uses the foundation's tokens; a value written out by hand is
+ * a measure of that part's own (a cover's artwork, a canvas glyph).
+ */
+
 /* Foundation --------------------------------------------------------------------
  *
  * The plugin's own measures, so everything it draws keeps to one system:
@@ -470,6 +494,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   align-items: flex-start;
   gap: var(--dr-gutter);
   padding: var(--dr-space-2) 2px;
+  position: relative;
 }
 
 .dr-props-popup .dr-rows .dr-row + .dr-row {
@@ -482,10 +507,6 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
  * reads as a list; on touch, where nothing is pointed at, faintly there.
  * The grip sits out in the panel's margin, keeping the label column put.
  */
-
-.dr-props-popup .dr-row {
-  position: relative;
-}
 
 .dr-props-popup .dr-row-grip {
   position: absolute;
@@ -607,6 +628,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   cursor: pointer;
   opacity: 0;
   transition: opacity var(--dr-dur-fast) var(--dr-ease);
+  touch-action: none;
+  cursor: grab;
 }
 
 .dr-props-popup .dr-key-icon:focus-visible {
@@ -637,11 +660,6 @@ body.is-mobile .dr-props-popup .dr-row-remove {
  * panel; the row being moved lifts, and the list says what's happening
  * with the cursor until it's let go.
  */
-
-.dr-props-popup .dr-key-icon {
-  touch-action: none;
-  cursor: grab;
-}
 
 .dr-props-popup .dr-rows.is-sorting,
 .dr-props-popup .dr-rows.is-sorting * {
@@ -2306,7 +2324,6 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   transition: transform var(--dr-dur-fast) var(--dr-ease);
 }
 
-
 .dr-card:focus-visible {
   outline: none;
 }
@@ -3082,15 +3099,12 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   padding: 2px var(--dr-space-2);
   border-radius: var(--dr-radius-pill);
   cursor: pointer;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-strip-now:focus-visible {
   background-color: var(--background-modifier-hover);
   outline: none;
-}
-
-.dr-strip-now {
-  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 @media (any-hover: hover) {
@@ -4367,12 +4381,10 @@ body.is-phone.dr-typing .dr-strip {
 
 body.is-phone .dr-strip-now {
   padding: 0 var(--dr-space-1) 0 0;
+  order: 1;
 }
 
 /* A mini player keeps its art at the edge: « » sit together after it. */
-body.is-phone .dr-strip-now {
-  order: 1;
-}
 
 body.is-phone .dr-strip-skip[data-action="previous"] {
   order: 2;
@@ -5111,7 +5123,7 @@ body.is-mobile .dr-bulk-chip {
  * without artwork gets one made for it.
  */
 
-.is-generated {
+:where([class*="dr-"]).is-generated {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5141,7 +5153,7 @@ body.is-mobile .dr-bulk-chip {
 
 /* A colour of its own, or one for all: lighter to darker in that colour,
  * rather than the drift between two hues a name gets. */
-.is-generated.is-tinted {
+:where([class*="dr-"]).is-generated.is-tinted {
   background-color: hsl(var(--dr-gen-h), var(--dr-gen-s), var(--dr-gen-l));
   background-image: linear-gradient(
     135deg,
@@ -5151,7 +5163,7 @@ body.is-mobile .dr-bulk-chip {
 }
 
 /* The theme's accent, read live, so changing it repaints them. */
-.is-generated.is-accent {
+:where([class*="dr-"]).is-generated.is-accent {
   --dr-gen-h: var(--accent-h, 352);
   --dr-gen-s: var(--accent-s, 95%);
   --dr-gen-l: var(--accent-l, 58%);
@@ -6176,7 +6188,7 @@ body.dr-strip-flat .dr-strip {
   display: none;
 }
 
-[class].is-blank.is-hued {
+:where([class*="dr-"])[class].is-blank.is-hued {
   background-color: hsl(var(--dr-gen-h, 210) 30% 84%);
   background-image: linear-gradient(
     145deg,
@@ -6190,7 +6202,7 @@ body.dr-strip-flat .dr-strip {
   opacity: 0.7;
 }
 
-.theme-dark [class].is-blank.is-hued {
+.theme-dark :where([class*="dr-"])[class].is-blank.is-hued {
   background-color: hsl(var(--dr-gen-h, 210) 18% 24%);
   background-image: linear-gradient(
     145deg,
@@ -7121,9 +7133,6 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 /* Folding canvas branches ------------------------------------------------------ */
 
 /* A group lets presses through to the canvas behind it; what's ours on it takes its own. */
-.canvas-node .dr-branch-knob {
-  pointer-events: auto;
-}
 
 /* Holding a folded branch, a card sits on a little stack of them. */
 .canvas-node > .dr-stack {
@@ -7267,6 +7276,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   font-variant-numeric: tabular-nums;
   line-height: 1;
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .canvas-node .dr-branch-knob.is-bottom {
