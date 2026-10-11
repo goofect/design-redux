@@ -3862,6 +3862,12 @@ body.dr-single-area
 
 body:not(.dr-left-collapsed)
   .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
+  /* Above the main area, so its shadow is drawn over it every time —
+     not shown and hidden by turns as the main area's layers are redrawn
+     (a cover fading in, the album's glow, the strip's blur), which
+     flickered. */
+  position: relative;
+  z-index: 1;
   margin: var(--dr-space-2) 0 var(--dr-space-2) var(--dr-space-2);
   overflow: hidden;
   border: 1px solid var(--background-modifier-border);
