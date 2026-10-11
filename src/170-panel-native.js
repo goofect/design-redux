@@ -62,8 +62,7 @@ async function unlinkedMentions(app, target, limit = 5000) {
 /** A note's name and aliases — what counts as mentioning it. */
 function mentionNames(app, file) {
   const names = [file.basename];
-  const cache = app.metadataCache.getFileCache(file);
-  const fm = (cache && cache.frontmatter) || {};
+  const fm = noteProps(app, file);
   ['aliases', 'alias'].forEach((key) => {
     const raw = fm[key];
     (Array.isArray(raw) ? raw : raw ? [raw] : []).forEach((a) => {

@@ -486,8 +486,7 @@ function convertValue(value, type) {
 function propertiesIn(app, files) {
   const counts = new Map();
   files.forEach((file) => {
-    const cache = app.metadataCache.getFileCache(file);
-    const fm = (cache && cache.frontmatter) || {};
+    const fm = noteProps(app, file);
     Object.keys(fm).forEach((k) => {
       if (k === 'position') return;
       const low = k.toLowerCase();
@@ -891,10 +890,7 @@ class BulkEdits {
   }
 
   frontmatterOf(file) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    const fm = Object.assign({}, (cache && cache.frontmatter) || {});
-    delete fm.position;
-    return fm;
+    return noteProps(this.app, file);
   }
 
   /**

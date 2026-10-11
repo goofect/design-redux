@@ -43,8 +43,7 @@ function valueText(value) {
  * from somewhere and a blank line reads as a mistake.
  */
 function leadProperty(app, file, fallbackToFolder) {
-  const cache = app.metadataCache.getFileCache(file);
-  const fm = (cache && cache.frontmatter) || {};
+  const fm = noteProps(app, file);
   for (const key of LEAD_PROPERTIES) {
     const text = valueText(fmGet(fm, key));
     if (text) return text;

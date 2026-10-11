@@ -22,6 +22,17 @@ function orderKeys(fm, order) {
   entries.forEach(([k, v]) => (fm[k] = v));
 }
 
+/** A note's properties as Obsidian read them, without its own bookkeeping: {} for none, or for a file that isn't a note. */
+function noteProps(app, file) {
+  const cache = file ? app.metadataCache.getFileCache(file) : null;
+  const fm = (cache && cache.frontmatter) || {};
+  const out = {};
+  Object.keys(fm).forEach((k) => {
+    if (k !== 'position') out[k] = fm[k];
+  });
+  return out;
+}
+
 class Notes {
   constructor(plugin) {
     this.plugin = plugin;
@@ -33,13 +44,7 @@ class Notes {
 
   /** A note's properties as Obsidian read them, without its own bookkeeping. */
   props(file) {
-    const cache = file ? this.app.metadataCache.getFileCache(file) : null;
-    const fm = (cache && cache.frontmatter) || {};
-    const out = {};
-    Object.keys(fm).forEach((k) => {
-      if (k !== 'position') out[k] = fm[k];
-    });
-    return out;
+    return noteProps(this.app, file);
   }
 
   /** One property by name, whatever case the note writes it in. */

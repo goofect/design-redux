@@ -282,8 +282,7 @@ class LibraryCheck extends Feature {
       // A note saying it's an album, without being a folder note.
       this.app.vault.getMarkdownFiles().forEach((f) => {
         if (this.plugin.isFolderNote(f)) return;
-        const cache = this.app.metadataCache.getFileCache(f);
-        const kind = valueList(fmGet((cache && cache.frontmatter) || {}, ALBUM_KEYS.type))[0];
+        const kind = valueList(fmGet(noteProps(this.app, f), ALBUM_KEYS.type))[0];
         // Only the kinds it knows: an album property can mean a record's album.
         if (kind && ALBUM_TYPES.some((t) => t.id === String(kind).toLowerCase())) add('hierarchy', f, 'roles', `Says it’s a ${kind} album, but isn’t a folder’s note`);
       });
@@ -291,8 +290,7 @@ class LibraryCheck extends Feature {
     // Notes whose parents lead round to themselves.
     const key = this.settings.graphRouteProperty || 'parent';
     const parentOf = (f) => {
-      const cache = this.app.metadataCache.getFileCache(f);
-      const v = valueList(fmGet((cache && cache.frontmatter) || {}, key))[0];
+      const v = valueList(fmGet(noteProps(this.app, f), key))[0];
       return v ? this.app.metadataCache.getFirstLinkpathDest(plainValue(v), f.path) : null;
     };
     this.app.vault.getMarkdownFiles().forEach((f) => {
@@ -318,8 +316,7 @@ class LibraryCheck extends Feature {
         const info = infos.get(folder);
         const note = info.note;
         if (!note) return;
-        const cache = this.app.metadataCache.getFileCache(note);
-        const fm = (cache && cache.frontmatter) || {};
+        const fm = noteProps(this.app, note);
         [ALBUM_KEYS.includes, ALBUM_KEYS.related, ALBUM_KEYS.featured].forEach((k) => {
           const seen = new Set();
           valueList(fmGet(fm, k)).forEach((v) => {
@@ -485,8 +482,7 @@ class LibraryCheck extends Feature {
     if (!files.length || !structure || !structure.enabled) return false;
     {
       const note = this.plugin.folderNote(folder);
-      const cache = note ? this.app.metadataCache.getFileCache(note) : null;
-      const before = valueList(fmGet((cache && cache.frontmatter) || {}, ALBUM_KEYS.includes));
+      const before = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes));
       const from = note ? note.path : `${folder.path}/x.md`;
       const have = structure.info(folder).includes;
       const added = files.filter((f) => have.indexOf(f) === -1).map((f) => `[[${this.app.metadataCache.fileToLinktext(f, from, true)}]]`);

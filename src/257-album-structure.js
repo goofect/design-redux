@@ -112,8 +112,7 @@ class AlbumStructure extends Feature {
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return empty;
     const note = this.plugin.folderNote(folder);
     if (!note) return empty;
-    const cache = this.app.metadataCache.getFileCache(note);
-    const fm = (cache && cache.frontmatter) || {};
+    const fm = noteProps(this.app, note);
     const type = String(valueList(fmGet(fm, ALBUM_KEYS.type))[0] || '').toLowerCase();
     const known = ALBUM_TYPES.find((t) => t.id === type);
     const missing = [];
@@ -269,8 +268,7 @@ class AlbumStructure extends Feature {
     const notes = files.filter((f) => f.extension === 'md');
     if (!notes.length) return null;
     const done = notes.filter((f) => {
-      const cache = this.app.metadataCache.getFileCache(f);
-      const fm = (cache && cache.frontmatter) || {};
+      const fm = noteProps(this.app, f);
       if (fmGet(fm, 'done') === true) return true;
       return valueList(fmGet(fm, 'status')).some((v) => DONE_VALUES.indexOf(v.toLowerCase()) !== -1);
     }).length;
@@ -343,8 +341,7 @@ class AlbumStructure extends Feature {
     const note = this.plugin.folderNote(folder);
     const from = note ? note.path : `${folder.path}/x.md`;
     const link = `[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`;
-    const cache = note ? this.app.metadataCache.getFileCache(note) : null;
-    const list = valueList(fmGet((cache && cache.frontmatter) || {}, ALBUM_KEYS.includes));
+    const list = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes));
     if (this.info(folder).includes.indexOf(file) !== -1) {
       new Notice(`${file.basename} is in ${folder.name} already.`);
       return false;
@@ -361,8 +358,7 @@ class AlbumStructure extends Feature {
   /** A note kept at the top of an album, or no longer: in its featured, by link. */
   async toggleFeatured(folder, file) {
     const note = this.plugin.folderNote(folder);
-    const cache = note ? this.app.metadataCache.getFileCache(note) : null;
-    const list = valueList(fmGet((cache && cache.frontmatter) || {}, ALBUM_KEYS.featured));
+    const list = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.featured));
     const from = note ? note.path : `${folder.path}/x.md`;
     const kept = list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), from) !== file);
     if (kept.length === list.length) kept.push(`[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`);

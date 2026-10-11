@@ -54,8 +54,7 @@ class BulkModal extends Modal {
     return this.bulk.notesFor(this.targets, this.reach).filter((file) => {
       if (this.excluded.has(file.path)) return false;
       if (!rows.length) return true;
-      const cache = this.app.metadataCache.getFileCache(file);
-      const fm = (cache && cache.frontmatter) || {};
+      const fm = noteProps(this.app, file);
       return rows.every((row) => whereHolds(fm, row));
     });
   }
@@ -1831,8 +1830,7 @@ const DEFAULTS_DELAY = 800;
 function propertyOverview(app, files) {
   const all = new Map();
   files.forEach((file) => {
-    const cache = app.metadataCache.getFileCache(file);
-    const fm = (cache && cache.frontmatter) || {};
+    const fm = noteProps(app, file);
     Object.keys(fm).forEach((key) => {
       if (key === 'position') return;
       const low = key.toLowerCase();
@@ -1869,8 +1867,8 @@ class PropertyListTool extends BulkModal {
     if (this.targets.length) return this.notes();
     const rows = this.where.filter(whereReady);
     return this.app.vault.getMarkdownFiles().filter((file) => {
-      const cache = rows.length ? this.app.metadataCache.getFileCache(file) : null;
-      return rows.every((row) => whereHolds((cache && cache.frontmatter) || {}, row));
+      const fm = rows.length ? noteProps(this.app, file) : {};
+      return rows.every((row) => whereHolds(fm, row));
     });
   }
 

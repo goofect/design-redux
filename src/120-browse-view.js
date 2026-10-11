@@ -2542,8 +2542,7 @@ class BrowseView extends ItemView {
 
   /** A note's property values, flattened for matching against. */
   propertyText(file) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    const fm = (cache && cache.frontmatter) || {};
+    const fm = noteProps(this.app, file);
     return Object.keys(fm)
       .filter((k) => k !== 'position')
       .map((k) => {

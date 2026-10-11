@@ -13,8 +13,7 @@ class PropertiesSection extends PanelSection {
   }
 
   get frontmatter() {
-    const cache = this.app.metadataCache.getFileCache(this.file);
-    return (cache && cache.frontmatter) || {};
+    return noteProps(this.app, this.file);
   }
 
   render() {

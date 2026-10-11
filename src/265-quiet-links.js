@@ -862,8 +862,7 @@ class QuietLinks extends Feature {
    */
   quietenProperties(el, sourcePath) {
     const file = sourcePath ? this.app.vault.getFileByPath(sourcePath) : null;
-    const cache = file ? this.app.metadataCache.getFileCache(file) : null;
-    const fm = (cache && cache.frontmatter) || {};
+    const fm = noteProps(this.app, file);
     el.querySelectorAll('.internal-link').forEach((link) => {
       if (link.classList.contains('dr-quiet-link')) return;
       const row = link.closest('[data-property-key], .dr-row[data-key]');

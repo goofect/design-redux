@@ -234,8 +234,7 @@ class SmartAlbums extends Feature {
     if (!keys.length) {
       const seen = new Set();
       this.app.vault.getMarkdownFiles().forEach((f) => {
-        const cache = this.app.metadataCache.getFileCache(f);
-        Object.keys((cache && cache.frontmatter) || {}).forEach((k) => k !== 'position' && seen.add(k));
+        Object.keys(noteProps(this.app, f)).forEach((k) => k !== 'position' && seen.add(k));
       });
       keys = Array.from(seen).sort(byName);
     }
