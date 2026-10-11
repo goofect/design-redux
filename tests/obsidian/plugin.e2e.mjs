@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view'];
+const SHOTS = ['album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -272,6 +272,97 @@ describe('Design Redux in Obsidian', function () {
     expect(report.body).toEqual([]);
     expect([report.panel, report.panelSample]).toEqual([0, []]);
     expect([report.page, report.pageSample]).toEqual([0, []]);
+  });
+
+  it('keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text', async function () {
+    const started = await browser.executeObsidian(({ app }) => (app.vault && typeof app.vault.getConfig === 'function' ? app.vault.getConfig('theme') : null) || 'moonstone');
+    // The album page, the library beside it; covers are measured on the home screen's tiles.
+    const covers = await browser.executeObsidian(async ({ plugins }) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      if (typeof library.reveal === 'function') await library.reveal();
+      await library.browseMode({ mode: 'home' });
+      await new Promise((r) => setTimeout(r, 600));
+      const page = document.querySelector('.workspace-leaf.mod-active .dr-browse') || document.querySelector('.dr-browse');
+      const tiles = Array.from(page.querySelectorAll('.dr-card-art, .dr-pick-art')).filter((c) => c.offsetWidth > 0);
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      return tiles.map((c) => Math.abs(c.offsetWidth - c.offsetHeight));
+    });
+    expect(covers.length).toBeGreaterThan(0);
+    covers.forEach((d) => expect(d).toBeLessThanOrEqual(1));
+    await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+    // Set the theme (Obsidian's dark or light) and the look, then measure what's on screen.
+    const measure = (theme, look, density) => browser.executeObsidian(async ({ app, plugins }, theme, look, density) => {
+      const plugin = plugins.designRedux;
+      const appearance = plugin.features.find((f) => f.constructor.name === 'Appearance');
+      if (typeof app.changeTheme === 'function') app.changeTheme(theme);
+      else if (app.vault && typeof app.vault.setConfig === 'function') {
+        app.vault.setConfig('theme', theme);
+        if (typeof app.updateTheme === 'function') app.updateTheme();
+      }
+      plugin.settings.look = look;
+      plugin.settings.gridDensity = density;
+      appearance.apply();
+      plugin.refreshBrowse();
+      await new Promise((r) => setTimeout(r, 400));
+      const lum = (rgb) => {
+        const [r, g, b] = (rgb.match(/[\d.]+/g) || ['0', '0', '0']).slice(0, 3).map((n) => {
+          const c = Number(n) / 255;
+          return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const behind = (el) => {
+        for (let e = el; e; e = e.parentElement) {
+          const c = getComputedStyle(e).backgroundColor;
+          const parts = c.match(/[\d.]+/g) || [];
+          if (parts.length >= 3 && (parts.length < 4 || Number(parts[3]) > 0.9)) return c;
+        }
+        return getComputedStyle(document.body).backgroundColor;
+      };
+      const contrast = (el) => {
+        if (!el) return 99;
+        const a = lum(getComputedStyle(el).color);
+        const b = lum(behind(el));
+        return Math.round(((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)) * 100) / 100;
+      };
+      const page = document.querySelector('.workspace-leaf.mod-active .dr-browse') || document.querySelector('.dr-browse');
+      const control = parseFloat(getComputedStyle(document.body).getPropertyValue('--dr-control-size'));
+      const shown = (el) => el.offsetWidth > 0 && el.offsetHeight > 0;
+      return {
+        dark: document.body.classList.contains('theme-dark'),
+        control,
+        buttons: Array.from(document.querySelectorAll('.dr-strip .dr-strip-btn:not(.is-secondary)')).filter(shown).map((b) => [b.offsetWidth, b.offsetHeight]),
+        rows: Array.from(document.querySelectorAll('.dr-library .dr-lib-row')).filter(shown).map((r) => [Math.round(parseFloat(getComputedStyle(r).minHeight)), r.offsetHeight]),
+        title: contrast(page.querySelector('.dr-detail-title')),
+        meta: contrast(page.querySelector('.dr-detail-meta')),
+      };
+    }, theme, look, density);
+    const check = (m, label) => {
+      m.buttons.forEach(([w, h]) => expect([label, w, h]).toEqual([label, m.control, m.control]));
+      m.rows.forEach(([min, h]) => expect([label, h >= min]).toEqual([label, true]));
+      expect([label, m.title >= 4.5, m.meta >= 4.5]).toEqual([label, true, true]);
+    };
+    const dark = await measure('obsidian', 'theme', 'standard');
+    check(dark, 'dark');
+    expect(dark.dark).toBe(true);
+    expect(dark.rows.length).toBeGreaterThan(0);
+    expect(dark.rows[0][0]).toBe(32);
+    const editorial = await measure('obsidian', 'editorial', 'standard');
+    check(editorial, 'editorial, dark');
+    await shot('album-editorial');
+    check(await measure('moonstone', 'editorial', 'standard'), 'editorial, light');
+    const light = await measure('moonstone', 'theme', 'standard');
+    check(light, 'light');
+    expect(light.dark).toBe(false);
+    await shot('album-light');
+    // Density: rows a unit tighter or looser.
+    const compact = await measure('obsidian', 'theme', 'compact');
+    const spacious = await measure('obsidian', 'theme', 'large');
+    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
+    check(compact, 'compact');
+    check(spacious, 'spacious');
+    // Back as it was, for the tests after.
+    await measure(started, 'theme', 'standard');
   });
 
   it('opens an album with its map embedded, or its folder note as an overview', async function () {
