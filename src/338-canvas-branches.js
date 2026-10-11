@@ -30,30 +30,12 @@ class CanvasBranches extends CanvasFeature {
   // Only the menus: nothing is drawn on the canvas.
   sync() {}
 
-  commands() {
+  actions() {
+    const one = (ctx) => (ctx.node && this.hasBranch(ctx.view, ctx.node) ? ctx.node : null);
     return [
-      {
-        id: 'tidy-canvas-branch',
-        name: 'Tidy the selected card’s branch',
-        icon: 'network',
-        check: () => !!this.settings.canvasTidy && !!this.target(this.pageCanvas()),
-        run: () => this.tidy(this.pageCanvas(), this.target(this.pageCanvas())),
-      },
-      {
-        id: 'select-canvas-branch',
-        name: 'Select the selected card’s branch',
-        icon: 'git-branch',
-        check: () => !!this.settings.canvasSelectBranch && !!this.target(this.pageCanvas()),
-        run: () => this.selectBranch(this.pageCanvas(), this.target(this.pageCanvas())),
-      },
+      { id: 'tidy-canvas-branch', name: 'Tidy the selected card’s branch', menu: 'Tidy branch', icon: 'network', on: 'canvas', when: (ctx) => !!this.settings.canvasTidy && !!one(ctx), run: (ctx) => this.tidy(ctx.view, one(ctx)) },
+      { id: 'select-canvas-branch', name: 'Select the selected card’s branch', menu: 'Select branch', icon: 'git-branch', on: 'canvas', when: (ctx) => !!this.settings.canvasSelectBranch && !!one(ctx), run: (ctx) => this.selectBranch(ctx.view, one(ctx)) },
     ];
-  }
-
-  /** The one selected card, if it has cards below it by its arrows. */
-  target(view) {
-    const selected = this.selectedNodes(view);
-    if (selected.length !== 1) return null;
-    return this.hasBranch(view, selected[0]) ? selected[0] : null;
   }
 
   hasBranch(view, node) {
@@ -61,29 +43,6 @@ class CanvasBranches extends CanvasFeature {
     const model = canvasModel(view.canvas);
     const rec = model.byId.get(node.id);
     return !!rec && !rec.tuck && !isGroupRecord(rec) && shownChildren(model, arrowLinks(model), rec.id).length > 0;
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!this.hasBranch(view, node)) return;
-    if (this.settings.canvasTidy) {
-      menu.addItem((item) =>
-        item
-          .setTitle('Tidy branch')
-          .setIcon('network')
-          .onClick(() => this.tidy(view, node))
-      );
-    }
-    if (this.settings.canvasSelectBranch) {
-      menu.addItem((item) =>
-        item
-          .setTitle('Select branch')
-          .setIcon('git-branch')
-          .onClick(() => this.selectBranch(view, node))
-      );
-    }
   }
 
   /** The branch laid out as a tree, and its arrows leaving and arriving on the sides the tree grows by. */

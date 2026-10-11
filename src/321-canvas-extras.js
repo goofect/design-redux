@@ -97,16 +97,8 @@ class CanvasFind extends CanvasFeature {
   // Nothing drawn on the canvas.
   sync() {}
 
-  commands() {
-    return [
-      {
-        id: 'find-canvas-card',
-        name: 'Find a card on the canvas',
-        icon: 'search',
-        check: () => this.enabled && !!this.pageCanvas(),
-        run: () => this.open(this.pageCanvas()),
-      },
-    ];
+  actions() {
+    return [{ id: 'find-canvas-card', name: 'Find a card on the canvas', menu: false, icon: 'search', on: 'canvas', when: () => this.enabled, run: (ctx) => this.open(ctx.view) }];
   }
 
   open(view) {
@@ -171,21 +163,27 @@ class CanvasFocus extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
+    const focused = (ctx) => !!this.focusOf(ctx.view);
+    const on = (ctx) => this.enabled && this.watched.has(ctx.view);
     return [
       {
         id: 'focus-canvas-branch',
         name: 'Focus on the selected card’s branch',
+        menu: (ctx) => (focused(ctx) ? 'Stop focusing' : 'Focus on branch'),
         icon: 'focus',
-        check: () => {
-          const view = this.pageCanvas();
-          return this.enabled && !!view && (this.focusOf(view) !== null || this.selectedNodes(view).length > 0);
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          if (this.focusOf(view)) this.setFocus(view, null);
-          else this.setFocus(view, this.selectedNodes(view).map((n) => n.id));
-        },
+        on: 'canvas',
+        when: (ctx) => on(ctx) && (focused(ctx) || ctx.nodes.length > 0),
+        run: (ctx) => this.setFocus(ctx.view, focused(ctx) ? null : ctx.nodes.map((n) => n.id)),
+      },
+      {
+        id: 'focus-canvas-near',
+        name: 'Focus on neighbourhood',
+        icon: 'radar',
+        on: 'canvas',
+        palette: false,
+        when: (ctx) => on(ctx) && !focused(ctx) && ctx.nodes.length > 0,
+        run: (ctx) => this.setFocus(ctx.view, ctx.nodes.map((n) => n.id), true),
       },
     ];
   }
@@ -203,27 +201,6 @@ class CanvasFocus extends CanvasFeature {
       else if (state.near && evt.key === '-') this.widen(view, -1);
     };
     view.containerEl.addEventListener('keydown', state.onKey);
-  }
-
-  addMenuItems(menu, nodes) {
-    const first = nodes[0];
-    const view = first && first.canvas && first.canvas.view;
-    if (!view || !this.watched.has(view)) return;
-    const on = !!this.focusOf(view);
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle(on ? 'Stop focusing' : 'Focus on branch')
-        .setIcon('focus')
-        .onClick(() => this.setFocus(view, on ? null : nodes.map((n) => n.id)))
-    );
-    if (!on) {
-      menu.addItem((item) =>
-        canvasAction(item)
-          .setTitle('Focus on neighbourhood')
-          .setIcon('radar')
-          .onClick(() => this.setFocus(view, nodes.map((n) => n.id), true))
-      );
-    }
   }
 
   /** A step further out round the cards focused on, or a step nearer; at least one. */
@@ -323,38 +300,14 @@ class CanvasDuplicate extends CanvasFeature {
   // Only the menus: nothing is drawn on the canvas.
   sync() {}
 
-  commands() {
-    return [
-      {
-        id: 'duplicate-canvas-branch',
-        name: 'Duplicate the selected card’s branch',
-        icon: 'copy-plus',
-        check: () => {
-          const view = this.pageCanvas();
-          return this.enabled && !!view && this.selectedNodes(view).length === 1;
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          this.duplicate(view, this.selectedNodes(view)[0]);
-        },
-      },
-    ];
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!view || !view.canvas || isGroupNode(node)) return;
-    const model = canvasModel(view.canvas);
-    const links = arrowLinks(model);
-    if (!(links.children.get(node.id) || []).length) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle('Duplicate branch')
-        .setIcon('copy-plus')
-        .onClick(() => this.duplicate(view, node))
-    );
+  actions() {
+    // One card, not a group, that leads somewhere.
+    const branch = (ctx) => {
+      const node = ctx.node;
+      if (!this.enabled || !node || isCanvasEdge(node) || isGroupNode(node)) return false;
+      return (arrowLinks(canvasModel(ctx.view.canvas)).children.get(node.id) || []).length > 0;
+    };
+    return [{ id: 'duplicate-canvas-branch', name: 'Duplicate the selected card’s branch', menu: 'Duplicate branch', icon: 'copy-plus', on: 'canvas', when: branch, run: (ctx) => this.duplicate(ctx.view, ctx.node) }];
   }
 
   /** The card and its branch copied, set beyond the original on the side its siblings line up. */

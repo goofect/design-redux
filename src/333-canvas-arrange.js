@@ -144,13 +144,16 @@ class CanvasArrange extends CanvasFeature {
     ];
   }
 
-  commands() {
+  // On menus as the Arrange group, in its sets (fillMenu).
+  actions() {
     return ARRANGE_ACTIONS.filter(Boolean).map((a) => ({
       id: `arrange-canvas-${a.id}`,
       name: `${a.title} of the selected cards`,
+      menu: false,
       icon: a.icon,
-      check: () => this.cards(this.pageCanvas()).length >= (a.least || 2),
-      run: () => this.arrange(this.pageCanvas(), a.id),
+      on: 'canvas',
+      when: (ctx) => this.enabled && this.cards(ctx.view).length >= (a.least || 2),
+      run: (ctx) => this.arrange(ctx.view, a.id),
     }));
   }
 

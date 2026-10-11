@@ -254,66 +254,81 @@ class CanvasRelations extends CanvasFeature {
     return block;
   }
 
-  commands() {
-    const arrows = () => this.selectedNodes(this.pageCanvas()).filter(isCanvasEdge);
-    return [
-      {
-        id: 'canvas-name-relationship',
-        name: 'Name how the selected arrows’ cards relate',
-        icon: 'tag',
-        check: () => this.enabled && arrows().length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          const edges = arrows();
-          new RelationPicker(this.app, this.names(), (name) => this.setRelation(view, edges, this.typeNamed(name))).open();
-        },
-      },
+  /** What an arrow's relationship can be made, and what can be found from them on the canvas. */
+  actions() {
+    // The arrows it's for — only arrows — on a canvas that can be changed.
+    const arrows = (ctx) => {
+      const edges = ctx.nodes.filter(isCanvasEdge);
+      return this.enabled && !ctx.view.canvas.readonly && edges.length === ctx.nodes.length ? edges : [];
+    };
+    const kindOf = (ctx) => {
+      const edges = arrows(ctx);
+      return edges.length === 1 ? relationOf(edges[0]) || String(edgeData(edges[0]).label || '') : null;
+    };
+    const typed = (ctx) => arrows(ctx).some((e) => relationInfo(e));
+    const related = (ctx) => arrows(ctx).every(isRelated);
+    const page = (id, name, icon, run) => ({ id, name, menu: false, icon, on: 'canvas', when: () => this.enabled, run: (ctx) => run(ctx.view) });
+    const kinds = this.types().map((t) => ({
+      id: `canvas-relation-${t.name}`,
+      name: t.name,
+      on: 'canvas',
+      group: 'kind',
+      palette: false,
+      checked: (ctx) => kindOf(ctx) === t.name,
+      when: (ctx) => arrows(ctx).length > 0,
+      run: (ctx) => this.setRelation(ctx.view, arrows(ctx), kindOf(ctx) === t.name ? null : t),
+    }));
+    return kinds.concat([
       {
         id: 'canvas-state-proposition',
         name: 'State a proposition with the selected arrow',
+        menu: 'Proposition…',
         icon: 'quote',
-        check: () => this.enabled && arrows().length === 1,
-        run: () => this.askProposition(this.pageCanvas(), arrows()[0]),
+        on: 'canvas',
+        group: 'kind',
+        checked: (ctx) => kindOf(ctx) === PROPOSITION,
+        when: (ctx) => arrows(ctx).length === 1,
+        run: (ctx) => this.askProposition(ctx.view, arrows(ctx)[0]),
+      },
+      { id: 'canvas-relation-none', name: 'None', icon: 'x', on: 'canvas', group: 'kind', palette: false, when: typed, run: (ctx) => this.setRelation(ctx.view, arrows(ctx), null) },
+      {
+        id: 'canvas-name-relationship',
+        name: 'Name how the selected arrows’ cards relate',
+        menu: false,
+        icon: 'tag',
+        on: 'canvas',
+        when: (ctx) => arrows(ctx).length > 0,
+        run: (ctx) => {
+          const edges = arrows(ctx);
+          new RelationPicker(this.app, this.names(), (name) => this.setRelation(ctx.view, edges, this.typeNamed(name))).open();
+        },
       },
       {
         id: 'canvas-reverse-relationship',
         name: 'Reverse the selected arrows’ relationship',
+        menu: 'Reverse the relationship',
         icon: 'arrow-left-right',
-        check: () => this.enabled && arrows().length > 0 && arrows().every((e) => this.canReverse(e)),
-        run: () => this.reverse(this.pageCanvas(), arrows()),
+        on: 'canvas',
+        group: 'arrow',
+        when: (ctx) => arrows(ctx).length > 0 && arrows(ctx).every((e) => this.canReverse(e)),
+        run: (ctx) => this.reverse(ctx.view, arrows(ctx)),
       },
       {
-        id: 'canvas-show-relationship',
-        name: 'Show one kind of relationship…',
-        icon: 'eye',
-        check: () => this.enabled && !!this.pageCanvas(),
-        run: () => this.chooseShown(this.pageCanvas()),
-      },
-      {
-        id: 'canvas-find-statement',
-        name: 'Find a statement on the canvas…',
-        icon: 'search',
-        check: () => this.enabled && !!this.pageCanvas(),
-        run: () => this.chooseStatement(this.pageCanvas()),
-      },
-      {
-        id: 'canvas-statements-note',
-        name: 'Make a note of what the canvas states',
-        icon: 'file-text',
-        check: () => this.enabled && !!this.pageCanvas(),
-        run: () => this.statementsNote(this.pageCanvas()),
-      },
-      {
+        // What a kind or proposition says decides that itself.
         id: 'canvas-toggle-related',
         name: 'Make the selected arrows related, or part of a branch again',
+        menu: (ctx) => (related(ctx) ? 'Make part of the branch' : 'Make related, not a branch'),
+        menuIcon: (ctx) => (related(ctx) ? 'git-branch' : 'git-compare-arrows'),
         icon: 'git-compare-arrows',
-        check: () => this.enabled && arrows().length > 0,
-        run: () => {
-          const edges = arrows();
-          this.setRelated(this.pageCanvas(), edges, !edges.every(isRelated));
-        },
+        on: 'canvas',
+        group: 'arrow',
+        when: (ctx) => arrows(ctx).length > 0 && !typed(ctx),
+        run: (ctx) => this.setRelated(ctx.view, arrows(ctx), !related(ctx)),
       },
-    ];
+      page('canvas-show-relationship', 'Show one kind of relationship…', 'eye', (view) => this.chooseShown(view)),
+      page('canvas-find-statement', 'Find a statement on the canvas…', 'search', (view) => this.chooseStatement(view)),
+      page('canvas-statements-note', 'Make a note of what the canvas states', 'file-text', (view) => this.statementsNote(view)),
+    ]);
   }
 
   register() {
@@ -342,58 +357,11 @@ class CanvasRelations extends CanvasFeature {
   }
 
   addEdgeItems(menu, edges) {
-    const view = edges[0] && edges[0].canvas && edges[0].canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    const kind = edges.length === 1 ? relationOf(edges[0]) || String(edgeData(edges[0]).label || '') : null;
-    const typed = edges.some((e) => relationInfo(e));
-    const related = edges.every(isRelated);
-    menuGroup(
-      menu,
-      'Relationship',
-      'tag',
-      (into, nested) => {
-        const name = (title) => (nested ? title : `Relationship: ${title}`);
-        this.types().forEach((t) => {
-          into.addItem((item) => {
-            item.setTitle(name(t.name)).setChecked(kind === t.name);
-            if (!nested) canvasAction(item);
-            item.onClick(() => this.setRelation(view, edges, kind === t.name ? null : t));
-          });
-        });
-        if (edges.length === 1) {
-          into.addItem((item) => {
-            item.setTitle(name('Proposition…')).setIcon('quote').setChecked(kind === PROPOSITION);
-            if (!nested) canvasAction(item);
-            item.onClick(() => this.askProposition(view, edges[0]));
-          });
-        }
-        if (typed) {
-          into.addItem((item) => {
-            item.setTitle(name('None')).setIcon('x');
-            if (!nested) canvasAction(item);
-            item.onClick(() => this.setRelation(view, edges, null));
-          });
-        }
-      },
-      'action'
-    );
-    if (edges.every((e) => this.canReverse(e))) {
-      menu.addItem((item) =>
-        canvasAction(item)
-          .setTitle('Reverse the relationship')
-          .setIcon('arrow-left-right')
-          .onClick(() => this.reverse(view, edges))
-      );
-    }
-    // What a kind or proposition says decides that itself.
-    if (!typed) {
-      menu.addItem((item) =>
-        canvasAction(item)
-          .setTitle(related ? 'Make part of the branch' : 'Make related, not a branch')
-          .setIcon(related ? 'git-branch' : 'git-compare-arrows')
-          .onClick(() => this.setRelated(view, edges, !related))
-      );
-    }
+    const ctx = canvasMenuContext(edges);
+    if (!ctx) return;
+    const all = this.actions();
+    addActionItems(menu, all.filter((a) => a.group === 'kind'), ctx, 'Relationship', 'tag', canvasAction);
+    addActionEntries(menu, all.filter((a) => a.group === 'arrow'), ctx, canvasAction);
   }
 
   /**

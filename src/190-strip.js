@@ -540,7 +540,7 @@ class ContextStrip extends Feature {
     // What can be done to it as a concept, the same as its menu offers.
     const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
     if (knowledge && knowledge.enabled && file.extension === 'md') {
-      button('waypoints', 'Concept', (evt) => showActionMenu(evt, knowledge.actions(), { file, from: 'strip' }), false, 'concept');
+      button('waypoints', 'Concept', (evt) => showActionMenu(evt, actionsOn(knowledge.actions(), 'note'), { file, from: 'strip' }), false, 'concept');
     }
 
     button('info', 'Properties', (evt) => {

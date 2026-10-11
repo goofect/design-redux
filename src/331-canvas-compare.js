@@ -149,41 +149,18 @@ class CanvasCompare extends CanvasFeature {
     ];
   }
 
-  commands() {
-    const view = () => (this.enabled ? this.pageCanvas() : null);
+  actions() {
+    const on = (ctx) => this.enabled && !!ctx.view;
+    // Two cards, and nothing else, to compare the branches of.
+    const two = (ctx) => {
+      const cards = ctx.nodes.filter((n) => !isCanvasEdge(n));
+      return on(ctx) && this.watched.has(ctx.view) && cards.length === 2 && cards.length === ctx.nodes.length ? cards : null;
+    };
     return [
-      {
-        id: 'canvas-keep-snapshot',
-        name: 'Keep a snapshot of this canvas, to compare with later',
-        icon: 'camera',
-        check: () => !!view(),
-        run: () => this.keepSnapshot(view()),
-      },
-      {
-        id: 'canvas-compare',
-        name: 'Compare this canvas with…',
-        icon: 'git-compare',
-        check: () => !!view(),
-        run: () => this.chooseOther(view()),
-      },
-      {
-        id: 'canvas-compare-branches',
-        name: 'Compare the two selected cards’ branches',
-        icon: 'columns-2',
-        check: () => !!view() && this.selectedNodes(view()).filter((n) => !isCanvasEdge(n)).length === 2,
-        run: () => {
-          const v = view();
-          const [a, b] = this.selectedNodes(v).filter((n) => !isCanvasEdge(n));
-          this.showBranches(v, a, b);
-        },
-      },
-      {
-        id: 'canvas-compare-done',
-        name: 'Stop comparing',
-        icon: 'x',
-        check: () => !!view() && !!this.diffOf(view()),
-        run: () => this.done(view()),
-      },
+      { id: 'canvas-keep-snapshot', name: 'Keep a snapshot of this canvas, to compare with later', menu: false, icon: 'camera', on: 'canvas', when: on, run: (ctx) => this.keepSnapshot(ctx.view) },
+      { id: 'canvas-compare', name: 'Compare this canvas with…', menu: false, icon: 'git-compare', on: 'canvas', when: on, run: (ctx) => this.chooseOther(ctx.view) },
+      { id: 'canvas-compare-branches', name: 'Compare the two selected cards’ branches', menu: 'Compare branches', icon: 'columns-2', on: 'canvas', when: (ctx) => !!two(ctx), run: (ctx) => this.showBranches(ctx.view, two(ctx)[0], two(ctx)[1]) },
+      { id: 'canvas-compare-done', name: 'Stop comparing', menu: false, icon: 'x', on: 'canvas', when: (ctx) => on(ctx) && !!this.diffOf(ctx.view), run: (ctx) => this.done(ctx.view) },
     ];
   }
 
@@ -196,19 +173,6 @@ class CanvasCompare extends CanvasFeature {
   diffOf(view) {
     const state = view && this.watched.get(view);
     return state && state.diff ? state.diff : null;
-  }
-
-  addMenuItems(menu, nodes) {
-    const cards = nodes.filter((n) => !isCanvasEdge(n));
-    if (cards.length !== 2 || cards.length !== nodes.length) return;
-    const view = cards[0].canvas && cards[0].canvas.view;
-    if (!view || !this.watched.has(view)) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle('Compare branches')
-        .setIcon('columns-2')
-        .onClick(() => this.showBranches(view, cards[0], cards[1]))
-    );
   }
 
   /* -- snapshots ------------------------------------------------------ */

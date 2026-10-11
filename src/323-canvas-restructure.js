@@ -38,53 +38,24 @@ class CanvasRestructure extends CanvasFeature {
     ];
   }
 
-  commands() {
-    const one = () => (this.enabled ? this.selectedCard(this.pageCanvas()) : null);
+  actions() {
+    // The one card it's for — not a group, nor one in a fold — on a canvas that can be changed.
+    const one = (ctx) => (this.enabled && !ctx.view.canvas.readonly ? this.cardOf(ctx.nodes) : null);
+    const act = (id, name, menu, icon, can, run) => ({ id, name, menu, icon, on: 'canvas', when: (ctx) => !!one(ctx) && (!can || !!can(ctx.view, one(ctx))), run: (ctx) => run(ctx.view, one(ctx)) });
     return [
-      {
-        id: 'canvas-add-parent-card',
-        name: 'Add a card before the selected card',
-        icon: 'git-pull-request-arrow',
-        check: () => !!one(),
-        run: () => this.addParent(this.pageCanvas(), one()),
-      },
-      {
-        id: 'canvas-promote-card',
-        name: 'Move the selected card up a level',
-        icon: 'arrow-up-left',
-        check: () => !!one() && !!this.promoteTarget(this.pageCanvas(), one()),
-        run: () => this.promote(this.pageCanvas(), one()),
-      },
-      {
-        id: 'canvas-card-earlier',
-        name: 'Move the selected card before the card beside it',
-        icon: 'arrow-up',
-        check: () => !!one() && !!this.swapTarget(this.pageCanvas(), one(), -1),
-        run: () => this.reorder(this.pageCanvas(), one(), -1),
-      },
-      {
-        id: 'canvas-card-later',
-        name: 'Move the selected card after the card beside it',
-        icon: 'arrow-down',
-        check: () => !!one() && !!this.swapTarget(this.pageCanvas(), one(), 1),
-        run: () => this.reorder(this.pageCanvas(), one(), 1),
-      },
-      {
-        id: 'canvas-demote-card',
-        name: 'Move the selected card under the one above it',
-        icon: 'arrow-down-right',
-        check: () => !!one() && !!this.demoteTarget(this.pageCanvas(), one()),
-        run: () => this.demote(this.pageCanvas(), one()),
-      },
+      act('canvas-add-parent-card', 'Add a card before the selected card', 'Add card before', 'git-pull-request-arrow', null, (v, n) => this.addParent(v, n)),
+      act('canvas-promote-card', 'Move the selected card up a level', 'Move up a level', 'arrow-up-left', (v, n) => this.promoteTarget(v, n), (v, n) => this.promote(v, n)),
+      Object.assign(act('canvas-card-earlier', 'Move the selected card before the card beside it', '', 'arrow-up', (v, n) => this.swapTarget(v, n, -1), (v, n) => this.reorder(v, n, -1)), { menu: false }),
+      Object.assign(act('canvas-card-later', 'Move the selected card after the card beside it', '', 'arrow-down', (v, n) => this.swapTarget(v, n, 1), (v, n) => this.reorder(v, n, 1)), { menu: false }),
+      act('canvas-demote-card', 'Move the selected card under the one above it', 'Move under the card above', 'arrow-down-right', (v, n) => this.demoteTarget(v, n), (v, n) => this.demote(v, n)),
     ];
   }
 
   // Nothing drawn on the canvas: only keys and menus.
   pass() {}
 
-  /** The one selected card — not a group, nor one in a fold — or null. */
-  selectedCard(view) {
-    const selected = this.selectedNodes(view);
+  /** The one card of these — not a group, nor one in a fold — or null. */
+  cardOf(selected) {
     if (selected.length !== 1) return null;
     const node = selected[0];
     if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
@@ -107,7 +78,7 @@ class CanvasRestructure extends CanvasFeature {
     const arrow = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[evt.key];
     if (evt.altKey ? !arrow : evt.key !== 'Enter' && evt.key !== 'Tab') return;
     if (!view.canvas || view.canvas.readonly) return;
-    const node = this.selectedCard(view);
+    const node = this.cardOf(this.selectedNodes(view));
     if (!node || node.isEditing) return;
     evt.preventDefault();
     evt.stopPropagation();
@@ -165,17 +136,6 @@ class CanvasRestructure extends CanvasFeature {
         resolve(changed);
       });
     });
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return;
-    const add = (title, icon, run) => menu.addItem((item) => canvasAction(item).setTitle(title).setIcon(icon).onClick(run));
-    add('Add card before', 'git-pull-request-arrow', () => this.addParent(view, node));
-    if (this.promoteTarget(view, node)) add('Move up a level', 'arrow-up-left', () => this.promote(view, node));
-    if (this.demoteTarget(view, node)) add('Move under the card above', 'arrow-down-right', () => this.demote(view, node));
   }
 
   /** The card a card would hang from a level up: the one its parent hangs from. */

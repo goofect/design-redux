@@ -123,6 +123,9 @@ class CanvasFeature extends Feature {
   /** When it's let go: what was added to it, taken away. */
   cleanup() {}
 
-  /** Entries for the canvas's own menus, for these cards. */
-  addMenuItems() {}
+  /** Entries for the canvas's own menus, for these cards: its canvas actions that apply. */
+  addMenuItems(menu, nodes) {
+    const ctx = canvasMenuContext(nodes);
+    if (ctx) addActionEntries(menu, actionsOn(this.actions(), 'canvas'), ctx, canvasAction);
+  }
 }

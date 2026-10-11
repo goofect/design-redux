@@ -69,7 +69,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
+  '\nmodule.exports.__test = { actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
@@ -1758,6 +1758,30 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(n('a').y, 130, 'the rest laid out');
     pins.setPinned(view, [n('b')], false);
     assert.ok(!('drPinned' in n('b').nodeEl.dataset));
+  });
+
+  await t('a canvas action, written once: the palette’s command and the card’s menu entry, each named for what it’s on', () => {
+    const view = mindCanvas({ nodes: [card('a', 0, 0, 100, 50), card('b', 300, 0, 100, 50)], edges: [edge('a', 'b', 'right', 'left')] });
+    const { p } = plugin({ canvasPins: true });
+    const n = (id) => view.canvas.nodes.get(id);
+    const pins = new R.CanvasPins(p);
+    pins.watched.set(view, { file: view.file });
+    let picked = [];
+    const [cmd] = R.actionCommands(pins.actions(), () => R.canvasContext(view, picked, 'palette'));
+    assert.strictEqual(cmd.id, 'canvas-toggle-keep-in-place');
+    assert.strictEqual(cmd.check(), false, 'nothing selected, nothing to keep');
+    picked = [n('a'), n('b')];
+    assert.strictEqual(cmd.check(), true);
+    cmd.run();
+    assert.deepStrictEqual([n('a'), n('b')].map((x) => !!x.unknownData.drPinned), [true, true]);
+    const menu = new Menu();
+    pins.addMenuItems(menu, [n('a')]);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Let layouts move it']);
+    menu.items[0].click();
+    assert.strictEqual(n('a').unknownData.drPinned, undefined, 'the card the menu was for, alone');
+    assert.strictEqual(n('b').unknownData.drPinned, true);
+    view.canvas.readonly = true;
+    assert.strictEqual(cmd.check(), false, 'a canvas that can’t be changed');
   });
 
   await t('zoom to branch fits a card and what’s below it; Back returns to where the canvas looked before each jump', () => {

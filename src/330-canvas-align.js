@@ -30,17 +30,19 @@ class CanvasAlign extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
+    const cards = (ctx) => (this.enabled ? ctx.nodes.filter(alignable) : []);
+    const on = (ctx) => cards(ctx).every((node) => this.isCentred(ctx.view, node));
     return [
       {
         id: 'center-canvas-text',
         name: 'Center text in the selected cards',
+        menu: (ctx) => (on(ctx) ? 'Stop centering text' : 'Center text'),
+        menuIcon: (ctx) => (on(ctx) ? 'align-left' : 'align-center'),
         icon: 'align-center',
-        check: () => this.selected(this.pageCanvas()).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          this.toggle(view, this.selected(view));
-        },
+        on: 'canvas',
+        when: (ctx) => cards(ctx).length > 0,
+        run: (ctx) => this.toggle(ctx.view, cards(ctx)),
       },
     ];
   }
@@ -75,20 +77,6 @@ class CanvasAlign extends CanvasFeature {
     this.settings.canvasAlignments = all;
     this.plugin.saveData(this.settings);
     this.pass(view);
-  }
-
-  addMenuItems(menu, nodes) {
-    const first = nodes[0];
-    const view = first && first.canvas && first.canvas.view;
-    const cards = nodes.filter(alignable);
-    if (!view || !view.file || !cards.length) return;
-    const on = cards.every((node) => this.isCentred(view, node));
-    menu.addItem((item) =>
-      item
-        .setTitle(on ? 'Stop centering text' : 'Center text')
-        .setIcon(on ? 'align-left' : 'align-center')
-        .onClick(() => this.toggle(view, cards))
-    );
   }
 
   pass(view) {

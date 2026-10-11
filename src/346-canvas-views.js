@@ -27,45 +27,23 @@ class CanvasViews extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
+    const card = (ctx) => (this.enabled && ctx.node && !isCanvasEdge(ctx.node) && this.watched.has(ctx.view) ? ctx.node : null);
     return [
-      {
-        id: 'canvas-zoom-to-branch',
-        name: 'Zoom to the selected card’s branch',
-        icon: 'scan',
-        check: () => {
-          const view = this.enabled ? this.pageCanvas() : null;
-          return !!view && this.selectedNodes(view).filter((n) => !isCanvasEdge(n)).length === 1;
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          this.zoomToBranch(view, this.selectedNodes(view).filter((n) => !isCanvasEdge(n))[0]);
-        },
-      },
+      { id: 'canvas-zoom-to-branch', name: 'Zoom to the selected card’s branch', menu: 'Zoom to branch', icon: 'scan', on: 'canvas', when: (ctx) => !!card(ctx), run: (ctx) => this.zoomToBranch(ctx.view, card(ctx)) },
       {
         id: 'canvas-view-back',
         name: 'Back to where the canvas was looking',
+        menu: false,
         icon: 'history',
-        check: () => {
-          const view = this.enabled ? this.pageCanvas() : null;
-          const state = view && this.watched.get(view);
+        on: 'canvas',
+        when: (ctx) => {
+          const state = this.enabled && this.watched.get(ctx.view);
           return !!(state && state.history && state.history.length);
         },
-        run: () => this.back(this.pageCanvas()),
+        run: (ctx) => this.back(ctx.view),
       },
     ];
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1 || isCanvasEdge(nodes[0])) return;
-    const view = nodes[0].canvas && nodes[0].canvas.view;
-    if (!view || !this.watched.has(view)) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle('Zoom to branch')
-        .setIcon('scan')
-        .onClick(() => this.zoomToBranch(view, nodes[0]))
-    );
   }
 
   // Nothing drawn on the canvas.

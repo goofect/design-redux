@@ -282,21 +282,16 @@ class CanvasBranchNote extends CanvasFeature {
 
   sync() {}
 
-  commands() {
+  actions() {
     return [
       {
         id: 'canvas-branch-to-note',
         name: 'Make a note from the selected card’s branch',
+        menu: 'Make a note from branch',
         icon: 'file-text',
-        check: () => {
-          const view = this.pageCanvas();
-          const nodes = this.selectedNodes(view);
-          return this.enabled && nodes.length === 1 && this.hasBranch(view, nodes[0]);
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          this.makeNote(view, this.selectedNodes(view)[0]);
-        },
+        on: 'canvas',
+        when: (ctx) => this.enabled && this.hasBranch(ctx.view, ctx.node),
+        run: (ctx) => this.makeNote(ctx.view, ctx.node),
       },
     ];
   }
@@ -305,19 +300,6 @@ class CanvasBranchNote extends CanvasFeature {
     if (!view || !view.canvas || !node || isCanvasEdge(node) || isGroupNode(node)) return false;
     const model = canvasModel(view.canvas);
     return (arrowLinks(model).children.get(node.id) || []).some((id) => !isGroupRecord(model.byId.get(id)));
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!this.hasBranch(view, node)) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle('Make a note from branch')
-        .setIcon('file-text')
-        .onClick(() => this.makeNote(view, node))
-    );
   }
 
   /** The branch written out as a note in the canvas's folder, opened in a new tab. */
@@ -361,21 +343,16 @@ class CanvasOutlineBranch extends CanvasFeature {
 
   sync() {}
 
-  commands() {
+  actions() {
     return [
       {
         id: 'canvas-outline-to-branch',
         name: 'Make cards from the selected card’s headings or list',
+        menu: (ctx) => (this.kindOf(ctx.view, ctx.node) === 'list' ? 'Make cards from list' : 'Make cards from headings'),
         icon: 'list-tree',
-        check: () => {
-          const view = this.pageCanvas();
-          const nodes = this.selectedNodes(view);
-          return this.enabled && nodes.length === 1 && !!this.kindOf(view, nodes[0]);
-        },
-        run: () => {
-          const view = this.pageCanvas();
-          this.expand(view, this.selectedNodes(view)[0]);
-        },
+        on: 'canvas',
+        when: (ctx) => this.enabled && !ctx.view.canvas.readonly && !!this.kindOf(ctx.view, ctx.node),
+        run: (ctx) => this.expand(ctx.view, ctx.node),
       },
     ];
   }
@@ -390,21 +367,6 @@ class CanvasOutlineBranch extends CanvasFeature {
     const file = typeof this.app.vault.getFileByPath === 'function' ? this.app.vault.getFileByPath(rec.file) : null;
     const cache = file ? this.app.metadataCache.getFileCache(file) : null;
     return cache && ((cache.headings && cache.headings.length) || (cache.listItems && cache.listItems.length)) ? 'headings' : null;
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    const kind = this.kindOf(view, node);
-    if (!kind) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle(kind === 'list' ? 'Make cards from list' : 'Make cards from headings')
-        .setIcon('list-tree')
-        .onClick(() => this.expand(view, node))
-    );
   }
 
   /** The outline read from the card: its own text, or its note's. */

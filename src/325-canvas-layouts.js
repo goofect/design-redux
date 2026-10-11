@@ -447,47 +447,80 @@ class CanvasLayouts extends CanvasFeature {
 
   sync() {}
 
-  commands() {
-    return BRANCH_LAYOUTS.map(([mode, title, icon]) => ({
+  /** Each kind of layout, for the selected branches or the cards alone, and the canvas's whole. */
+  actions() {
+    const open = (ctx) => this.enabled && !ctx.view.canvas.readonly;
+    const cards = (ctx) => ctx.nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
+    const roots = (ctx) => (this.enabled ? this.rootsOf(ctx.view, ctx.nodes.filter((n) => !isCanvasEdge(n))) : []);
+    const iconOf = (mode) => (BRANCH_LAYOUTS.find((b) => b[0] === mode) || BRANCH_LAYOUTS[0])[2];
+    const branch = BRANCH_LAYOUTS.map(([mode, title, icon]) => ({
       id: `canvas-layout-${mode === 'bottom' ? 'down' : mode === 'top' ? 'up' : mode}`,
       name: `Lay out the selected cards’ branches: ${title.toLowerCase()}`,
+      menu: title,
       icon,
-      check: () => {
-        const view = this.pageCanvas();
-        return this.enabled && this.rootsOf(view, this.selectedNodes(view)).length > 0;
-      },
-      run: () => {
-        const view = this.pageCanvas();
-        this.layoutMany(view, this.rootsOf(view, this.selectedNodes(view)), mode);
-      },
-    })).concat([
+      on: 'canvas',
+      group: 'branch',
+      when: (ctx) => roots(ctx).length > 0,
+      run: (ctx) => this.layoutMany(ctx.view, roots(ctx), mode),
+    }));
+    // Several cards chosen: laid out among themselves alone, the rest left be.
+    const alone = LAYOUT_ENGINES.map((engine) => ({
+      id: `canvas-layout-cards-${engine.mode}`,
+      name: engine.label,
+      icon: iconOf(engine.mode),
+      on: 'canvas',
+      group: 'cards',
+      palette: false,
+      when: (ctx) => open(ctx) && cards(ctx).length > 1,
+      run: (ctx) => this.layoutSelected(ctx.view, cards(ctx), engine.mode),
+    }));
+    return branch.concat(alone, [
       {
+        // From a menu, the cards it's for, if they overlap; from the palette, those chosen or the whole canvas.
         id: 'canvas-spread-overlaps',
         name: 'Spread out overlapping cards',
         icon: 'move-diagonal',
-        check: () => this.enabled && !!this.pageCanvas() && !this.pageCanvas().canvas.readonly,
-        run: () => {
-          const view = this.pageCanvas();
-          const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-          this.spread(view, picked.length > 1 ? picked : null);
+        on: 'canvas',
+        group: 'spread',
+        when: (ctx) => open(ctx) && (cards(ctx).length > 1 ? ctx.from === 'palette' || this.overlapping(ctx.view, cards(ctx)) : ctx.from === 'palette'),
+        run: (ctx) => this.spread(ctx.view, cards(ctx).length > 1 ? cards(ctx) : null),
+      },
+      {
+        // Several trees: each tidied as it grows, one after another.
+        id: 'canvas-tidy-branches',
+        name: 'Tidy branches',
+        icon: 'network',
+        on: 'canvas',
+        group: 'tidy',
+        palette: false,
+        when: (ctx) => {
+          const branches = this.plugin.feature(CanvasBranches);
+          return roots(ctx).length > 1 && !!branches && branches.enabled && !!this.settings.canvasTidy;
+        },
+        run: async (ctx) => {
+          const branches = this.plugin.feature(CanvasBranches);
+          for (const node of roots(ctx)) await branches.tidy(ctx.view, node);
         },
       },
       {
         id: 'canvas-layout-choose',
         name: 'Lay out…',
+        menu: false,
         icon: 'layout-dashboard',
-        check: () => this.enabled && this.scopes(this.pageCanvas()).length > 0,
-        run: () => this.choose(this.pageCanvas()),
+        on: 'canvas',
+        when: (ctx) => this.enabled && this.scopes(ctx.view).length > 0,
+        run: (ctx) => this.choose(ctx.view),
       },
       {
         id: 'canvas-layout-everything',
         name: 'Lay out the whole canvas…',
+        menu: false,
         icon: 'layout-grid',
-        check: () => this.enabled && this.wholeRoots(this.pageCanvas()).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
+        on: 'canvas',
+        when: (ctx) => this.enabled && this.wholeRoots(ctx.view).length > 0,
+        run: (ctx) => {
           const items = BRANCH_LAYOUTS.map(([mode, title]) => ({ label: title, mode }));
-          new ComparePicker(this.app, items, 'Lay out every tree on the canvas', (item) => this.layoutMany(view, this.wholeRoots(view), item.mode)).open();
+          new ComparePicker(this.app, items, 'Lay out every tree on the canvas', (item) => this.layoutMany(ctx.view, this.wholeRoots(ctx.view), item.mode)).open();
         },
       },
     ]);
@@ -643,64 +676,14 @@ class CanvasLayouts extends CanvasFeature {
   }
 
   addMenuItems(menu, nodes) {
-    const view = nodes[0] && nodes[0].canvas && nodes[0].canvas.view;
-    const cards = nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-    if (view && view.canvas && !view.canvas.readonly && cards.length > 1 && this.overlapping(view, cards)) {
-      menu.addItem((item) =>
-        canvasAction(item)
-          .setTitle('Spread out overlapping cards')
-          .setIcon('move-diagonal')
-          .onClick(() => this.spread(view, cards))
-      );
-    }
-    // Several cards chosen: laid out among themselves alone, the rest left be.
-    if (view && view.canvas && !view.canvas.readonly && cards.length > 1) {
-      menuGroup(
-        menu,
-        'Lay out these cards only',
-        'layout-dashboard',
-        (into, nested) => {
-          LAYOUT_ENGINES.forEach((engine) => {
-            into.addItem((item) => {
-              item.setTitle(nested ? engine.label : `Lay out these cards only: ${engine.label.toLowerCase()}`);
-              if (!nested) canvasAction(item);
-              item.onClick(() => this.layoutSelected(view, cards, engine.mode));
-            });
-          });
-        },
-        'action'
-      );
-    }
-    const roots = this.rootsOf(view, nodes.filter((n) => !isCanvasEdge(n)));
-    if (!roots.length) return;
-    const many = roots.length > 1;
-    menuGroup(
-      menu,
-      many ? 'Lay out branches' : 'Lay out branch',
-      'layout-grid',
-      (into, nested) => {
-        BRANCH_LAYOUTS.forEach(([mode, title, icon]) => {
-          into.addItem((item) => {
-            item.setTitle(nested ? title : `${many ? 'Lay out branches' : 'Lay out branch'}: ${title.toLowerCase()}`).setIcon(icon);
-            if (!nested) canvasAction(item);
-            item.onClick(() => this.layoutMany(view, roots, mode));
-          });
-        });
-      },
-      'action'
-    );
-    // Several trees: each tidied as it grows, one after another.
-    const branches = this.plugin.feature(CanvasBranches);
-    if (many && branches && branches.enabled && this.settings.canvasTidy) {
-      menu.addItem((item) =>
-        canvasAction(item)
-          .setTitle('Tidy branches')
-          .setIcon('network')
-          .onClick(async () => {
-            for (const node of roots) await branches.tidy(view, node);
-          })
-      );
-    }
+    const ctx = canvasMenuContext(nodes);
+    if (!ctx) return;
+    const group = (name) => this.actions().filter((a) => a.group === name);
+    addActionEntries(menu, group('spread'), ctx, canvasAction);
+    addActionItems(menu, group('cards'), ctx, 'Lay out these cards only', 'layout-dashboard', canvasAction);
+    const many = this.rootsOf(ctx.view, nodes.filter((n) => !isCanvasEdge(n))).length > 1;
+    addActionItems(menu, group('branch'), ctx, many ? 'Lay out branches' : 'Lay out branch', 'layout-grid', canvasAction);
+    addActionEntries(menu, group('tidy'), ctx, canvasAction);
   }
 
   /** Where the branch's cards go for a layout. */

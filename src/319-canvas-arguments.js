@@ -50,58 +50,55 @@ class CanvasArguments extends CanvasFeature {
     ];
   }
 
-  commands() {
-    const one = () => {
-      const view = this.enabled ? this.pageCanvas() : null;
-      const nodes = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-      return nodes.length === 1 ? nodes[0] : null;
+  /** Each part a card can be given, and the answers a card can be given. */
+  actions() {
+    // The cards a menu is for, or selected: plain cards, on a canvas that can be changed.
+    const cards = (ctx) => {
+      const nodes = ctx.nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
+      return this.enabled && nodes.length && nodes.length === ctx.nodes.length && !ctx.view.canvas.readonly ? nodes : null;
     };
-    const adds = ['reason', 'objection', 'rebuttal', 'evidence'].map((role) => ({
-      id: `canvas-add-${role}`,
-      name: { reason: 'Add a reason for the selected card', objection: 'Add an objection to the selected card', rebuttal: 'Add a rebuttal of the selected card', evidence: 'Add evidence for the selected card' }[role],
+    const current = (ctx) => {
+      const nodes = cards(ctx);
+      return nodes && nodes.every((n) => roleOf(n) === roleOf(nodes[0])) ? roleOf(nodes[0]) : undefined;
+    };
+    const one = (ctx) => {
+      const nodes = cards(ctx);
+      return nodes && nodes.length === 1 ? nodes[0] : null;
+    };
+    const parts = Object.keys(ARGUMENT_ROLES).map((role) => ({
+      id: `canvas-make-${role}`,
+      name: `Make the selected card a ${ARGUMENT_ROLES[role].name.toLowerCase()}`,
+      menu: ARGUMENT_ROLES[role].name,
       icon: ARGUMENT_ROLES[role].icon,
-      check: () => !!one(),
-      run: () => this.addAnswer(this.pageCanvas(), one(), role),
+      on: 'canvas',
+      // Only a claim has a command of its own; on a menu, a part ticked is taken off again.
+      palette: role === 'claim' ? undefined : false,
+      checked: (ctx) => current(ctx) === role,
+      when: (ctx) => !!cards(ctx),
+      run: (ctx) => this.setRole(ctx.view, cards(ctx), ctx.from !== 'palette' && current(ctx) === role ? null : role),
     }));
-    return [
-      {
-        id: 'canvas-make-claim',
-        name: 'Make the selected card a claim',
-        icon: ARGUMENT_ROLES.claim.icon,
-        check: () => !!one(),
-        run: () => this.setRole(this.pageCanvas(), [one()], 'claim'),
-      },
-    ].concat(adds);
+    const answers = [
+      ['reason', 'Add a reason for the selected card', 'Add a reason'],
+      ['objection', 'Add an objection to the selected card', 'Add an objection'],
+      ['rebuttal', 'Add a rebuttal of the selected card', 'Add a rebuttal'],
+      ['evidence', 'Add evidence for the selected card', 'Add evidence'],
+    ].map(([role, name, menu]) => ({
+      id: `canvas-add-${role}`,
+      name,
+      menu,
+      icon: ARGUMENT_ROLES[role].icon,
+      on: 'canvas',
+      when: (ctx) => !!one(ctx),
+      run: (ctx) => this.addAnswer(ctx.view, one(ctx), role),
+    }));
+    return parts
+      .concat([{ id: 'canvas-clear-part', name: 'No part', icon: 'x', on: 'canvas', palette: false, when: (ctx) => !!current(ctx), run: (ctx) => this.setRole(ctx.view, cards(ctx), null) }])
+      .concat(answers);
   }
 
   addMenuItems(menu, nodes) {
-    const cards = nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-    if (!cards.length || cards.length !== nodes.length) return;
-    const view = cards[0].canvas && cards[0].canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    const current = cards.every((n) => roleOf(n) === roleOf(cards[0])) ? roleOf(cards[0]) : undefined;
-    menuGroup(
-      menu,
-      'Argument',
-      'scale',
-      (into, nested) => {
-        const add = (title, icon, run, checked) =>
-          into.addItem((item) => {
-            item.setTitle(nested ? title : `Argument: ${title.toLowerCase()}`).setIcon(icon);
-            if (checked !== undefined && typeof item.setChecked === 'function') item.setChecked(checked);
-            if (!nested) canvasAction(item);
-            item.onClick(run);
-          });
-        Object.keys(ARGUMENT_ROLES).forEach((role) => add(ARGUMENT_ROLES[role].name, ARGUMENT_ROLES[role].icon, () => this.setRole(view, cards, current === role ? null : role), current === role));
-        if (current) add('No part', 'x', () => this.setRole(view, cards, null));
-        if (cards.length === 1) {
-          if (typeof into.addSeparator === 'function' && nested) into.addSeparator();
-          add('Add a reason', 'thumbs-up', () => this.addAnswer(view, cards[0], 'reason'));
-          add('Add an objection', 'thumbs-down', () => this.addAnswer(view, cards[0], 'objection'));
-        }
-      },
-      'action'
-    );
+    const ctx = canvasMenuContext(nodes);
+    if (ctx) addActionItems(menu, this.actions(), ctx, 'Argument', 'scale', canvasAction);
   }
 
   /** The cards given a part — or, given null, none. Saved, a step of Undo. */

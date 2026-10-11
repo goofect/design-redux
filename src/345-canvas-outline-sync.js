@@ -133,14 +133,36 @@ class CanvasOutlineSync extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
+    // A branch's card: its outline opened, or one kept.
+    const branch = (ctx) => {
+      const node = ctx.node;
+      if (!this.enabled || !node || isCanvasEdge(node) || !this.watched.has(ctx.view)) return false;
+      return (arrowLinks(canvasModel(ctx.view.canvas)).children.get(node.id) || []).length > 0;
+    };
+    const kept = (ctx) => this.outlinesOf(ctx.view.file).find((f) => this.outlineInfo(f).root === ctx.node.id);
     return [
       {
         id: 'canvas-outline-sync',
         name: 'Bring the outline and its canvas into step',
+        menu: false,
         icon: 'refresh-cw',
-        check: () => this.enabled && !!this.outlineNote(this.app.workspace.getActiveFile()),
-        run: () => this.sync(this.app.workspace.getActiveFile(), true),
+        on: 'note',
+        when: (ctx) => this.enabled && !!this.outlineNote(ctx.file),
+        run: (ctx) => this.sync(ctx.file, true),
+      },
+      {
+        id: 'canvas-keep-outline',
+        name: 'Keep an outline of this branch',
+        menu: (ctx) => (kept(ctx) ? 'Open its outline' : 'Keep an outline of this branch'),
+        icon: 'list-tree',
+        on: 'canvas',
+        palette: false,
+        when: branch,
+        run: (ctx) => {
+          const note = kept(ctx);
+          return note ? this.app.workspace.getLeaf('split').openFile(note) : this.keep(ctx.view, ctx.node);
+        },
       },
     ];
   }
@@ -188,22 +210,6 @@ class CanvasOutlineSync extends CanvasFeature {
       const info = this.outlineInfo(f);
       return info && info.canvas === canvas;
     });
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1 || isCanvasEdge(nodes[0])) return;
-    const node = nodes[0];
-    const view = node.canvas && node.canvas.view;
-    if (!view || !view.file || !this.watched.has(view)) return;
-    const model = canvasModel(view.canvas);
-    if (!(arrowLinks(model).children.get(node.id) || []).length) return;
-    const kept = this.outlinesOf(view.file).find((f) => this.outlineInfo(f).root === node.id);
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle(kept ? 'Open its outline' : 'Keep an outline of this branch')
-        .setIcon('list-tree')
-        .onClick(() => (kept ? this.app.workspace.getLeaf('split').openFile(kept) : this.keep(view, node)))
-    );
   }
 
   /** A new outline note for the branch, beside the canvas, opened beside it. */

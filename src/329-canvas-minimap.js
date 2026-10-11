@@ -76,13 +76,15 @@ class CanvasMinimap extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'toggle-canvas-minimap',
         name: 'Show or hide the canvas minimap',
+        menu: false,
         icon: 'map',
-        check: () => !!this.pageCanvas(),
+        on: 'canvas',
+        when: () => true,
         run: () => {
           this.settings.canvasMinimap = !this.settings.canvasMinimap;
           this.plugin.saveSettings();

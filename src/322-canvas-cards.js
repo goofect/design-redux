@@ -112,37 +112,24 @@ class CanvasCards extends CanvasFeature {
     super.disable();
   }
 
-  commands() {
+  actions() {
+    const cards = (ctx) => (ctx.view.canvas.readonly ? [] : this.fitTargets(ctx.nodes));
     return [
       {
         id: 'fit-canvas-cards',
         name: 'Fit the selected cards to their text',
+        menu: 'Fit to text',
         icon: 'fold-vertical',
-        check: () => this.fitTargets(this.pageCanvas()).length > 0,
-        run: () => this.fitToText(this.pageCanvas(), this.fitTargets(this.pageCanvas())),
+        on: 'canvas',
+        when: (ctx) => cards(ctx).length > 0,
+        run: (ctx) => this.fitToText(ctx.view, cards(ctx)),
       },
     ];
   }
 
-  /** The selected text cards, not being typed in. */
-  fitTargets(view) {
-    if (!view || !view.canvas) return [];
-    return this.selectedNodes(view).filter((n) => n && n.nodeEl && !n.isEditing && isTextCard(n) && !tuckOf(n));
-  }
-
-  addMenuItems(menu, nodes) {
-    const first = nodes[0];
-    const view = first && first.canvas && first.canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    const cards = nodes.filter((n) => n && n.nodeEl && !n.isEditing && isTextCard(n) && !tuckOf(n));
-    if (!cards.length) return;
-    menu.addItem((item) => {
-      item
-        .setTitle('Fit to text')
-        .setIcon('fold-vertical')
-        .onClick(() => this.fitToText(view, cards));
-      if (typeof item.setSection === 'function') item.setSection('action');
-    });
+  /** The text cards of these, not being typed in. */
+  fitTargets(nodes) {
+    return nodes.filter((n) => n && n.nodeEl && !n.isEditing && isTextCard(n) && !tuckOf(n));
   }
 
   mount(view, state) {

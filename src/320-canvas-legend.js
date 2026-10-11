@@ -74,16 +74,8 @@ class CanvasLegend extends Feature {
     ];
   }
 
-  commands() {
-    return [
-      {
-        id: 'toggle-canvas-legend',
-        name: 'Show or hide the canvas legend',
-        icon: 'list',
-        check: () => !!this.pageCanvas(),
-        run: () => this.toggleHidden(this.pageCanvas()),
-      },
-    ];
+  actions() {
+    return [{ id: 'toggle-canvas-legend', name: 'Show or hide the canvas legend', menu: false, icon: 'list', on: 'canvas', when: () => true, run: (ctx) => this.toggleHidden(ctx.view) }];
   }
 
   register() {

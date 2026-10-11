@@ -134,25 +134,6 @@ class Knowledge extends Feature {
     ];
   }
 
-  commands() {
-    const canvas = () => {
-      const leaf = typeof pageLeaf === 'function' ? pageLeaf(this.app) : null;
-      const view = leaf && !leaf.isDeferred ? leaf.view : null;
-      return view && view.canvas && view.file && view.file.extension === 'canvas' ? view : null;
-    };
-    return actionCommands(this.actions(), () => activeNoteContext(this.app)).concat([
-      {
-        id: 'knowledge-create',
-        name: 'Create a concept…',
-        icon: 'file-plus',
-        check: () => this.enabled,
-        run: () => this.createConcept(null),
-      },
-      { id: 'knowledge-canvas-write', name: 'Write this canvas’s relationships into its notes', icon: 'file-input', check: () => this.enabled && !!canvas(), run: () => this.writeFromCanvas(canvas()) },
-      { id: 'knowledge-canvas-draw', name: 'Draw its notes’ relationships on this canvas', icon: 'git-branch-plus', check: () => this.enabled && !!canvas(), run: () => this.drawOnCanvas(canvas()) },
-    ]);
-  }
-
   /**
    * What can be done to a concept, defined once: the palette, its note's
    * menu, its card's menu on a canvas and the strip all offer these.
@@ -169,6 +150,9 @@ class Knowledge extends Feature {
       { id: 'knowledge-in-canvas', name: 'Open this note in a canvas', menu: 'Open in canvas', icon: 'layout-dashboard', when: (ctx) => on(ctx) && ctx.from !== 'canvas', run: (ctx) => this.openInCanvas(ctx.file) },
       { id: 'knowledge-in-album', name: 'Open this note’s album', menu: 'Open in album', icon: 'disc', when: on, run: (ctx) => this.openInAlbum(ctx.file) },
       { id: 'knowledge-map', name: 'Map this note’s relationships on a canvas', menu: 'Map its relationships', icon: 'network', when: on, run: (ctx) => this.map(ctx.file) },
+      { id: 'knowledge-create', name: 'Create a concept…', menu: false, icon: 'file-plus', on: 'app', when: () => this.enabled, run: () => this.createConcept(null) },
+      { id: 'knowledge-canvas-write', name: 'Write this canvas’s relationships into its notes', menu: false, icon: 'file-input', on: 'canvas', when: () => this.enabled, run: (ctx) => this.writeFromCanvas(ctx.view) },
+      { id: 'knowledge-canvas-draw', name: 'Draw its notes’ relationships on this canvas', menu: false, icon: 'git-branch-plus', on: 'canvas', when: () => this.enabled, run: (ctx) => this.drawOnCanvas(ctx.view) },
     ];
   }
 
@@ -285,7 +269,7 @@ class Knowledge extends Feature {
     this.plugin.registerEvent(
       this.app.workspace.on('canvas:node-menu', (menu, node) => {
         const file = this.enabled ? this.noteOfCard(node) : null;
-        if (file) addActionItems(menu, this.actions(), { file, node, view: node.canvas && node.canvas.view, from: 'canvas' }, 'Concept', 'waypoints');
+        if (file) addActionItems(menu, actionsOn(this.actions(), 'note'), { file, node, view: node.canvas && node.canvas.view, from: 'canvas' }, 'Concept', 'waypoints');
       })
     );
     const stale = () => (this.cache = null);
@@ -687,7 +671,7 @@ class Knowledge extends Feature {
   /** On a note's menu: its relationships. */
   addFileItems(menu, file, sectioned) {
     if (!this.enabled || !file || file.extension !== 'md') return;
-    addActionItems(menu, this.actions(), { file, from: 'menu' }, 'Concept', 'waypoints', sectioned);
+    addActionItems(menu, actionsOn(this.actions(), 'note'), { file, from: 'menu' }, 'Concept', 'waypoints', sectioned);
   }
 }
 

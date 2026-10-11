@@ -47,32 +47,19 @@ class CanvasQuickAdd extends CanvasFeature {
 
   sync() {}
 
-  commands() {
+  actions() {
+    const card = (ctx) => (ctx.node && !isCanvasEdge(ctx.node) && !isGroupNode(ctx.node) ? ctx.node : null);
     return [
       {
+        // From a card's menu, joined to that card; from the palette, to the one selected, if any.
         id: 'canvas-quick-add',
         name: 'Add or connect a card…',
         icon: 'circle-plus',
-        check: () => this.enabled && !!this.pageCanvas() && !this.pageCanvas().canvas.readonly,
-        run: () => {
-          const view = this.pageCanvas();
-          const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-          this.open(view, picked.length === 1 ? picked[0] : null);
-        },
+        on: 'canvas',
+        when: (ctx) => this.enabled && !ctx.view.canvas.readonly && (ctx.from === 'palette' || !!card(ctx)),
+        run: (ctx) => this.open(ctx.view, card(ctx)),
       },
     ];
-  }
-
-  addMenuItems(menu, nodes) {
-    if (nodes.length !== 1 || isCanvasEdge(nodes[0]) || isGroupNode(nodes[0])) return;
-    const view = nodes[0].canvas && nodes[0].canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle('Add or connect a card…')
-        .setIcon('circle-plus')
-        .onClick(() => this.open(view, nodes[0]))
-    );
   }
 
   open(view, node) {

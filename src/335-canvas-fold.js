@@ -106,58 +106,62 @@ class CanvasFold extends CanvasFeature {
     return this.settings.canvasCloseGaps !== false;
   }
 
-  commands() {
+  actions() {
+    const model = (ctx) => canvasModel(ctx.view.canvas);
+    // On a card's menu, its own branch; from the palette, any of the selected cards'.
+    const folds = (ctx) => (ctx.from === 'palette' || ctx.nodes.length === 1 ? this.branchTargets(ctx.view, ctx.nodes) : []);
+    const folded = (ctx) => folds(ctx).every((n) => tuckedCount(model(ctx), n.id) > 0);
+    const masters = (ctx) => this.masterCandidates(ctx.view, ctx.nodes);
+    const status = (ctx) => this.foldStatus(model(ctx));
     return [
       {
         id: 'fold-canvas-branch',
         name: 'Fold or unfold the selected card’s branch',
+        menu: (ctx) => (folded(ctx) ? 'Unfold branch' : 'Fold branch'),
+        menuIcon: (ctx) => (folded(ctx) ? 'chevrons-up-down' : 'chevrons-down-up'),
         icon: 'chevrons-down-up',
-        check: () => this.branchTargets(this.pageCanvas()).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          const cards = this.branchTargets(view);
-          const model = canvasModel(view.canvas);
-          this.foldBranches(view, cards, !cards.every((n) => tuckedCount(model, n.id) > 0));
-        },
+        on: 'canvas',
+        when: (ctx) => folds(ctx).length > 0,
+        run: (ctx) => this.foldBranches(ctx.view, folds(ctx), !folded(ctx)),
       },
       {
         id: 'fold-every-canvas-branch',
         name: 'Fold every branch on the canvas',
+        menu: false,
         icon: 'chevrons-down-up',
-        check: () => {
-          const view = this.pageCanvas();
-          return !!view && this.canBranch && this.foldStatus(canvasModel(view.canvas)).roots > 0;
-        },
-        run: () => this.foldEverything(this.pageCanvas(), 'branches'),
+        on: 'canvas',
+        when: (ctx) => this.canBranch && status(ctx).roots > 0,
+        run: (ctx) => this.foldEverything(ctx.view, 'branches'),
       },
       {
         id: 'toggle-canvas-master-card',
         name: 'Make the selected cards master cards, or not',
+        menu: (ctx) => (ctx.nodes.length > 1 ? 'Master cards' : 'Master card'),
         icon: 'crown',
-        check: () => this.masterCandidates(this.pageCanvas()).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          const recs = this.masterCandidates(view);
-          this.setMaster(view, recs.map((r) => r.node), !recs.every((r) => r.master));
+        on: 'canvas',
+        checked: (ctx) => masters(ctx).every((r) => r.master),
+        when: (ctx) => masters(ctx).length > 0,
+        run: (ctx) => {
+          const recs = masters(ctx);
+          this.setMaster(ctx.view, recs.map((r) => r.node), !recs.every((r) => r.master));
         },
       },
       {
         id: 'unfold-canvas-everything',
         name: 'Unfold every branch on the canvas',
+        menu: false,
         icon: 'chevrons-up-down',
-        check: () => {
-          const view = this.pageCanvas();
-          return !!view && this.foldStatus(canvasModel(view.canvas)).anything;
-        },
-        run: () => this.foldEverything(this.pageCanvas(), 'everything'),
+        on: 'canvas',
+        when: (ctx) => status(ctx).anything,
+        run: (ctx) => this.foldEverything(ctx.view, 'everything'),
       },
     ];
   }
 
-  /** The selected cards whose branch can be folded, or is. */
-  branchTargets(view) {
-    const selected = this.selectedNodes(view);
-    if (!selected.length) return [];
+  /** The selected cards — or these — whose branch can be folded, or is. */
+  branchTargets(view, nodes) {
+    const selected = nodes || this.selectedNodes(view);
+    if (!view || !selected.length) return [];
     const model = canvasModel(view.canvas);
     const links = arrowLinks(model);
     return selected.filter((n) => {
@@ -201,56 +205,6 @@ class CanvasFold extends CanvasFeature {
     this.pass(view);
     const ws = this.app && this.app.workspace;
     if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:canvas-changed', view);
-  }
-
-  addMenuItems(menu, nodes) {
-    const first = nodes[0];
-    const view = first && first.canvas && first.canvas.view;
-    if (!view || !view.canvas || !nodes.length) return;
-    if (nodes.length > 1) {
-      // Several selected: master cards, all at once.
-      const recs = this.masterCandidates(view, nodes);
-      if (!recs.length) return;
-      const on = recs.every((r) => r.master);
-      menu.addItem((item) => {
-        if (typeof item.setSection === 'function') item.setSection('action');
-        item.setIcon('crown').onClick(() => this.setMaster(view, recs.map((r) => r.node), !on));
-        if (typeof item.setChecked === 'function') {
-          item.setTitle('Master cards');
-          item.setChecked(on);
-        } else {
-          item.setTitle(on ? 'No longer master cards' : 'Make master cards');
-        }
-      });
-      return;
-    }
-    const model = canvasModel(view.canvas);
-    const rec = model.byId.get(first.id);
-    if (!rec || rec.tuck || isGroupRecord(rec)) return;
-    const links = arrowLinks(model);
-    const count = tuckedCount(model, rec.id);
-    const section = (item) => (typeof item.setSection === 'function' ? item.setSection('action') : item);
-    if (count || (this.canBranch && foldableBranch(model, rec.id, links).length)) {
-      menu.addItem((item) =>
-        section(item)
-          .setTitle(count ? 'Unfold branch' : 'Fold branch')
-          .setIcon(count ? 'chevrons-up-down' : 'chevrons-down-up')
-          .onClick(() => this.foldBranches(view, [first], !count))
-      );
-    }
-    if (this.canBranch) {
-      menu.addItem((item) => {
-        section(item)
-          .setIcon('crown')
-          .onClick(() => this.setMaster(view, [first], !rec.master));
-        if (typeof item.setChecked === 'function') {
-          item.setTitle('Master card');
-          item.setChecked(rec.master);
-        } else {
-          item.setTitle(rec.master ? 'No longer a master card' : 'Make master card');
-        }
-      });
-    }
   }
 
   /** A canvas still gliding from the last fold, put where it's going: what's next starts from there. */

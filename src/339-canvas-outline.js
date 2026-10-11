@@ -179,16 +179,8 @@ class CanvasOutline extends CanvasFeature {
     this.plugin.registerView(CANVAS_OUTLINE_VIEW, (leaf) => new CanvasOutlineView(leaf, this));
   }
 
-  commands() {
-    return [
-      {
-        id: 'open-canvas-outline',
-        name: 'Open the canvas outline',
-        icon: 'list-tree',
-        check: () => this.enabled,
-        run: () => this.show(),
-      },
-    ];
+  actions() {
+    return [{ id: 'open-canvas-outline', name: 'Open the canvas outline', menu: false, icon: 'list-tree', on: 'app', when: () => this.enabled, run: () => this.show() }];
   }
 
   disable() {

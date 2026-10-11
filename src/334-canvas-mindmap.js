@@ -205,8 +205,9 @@ class CanvasMindMap extends CanvasFeature {
     return !!this.settings.canvasMindMap;
   }
 
-  commands() {
-    const one = () => (this.keys ? this.selectedCard(this.pageCanvas()) : null);
+  actions() {
+    const one = (ctx) => (this.keys ? this.cardOf(ctx.nodes) : null);
+    const open = (ctx) => (ctx.view.canvas.readonly ? null : one(ctx));
     const ways = [
       ['left', 'Select the card to the left'],
       ['right', 'Select the card to the right'],
@@ -214,34 +215,18 @@ class CanvasMindMap extends CanvasFeature {
       ['down', 'Select the card below'],
     ];
     return [
-      {
-        id: 'canvas-add-child-card',
-        name: 'Add a card the selected card leads to',
-        icon: 'git-branch-plus',
-        check: () => !!one(),
-        run: () => this.addChild(this.pageCanvas(), one()),
-      },
-      {
-        id: 'canvas-add-sibling-card',
-        name: 'Add a card beside the selected card',
-        icon: 'list-plus',
-        check: () => !!one(),
-        run: () => this.addSibling(this.pageCanvas(), one()),
-      },
-    ].concat(
-      ways.map(([way, name]) => ({
-        id: `canvas-select-${way}`,
-        name,
-        icon: `arrow-${way}`,
-        check: () => !!one(),
-        run: () => this.step(this.pageCanvas(), way),
-      }))
-    );
+      { id: 'canvas-add-child-card', name: 'Add a card the selected card leads to', menu: 'Add card after', icon: 'git-branch-plus', on: 'canvas', when: (ctx) => !!open(ctx), run: (ctx) => this.addChild(ctx.view, open(ctx)) },
+      { id: 'canvas-add-sibling-card', name: 'Add a card beside the selected card', menu: 'Add card beside', icon: 'list-plus', on: 'canvas', when: (ctx) => !!open(ctx), run: (ctx) => this.addSibling(ctx.view, open(ctx)) },
+    ].concat(ways.map(([way, name]) => ({ id: `canvas-select-${way}`, name, menu: false, icon: `arrow-${way}`, on: 'canvas', when: (ctx) => !!one(ctx), run: (ctx) => this.step(ctx.view, way) })));
   }
 
   /** The one selected card — not a group, nor one in a fold — or null. */
   selectedCard(view) {
-    const selected = this.selectedNodes(view);
+    return this.cardOf(this.selectedNodes(view));
+  }
+
+  /** The one card of these, as above, or null. */
+  cardOf(selected) {
     if (selected.length !== 1) return null;
     const node = selected[0];
     if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
@@ -487,27 +472,6 @@ class CanvasMindMap extends CanvasFeature {
     } catch (err) {
       /* left as it was */
     }
-  }
-
-  addMenuItems(menu, nodes) {
-    if (!this.keys || nodes.length !== 1) return;
-    const node = nodes[0];
-    const view = node && node.canvas && node.canvas.view;
-    if (!view || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node) || (view.canvas && view.canvas.readonly)) return;
-    menu.addItem((item) =>
-      item
-        .setTitle('Add card after')
-        .setIcon('git-branch-plus')
-        .setSection('action')
-        .onClick(() => this.addChild(view, node))
-    );
-    menu.addItem((item) =>
-      item
-        .setTitle('Add card beside')
-        .setIcon('list-plus')
-        .setSection('action')
-        .onClick(() => this.addSibling(view, node))
-    );
   }
 
   /** Whether new cards go in free space, rather than in line. */

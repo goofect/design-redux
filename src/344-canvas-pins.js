@@ -17,18 +17,23 @@ class CanvasPins extends CanvasFeature {
     ];
   }
 
-  commands() {
+  actions() {
+    // Cards only, on a canvas that can be changed.
+    const cards = (ctx) => {
+      const found = this.cardsOf(ctx.nodes);
+      return this.enabled && !ctx.view.canvas.readonly && found.length && found.length === ctx.nodes.length ? found : [];
+    };
+    const pinned = (ctx) => cards(ctx).every((n) => this.isPinned(n));
     return [
       {
         id: 'canvas-toggle-keep-in-place',
         name: 'Keep the selected cards in place, or not',
+        menu: (ctx) => (pinned(ctx) ? 'Let layouts move it' : 'Keep in place'),
+        menuIcon: (ctx) => (pinned(ctx) ? 'pin-off' : 'pin'),
         icon: 'pin',
-        check: () => this.enabled && this.cardsOf(this.selectedNodes(this.pageCanvas())).length > 0,
-        run: () => {
-          const view = this.pageCanvas();
-          const cards = this.cardsOf(this.selectedNodes(view));
-          this.setPinned(view, cards, !cards.every((n) => this.isPinned(n)));
-        },
+        on: 'canvas',
+        when: (ctx) => cards(ctx).length > 0,
+        run: (ctx) => this.setPinned(ctx.view, cards(ctx), !pinned(ctx)),
       },
     ];
   }
@@ -39,20 +44,6 @@ class CanvasPins extends CanvasFeature {
 
   isPinned(node) {
     return !!(node && node.unknownData && node.unknownData[PIN_KEY]);
-  }
-
-  addMenuItems(menu, nodes) {
-    const cards = this.cardsOf(nodes);
-    if (!cards.length || cards.length !== nodes.length) return;
-    const view = cards[0].canvas && cards[0].canvas.view;
-    if (!view || !view.canvas || view.canvas.readonly) return;
-    const pinned = cards.every((n) => this.isPinned(n));
-    menu.addItem((item) =>
-      canvasAction(item)
-        .setTitle(pinned ? 'Let layouts move it' : 'Keep in place')
-        .setIcon(pinned ? 'pin-off' : 'pin')
-        .onClick(() => this.setPinned(view, cards, !pinned))
-    );
   }
 
   /** The cards kept in place, or let go. Saved, a step of Undo. */

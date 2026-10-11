@@ -83,33 +83,17 @@ class CanvasVaultMap extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
-      {
-        id: 'canvas-map-folder',
-        name: 'Make a canvas map of this folder',
-        icon: 'network',
-        check: () => this.enabled && !!pageFolder(this.app),
-        run: () => this.mapFolder(pageFolder(this.app)),
-      },
-      {
-        id: 'canvas-map-tag',
-        name: 'Make a canvas map of a tag…',
-        icon: 'tags',
-        check: () => this.enabled,
-        run: () => new TagPicker(this.app, this.allTags(), (tag) => this.mapTag(tag)).open(),
-      },
+      { id: 'canvas-map-folder', name: 'Make a canvas map of this folder', menu: 'Make a canvas map', icon: 'network', on: 'album', when: () => this.enabled, run: (ctx) => this.mapFolder(ctx.folder) },
+      { id: 'canvas-map-tag', name: 'Make a canvas map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled, run: () => new TagPicker(this.app, this.allTags(), (tag) => this.mapTag(tag)).open() },
     ];
   }
 
   register() {
     this.plugin.registerEvent(
       this.app.workspace.on('file-menu', (menu, target) => {
-        if (!this.enabled || !(target instanceof TFolder)) return;
-        menu.addItem((item) => {
-          if (typeof item.setSection === 'function') item.setSection('action');
-          item.setTitle('Make a canvas map').setIcon('network').onClick(() => this.mapFolder(target));
-        });
+        if (target instanceof TFolder) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, canvasAction);
       })
     );
   }

@@ -36,9 +36,18 @@ class Feature {
     return !key || !!this.settings[key];
   }
 
-  /** [{ id, name, check?, run }] — check gates palette visibility. */
-  commands() {
+  /**
+   * What it does, each written once (see 253-actions.js): as commands
+   * here, and on the menus of what they act on where the feature puts
+   * them there.
+   */
+  actions() {
     return [];
+  }
+
+  /** [{ id, name, check?, run }] — check gates palette visibility. Its actions, by default. */
+  commands() {
+    return actionCommands(this.actions(), (a) => actionContext(this.app, a));
   }
 
   /** Rows for the settings tab, in order. */

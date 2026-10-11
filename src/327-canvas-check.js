@@ -100,16 +100,8 @@ class CanvasCheck extends CanvasFeature {
 
   sync() {}
 
-  commands() {
-    return [
-      {
-        id: 'check-canvas',
-        name: 'Look the canvas over',
-        icon: 'list-checks',
-        check: () => this.enabled && !!this.pageCanvas(),
-        run: () => this.open(this.pageCanvas()),
-      },
-    ];
+  actions() {
+    return [{ id: 'check-canvas', name: 'Look the canvas over', menu: false, icon: 'list-checks', on: 'canvas', when: () => this.enabled, run: (ctx) => this.open(ctx.view) }];
   }
 
   problems(view) {
