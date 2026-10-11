@@ -568,6 +568,47 @@ describe('Design Redux in Obsidian', function () {
     expect(result.second.saved.drRelation).toEqual({ predicate: 'constrains', subject: 'b', object: 'a' });
   });
 
+  it('keeps a branch and its outline note in step, with the canvas open', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      for (const p of ['Sync.canvas', 'Government outline.md']) {
+        const old = app.vault.getAbstractFileByPath(p);
+        if (old) await app.vault.delete(old);
+      }
+      const card = (id, text, x, y) => ({ id, type: 'text', text, x, y, width: 180, height: 60 });
+      await app.vault.create('Sync.canvas', JSON.stringify({
+        nodes: [card('g', 'Government', 0, 0), card('p', 'Parliamentary', 300, -100), card('s', 'Presidential', 300, 100), card('f', 'Fusion of powers', 600, -100)],
+        edges: [
+          { id: 'e1', fromNode: 'g', fromSide: 'right', toNode: 'p', toSide: 'left' },
+          { id: 'e2', fromNode: 'g', fromSide: 'right', toNode: 's', toSide: 'left' },
+          { id: 'e3', fromNode: 'p', fromSide: 'right', toNode: 'f', toSide: 'left' },
+        ],
+      }));
+    });
+    await obsidianPage.openFile('Sync.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const view = app.workspace.activeLeaf.view;
+      const sync = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasOutlineSync');
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 100)); };
+      const note = await sync.keep(view, view.canvas.nodes.get('g'));
+      await until(() => !!sync.outlineInfo(note));
+      // Fusion of powers moved under Presidential, in the note.
+      const text = await app.vault.read(note);
+      await app.vault.modify(note, text.replace(/\t\t- Fusion of powers (\^f)\n/, '').replace(/(\t- Presidential \^s\n)/, `$1\t\t- Fusion of powers ^f\n`));
+      const followed = await sync.sync(note, true);
+      // The open canvas takes the file as it now is.
+      const parentOfF = () => {
+        let parent = null;
+        view.canvas.edges.forEach((e) => { if (e.to.node.id === 'f') parent = e.from.node.id; });
+        return parent;
+      };
+      await until(() => parentOfF() === 's');
+      return { followed, parent: parentOfF() };
+    });
+    expect(result.followed).toBe('outline');
+    expect(result.parent).toBe('s');
+  });
+
   it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const old = app.vault.getFileByPath('Paste.canvas');

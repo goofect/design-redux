@@ -50,7 +50,7 @@ const SETTINGS_TABS = [
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
       {
         title: 'Canvas',
-        keys: ['canvasLegend', 'canvasDepth', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasViews', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasFocusSelect', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap'],
+        keys: ['canvasLegend', 'canvasDepth', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasViews', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasFocusSelect', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasVaultMap'],
       },
       {
         title: 'Compatibility',

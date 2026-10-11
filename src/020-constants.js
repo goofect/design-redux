@@ -184,6 +184,9 @@ const DEFAULTS = {
   // A branch written out as a note, and a note's headings or a card's list made into cards.
   canvasBranchNote: true,
   canvasOutlineBranch: true,
+  // A branch kept as an outline note, the two kept in step.
+  canvasOutlineSync: true,
+  canvasOutlineNumbers: false,
   // A branch laid out to one side, both sides, or all round its card.
   canvasLayouts: true,
   // Arrows named for how their cards relate, or marked related: out of branches.

@@ -71,7 +71,7 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, selectionLinks, cardRole, Knowledge, ' +
+  'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
   'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
@@ -1222,6 +1222,62 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(k.drawOnCanvas(view), 1);
     const drawn = imported.edges[0];
     assert.deepStrictEqual([drawn.fromNode, drawn.toNode, drawn.label, drawn.drRelation.kind, drawn.drRelated], ['c', 'p', 'supports', 'supports', true]);
+  });
+
+  await t('a branch and its outline in step: whichever changed is followed — moves, names, new items, order — and both changed asks', async () => {
+    const data = {
+      nodes: [card('g', 0, 0, 160, 60, { text: 'Government' }), card('p', 300, -100, 160, 60, { text: 'Parliamentary' }), card('f', 600, -100, 160, 60, { text: 'Fusion of powers' }), card('s', 300, 100, 160, 60, { text: 'Presidential' })],
+      edges: [edge('g', 'p', 'right', 'left'), edge('p', 'f', 'right', 'left'), edge('g', 's', 'right', 'left')],
+    };
+    const items = R.branchItems(data, 'g');
+    assert.deepStrictEqual(items.map((i) => [i.id, i.parent, i.index, i.depth]), [['g', null, 0, 0], ['p', 'g', 0, 1], ['f', 'p', 0, 2], ['s', 'g', 1, 1]]);
+    const text = R.outlineText(items, false);
+    assert.strictEqual(text, '- Government ^g\n\t- Parliamentary ^p\n\t\t- Fusion of powers ^f\n\t- Presidential ^s\n');
+    assert.strictEqual(R.shapeOf(R.syncedOutlineItems(text)), R.shapeOf(items), 'read back, the same shape');
+    assert.ok(R.outlineText(items, true).startsWith('1. Government'), 'numbered');
+    // A fake vault: the canvas and the outline note as files.
+    const files = { 'Map.canvas': JSON.stringify(data), 'Government outline.md': '' };
+    const canvasFile = { path: 'Map.canvas', extension: 'canvas', basename: 'Map' };
+    const note = { path: 'Government outline.md', extension: 'md', basename: 'Government outline' };
+    let fm = {};
+    const fmOf = () => { const m = /^---\n([\s\S]*?)\n---/.exec(files[note.path]); const o = {}; (m ? m[1].split('\n') : []).forEach((l) => { const i = l.indexOf(':'); o[l.slice(0, i)] = l.slice(i + 1).trim().replace(/^"|"$/g, ''); }); return o; };
+    const app = {
+      vault: { read: async (f) => files[f.path], modify: async (f, t) => { files[f.path] = t; }, create: async (p, t) => { files[p] = t; return note; }, getMarkdownFiles: () => [note], getRoot: () => ({ path: '/' }), on: () => ({}) },
+      metadataCache: { getFileCache: (f) => (f === note ? { frontmatter: fmOf() } : null), getFirstLinkpathDest: (l) => (l === 'Map' ? canvasFile : null), fileToLinktext: () => 'Map', on: () => ({}) },
+      fileManager: { processFrontMatter: async (f, fn) => { fm = fmOf(); fn(fm); files[note.path] = files[note.path].replace(/outline-synced: .*/, `outline-synced: ${fm['outline-synced']}`); } },
+      workspace: { getLeaf: () => ({ openFile: async () => {} }), trigger() {} },
+    };
+    let undo = null;
+    const p = { settings: { canvasOutlineSync: true }, app, freeChildPath: (f, base, ext) => `${base}.${ext}`, offerUndo: (m, fn) => { undo = fn; }, feature: () => null };
+    const sync = new R.CanvasOutlineSync(p);
+    const view = { file: canvasFile };
+    await sync.keep(view, { id: 'g' });
+    assert.ok(/^---\noutline-of: "\[\[Map\]\]"\noutline-root: g\noutline-synced: \w+\n---\n- Government \^g/.test(files[note.path]), files[note.path]);
+    // The outline changed: Fusion moved under Presidential, Presidential renamed and put first, a new item.
+    files[note.path] = files[note.path].replace(/- Government \^g[\s\S]*$/, '- Government ^g\n\t- Presidential system ^s\n\t\t- Fusion of powers ^f\n\t\t- Veto\n\t- Parliamentary ^p\n');
+    assert.strictEqual(await sync.sync(note, true), 'outline');
+    const after = JSON.parse(files['Map.canvas']);
+    const after2 = R.branchItems(after, 'g');
+    assert.deepStrictEqual(after2.map((i) => [i.text, i.parent]), [['Government', null], ['Presidential system', 'g'], ['Fusion of powers', 's'], ['Veto', 's'], ['Parliamentary', 'g']]);
+    const node = (id) => after.nodes.find((n) => n.id === id);
+    assert.deepStrictEqual([node('f').x, node('p').x], [600, 300], 'cards keep their places across');
+    assert.ok(node('s').y < node('p').y, 'order followed by trading places');
+    assert.ok(/- Veto \^\w+/.test(files[note.path]), 'the new card’s id written into the outline');
+    assert.strictEqual(await sync.sync(note, true), 'same', 'in step');
+    // The canvas changed: the outline follows.
+    const moved = JSON.parse(files['Map.canvas']);
+    moved.nodes.find((n) => n.id === 'p').text = 'Parliamentary government';
+    files['Map.canvas'] = JSON.stringify(moved);
+    assert.strictEqual(await sync.sync(note, true), 'canvas');
+    assert.ok(files[note.path].includes('- Parliamentary government ^p'));
+    await undo();
+    assert.ok(!files[note.path].includes('Parliamentary government ^p'), 'the outline as it was before the sync');
+    assert.ok(files['Map.canvas'].includes('Parliamentary government'), 'and the canvas as it was: the change made there is its own');
+    // Both changed: left alone without asking.
+    files['Map.canvas'] = files['Map.canvas'].replace('Fusion of powers', 'Fusion');
+    files[note.path] = files[note.path].replace('Government ^g', 'State ^g');
+    assert.strictEqual(await sync.sync(note, false), null);
+    assert.ok(files[note.path].includes('State ^g') && files['Map.canvas'].includes('"Fusion"'), 'neither touched');
   });
 
   await t('an arrow given a meaning: a kind — hierarchy in the branch, association out — or a proposition, turned round and listed; one just made related is dashed', async () => {
