@@ -852,15 +852,6 @@ class MarkedLists extends Feature {
     if (on) this.extensions.push(listEditorExtensions());
     this.app.workspace.updateOptions();
     // Notes already drawn were drawn with the old settings.
-    if (!first || !on) this.rerender();
-  }
-
-  rerender() {
-    this.app.workspace.iterateAllLeaves((leaf) => {
-      const view = leaf.view;
-      if (!(view instanceof MarkdownView) || !view.previewMode) return;
-      if (typeof view.previewMode.rerender === 'function') view.previewMode.rerender(true);
-    });
+    if (!first || !on) rerenderReading(this.app);
   }
 }
-

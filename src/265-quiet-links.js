@@ -814,7 +814,7 @@ class QuietLinks extends Feature {
       this.sweep();
     }
     this.watchPanes();
-    if (switched) this.rerenderReading();
+    if (switched) rerenderReading(this.app);
   }
 
   disable() {
@@ -825,7 +825,7 @@ class QuietLinks extends Feature {
       this.restoreAll();
     }
     this.unwatchPanes();
-    if (switched && !this.plugin.unloading) this.rerenderReading();
+    if (switched && !this.plugin.unloading) rerenderReading(this.app);
   }
 
   refreshEditors() {
@@ -836,19 +836,6 @@ class QuietLinks extends Feature {
       /* nothing open to redraw */
     }
     this.changed = false;
-  }
-
-  /** Reading views drawn before the switch are drawn again, so the change shows. */
-  rerenderReading() {
-    this.app.workspace.iterateAllLeaves((leaf) => {
-      const view = leaf.view;
-      if (!(view instanceof MarkdownView) || !view.previewMode) return;
-      try {
-        view.previewMode.rerender(true);
-      } catch (err) {
-        /* it redraws on its next change */
-      }
-    });
   }
 
   /* -- reading view and properties ------------------------------------ */

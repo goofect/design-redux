@@ -299,3 +299,16 @@ function scriptLivePreview(state) {
     return false;
   }
 }
+
+/** Redraw open notes in reading view, after what they're drawn with has changed. */
+function rerenderReading(app) {
+  app.workspace.iterateAllLeaves((leaf) => {
+    const view = leaf.view;
+    if (!(view instanceof MarkdownView) || !view.previewMode) return;
+    try {
+      if (typeof view.previewMode.rerender === 'function') view.previewMode.rerender(true);
+    } catch (err) {
+      /* it redraws on its next change */
+    }
+  });
+}

@@ -383,15 +383,6 @@ function renderScripts(el, ctx) {
   });
 }
 
-/** Redraw open notes in reading view, after what they're drawn with has changed. */
-function rerenderReading(app) {
-  app.workspace.iterateAllLeaves((leaf) => {
-    const view = leaf.view;
-    if (!(view instanceof MarkdownView) || !view.previewMode) return;
-    if (typeof view.previewMode.rerender === 'function') view.previewMode.rerender(true);
-  });
-}
-
 class Scripts extends Feature {
   constructor(plugin) {
     super(plugin);
