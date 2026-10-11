@@ -10,6 +10,17 @@
 class Queue {
   constructor(plugin) {
     this.plugin = plugin;
+    // Told whenever the queue changes (Up Next, to redraw what shows it).
+    this.listeners = [];
+  }
+
+  /** Call `fn` whenever the queue changes; returns what stops it. */
+  onChange(fn) {
+    this.listeners.push(fn);
+    return () => {
+      const i = this.listeners.indexOf(fn);
+      if (i !== -1) this.listeners.splice(i, 1);
+    };
   }
 
   get app() {
@@ -67,8 +78,7 @@ class Queue {
   set(paths) {
     this.settings.queue = paths.slice();
     this.plugin.saveData(this.settings);
-    const upNext = this.plugin.feature(UpNext);
-    if (upNext) upNext.refresh();
+    this.listeners.forEach((fn) => fn());
   }
 
   followRename(file, oldPath) {

@@ -12,6 +12,13 @@
 const QUEUED_KINDS = ['md', 'canvas'];
 
 class UpNext extends Feature {
+  constructor(plugin) {
+    super(plugin);
+    // Told of every change to the queue, to redraw what shows it; the two
+    // live and go with the plugin.
+    if (plugin.queue) plugin.queue.onChange(() => this.refresh());
+  }
+
   get queue() {
     return this.plugin.queue;
   }
