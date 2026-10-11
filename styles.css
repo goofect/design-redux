@@ -1230,6 +1230,20 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   margin-bottom: 24px;
 }
 
+/* A heading over a group of covers, as a shelf's is. */
+.dr-tile-group-head {
+  margin: 20px 0 10px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dr-tile-group-head:first-of-type {
+  margin-top: 0;
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

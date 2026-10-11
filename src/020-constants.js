@@ -30,6 +30,9 @@ const LIBRARY_BUILTINS = {
 /* How large covers are on screens of tiles. */
 const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Large' };
 
+/* How screens of albums group their covers. */
+const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of album', collection: 'Collection' };
+
 const DEFAULTS = {
   library: true,
   singleArea: false,
@@ -67,6 +70,8 @@ const DEFAULTS = {
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
+  // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
+  tileGroups: '',
   // A command listing what the library has lost track of.
   libraryCheck: true,
   smartAlbumList: [],

@@ -55,16 +55,13 @@ class FolderScreen extends BrowseScreen {
     // tiles. The album treatment is for one that actually holds notes.
     if (subfolders.length && !holdsNotes) {
       view.renderPlainHeader(root, folder);
-      const folders = view.sortFolders(
-        subfolders.filter((c) => view.folderInFilter(c)).filter((c) => view.matches(c.name))
-      );
+      // In the order they were put in, where they have been.
+      const folders = view.shelfFolders(folder).filter((c) => view.folderInFilter(c)).filter((c) => view.matches(c.name));
       if (!folders.length) {
         root.createDiv({ cls: 'dr-empty', text: 'No folders' });
         return;
       }
-      const grid = root.createDiv({ cls: 'dr-grid' });
-      roveFocus(grid, '.dr-card');
-      folders.forEach((f) => view.folderCard(grid, f));
+      view.folderTiles(root, folders).forEach((grid) => view.arrangeableTiles(grid));
       return;
     }
 
@@ -187,9 +184,7 @@ class FoldersScreen extends BrowseScreen {
       return;
     }
 
-    const grid = root.createDiv({ cls: 'dr-grid' });
-    roveFocus(grid, '.dr-card');
-    shown.forEach((f) => view.folderCard(grid, f, f.parent && f.parent.name));
+    view.folderTiles(root, shown, (f) => f.parent && f.parent.name);
   }
 }
 

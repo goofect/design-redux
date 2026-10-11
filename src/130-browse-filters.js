@@ -131,6 +131,14 @@ class Library extends Feature {
         options: GRID_DENSITIES,
       },
       {
+        key: 'tileGroups',
+        type: 'dropdown',
+        showIf: 'library',
+        name: 'Group covers by',
+        desc: 'On screens of albums: by the kind of album each is, or the collection — the folder — each is in.',
+        options: TILE_GROUPS,
+      },
+      {
         key: 'discNoteLimit',
         type: 'number',
         name: 'Notes per disc',

@@ -1111,6 +1111,44 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(text('.dr-empty'), ['Nothing matches']);
   });
 
+  await t('covers grouped by kind or collection; a shelf’s albums put in your own order, kept by name', async () => {
+    const { v, plugin, app, view } = setup();
+    v.folder('Politics');
+    ['Theory', 'Law', 'Ideas'].forEach((n) => { v.folder(`Politics/${n}`); v.file(`Politics/${n}/Note ${n}.md`); });
+    const lawNote = v.file('Politics/Law/Law.md');
+    const fms = new Map([[lawNote, { album: 'reference' }]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-grid .dr-card')).map((c) => c.dataset.path);
+    const heads = () => Array.from(view.contentEl.querySelectorAll('.dr-tile-group-head')).map((h) => h.textContent);
+    // A shelf, in its own order once one's moved.
+    Object.assign(view, { path: 'Politics' });
+    view.render();
+    assert.deepStrictEqual(tiles(), ['Politics/Ideas', 'Politics/Law', 'Politics/Theory']);
+    view.tileSteps(v.vault.getFolderByPath('Politics/Theory')).earlier();
+    assert.deepStrictEqual(plugin.settings.albumOrders.Politics.names, ['Ideas', 'Theory', 'Law']);
+    assert.deepStrictEqual(tiles(), ['Politics/Ideas', 'Politics/Theory', 'Politics/Law']);
+    assert.strictEqual(view.tileSteps(v.vault.getFolderByPath('Politics/Ideas')).earlier, null, 'already first');
+    // Not in an album of notes: its disc folders aren't tiles to arrange.
+    Object.assign(view, { path: 'IR' });
+    view.render();
+    assert.strictEqual(view.tileSteps(v.vault.getFolderByPath('IR/Theories')), null);
+    // Every folder, grouped by collection, then by kind.
+    plugin.settings.tileGroups = 'collection';
+    Object.assign(view, { mode: 'folders', path: '/' });
+    view.render();
+    assert.deepStrictEqual(heads(), ['IR', 'Politics', 'Vault']);
+    plugin.settings.tileGroups = 'kind';
+    view.render();
+    assert.deepStrictEqual(heads(), ['Reference', 'No kind given']);
+    assert.deepStrictEqual(tiles()[0], 'Politics/Law');
+    plugin.settings.tileGroups = '';
+    view.render();
+    assert.deepStrictEqual(heads(), []);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

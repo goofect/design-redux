@@ -1126,7 +1126,7 @@ class BrowseView extends ItemView {
       open: () => this.openFolder(folder),
       here: !!(opts && opts.here),
       redraw: () => this.render(),
-      arrange: this.mode === 'pinned' ? this.pinSteps(folder) : null,
+      arrange: this.tileSteps(folder),
     });
   }
 
@@ -1378,6 +1378,27 @@ class BrowseView extends ItemView {
           })
       )
     );
+
+    // Covers on a screen of albums, grouped.
+    if (this.mode === 'folders' || (this.mode === 'folder' && this.isShelf(this.folder()))) {
+      menu.addSeparator();
+      const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+      const by = this.plugin.settings.tileGroups || '';
+      Object.keys(TILE_GROUPS)
+        .filter((key) => (key !== 'kind' || (structure && structure.enabled)) && (key !== 'collection' || this.mode === 'folders'))
+        .forEach((key) =>
+          menu.addItem((item) =>
+            item
+              .setTitle(key ? `Grouped by ${TILE_GROUPS[key].toLowerCase()}` : 'Not grouped')
+              .setChecked(by === key)
+              .onClick(() => {
+                this.plugin.settings.tileGroups = key;
+                this.plugin.saveData(this.plugin.settings);
+                redraw();
+              })
+          )
+        );
+    }
 
     menu.addSeparator();
     const filter = (title, icon, on, pick, clear) =>
@@ -2123,19 +2144,87 @@ class BrowseView extends ItemView {
 
   /** Earlier and later for one pin, where it isn't already at that end. */
   pinSteps(target) {
-    if (this.mode !== 'pinned' || !this.keepsOwnOrder() || !this.canArrange()) return null;
-    const paths = this.pinnedInOrder().map((t) => t.path);
-    const at = paths.indexOf(target.path);
-    if (at === -1) return null;
+    return this.mode === 'pinned' ? this.tileSteps(target) : null;
+  }
+
+  /** A shelf's albums, in the order they were put in, or as sorted. */
+  shelfFolders(shelf) {
+    return this.plugin.orders.arrangeAlbum(shelf, this.visibleFolders(shelf), (list) => this.sortFolders(list));
+  }
+
+  /** A folder of nothing but folders. */
+  isShelf(folder) {
+    return !!folder && !(folder.children || []).some((c) => c instanceof TFile && !this.plugin.isFolderNote(c)) && this.visibleFolders(folder).length > 0;
+  }
+
+  /**
+   * Where tiles on screen can be put in order: pins in their own order,
+   * or the albums on a shelf, kept by name as an album keeps its notes.
+   */
+  tileOrder() {
+    if (this.mode === 'pinned') {
+      return this.keepsOwnOrder() ? { paths: () => this.pinnedInOrder().map((t) => t.path), move: (path, before) => this.arrangePin(path, before) } : null;
+    }
+    const shelf = this.mode === 'folder' ? this.folder() : null;
+    if (!this.isShelf(shelf)) return null;
+    const paths = () => this.shelfFolders(shelf).map((f) => f.path);
     return {
-      earlier: at > 0 ? () => this.arrangePin(target.path, paths[at - 1]) : null,
-      later: at < paths.length - 1 ? () => this.arrangePin(target.path, paths[at + 2] === undefined ? null : paths[at + 2]) : null,
+      paths,
+      move: (path, before) => {
+        this.plugin.orders.setAlbum(shelf, moveBefore(paths(), path, before).map((p) => p.split('/').pop()));
+        this.render();
+      },
     };
   }
 
-  /** Tiles on the Pinned screen can be dragged into order, on desktop. */
+  /** Earlier and later for one tile, where it isn't already at that end. */
+  tileSteps(target) {
+    const order = this.canArrange() ? this.tileOrder() : null;
+    if (!order) return null;
+    const paths = order.paths();
+    const at = paths.indexOf(target.path);
+    if (at === -1) return null;
+    return {
+      earlier: at > 0 ? () => order.move(target.path, paths[at - 1]) : null,
+      later: at < paths.length - 1 ? () => order.move(target.path, paths[at + 2] === undefined ? null : paths[at + 2]) : null,
+    };
+  }
+
+  /**
+   * Folder tiles in one grid, or grouped as the setting says: by kind of
+   * album, or by the folder they're in. The grids, to arrange.
+   */
+  folderTiles(root, folders, subtitle) {
+    const by = this.plugin.settings.tileGroups;
+    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const top = (f) => !f.parent || (f.parent.isRoot && f.parent.isRoot());
+    const keyOf =
+      by === 'kind' && structure && structure.enabled
+        ? (f) => structure.info(f).label
+        : by === 'collection'
+          ? (f) => (top(f) ? '' : f.parent.name)
+          : null;
+    const draw = (list) => {
+      const grid = root.createDiv({ cls: 'dr-grid' });
+      roveFocus(grid, '.dr-card');
+      list.forEach((f) => this.folderCard(grid, f, subtitle ? subtitle(f) : undefined));
+      return grid;
+    };
+    const groups = new Map();
+    if (keyOf) folders.forEach((f) => groups.set(keyOf(f), (groups.get(keyOf(f)) || []).concat(f)));
+    if (!keyOf || groups.size < 2) return [draw(folders)];
+    const keys = Array.from(groups.keys()).filter(Boolean).sort(byName);
+    if (groups.has('')) keys.push('');
+    return keys.map((key) => {
+      root.createDiv({ cls: 'dr-tile-group-head', text: key || (by === 'kind' ? 'No kind given' : this.app.vault.getName()) });
+      return draw(groups.get(key));
+    });
+  }
+
+  /** Tiles that can be dragged into order, on desktop: pins, or a shelf's albums. */
   arrangeableTiles(grid) {
-    if (Platform.isMobile || this.mode !== 'pinned') return;
+    const order = this.tileOrder();
+    if (Platform.isMobile || !order) return;
     let dragged = null;
     grid.querySelectorAll('.dr-card[data-path]').forEach((card) => {
       card.setAttribute('draggable', 'true');
@@ -2170,10 +2259,10 @@ class BrowseView extends ItemView {
       clear();
       if (!at || !this.canArrange()) return;
       evt.preventDefault();
-      const paths = this.pinnedInOrder().map((t) => t.path).filter((p) => p !== dragged);
+      const paths = order.paths().filter((p) => p !== dragged);
       const i = paths.indexOf(at.card.dataset.path);
       const before = at.after ? paths[i + 1] : paths[i];
-      this.arrangePin(dragged, before === undefined ? null : before);
+      order.move(dragged, before === undefined ? null : before);
     });
     // Alt+left and right move the focused tile, from the keyboard.
     grid.addEventListener('keydown', (evt) => {
@@ -2181,7 +2270,7 @@ class BrowseView extends ItemView {
       const card = evt.target && typeof evt.target.closest === 'function' ? evt.target.closest('.dr-card[data-path]') : null;
       if (!card) return;
       const target = this.app.vault.getAbstractFileByPath(card.dataset.path);
-      const steps = target && this.pinSteps(target);
+      const steps = target && this.tileSteps(target);
       const step = steps && (evt.key === 'ArrowLeft' ? steps.earlier : steps.later);
       if (!step) return;
       evt.preventDefault();
