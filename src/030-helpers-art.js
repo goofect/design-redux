@@ -819,6 +819,10 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
     else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
   }
+  if (isFolder && typeof AlbumRefactor === 'function' && typeof plugin.feature === 'function') {
+    const refactor = plugin.feature(AlbumRefactor);
+    if (refactor) refactor.addFolderItems(menu, target, sectioned);
+  }
 
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.

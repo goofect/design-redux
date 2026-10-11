@@ -80,6 +80,8 @@ const DEFAULTS = {
   libraryCheck: true,
   // The notes in no album, in one place, to put in albums a few at a time.
   libraryInbox: true,
+  // Renaming, moving, merging and splitting albums, shown first and undone in one step.
+  albumRefactor: true,
   smartAlbumList: [],
   // { folderPath: sort key }
   albumSorts: {},

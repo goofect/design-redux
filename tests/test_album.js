@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1312,6 +1312,85 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(one.path, 'Loose one.md', 'left where it is');
     await undo();
     assert.ok(!('includes' in fms.get(irNote)));
+  });
+
+  await t('reorganising albums: rename, move, merge and split, each shown first, done as shown, and undone in one step', async () => {
+    const { v, plugin, app } = setup();
+    const fms = new Map();
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.resolvedLinks = { 'Elsewhere.md': { 'IR/Anarchy.md': 2 } };
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); };
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder) || v.vault.create(`${folder.path}/${folder.name}.md`);
+    plugin.moveFile = async (file, dir) => {
+      const from = file.path;
+      const at = (name) => (!dir || dir === '/' ? name : `${dir}/${name}`);
+      let name = file.name;
+      for (let n = 1; v.vault.getAbstractFileByPath(at(name)); n++) name = file.extension ? `${file.basename} ${n}.${file.extension}` : `${file.name} ${n}`;
+      await v.fileManager.renameFile(file, at(name));
+      return from;
+    };
+    plugin.putBack = async (entry, from) => { await v.fileManager.renameFile(entry, from); return true; };
+    let undo = null;
+    plugin.offerUndo = (msg, fn) => { undo = fn; };
+    const refactor = new R.AlbumRefactor(plugin);
+    plugin.feature = () => null;
+    const folder = (p) => v.vault.getFolderByPath(p);
+    const file = (p) => v.vault.getFileByPath(p);
+    // Rename: what it'd do, what stops it, and back.
+    v.folder('Law');
+    let plan = refactor.planRename(folder('IR'), 'Law');
+    assert.ok(plan.blocked.includes('there already'));
+    assert.ok(refactor.planRename(folder('IR'), 'a/b').blocked);
+    plan = refactor.planRename(folder('IR'), 'Relations');
+    assert.ok(!plan.blocked);
+    assert.ok(plan.lines.some((l) => l.includes('2 links from other notes point in')), plan.lines.join(' | '));
+    await refactor.perform(plan);
+    assert.ok(folder('Relations') && file('Relations/Anarchy.md'));
+    await undo();
+    assert.ok(folder('IR') && file('IR/Theories/Realism.md') && !folder('Relations'));
+    // Move into another collection, and back.
+    plan = refactor.planMove(folder('IR'), folder('IR/Theories'));
+    assert.ok(plan.blocked.includes('inside itself'));
+    plan = refactor.planMove(folder('IR'), folder('Law'));
+    assert.ok(plan.lines.some((l) => l.includes('6 notes go with it, in 1 sub-album')), plan.lines.join(' | '));
+    await refactor.perform(plan);
+    assert.ok(file('Law/IR/Anarchy.md'));
+    await undo();
+    assert.ok(file('IR/Anarchy.md') && !folder('Law/IR'));
+    // Merge: notes moved, a name in both numbered, properties joined, its note a note, the folder gone; and back.
+    v.file('Law/Realism.md');
+    const lawNote = v.file('Law/Law.md');
+    const theoriesNote = v.file('IR/Theories/Theories.md');
+    fms.set(lawNote, { description: 'Rules.', related: ['[[Courts]]'] });
+    fms.set(theoriesNote, { album: 'subject', description: 'Ideas.', related: ['[[Courts]]', '[[Power]]'], includes: ['[[Law]]', '[[Anarchy]]'] });
+    plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
+    assert.ok(plan.warnings.some((w) => w.includes('“Realism.md” is in both')));
+    assert.ok(plan.lines.some((l) => l.includes('Its includes, related join Law’s')), plan.lines.join(' | '));
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
+    await refactor.perform(plan);
+    assert.ok(!folder('IR/Theories'), 'the empty folder is gone');
+    assert.ok(file('Law/Realism 1.md') && file('Law/Liberalism.md') && file('Law/Theories.md'));
+    assert.deepStrictEqual(fms.get(lawNote).related, ['[[Courts]]', '[[Power]]']);
+    assert.deepStrictEqual(fms.get(lawNote).includes, ['[[Anarchy]]'], 'not the album it went into');
+    assert.strictEqual(fms.get(lawNote).description, 'Rules.', 'its own description kept');
+    assert.ok(!('album' in fms.get(theoriesNote)), 'a note like the rest: not saying it’s an album');
+    await undo();
+    assert.ok(file('IR/Theories/Realism.md') && file('IR/Theories/Liberalism.md') && file('IR/Theories/Theories.md'));
+    assert.ok(file('Law/Realism.md') && !file('Law/Realism 1.md'));
+    assert.deepStrictEqual(fms.get(lawNote), { description: 'Rules.', related: ['[[Courts]]'] });
+    assert.strictEqual(fms.get(theoriesNote).album, 'subject');
+    // Split notes off into a new album beside it, and back.
+    plan = refactor.planSplit(folder('IR'), [], 'Security');
+    assert.ok(plan.blocked.includes('Pick'));
+    plan = refactor.planSplit(folder('IR'), [file('IR/Anarchy.md'), file('IR/Deterrence.md')], 'Security');
+    assert.ok(plan.lines[1].includes('2 notes move into it: Anarchy, Deterrence'));
+    await refactor.perform(plan);
+    assert.ok(file('Security/Anarchy.md') && file('Security/Deterrence.md') && file('IR/Balance.md'));
+    await undo();
+    assert.ok(file('IR/Anarchy.md') && !folder('Security'), 'the new album gone again');
   });
 
   console.log(`\n${passed} passed`);
