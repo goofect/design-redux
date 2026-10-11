@@ -37,6 +37,20 @@ function headerDuplicates(leaf) {
 }
 
 /* The sign a screen shows where a note shows its cover. */
+/* Narrower than this, the strip keeps what's open and its main buttons; the rest go into More. */
+const STRIP_NARROW = 760;
+
+/*
+ * What the strip offers for what's open, besides a note's own buttons:
+ * actions written once elsewhere, by id — [id, short name, secondary].
+ * Ones that hang on the canvas's selection aren't here: the strip isn't
+ * told when that changes.
+ */
+const STRIP_ACTIONS = {
+  album: [['new-note-here', 'New note', false], ['shuffle-album', 'Shuffle', false]],
+  canvas: [['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
+};
+
 const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };
 
 class ContextStrip extends Feature {
@@ -143,6 +157,10 @@ class ContextStrip extends Feature {
     );
     // Moving notes around an album moves its neighbours.
     this.plugin.registerEvent(this.app.vault.on('rename', () => this.update()));
+    // A window made narrow or wide again: what the strip has room for.
+    this.plugin.registerDomEvent(window, 'resize', () => {
+      if (this.enabled && this.el && this.isNarrow() !== this.narrow) this.update();
+    });
 
     if (Platform.isPhone) this.registerPhone();
   }
@@ -252,6 +270,8 @@ class ContextStrip extends Feature {
     const file = !browse && view && view.file instanceof TFile ? view.file : null;
 
     this.el.empty();
+    this.narrow = this.isNarrow();
+    this.el.toggleClass('is-narrow', this.narrow);
     // Up whenever there's a page at all — including an empty one, since
     // the strip is also where a closed sidebar comes back from.
     this.el.toggleClass('is-empty', !view);
@@ -335,18 +355,66 @@ class ContextStrip extends Feature {
     }
     if (!folder) return;
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
-    const more = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
-    more.setAttribute('aria-label', 'More');
-    more.setAttribute('role', 'button');
-    more.setAttribute('tabindex', '0');
-    setIcon(more, 'ellipsis');
-    onActivate(more, (evt) =>
-      showTargetMenu(this.plugin, evt, folder, {
-        here: true,
-        source: 'design-redux-strip',
-        redraw: () => browse.render(),
-      })
-    );
+    const specs = this.contextSpecs('album');
+    if (typeof browse.filterMenu === 'function') specs.push({ icon: 'arrow-up-down', label: 'Sort and filter', role: 'sort', run: (evt) => showMenuAt(browse.filterMenu(), evt) });
+    specs.push({
+      icon: 'ellipsis',
+      label: 'More',
+      role: 'more',
+      run: (evt) => showTargetMenu(this.plugin, evt, folder, { here: true, source: 'design-redux-strip', redraw: () => browse.render() }),
+    });
+    specs.forEach((spec) => this.stripButton(actions, spec));
+  }
+
+  /** Narrow enough that the strip's secondary buttons go into More. Not on a phone, whose strip is its own. */
+  isNarrow() {
+    return !Platform.isMobile && typeof window !== 'undefined' && window.innerWidth <= STRIP_NARROW;
+  }
+
+  /** The actions written elsewhere that the strip offers for this kind of page, as buttons — those that apply now. */
+  contextSpecs(kind) {
+    const out = [];
+    (STRIP_ACTIONS[kind] || []).forEach(([id, label, secondary]) => {
+      const action = this.findAction(id);
+      const ctx = action && actionContext(this.app, action);
+      if (!ctx || !applies(action, ctx)) return;
+      out.push({
+        icon: action.icon,
+        label,
+        role: id,
+        secondary,
+        run: () => {
+          const now = actionContext(this.app, action);
+          if (now && applies(action, now)) action.run(Object.assign(now, { from: 'strip' }));
+        },
+      });
+    });
+    return out;
+  }
+
+  /** An action by its id, from whichever feature defines it; which feature that is, remembered. */
+  findAction(id) {
+    if (!this.actionHomes) this.actionHomes = new Map();
+    let home = this.actionHomes.get(id);
+    if (!home) {
+      home = (this.plugin.features || []).find((f) => f.actions().some((a) => a.id === id));
+      if (home) this.actionHomes.set(id, home);
+    }
+    return home ? home.actions().find((a) => a.id === id) : null;
+  }
+
+  /** One of the strip's buttons: an icon named for what it does. */
+  stripButton(parent, spec) {
+    const el = parent.createDiv({ cls: 'clickable-icon dr-strip-btn' });
+    if (spec.secondary) el.addClass('is-secondary');
+    if (spec.role) el.dataset.action = spec.role;
+    el.setAttribute('aria-label', spec.label);
+    el.setAttribute('role', 'button');
+    el.setAttribute('tabindex', '0');
+    setIcon(el, spec.icon);
+    if (spec.active) el.addClass('is-active');
+    onActivate(el, spec.run);
+    return el;
   }
 
   /** The line under a screen's name: what an album holds and what it is; otherwise the vault. */
@@ -471,28 +539,20 @@ class ContextStrip extends Feature {
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
 
     // Properties, More, and what's there only when it matters — footnotes, Up Next — always;
-    // reading mode and pin when the strip is pointed at or tabbed into.
-    const secondary = ['mode', 'pin', 'concept'];
-    const button = (icon, label, onClick, active, role) => {
-      const el = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
-      if (secondary.indexOf(role) !== -1) el.addClass('is-secondary');
-      if (role) el.dataset.action = role;
-      el.setAttribute('aria-label', label);
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-      setIcon(el, icon);
-      if (active) el.addClass('is-active');
-      onActivate(el, onClick);
-    };
+    // reading mode, pin and the like when the strip is pointed at or tabbed into — or,
+    // in a narrow window, in More.
+    const specs = [];
 
     // The last thing the view header carried that the strip didn't, so
     // the header can go entirely in single-area mode.
     if (leaf && !leaf.isDeferred && leaf.view instanceof MarkdownView) {
       const reading = leaf.view.getMode() === 'preview';
-      button(
-        reading ? 'pencil' : 'book-open',
-        reading ? 'Edit' : 'Read',
-        () => {
+      specs.push({
+        icon: reading ? 'pencil' : 'book-open',
+        label: reading ? 'Edit' : 'Read',
+        role: 'mode',
+        secondary: true,
+        run: () => {
           // The command acts on whatever has focus, so the page is
           // given focus first; otherwise a click here with the sidebar
           // focused would do nothing.
@@ -500,55 +560,83 @@ class ContextStrip extends Feature {
           this.app.commands.executeCommandById('markdown:toggle-preview');
           window.setTimeout(() => this.update(), 50);
         },
-        false,
-        'mode'
-      );
+      });
     }
 
     const pinned = this.plugin.pins.has(file);
-    button(pinned ? 'pin-off' : 'pin', pinned ? 'Unpin' : 'Pin', () => {
-      this.plugin.togglePin(file);
-      this.update();
-    }, pinned, 'pin');
+    specs.push({
+      icon: pinned ? 'pin-off' : 'pin',
+      label: pinned ? 'Unpin' : 'Pin',
+      role: 'pin',
+      secondary: true,
+      active: pinned,
+      run: () => {
+        this.plugin.togglePin(file);
+        this.update();
+      },
+    });
+
+    // On a canvas, what can be done to it as a whole.
+    if (file.extension === 'canvas') specs.push(...this.contextSpecs('canvas'));
 
     // The note's footnotes, kept off the page, a press away.
     const footnotes = typeof Footnotes === 'function' ? this.plugin.feature(Footnotes) : null;
     if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
-      button('file-signature', `Footnotes (${footnotes.countIn(file)})`, () => footnotes.showView(), false, 'footnotes');
+      specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: () => footnotes.showView() });
     }
 
     // What's lined up, while anything is.
     const upNext = typeof UpNext === 'function' ? this.plugin.feature(UpNext) : null;
     const lined = upNext && upNext.enabled ? upNext.queue.files().length : 0;
-    if (lined) {
-      button('list-ordered', `Up Next (${lined})`, (evt) => upNext.showMenu(evt), false, 'up-next');
-    }
+    if (lined) specs.push({ icon: 'list-ordered', label: `Up Next (${lined})`, role: 'up-next', run: (evt) => upNext.showMenu(evt) });
 
     // What can be done to it as a concept, the same as its menu offers.
     const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
     if (knowledge && knowledge.enabled && file.extension === 'md') {
-      button('waypoints', 'Concept', (evt) => showActionMenu(evt, actionsOn(knowledge.actions(), 'note'), { file, from: 'strip' }), false, 'concept');
+      specs.push({ icon: 'waypoints', label: 'Concept', role: 'concept', secondary: true, run: (evt) => showActionMenu(evt, actionsOn(knowledge.actions(), 'note'), { file, from: 'strip' }) });
     }
 
-    button('info', 'Properties', (evt) => {
-      const panel = this.plugin.feature(PropertiesPanel);
-      if (panel && panel.enabled && leaf) panel.toggleFrom(leaf, evt.currentTarget);
-    }, false, 'properties');
+    // A note's properties; a canvas or a picture has none to show.
+    if (file.extension === 'md') {
+      specs.push({
+        icon: 'info',
+        label: 'Properties',
+        role: 'properties',
+        run: (evt) => {
+          const panel = this.plugin.feature(PropertiesPanel);
+          if (panel && panel.enabled && leaf) panel.toggleFrom(leaf, evt.currentTarget);
+        },
+      });
+    }
+
+    const overflow = this.isNarrow() ? specs.filter((spec) => spec.secondary) : [];
+    specs.filter((spec) => overflow.indexOf(spec) === -1).forEach((spec) => this.stripButton(actions, spec));
 
     // The page menu the note's own header had — Find, Replace, Export
     // to PDF, version history — followed by the file's entries, which
     // Obsidian adds as part of it. Hiding the header had taken all of
-    // that away.
-    button('ellipsis', 'More', (evt) => {
-      const menu = new Menu();
-      const view = leaf && !leaf.isDeferred ? leaf.view : null;
-      if (view && typeof view.onPaneMenu === 'function') {
-        view.onPaneMenu(menu, 'more-options');
-      } else {
-        this.app.workspace.trigger('file-menu', menu, file, 'design-redux-strip', leaf);
-      }
-      showMenuAt(menu, evt);
-    }, false, 'more');
+    // that away. In a narrow window, what the strip had no room for first.
+    this.stripButton(actions, {
+      icon: 'ellipsis',
+      label: 'More',
+      role: 'more',
+      run: (evt) => {
+        const menu = new Menu();
+        overflow.forEach((spec) =>
+          menu.addItem((item) => {
+            item.setTitle(spec.label).setIcon(spec.icon).onClick(() => spec.run(evt));
+            if (typeof item.setSection === 'function') item.setSection('action');
+          })
+        );
+        const view = leaf && !leaf.isDeferred ? leaf.view : null;
+        if (view && typeof view.onPaneMenu === 'function') {
+          view.onPaneMenu(menu, 'more-options');
+        } else {
+          this.app.workspace.trigger('file-menu', menu, file, 'design-redux-strip', leaf);
+        }
+        showMenuAt(menu, evt);
+      },
+    });
   }
 
   /** What goes beside the note's place in its album: as the setting says, or one property worth showing. */

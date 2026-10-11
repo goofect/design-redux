@@ -122,6 +122,8 @@ body {
   /* Components' own measures, from the unit: a sidebar row (28, 32 or 36px
      by density), the gap under a cover, and the gap under a card's title. */
   --dr-row-height: calc(var(--dr-u) * 4 + 16px);
+  --dr-control-size: 30px;
+  --dr-control-icon: 16px;
   --dr-cover-gap: calc(var(--dr-u) * 2.5);
   --dr-title-gap: var(--dr-space-1);
 }
@@ -212,6 +214,16 @@ body.dr-look-editorial .is-generated,
 body.dr-look-editorial [class].is-blank.is-hued,
 body.dr-look-editorial .dr-cat {
   filter: grayscale(1);
+}
+
+/* Icon buttons a finger can find. */
+body.is-mobile {
+  --dr-control-size: 36px;
+}
+
+body.is-phone {
+  --dr-control-size: 38px;
+  --dr-control-icon: 19px;
 }
 
 /* Density: the unit every space is a multiple of — lists, grids, the strip, panels, windows. */
@@ -1053,8 +1065,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
   border-radius: var(--dr-radius-pill);
   background-color: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
@@ -1069,8 +1081,8 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 .dr-browse-up .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 .dr-browse-search {
@@ -1905,8 +1917,8 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
 }
 
 .dr-detail-action-icon .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 /* -- the list -----------------------------------------------------------
@@ -2552,8 +2564,8 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
   margin-left: auto;
   padding: 0;
   border-radius: var(--dr-radius-pill);
@@ -2951,6 +2963,10 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   box-shadow: var(--dr-shadow-lg);
 }
 
+.dr-strip.is-narrow {
+  max-width: calc(100vw - var(--dr-space-6));
+}
+
 .dr-strip.is-empty {
   display: none;
 }
@@ -2967,8 +2983,8 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
   padding: 0;
   border-radius: var(--dr-radius-pill);
   color: var(--text-muted);
@@ -3013,8 +3029,8 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 }
 
 .dr-strip-btn .svg-icon {
-  width: 16px;
-  height: 16px;
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 /* The middle: « the note » — back and on through its album either side,
@@ -4023,8 +4039,8 @@ body.is-mobile .dr-cat {
 
 body.is-mobile .dr-browse-up,
 body.is-mobile .dr-filter-btn {
-  width: 36px;
-  height: 36px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
 }
 
 /* The library, as the Library tab's list: full-size rows and icons. */
@@ -4322,7 +4338,8 @@ body.is-phone .dr-strip {
 
 body.is-phone .dr-strip-nav,
 body.is-phone .dr-strip-btn[data-action="pin"],
-body.is-phone .dr-strip-btn[data-action="properties"] {
+body.is-phone .dr-strip-btn[data-action="properties"],
+body.is-phone .dr-strip-btn[data-action="sort"] {
   display: none;
 }
 
@@ -4355,13 +4372,13 @@ body.is-phone .dr-strip-art {
 }
 
 body.is-phone .dr-strip-btn {
-  width: 38px;
-  height: 38px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
 }
 
 body.is-phone .dr-strip-btn .svg-icon {
-  width: 19px;
-  height: 19px;
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 /* -- the properties panel, across the screen ---------------------------------- */
@@ -6185,8 +6202,8 @@ body.dr-strip-flat .dr-strip {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
   border-radius: var(--dr-radius-pill);
   background-color: rgba(20, 20, 20, 0.55);
   backdrop-filter: blur(10px);
@@ -6201,8 +6218,8 @@ body.dr-strip-flat .dr-strip {
 }
 
 .dr-card-button .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 @media (any-hover: hover) {

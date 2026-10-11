@@ -593,6 +593,26 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     // Only what's needed shown until it's pointed at: Properties and More always, the rest waiting.
     const secondary = Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action);
     assert.deepStrictEqual(secondary, ['mode', 'pin']);
+    // In a narrow window those go into More instead, first in its menu.
+    app.workspace.trigger = () => {};
+    Object.defineProperty(window, 'innerWidth', { value: 600, configurable: true });
+    strip.update();
+    assert.ok(strip.el.classList.contains('is-narrow'));
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')), []);
+    click(strip.el.querySelector('[data-action="more"]'));
+    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
+    Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
+    // An album's strip: the actions written for albums elsewhere, sorting, and More.
+    const made = [];
+    plugin.features = [{ actions: () => [{ id: 'new-note-here', name: 'New note in the current folder', icon: 'file-plus', on: 'album', run: (ctx) => made.push(`${ctx.folder.path} from ${ctx.from}`) }] }];
+    const { view } = setup();
+    Object.assign(view, { app, plugin });
+    leaf.view = view;
+    strip.update();
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['new-note-here', 'sort', 'more']);
+    assert.strictEqual(strip.el.querySelector('[data-action="new-note-here"]').getAttribute('aria-label'), 'New note');
+    click(strip.el.querySelector('[data-action="new-note-here"]'));
+    assert.deepStrictEqual(made, ['IR from strip']);
     assert.ok(!strip.el.querySelector('[data-action="more"]').classList.contains('is-secondary'));
     // An album screen: its cover, what it holds and what it is.
     const browse = Object.assign(Object.create(R.BrowseView.prototype), { mode: 'folder', path: 'IR', plugin, app, leaf: {} });
