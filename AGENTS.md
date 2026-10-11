@@ -21,6 +21,8 @@ Coffee N' Christmas.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself.
 - `README.md` — don't update unless asked.
+- `docs/architecture.md` — the architecture audit and the refactor roadmap
+  (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
   in for). `npm test`, or `node tests/run.js qol album` for just some.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
