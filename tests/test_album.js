@@ -1094,11 +1094,35 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     for (let i = 0; i < 10; i++) v.file(`IR/Extra ${i}.md`);
     plugin.recentFiles = () => [v.vault.getFileByPath('IR/Extra 3.md'), v.vault.getFileByPath('IR/Anarchy.md'), v.vault.getFileByPath('Elsewhere.md')].filter(Boolean);
     view.render();
+    const tabs = () => text('.dr-panel-tab').map((t) => t.replace(/\d+$/, ''));
+    assert.deepStrictEqual(tabs(), ['Overview', 'Notes', 'Map', 'Sub-albums', 'Lately'], 'one at a time, where there’s something to show');
+    assert.ok(view.contentEl.querySelector('.dr-panel-tab.is-active[data-panel="notes"]'), 'a list opens to its notes');
+    assert.ok(text('.dr-detail-meta')[0].includes('1 sub-album'));
+    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="lately"]'));
     assert.ok(text('.dr-shelf-title').includes('Changed lately'));
     assert.ok(text('.dr-shelf-title').includes('Opened lately'));
+    view.render();
+    assert.ok(view.contentEl.querySelector('.dr-panel-tab.is-active[data-panel="lately"]'), 'the panel chosen stays chosen');
+    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="albums"]'));
+    assert.ok(view.contentEl.querySelector('.dr-album-panel .dr-card[data-path="IR/Theories"]'));
+    // Sources, and what it hasn't got: links to notes not written, notes marked open.
+    fms.set(v.vault.getFileByPath('IR/Extra 1.md'), { author: 'Waltz' });
+    fms.set(v.vault.getFileByPath('IR/Extra 2.md'), { status: 'Open' });
+    app.metadataCache.unresolvedLinks = { 'IR/Anarchy.md': { Hegemony: 1 }, 'IR/Balance.md': { Hegemony: 2 } };
+    view.render();
+    assert.deepStrictEqual(tabs(), ['Overview', 'Notes', 'Map', 'Sub-albums', 'Sources', 'Gaps', 'Lately']);
+    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="sources"]'));
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-album-panel .dr-track[data-path]')).map((r) => r.dataset.path), ['IR/Extra 1.md']);
+    let linked = null;
+    app.workspace.openLinkText = (name, from) => { linked = [name, from]; };
+    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="gaps"]'));
+    assert.deepStrictEqual(text('.dr-gap-row'), ['Hegemonylinked from 2 notes']);
+    assert.ok(view.contentEl.querySelector('.dr-album-panel .dr-track[data-path="IR/Extra 2.md"]'), 'an open question');
+    click(view.contentEl.querySelector('.dr-gap-row'));
+    assert.deepStrictEqual(linked, ['Hegemony', 'IR/Anarchy.md'], 'opened as its link would be, so Obsidian makes it');
     plugin.settings.albumRecents = false;
     view.render();
-    assert.ok(!text('.dr-shelf-title').includes('Changed lately'));
+    assert.ok(!text('.dr-panel-tab').some((t) => t.startsWith('Lately')));
     // Empty, and why.
     v.folder('Plans');
     const plans = v.file('Plans/Plans.md');

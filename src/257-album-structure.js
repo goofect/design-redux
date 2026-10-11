@@ -41,6 +41,13 @@ const ALBUM_TYPES = [
 /* An album of no kind, where covers are coloured by kind. */
 const ALBUM_KIND_NEUTRAL = '#7d7770';
 
+/* What makes a note a source: properties it has, or its type or tags. */
+const SOURCE_KEYS = ['author', 'authors', 'url', 'source', 'isbn', 'doi', 'publisher'];
+const SOURCE_KINDS = ['source', 'book', 'article', 'paper', 'reading'];
+
+/* What marks a note as an open question: its status or a tag. */
+const OPEN_VALUES = ['open', 'question', 'unanswered', 'unresolved', 'gap'];
+
 /* What counts as finished, for a project's notes and a reading list's. */
 const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
 
@@ -255,9 +262,9 @@ class AlbumStructure extends Feature {
    * Under the album's title, as its layout asks: the folder note's own
    * text, or its canvas, drawn by Obsidian as an embed would be.
    */
-  renderLead(root, folder, info, view) {
-    if (info.layout !== 'overview' && info.layout !== 'map') return null;
-    const box = root.createDiv({ cls: `dr-album-lead is-${info.layout} markdown-rendered` });
+  renderLead(root, folder, info, view, which = info.layout) {
+    if (which !== 'overview' && which !== 'map') return null;
+    const box = root.createDiv({ cls: `dr-album-lead is-${which} markdown-rendered` });
     const source = info.note ? info.note.path : folder.path;
     const draw = (markdown) => {
       try {
@@ -267,7 +274,7 @@ class AlbumStructure extends Feature {
         box.setText(markdown);
       }
     };
-    if (info.layout === 'map') {
+    if (which === 'map') {
       const map = this.mapOf(folder);
       if (map) {
         // Drawn by Obsidian as a picture of the map; pressed, the map opens.
@@ -295,6 +302,54 @@ class AlbumStructure extends Feature {
       else box.remove();
     }, () => box.remove());
     return box;
+  }
+
+  /** Whether the folder note has text of its own, past its properties. Unknown counts as yes. */
+  hasOverview(info) {
+    if (!info.note) return false;
+    const cache = this.app.metadataCache.getFileCache(info.note);
+    if (!cache || !Array.isArray(cache.sections)) return true;
+    return cache.sections.some((s) => s.type !== 'yaml');
+  }
+
+  /** Which panel an album opens to: as its layout says. */
+  defaultPanel(info) {
+    return info.layout === 'overview' || info.layout === 'map' ? info.layout : 'notes';
+  }
+
+  /** Notes that are sources: books, articles — anything with an author, a link or a source of its own. */
+  sources(files) {
+    return files.filter((f) => {
+      const cache = this.app.metadataCache.getFileCache(f);
+      const fm = (cache && cache.frontmatter) || {};
+      if (SOURCE_KEYS.some((k) => valueList(fmGet(fm, k)).length)) return true;
+      if (valueList(fmGet(fm, 'type')).some((v) => SOURCE_KINDS.indexOf(v.toLowerCase()) !== -1)) return true;
+      return noteTags(cache).some((t) => SOURCE_KINDS.indexOf(t) !== -1);
+    });
+  }
+
+  /**
+   * What the album hasn't got yet: notes its notes link to that aren't
+   * written — each with how many link to it — and notes marked as open
+   * questions.
+   */
+  gaps(files) {
+    const unresolved = this.app.metadataCache.unresolvedLinks || {};
+    const named = new Map();
+    files.forEach((f) => {
+      Object.keys(unresolved[f.path] || {}).forEach((name) => {
+        const was = named.get(name);
+        named.set(name, { name, from: was ? was.from : f, count: (was ? was.count : 0) + 1 });
+      });
+    });
+    const open = files.filter((f) => {
+      const cache = this.app.metadataCache.getFileCache(f);
+      const fm = (cache && cache.frontmatter) || {};
+      if (valueList(fmGet(fm, 'status')).some((v) => OPEN_VALUES.indexOf(v.toLowerCase()) !== -1)) return true;
+      return noteTags(cache).some((t) => OPEN_VALUES.indexOf(t) !== -1);
+    });
+    const unwritten = Array.from(named.values()).sort((a, b) => b.count - a.count || byName(a.name, b.name));
+    return { unwritten, open };
   }
 
   /** On a note's menu: kept at the top of its album, or not. */

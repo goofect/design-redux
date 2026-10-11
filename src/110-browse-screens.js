@@ -80,7 +80,6 @@ class FolderScreen extends BrowseScreen {
     if (about) {
       // Names its properties give that lead nowhere: said, with the way to fix them.
       if (about.missing.length) this.missingNotice(root, about);
-      structure.renderLead(root, folder, about, view);
       const featured = about.featured.filter((f) => view.matches(f.basename));
       if (featured.length) view.shelf(root, 'Start here', featured);
     }
@@ -94,13 +93,107 @@ class FolderScreen extends BrowseScreen {
       view.renderMoreIn(root, folder);
       return;
     }
-    if (about && about.layout === 'covers') this.renderCovers(root, discs, folder);
-    else view.renderDiscs(root, discs, folder);
+    const drawNotes = (el) => {
+      if (about && about.layout === 'covers') this.renderCovers(el, discs, folder);
+      else view.renderDiscs(el, discs, folder);
+      if (!view.editing) view.renderAlbumFoot(el, all);
+    };
+    const panels = about ? this.panels(folder, about, all, drawNotes) : [];
+    if (panels.length > 1) this.renderPanels(root, folder, about, panels);
+    else drawNotes(root);
     if (view.editing) return;
-    view.renderAlbumFoot(root, all);
-    if (about && this.settings.albumRecents !== false) this.renderRecents(root, all);
     if (about && about.related.length) view.shelf(root, 'Related albums', about.related);
     view.renderMoreIn(root, folder);
+  }
+
+  /**
+   * What an album can show, one at a time: its notes; the folder note's
+   * text; its map; its sub-albums; its sources; what it hasn't got yet;
+   * and, in a long one, what changed and was opened lately. Each only
+   * where there's something to show.
+   */
+  panels(folder, about, all, drawNotes) {
+    const view = this.view;
+    const structure = this.plugin.feature(AlbumStructure);
+    const out = [{ id: 'notes', label: 'Notes', count: all.length, draw: drawNotes }];
+    if (structure.hasOverview(about)) out.unshift({ id: 'overview', label: 'Overview', draw: (el) => structure.renderLead(el, folder, about, view, 'overview') });
+    if (structure.mapOf(folder) || about.type === 'concept map' || about.layout === 'map') {
+      out.push({ id: 'map', label: 'Map', draw: (el) => structure.renderLead(el, folder, about, view, 'map') });
+    }
+    const subs = view.sortFolders(view.visibleFolders(folder));
+    if (subs.length) out.push({ id: 'albums', label: 'Sub-albums', count: subs.length, draw: (el) => view.folderTiles(el, subs) });
+    const sources = structure.sources(all);
+    if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
+    const gaps = structure.gaps(all);
+    if (gaps.unwritten.length || gaps.open.length) out.push({ id: 'gaps', label: 'Gaps', count: gaps.unwritten.length + gaps.open.length, draw: (el) => this.renderGaps(el, gaps) });
+    if (this.settings.albumRecents !== false && all.length >= ALBUM_RECENTS_FROM) out.push({ id: 'lately', label: 'Lately', draw: (el) => this.renderRecents(el, all) });
+    return out;
+  }
+
+  /** Tabs over the panel shown: as last chosen here, or as the album's layout says. */
+  renderPanels(root, folder, about, panels) {
+    const view = this.view;
+    const structure = this.plugin.feature(AlbumStructure);
+    if (!view.albumPanels) view.albumPanels = new Map();
+    const strip = root.createDiv({ cls: 'dr-album-panels' });
+    strip.setAttribute('role', 'tablist');
+    const body = root.createDiv({ cls: 'dr-album-panel' });
+    body.setAttribute('role', 'tabpanel');
+    const show = (id) => {
+      strip.querySelectorAll('.dr-panel-tab').forEach((tab) => {
+        const on = tab.dataset.panel === id;
+        tab.toggleClass('is-active', on);
+        tab.setAttribute('aria-selected', String(on));
+        tab.setAttribute('tabindex', on ? '0' : '-1');
+      });
+      body.empty();
+      panels.find((p) => p.id === id).draw(body);
+    };
+    panels.forEach((p) => {
+      const tab = strip.createDiv({ cls: 'dr-panel-tab' });
+      tab.dataset.panel = p.id;
+      tab.setAttribute('role', 'tab');
+      tab.createSpan({ text: p.label });
+      if (p.count) tab.createSpan({ cls: 'dr-panel-count', text: String(p.count) });
+      onActivate(tab, () => {
+        // Chosen here: kept while the album's open in this tab.
+        view.albumPanels.set(folder.path, p.id);
+        show(p.id);
+      });
+    });
+    // Left and right step between the tabs.
+    strip.addEventListener('keydown', (evt) => {
+      if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
+      const tabs = Array.from(strip.querySelectorAll('.dr-panel-tab'));
+      const at = tabs.indexOf(evt.target.closest('.dr-panel-tab'));
+      const next = tabs[(at + (evt.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      if (!next) return;
+      evt.preventDefault();
+      next.focus();
+      next.click();
+    });
+    const has = (id) => panels.some((p) => p.id === id);
+    const kept = view.albumPanels.get(folder.path);
+    show([kept, structure.defaultPanel(about)].find(has) || 'notes');
+  }
+
+  /** What an album hasn't got: notes linked to but not written, then notes marked open. */
+  renderGaps(el, gaps) {
+    const view = this.view;
+    if (gaps.unwritten.length) {
+      const list = el.createDiv({ cls: 'dr-tracks dr-gaps' });
+      list.createDiv({ cls: 'dr-disc' }).createSpan({ cls: 'dr-disc-title', text: 'Not written yet' });
+      gaps.unwritten.forEach((gap) => {
+        const row = list.createDiv({ cls: 'dr-gap-row' });
+        row.setAttribute('role', 'button');
+        row.setAttribute('tabindex', '0');
+        row.createSpan({ cls: 'dr-gap-name', text: gap.name });
+        row.createSpan({ cls: 'dr-gap-from', text: gap.count === 1 ? `linked from ${gap.from.basename}` : `linked from ${gap.count} notes` });
+        // Opened as its link would be: Obsidian makes the note.
+        onActivate(row, () => this.app.workspace.openLinkText(gap.name, gap.from.path, false));
+      });
+    }
+    if (gaps.open.length) view.renderDiscs(el, [{ title: 'Open questions', folder: null, files: gaps.open }], null);
   }
 
   /** Why an album shows nothing: Find or a filter, or nothing put in it yet. */

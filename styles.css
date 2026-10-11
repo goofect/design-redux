@@ -1248,6 +1248,81 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   margin-top: 0;
 }
 
+/* An album's panels: tabs in a quiet row, the chosen one underlined. */
+.dr-album-panels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  margin: 4px 0 18px;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-panel-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 0 8px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-panel-tab.is-active {
+  color: var(--text-normal);
+  border-bottom-color: var(--text-accent);
+}
+
+.dr-panel-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  border-radius: var(--radius-s, 4px);
+}
+
+.dr-panel-count {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-panel-tab:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* Notes linked to but not written: a name, and where it's linked from. */
+.dr-gap-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+}
+
+.dr-gap-name {
+  color: var(--text-normal);
+}
+
+.dr-gap-from {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.dr-gap-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-gap-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

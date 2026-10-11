@@ -1033,6 +1033,8 @@ class BrowseView extends ItemView {
     const files = spec.files || [];
     const notes = files.every((f) => f.extension === 'md');
     const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
+    const subs = about ? this.visibleFolders(folder).length : 0;
+    if (subs) meta.push(subs === 1 ? '1 sub-album' : `${subs} sub-albums`);
     // How long the album is, as an album gives its running time.
     const length = this.totalLength(files);
     if (length) meta.push(length);
