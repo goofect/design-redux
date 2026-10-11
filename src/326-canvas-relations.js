@@ -148,8 +148,8 @@ class PropositionModal extends Modal {
         [subject, object] = [object, subject];
         fill();
       }))
-      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
-      .addButton((b) => b.setButtonText('Save').setCta().onClick(save));
+      .addButton((b) => b.setButtonText('Save').setCta().onClick(save))
+      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
     input.addEventListener('keydown', (evt) => {
       if (evt.key === 'Enter' && !evt.isComposing) {
         evt.preventDefault();

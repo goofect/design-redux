@@ -26,8 +26,8 @@ class RefactorPreview extends Modal {
     plan.lines.forEach((line) => list.createEl('li', { text: line }));
     plan.warnings.forEach((line) => list.createEl('li', { cls: 'is-warning', text: line }));
     if (plan.blocked) contentEl.createDiv({ cls: 'dr-refactor-blocked', text: plan.blocked });
+    // What it does first, then Cancel — as Obsidian's own dialogs.
     const buttons = new Setting(contentEl);
-    buttons.addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
     if (!plan.blocked) {
       buttons.addButton((b) =>
         b
@@ -39,6 +39,7 @@ class RefactorPreview extends Modal {
           })
       );
     }
+    buttons.addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
   }
 
   onClose() {
@@ -71,7 +72,6 @@ class SplitChooser extends Modal {
       row.createSpan({ text: file.basename });
     });
     new Setting(contentEl)
-      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
       .addButton((b) =>
         b
           .setButtonText('Next')
@@ -80,7 +80,8 @@ class SplitChooser extends Modal {
             this.close();
             this.onChoose(this.files.filter((f) => picked.has(f)), name);
           })
-      );
+      )
+      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
   }
 
   onClose() {

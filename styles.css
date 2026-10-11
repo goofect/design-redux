@@ -286,6 +286,14 @@ body {
   border-radius: var(--dr-radius-sm);
 }
 
+/* And any other control the plugin draws, reached by the keyboard: a
+   ring, unless it draws its own. Zero specificity, so its own wins. */
+:where([class^="dr-"], [class*=" dr-"]) :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+:where([class^="dr-"][role="button"], [class*=" dr-"][role="button"]):focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 1px;
+}
+
 /* Obsidian's own header icons sit inside wrapper divs that size them;
    these are direct children of the flex row, so without this they
    stretch to its full height and their hover backdrop looks oversized. */

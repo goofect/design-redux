@@ -100,15 +100,15 @@ class OutlineConflict extends Modal {
     if (this.titleEl) this.titleEl.setText('Both changed');
     contentEl.createEl('p', { text: 'The canvas and the outline have both changed since they were last the same. Which should the other follow?' });
     new Setting(contentEl)
-      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()))
+      .addButton((b) => b.setButtonText('The canvas').setCta().onClick(() => {
+        this.close();
+        this.onChoose('canvas');
+      }))
       .addButton((b) => b.setButtonText('The outline').onClick(() => {
         this.close();
         this.onChoose('outline');
       }))
-      .addButton((b) => b.setButtonText('The canvas').setCta().onClick(() => {
-        this.close();
-        this.onChoose('canvas');
-      }));
+      .addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
   }
 
   onClose() {
