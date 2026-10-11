@@ -128,7 +128,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
-  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds };\n');
+  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1457,6 +1457,54 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-name input').value, 'course');
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-value input').value, 'POL101');
     again.close();
+  });
+
+  /* -- notes: properties written one way, undone only where unchanged ----- */
+
+  await t('a write says what it changed, key by key; one that fails says so and changes nothing', async () => {
+    const v = makeVault({ 'n.md': note({ status: 'draft', tags: ['law'], keep: 1 }, 'Body') });
+    const { plugin } = makePlugin(v);
+    const notes = new R.Notes(plugin);
+    assert.deepStrictEqual(notes.props(v.file('n.md')), { status: 'draft', tags: ['law'], keep: 1 }, 'without Obsidian’s bookkeeping');
+    assert.strictEqual(notes.get(v.file('n.md'), 'STATUS'), 'draft');
+    const r = await notes.write(v.file('n.md'), (fm) => {
+      fm.status = 'done';
+      fm.tags.push('court');
+      delete fm.keep;
+      fm.area = 'IR';
+    });
+    assert.deepStrictEqual(r.before, { status: 'draft', tags: ['law'], keep: 1, area: undefined });
+    assert.deepStrictEqual(r.after, { status: 'done', tags: ['law', 'court'], keep: undefined, area: 'IR' });
+    assert.deepStrictEqual(r.order, ['status', 'tags', 'keep']);
+    const was = notices.length;
+    const failing = await notes.write(v.file('n.md'), () => { throw new Error('no'); }, { failure: 'Could not do it.' });
+    assert.strictEqual(failing, null);
+    assert.strictEqual(notices[was].message, 'Could not do it.');
+  });
+
+  await t('undo puts back what’s still as the change left it, keeps what was edited since, and a removed key returns to its place', async () => {
+    const v = makeVault({ 'n.md': note({ status: 'draft', area: 'IR', year: 2001 }, 'Body'), 'm.md': note({ status: 'draft' }) });
+    const { plugin } = makePlugin(v);
+    const undos = [];
+    plugin.offerUndo = (message, undo) => undos.push({ message, undo });
+    const notes = new R.Notes(plugin);
+    const a = await notes.write(v.file('n.md'), (fm) => { fm.status = 'done'; fm.area = 'Law'; delete fm.year; }, { undo: 'Changed n.' });
+    const b = await notes.write(v.file('m.md'), (fm) => { fm.status = 'done'; });
+    assert.strictEqual(undos.length, 1, 'only the one asked for offers Undo');
+    // Edited since: area by hand.
+    await v.app.fileManager.processFrontMatter(v.file('n.md'), (fm) => { fm.area = 'Politics'; });
+    const was = notices.length;
+    await undos[0].undo();
+    assert.deepStrictEqual(v.fm('n.md'), { status: 'draft', year: 2001, area: 'Politics', position: {} });
+    assert.deepStrictEqual(Object.keys(v.fm('n.md')).filter((k) => k !== 'position'), ['status', 'area', 'year'], 'year back in its place');
+    assert.match(notices[was].message, /1 property changed since was kept as it is/);
+    // Several at once: one step.
+    let after = 0;
+    notes.offerUndo('Both.', [b, null], () => after++);
+    await undos[1].undo();
+    assert.strictEqual(v.fm('m.md').status, 'draft');
+    assert.strictEqual(after, 1);
+    assert.strictEqual(notes.offerUndo('Nothing.', [{ before: {}, after: {} }]), null, 'nothing changed, nothing to undo');
   });
 
   /* -- only notes where, and notes left out ------------------------------- */

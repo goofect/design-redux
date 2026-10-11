@@ -36,8 +36,6 @@ function uniqueList(items) {
   });
 }
 
-const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-
 /** A key of the note's that is `name`, whatever case either is written in. */
 function keyLike(fm, name) {
   const want = String(name).toLowerCase();
