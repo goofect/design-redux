@@ -272,10 +272,17 @@ function printCover(plugin, el, folder) {
   const kind = albumKindOf(plugin, folder);
   el.addClass('has-print');
   const band = el.createDiv({ cls: 'dr-cover-print' });
-  if (kind) band.createDiv({ cls: 'dr-cover-print-kind', text: kind.label });
+  // Its number in its collection, in the collection's own order: a catalogue number, as a series has.
+  const parent = folder.parent;
+  const siblings = parent ? (parent.children || []).filter((c) => c instanceof TFolder) : [];
+  const ordered = plugin.orders && typeof plugin.orders.arrangeAlbum === 'function'
+    ? plugin.orders.arrangeAlbum(parent, siblings, (list) => list.slice().sort((a, b) => byName(a.name, b.name)))
+    : siblings.slice().sort((a, b) => byName(a.name, b.name));
+  const number = siblings.length > 1 ? ordered.indexOf(folder) + 1 : 0;
+  const label = [kind ? kind.label : '', number ? `No. ${String(number).padStart(2, '0')}` : ''].filter(Boolean).join(' · ');
+  if (label) band.createDiv({ cls: 'dr-cover-print-kind', text: label });
   band.createDiv({ cls: 'dr-cover-print-title', text: folder.name });
-  const parent = folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent : null;
-  if (parent) band.createDiv({ cls: 'dr-cover-print-from', text: parent.name });
+  if (parent && !(parent.isRoot && parent.isRoot())) band.createDiv({ cls: 'dr-cover-print-from', text: parent.name });
 }
 
 /** A number from a name, stable between runs: the same name, the same colour. */

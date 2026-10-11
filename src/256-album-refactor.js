@@ -89,7 +89,7 @@ class SplitChooser extends Modal {
 }
 
 /* What merging carries from one album's folder note to the other's. */
-const MERGED_KEYS = ['includes', 'related', 'featured'];
+const mergedKeys = () => [ALBUM_KEYS.includes, ALBUM_KEYS.related, ALBUM_KEYS.featured];
 
 class AlbumRefactor extends Feature {
   settingsSchema() {
@@ -254,7 +254,7 @@ class AlbumRefactor extends Feature {
     if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-album moves' : 'sub-albums move'} too.`);
     const structure = this.plugin.feature(AlbumStructure);
     const fm = this.frontmatter(note);
-    const carried = MERGED_KEYS.filter((k) => valueList(fmGet(fm, k)).length);
+    const carried = mergedKeys().filter((k) => valueList(fmGet(fm, k)).length);
     if (carried.length) lines.push(`Its ${carried.join(', ')} join ${target.name}’s.`);
     if (note) lines.push(`Its folder note moves into ${target.name} as “${folder.name}.md”, a note like the rest, with what it says kept.`);
     lines.push(`The empty folder “${folder.name}” is removed.`);
@@ -324,11 +324,11 @@ class AlbumRefactor extends Feature {
     const targetNote = this.plugin.folderNote(target);
     const before = this.frontmatter(targetNote);
     const kept = {};
-    MERGED_KEYS.concat('description').forEach((k) => (kept[k] = fmGet(before, k)));
-    const carried = MERGED_KEYS.filter((k) => valueList(fmGet(theirs, k)).length);
-    const description = valueList(fmGet(theirs, 'description')).join(' ');
+    mergedKeys().concat(ALBUM_KEYS.description).forEach((k) => (kept[k] = fmGet(before, k)));
+    const carried = mergedKeys().filter((k) => valueList(fmGet(theirs, k)).length);
+    const description = valueList(fmGet(theirs, ALBUM_KEYS.description)).join(' ');
     const ownKind = {};
-    if (structure && (carried.length || (description && !valueList(kept.description).length))) {
+    if (structure && (carried.length || (description && !valueList(kept[ALBUM_KEYS.description]).length))) {
       const into = targetNote || (await this.plugin.ensureFolderNote(target));
       await this.app.fileManager.processFrontMatter(into, (fm) => {
         carried.forEach((k) => {
@@ -340,17 +340,16 @@ class AlbumRefactor extends Feature {
           });
           fm[k] = merged;
         });
-        if (description && !valueList(fmGet(fm, 'description')).length) fm.description = description;
+        if (description && !valueList(fmGet(fm, ALBUM_KEYS.description)).length) fm[ALBUM_KEYS.description] = description;
       });
     }
     // Its note, a note like the rest now: no longer saying what kind of album it is.
     if (note) {
-      ['album', 'layout'].forEach((k) => (ownKind[k] = fmGet(theirs, k)));
-      if (ownKind.album !== undefined || ownKind.layout !== undefined) {
-        await this.app.fileManager.processFrontMatter(note, (fm) => {
-          delete fm.album;
-          delete fm.layout;
-        });
+      [ALBUM_KEYS.type, ALBUM_KEYS.layout].forEach((k) => {
+        if (fmGet(theirs, k) !== undefined) ownKind[k] = fmGet(theirs, k);
+      });
+      if (Object.keys(ownKind).length) {
+        await this.app.fileManager.processFrontMatter(note, (fm) => Object.keys(ownKind).forEach((k) => delete fm[k]));
       }
     }
     const moved = [];
@@ -362,11 +361,8 @@ class AlbumRefactor extends Feature {
     return async () => {
       if (!this.app.vault.getAbstractFileByPath(from)) await this.app.vault.createFolder(from);
       for (const [entry, was] of moved.slice().reverse()) await this.plugin.putBack(entry, was);
-      if (note && (ownKind.album !== undefined || ownKind.layout !== undefined)) {
-        await this.app.fileManager.processFrontMatter(note, (fm) => {
-          if (ownKind.album !== undefined) fm.album = ownKind.album;
-          if (ownKind.layout !== undefined) fm.layout = ownKind.layout;
-        });
+      if (note && Object.keys(ownKind).length) {
+        await this.app.fileManager.processFrontMatter(note, (fm) => Object.assign(fm, ownKind));
       }
       const into = this.plugin.folderNote(target);
       if (into && (carried.length || description)) {

@@ -57,11 +57,17 @@ class FolderScreen extends BrowseScreen {
       view.renderPlainHeader(root, folder);
       // In the order they were put in, where they have been.
       const folders = view.shelfFolders(folder).filter((c) => view.folderInFilter(c)).filter((c) => view.matches(c.name));
+      const structure = this.plugin.feature(AlbumStructure);
+      const shows = !!(structure && structure.enabled);
+      if (shows) structure.renderCollectionHead(root, folder, view, subfolders.length);
       if (!folders.length) {
         root.createDiv({ cls: 'dr-empty', text: 'No folders' });
         return;
       }
-      view.folderTiles(root, folders).forEach((grid) => view.arrangeableTiles(grid));
+      // A collection asked to open as a list: its albums as a tree.
+      const about = shows ? structure.info(folder) : null;
+      if (about && about.layoutGiven && about.layout === 'list') this.renderTree(root, folders, 0);
+      else view.folderTiles(root, folders).forEach((grid) => view.arrangeableTiles(grid));
       return;
     }
 
@@ -95,6 +101,7 @@ class FolderScreen extends BrowseScreen {
     }
     const drawNotes = (el) => {
       if (about && about.layout === 'covers') this.renderCovers(el, discs, folder);
+      else if (about && about.layout === 'table') this.renderTable(el, discs, folder);
       else view.renderDiscs(el, discs, folder);
       if (!view.editing) view.renderAlbumFoot(el, all);
     };
@@ -126,8 +133,82 @@ class FolderScreen extends BrowseScreen {
     if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
     const gaps = structure.gaps(all);
     if (gaps.unwritten.length || gaps.open.length) out.push({ id: 'gaps', label: 'Gaps', count: gaps.unwritten.length + gaps.open.length, draw: (el) => this.renderGaps(el, gaps) });
+    const linked = structure.linked(folder, all);
+    if (linked.length) out.push({ id: 'linked', label: 'Linked', count: linked.length, draw: (el) => this.renderLinked(el, folder, linked) });
     if (this.settings.albumRecents !== false && all.length >= ALBUM_RECENTS_FROM) out.push({ id: 'lately', label: 'Lately', draw: (el) => this.renderRecents(el, all) });
     return out;
+  }
+
+  /** The album's notes as a table — a row each, the columns set for tables — under a heading for each disc. */
+  renderTable(el, discs, album) {
+    const view = this.view;
+    const columns = view.tableColumns();
+    discs.forEach((disc) => {
+      const head = el.createDiv({ cls: 'dr-disc dr-covers-head' });
+      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
+      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
+      if (disc.folder && disc.folder !== album) {
+        head.setAttribute('role', 'button');
+        head.setAttribute('tabindex', '0');
+        onActivate(head, () => view.openFolder(disc.folder));
+      }
+      const table = el.createDiv({ cls: 'dr-table' });
+      roveFocus(table, '.dr-tr:not(.dr-th)');
+      const th = table.createDiv({ cls: 'dr-tr dr-th' });
+      th.createDiv({ cls: 'dr-td dr-td-title', text: 'Title' });
+      columns.forEach((key) => th.createDiv({ cls: 'dr-td', text: view.columnLabel(key) }));
+      if (view.lengthStyle()) th.createDiv({ cls: 'dr-td dr-td-length', text: view.lengthStyle() === 'words' ? 'Words' : 'Length' });
+      th.createDiv({ cls: 'dr-td dr-td-time', text: 'Modified' });
+      disc.files.forEach((file) => view.tableRow(table, file, columns));
+    });
+  }
+
+  /** A collection's albums as a tree: each, with its kind and size, and the albums inside it beneath. */
+  renderTree(root, folders, depth) {
+    const view = this.view;
+    const structure = this.plugin.feature(AlbumStructure);
+    const list = depth ? root : root.createDiv({ cls: 'dr-tree' });
+    if (!depth) roveFocus(list, '.dr-tree-row');
+    folders.forEach((f) => {
+      const row = list.createDiv({ cls: 'dr-tree-row' });
+      row.style.setProperty('--dr-tree-depth', String(depth));
+      row.dataset.path = f.path;
+      row.setAttribute('role', 'button');
+      row.setAttribute('tabindex', '0');
+      setIcon(row.createSpan({ cls: 'dr-tree-icon' }), 'folder');
+      row.createSpan({ cls: 'dr-tree-name', text: f.name });
+      const kind = structure && structure.enabled ? structure.info(f).label : '';
+      if (kind) row.createSpan({ cls: 'dr-card-kind', text: kind });
+      row.createSpan({ cls: 'dr-tree-count', text: view.countLabel(f) });
+      onActivate(row, () => view.openFolder(f));
+      onContextMenu(row, (evt) => view.folderMenu(evt, f, view.folderCover(f)));
+      if (depth < 4) this.renderTree(list, view.sortFolders(view.visibleFolders(f)), depth + 1);
+    });
+  }
+
+  /** Notes elsewhere tied to the album's by links: each, how strongly, and a way to show it here. */
+  renderLinked(el, folder, linked) {
+    const view = this.view;
+    const structure = this.plugin.feature(AlbumStructure);
+    el.createDiv({ cls: 'dr-report-lead', text: 'Notes kept elsewhere that link with this album’s. Shown here, they stay where they are.' });
+    const list = el.createDiv({ cls: 'dr-tracks dr-linked' });
+    roveFocus(list, '.dr-gap-row');
+    linked.forEach(({ file, count }) => {
+      const row = list.createDiv({ cls: 'dr-gap-row' });
+      row.dataset.path = file.path;
+      row.setAttribute('tabindex', '0');
+      const name = row.createSpan({ cls: 'dr-gap-name', text: file.basename });
+      name.setAttribute('role', 'button');
+      onActivate(name, (evt) => view.openFile(file, evt));
+      row.createSpan({ cls: 'dr-gap-from', text: `${count} ${count === 1 ? 'link' : 'links'} · ${file.parent && file.parent.path !== '/' ? file.parent.name : this.app.vault.getName()}` });
+      const take = row.createSpan({ cls: 'dr-linked-take', text: 'Show here' });
+      take.setAttribute('role', 'button');
+      take.setAttribute('tabindex', '0');
+      onActivate(take, async (evt) => {
+        evt.stopPropagation();
+        if (await structure.include(folder, file)) view.render();
+      });
+    });
   }
 
   /** Tabs over the panel shown: as last chosen here, or as the album's layout says. */

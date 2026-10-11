@@ -1469,6 +1469,77 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   }
 }
 
+/* A collection's header, under its title: that it is one, what it's for. */
+.dr-collection-head {
+  margin: -4px 0 22px;
+}
+
+/* A collection as a tree of its albums. */
+.dr-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px 7px calc(10px + var(--dr-tree-depth, 0) * 22px);
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+}
+
+.dr-tree-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.dr-tree-name {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-tree-count {
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.dr-tree-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* A note linked from elsewhere, and where an inbox note seems to belong: a small, quiet button. */
+.dr-linked-take,
+.dr-inbox-suggest {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px 10px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-s, 4px);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dr-linked-take:focus-visible,
+.dr-inbox-suggest:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-tree-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-linked-take:hover,
+  .dr-inbox-suggest:hover {
+    color: var(--text-normal);
+    border-color: var(--text-faint);
+  }
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

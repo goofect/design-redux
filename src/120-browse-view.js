@@ -994,9 +994,11 @@ class BrowseView extends ItemView {
     const structure = folder ? this.plugin.feature(AlbumStructure) : null;
     const about = structure ? structure.info(folder) : null;
     const trail = structure && structure.enabled ? structure.trail(folder) : [];
-    if ((about && about.label) || trail.length) {
+    // The vault itself is the library, at the top of everything.
+    const level = about && about.label ? about.label : structure && structure.enabled && folder.isRoot && folder.isRoot() ? 'Library' : '';
+    if (level || trail.length) {
       const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
-      if (about && about.label) kicker.createSpan({ cls: 'dr-detail-kind', text: about.label });
+      if (level) kicker.createSpan({ cls: 'dr-detail-kind', text: level });
       if (trail.length) {
         const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this album is' } });
         trail.forEach((f, i) => {

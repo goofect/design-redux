@@ -19,11 +19,23 @@
 /* And an album's page shows the way down to it from the top.          */
 /* ------------------------------------------------------------------ */
 
-const ALBUM_KEYS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
+/* The folder note properties an album is read from; each can be given another name in settings, so none has to clash with your own. */
+const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
+const ALBUM_KEY_LABELS = { type: 'Kind', description: 'Description', includes: 'Notes and albums it takes in', related: 'Related albums', featured: 'Notes to start with', layout: 'How it opens' };
+const ALBUM_KEYS = Object.assign({}, ALBUM_KEY_DEFAULTS);
+
+/** The names set in settings, or the usual ones. */
+function applyAlbumKeys(names) {
+  Object.keys(ALBUM_KEY_DEFAULTS).forEach((k) => {
+    const own = names && typeof names[k] === 'string' ? names[k].trim() : '';
+    ALBUM_KEYS[k] = own || ALBUM_KEY_DEFAULTS[k];
+  });
+}
 
 const ALBUM_LAYOUTS = [
   { id: 'list', label: 'List', icon: 'list' },
   { id: 'covers', label: 'Covers', icon: 'layout-grid' },
+  { id: 'table', label: 'Table', icon: 'table' },
   { id: 'overview', label: 'Overview', icon: 'file-text' },
   { id: 'map', label: 'Map', icon: 'waypoints' },
 ];
@@ -57,8 +69,24 @@ function valueList(raw) {
 }
 
 class AlbumStructure extends Feature {
+  /** Every settings save: the property names, as set. Safe to run again. */
+  enable() {
+    applyAlbumKeys(this.settings.albumKeyNames);
+  }
+
+  disable() {
+    applyAlbumKeys(null);
+  }
+
   settingsSchema() {
     return [
+      {
+        key: 'albumKeyNames',
+        type: 'custom',
+        showIf: 'albumStructure',
+        name: 'Album property names',
+        render: (containerEl) => this.renderKeyNames(containerEl),
+      },
       {
         key: 'albumStructure',
         name: 'Albums say what they are',
@@ -110,7 +138,7 @@ class AlbumStructure extends Feature {
 
   /** What a folder note says of its album: { type, label, description, includes, related, note }. */
   info(folder) {
-    const empty = { type: '', label: '', description: '', includes: [], related: [], featured: [], layout: 'list', missing: [], note: null };
+    const empty = { type: '', label: '', description: '', includes: [], related: [], featured: [], layout: 'list', layoutGiven: false, missing: [], note: null };
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return empty;
     const note = this.plugin.folderNote(folder);
     if (!note) return empty;
@@ -138,10 +166,128 @@ class AlbumStructure extends Feature {
       related: links(ALBUM_KEYS.related),
       featured: links(ALBUM_KEYS.featured).filter((t) => t instanceof TFile),
       layout: (ALBUM_LAYOUTS.find((l) => l.id === String(valueList(fmGet(fm, ALBUM_KEYS.layout))[0] || '').toLowerCase()) || ALBUM_LAYOUTS[0]).id,
+      // Whether it says, rather than opening as albums usually do.
+      layoutGiven: !!ALBUM_LAYOUTS.find((l) => l.id === String(valueList(fmGet(fm, ALBUM_KEYS.layout))[0] || '').toLowerCase()),
       // Names its includes, related and featured give that lead nowhere.
       missing,
       note,
     };
+  }
+
+  /**
+   * The settings' property names, one row each, with a way to carry
+   * values already written under the old names over to the new.
+   */
+  renderKeyNames(containerEl) {
+    const doc = containerEl.ownerDocument;
+    const block = containerEl.appendChild(doc.createElement('div'));
+    block.className = 'dr-album-keys';
+    const names = Object.assign({}, this.settings.albumKeyNames || {});
+    new Setting(block)
+      .setName('Album property names')
+      .setDesc('The folder note properties an album is read from. Give any another name where it would clash with one of yours; the usual name is used where left empty.')
+      .setHeading();
+    Object.keys(ALBUM_KEY_DEFAULTS).forEach((k) => {
+      new Setting(block).setName(ALBUM_KEY_LABELS[k]).addText((t) =>
+        t
+          .setPlaceholder(ALBUM_KEY_DEFAULTS[k])
+          .setValue(names[k] || '')
+          .onChange((v) => {
+            names[k] = v.trim();
+            this.settings.albumKeyNames = Object.assign({}, names);
+            this.plugin.saveSettings();
+          })
+      );
+    });
+    new Setting(block)
+      .setDesc('Values written under other names before stay there until carried over.')
+      .addButton((b) => b.setButtonText('Carry values over to these names').onClick(() => this.carryKeys()));
+    return block;
+  }
+
+  /** Every folder note's values under any earlier name moved to the name now set, as one step of Undo. */
+  async carryKeys() {
+    const notes = this.app.vault.getMarkdownFiles().filter((f) => this.plugin.isFolderNote(f));
+    const changes = [];
+    for (const note of notes) {
+      const cache = this.app.metadataCache.getFileCache(note);
+      const fm = (cache && cache.frontmatter) || {};
+      const moves = Object.keys(ALBUM_KEY_DEFAULTS)
+        .map((k) => [ALBUM_KEY_DEFAULTS[k], ALBUM_KEYS[k]])
+        .filter(([from, to]) => from !== to && fmGet(fm, from) !== undefined && fmGet(fm, to) === undefined);
+      if (!moves.length) continue;
+      await this.app.fileManager.processFrontMatter(note, (data) => {
+        moves.forEach(([from, to]) => {
+          data[to] = data[from];
+          delete data[from];
+        });
+      });
+      changes.push([note, moves]);
+    }
+    if (!changes.length) {
+      new Notice('Nothing to carry over: every value is under the names set.');
+      return 0;
+    }
+    this.plugin.offerUndo(`Carried values over in ${changes.length} folder ${changes.length === 1 ? 'note' : 'notes'}.`, async () => {
+      for (const [note, moves] of changes) {
+        await this.app.fileManager.processFrontMatter(note, (data) => {
+          moves.forEach(([from, to]) => {
+            data[from] = data[to];
+            delete data[to];
+          });
+        });
+      }
+    });
+    return changes.length;
+  }
+
+  /**
+   * Notes elsewhere tied to the album's by links, either way: what it
+   * means beside where it's kept. Most linked first; not those already in it.
+   */
+  linked(folder, files) {
+    const inAlbum = new Set(files.map((f) => f.path));
+    const resolved = this.app.metadataCache.resolvedLinks || {};
+    const counts = new Map();
+    const bump = (path, n) => {
+      if (inAlbum.has(path) || this.plugin.isFolderNote(this.app.vault.getFileByPath(path) || {})) return;
+      counts.set(path, (counts.get(path) || 0) + n);
+    };
+    Object.keys(resolved).forEach((from) => {
+      const out = resolved[from] || {};
+      Object.keys(out).forEach((to) => {
+        if (inAlbum.has(from) && !inAlbum.has(to)) bump(to, out[to]);
+        else if (inAlbum.has(to) && !inAlbum.has(from)) bump(from, out[to]);
+      });
+    });
+    return Array.from(counts.entries())
+      .map(([path, count]) => ({ file: this.app.vault.getFileByPath(path), count }))
+      .filter((x) => x.file && x.file.extension === 'md')
+      .sort((a, b) => b.count - a.count || byName(a.file.basename, b.file.basename))
+      .slice(0, 40);
+  }
+
+  /** Above a collection's albums: that it's a collection — or the library itself — the way down, what it's for, how many. */
+  renderCollectionHead(root, folder, view, count) {
+    const top = !!(folder.isRoot && folder.isRoot());
+    const info = this.info(folder);
+    const head = root.createDiv({ cls: 'dr-collection-head' });
+    const kicker = head.createDiv({ cls: 'dr-detail-kicker' });
+    kicker.createSpan({ cls: 'dr-detail-kind', text: top ? 'Library' : info.label || 'Collection' });
+    const trail = top ? [] : this.trail(folder);
+    if (trail.length) {
+      const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
+      trail.forEach((f, i) => {
+        if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+        const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
+        crumb.setAttribute('role', 'button');
+        crumb.setAttribute('tabindex', '0');
+        onActivate(crumb, () => view.openFolder(f));
+      });
+    }
+    head.createDiv({ cls: 'dr-detail-meta', text: count === 1 ? '1 album' : `${count} albums` });
+    if (info.description) head.createDiv({ cls: 'dr-detail-desc', text: info.description });
+    return head;
   }
 
   /** Notes from elsewhere that belong to the album too, less any already in it. */

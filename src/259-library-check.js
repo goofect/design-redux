@@ -121,6 +121,13 @@ class InboxScreen extends BrowseScreen {
     });
     all.addClass('dr-inbox-all');
     const move = view.action(bar, 'folder-input', 'Move into an album…', () => check.moveInto(chosen(), () => picked.clear()));
+    // Where each seems to belong, by its links and tags.
+    const suggested = check.suggestions(notes);
+    const placed = view.action(bar, 'wand-2', 'Put where suggested', async () => {
+      const pairs = chosen().filter((f) => suggested.has(f)).map((f) => [f, suggested.get(f)]);
+      if (await check.moveEach(pairs)) picked.clear();
+    });
+    placed.toggleClass('is-disabled', !chosen().some((f) => suggested.has(f)));
     const show = view.action(bar, 'link', 'Show in an album…', () => check.showIn(chosen(), () => picked.clear()));
     [move, show].forEach((b) => b.toggleClass('is-disabled', !picked.size));
     const structure = this.plugin.feature(AlbumStructure);
@@ -144,6 +151,16 @@ class InboxScreen extends BrowseScreen {
       const name = row.createSpan({ cls: 'dr-inbox-name', text: file.basename });
       name.setAttribute('role', 'button');
       onActivate(name, (evt) => view.openFile(file, evt));
+      const home = suggested.get(file);
+      if (home) {
+        const chip = row.createSpan({ cls: 'dr-inbox-suggest', text: `→ ${home.name}` });
+        chip.setAttribute('role', 'button');
+        chip.setAttribute('aria-label', `Move into ${home.name}, where it seems to belong`);
+        onActivate(chip, (evt) => {
+          evt.stopPropagation();
+          check.moveEach([[file, home]]);
+        });
+      }
       row.createSpan({ cls: 'dr-inbox-when', text: view.relative(file.stat.mtime) });
       // Space picks the row, as a checkbox would.
       row.addEventListener('keydown', (evt) => {
@@ -368,6 +385,61 @@ class LibraryCheck extends Feature {
       return;
     }
     this.app.workspace.getLeaf(false).openFile(p.target);
+  }
+
+  /**
+   * Where notes in no album seem to belong: the album whose notes they
+   * link with most, either way, with a nudge for a tag or property
+   * naming it. Those with nothing to go on are left out.
+   */
+  suggestions(notes) {
+    const structure = this.plugin.feature(AlbumStructure);
+    const albumOf = new Map();
+    this.folders().forEach((f) => {
+      (f.children || []).forEach((c) => this.isNote(c) && albumOf.set(c.path, f));
+      if (structure && structure.enabled) structure.info(f).includes.forEach((t) => t instanceof TFile && !albumOf.has(t.path) && albumOf.set(t.path, f));
+    });
+    const resolved = this.app.metadataCache.resolvedLinks || {};
+    const linksTo = new Map();
+    Object.keys(resolved).forEach((from) => Object.keys(resolved[from] || {}).forEach((to) => linksTo.set(to, (linksTo.get(to) || []).concat([[from, resolved[from][to]]]))));
+    const slug = (s) => String(s).toLowerCase().replace(/\s+/g, '-');
+    const out = new Map();
+    notes.forEach((file) => {
+      const score = new Map();
+      const add = (folder, n) => folder && score.set(folder, (score.get(folder) || 0) + n);
+      Object.entries(resolved[file.path] || {}).forEach(([to, n]) => add(albumOf.get(to), n));
+      (linksTo.get(file.path) || []).forEach(([from, n]) => add(albumOf.get(from), n));
+      const cache = this.app.metadataCache.getFileCache(file);
+      const tags = noteTags(cache);
+      const values = Object.values((cache && cache.frontmatter) || {}).reduce((acc, v) => acc.concat(valueList(v).map((x) => slug(plainValue(x)))), []);
+      new Set(albumOf.values()).forEach((folder) => {
+        const name = slug(folder.name);
+        if (tags.some((t) => t === name || t.endsWith('/' + name))) add(folder, 2);
+        if (values.indexOf(name) !== -1) add(folder, 2);
+      });
+      let best = null;
+      score.forEach((n, folder) => {
+        if (!best || n > best[1] || (n === best[1] && byName(folder.name, best[0].name) < 0)) best = [folder, n];
+      });
+      if (best) out.set(file, best[0]);
+    });
+    return out;
+  }
+
+  /** Each note moved into its own album, as one step of Undo. */
+  async moveEach(pairs) {
+    const moved = [];
+    for (const [file, folder] of pairs) {
+      const from = await this.plugin.moveFile(file, folder.path);
+      if (from) moved.push([file, from]);
+    }
+    this.plugin.refreshBrowse();
+    if (!moved.length) return false;
+    this.plugin.offerUndo(`Moved ${moved.length} ${moved.length === 1 ? 'note' : 'notes'} where ${moved.length === 1 ? 'it seemed' : 'they seemed'} to belong.`, async () => {
+      for (const [file, from] of moved.slice().reverse()) await this.plugin.putBack(file, from);
+      this.plugin.refreshBrowse();
+    });
+    return true;
   }
 
   /** The notes moved into an album chosen from a list. */

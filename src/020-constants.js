@@ -66,6 +66,8 @@ const DEFAULTS = {
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
   albumStructure: true,
+  // Other names for the folder note properties albums are read from: { type, description, includes, related, featured, layout }.
+  albumKeyNames: {},
   // In a long album, shelves of what changed and was opened lately.
   albumRecents: true,
   // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.

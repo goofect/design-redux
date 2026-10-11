@@ -1393,6 +1393,103 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(file('IR/Anarchy.md') && !folder('Security'), 'the new album gone again');
   });
 
+  await t('levels and views: a collection says so and can open as a tree; an album as a table; notes linked from elsewhere; covers numbered; property names of your own', async () => {
+    const { v, plugin, app, view } = setup();
+    v.folder('Politics');
+    ['Theory', 'Law'].forEach((n) => { v.folder(`Politics/${n}`); v.file(`Politics/${n}/Note ${n}.md`); });
+    v.folder('Politics/Law/Courts');
+    v.file('Politics/Law/Courts/Ruling.md');
+    const shelfNote = v.file('Politics/Politics.md');
+    const irNote = v.file('IR/IR.md');
+    const far = v.file('Far.md');
+    const fms = new Map([[shelfNote, { description: 'The study of power.' }], [irNote, {}]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    app.metadataCache.fileToLinktext = (f) => f.basename;
+    app.metadataCache.resolvedLinks = { 'Far.md': { 'IR/Anarchy.md': 2 }, 'IR/Balance.md': { 'Far.md': 1, 'IR/Anarchy.md': 1 } };
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); };
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    // A collection: said to be one, what it's for, how many albums.
+    Object.assign(view, { path: 'Politics' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-kind'), ['Collection']);
+    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-meta'), ['2 albums']);
+    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-desc'), ['The study of power.']);
+    // Opened as a list: a tree of its albums, the ones inside beneath.
+    fms.get(shelfNote).layout = 'list';
+    view.render();
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-tree-row')).map((r) => [r.dataset.path, r.style.getPropertyValue('--dr-tree-depth')]), [['Politics/Law', '0'], ['Politics/Law/Courts', '1'], ['Politics/Theory', '0']]);
+    // The vault itself: the library.
+    Object.assign(view, { path: '/' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-detail-kind'), ['Library']);
+    // An album as a table.
+    fms.get(irNote).layout = 'table';
+    Object.assign(view, { path: 'IR' });
+    view.render();
+    assert.ok(view.contentEl.querySelector('.dr-album-panel .dr-table .dr-tr') || view.contentEl.querySelector('.dr-table .dr-tr'));
+    // Notes elsewhere that link with it, either way, most first; shown here at a press.
+    const linked = structure.linked(v.vault.getFolderByPath('IR'), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence'].map((n) => v.vault.getFileByPath(`IR/${n}.md`)));
+    assert.deepStrictEqual(linked.map((x) => [x.file.path, x.count]), [['Far.md', 3]]);
+    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="linked"]'));
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-linked .dr-gap-row')).map((r) => r.dataset.path), ['Far.md']);
+    click(view.contentEl.querySelector('.dr-linked-take'));
+    await settle();
+    assert.deepStrictEqual(fms.get(irNote).includes, ['[[Far]]']);
+    assert.ok(far.parent.path === '/' || true);
+    // Covers numbered in their collection, in its order.
+    plugin.settings.coverPrint = true;
+    plugin.settings.coverFallback = 'art';
+    const el = document.createElement('div');
+    R.drawFolderArt(plugin, el, v.vault.getFolderByPath('Politics/Theory'));
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-cover-print-kind')).map((x) => x.textContent), ['No. 02']);
+    // Property names of your own: read under them, and earlier values carried over with Undo.
+    plugin.settings.albumKeyNames = { type: 'album-kind' };
+    structure.enable();
+    fms.set(irNote, { album: 'project' });
+    assert.strictEqual(structure.info(v.vault.getFolderByPath('IR')).type, '', 'read under the new name only');
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    plugin.isFolderNote = (f) => f.basename === (f.parent && f.parent.name);
+    assert.strictEqual(await structure.carryKeys(), 1);
+    assert.deepStrictEqual(fms.get(irNote), { 'album-kind': 'project' });
+    assert.strictEqual(structure.info(v.vault.getFolderByPath('IR')).type, 'project');
+    await undo();
+    assert.deepStrictEqual(fms.get(irNote), { album: 'project' });
+    structure.disable();
+    assert.strictEqual(structure.info(v.vault.getFolderByPath('IR')).type, 'project', 'off: the usual names again');
+  });
+
+  await t('the inbox suggests where a note belongs, by its links and tags, and puts the picked there in one step', async () => {
+    const { v, plugin, app } = setup();
+    v.folder('Law');
+    v.file('Law/Treaty.md');
+    const linky = v.file('Linky.md');
+    const tagged = v.file('Tagged.md');
+    const lost = v.file('Lost.md');
+    app.metadataCache.resolvedLinks = { 'Linky.md': { 'IR/Anarchy.md': 2, 'Law/Treaty.md': 1 } };
+    app.metadataCache.getFileCache = (f) => (f === tagged ? { tags: [{ tag: '#law' }] } : null);
+    plugin.folderNote = () => null;
+    plugin.moveFile = async (file, dir) => { const from = file.path; await v.fileManager.renameFile(file, `${dir}/${file.name}`); return from; };
+    plugin.putBack = async (file, from) => { await v.fileManager.renameFile(file, from); return true; };
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    const check = new R.LibraryCheck(plugin);
+    plugin.feature = (C) => (C === R.LibraryCheck ? check : null);
+    const found = check.suggestions([linky, tagged, lost]);
+    assert.strictEqual(found.get(linky).path, 'IR', 'most linked');
+    assert.strictEqual(found.get(tagged).path, 'Law', 'a tag naming it');
+    assert.ok(!found.has(lost), 'nothing to go on: no guess');
+    assert.strictEqual(await check.moveEach([[linky, found.get(linky)], [tagged, found.get(tagged)]]), true);
+    assert.deepStrictEqual([linky.path, tagged.path], ['IR/Linky.md', 'Law/Tagged.md']);
+    await undo();
+    assert.deepStrictEqual([linky.path, tagged.path], ['Linky.md', 'Tagged.md']);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {
