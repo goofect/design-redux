@@ -223,6 +223,57 @@ describe('Design Redux in Obsidian', function () {
     await clickText('.dr-detail-action', 'Done');
   });
 
+  it('holds the left panel and the album page still while nothing changes', async function () {
+    // Watched for three seconds with an album open and nothing touched: the
+    // left panel's classes, the page's, and anything redrawn on either side.
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      if (typeof library.reveal === 'function') await library.reveal();
+    });
+    await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+    await browser.pause(1500);
+    const report = await browser.executeObsidian(async ({ app }) => {
+      const out = { split: [], body: [], panel: 0, panelSample: [], page: 0, pageSample: [], splitStyle: 0 };
+      const split = app.workspace.leftSplit && app.workspace.leftSplit.containerEl;
+      const name = (n) => (n.nodeType === 1 ? `${n.tagName.toLowerCase()}.${String(n.className).split(' ').slice(0, 2).join('.')}` : '#text');
+      const watch = [];
+      if (split) {
+        const mo = new MutationObserver((records) => records.forEach((r) => {
+          if (r.target === split && r.attributeName === 'class') out.split.push(`${r.oldValue} -> ${split.className}`);
+          else if (r.target === split && r.attributeName === 'style') out.splitStyle++;
+          else if (r.type === 'childList' || r.attributeName) {
+            out.panel++;
+            if (out.panelSample.length < 6) out.panelSample.push(`${r.type}:${r.attributeName || ''} ${name(r.target)}`);
+          }
+        }));
+        mo.observe(split, { attributes: true, attributeOldValue: true, childList: true, subtree: true, characterData: true });
+        watch.push(mo);
+      }
+      const bodyMo = new MutationObserver((records) => records.forEach((r) => {
+        if (r.attributeName === 'class') out.body.push(`${r.oldValue} -> ${document.body.className}`.replace(/\s+/g, ' ').slice(0, 300));
+      }));
+      bodyMo.observe(document.body, { attributes: true, attributeOldValue: true });
+      watch.push(bodyMo);
+      const page = document.querySelector('.workspace-split.mod-root');
+      if (page) {
+        const pageMo = new MutationObserver((records) => records.forEach((r) => {
+          out.page++;
+          if (out.pageSample.length < 6) out.pageSample.push(`${r.type}:${r.attributeName || ''} ${name(r.target)}`);
+        }));
+        pageMo.observe(page, { attributes: true, childList: true, subtree: true, characterData: true });
+        watch.push(pageMo);
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+      watch.forEach((mo) => mo.disconnect());
+      return out;
+    });
+    expect(report.split).toEqual([]);
+    expect(report.body).toEqual([]);
+    expect([report.panel, report.panelSample]).toEqual([0, []]);
+    expect([report.page, report.pageSample]).toEqual([0, []]);
+  });
+
   it('opens an album with its map embedded, or its folder note as an overview', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       if (!app.vault.getFolderByPath('Atlas')) {
