@@ -3927,6 +3927,10 @@ body:not(.dr-left-collapsed)
      flickered. */
   position: relative;
   z-index: 1;
+  /* And a layer of its own for good: otherwise the browser moves it in
+     and out of one as the layers beneath come and go, redrawing the
+     shadow each time — which flickered too. */
+  will-change: transform;
   margin: var(--dr-space-2) 0 var(--dr-space-2) var(--dr-space-2);
   overflow: hidden;
   border: 1px solid var(--background-modifier-border);
