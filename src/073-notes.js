@@ -83,7 +83,7 @@ class Notes {
   /** Undo for changes already written: one notice, one step, for all of them. */
   offerUndo(message, records, onUndo) {
     const kept = records.filter((r) => r && Object.keys(r.before).length);
-    if (!kept.length) return null;
+    if (!kept.length || typeof this.plugin.offerUndo !== 'function') return null;
     return this.plugin.offerUndo(message, async () => {
       await this.undo(kept);
       if (onUndo) onUndo();

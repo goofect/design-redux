@@ -95,7 +95,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_audit_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertiesSection, Pins, BrowseView, MenuFilter, looseOr, fmGet, ' +
+  '\nmodule.exports.__test = { Notes, PropertiesSection, Pins, BrowseView, MenuFilter, looseOr, fmGet, ' +
   'composing, listEnter, renderLists, makeHeaderDraggable };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
@@ -124,7 +124,9 @@ function panelFor(initial) {
   };
   document.body.innerHTML = '';
   const popupEl = document.body.appendChild(document.createElement('div'));
-  const section = new R.PropertiesSection({ plugin: { app, settings: {} }, popupEl });
+  const plugin = { app, settings: {} };
+  plugin.notes = new R.Notes(plugin);
+  const section = new R.PropertiesSection({ plugin, popupEl });
   section.mount(popupEl, file);
   return { section, stored, popupEl };
 }

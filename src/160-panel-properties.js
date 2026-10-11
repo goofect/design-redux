@@ -104,35 +104,11 @@ class PropertiesSection extends PanelSection {
    */
   async remove(key) {
     const file = this.file;
-    const fm = this.frontmatter;
-    const order = Object.keys(fm).filter((k) => k !== 'position');
-    const value = fm[key] === undefined ? null : JSON.parse(JSON.stringify(fm[key]));
-    await this.write(key, undefined);
-    if (typeof this.plugin.offerUndo !== 'function') return;
-    this.plugin.offerUndo(`Removed “${key}”.`, () => this.putBack(file, key, value, order));
-  }
-
-  /** A removed property back, where it was — unless one of that name has been added since. */
-  async putBack(file, key, value, order) {
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        if (Object.keys(fm).some((k) => k.toLowerCase() === key.toLowerCase())) return;
-        fm[key] = value;
-        const keys = Object.keys(fm).filter((k) => k !== 'position');
-        const sorted = order
-          .filter((k) => keys.indexOf(k) !== -1)
-          .concat(keys.filter((k) => order.indexOf(k) === -1));
-        const entries = sorted.map((k) => [k, fm[k]]);
-        keys.forEach((k) => delete fm[k]);
-        entries.forEach(([k, v]) => {
-          fm[k] = v;
-        });
-      });
-      if (this.file === file) this.afterWrite(file);
-    } catch (err) {
-      console.error('Design Redux: could not put the property back', err);
-      new Notice('Could not put the property back.');
-    }
+    const done = await this.plugin.notes.write(file, (fm) => delete fm[key], {
+      undo: `Removed “${key}”.`,
+      onUndo: () => this.file === file && this.afterWrite(file),
+    });
+    if (done) this.afterWrite(file);
   }
 
   /** The properties in the order the rows now show them. */
@@ -428,17 +404,12 @@ class PropertiesSection extends PanelSection {
    */
   async write(key, value, opts = {}) {
     const file = this.file;
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        if (opts.onlyNew && Object.keys(fm).some((k) => k.toLowerCase() === key.toLowerCase())) return;
-        if (value === undefined) delete fm[key];
-        else fm[key] = value;
-      });
-      if (opts.redraw !== false) this.afterWrite(file);
-    } catch (err) {
-      console.error('Design Redux: frontmatter write failed', err);
-      new Notice('Could not update the properties.');
-    }
+    const done = await this.plugin.notes.write(file, (fm) => {
+      if (opts.onlyNew && Object.keys(fm).some((k) => k.toLowerCase() === key.toLowerCase())) return;
+      if (value === undefined) delete fm[key];
+      else fm[key] = value;
+    });
+    if (done && opts.redraw !== false) this.afterWrite(file);
   }
 
   /**
@@ -511,8 +482,9 @@ class PropertiesSection extends PanelSection {
     if (cached) return refuse(cached);
 
     let clash = null;
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
+    const done = await this.plugin.notes.write(
+      file,
+      (fm) => {
         clash = clashWith(Object.keys(fm));
         if (clash) return;
         const entries = Object.keys(fm)
@@ -522,13 +494,11 @@ class PropertiesSection extends PanelSection {
         entries.forEach(([k, v]) => {
           fm[k === oldKey ? newKey : k] = v;
         });
-      });
-      if (clash) return refuse(clash);
-      this.afterWrite(file);
-    } catch (err) {
-      console.error('Design Redux: rename failed', err);
-      new Notice('Could not rename the property.');
-    }
+      },
+      { failure: 'Could not rename the property.' }
+    );
+    if (clash) return refuse(clash);
+    if (done) this.afterWrite(file);
   }
 
   /**
@@ -540,23 +510,8 @@ class PropertiesSection extends PanelSection {
    */
   async reorder(order) {
     const file = this.file;
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        const keys = Object.keys(fm).filter((k) => k !== 'position');
-        const sorted = order
-          .filter((k) => keys.indexOf(k) !== -1)
-          .concat(keys.filter((k) => order.indexOf(k) === -1));
-        const entries = sorted.map((k) => [k, fm[k]]);
-        keys.forEach((k) => delete fm[k]);
-        entries.forEach(([k, v]) => {
-          fm[k] = v;
-        });
-      });
-    } catch (err) {
-      console.error('Design Redux: reorder failed', err);
-      new Notice('Could not reorder the properties.');
-      if (this.file === file) this.forceRefresh();
-    }
+    const done = await this.plugin.notes.write(file, (fm) => orderKeys(fm, order), { failure: 'Could not reorder the properties.' });
+    if (!done && this.file === file) this.forceRefresh();
   }
 
   /** After our own write, redraw even though focus is still inside. */

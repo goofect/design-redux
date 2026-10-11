@@ -61,8 +61,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_reorder_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertiesSection };\n');
-const { PropertiesSection } = require(tmp).__test;
+  '\nmodule.exports.__test = { PropertiesSection, Notes };\n');
+const { PropertiesSection, Notes } = require(tmp).__test;
 fs.unlinkSync(tmp);
 
 /* -- a note and a panel -------------------------------------------------- */
@@ -83,7 +83,9 @@ function setup(initial = { parent: '[[Judiciary]]', domain: 'Law', status: 'draf
     },
   };
   const popupEl = document.body.appendChild(document.createElement('div'));
-  const panel = { plugin: { app, settings: {} }, popupEl };
+  const plugin = { app, settings: {} };
+  plugin.notes = new Notes(plugin);
+  const panel = { plugin, popupEl };
   const section = new PropertiesSection(panel);
   section.mount(popupEl, file);
   const list = popupEl.querySelector('.dr-rows');
