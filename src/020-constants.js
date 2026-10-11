@@ -27,6 +27,9 @@ const LIBRARY_BUILTINS = {
   smart: { label: 'Smart albums', icon: 'sparkles' },
 };
 
+/* How large covers are on screens of tiles. */
+const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Large' };
+
 const DEFAULTS = {
   library: true,
   singleArea: false,
@@ -60,6 +63,8 @@ const DEFAULTS = {
   albumStructure: true,
   // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
   smartAlbums: true,
+  // How large covers are on screens of tiles: compact, standard or large.
+  gridDensity: 'standard',
   smartAlbumList: [],
   // { folderPath: sort key }
   albumSorts: {},

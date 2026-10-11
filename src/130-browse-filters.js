@@ -123,6 +123,14 @@ class Library extends Feature {
         options: LENGTH_STYLES,
       },
       {
+        key: 'gridDensity',
+        type: 'dropdown',
+        showIf: 'library',
+        name: 'Cover size',
+        desc: 'How large covers are on screens of tiles: a compact catalogue, standard, or large.',
+        options: GRID_DENSITIES,
+      },
+      {
         key: 'discNoteLimit',
         type: 'number',
         name: 'Notes per disc',
@@ -216,6 +224,20 @@ class Library extends Feature {
         name: 'Open library',
         check: () => this.enabled,
         run: () => this.reveal(),
+      },
+      {
+        id: 'cycle-cover-size',
+        name: 'Next cover size: compact, standard, large',
+        icon: 'grid-2x2',
+        check: () => this.enabled,
+        run: () => {
+          const keys = Object.keys(GRID_DENSITIES);
+          const now = keys.indexOf(this.settings.gridDensity);
+          this.settings.gridDensity = keys[(now + 1) % keys.length];
+          this.plugin.saveData(this.settings);
+          this.plugin.refreshBrowse();
+          new Notice(`Covers: ${GRID_DENSITIES[this.settings.gridDensity].toLowerCase()}`);
+        },
       },
       // The page's history, so these work from anywhere — including
       // the sidebar, where Obsidian's own navigate commands act on the

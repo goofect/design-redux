@@ -981,6 +981,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(text('.dr-empty')[0].includes('any more'));
   });
 
+  await t('covers come compact, standard or large, as set; anything else is standard', () => {
+    const { plugin, view } = setup();
+    assert.strictEqual(view.containerEl.dataset.drDensity, 'standard');
+    plugin.settings.gridDensity = 'compact';
+    view.render();
+    assert.strictEqual(view.containerEl.dataset.drDensity, 'compact');
+    plugin.settings.gridDensity = 'huge';
+    view.render();
+    assert.strictEqual(view.containerEl.dataset.drDensity, 'standard');
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

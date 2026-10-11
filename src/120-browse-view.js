@@ -390,6 +390,8 @@ class BrowseView extends ItemView {
     this.stale = false;
     const root = this.contentEl;
     root.empty();
+    const density = this.plugin.settings.gridDensity;
+    this.containerEl.dataset.drDensity = GRID_DENSITIES[density] ? density : 'standard';
     this.beginDrawing();
 
     // A screen that throws should say so rather than leave a blank
