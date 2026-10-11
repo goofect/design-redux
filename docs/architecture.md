@@ -228,7 +228,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | | Scope | Risk | Done when |
 |---|---|---|---|
 | M0 | this audit | low | this file |
-| M1 | safety net | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
+| M1 | safety net — **done** | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
 | M2 | helpers in the right place, duplicates gone | low | no shared name declared in a feature piece; 030 has no mutual pairs |
 | M3 | note and property operations; quiet links split | high | one read path and one write path for properties; undo doesn't overwrite later edits |
 | M4 | library, albums, the plugin class | high | 120 under ~1,200 lines; 350 only composes |
@@ -256,12 +256,11 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 ## 8. Performance baseline
 
 - **Already recorded:** each real-Obsidian test's time (`ci-output/<version>-timings.txt`).
-- **To add in M1:**
-  - plugin `onload` time;
-  - library render time with 50 and 500 albums;
-  - canvas fold, unfold and tidy on 20, 100 and 500 cards.
-  - These go to the same file. They are compared by eye at first, and later flagged at more
-    than 10% slower.
+- **Added in M1:** plugin load time and one library redraw, as `perf:` lines at the top of
+  the same file.
+- **To add with the milestones that touch them:** library redraws with 50 and 500 albums (M4);
+  canvas fold, unfold and tidy on 20, 100 and 500 cards (M6). They are compared by eye at
+  first, and later flagged at more than 10% slower.
 
 ## 9. Risks
 
@@ -276,14 +275,22 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | Command ids or setting keys change | all | never renamed; the lifecycle test lists command ids against a snapshot |
 | The refactor grows features | all | new ideas go in a list, not in refactor commits |
 
-## 10. The recommended first change (M1)
+## 10. M1, done
 
-A safety net before anything moves:
+- `tests/test_lifecycle.js` builds the whole plugin in a stand-in for Obsidian's window: load,
+  enable twice, every switch off and on, unload. It checks nothing is doubled or left behind:
+  classes, elements, listeners, observers, intervals, frames, handlers, patched methods. It also
+  checks that no command id (161) or setting key (127) is lost; new ones are recorded with
+  `node tests/test_lifecycle.js --update`.
+  - It found one leftover, now fixed: footnotes left `dr-footnotes-aside` on the body after
+    unload.
+- `tests/test_preserve.js` covers what the plugin writes into notes, byte for byte: quiet-link
+  renames, sharing and back, and tag renames, on an awkward note.
+  - It found that renaming a note rewrote quiet links inside code, maths and comments. Now fixed.
+- `node tests/map.js --areas` prints the area report. `--check`, run as `tests/test_layers.js`,
+  fails on a new use across the layers, or on a listed one that's gone. 88 are known today,
+  listed in `tests/snapshots/layers.json`; the list only shrinks.
+- The real-Obsidian suite records plugin load and library redraw times.
 
-1. A lifecycle simulation suite covering every feature. It checks that enable is safe to
-   repeat, and that disable leaves nothing behind. It also snapshots command ids and setting
-   keys.
-2. `node tests/map.js --areas`. It prints the area matrix and mutual pairs above, and warns
-   about upward use.
-
-It changes no plugin code, and every later milestone leans on it.
+**Next, M2:** move the misplaced shared helpers, merge the duplicates, and split
+`030-helpers-art`. Each step shortens `layers.json`.
