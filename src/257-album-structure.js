@@ -40,19 +40,6 @@ const ALBUM_LAYOUTS = [
   { id: 'map', label: 'Map', icon: 'waypoints' },
 ];
 
-/* Each kind's symbol, and its colour where covers are coloured by kind: muted, so colour means kind and no more. */
-const ALBUM_TYPES = [
-  { id: 'subject', label: 'Subject', icon: 'book', color: '#4f6d8f' },
-  { id: 'concept map', label: 'Concept map', icon: 'waypoints', color: '#7a5c8e' },
-  { id: 'project', label: 'Project', icon: 'target', color: '#b0703a' },
-  { id: 'reading list', label: 'Reading list', icon: 'library', color: '#5e7f5a' },
-  { id: 'reference', label: 'Reference', icon: 'bookmark', color: '#4d7f80' },
-  { id: 'index', label: 'Index', icon: 'list', color: '#8a6f52' },
-];
-
-/* An album of no kind, where covers are coloured by kind. */
-const ALBUM_KIND_NEUTRAL = '#7d7770';
-
 /* What makes a note a source: properties it has, or its type or tags. */
 const SOURCE_KEYS = ['author', 'authors', 'url', 'source', 'isbn', 'doi', 'publisher'];
 const SOURCE_KINDS = ['source', 'book', 'article', 'paper', 'reading'];

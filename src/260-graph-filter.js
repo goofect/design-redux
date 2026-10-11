@@ -10,8 +10,6 @@
 /* query stays in the field where it can be read and edited by hand.   */
 /* ------------------------------------------------------------------ */
 
-const GRAPH_TYPES = ['graph', 'localgraph'];
-
 const GRAPH_OPS = {
   is: 'is',
   not: 'is not',

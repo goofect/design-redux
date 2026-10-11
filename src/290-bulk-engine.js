@@ -11,9 +11,6 @@
 /* Property types whose value is a list. */
 const LIST_TYPES = ['multitext', 'tags', 'aliases'];
 
-/* The properties Obsidian reads tags from. */
-const TAG_KEYS = ['tags', 'tag'];
-
 /* Returned by mergeValues when two values can't become one. */
 const CONFLICT = Object.freeze({ conflict: true });
 

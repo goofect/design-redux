@@ -1,7 +1,5 @@
 {
  "030-helpers-art": [
-  "ALBUM_KIND_NEUTRAL",
-  "ALBUM_TYPES",
   "AlbumRefactor",
   "AlbumStructure",
   "BrowseView",
@@ -13,9 +11,6 @@
  "080-feature": [
   "actionCommands",
   "actionContext"
- ],
- "085-appearance": [
-  "CANVAS_SPACE"
  ],
  "100-library": [
   "SmartAlbums"
@@ -31,7 +26,6 @@
   "BulkEditing",
   "ContextStrip",
   "SmartAlbums",
-  "TAG_KEYS",
   "UpNext"
  ],
  "160-panel-properties": [
@@ -111,9 +105,6 @@
   "BrowseView",
   "GraphPropertyFilter",
   "Library"
- ],
- "340-diagnostics": [
-  "GRAPH_TYPES"
  ],
  "348-workspace-modes": [
   "CanvasOutline",

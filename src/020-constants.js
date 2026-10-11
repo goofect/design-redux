@@ -309,3 +309,24 @@ const NAV_BUTTONS = '.workspace-leaf-content[data-type="file-explorer"] .nav-but
 // The left ribbon's buttons: .mod-left until Obsidian 1.14, .mod-primary since.
 const RIBBON_ACTIONS = '.workspace-ribbon:is(.mod-left, .mod-primary) .side-dock-actions';
 
+/* Each kind's symbol, and its colour where covers are coloured by kind: muted, so colour means kind and no more. */
+const ALBUM_TYPES = [
+  { id: 'subject', label: 'Subject', icon: 'book', color: '#4f6d8f' },
+  { id: 'concept map', label: 'Concept map', icon: 'waypoints', color: '#7a5c8e' },
+  { id: 'project', label: 'Project', icon: 'target', color: '#b0703a' },
+  { id: 'reading list', label: 'Reading list', icon: 'library', color: '#5e7f5a' },
+  { id: 'reference', label: 'Reference', icon: 'bookmark', color: '#4d7f80' },
+  { id: 'index', label: 'Index', icon: 'list', color: '#8a6f52' },
+];
+
+/* An album of no kind, where covers are coloured by kind. */
+const ALBUM_KIND_NEUTRAL = '#7d7770';
+
+/* The graph views: the vault's and a note's own. */
+const GRAPH_TYPES = ['graph', 'localgraph'];
+
+/* The properties Obsidian reads tags from. */
+const TAG_KEYS = ['tags', 'tag'];
+
+/* How far apart canvas cards are put, as set (Appearance): every gap a tidy makes goes through canvasGap(). */
+const CANVAS_SPACE = { scale: 1 };

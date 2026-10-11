@@ -328,9 +328,6 @@ function sideAxes(side) {
 
 /* -- tidying a branch ------------------------------------------------- */
 
-/* How far apart cards are put, as set (Appearance): every gap below is taken through canvasGap(). */
-const CANVAS_SPACE = { scale: 1 };
-
 function canvasGap(n) {
   return Math.round(n * CANVAS_SPACE.scale);
 }
