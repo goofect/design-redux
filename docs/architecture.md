@@ -230,7 +230,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M0 | this audit | low | this file |
 | M1 | safety net — **done** | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
 | M2 | helpers in the right place, duplicates gone — **done** | low | no shared helper declared in a feature piece; nothing in core reaches up; 030 has no mutual pairs |
-| M3 | note and property operations; quiet links split | high | one read path and one write path for properties; undo doesn't overwrite later edits |
+| M3 | note and property operations; quiet links split — **done** | high | one read path and one write path for properties; undo doesn't overwrite later edits |
 | M4 | library, albums, the plugin class | high | 120 under ~1,200 lines; 350 only composes |
 | M5 | UI parts and CSS | medium | dialogs build from shared parts |
 | M6 | canvas | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
@@ -331,3 +331,44 @@ The 52 crossings left, by kind, and the milestone that takes each kind:
 - **Knowledge mapping notes onto canvases** (11 canvas names): M6.
 - **Album property using the bulk engine's notices** (`bulkNotice`, `bulkTail`): M3, when bulk
   and notes share one undo.
+
+## 13. M3, done
+
+- **`073-notes`** is now the one read path and the one write path for properties.
+  - `noteProps(app, file)` and `plugin.notes.props/get` read a note's properties as Obsidian
+    has them, without its `position` key. 19 hand-written reads now use it; only reads that
+    need the cache for tags or links too keep the cache.
+  - `plugin.notes.write(file, change, opts)` writes through `processFrontMatter`, shows the
+    error notice in one place, and returns what changed, key by key.
+  - `plugin.notes.undo(records)` puts back only what's still as the change left it. What was
+    edited since is kept, and a notice says how many were kept. A key that's put back returns
+    to its old place.
+- **Moved onto it:**
+  - the property clipboard;
+  - the properties panel, whose own put-back is gone;
+  - knowledge relationships, whose own restore is gone;
+  - carrying album values over to new names;
+  - an album's properties, and the merge undo;
+  - covers, set and cleared;
+  - folder defaults.
+- **This is the one behaviour change in M3, and it was deliberate.** Undo no longer overwrites
+  later edits for the clipboard, knowledge, album carry-over and album merges. Before, those
+  put old values back blindly.
+- **Still outside it:**
+  - The bulk engine keeps its own records. They are text-level, and restore a file only if it
+    is still exactly what bulk wrote, which is stricter. It now shares `sameValue` with
+    notes.
+  - `345-canvas-outline-sync` keeps its own stamp write. It is canvas code, so it waits for
+    M6.
+- **Quiet links** are in four pieces: `263-quiet-text` (pure), `264-quiet-cache`,
+  `265-quiet-links` (the feature) and `266-quiet-editor`. The class itself is unsplit, since
+  pieces can't share a class.
+- **Tests:** the notes tests are in `test_bulk`, on its real-YAML vault. The suites' stand-in
+  plugins now carry a real `Notes`.
+
+**Next, M4:** the library and albums.
+- Move file operations (`moveFile`, `putBack`, `offerUndo`, folder-note renames) out of the
+  plugin class into a `Files` service.
+- Split `120-browse-view`.
+- Decide where albums sit relative to the library.
+- Take on the `plugin.feature(X)` lookups between features.
