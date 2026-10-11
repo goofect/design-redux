@@ -36,6 +36,9 @@ function headerDuplicates(leaf) {
   return Array.from(found);
 }
 
+/* The sign a screen shows where a note shows its cover. */
+const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };
+
 class ContextStrip extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -270,7 +273,7 @@ class ContextStrip extends Feature {
     this.renderNav(this.el);
     const reading = !!file && this.settings.stripProgress !== false;
     if (file) {
-      this.renderNow(this.el, file);
+      this.renderNow(this.el, file, view);
       this.renderActions(this.el, file, leaf);
       if (reading) this.el.createDiv({ cls: 'dr-strip-progress' });
     } else {
@@ -332,9 +335,17 @@ class ContextStrip extends Feature {
       'Nothing open';
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: title });
-    text.createDiv({ cls: 'dr-strip-sub', text: this.app.vault.getName() });
-
     const folder = browse && browse.mode === 'folder' ? browse.folder() : null;
+    text.createDiv({ cls: 'dr-strip-sub', text: this.screenLine(browse, folder) });
+    // An album shows its cover, as a note does; other screens their own sign.
+    if (folder && !(folder.isRoot && folder.isRoot())) {
+      art.empty();
+      art.removeClass('is-blank');
+      drawFolderArt(this.plugin, art, folder);
+    } else if (browse && STRIP_SCREEN_ICONS[browse.mode]) {
+      art.empty();
+      setIcon(art.createSpan({ cls: 'dr-card-glyph' }), STRIP_SCREEN_ICONS[browse.mode]);
+    }
     if (!folder) return;
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
     const more = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
@@ -349,6 +360,20 @@ class ContextStrip extends Feature {
         redraw: () => browse.render(),
       })
     );
+  }
+
+  /** The line under a screen's name: what an album holds and what it is; otherwise the vault. */
+  screenLine(browse, folder) {
+    const vault = this.app.vault.getName();
+    if (!browse) return vault;
+    if (browse.mode === 'smart') return 'Smart album';
+    if (browse.mode === 'library-check') return 'What to look at';
+    if (browse.mode === 'inbox') return 'Notes in no album';
+    if (!folder || (folder.isRoot && folder.isRoot())) return vault;
+    const n = countFilesIn(folder);
+    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const kind = structure ? structure.info(folder).label : '';
+    return [n === 1 ? '1 item' : `${n} items`, kind || (folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent.name : '')].filter(Boolean).join(' · ');
   }
 
   renderNav(strip) {
@@ -366,7 +391,8 @@ class ContextStrip extends Feature {
       ['chevron-left', 'Back', 'back'],
       ['chevron-right', 'Forward', 'forward'],
     ].forEach(([icon, label, dir]) => {
-      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn' });
+      // Back and forward through what was open: there when wanted, quiet otherwise.
+      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary' });
       el.setAttribute('aria-label', label);
       setIcon(el, icon);
       if (!this.canGo(dir)) {
@@ -379,8 +405,8 @@ class ContextStrip extends Feature {
     });
   }
 
-  /** The note itself: cover, name, and one property beneath it. */
-  renderNow(strip, file) {
+  /** The note itself: cover, name, and one property beneath it — for a canvas, how many cards. */
+  renderNow(strip, file, view) {
     // The middle of the strip, as a player's: back a note through the
     // album, the note itself, and on a note.
     const center = strip.createDiv({ cls: 'dr-strip-center' });
@@ -396,7 +422,8 @@ class ContextStrip extends Feature {
 
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: file.basename });
-    const lead = this.leadOf(file);
+    const cards = file.extension === 'canvas' && view && view.canvas && view.canvas.nodes ? view.canvas.nodes.size : -1;
+    const lead = cards >= 0 ? `${cards} ${cards === 1 ? 'card' : 'cards'}` : this.leadOf(file);
     // Where it falls in its album, as a player says "3 of 12".
     const place = this.settings.stripPlace !== false && near.index >= 0 && near.total > 1 ? `${near.index + 1} of ${near.total}` : '';
     if (lead || place) {
@@ -443,8 +470,11 @@ class ContextStrip extends Feature {
   renderActions(strip, file, leaf) {
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
 
+    // Properties and More always; the rest shown when the strip is pointed at or tabbed into.
+    const secondary = ['mode', 'pin', 'footnotes', 'up-next'];
     const button = (icon, label, onClick, active, role) => {
       const el = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
+      if (secondary.indexOf(role) !== -1) el.addClass('is-secondary');
       if (role) el.dataset.action = role;
       el.setAttribute('aria-label', label);
       el.setAttribute('role', 'button');

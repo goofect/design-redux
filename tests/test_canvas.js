@@ -71,7 +71,7 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, selectionLinks, ' +
+  'tuckedBBox, selectionLinks, cardRole, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
   'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
@@ -1698,9 +1698,18 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     depth.pass(view);
     const marks = ['r', 'a', 'a1', 'a2', 'lone'].map((id) => view.canvas.nodes.get(id).nodeEl.dataset.drDepth);
     assert.deepStrictEqual(marks, ['0', '1', '2', '2', undefined]);
+    // Each card's part: root, a step out, deeper; arrows in the tree, and one that only associates.
+    const roles = ['r', 'a', 'a1', 'lone'].map((id) => view.canvas.nodes.get(id).nodeEl.dataset.drRole);
+    assert.deepStrictEqual(roles, ['root', 'primary', 'secondary', undefined]);
+    assert.ok(view.canvas.edges.get('r-a').lineGroupEl.classList.contains('dr-edge-tree'));
+    assert.ok(view.canvas.edges.get('a2-r').lineGroupEl.classList.contains('dr-edge-assoc'));
+    assert.strictEqual(R.cardRole({ type: 'file', file: 'Note.md' }, 2), 'reference', 'a note brought in is a reference');
+    assert.strictEqual(R.cardRole({ type: 'link', url: 'https://x' }, undefined), 'reference');
     depth.plugin.settings.canvasDepth = false;
     depth.pass(view);
     assert.strictEqual(view.canvas.nodes.get('r').nodeEl.dataset.drDepth, undefined);
+    assert.strictEqual(view.canvas.nodes.get('r').nodeEl.dataset.drRole, undefined);
+    assert.ok(!view.canvas.edges.get('r-a').lineGroupEl.classList.contains('dr-edge-tree'));
   });
 
   await t('focus on a neighbourhood: the cards a step away by any arrow, wider and narrower by keys', () => {

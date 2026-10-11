@@ -2757,21 +2757,44 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   padding: 0;
   border-radius: 100px;
   color: var(--text-muted);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-normal) var(--dr-ease), width var(--dr-dur-normal) var(--dr-ease);
 }
 
 @media (any-hover: hover) {
   .dr-strip-btn:hover {
     color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  /* Only what's needed until the strip is pointed at or tabbed into: the
+   * rest folds away, and the strip widens smoothly to show it. */
+  .dr-strip:not(:hover):not(:focus-within) .dr-strip-btn.is-secondary:not(.is-active) {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
   }
 }
 
+.dr-strip-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* What's on — a pin — in the one accent; what can't be pressed, quieter but there. */
 .dr-strip-btn.is-active {
   color: var(--text-accent);
 }
 
 .dr-strip-btn.is-disabled {
-  opacity: 0.3;
+  opacity: 0.35;
   pointer-events: none;
+}
+
+/* A hairline between the note and what can be done to it, rather than boxes round the buttons. */
+.dr-strip-center + .dr-strip-actions,
+.dr-strip-now.is-screen + .dr-strip-actions {
+  padding-left: var(--dr-space-2);
+  border-left: 1px solid var(--background-modifier-border);
 }
 
 .dr-strip-btn .svg-icon {
@@ -2815,6 +2838,10 @@ body.dr-single-area .workspace-split.mod-root .view-header {
 .dr-strip-now:focus-visible {
   background-color: var(--background-modifier-hover);
   outline: none;
+}
+
+.dr-strip-now {
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 @media (any-hover: hover) {
@@ -7606,4 +7633,22 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 .canvas-node[data-dr-depth="1"] .canvas-node-content {
   font-size: 1.04em;
   font-weight: var(--font-semibold);
+}
+
+/* Deeper: lighter, not fainter — still easy to read. */
+.canvas-node[data-dr-role="secondary"] .canvas-node-content {
+  font-size: 0.96em;
+}
+
+/* A reference — a note, a file, a link brought in — quieter than the
+ * ideas round it: a lighter, broken border where no colour's been given. */
+.canvas-node[data-dr-role="reference"]:not(.is-themed) > .canvas-node-container {
+  border-style: dashed;
+  border-color: var(--background-modifier-border);
+}
+
+/* Arrows: a tree's solid as they are; an association softer, its head too. */
+.canvas-edges g.dr-edge-assoc path.canvas-display-path,
+.canvas-edges g.dr-edge-assoc .canvas-path-end {
+  opacity: 0.7;
 }

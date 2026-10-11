@@ -590,6 +590,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     cmds['next-in-album'].run();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.strictEqual(cmds['next-in-album'].check(), false, 'offered past the last note');
+    // Only what's needed shown until it's pointed at: Properties and More always, the rest waiting.
+    const secondary = Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action);
+    assert.deepStrictEqual(secondary, ['mode', 'pin']);
+    assert.ok(!strip.el.querySelector('[data-action="more"]').classList.contains('is-secondary'));
+    // An album screen: its cover, what it holds and what it is.
+    const browse = Object.assign(Object.create(R.BrowseView.prototype), { mode: 'folder', path: 'IR', plugin, app, leaf: {} });
+    browse.folder = () => app.vault.getFolderByPath('IR');
+    browse.getDisplayText = () => 'IR';
+    leaf.view = browse;
+    strip.update();
+    assert.ok(/\d+ items/.test(strip.el.querySelector('.dr-strip-sub').textContent), strip.el.querySelector('.dr-strip-sub').textContent);
+    assert.ok(!strip.el.querySelector('.dr-strip-art').classList.contains('is-blank'), 'the album’s cover');
   });
 
   await t('a note without a cover shows the first image in it, where the setting has it', () => {
