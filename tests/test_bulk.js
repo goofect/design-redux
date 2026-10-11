@@ -127,7 +127,8 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty };\n');
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
+  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1456,6 +1457,86 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-name input').value, 'course');
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-value input').value, 'POL101');
     again.close();
+  });
+
+  /* -- pasting properties ------------------------------------------------ */
+
+  await t('a paste plan says, property by property, what each mode would do', () => {
+    const now = { Status: 'draft', tags: ['law'], empty: '' };
+    const incoming = { status: 'done', tags: ['Law', 'court'], empty: 'x', fresh: 1, same: 'y' };
+    now.same = 'y';
+    const plan = (mode) => Object.fromEntries(R.propertyPastePlan(now, incoming, mode).map((r) => [r.key, r]));
+    const add = plan('add');
+    assert.strictEqual(add.Status.status, 'keep', 'matched whatever the case, under the note’s own name');
+    assert.strictEqual(add.Status.apply, false);
+    assert.strictEqual(add.tags.status, 'keep');
+    assert.strictEqual(add.empty.status, 'add', 'an empty value counts as missing');
+    assert.strictEqual(add.fresh.status, 'add');
+    assert.strictEqual(add.same.status, 'same');
+    assert.strictEqual(add.same.apply, false);
+    const merge = plan('merge');
+    assert.strictEqual(merge.tags.status, 'merge');
+    assert.deepStrictEqual(merge.tags.value, ['law', 'court'], 'joined, each once whatever the case');
+    assert.strictEqual(merge.Status.status, 'keep', 'text isn’t joined');
+    const replace = plan('replace');
+    assert.strictEqual(replace.Status.status, 'replace');
+    assert.strictEqual(replace.Status.value, 'done');
+    assert.deepStrictEqual(R.joinedValues('a', ['A', 'b']), ['a', 'b']);
+  });
+
+  await t('pasting shows what it would do, takes only what’s ticked, and undoes', async () => {
+    const v = makeVault({ 'n.md': note({ status: 'draft', tags: ['law'] }, 'Body') });
+    const { plugin } = makePlugin(v);
+    const undos = [];
+    plugin.offerUndo = (message, undo) => undos.push({ message, undo });
+    const clip = new R.PropertyClipboard(plugin);
+    const file = v.file('n.md');
+    const modal = new R.PropertyPasteModal(clip, file, { status: 'done', tags: ['court'], area: 'IR' }, { mode: 'merge' });
+    modal.open();
+    const rows = () => [...modal.contentEl.querySelectorAll('.dr-paste-row')];
+    assert.deepStrictEqual(rows().map((r) => r.dataset.status), ['keep', 'merge', 'add']);
+    assert.strictEqual(modal.contentEl.querySelector('.mod-cta').textContent, 'Paste 2 properties');
+    assert.ok(rows()[0].querySelector('.dr-paste-value').textContent.includes('draft → done'));
+    // Replace mode: the text one would replace too.
+    change(modal.contentEl.querySelector('.dr-paste-mode'), 'replace');
+    assert.deepStrictEqual(rows().map((r) => r.dataset.status), ['replace', 'replace', 'add']);
+    assert.strictEqual(modal.contentEl.querySelector('.mod-cta').textContent, 'Paste 3 properties');
+    // Back to merge; the list left out; status ticked in, so it replaces.
+    change(modal.contentEl.querySelector('.dr-paste-mode'), 'merge');
+    const box = (i) => rows()[i].querySelector('input');
+    box(1).checked = false;
+    box(1).dispatchEvent(new window.Event('change'));
+    box(0).checked = true;
+    box(0).dispatchEvent(new window.Event('change'));
+    assert.strictEqual(rows()[0].dataset.status, 'replace');
+    assert.strictEqual(modal.contentEl.querySelector('.mod-cta').textContent, 'Paste 2 properties');
+    click(modal.contentEl.querySelector('.mod-cta'));
+    await settle();
+    assert.deepStrictEqual(v.fm('n.md'), { status: 'done', tags: ['law'], area: 'IR', position: {} });
+    assert.ok(v.text('n.md').endsWith('Body'));
+    assert.strictEqual(undos.length, 1);
+    await undos[0].undo();
+    assert.deepStrictEqual(v.fm('n.md'), { status: 'draft', tags: ['law'], position: {} }, 'undone: the old value back, the added one gone');
+  });
+
+  await t('a property set is kept by name and applied like a paste, missing ones only', async () => {
+    const v = makeVault({ 'a.md': note({ kind: 'case', court: 'ICJ', year: 2001 }), 'b.md': note({ kind: 'statute' }) });
+    const { plugin } = makePlugin(v);
+    plugin.offerUndo = () => {};
+    const clip = new R.PropertyClipboard(plugin);
+    await clip.keepSet('Case', { kind: 'case', court: '' });
+    assert.deepStrictEqual(plugin.settings.propertySets, { Case: { kind: 'case', court: '' } });
+    assert.ok(plugin.saved > 0);
+    const before = modals.length;
+    clip.chooseSet(v.file('b.md'));
+    pickers.pop().onChoose({ name: 'Case' });
+    const modal = modals[before];
+    assert.ok(modal instanceof R.PropertyPasteModal);
+    assert.strictEqual(modal.mode, 'add');
+    assert.ok(!modal.contentEl.textContent.includes('Keep as a set'), 'a set isn’t offered to be kept again');
+    click(modal.contentEl.querySelector('.mod-cta'));
+    await settle();
+    assert.deepStrictEqual(v.fm('b.md'), { kind: 'statute', court: '', position: {} }, 'its kind kept; the empty court added');
   });
 
   console.log(`\n${passed} passed`);

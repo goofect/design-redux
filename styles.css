@@ -4015,6 +4015,85 @@ body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
   width: 100%;
 }
 
+/* Properties to copy or paste, each ticked or not; a paste says what each
+ * would do — added, unchanged, joined, replacing, or kept as it is. */
+.dr-paste-mode {
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-checklist,
+.dr-paste-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-checklist-row,
+.dr-paste-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  min-height: var(--dr-row-height);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-checklist-name,
+.dr-paste-key {
+  font-weight: var(--font-semibold);
+}
+
+.dr-checklist-note,
+.dr-paste-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-checklist-note {
+  margin-left: auto;
+}
+
+.dr-paste-text {
+  flex: 1;
+  min-width: 0;
+  line-height: var(--dr-line-label);
+}
+
+.dr-paste-status {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-paste-row[data-status="add"] .dr-paste-status,
+.dr-paste-row[data-status="merge"] .dr-paste-status {
+  color: var(--text-success, var(--color-green));
+}
+
+.dr-paste-row[data-status="replace"] .dr-paste-status {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-paste-row[data-status="same"] {
+  opacity: var(--dr-disabled-opacity);
+  cursor: default;
+}
+
+@media (any-hover: hover) {
+  .dr-checklist-row:hover,
+  .dr-paste-row:not([data-status="same"]):hover {
+    background: var(--dr-hover);
+  }
+}
+
 /* Touch -----------------------------------------------------------------------
  *
  * The mobile app, phone or tablet (Obsidian's is-mobile). There's no

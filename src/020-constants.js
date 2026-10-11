@@ -72,6 +72,8 @@ const DEFAULTS = {
   knowledgeBroader: 'concept',
   // Warnings marked as meant, by the note they're about: { path: [code] }.
   knowledgeMeant: {},
+  // Property sets kept by name, to apply to a note as a template: { name: { key: value } }.
+  propertySets: {},
   // Workspace modes, and the one on with the layout it put aside.
   workspaceModes: true,
   workspaceMode: '',
