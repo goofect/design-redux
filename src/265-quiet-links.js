@@ -226,20 +226,41 @@ function quietPointsAt(path, oldPath) {
  * `linktext` instead — its heading and words kept. The count of links
  * changed comes back with it.
  */
-function renameQuietLinks(text, oldPath, linktext, stillResolves) {
+function renameQuietLinks(text, oldPath, linktext, stillResolves, spans) {
+  return renameQuietLinksIn(text, [{ oldPath, linktext }], stillResolves, spans);
+}
+
+/**
+ * The same for several renamed files at once: { oldPath, linktext } each,
+ * in one pass so the places found stay true. Only over `spans` when given
+ * — where links really are — or every quiet link in the text.
+ */
+function renameQuietLinksIn(text, renames, stillResolves, spans) {
   let count = 0;
   let out = '';
   let at = 0;
-  quietMatches(text).forEach((q) => {
+  (spans || quietMatches(text)).forEach((q) => {
     const parts = splitQuiet(q.inner);
-    if (!quietPointsAt(parts.path, oldPath)) return;
+    const r = renames.find((x) => quietPointsAt(parts.path, x.oldPath));
+    if (!r) return;
     if (stillResolves && stillResolves(parts.path)) return;
     count++;
     const words = parts.words ? `|${parts.words}` : '';
-    out += text.slice(at, q.from) + `[[[${linktext}${parts.subpath}${words}]]]`;
+    out += text.slice(at, q.from) + `[[[${r.linktext}${parts.subpath}${words}]]]`;
     at = q.to;
   });
   return { text: out + text.slice(at), count };
+}
+
+/**
+ * Where a note's quiet links are, to rename them: in its properties, and in
+ * its text where Obsidian found them — so none in code, maths or comments,
+ * which keep what's written, as Obsidian leaves its own links there.
+ */
+function renameSpans(text, cache) {
+  const head = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/.exec(text);
+  const end = head ? head[0].length : 0;
+  return quietMatches(text.slice(0, end)).concat(quietSpans(text, cache).filter((s) => s.from >= end));
 }
 
 /* -- sharing, and stray notes ---------------------------------------- */
@@ -1012,11 +1033,10 @@ class QuietLinks extends Feature {
   async applyChanges(changes) {
     for (const change of changes) {
       try {
+        const cache = this.app.metadataCache.getFileCache(change.source);
+        const renames = change.renames.map((r) => ({ oldPath: r.oldPath, linktext: this.app.metadataCache.fileToLinktext(r.file, change.source.path, true) }));
         await this.app.vault.process(change.source, (text) =>
-          change.renames.reduce((current, r) => {
-            const linktext = this.app.metadataCache.fileToLinktext(r.file, change.source.path, true);
-            return renameQuietLinks(current, r.oldPath, linktext, (path) => !!this.resolve(path, change.source.path)).text;
-          }, text)
+          renameQuietLinksIn(text, renames, (path) => !!this.resolve(path, change.source.path), renameSpans(text, cache)).text
         );
       } catch (err) {
         console.error('Design Redux: could not update quiet links', err);
