@@ -178,6 +178,14 @@ function isCanvasEdge(item) {
   return !!item && !!item.from && !!item.to && !!item.from.node && !!item.to.node;
 }
 
+/** The one card selected, if one alone is and it's a card: not an arrow, a group or a card tucked in a fold. */
+function soleCard(selected) {
+  if (selected.length !== 1) return null;
+  const node = selected[0];
+  if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
+  return node;
+}
+
 class CanvasArrows extends CanvasFeature {
   constructor(plugin) {
     super(plugin);

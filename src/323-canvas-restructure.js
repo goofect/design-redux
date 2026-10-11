@@ -40,7 +40,7 @@ class CanvasRestructure extends CanvasFeature {
 
   actions() {
     // The one card it's for — not a group, nor one in a fold — on a canvas that can be changed.
-    const one = (ctx) => (this.enabled && !ctx.view.canvas.readonly ? this.cardOf(ctx.nodes) : null);
+    const one = (ctx) => (this.enabled && !ctx.view.canvas.readonly ? soleCard(ctx.nodes) : null);
     const act = (id, name, menu, icon, can, run) => ({ id, name, menu, icon, on: 'canvas', when: (ctx) => !!one(ctx) && (!can || !!can(ctx.view, one(ctx))), run: (ctx) => run(ctx.view, one(ctx)) });
     return [
       act('canvas-add-parent-card', 'Add a card before the selected card', 'Add card before', 'git-pull-request-arrow', null, (v, n) => this.addParent(v, n)),
@@ -55,12 +55,6 @@ class CanvasRestructure extends CanvasFeature {
   pass() {}
 
   /** The one card of these — not a group, nor one in a fold — or null. */
-  cardOf(selected) {
-    if (selected.length !== 1) return null;
-    const node = selected[0];
-    if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
-    return node;
-  }
 
   mount(view, state) {
     if (!view.containerEl) return;
@@ -78,7 +72,7 @@ class CanvasRestructure extends CanvasFeature {
     const arrow = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[evt.key];
     if (evt.altKey ? !arrow : evt.key !== 'Enter' && evt.key !== 'Tab') return;
     if (!view.canvas || view.canvas.readonly) return;
-    const node = this.cardOf(this.selectedNodes(view));
+    const node = soleCard(this.selectedNodes(view));
     if (!node || node.isEditing) return;
     evt.preventDefault();
     evt.stopPropagation();

@@ -206,7 +206,7 @@ class CanvasMindMap extends CanvasFeature {
   }
 
   actions() {
-    const one = (ctx) => (this.keys ? this.cardOf(ctx.nodes) : null);
+    const one = (ctx) => (this.keys ? soleCard(ctx.nodes) : null);
     const open = (ctx) => (ctx.view.canvas.readonly ? null : one(ctx));
     const ways = [
       ['left', 'Select the card to the left'],
@@ -222,16 +222,10 @@ class CanvasMindMap extends CanvasFeature {
 
   /** The one selected card — not a group, nor one in a fold — or null. */
   selectedCard(view) {
-    return this.cardOf(this.selectedNodes(view));
+    return soleCard(this.selectedNodes(view));
   }
 
   /** The one card of these, as above, or null. */
-  cardOf(selected) {
-    if (selected.length !== 1) return null;
-    const node = selected[0];
-    if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
-    return node;
-  }
 
   mount(view, state) {
     if (!view.containerEl) return;
