@@ -2,15 +2,7 @@
  "030-helpers-art": [
   "AlbumRefactor",
   "AlbumStructure",
-  "BrowseView",
   "Knowledge"
- ],
- "075-queue": [
-  "UpNext"
- ],
- "080-feature": [
-  "actionCommands",
-  "actionContext"
  ],
  "100-library": [
   "SmartAlbums"
@@ -44,12 +36,6 @@
  ],
  "200-one-page": [
   "Library"
- ],
- "235-covers": [
-  "BrowseView"
- ],
- "253-actions": [
-  "BrowseView"
  ],
  "254-knowledge": [
   "BROWSE_SCREENS",

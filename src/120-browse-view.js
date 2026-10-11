@@ -2720,3 +2720,10 @@ class BrowseView extends ItemView {
   }
 }
 
+/* What a browse action acts on: the album the browse view shows. */
+ACTION_CONTEXTS.browse = (app) => {
+  const view = app.workspace.getActiveViewOfType(BrowseView);
+  const folder = view && view.mode === 'folder' ? view.folder() : null;
+  return folder ? { folder, view, from: 'palette' } : null;
+};
+

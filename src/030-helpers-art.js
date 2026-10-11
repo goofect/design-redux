@@ -872,6 +872,11 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
   showMenuAt(menu, evt);
 }
 
+/** Whether a view is the browse view: known by its type, so a helper needn't know the class. */
+function isBrowseView(view) {
+  return !!view && typeof view.getViewType === 'function' && view.getViewType() === BROWSE_VIEW;
+}
+
 /**
  * The folder the page is in: the one a folder screen shows, or the one
  * holding the note that's open.
@@ -879,7 +884,7 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
 function pageFolder(app) {
   const leaf = pageLeaf(app);
   const view = leaf && !leaf.isDeferred ? leaf.view : null;
-  if (view instanceof BrowseView) return view.mode === 'folder' ? view.folder() : null;
+  if (isBrowseView(view)) return view.mode === 'folder' ? view.folder() : null;
   return view && view.file instanceof TFile ? view.file.parent : null;
 }
 

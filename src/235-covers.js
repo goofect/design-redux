@@ -96,7 +96,7 @@ class CoverImages extends Feature {
   coverColorTarget() {
     const leaf = pageLeaf(this.app);
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    if (view instanceof BrowseView) {
+    if (isBrowseView(view)) {
       const folder = view.mode === 'folder' ? view.folder() : null;
       return folder && !folder.isRoot() ? folder : null;
     }

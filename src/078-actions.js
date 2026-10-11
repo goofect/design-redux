@@ -58,7 +58,7 @@ const ACTION_CONTEXTS = {
   note: (app) => activeNoteContext(app),
   file: (app) => {
     const view = pageView(app);
-    const file = view && !(view instanceof BrowseView) && view.file instanceof TFile ? view.file : null;
+    const file = view && !isBrowseView(view) && view.file instanceof TFile ? view.file : null;
     return file ? { file, from: 'palette' } : null;
   },
   editor: (app) => {
@@ -83,11 +83,7 @@ const ACTION_CONTEXTS = {
     const folder = pageFolder(app);
     return folder ? { folder, from: 'palette' } : null;
   },
-  browse: (app) => {
-    const view = app.workspace.getActiveViewOfType(BrowseView);
-    const folder = view && view.mode === 'folder' ? view.folder() : null;
-    return folder ? { folder, view, from: 'palette' } : null;
-  },
+  // browse: the browse view adds its own (120-browse-view).
 };
 
 /** What an action acts on, found for the palette. */
