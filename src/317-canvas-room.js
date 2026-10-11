@@ -129,7 +129,7 @@ function closeLimit(model, before, moving, room, side, p, origin) {
       const gap = side === 'after' ? p.near(m) - p.far(s) : p.near(s) - p.far(m);
       // Not on its way: beyond it, or already over it.
       if (gap < -1) return;
-      room = Math.min(room, Math.max(0, gap - CLOSE_KEEP));
+      room = Math.min(room, Math.max(0, gap - canvasGap(CLOSE_KEEP)));
     });
   });
   return room;
@@ -170,8 +170,8 @@ function makeRoom(model, before, change) {
     closing &&
     across(n, p.lo(m), p.hi(m)) &&
     (side === 'after'
-      ? p.near(n) < p.near(m) && p.far(n) > p.near(m) + delta - CLOSE_KEEP
-      : p.far(n) > p.far(m) && p.near(n) < p.far(m) + delta + CLOSE_KEEP);
+      ? p.near(n) < p.near(m) && p.far(n) > p.near(m) + delta - canvasGap(CLOSE_KEEP)
+      : p.far(n) > p.far(m) && p.near(n) < p.far(m) + delta + canvasGap(CLOSE_KEEP));
   const moving = [];
   const taken = new Set();
   let grew = true;
@@ -673,15 +673,15 @@ function moveStrays(model, before, rec, ids, axes, home) {
   const p = axisParts(axes.depth);
   const region = boundsOf(tree);
   const middle = p.near(rec) + rec[p.size] / 2;
-  let ahead = p.far(region) + TIDY_SIBLING_GAP;
-  let behind = p.near(region) - TIDY_SIBLING_GAP;
+  let ahead = p.far(region) + canvasGap(TIDY_SIBLING_GAP);
+  let behind = p.near(region) - canvasGap(TIDY_SIBLING_GAP);
   strays.forEach((n) => {
     // Beyond the tree the way it grows — or, growing both ways, on the side the card was.
     const forward = axes.both ? p.near(n) + n[p.size] / 2 >= middle : axes.forward;
     const target = forward ? ahead : behind - n[p.size];
     shiftRecord(model, n, axes.depth, target - p.near(n), new Set());
-    if (forward) ahead = target + n[p.size] + TIDY_SIBLING_GAP;
-    else behind = target - TIDY_SIBLING_GAP;
+    if (forward) ahead = target + n[p.size] + canvasGap(TIDY_SIBLING_GAP);
+    else behind = target - canvasGap(TIDY_SIBLING_GAP);
   });
 }
 

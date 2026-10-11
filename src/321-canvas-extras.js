@@ -329,8 +329,8 @@ class CanvasDuplicate extends CanvasFeature {
     const box = boundsOf(shown);
     const grows = branchSide(model, root.id, links);
     const across = grows === 'bottom' || grows === 'top';
-    const dx = across ? box.width + DUPLICATE_GAP : 0;
-    const dy = across ? 0 : box.height + DUPLICATE_GAP;
+    const dx = across ? box.width + canvasGap(DUPLICATE_GAP) : 0;
+    const dy = across ? 0 : box.height + canvasGap(DUPLICATE_GAP);
     const fresh = new Map(ids.map((id) => [id, newCanvasId(canvas)]));
     const nodes = ids
       .map((id) => byId.get(id))

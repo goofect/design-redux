@@ -30,7 +30,7 @@ const LIBRARY_BUILTINS = {
 };
 
 /* How large covers are on screens of tiles. */
-const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Comfortable' };
+const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
 
 /* How screens of albums group their covers. */
 const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of album', collection: 'Collection' };
@@ -85,6 +85,9 @@ const DEFAULTS = {
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
+  // The theme's look, or the editorial one; how far apart canvas layouts put cards.
+  look: 'theme',
+  canvasSpacing: 'standard',
   // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
   // An album cover that isn't a picture has its kind, name and collection printed on it.

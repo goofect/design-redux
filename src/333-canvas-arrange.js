@@ -74,7 +74,7 @@ function arrangePlaces(recs, action) {
     const total = sorted.reduce((s, r) => s + r[size], 0);
     let gap = (span - total) / (sorted.length - 1);
     // Overlapping already: a plain gap between them, from the first.
-    if (gap < 0) gap = ARRANGE_GAP;
+    if (gap < 0) gap = canvasGap(ARRANGE_GAP);
     let at = first[axis];
     sorted.forEach((r) => {
       put(r, { [axis]: round(at) });
@@ -87,7 +87,7 @@ function arrangePlaces(recs, action) {
     let at = box[axis];
     readingOrder(recs).forEach((r) => {
       put(r, { [axis]: at, [cross]: box[cross] });
-      at += r[size] + ARRANGE_GAP;
+      at += r[size] + canvasGap(ARRANGE_GAP);
     });
   };
   if (action === 'left') recs.forEach((r) => put(r, { x: box.x }));
@@ -120,8 +120,8 @@ function arrangePlaces(recs, action) {
     order.forEach((r, i) => {
       const c = i % cols;
       const w = Math.floor(i / cols);
-      const x = box.x + widths.slice(0, c).reduce((s, v) => s + v + ARRANGE_GAP, 0);
-      const y = box.y + heights.slice(0, w).reduce((s, v) => s + v + ARRANGE_GAP, 0);
+      const x = box.x + widths.slice(0, c).reduce((s, v) => s + v + canvasGap(ARRANGE_GAP), 0);
+      const y = box.y + heights.slice(0, w).reduce((s, v) => s + v + canvasGap(ARRANGE_GAP), 0);
       put(r, { x, y });
     });
   }

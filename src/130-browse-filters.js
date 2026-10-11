@@ -125,9 +125,8 @@ class Library extends Feature {
       {
         key: 'gridDensity',
         type: 'dropdown',
-        showIf: 'library',
-        name: 'Cover size',
-        desc: 'How large covers are on screens of tiles: a compact catalogue, standard, or large.',
+        name: 'Density',
+        desc: 'How much room everything gets — covers, rows, the library, the strip, panels and windows: compact, standard or spacious.',
         options: GRID_DENSITIES,
       },
       {
@@ -235,7 +234,7 @@ class Library extends Feature {
       },
       {
         id: 'cycle-cover-size',
-        name: 'Next cover size: compact, standard, large',
+        name: 'Next density: compact, standard, spacious',
         icon: 'grid-2x2',
         when: () => this.enabled,
         run: () => {
@@ -244,7 +243,9 @@ class Library extends Feature {
           this.settings.gridDensity = keys[(now + 1) % keys.length];
           this.plugin.saveData(this.settings);
           this.plugin.refreshBrowse();
-          new Notice(`Covers: ${GRID_DENSITIES[this.settings.gridDensity].toLowerCase()}`);
+          const appearance = this.plugin.feature(Appearance);
+          if (appearance) appearance.apply();
+          new Notice(`Density: ${GRID_DENSITIES[this.settings.gridDensity].toLowerCase()}`);
         },
       },
       // The page's history, so these work from anywhere — including

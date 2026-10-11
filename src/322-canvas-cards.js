@@ -218,7 +218,7 @@ class CanvasCards extends CanvasFeature {
     );
     if (below.length) {
       const top = Math.min(...below.map((n) => n.y));
-      const need = rec.y + height + FREE_GAP - top;
+      const need = rec.y + height + canvasGap(FREE_GAP) - top;
       if (need > 0) {
         makeRoom(model, before, { origin: new Set([rec.id]), home, axis: 'y', side: 'after', at: top, delta: need, span: [rec.x, rec.x + rec.width] });
       }

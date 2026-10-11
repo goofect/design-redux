@@ -13,6 +13,7 @@ class DesignRedux extends Plugin {
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
+      new Appearance(this),
       new Library(this),
       new ListKeys(this),
       new SidebarDrop(this),

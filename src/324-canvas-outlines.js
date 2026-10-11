@@ -226,7 +226,7 @@ function growCards(plugin, view, node, items, opts = {}) {
   const kids = shownChildren(model, links, root.id);
   const axes = sideAxes(side);
   const deep = axes.depth === 'x' ? 'width' : 'height';
-  let away = TIDY_DEPTH_GAP;
+  let away = canvasGap(TIDY_DEPTH_GAP);
   if (kids.length) {
     const near = axes.forward ? Math.min(...kids.map((k) => k[axes.depth])) - (root[axes.depth] + root[deep]) : root[axes.depth] - Math.max(...kids.map((k) => k[axes.depth] + k[deep]));
     if (near > 0) away = near;

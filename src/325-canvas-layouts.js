@@ -45,11 +45,11 @@ function outlineLayout(model, rootId, links) {
   const root = model.byId.get(rootId);
   if (!root) return out;
   const kids = orderedBranch(model, rootId, links, siblingOrder);
-  let y = root.y + root.height + OUTLINE_GAP;
+  let y = root.y + root.height + canvasGap(OUTLINE_GAP);
   const walk = (id, depth) =>
     (kids.get(id) || []).forEach((c) => {
-      out.set(c.id, { x: Math.round(root.x + depth * OUTLINE_INDENT), y: Math.round(y) });
-      y += c.height + OUTLINE_GAP;
+      out.set(c.id, { x: Math.round(root.x + depth * canvasGap(OUTLINE_INDENT)), y: Math.round(y) });
+      y += c.height + canvasGap(OUTLINE_GAP);
       walk(c.id, depth + 1);
     });
   walk(rootId, 1);
@@ -135,7 +135,7 @@ function conceptLayout(model, rootId, links) {
     });
   }
   // Then nothing touching: each pair that meets eased apart, the root staying put.
-  const gap = TIDY_SIBLING_GAP;
+  const gap = canvasGap(TIDY_SIBLING_GAP);
   for (let pass = 0; pass < 80; pass++) {
     let moved = false;
     for (let i = 0; i < ids.length; i++) {
@@ -328,10 +328,10 @@ function radialLayout(model, rootId, links) {
     });
   });
   // Wide enough round that the narrowest share fits a card.
-  const least = (total * (widest + TIDY_SIBLING_GAP)) / (2 * Math.PI);
+  const least = (total * (widest + canvasGap(TIDY_SIBLING_GAP))) / (2 * Math.PI);
   const radius = [0];
   for (let d = 1; d < reach.length; d++) {
-    radius[d] = Math.max(radius[d - 1] + reach[d - 1] + reach[d] + TIDY_DEPTH_GAP, d === 1 ? least : 0);
+    radius[d] = Math.max(radius[d - 1] + reach[d - 1] + reach[d] + canvasGap(TIDY_DEPTH_GAP), d === 1 ? least : 0);
   }
   const place = (id, start, span) => {
     let at = start;
@@ -400,7 +400,7 @@ function selectionLinks(model, recs) {
 }
 
 function spreadApart(cards, still, gap) {
-  gap = gap === undefined ? TIDY_SIBLING_GAP : gap;
+  gap = gap === undefined ? canvasGap(TIDY_SIBLING_GAP) : gap;
   const pos = cards.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.width, h: r.height, fixed: still.has(r.id) }));
   for (let pass = 0; pass < 100; pass++) {
     let moved = false;

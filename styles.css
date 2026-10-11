@@ -120,6 +120,95 @@ body {
   }
 }
 
+/* The editorial look, chosen in settings: monochrome surfaces a step
+ * apart, fine low-contrast lines instead of shadows, small corners,
+ * titles in a medium weight, and covers without colour of their own
+ * unless they have art. The accent stays the theme's, for what it means. */
+body.dr-look-editorial.theme-dark {
+  --color-base-00: #090909;
+  --color-base-05: #0d0d0d;
+  --color-base-10: #111111;
+  --color-base-20: #181818;
+  --color-base-25: #1e1e1e;
+  --color-base-30: #252525;
+  --color-base-35: #2e2e2e;
+  --color-base-40: #3a3a3a;
+  --color-base-50: #575757;
+  --color-base-60: #737373;
+  --color-base-70: #a0a0a0;
+  --color-base-100: #e8e8e8;
+  --background-primary: #090909;
+  --background-primary-alt: #111111;
+  --background-secondary: #111111;
+  --background-secondary-alt: #181818;
+  --background-modifier-border: #252525;
+  --background-modifier-border-hover: #333333;
+  --background-modifier-border-focus: #4a4a4a;
+  --background-modifier-hover: rgba(255, 255, 255, 0.05);
+  --background-modifier-active-hover: rgba(255, 255, 255, 0.08);
+  --divider-color: #252525;
+  --text-normal: #e8e8e8;
+  --text-muted: #a0a0a0;
+  --text-faint: #737373;
+}
+
+body.dr-look-editorial.theme-light {
+  --color-base-00: #fbfbfa;
+  --color-base-05: #f7f7f6;
+  --color-base-10: #f2f2f1;
+  --color-base-20: #ececeb;
+  --color-base-25: #e6e6e5;
+  --color-base-30: #e1e1df;
+  --color-base-35: #d6d6d4;
+  --color-base-40: #c4c4c2;
+  --color-base-50: #9a9a98;
+  --color-base-60: #808080;
+  --color-base-70: #5c5c5c;
+  --color-base-100: #161616;
+  --background-primary: #fbfbfa;
+  --background-primary-alt: #f4f4f3;
+  --background-secondary: #f4f4f3;
+  --background-secondary-alt: #ececeb;
+  --background-modifier-border: #e1e1df;
+  --background-modifier-border-hover: #d0d0ce;
+  --background-modifier-border-focus: #b5b5b3;
+  --background-modifier-hover: rgba(0, 0, 0, 0.04);
+  --background-modifier-active-hover: rgba(0, 0, 0, 0.07);
+  --divider-color: #e1e1df;
+  --text-normal: #161616;
+  --text-muted: #5c5c5c;
+  --text-faint: #8a8a8a;
+}
+
+body.dr-look-editorial {
+  --dr-shadow-sm: 0 0 0 1px var(--background-modifier-border);
+  --dr-shadow-md: 0 0 0 1px var(--background-modifier-border);
+  --dr-shadow-lg: 0 0 0 1px var(--background-modifier-border);
+  --dr-float-shadow: 0 0 0 1px var(--background-modifier-border);
+  --dr-cover-edge: inset 0 0 0 1px var(--background-modifier-border);
+  --dr-radius-pill: var(--dr-radius-sm);
+  --dr-display-weight: var(--font-medium, 500);
+  --dr-ui-weight: var(--font-normal, 400);
+}
+
+body.dr-look-editorial .dr-detail-glow {
+  display: none;
+}
+
+body.dr-look-editorial .is-generated,
+body.dr-look-editorial [class].is-blank.is-hued,
+body.dr-look-editorial .dr-cat {
+  filter: grayscale(1);
+}
+
+/* Density: the unit every space is a multiple of — lists, grids, the strip, panels, windows. */
+body.dr-density-compact {
+  --dr-u: 3px;
+}
+
+body.dr-density-spacious {
+  --dr-u: 5px;
+}
 
 /* Design Redux
  *

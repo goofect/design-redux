@@ -69,7 +69,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
+  '\nmodule.exports.__test = { CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
@@ -1145,6 +1145,12 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     await lay.layout(view, n('r'), 'bottom');
     assert.deepStrictEqual([n('r').x, n('r').y], [0, 0], 'the card stays');
     assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).y), [130, 130, 130]);
+    // Spacious canvas spacing: the same layout, further apart; and back.
+    R.CANVAS_SPACE.scale = 1.4;
+    await lay.layout(view, n('r'), 'bottom');
+    assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).y), [162, 162, 162]);
+    R.CANVAS_SPACE.scale = 1;
+    await lay.layout(view, n('r'), 'bottom');
     assert.ok(view.canvas.saves >= saves, 'saved');
     assert.ok(!lay.hasBranch(view, n('a')), 'a card with nothing below it has nothing to lay out');
     // Several selected: each tree once — a card inside another's branch isn't laid out again.

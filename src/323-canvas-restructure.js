@@ -254,7 +254,7 @@ class CanvasRestructure extends CanvasFeature {
   moveOut(model, before, card, made, side, links) {
     const axes = sideAxes(side);
     const deep = axes.depth === 'x' ? 'width' : 'height';
-    const delta = (made[deep] + TIDY_DEPTH_GAP) * (axes.forward ? 1 : -1);
+    const delta = (made[deep] + canvasGap(TIDY_DEPTH_GAP)) * (axes.forward ? 1 : -1);
     const members = [card].concat(branchOf(model, card.id, links).map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
     const p = axisParts(axes.depth);
     const cross = axisParts(axes.across);

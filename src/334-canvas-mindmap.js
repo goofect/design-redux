@@ -76,8 +76,8 @@ function boxEdges(r) {
  */
 function freeSpot(model, anchor, size, prefer, opts) {
   opts = opts || {};
-  const gap = opts.gap === undefined ? FREE_GAP : opts.gap;
-  const away = opts.away === undefined ? TIDY_DEPTH_GAP : opts.away;
+  const gap = opts.gap === undefined ? canvasGap(FREE_GAP) : opts.gap;
+  const away = opts.away === undefined ? canvasGap(TIDY_DEPTH_GAP) : opts.away;
   const skip = opts.skip || new Set();
   const home = canvasHomes(model).get(anchor.id) || null;
   const homeRec = home ? model.byId.get(home) : null;
@@ -498,13 +498,13 @@ class CanvasMindMap extends CanvasFeature {
     const size = this.sizeFor(view, kids.length ? kids[kids.length - 1] : null, parent);
     if (this.placesFreely) {
       // Level with the cards after it, where it has some.
-      let away = TIDY_DEPTH_GAP;
+      let away = canvasGap(TIDY_DEPTH_GAP);
       if (kids.length) {
         const depthSize = axes.depth === 'x' ? 'width' : 'height';
         away = axes.forward
           ? Math.min(...kids.map((k) => k[axes.depth])) - (parent[axes.depth] + parent[depthSize])
           : parent[axes.depth] - Math.max(...kids.map((k) => k[axes.depth] + k[depthSize]));
-        if (!(away > 0)) away = TIDY_DEPTH_GAP;
+        if (!(away > 0)) away = canvasGap(TIDY_DEPTH_GAP);
       }
       const spot = freeSpot(model, parent, size, side, { away });
       if (spot) {
@@ -523,9 +523,9 @@ class CanvasMindMap extends CanvasFeature {
       const near = Math.min(...kids.map((k) => k[depth]));
       const far = Math.max(...kids.map((k) => k[depth] + k[dSize]));
       box[depth] = axes.forward ? near : far - box[dSize];
-      box[across] = Math.max(...kids.map((k) => k[across] + k[aSize])) + TIDY_SIBLING_GAP;
+      box[across] = Math.max(...kids.map((k) => k[across] + k[aSize])) + canvasGap(TIDY_SIBLING_GAP);
     } else {
-      box[depth] = axes.forward ? parent[depth] + parent[dSize] + TIDY_DEPTH_GAP : parent[depth] - TIDY_DEPTH_GAP - box[dSize];
+      box[depth] = axes.forward ? parent[depth] + parent[dSize] + canvasGap(TIDY_DEPTH_GAP) : parent[depth] - canvasGap(TIDY_DEPTH_GAP) - box[dSize];
       box[across] = Math.round(parent[across] + parent[aSize] / 2 - box[aSize] / 2);
     }
     return this.grow(view, parent, box, { from: parent, fromSide: side, toSide: OPPOSITE_SIDE[side] }, across, kids[kids.length - 1]);
@@ -564,7 +564,7 @@ class CanvasMindMap extends CanvasFeature {
       // Beside it, after it the way its siblings line up, in the nearest free space.
       const after = across === 'y' ? 'bottom' : 'right';
       // In its column, rather than off to one side: beside it is the next of its parent's.
-      const spot = freeSpot(model, card, size, after, { away: TIDY_SIBLING_GAP, beside: 2.5, behind: 2, align: 1 });
+      const spot = freeSpot(model, card, size, after, { away: canvasGap(TIDY_SIBLING_GAP), beside: 2.5, behind: 2, align: 1 });
       if (spot) {
         const box = { x: spot.x, y: spot.y, width: size.width, height: size.height };
         // Joined as the card beside it is.
@@ -574,7 +574,7 @@ class CanvasMindMap extends CanvasFeature {
     const box = { x: card.x, y: card.y, width: size.width, height: size.height };
     // Its own branch, if it has one, stays clear: the new card goes past it.
     const own = [card].concat(branchOf(model, card.id, links).map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
-    box[across] = Math.max(...own.map((r) => r[across] + r[aSize])) + TIDY_SIBLING_GAP;
+    box[across] = Math.max(...own.map((r) => r[across] + r[aSize])) + canvasGap(TIDY_SIBLING_GAP);
     return this.grow(view, parent || card, box, join, across, card);
   }
 
@@ -636,7 +636,7 @@ class CanvasMindMap extends CanvasFeature {
   makeWay(model, before, rec, holder, axis) {
     const homes = homesBefore(model, before);
     const home = homes.get(holder.id) || null;
-    const pad = TIDY_SIBLING_GAP / 2;
+    const pad = canvasGap(TIDY_SIBLING_GAP) / 2;
     const hits = model.nodes.filter(
       (n) =>
         n !== rec &&
@@ -655,7 +655,7 @@ class CanvasMindMap extends CanvasFeature {
       axis,
       side: 'after',
       at: Math.min(...hits.map(p.near)),
-      delta: p.far(rec) + TIDY_SIBLING_GAP - Math.min(...hits.map(p.near)),
+      delta: p.far(rec) + canvasGap(TIDY_SIBLING_GAP) - Math.min(...hits.map(p.near)),
       span: [p.lo(rec), p.hi(rec)],
     });
   }

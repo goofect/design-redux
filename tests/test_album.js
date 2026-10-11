@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1672,6 +1672,31 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), ['knowledge-check', 'knowledge-check-note']);
     plugin.settings.knowledgeCheck = false;
     assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), []);
+  });
+
+  await t('appearance: density and the look as classes on the page, canvas spacing as a scale; a command for each; gone when unloaded', async () => {
+    const { plugin } = setup();
+    const look = new R.Appearance(plugin);
+    plugin.feature = (C) => (C === R.Appearance ? look : null);
+    const has = (c) => document.body.classList.contains(c);
+    look.enable();
+    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard, and the theme’s look');
+    plugin.settings.gridDensity = 'large';
+    plugin.settings.canvasSpacing = 'compact';
+    look.enable();
+    assert.ok(has('dr-density-spacious'));
+    assert.strictEqual(R.CANVAS_SPACE.scale, 0.75);
+    const cmds = Object.fromEntries(look.commands().map((c) => [c.id, c]));
+    cmds['switch-look'].run();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(plugin.settings.look, 'editorial');
+    assert.ok(has('dr-look-editorial'));
+    cmds['next-canvas-spacing'].run();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(plugin.settings.canvasSpacing, 'standard');
+    assert.strictEqual(R.CANVAS_SPACE.scale, 1);
+    look.disable();
+    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial'), 'nothing left behind');
   });
 
   await t('concept actions defined once: commands, a note’s menu, a canvas card’s menu; a child concept made under it, and moved under another, with Undo', async () => {

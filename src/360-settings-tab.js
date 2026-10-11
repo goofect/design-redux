@@ -22,7 +22,7 @@ const SETTINGS_TABS = [
     title: 'Browsing',
     sections: [
       { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
-      { title: 'Screens', keys: ['albumColumns', 'trackLength', 'gridDensity', 'tileGroups', 'tableColumns', 'categoryProperty'] },
+      { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty'] },
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Albums', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
@@ -45,13 +45,14 @@ const SETTINGS_TABS = [
     id: 'interface',
     title: 'Interface',
     sections: [
+      { title: 'Look', keys: ['look', 'gridDensity'] },
       { title: 'Workspace', keys: ['workspaceModes'] },
       { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'upNext', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
       {
         title: 'Canvas',
-        keys: ['canvasLegend', 'canvasDepth', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasViews', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasFocusSelect', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasVaultMap'],
+        keys: ['canvasSpacing', 'canvasLegend', 'canvasDepth', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasViews', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasFocusSelect', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasVaultMap'],
       },
       {
         title: 'Compatibility',

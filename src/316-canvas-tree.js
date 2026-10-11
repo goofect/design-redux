@@ -328,6 +328,13 @@ function sideAxes(side) {
 
 /* -- tidying a branch ------------------------------------------------- */
 
+/* How far apart cards are put, as set (Appearance): every gap below is taken through canvasGap(). */
+const CANVAS_SPACE = { scale: 1 };
+
+function canvasGap(n) {
+  return Math.round(n * CANVAS_SPACE.scale);
+}
+
 const TIDY_DEPTH_GAP = 80;
 const TIDY_SIBLING_GAP = 30;
 /* Between cards that hang from different cards: a little more, so each card's own read as a set. */
@@ -435,7 +442,7 @@ function tidyOneWay(root, way, first, kids, out) {
       let shift = -Infinity;
       sub.forEach((r, lv) => {
         if (!r || !merged[lv]) return;
-        const gap = lv === level + 1 ? TIDY_SIBLING_GAP : TIDY_COUSIN_GAP;
+        const gap = lv === level + 1 ? canvasGap(TIDY_SIBLING_GAP) : canvasGap(TIDY_COUSIN_GAP);
         shift = Math.max(shift, merged[lv][1] + gap - r[0]);
       });
       if (shift === -Infinity) shift = 0;
@@ -457,10 +464,10 @@ function tidyOneWay(root, way, first, kids, out) {
   outline(root, 0);
   // Where each level begins, out from the root.
   const starts = [];
-  let edge = forward ? (vertical ? root.y + root.height : root.x + root.width) + TIDY_DEPTH_GAP : (vertical ? root.y : root.x) - TIDY_DEPTH_GAP;
+  let edge = forward ? (vertical ? root.y + root.height : root.x + root.width) + canvasGap(TIDY_DEPTH_GAP) : (vertical ? root.y : root.x) - canvasGap(TIDY_DEPTH_GAP);
   for (let level = 1; level < depths.length; level++) {
     starts[level] = edge;
-    edge = forward ? edge + depths[level] + TIDY_DEPTH_GAP : edge - depths[level] - TIDY_DEPTH_GAP;
+    edge = forward ? edge + depths[level] + canvasGap(TIDY_DEPTH_GAP) : edge - depths[level] - canvasGap(TIDY_DEPTH_GAP);
   }
   const place = (n, centre, level) =>
     kidsOf(n).forEach((c) => {
