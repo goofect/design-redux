@@ -172,6 +172,27 @@ function rowName(row) {
 }
 
 /**
+ * A name cut short — one line ending in an ellipsis, or a title clamped to
+ * two — shows in full under the pointer: its row or card is given the name
+ * as a tooltip when pointed at, only while it doesn't fit.
+ */
+function fullNameOnHover(view, container) {
+  view.registerDomEvent(container, 'pointerover', (evt) => {
+    const host = evt.target && typeof evt.target.closest === 'function' ? evt.target.closest('[tabindex]') : null;
+    const label = host && container.contains(host) ? host.querySelector(ROW_NAMES) : null;
+    if (!label) return;
+    const cut = label.scrollWidth > label.clientWidth + 1 || label.scrollHeight > label.clientHeight + 1;
+    if (cut && !host.hasAttribute('title')) {
+      host.setAttribute('title', label.textContent.trim());
+      host.dataset.drFullName = '';
+    } else if (!cut && 'drFullName' in host.dataset) {
+      host.removeAttribute('title');
+      delete host.dataset.drFullName;
+    }
+  });
+}
+
+/**
  * Keys typed in quick succession spell the start of a name: the first row
  * from the one in focus on whose name starts that way gets focus. Typing
  * one letter again moves on to the next row starting with it.

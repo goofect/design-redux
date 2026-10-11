@@ -85,8 +85,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_sidebar_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates };\n');
-const { LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates } = require(tmp).__test;
+  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates };\n');
+const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates } = require(tmp).__test;
 
 /* -- a vault and a plugin ----------------------------------------- */
 
@@ -632,6 +632,28 @@ t('a track dropped on a folder in the library, or in the file list, moves there 
   drop.onDragOver(off);
   assert.ok(!off.prevented);
   [row, explorer, noteRow].forEach((el) => el.remove());
+});
+
+t('a name cut short shows in full under the pointer, only while it doesn’t fit', () => {
+  const box = document.body.createDiv();
+  const view = { registerDomEvent: (el, type, fn) => el.addEventListener(type, fn) };
+  fullNameOnHover(view, box);
+  const row = box.createDiv({ cls: 'dr-lib-row' });
+  row.setAttribute('tabindex', '0');
+  const label = row.createSpan({ cls: 'dr-lib-label', text: 'A rather long album name' });
+  const size = (scroll, client) => Object.defineProperties(label, { scrollWidth: { value: scroll, configurable: true }, clientWidth: { value: client, configurable: true } });
+  const point = () => label.dispatchEvent(new window.Event('pointerover', { bubbles: true }));
+  size(240, 120);
+  point();
+  assert.strictEqual(row.getAttribute('title'), 'A rather long album name');
+  size(120, 120);
+  point();
+  assert.ok(!row.hasAttribute('title'), 'fits again: no tooltip');
+  row.setAttribute('title', 'Its own');
+  size(240, 120);
+  point();
+  assert.strictEqual(row.getAttribute('title'), 'Its own', 'a title of its own is left alone');
+  box.remove();
 });
 
 fs.unlinkSync(tmp);

@@ -95,6 +95,7 @@ class BrowseView extends ItemView {
   async onOpen() {
     this.containerEl.addClass('dr-browse');
     this.render();
+    fullNameOnHover(this, this.containerEl);
 
     // "/" goes to Find from anywhere on the page. The keydown covers
     // focus inside it; the view's scope covers the page being active

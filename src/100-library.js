@@ -43,6 +43,7 @@ class LibraryView extends ItemView {
   async onOpen() {
     this.containerEl.addClass('dr-library');
     this.render();
+    fullNameOnHover(this, this.containerEl);
 
     // Once per burst: a sync or a pull can create hundreds of files.
     this.registerEvent(this.app.vault.on('create', () => this.queueRender()));
