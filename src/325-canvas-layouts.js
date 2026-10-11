@@ -20,6 +20,16 @@ const BRANCH_LAYOUTS = [
   ['concept', 'As a concept map', 'waypoints'],
 ];
 
+/* What each kind of layout is best for, as the Lay out… command offers them. */
+const LAYOUT_ENGINES = [
+  { mode: 'radial', label: 'Radial', note: 'For brainstorming, broad topics, a subject explored from a central question' },
+  { mode: 'right', label: 'Tree, to the right', note: 'For taxonomies, parent and child concepts, doctrines, structured notes' },
+  { mode: 'bottom', label: 'Tree, downward', note: 'The same, top to bottom' },
+  { mode: 'both', label: 'Tree, both sides', note: 'A mind map: branches either side of the centre' },
+  { mode: 'concept', label: 'Concept map', note: 'For subjects whose ideas relate in many ways: theory, philosophy, law' },
+  { mode: 'outline', label: 'Outline', note: 'For an essay plan, a study outline or an argument in order' },
+];
+
 const OUTLINE_INDENT = 48;
 const OUTLINE_GAP = 16;
 
@@ -346,6 +356,49 @@ function radialLayout(model, rootId, links) {
  * a gap between them, until none touch; cards in `still` (and groups)
  * stay where they are. id -> { x, y } for those that move.
  */
+/**
+ * Arrows among some cards only, as a tree: the first in reading order
+ * at its top, any card not reached from it — the top of another tree
+ * among them, or a ring with no top — hung from it too.
+ */
+function selectionLinks(model, recs) {
+  const full = arrowLinks(model);
+  const ids = recs.map((r) => r.id);
+  const set = new Set(ids);
+  const children = new Map(ids.map((id) => [id, (full.children.get(id) || []).filter((c) => set.has(c) && c !== id)]));
+  const ordered = recs.slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  const parents = new Map();
+  children.forEach((kids, id) => kids.forEach((c) => parents.set(c, (parents.get(c) || []).concat(id))));
+  const root = (ordered.find((r) => !(parents.get(r.id) || []).length) || ordered[0]).id;
+  const reached = new Set([root]);
+  const walk = [root];
+  while (walk.length) children.get(walk.pop()).forEach((c) => !reached.has(c) && (reached.add(c), walk.push(c)));
+  ordered.forEach((r) => {
+    if (reached.has(r.id)) return;
+    children.get(root).push(r.id);
+    reached.add(r.id);
+    const below = [r.id];
+    while (below.length) children.get(below.pop()).forEach((c) => !reached.has(c) && (reached.add(c), below.push(c)));
+  });
+  // Parents again, as the tree now is: one each, the first that reaches it.
+  const tree = new Map(ids.map((id) => [id, []]));
+  const seen = new Set([root]);
+  const queue = [root];
+  while (queue.length) {
+    const id = queue.shift();
+    tree.get(id).length = 0;
+    children.get(id).forEach((c) => {
+      if (seen.has(c)) return;
+      seen.add(c);
+      tree.get(id).push(c);
+      queue.push(c);
+    });
+  }
+  const up = new Map();
+  tree.forEach((kids, id) => kids.forEach((c) => up.set(c, [id])));
+  return { root, children: tree, parents: up };
+}
+
 function spreadApart(cards, still, gap) {
   gap = gap === undefined ? TIDY_SIBLING_GAP : gap;
   const pos = cards.map((r) => ({ id: r.id, x: r.x, y: r.y, w: r.width, h: r.height, fixed: still.has(r.id) }));
@@ -420,6 +473,13 @@ class CanvasLayouts extends CanvasFeature {
         },
       },
       {
+        id: 'canvas-layout-choose',
+        name: 'Lay out…',
+        icon: 'layout-dashboard',
+        check: () => this.enabled && this.scopes(this.pageCanvas()).length > 0,
+        run: () => this.choose(this.pageCanvas()),
+      },
+      {
         id: 'canvas-layout-everything',
         name: 'Lay out the whole canvas…',
         icon: 'layout-grid',
@@ -431,6 +491,69 @@ class CanvasLayouts extends CanvasFeature {
         },
       },
     ]);
+  }
+
+  /** What a layout can be given now: the whole map, the selected branches, the selected cards alone. */
+  scopes(view) {
+    if (!view || !view.canvas || view.canvas.readonly) return [];
+    const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n));
+    const out = [];
+    const whole = this.wholeRoots(view);
+    if (whole.length) out.push({ id: 'whole', label: 'The whole map', note: `${whole.length} ${whole.length === 1 ? 'tree' : 'trees'}`, run: (mode) => this.layoutMany(view, whole, mode) });
+    const roots = this.rootsOf(view, picked);
+    if (roots.length) out.push({ id: 'branch', label: roots.length === 1 ? 'The selected branch' : 'The selected branches', note: 'Each card chosen, and everything below it', run: (mode) => this.layoutMany(view, roots, mode) });
+    const cards = picked.filter((n) => !isGroupNode(n));
+    if (cards.length > 1) out.push({ id: 'cards', label: 'The selected cards only', note: `${cards.length} cards, among themselves; the rest stay where they are`, run: (mode) => this.layoutSelected(view, cards, mode) });
+    return out;
+  }
+
+  /** Which layout, then — where there's a choice — what to lay out. */
+  choose(view) {
+    const scopes = this.scopes(view);
+    if (!scopes.length) return;
+    new ComparePicker(this.app, LAYOUT_ENGINES, 'Which layout?', (engine) => {
+      if (scopes.length === 1) {
+        scopes[0].run(engine.mode);
+        return;
+      }
+      new ComparePicker(this.app, scopes, `${engine.label}: lay out what?`, (scope) => scope.run(engine.mode)).open();
+    }).open();
+  }
+
+  /**
+   * The selected cards alone laid out among themselves: by the arrows
+   * between them, the first in reading order at the centre, any not
+   * joined to it hung from it. Nothing else moves; a card kept in place
+   * stays. Glides; one step of Undo.
+   */
+  layoutSelected(view, nodes, mode) {
+    if (!view || !view.canvas) return Promise.resolve(false);
+    const fold = this.plugin.feature(CanvasFold);
+    if (fold) fold.settle(view);
+    const model = canvasModel(view.canvas);
+    const recs = nodes.map((n) => model.byId.get(n.id)).filter((r) => r && !r.tuck && !isGroupRecord(r));
+    if (recs.length < 2) return Promise.resolve(false);
+    const links = selectionLinks(model, recs);
+    const root = model.byId.get(links.root);
+    const places = this.places(model, root.id, mode, links);
+    const before = snapshotModel(model);
+    let changed = false;
+    places.forEach((at, id) => {
+      const n = model.byId.get(id);
+      if (!n || n.pinned || !links.children.has(id)) return;
+      const moved = new Set();
+      ['x', 'y'].forEach((axis) => {
+        if (n[axis] === at[axis]) return;
+        moved.clear();
+        shiftRecord(model, n, axis, at[axis] - n[axis], moved);
+        changed = true;
+      });
+    });
+    if (!changed) return Promise.resolve(false);
+    const state = fold ? fold.watched.get(view) : null;
+    return new Promise((resolve) => {
+      glideCanvasModel(view, model, before, state, (moved) => resolve(this.laidOut(view, model, root, places, links, mode, moved || changed)));
+    });
   }
 
   /** Of some cards, those with a branch, less any inside another's branch. */
@@ -528,6 +651,24 @@ class CanvasLayouts extends CanvasFeature {
           .setTitle('Spread out overlapping cards')
           .setIcon('move-diagonal')
           .onClick(() => this.spread(view, cards))
+      );
+    }
+    // Several cards chosen: laid out among themselves alone, the rest left be.
+    if (view && view.canvas && !view.canvas.readonly && cards.length > 1) {
+      menuGroup(
+        menu,
+        'Lay out these cards only',
+        'layout-dashboard',
+        (into, nested) => {
+          LAYOUT_ENGINES.forEach((engine) => {
+            into.addItem((item) => {
+              item.setTitle(nested ? engine.label : `Lay out these cards only: ${engine.label.toLowerCase()}`);
+              if (!nested) canvasAction(item);
+              item.onClick(() => this.layoutSelected(view, cards, engine.mode));
+            });
+          });
+        },
+        'action'
       );
     }
     const roots = this.rootsOf(view, nodes.filter((n) => !isCanvasEdge(n)));

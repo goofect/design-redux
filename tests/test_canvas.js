@@ -71,7 +71,7 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, ' +
+  'tuckedBBox, selectionLinks, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
   'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
@@ -1140,7 +1140,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const menu = new Menu();
     lay.addMenuItems(menu, [n('r')]);
     assert.ok(menu.items.some((i) => /Lay out branch/.test(i.title)), menu.items.map((i) => i.title).join());
-    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial', 'canvas-layout-outline', 'canvas-layout-concept', 'canvas-spread-overlaps', 'canvas-layout-everything']);
+    assert.deepStrictEqual(lay.commands().map((c) => c.id), ['canvas-layout-right', 'canvas-layout-left', 'canvas-layout-down', 'canvas-layout-up', 'canvas-layout-both', 'canvas-layout-radial', 'canvas-layout-outline', 'canvas-layout-concept', 'canvas-spread-overlaps', 'canvas-layout-choose', 'canvas-layout-everything']);
     const saves = view.canvas.saves;
     await lay.layout(view, n('r'), 'bottom');
     assert.deepStrictEqual([n('r').x, n('r').y], [0, 0], 'the card stays');
@@ -1152,6 +1152,35 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(lay.wholeRoots(view).map((x) => x.id), ['r']);
     assert.strictEqual(await lay.layoutMany(view, [n('r')], 'outline'), true);
     assert.deepStrictEqual(['a', 'b', 'c'].map((id) => n(id).x), [48, 48, 48], 'as an outline: set in under the card');
+  });
+
+  await t('a layout for the selected cards only: among themselves by their arrows, the rest left where they are; offered with the whole map and the branch', async () => {
+    const view = mindCanvas({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 0, 100, 50), card('c', 200, 100, 100, 50), card('x', 600, 400, 100, 50), card('y', 900, 50, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('r', 'c', 'right', 'left')],
+    });
+    const { p, fold } = plugin({ canvasLayouts: true });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const lay = new R.CanvasLayouts(p);
+    const n = (id) => view.canvas.nodes.get(id);
+    // Links among the chosen only: a card joined to none hangs from the first.
+    const model = R.canvasModel(view.canvas);
+    const links = R.selectionLinks(model, ['a', 'b', 'x'].map((id) => model.byId.get(id)));
+    assert.strictEqual(links.root, 'a');
+    assert.deepStrictEqual(links.children.get('a'), ['b', 'x']);
+    // Scopes: the whole map, the branch, the cards alone.
+    view.canvas.selectOnly = (x) => { view.canvas.selection = new Set([x]); };
+    view.canvas.selection = new Set([n('r'), n('x'), n('y')]);
+    assert.deepStrictEqual(lay.scopes(view).map((s) => s.id), ['whole', 'branch', 'cards']);
+    const menu = new Menu();
+    lay.addMenuItems(menu, [n('a'), n('b'), n('c')]);
+    assert.ok(menu.items.some((i) => /these cards only/i.test(i.title)), menu.items.map((i) => i.title).join());
+    // Down, for a, b and c alone: r, x and y stay put.
+    const still = ['r', 'x', 'y'].map((id) => [n(id).x, n(id).y]);
+    assert.strictEqual(await lay.layoutSelected(view, [n('a'), n('b'), n('c')], 'bottom'), true);
+    assert.deepStrictEqual(['r', 'x', 'y'].map((id) => [n(id).x, n(id).y]), still, 'nothing else moves');
+    assert.strictEqual(n('a').y, -100, 'the first in reading order stays');
+    assert.ok(n('b').y > n('a').y && n('c').y > n('a').y && n('b').y === n('c').y, 'the others set out below it');
   });
 
   await t('an arrow given a meaning: a kind — hierarchy in the branch, association out — or a proposition, turned round and listed; one just made related is dashed', async () => {
