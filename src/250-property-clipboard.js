@@ -130,8 +130,7 @@ class PropertyPasteModal extends Modal {
   draw() {
     const { contentEl } = this;
     contentEl.empty();
-    const cache = this.app.metadataCache.getFileCache(this.file);
-    this.plan = propertyPastePlan((cache && cache.frontmatter) || {}, this.incoming, this.mode);
+    this.plan = propertyPastePlan(this.feature.plugin.notes.props(this.file), this.incoming, this.mode);
     const select = contentEl.createEl('select', { cls: 'dropdown dr-paste-mode' });
     Object.entries(PASTE_MODES).forEach(([value, label]) => {
       const option = select.createEl('option', { text: label });
@@ -230,19 +229,8 @@ class PropertyClipboard extends Feature {
     return leaf.view.metadataEditor || null;
   }
 
-  /** A note's properties as they're kept, without Obsidian's own bookkeeping. */
-  propertiesOf(file) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    const fm = (cache && cache.frontmatter) || {};
-    const out = {};
-    Object.keys(fm).forEach((k) => {
-      if (k !== 'position') out[k] = fm[k];
-    });
-    return out;
-  }
-
   keysOf(file) {
-    return file ? Object.keys(this.propertiesOf(file)) : [];
+    return file ? Object.keys(this.plugin.notes.props(file)) : [];
   }
 
   /**
@@ -251,7 +239,7 @@ class PropertyClipboard extends Feature {
    * the properties ticked.
    */
   async copy(file, choose) {
-    const all = this.propertiesOf(file);
+    const all = this.plugin.notes.props(file);
     const count = Object.keys(all).length;
     if (!count) {
       new Notice('This note has no properties.');
@@ -292,38 +280,25 @@ class PropertyClipboard extends Feature {
     new PropertyPasteModal(this, file, parsed, { mode: 'merge' }).open();
   }
 
-  /** The rows chosen, written into the note — one step of Undo. */
+  /** The rows chosen, written into the note — one step of Undo, which keeps what's edited since. */
   async write(file, rows) {
-    const before = {};
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
+    const n = rows.length;
+    const record = await this.plugin.notes.write(
+      file,
+      (fm) =>
         rows.forEach((row) => {
           const name = Object.keys(fm).find((k) => k.toLowerCase() === row.key.toLowerCase()) || row.key;
-          before[name] = fm[name] === undefined ? undefined : JSON.parse(JSON.stringify(fm[name]));
           fm[name] = row.value;
-        });
-      });
-    } catch (err) {
-      console.error('Design Redux: frontmatter write failed', err);
-      new Notice('Could not update the properties.');
-      return false;
-    }
-    const n = rows.length;
-    this.plugin.offerUndo(`Pasted ${n} ${n === 1 ? 'property' : 'properties'} into ${file.basename}.`, () =>
-      this.app.fileManager.processFrontMatter(file, (fm) => {
-        Object.keys(before).forEach((name) => {
-          if (before[name] === undefined) delete fm[name];
-          else fm[name] = before[name];
-        });
-      })
+        }),
+      { undo: `Pasted ${n} ${n === 1 ? 'property' : 'properties'} into ${file.basename}.` }
     );
-    return true;
+    return !!record;
   }
 
   /* -- sets: properties kept by name, to apply as a template ---------- */
 
   saveSet(file) {
-    const all = this.propertiesOf(file);
+    const all = this.plugin.notes.props(file);
     const items = Object.keys(all).map((key) => ({ label: key, note: shortValue(all[key]), key }));
     new ChecklistModal(this.app, `A set from ${file.basename}`, items, 'Next', (chosen) => {
       const props = {};

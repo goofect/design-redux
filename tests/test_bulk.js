@@ -295,6 +295,7 @@ function makePlugin(vault) {
     feature(C) { return this.features.find((f) => f instanceof C) || null; },
   };
   plugin.bulk = new R.BulkEdits(plugin);
+  plugin.notes = new R.Notes(plugin);
   const editing = new R.BulkEditing(plugin);
   plugin.features.push(editing);
   return { plugin, bulk: plugin.bulk, editing };
