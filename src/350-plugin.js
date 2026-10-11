@@ -30,6 +30,7 @@ class DesignRedux extends Plugin {
       new AlbumProperty(this),
       new AlbumStructure(this),
       new SmartAlbums(this),
+      new LibraryCheck(this),
       new MarkedLists(this),
       new Scripts(this),
       new Footnotes(this),

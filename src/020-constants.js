@@ -65,6 +65,8 @@ const DEFAULTS = {
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
+  // A command listing what the library has lost track of.
+  libraryCheck: true,
   smartAlbumList: [],
   // { folderPath: sort key }
   albumSorts: {},

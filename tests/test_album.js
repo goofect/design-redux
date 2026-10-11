@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -990,6 +990,54 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.gridDensity = 'huge';
     view.render();
     assert.strictEqual(view.containerEl.dataset.drDensity, 'standard');
+  });
+
+  await t('looking the library over: empty albums, no description, notes in no album, missing and circular includes, deep nesting, a name twice', () => {
+    const { v, plugin, app } = setup();
+    v.file('IR/IR.md');
+    v.folder('Law');
+    v.file('Law/Law.md');
+    v.file('Law/Treaty.md');
+    v.folder('Empty');
+    v.folder('Law/Theories');
+    v.file('Law/Theories/Natural law.md');
+    v.folder('A');
+    v.folder('A/B');
+    v.folder('A/B/C');
+    v.folder('A/B/C/D');
+    v.folder('A/B/C/D/E');
+    v.folder('A/B/C/D/E/F');
+    v.file('A/B/C/D/E/F/Deep.md');
+    const loose = v.file('Loose.md');
+    const kept = v.file('Kept.md');
+    v.file('Home.md');
+    const fms = new Map([
+      [v.vault.getFileByPath('IR/IR.md'), { description: 'States.', includes: ['[[Law]]', '[[Kept]]', '[[Gone]]'] }],
+      [v.vault.getFileByPath('Law/Law.md'), { includes: '[[IR]]' }],
+    ]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    const structure = new R.AlbumStructure(plugin);
+    const check = new R.LibraryCheck(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const found = check.problems().map((p) => `${p.target.path}: ${p.kind}`);
+    assert.deepStrictEqual(found.sort(), [
+      'A/B/C/D/E/F: about',
+      'A/B/C/D/E/F: deep',
+      'Empty: empty',
+      'IR: loop',
+      'IR: missing',
+      'IR/Theories: about',
+      'IR/Theories: twice',
+      'Law: about',
+      'Law: loop',
+      'Law/Theories: about',
+      'Law/Theories: twice',
+      'Loose.md: loose',
+    ].sort());
+    assert.ok(!found.includes('Kept.md: loose'), 'a note an album takes in is in one');
+    assert.ok(loose && kept);
   });
 
   console.log(`\n${passed} passed`);
