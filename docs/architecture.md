@@ -29,7 +29,7 @@ What holds it together:
   settings save (`plugin.refresh()`), `sync()` on layout and active-leaf changes (batched to
   one per frame), and `settingKey` for the on/off toggle. There are 56 feature classes, all of
   them built in `350-plugin.js`.
-- **Actions** (`253`): each feature writes what it does once, as actions. Its commands
+- **Actions** (`078`, moved from `253` in M2): each feature writes what it does once, as actions. Its commands
   (registered once, hidden by `check`) and every menu of that kind of thing are built from that
   list. Command ids are stable.
 - **Settings**: `DEFAULTS` holds every setting, `SETTINGS_TABS` places them in the settings
@@ -174,7 +174,7 @@ is the layer:
 ```text
  core (010–089)         constants, pure helpers, Feature, services: Notes (read/write
                         properties, with undo), Files (move/put back), Orders, Pins, Queue
- shared UI (230–253)    pickers (ComparePicker included), checklists, summaries, actions
+ shared UI (230–253)    pickers (ComparePicker included), checklists, summaries
  domain features        library · chrome · albums · links · editor · bulk · canvas
    each one: pure planning (testable without Obsidian) → one service call that writes
  adapters               canvas (316 + 315 the only door to view.canvas), CodeMirror bits
@@ -216,7 +216,7 @@ The rules, to be checked by a script (warnings at first):
 | M4 | 120 | split navigation, rendering and filtering; album membership queries into 257 | none |
 | M4 | 300 | one piece per dialog family (properties, tags/values, types/missing, the list tool) | none |
 | M5 | 300, 250, 259, 261 | shared summary/checklist/note-link builders; CSS sections follow pieces; unused selectors removed after a scan | none |
-| M6 | 317–347 | canvas internals only through 315/316; layout maths separate from applying it; benchmarks | none |
+| M6 | 317–347 | canvas internals only through 315/316; layout maths separate from applying it; one glide-and-save step for the 8 copies in 323, 325, 326, 334, 338, 341; knowledge's canvas mapping (254 → 316/321/326/332/334) into the canvas area; benchmarks | none |
 | M7 | build | ES modules: optional, see §4 | none |
 | M8 | all | remove what's unused, update AGENTS.md and the `.claude/rules/` notes | none |
 
@@ -229,7 +229,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 |---|---|---|---|
 | M0 | this audit | low | this file |
 | M1 | safety net — **done** | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
-| M2 | helpers in the right place, duplicates gone | low | no shared name declared in a feature piece; 030 has no mutual pairs |
+| M2 | helpers in the right place, duplicates gone — **done** | low | no shared helper declared in a feature piece; nothing in core reaches up; 030 has no mutual pairs |
 | M3 | note and property operations; quiet links split | high | one read path and one write path for properties; undo doesn't overwrite later edits |
 | M4 | library, albums, the plugin class | high | 120 under ~1,200 lines; 350 only composes |
 | M5 | UI parts and CSS | medium | dialogs build from shared parts |
@@ -294,3 +294,40 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 
 **Next, M2:** move the misplaced shared helpers, merge the duplicates, and split
 `030-helpers-art`. Each step shortens `layers.json`.
+
+## 12. M2, done
+
+Behaviour is unchanged, and every suite passed at every step. The crossings went from 88 to
+52, and the pairs of pieces that use each other from 21 to 14.
+
+- **New core pieces:**
+  - `045-helpers-properties`: plainValue, fmGet, propertyCounter, valueList,
+    knownPropertyNames, propertyValues.
+  - `047-helpers-text`: bulkCount, plainMarkdownLine, noteNameFrom.
+  - `031-colours`: normalHex, hexToRgb, hexToHsl.
+- **Moved down:**
+  - ComparePicker and confirmAction to `230-pickers`.
+  - The shared constants (album kinds, graph types, tag keys, canvas spacing) to
+    `020-constants`.
+  - scriptLivePreview and one rerenderReading (three copies before) to `050-helpers-dom`.
+- **The action registry** moved into core, from `253-actions` to `078-actions`, beside
+  `Feature`, which builds its commands from it. The browse view adds its own `browse` context.
+- **Core no longer reaches up:**
+  - The queue tells its listeners of changes, and Up Next listens.
+  - Core helpers recognise the browse view by its type (`isBrowseView`).
+  - The album features' menu entries and kind info come through the plugin
+    (`addAlbumMenuItems`, `albumInfo`).
+- **Duplicates merged:** `pageFile(app)` and `soleCard(selected)`. The canvas glide-and-save
+  block (8 copies) moves to M6, since it's canvas saving.
+
+The 52 crossings left, by kind, and the milestone that takes each kind:
+- **Features asking for each other with `plugin.feature(X)`:** Library, BrowseView,
+  AlbumStructure, SmartAlbums, BulkEditing, ContextStrip, UpNext, QuietLinks, Footnotes,
+  CanvasOutline and others. Taken in M4, where the library and the plugin class are split, and
+  in M6 for the canvas ones.
+- **Albums adding screens to the browse view:** `BROWSE_SCREENS`, `BrowseScreen`. These are
+  by design: library is the host, and the albums area adds to it. M4 decides whether albums
+  sits above library.
+- **Knowledge mapping notes onto canvases** (11 canvas names): M6.
+- **Album property using the bulk engine's notices** (`bulkNotice`, `bulkTail`): M3, when bulk
+  and notes share one undo.

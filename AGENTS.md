@@ -45,7 +45,7 @@ Coffee N' Christmas.
   `actions()`, `register()` (events, once), `enable()` / `disable()` / `sync()`,
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
-- What a feature does is written once in `actions()` (`253-actions.js`): each
+- What a feature does is written once in `actions()` (`078-actions.js`): each
   says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
