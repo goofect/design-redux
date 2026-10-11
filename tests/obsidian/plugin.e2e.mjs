@@ -152,7 +152,7 @@ describe('Design Redux in Obsidian', function () {
     for (const [part, ok] of Object.entries(compat)) expect([part, ok]).toEqual([part, true]);
   });
 
-  it('draws its settings as four tabs', async function () {
+  it('draws its settings as six tabs, by what they’re for', async function () {
     await browser.executeObsidian(({ app }) => {
       app.setting.open();
       app.setting.openTabById('design-redux');
@@ -171,7 +171,7 @@ describe('Design Redux in Obsidian', function () {
     });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
-    expect(where.tabs).toBe(4);
+    expect(where.tabs).toBe(6);
 
     // A screenshot from whichever window they're in.
     const main = await browser.getWindowHandle();
@@ -182,9 +182,9 @@ describe('Design Redux in Obsidian', function () {
         if ((await browser.$$('.dr-settings').length) > 0) break;
       }
     }
+    await shot('settings-appearance');
+    await clickText('.dr-settings .dr-set-tab', 'Library');
     await shot('settings-library');
-    await clickText('.dr-settings .dr-set-tab', 'Browsing');
-    await shot('settings-browsing');
 
     // Searching shows the matching rows from every tab, named as ever, and nothing else.
     const found = await browser.execute(() => {
@@ -202,7 +202,7 @@ describe('Design Redux in Obsidian', function () {
     expect(found.names).toContain('Drop to set a cover');
     expect(found.names.length).toBe(found.seen);
     expect(found.seen).toBeLessThan(found.all);
-    expect(found.panes).toContain('browsing');
+    expect(found.panes).toContain('library');
     await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
     await browser.pause(500);

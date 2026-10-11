@@ -1,10 +1,18 @@
 /*
- * Where each setting sits: four tabs of short sections. Features still
+ * Where each setting sits: six tabs, by what they're for, of short sections. Features still
  * own their rows — name, control, description; this only decides where
  * each goes. A row shown only while another in its section is on sits
  * indented beneath that one.
  */
 const SETTINGS_TABS = [
+  {
+    id: 'appearance',
+    title: 'Appearance',
+    sections: [
+      { title: 'Look', keys: ['look'] },
+      { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'canvasSpacing'] },
+    ],
+  },
   {
     id: 'library',
     title: 'Library',
@@ -15,15 +23,8 @@ const SETTINGS_TABS = [
         desc: 'What the library lists, under your own headings.',
         keys: ['librarySections'],
       },
-    ],
-  },
-  {
-    id: 'browsing',
-    title: 'Browsing',
-    sections: [
       { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty'] },
-      { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Albums', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
       { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },
@@ -33,6 +34,7 @@ const SETTINGS_TABS = [
     id: 'notes',
     title: 'Notes',
     sections: [
+      { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
       { title: 'Properties', keys: ['propertiesDropdown', 'propertyForAlbum', 'showMentions'] },
@@ -42,18 +44,32 @@ const SETTINGS_TABS = [
     ],
   },
   {
-    id: 'interface',
-    title: 'Interface',
+    id: 'canvas',
+    title: 'Canvas',
     sections: [
-      { title: 'Look', keys: ['look', 'gridDensity'] },
-      { title: 'Workspace', keys: ['workspaceModes'] },
+      { title: 'Cards', keys: ['canvasDepth', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
+      { title: 'Arrows', keys: ['canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments'] },
+      { title: 'Building a map', keys: ['canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate'] },
+      { title: 'Arranging and folding', keys: ['canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasArrange', 'canvasSelectBranch'] },
+      { title: 'Finding and focus', keys: ['canvasFind', 'canvasViews', 'canvasMinimap', 'canvasFocus', 'canvasFocusSelect'] },
+      { title: 'Outlines and notes', keys: ['canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap'] },
+      { title: 'Checking and comparing', keys: ['canvasCheck', 'canvasCompare'] },
+    ],
+  },
+  {
+    id: 'workspace',
+    title: 'Workspace',
+    sections: [
+      { title: 'Modes', keys: ['workspaceModes'] },
       { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'upNext', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
-      {
-        title: 'Canvas',
-        keys: ['canvasSpacing', 'canvasLegend', 'canvasDepth', 'canvasTextAlign', 'canvasArrange', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasCardFit', 'canvasCardTitles', 'canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments', 'canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasSelectBranch', 'canvasOutline', 'canvasFind', 'canvasViews', 'canvasMinimap', 'canvasCheck', 'canvasCompare', 'canvasFocus', 'canvasFocusSelect', 'canvasDuplicate', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasVaultMap'],
-      },
+    ],
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced',
+    sections: [
       {
         title: 'Compatibility',
         desc: 'Obsidian internals Design Redux relies on, and what stops working if an update changes one.',
@@ -344,7 +360,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
   }
 
   renderPane(pane, spec, sections) {
-    if (spec.id === 'browsing' && !this.settings.library) {
+    if (spec.id === 'library' && !this.settings.library) {
       const note = pane.createDiv({ cls: 'dr-set-callout' });
       note.createSpan({ text: 'The library is off, so the settings for its screens are hidden.' });
       const on = note.createEl('button', { text: 'Turn it on' });
@@ -386,7 +402,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
       });
     });
 
-    if (spec.id === 'interface' && Platform.isMobile) {
+    if (spec.id === 'workspace' && Platform.isMobile) {
       pane.createDiv({
         cls: 'setting-item-description dr-settings-note',
         text: 'Settings for the desktop app\'s tab bar and sidebar header aren\'t shown on a phone or tablet.',
