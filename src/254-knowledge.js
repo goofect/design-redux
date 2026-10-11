@@ -202,9 +202,9 @@ class Knowledge extends Feature {
   async moveUnder(file, target) {
     const kind = this.childKind();
     const link = `[[${this.app.metadataCache.fileToLinktext(target, file.path, true)}]]`;
-    const before = await this.edit(file, kind.prop, () => [link]);
-    if (before === null) return false;
-    this.plugin.offerUndo(`${file.basename} ${kind.name} ${target.basename} now.`, () => this.restore(file, kind.prop, before));
+    const record = await this.edit(file, kind.prop, () => [link]);
+    if (!record) return false;
+    this.plugin.notes.offerUndo(`${file.basename} ${kind.name} ${target.basename} now.`, [record], () => this.changed());
     return true;
   }
 
@@ -401,46 +401,37 @@ class Knowledge extends Feature {
       return false;
     }
     const link = `[[${this.app.metadataCache.fileToLinktext(target, file.path, true)}]]`;
-    const before = await this.edit(file, kind.prop, (list) => list.concat(link));
-    if (before === null) return false;
-    this.plugin.offerUndo(`${file.basename} ${kind.name} ${target.basename}.`, () => this.restore(file, kind.prop, before));
+    const record = await this.edit(file, kind.prop, (list) => list.concat(link));
+    if (!record) return false;
+    this.plugin.notes.offerUndo(`${file.basename} ${kind.name} ${target.basename}.`, [record], () => this.changed());
     return true;
   }
 
   async remove(file, kind, target) {
-    const before = await this.edit(file, kind.prop, (list) => list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), file.path) !== target));
-    if (before === null) return false;
-    this.plugin.offerUndo(`${file.basename} no longer ${kind.name} ${target.basename}.`, () => this.restore(file, kind.prop, before));
+    const record = await this.edit(file, kind.prop, (list) => list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), file.path) !== target));
+    if (!record) return false;
+    this.plugin.notes.offerUndo(`${file.basename} no longer ${kind.name} ${target.basename}.`, [record], () => this.changed());
     return true;
   }
 
-  /** A note's property changed as a list; what it held before, or null where it couldn't be. */
+  /** A note's property changed as a list: what changed (for Undo), or null where it couldn't be. */
   async edit(file, prop, change) {
-    let before;
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
+    const record = await this.plugin.notes.write(
+      file,
+      (fm) => {
         const name = Object.keys(fm).find((k) => k.toLowerCase() === prop.toLowerCase()) || prop;
-        before = fm[name] === undefined ? undefined : JSON.parse(JSON.stringify(fm[name]));
         const next = change(valueList(fm[name]));
         if (next.length) fm[name] = next;
         else delete fm[name];
-      });
-    } catch (err) {
-      console.error('Design Redux: could not change the relationship', err);
-      new Notice('Could not change that relationship.');
-      return null;
-    }
-    this.cache = null;
-    this.plugin.refreshBrowse();
-    return before === undefined ? [] : before;
+      },
+      { failure: 'Could not change that relationship.' }
+    );
+    if (record) this.changed();
+    return record;
   }
 
-  async restore(file, prop, before) {
-    await this.app.fileManager.processFrontMatter(file, (fm) => {
-      const name = Object.keys(fm).find((k) => k.toLowerCase() === prop.toLowerCase()) || prop;
-      if (Array.isArray(before) ? !before.length : before === undefined) delete fm[name];
-      else fm[name] = before;
-    });
+  /** After a relationship is written or undone: worked out again, and shown. */
+  changed() {
     this.cache = null;
     this.plugin.refreshBrowse();
   }
@@ -496,16 +487,15 @@ class Knowledge extends Feature {
       new Notice('Nothing to write: every arrow with a kind between notes is in them already.');
       return 0;
     }
-    const undo = [];
+    const records = [];
     for (const w of writes) {
       const link = `[[${this.app.metadataCache.fileToLinktext(w.to, w.from.path, true)}]]`;
-      const before = await this.edit(w.from, w.kind.prop, (list) => list.concat(link));
-      if (before !== null) undo.push([w.from, w.kind.prop, before]);
+      const record = await this.edit(w.from, w.kind.prop, (list) => list.concat(link));
+      if (record) records.push(record);
     }
-    this.plugin.offerUndo(`Wrote ${undo.length} ${undo.length === 1 ? 'relationship' : 'relationships'} into the notes.`, async () => {
-      for (const [file, prop, before] of undo.slice().reverse()) await this.restore(file, prop, before);
-    });
-    return undo.length;
+    // Undone last first: two arrows from one note change the same list in turn.
+    this.plugin.notes.offerUndo(`Wrote ${records.length} ${records.length === 1 ? 'relationship' : 'relationships'} into the notes.`, records.slice().reverse(), () => this.changed());
+    return records.length;
   }
 
   /**

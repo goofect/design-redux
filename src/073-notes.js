@@ -76,6 +76,8 @@ class Notes {
       if (opts.failure !== false) new Notice(opts.failure || 'Could not update the properties.');
       return null;
     }
+    // Written, though nothing was asked of the change (as a stand-in for Obsidian may do): nothing changed.
+    if (!record) record = { file, before: {}, after: {}, order: [] };
     if (opts.undo && Object.keys(record.before).length) this.offerUndo(opts.undo, [record], opts.onUndo);
     return record;
   }
