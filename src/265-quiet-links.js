@@ -89,6 +89,37 @@ function quietRefs(cache) {
   return out;
 }
 
+/** What a quiet link says under the pointer: where it goes, and that it's kept off the graph. */
+function quietHint(target, missing) {
+  return `Quiet link to ${quietLabel(target, '')}${missing ? ' (not made yet)' : ''} — kept off the graph and backlinks`;
+}
+
+/**
+ * The notes a note links to quietly, each once: { target, path, count,
+ * lines, keys } — from what Obsidian read as links in its text (so not
+ * in code), and from its properties.
+ */
+function quietLinksIn(text, cache) {
+  const out = new Map();
+  const entry = (target) => {
+    const low = target.toLowerCase();
+    if (!out.has(low)) out.set(low, { target, path: splitQuiet(target).path, count: 0, lines: [], keys: [] });
+    const found = out.get(low);
+    found.count++;
+    return found;
+  };
+  quietSpans(text, cache).forEach((span) => {
+    entry(splitQuiet(span.inner).target).lines.push(text.slice(0, span.from).split('\n').length);
+  });
+  quietRefs(cache)
+    .filter((ref) => ref.key)
+    .forEach((ref) => {
+      const found = entry(ref.path);
+      if (found.keys.indexOf(ref.key) === -1) found.keys.push(ref.key);
+    });
+  return Array.from(out.values());
+}
+
 /** Whether a link Obsidian recorded is a quiet link's stand-in. */
 function isQuietRef(ref) {
   return (
@@ -306,6 +337,7 @@ class QuietLinkWidget extends WidgetType {
     if (this.missing) el.classList.add('is-unresolved');
     el.textContent = this.label;
     el.setAttribute('data-href', this.target);
+    el.setAttribute('aria-label', quietHint(this.target, this.missing));
     el.addEventListener('mousedown', (evt) => {
       if (evt.button !== 0 && evt.button !== 1) return;
       evt.preventDefault();
@@ -521,6 +553,15 @@ class QuietLinks extends Feature {
       },
       { id: 'make-quiet-links-portable', name: 'Make quiet links normal, for sharing', icon: 'share', when: () => this.enabled, run: () => this.makePortable() },
       { id: 'make-shared-links-quiet', name: 'Make shared links quiet again', icon: 'link-2-off', when: () => this.enabled, run: () => this.makeQuietAgain() },
+      {
+        id: 'list-quiet-links',
+        name: 'Show this note’s quiet links',
+        icon: 'list',
+        on: 'note',
+        menu: false,
+        when: (ctx) => this.enabled && quietRefs(this.app.metadataCache.getFileCache(ctx.file)).length > 0,
+        run: (ctx) => this.listQuiet(ctx.file),
+      },
       { id: 'fold-stray-quiet-notes', name: 'Fold in notes made by quiet links elsewhere', icon: 'merge', when: () => this.enabled, run: () => this.reviewStrays(true) },
     ];
   }
@@ -535,6 +576,26 @@ class QuietLinks extends Feature {
   /** The note a quiet link names, if it exists. */
   resolve(path, sourcePath) {
     return path ? this.app.metadataCache.getFirstLinkpathDest(path, sourcePath || '') : null;
+  }
+
+  /** The notes this one links to quietly — which Outgoing links leaves out — to open one. */
+  async listQuiet(file) {
+    const text = await this.app.vault.cachedRead(file);
+    const links = quietLinksIn(text, this.app.metadataCache.getFileCache(file));
+    if (!links.length) {
+      new Notice(`${file.basename} has no quiet links.`);
+      return;
+    }
+    const items = links.map((link) => {
+      const where = link.lines.map((n) => `line ${n}`).concat(link.keys.map((k) => `“${k}”`));
+      const missing = !this.resolve(link.path, file.path);
+      return {
+        label: quietLabel(link.target, ''),
+        note: where.slice(0, 4).join(', ') + (where.length > 4 ? '…' : '') + (missing ? ' · not made yet' : ''),
+        link,
+      };
+    });
+    new ComparePicker(this.app, items, `Quiet links in ${file.basename}`, (item) => this.open(item.link.target, file.path, false)).open();
   }
 
   /** Open a quiet link's note — made first if it's missing, as any link's is. */
@@ -819,8 +880,9 @@ class QuietLinks extends Feature {
     el.textContent = quietLabel(target, words);
     el.setAttribute('data-href', target);
     if (el.hasAttribute('href')) el.setAttribute('href', target);
-    if (href && el.getAttribute('aria-label') === href) el.setAttribute('aria-label', target);
-    el.classList.toggle('is-unresolved', !this.resolve(splitQuiet(target).path, sourcePath));
+    const missing = !this.resolve(splitQuiet(target).path, sourcePath);
+    el.setAttribute('aria-label', quietHint(target, missing));
+    el.classList.toggle('is-unresolved', missing);
     el.classList.add('dr-quiet-link');
     if (!ownClicks) return;
     // A property's link opens from its value, not from what it shows —

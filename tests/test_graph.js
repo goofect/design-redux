@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks, quietLinksIn, quietHint };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -446,6 +446,24 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(shared, 'See [[Anarchy]]%%quiet%% and [[Deterrence|deterrence]]%%quiet%%.\n```\nx = a[[[1]]]\n```\n');
     const back = G.rewriteSpans(shared, G.portableSpans(shared), (inner) => `[[[${inner}]]]`);
     assert.strictEqual(back, text);
+  });
+
+  await t('a note’s quiet links, each once, with the lines and properties they’re in — not code', () => {
+    const text = 'See [[[Anarchy]]].\nAgain [[[anarchy|it]]] and [[[Realism#Roots]]].\n```\nx = a[[[1]]]\n```\n';
+    const at = (s) => text.indexOf(s);
+    const span = (s, original) => Object.assign({ link: '[' + original.slice(3).split('|')[0], original }, { position: { start: { offset: at(s) }, end: { offset: at(s) + s.length - 1 } } });
+    const cache = {
+      drQuietLinks: [span('[[[Anarchy]]]', '[[[Anarchy]]'), span('[[[anarchy|it]]]', '[[[anarchy|it]]'), span('[[[Realism#Roots]]]', '[[[Realism#Roots]]')],
+      frontmatterLinks: [{ key: 'related', link: '[Anarchy]', original: '[[[Anarchy]]]' }],
+    };
+    const links = G.quietLinksIn(text, cache);
+    assert.deepStrictEqual(links.map((l) => [l.target, l.count, l.lines, l.keys]), [
+      ['Anarchy', 3, [1, 2], ['related']],
+      ['Realism#Roots', 1, [2], []],
+    ]);
+    assert.strictEqual(links[1].path, 'Realism');
+    assert.strictEqual(G.quietHint('Realism#Roots'), 'Quiet link to Realism > Roots — kept off the graph and backlinks');
+    assert.match(G.quietHint('Gone', true), /Gone \(not made yet\)/);
   });
 
   await t('a note made by a quiet link elsewhere is known by its bracket, and only when a quiet link points at it', () => {
