@@ -78,11 +78,17 @@ Coffee N' Christmas.
   - No throwaway probe scripts in real Obsidian when a simulation or an
     existing test can show it.
   - Don't read a large `src/` file whole: grep, then read the lines needed.
-  - Where something lives, or what uses a name (the pieces share one scope):
-    `node tests/map.js [words]`, `node tests/map.js --who NAME` — before
-    opening files to look around.
-  - `node tests/tool-log.js` sums up the session's reading (a hook logs each
-    tool call: file and size, not contents): repeat and broad reads to cut.
+  - Look before reading, narrowest first: file names → `node tests/map.js
+    [words]` (pieces, their features and suites) → `--who NAME` or `--deps
+    PIECE` (where a name is declared and who uses it; the pieces share one
+    scope) → grep and the few lines needed → a whole file only when the
+    change needs it.
+  - A long task: keep a short checkpoint in `.claude-cache/checkpoint.md` —
+    task, files, findings, changes, tests, what's left; conclusions, not
+    transcripts — and read it after a compaction or in a new session.
+  - `node tests/tool-log.js` sums up the session (a hook logs each tool call:
+    file and size, not contents): repeat and broad reads, output size, and
+    tokens — input not served from the cache is the number to bring down.
   - Long output goes through `tail`/`grep` or into a file, never in full.
   - CI results (summary, test output, a few screenshots, a report of the
     internals used) are on the `ci-results` branch; `tests/ci.sh` reads what

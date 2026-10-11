@@ -27,3 +27,6 @@ data.json
 .obsidian-cache
 logs
 ci-output
+
+# What tests/map.js keeps by content hash, and task checkpoints
+.claude-cache

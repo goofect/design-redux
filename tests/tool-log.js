@@ -9,7 +9,9 @@
  *   node tests/tool-log.js hook     (run by .claude/settings.json after each tool call)
  *
  * Re-reading a file after changing it is fine; "needless" counts reads of a
- * file not changed since it was last read.
+ * file not changed since it was last read. Tokens come from the session's
+ * own transcript: input not served from the cache, written to it, read
+ * from it, and output — the first is the one to bring down.
  */
 const fs = require('fs');
 const path = require('path');
@@ -28,6 +30,7 @@ function hook() {
       const out = e.tool_response === undefined ? '' : typeof e.tool_response === 'string' ? e.tool_response : JSON.stringify(e.tool_response);
       const rel = (f) => (f ? path.relative(e.cwd || root, path.resolve(e.cwd || root, f)) : undefined);
       const row = { t: Date.now(), s: e.session_id, tool: e.tool_name, bytes: out.length };
+      if (e.transcript_path) row.tp = e.transcript_path;
       if (ti.file_path) row.file = rel(ti.file_path);
       if (e.tool_name === 'Read') {
         const file = e.tool_response && e.tool_response.file;
@@ -98,6 +101,33 @@ function sum(rows) {
   };
 }
 
+/** A session's tokens from its transcript, each reply counted once: { fresh, written, cached, out, replies }, or null. */
+function tokens(rows) {
+  const tp = rows.map((r) => r.tp).filter(Boolean).pop();
+  if (!tp || !fs.existsSync(tp)) return null;
+  const seen = new Map();
+  fs.readFileSync(tp, 'utf8').split('\n').forEach((l) => {
+    if (!l.includes('"usage"')) return;
+    try {
+      const e = JSON.parse(l);
+      const m = e.message;
+      if (m && m.usage) seen.set(m.id || e.uuid, m.usage);
+    } catch (err) {
+      /* a line being written */
+    }
+  });
+  const sum = { fresh: 0, written: 0, cached: 0, out: 0, replies: seen.size };
+  seen.forEach((u) => {
+    sum.fresh += u.input_tokens || 0;
+    sum.written += u.cache_creation_input_tokens || 0;
+    sum.cached += u.cache_read_input_tokens || 0;
+    sum.out += u.output_tokens || 0;
+  });
+  return sum;
+}
+
+const thousands = (n) => (n >= 10000 ? `${Math.round(n / 1000)}k` : String(n));
+
 function report(which) {
   const by = sessions();
   if (!by.size) {
@@ -108,7 +138,9 @@ function report(which) {
   if (which === 'all') {
     by.forEach((rows, s) => {
       const r = sum(rows);
-      console.log(`${String(s).slice(0, 8)}  ${new Date(rows[0].t).toISOString().slice(0, 16)}  ${r.calls} calls, ${r.reads} reads of ${r.unique} files (${pct(r.repeat)} repeat, ${r.needless} needless), ${r.searches} searches, ${r.kb} KB back`);
+      const k = tokens(rows);
+      const t = k ? `, ${thousands(k.fresh + k.written)} uncached in, ${thousands(k.out)} out` : '';
+      console.log(`${String(s).slice(0, 8)}  ${new Date(rows[0].t).toISOString().slice(0, 16)}  ${r.calls} calls, ${r.reads} reads of ${r.unique} files (${pct(r.repeat)} repeat, ${r.needless} needless), ${r.searches} searches, ${r.kb} KB back${t}`);
     });
     return;
   }
@@ -120,6 +152,12 @@ function report(which) {
   if (r.broad.length) console.log(`broad reads (over ${BROAD} lines): ${r.broad.join(', ')}`);
   console.log(`searches: ${r.searches}, shell commands: ${r.bash}`);
   console.log(`came back: ${r.kb} KB — ${Object.entries(r.bytes).sort((a, b) => b[1] - a[1]).map(([t, b]) => `${t} ${Math.round(b / 1024)}`).join(', ')}`);
+  const k = tokens(rows);
+  if (k) {
+    const input = k.fresh + k.written + k.cached;
+    console.log(`tokens: ${thousands(k.fresh)} input not cached, ${thousands(k.written)} written to the cache, ${thousands(k.cached)} read from it (${pct(input ? k.cached / input : 0)} of input), ${thousands(k.out)} output, over ${k.replies} replies`);
+    console.log(`uncached input per tool call: ${thousands(Math.round((k.fresh + k.written) / Math.max(1, r.calls)))}`);
+  }
 }
 
 if (process.argv[2] === 'hook') hook();
