@@ -199,6 +199,11 @@ t('drawn again with nothing changed, the rows on screen stay — their covers do
   view.render();
   assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'the same row, not one drawn again');
   assert.deepStrictEqual(active(view), ['Search'], 'still marked where you are');
+  // A name pointed at shows in full: still the same rows, drawn again or not.
+  before.setAttribute('title', 'Search');
+  before.dataset.drFullName = '';
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'a tooltip isn’t a change in what’s listed');
   view.plugin.settings.librarySections[0].items.reverse();
   view.render();
   assert.notStrictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'changed: drawn again');

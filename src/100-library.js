@@ -141,8 +141,16 @@ class LibraryView extends ItemView {
       roveFocus(list, '.dr-lib-row');
       (section.items || []).forEach((item) => this.renderItem(list, item));
     });
-    // What's marked or still arriving isn't a difference in what's listed.
-    const norm = (html) => html.replace(/ is-active/g, '').replace(/ tabindex="-?\d+"/g, '').replace(/ ?is-arriving/g, '').replace(/ class=""/g, '');
+    // What's marked, still arriving, or given its full name under the
+    // pointer isn't a difference in what's listed.
+    const norm = (html) =>
+      html
+        .replace(/ is-active/g, '')
+        .replace(/ tabindex="-?\d+"/g, '')
+        .replace(/ ?is-arriving/g, '')
+        .replace(/ class=""/g, '')
+        .replace(/ title="[^"]*"/g, '')
+        .replace(/ data-dr-full-name=""/g, '');
     this.containerEl.dataset.drDensity = this.plugin.settings.gridDensity || 'standard';
     if (norm(fresh.innerHTML) !== norm(root.innerHTML)) {
       root.empty();
