@@ -1660,6 +1660,51 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   display: block;
 }
 
+/* The workspace mode on, named on the strip: pressed, it's left. */
+.dr-strip-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  height: 26px;
+  padding: 0 var(--dr-space-2);
+  border-radius: 100px;
+  background-color: var(--background-modifier-hover);
+  font-size: var(--dr-meta-size);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-strip-mode-icon {
+  display: flex;
+}
+
+.dr-strip-mode-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-strip-mode:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-strip-mode:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* Study: the page and little else — no status bar, the strip down to the note. */
+body.dr-mode-study .status-bar {
+  display: none;
+}
+
+body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
+  display: none;
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

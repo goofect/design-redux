@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge, WorkspaceModes, actionCommands, addActionItems };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1561,6 +1561,89 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const labels = made.data.edges.map((e) => e.label).sort();
     assert.deepStrictEqual(labels, ['contrasts with', 'has part', 'has type', 'holds']);
     assert.ok(made.data.edges.every((e) => e.drRelation && e.drRelation.kind));
+  });
+
+  await t('concept actions defined once: commands, a note’s menu, a canvas card’s menu; a child concept made under it, and moved under another, with Undo', async () => {
+    const { v, plugin, app } = setup();
+    v.folder('Ideas');
+    const gov = v.file('Ideas/Government.md');
+    const law = v.file('Ideas/Law.md');
+    const fms = new Map();
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
+    app.metadataCache.fileToLinktext = (x) => x.basename;
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
+    app.fileManager.trashFile = async () => {};
+    let created = null;
+    app.vault.create = async (path, body) => { created = [path, body]; const f = v.file(path); return f; };
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    plugin.freeChildPath = (folder, base, ext) => `${folder.path}/${base}.${ext}`;
+    const k = new R.Knowledge(plugin);
+    plugin.feature = (C) => (C === R.Knowledge ? k : null);
+    const ids = k.actions().map((a) => a.id);
+    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-canvas', 'knowledge-in-album', 'knowledge-map'].every((id) => ids.includes(id)));
+    // As commands: offered with a note open, not without.
+    let active = gov;
+    app.workspace.getActiveFile = () => active;
+    const cmds = Object.fromEntries(R.actionCommands(k.actions(), () => (active ? { file: active, from: 'palette' } : null)).map((c) => [c.id, c]));
+    assert.strictEqual(cmds['knowledge-explore'].check(), true);
+    assert.strictEqual(cmds['knowledge-broader'].check(), false, 'nothing above it yet');
+    active = null;
+    assert.strictEqual(cmds['knowledge-explore'].check(), false);
+    // On a menu: one group, each by its short name; on a canvas, not "Open in canvas".
+    const titles = (from) => {
+      const items = [];
+      R.addActionItems({ addItem: (fn) => { const it = {}; ['setSection', 'setIcon', 'setChecked'].forEach((m) => (it[m] = () => it)); it.setTitle = (x) => { it.title = x; return it; }; it.onClick = () => it; fn(it); items.push(it.title); } }, k.actions(), { file: gov, from }, 'Concept', 'waypoints');
+      return items;
+    };
+    assert.ok(titles('menu').includes('Concept: Show related concepts'));
+    assert.ok(titles('menu').includes('Concept: Open in canvas'));
+    assert.ok(!titles('canvas').includes('Concept: Open in canvas'));
+    // A child concept: a note beside it, saying it sits under it; Undo takes it away.
+    const child = await k.makeConcept('Parliament', gov);
+    assert.deepStrictEqual(created, ['Ideas/Parliament.md', '---\nparent: "[[Government]]"\n---\n']);
+    assert.strictEqual(child.basename, 'Parliament');
+    assert.ok(typeof undo === 'function');
+    // Moved under another: its parent names only that one now, and back.
+    fms.set(child, { parent: '[[Government]]' });
+    assert.strictEqual(await k.moveUnder(child, law), true);
+    assert.deepStrictEqual(fms.get(child).parent, ['[[Law]]']);
+    await undo();
+    assert.strictEqual(fms.get(child).parent, '[[Government]]');
+  });
+
+  await t('workspace modes: entered at a command, the layout kept first; another mode keeps the first layout; leaving puts it back whole', async () => {
+    const { plugin, app } = setup();
+    const calls = [];
+    let layout = { main: 'as it was' };
+    app.workspace.getLayout = () => JSON.parse(JSON.stringify(layout));
+    app.workspace.changeLayout = async (l) => { calls.push(['changeLayout', l]); layout = l; };
+    app.workspace.leftSplit = { expand: () => calls.push('left open'), collapse: () => calls.push('left shut') };
+    app.workspace.rightSplit = { expand: () => calls.push('right open'), collapse: () => calls.push('right shut') };
+    app.workspace.getLastOpenFiles = () => [];
+    app.workspace.getActiveFile = () => null;
+    app.workspace.onLayoutReady = (fn) => fn();
+    plugin.offerUndo = () => {};
+    const modes = new R.WorkspaceModes(plugin);
+    plugin.feature = (C) => (C === R.WorkspaceModes ? modes : null);
+    assert.strictEqual(modes.current(), null);
+    await modes.enter('study');
+    assert.strictEqual(modes.current(), 'study');
+    assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
+    assert.deepStrictEqual(calls.slice(0, 2), ['left shut', 'right shut']);
+    assert.ok(document.body.classList.contains('dr-mode-study'));
+    // Another mode: the layout from before the first is still the one kept.
+    layout = { main: 'studying' };
+    await modes.enter('review');
+    assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
+    assert.ok(!document.body.classList.contains('dr-mode-study') && document.body.classList.contains('dr-mode-review'));
+    // Left: as it was.
+    await modes.leave();
+    assert.deepStrictEqual(calls[calls.length - 1], ['changeLayout', { main: 'as it was' }]);
+    assert.strictEqual(modes.current(), null);
+    assert.ok(!document.body.classList.contains('dr-mode-review'));
+    assert.strictEqual(modes.commands().find((c) => c.id === 'workspace-mode-leave').check(), false);
   });
 
   console.log(`\n${passed} passed`);

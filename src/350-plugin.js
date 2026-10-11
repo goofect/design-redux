@@ -29,6 +29,7 @@ class DesignRedux extends Plugin {
       new PropertyClipboard(this),
       new AlbumProperty(this),
       new Knowledge(this),
+      new WorkspaceModes(this),
       new AlbumStructure(this),
       new SmartAlbums(this),
       new LibraryCheck(this),

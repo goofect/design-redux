@@ -612,6 +612,28 @@ describe('Design Redux in Obsidian', function () {
     expect(result.parent).toBe('s');
   });
 
+  it('enters a workspace mode and leaves it with the workspace as it was', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');
+      const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      app.workspace.leftSplit.expand();
+      await until(() => !app.workspace.leftSplit.collapsed);
+      const leaves = () => { const out = []; app.workspace.iterateRootLeaves((l) => out.push(l.view.getViewType())); return out.sort().join(','); };
+      const before = { left: app.workspace.leftSplit.collapsed, leaves: leaves() };
+      await modes.enter('study');
+      await until(() => app.workspace.leftSplit.collapsed);
+      const during = { left: app.workspace.leftSplit.collapsed, cls: document.body.classList.contains('dr-mode-study'), chip: !!document.querySelector('.dr-strip-mode') };
+      await modes.leave();
+      await until(() => !app.workspace.leftSplit.collapsed);
+      const after = { left: app.workspace.leftSplit.collapsed, leaves: leaves(), cls: document.body.classList.contains('dr-mode-study') };
+      return { before, during, after };
+    });
+    expect(result.during).toEqual({ left: true, cls: true, chip: true });
+    expect(result.after.left).toBe(result.before.left);
+    expect(result.after.leaves).toBe(result.before.leaves);
+    expect(result.after.cls).toBe(false);
+  });
+
   it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const old = app.vault.getFileByPath('Paste.canvas');

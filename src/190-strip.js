@@ -387,6 +387,19 @@ class ContextStrip extends Feature {
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
 
+    // The workspace mode on, named; pressed, it's left and the workspace is as it was.
+    const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
+    const mode = modes && modes.enabled ? modes.mode(modes.current()) : null;
+    if (mode) {
+      const chip = nav.createDiv({ cls: 'dr-strip-mode' });
+      chip.setAttribute('role', 'button');
+      chip.setAttribute('tabindex', '0');
+      chip.setAttribute('aria-label', `Leave ${mode.label}, back to how the workspace was`);
+      setIcon(chip.createSpan({ cls: 'dr-strip-mode-icon' }), mode.icon);
+      chip.createSpan({ text: mode.label });
+      onActivate(chip, () => modes.leave());
+    }
+
     [
       ['chevron-left', 'Back', 'back'],
       ['chevron-right', 'Forward', 'forward'],
@@ -472,7 +485,7 @@ class ContextStrip extends Feature {
 
     // Properties, More, and what's there only when it matters — footnotes, Up Next — always;
     // reading mode and pin when the strip is pointed at or tabbed into.
-    const secondary = ['mode', 'pin'];
+    const secondary = ['mode', 'pin', 'concept'];
     const button = (icon, label, onClick, active, role) => {
       const el = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
       if (secondary.indexOf(role) !== -1) el.addClass('is-secondary');
@@ -522,6 +535,12 @@ class ContextStrip extends Feature {
     const lined = upNext && upNext.enabled ? upNext.queue.files().length : 0;
     if (lined) {
       button('list-ordered', `Up Next (${lined})`, (evt) => upNext.showMenu(evt), false, 'up-next');
+    }
+
+    // What can be done to it as a concept, the same as its menu offers.
+    const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
+    if (knowledge && knowledge.enabled && file.extension === 'md') {
+      button('waypoints', 'Concept', (evt) => showActionMenu(evt, knowledge.actions(), { file, from: 'strip' }), false, 'concept');
     }
 
     button('info', 'Properties', (evt) => {

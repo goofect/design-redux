@@ -45,6 +45,7 @@ const SETTINGS_TABS = [
     id: 'interface',
     title: 'Interface',
     sections: [
+      { title: 'Workspace', keys: ['workspaceModes'] },
       { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'upNext', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },

@@ -135,25 +135,159 @@ class Knowledge extends Feature {
   }
 
   commands() {
-    const note = () => {
-      const f = this.app.workspace.getActiveFile();
-      return f && f.extension === 'md' ? f : null;
-    };
     const canvas = () => {
       const leaf = typeof pageLeaf === 'function' ? pageLeaf(this.app) : null;
       const view = leaf && !leaf.isDeferred ? leaf.view : null;
       return view && view.canvas && view.file && view.file.extension === 'canvas' ? view : null;
     };
-    return [
-      { id: 'knowledge-explore', name: 'Explore this note’s relationships', icon: 'waypoints', check: () => this.enabled && !!note(), run: () => this.explore(note()) },
-      { id: 'knowledge-add', name: 'Add a relationship to this note…', icon: 'plus', check: () => this.enabled && !!note(), run: () => this.ask(note()) },
-      { id: 'knowledge-map', name: 'Map this note’s relationships on a canvas', icon: 'layout-dashboard', check: () => this.enabled && !!note(), run: () => this.map(note()) },
+    return actionCommands(this.actions(), () => activeNoteContext(this.app)).concat([
+      {
+        id: 'knowledge-create',
+        name: 'Create a concept…',
+        icon: 'file-plus',
+        check: () => this.enabled,
+        run: () => this.createConcept(null),
+      },
       { id: 'knowledge-canvas-write', name: 'Write this canvas’s relationships into its notes', icon: 'file-input', check: () => this.enabled && !!canvas(), run: () => this.writeFromCanvas(canvas()) },
       { id: 'knowledge-canvas-draw', name: 'Draw its notes’ relationships on this canvas', icon: 'git-branch-plus', check: () => this.enabled && !!canvas(), run: () => this.drawOnCanvas(canvas()) },
+    ]);
+  }
+
+  /**
+   * What can be done to a concept, defined once: the palette, its note's
+   * menu, its card's menu on a canvas and the strip all offer these.
+   */
+  actions() {
+    const on = (ctx) => this.enabled && !!ctx && !!ctx.file && ctx.file.extension === 'md';
+    const up = (ctx) => this.relationsOf(ctx.file).out.some((r) => r.kind.category === 'hierarchy');
+    return [
+      { id: 'knowledge-explore', name: 'Explore this note’s relationships', menu: 'Show related concepts', icon: 'waypoints', when: on, run: (ctx) => this.explore(ctx.file) },
+      { id: 'knowledge-add', name: 'Add a relationship to this note…', menu: 'Add a relationship…', icon: 'plus', when: on, run: (ctx) => this.ask(ctx.file) },
+      { id: 'knowledge-child', name: 'Create a concept under this one…', menu: 'Create a child concept…', icon: 'corner-down-right', when: on, run: (ctx) => this.createConcept(ctx.file) },
+      { id: 'knowledge-move', name: 'Move this concept under another…', menu: 'Move under another concept…', icon: 'move-up-right', when: on, run: (ctx) => this.askMove(ctx.file) },
+      { id: 'knowledge-broader', name: 'Find what this concept comes under…', menu: 'Find broader concepts…', icon: 'arrow-up-to-line', when: (ctx) => on(ctx) && up(ctx), run: (ctx) => this.chooseBroader(ctx.file) },
+      { id: 'knowledge-in-canvas', name: 'Open this note in a canvas', menu: 'Open in canvas', icon: 'layout-dashboard', when: (ctx) => on(ctx) && ctx.from !== 'canvas', run: (ctx) => this.openInCanvas(ctx.file) },
+      { id: 'knowledge-in-album', name: 'Open this note’s album', menu: 'Open in album', icon: 'disc', when: on, run: (ctx) => this.openInAlbum(ctx.file) },
+      { id: 'knowledge-map', name: 'Map this note’s relationships on a canvas', menu: 'Map its relationships', icon: 'network', when: on, run: (ctx) => this.map(ctx.file) },
     ];
   }
 
+  /** The kind a child concept is given: the first hierarchy kind — the graph's parent, where it counts. */
+  childKind() {
+    return this.kinds().find((k) => k.category === 'hierarchy') || this.kinds()[0];
+  }
+
+  /** A name for a new concept, under `parent` if given. */
+  createConcept(parent) {
+    new NamePrompt(this.app, parent ? `A concept under ${parent.basename}` : 'A new concept', 'Name', (name) => this.makeConcept(name, parent), { button: 'Create' }).open();
+  }
+
+  /** A new note, under `parent` if given — beside it, saying so — or in the folder open; opened, with Undo. */
+  async makeConcept(name, parent) {
+    name = String(name || '').trim();
+    if (!name) return null;
+    const kind = parent ? this.childKind() : null;
+    const active = this.app.workspace.getActiveFile();
+    const folder = (parent && parent.parent) || (active && active.parent) || this.app.vault.getRoot();
+    const path = this.plugin.freeChildPath(folder, noteNameFrom(name), 'md');
+    const link = parent ? `[[${this.app.metadataCache.fileToLinktext(parent, path, true)}]]` : '';
+    const key = kind && /[:#]/.test(kind.prop) ? JSON.stringify(kind.prop) : kind && kind.prop;
+    const body = parent ? `---\n${key}: "${link}"\n---\n` : '';
+    let file = null;
+    try {
+      file = await this.app.vault.create(path, body);
+    } catch (err) {
+      console.error('Design Redux: could not make the concept', err);
+      new Notice('Could not make that note.');
+      return null;
+    }
+    this.cache = null;
+    await this.app.workspace.getLeaf(false).openFile(file);
+    this.plugin.offerUndo(`Made ${file.basename}${parent ? `, ${kind.name} ${parent.basename}` : ''}.`, () => this.app.fileManager.trashFile(file));
+    return file;
+  }
+
+  /** Under another concept instead, chosen from the notes. */
+  askMove(file) {
+    new NotePicker(this.app, `${file.basename} ${this.childKind().name}…`, (target) => this.moveUnder(file, target), (f) => f === file).open();
+  }
+
+  /** Its first hierarchy kind naming `target` only, with Undo. */
+  async moveUnder(file, target) {
+    const kind = this.childKind();
+    const link = `[[${this.app.metadataCache.fileToLinktext(target, file.path, true)}]]`;
+    const before = await this.edit(file, kind.prop, () => [link]);
+    if (before === null) return false;
+    this.plugin.offerUndo(`${file.basename} ${kind.name} ${target.basename} now.`, () => this.restore(file, kind.prop, before));
+    return true;
+  }
+
+  /** What it comes under, nearest first, to explore. */
+  chooseBroader(file) {
+    const direct = this.relationsOf(file).out.filter((r) => r.kind.category === 'hierarchy');
+    const chain = this.broaderChain(file).reverse();
+    const seen = new Set();
+    const items = direct.map((r) => ({ label: r.file.basename, note: r.kind.name, file: r.file }))
+      .concat(chain.map((f, i) => ({ label: f.basename, note: i ? `${i + 1} steps up` : 'directly above', file: f })))
+      .filter((x) => !seen.has(x.file) && seen.add(x.file));
+    new ComparePicker(this.app, items, `What ${file.basename} comes under`, (item) => this.explore(item.file)).open();
+  }
+
+  /** Canvases with a card for the note: one opened at its card, or a choice; with none, a map made. */
+  async openInCanvas(file) {
+    const found = [];
+    for (const canvas of this.app.vault.getFiles().filter((f) => f.extension === 'canvas')) {
+      try {
+        const data = JSON.parse(await this.app.vault.cachedRead(canvas));
+        const card = (data.nodes || []).find((n) => n.type === 'file' && n.file === file.path);
+        if (card) found.push({ canvas, id: card.id });
+      } catch (err) {
+        /* not one to read */
+      }
+    }
+    if (!found.length) return this.map(file);
+    const open = async (hit) => {
+      const leaf = this.app.workspace.getLeaf(false);
+      await leaf.openFile(hit.canvas);
+      const find = typeof CanvasFind === 'function' ? this.plugin.feature(CanvasFind) : null;
+      const view = leaf.view;
+      if (find && view && view.canvas) window.setTimeout(() => find.goTo(view, hit.id), 300);
+    };
+    if (found.length === 1) return open(found[0]);
+    new ComparePicker(this.app, found.map((h) => ({ label: h.canvas.basename, note: h.canvas.parent ? h.canvas.parent.path : '', h })), `Which canvas with ${file.basename}?`, (item) => open(item.h)).open();
+    return null;
+  }
+
+  /** Its album: the folder it's kept in, or any album taking it in. */
+  openInAlbum(file) {
+    const library = this.plugin.feature(Library);
+    if (!library) return;
+    const albums = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? [file.parent] : [];
+    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    if (structure && structure.enabled) {
+      const walk = (folder) =>
+        (folder.children || []).forEach((c) => {
+          if (!(c instanceof TFolder)) return;
+          if (albums.indexOf(c) === -1 && structure.info(c).includes.indexOf(file) !== -1) albums.push(c);
+          walk(c);
+        });
+      walk(this.app.vault.getRoot());
+    }
+    const go = (folder) => library.browseMode({ mode: 'folder', path: folder.path });
+    if (!albums.length) return library.browseMode({ mode: 'folder', path: '/' });
+    if (albums.length === 1) return go(albums[0]);
+    new ComparePicker(this.app, albums.map((f, i) => ({ label: f.name, note: i ? 'takes it in' : 'kept here', f })), `${file.basename} is in…`, (item) => go(item.f)).open();
+    return null;
+  }
+
   register() {
+    // A note's card on a canvas offers what its note does.
+    this.plugin.registerEvent(
+      this.app.workspace.on('canvas:node-menu', (menu, node) => {
+        const file = this.enabled ? this.noteOfCard(node) : null;
+        if (file) addActionItems(menu, this.actions(), { file, node, view: node.canvas && node.canvas.view, from: 'canvas' }, 'Concept', 'waypoints');
+      })
+    );
     const stale = () => (this.cache = null);
     this.plugin.registerEvent(this.app.metadataCache.on('changed', stale));
     this.plugin.registerEvent(this.app.vault.on('rename', stale));
@@ -553,7 +687,7 @@ class Knowledge extends Feature {
   /** On a note's menu: its relationships. */
   addFileItems(menu, file, sectioned) {
     if (!this.enabled || !file || file.extension !== 'md') return;
-    menu.addItem((item) => sectioned(item, 'action').setTitle('Explore relationships').setIcon('waypoints').onClick(() => this.explore(file)));
+    addActionItems(menu, this.actions(), { file, from: 'menu' }, 'Concept', 'waypoints', sectioned);
   }
 }
 
