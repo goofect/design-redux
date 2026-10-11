@@ -486,8 +486,15 @@ describe('Design Redux in Obsidian', function () {
       const y = Number(r.getAttribute('y')) + Number(r.getAttribute('height')) / 2;
       return { x: x < 100 ? 85 : -85, y: y < 68 ? 55 : -55 };
     }, ACTIVE);
-    const map = await browser.$(ACTIVE + '.dr-minimap svg');
-    await map.click(far);
+    // Pressed as the pointer would: on a small window something else can
+    // lie over the map's corner, and WebDriver won't click through it.
+    await browser.execute((active, at) => {
+      const svg = document.querySelector(active + '.dr-minimap svg');
+      const r = svg.getBoundingClientRect();
+      const init = { bubbles: true, cancelable: true, button: 0, pointerId: 1, clientX: r.left + r.width / 2 + at.x, clientY: r.top + r.height / 2 + at.y };
+      svg.dispatchEvent(new PointerEvent('pointerdown', init));
+      svg.dispatchEvent(new PointerEvent('pointerup', init));
+    }, ACTIVE, far);
     await browser.pause(600);
     const after = await browser.executeObsidian(({ app }) => {
       const b = app.workspace.activeLeaf.view.canvas.getViewportBBox();
