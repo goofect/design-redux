@@ -470,8 +470,9 @@ class ContextStrip extends Feature {
   renderActions(strip, file, leaf) {
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
 
-    // Properties and More always; the rest shown when the strip is pointed at or tabbed into.
-    const secondary = ['mode', 'pin', 'footnotes', 'up-next'];
+    // Properties, More, and what's there only when it matters — footnotes, Up Next — always;
+    // reading mode and pin when the strip is pointed at or tabbed into.
+    const secondary = ['mode', 'pin'];
     const button = (icon, label, onClick, active, role) => {
       const el = actions.createDiv({ cls: 'clickable-icon dr-strip-btn' });
       if (secondary.indexOf(role) !== -1) el.addClass('is-secondary');
