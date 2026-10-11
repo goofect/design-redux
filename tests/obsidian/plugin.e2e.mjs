@@ -87,13 +87,18 @@ describe('Design Redux in Obsidian', function () {
         window.__drErrors.push(String((e.reason && e.reason.stack) || e.reason))
       );
       await app.plugins.disablePlugin('design-redux');
+      // How long loading takes: the baseline the refactor is held to.
+      const started = performance.now();
       await app.plugins.enablePlugin('design-redux');
+      window.__drLoadMs = Math.round(performance.now() - started);
     });
     await browser.pause(1500);
   });
 
   // How long each test takes, slowest first, beside the other results: what to speed up.
   const timings = [];
+  // Measured, not timed tests: plugin load, a library redraw.
+  const perf = [];
   let started = 0;
   beforeEach(function () {
     started = Date.now();
@@ -109,7 +114,7 @@ describe('Design Redux in Obsidian', function () {
 
   after(function () {
     fs.mkdirSync(OUT, { recursive: true });
-    const lines = timings.sort((x, y) => y[0] - x[0]).map(([ms, title]) => `${(ms / 1000).toFixed(1).padStart(5)}s  ${title}`);
+    const lines = perf.concat(timings.sort((x, y) => y[0] - x[0]).map(([ms, title]) => `${(ms / 1000).toFixed(1).padStart(5)}s  ${title}`));
     fs.writeFileSync(path.join(OUT, `${version}-timings.txt`), lines.join('\n') + '\n');
   });
 
@@ -119,6 +124,17 @@ describe('Design Redux in Obsidian', function () {
       return p ? p.features.map((f) => [f.constructor.name, !!f.enabled]) : null;
     });
     expect(state).not.toBeNull();
+    const measured = await browser.executeObsidian(({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('design-redux-library')[0];
+      let redraw = null;
+      if (leaf && leaf.view && typeof leaf.view.render === 'function') {
+        const started = performance.now();
+        leaf.view.render();
+        redraw = Math.round(performance.now() - started);
+      }
+      return { load: window.__drLoadMs, redraw };
+    });
+    perf.push(`perf: plugin load ${measured.load} ms`, `perf: library redraw ${measured.redraw} ms`);
     const on = Object.fromEntries(state);
     // Switched on by default.
     for (const name of ['Library', 'ContextStrip', 'CoverImages', 'Scripts', 'CanvasLegend', 'CanvasAlign', 'BulkEditing']) {
