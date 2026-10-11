@@ -365,6 +365,31 @@ describe('Design Redux in Obsidian', function () {
     await measure(started, 'theme', 'standard');
   });
 
+  it('keeps the ribbon’s buttons out of sight while they’re in the menu', async function () {
+    const seen = await browser.executeObsidian(({ plugins }) => {
+      const s = plugins.designRedux.settings;
+      const ribbon = document.querySelector('.workspace-ribbon.mod-left, .workspace-ribbon.mod-primary');
+      const visible = Array.from(document.querySelectorAll('.side-dock-ribbon-action')).filter((el) => {
+        const r = el.getBoundingClientRect();
+        let opacity = 1;
+        for (let e = el; e && e !== document.body; e = e.parentElement) opacity *= Number(getComputedStyle(e).opacity);
+        const onScreen = r.width > 0 && r.height > 0 && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight;
+        return onScreen && opacity > 0.05;
+      });
+      return {
+        on: !!(s.navDropdown && s.ribbonInMenu),
+        body: document.body.classList.contains('dr-ribbon-active'),
+        ribbonWidth: ribbon ? ribbon.getBoundingClientRect().width : -1,
+        actions: document.querySelectorAll('.side-dock-ribbon-action').length,
+        visible: visible.map((el) => el.getAttribute('aria-label')),
+      };
+    });
+    expect(seen.on).toBe(true);
+    expect(seen.body).toBe(true);
+    expect(seen.ribbonWidth).toBe(0);
+    expect(seen.visible).toEqual([]);
+  });
+
   it('opens an album with its map embedded, or its folder note as an overview', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       if (!app.vault.getFolderByPath('Atlas')) {

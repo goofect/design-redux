@@ -346,7 +346,7 @@ body {
  * bounding box, and an unrenderable element measures as 0,0.
  */
 
-body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-buttons-container, body.dr-ribbon-active .workspace-ribbon.mod-left .side-dock-actions {
+body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-buttons-container, body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) .side-dock-actions {
   position: fixed;
   left: var(--dr-park-x, -9999px);
   top: var(--dr-park-y, -9999px);
@@ -360,13 +360,16 @@ body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-heade
   min-height: 0;
 }
 
-/* Collapsed ribbon ------------------------------------------------------ */
+/* Collapsed ribbon ------------------------------------------------------
+ *
+ * The left ribbon is .mod-left until Obsidian 1.14 and .mod-primary since.
+ */
 
 body.dr-ribbon-active {
   --ribbon-width: 0px;
 }
 
-body.dr-ribbon-active .workspace-ribbon.mod-left {
+body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) {
   flex: 0 0 0;
   width: 0;
   min-width: 0;
@@ -382,7 +385,7 @@ body.dr-ribbon-active .workspace-ribbon.mod-left {
 
 /* Everything except the parked actions, which stay measurable. */
 
-body.dr-ribbon-active .workspace-ribbon.mod-left > *:not(.side-dock-actions) {
+body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) > *:not(.side-dock-actions) {
   display: none;
 }
 

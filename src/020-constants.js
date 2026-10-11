@@ -304,5 +304,6 @@ const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'av
 
 const TAB_HEADER = '.workspace-split.mod-left-split .workspace-tab-header-container';
 const NAV_BUTTONS = '.workspace-leaf-content[data-type="file-explorer"] .nav-buttons-container';
-const RIBBON_ACTIONS = '.workspace-ribbon.mod-left .side-dock-actions';
+// The left ribbon's buttons: .mod-left until Obsidian 1.14, .mod-primary since.
+const RIBBON_ACTIONS = '.workspace-ribbon:is(.mod-left, .mod-primary) .side-dock-actions';
 
