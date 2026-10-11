@@ -603,7 +603,10 @@ describe('Design Redux in Obsidian', function () {
         return parent;
       };
       await until(() => parentOfF() === 's');
-      return { followed, parent: parentOfF() };
+      const out = { followed, parent: parentOfF() };
+      // The outline opened beside the canvas: closed, so later tests find the tabs they left.
+      app.workspace.getLeavesOfType('markdown').filter((l) => l.view.file && l.view.file.path === note.path).forEach((l) => l.detach());
+      return out;
     });
     expect(result.followed).toBe('outline');
     expect(result.parent).toBe('s');
@@ -1216,7 +1219,7 @@ describe('Design Redux in Obsidian', function () {
         leafType: box && box.closest('.workspace-leaf-content') ? box.closest('.workspace-leaf-content').dataset.type : null,
         inRootSplit: !!(box && box.closest('.workspace-split.mod-root')),
         bodyHasPanelClass: document.body.classList.contains('dr-props-active'),
-        metadataContainers: Array.from(document.querySelectorAll('.metadata-container')).map((e) => [
+        metadataContainers: Array.from(document.querySelectorAll('.workspace-leaf.mod-active .metadata-container')).map((e) => [
           e.className,
           getComputedStyle(e).display,
         ]),
