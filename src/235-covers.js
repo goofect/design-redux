@@ -121,15 +121,7 @@ class CoverImages extends Feature {
 
   async setCover(file, value) {
     const key = this.property;
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        fm[key] = value;
-      });
-      new Notice(`Cover set on "${key}".`);
-    } catch (err) {
-      console.error('Design Redux: could not set the cover', err);
-      new Notice('Could not update the properties.');
-    }
+    if (await this.plugin.notes.write(file, (fm) => (fm[key] = value))) new Notice(`Cover set on "${key}".`);
   }
 
   /**

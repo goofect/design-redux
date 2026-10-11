@@ -180,14 +180,7 @@ class DesignRedux extends Plugin {
 
   async clearNoteCover(file) {
     const key = this.settings.coverProperty || 'cover';
-    try {
-      await this.app.fileManager.processFrontMatter(file, (fm) => {
-        delete fm[key];
-      });
-    } catch (err) {
-      console.error('Design Redux: could not clear the cover', err);
-      new Notice('Could not update the properties.');
-    }
+    await this.notes.write(file, (fm) => delete fm[key]);
   }
 
   /** Every kind of file, most recent first. */
@@ -526,15 +519,9 @@ class DesignRedux extends Plugin {
     const note = this.folderNote(folder);
     if (!note) return;
     const key = this.settings.coverProperty || 'cover';
-    try {
-      await this.app.fileManager.processFrontMatter(note, (fm) => {
-        delete fm[key];
-      });
-      this.refreshBrowse();
-      if (after) after();
-    } catch (err) {
-      console.error('Design Redux: could not clear the folder cover', err);
-    }
+    if (!(await this.notes.write(note, (fm) => delete fm[key], { failure: false }))) return;
+    this.refreshBrowse();
+    if (after) after();
   }
 
   refreshBrowse() {

@@ -180,34 +180,24 @@ class AlbumStructure extends Feature {
     const notes = this.app.vault.getMarkdownFiles().filter((f) => this.plugin.isFolderNote(f));
     const changes = [];
     for (const note of notes) {
-      const cache = this.app.metadataCache.getFileCache(note);
-      const fm = (cache && cache.frontmatter) || {};
+      const fm = this.plugin.notes.props(note);
       const moves = Object.keys(ALBUM_KEY_DEFAULTS)
         .map((k) => [ALBUM_KEY_DEFAULTS[k], ALBUM_KEYS[k]])
         .filter(([from, to]) => from !== to && fmGet(fm, from) !== undefined && fmGet(fm, to) === undefined);
       if (!moves.length) continue;
-      await this.app.fileManager.processFrontMatter(note, (data) => {
+      const record = await this.plugin.notes.write(note, (data) => {
         moves.forEach(([from, to]) => {
           data[to] = data[from];
           delete data[from];
         });
       });
-      changes.push([note, moves]);
+      if (record) changes.push(record);
     }
     if (!changes.length) {
       new Notice('Nothing to carry over: every value is under the names set.');
       return 0;
     }
-    this.plugin.offerUndo(`Carried values over in ${changes.length} folder ${changes.length === 1 ? 'note' : 'notes'}.`, async () => {
-      for (const [note, moves] of changes) {
-        await this.app.fileManager.processFrontMatter(note, (data) => {
-          moves.forEach(([from, to]) => {
-            data[from] = data[to];
-            delete data[to];
-          });
-        });
-      }
-    });
+    this.plugin.notes.offerUndo(`Carried values over in ${changes.length} folder ${changes.length === 1 ? 'note' : 'notes'}.`, changes);
     return changes.length;
   }
 
@@ -307,19 +297,24 @@ class AlbumStructure extends Feature {
 
   /** One of the folder note's properties set — the note made if there's none — or, given '', removed. */
   async setProperty(folder, key, value) {
+    let note;
     try {
-      const note = await this.plugin.ensureFolderNote(folder);
-      await this.app.fileManager.processFrontMatter(note, (fm) => {
-        const name = Object.keys(fm).find((k) => k.toLowerCase() === key.toLowerCase()) || key;
-        if (value === '' || value === null || (Array.isArray(value) && !value.length)) delete fm[name];
-        else fm[name] = value;
-      });
-      return true;
+      note = await this.plugin.ensureFolderNote(folder);
     } catch (err) {
-      console.error('Design Redux: could not change the album', err);
+      console.error('Design Redux: could not make the folder note', err);
       new Notice('Could not change the album.');
       return false;
     }
+    const record = await this.plugin.notes.write(
+      note,
+      (fm) => {
+        const name = Object.keys(fm).find((k) => k.toLowerCase() === key.toLowerCase()) || key;
+        if (value === '' || value === null || (Array.isArray(value) && !value.length)) delete fm[name];
+        else fm[name] = value;
+      },
+      { failure: 'Could not change the album.' }
+    );
+    return !!record;
   }
 
   setType(folder, type) {

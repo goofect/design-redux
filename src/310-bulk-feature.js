@@ -125,15 +125,14 @@ class BulkEditing extends Feature {
     if (file.basename === pattern.replace(/\{\{folder\}\}/g, file.parent.name)) return;
     window.setTimeout(async () => {
       if (this.app.vault.getFileByPath(file.path) !== file) return;
-      try {
-        await this.app.fileManager.processFrontMatter(file, (fm) =>
+      await this.plugin.notes.write(
+        file,
+        (fm) =>
           props.forEach((p) => {
             if (keyLike(fm, p.key) === undefined) fm[p.key] = JSON.parse(JSON.stringify(p.value === undefined ? null : p.value));
-          })
-        );
-      } catch (err) {
-        console.error('Design Redux: could not add default properties', err);
-      }
+          }),
+        { failure: false }
+      );
     }, DEFAULTS_DELAY);
   }
 
