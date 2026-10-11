@@ -294,8 +294,14 @@ class AlbumRefactor extends Feature {
   }
 
   frontmatter(note) {
-    const cache = note ? this.app.metadataCache.getFileCache(note) : null;
-    return (cache && cache.frontmatter) || {};
+    return this.plugin.notes.props(note);
+  }
+
+  /** A change to a note's properties, or a failure that stops what's under way (its caller says so). */
+  async change(note, fn) {
+    const record = await this.plugin.notes.write(note, fn, { failure: false });
+    if (!record) throw new Error(`could not change the properties of ${note.path}`);
+    return record;
   }
 
   /** Merged: properties joined, everything moved, the folder note made a note, the empty folder gone. Its Undo. */
@@ -304,14 +310,14 @@ class AlbumRefactor extends Feature {
     const theirs = this.frontmatter(note);
     const targetNote = this.plugin.folderNote(target);
     const before = this.frontmatter(targetNote);
-    const kept = {};
-    mergedKeys().concat(ALBUM_KEYS.description).forEach((k) => (kept[k] = fmGet(before, k)));
     const carried = mergedKeys().filter((k) => valueList(fmGet(theirs, k)).length);
     const description = valueList(fmGet(theirs, ALBUM_KEYS.description)).join(' ');
     const ownKind = {};
-    if (structure && (carried.length || (description && !valueList(kept[ALBUM_KEYS.description]).length))) {
+    // What changed in notes' properties, undone the notes way: what's edited since is kept.
+    const records = [];
+    if (structure && (carried.length || (description && !valueList(fmGet(before, ALBUM_KEYS.description)).length))) {
       const into = targetNote || (await this.plugin.ensureFolderNote(target));
-      await this.app.fileManager.processFrontMatter(into, (fm) => {
+      records.push(await this.change(into, (fm) => {
         carried.forEach((k) => {
           const merged = valueList(fmGet(fm, k));
           valueList(fmGet(theirs, k)).forEach((v) => {
@@ -322,16 +328,14 @@ class AlbumRefactor extends Feature {
           fm[k] = merged;
         });
         if (description && !valueList(fmGet(fm, ALBUM_KEYS.description)).length) fm[ALBUM_KEYS.description] = description;
-      });
+      }));
     }
     // Its note, a note like the rest now: no longer saying what kind of album it is.
     if (note) {
       [ALBUM_KEYS.type, ALBUM_KEYS.layout].forEach((k) => {
         if (fmGet(theirs, k) !== undefined) ownKind[k] = fmGet(theirs, k);
       });
-      if (Object.keys(ownKind).length) {
-        await this.app.fileManager.processFrontMatter(note, (fm) => Object.keys(ownKind).forEach((k) => delete fm[k]));
-      }
+      if (Object.keys(ownKind).length) records.push(await this.change(note, (fm) => Object.keys(ownKind).forEach((k) => delete fm[k])));
     }
     const moved = [];
     for (const entry of children.concat(note ? [note] : [])) {
@@ -342,18 +346,7 @@ class AlbumRefactor extends Feature {
     return async () => {
       if (!this.app.vault.getAbstractFileByPath(from)) await this.app.vault.createFolder(from);
       for (const [entry, was] of moved.slice().reverse()) await this.plugin.putBack(entry, was);
-      if (note && Object.keys(ownKind).length) {
-        await this.app.fileManager.processFrontMatter(note, (fm) => Object.assign(fm, ownKind));
-      }
-      const into = this.plugin.folderNote(target);
-      if (into && (carried.length || description)) {
-        await this.app.fileManager.processFrontMatter(into, (fm) => {
-          Object.keys(kept).forEach((k) => {
-            if (kept[k] === undefined) delete fm[k];
-            else fm[k] = kept[k];
-          });
-        });
-      }
+      await this.plugin.notes.undo(records.slice().reverse());
     };
   }
 

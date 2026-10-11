@@ -37,8 +37,7 @@ class AlbumProperty extends Feature {
   }
 
   frontmatter(file) {
-    const cache = this.app.metadataCache.getFileCache(file);
-    return (cache && cache.frontmatter) || {};
+    return this.plugin.notes.props(file);
   }
 
   keysOf(file) {
