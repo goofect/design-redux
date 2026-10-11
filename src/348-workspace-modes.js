@@ -28,20 +28,20 @@ class WorkspaceModes extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'workspace-mode',
         name: 'Switch workspace mode…',
         icon: 'layout-template',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => this.choose(),
       },
       {
         id: 'workspace-mode-leave',
         name: 'Leave the workspace mode, back to how it was',
         icon: 'undo-2',
-        check: () => this.enabled && !!this.current(),
+        when: () => this.enabled && !!this.current(),
         run: () => this.leave(),
       },
     ].concat(
@@ -49,7 +49,7 @@ class WorkspaceModes extends Feature {
         id: `workspace-mode-${m.id}`,
         name: `Workspace mode: ${m.label}`,
         icon: m.icon,
-        check: () => this.enabled && this.current() !== m.id,
+        when: () => this.enabled && this.current() !== m.id,
         run: () => this.enter(m.id),
       }))
     );

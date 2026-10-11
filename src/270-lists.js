@@ -778,13 +778,15 @@ class MarkedLists extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return ['alpha', 'roman'].map((kind) => ({
       id: kind === 'alpha' ? 'make-lettered-list' : 'make-roman-numeral-list',
       name: kind === 'alpha' ? 'Make the selected lines an alphabetical list, or plain again' : 'Make the selected lines a Roman numeral list, or plain again',
+      menu: LIST_MENU[kind].title,
       icon: LIST_MENU[kind].icon,
-      check: () => !!this.settings[LIST_MENU[kind].setting] && !!activeEditorView(this.app),
-      run: () => this.relist(activeEditorView(this.app), kind),
+      on: 'editor',
+      when: (ctx) => !!this.settings[LIST_MENU[kind].setting] && !!ctx.cm,
+      run: (ctx) => this.relist(ctx.cm, kind),
     }));
   }
 
@@ -795,28 +797,16 @@ class MarkedLists extends Feature {
    */
   register() {
     this.plugin.registerEvent(
-      this.app.workspace.on('editor-menu', (menu, editor) => {
-        const cm = editor && editor.cm;
-        if (!this.enabled || !cm || !cm.state || typeof cm.dispatch !== 'function') return;
+      this.app.workspace.on('editor-menu', (menu, editor, info) => {
+        const ctx = this.enabled ? editorContext(editor, info, 'menu') : null;
+        if (!ctx || !ctx.cm) return;
         // Older Obsidian builds Paragraph as a submenu of its own; newer
         // gathers a section into it, list entries in 'selection.paragraph.list'.
         const paragraph = findSubmenu(menu, 'Paragraph');
         const configs = !paragraph && menu.submenuConfigs && typeof menu.submenuConfigs === 'object' ? menu.submenuConfigs : null;
         const section = paragraph ? 'selection-list' : configs && configs['selection.paragraph'] ? 'selection.paragraph.list' : 'selection';
         const into = paragraph || menu;
-        const ours = [];
-        ['alpha', 'roman'].forEach((kind) => {
-          const what = LIST_MENU[kind];
-          if (!this.settings[what.setting]) return;
-          into.addItem((item) => {
-            item
-              .setTitle(what.title)
-              .setIcon(what.icon)
-              .onClick(() => this.relist(cm, kind));
-            if (typeof item.setSection === 'function') item.setSection(section);
-            ours.push(item);
-          });
-        });
+        const ours = addActionEntries(into, this.actions(), ctx, section);
         if (section !== 'selection') arrangeListEntries(into, section, ours);
       })
     );

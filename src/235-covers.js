@@ -65,61 +65,27 @@ class CoverImages extends Feature {
     ];
   }
 
-  commands() {
-    const withFile = (fn) => ({
-      check: () => !!this.app.workspace.getActiveFile(),
-      run: () => fn(this.app.workspace.getActiveFile()),
-    });
-
+  actions() {
+    const note = (id, name, run) => ({ id, name, on: 'note', menu: false, run: (ctx) => run(ctx.file) });
     return [
-      Object.assign(
-        { id: 'set-cover-image', name: 'Set cover image for Bases card' },
-        withFile((file) =>
-          new ImagePicker(this.app, (image) =>
-            this.setCover(file, this.linkTo(image, file))
-          ).open()
-        )
-      ),
-      Object.assign(
-        { id: 'cover-from-first-image', name: 'Use first image in note as card cover' },
-        withFile((file) => {
-          const image = this.firstImageIn(file);
-          if (!image) new Notice('No images embedded in this note.');
-          else this.setCover(file, this.linkTo(image, file));
-        })
-      ),
-      Object.assign(
-        { id: 'repair-cover-link', name: 'Repair cover image link' },
-        withFile((file) => this.repairCover(file))
-      ),
-      Object.assign(
-        { id: 'remove-cover-image', name: 'Remove cover image' },
-        withFile((file) => this.plugin.clearNoteCover(file))
-      ),
+      note('set-cover-image', 'Set cover image for Bases card', (file) => new ImagePicker(this.app, (image) => this.setCover(file, this.linkTo(image, file))).open()),
+      note('cover-from-first-image', 'Use first image in note as card cover', (file) => {
+        const image = this.firstImageIn(file);
+        if (!image) new Notice('No images embedded in this note.');
+        else this.setCover(file, this.linkTo(image, file));
+      }),
+      note('repair-cover-link', 'Repair cover image link', (file) => this.repairCover(file)),
+      note('remove-cover-image', 'Remove cover image', (file) => this.plugin.clearNoteCover(file)),
       {
         id: 'set-cover-color',
         name: 'Set cover colour',
         icon: 'palette',
         // The page's own: the folder on screen, or the note that's open.
-        check: () => !!this.coverColorTarget(),
+        when: () => !!this.coverColorTarget(),
         run: () => this.plugin.chooseCoverColor(this.coverColorTarget()),
       },
-      {
-        id: 'set-folder-cover',
-        name: 'Set cover image for a folder',
-        run: () =>
-          new FolderPicker(this.app, (folder) =>
-            this.plugin.setFolderCover(folder)
-          ).open(),
-      },
-      {
-        id: 'remove-folder-cover',
-        name: 'Remove cover image from a folder',
-        run: () =>
-          new FolderPicker(this.app, (folder) =>
-            this.plugin.clearFolderCover(folder)
-          ).open(),
-      },
+      { id: 'set-folder-cover', name: 'Set cover image for a folder', run: () => new FolderPicker(this.app, (folder) => this.plugin.setFolderCover(folder)).open() },
+      { id: 'remove-folder-cover', name: 'Remove cover image from a folder', run: () => new FolderPicker(this.app, (folder) => this.plugin.clearFolderCover(folder)).open() },
     ];
   }
 

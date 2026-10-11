@@ -501,45 +501,23 @@ class QuietLinks extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
+    const hit = (ctx) => linkAtCursor(ctx.editor);
     return [
       {
         id: 'toggle-quiet-link',
         name: 'Make the link at the cursor quiet or normal',
+        menu: (ctx) => (hit(ctx).quiet ? 'Make link normal' : 'Make link quiet'),
+        menuIcon: (ctx) => (hit(ctx).quiet ? 'link' : 'link-2-off'),
         icon: 'link-2-off',
-        check: () => this.enabled && !!linkAtCursor(this.editor()),
-        run: () => this.toggle(this.editor()),
+        on: 'editor',
+        when: (ctx) => this.enabled && !!hit(ctx),
+        run: (ctx) => this.toggle(ctx.editor),
       },
-      {
-        id: 'make-quiet-links-portable',
-        name: 'Make quiet links normal, for sharing',
-        icon: 'share',
-        check: () => this.enabled,
-        run: () => this.makePortable(),
-      },
-      {
-        id: 'make-shared-links-quiet',
-        name: 'Make shared links quiet again',
-        icon: 'link-2-off',
-        check: () => this.enabled,
-        run: () => this.makeQuietAgain(),
-      },
-      {
-        id: 'fold-stray-quiet-notes',
-        name: 'Fold in notes made by quiet links elsewhere',
-        icon: 'merge',
-        check: () => this.enabled,
-        run: () => this.reviewStrays(true),
-      },
+      { id: 'make-quiet-links-portable', name: 'Make quiet links normal, for sharing', icon: 'share', when: () => this.enabled, run: () => this.makePortable() },
+      { id: 'make-shared-links-quiet', name: 'Make shared links quiet again', icon: 'link-2-off', when: () => this.enabled, run: () => this.makeQuietAgain() },
+      { id: 'fold-stray-quiet-notes', name: 'Fold in notes made by quiet links elsewhere', icon: 'merge', when: () => this.enabled, run: () => this.reviewStrays(true) },
     ];
-  }
-
-  editor() {
-    const ws = this.app.workspace;
-    const active = ws.activeEditor;
-    if (active && active.editor) return active.editor;
-    const view = typeof ws.getActiveViewOfType === 'function' ? ws.getActiveViewOfType(MarkdownView) : null;
-    return view ? view.editor : null;
   }
 
   toggle(editor) {
@@ -584,17 +562,9 @@ class QuietLinks extends Feature {
     }
 
     this.plugin.registerEvent(
-      this.app.workspace.on('editor-menu', (menu, editor) => {
-        if (!this.enabled) return;
-        const hit = linkAtCursor(editor);
-        if (!hit) return;
-        menu.addItem((item) => {
-          if (typeof item.setSection === 'function') item.setSection('action');
-          item
-            .setTitle(hit.quiet ? 'Make link normal' : 'Make link quiet')
-            .setIcon(hit.quiet ? 'link' : 'link-2-off')
-            .onClick(() => this.toggle(editor));
-        });
+      this.app.workspace.on('editor-menu', (menu, editor, info) => {
+        const ctx = this.enabled ? editorContext(editor, info, 'menu') : null;
+        if (ctx) addActionEntries(menu, actionsOn(this.actions(), 'editor'), ctx, 'action');
       })
     );
 

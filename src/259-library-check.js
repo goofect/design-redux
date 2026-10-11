@@ -193,20 +193,20 @@ class LibraryCheck extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'library-check',
         name: 'Look the library over',
         icon: 'stethoscope',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => this.open('library-check'),
       },
       {
         id: 'library-inbox',
         name: 'Open the inbox: notes in no album',
         icon: 'inbox',
-        check: () => this.enabled && this.settings.libraryInbox !== false,
+        when: () => this.enabled && this.settings.libraryInbox !== false,
         run: () => this.open('inbox'),
       },
     ];

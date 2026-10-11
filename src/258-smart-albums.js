@@ -88,20 +88,20 @@ class SmartAlbums extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'smart-album-open',
         name: 'Open a smart album…',
         icon: 'sparkles',
-        check: () => this.enabled && this.list().length > 0,
+        when: () => this.enabled && this.list().length > 0,
         run: () => this.choose(),
       },
       {
         id: 'smart-album-save',
         name: 'Keep these filters as a smart album…',
         icon: 'sparkles',
-        check: () => {
+        when: () => {
           const view = this.enabled ? this.app.workspace.getActiveViewOfType(BrowseView) : null;
           return !!view && view.hasFilters();
         },

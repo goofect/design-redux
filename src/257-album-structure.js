@@ -101,22 +101,10 @@ class AlbumStructure extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
-      {
-        id: 'album-set-type',
-        name: 'Set what kind of album this is…',
-        icon: 'shapes',
-        check: () => this.enabled && !!this.currentFolder(),
-        run: () => this.chooseType(this.currentFolder()),
-      },
-      {
-        id: 'album-include-note',
-        name: 'Show this note in another album too…',
-        icon: 'folder-input',
-        check: () => this.enabled && !!this.pageNote(),
-        run: () => this.chooseAlbumFor(this.pageNote()),
-      },
+      { id: 'album-set-type', name: 'Set what kind of album this is…', icon: 'shapes', when: () => this.enabled && !!this.currentFolder(), run: () => this.chooseType(this.currentFolder()) },
+      { id: 'album-include-note', name: 'Show this note in another album too…', icon: 'folder-input', on: 'note', menu: false, when: () => this.enabled, run: (ctx) => this.chooseAlbumFor(ctx.file) },
     ];
   }
 

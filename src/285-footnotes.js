@@ -798,29 +798,21 @@ class Footnotes extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
+    const hit = (ctx) => footnoteAt(ctx.cm.state.doc.toString(), ctx.cm.state.selection.main.head);
     return [
       {
         id: 'add-footnote',
         name: 'Add footnote',
+        // ctx.place: where the editor's menu put it — in Obsidian's Insert, it's "here".
+        menu: (ctx) => (hit(ctx) ? 'Change footnote' : ctx.place === 'insert' ? 'Footnote here' : 'Add footnote'),
         icon: 'file-signature',
-        check: () => this.enabled && !!this.editorView(),
-        run: () => this.openBox(this.editorView()),
+        on: 'editor',
+        when: (ctx) => this.enabled && !!ctx.cm,
+        run: (ctx) => this.openBox(ctx.cm),
       },
-      {
-        id: 'show-footnotes',
-        name: 'Show footnotes',
-        icon: 'file-signature',
-        check: () => this.enabled,
-        run: () => this.showView(),
-      },
-      {
-        id: 'tidy-footnotes',
-        name: 'Put footnotes in order',
-        icon: 'list-ordered',
-        check: () => this.enabled && !!this.editorView(),
-        run: () => this.tidy(this.editorView()),
-      },
+      { id: 'show-footnotes', name: 'Show footnotes', icon: 'file-signature', when: () => this.enabled, run: () => this.showView() },
+      { id: 'tidy-footnotes', name: 'Put footnotes in order', menu: false, icon: 'list-ordered', on: 'editor', when: (ctx) => this.enabled && !!ctx.cm, run: (ctx) => this.tidy(ctx.cm) },
     ];
   }
 
@@ -895,20 +887,13 @@ class Footnotes extends Feature {
     );
 
     this.plugin.registerEvent(
-      this.app.workspace.on('editor-menu', (menu, editor) => {
-        const cm = editor && editor.cm;
-        if (!this.enabled || !cm || !cm.state || typeof cm.dispatch !== 'function') return;
-        const text = cm.state.doc.toString();
-        const hit = footnoteAt(text, cm.state.selection.main.head);
-        const insert = findSubmenu(menu, 'Insert');
-        const into = hit ? menu : insert || menu;
-        into.addItem((item) => {
-          item
-            .setTitle(hit ? 'Change footnote' : insert ? 'Footnote here' : 'Add footnote')
-            .setIcon('file-signature')
-            .onClick(() => this.openBox(cm));
-          if ((hit || !insert) && typeof item.setSection === 'function') item.setSection(hit ? 'action' : 'selection');
-        });
+      this.app.workspace.on('editor-menu', (menu, editor, info) => {
+        const ctx = this.enabled ? editorContext(editor, info, 'menu') : null;
+        if (!ctx || !ctx.cm) return;
+        const hit = footnoteAt(ctx.cm.state.doc.toString(), ctx.cm.state.selection.main.head);
+        const insert = hit ? null : findSubmenu(menu, 'Insert');
+        if (insert) ctx.place = 'insert';
+        addActionEntries(insert || menu, actionsOn(this.actions(), 'editor'), ctx, insert ? null : hit ? 'action' : 'selection');
       })
     );
   }

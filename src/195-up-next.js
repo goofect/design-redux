@@ -26,36 +26,19 @@ class UpNext extends Feature {
     ];
   }
 
-  commands() {
+  /** What can be lined up: the note open or chosen, an album's notes; and the queue itself. */
+  actions() {
+    // A file that can be queued: a note or another kind it reads, not the note standing for a folder.
+    const queueable = (ctx) => this.enabled && QUEUED_KINDS.indexOf(ctx.file.extension) !== -1 && !this.plugin.isFolderNote(ctx.file);
+    const notes = (ctx) => (this.enabled ? this.notesOf(ctx.folder) : []);
     return [
-      {
-        id: 'up-next-open',
-        name: 'Open the next note in Up Next',
-        icon: 'list-start',
-        check: () => this.enabled && !!this.queue.peek(this.pageFile()),
-        run: () => this.openNext(),
-      },
-      {
-        id: 'up-next-add',
-        name: 'Add this note to Up Next',
-        icon: 'list-end',
-        check: () => this.enabled && !!this.pageFile(),
-        run: () => this.enqueue([this.pageFile()], false),
-      },
-      {
-        id: 'up-next-clear',
-        name: 'Clear Up Next',
-        icon: 'list-x',
-        check: () => this.enabled && this.queue.paths().length > 0,
-        run: () => this.clear(),
-      },
-      {
-        id: 'shuffle-album',
-        name: 'Shuffle this album',
-        icon: 'shuffle',
-        check: () => this.enabled && !!pageFolder(this.app) && this.notesOf(pageFolder(this.app)).length > 0,
-        run: () => this.shuffle(pageFolder(this.app)),
-      },
+      { id: 'up-next-open', name: 'Open the next note in Up Next', icon: 'list-start', when: () => this.enabled && !!this.queue.peek(this.pageFile()), run: () => this.openNext() },
+      { id: 'up-next-read-next', name: 'Read next', icon: 'list-start', on: 'file', palette: false, when: queueable, run: (ctx) => this.enqueue([ctx.file], true) },
+      { id: 'up-next-add', name: 'Add this note to Up Next', menu: 'Add to Up Next', icon: 'list-end', on: 'file', when: (ctx) => queueable(ctx) && !this.queue.has(ctx.file), run: (ctx) => this.enqueue([ctx.file], false) },
+      { id: 'up-next-remove', name: 'Remove from Up Next', icon: 'list-x', on: 'file', palette: false, when: (ctx) => queueable(ctx) && this.queue.has(ctx.file), run: (ctx) => this.queue.remove(ctx.file) },
+      { id: 'up-next-clear', name: 'Clear Up Next', icon: 'list-x', when: () => this.enabled && this.queue.paths().length > 0, run: () => this.clear() },
+      { id: 'up-next-add-album', name: 'Add to Up Next', icon: 'list-end', on: 'album', palette: false, when: (ctx) => notes(ctx).length > 0, run: (ctx) => this.enqueue(notes(ctx), false, ctx.folder.name) },
+      { id: 'shuffle-album', name: 'Shuffle this album', menu: 'Shuffle', icon: 'shuffle', on: 'album', when: (ctx) => notes(ctx).length > 0, run: (ctx) => this.shuffle(ctx.folder) },
     ];
   }
 
@@ -152,20 +135,8 @@ class UpNext extends Feature {
    * notes, or shuffles them.
    */
   addMenuItems(menu, target, section) {
-    const isFolder = target instanceof TFolder;
-    if (!isFolder && !(target instanceof TFile && QUEUED_KINDS.indexOf(target.extension) !== -1)) return;
-    if (!isFolder && this.plugin.isFolderNote(target)) return;
-    const add = (title, icon, run) => menu.addItem((item) => section(item).setTitle(title).setIcon(icon).onClick(run));
-    if (isFolder) {
-      const files = this.notesOf(target);
-      if (!files.length) return;
-      add('Add to Up Next', 'list-end', () => this.enqueue(files, false, target.name));
-      add('Shuffle', 'shuffle', () => this.shuffle(target));
-      return;
-    }
-    add('Read next', 'list-start', () => this.enqueue([target], true));
-    if (this.queue.has(target)) add('Remove from Up Next', 'list-x', () => this.queue.remove(target));
-    else add('Add to Up Next', 'list-end', () => this.enqueue([target], false));
+    if (target instanceof TFolder) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, section);
+    else if (target instanceof TFile) addActionEntries(menu, actionsOn(this.actions(), 'file'), { file: target, from: 'menu' }, section);
   }
 
   /** The first queued note, opened in the page. */

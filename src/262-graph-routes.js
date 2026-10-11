@@ -632,12 +632,12 @@ class GraphRoutes extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'toggle-graph-routes',
         name: 'Graph: links through notes between, on or off',
-        check: () => this.enabled && !!this.commandGraph(),
+        when: () => this.enabled && !!this.commandGraph(),
         run: () => {
           const graph = this.commandGraph();
           if (graph) this.setOn(graph.type, !this.isOn(graph.type));

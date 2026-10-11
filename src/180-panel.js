@@ -67,12 +67,12 @@ class PropertiesPanel extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'open-properties',
         name: 'Open properties',
-        check: () => {
+        when: () => {
           const leaf = this.app.workspace.activeLeaf;
           return this.enabled && !!leaf && leaf.view instanceof MarkdownView;
         },

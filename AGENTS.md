@@ -34,9 +34,14 @@ Coffee N' Christmas.
 ## How the code is laid out
 
 - Each feature is a `class X extends Feature` with `settingsSchema()`,
-  `commands()`, `register()` (events, once), `enable()` / `disable()` / `sync()`,
+  `actions()`, `register()` (events, once), `enable()` / `disable()` / `sync()`,
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
+- What a feature does is written once in `actions()` (`253-actions.js`): each
+  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
+  its commands come from them, and menus of that thing are built from the
+  same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
+  hang on them.
 - `DEFAULTS` holds every setting. Settings rows are placed in the settings tab by
   `SETTINGS_TABS`; a new row's key must be added there.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and

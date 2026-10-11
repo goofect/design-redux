@@ -28,12 +28,12 @@ class ActionsMenu extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'open-actions',
         name: 'Open actions menu',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => {
           // The trigger lives in the left sidebar's tab header, so there
           // isn't one while that sidebar is collapsed.

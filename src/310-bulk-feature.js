@@ -1,5 +1,5 @@
 class BulkEditing extends Feature {
-  commands() {
+  actions() {
     return [
       {
         id: 'add-properties-to-folders',
@@ -47,13 +47,13 @@ class BulkEditing extends Feature {
       {
         id: 'folder-default-properties',
         name: 'Default properties for this folder…',
-        check: () => this.pageFolderTargets().length > 0,
+        when: () => this.pageFolderTargets().length > 0,
         run: () => this.openDefaults(this.pageFolderTargets()[0]),
       },
       {
         id: 'undo-bulk-change',
         name: 'Undo the last bulk change',
-        check: () => !!this.plugin.bulk.last,
+        when: () => !!this.plugin.bulk.last,
         run: () => this.plugin.bulk.undo(),
       },
     ];

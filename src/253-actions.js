@@ -7,13 +7,14 @@
 /* menu of what it acts on, the context strip. A feature lists them as */
 /* actions(), each { id, name, menu, icon, on, when(ctx), run(ctx) }:  */
 /* `on` says what it acts on, and so where the palette finds it —      */
-/*   app     nothing in particular: ctx { from }                       */
+/*   app     nothing in particular (the default): ctx { from }         */
 /*   note    the note open: { file }                                   */
 /*   file    the file open in the page, of any kind: { file }          */
-/*   editor  the note being written in: { file, editor, view }         */
+/*   editor  the note being written in: { file, editor, cm, view }     */
 /*   canvas  the canvas open and its selection: { view, file, nodes,   */
 /*           node — the one card selected, or null }                   */
 /*   album   the album open, or the open note's: { folder }            */
+/*   browse  the album open in the browse view, only: { folder, view } */
 /* — and ctx.from says where it was asked: palette, menu, canvas,      */
 /* strip. `menu` is its short name on a menu (a function of ctx when   */
 /* it changes, false to keep it off menus), `menuIcon(ctx)` its icon   */
@@ -38,6 +39,13 @@ function canvasContext(view, nodes, from) {
   return { view, file: view.file, nodes, node: nodes.length === 1 ? nodes[0] : null, from };
 }
 
+/** A note being written in, as an action sees it: cm is its CodeMirror view, where it can be reached. */
+function editorContext(editor, view, from) {
+  if (!editor) return null;
+  const cm = editor.cm && editor.cm.state && typeof editor.cm.dispatch === 'function' ? editor.cm : null;
+  return { file: view && view.file, editor, cm, view, from };
+}
+
 /** For a canvas's own menu: the canvas these cards are on. */
 function canvasMenuContext(nodes) {
   const first = nodes && nodes[0];
@@ -54,8 +62,11 @@ const ACTION_CONTEXTS = {
     return file ? { file, from: 'palette' } : null;
   },
   editor: (app) => {
-    const view = typeof app.workspace.getActiveViewOfType === 'function' ? app.workspace.getActiveViewOfType(MarkdownView) : null;
-    return view && view.editor ? { file: view.file, editor: view.editor, view, from: 'palette' } : null;
+    // The editor in use — a note's, or a canvas card's being typed in — unless it's only being read.
+    const ws = app.workspace;
+    const view = ws.activeEditor || (typeof ws.getActiveViewOfType === 'function' ? ws.getActiveViewOfType(MarkdownView) : null);
+    if (!view || (typeof view.getMode === 'function' && view.getMode() !== 'source')) return null;
+    return editorContext(view.editor, view, 'palette');
   },
   canvas: (app) => {
     const view = pageView(app);
@@ -72,17 +83,27 @@ const ACTION_CONTEXTS = {
     const folder = pageFolder(app);
     return folder ? { folder, from: 'palette' } : null;
   },
+  browse: (app) => {
+    const view = app.workspace.getActiveViewOfType(BrowseView);
+    const folder = view && view.mode === 'folder' ? view.folder() : null;
+    return folder ? { folder, view, from: 'palette' } : null;
+  },
 };
 
 /** What an action acts on, found for the palette. */
 function actionContext(app, action) {
-  const find = ACTION_CONTEXTS[action.on || 'note'];
+  const find = ACTION_CONTEXTS[action.on || 'app'];
   return find ? find(app) : null;
 }
 
 /** Those of a list that act on one kind of thing. */
 function actionsOn(actions, on) {
-  return actions.filter((a) => (a.on || 'note') === on);
+  return actions.filter((a) => (a.on || 'app') === on);
+}
+
+/** Whether an action can be done to this; with no when(), always. */
+function applies(action, ctx) {
+  return !action.when || !!action.when(ctx);
 }
 
 /** An action's name or icon on a menu: fixed, or worked out for what it's on. */
@@ -115,18 +136,18 @@ function actionCommands(actions, context) {
       ...(a.hotkeys ? { hotkeys: a.hotkeys } : {}),
       check: () => {
         const ctx = context(a);
-        return !!ctx && !!a.when(ctx);
+        return !!ctx && applies(a, ctx);
       },
       run: () => {
         const ctx = context(a);
-        if (ctx && a.when(ctx)) a.run(ctx);
+        if (ctx && applies(a, ctx)) a.run(ctx);
       },
     }));
 }
 
 /** The actions that apply here, for a menu. */
 function menuActions(actions, ctx) {
-  return actions.filter((a) => a.menu !== false && a.when(ctx));
+  return actions.filter((a) => a.menu !== false && applies(a, ctx));
 }
 
 /** The actions that apply, as one group on a menu, each by its short name. */
@@ -149,13 +170,21 @@ function addActionItems(menu, actions, ctx, title, icon, sectioned) {
   return apply.length;
 }
 
-/** The actions that apply, each an entry of the menu itself. */
+/** The actions that apply, each an entry of the menu itself — the entries given back; mark sets each one's section, or names it. */
 function addActionEntries(menu, actions, ctx, mark) {
   const apply = menuActions(actions, ctx);
+  if (typeof mark === 'string') {
+    const section = mark;
+    mark = (item) => (typeof item.setSection === 'function' ? item.setSection(section) : item);
+  }
+  const items = [];
   apply.forEach((a) =>
-    menu.addItem((item) => actionItem(mark ? mark(item, 'action') : item, a, ctx, actionLabel(a, ctx)))
+    menu.addItem((item) => {
+      actionItem(mark ? mark(item, 'action') : item, a, ctx, actionLabel(a, ctx));
+      items.push(item);
+    })
   );
-  return apply.length;
+  return items;
 }
 
 /** The same actions as a menu of their own, at a button. */

@@ -17,14 +17,16 @@ class AlbumProperty extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'property-to-album',
         name: 'Give a property of this note to its whole album…',
         icon: 'layers',
-        check: () => this.enabled && !!this.pageNote() && this.keysOf(this.pageNote()).length > 0,
-        run: () => this.pick(this.pageNote()),
+        on: 'note',
+        menu: false,
+        when: (ctx) => this.enabled && !!ctx.file.parent && this.keysOf(ctx.file).length > 0,
+        run: (ctx) => this.pick(ctx.file),
       },
     ];
   }

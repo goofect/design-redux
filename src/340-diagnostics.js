@@ -172,7 +172,7 @@ class Diagnostics extends Feature {
     ];
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'copy-diagnostics',

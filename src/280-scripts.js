@@ -433,14 +433,22 @@ class Scripts extends Feature {
     ];
   }
 
-  commands() {
+  /** Superscript and subscript: in the palette, with keys, and on the editor's menu. */
+  actions() {
+    const inside = (ctx) => scriptAt(ctx.cm.state, ctx.cm.state.selection.main);
     return ['sup', 'sub'].map((kind) => ({
       id: kind === 'sup' ? 'superscript' : 'subscript',
       name: SCRIPT_MARKS[kind].label,
+      menu: (ctx) => {
+        const now = inside(ctx);
+        return now && now.kind === kind ? `Remove ${SCRIPT_MARKS[kind].label.toLowerCase()}` : SCRIPT_MARKS[kind].label;
+      },
       icon: SCRIPT_MARKS[kind].icon,
       hotkeys: scriptHotkeys(kind),
-      check: () => this.enabled && !!this.editorView(),
-      run: () => this.toggle(this.editorView(), kind),
+      on: 'editor',
+      // On the menu, with text selected or the cursor in one already.
+      when: (ctx) => this.enabled && !!ctx.cm && (ctx.from === 'palette' || !ctx.cm.state.selection.main.empty || !!inside(ctx)),
+      run: (ctx) => this.toggle(ctx.cm, kind),
     }));
   }
 
@@ -466,26 +474,13 @@ class Scripts extends Feature {
   /** In the editor's right-click menu, with text selected or the cursor in one already. */
   register() {
     this.plugin.registerEvent(
-      this.app.workspace.on('editor-menu', (menu, editor) => {
-        const cm = editor && editor.cm;
-        if (!this.enabled || !cm || !cm.state) return;
-        const range = cm.state.selection.main;
-        const inside = scriptAt(cm.state, range);
-        if (range.empty && !inside) return;
+      this.app.workspace.on('editor-menu', (menu, editor, info) => {
+        const ctx = this.enabled ? editorContext(editor, info, 'menu') : null;
+        if (!ctx) return;
         // With Obsidian's own Format entries, where they can be found;
         // otherwise beside them.
         const format = findSubmenu(menu, 'Format');
-        const into = format || menu;
-        ['sup', 'sub'].forEach((kind) =>
-          into.addItem((item) => {
-            const marks = SCRIPT_MARKS[kind];
-            item
-              .setTitle(inside && inside.kind === kind ? `Remove ${marks.label.toLowerCase()}` : marks.label)
-              .setIcon(marks.icon)
-              .onClick(() => this.toggle(cm, kind));
-            if (!format && typeof item.setSection === 'function') item.setSection('selection');
-          })
-        );
+        addActionEntries(format || menu, this.actions(), ctx, format ? null : 'selection');
       })
     );
   }

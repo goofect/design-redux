@@ -1351,6 +1351,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.feature = () => null;
     const folder = (p) => v.vault.getFolderByPath(p);
     const file = (p) => v.vault.getFileByPath(p);
+    // Written once: the album's menu and the palette, which offers them only for the album on screen.
+    const menu = new Menu();
+    refactor.addFolderItems(menu, folder('IR'), (item) => item);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Reorganise: Rename…', 'Reorganise: Move into…', 'Reorganise: Merge into…', 'Reorganise: Split notes off…']);
+    const rename = refactor.commands().find((c) => c.id === 'album-rename');
+    plugin.app.workspace.getActiveViewOfType = () => null;
+    assert.strictEqual(rename.check(), false, 'no album on screen');
+    plugin.app.workspace.getActiveViewOfType = (C) => (C === R.BrowseView ? Object.assign(Object.create(R.BrowseView.prototype), { mode: 'folder', folder: () => folder('IR') }) : null);
+    assert.strictEqual(rename.check(), true);
+    delete plugin.app.workspace.getActiveViewOfType;
     // Rename: what it'd do, what stops it, and back.
     v.folder('Law');
     let plan = refactor.planRename(folder('IR'), 'Law');

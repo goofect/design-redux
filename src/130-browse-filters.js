@@ -225,19 +225,19 @@ class Library extends Feature {
     liveViews(this.app, LIBRARY_VIEW, LibraryView).forEach((v) => v.render());
   }
 
-  commands() {
+  actions() {
     return [
       {
         id: 'open-library',
         name: 'Open library',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => this.reveal(),
       },
       {
         id: 'cycle-cover-size',
         name: 'Next cover size: compact, standard, large',
         icon: 'grid-2x2',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => {
           const keys = Object.keys(GRID_DENSITIES);
           const now = keys.indexOf(this.settings.gridDensity);
@@ -253,31 +253,33 @@ class Library extends Feature {
       {
         id: 'go-back',
         name: 'Go back',
-        check: () => canStep(pageLeaf(this.app), 'back'),
+        when: () => canStep(pageLeaf(this.app), 'back'),
         run: () => step(pageLeaf(this.app), 'back'),
       },
       {
         id: 'go-forward',
         name: 'Go forward',
-        check: () => canStep(pageLeaf(this.app), 'forward'),
+        when: () => canStep(pageLeaf(this.app), 'forward'),
         run: () => step(pageLeaf(this.app), 'forward'),
       },
       {
         id: 'new-note-here',
         name: 'New note in the current folder',
-        check: () => !!pageFolder(this.app),
-        run: () => this.plugin.newNote(pageFolder(this.app)),
+        on: 'album',
+        menu: false,
+        run: (ctx) => this.plugin.newNote(ctx.folder),
       },
       {
         id: 'new-folder-here',
         name: 'New folder in the current folder',
-        check: () => !!pageFolder(this.app),
-        run: () => this.plugin.newFolder(pageFolder(this.app)),
+        on: 'album',
+        menu: false,
+        run: (ctx) => this.plugin.newFolder(ctx.folder),
       },
       {
         id: 'browse-vault',
         name: 'Browse vault as a grid',
-        check: () => this.enabled,
+        when: () => this.enabled,
         run: () => this.browseRoot(),
       },
     ];

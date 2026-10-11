@@ -102,40 +102,20 @@ class AlbumRefactor extends Feature {
     ];
   }
 
-  commands() {
-    const folder = () => this.currentFolder();
-    const when = () => this.enabled && !!folder();
+  /** On the album's menu as Reorganise; from the palette, for the album open. */
+  actions() {
+    const when = (ctx) => this.enabled && !(ctx.folder.isRoot && ctx.folder.isRoot());
+    const act = (id, name, menu, icon, run) => ({ id, name, menu, icon, on: 'browse', when, run: (ctx) => run(ctx.folder) });
     return [
-      { id: 'album-rename', name: 'Rename this album…', icon: 'pencil', check: when, run: () => this.askRename(folder()) },
-      { id: 'album-move', name: 'Move this album into another collection…', icon: 'folder-input', check: when, run: () => this.askMove(folder()) },
-      { id: 'album-merge', name: 'Merge this album into another…', icon: 'merge', check: when, run: () => this.askMerge(folder()) },
-      { id: 'album-split', name: 'Split notes off this album into a new one…', icon: 'split', check: when, run: () => this.askSplit(folder()) },
+      act('album-rename', 'Rename this album…', 'Rename…', 'pencil', (f) => this.askRename(f)),
+      act('album-move', 'Move this album into another collection…', 'Move into…', 'folder-input', (f) => this.askMove(f)),
+      act('album-merge', 'Merge this album into another…', 'Merge into…', 'merge', (f) => this.askMerge(f)),
+      act('album-split', 'Split notes off this album into a new one…', 'Split notes off…', 'split', (f) => this.askSplit(f)),
     ];
   }
 
-  currentFolder() {
-    const view = this.app.workspace.getActiveViewOfType(BrowseView);
-    const folder = view && view.mode === 'folder' ? view.folder() : null;
-    return folder && !(folder.isRoot && folder.isRoot()) ? folder : null;
-  }
-
   addFolderItems(menu, folder, sectioned) {
-    if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return;
-    menuGroup(
-      menu,
-      'Reorganise',
-      'folder-tree',
-      (m, nested) => {
-        if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
-        [
-          ['Rename…', 'pencil', () => this.askRename(folder)],
-          ['Move into…', 'folder-input', () => this.askMove(folder)],
-          ['Merge into…', 'merge', () => this.askMerge(folder)],
-          ['Split notes off…', 'split', () => this.askSplit(folder)],
-        ].forEach(([title, icon, run]) => m.addItem((item) => item.setTitle(nested ? title : `Album: ${title}`).setIcon(icon).onClick(run)));
-      },
-      'action'
-    );
+    if (folder) addActionItems(menu, this.actions(), { folder, from: 'menu' }, 'Reorganise', 'folder-tree', sectioned);
   }
 
   /* -- what each would do ------------------------------------------ */

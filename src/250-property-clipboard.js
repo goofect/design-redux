@@ -3,26 +3,19 @@
 /* ------------------------------------------------------------------ */
 
 class PropertyClipboard extends Feature {
-  commands() {
-    const withFile = (fn) => ({
-      check: () => !!this.app.workspace.getActiveFile(),
-      run: () => fn(this.app.workspace.getActiveFile()),
-    });
-
+  actions() {
     return [
       {
         id: 'sort-properties',
         name: 'Sort properties alphabetically',
-        check: () => {
+        when: () => {
           const editor = this.activeEditor();
           return !!(editor && typeof editor.sortProperties === 'function');
         },
         run: () => this.activeEditor().sortProperties(),
       },
-      Object.assign({ id: 'copy-properties', name: 'Copy properties' },
-        withFile((file) => this.copy(file))),
-      Object.assign({ id: 'paste-properties', name: 'Paste properties' },
-        withFile((file) => this.paste(file))),
+      { id: 'copy-properties', name: 'Copy properties', on: 'note', menu: false, run: (ctx) => this.copy(ctx.file) },
+      { id: 'paste-properties', name: 'Paste properties', on: 'note', menu: false, run: (ctx) => this.paste(ctx.file) },
     ];
   }
 

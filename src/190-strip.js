@@ -87,27 +87,14 @@ class ContextStrip extends Feature {
     ];
   }
 
-  commands() {
-    const step = (dir) => {
-      const file = this.pageFile();
-      const near = file ? albumNeighbours(this.plugin, file) : null;
+  actions() {
+    const step = (ctx, dir) => {
+      const near = albumNeighbours(this.plugin, ctx.file);
       return near && near[dir];
     };
     return [
-      {
-        id: 'previous-in-album',
-        name: 'Previous note in album',
-        icon: 'chevrons-left',
-        check: () => !!step('previous'),
-        run: () => this.skip('previous'),
-      },
-      {
-        id: 'next-in-album',
-        name: 'Next note in album',
-        icon: 'chevrons-right',
-        check: () => !!step('next'),
-        run: () => this.skip('next', true),
-      },
+      { id: 'previous-in-album', name: 'Previous note in album', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: () => this.skip('previous') },
+      { id: 'next-in-album', name: 'Next note in album', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next', true) },
     ];
   }
 
