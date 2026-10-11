@@ -128,15 +128,23 @@ class LibraryView extends ItemView {
 
   render() {
     const root = this.contentEl;
-    root.empty();
+    // Drawn aside first, and put in only if it's different: a note it
+    // lists changes with every key typed in it, and drawing the same rows
+    // again would make their covers flash.
+    const fresh = root.ownerDocument.createElement('div');
     this.plugin.settings.librarySections.forEach((section) => {
       if (section.title) {
-        root.createDiv({ cls: 'dr-lib-group', text: section.title });
+        fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
       }
-      const list = root.createDiv({ cls: 'dr-lib-list' });
+      const list = fresh.createDiv({ cls: 'dr-lib-list' });
       roveFocus(list, '.dr-lib-row');
       (section.items || []).forEach((item) => this.renderItem(list, item));
     });
+    const shown = root.innerHTML.replace(/ is-active/g, '').replace(/ tabindex="-?\d+"/g, '');
+    if (fresh.innerHTML.replace(/ tabindex="-?\d+"/g, '') !== shown) {
+      root.empty();
+      while (fresh.firstChild) root.appendChild(fresh.firstChild);
+    }
     this.markActive();
   }
 

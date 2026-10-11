@@ -193,6 +193,17 @@ const active = (view) =>
 let passed = 0;
 const t = (name, fn) => { fn(); passed++; console.log('  ok  ' + name); };
 
+t('drawn again with nothing changed, the rows on screen stay — their covers don’t flash', () => {
+  const { view } = setup({ page: browsePage('search') });
+  const before = view.contentEl.querySelector('.dr-lib-row');
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'the same row, not one drawn again');
+  assert.deepStrictEqual(active(view), ['Search'], 'still marked where you are');
+  view.plugin.settings.librarySections[0].items.reverse();
+  view.render();
+  assert.notStrictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'changed: drawn again');
+});
+
 /* -- the highlight ------------------------------------------------- */
 
 t('Search screen highlights Search, and only Search', () => {
