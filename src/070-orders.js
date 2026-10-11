@@ -30,7 +30,7 @@ function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'albumSorts'];
+const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'albumSorts', 'knowledgeMeant'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed

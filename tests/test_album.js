@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge, WorkspaceModes, actionCommands, addActionItems };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1557,10 +1557,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('contrasts with' in fms.get(parl)));
     await undo();
     assert.deepStrictEqual(fms.get(parl)['contrasts with'], ['[[Presidentialism]]']);
-    // Looked over: a circle, one twice, one missing, one implied already, two hierarchies to one note.
+    // Looked over: a circle, one twice, one missing, one implied already. Sitting under a note and
+    // being part of it go together — the graph's parent goes with any hierarchy.
     k.cache = null;
     const found = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
-    ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied', 'Fusion of powers: relation-roles'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
+    ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
+    assert.ok(!found.includes('Fusion of powers: relation-roles'), found.join(', '));
     // Mapped: it at the centre, each arrow labelled and given its kind.
     let made = null;
     app.vault.create = async (path, data) => { made = { path, data: JSON.parse(data) }; return { path }; };
@@ -1571,6 +1573,105 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const labels = made.data.edges.map((e) => e.label).sort();
     assert.deepStrictEqual(labels, ['contrasts with', 'has part', 'has type', 'holds']);
     assert.ok(made.data.edges.every((e) => e.drRelation && e.drRelation.kind));
+  });
+
+  await t('the knowledge structure checked: errors, what’s worth a look and modelling choices told apart; fixed, or marked as meant', async () => {
+    const { v, plugin, app, view } = setup();
+    v.folder('Map');
+    v.folder('Elsewhere');
+    const names = ['Map', 'Animal', 'Mammal', 'Dog', 'Cat', 'Wolf', 'Tail', 'Loose', 'Heat', 'Alone', 'Egg', 'Chicken', 'Part', 'Whole'];
+    const f = {};
+    names.forEach((n) => (f[n] = v.file(`Map/${n}.md`)));
+    ['Note', 'Claim', 'Twice'].forEach((n) => (f[n] = v.file(`Elsewhere/${n}.md`)));
+    const fms = new Map([
+      [f.Map, { 'is a type of': '[[Animal]]' }],
+      [f.Mammal, { 'is a type of': '[[Animal]]' }],
+      [f.Dog, { 'is a type of': ['[[Mammal]]', '[[Animal]]'], 'contrasts with': '[[Cat]]' }],
+      [f.Cat, { 'is a type of': '[[Mammal]]', 'contrasts with': '[[Dog]]' }],
+      [f.Wolf, { 'is a type of': '[[Dog]]', 'is part of': '[[Dog]]' }],
+      [f.Tail, { 'is part of': ['[[Dog]]', '[[Cat]]'] }],
+      [f.Loose, { causes: '[[Heat]]' }],
+      [f.Heat, { causes: '[[Loose]]' }],
+      [f.Egg, { 'is a type of': '[[Chicken]]' }],
+      [f.Chicken, { 'is a type of': '[[Egg]]' }],
+      [f.Part, { 'is part of': '[[Whole]]' }],
+      [f.Whole, { 'is a type of': '[[Part]]' }],
+      [f.Note, { supports: '[[Claim]]', contradicts: '[[Claim]]' }],
+      [f.Claim, { parent: '[[Gone]]' }],
+      [f.Twice, { 'is a type of': ['[[Claim]]', '[[Claim]]'] }],
+    ]);
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
+    app.metadataCache.fileToLinktext = (x) => x.basename;
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.offerUndo = () => {};
+    plugin.settings.knowledgeTreeKinds = 'is part of';
+    const k = new R.Knowledge(plugin);
+    const check = new R.KnowledgeCheck(plugin);
+    const relations = { types: () => [
+      { name: 'is a type of', inverse: 'has type', category: 'hierarchy' },
+      { name: 'is part of', inverse: 'has part', category: 'hierarchy' },
+      { name: 'causes', inverse: 'is caused by', category: 'association' },
+      { name: 'contrasts with', inverse: 'contrasts with', category: 'association' },
+      { name: 'supports', inverse: 'is supported by', category: 'association' },
+      { name: 'contradicts', inverse: 'is contradicted by', category: 'association' },
+    ] };
+    const structure = new R.AlbumStructure(plugin);
+    const info = structure.info.bind(structure);
+    structure.info = (folder) => Object.assign(info(folder), folder.name === 'Map' ? { type: 'concept map' } : {});
+    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.KnowledgeCheck ? check : C && C.name === 'CanvasRelations' ? relations : C === R.AlbumStructure ? structure : null);
+    const seen = () => check.findings().map((x) => `${x.level} ${x.type} ${x.subject.basename}`);
+    const all = seen();
+    [
+      'error broken Claim', 'error repeat Twice', 'error cycle Chicken', 'error conflict Wolf', 'error parents Tail',
+      'warning cycle Part', 'warning redundant Dog', 'warning both Cat', 'warning oppose Note', 'warning folder Map', 'warning orphan Alone', 'warning broader Loose', 'warning broader Heat',
+      'choice parents Dog', 'choice cycle Heat',
+    ].forEach((x) => assert.ok(all.includes(x), `${x} in\n${all.join('\n')}`));
+    assert.ok(!all.some((x) => / (broader|orphan) (Animal|Map|Mammal)$/.test(x)), 'the top of the hierarchy, and the album’s own note, need nothing above them');
+    assert.ok(!all.some((x) => x.startsWith('error') && x.includes('Dog')), 'several broader concepts: a polyhierarchy, not an error');
+    // Errors first, then what's worth a look, then the choices.
+    const levels = check.findings().map((x) => x.level);
+    assert.deepStrictEqual(levels.slice().sort((a, b) => ['error', 'warning', 'choice'].indexOf(a) - ['error', 'warning', 'choice'].indexOf(b)), levels);
+    // A strongly connected group of notes, however long the chain.
+    const chain = Array.from({ length: 3000 }, (_, i) => i);
+    assert.deepStrictEqual(R.loopsAmong(chain, (i) => [(i + 1) % 3000]).map((g) => g.length), [3000]);
+    // The library check: the errors and warnings, a row a note, no choices.
+    const problems = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
+    ['Chicken: relation-loop', 'Egg: relation-loop', 'Claim: relation-missing', 'Dog: relation-implied', 'Loose: relation-broader'].forEach((x) => assert.ok(problems.includes(x), `${x} in ${problems.join(', ')}`));
+    assert.ok(!problems.includes('Heat: relation-loop'), 'a loop of causes is a modelling choice');
+    // Marked as meant: a choice, kept with the note.
+    const both = check.findings().find((x) => x.type === 'both');
+    await check.setMeant(both, true);
+    assert.deepStrictEqual(plugin.settings.knowledgeMeant, { 'Map/Cat.md': ['both:contrasts with'] });
+    assert.ok(seen().includes('choice both Cat'));
+    assert.strictEqual(check.findings().find((x) => x.type === 'both').meant, true);
+    // Fixed: the implied link taken out, the repeat kept once, the missing link taken out.
+    const fix = async (type) => { await check.findings().find((x) => x.type === type).fixes[0].run(); k.cache = null; };
+    await fix('redundant');
+    assert.deepStrictEqual(fms.get(f.Dog)['is a type of'], ['[[Mammal]]']);
+    await fix('repeat');
+    assert.deepStrictEqual(fms.get(f.Twice)['is a type of'], ['[[Claim]]']);
+    const broken = check.findings().find((x) => x.type === 'broken');
+    await broken.fixes[1].run();
+    k.cache = null;
+    assert.ok(!('parent' in fms.get(f.Claim)));
+    assert.ok(!seen().some((x) => / (redundant|repeat|broken) /.test(x)), seen().join('\n'));
+    // On screen: a section for each level; a note's own, where its relationships are explored.
+    Object.assign(view, { mode: 'knowledge-check', property: null });
+    view.render();
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    assert.deepStrictEqual(text('.dr-report-head').map((h) => h.replace(/\d+$/, '')), ['Errors', 'Worth a look', 'Modelling choices']);
+    assert.ok(view.contentEl.querySelector('.dr-integrity-row[data-type="conflict"] .dr-integrity-fix') === null, 'no fix to guess at for a conflict');
+    assert.strictEqual(view.contentEl.querySelector('.dr-integrity-row[data-type="broader"] .dr-integrity-fix').textContent, 'Put it under Map (is a type of)');
+    Object.assign(view, { mode: 'concept', property: f.Wolf.path });
+    view.render();
+    assert.ok(text('.dr-report-head').some((h) => h.startsWith('Worth checking')));
+    // Switched off: no screen, nothing worked out.
+    app.workspace.getActiveFile = () => f.Dog;
+    assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), ['knowledge-check', 'knowledge-check-note']);
+    plugin.settings.knowledgeCheck = false;
+    assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), []);
   });
 
   await t('concept actions defined once: commands, a note’s menu, a canvas card’s menu; a child concept made under it, and moved under another, with Undo', async () => {

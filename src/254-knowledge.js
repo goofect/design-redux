@@ -84,6 +84,8 @@ class ConceptScreen extends BrowseScreen {
     view.action(actions, 'file-text', 'Open note', () => this.app.workspace.getLeaf(false).openFile(file)).addClass('is-primary');
     view.action(actions, 'plus', 'Add a relationship', () => k.ask(file));
     if (count) view.action(actions, 'layout-dashboard', 'Map it', () => k.map(file));
+    const check = typeof KnowledgeCheck === 'function' ? this.plugin.feature(KnowledgeCheck) : null;
+    if (check && check.enabled) check.renderFor(root, file, view);
     if (!count) {
       view.emptyState(root, 'Nothing related to it yet.', 'waypoints', ['Add a relationship', () => k.ask(file)]);
       return;
@@ -285,7 +287,7 @@ class Knowledge extends Feature {
     const parent = String(this.settings.graphRouteProperty || 'parent').trim();
     const out = set.map((t) => Object.assign({ prop: t.name }, t));
     if (parent && !out.some((t) => t.prop.toLowerCase() === parent.toLowerCase())) {
-      out.unshift({ name: 'sits under', inverse: 'holds', category: 'hierarchy', prop: parent, line: 'solid', color: '' });
+      out.unshift({ name: 'sits under', inverse: 'holds', category: 'hierarchy', prop: parent, line: 'solid', color: '', generic: true });
     }
     return out;
   }
@@ -327,7 +329,7 @@ class Knowledge extends Feature {
         });
       });
     });
-    this.cache = { out, into, broken, twice };
+    this.cache = { out, into, broken, twice, kinds };
     return this.cache;
   }
 
@@ -446,59 +448,17 @@ class Knowledge extends Feature {
   /* -- what to look at --------------------------------------------- */
 
   /**
-   * Relationships worth a look, for the library's check: hierarchies that
-   * lead round to where they began, links that lead nowhere, one listed
-   * twice, a link implied already through another, two kinds of
-   * hierarchy to one note, support and contradiction of one note. A
-   * note under several broader ones is fine, so isn't listed.
+   * Relationships worth a look, for the library's check: the errors and
+   * what's worth a look from the knowledge check (261), one row a note —
+   * not the modelling choices, nor what's been marked as meant.
    */
   problems() {
-    const idx = this.index();
+    const kinds = { broken: 'relation-missing', repeat: 'relation-twice', both: 'relation-twice', cycle: 'relation-loop', redundant: 'relation-implied', conflict: 'relation-roles', oppose: 'relation-roles', folder: 'relation-roles', parents: 'relation-parents', orphan: 'relation-orphan', broader: 'relation-broader' };
     const out = [];
-    const add = (target, kind, problem) => out.push({ target, kind, problem });
-    idx.broken.forEach((b) => add(b.file, 'relation-missing', `Its ${b.kind.prop} names “${b.name}”, which isn’t there`));
-    idx.twice.forEach((t) => add(t.file, 'relation-twice', `Lists ${t.target.basename} twice in its ${t.kind.prop}`));
-    const up = (file) => (idx.out.get(file.path) || []).filter((r) => r.kind.category === 'hierarchy').map((r) => r.file);
-    this.app.vault.getMarkdownFiles().forEach((file) => {
-      const mine = idx.out.get(file.path) || [];
-      if (!mine.length) return;
-      // Round in a circle.
-      const seen = new Set();
-      const stack = up(file).slice();
-      let looped = false;
-      while (stack.length && !looped) {
-        const f = stack.pop();
-        if (f === file) looped = true;
-        else if (!seen.has(f)) {
-          seen.add(f);
-          stack.push(...up(f));
-        }
-      }
-      if (looped) add(file, 'relation-loop', 'What it comes under leads back round to it');
-      // Said directly, and implied already through another.
-      mine.filter((r) => r.kind.category === 'hierarchy').forEach((r) => {
-        const via = mine.find((o) => o !== r && o.kind.prop === r.kind.prop && (idx.out.get(o.file.path) || []).some((x) => x.kind.prop === r.kind.prop && x.file === r.file));
-        if (via) add(file, 'relation-implied', `${r.kind.name} ${r.file.basename} directly, and through ${via.file.basename} already`);
-      });
-      // Two roles at odds, towards one note.
-      const byTarget = new Map();
-      mine.forEach((r) => byTarget.set(r.file, (byTarget.get(r.file) || []).concat(r.kind)));
-      byTarget.forEach((kinds, target) => {
-        const hier = kinds.filter((k) => k.category === 'hierarchy');
-        if (hier.length > 1) add(file, 'relation-roles', `Both ${hier.map((k) => k.name).join(' and ')} ${target.basename}`);
-        if (kinds.some((k) => /^support/.test(k.name)) && kinds.some((k) => /^contra/.test(k.name))) add(file, 'relation-roles', `Both supports and contradicts ${target.basename}`);
-      });
+    knowledgeFindings(this).forEach((f) => {
+      if (f.level === 'choice') return;
+      (f.type === 'cycle' ? f.notes : [f.subject]).forEach((target) => out.push({ target, kind: kinds[f.type] || 'relation-roles', problem: f.text }));
     });
-    // In a concept map album, yet tied to nothing.
-    const structure = this.plugin.feature(AlbumStructure);
-    if (structure && structure.enabled) {
-      this.app.vault.getMarkdownFiles().forEach((file) => {
-        if (!file.parent || this.plugin.isFolderNote(file)) return;
-        if (structure.info(file.parent).type !== 'concept map') return;
-        const rel = this.relationsOf(file);
-        if (!rel.out.length && !rel.in.length) add(file, 'relation-orphan', 'In a concept map, but related to nothing');
-      });
-    }
     return out;
   }
 
