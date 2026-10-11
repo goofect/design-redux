@@ -113,19 +113,12 @@ class ContextStrip extends Feature {
     ];
   }
 
-  /** The note on the page, if the page is a note. */
-  pageFile() {
-    const leaf = pageLeaf(this.app);
-    const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    return view && !(view instanceof BrowseView) && view.file instanceof TFile ? view.file : null;
-  }
-
   /**
    * The note before or after this one in its album, opened in the same
    * page. The strip's » takes Up Next's first before the album's next.
    */
   skip(dir, albumOnly) {
-    const file = this.pageFile();
+    const file = pageFile(this.app);
     if (!file) return false;
     const queued = dir === 'next' && !albumOnly ? this.queuedAfter(file) : null;
     if (queued) {
@@ -519,7 +512,7 @@ class ContextStrip extends Feature {
 
   /** « or »: the note before or after this one — Up Next's first, for ». */
   skipButton(parent, near, dir) {
-    const queued = dir === 'next' ? this.queuedAfter(this.pageFile()) : null;
+    const queued = dir === 'next' ? this.queuedAfter(pageFile(this.app)) : null;
     const target = queued || near[dir];
     const word = queued ? 'Up Next' : dir === 'previous' ? 'Previous' : 'Next';
     const el = parent.createDiv({ cls: 'clickable-icon dr-strip-btn dr-strip-skip' });

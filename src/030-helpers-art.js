@@ -826,6 +826,13 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
   showMenuAt(menu, evt);
 }
 
+/** The note on the page, if the page is a note (not a screen of the browse view). */
+function pageFile(app) {
+  const leaf = pageLeaf(app);
+  const view = leaf && !leaf.isDeferred ? leaf.view : null;
+  return view && !isBrowseView(view) && view.file instanceof TFile ? view.file : null;
+}
+
 /** Whether a view is the browse view: known by its type, so a helper needn't know the class. */
 function isBrowseView(view) {
   return !!view && typeof view.getViewType === 'function' && view.getViewType() === BROWSE_VIEW;

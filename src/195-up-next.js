@@ -39,7 +39,7 @@ class UpNext extends Feature {
     const queueable = (ctx) => this.enabled && QUEUED_KINDS.indexOf(ctx.file.extension) !== -1 && !this.plugin.isFolderNote(ctx.file);
     const notes = (ctx) => (this.enabled ? this.notesOf(ctx.folder) : []);
     return [
-      { id: 'up-next-open', name: 'Open the next note in Up Next', icon: 'list-start', when: () => this.enabled && !!this.queue.peek(this.pageFile()), run: () => this.openNext() },
+      { id: 'up-next-open', name: 'Open the next note in Up Next', icon: 'list-start', when: () => this.enabled && !!this.queue.peek(pageFile(this.app)), run: () => this.openNext() },
       { id: 'up-next-read-next', name: 'Read next', icon: 'list-start', on: 'file', palette: false, when: queueable, run: (ctx) => this.enqueue([ctx.file], true) },
       { id: 'up-next-add', name: 'Add this note to Up Next', menu: 'Add to Up Next', icon: 'list-end', on: 'file', when: (ctx) => queueable(ctx) && !this.queue.has(ctx.file), run: (ctx) => this.enqueue([ctx.file], false) },
       { id: 'up-next-remove', name: 'Remove from Up Next', icon: 'list-x', on: 'file', palette: false, when: (ctx) => queueable(ctx) && this.queue.has(ctx.file), run: (ctx) => this.queue.remove(ctx.file) },
@@ -95,13 +95,6 @@ class UpNext extends Feature {
     if (!this.plugin.unloading) this.refresh();
   }
 
-  /** The note on the page, if the page is a note. */
-  pageFile() {
-    const leaf = pageLeaf(this.app);
-    const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    return view && !(view instanceof BrowseView) && view.file instanceof TFile ? view.file : null;
-  }
-
   /** The strip and album pages, which show the queue and Shuffle. */
   refresh() {
     const strip = this.plugin.feature(ContextStrip);
@@ -148,7 +141,7 @@ class UpNext extends Feature {
 
   /** The first queued note, opened in the page. */
   openNext() {
-    const target = this.queue.peek(this.pageFile());
+    const target = this.queue.peek(pageFile(this.app));
     if (!target) return false;
     this.open(target);
     return true;
@@ -185,7 +178,7 @@ class UpNext extends Feature {
       order[j] = t;
     }
     // Not the note already open, if there's anything else to start on.
-    const here = this.pageFile();
+    const here = pageFile(this.app);
     if (order.length > 1 && order[0] === here) order.push(order.shift());
     const first = order.shift();
     const was = this.queue.paths().slice();
