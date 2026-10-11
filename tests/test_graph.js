@@ -383,6 +383,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     suggest.selectSuggestion(found[1]);
     assert.strictEqual(line, 'Typed [[[Deterrence]]]');
     assert.deepStrictEqual(editor.cursor, { line: 0, ch: 22 });
+    // A letter typed after the list was asked for: taken in too, not left behind.
+    line = 'Typed [[[Det]]]';
+    editor.getCursor = () => ({ line: 0, ch: 12 });
+    suggest.context = { editor, file: null, start: { line: 0, ch: 9 }, end: { line: 0, ch: 11 } };
+    suggest.selectSuggestion(found[1]);
+    assert.strictEqual(line, 'Typed [[[Deterrence]]]');
   });
 
   await t("what Obsidian already counted is taken back — a stray \"[Name\" note too — and counted again when switched off", () => {

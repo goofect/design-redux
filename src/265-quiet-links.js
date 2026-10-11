@@ -475,10 +475,15 @@ class QuietLinkSuggest extends (EditorSuggest || class {}) {
     const linktext = this.app.metadataCache.fileToLinktext(item.file, source, true);
     const text =
       item.kind === 'heading' ? `${linktext}#${item.heading}` : item.kind === 'alias' ? `${linktext}|${item.alias}` : linktext;
+    // Typed on since the list was last asked for — a fast hand, a slow
+    // older Obsidian: up to where the cursor is now, not where it was.
+    const cursor = typeof editor.getCursor === 'function' ? editor.getCursor() : null;
+    const now = cursor && cursor.line === context.start.line ? this.onTrigger(cursor, editor) : null;
+    const end = now && now.start.ch === context.start.ch ? now.end : context.end;
     // Closing brackets Obsidian may already have paired: kept, not doubled.
-    const after = editor.getLine(context.end.line).slice(context.end.ch);
+    const after = editor.getLine(end.line).slice(end.ch);
     const closing = (/^\]{0,3}/.exec(after) || [''])[0].length;
-    editor.replaceRange(`${text}]]]`, context.start, { line: context.end.line, ch: context.end.ch + closing });
+    editor.replaceRange(`${text}]]]`, context.start, { line: end.line, ch: end.ch + closing });
     editor.setCursor({ line: context.start.line, ch: context.start.ch + text.length + 3 });
     this.close();
   }
