@@ -30,7 +30,7 @@ const LIBRARY_BUILTINS = {
 };
 
 /* How large covers are on screens of tiles. */
-const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Large' };
+const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Comfortable' };
 
 /* How screens of albums group their covers. */
 const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of album', collection: 'Collection' };
@@ -163,6 +163,8 @@ const DEFAULTS = {
   canvasFind: true,
   // Dim everything but a card's branch.
   canvasFocus: true,
+  // One card selected: what's not joined to it faded a little.
+  canvasFocusSelect: false,
   // Copy a card with everything its arrows lead to.
   canvasDuplicate: true,
   // { canvasPath: { cardId: 'center' } }

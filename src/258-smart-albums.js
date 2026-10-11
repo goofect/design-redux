@@ -30,7 +30,7 @@ class SmartScreen extends BrowseScreen {
     const album = this.album();
     if (!album) {
       view.renderTitleBar(root, 'Smart album');
-      root.createDiv({ cls: 'dr-empty', text: 'This smart album isn’t there any more.' });
+      view.emptyState(root, 'This smart album isn’t there any more.', 'sparkles');
       return;
     }
     // Its filters, once on arriving; after that the chips are yours to change.
@@ -65,7 +65,7 @@ class SmartScreen extends BrowseScreen {
       view.action(actions, 'ellipsis', 'More', (evt) => smart.menu(evt, view, album));
     }
     if (!files.length) {
-      root.createDiv({ cls: 'dr-empty', text: 'Nothing matches' });
+      view.emptyState(root, 'Nothing matches its filters', 'sparkles');
       return;
     }
     view.renderDiscs(root, smart.discs(album, files, view), null);

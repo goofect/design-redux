@@ -167,6 +167,11 @@ function fillArt(el, src, glyph, gen, look) {
   const img = el.createEl('img');
   img.src = src;
   img.alt = '';
+  // Not here yet: eased in once it is. One the browser has already shows at once.
+  if (!img.complete) {
+    img.addClass('is-arriving');
+    img.addEventListener('load', () => img.removeClass('is-arriving'), { once: true });
+  }
   img.addEventListener('error', () => {
     img.remove();
     blank();

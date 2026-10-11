@@ -61,7 +61,7 @@ class FolderScreen extends BrowseScreen {
       const shows = !!(structure && structure.enabled);
       if (shows) structure.renderCollectionHead(root, folder, view, subfolders.length);
       if (!folders.length) {
-        root.createDiv({ cls: 'dr-empty', text: 'No folders' });
+        view.emptyState(root, 'No folders', 'folder', view.clearAction());
         return;
       }
       // A collection asked to open as a list: its albums as a tree.
@@ -95,7 +95,10 @@ class FolderScreen extends BrowseScreen {
       albums.forEach((f) => view.folderCard(grid, f));
     }
     if (!all.length && !view.editing) {
-      if (!albums.length) root.createDiv({ cls: 'dr-empty', text: this.emptyText(about) });
+      if (!albums.length) {
+        const add = folder.isRoot && folder.isRoot() ? null : ['New note', () => this.plugin.newNote(folder)];
+        view.emptyState(root, this.emptyText(about), 'folder-open', view.clearAction() || add);
+      }
       view.renderMoreIn(root, folder);
       return;
     }
@@ -354,7 +357,7 @@ class FoldersScreen extends BrowseScreen {
     );
 
     if (!shown.length) {
-      root.createDiv({ cls: 'dr-empty', text: 'No folders' });
+      view.emptyState(root, 'No folders', 'folder', view.clearAction());
       return;
     }
 
@@ -382,7 +385,7 @@ class NotesScreen extends BrowseScreen {
     );
 
     if (!notes.length) {
-      root.createDiv({ cls: 'dr-empty', text: 'No notes' });
+      view.emptyState(root, 'No notes', 'file-text', view.clearAction());
       return;
     }
 
@@ -689,10 +692,7 @@ class CollectionScreen extends BrowseScreen {
     const orderedFolders = view.keepsOwnOrder() ? folders : view.sortFolders(folders);
 
     if (!files.length && !folders.length) {
-      root.createDiv({
-        cls: 'dr-empty',
-        text: this.pinned ? 'Nothing pinned yet' : 'Nothing opened yet',
-      });
+      view.emptyState(root, this.pinned ? 'Nothing pinned yet' : 'Nothing opened yet', this.pinned ? 'pin' : 'clock', view.clearAction());
       return;
     }
 

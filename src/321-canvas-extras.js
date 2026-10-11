@@ -162,6 +162,12 @@ class CanvasFocus extends CanvasFeature {
         name: 'Focus on a branch',
         desc: 'Dim everything but a card’s branch, or the cards round it, from its right-click menu. + and − widen or narrow it; Escape ends it.',
       },
+      {
+        key: 'canvasFocusSelect',
+        showIf: 'canvasFocus',
+        name: 'Quieten what’s unrelated to the selected card',
+        desc: 'With one card selected, cards and arrows not joined to it fade a little, so what it connects to stands out.',
+      },
     ];
   }
 
@@ -243,22 +249,36 @@ class CanvasFocus extends CanvasFeature {
     this.pass(view, state);
   }
 
-  /** Each redraw: what's in the branch lit, the rest dimmed — cards drawn later too. */
+  /**
+   * Each redraw: what's in the branch lit, the rest dimmed — cards drawn
+   * later too. With no focus asked for, and the setting on, one card
+   * selected lights it and the cards joined to it, the rest faded a little.
+   */
   pass(view, state) {
     const host = view.contentEl;
-    if (!state || !state.focus) {
+    if (!state) return;
+    let ids = state.focus;
+    let near = state.near;
+    const soft = !ids && !!this.settings.canvasFocusSelect;
+    if (soft) {
+      const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
+      ids = picked.length === 1 && !picked[0].isEditing ? [picked[0].id] : null;
+      near = 1;
+    }
+    if (!ids) {
       if (host.hasClass('dr-branch-focus')) this.cleanup(view);
       return;
     }
     const model = canvasModel(view.canvas);
-    const ids = state.focus.filter((id) => model.byId.has(id));
-    const lit = new Set(state.near ? neighbourhood(model, ids, state.near) : branchWithin(model, ids));
-    if (!lit.size) {
-      state.focus = null;
+    ids = ids.filter((id) => model.byId.has(id));
+    const lit = new Set(near ? neighbourhood(model, ids, near) : branchWithin(model, ids));
+    if (!lit.size || (soft && lit.size < 2)) {
+      if (!soft) state.focus = null;
       this.cleanup(view);
       return;
     }
     host.addClass('dr-branch-focus');
+    host.toggleClass('is-soft', soft);
     model.nodes.forEach((rec) => {
       if (rec.node && rec.node.nodeEl) rec.node.nodeEl.toggleClass('dr-focus-lit', lit.has(rec.id));
     });
@@ -276,12 +296,14 @@ class CanvasFocus extends CanvasFeature {
     if (state && state.onKey && view.containerEl) view.containerEl.removeEventListener('keydown', state.onKey);
     const host = view.contentEl;
     if (!host) return;
-    host.removeClass('dr-branch-focus');
+    host.removeClass('dr-branch-focus', 'is-soft');
     host.querySelectorAll('.dr-focus-lit').forEach((el) => el.classList.remove('dr-focus-lit'));
   }
 }
 
 CanvasFocus.settingKey = 'canvasFocus';
+// A selection made by a click or a key changes no element the watcher sees.
+CanvasFocus.watchInput = true;
 
 /* -- duplicate ------------------------------------------------------------------ */
 

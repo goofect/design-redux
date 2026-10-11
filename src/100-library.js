@@ -140,8 +140,10 @@ class LibraryView extends ItemView {
       roveFocus(list, '.dr-lib-row');
       (section.items || []).forEach((item) => this.renderItem(list, item));
     });
-    const shown = root.innerHTML.replace(/ is-active/g, '').replace(/ tabindex="-?\d+"/g, '');
-    if (fresh.innerHTML.replace(/ tabindex="-?\d+"/g, '') !== shown) {
+    // What's marked or still arriving isn't a difference in what's listed.
+    const norm = (html) => html.replace(/ is-active/g, '').replace(/ tabindex="-?\d+"/g, '').replace(/ ?is-arriving/g, '').replace(/ class=""/g, '');
+    this.containerEl.dataset.drDensity = this.plugin.settings.gridDensity || 'standard';
+    if (norm(fresh.innerHTML) !== norm(root.innerHTML)) {
       root.empty();
       while (fresh.firstChild) root.appendChild(fresh.firstChild);
     }

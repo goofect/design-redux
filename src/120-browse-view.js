@@ -1268,6 +1268,33 @@ class BrowseView extends ItemView {
     });
   }
 
+  /** Where a screen has nothing: a quiet icon, why, and at most one thing to do. */
+  emptyState(root, text, icon, action) {
+    const box = root.createDiv({ cls: 'dr-empty' });
+    if (icon) setIcon(box.createSpan({ cls: 'dr-empty-icon', attr: { 'aria-hidden': 'true' } }), icon);
+    box.createSpan({ cls: 'dr-empty-text', text });
+    if (action) {
+      const button = box.createSpan({ cls: 'dr-empty-action', text: action[0] });
+      button.setAttribute('role', 'button');
+      button.setAttribute('tabindex', '0');
+      onActivate(button, action[1]);
+    }
+    return box;
+  }
+
+  /** Clear filters, where Find or a filter is why nothing shows; otherwise none. */
+  clearAction() {
+    if (!this.query.trim() && !this.hasFilters()) return null;
+    return [
+      'Clear filters',
+      () => {
+        this.clearFilters();
+        this.query = '';
+        this.render();
+      },
+    ];
+  }
+
   /** The smart album on screen, if it's one. */
   smartAlbum() {
     const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;

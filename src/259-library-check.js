@@ -108,7 +108,7 @@ class InboxScreen extends BrowseScreen {
     // Only what's still here can stay picked.
     Array.from(picked).forEach((p) => notes.some((f) => f.path === p) || picked.delete(p));
     if (!notes.length) {
-      root.createDiv({ cls: 'dr-empty', text: 'Every note is in an album.' });
+      view.emptyState(root, 'Every note is in an album.', 'inbox');
       return;
     }
     root.createDiv({ cls: 'dr-report-lead', text: 'Notes in no album. Pick some, then move them into one, or show them in one where they are.' });

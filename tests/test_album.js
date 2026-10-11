@@ -1128,10 +1128,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     fms.set(plans, { album: 'project' });
     Object.assign(view, { path: 'Plans' });
     view.render();
-    assert.deepStrictEqual(text('.dr-empty'), ['Nothing in this project yet']);
+    assert.deepStrictEqual(text('.dr-empty-text'), ['Nothing in this project yet']);
+    assert.deepStrictEqual(text('.dr-empty-action'), ['New note'], 'one thing to do');
     view.query = 'zzz';
     view.render();
-    assert.deepStrictEqual(text('.dr-empty'), ['Nothing matches']);
+    assert.deepStrictEqual(text('.dr-empty-text'), ['Nothing matches']);
+    assert.deepStrictEqual(text('.dr-empty-action'), ['Clear filters']);
   });
 
   await t('covers grouped by kind or collection; a shelf’s albums put in your own order, kept by name', async () => {
