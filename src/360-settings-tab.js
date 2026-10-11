@@ -23,6 +23,7 @@ const SETTINGS_TABS = [
     sections: [
       { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'gridDensity', 'tileGroups', 'tableColumns', 'categoryProperty'] },
+      { title: 'Relationships', keys: ['knowledge'] },
       { title: 'Albums', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
       { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },

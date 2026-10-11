@@ -831,6 +831,10 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
     else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
   }
+  if (!isFolder && typeof Knowledge === 'function' && typeof plugin.feature === 'function') {
+    const knowledge = plugin.feature(Knowledge);
+    if (knowledge) knowledge.addFileItems(menu, target, sectioned);
+  }
   if (isFolder && typeof AlbumRefactor === 'function' && typeof plugin.feature === 'function') {
     const refactor = plugin.feature(AlbumRefactor);
     if (refactor) refactor.addFolderItems(menu, target, sectioned);

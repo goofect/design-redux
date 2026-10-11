@@ -28,6 +28,7 @@ class DesignRedux extends Plugin {
       new ImageRouter(this),
       new PropertyClipboard(this),
       new AlbumProperty(this),
+      new Knowledge(this),
       new AlbumStructure(this),
       new SmartAlbums(this),
       new LibraryCheck(this),

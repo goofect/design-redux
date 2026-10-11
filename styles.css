@@ -1635,6 +1635,31 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   opacity: 0.35;
 }
 
+/* A note's relationships: its cover and name, the way up above it. */
+.dr-concept-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--dr-space-5);
+  margin: var(--dr-space-2) 0 var(--dr-space-5);
+}
+
+.dr-concept-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-md);
+  background-color: var(--background-secondary);
+}
+
+.dr-concept-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

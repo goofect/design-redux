@@ -65,6 +65,8 @@ const DEFAULTS = {
   // An album sorted from its filter button keeps that order, by its path.
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
+  // Relationships kept in notes as properties named for the canvas's kinds of relationship.
+  knowledge: true,
   albumStructure: true,
   // Other names for the folder note properties albums are read from: { type, description, includes, related, featured, layout }.
   albumKeyNames: {},

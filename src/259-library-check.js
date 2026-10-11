@@ -22,6 +22,7 @@ const LIBRARY_SECTIONS = [
   { id: 'hierarchy', title: 'Hierarchy' },
   { id: 'overlap', title: 'Duplicates and overlaps' },
   { id: 'coverage', title: 'Coverage and balance' },
+  { id: 'relations', title: 'Relationships' },
 ];
 
 /* Albums sharing at least this many notes, and this much of the smaller one, overlap. */
@@ -341,6 +342,10 @@ class LibraryCheck extends Feature {
         })
       );
     }
+
+    // -- relationships between notes, as they hold them
+    const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
+    if (knowledge && knowledge.enabled) knowledge.problems().forEach((p) => add('relations', p.target, p.kind, p.problem));
 
     // -- coverage and balance
     folders.forEach((folder) => {

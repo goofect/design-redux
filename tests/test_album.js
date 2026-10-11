@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Knowledge };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1502,6 +1502,65 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([linky.path, tagged.path], ['IR/Linky.md', 'Law/Tagged.md']);
     await undo();
     assert.deepStrictEqual([linky.path, tagged.path], ['Linky.md', 'Tagged.md']);
+  });
+
+  await t('relationships kept in notes: read both ways, explored, added and removed with Undo, looked over, mapped', async () => {
+    const { v, plugin, app, view } = setup();
+    v.folder('Ideas');
+    const f = (n) => v.vault.getFileByPath(`Ideas/${n}.md`) || v.file(`Ideas/${n}.md`);
+    const [gov, parl, pres, fusion, sep, rule] = ['Government', 'Parliamentarism', 'Presidentialism', 'Fusion of powers', 'Separation of powers', 'Rule of law'].map(f);
+    const fms = new Map([
+      [parl, { 'is a type of': '[[Government]]', 'contrasts with': ['[[Presidentialism]]'] }],
+      [pres, { 'is a type of': '[[Government]]' }],
+      [fusion, { parent: '[[Parliamentarism]]', 'is part of': ['[[Parliamentarism]]', '[[Parliamentarism]]', '[[Gone]]'] }],
+      [sep, { parent: '[[Presidentialism]]', 'is a type of': ['[[Presidentialism]]', '[[Government]]'] }],
+      [gov, { parent: '[[Rule of law]]' }],
+      [rule, { parent: '[[Government]]' }],
+    ]);
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
+    app.metadataCache.fileToLinktext = (x) => x.basename;
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    const k = new R.Knowledge(plugin);
+    plugin.feature = (C) => (C === R.Knowledge ? k : null);
+    // Read both ways: what a note says, and what's said of it.
+    const groups = (file) => k.groups(file).map((g) => [g.label, g.items.map((i) => i.file.basename)]);
+    assert.deepStrictEqual(groups(gov), [['Sits under', ['Rule of law']], ['Holds', ['Rule of law']], ['Has type', ['Parliamentarism', 'Presidentialism', 'Separation of powers']]]);
+    assert.deepStrictEqual(groups(parl).map((g) => g[0]), ['Holds', 'Is a type of', 'Has part', 'Contrasts with']);
+    assert.deepStrictEqual(k.broaderChain(fusion).map((x) => x.basename), ['Rule of law', 'Government', 'Parliamentarism'], 'up until it would go round');
+    // Explored: a screen of them, a step at a time.
+    Object.assign(view, { mode: 'concept', property: parl.path });
+    view.render();
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    assert.deepStrictEqual(text('.dr-detail-title'), ['Parliamentarism']);
+    assert.deepStrictEqual(text('.dr-crumb'), ['Rule of law', 'Government']);
+    assert.ok(text('.dr-report-head').some((h) => h.startsWith('Contrasts with')));
+    // Added and removed, each with Undo.
+    k.cache = null;
+    assert.strictEqual(await k.add(rule, k.kindNamed('supports'), parl), true);
+    assert.deepStrictEqual(fms.get(rule).supports, ['[[Parliamentarism]]']);
+    await undo();
+    assert.ok(!('supports' in fms.get(rule)));
+    assert.strictEqual(await k.remove(parl, k.kindNamed('contrasts with'), pres), true);
+    assert.ok(!('contrasts with' in fms.get(parl)));
+    await undo();
+    assert.deepStrictEqual(fms.get(parl)['contrasts with'], ['[[Presidentialism]]']);
+    // Looked over: a circle, one twice, one missing, one implied already, two hierarchies to one note.
+    k.cache = null;
+    const found = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
+    ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied', 'Fusion of powers: relation-roles'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
+    // Mapped: it at the centre, each arrow labelled and given its kind.
+    let made = null;
+    app.vault.create = async (path, data) => { made = { path, data: JSON.parse(data) }; return { path }; };
+    plugin.freeChildPath = (folder, base, ext) => `${folder.path}/${base}.${ext}`;
+    await k.map(parl);
+    assert.strictEqual(made.path, 'Ideas/Parliamentarism relationships.canvas');
+    assert.strictEqual(made.data.nodes[0].file, parl.path);
+    const labels = made.data.edges.map((e) => e.label).sort();
+    assert.deepStrictEqual(labels, ['contrasts with', 'has part', 'has type', 'holds']);
+    assert.ok(made.data.edges.every((e) => e.drRelation && e.drRelation.kind));
   });
 
   console.log(`\n${passed} passed`);

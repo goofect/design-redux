@@ -71,7 +71,7 @@ const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
-  'tuckedBBox, selectionLinks, cardRole, ' +
+  'tuckedBBox, selectionLinks, cardRole, Knowledge, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
   'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
@@ -1181,6 +1181,47 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(['r', 'x', 'y'].map((id) => [n(id).x, n(id).y]), still, 'nothing else moves');
     assert.strictEqual(n('a').y, -100, 'the first in reading order stays');
     assert.ok(n('b').y > n('a').y && n('c').y > n('a').y && n('b').y === n('c').y, 'the others set out below it');
+  });
+
+  await t('a canvas and its notes’ relationships, both ways: arrows with a kind written into the notes, and notes’ relationships drawn as arrows', async () => {
+    const files = {};
+    ['Government', 'Parliamentarism', 'Courts'].forEach((n) => (files[`Ideas/${n}.md`] = { path: `Ideas/${n}.md`, basename: n, extension: 'md' }));
+    const view = fakeCanvas({
+      nodes: [card('g', 0, 0, 200, 60, { type: 'file', file: 'Ideas/Government.md' }), card('p', 300, 0, 200, 60, { type: 'file', file: 'Ideas/Parliamentarism.md' }), card('c', 300, 200, 200, 60, { type: 'file', file: 'Ideas/Courts.md' }), card('t', 0, 300, 200, 60)],
+      edges: [edge('g', 'p', 'right', 'left')],
+    });
+    const ge = view.canvas.edges.get('g-p');
+    ge.unknownData = { drRelation: { kind: 'is a type of', subject: 'p', object: 'g' } };
+    const fms = new Map([[files['Ideas/Courts.md'], { supports: '[[Parliamentarism]]' }]]);
+    const app = {
+      vault: { getFileByPath: (p) => files[p] || null, getMarkdownFiles: () => Object.values(files) },
+      metadataCache: {
+        getFileCache: (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null),
+        getFirstLinkpathDest: (l) => Object.values(files).find((f) => f.basename === l) || null,
+        fileToLinktext: (f) => f.basename,
+        on: () => ({}),
+      },
+      fileManager: { processFrontMatter: async (f, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(f) || {})); fn(fm); fms.set(f, fm); } },
+      workspace: { trigger() {} },
+    };
+    let undo = null;
+    const rel = new R.CanvasRelations({ settings: { canvasRelations: true }, app });
+    const p = { settings: { knowledge: true, graphRouteProperty: 'parent' }, app, feature: (C) => (C === R.CanvasRelations ? rel : null), offerUndo: (m, fn) => { undo = fn; }, refreshBrowse() {} };
+    rel.plugin = p;
+    const k = new R.Knowledge(p);
+    // Canvas into notes: the subject note says it.
+    assert.strictEqual(await k.writeFromCanvas(view), 1);
+    assert.deepStrictEqual(fms.get(files['Ideas/Parliamentarism.md'])['is a type of'], ['[[Government]]']);
+    assert.strictEqual(await k.writeFromCanvas(view), 0, 'in them already');
+    await undo();
+    assert.ok(!('is a type of' in fms.get(files['Ideas/Parliamentarism.md'])));
+    // Notes onto the canvas: an arrow for each relationship not drawn, labelled and given its kind.
+    let imported = null;
+    view.canvas.importData = (d) => { imported = d; };
+    k.cache = null;
+    assert.strictEqual(k.drawOnCanvas(view), 1);
+    const drawn = imported.edges[0];
+    assert.deepStrictEqual([drawn.fromNode, drawn.toNode, drawn.label, drawn.drRelation.kind, drawn.drRelated], ['c', 'p', 'supports', 'supports', true]);
   });
 
   await t('an arrow given a meaning: a kind — hierarchy in the branch, association out — or a proposition, turned round and listed; one just made related is dashed', async () => {
