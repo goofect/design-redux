@@ -206,6 +206,9 @@ function setup() {
   };
   plugin.pins = { files: () => [], folders: () => [], all: () => [], has: () => false };
   plugin.orders = new R.Orders(plugin);
+  // The album features reached through the plugin, as in Obsidian.
+  plugin.albumInfo = R.DesignRedux.prototype.albumInfo.bind(plugin);
+  plugin.addAlbumMenuItems = R.DesignRedux.prototype.addAlbumMenuItems.bind(plugin);
   const app = {
     vault: v.vault,
     fileManager: v.fileManager,

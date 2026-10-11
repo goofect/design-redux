@@ -151,6 +151,24 @@ class DesignRedux extends Plugin {
     this.each((f) => f.disable());
   }
 
+  /** An album's info from its folder note — its kind and label — or null: asked by helpers below the album features. */
+  albumInfo(folder) {
+    const structure = this.feature(AlbumStructure);
+    return structure ? structure.info(folder) : null;
+  }
+
+  /** The album features' entries on a folder's or a note's menu, in this order. */
+  addAlbumMenuItems(menu, target, sectioned, redraw) {
+    const isFolder = target instanceof TFolder;
+    const structure = this.feature(AlbumStructure);
+    if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
+    else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
+    const knowledge = this.feature(Knowledge);
+    if (knowledge && !isFolder) knowledge.addFileItems(menu, target, sectioned);
+    const refactor = this.feature(AlbumRefactor);
+    if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
+  }
+
   /** Ask for an image and record it on the note itself. */
   setNoteCover(file) {
     const covers = this.feature(CoverImages);

@@ -1,9 +1,4 @@
 {
- "030-helpers-art": [
-  "AlbumRefactor",
-  "AlbumStructure",
-  "Knowledge"
- ],
  "100-library": [
   "SmartAlbums"
  ],

@@ -212,8 +212,7 @@ function drawFolderArt(plugin, el, folder) {
 
 /** An album's kind, from its folder note, or null. */
 function albumKindOf(plugin, folder) {
-  const structure = folder && typeof AlbumStructure === 'function' && typeof plugin.feature === 'function' ? plugin.feature(AlbumStructure) : null;
-  const info = structure ? structure.info(folder) : null;
+  const info = folder && typeof plugin.albumInfo === 'function' ? plugin.albumInfo(folder) : null;
   return info && info.type ? ALBUM_TYPES.find((t) => t.id === info.type) || { id: info.type, label: info.label, icon: 'folder', color: ALBUM_KIND_NEUTRAL } : null;
 }
 
@@ -782,19 +781,8 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
     }, 'action');
   }
 
-  if (typeof AlbumStructure === 'function' && typeof plugin.feature === 'function') {
-    const structure = plugin.feature(AlbumStructure);
-    if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
-    else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
-  }
-  if (!isFolder && typeof Knowledge === 'function' && typeof plugin.feature === 'function') {
-    const knowledge = plugin.feature(Knowledge);
-    if (knowledge) knowledge.addFileItems(menu, target, sectioned);
-  }
-  if (isFolder && typeof AlbumRefactor === 'function' && typeof plugin.feature === 'function') {
-    const refactor = plugin.feature(AlbumRefactor);
-    if (refactor) refactor.addFolderItems(menu, target, sectioned);
-  }
+  // The album features' own entries, through the plugin: this helper is below them.
+  if (typeof plugin.addAlbumMenuItems === 'function') plugin.addAlbumMenuItems(menu, target, sectioned, redraw);
 
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.
