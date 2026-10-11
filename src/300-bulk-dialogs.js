@@ -3,6 +3,34 @@
  * what will happen that updates as you type, and the button that does
  * it, which says how many notes it will change.
  */
+/** Conditions a note must meet to be among a dialog's notes. */
+const WHERE_OPS = {
+  is: 'is',
+  not: 'is not',
+  contains: 'contains',
+  has: 'has a value',
+  lacks: 'has no value',
+};
+
+/** Whether a condition is filled in enough to count. */
+function whereReady(row) {
+  if (!row.key || !row.key.trim()) return false;
+  return row.op === 'has' || row.op === 'lacks' || plainValue(row.value || '') !== '';
+}
+
+/** Whether a note's properties meet a condition: any item of a list will do; case doesn't count. */
+function whereHolds(fm, row) {
+  const low = row.key.trim().toLowerCase();
+  const name = Object.keys(fm || {}).find((k) => k.toLowerCase() === low);
+  const values = name === undefined ? [] : valueList(fm[name]).map((v) => plainValue(v).toLowerCase()).filter((v) => v !== '');
+  const want = plainValue(row.value || '').toLowerCase();
+  if (row.op === 'has') return values.length > 0;
+  if (row.op === 'lacks') return !values.length;
+  if (row.op === 'contains') return values.some((v) => v.includes(want));
+  const is = values.indexOf(want) !== -1;
+  return row.op === 'not' ? !is : is;
+}
+
 class BulkModal extends Modal {
   constructor(plugin) {
     super(plugin.app);
@@ -15,6 +43,21 @@ class BulkModal extends Modal {
     this.action = null;
     this.targets = [];
     this.reach = 'deep';
+    // Only notes meeting these, less the ones left out from the summary.
+    this.where = [];
+    this.excluded = new Set();
+  }
+
+  /** The notes in the folders and notes chosen that meet the conditions, less any left out. */
+  notes() {
+    const rows = this.where.filter(whereReady);
+    return this.bulk.notesFor(this.targets, this.reach).filter((file) => {
+      if (this.excluded.has(file.path)) return false;
+      if (!rows.length) return true;
+      const cache = this.app.metadataCache.getFileCache(file);
+      const fm = (cache && cache.frontmatter) || {};
+      return rows.every((row) => whereHolds(fm, row));
+    });
   }
 
   frame(title) {
@@ -51,8 +94,73 @@ class BulkModal extends Modal {
     where.addClass('is-where');
     this.targetsEl = where.createDiv({ cls: 'dr-bulk-chips' });
     this.scopeEl = where.createDiv({ cls: 'dr-bulk-option' });
+    this.whereEl = where.createDiv({ cls: 'dr-bulk-where' });
     this.renderTargets();
+    this.renderWhere();
     return where;
+  }
+
+  /** The conditions, a row each — property, how, value — and a way to add one. */
+  renderWhere() {
+    const el = this.whereEl;
+    if (!el) return;
+    el.empty();
+    this.where.forEach((row, i) => {
+      const line = el.createDiv({ cls: 'dr-bulk-where-row' });
+      line.createSpan({ cls: 'dr-bulk-where-word', text: i ? 'and' : 'where' });
+      const key = line.createEl('input', { type: 'text', cls: 'dr-bulk-where-key' });
+      key.placeholder = 'property';
+      key.value = row.key;
+      key.setAttribute('aria-label', 'Property');
+      key.setAttribute('autocomplete', 'off');
+      key.setAttribute('spellcheck', 'false');
+      key.addEventListener('input', () => {
+        row.key = key.value;
+        this.queueUpdate();
+      });
+      const op = line.createEl('select', { cls: 'dropdown dr-bulk-where-op' });
+      Object.entries(WHERE_OPS).forEach(([value, label]) => {
+        const option = op.createEl('option', { text: label });
+        option.value = value;
+      });
+      op.value = row.op;
+      op.setAttribute('aria-label', 'How');
+      const value = line.createEl('input', { type: 'text', cls: 'dr-bulk-where-value' });
+      value.placeholder = 'value';
+      value.value = row.value;
+      value.setAttribute('aria-label', 'Value');
+      value.toggleClass('is-hidden', row.op === 'has' || row.op === 'lacks');
+      value.addEventListener('input', () => {
+        row.value = value.value;
+        this.queueUpdate();
+      });
+      op.addEventListener('change', () => {
+        row.op = op.value;
+        value.toggleClass('is-hidden', row.op === 'has' || row.op === 'lacks');
+        this.update();
+      });
+      const remove = line.createSpan({ cls: 'dr-bulk-chip-remove' });
+      setIcon(remove, 'x');
+      remove.setAttribute('role', 'button');
+      remove.setAttribute('tabindex', '0');
+      remove.setAttribute('aria-label', 'Remove this condition');
+      onActivate(remove, () => {
+        this.where.splice(this.where.indexOf(row), 1);
+        this.renderWhere();
+        this.update();
+      });
+    });
+    const add = el.createDiv({ cls: 'dr-bulk-where-add' });
+    add.setAttribute('role', 'button');
+    add.setAttribute('tabindex', '0');
+    setIcon(add.createSpan({ cls: 'dr-bulk-chip-icon' }), 'filter');
+    add.createSpan({ text: this.where.length ? 'And where…' : 'Only notes where…' });
+    onActivate(add, () => {
+      this.where.push({ key: '', op: 'is', value: '' });
+      this.renderWhere();
+      const last = el.querySelector('.dr-bulk-where-row:last-of-type .dr-bulk-where-key');
+      if (last) last.focus();
+    });
   }
 
   renderTargets() {
@@ -173,26 +281,62 @@ class BulkModal extends Modal {
       setIcon(el.createSpan({ cls: 'dr-bulk-line-icon' }), line.icon || 'dot');
       const text = el.createDiv({ cls: 'dr-bulk-line-text' });
       text.createSpan({ text: line.text });
-      if (line.notes && line.notes.length) {
-        const list = text.createDiv({ cls: 'dr-bulk-notes' });
-        line.notes.slice(0, 6).forEach((file) => {
-          const link = list.createSpan({ cls: 'dr-bulk-note', text: file.basename });
-          link.setAttribute('role', 'link');
-          link.setAttribute('tabindex', '0');
-          link.setAttribute('aria-label', `Open ${file.path}`);
-          onActivate(link, () => {
-            this.close();
-            this.app.workspace.getLeaf(false).openFile(file);
-          });
-        });
-        if (line.notes.length > 6) list.createSpan({ cls: 'dr-bulk-more', text: `and ${line.notes.length - 6} more` });
-      }
+      if (line.notes && line.notes.length) this.noteList(text.createDiv({ cls: 'dr-bulk-notes' }), line.notes, 6);
     });
-    this.summaryEl.toggleClass('is-empty', !lines.length);
+    // Notes left out of a dialog that picks its notes from folders, and a way to put them back.
+    const left = this.whereEl ? this.excluded.size : 0;
+    if (left) {
+      const el = this.summaryEl.createDiv({ cls: 'dr-bulk-line is-left-out' });
+      setIcon(el.createSpan({ cls: 'dr-bulk-line-icon' }), 'eye-off');
+      const text = el.createDiv({ cls: 'dr-bulk-line-text' });
+      text.createSpan({ text: `${bulkCount(left, 'note')} left out. ` });
+      const back = text.createSpan({ cls: 'dr-bulk-note dr-bulk-put-back', text: 'Put back' });
+      back.setAttribute('role', 'button');
+      back.setAttribute('tabindex', '0');
+      onActivate(back, () => {
+        this.excluded.clear();
+        this.update();
+      });
+    }
+    this.summaryEl.toggleClass('is-empty', !lines.length && !left);
     this.action = action;
     this.goButton.setText(action ? action.label : this.idleLabel || 'Apply');
     this.goButton.disabled = !action;
     this.goButton.toggleClass('is-disabled', !action);
+  }
+
+  /**
+   * Notes as links, the first few and "and N more" to show the rest; in a
+   * dialog that picks its notes from folders, each with an × to leave it out.
+   */
+  noteList(list, notes, shown) {
+    list.empty();
+    notes.slice(0, shown).forEach((file) => {
+      const wrap = list.createSpan({ cls: 'dr-bulk-note-wrap' });
+      const link = wrap.createSpan({ cls: 'dr-bulk-note', text: file.basename });
+      link.setAttribute('role', 'link');
+      link.setAttribute('tabindex', '0');
+      link.setAttribute('aria-label', `Open ${file.path}`);
+      onActivate(link, () => {
+        this.close();
+        this.app.workspace.getLeaf(false).openFile(file);
+      });
+      if (!this.whereEl) return;
+      const leave = wrap.createSpan({ cls: 'dr-bulk-chip-remove dr-bulk-leave' });
+      setIcon(leave, 'x');
+      leave.setAttribute('role', 'button');
+      leave.setAttribute('tabindex', '0');
+      leave.setAttribute('aria-label', `Leave out ${file.basename}`);
+      onActivate(leave, () => {
+        this.excluded.add(file.path);
+        this.update();
+      });
+    });
+    if (notes.length <= shown) return;
+    const more = list.createSpan({ cls: 'dr-bulk-more', text: `and ${notes.length - shown} more` });
+    more.setAttribute('role', 'button');
+    more.setAttribute('tabindex', '0');
+    onActivate(more, () => this.noteList(list, notes, notes.length));
   }
 
   async go() {
@@ -474,7 +618,7 @@ class AddPropertiesModal extends BulkModal {
   update() {
     const lines = [];
     const named = this.rows.filter((r) => r.key);
-    const files = this.bulk.notesFor(this.targets, this.reach);
+    const files = this.notes();
     const seen = new Set();
     let problem = '';
     named.forEach((r) => {
@@ -510,6 +654,7 @@ class AddPropertiesModal extends BulkModal {
       lines.push({
         icon: 'plus',
         text: `Adds ${names} to ${n === files.length ? (n === 1 ? 'the note' : `all ${n} notes`) : `${n} of the ${files.length} notes`}.`,
+        notes: plan.changing,
       });
     }
     Object.keys(plan.held).forEach((key) => {
@@ -1318,7 +1463,7 @@ class RemovePropertiesModal extends BulkModal {
   }
 
   update() {
-    const files = this.bulk.notesFor(this.targets, this.reach);
+    const files = this.notes();
     const present = propertiesIn(this.app, files);
     if (this.listEl) this.renderChecks(present);
     const keys = present.filter((p) => this.chosen.has(p.name.toLowerCase())).map((p) => p.name);
@@ -1331,6 +1476,7 @@ class RemovePropertiesModal extends BulkModal {
       icon: 'trash-2',
       cls: 'is-warning',
       text: `Removes ${nameList(keys)} from ${bulkCount(changing.length, 'note')}, values and all.`,
+      notes: changing,
     });
     this.showSummary(lines, changing.length
       ? {
@@ -1528,7 +1674,7 @@ class MissingPropertyModal extends BulkModal {
 
   update() {
     const key = this.resolvedKey();
-    const files = this.bulk.notesFor(this.targets, this.reach);
+    const files = this.notes();
     const missing = key ? this.bulk.missing(files, key) : [];
     const type = key ? propertyType(this.app, key) : 'text';
     if (this.listEl) this.renderMissing(key, missing, type);
@@ -1718,9 +1864,14 @@ class PropertyListTool extends BulkModal {
     this.picks = new Set();
   }
 
-  /** The notes listed: those chosen, or every note while none are. */
+  /** The notes listed: those chosen, or every note while none are — meeting the conditions. */
   files() {
-    return this.targets.length ? this.bulk.notesFor(this.targets, this.reach) : this.app.vault.getMarkdownFiles();
+    if (this.targets.length) return this.notes();
+    const rows = this.where.filter(whereReady);
+    return this.app.vault.getMarkdownFiles().filter((file) => {
+      const cache = rows.length ? this.app.metadataCache.getFileCache(file) : null;
+      return rows.every((row) => whereHolds((cache && cache.frontmatter) || {}, row));
+    });
   }
 
   onOpen() {

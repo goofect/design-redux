@@ -128,7 +128,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
-  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard };\n');
+  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1457,6 +1457,82 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-name input').value, 'course');
     assert.strictEqual(again.contentEl.querySelector('.dr-bulk-value input').value, 'POL101');
     again.close();
+  });
+
+  /* -- only notes where, and notes left out ------------------------------- */
+
+  await t('a condition holds on any item of a list, whatever the case or link brackets', () => {
+    const fm = { Status: 'Draft', tags: ['law', 'court'], links: '[[Law]]', empty: '' };
+    assert.ok(R.whereHolds(fm, { key: 'status', op: 'is', value: 'draft' }));
+    assert.ok(!R.whereHolds(fm, { key: 'status', op: 'not', value: 'draft' }));
+    assert.ok(R.whereHolds(fm, { key: 'tags', op: 'is', value: 'COURT' }));
+    assert.ok(R.whereHolds(fm, { key: 'links', op: 'is', value: '[[law]]' }));
+    assert.ok(R.whereHolds(fm, { key: 'tags', op: 'contains', value: 'our' }));
+    assert.ok(R.whereHolds(fm, { key: 'empty', op: 'lacks', value: '' }));
+    assert.ok(R.whereHolds(fm, { key: 'missing', op: 'lacks', value: '' }));
+    assert.ok(R.whereHolds(fm, { key: 'missing', op: 'not', value: 'x' }), 'a note without it isn’t it');
+    assert.ok(!R.whereHolds(fm, { key: 'empty', op: 'has', value: '' }));
+  });
+
+  await t('Add properties: only notes where…, and a note left out from the summary, then put back', async () => {
+    const v = makeVault({
+      'IR/a.md': note({ status: 'draft' }), 'IR/b.md': note({ status: 'done' }), 'IR/c.md': note({ status: 'Draft' }), 'IR/d.md': '',
+    });
+    const { plugin } = makePlugin(v);
+    const modal = new R.AddPropertiesModal(plugin, [v.folders.IR]);
+    modal.open();
+    const el = modal.contentEl;
+    const button = el.querySelector('.modal-button-container .mod-cta');
+    change(el.querySelector('.dr-bulk-name input'), 'area');
+    type(el.querySelector('.dr-bulk-value input'), 'IR');
+    await settle();
+    assert.strictEqual(button.textContent, 'Add to 4 notes');
+    click(el.querySelector('.dr-bulk-where-add'));
+    const row = el.querySelector('.dr-bulk-where-row');
+    assert.ok(row, 'a condition row');
+    type(row.querySelector('.dr-bulk-where-key'), 'status');
+    type(row.querySelector('.dr-bulk-where-value'), 'draft');
+    await settle();
+    assert.strictEqual(button.textContent, 'Add to 2 notes', 'a and c, whatever the case');
+    // Leave c out from the summary.
+    const leave = [...el.querySelectorAll('.dr-bulk-leave')].find((x) => x.getAttribute('aria-label') === 'Leave out c');
+    click(leave);
+    assert.strictEqual(button.textContent, 'Add to 1 note');
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /1 note left out/);
+    click(el.querySelector('.dr-bulk-put-back'));
+    assert.strictEqual(button.textContent, 'Add to 2 notes');
+    // "has no value" needs no value; the condition removed brings them all back.
+    const op = el.querySelector('.dr-bulk-where-op');
+    change(op, 'lacks');
+    assert.ok(el.querySelector('.dr-bulk-where-value').classList.contains('is-hidden'));
+    assert.strictEqual(button.textContent, 'Add to 1 note', 'only d has no status');
+    click(el.querySelector('.dr-bulk-where-row .dr-bulk-chip-remove'));
+    assert.strictEqual(button.textContent, 'Add to 4 notes');
+    // Then left out and applied: the note left out isn't touched.
+    click([...el.querySelectorAll('.dr-bulk-leave')].find((x) => x.getAttribute('aria-label') === 'Leave out b'));
+    click(button);
+    await settle(150);
+    assert.strictEqual(v.fm('IR/a.md').area, 'IR');
+    assert.strictEqual(v.fm('IR/b.md').area, undefined);
+  });
+
+  await t('a long list of notes in the summary shows the rest when asked', async () => {
+    const spec = {};
+    for (let i = 0; i < 9; i++) spec[`F/n${i}.md`] = '';
+    const v = makeVault(spec);
+    const { plugin } = makePlugin(v);
+    const modal = new R.AddPropertiesModal(plugin, [v.folders.F]);
+    modal.open();
+    const el = modal.contentEl;
+    change(el.querySelector('.dr-bulk-name input'), 'area');
+    type(el.querySelector('.dr-bulk-value input'), 'x');
+    await settle();
+    const more = el.querySelector('.dr-bulk-more');
+    assert.ok(more, 'the notes it adds to are listed');
+    assert.strictEqual(more.textContent, 'and 3 more');
+    click(more);
+    assert.strictEqual(el.querySelectorAll('.dr-bulk-summary .dr-bulk-note:not(.dr-bulk-put-back)').length, 9);
+    assert.ok(!el.querySelector('.dr-bulk-more'));
   });
 
   /* -- pasting properties ------------------------------------------------ */

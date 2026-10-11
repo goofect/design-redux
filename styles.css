@@ -5100,6 +5100,54 @@ body.is-mobile .dr-chip-clear {
 
 .dr-bulk-more {
   color: var(--text-faint);
+  cursor: pointer;
+}
+
+/* A note in the summary, with an × to leave it out. */
+.dr-bulk-note-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dr-bulk-leave {
+  opacity: 0.45;
+}
+
+/* Only notes where — a row per condition: property, how, value. */
+.dr-bulk-where {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  margin-top: var(--dr-space-2);
+}
+
+.dr-bulk-where-row {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dr-space-1);
+}
+
+.dr-bulk-where-word {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-bulk-where-value.is-hidden {
+  visibility: hidden;
+}
+
+.dr-bulk-where-add {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--dr-space-1);
+  padding: 2px var(--dr-space-1);
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
 }
 
 .dr-bulk-modal .modal-button-container button.is-disabled,
@@ -5138,8 +5186,14 @@ body.is-mobile .dr-chip-clear {
     color: var(--text-normal);
   }
 
-  .dr-bulk-note:hover {
+  .dr-bulk-note:hover,
+  .dr-bulk-more:hover {
     text-decoration: underline;
+  }
+
+  .dr-bulk-where-add:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
   }
 }
 
@@ -5147,9 +5201,20 @@ body.is-mobile .dr-chip-clear {
 .dr-bulk-chip-remove:focus-visible,
 .dr-bulk-add:focus-visible,
 .dr-bulk-type:focus-visible,
-.dr-bulk-note:focus-visible {
+.dr-bulk-note:focus-visible,
+.dr-bulk-more:focus-visible,
+.dr-bulk-where-add:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* On a phone a condition's value goes under its property. */
+body.is-phone .dr-bulk-where-row {
+  grid-template-columns: 3em minmax(0, 1fr) auto;
+}
+
+body.is-phone .dr-bulk-where-value {
+  grid-column: 2;
 }
 
 /* On a phone the value goes under its name, full width. */
