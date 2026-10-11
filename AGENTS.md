@@ -26,9 +26,10 @@ Coffee N' Christmas.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
   and the latest.
-- `.claude/rules/` — notes for one area each (canvas internals, quiet links,
-  real-Obsidian tests). Claude Code loads one when a file of its area is
-  opened; other agents: read it before changing that area.
+- `.claude/rules/` — notes for one area each (canvas internals, albums and
+  the browse view, quiet links, real-Obsidian tests). Claude Code loads one
+  when a file of its area is opened; other agents: read it before changing
+  that area. `.claude/skills/diagnose-tests` says how to read a failure.
 
 ## How the code is laid out
 
@@ -81,11 +82,15 @@ Coffee N' Christmas.
   - Look before reading, narrowest first: file names → `node tests/map.js
     [words]` (pieces, their features and suites) → `--who NAME` or `--deps
     PIECE` (where a name is declared and who uses it; the pieces share one
-    scope) → grep and the few lines needed → a whole file only when the
-    change needs it.
+    scope; `--who` gives the lines) → grep and the few lines needed → a whole
+    file only when the change needs it. Soft limits, widened when correctness
+    needs it: a first read of 100–200 lines, then only the direct callers and
+    callees; passing tests as a summary, a failure as its own lines.
   - A long task: keep a short checkpoint in `.claude-cache/checkpoint.md` —
-    task, files, findings, changes, tests, what's left; conclusions, not
-    transcripts — and read it after a compaction or in a new session.
+    objective, files, constraints, changes, tests, what's left, the next
+    step; conclusions, not transcripts — at the turn between phases, and read
+    it after a compaction or in a new session. Unrelated work goes in a
+    session of its own.
   - `node tests/tool-log.js` sums up the session (a hook logs each tool call:
     file and size, not contents): repeat and broad reads, output size, and
     tokens — input not served from the cache is the number to bring down.

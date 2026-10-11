@@ -116,12 +116,16 @@ function tokens(rows) {
       /* a line being written */
     }
   });
-  const sum = { fresh: 0, written: 0, cached: 0, out: 0, replies: seen.size };
+  const sum = { fresh: 0, written: 0, cached: 0, out: 0, replies: seen.size, peak: 0, last: 0 };
   seen.forEach((u) => {
     sum.fresh += u.input_tokens || 0;
     sum.written += u.cache_creation_input_tokens || 0;
     sum.cached += u.cache_read_input_tokens || 0;
     sum.out += u.output_tokens || 0;
+    // How full the context was for this reply: everything it was given.
+    const held = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+    sum.peak = Math.max(sum.peak, held);
+    sum.last = held;
   });
   return sum;
 }
@@ -156,7 +160,7 @@ function report(which) {
   if (k) {
     const input = k.fresh + k.written + k.cached;
     console.log(`tokens: ${thousands(k.fresh)} input not cached, ${thousands(k.written)} written to the cache, ${thousands(k.cached)} read from it (${pct(input ? k.cached / input : 0)} of input), ${thousands(k.out)} output, over ${k.replies} replies`);
-    console.log(`uncached input per tool call: ${thousands(Math.round((k.fresh + k.written) / Math.max(1, r.calls)))}`);
+    console.log(`uncached input per tool call: ${thousands(Math.round((k.fresh + k.written) / Math.max(1, r.calls)))}; context at its fullest ${thousands(k.peak)}, now ${thousands(k.last)}`);
   }
 }
 

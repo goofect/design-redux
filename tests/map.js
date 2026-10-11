@@ -4,7 +4,7 @@
  *
  *   node tests/map.js              a line per piece: heading, features (setting), suites that test it
  *   node tests/map.js canvas fold  only the pieces whose line has every word
- *   node tests/map.js --who NAME   where NAME is declared, and which pieces and tests use it
+ *   node tests/map.js --who NAME   where NAME is declared, and the lines in each piece that use it
  *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 335 or 335-canvas-fold)
  *
  * The pieces share one scope, so --who and --deps are how to find callers
@@ -20,7 +20,7 @@ const crypto = require('crypto');
 const root = path.join(__dirname, '..');
 const src = path.join(root, 'src');
 const cacheFile = path.join(root, '.claude-cache', 'index.json');
-const INDEX_VERSION = 1;
+const INDEX_VERSION = 2;
 const read = (f) => fs.readFileSync(f, 'utf8');
 const escape = (s) => s.replace(/[$]/g, '\\$');
 const word = (name) => new RegExp(`(^|[^\\w$])${escape(name)}(?![\\w$])`, 'g');
@@ -63,7 +63,7 @@ function declaredIn(body, fnScope) {
   return block.concat(vars);
 }
 
-/** One piece: its top-level declarations (name → line) and the outside names it uses (name → count). */
+/** One piece: its top-level declarations (name → line) and the outside names it uses (name → the lines). */
 function analyse(text) {
   const acorn = require('acorn');
   const ast = acorn.parse(text, { ecmaVersion: 'latest', locations: true, allowReturnOutsideFunction: true, allowHashBang: true });
@@ -80,7 +80,8 @@ function analyse(text) {
         // Not a property name, a key, or a label.
         if (parent && ((parent.type === 'MemberExpression' && key === 'property' && !parent.computed) || ((parent.type === 'Property' || parent.type === 'MethodDefinition' || parent.type === 'PropertyDefinition') && key === 'key' && !parent.computed) || /Label|Break|Continue/.test(parent.type))) return;
         for (let s = scope; s; s = s.up) if (s.names.has(node.name)) return;
-        uses[node.name] = (uses[node.name] || 0) + 1;
+        if (!Object.prototype.hasOwnProperty.call(uses, node.name)) uses[node.name] = [];
+        uses[node.name].push(node.loc.start.line);
         return;
       }
       case 'FunctionDeclaration':
@@ -219,8 +220,13 @@ if (args[0] === '--who') {
   }
   const home = homeOf.get(name);
   console.log(home ? `${name}: declared in ${home.name}:${home.declared[name]}` : `${name}: not declared at the top of any piece`);
-  const users = pieces.filter((p) => p !== home && p.uses[name]).map((p) => `${p.name} (${p.uses[name]})`);
-  console.log(users.length ? `used in ${users.join(', ')}` : 'used nowhere else');
+  // Each piece that uses it, and where: the lines to read, not the file.
+  const users = pieces.filter((p) => p !== home && Object.prototype.hasOwnProperty.call(p.uses, name));
+  if (!users.length) console.log('used nowhere else');
+  users.forEach((p) => {
+    const lines = p.uses[name];
+    console.log(`  ${p.name}: ${lines.slice(0, 10).join(', ')}${lines.length > 10 ? ` and ${lines.length - 10} more` : ''}`);
+  });
   const inTests = testsNaming(name);
   if (inTests.length) console.log(`tests: ${inTests.map(([t, n]) => `${t} (${n})`).join(', ')}`);
   process.exit(0);
@@ -241,7 +247,8 @@ if (args[0] === '--deps') {
   console.log(`${piece.name} uses:`);
   Array.from(from.keys()).sort().forEach((p) => console.log(`  ${p}: ${from.get(p).sort().join(', ')}`));
   const own = Object.keys(piece.declared);
-  const by = pieces.filter((p) => p !== piece && own.some((n) => p.uses[n])).map((p) => `${p.name} (${own.filter((n) => p.uses[n]).join(', ')})`);
+  const has = (p, n) => Object.prototype.hasOwnProperty.call(p.uses, n);
+  const by = pieces.filter((p) => p !== piece && own.some((n) => has(p, n))).map((p) => `${p.name} (${own.filter((n) => has(p, n)).join(', ')})`);
   console.log(by.length ? `used by:\n  ${by.join('\n  ')}` : 'used by no other piece');
   process.exit(0);
 }
