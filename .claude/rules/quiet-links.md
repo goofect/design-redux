@@ -1,6 +1,9 @@
 ---
 paths:
+  - "src/263-quiet-text.js"
+  - "src/264-quiet-cache.js"
   - "src/265-quiet-links.js"
+  - "src/266-quiet-editor.js"
   - "tests/test_graph.js"
 ---
 
