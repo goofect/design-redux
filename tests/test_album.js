@@ -96,7 +96,8 @@ class TFolder extends TAbstractFile {
 class MarkdownView {}
 const obsidian = new Proxy({
   Menu, Modal, FuzzySuggestModal, Component, ItemView, TFile, TFolder, TAbstractFile, MarkdownView,
-  setIcon: (el, name) => { el.dataset.icon = name; },
+  // As Obsidian's: an icon must be named.
+  setIcon: (el, name) => { if (typeof name !== 'string') throw new TypeError("Cannot read properties of undefined (reading 'startsWith')"); el.dataset.icon = name; },
   Notice: class { constructor(m) { notices.push(m); } },
   Platform: { isMobile: false, isPhone: false },
   normalizePath: (p) => p.replace(/\/+/g, '/').replace(/^\//, ''),
@@ -604,7 +605,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     // An album's strip: the actions written for albums elsewhere, sorting, and More.
     const made = [];
-    plugin.features = [{ actions: () => [{ id: 'new-note-here', name: 'New note in the current folder', icon: 'file-plus', on: 'album', run: (ctx) => made.push(`${ctx.folder.path} from ${ctx.from}`) }] }];
+    plugin.features = [{ actions: () => [{ id: 'new-note-here', name: 'New note in the current folder', on: 'album', run: (ctx) => made.push(`${ctx.folder.path} from ${ctx.from}`) }] }];
     const { view } = setup();
     Object.assign(view, { app, plugin });
     leaf.view = view;

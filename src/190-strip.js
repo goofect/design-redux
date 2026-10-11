@@ -42,12 +42,13 @@ const STRIP_NARROW = 760;
 
 /*
  * What the strip offers for what's open, besides a note's own buttons:
- * actions written once elsewhere, by id — [id, short name, secondary].
+ * actions written once elsewhere, by id — [id, short name, secondary,
+ * icon where the action has none of its own].
  * Ones that hang on the canvas's selection aren't here: the strip isn't
  * told when that changes.
  */
 const STRIP_ACTIONS = {
-  album: [['new-note-here', 'New note', false], ['shuffle-album', 'Shuffle', false]],
+  album: [['new-note-here', 'New note', false, 'file-plus'], ['shuffle-album', 'Shuffle', false]],
   canvas: [['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
 };
 
@@ -374,12 +375,12 @@ class ContextStrip extends Feature {
   /** The actions written elsewhere that the strip offers for this kind of page, as buttons — those that apply now. */
   contextSpecs(kind) {
     const out = [];
-    (STRIP_ACTIONS[kind] || []).forEach(([id, label, secondary]) => {
+    (STRIP_ACTIONS[kind] || []).forEach(([id, label, secondary, icon]) => {
       const action = this.findAction(id);
       const ctx = action && actionContext(this.app, action);
       if (!ctx || !applies(action, ctx)) return;
       out.push({
-        icon: action.icon,
+        icon: action.icon || icon || 'circle',
         label,
         role: id,
         secondary,
@@ -411,7 +412,7 @@ class ContextStrip extends Feature {
     el.setAttribute('aria-label', spec.label);
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
-    setIcon(el, spec.icon);
+    if (spec.icon) setIcon(el, spec.icon);
     if (spec.active) el.addClass('is-active');
     onActivate(el, spec.run);
     return el;
