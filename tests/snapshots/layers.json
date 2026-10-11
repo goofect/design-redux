@@ -1,0 +1,144 @@
+{
+ "030-helpers-art": [
+  "ALBUM_KIND_NEUTRAL",
+  "ALBUM_TYPES",
+  "AlbumRefactor",
+  "AlbumStructure",
+  "BrowseView",
+  "Knowledge"
+ ],
+ "075-queue": [
+  "UpNext"
+ ],
+ "080-feature": [
+  "actionCommands",
+  "actionContext"
+ ],
+ "085-appearance": [
+  "CANVAS_SPACE"
+ ],
+ "100-library": [
+  "SmartAlbums"
+ ],
+ "110-browse-screens": [
+  "AlbumStructure",
+  "BulkEditing",
+  "bulkCount",
+  "renamePropertyInPlace"
+ ],
+ "120-browse-view": [
+  "AlbumStructure",
+  "BulkEditing",
+  "ContextStrip",
+  "SmartAlbums",
+  "TAG_KEYS",
+  "UpNext",
+  "knownPropertyNames",
+  "propertyValues"
+ ],
+ "130-browse-filters": [
+  "knownPropertyNames"
+ ],
+ "160-panel-properties": [
+  "AlbumProperty",
+  "BulkEditing",
+  "QuietLinks",
+  "knownPropertyNames"
+ ],
+ "180-panel": [
+  "plainMarkdownLine"
+ ],
+ "190-strip": [
+  "AlbumStructure",
+  "BrowseView",
+  "Footnotes",
+  "Knowledge",
+  "Library"
+ ],
+ "195-up-next": [
+  "BrowseView"
+ ],
+ "200-one-page": [
+  "Library"
+ ],
+ "235-covers": [
+  "BrowseView"
+ ],
+ "250-property-clipboard": [
+  "ComparePicker",
+  "valueList"
+ ],
+ "253-actions": [
+  "BrowseView"
+ ],
+ "254-knowledge": [
+  "BROWSE_SCREENS",
+  "BrowseScreen",
+  "CanvasFind",
+  "CanvasRelations",
+  "ComparePicker",
+  "DEFAULT_RELATION_TYPES",
+  "Library",
+  "RELATED_KEY",
+  "RELATION_KEY",
+  "boxEdges",
+  "nearestSides",
+  "newCanvasId",
+  "noteNameFrom",
+  "relationInfo",
+  "statementEnds"
+ ],
+ "255-album-property": [
+  "bulkCount",
+  "bulkNotice",
+  "bulkTail",
+  "confirmAction"
+ ],
+ "257-album-structure": [
+  "ALBUM_RECENTS_FROM",
+  "BrowseView",
+  "CanvasVaultMap",
+  "ComparePicker"
+ ],
+ "258-smart-albums": [
+  "BROWSE_SCREENS",
+  "BrowseScreen",
+  "BrowseView",
+  "ComparePicker",
+  "Library",
+  "LibraryView"
+ ],
+ "259-library-check": [
+  "BROWSE_SCREENS",
+  "BrowseScreen",
+  "Library"
+ ],
+ "261-knowledge-check": [
+  "BROWSE_SCREENS",
+  "Library",
+  "noteNameFrom"
+ ],
+ "265-quiet-links": [
+  "ComparePicker",
+  "scriptLivePreview"
+ ],
+ "290-bulk-engine": [
+  "BrowseView",
+  "GraphPropertyFilter",
+  "Library"
+ ],
+ "300-bulk-dialogs": [
+  "knownPropertyNames",
+  "propertyValues",
+  "valueList"
+ ],
+ "340-diagnostics": [
+  "GRAPH_TYPES"
+ ],
+ "348-workspace-modes": [
+  "CanvasOutline",
+  "ComparePicker",
+  "Knowledge",
+  "Library"
+ ]
+}

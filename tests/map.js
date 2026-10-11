@@ -6,6 +6,11 @@
  *   node tests/map.js canvas fold  only the pieces whose line has every word
  *   node tests/map.js --who NAME   where NAME is declared, and the lines in each piece that use it
  *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 335 or 335-canvas-fold)
+ *   node tests/map.js --areas      the areas (number ranges) and what each uses from the others, pieces
+ *                                  that use each other, and uses that cross the layers
+ *   node tests/map.js --check      fails on a use crossing the layers that isn't in tests/snapshots/layers.json,
+ *                                  or one listed there that's gone (--update rewrites the list); see
+ *                                  docs/architecture.md
  *
  * The pieces share one scope, so --who and --deps are how to find callers
  * and callees. Each piece is parsed (acorn) and its top-level names and the
@@ -266,6 +271,94 @@ pieces.forEach((p) => {
   p.suites = tests.filter((t) => telling.some((n) => word(n).test(t.text))).map((t) => t.name);
   if (classes.some((n) => word(n).test(e2e))) p.suites.push('obsidian');
 });
+
+/* -- areas and layers ---------------------------------------------------- */
+
+// The areas by number, and their layer: a piece may use its own area and
+// lower layers (shared UI is below every feature); composition, anything.
+const AREAS = [
+  { name: 'core', from: 10, to: 89, level: 0 },
+  { name: 'library', from: 90, to: 139, level: 2 },
+  { name: 'chrome', from: 140, to: 229, level: 2 },
+  { name: 'shared-ui', from: 230, to: 253, level: 1 },
+  { name: 'albums', from: 254, to: 259, level: 2 },
+  { name: 'links', from: 260, to: 269, level: 2 },
+  { name: 'editor', from: 270, to: 289, level: 2 },
+  { name: 'bulk', from: 290, to: 314, level: 2 },
+  { name: 'canvas', from: 315, to: 347, level: 2 },
+  { name: 'composition', from: 349, to: 999, level: 3 },
+];
+const AREA_OF = { '261-knowledge-check': 'albums', '348-workspace-modes': 'chrome' };
+const areaOf = (p) => AREAS.find((a) => a.name === AREA_OF[p.name]) || AREAS.find((a) => +p.name.slice(0, 3) >= a.from && +p.name.slice(0, 3) <= a.to);
+const crossing = (a, b) => a !== b && a.level !== 3 && b.level >= a.level;
+const crosses = (user, home) => crossing(areaOf(user), areaOf(home));
+/** Every use from another piece: [user, name, home]. */
+const uses = () => pieces.flatMap((p) => Object.keys(p.uses).map((n) => [p, n, homeOf.get(n)]).filter(([, , h]) => h && h !== p && h.name !== '010-imports'));
+const layersFile = path.join(__dirname, 'snapshots', 'layers.json');
+
+if (args[0] === '--areas') {
+  const size = new Map();
+  pieces.forEach((p) => {
+    const a = areaOf(p).name;
+    const s = size.get(a) || { pieces: 0, lines: 0 };
+    s.pieces++;
+    s.lines += p.text.split('\n').length;
+    size.set(a, s);
+  });
+  console.log('areas, lowest layer first:');
+  AREAS.slice().sort((x, y) => x.level - y.level).forEach((a) => {
+    const s = size.get(a.name) || { pieces: 0, lines: 0 };
+    console.log(`  ${a.name} (${a.from}–${a.to}, layer ${a.level}): ${s.pieces} pieces, ${s.lines} lines`);
+  });
+  const edges = new Map();
+  uses().forEach(([u, n, h]) => {
+    const [a, b] = [areaOf(u), areaOf(h)];
+    if (a === b) return;
+    const k = `${a.name} → ${b.name}`;
+    const e = edges.get(k) || { names: new Set(), crosses: crossing(a, b) };
+    e.names.add(n);
+    edges.set(k, e);
+  });
+  console.log('what each area uses from another (names):');
+  [...edges.entries()].sort((x, y) => y[1].names.size - x[1].names.size).forEach(([k, e]) => {
+    const n = e.names.size;
+    console.log(`  ${k}: ${n}${n <= 5 ? ` (${[...e.names].join(', ')})` : ''}${e.crosses ? '  ← crosses' : ''}`);
+  });
+  const deps = new Map(pieces.map((p) => [p, new Set()]));
+  uses().forEach(([u, , h]) => deps.get(u).add(h));
+  const pairs = [];
+  pieces.forEach((a) => deps.get(a).forEach((b) => a.name < b.name && deps.get(b).has(a) && pairs.push(`${a.name} ↔ ${b.name}`)));
+  console.log(`pieces that use each other: ${pairs.length}`);
+  pairs.forEach((x) => console.log(`  ${x}`));
+  process.exit(0);
+}
+
+if (args[0] === '--check') {
+  const found = {};
+  uses().filter(([u, , h]) => crosses(u, h)).forEach(([u, n]) => (found[u.name] = (found[u.name] || []).concat(n).sort()));
+  if (args.includes('--update')) {
+    fs.mkdirSync(path.dirname(layersFile), { recursive: true });
+    const sorted = {};
+    Object.keys(found).sort().forEach((k) => (sorted[k] = found[k]));
+    fs.writeFileSync(layersFile, JSON.stringify(sorted, null, 1) + '\n');
+    console.log(`${Object.values(found).flat().length} uses crossing the layers recorded`);
+    process.exit(0);
+  }
+  let known = {};
+  try {
+    known = JSON.parse(read(layersFile));
+  } catch (err) {
+    known = {};
+  }
+  const fresh = [];
+  const gone = [];
+  Object.keys(found).forEach((p) => found[p].forEach((n) => (known[p] || []).includes(n) || fresh.push(`${p} uses ${n} (${homeOf.get(n).name})`)));
+  Object.keys(known).forEach((p) => known[p].forEach((n) => (found[p] || []).includes(n) || gone.push(`${p}: ${n}`)));
+  fresh.forEach((x) => console.log(`crosses the layers: ${x}`));
+  gone.forEach((x) => console.log(`no longer crosses, take it off the list (--check --update): ${x}`));
+  if (!fresh.length && !gone.length) console.log(`layers: ${Object.values(known).flat().length} known crossings, none new`);
+  process.exit(fresh.length || gone.length ? 1 : 0);
+}
 
 const words = args.map((a) => a.toLowerCase());
 pieces.forEach((p) => {
