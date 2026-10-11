@@ -28,50 +28,6 @@ function liveViews(app, type, ctor) {
    tried. Every place that shows one line about a note uses this. */
 const LEAD_PROPERTIES = ['domain', 'author', 'book', 'status'];
 
-/** A value without its wikilink brackets, alias or heading. */
-function plainValue(value) {
-  return String(value)
-    .replace(/^!?\[\[/, '')
-    .replace(/\]\]$/, '')
-    .split('|')[0]
-    .split('#')[0]
-    .trim();
-}
-
-/**
- * A property's value by name, whatever case the note wrote it in —
- * Obsidian treats "Author" and "author" as one property, and lists it
- * lower-cased.
- */
-function fmGet(fm, key) {
-  if (!fm || !key) return undefined;
-  if (Object.prototype.hasOwnProperty.call(fm, key)) return fm[key];
-  const want = String(key).toLowerCase();
-  const name = Object.keys(fm).find((k) => k.toLowerCase() === want);
-  return name === undefined ? undefined : fm[name];
-}
-
-/**
- * How many notes carry each property, as Obsidian counts them: kept with
- * each property's info before Obsidian 1.14, asked for on their own
- * since. A function of a property's key and its info.
- */
-function propertyCounter(app) {
-  const m = app && app.metadataTypeManager;
-  let occ = null;
-  try {
-    if (m && typeof m.getPropertyOccurrences === 'function') occ = m.getPropertyOccurrences();
-  } catch (err) {
-    occ = null;
-  }
-  return (key, info) => {
-    const own = info && (info.count || info.occurrences);
-    if (own) return own;
-    const lower = String(key || '').toLowerCase();
-    return occ && typeof occ[lower] === 'number' ? occ[lower] : 0;
-  };
-}
-
 /** A frontmatter value as one line of text, lists included. */
 function valueText(value) {
   if (value === undefined || value === null || value === '') return '';

@@ -19,51 +19,6 @@ const GRAPH_OPS = {
   lacks: 'is missing',
 };
 
-/** Property names in the vault, most used first. */
-function knownPropertyNames(app) {
-  try {
-    const m = app.metadataTypeManager;
-    const all =
-      (m && typeof m.getAllProperties === 'function' && m.getAllProperties()) ||
-      (m && m.properties) ||
-      {};
-    const count = propertyCounter(app);
-    return Object.keys(all)
-      .map((k) => ({
-        name: (all[k] && all[k].name) || k,
-        count: count(k, all[k]),
-      }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .map((e) => e.name);
-  } catch (err) {
-    return [];
-  }
-}
-
-/** Every value a property takes across the vault, most used first. */
-function propertyValues(app, key) {
-  const want = String(key || '').toLowerCase();
-  if (!want) return [];
-  const counts = new Map();
-  app.vault.getMarkdownFiles().forEach((file) => {
-    const cache = app.metadataCache.getFileCache(file);
-    const fm = cache && cache.frontmatter;
-    if (!fm) return;
-    const name = Object.keys(fm).find((k) => k.toLowerCase() === want);
-    if (!name) return;
-    const raw = fm[name];
-    (Array.isArray(raw) ? raw : [raw]).forEach((v) => {
-      if (v === null || v === undefined || v === '') return;
-      const text = plainValue(v);
-      if (text) counts.set(text, (counts.get(text) || 0) + 1);
-    });
-  });
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map((e) => e[0])
-    .slice(0, 200);
-}
-
 /** Quoted when a bare word wouldn't survive the search syntax. */
 function searchWord(text) {
   const t = String(text).trim();

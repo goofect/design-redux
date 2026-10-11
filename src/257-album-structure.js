@@ -63,11 +63,6 @@ const OPEN_VALUES = ['open', 'question', 'unanswered', 'unresolved', 'gap'];
 /* What counts as finished, for a project's notes and a reading list's. */
 const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
 
-/** A property's values as a list of strings, whether written as one or many. */
-function valueList(raw) {
-  return (Array.isArray(raw) ? raw : [raw]).filter((v) => v !== null && v !== undefined && String(v).trim() !== '').map((v) => String(v).trim());
-}
-
 class AlbumStructure extends Feature {
   /** Every settings save: the property names, as set. Safe to run again. */
   enable() {

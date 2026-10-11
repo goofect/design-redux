@@ -32,18 +32,12 @@
   "ContextStrip",
   "SmartAlbums",
   "TAG_KEYS",
-  "UpNext",
-  "knownPropertyNames",
-  "propertyValues"
- ],
- "130-browse-filters": [
-  "knownPropertyNames"
+  "UpNext"
  ],
  "160-panel-properties": [
   "AlbumProperty",
   "BulkEditing",
-  "QuietLinks",
-  "knownPropertyNames"
+  "QuietLinks"
  ],
  "180-panel": [
   "plainMarkdownLine"
@@ -65,8 +59,7 @@
   "BrowseView"
  ],
  "250-property-clipboard": [
-  "ComparePicker",
-  "valueList"
+  "ComparePicker"
  ],
  "253-actions": [
   "BrowseView"
@@ -126,11 +119,6 @@
   "BrowseView",
   "GraphPropertyFilter",
   "Library"
- ],
- "300-bulk-dialogs": [
-  "knownPropertyNames",
-  "propertyValues",
-  "valueList"
  ],
  "340-diagnostics": [
   "GRAPH_TYPES"
