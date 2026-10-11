@@ -430,10 +430,18 @@ describe('Design Redux in Obsidian', function () {
       return { viewport: typeof canvas.getViewportBBox === 'function', move: typeof canvas.setViewport === 'function', zoom: typeof canvas.zoom === 'number' };
     });
     expect(has).toEqual({ viewport: true, move: true, zoom: true });
-    await browser.waitUntil(async () => browser.execute((active) => {
-      const el = document.querySelector(active + '.dr-minimap');
-      return !!el && !el.classList.contains('is-hidden') && Number(el.querySelector('.dr-minimap-view').getAttribute('width')) > 0;
-    }, ACTIVE), { timeout: 10000, timeoutMsg: 'the minimap never showed the part on screen' });
+    // Closed in again while it isn't showing: a canvas just opened can put
+    // back the view it was saved with, after the first zoom.
+    await browser.waitUntil(async () => browser.executeObsidian(({ app }) => {
+      const view = app.workspace.activeLeaf.view;
+      const el = view.containerEl.querySelector('.dr-minimap');
+      const shown = !!el && !el.classList.contains('is-hidden') && Number(el.querySelector('.dr-minimap-view').getAttribute('width')) > 0;
+      if (!shown) {
+        const box = Array.from(view.canvas.nodes.values())[0].getBBox();
+        view.canvas.zoomToBbox({ minX: box.minX, minY: box.minY, maxX: box.minX + 40, maxY: box.minY + 30 });
+      }
+      return shown;
+    }), { timeout: 10000, interval: 500, timeoutMsg: 'the minimap never showed the part on screen' });
     const before = await browser.executeObsidian(({ app }) => {
       const b = app.workspace.activeLeaf.view.canvas.getViewportBBox();
       return [(b.minX + b.maxX) / 2, (b.minY + b.maxY) / 2];
@@ -993,6 +1001,13 @@ describe('Design Redux in Obsidian', function () {
     const child = fresh(now)[0];
     // Grown out of the root, then opened to type in.
     await browser.waitUntil(async () => (await cards()).nodes[child].editing, { timeout: 5000, timeoutMsg: 'the new card never opened' });
+    // Its editor taking the keys, not just open: typed sooner, the first letter is lost.
+    await browser.waitUntil(async () => browser.executeObsidian(({ app }, id) => {
+      const node = app.workspace.activeLeaf.view.canvas.nodes.get(id);
+      if (!node || !node.nodeEl) return false;
+      const at = node.nodeEl.ownerDocument.activeElement;
+      return !!node.nodeEl.querySelector('.cm-editor.cm-focused') || (!!at && at !== node.nodeEl && node.nodeEl.contains(at));
+    }, child), { timeout: 5000, timeoutMsg: 'the new card’s editor never took the keys' });
     now = await cards();
     expect(now.edges).toBe(3);
     expect(now.nodes[child].x).toBe(360);
