@@ -5078,7 +5078,7 @@ body.is-mobile .dr-bulk-chip {
   color: rgba(255, 255, 255, 0.94);
   font-size: 2em;
   font-size: 36cqi;
-  font-weight: var(--font-semibold, 600);
+  font-weight: var(--font-bold, 700);
   letter-spacing: -0.02em;
   line-height: 1;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.18);
@@ -5144,7 +5144,7 @@ body.is-mobile .dr-bulk-chip {
 
 .dr-cover-print-title {
   font-size: clamp(10px, 10cqi, 26px);
-  font-weight: var(--font-semibold, 600);
+  font-weight: var(--font-bold, 700);
   line-height: 1.1;
   overflow: hidden;
   display: -webkit-box;
@@ -7832,7 +7832,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 
 .canvas-node[data-dr-depth="0"] .canvas-node-content {
   font-size: 1.12em;
-  font-weight: var(--font-semibold, 600);
+  font-weight: var(--font-bold, 700);
 }
 
 .canvas-node[data-dr-depth="1"] .canvas-node-content {
