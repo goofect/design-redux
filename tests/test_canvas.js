@@ -69,7 +69,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
+  '\nmodule.exports.__test = { Notes, CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
@@ -1214,6 +1214,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const rel = new R.CanvasRelations({ settings: { canvasRelations: true }, app });
     const p = { settings: { knowledge: true, graphRouteProperty: 'parent' }, app, feature: (C) => (C === R.CanvasRelations ? rel : null), offerUndo: (m, fn) => { undo = fn; }, refreshBrowse() {} };
     rel.plugin = p;
+    p.notes = new R.Notes(p);
     const k = new R.Knowledge(p);
     // Canvas into notes: the subject note says it.
     assert.strictEqual(await k.writeFromCanvas(view), 1);
