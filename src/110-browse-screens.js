@@ -80,24 +80,84 @@ class FolderScreen extends BrowseScreen {
     const albums = about ? about.includes.filter((t) => t instanceof TFolder && view.matches(t.name)) : [];
 
     view.renderHeader(root, folder, all);
+    if (about) {
+      // Names its properties give that lead nowhere: said, with the way to fix them.
+      if (about.missing.length) this.missingNotice(root, about);
+      structure.renderLead(root, folder, about, view);
+      const featured = about.featured.filter((f) => view.matches(f.basename));
+      if (featured.length) view.shelf(root, 'Start here', featured);
+    }
     if (albums.length) {
       const grid = root.createDiv({ cls: 'dr-grid dr-album-includes' });
       roveFocus(grid, '.dr-card');
       albums.forEach((f) => view.folderCard(grid, f));
     }
     if (!all.length && !view.editing) {
-      if (!albums.length) root.createDiv({ cls: 'dr-empty', text: 'Nothing here' });
+      if (!albums.length) root.createDiv({ cls: 'dr-empty', text: this.emptyText(about) });
       view.renderMoreIn(root, folder);
       return;
     }
-    view.renderDiscs(root, discs, folder);
+    if (about && about.layout === 'covers') this.renderCovers(root, discs, folder);
+    else view.renderDiscs(root, discs, folder);
     if (view.editing) return;
     view.renderAlbumFoot(root, all);
+    if (about && this.settings.albumRecents !== false) this.renderRecents(root, all);
     if (about && about.related.length) view.shelf(root, 'Related albums', about.related);
     view.renderMoreIn(root, folder);
   }
 
+  /** Why an album shows nothing: Find or a filter, or nothing put in it yet. */
+  emptyText(about) {
+    const view = this.view;
+    if (view.query.trim() || view.hasFilters()) return 'Nothing matches';
+    if (about && about.label) return `Nothing in this ${about.label.toLowerCase()} yet`;
+    return 'Nothing here';
+  }
+
+  missingNotice(root, about) {
+    const names = about.missing.map((m) => `“${m.name}”`).join(', ');
+    const note = root.createDiv({ cls: 'dr-album-notice' });
+    setIcon(note.createSpan({ cls: 'dr-album-notice-icon' }), 'link-2-off');
+    note.createSpan({ text: `${about.missing.length === 1 ? 'A link in its properties leads' : 'Links in its properties lead'} nowhere: ${names}` });
+    note.setAttribute('role', 'button');
+    note.setAttribute('tabindex', '0');
+    note.setAttribute('aria-label', 'Open the folder note to fix it');
+    onActivate(note, () => this.app.workspace.getLeaf(false).openFile(about.note));
+  }
+
+  /** The album's notes as covers, under a heading for each disc. */
+  renderCovers(root, discs, album) {
+    const view = this.view;
+    discs.forEach((disc) => {
+      const head = root.createDiv({ cls: 'dr-disc dr-covers-head' });
+      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
+      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
+      if (disc.folder && disc.folder !== album) {
+        head.setAttribute('role', 'button');
+        head.setAttribute('tabindex', '0');
+        onActivate(head, () => view.openFolder(disc.folder));
+      }
+      const grid = root.createDiv({ cls: 'dr-grid' });
+      roveFocus(grid, '.dr-card');
+      disc.files.forEach((f) => view.fileCard(grid, f));
+    });
+  }
+
+  /** In a long album, what changed lately and what was opened lately, apart from its own order. */
+  renderRecents(root, all) {
+    if (all.length < ALBUM_RECENTS_FROM) return;
+    const view = this.view;
+    const changed = all.slice().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 8);
+    const inAlbum = new Set(all);
+    const opened = this.plugin.recentFiles().filter((f) => inAlbum.has(f)).slice(0, 8);
+    if (opened.length > 1) view.shelf(root, 'Opened lately', opened);
+    view.shelf(root, 'Changed lately', changed);
+  }
+
 }
+
+/* An album this long shows what changed and what was opened lately. */
+const ALBUM_RECENTS_FROM = 12;
 
 /* -- every folder, as tiles ------------------------------------------ */
 

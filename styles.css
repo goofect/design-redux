@@ -1155,6 +1155,81 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   white-space: nowrap;
 }
 
+/* What an album opens with, under its header: its folder note's text, or its map. */
+.dr-album-lead {
+  margin: 0 0 28px;
+}
+
+.dr-album-lead.is-overview {
+  max-width: 70ch;
+  font-size: var(--font-text-size);
+  color: var(--text-normal);
+}
+
+.dr-album-lead.is-map {
+  height: min(420px, 55vh);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-l, 12px);
+  overflow: hidden;
+}
+
+.dr-album-lead.is-map > .internal-embed,
+.dr-album-lead.is-map > p,
+.dr-album-lead.is-map .internal-embed {
+  height: 100%;
+  margin: 0;
+}
+
+.dr-album-lead-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-album-lead-empty:focus-visible,
+.dr-album-notice:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Something an album's properties name that isn't there: quiet, but said. */
+.dr-album-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 8px 12px;
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-album-notice-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-album-lead-empty:hover,
+  .dr-album-notice:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* An album as covers: each disc's heading over its tiles. */
+.dr-covers-head {
+  margin-top: 8px;
+}
+
+.dr-covers-head + .dr-grid {
+  margin-bottom: 24px;
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

@@ -12,11 +12,21 @@
 /*   description: what it's for, shown under its title;               */
 /*   includes: notes from elsewhere that belong to it too — shown in   */
 /*     it, not moved or copied;                                        */
-/*   related: albums beside it, not above or below.                    */
+/*   related: albums beside it, not above or below;                    */
+/*   featured: notes to start with, at the top of the album;           */
+/*   layout: how it opens — its notes as a list or as covers, the      */
+/*     folder note's text first as an overview, or its canvas map.     */
 /* And an album's page shows the way down to it from the top.          */
 /* ------------------------------------------------------------------ */
 
-const ALBUM_KEYS = { type: 'album', description: 'description', includes: 'includes', related: 'related' };
+const ALBUM_KEYS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
+
+const ALBUM_LAYOUTS = [
+  { id: 'list', label: 'List', icon: 'list' },
+  { id: 'covers', label: 'Covers', icon: 'layout-grid' },
+  { id: 'overview', label: 'Overview', icon: 'file-text' },
+  { id: 'map', label: 'Map', icon: 'waypoints' },
+];
 
 const ALBUM_TYPES = [
   { id: 'subject', label: 'Subject', icon: 'book' },
@@ -41,7 +51,13 @@ class AlbumStructure extends Feature {
       {
         key: 'albumStructure',
         name: 'Albums say what they are',
-        desc: 'A folder note’s album, description, includes and related properties: its kind above its title, what it’s for, notes from elsewhere shown in it, and albums beside it. An album’s page shows the way down to it.',
+        desc: 'A folder note’s album, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, albums beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. An album’s page shows the way down to it.',
+      },
+      {
+        key: 'albumRecents',
+        showIf: 'albumStructure',
+        name: 'Lately, in long albums',
+        desc: `An album of ${ALBUM_RECENTS_FROM} notes or more shows what changed and what was opened lately, apart from its own order.`,
       },
     ];
   }
@@ -83,7 +99,7 @@ class AlbumStructure extends Feature {
 
   /** What a folder note says of its album: { type, label, description, includes, related, note }. */
   info(folder) {
-    const empty = { type: '', label: '', description: '', includes: [], related: [], note: null };
+    const empty = { type: '', label: '', description: '', includes: [], related: [], featured: [], layout: 'list', missing: [], note: null };
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return empty;
     const note = this.plugin.folderNote(folder);
     if (!note) return empty;
@@ -91,10 +107,12 @@ class AlbumStructure extends Feature {
     const fm = (cache && cache.frontmatter) || {};
     const type = String(valueList(fmGet(fm, ALBUM_KEYS.type))[0] || '').toLowerCase();
     const known = ALBUM_TYPES.find((t) => t.id === type);
+    const missing = [];
     const links = (key) => {
       const out = [];
       valueList(fmGet(fm, key)).forEach((v) => {
         const file = this.app.metadataCache.getFirstLinkpathDest(plainValue(v), note.path);
+        if (!file) missing.push({ key, name: plainValue(v) });
         // A folder note stands for its folder.
         const target = file && this.plugin.isFolderNote(file) && file.parent ? file.parent : file;
         if (target && target !== folder && target !== note && out.indexOf(target) === -1) out.push(target);
@@ -107,6 +125,10 @@ class AlbumStructure extends Feature {
       description: valueList(fmGet(fm, ALBUM_KEYS.description)).join(' '),
       includes: links(ALBUM_KEYS.includes),
       related: links(ALBUM_KEYS.related),
+      featured: links(ALBUM_KEYS.featured).filter((t) => t instanceof TFile),
+      layout: (ALBUM_LAYOUTS.find((l) => l.id === String(valueList(fmGet(fm, ALBUM_KEYS.layout))[0] || '').toLowerCase()) || ALBUM_LAYOUTS[0]).id,
+      // Names its includes, related and featured give that lead nowhere.
+      missing,
       note,
     };
   }
@@ -139,10 +161,14 @@ class AlbumStructure extends Feature {
   }
 
   /** A concept map's canvas: one named for the album, or the first in it; made from the album if none. */
-  async openMap(folder) {
+  /** An album's canvas: the one named for it, or the first in it. */
+  mapOf(folder) {
     const canvases = (folder.children || []).filter((c) => c instanceof TFile && c.extension === 'canvas');
-    const named = canvases.find((c) => c.basename.toLowerCase() === `${folder.name} map`.toLowerCase());
-    const existing = named || canvases[0];
+    return canvases.find((c) => c.basename.toLowerCase() === `${folder.name} map`.toLowerCase()) || canvases[0] || null;
+  }
+
+  async openMap(folder) {
+    const existing = this.mapOf(folder);
     if (existing) {
       await this.app.workspace.getLeaf(false).openFile(existing);
       return existing;
@@ -206,10 +232,98 @@ class AlbumStructure extends Feature {
     return ok;
   }
 
-  /** On a folder's menu: what kind of album it is. */
+  setLayout(folder, layout) {
+    return this.setProperty(folder, ALBUM_KEYS.layout, layout === 'list' ? '' : layout);
+  }
+
+  /** A note kept at the top of an album, or no longer: in its featured, by link. */
+  async toggleFeatured(folder, file) {
+    const note = this.plugin.folderNote(folder);
+    const cache = note ? this.app.metadataCache.getFileCache(note) : null;
+    const list = valueList(fmGet((cache && cache.frontmatter) || {}, ALBUM_KEYS.featured));
+    const from = note ? note.path : `${folder.path}/x.md`;
+    const kept = list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), from) !== file);
+    if (kept.length === list.length) kept.push(`[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`);
+    return this.setProperty(folder, ALBUM_KEYS.featured, kept);
+  }
+
+  /**
+   * Under the album's title, as its layout asks: the folder note's own
+   * text, or its canvas, drawn by Obsidian as an embed would be.
+   */
+  renderLead(root, folder, info, view) {
+    if (info.layout !== 'overview' && info.layout !== 'map') return null;
+    const box = root.createDiv({ cls: `dr-album-lead is-${info.layout} markdown-rendered` });
+    const source = info.note ? info.note.path : folder.path;
+    const draw = (markdown) => {
+      try {
+        if (typeof MarkdownRenderer.render === 'function') MarkdownRenderer.render(this.app, markdown, box, source, view);
+        else MarkdownRenderer.renderMarkdown(markdown, box, source, view);
+      } catch (err) {
+        box.setText(markdown);
+      }
+    };
+    if (info.layout === 'map') {
+      const map = this.mapOf(folder);
+      if (map) draw(`![[${map.path}]]`);
+      else {
+        const make = box.createDiv({ cls: 'dr-album-lead-empty', text: 'No map yet — make one' });
+        make.setAttribute('role', 'button');
+        make.setAttribute('tabindex', '0');
+        onActivate(make, () => this.openMap(folder));
+      }
+      return box;
+    }
+    if (!info.note) return box;
+    this.app.vault.cachedRead(info.note).then((text) => {
+      // The text without its properties, which the header has already said.
+      const body = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').trim();
+      if (body) draw(body);
+      else box.remove();
+    }, () => box.remove());
+    return box;
+  }
+
+  /** On a note's menu: kept at the top of its album, or not. */
+  addFileItems(menu, file, sectioned, redraw) {
+    const folder = file && file.parent;
+    if (!this.enabled || !folder || (folder.isRoot && folder.isRoot()) || this.plugin.isFolderNote(file)) return;
+    const on = this.info(folder).featured.indexOf(file) !== -1;
+    menu.addItem((item) =>
+      sectioned(item, 'action')
+        .setTitle(on ? `Don’t keep at the top of ${folder.name}` : `Keep at the top of ${folder.name}`)
+        .setIcon(on ? 'pin-off' : 'arrow-up-to-line')
+        .onClick(async () => {
+          if (await this.toggleFeatured(folder, file)) redraw();
+        })
+    );
+  }
+
+  /** On a folder's menu: what kind of album it is, and how it opens. */
   addFolderItems(menu, folder, sectioned, redraw) {
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return;
-    const now = this.info(folder).type;
+    const info = this.info(folder);
+    const now = info.type;
+    menuGroup(
+      menu,
+      'Album layout',
+      'layout-grid',
+      (m, nested) => {
+        if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
+        ALBUM_LAYOUTS.forEach((l) =>
+          m.addItem((item) =>
+            item
+              .setTitle(nested ? l.label : `Layout: ${l.label}`)
+              .setIcon(l.icon)
+              .setChecked(info.layout === l.id)
+              .onClick(async () => {
+                if (await this.setLayout(folder, l.id)) redraw();
+              })
+          )
+        );
+      },
+      'action'
+    );
     menuGroup(
       menu,
       'Kind of album',

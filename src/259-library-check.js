@@ -64,18 +64,8 @@ class LibraryCheck extends Feature {
       else if (shows && holdsNotes && !info.description) out.push({ target: folder, kind: 'about', problem: 'No description' });
       const depth = folder.path.split('/').length;
       if (depth > LIBRARY_DEEP) out.push({ target: folder, kind: 'deep', problem: `Nested ${depth} folders deep` });
-      if (info && info.note) {
-        // Links its includes and related name that lead nowhere.
-        const cache = this.app.metadataCache.getFileCache(info.note);
-        const fm = (cache && cache.frontmatter) || {};
-        [ALBUM_KEYS.includes, ALBUM_KEYS.related].forEach((key) =>
-          valueList(fmGet(fm, key)).forEach((v) => {
-            if (!this.app.metadataCache.getFirstLinkpathDest(plainValue(v), info.note.path)) {
-              out.push({ target: folder, kind: 'missing', problem: `Its ${key} name “${plainValue(v)}”, which isn’t there` });
-            }
-          })
-        );
-      }
+      // Links its properties name that lead nowhere.
+      if (info) info.missing.forEach((m) => out.push({ target: folder, kind: 'missing', problem: `Its ${m.key} name “${m.name}”, which isn’t there` }));
     });
 
     // Albums that take each other in, round in a circle.

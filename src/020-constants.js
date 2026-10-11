@@ -61,6 +61,8 @@ const DEFAULTS = {
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
   albumStructure: true,
+  // In a long album, shelves of what changed and was opened lately.
+  albumRecents: true,
   // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.

@@ -776,9 +776,10 @@ function showTargetMenu(plugin, evt, target, opts = {}) {
     }, 'action');
   }
 
-  if (isFolder && typeof AlbumStructure === 'function' && typeof plugin.feature === 'function') {
+  if (typeof AlbumStructure === 'function' && typeof plugin.feature === 'function') {
     const structure = plugin.feature(AlbumStructure);
-    if (structure) structure.addFolderItems(menu, target, sectioned, redraw);
+    if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
+    else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
   }
 
   // The vault's root can hold new things but isn't a thing to cover,

@@ -1040,6 +1040,77 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(loose && kept);
   });
 
+  await t('inside an album: notes to start with, a list or covers, an overview or its map, what changed lately, and why it’s empty', async () => {
+    const { v, plugin, app, view } = setup();
+    const note = v.file('IR/IR.md');
+    const fm = { album: 'project', featured: ['[[Balance]]'], includes: '[[Gone]]' };
+    const fms = new Map([[note, fm]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    app.metadataCache.fileToLinktext = (f) => f.basename;
+    app.vault.cachedRead = async () => '---\nalbum: project\n---\nWhat this is for.';
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
+    let written = null;
+    app.fileManager.processFrontMatter = async (file, fn) => { const copy = Object.assign({}, fms.get(file)); fn(copy); written = copy; };
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    view.render();
+    assert.ok(text('.dr-shelf-title').includes('Start here'));
+    assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Balance.md"]'));
+    assert.ok(text('.dr-album-notice')[0].includes('“Gone”'), 'a link that leads nowhere, said');
+    assert.ok(view.contentEl.querySelector('.dr-track[data-path]'), 'a list, as it opens by default');
+    // Kept at the top, and no longer, from a note's menu.
+    const items = [];
+    structure.addFileItems({ addItem: (fn) => { const item = {}; ['setSection', 'setIcon'].forEach((m) => (item[m] = () => item)); item.setTitle = (x) => { item.title = x; return item; }; item.onClick = (f) => { item.run = f; return item; }; fn(item); items.push(item); } }, v.vault.getFileByPath('IR/Balance.md'), (i) => i, () => {});
+    assert.deepStrictEqual(items.map((i) => i.title), ['Don’t keep at the top of IR']);
+    await structure.toggleFeatured(v.vault.getFolderByPath('IR'), v.vault.getFileByPath('IR/Balance.md'));
+    assert.ok(!('featured' in written), 'an empty list is taken away');
+    await structure.toggleFeatured(v.vault.getFolderByPath('IR'), v.vault.getFileByPath('IR/Anarchy.md'));
+    assert.deepStrictEqual(written.featured, ['[[Balance]]', '[[Anarchy]]']);
+    // As covers: a heading and tiles for each disc.
+    fm.layout = 'covers';
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.dr-track[data-path]'));
+    assert.deepStrictEqual(text('.dr-covers-head .dr-disc-title'), ['IR', 'Theories']);
+    assert.ok(view.contentEl.querySelector('.dr-grid .dr-card[data-path="IR/Anarchy.md"]'));
+    // An overview: the folder note's text, without its properties.
+    fm.layout = 'overview';
+    view.render();
+    await settle();
+    assert.deepStrictEqual(text('.dr-album-lead.is-overview'), ['What this is for.']);
+    // Its map: offered while there's none, embedded once there is.
+    fm.layout = 'map';
+    view.render();
+    assert.ok(text('.dr-album-lead-empty')[0].includes('No map yet'));
+    v.file('IR/IR map.canvas');
+    view.render();
+    assert.deepStrictEqual(text('.dr-album-lead.is-map'), ['![[IR/IR map.canvas]]']);
+    await structure.setLayout(v.vault.getFolderByPath('IR'), 'list');
+    assert.ok(!('layout' in written), 'a list is how it opens anyway');
+    delete fm.layout;
+    // A long album: what changed lately, and what was opened lately.
+    for (let i = 0; i < 10; i++) v.file(`IR/Extra ${i}.md`);
+    plugin.recentFiles = () => [v.vault.getFileByPath('IR/Extra 3.md'), v.vault.getFileByPath('IR/Anarchy.md'), v.vault.getFileByPath('Elsewhere.md')].filter(Boolean);
+    view.render();
+    assert.ok(text('.dr-shelf-title').includes('Changed lately'));
+    assert.ok(text('.dr-shelf-title').includes('Opened lately'));
+    plugin.settings.albumRecents = false;
+    view.render();
+    assert.ok(!text('.dr-shelf-title').includes('Changed lately'));
+    // Empty, and why.
+    v.folder('Plans');
+    const plans = v.file('Plans/Plans.md');
+    fms.set(plans, { album: 'project' });
+    Object.assign(view, { path: 'Plans' });
+    view.render();
+    assert.deepStrictEqual(text('.dr-empty'), ['Nothing in this project yet']);
+    view.query = 'zzz';
+    view.render();
+    assert.deepStrictEqual(text('.dr-empty'), ['Nothing matches']);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {
