@@ -124,6 +124,16 @@ body {
   --dr-row-height: calc(var(--dr-u) * 4 + 16px);
   --dr-control-size: 30px;
   --dr-control-icon: 16px;
+
+  /* On a canvas: how far the rest steps back while something is singled
+     out — a branch, a colour, one kind of relationship — or, more softly,
+     while a card is selected; and how much softer an association's arrow
+     is than a tree's. */
+  --dr-dim-card: 0.15;
+  --dr-dim-edge: 0.12;
+  --dr-dim-card-soft: 0.45;
+  --dr-dim-edge-soft: 0.35;
+  --dr-edge-assoc-opacity: 0.7;
   --dr-cover-gap: calc(var(--dr-u) * 2.5);
   --dr-title-gap: var(--dr-space-1);
 }
@@ -1790,13 +1800,13 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 /* One card selected, the rest quietened: lighter than a focus asked for. */
 .dr-branch-focus.is-soft .canvas-node:not(.dr-focus-lit) {
-  opacity: 0.45;
+  opacity: var(--dr-dim-card-soft);
 }
 
 .dr-branch-focus.is-soft .canvas-edges > g:not(.dr-focus-lit),
 .dr-branch-focus.is-soft .canvas-edges > svg > g:not(.dr-focus-lit),
 .dr-branch-focus.is-soft .canvas-path-label-wrapper:not(.dr-focus-lit) {
-  opacity: 0.35;
+  opacity: var(--dr-dim-edge-soft);
 }
 
 /* A note's relationships: its cover and name, the way up above it. */
@@ -5926,11 +5936,11 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 }
 
 .dr-canvas-focus .canvas-node:not(.dr-legend-match) {
-  opacity: 0.18;
+  opacity: var(--dr-dim-card);
 }
 
 .dr-canvas-focus .canvas-edges {
-  opacity: 0.3;
+  opacity: var(--dr-dim-edge);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7141,7 +7151,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   height: 22px;
   box-sizing: border-box;
   border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
-  border-radius: 11px;
+  border-radius: 50%;
   background-color: var(--background-primary);
   color: var(--color-yellow, var(--text-accent));
   transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
@@ -7244,7 +7254,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   border-radius: var(--dr-radius-md);
   background-color: var(--interactive-accent);
   color: var(--text-on-accent);
-  font-size: 11px;
+  font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold, 600);
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -7467,14 +7477,14 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
  */
 
 .dr-branch-focus .canvas-node:not(.dr-focus-lit) {
-  opacity: 0.15;
+  opacity: var(--dr-dim-card);
   transition: opacity var(--dr-dur-normal) var(--dr-ease);
 }
 
 .dr-branch-focus .canvas-edges > g:not(.dr-focus-lit),
 .dr-branch-focus .canvas-edges > svg > g:not(.dr-focus-lit),
 .dr-branch-focus .canvas-path-label-wrapper:not(.dr-focus-lit) {
-  opacity: 0.12;
+  opacity: var(--dr-dim-edge);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7784,7 +7794,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   border-radius: var(--dr-radius-sm);
   background-color: rgba(var(--dr-role-rgb), 0.12);
   color: rgb(var(--dr-role-rgb));
-  font-size: 12px;
+  font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
   white-space: nowrap;
   pointer-events: none;
@@ -7839,14 +7849,14 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 /* -- one kind of relationship shown alone ------------------------------- */
 
 .dr-relation-only .canvas-node:not(.dr-relation-lit) {
-  opacity: 0.15;
+  opacity: var(--dr-dim-card);
   transition: opacity var(--dr-dur-normal) var(--dr-ease);
 }
 
 .dr-relation-only .canvas-edges > g:not(.dr-relation-lit),
 .dr-relation-only .canvas-edges > svg > g:not(.dr-relation-lit),
 .dr-relation-only .canvas-path-label-wrapper:not(.dr-relation-lit) {
-  opacity: 0.12;
+  opacity: var(--dr-dim-edge);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -7886,5 +7896,5 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 /* Arrows: a tree's solid as they are; an association softer, its head too. */
 .canvas-edges g.dr-edge-assoc path.canvas-display-path,
 .canvas-edges g.dr-edge-assoc .canvas-path-end {
-  opacity: 0.7;
+  opacity: var(--dr-edge-assoc-opacity);
 }
