@@ -835,9 +835,8 @@ class Footnotes extends Feature {
     this.applyAside();
   }
 
-  /** The citations off the page, or back on it, as the setting says. */
-  applyAside() {
-    const on = this.aside;
+  /** The citations off the page, or back on it, as the setting says — or off, when going away. */
+  applyAside(on = this.aside) {
     document.body.toggleClass('dr-footnotes-aside', on);
     if (this.asideOn === on || !this.extensions) return;
     this.asideOn = on;
@@ -900,7 +899,8 @@ class Footnotes extends Feature {
 
   disable() {
     if (this.box) this.box.finish(false);
-    this.applyAside();
+    // Off whatever the setting says: unloading, the setting is still on.
+    this.applyAside(false);
   }
 
   get renumber() {
