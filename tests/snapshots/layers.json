@@ -18,7 +18,6 @@
  "110-browse-screens": [
   "AlbumStructure",
   "BulkEditing",
-  "bulkCount",
   "renamePropertyInPlace"
  ],
  "120-browse-view": [
@@ -32,9 +31,6 @@
   "AlbumProperty",
   "BulkEditing",
   "QuietLinks"
- ],
- "180-panel": [
-  "plainMarkdownLine"
  ],
  "190-strip": [
   "AlbumStructure",
@@ -67,12 +63,10 @@
   "boxEdges",
   "nearestSides",
   "newCanvasId",
-  "noteNameFrom",
   "relationInfo",
   "statementEnds"
  ],
  "255-album-property": [
-  "bulkCount",
   "bulkNotice",
   "bulkTail"
  ],
@@ -95,11 +89,7 @@
  ],
  "261-knowledge-check": [
   "BROWSE_SCREENS",
-  "Library",
-  "noteNameFrom"
- ],
- "265-quiet-links": [
-  "scriptLivePreview"
+  "Library"
  ],
  "290-bulk-engine": [
   "BrowseView",

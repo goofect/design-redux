@@ -148,17 +148,6 @@ function branchMarkdown(model, rootId, links, linkFor) {
   return text.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
 }
 
-/** A file name from a card's words: what a file name can't hold taken out. */
-function noteNameFrom(label) {
-  const name = String(label || '')
-    .replace(/[\\/:*?"<>|#^[\]]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 100)
-    .trim();
-  return name || 'Branch';
-}
-
 /**
  * Cards for a tree, as a tidy branch growing from `root` on `side`:
  * { nodes, edges } as a canvas file holds them, new ids from `newId`.

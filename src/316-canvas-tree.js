@@ -504,19 +504,6 @@ function markdownLines(text) {
     .filter((l) => l);
 }
 
-/** One line of markdown as the words it shows: no marks, links as their text. */
-function plainMarkdownLine(line) {
-  return String(line || '')
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/^>\s*(\[![^\]]*\][+-]?\s*)?/, '')
-    .replace(/^[-*+]\s+(\[.\]\s+)?/, '')
-    .replace(/^\d+[.)]\s+/, '')
-    .replace(/!?\[\[([^\]|]*\|)?([^\]]*)\]\]/g, '$2')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[*_`~=]/g, '')
-    .trim();
-}
-
 /**
  * The canvas as a tree, for the outline: groups hold what's inside them,
  * and a card holds the cards its arrows lead to in the same group. Only

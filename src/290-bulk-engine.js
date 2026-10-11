@@ -1551,8 +1551,6 @@ class BulkEdits {
 
 /* -- dialogs ---------------------------------------------------------- */
 
-const bulkCount = (n, one, many) => `${n} ${n === 1 ? one : many || one + 's'}`;
-
 /** Names in a sentence: "status", "status and domain", "status, domain and 2 more". */
 function nameList(names, quote = true, most = 3) {
   const q = names.map((n) => (quote ? `“${n}”` : n));

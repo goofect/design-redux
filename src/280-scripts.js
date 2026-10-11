@@ -181,15 +181,6 @@ function scriptAt(state, range) {
   return scriptSpans(line.text).find((s) => s.from <= a && b <= s.to) || null;
 }
 
-/** Whether Obsidian's editor is showing Live Preview rather than the source. */
-function scriptLivePreview(state) {
-  try {
-    return !!editorLivePreviewField && state.field(editorLivePreviewField, false) === true;
-  } catch (err) {
-    return false;
-  }
-}
-
 /** Code, maths, links, comments and frontmatter keep their ^ and ~ as they are. */
 function scriptIgnored(state, pos) {
   for (let node = syntaxTree(state).resolveInner(pos, 1); node; node = node.parent) {

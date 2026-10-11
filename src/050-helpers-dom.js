@@ -290,3 +290,12 @@ function activeEditorView(app) {
   const cm = view.editor && view.editor.cm;
   return cm && cm.state && typeof cm.dispatch === 'function' ? cm : null;
 }
+
+/** Whether Obsidian's editor is showing Live Preview rather than the source. */
+function scriptLivePreview(state) {
+  try {
+    return !!editorLivePreviewField && state.field(editorLivePreviewField, false) === true;
+  } catch (err) {
+    return false;
+  }
+}
