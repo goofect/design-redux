@@ -1034,10 +1034,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       'Law: loop',
       'Law/Theories: about',
       'Law/Theories: twice',
-      'Loose.md: loose',
     ].sort());
-    assert.ok(!found.includes('Kept.md: loose'), 'a note an album takes in is in one');
-    assert.ok(loose && kept);
+    assert.deepStrictEqual(check.unclassified(), [loose], 'in no album: not one an album takes in, nor the home note');
+    assert.ok(kept);
   });
 
   await t('inside an album: notes to start with, a list or covers, an overview or its map, what changed lately, and why it’s empty', async () => {
@@ -1214,6 +1213,105 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const titled = art();
     R.drawFolderArt(plugin, titled, theories);
     assert.ok(!titled.querySelector('.dr-cover-print'));
+  });
+
+  await t('the library report: roles at odds, parents in a circle, albums in no collection, overlaps, a cover twice, subjects with nothing to start with, and size out of balance', () => {
+    const { v, plugin, app, view } = setup();
+    v.folder('Shelf');
+    v.folder('Shelf/Inner');
+    v.file('Shelf/Inner/Deep.md');
+    v.folder('Top');
+    const shared = ['One', 'Two', 'Three'].map((n) => v.file(`Top/${n}.md`));
+    v.file('Top/Top.md');
+    v.folder('Mirror');
+    v.file('Mirror/Mirror.md');
+    v.folder('Big');
+    for (let i = 0; i < 45; i++) v.file(`Big/N${i}.md`);
+    const a = v.file('A.md');
+    const b = v.file('B.md');
+    const odd = v.file('Odd.md');
+    const fms = new Map([
+      [v.vault.getFileByPath('IR/Theories/Realism.md'), {}],
+      [v.vault.getFileByPath('Top/Top.md'), { album: 'subject', description: 'x', related: ['[[Mirror]]'], includes: ['[[Mirror]]'] }],
+      [v.vault.getFileByPath('Mirror/Mirror.md'), { description: 'y', includes: ['[[One]]', '[[Two]]', '[[Three]]', '[[One]]'] }],
+      [a, { parent: '[[B]]' }],
+      [b, { parent: '[[A]]' }],
+      [odd, { album: 'project' }],
+    ]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    plugin.folderCoverSrc = (folder) => (folder.name === 'Top' || folder.name === 'Big' ? 'app://cover.png' : null);
+    const structure = new R.AlbumStructure(plugin);
+    const check = new R.LibraryCheck(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : C === R.LibraryCheck ? check : null);
+    const found = check.problems();
+    const has = (path, kind) => found.some((p) => p.target.path === path && p.kind === kind);
+    assert.ok(has('Top', 'roles'), 'takes in an album it lists as related too');
+    assert.ok(has('Odd.md', 'roles'), 'a note saying it’s an album');
+    assert.ok(has('A.md', 'parents') && has('B.md', 'parents'), 'parents round in a circle');
+    assert.ok(has('IR', 'orphan') && has('Big', 'orphan'), 'albums at the top while others are in collections');
+    assert.ok(has('Mirror', 'listed'), 'a note listed twice');
+    assert.ok(has('Top', 'overlap') || has('Mirror', 'overlap'), 'albums sharing most of their notes');
+    assert.ok(has('Top', 'cover') && has('Big', 'cover'), 'one cover for two albums');
+    assert.ok(has('Top', 'start'), 'a subject with no notes to start with');
+    assert.ok(has('Big', 'large'), 'far larger than most');
+    assert.deepStrictEqual(Array.from(new Set(found.map((p) => p.section))).sort(), ['coverage', 'hierarchy', 'overlap']);
+    // Drawn as a report, a section at a time, with the inbox above.
+    Object.assign(view, { mode: 'library-check', path: '/' });
+    view.render();
+    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
+    assert.deepStrictEqual(text('.dr-report-head').map((t) => t.replace(/\d+$/, '')), ['Hierarchy', 'Duplicates and overlaps', 'Coverage and balance']);
+    assert.ok(text('.dr-report-name')[0].includes('in no album'));
+    assert.ok(shared.length === 3);
+  });
+
+  await t('the inbox: notes in no album, picked a few at a time, moved into an album or shown in one, with Undo', async () => {
+    const { v, plugin, app, view } = setup();
+    const one = v.file('Loose one.md');
+    const two = v.file('Loose two.md');
+    v.file('Home.md');
+    app.metadataCache.fileToLinktext = (f) => f.basename;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    const structure = new R.AlbumStructure(plugin);
+    const check = new R.LibraryCheck(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : C === R.LibraryCheck ? check : null);
+    let undo = null;
+    plugin.offerUndo = (msg, fn) => { undo = fn; };
+    plugin.putBack = async (file, from) => { await v.fileManager.renameFile(file, from); return true; };
+    plugin.moveFile = async (file, dir) => { const from = file.path; await v.fileManager.renameFile(file, `${dir}/${file.name}`); return from; };
+    Object.assign(view, { mode: 'inbox', path: '/' });
+    view.render();
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-inbox-row')).map((r) => r.dataset.path);
+    assert.deepStrictEqual(rows(), ['Loose one.md', 'Loose two.md']);
+    const box = (path) => view.contentEl.querySelector(`.dr-inbox-row[data-path="${path}"] input`);
+    box('Loose two.md').click();
+    assert.deepStrictEqual(Array.from(view.inboxPicked), ['Loose two.md']);
+    assert.ok(view.contentEl.querySelector('.dr-inbox-count').textContent.includes('1 picked'));
+    // Moved into an album as one step, and put back with Undo.
+    const ir = v.vault.getFolderByPath('IR');
+    assert.strictEqual(await check.moveFilesInto([two], ir), true);
+    assert.strictEqual(two.path, 'IR/Loose two.md');
+    view.render();
+    assert.deepStrictEqual(rows(), ['Loose one.md'], 'in an album now: out of the inbox');
+    await undo();
+    view.render();
+    assert.deepStrictEqual(rows(), ['Loose one.md', 'Loose two.md']);
+    // Shown in an album where they are: listed in its includes, and out of the inbox.
+    const fms = new Map();
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
+    const irNote = v.file('IR/IR.md');
+    fms.set(irNote, {});
+    plugin.ensureFolderNote = async () => irNote;
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); };
+    assert.strictEqual(await check.showFilesIn([one, two], ir), true);
+    assert.deepStrictEqual(fms.get(irNote).includes, ['[[Loose one]]', '[[Loose two]]']);
+    view.render();
+    assert.deepStrictEqual(rows(), [], 'shown in an album: in one');
+    assert.strictEqual(one.path, 'Loose one.md', 'left where it is');
+    await undo();
+    assert.ok(!('includes' in fms.get(irNote)));
   });
 
   console.log(`\n${passed} passed`);

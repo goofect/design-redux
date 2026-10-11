@@ -1323,6 +1323,109 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   }
 }
 
+/* The library report, and the inbox: quiet rows to go through. */
+.dr-report-lead {
+  margin: 0 0 18px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-report-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 22px 0 6px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.dr-report-count {
+  font-weight: var(--font-normal, 400);
+  color: var(--text-faint);
+}
+
+.dr-report-row,
+.dr-inbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s, 4px);
+  cursor: pointer;
+}
+
+.dr-report-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.dr-report-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-report-name,
+.dr-inbox-name {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-report-problem {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.dr-report-where,
+.dr-inbox-when {
+  flex: 0 1 auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-inbox-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-inbox-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.dr-inbox-bar .dr-detail-action.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.dr-inbox-count {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-report-row:focus-visible,
+.dr-inbox-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-report-row:hover,
+  .dr-inbox-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: 24px;

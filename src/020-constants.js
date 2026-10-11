@@ -12,6 +12,7 @@ const BUILTIN_SCREENS = {
   properties: 'properties',
   recents: 'recents',
   bookmarks: 'pinned',
+  inbox: 'inbox',
 };
 
 const LIBRARY_BUILTINS = {
@@ -25,6 +26,7 @@ const LIBRARY_BUILTINS = {
   notes: { label: 'Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
   smart: { label: 'Smart albums', icon: 'sparkles' },
+  inbox: { label: 'Inbox', icon: 'inbox' },
 };
 
 /* How large covers are on screens of tiles. */
@@ -76,6 +78,8 @@ const DEFAULTS = {
   coverPrint: false,
   // A command listing what the library has lost track of.
   libraryCheck: true,
+  // The notes in no album, in one place, to put in albums a few at a time.
+  libraryInbox: true,
   smartAlbumList: [],
   // { folderPath: sort key }
   albumSorts: {},
