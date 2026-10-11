@@ -107,7 +107,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1147,6 +1147,49 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.tileGroups = '';
     view.render();
     assert.deepStrictEqual(heads(), []);
+  });
+
+  await t('covers by kind: each kind its symbol and colour, a note its album’s; and kind, name and collection printed on a cover', () => {
+    const { v, plugin, app } = setup();
+    const note = v.file('IR/Theories/Theories.md');
+    const fms = new Map([[note, { album: 'project' }]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    plugin.settings.coverFallback = 'kind';
+    const art = () => document.createElement('div');
+    const theories = v.vault.getFolderByPath('IR/Theories');
+    const el = art();
+    R.drawFolderArt(plugin, el, theories);
+    assert.ok(el.classList.contains('is-kind'));
+    assert.strictEqual(el.querySelector('.dr-card-glyph').dataset.icon, 'target', 'a project’s symbol');
+    const projectHue = el.style.getPropertyValue('--dr-gen-h');
+    const plain = art();
+    R.drawFolderArt(plugin, plain, v.vault.getFolderByPath('IR'));
+    assert.strictEqual(plain.querySelector('.dr-card-glyph').dataset.icon, 'folder', 'no kind: plain');
+    assert.notStrictEqual(plain.style.getPropertyValue('--dr-gen-h'), projectHue);
+    const track = art();
+    R.drawNoteArt(plugin, track, v.vault.getFileByPath('IR/Theories/Realism.md'));
+    assert.ok(track.classList.contains('is-kind'));
+    assert.strictEqual(track.style.getPropertyValue('--dr-gen-h'), projectHue, 'a note in its album’s colour');
+    // A colour chosen for the album wins.
+    plugin.settings.coverColors = { 'IR/Theories': '#3e63dd' };
+    const own = art();
+    R.drawFolderArt(plugin, own, theories);
+    assert.notStrictEqual(own.style.getPropertyValue('--dr-gen-h'), projectHue);
+    // Printed: kind, name, collection.
+    plugin.settings.coverPrint = true;
+    plugin.settings.coverFallback = 'art';
+    const printed = art();
+    R.drawFolderArt(plugin, printed, theories);
+    const text = (sel) => Array.from(printed.querySelectorAll(sel)).map((x) => x.textContent);
+    assert.deepStrictEqual([text('.dr-cover-print-kind'), text('.dr-cover-print-title'), text('.dr-cover-print-from')], [['Project'], ['Theories'], ['IR']]);
+    // Not over a picture, nor where the name is the cover already.
+    plugin.settings.coverFallback = 'title';
+    const titled = art();
+    R.drawFolderArt(plugin, titled, theories);
+    assert.ok(!titled.querySelector('.dr-cover-print'));
   });
 
   console.log(`\n${passed} passed`);

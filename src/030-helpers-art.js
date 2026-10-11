@@ -221,6 +221,11 @@ function drawNoteArt(plugin, el, file) {
   const md = file.extension === 'md';
   const look = blankLook(settings, file.basename, file.path);
   const src = md ? noteCoverSrc(plugin, file) : null;
+  // Coloured by kind: a note takes its album's colour, with its own icon.
+  if (settings.coverFallback === 'kind' && md && !src) {
+    kindArt(plugin, el, file.parent, iconForFile(file), file.path);
+    return;
+  }
   const gen = md ? coverGen(settings, file.basename, file.path) : null;
   if (src || gen) {
     fillArt(el, src, iconForFile(file), gen, look);
@@ -234,10 +239,43 @@ function drawNoteArt(plugin, el, file) {
 
 /** A folder's artwork: its cover, or a colour chosen for it, or the icon as the settings say. */
 function drawFolderArt(plugin, el, folder) {
+  const settings = plugin.settings;
   const root = !!(folder.isRoot && folder.isRoot());
   const name = root ? plugin.app.vault.getName() : folder.name;
-  const gen = coverGen(plugin.settings, name, folder.path);
-  fillArt(el, plugin.folderCoverSrc(folder), 'folder', gen, blankLook(plugin.settings, name, folder.path));
+  const src = plugin.folderCoverSrc(folder);
+  if (settings.coverFallback === 'kind' && !src) kindArt(plugin, el, root ? null : folder, null, folder.path);
+  else fillArt(el, src, 'folder', coverGen(settings, name, folder.path), blankLook(settings, name, folder.path));
+  // Printed on a cover that isn't a picture: its kind, its name and where it's from, in the same places on every album.
+  if (settings.coverPrint && !src && !root && settings.coverFallback !== 'title') printCover(plugin, el, folder);
+}
+
+/** An album's kind, from its folder note, or null. */
+function albumKindOf(plugin, folder) {
+  const structure = folder && typeof AlbumStructure === 'function' && typeof plugin.feature === 'function' ? plugin.feature(AlbumStructure) : null;
+  const info = structure ? structure.info(folder) : null;
+  return info && info.type ? ALBUM_TYPES.find((t) => t.id === info.type) || { id: info.type, label: info.label, icon: 'folder', color: ALBUM_KIND_NEUTRAL } : null;
+}
+
+/**
+ * A cover for an album's kind: its symbol, on its colour — or on the
+ * colour chosen for it. A note gets its album's colour and its own icon.
+ */
+function kindArt(plugin, el, folder, glyph, path) {
+  const kind = albumKindOf(plugin, folder);
+  el.addClass('is-generated', 'is-kind');
+  paintTint(el, ownTint(plugin.settings, path) || (kind ? kind.color : ALBUM_KIND_NEUTRAL), folder ? folder.name : '');
+  setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph || (kind ? kind.icon : 'folder'));
+}
+
+/** The kind, the name and the collection, printed along a cover's foot. */
+function printCover(plugin, el, folder) {
+  const kind = albumKindOf(plugin, folder);
+  el.addClass('has-print');
+  const band = el.createDiv({ cls: 'dr-cover-print' });
+  if (kind) band.createDiv({ cls: 'dr-cover-print-kind', text: kind.label });
+  band.createDiv({ cls: 'dr-cover-print-title', text: folder.name });
+  const parent = folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent : null;
+  if (parent) band.createDiv({ cls: 'dr-cover-print-from', text: parent.name });
 }
 
 /** A number from a name, stable between runs: the same name, the same colour. */

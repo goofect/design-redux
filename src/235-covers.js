@@ -46,6 +46,7 @@ class CoverImages extends Feature {
           name: 'A colour from its name',
           accent: 'The accent colour',
           custom: 'One colour for all',
+          kind: 'A symbol and colour for its kind of album',
         },
       },
       {
@@ -55,6 +56,11 @@ class CoverImages extends Feature {
         name: 'Cover colour',
         desc: 'For generated covers without a colour of their own.',
         parent: 'coverFallback',
+      },
+      {
+        key: 'coverPrint',
+        name: 'Print albums’ names on their covers',
+        desc: 'An album without a picture has its kind, its name and the collection it’s in printed along the foot of its cover, in the same places on every album.',
       },
     ];
   }

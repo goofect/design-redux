@@ -28,14 +28,18 @@ const ALBUM_LAYOUTS = [
   { id: 'map', label: 'Map', icon: 'waypoints' },
 ];
 
+/* Each kind's symbol, and its colour where covers are coloured by kind: muted, so colour means kind and no more. */
 const ALBUM_TYPES = [
-  { id: 'subject', label: 'Subject', icon: 'book' },
-  { id: 'concept map', label: 'Concept map', icon: 'waypoints' },
-  { id: 'project', label: 'Project', icon: 'target' },
-  { id: 'reading list', label: 'Reading list', icon: 'library' },
-  { id: 'reference', label: 'Reference', icon: 'bookmark' },
-  { id: 'index', label: 'Index', icon: 'list' },
+  { id: 'subject', label: 'Subject', icon: 'book', color: '#4f6d8f' },
+  { id: 'concept map', label: 'Concept map', icon: 'waypoints', color: '#7a5c8e' },
+  { id: 'project', label: 'Project', icon: 'target', color: '#b0703a' },
+  { id: 'reading list', label: 'Reading list', icon: 'library', color: '#5e7f5a' },
+  { id: 'reference', label: 'Reference', icon: 'bookmark', color: '#4d7f80' },
+  { id: 'index', label: 'Index', icon: 'list', color: '#8a6f52' },
 ];
+
+/* An album of no kind, where covers are coloured by kind. */
+const ALBUM_KIND_NEUTRAL = '#7d7770';
 
 /* What counts as finished, for a project's notes and a reading list's. */
 const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
@@ -265,7 +269,16 @@ class AlbumStructure extends Feature {
     };
     if (info.layout === 'map') {
       const map = this.mapOf(folder);
-      if (map) draw(`![[${map.path}]]`);
+      if (map) {
+        // Drawn by Obsidian as a picture of the map; pressed, the map opens.
+        draw(`![[${map.path}]]`);
+        box.addClass('is-linked');
+        box.setAttribute('aria-label', `Open ${map.basename}`);
+        box.addEventListener('click', (evt) => {
+          evt.preventDefault();
+          this.app.workspace.getLeaf(false).openFile(map);
+        });
+      }
       else {
         const make = box.createDiv({ cls: 'dr-album-lead-empty', text: 'No map yet — make one' });
         make.setAttribute('role', 'button');

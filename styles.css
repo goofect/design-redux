@@ -1180,6 +1180,10 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   margin: 0;
 }
 
+.dr-album-lead.is-map.is-linked {
+  cursor: pointer;
+}
+
 .dr-album-lead-empty {
   display: flex;
   align-items: center;
@@ -4448,6 +4452,62 @@ body.is-mobile .dr-bulk-chip {
   --dr-gen-h: var(--accent-h, 352);
   --dr-gen-s: var(--accent-s, 95%);
   --dr-gen-l: var(--accent-l, 58%);
+}
+
+/* A kind's symbol on its colour: white, and large enough to read as the cover. */
+.is-generated.is-kind .dr-card-glyph {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.is-generated.is-kind .dr-card-glyph .svg-icon {
+  width: 40cqi;
+  height: 40cqi;
+  stroke-width: 1.5px;
+}
+
+/* Printed along a cover's foot: kind, name, collection — the same places on every album. */
+.dr-card-art.has-print,
+.dr-detail-art.has-print {
+  container-type: inline-size;
+}
+
+.dr-cover-print {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 7cqi 8cqi;
+  background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.55));
+  color: rgba(255, 255, 255, 0.95);
+  pointer-events: none;
+}
+
+.dr-cover-print-kind {
+  font-size: clamp(7px, 5.5cqi, 13px);
+  font-weight: var(--font-semibold, 600);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+.dr-cover-print-title {
+  font-size: clamp(10px, 10cqi, 26px);
+  font-weight: var(--font-bold, 700);
+  line-height: 1.1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dr-cover-print-from {
+  margin-top: 2px;
+  font-size: clamp(7px, 5.5cqi, 13px);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .is-generated.is-light .dr-gen-initials {

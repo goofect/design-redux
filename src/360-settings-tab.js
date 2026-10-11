@@ -25,7 +25,7 @@ const SETTINGS_TABS = [
       { title: 'Screens', keys: ['albumColumns', 'trackLength', 'gridDensity', 'tileGroups', 'tableColumns', 'categoryProperty'] },
       { title: 'Albums', keys: ['albumStructure', 'albumRecents', 'smartAlbums', 'libraryCheck'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
-      { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor'] },
+      { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },
     ],
   },
   {

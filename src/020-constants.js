@@ -72,6 +72,8 @@ const DEFAULTS = {
   gridDensity: 'standard',
   // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
+  // An album cover that isn't a picture has its kind, name and collection printed on it.
+  coverPrint: false,
   // A command listing what the library has lost track of.
   libraryCheck: true,
   smartAlbumList: [],
