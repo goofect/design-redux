@@ -112,32 +112,6 @@ function compareBranches(model, aId, bId) {
   };
 }
 
-class ComparePicker extends FuzzySuggestModal {
-  constructor(app, items, placeholder, onChoose) {
-    super(app);
-    this.items = items;
-    this.onChoose = onChoose;
-    this.setPlaceholder(placeholder);
-  }
-
-  getItems() {
-    return this.items;
-  }
-
-  getItemText(item) {
-    return `${item.label} ${item.note || ''}`;
-  }
-
-  renderSuggestion(match, el) {
-    el.createDiv({ text: match.item.label });
-    if (match.item.note) el.createDiv({ cls: 'dr-find-where', text: match.item.note });
-  }
-
-  onChooseItem(item) {
-    this.onChoose(item);
-  }
-}
-
 class CanvasCompare extends CanvasFeature {
   settingsSchema() {
     return [

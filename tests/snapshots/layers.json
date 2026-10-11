@@ -58,9 +58,6 @@
  "235-covers": [
   "BrowseView"
  ],
- "250-property-clipboard": [
-  "ComparePicker"
- ],
  "253-actions": [
   "BrowseView"
  ],
@@ -69,7 +66,6 @@
   "BrowseScreen",
   "CanvasFind",
   "CanvasRelations",
-  "ComparePicker",
   "DEFAULT_RELATION_TYPES",
   "Library",
   "RELATED_KEY",
@@ -84,20 +80,17 @@
  "255-album-property": [
   "bulkCount",
   "bulkNotice",
-  "bulkTail",
-  "confirmAction"
+  "bulkTail"
  ],
  "257-album-structure": [
   "ALBUM_RECENTS_FROM",
   "BrowseView",
-  "CanvasVaultMap",
-  "ComparePicker"
+  "CanvasVaultMap"
  ],
  "258-smart-albums": [
   "BROWSE_SCREENS",
   "BrowseScreen",
   "BrowseView",
-  "ComparePicker",
   "Library",
   "LibraryView"
  ],
@@ -112,7 +105,6 @@
   "noteNameFrom"
  ],
  "265-quiet-links": [
-  "ComparePicker",
   "scriptLivePreview"
  ],
  "290-bulk-engine": [
@@ -125,7 +117,6 @@
  ],
  "348-workspace-modes": [
   "CanvasOutline",
-  "ComparePicker",
   "Knowledge",
   "Library"
  ]

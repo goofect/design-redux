@@ -1305,32 +1305,3 @@ class StrayNotesModal extends Modal {
     this.contentEl.empty();
   }
 }
-
-/** Ask before a change to many notes: resolves true to go ahead. */
-function confirmAction(app, opts) {
-  return new Promise((resolve) => {
-    const modal = new Modal(app);
-    let answered = false;
-    const answer = (yes) => {
-      if (answered) return;
-      answered = true;
-      resolve(yes);
-      modal.close();
-    };
-    modal.onOpen = () => {
-      modal.titleEl.setText(opts.title);
-      modal.contentEl.createEl('p', { text: opts.text });
-      const buttons = modal.contentEl.createDiv({ cls: 'modal-button-container' });
-      buttons.createEl('button', { cls: 'mod-cta', text: opts.button || 'Go ahead' }).addEventListener('click', () => answer(true));
-      buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => answer(false));
-    };
-    modal.onClose = () => {
-      modal.contentEl.empty();
-      if (!answered) {
-        answered = true;
-        resolve(false);
-      }
-    };
-    modal.open();
-  });
-}

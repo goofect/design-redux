@@ -388,3 +388,58 @@ class ChoicePicker extends FuzzySuggestModal {
   }
 }
 
+/** One of a list, picked by typing: items are { label, note? }; the note is shown under each. */
+class ComparePicker extends FuzzySuggestModal {
+  constructor(app, items, placeholder, onChoose) {
+    super(app);
+    this.items = items;
+    this.onChoose = onChoose;
+    this.setPlaceholder(placeholder);
+  }
+
+  getItems() {
+    return this.items;
+  }
+
+  getItemText(item) {
+    return `${item.label} ${item.note || ''}`;
+  }
+
+  renderSuggestion(match, el) {
+    el.createDiv({ text: match.item.label });
+    if (match.item.note) el.createDiv({ cls: 'dr-find-where', text: match.item.note });
+  }
+
+  onChooseItem(item) {
+    this.onChoose(item);
+  }
+}
+
+/** Ask before a change to many notes: resolves true to go ahead. */
+function confirmAction(app, opts) {
+  return new Promise((resolve) => {
+    const modal = new Modal(app);
+    let answered = false;
+    const answer = (yes) => {
+      if (answered) return;
+      answered = true;
+      resolve(yes);
+      modal.close();
+    };
+    modal.onOpen = () => {
+      modal.titleEl.setText(opts.title);
+      modal.contentEl.createEl('p', { text: opts.text });
+      const buttons = modal.contentEl.createDiv({ cls: 'modal-button-container' });
+      buttons.createEl('button', { cls: 'mod-cta', text: opts.button || 'Go ahead' }).addEventListener('click', () => answer(true));
+      buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => answer(false));
+    };
+    modal.onClose = () => {
+      modal.contentEl.empty();
+      if (!answered) {
+        answered = true;
+        resolve(false);
+      }
+    };
+    modal.open();
+  });
+}
