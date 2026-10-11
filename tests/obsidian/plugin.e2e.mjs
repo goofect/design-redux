@@ -124,17 +124,7 @@ describe('Design Redux in Obsidian', function () {
       return p ? p.features.map((f) => [f.constructor.name, !!f.enabled]) : null;
     });
     expect(state).not.toBeNull();
-    const measured = await browser.executeObsidian(({ app }) => {
-      const leaf = app.workspace.getLeavesOfType('design-redux-library')[0];
-      let redraw = null;
-      if (leaf && leaf.view && typeof leaf.view.render === 'function') {
-        const started = performance.now();
-        leaf.view.render();
-        redraw = Math.round(performance.now() - started);
-      }
-      return { load: window.__drLoadMs, redraw };
-    });
-    perf.push(`perf: plugin load ${measured.load} ms`, `perf: library redraw ${measured.redraw} ms`);
+    perf.push(`perf: plugin load ${await browser.executeObsidian(() => window.__drLoadMs)} ms`);
     const on = Object.fromEntries(state);
     // Switched on by default.
     for (const name of ['Library', 'ContextStrip', 'CoverImages', 'Scripts', 'CanvasLegend', 'CanvasAlign', 'BulkEditing']) {
@@ -248,6 +238,15 @@ describe('Design Redux in Obsidian', function () {
       if (typeof library.reveal === 'function') await library.reveal();
     });
     await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+    // The library open: how long one redraw of it takes, for the baseline.
+    const redraw = await browser.executeObsidian(({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('design-redux-library')[0];
+      if (!leaf || !leaf.view || typeof leaf.view.render !== 'function') return null;
+      const started = performance.now();
+      leaf.view.render();
+      return Math.round(performance.now() - started);
+    });
+    perf.push(`perf: library redraw ${redraw} ms`);
     await browser.pause(1500);
     const report = await browser.executeObsidian(async ({ app }) => {
       const out = { split: [], body: [], panel: 0, panelSample: [], page: 0, pageSample: [], splitStyle: 0 };
