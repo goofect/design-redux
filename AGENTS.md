@@ -71,6 +71,8 @@ Coffee N' Christmas.
   `design-redux:canvas-changed`). On a canvas, after a change by hand:
   `afterCanvasChange` or `glideAndSettle`; save with `saveCanvas`.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
+- A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
+  instances (082), drawn between the properties and the mentions.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback.
