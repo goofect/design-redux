@@ -22,21 +22,15 @@
  "200-one-page": [
   "Library"
  ],
- "254-knowledge": [
-  "CanvasFind",
-  "CanvasRelations",
-  "boxEdges",
-  "nearestSides",
-  "newCanvasId",
-  "relationInfo",
-  "statementEnds"
- ],
  "255-album-property": [
   "bulkNotice",
   "bulkTail"
  ],
  "257-album-structure": [
   "CanvasVaultMap"
+ ],
+ "326-canvas-relations": [
+  "Knowledge"
  ],
  "348-workspace-modes": [
   "CanvasOutline",
