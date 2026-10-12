@@ -50,6 +50,48 @@ const OPEN_VALUES = ['open', 'question', 'unanswered', 'unresolved', 'gap'];
 /* What counts as finished, for a project's notes and a reading list's. */
 const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
 
+/** In the note panel: the album a note is in, albums that include it from elsewhere, and canvases it's on. */
+class PlacesSection extends PanelSection {
+  constructor(panel, structure) {
+    super(panel);
+    this.structure = structure;
+  }
+
+  get cls() {
+    return 'dr-places-section';
+  }
+
+  render() {
+    const file = this.file;
+    if (!file || file.extension !== 'md') return;
+    this.renderLabel('Kept in');
+    const folder = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
+    const albums = (folder ? [{ folder, own: true }] : []).concat(this.structure.albumsIncluding(file).map((f) => ({ folder: f, own: false })));
+    this.renderList('places-albums', 'Albums', albums, (list, a) => {
+      const row = list.createDiv({ cls: 'dr-mention' });
+      asButton(row, `Open the album ${a.folder.name}`);
+      row.createSpan({ cls: 'dr-mention-name', text: a.folder.name });
+      if (!a.own) row.createSpan({ cls: 'dr-mention-count', text: 'includes it' });
+      onActivate(row, () => {
+        const library = this.plugin.feature(Library);
+        if (library) library.browseMode({ mode: 'folder', path: a.folder.path });
+        this.panel.close();
+      });
+    });
+    this.renderList('places-canvases', 'Canvases', canvasesWith(this.app, file), (list, canvas) => this.fileRow(list, canvas));
+  }
+}
+
+/** The canvases with a card for a note, as Obsidian counts their links. */
+function canvasesWith(app, file) {
+  const links = app.metadataCache.resolvedLinks || {};
+  return Object.keys(links)
+    .filter((p) => p.endsWith('.canvas') && links[p] && links[p][file.path])
+    .map((p) => app.vault.getFileByPath(p))
+    .filter(Boolean)
+    .sort((a, b) => a.basename.localeCompare(b.basename));
+}
+
 class AlbumStructure extends Feature {
   /** Every settings save: the property names, as set. Safe to run again. */
   enable() {
@@ -62,6 +104,12 @@ class AlbumStructure extends Feature {
 
   settingsSchema() {
     return [
+      {
+        key: 'panelPlaces',
+        name: 'Where a note is kept, in the note panel',
+        desc: 'Below a note’s properties: the album it’s in, the albums that include it from elsewhere, and the canvases it’s on.',
+        showIf: 'albumStructure',
+      },
       {
         key: 'albumKeyNames',
         type: 'custom',
@@ -246,6 +294,20 @@ class AlbumStructure extends Feature {
     head.createDiv({ cls: 'dr-detail-meta', text: count === 1 ? '1 album' : `${count} albums` });
     if (info.description) head.createDiv({ cls: 'dr-detail-desc', text: info.description });
     return head;
+  }
+
+  panelSections(panel) {
+    return this.settings.panelPlaces !== false ? [new PlacesSection(panel, this)] : [];
+  }
+
+  /** The albums that include a note from elsewhere: those whose folder note names it under includes. */
+  albumsIncluding(file) {
+    const out = [];
+    this.app.vault.getMarkdownFiles().forEach((note) => {
+      if (!note.parent || !this.plugin.isFolderNote(note) || !valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length) return;
+      if (note.parent !== file.parent && this.info(note.parent).includes.indexOf(file) !== -1) out.push(note.parent);
+    });
+    return out.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /** Notes from elsewhere that belong to the album too, less any already in it. */

@@ -123,6 +123,79 @@ BROWSE_SCREENS.concept = ConceptScreen;
 
 /* -- the model ------------------------------------------------------- */
 
+/** In the note panel: what the note comes under, its relationships both ways, and what to do with them. */
+class RelationsSection extends PanelSection {
+  constructor(panel, knowledge) {
+    super(panel);
+    this.knowledge = knowledge;
+  }
+
+  get cls() {
+    return 'dr-relations-section';
+  }
+
+  render() {
+    const k = this.knowledge;
+    const file = this.file;
+    if (!file || file.extension !== 'md') return;
+    this.renderLabel('Relationships');
+    const chain = k.broaderChain(file);
+    if (chain.length) {
+      const under = this.containerEl.createDiv({ cls: 'dr-relations-under' });
+      under.createSpan({ cls: 'dr-relations-under-word', text: 'Under' });
+      chain.forEach((f, i) => {
+        if (i) under.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+        const crumb = under.createSpan({ cls: 'dr-relations-crumb', text: f.basename });
+        asButton(crumb, `Open ${f.basename}`);
+        onActivate(crumb, () => {
+          this.app.workspace.getLeaf(false).openFile(f);
+          this.panel.close();
+        });
+      });
+    }
+    const groups = k.groups(file);
+    groups.forEach((g) =>
+      this.renderList(`relation-${g.label.toLowerCase()}`, g.label, g.items, (list, item) => {
+        const row = this.fileRow(list, item.file);
+        const off = row.createSpan({ cls: 'dr-mention-remove' });
+        setIcon(off, 'x');
+        asButton(off, `Take off: ${item.from.basename} ${item.kind.name} ${item.to.basename}`);
+        onActivate(off, (evt) => {
+          if (evt) evt.stopPropagation();
+          k.remove(item.from, item.kind, item.to);
+        });
+      })
+    );
+    if (!groups.length) this.containerEl.createDiv({ cls: 'dr-empty', text: 'Nothing related to it yet.' });
+    const actions = this.containerEl.createDiv({ cls: 'dr-section-actions' });
+    const act = (icon, label, run) => {
+      const b = actions.createEl('button', { cls: 'dr-section-action' });
+      setIcon(b.createSpan({ cls: 'dr-section-action-icon' }), icon);
+      b.createSpan({ text: label });
+      b.addEventListener('click', run);
+    };
+    act('plus', 'Add', () => k.ask(file));
+    if (groups.length) {
+      act('waypoints', 'Explore', () => {
+        k.explore(file);
+        this.panel.close();
+      });
+      act('network', 'Map', () => k.map(file));
+    }
+  }
+
+  /** Any note's change may be one of this note's relationships: drawn again once the index has caught up. */
+  refresh() {
+    window.clearTimeout(this.redraw);
+    this.redraw = window.setTimeout(() => super.refresh(), 0);
+  }
+
+  destroy() {
+    window.clearTimeout(this.redraw);
+    super.destroy();
+  }
+}
+
 class Knowledge extends Feature {
   settingsSchema() {
     return [
@@ -131,7 +204,17 @@ class Knowledge extends Feature {
         name: 'Relationships between notes',
         desc: 'A note’s relationships kept as its own properties, one for each kind of relationship set for canvas arrows (and the graph’s parent, as what it sits under). An explorer shows any note’s, both ways; a canvas can be drawn from them, or write its arrows into them; the library’s check looks them over.',
       },
+      {
+        key: 'panelRelationships',
+        name: 'Relationships in the note panel',
+        desc: 'Below a note’s properties: what it comes under, and its relationships both ways — each to open or take off — with a way to add one, explore them or map them.',
+        showIf: 'knowledge',
+      },
     ];
+  }
+
+  panelSections(panel) {
+    return this.settings.panelRelationships !== false ? [new RelationsSection(panel, this)] : [];
   }
 
   /**

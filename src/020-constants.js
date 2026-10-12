@@ -122,6 +122,9 @@ const DEFAULTS = {
   ribbonInMenu: true,
   propertiesDropdown: true,
   showMentions: true,
+  // The note panel's sections from relationships and albums.
+  panelRelationships: true,
+  panelPlaces: true,
   settingsInHeader: true,
   coverProperty: 'cover',
   // {{folder}} stands for the folder's own name, which is the common

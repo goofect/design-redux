@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1808,6 +1808,68 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(modes.current(), null);
     assert.ok(!document.body.classList.contains('dr-mode-review'));
     assert.strictEqual(modes.commands().find((c) => c.id === 'workspace-mode-leave').check(), false);
+  });
+
+  await t('the note panel: a note’s relationships both ways, to open or take off, and the albums and canvases it’s in', async () => {
+    const { v, plugin, app } = setup();
+    v.folder('Ideas');
+    const gov = v.file('Ideas/Government.md');
+    const parl = v.file('Ideas/Parliamentarism.md');
+    const pres = v.file('Ideas/Presidentialism.md');
+    const reading = v.file('IR/IR.md');
+    const fms = new Map([
+      [parl, { parent: '[[Government]]', 'contrasts with': ['[[Presidentialism]]'] }],
+      [pres, {}],
+      [reading, { includes: ['[[Parliamentarism]]'] }],
+    ]);
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
+    app.metadataCache.fileToLinktext = (x) => x.basename;
+    app.metadataCache.resolvedLinks = { 'Maps/Politics.canvas': { 'Ideas/Parliamentarism.md': 1 }, 'Maps/Other.canvas': { 'IR/Anarchy.md': 1 } };
+    v.folder('Maps');
+    v.file('Maps/Politics.canvas');
+    v.file('Maps/Other.canvas');
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
+    plugin.offerUndo = () => {};
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    const k = new R.Knowledge(plugin);
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.AlbumStructure ? structure : null);
+    const closed = [];
+    const panel = { plugin, close: () => closed.push(true) };
+    const host = document.body.createDiv();
+
+    // Relationships: what it comes under, then each kind, both ways.
+    const rel = new R.RelationsSection(panel, k);
+    rel.mount(host, parl);
+    const el = rel.containerEl;
+    assert.strictEqual(el.querySelector('.dr-section-label').textContent, 'Relationships');
+    assert.deepStrictEqual([...el.querySelectorAll('.dr-relations-crumb')].map((c) => c.textContent), ['Government']);
+    const heads = [...el.querySelectorAll('.dr-section-title')].map((h) => h.textContent);
+    assert.ok(heads.includes('Sits under') && heads.includes('Contrasts with'), heads.join(', '));
+    // From the other side, the same relationship under its inverse.
+    const other = new R.RelationsSection(panel, k);
+    other.mount(host, gov);
+    assert.deepStrictEqual([...other.containerEl.querySelectorAll('.dr-section-title')].map((h) => h.textContent), ['Holds']);
+    assert.deepStrictEqual([...other.containerEl.querySelectorAll('.dr-mention-name')].map((n) => n.textContent), ['Parliamentarism']);
+    // Taken off from the panel: written into the note that holds it.
+    const off = [...el.querySelectorAll('.dr-mention-remove')].find((x) => /contrasts with Presidentialism/.test(x.getAttribute('aria-label')));
+    off.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 20));
+    assert.strictEqual(fms.get(parl)['contrasts with'], undefined);
+    assert.strictEqual(closed.length, 0, 'taking one off doesn’t open the note');
+    // Nothing related: said so, with Add.
+    const none = new R.RelationsSection(panel, k);
+    none.mount(host, v.file('IR/Balance.md'));
+    assert.ok(none.containerEl.textContent.includes('Nothing related to it yet.'));
+    assert.deepStrictEqual([...none.containerEl.querySelectorAll('.dr-section-action')].map((b) => b.textContent), ['Add']);
+
+    // Kept in: its own album, the albums that include it, the canvases it's on.
+    const places = new R.PlacesSection(panel, structure);
+    places.mount(host, parl);
+    const names = [...places.containerEl.querySelectorAll('.dr-mention-name')].map((n) => n.textContent);
+    assert.deepStrictEqual(names, ['Ideas', 'IR', 'Politics']);
+    assert.ok(places.containerEl.textContent.includes('includes it'));
   });
 
   await t('a property, tag or value renamed by the bulk tools: what a screen shows and filters by follows', () => {
