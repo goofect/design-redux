@@ -1170,6 +1170,71 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('times folding, unfolding and tidying canvases of 20, 100 and 500 cards', async function () {
+    // A baseline, not a check: each canvas a tree, every card with up to four under it.
+    this.timeout(180000);
+    const made = [];
+    for (const n of [20, 100, 500]) {
+      const path = await browser.executeObsidian(async ({ app }, n) => {
+        const nodes = [];
+        const edges = [];
+        const rows = {};
+        const depth = [];
+        for (let i = 0; i < n; i++) {
+          const parent = i ? Math.floor((i - 1) / 4) : -1;
+          depth[i] = i ? depth[parent] + 1 : 0;
+          const row = (rows[depth[i]] = (rows[depth[i]] || 0) + 1) - 1;
+          nodes.push({ id: `c${i}`, type: 'text', text: `Card ${i}`, x: depth[i] * 320, y: row * 90, width: 200, height: 60 });
+          if (parent >= 0) edges.push({ id: `e${i}`, fromNode: `c${parent}`, fromSide: 'right', toNode: `c${i}`, toSide: 'left' });
+        }
+        const at = `Bench ${n}.canvas`;
+        const old = app.vault.getFileByPath(at);
+        if (old) await app.vault.delete(old);
+        await app.vault.create(at, JSON.stringify({ nodes, edges }));
+        return at;
+      }, n);
+      made.push(path);
+      await obsidianPage.openFile(path);
+      await browser.waitUntil(
+        () => browser.executeObsidian(({ app }, n) => {
+          const v = app.workspace.activeLeaf && app.workspace.activeLeaf.view;
+          return !!(v && v.canvas && v.canvas.nodes && v.canvas.nodes.size === n);
+        }, n),
+        { timeout: 30000, timeoutMsg: `the canvas of ${n} cards never loaded` }
+      );
+      const times = await browser.executeObsidian(async ({ app, plugins }) => {
+        const view = app.workspace.activeLeaf.view;
+        const features = plugins.designRedux.features;
+        const fold = features.find((f) => f.constructor.name === 'CanvasFold');
+        const branches = features.find((f) => f.constructor.name === 'CanvasBranches');
+        // Without motion, so what's timed is the work, not the glide.
+        const real = window.matchMedia;
+        window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : real.call(window, q));
+        const time = async (fn) => {
+          const started = performance.now();
+          await fn();
+          return Math.round(performance.now() - started);
+        };
+        try {
+          return {
+            fold: fold ? await time(() => fold.foldEverything(view, 'branches')) : null,
+            unfold: fold ? await time(() => fold.foldEverything(view, 'everything')) : null,
+            tidy: branches ? await time(() => branches.tidy(view, view.canvas.nodes.get('c0'))) : null,
+          };
+        } finally {
+          window.matchMedia = real;
+        }
+      });
+      perf.push(`perf: canvas of ${n} cards: fold ${times.fold} ms, unfold ${times.unfold} ms, tidy ${times.tidy} ms`);
+    }
+    await browser.executeObsidian(async ({ app }, paths) => {
+      for (const at of paths) {
+        const file = app.vault.getFileByPath(at);
+        if (file) await app.vault.delete(file);
+      }
+    }, made);
+  });
+
   it('keeps a master card, and what hangs from it, out of the fold above it', async function () {
     const data = {
       nodes: [
