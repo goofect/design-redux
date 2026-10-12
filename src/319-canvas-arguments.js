@@ -112,11 +112,7 @@ class CanvasArguments extends CanvasFeature {
       any = true;
     });
     if (!any) return false;
-    try {
-      view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the canvas's next change */
-    }
+    saveCanvas(view.canvas);
     this.pass(view);
     return true;
   }

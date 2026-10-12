@@ -43,11 +43,7 @@ function groupOpenHeight(model, rec) {
  */
 function afterCanvasChange(plugin, view, changed, opts = {}) {
   if (changed || opts.save) {
-    try {
-      view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the canvas's next change */
-    }
+    saveCanvas(view.canvas);
   }
   const fold = plugin.feature(CanvasFold);
   if (fold) fold.schedule(view);
@@ -341,11 +337,7 @@ class CanvasFold extends CanvasFeature {
   }
 
   save(view) {
-    try {
-      if (typeof view.canvas.requestSave === 'function') view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the canvas's next change */
-    }
+    saveCanvas(view.canvas);
   }
 
   /**

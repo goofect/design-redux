@@ -642,11 +642,7 @@ class CanvasRelations extends CanvasFeature {
   }
 
   saved(view) {
-    try {
-      if (view && view.canvas) view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the canvas's next change */
-    }
+    if (view && view.canvas) saveCanvas(view.canvas);
   }
 
   /** Each redraw: plain related arrows dashed, propositions' labels marked; while one kind is shown alone, it lit and the rest faded. */

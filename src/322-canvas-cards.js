@@ -229,10 +229,6 @@ class CanvasCards extends CanvasFeature {
   }
 
   save(view) {
-    try {
-      if (typeof view.canvas.requestSave === 'function') view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the canvas's next change */
-    }
+    saveCanvas(view.canvas);
   }
 }

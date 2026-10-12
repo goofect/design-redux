@@ -13,6 +13,19 @@
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
 const TUCK_KEY = 'drTuck';
 
+/**
+ * The canvas saved — Obsidian's own save, a step of its Undo — or, where
+ * it can't be now, with the canvas's next change. Only after a change
+ * made by hand: a pass never saves.
+ */
+function saveCanvas(canvas) {
+  try {
+    canvas.requestSave();
+  } catch (err) {
+    /* saved with the canvas's next change */
+  }
+}
+
 /* On a card: kept where it is — layouts and tidying leave it, and what hangs from it. */
 const PIN_KEY = 'drPinned';
 

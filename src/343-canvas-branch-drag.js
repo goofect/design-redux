@@ -124,11 +124,7 @@ class CanvasBranchDrag extends CanvasFeature {
       });
       return;
     }
-    try {
-      view.canvas.requestSave();
-    } catch (err) {
-      /* saved with the card */
-    }
+    saveCanvas(view.canvas);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.schedule(view);
   }
