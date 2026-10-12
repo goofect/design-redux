@@ -91,6 +91,11 @@ class GraphPropertyFilter extends Feature {
     ];
   }
 
+  register() {
+    // A property renamed by the bulk tools: the graphs' rules follow.
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:property-renamed', (from, to) => this.renameProperty(from, to)));
+  }
+
   enable() {
     this.sync();
   }

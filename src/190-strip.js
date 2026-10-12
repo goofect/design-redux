@@ -260,7 +260,7 @@ class ContextStrip extends Feature {
 
     const leaf = pageLeaf(this.app);
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    const browse = view instanceof BrowseView ? view : null;
+    const browse = isBrowseView(view) ? view : null;
     const file = !browse && view && view.file instanceof TFile ? view.file : null;
 
     this.el.empty();
@@ -323,7 +323,7 @@ class ContextStrip extends Feature {
    * in it is a click away.
    */
   renderScreen(strip, view) {
-    const browse = view instanceof BrowseView ? view : null;
+    const browse = isBrowseView(view) ? view : null;
     const now = strip.createDiv({ cls: 'dr-strip-now is-screen' });
     const art = now.createDiv({ cls: 'dr-strip-art is-blank' });
     const icon = browse

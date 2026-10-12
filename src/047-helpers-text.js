@@ -28,3 +28,19 @@ function noteNameFrom(label) {
     .trim();
   return name || 'Branch';
 }
+
+/** Whether a tag is `from` or nested beneath it, ignoring case and #. */
+function tagUnder(tag, from) {
+  const t = String(tag).trim().replace(/^#/, '').toLowerCase();
+  const f = String(from).replace(/^#/, '').toLowerCase();
+  return !!f && (t === f || t.startsWith(f + '/'));
+}
+
+/** A tag renamed, keeping its # if it had one and what's nested beneath as written. */
+function renameTagText(tag, from, to) {
+  const text = String(tag).trim();
+  if (!tagUnder(text, from)) return tag;
+  const hash = text.startsWith('#') ? '#' : '';
+  const bare = text.replace(/^#/, '');
+  return hash + to + bare.slice(String(from).replace(/^#/, '').length);
+}

@@ -264,22 +264,6 @@ function mergePropertiesIn(fm, froms, to, mode) {
   return how;
 }
 
-/** Whether a tag is `from` or nested beneath it, ignoring case and #. */
-function tagUnder(tag, from) {
-  const t = String(tag).trim().replace(/^#/, '').toLowerCase();
-  const f = String(from).replace(/^#/, '').toLowerCase();
-  return !!f && (t === f || t.startsWith(f + '/'));
-}
-
-/** A tag renamed, keeping its # if it had one and what's nested beneath as written. */
-function renameTagText(tag, from, to) {
-  const text = String(tag).trim();
-  if (!tagUnder(text, from)) return tag;
-  const hash = text.startsWith('#') ? '#' : '';
-  const bare = text.replace(/^#/, '');
-  return hash + to + bare.slice(String(from).replace(/^#/, '').length);
-}
-
 /** A tags property's value with one tag renamed, as a list or as the text it was. */
 function renameTagsValue(value, from, to) {
   if (Array.isArray(value)) {
@@ -1450,41 +1434,14 @@ class BulkEdits {
     return changed;
   }
 
-  /** Graphs and the sidebar follow a change to the settings that name a property. */
+  /** Graphs and the sidebar follow a change to the settings that name a property: they listen for it. */
   afterSettings(from, to) {
-    const graph = this.plugin.feature(GraphPropertyFilter);
-    if (graph && typeof graph.renameProperty === 'function') graph.renameProperty(from, to);
-    const library = this.plugin.feature(Library);
-    if (library && typeof library.refreshViews === 'function') library.refreshViews();
+    this.app.workspace.trigger('design-redux:property-renamed', from, to);
   }
 
-  /** Open screens that were showing the old name show the new one. */
+  /** Open screens that were showing the old name show the new one: the library moves them on. */
   followRename(what) {
-    liveViews(this.app, BROWSE_VIEW, BrowseView).forEach((view) => {
-      if (what.property) {
-        const [from, to] = what.property;
-        if (view.property && view.property.toLowerCase() === from.toLowerCase()) {
-          view.property = to.toLowerCase();
-        }
-        if (view.filterProp && String(view.filterProp.key).toLowerCase() === from.toLowerCase()) {
-          view.filterProp = Object.assign({}, view.filterProp, { key: to });
-        }
-      }
-      if (what.tag) {
-        const [from, to] = what.tag;
-        if (view.filterTag && tagUnder(view.filterTag, from)) {
-          view.filterTag = renameTagText(view.filterTag, from, to).toLowerCase();
-        }
-      }
-      if (what.value) {
-        const [key, from, to] = what.value;
-        const sameKey = (k) => String(k || '').toLowerCase() === key.toLowerCase();
-        if (sameKey(view.property) && view.value === from) view.value = to;
-        if (view.filterProp && sameKey(view.filterProp.key) && view.filterProp.value === from) {
-          view.filterProp = Object.assign({}, view.filterProp, { value: to });
-        }
-      }
-    });
+    this.app.workspace.trigger('design-redux:renamed', what);
     // Once Obsidian has read the changed files back.
     window.setTimeout(() => this.plugin.refreshBrowse(), 400);
   }

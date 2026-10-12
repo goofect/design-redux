@@ -1809,6 +1809,21 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(modes.commands().find((c) => c.id === 'workspace-mode-leave').check(), false);
   });
 
+  await t('a property, tag or value renamed by the bulk tools: what a screen shows and filters by follows', () => {
+    const { view } = setup();
+    Object.assign(view, { property: 'status', value: 'draft', filterProp: { key: 'Status', value: 'draft' }, filterTag: '#law/court' });
+    view.followRenamed({ value: ['status', 'draft', 'wip'] });
+    assert.strictEqual(view.value, 'wip');
+    assert.deepStrictEqual(view.filterProp, { key: 'Status', value: 'wip' });
+    view.followRenamed({ property: ['STATUS', 'State'] });
+    assert.strictEqual(view.property, 'state');
+    assert.strictEqual(view.filterProp.key, 'State');
+    view.followRenamed({ tag: ['law', 'jurisprudence'] });
+    assert.strictEqual(view.filterTag, '#jurisprudence/court');
+    view.followRenamed({ tag: ['politics', 'x'] });
+    assert.strictEqual(view.filterTag, '#jurisprudence/court', 'another tag leaves it');
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

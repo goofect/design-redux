@@ -1,27 +1,12 @@
 {
- "100-library": [
-  "SmartAlbums"
- ],
  "110-browse-screens": [
-  "AlbumStructure",
   "BulkEditing",
   "renamePropertyInPlace"
  ],
  "120-browse-view": [
-  "AlbumStructure",
   "BulkEditing",
   "ContextStrip",
   "UpNext"
- ],
- "121-browse-sorting": [
-  "AlbumStructure",
-  "SmartAlbums"
- ],
- "122-browse-editing": [
-  "AlbumStructure"
- ],
- "123-browse-rows": [
-  "AlbumStructure"
  ],
  "160-panel-properties": [
   "AlbumProperty",
@@ -30,7 +15,6 @@
  ],
  "190-strip": [
   "AlbumStructure",
-  "BrowseView",
   "Footnotes",
   "Knowledge",
   "Library"
@@ -39,12 +23,9 @@
   "Library"
  ],
  "254-knowledge": [
-  "BROWSE_SCREENS",
-  "BrowseScreen",
   "CanvasFind",
   "CanvasRelations",
   "DEFAULT_RELATION_TYPES",
-  "Library",
   "RELATED_KEY",
   "RELATION_KEY",
   "boxEdges",
@@ -58,30 +39,7 @@
   "bulkTail"
  ],
  "257-album-structure": [
-  "ALBUM_RECENTS_FROM",
-  "BrowseView",
   "CanvasVaultMap"
- ],
- "258-smart-albums": [
-  "BROWSE_SCREENS",
-  "BrowseScreen",
-  "BrowseView",
-  "Library",
-  "LibraryView"
- ],
- "259-library-check": [
-  "BROWSE_SCREENS",
-  "BrowseScreen",
-  "Library"
- ],
- "261-knowledge-check": [
-  "BROWSE_SCREENS",
-  "Library"
- ],
- "290-bulk-engine": [
-  "BrowseView",
-  "GraphPropertyFilter",
-  "Library"
  ],
  "348-workspace-modes": [
   "CanvasOutline",

@@ -6,6 +6,33 @@
 /* ------------------------------------------------------------------ */
 
 class BrowseSorting {
+  /** A property, tag or value renamed by the bulk tools: what this screen shows and filters by follows. */
+  followRenamed(what) {
+    if (what.property) {
+      const [from, to] = what.property;
+      if (this.property && this.property.toLowerCase() === from.toLowerCase()) {
+        this.property = to.toLowerCase();
+      }
+      if (this.filterProp && String(this.filterProp.key).toLowerCase() === from.toLowerCase()) {
+        this.filterProp = Object.assign({}, this.filterProp, { key: to });
+      }
+    }
+    if (what.tag) {
+      const [from, to] = what.tag;
+      if (this.filterTag && tagUnder(this.filterTag, from)) {
+        this.filterTag = renameTagText(this.filterTag, from, to).toLowerCase();
+      }
+    }
+    if (what.value) {
+      const [key, from, to] = what.value;
+      const sameKey = (k) => String(k || '').toLowerCase() === key.toLowerCase();
+      if (sameKey(this.property) && this.value === from) this.value = to;
+      if (this.filterProp && sameKey(this.filterProp.key) && this.filterProp.value === from) {
+        this.filterProp = Object.assign({}, this.filterProp, { value: to });
+      }
+    }
+  }
+
   /* -- sorting and filtering ------------------------------------- */
 
   /** The one ordering every screen uses, so a choice sticks. */

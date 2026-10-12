@@ -304,6 +304,10 @@ class Library extends Feature {
   }
 
   register() {
+    // A property, tag or value renamed by the bulk tools: open screens follow, and the sidebar.
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:renamed', (what) => liveViews(this.app, BROWSE_VIEW, BrowseView).forEach((view) => view.followRenamed(what))));
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:property-renamed', () => this.refreshViews()));
+
     // The panel shape is set on Obsidian's own sidebar element, so it's
     // taken off again however the plugin goes away.
     this.plugin.register(() => clearSidebarChrome());

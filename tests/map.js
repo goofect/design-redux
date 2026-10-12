@@ -278,19 +278,21 @@ pieces.forEach((p) => {
 // lower layers (shared UI is below every feature); composition, anything.
 const AREAS = [
   { name: 'core', from: 10, to: 89, level: 0 },
+  // The library and its albums are one subsystem (see .claude/rules/albums.md):
+  // album features draw inside the browse view and add its screens.
   { name: 'library', from: 90, to: 139, level: 2 },
   { name: 'chrome', from: 140, to: 229, level: 2 },
   { name: 'shared-ui', from: 230, to: 253, level: 1 },
-  { name: 'albums', from: 254, to: 259, level: 2 },
+  { name: 'library', from: 254, to: 259, level: 2 },
   { name: 'links', from: 260, to: 269, level: 2 },
   { name: 'editor', from: 270, to: 289, level: 2 },
   { name: 'bulk', from: 290, to: 314, level: 2 },
   { name: 'canvas', from: 315, to: 347, level: 2 },
   { name: 'composition', from: 349, to: 999, level: 3 },
 ];
-const AREA_OF = { '261-knowledge-check': 'albums', '348-workspace-modes': 'chrome' };
+const AREA_OF = { '261-knowledge-check': 'library', '348-workspace-modes': 'chrome' };
 const areaOf = (p) => AREAS.find((a) => a.name === AREA_OF[p.name]) || AREAS.find((a) => +p.name.slice(0, 3) >= a.from && +p.name.slice(0, 3) <= a.to);
-const crossing = (a, b) => a !== b && a.level !== 3 && b.level >= a.level;
+const crossing = (a, b) => a.name !== b.name && a.level !== 3 && b.level >= a.level;
 const crosses = (user, home) => crossing(areaOf(user), areaOf(home));
 /** Every use from another piece: [user, name, home]. */
 const uses = () => pieces.flatMap((p) => Object.keys(p.uses).map((n) => [p, n, homeOf.get(n)]).filter(([, , h]) => h && h !== p && h.name !== '010-imports'));
@@ -306,14 +308,16 @@ if (args[0] === '--areas') {
     size.set(a, s);
   });
   console.log('areas, lowest layer first:');
-  AREAS.slice().sort((x, y) => x.level - y.level).forEach((a) => {
-    const s = size.get(a.name) || { pieces: 0, lines: 0 };
-    console.log(`  ${a.name} (${a.from}–${a.to}, layer ${a.level}): ${s.pieces} pieces, ${s.lines} lines`);
+  const names = [...new Set(AREAS.slice().sort((x, y) => x.level - y.level).map((a) => a.name))];
+  names.forEach((name) => {
+    const parts = AREAS.filter((a) => a.name === name);
+    const s = size.get(name) || { pieces: 0, lines: 0 };
+    console.log(`  ${name} (${parts.map((a) => `${a.from}–${a.to}`).join(', ')}, layer ${parts[0].level}): ${s.pieces} pieces, ${s.lines} lines`);
   });
   const edges = new Map();
   uses().forEach(([u, n, h]) => {
     const [a, b] = [areaOf(u), areaOf(h)];
-    if (a === b) return;
+    if (a.name === b.name) return;
     const k = `${a.name} → ${b.name}`;
     const e = edges.get(k) || { names: new Set(), crosses: crossing(a, b) };
     e.names.add(n);

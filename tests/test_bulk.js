@@ -267,6 +267,7 @@ function makeVault(spec) {
       getLeavesOfType: () => [],
       getLeaf: () => ({ openFile: (f) => opened.push(f) }),
       on: (name, fn) => { handlers[name] = fn; return {}; },
+      trigger: (name, ...args) => handlers[name] && handlers[name](...args),
     },
   };
   const opened = [];
