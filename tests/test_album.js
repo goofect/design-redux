@@ -2061,6 +2061,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await modes.enter('review');
     assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
     assert.ok(!document.body.classList.contains('dr-mode-study') && document.body.classList.contains('dr-mode-review'));
+    // The switcher: every mode, the one on ticked, the way out, and its settings.
+    plugin.openSettingsAt = (key) => calls.push(['settings', key]);
+    modes.showMenu({ clientX: 1, clientY: 1 });
+    const menu = menus[menus.length - 1];
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Library', 'Study', 'Mapping', 'Research', 'Review', 'Leave Review, back to how it was', 'Mode settings…']);
+    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Review');
+    menu.items[6].click();
+    assert.deepStrictEqual(calls[calls.length - 1], ['settings', 'workspaceModes']);
     // Left: as it was.
     await modes.leave();
     assert.deepStrictEqual(calls[calls.length - 1], ['changeLayout', { main: 'as it was' }]);

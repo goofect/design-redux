@@ -81,6 +81,27 @@ class WorkspaceModes extends Feature {
     if (strip && strip.enabled && typeof strip.update === 'function') strip.update();
   }
 
+  /** The switcher's menu: each mode, the one on ticked; leaving it; and its settings. */
+  showMenu(evt) {
+    const now = this.current();
+    const menu = new Menu();
+    WORKSPACE_MODES.forEach((m) =>
+      menu.addItem((item) =>
+        item
+          .setTitle(m.label)
+          .setIcon(m.icon)
+          .setChecked(m.id === now)
+          .onClick(() => (m.id === now ? null : this.enter(m.id)))
+      )
+    );
+    menu.addSeparator();
+    if (now) menu.addItem((item) => item.setTitle(`Leave ${this.mode(now).label}, back to how it was`).setIcon('log-out').onClick(() => this.leave()));
+    if (typeof this.plugin.openSettingsAt === 'function') {
+      menu.addItem((item) => item.setTitle('Mode settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt('workspaceModes')));
+    }
+    showMenuAt(menu, evt);
+  }
+
   choose() {
     const now = this.current();
     const items = WORKSPACE_MODES.map((m) => ({ label: m.label, note: m.id === now ? 'Now' : m.desc, id: m.id }));
@@ -177,6 +198,8 @@ class WorkspaceModes extends Feature {
       if (outline && outline.enabled) await outline.show();
     } else if (id === 'research') {
       this.sidebars(true, true);
+      // What's picked, beside the note: its properties, relationships and references.
+      if (this.settings.inspector && this.app.commands && this.plugin.manifest) this.app.commands.executeCommandById(`${this.plugin.manifest.id}:open-inspector`);
       const note = this.recent('md');
       if (note) {
         await ws.getLeaf(false).openFile(note);

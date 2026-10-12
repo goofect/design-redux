@@ -434,15 +434,20 @@ class ContextStrip extends Feature {
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
 
-    // The workspace mode on, named; pressed, it's left and the workspace is as it was.
+    // The workspace mode: the one on, named; or, quietly, the way into one. Either opens the switcher.
     const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
     const mode = modes && modes.enabled ? modes.mode(modes.current()) : null;
     if (mode) {
       const chip = nav.createDiv({ cls: 'dr-strip-mode' });
-      asButton(chip, `Leave ${mode.label}, back to how the workspace was`);
+      asButton(chip, `${mode.label} mode: switch, or leave it`);
       setIcon(chip.createSpan({ cls: 'dr-strip-mode-icon' }), mode.icon);
       chip.createSpan({ text: mode.label });
-      onActivate(chip, () => modes.leave());
+      onActivate(chip, (evt) => modes.showMenu(evt));
+    } else if (modes && modes.enabled) {
+      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary dr-strip-modes' });
+      asButton(el, 'Workspace mode');
+      setIcon(el, 'layout-template');
+      onActivate(el, (evt) => modes.showMenu(evt));
     }
 
     [
