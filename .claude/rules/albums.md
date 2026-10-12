@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/1[0-3]0-*.js"
+  - "src/1[0-3][0-9]-*.js"
   - "src/235-covers.js"
   - "src/25[5-9]-*.js"
   - "tests/test_album.js"

@@ -11,8 +11,17 @@
   "AlbumStructure",
   "BulkEditing",
   "ContextStrip",
-  "SmartAlbums",
   "UpNext"
+ ],
+ "121-browse-sorting": [
+  "AlbumStructure",
+  "SmartAlbums"
+ ],
+ "122-browse-editing": [
+  "AlbumStructure"
+ ],
+ "123-browse-rows": [
+  "AlbumStructure"
  ],
  "160-panel-properties": [
   "AlbumProperty",
