@@ -70,24 +70,25 @@ settings:
 
 /* Map -------------------------------------------------------------------------
  *
- * In this order; search for a heading to go to it.
- *   Foundation, Shared — the measures, the looks and density; what every part shares
- *   Properties panel … Collapsible section headings — the properties popup
- *   Library editor, in settings; Settings; Settings: search… — the settings tab
- *   Browse … Nothing chosen yet; Home; Search; Browse categories — the browse view
- *   Navigation; One content area; The panel's title block — the single-area workspace
- *   Context strip; The strip while browsing — the strip
- *   Library sidebar; The panel; Getting the sidebar back — the left panel
+ * In this order; search for a heading to go to it. The numbers are the
+ * src/ pieces each part dresses.
+ *   Foundation, Shared — the measures, the looks and density; what every part shares (020–085)
+ *   Properties panel … Collapsible section headings — the properties popup (150–180)
+ *   Library editor, in settings; Settings; Settings: search… — the settings tab (090, 360)
+ *   Browse … Nothing chosen yet; Home; Search; Browse categories — the browse view (110–123, 254–261)
+ *   Navigation; One content area; The panel's title block — the single-area workspace (130, 200)
+ *   Context strip; The strip while browsing — the strip (190, 195)
+ *   Library sidebar; The panel; Getting the sidebar back — the left panel (100, 105, 107)
  *   Touch; Phone — larger targets, and the phone's own layout
  *   Lettered and roman numeral lists; Superscript and subscript; Quiet links;
- *     Footnotes — in notes
- *   Property filters in the graph; Filters in effect — the graph
- *   Bulk edits; Property tools; Editing properties; The Properties window
+ *     Footnotes — in notes (270–285, 263–266)
+ *   Property filters in the graph; Filters in effect — the graph (260, 262)
+ *   Bulk edits; Property tools; Editing properties; The Properties window (250, 300–310)
  *   Generated covers; Drawn covers; Choosing a cover colour; Artwork where
- *     there's none; Covers by dropping — covers
- *   Arranging by drag; Editing an album
+ *     there's none; Covers by dropping — covers (030–032, 230–240)
+ *   Arranging by drag; Editing an album (122)
  *   Canvas legend; Arrow styles; Folding canvas branches; Canvas outline;
- *     Canvas: focus on a branch, and the canvas features after it
+ *     Canvas: focus on a branch, and the canvas features after it (315–347)
  * Each part uses the foundation's tokens; a value written out by hand is
  * a measure of that part's own (a cover's artwork, a canvas glyph).
  */
@@ -6467,8 +6468,7 @@ body.is-phone .dr-td-length {
 /* Quiet links ------------------------------------------------------------------
  *
  * A link kept off the graph and out of backlinks: drawn as any link is,
- * but with a dotted underline, so it's plain which kind it is. Where
- * Obsidian would list its stand-in as a note to create, that's hidden.
+ * but with a dotted underline, so it's plain which kind it is.
  */
 
 .markdown-rendered .internal-link.dr-quiet-link,
@@ -6478,10 +6478,6 @@ body.is-phone .dr-td-length {
   text-decoration-style: dotted;
   text-underline-offset: 3px;
   cursor: pointer;
-}
-
-.outgoing-link-item.dr-quiet-hidden {
-  display: none !important;
 }
 
 /* Notes made by quiet links elsewhere: the list to fold them in. */
