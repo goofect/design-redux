@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinks, quietPointsAt, QuietLinkSuggest, QuietLinks, quietLinksIn, quietHint };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinksIn, quietPointsAt, QuietLinkSuggest, QuietLinks, quietLinksIn, quietHint };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -492,10 +492,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(G.quietPointsAt('politics/anarchy', 'Politics/Anarchy.md'));
     assert.ok(!G.quietPointsAt('Anarchy2', 'Politics/Anarchy.md'));
     const text = 'A [[[Anarchy]]], [[[Anarchy#Order|words]]] and [[[Politics/Anarchy]]]; [[Anarchy]] and [[[Anarchy2]]] stay.';
-    const out = G.renameQuietLinks(text, 'Politics/Anarchy.md', 'Anarchism');
+    const out = G.renameQuietLinksIn(text, [{ oldPath: 'Politics/Anarchy.md', linktext: 'Anarchism' }]);
     assert.strictEqual(out.count, 3);
     assert.strictEqual(out.text, 'A [[[Anarchism]]], [[[Anarchism#Order|words]]] and [[[Anarchism]]]; [[Anarchy]] and [[[Anarchy2]]] stay.');
-    const kept = G.renameQuietLinks(text, 'Politics/Anarchy.md', 'Anarchism', () => true);
+    const kept = G.renameQuietLinksIn(text, [{ oldPath: 'Politics/Anarchy.md', linktext: 'Anarchism' }], () => true);
     assert.strictEqual(kept.count, 0, 'rewrote a link that still names a note');
   });
 

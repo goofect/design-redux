@@ -17,8 +17,6 @@
 /* drawn dashed, kept out of branches, with no more said.              */
 /* ------------------------------------------------------------------ */
 
-const DEFAULT_RELATIONS = 'is a type of, is part of, depends on, causes, contrasts with, supports, exemplifies, governed by';
-
 const PROPOSITION = 'Proposition';
 
 const RELATION_COLORS = { '': 'No colour', 1: 'Red', 2: 'Orange', 3: 'Yellow', 4: 'Green', 5: 'Cyan', 6: 'Purple' };

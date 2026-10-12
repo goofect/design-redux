@@ -78,18 +78,11 @@ function quietPointsAt(path, oldPath) {
 }
 
 /**
- * Text with every quiet link to the file once at `oldPath` pointing at
- * `linktext` instead — its heading and words kept. The count of links
- * changed comes back with it.
- */
-function renameQuietLinks(text, oldPath, linktext, stillResolves, spans) {
-  return renameQuietLinksIn(text, [{ oldPath, linktext }], stillResolves, spans);
-}
-
-/**
- * The same for several renamed files at once: { oldPath, linktext } each,
- * in one pass so the places found stay true. Only over `spans` when given
- * — where links really are — or every quiet link in the text.
+ * Text with every quiet link to a renamed file pointing at its new name —
+ * its heading and words kept — for several at once: { oldPath, linktext }
+ * each, in one pass so the places found stay true. Only over `spans` when
+ * given — where links really are — or every quiet link in the text. The
+ * count of links changed comes back with it.
  */
 function renameQuietLinksIn(text, renames, stillResolves, spans) {
   let count = 0;

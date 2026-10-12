@@ -186,11 +186,6 @@ function outlineItems(items, size) {
   return items.map((it) => ({ card: { type: 'text', text: it.text, width: size.width, height: height(it.text) }, children: outlineItems(it.children, size) }));
 }
 
-/** Text cards for an outline, laid out from `root`. */
-function outlineCards(root, items, side, size, newId) {
-  return treeCards(root, outlineItems(items, size), side, newId);
-}
-
 /**
  * Cards (items as treeCards takes them) that a card leads to, as a tidy
  * branch in the nearest free space on the side its branch grows — after

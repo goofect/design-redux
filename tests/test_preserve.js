@@ -14,7 +14,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_preserve_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { renameQuietLinks, renameQuietLinksIn, renameSpans, quietSpans, portableSpans, rewriteSpans, tagSpots, renameTagsAt };\n');
+  '\nmodule.exports.__test = { renameQuietLinksIn, renameSpans, quietSpans, portableSpans, rewriteSpans, tagSpots, renameTagsAt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
