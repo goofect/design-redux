@@ -60,7 +60,7 @@ class ReportScreen extends BrowseScreen {
       text: found.length || loose.length ? 'Things to look at, not rules: nothing here is changed until you change it.' : 'Nothing to look at: every album holds something and says what it is, and every note is in one.',
     });
     if (loose.length && check.settings.libraryInbox !== false) {
-      const row = this.row(root, 'inbox', `${loose.length} ${loose.length === 1 ? 'note' : 'notes'} in no album`, 'Open the inbox to put them in albums', '');
+      const row = reportRow(root, 'inbox', `${loose.length} ${loose.length === 1 ? 'note' : 'notes'} in no album`, 'Open the inbox to put them in albums', '');
       onActivate(row, () => view.navigate({ mode: 'inbox', property: null }));
     }
     LIBRARY_SECTIONS.forEach((section) => {
@@ -73,22 +73,24 @@ class ReportScreen extends BrowseScreen {
       roveFocus(list, '.dr-report-row');
       items.forEach((p) => {
         const folder = p.target instanceof TFolder;
-        const row = this.row(list, folder ? 'folder' : 'file-text', folder ? p.target.name : p.target.basename, p.problem, p.target.path);
+        const row = reportRow(list, folder ? 'folder' : 'file-text', folder ? p.target.name : p.target.basename, p.problem, p.target.path);
         onActivate(row, () => check.goTo(p));
       });
     });
   }
 
-  row(parent, icon, name, problem, where) {
-    const row = parent.createDiv({ cls: 'dr-report-row' });
-    asButton(row);
-    setIcon(row.createSpan({ cls: 'dr-report-icon' }), icon);
-    const text = row.createDiv({ cls: 'dr-report-text' });
-    text.createDiv({ cls: 'dr-report-name', text: name });
-    text.createDiv({ cls: 'dr-report-problem', text: problem });
-    if (where) row.createSpan({ cls: 'dr-report-where', text: where });
-    return row;
-  }
+}
+
+/** A report's row: its icon, the note's name, what's wrong, and where — a button, so it's reached with Tab. */
+function reportRow(parent, icon, name, problem, where) {
+  const row = parent.createDiv({ cls: 'dr-report-row' });
+  asButton(row);
+  setIcon(row.createSpan({ cls: 'dr-report-icon' }), icon);
+  const text = row.createDiv({ cls: 'dr-report-text' });
+  text.createDiv({ cls: 'dr-report-name', text: name });
+  text.createDiv({ cls: 'dr-report-problem', text: problem });
+  if (where) row.createSpan({ cls: 'dr-report-where', text: where });
+  return row;
 }
 
 /* -- the inbox ----------------------------------------------------- */

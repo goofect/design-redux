@@ -560,14 +560,10 @@ class KnowledgeCheck extends Feature {
 
   /** One finding as a row: into the note's relationships on a click; fixes beside it and on its menu. */
   renderRow(list, f, view) {
-    const row = list.createDiv({ cls: 'dr-report-row dr-integrity-row' });
+    const row = reportRow(list, INTEGRITY_ICONS[f.type] || 'circle-alert', f.subject.basename, f.meant ? `${f.text} — marked as meant` : f.text);
+    row.addClass('dr-integrity-row');
     row.dataset.level = f.level;
     row.dataset.type = f.type;
-    asButton(row);
-    setIcon(row.createSpan({ cls: 'dr-report-icon' }), INTEGRITY_ICONS[f.type] || 'circle-alert');
-    const text = row.createDiv({ cls: 'dr-report-text' });
-    text.createDiv({ cls: 'dr-report-name', text: f.subject.basename });
-    text.createDiv({ cls: 'dr-report-problem', text: f.meant ? `${f.text} — marked as meant` : f.text });
     const fix = f.fixes[0];
     if (fix) {
       const button = row.createEl('button', { cls: 'dr-integrity-fix', text: fix.label });
