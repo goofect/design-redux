@@ -2174,6 +2174,36 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   opacity: 0.7;
 }
 
+/* The column names above an album's notes, and the columns kept lined up under them. */
+.dr-track-head {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 3.5);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: var(--dr-space-1);
+}
+
+.dr-track-head > div {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dr-track-head .dr-track-more {
+  visibility: hidden;
+}
+
+.dr-tracks.has-head .dr-track-sub {
+  flex: 0 0 9em;
+}
+
+.dr-tracks.has-head .dr-track-time {
+  flex: 0 0 6.5em;
+}
+
 @media (any-hover: hover) {
   .dr-track-more {
     opacity: 0;
@@ -4414,7 +4444,8 @@ body.is-phone .dr-track {
 }
 
 body.is-phone .dr-track-sub,
-body.is-phone .dr-track-time {
+body.is-phone .dr-track-time,
+body.is-phone .dr-track-head {
   display: none;
 }
 

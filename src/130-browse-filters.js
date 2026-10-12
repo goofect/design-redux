@@ -115,6 +115,12 @@ class Library extends Feature {
         suggestExtra: ['modified', 'created', 'folder'],
       },
       {
+        key: 'trackHeader',
+        showIf: 'library',
+        name: 'Column names above an album’s notes',
+        desc: 'A row naming the columns — #, title, those above and length — with the columns lined up under it.',
+      },
+      {
         key: 'trackLength',
         type: 'dropdown',
         showIf: 'library',

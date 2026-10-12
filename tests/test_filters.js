@@ -283,7 +283,7 @@ t("an album's discs without a match drop out", () => {
   view.render();
   const discs = Array.from(view.contentEl.querySelectorAll('.dr-disc-title')).map((e) => e.textContent);
   assert.deepStrictEqual(discs, ['Law', 'Courts']);
-  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
+  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
   assert.deepStrictEqual(tracks, ['Contract', 'Tribunal']);
   view.filterDate = { field: 'modified', range: 'day' };
   view.render();
@@ -429,7 +429,7 @@ t('folder tiles follow alphabetical either way', () => {
 t("an album's notes follow Z–A too", () => {
   const view = page({ mode: 'folder', path: 'Law' });
   openMenu(view).find('Alphabetical (Z–A)').click();
-  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
+  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
   assert.deepStrictEqual(tracks.slice(0, 2), ['Tort', 'Contract']);
 });
 
@@ -453,14 +453,14 @@ t('an album sorted on its own keeps that order, and the other screens keep their
   openMenu(view).find('Alphabetical (Z–A)').click();
   assert.strictEqual(plugin.settings.defaultSort, 'name', 'the shared order is left alone');
   assert.deepStrictEqual(plugin.settings.albumSorts, { Law: 'name-desc' });
-  const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
+  const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
   assert.deepStrictEqual(tracks().slice(0, 2), ['Tort', 'Contract']);
   // Another album, and the Notes table, still in the shared order.
   const other = page({ mode: 'folder', path: 'Politics' }, { keep: true });
   assert.ok(openMenu(other).find('Alphabetical (A–Z)').checked);
   // Back to Law later: still Z–A.
   const again = page({ mode: 'folder', path: 'Law' }, { keep: true });
-  assert.deepStrictEqual(Array.from(again.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent).slice(0, 2), ['Tort', 'Contract']);
+  assert.deepStrictEqual(Array.from(again.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent).slice(0, 2), ['Tort', 'Contract']);
   // Switched off, an album's order is the shared one again, as it was.
   plugin.settings.albumSortMemory = false;
   try {

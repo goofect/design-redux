@@ -61,6 +61,7 @@ const DEFAULTS = {
   albumNoteLimit: 8,
   discNoteLimit: 10,
   albumColumns: 'domain, modified',
+  trackHeader: true,
   // What an album row ends with, where a track's length would be:
   // 'time' to read it, 'words', or 'none'.
   trackLength: 'time',

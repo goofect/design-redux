@@ -876,6 +876,8 @@ class BrowseView extends ItemView {
     // a row of its own disc, it goes there in the album's order.
     if (!Platform.isMobile && !this.editing) this.acceptDrops(list);
 
+    if (this.plugin.settings.trackHeader !== false && !this.editing) this.trackHead(list);
+
     const key = `discs:${album ? album.path : ''}`;
     const cap = 24;
     const shown = this.expanded.has(key) ? discs : discs.slice(0, cap);
