@@ -231,8 +231,12 @@ class BrowseRows {
 
     const row = root.createDiv({ cls: 'dr-shelf-row' });
     roveFocus(row, '.dr-card');
+    // A folder, a note, a note with a line of its own ({ file, subtitle,
+    // progress }), or a tile drawn by the screen ({ draw }).
     items.forEach((item) => {
       if (item instanceof TFolder) view.folderCard(row, item);
+      else if (item.draw) item.draw(row);
+      else if (item.file) view.fileCard(row, item.file, item.subtitle, item.progress);
       else view.fileCard(row, item);
     });
     this.arrows(head, row);
@@ -299,14 +303,17 @@ class BrowseRows {
   }
 
   /** A single file as a tile: its cover, or an icon for its type. */
-  fileCard(grid, file) {
+  fileCard(grid, file, subtitle, progress) {
     const card = this.card(
       grid,
       file.basename,
-      file.parent && file.parent.path !== '/' ? file.parent.name : ''
+      subtitle || (file.parent && file.parent.path !== '/' ? file.parent.name : '')
     );
     card.dataset.path = file.path;
-    drawNoteArt(this.plugin, card.querySelector('.dr-card-art'), file);
+    const art = card.querySelector('.dr-card-art');
+    drawNoteArt(this.plugin, art, file);
+    // How far along its album: a thin bar along the cover's foot.
+    if (progress > 0) art.createDiv({ cls: 'dr-card-progress' }).style.setProperty('--dr-progress', Math.min(1, progress).toFixed(4));
     this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
 
     onActivate(card, (evt) => this.openFile(file, evt));

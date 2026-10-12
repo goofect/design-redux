@@ -162,6 +162,13 @@ class Library extends Feature {
         suggest: 'file',
       },
       {
+        key: 'homeShelves',
+        type: 'custom',
+        name: 'Home shelves',
+        showIf: 'library',
+        render: (containerEl) => this.renderHomeShelves(containerEl),
+      },
+      {
         key: 'librarySections',
         type: 'custom',
         name: 'Library layout',
@@ -173,6 +180,37 @@ class Library extends Feature {
 
   editor() {
     return new LibraryEditor(this);
+  }
+
+  /** Home's shelves, top to bottom: each on or off, moved up or down. */
+  renderHomeShelves(containerEl) {
+    const doc = containerEl.ownerDocument;
+    const block = containerEl.appendChild(doc.createElement('div'));
+    block.className = 'dr-home-shelves';
+    const draw = () => {
+      block.empty();
+      const list = homeShelves(this.settings);
+      const save = () => {
+        this.settings.homeShelves = list.map((s) => ({ id: s.id, on: s.on }));
+        this.plugin.saveSettings();
+      };
+      const move = (i, by) => {
+        list.splice(i + by, 0, list.splice(i, 1)[0]);
+        save();
+        draw();
+      };
+      new Setting(block).setName('Home shelves').setDesc('What Home shows, top to bottom.').setHeading();
+      list.forEach((shelf, i) => {
+        const row = new Setting(block).setName(shelf.label).setClass('dr-home-shelf');
+        row.addExtraButton((b) => b.setIcon('arrow-up').setTooltip('Move up').setDisabled(i === 0).onClick(() => i > 0 && move(i, -1)));
+        row.addExtraButton((b) => b.setIcon('arrow-down').setTooltip('Move down').setDisabled(i === list.length - 1).onClick(() => i < list.length - 1 && move(i, 1)));
+        row.addToggle((t) => t.setValue(shelf.on).onChange((v) => {
+          shelf.on = v;
+          save();
+        }));
+      });
+    };
+    draw();
   }
 
   /**

@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -246,6 +246,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
+const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -899,9 +900,57 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'home' }, {});
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((e) => e.textContent);
     assert.deepStrictEqual(text('.dr-pick-caption'), ['Last opened', 'Rediscover']);
-    assert.deepStrictEqual(text('.dr-shelf-title'), ['Recently opened', 'Recently added', 'Rediscover', 'Folders']);
+    assert.deepStrictEqual(text('.dr-shelf-title'), ['Continue reading', 'Recently opened', 'Recently added', 'Rediscover', 'Folders']);
     click(view.contentEl.querySelector('.dr-pick[data-path="IR/Balance.md"]'));
     assert.strictEqual(opened[0].basename, 'Balance');
+  });
+
+  await t("Home's shelves: where to pick up in each album, your collections, and the shelves you chose in the order you chose", async () => {
+    const { v, view, plugin, app } = setup();
+    const notes = R.albumSequence(plugin, f(app, 'IR/Balance.md'));
+    plugin.recentFiles = () => [notes[1]];
+    await view.setState({ mode: 'home' }, {});
+    const shelf = (title) => {
+      const head = Array.from(view.contentEl.querySelectorAll('.dr-shelf-head')).find((h) => h.textContent.includes(title));
+      return head ? head.nextElementSibling : null;
+    };
+    const cards = (title) => Array.from(shelf(title).querySelectorAll('.dr-card')).map((c) => `${c.querySelector('.dr-card-title').textContent} · ${(c.querySelector('.dr-card-sub') || {}).textContent}`);
+    assert.deepStrictEqual(cards('Continue reading'), [`${notes[2].basename} · IR · 3 of ${notes.length}`], 'the note after the last one opened, with how far along');
+    assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress').style.getPropertyValue('--dr-progress'), (2 / notes.length).toFixed(4));
+
+    // What's Up Next comes first.
+    plugin.settings.upNext = true;
+    plugin.queue = new R.Queue(plugin);
+    plugin.queue.set([notes[0].path]);
+    view.render();
+    assert.strictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`);
+
+    // Your collections: smart albums, then albums that gather notes from elsewhere.
+    const smart = new R.SmartAlbums(plugin);
+    smart.enabled = true;
+    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Unread' }];
+    const structure = new R.AlbumStructure(plugin);
+    structure.enabled = true;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    v.folder('Reading');
+    const reading = v.file('Reading/Reading.md');
+    app.metadataCache.getFileCache = (f) => (f === reading ? { frontmatter: { includes: ['[[Anarchy]]'] } } : null);
+    plugin.feature = (C) => (C === R.SmartAlbums ? smart : C === R.AlbumStructure ? structure : null);
+    view.render();
+    assert.deepStrictEqual(cards('Your collections'), ['Unread · Smart album', `Reading · ${(shelf('Your collections').querySelectorAll('.dr-card-sub')[1] || {}).textContent}`]);
+    const went = [];
+    view.leaf.setViewState = async (s) => went.push(s.state);
+    click(shelf('Your collections').querySelector('.dr-card'));
+    assert.deepStrictEqual([went[0].mode, went[0].property], ['smart', 's1']);
+
+    // Chosen and ordered in the settings; a shelf new since comes on at the end.
+    plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
+    await view.setState({ mode: 'home' }, {});
+    const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(titles, ['Folders', 'Recently opened']);
+    assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

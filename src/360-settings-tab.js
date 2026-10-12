@@ -17,7 +17,7 @@ const SETTINGS_TABS = [
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'homePath', 'hideEmptyFolders', 'sidebarDrop'] },
+      { keys: ['library', 'homePath', 'homeShelves', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
         desc: 'What the library lists, under your own headings.',

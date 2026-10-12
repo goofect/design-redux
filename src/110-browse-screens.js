@@ -908,6 +908,31 @@ class SearchScreen extends BrowseScreen {
   }
 }
 
+/* Home's shelves, in the order they first come; which show, and in what order, is the homeShelves setting. */
+const HOME_SHELVES = [
+  { id: 'picks', label: 'Highlights' },
+  { id: 'continue', label: 'Continue reading' },
+  { id: 'recents', label: 'Recently opened' },
+  { id: 'added', label: 'Recently added' },
+  { id: 'collections', label: 'Your collections' },
+  { id: 'pinned', label: 'Pinned' },
+  { id: 'rediscover', label: 'Rediscover' },
+  { id: 'folders', label: 'Folders' },
+];
+
+/** Home's shelves as set: each once, in the order chosen, on or off; any new since, on at the end. */
+function homeShelves(settings) {
+  const known = new Map(HOME_SHELVES.map((s) => [s.id, s]));
+  const out = [];
+  (Array.isArray(settings.homeShelves) ? settings.homeShelves : []).forEach((s) => {
+    if (s && known.has(s.id) && !out.some((o) => o.id === s.id)) out.push(Object.assign({}, known.get(s.id), { on: s.on !== false }));
+  });
+  HOME_SHELVES.forEach((s) => {
+    if (!out.some((o) => o.id === s.id)) out.push(Object.assign({}, s, { on: true }));
+  });
+  return out;
+}
+
 class HomeScreen extends BrowseScreen {
   title() {
     return 'Home';
@@ -949,17 +974,67 @@ class HomeScreen extends BrowseScreen {
     pick('Last opened', recents.find((f) => f.extension === 'md' && f !== note));
     pick('Home note', note);
     pick('Rediscover', older[0]);
-    if (picks.length) this.picks(root, picks);
 
-    if (recents.length) view.shelf(root, 'Recently opened', recents.slice(0, 12), { mode: 'recents' });
-    if (added.length) view.shelf(root, 'Recently added', added);
-    if (pinned.length) view.shelf(root, 'Pinned', pinned, { mode: 'pinned' });
-    if (older.length > 1) view.shelf(root, 'Rediscover', older.slice(1));
-    if (folders.length) view.shelf(root, 'Folders', folders, { mode: 'folders' });
+    // The shelves, in the order and as many as the settings say.
+    const continuing = this.continuing(recents, keep);
+    const collections = this.collections(view);
+    const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
+    const shelves = {
+      picks: () => picks.length > 0 && (this.picks(root, picks), true),
+      continue: () => shelf('Continue reading', continuing),
+      recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
+      added: () => shelf('Recently added', added),
+      collections: () => shelf('Your collections', collections),
+      pinned: () => shelf('Pinned', pinned, { mode: 'pinned' }),
+      rediscover: () => shelf('Rediscover', older.slice(1)),
+      folders: () => shelf('Folders', folders, { mode: 'folders' }),
+    };
+    const drawn = homeShelves(this.settings).filter((s) => s.on && shelves[s.id]()).length;
+    if (!drawn) root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
+  }
 
-    if (!note && !recents.length && !pinned.length && !folders.length && !notes.length) {
-      root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
+  /**
+   * Where to pick up: what's Up Next, then the albums you're partway
+   * through, the latest first — the note after the last one you opened
+   * in each, with how far along it is.
+   */
+  continuing(recents, keep) {
+    const items = [];
+    const next = this.settings.upNext && this.plugin.queue ? this.plugin.queue.peek(null) : null;
+    if (next && keep(next)) items.push({ file: next, subtitle: 'Up Next' });
+    const seen = new Set();
+    recents.forEach((file) => {
+      const album = file.parent;
+      if (items.length >= 12 || !album || (album.isRoot && album.isRoot()) || this.plugin.isFolderNote(file) || seen.has(album.path)) return;
+      seen.add(album.path);
+      const near = albumNeighbours(this.plugin, file);
+      if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
+      items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}`, progress: (near.index + 1) / near.total });
+    });
+    return items;
+  }
+
+  /** Your own collections: smart albums, then albums that gather notes from elsewhere. */
+  collections(view) {
+    const items = [];
+    const smart = this.plugin.feature(SmartAlbums);
+    if (smart && smart.enabled) {
+      smart.list().forEach((album) => items.push({ draw: (row) => this.smartCard(row, album) }));
     }
+    const structure = this.plugin.feature(AlbumStructure);
+    if (structure && structure.enabled) {
+      structure.gathering().filter((f) => view.folderInFilter(f) && view.matches(f.name)).forEach((f) => items.push(f));
+    }
+    return items;
+  }
+
+  /** A smart album's tile: drawn as the covers are, for its name; opens the album. */
+  smartCard(row, album) {
+    const view = this.view;
+    const card = view.card(row, album.name, 'Smart album');
+    const key = `smart:${album.id}`;
+    fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.settings, album.name, key), blankLook(this.settings, album.name, key));
+    onActivate(card, () => view.navigate({ mode: 'smart', property: album.id, path: '/' }));
   }
 
   /**

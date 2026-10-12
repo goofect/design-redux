@@ -112,6 +112,7 @@ const DEFAULTS = {
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',
+  homeShelves: [],
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
   // starting layout from the vault the first time it's shown".
   librarySections: [],

@@ -300,14 +300,18 @@ class AlbumStructure extends Feature {
     return this.settings.panelPlaces !== false ? [new PlacesSection(panel, this)] : [];
   }
 
+  /** The albums that gather notes from elsewhere: those whose folder note names some under includes, by name. */
+  gathering() {
+    return this.app.vault
+      .getMarkdownFiles()
+      .filter((note) => note.parent && this.plugin.isFolderNote(note) && valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length)
+      .map((note) => note.parent)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   /** The albums that include a note from elsewhere: those whose folder note names it under includes. */
   albumsIncluding(file) {
-    const out = [];
-    this.app.vault.getMarkdownFiles().forEach((note) => {
-      if (!note.parent || !this.plugin.isFolderNote(note) || !valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length) return;
-      if (note.parent !== file.parent && this.info(note.parent).includes.indexOf(file) !== -1) out.push(note.parent);
-    });
-    return out.sort((a, b) => a.name.localeCompare(b.name));
+    return this.gathering().filter((folder) => folder !== file.parent && this.info(folder).includes.indexOf(file) !== -1);
   }
 
   /** Notes from elsewhere that belong to the album too, less any already in it. */
