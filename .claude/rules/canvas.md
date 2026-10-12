@@ -24,3 +24,6 @@ paths:
   and `getBBox` are wrapped once with `around()`, and an arrow is redrawn
   after Obsidian draws it; anything unexpected falls back to Obsidian's own
   drawing. An arrow's style is in its data as `drArrow`.
+- After a change made by hand: `afterCanvasChange` or `glideAndSettle` (335),
+  which save (`saveCanvas`, 316), tell the fold pass and announce
+  `design-redux:canvas-changed`. Never from a pass.

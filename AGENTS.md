@@ -54,6 +54,23 @@ Coffee N' Christmas.
   `SETTINGS_TABS`; a new row's key must be added there.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
+- Layers, by piece number (`node tests/map.js --areas`): core 010–089, shared UI
+  230–253, then the features by area (library and albums, chrome, links, editor,
+  bulk, canvas), then the plugin 349–999. A piece uses its own area and those
+  below; `tests/test_layers.js` refuses a new use across.
+- Core services on the plugin: `plugin.notes` reads and writes a note's
+  properties — read with `noteProps(app, file)`, write with
+  `plugin.notes.write(file, change, { undo })`, whose Undo keeps what was edited
+  since; never `processFrontMatter` directly. `plugin.files` makes, moves and puts
+  back files and folder notes (the plugin's `moveFile` and so on pass to it).
+- A large class can be written in parts: a later piece writes `class Part {…}`
+  and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
+  120–123, Knowledge's canvas side in 326). No `super` in a part.
+- Features tell each other through workspace events where they can
+  (`design-redux:renamed`, `design-redux:property-renamed`,
+  `design-redux:canvas-changed`). On a canvas, after a change by hand:
+  `afterCanvasChange` or `glideAndSettle`; save with `saveCanvas`.
+- An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback.

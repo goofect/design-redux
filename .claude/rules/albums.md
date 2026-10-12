@@ -21,6 +21,11 @@ paths:
 - A screen is a class in `BROWSE_SCREENS`, reached with
   `view.navigate({ mode, property })`; an album's panels are entries in
   `FolderScreen.panels`, shown as tabs only when there's more than one.
+- The browse view is `BrowseView` (120) with its parts in 121 (sorting and
+  filters), 122 (editing, pins in your own order) and 123 (rows, shelves,
+  cards), put on it by `mixInto`. The library and its albums are one area for
+  the layer check.
 - `tests/test_album.js`: `setup()` gives a vault whose files really move; its
   `plugin.moveFile` returns true, not the old path, and `processFrontMatter`
   does nothing — replace either in a test that needs them.
+  Its plugin has a real `notes` and `files`.

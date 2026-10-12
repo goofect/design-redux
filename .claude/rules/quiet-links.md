@@ -15,3 +15,8 @@ counts the note's links — and swept once after 'resolved' for notes it
 remembered. That keeps the stand-in out of the graph, backlinks, Outgoing
 links, the [[ list and Quick switcher; don't patch those separately. Obsidian
 doesn't update quiet links on rename; the plugin does.
+
+The pieces: 263 their text (pure), 264 what Obsidian recorded, 265 the
+feature, 266 the editor. A rename touches only the links Obsidian found
+(`renameSpans`) and those in properties: code, maths and comments keep what's
+written, as Obsidian leaves its own links there (`tests/test_preserve.js`).

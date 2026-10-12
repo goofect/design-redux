@@ -1,11 +1,49 @@
 # Design Redux: architecture audit and refactor roadmap
 
-This covers milestone 0 of the refactor: what the code is now, what's wrong with it (with
-evidence), where it should go, and in what order. It doesn't change any code. The figures were
-taken on 2026-10-11 from `src/` (88 pieces, 36,627 lines) using `tests/map.js`'s index.
-To get them again: `node tests/map.js`, then `--who NAME` and `--deps PIECE`.
+The refactor is done (M0–M6 and M8; M7, ES modules, was weighed and left out). The first
+section says how the code stands now. §1–§3 are the milestone-0 audit as it was taken
+(2026-10-11: 88 pieces, 36,627 lines), kept as the record. The rest is the roadmap and what
+each milestone did.
 
-## 1. The current architecture
+## 0. Where it stands
+
+```text
+build.mjs joins src/NNN-*.js in name order → main.js (one shared scope); 103 pieces
+
+ 010–089  core          constants; helpers (art, colours 031, properties 045, text 047,     18 pieces  4,265 lines
+                        sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
+                        Queue; actions 078; Feature and mixInto 080; appearance
+ 230–253  shared UI     pickers, covers, cover drop, image routing, property clipboard       5 pieces  1,258
+ 090–139  library       sidebar, browse view 120 (+121–123), screens, filters; and the      17 pieces  7,899
+ 254–261    and albums  album features, knowledge, library and knowledge checks
+ 140–229  chrome        actions menu, properties panel, strip, Up Next, menus               11 pieces  2,910
+ 260–269  links         graph filter and routes, quiet links 263–266                        6 pieces  2,701
+ 270–289  editor        marked lists, scripts, footnotes                                     3 pieces  2,363
+ 290–314  bulk          engine, dialogs 300–304, feature                                     7 pieces  4,055
+ 315–347  canvas        tree (the model, saveCanvas), folds, layouts, arrows, outline, …   33 pieces 10,403
+ 349–999  composition   the plugin (lifecycle, settings, features, delegates), settings      3 pieces    945
+```
+
+- **The rules, checked on every `npm test`:**
+  - **Layers:** a piece uses its own area and those below. 20 known crossings remain, and
+    the list in `tests/snapshots/layers.json` only shrinks. From 88 at M0.
+  - **Lifecycle:** no leftovers after switching off or unloading, and no command id or
+    setting key lost.
+  - **Note text:** what the plugin writes into notes, byte for byte.
+- **One way to do each common thing:**
+  - read or write a note's properties: `noteProps`, `plugin.notes`;
+  - move a file or undo a move: `plugin.files`;
+  - make an element act as a button: `asButton`;
+  - follow a change made by hand on a canvas: `afterCanvasChange`, `glideAndSettle`,
+    `saveCanvas`.
+- **Features tell each other through workspace events** where they can. Elsewhere they ask
+  through `plugin.feature(X)`; those are the crossings left.
+- **Pairs of pieces that use each other:** 11, down from 21.
+- **The largest pieces now:** `290-bulk-engine` (1,605 lines), `120-browse-view` (1,173),
+  `110-browse-screens` (1,045), `285-footnotes` (994), `301-bulk-properties` (969),
+  `262-graph-routes` (964).
+
+## 1. The architecture at M0
 
 ```text
 build.mjs joins src/NNN-*.js in name order → main.js (one shared scope)
@@ -235,7 +273,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M5 | UI parts and CSS — **done** | medium | dialogs build from shared parts |
 | M6 | canvas — **done** (target revised, §16) | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
 | M7 | build (optional) | high | only if §4's conditions hold |
-| M8 | cleanup | medium | docs match the code |
+| M8 | cleanup — **done** | medium | docs match the code |
 
 ## 7. Tests and validation
 
@@ -485,3 +523,28 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   - the plugin class's leftover behaviour (covers, new folder, pins, leftovers);
   - the library benchmarks;
   - docs and `AGENTS.md` brought up to date.
+
+## 17. M8, done
+
+- **The plugin class** now wires the features and coordinates them: lifecycle, settings, the
+  feature registry, delegates, pins, new folder, and clearing leftovers.
+  - Covers (a folder's artwork; setting, clearing and colouring them) moved to `CoverImages`
+    (235).
+  - `propertyLabel(app, key)` moved to `045`.
+  - The plugin keeps one-line delegates, so callers and test stand-ins are as they were.
+- **Unused code:** a scan of every top-level name found three nothing used, and they're
+  gone: `renameQuietLinks` (tests use `renameQuietLinksIn`), `outlineCards` and
+  `DEFAULT_RELATIONS`. In M5, one unused CSS rule went the same way.
+- **Library benchmarks:** the real-Obsidian suite times a shelf of 50 and of 500 albums, and
+  the sidebar beside them. The first run, locally on the latest Obsidian:
+
+  | Albums | Shelf drawn | Sidebar |
+  |---|---|---|
+  | 50 | 22 ms | 18 ms |
+  | 500 | 135 ms | 100 ms |
+
+  The sidebar's 100 ms at 500 albums is worth watching, since it redraws as the vault
+  changes. It's for a later look, not this refactor.
+- **Docs:** `AGENTS.md` now states the layers, the services, `mixInto`, the events, the
+  canvas helpers and `asButton`. The rules notes for albums, the canvas and quiet links say
+  what moved. §0 above gives the current state.
