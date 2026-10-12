@@ -85,8 +85,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_sidebar_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates };\n');
-const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates } = require(tmp).__test;
+  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files };\n');
+const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files } = require(tmp).__test;
 
 /* -- a vault and a plugin ----------------------------------------- */
 
@@ -457,7 +457,8 @@ t('a keyboard-opened menu is placed under its button, not at nothing', () => {
 t('new names never overwrite: Untitled, then Untitled 1, and so on', () => {
   const taken = new Set(['Concepts Folder/Untitled.md', 'Concepts Folder/Untitled 1.md']);
   const ctx = { app: { vault: { getAbstractFileByPath: (p) => (taken.has(p) ? {} : null) } } };
-  const free = (f, b, e) => DesignRedux.prototype.freeChildPath.call(ctx, f, b, e);
+  const files = new Files(ctx);
+  const free = (f, b, e) => files.freeChildPath(f, b, e);
   assert.strictEqual(free(folders['Concepts Folder'], 'Untitled', 'md'), 'Concepts Folder/Untitled 2.md');
   assert.strictEqual(free(root, 'Untitled', 'md'), 'Untitled.md');
 });

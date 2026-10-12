@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -207,6 +207,7 @@ function setup() {
   plugin.pins = { files: () => [], folders: () => [], all: () => [], has: () => false };
   plugin.orders = new R.Orders(plugin);
   plugin.notes = new R.Notes(plugin);
+  plugin.files = new R.Files(plugin);
   // The album features reached through the plugin, as in Obsidian.
   plugin.albumInfo = R.DesignRedux.prototype.albumInfo.bind(plugin);
   plugin.addAlbumMenuItems = R.DesignRedux.prototype.addAlbumMenuItems.bind(plugin);
@@ -504,6 +505,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       app: { vault: v.vault, fileManager: v.fileManager },
       unloading: false,
     };
+    plugin.files = new R.Files(plugin);
     plugin.folderNote = R.DesignRedux.prototype.folderNote.bind(plugin);
     plugin.followFolderNote = R.DesignRedux.prototype.followFolderNote.bind(plugin);
     plugin.renameFolderNote = R.DesignRedux.prototype.renameFolderNote.bind(plugin);
