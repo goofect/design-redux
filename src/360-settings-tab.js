@@ -9,8 +9,8 @@ const SETTINGS_TABS = [
     id: 'appearance',
     title: 'Appearance',
     sections: [
-      { title: 'Look', keys: ['look'] },
-      { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'canvasSpacing'] },
+      { title: 'Look', keys: ['look', 'lookScope'] },
+      { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'artworkSize', 'canvasSpacing'] },
     ],
   },
   {

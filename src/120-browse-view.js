@@ -396,6 +396,10 @@ class BrowseView extends ItemView {
     root.empty();
     const density = this.plugin.settings.gridDensity;
     this.containerEl.dataset.drDensity = GRID_DENSITIES[density] ? density : 'standard';
+    // Covers sized on their own, when set apart from the density.
+    const art = this.plugin.settings.artworkSize;
+    if (ARTWORK_SIZES[art] && art) this.containerEl.dataset.drArt = art;
+    else delete this.containerEl.dataset.drArt;
     this.beginDrawing();
 
     // A screen that throws should say so rather than leave a blank

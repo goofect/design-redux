@@ -1991,8 +1991,23 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await new Promise((r) => setTimeout(r, 0));
     assert.strictEqual(plugin.settings.canvasSpacing, 'standard');
     assert.strictEqual(R.CANVAS_SPACE.scale, 1);
+    // The editorial look on the whole window, or on Design Redux only.
+    assert.ok(!has('dr-look-scoped'));
+    plugin.settings.lookScope = 'plugin';
+    look.enable();
+    assert.ok(has('dr-look-editorial') && has('dr-look-scoped'));
     look.disable();
-    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial'), 'nothing left behind');
+    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial') && !has('dr-look-scoped'), 'nothing left behind');
+  });
+
+  await t('covers sized on their own, apart from the density', () => {
+    const { view, plugin } = setup();
+    plugin.settings.gridDensity = 'compact';
+    view.render();
+    assert.strictEqual(view.containerEl.dataset.drArt, undefined, 'as the density');
+    plugin.settings.artworkSize = 'large';
+    view.render();
+    assert.deepStrictEqual([view.containerEl.dataset.drDensity, view.containerEl.dataset.drArt], ['compact', 'large']);
   });
 
   await t('concept actions defined once: commands, a note’s menu, a canvas card’s menu; a child concept made under it, and moved under another, with Undo', async () => {

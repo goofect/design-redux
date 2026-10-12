@@ -173,8 +173,11 @@ body {
 /* The editorial look, chosen in settings: monochrome surfaces a step
  * apart, fine low-contrast lines instead of shadows, small corners,
  * titles in a medium weight, and covers without colour of their own
- * unless they have art. The accent stays the theme's, for what it means. */
-body.dr-look-editorial.theme-dark {
+ * unless they have art. The accent stays the theme's, for what it means.
+ * Its colours go on the whole window, or — set to Design Redux only
+ * (dr-look-scoped) — on just what the plugin draws. */
+body.dr-look-editorial.theme-dark:not(.dr-look-scoped),
+body.dr-look-editorial.dr-look-scoped.theme-dark :is(.dr-browse, .dr-library, .dr-inspector, .dr-strip, .dr-props-popup) {
   --color-base-00: #090909;
   --color-base-05: #0d0d0d;
   --color-base-10: #111111;
@@ -202,7 +205,8 @@ body.dr-look-editorial.theme-dark {
   --text-faint: #7d7d7d;
 }
 
-body.dr-look-editorial.theme-light {
+body.dr-look-editorial.theme-light:not(.dr-look-scoped),
+body.dr-look-editorial.dr-look-scoped.theme-light :is(.dr-browse, .dr-library, .dr-inspector, .dr-strip, .dr-props-popup) {
   --color-base-00: #fbfbfa;
   --color-base-05: #f7f7f6;
   --color-base-10: #f2f2f1;
@@ -239,6 +243,15 @@ body.dr-look-editorial {
   --dr-radius-pill: var(--dr-radius-sm);
   --dr-display-weight: var(--font-medium, 500);
   --dr-ui-weight: var(--font-normal, 400);
+}
+
+/* Scoped, the plugin's own views take their surfaces from those colours. */
+body.dr-look-editorial.dr-look-scoped :is(.dr-browse, .dr-inspector) {
+  background-color: var(--background-primary);
+}
+
+body.dr-look-editorial.dr-look-scoped .dr-library {
+  background-color: var(--background-secondary);
 }
 
 body.dr-look-editorial .dr-detail-glow {
@@ -2398,6 +2411,19 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
 }
 
 .dr-browse[data-dr-density="large"] {
+  --dr-tile-size: 230px;
+}
+
+/* Or sized on their own, whatever the density. */
+.dr-browse[data-dr-art="small"] {
+  --dr-tile-size: 120px;
+}
+
+.dr-browse[data-dr-art="medium"] {
+  --dr-tile-size: 170px;
+}
+
+.dr-browse[data-dr-art="large"] {
   --dr-tile-size: 230px;
 }
 

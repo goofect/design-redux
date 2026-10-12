@@ -127,6 +127,8 @@ const DEFAULTS = {
   homePath: 'Home.md',
   homeShelves: [],
   inspector: true,
+  lookScope: 'window',
+  artworkSize: '',
   canvasTools: true,
   inspectorClick: 'shown',
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
