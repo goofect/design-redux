@@ -46,6 +46,7 @@ class DesignRedux extends Plugin {
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
       new QuietLinks(this),
+      new CanvasTools(this),
       new CanvasLegend(this),
       new CanvasAlign(this),
       new CanvasArrows(this),

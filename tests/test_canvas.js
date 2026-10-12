@@ -69,7 +69,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { Notes, CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
+  '\nmodule.exports.__test = { CanvasTools, Menu, Notes, CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
@@ -2291,6 +2291,41 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(opened, ['r']);
     assert.deepStrictEqual(Array.from(view.canvas.selection).map((n) => n.id), ['a']);
     assert.ok(zoomed);
+  });
+
+  await t('canvas tools: every tool by what it’s for, only those that fit what’s selected', async () => {
+    const card = { id: 'a' };
+    const selection = new Set();
+    const view = { file: { extension: 'canvas', path: 'M.canvas' }, canvas: { selection }, containerEl: document.createElement('div') };
+    const app = { workspace: { rootSplit: {}, getMostRecentLeaf: () => ({ view }) } };
+    const ran = [];
+    const one = (ctx) => ctx.nodes.length === 1;
+    const feature = { enabled: true, actions: () => [
+      { id: 'canvas-quick-add', name: 'Add or connect a card…', on: 'canvas', run: () => ran.push('add') },
+      { id: 'canvas-add-child-card', name: 'Add a card the selected card leads to', on: 'canvas', when: one, run: () => {} },
+      { id: 'tidy-canvas-branch', name: 'Tidy the selected card’s branch', on: 'canvas', when: one, run: () => {} },
+      { id: 'find-canvas-card', name: 'Find a card on the canvas', on: 'canvas', menu: false, run: () => {} },
+      { id: 'check-canvas', name: 'Look the canvas over', on: 'canvas', menu: false, run: () => {} },
+      { id: 'some-other-thing', name: 'Not a tool', on: 'canvas', run: () => {} },
+    ] };
+    const opened = [];
+    const plugin = { settings: { canvasTools: true }, app, features: [feature], openSettingsAt: (k) => opened.push(k) };
+    const tools = new R.CanvasTools(plugin);
+    plugin.features.push(tools);
+    const shape = () => tools.toolsByTask().map((g) => `${g.task.title}: ${g.items.map((i) => i.action.id).join(', ')}`);
+    assert.deepStrictEqual(shape(), ['Create: canvas-quick-add', 'Navigate: find-canvas-card', 'Look over: check-canvas'], 'nothing selected: making, finding, looking over');
+    selection.add(card);
+    assert.deepStrictEqual(shape(), ['Create: canvas-quick-add, canvas-add-child-card', 'Arrange: tidy-canvas-branch', 'Navigate: find-canvas-card', 'Look over: check-canvas']);
+    const shown = [];
+    R.Menu.prototype.showAtMouseEvent = function () { shown.push(this); };
+    R.Menu.prototype.addSeparator = function () { return this; };
+    tools.showMenu({ clientX: 1, clientY: 1 });
+    const titles = shown[0].items.map((i) => i.title);
+    assert.ok(titles.includes('Create: Add or connect a card…') && titles.includes('Canvas settings…'), titles.join(' | '));
+    shown[0].items.find((i) => i.title === 'Create: Add or connect a card…').click();
+    assert.deepStrictEqual(ran, ['add']);
+    shown[0].items.find((i) => i.title === 'Canvas settings…').click();
+    assert.deepStrictEqual(opened, ['canvasTools']);
   });
 
   console.log(`\n${passed} passed`);

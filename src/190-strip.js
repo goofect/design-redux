@@ -49,7 +49,7 @@ const STRIP_NARROW = 760;
  */
 const STRIP_ACTIONS = {
   album: [['new-note-here', 'New note', false, 'file-plus'], ['shuffle-album', 'Shuffle', false]],
-  canvas: [['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
+  canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
 };
 
 const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };
@@ -377,9 +377,9 @@ class ContextStrip extends Feature {
         label,
         role: id,
         secondary,
-        run: () => {
+        run: (evt) => {
           const now = actionContext(this.app, action);
-          if (now && applies(action, now)) action.run(Object.assign(now, { from: 'strip' }));
+          if (now && applies(action, now)) action.run(Object.assign(now, { from: 'strip', evt }));
         },
       });
     });

@@ -367,3 +367,122 @@ class CanvasDuplicate extends CanvasFeature {
 }
 
 CanvasDuplicate.settingKey = 'canvasDuplicate';
+
+/* -- every tool, by what it's for ------------------------------------- */
+
+/*
+ * The canvas's tools by what they're for, rather than by which feature
+ * has them: making cards, arranging them, finding your way, structure,
+ * and looking the canvas over. Each tool says itself whether it fits
+ * what's selected, so the menu is only ever what can be done now.
+ */
+const CANVAS_TASKS = [
+  {
+    title: 'Create',
+    icon: 'circle-plus',
+    ids: ['canvas-quick-add', 'canvas-add-child-card', 'canvas-add-sibling-card', 'canvas-add-parent-card', 'duplicate-canvas-branch', 'canvas-outline-to-branch', 'canvas-make-claim', 'canvas-add-reason', 'canvas-add-objection', 'canvas-add-rebuttal', 'canvas-add-evidence'],
+  },
+  {
+    title: 'Arrange',
+    icon: 'layout-grid',
+    ids: ['canvas-layout-choose', 'canvas-layout-everything', 'tidy-canvas-branch', 'canvas-spread-overlaps', 'fit-canvas-cards', 'center-canvas-text', 'canvas-promote-card', 'canvas-demote-card', 'canvas-card-earlier', 'canvas-card-later', 'canvas-toggle-keep-in-place', 'arrange-canvas-left', 'arrange-canvas-center', 'arrange-canvas-right', 'arrange-canvas-top', 'arrange-canvas-middle', 'arrange-canvas-bottom', 'arrange-canvas-space-across', 'arrange-canvas-space-down', 'arrange-canvas-width', 'arrange-canvas-height', 'arrange-canvas-grid', 'arrange-canvas-row', 'arrange-canvas-column'],
+  },
+  {
+    title: 'Navigate',
+    icon: 'compass',
+    ids: ['find-canvas-card', 'canvas-find-statement', 'focus-canvas-branch', 'canvas-zoom-to-branch', 'canvas-view-back', 'select-canvas-branch', 'open-canvas-outline', 'toggle-canvas-minimap', 'toggle-canvas-legend'],
+  },
+  {
+    title: 'Structure',
+    icon: 'network',
+    ids: ['fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything', 'toggle-canvas-master-card', 'canvas-state-proposition', 'canvas-name-relationship', 'canvas-reverse-relationship', 'canvas-toggle-related', 'canvas-show-relationship', 'canvas-branch-to-note', 'canvas-keep-outline', 'canvas-statements-note'],
+  },
+  {
+    title: 'Look over',
+    icon: 'microscope',
+    ids: ['check-canvas', 'canvas-compare-branches', 'canvas-keep-snapshot', 'canvas-compare', 'canvas-compare-done'],
+  },
+];
+
+class CanvasTools extends CanvasFeature {
+  settingsSchema() {
+    return [
+      {
+        key: 'canvasTools',
+        name: 'Canvas tools',
+        desc: 'A button among the canvas’s controls, and on the strip, with every canvas tool by what it’s for — create, arrange, navigate, structure, look over — only those that fit what’s selected.',
+      },
+    ];
+  }
+
+  actions() {
+    return [{ id: 'canvas-tools', name: 'Canvas tools…', icon: 'wrench', on: 'canvas', menu: false, when: () => this.enabled, run: (ctx) => this.showMenu(ctx && ctx.evt) }];
+  }
+
+  /** The tools that fit now, a group for each task that has any: [{ task, items: [{ action, ctx }] }]. */
+  toolsByTask() {
+    const byId = new Map();
+    (this.plugin.features || []).forEach((f) => {
+      if (f === this || !f.enabled) return;
+      let list = [];
+      try {
+        list = f.actions();
+      } catch (err) {
+        list = [];
+      }
+      list.forEach((a) => byId.set(a.id, a));
+    });
+    return CANVAS_TASKS.map((task) => ({
+      task,
+      items: task.ids
+        .map((id) => byId.get(id))
+        .filter(Boolean)
+        .map((action) => ({ action, ctx: actionContext(this.app, action) }))
+        .filter(({ action, ctx }) => ctx && applies(action, ctx)),
+    })).filter((group) => group.items.length);
+  }
+
+  /** A submenu for each task — or, where menus can't nest, one list, each name after its task's. */
+  showMenu(evt) {
+    const menu = new Menu();
+    const groups = this.toolsByTask();
+    groups.forEach(({ task, items }) =>
+      menuGroup(menu, task.title, task.icon, (m, nested) =>
+        items.forEach(({ action, ctx }) => m.addItem((item) => actionItem(item, action, Object.assign(ctx, { from: 'tools' }), nested ? actionLabel(action, ctx) : `${task.title}: ${actionLabel(action, ctx)}`)))
+      )
+    );
+    if (!groups.length) menu.addItem((item) => item.setTitle('Nothing to do here yet').setDisabled(true));
+    if (typeof this.plugin.openSettingsAt === 'function') {
+      menu.addSeparator();
+      menu.addItem((item) => item.setTitle('Canvas settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt('canvasTools')));
+    }
+    // From the palette there's no press to open it at: it opens at the button.
+    if (!evt) {
+      const view = this.pageCanvas();
+      const state = view && this.watched.get(view);
+      const button = state && state.control && state.control.querySelector('.canvas-control-item');
+      if (button) evt = { currentTarget: button };
+    }
+    showMenuAt(menu, evt);
+  }
+
+  /** Among the canvas's controls, the button that opens them. */
+  mount(view, state) {
+    const controls = view.containerEl.querySelector('.canvas-controls');
+    if (!controls) return;
+    const group = controls.createDiv({ cls: 'canvas-control-group dr-tools-control' });
+    const item = group.createDiv({ cls: 'canvas-control-item' });
+    item.setAttribute('aria-label', 'Canvas tools');
+    item.setAttribute('data-tooltip-position', 'left');
+    asButton(item);
+    setIcon(item, 'wrench');
+    onActivate(item, (evt) => this.showMenu(evt));
+    state.control = group;
+  }
+
+  cleanup(view, state) {
+    if (state && state.control) state.control.remove();
+  }
+}
+
+CanvasTools.settingKey = 'canvasTools';

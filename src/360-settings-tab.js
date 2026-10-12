@@ -48,7 +48,7 @@ const SETTINGS_TABS = [
     id: 'canvas',
     title: 'Canvas',
     sections: [
-      { title: 'Cards', keys: ['canvasDepth', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
+      { title: 'Cards', keys: ['canvasTools', 'canvasDepth', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
       { title: 'Arrows', keys: ['canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments'] },
       { title: 'Building a map', keys: ['canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate'] },
       { title: 'Arranging and folding', keys: ['canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasArrange', 'canvasSelectBranch'] },
