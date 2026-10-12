@@ -1,7 +1,7 @@
 {
   "id": "design-redux",
   "name": "Design Redux",
-  "version": "1.17.101",
+  "version": "1.17.102",
   "minAppVersion": "1.7.2",
   "description": "Browse your vault as a library: folders as albums, properties and covers, with the ribbon, file explorer actions and note properties tucked into the header.",
   "author": "",
