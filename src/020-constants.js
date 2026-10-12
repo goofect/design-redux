@@ -330,3 +330,44 @@ const TAG_KEYS = ['tags', 'tag'];
 
 /* How far apart canvas cards are put, as set (Appearance): every gap a tidy makes goes through canvasGap(). */
 const CANVAS_SPACE = { scale: 1 };
+
+/* On an arrow: a relationship, not a branch — trees, folds and layouts pass it by. */
+const RELATED_KEY = 'drRelated';
+
+/* On an arrow: what it means — { kind, subject, object } or { predicate, subject, object }, the ends as card ids. */
+const RELATION_KEY = 'drRelation';
+
+/*
+ * Each kind: its reading the other way, whether it's hierarchy or
+ * association, its line — solid, dashed or dotted — and colour: one of
+ * the canvas's six, or none. Grey by default.
+ */
+const DEFAULT_RELATION_TYPES = [
+  { name: 'is a type of', inverse: 'has type', category: 'hierarchy', line: 'solid', color: '' },
+  { name: 'is part of', inverse: 'has part', category: 'hierarchy', line: 'solid', color: '' },
+  { name: 'depends on', inverse: 'is needed by', category: 'association', line: 'dashed', color: '' },
+  { name: 'causes', inverse: 'is caused by', category: 'association', line: 'solid', color: '' },
+  { name: 'contrasts with', inverse: 'contrasts with', category: 'association', line: 'dotted', color: '' },
+  { name: 'supports', inverse: 'is supported by', category: 'association', line: 'solid', color: '' },
+  { name: 'exemplifies', inverse: 'is exemplified by', category: 'association', line: 'dashed', color: '' },
+  { name: 'governed by', inverse: 'governs', category: 'association', line: 'solid', color: '' },
+];
+
+/**
+ * The kinds of relationship, as set: each with its reading the other way,
+ * its category, line and colour — the defaults' where it's one of them.
+ * Shared by the canvas's arrows and the relationships kept in notes.
+ */
+function relationTypes(settings) {
+  const fill = (t) => Object.assign({ inverse: '', category: 'association', line: 'solid', color: '' }, DEFAULT_RELATION_TYPES.find((d) => d.name === t.name) || {}, t);
+  const set = Array.isArray(settings.canvasRelationTypes) ? settings.canvasRelationTypes.filter((t) => t && String(t.name || '').trim()) : [];
+  if (set.length) return set.map(fill);
+  // Names set before kinds had styles: each as the default of that name has, or plain.
+  const names = String(settings.canvasRelationNames || '').trim();
+  if (!names) return DEFAULT_RELATION_TYPES;
+  return names
+    .split(',')
+    .map((n) => n.trim())
+    .filter((n, i, all) => n && all.indexOf(n) === i)
+    .map((name) => fill({ name }));
+}

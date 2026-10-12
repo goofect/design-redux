@@ -19,25 +19,7 @@
 
 const DEFAULT_RELATIONS = 'is a type of, is part of, depends on, causes, contrasts with, supports, exemplifies, governed by';
 
-/* On an arrow: what it means — { kind, subject, object } or { predicate, subject, object }, the ends as card ids. */
-const RELATION_KEY = 'drRelation';
 const PROPOSITION = 'Proposition';
-
-/*
- * Each kind: its reading the other way, whether it's hierarchy or
- * association, its line — solid, dashed or dotted — and colour: one of
- * the canvas's six, or none. Grey by default.
- */
-const DEFAULT_RELATION_TYPES = [
-  { name: 'is a type of', inverse: 'has type', category: 'hierarchy', line: 'solid', color: '' },
-  { name: 'is part of', inverse: 'has part', category: 'hierarchy', line: 'solid', color: '' },
-  { name: 'depends on', inverse: 'is needed by', category: 'association', line: 'dashed', color: '' },
-  { name: 'causes', inverse: 'is caused by', category: 'association', line: 'solid', color: '' },
-  { name: 'contrasts with', inverse: 'contrasts with', category: 'association', line: 'dotted', color: '' },
-  { name: 'supports', inverse: 'is supported by', category: 'association', line: 'solid', color: '' },
-  { name: 'exemplifies', inverse: 'is exemplified by', category: 'association', line: 'dashed', color: '' },
-  { name: 'governed by', inverse: 'governs', category: 'association', line: 'solid', color: '' },
-];
 
 const RELATION_COLORS = { '': 'No colour', 1: 'Red', 2: 'Orange', 3: 'Yellow', 4: 'Green', 5: 'Cyan', 6: 'Purple' };
 const RELATION_CATEGORIES = { hierarchy: 'Hierarchy', association: 'Association' };
@@ -184,17 +166,7 @@ class CanvasRelations extends CanvasFeature {
 
   /** The kinds of relationship, as set: { name, inverse, category, line, color }. */
   types() {
-    const fill = (t) => Object.assign({ inverse: '', category: 'association', line: 'solid', color: '' }, DEFAULT_RELATION_TYPES.find((d) => d.name === t.name) || {}, t);
-    const set = Array.isArray(this.settings.canvasRelationTypes) ? this.settings.canvasRelationTypes.filter((t) => t && String(t.name || '').trim()) : [];
-    if (set.length) return set.map(fill);
-    // Names set before kinds had styles: each as the default of that name has, or plain.
-    const names = String(this.settings.canvasRelationNames || '').trim();
-    if (!names) return DEFAULT_RELATION_TYPES;
-    return names
-      .split(',')
-      .map((n) => n.trim())
-      .filter((n, i, all) => n && all.indexOf(n) === i)
-      .map((name) => fill({ name }));
+    return relationTypes(this.settings);
   }
 
   /** The settings' list of kinds: a name, its reading the other way, hierarchy or association, a line and a colour each, and one to add. */

@@ -280,8 +280,7 @@ class Knowledge extends Feature {
 
   /** The kinds of relationship: the canvas's, each read as a note property of its name — and the graph's parent. */
   kinds() {
-    const relations = typeof CanvasRelations === 'function' ? this.plugin.feature(CanvasRelations) : null;
-    const set = relations ? relations.types() : DEFAULT_RELATION_TYPES;
+    const set = relationTypes(this.settings);
     const parent = String(this.settings.graphRouteProperty || 'parent').trim();
     const out = set.map((t) => Object.assign({ prop: t.name }, t));
     if (parent && !out.some((t) => t.prop.toLowerCase() === parent.toLowerCase())) {

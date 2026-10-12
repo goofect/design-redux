@@ -1636,18 +1636,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.knowledgeTreeKinds = 'is part of';
     const k = new R.Knowledge(plugin);
     const check = new R.KnowledgeCheck(plugin);
-    const relations = { types: () => [
+    // The kinds as set, which the canvas and notes both read.
+    plugin.settings.canvasRelationTypes = [
       { name: 'is a type of', inverse: 'has type', category: 'hierarchy' },
       { name: 'is part of', inverse: 'has part', category: 'hierarchy' },
       { name: 'causes', inverse: 'is caused by', category: 'association' },
       { name: 'contrasts with', inverse: 'contrasts with', category: 'association' },
       { name: 'supports', inverse: 'is supported by', category: 'association' },
       { name: 'contradicts', inverse: 'is contradicted by', category: 'association' },
-    ] };
+    ];
     const structure = new R.AlbumStructure(plugin);
     const info = structure.info.bind(structure);
     structure.info = (folder) => Object.assign(info(folder), folder.name === 'Map' ? { type: 'concept map' } : {});
-    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.KnowledgeCheck ? check : C && C.name === 'CanvasRelations' ? relations : C === R.AlbumStructure ? structure : null);
+    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.KnowledgeCheck ? check : C === R.AlbumStructure ? structure : null);
     const seen = () => check.findings().map((x) => `${x.level} ${x.type} ${x.subject.basename}`);
     const all = seen();
     [

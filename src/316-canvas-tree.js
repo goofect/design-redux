@@ -13,9 +13,6 @@
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
 const TUCK_KEY = 'drTuck';
 
-/* On an arrow: a relationship, not a branch — trees, folds and layouts pass it by. */
-const RELATED_KEY = 'drRelated';
-
 /* On a card: kept where it is — layouts and tidying leave it, and what hangs from it. */
 const PIN_KEY = 'drPinned';
 
