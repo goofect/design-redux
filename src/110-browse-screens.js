@@ -1011,6 +1011,7 @@ class SearchScreen extends BrowseScreen {
 const HOME_SHELVES = [
   { id: 'picks', label: 'Highlights' },
   { id: 'continue', label: 'Continue reading' },
+  { id: 'upnext', label: 'Up Next' },
   { id: 'recents', label: 'Recently opened' },
   { id: 'added', label: 'Recently added' },
   { id: 'collections', label: 'Your collections' },
@@ -1075,12 +1076,16 @@ class HomeScreen extends BrowseScreen {
     pick('Rediscover', older[0]);
 
     // The shelves, in the order and as many as the settings say.
-    const continuing = this.continuing(recents, keep);
+    // What's lined up, in order — shown whole when its shelf is on, so Continue reading needn't lead with it.
+    const queued = this.settings.upNext && this.plugin.queue ? this.plugin.queue.files().filter(keep) : [];
+    const queueShelf = homeShelves(this.settings).some((s) => s.id === 'upnext' && s.on) && queued.length > 0;
+    const continuing = this.continuing(recents, keep, queueShelf);
     const collections = collectionTiles(view);
     const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
       continue: () => shelf('Continue reading', continuing),
+      upnext: () => shelf('Up Next', queued.slice(0, 24).map((file, i) => ({ file, subtitle: `${i + 1} · ${file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent.name : 'Up Next'}` }))),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
       collections: () => shelf('Your collections', collections, { mode: 'collections' }),
@@ -1097,9 +1102,9 @@ class HomeScreen extends BrowseScreen {
    * through, the latest first — the note after the last one you opened
    * in each, with how far along it is.
    */
-  continuing(recents, keep) {
+  continuing(recents, keep, queueShown) {
     const items = [];
-    const next = this.settings.upNext && this.plugin.queue ? this.plugin.queue.peek(null) : null;
+    const next = this.settings.upNext && this.plugin.queue && !queueShown ? this.plugin.queue.peek(null) : null;
     if (next && keep(next)) items.push({ file: next, subtitle: 'Up Next' });
     const seen = new Set();
     recents.forEach((file) => {

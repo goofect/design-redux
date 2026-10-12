@@ -234,20 +234,24 @@ class Library extends Feature {
 
     // Shaped after the app this borrows from: a few destinations, then
     // the ways into the whole vault, then the saved views.
+    // Where to go — the vault's ways in; then what's yours — pinned and
+    // collections of your own; then the tools that look the library over.
+    // Recently opened and added are Home's.
     const library = [
-      { kind: 'builtin', id: 'added' },
-      { kind: 'builtin', id: 'recents' },
       { kind: 'builtin', id: 'notes' },
       { kind: 'builtin', id: 'folders' },
-      { kind: 'builtin', id: 'properties' },
+      { kind: 'builtin', id: 'collections' },
     ];
     const structure = this.plugin.feature(AlbumStructure);
     if (structure && structure.enabled && structure.ofKind('subject').length) library.push({ kind: 'builtin', id: 'subjects' });
-    const collections = [
-      { kind: 'builtin', id: 'collections' },
+    library.push({ kind: 'builtin', id: 'properties' });
+    const yours = [
       { kind: 'builtin', id: 'bookmarks' },
       { kind: 'builtin', id: 'smart' },
     ];
+    const tools = ['library-check', 'knowledge-check', 'inbox']
+      .filter((id) => this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'])
+      .map((id) => ({ kind: 'builtin', id }));
 
     const sections = [
       {
@@ -259,10 +263,11 @@ class Library extends Feature {
         ],
       },
       { title: 'Library', items: library },
-      { title: 'Collections', items: collections },
+      { title: 'Your library', items: yours },
     ];
     if (folders.length) sections.push({ title: 'Folders', items: folders });
     if (bases.length) sections.push({ title: 'Bases', items: bases });
+    if (tools.length) sections.push({ title: 'Utilities', items: tools });
     return sections;
   }
 

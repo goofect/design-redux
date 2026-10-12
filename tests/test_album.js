@@ -246,7 +246,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
-const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
+const HOME_OFF = ['picks', 'continue', 'upnext', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -982,7 +982,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.queue = new R.Queue(plugin);
     plugin.queue.set([notes[0].path]);
     view.render();
-    assert.strictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`);
+    assert.deepStrictEqual(cards('Up Next'), [`${notes[0].basename} · 1 · IR`], 'the queue, in order, on a shelf of its own');
+    assert.notStrictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`);
+    plugin.settings.homeShelves = [{ id: 'upnext', on: false }];
+    view.render();
+    assert.strictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`, 'without that shelf, Continue reading leads with it');
+    plugin.settings.homeShelves = [];
 
     // Your collections: smart albums, then albums that gather notes from elsewhere.
     const smart = new R.SmartAlbums(plugin);
@@ -1004,7 +1009,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Chosen and ordered in the settings; a shelf new since comes on at the end.
     plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
-    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'upnext:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
     plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
     await view.setState({ mode: 'home' }, {});
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);
@@ -1117,7 +1122,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(titles(), ['Law']);
     const library = new R.Library(plugin);
     const sections = library.defaultSections();
-    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Collections']);
+    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Your library']);
+    plugin.settings.libraryCheck = true;
+    plugin.settings.knowledgeCheck = false;
+    assert.deepStrictEqual(library.defaultSections().pop().items.map((i) => i.id), ['library-check', 'inbox'], 'the tools last, those switched on');
     assert.ok(sections[1].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 

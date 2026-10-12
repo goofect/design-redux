@@ -16,6 +16,8 @@ const BUILTIN_SCREENS = {
   collections: 'collections',
   bookmarks: 'pinned',
   inbox: 'inbox',
+  'library-check': 'library-check',
+  'knowledge-check': 'knowledge-check',
 };
 
 const LIBRARY_BUILTINS = {
@@ -33,6 +35,8 @@ const LIBRARY_BUILTINS = {
   random: { label: 'Random note', icon: 'dice' },
   smart: { label: 'Smart albums', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
+  'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
+  'knowledge-check': { label: 'Knowledge check', icon: 'network', needs: 'knowledgeCheck' },
 };
 
 /* How large covers are on screens of tiles. */

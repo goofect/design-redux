@@ -179,6 +179,8 @@ class LibraryView extends ItemView {
       const id = item.id === 'all' ? 'notes' : item.id;
       const spec = LIBRARY_BUILTINS[id];
       if (!spec) return;
+      // A tool whose feature is off has nothing to show.
+      if (spec.needs && !this.plugin.settings[spec.needs]) return;
       if (id === 'bookmarks') {
         this.renderPins(list, spec);
         return;
