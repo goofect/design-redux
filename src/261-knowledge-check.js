@@ -563,8 +563,7 @@ class KnowledgeCheck extends Feature {
     const row = list.createDiv({ cls: 'dr-report-row dr-integrity-row' });
     row.dataset.level = f.level;
     row.dataset.type = f.type;
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
+    asButton(row);
     setIcon(row.createSpan({ cls: 'dr-report-icon' }), INTEGRITY_ICONS[f.type] || 'circle-alert');
     const text = row.createDiv({ cls: 'dr-report-text' });
     text.createDiv({ cls: 'dr-report-name', text: f.subject.basename });

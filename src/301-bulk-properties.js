@@ -27,8 +27,7 @@ class AddPropertiesModal extends BulkModal {
     const what = this.section('Properties');
     this.rowsEl = what.createDiv({ cls: 'dr-bulk-rows' });
     const add = what.createDiv({ cls: 'dr-bulk-add' });
-    add.setAttribute('role', 'button');
-    add.setAttribute('tabindex', '0');
+    asButton(add);
     setIcon(add.createSpan({ cls: 'dr-bulk-add-icon' }), 'plus');
     add.createSpan({ text: 'Add another property' });
     onActivate(add, () => {
@@ -93,8 +92,7 @@ class AddPropertiesModal extends BulkModal {
     const remove = el.createDiv({ cls: 'dr-bulk-remove clickable-icon' });
     setIcon(remove, 'x');
     remove.setAttribute('aria-label', 'Remove this property');
-    remove.setAttribute('role', 'button');
-    remove.setAttribute('tabindex', '0');
+    asButton(remove);
     onActivate(remove, () => {
       this.rows.splice(this.rows.indexOf(row), 1);
       if (!this.rows.length) this.rows.push(this.newRow());
@@ -388,8 +386,7 @@ class FolderDefaultsModal extends AddPropertiesModal {
     const what = this.section('Properties');
     this.rowsEl = what.createDiv({ cls: 'dr-bulk-rows' });
     const add = what.createDiv({ cls: 'dr-bulk-add' });
-    add.setAttribute('role', 'button');
-    add.setAttribute('tabindex', '0');
+    asButton(add);
     setIcon(add.createSpan({ cls: 'dr-bulk-add-icon' }), 'plus');
     add.createSpan({ text: 'Add another property' });
     onActivate(add, () => {
@@ -814,9 +811,7 @@ class MergePropertiesModal extends BulkModal {
       chip.setAttribute('aria-label', `${name}: in ${bulkCount(count, 'note')}`);
       const remove = chip.createSpan({ cls: 'dr-bulk-chip-remove' });
       setIcon(remove, 'x');
-      remove.setAttribute('role', 'button');
-      remove.setAttribute('tabindex', '0');
-      remove.setAttribute('aria-label', `Leave out ${name}`);
+      asButton(remove, `Leave out ${name}`);
       onActivate(remove, () => {
         this.names.splice(this.names.indexOf(name), 1);
         this.renderChips();

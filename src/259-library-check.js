@@ -81,8 +81,7 @@ class ReportScreen extends BrowseScreen {
 
   row(parent, icon, name, problem, where) {
     const row = parent.createDiv({ cls: 'dr-report-row' });
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
+    asButton(row);
     setIcon(row.createSpan({ cls: 'dr-report-icon' }), icon);
     const text = row.createDiv({ cls: 'dr-report-text' });
     text.createDiv({ cls: 'dr-report-name', text: name });

@@ -403,8 +403,7 @@ class ContextStrip extends Feature {
     if (spec.secondary) el.addClass('is-secondary');
     if (spec.role) el.dataset.action = spec.role;
     el.setAttribute('aria-label', spec.label);
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
+    asButton(el);
     if (spec.icon) setIcon(el, spec.icon);
     if (spec.active) el.addClass('is-active');
     onActivate(el, spec.run);
@@ -431,8 +430,7 @@ class ContextStrip extends Feature {
     // Only while the sidebar is closed; styled in and out by body class.
     const toggle = nav.createDiv({ cls: 'clickable-icon dr-strip-btn dr-sidebar-toggle' });
     toggle.setAttribute('aria-label', 'Show sidebar');
-    toggle.setAttribute('role', 'button');
-    toggle.setAttribute('tabindex', '0');
+    asButton(toggle);
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
 
@@ -441,9 +439,7 @@ class ContextStrip extends Feature {
     const mode = modes && modes.enabled ? modes.mode(modes.current()) : null;
     if (mode) {
       const chip = nav.createDiv({ cls: 'dr-strip-mode' });
-      chip.setAttribute('role', 'button');
-      chip.setAttribute('tabindex', '0');
-      chip.setAttribute('aria-label', `Leave ${mode.label}, back to how the workspace was`);
+      asButton(chip, `Leave ${mode.label}, back to how the workspace was`);
       setIcon(chip.createSpan({ cls: 'dr-strip-mode-icon' }), mode.icon);
       chip.createSpan({ text: mode.label });
       onActivate(chip, () => modes.leave());
@@ -461,8 +457,7 @@ class ContextStrip extends Feature {
         el.addClass('is-disabled');
         return;
       }
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
+      asButton(el);
       onActivate(el, () => this.go(dir));
     });
   }
@@ -475,8 +470,7 @@ class ContextStrip extends Feature {
     const near = albumNeighbours(this.plugin, file);
     this.skipButton(center, near, 'previous');
     const now = center.createDiv({ cls: 'dr-strip-now' });
-    now.setAttribute('role', 'button');
-    now.setAttribute('tabindex', '0');
+    asButton(now);
 
     const art = now.createDiv({ cls: 'dr-strip-art' });
     drawNoteArt(this.plugin, art, file);
@@ -523,8 +517,7 @@ class ContextStrip extends Feature {
       el.addClass('is-disabled');
       return el;
     }
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
+    asButton(el);
     onActivate(el, () => this.skip(dir));
     return el;
   }

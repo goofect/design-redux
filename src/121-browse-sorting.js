@@ -174,8 +174,7 @@ class BrowseSorting {
     box.createSpan({ cls: 'dr-empty-text', text });
     if (action) {
       const button = box.createSpan({ cls: 'dr-empty-action', text: action[0] });
-      button.setAttribute('role', 'button');
-      button.setAttribute('tabindex', '0');
+      asButton(button);
       onActivate(button, action[1]);
     }
     return box;
@@ -280,8 +279,7 @@ class BrowseSorting {
     const usual = this.ownOrderLabel() ? 'own' : 'name';
     if (this.hasFilters() || this.currentSort() !== usual) btn.addClass('is-active');
 
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('tabindex', '0');
+    asButton(btn);
     onActivate(btn, (evt) => showMenuAt(this.filterMenu(), evt));
   }
 
@@ -467,14 +465,10 @@ class BrowseSorting {
     chips.forEach(([label, change, clear]) => {
       const chip = row.createDiv({ cls: 'dr-chip' });
       const name = chip.createSpan({ cls: 'dr-chip-label', text: label });
-      name.setAttribute('role', 'button');
-      name.setAttribute('tabindex', '0');
-      name.setAttribute('aria-label', `Change: ${label}`);
+      asButton(name, `Change: ${label}`);
       onActivate(name, change);
       const x = chip.createSpan({ cls: 'dr-chip-clear' });
-      x.setAttribute('role', 'button');
-      x.setAttribute('tabindex', '0');
-      x.setAttribute('aria-label', `Remove: ${label}`);
+      asButton(x, `Remove: ${label}`);
       setIcon(x, 'x');
       onActivate(x, () => {
         clear();
@@ -574,8 +568,7 @@ class BrowseSorting {
 
   action(parentEl, icon, label, onClick) {
     const btn = parentEl.createDiv({ cls: 'dr-detail-action' });
-    btn.setAttribute('role', 'button');
-    btn.setAttribute('tabindex', '0');
+    asButton(btn);
     setIcon(btn.createSpan({ cls: 'dr-detail-action-icon' }), icon);
     btn.createSpan({ text: label });
     onActivate(btn, onClick);

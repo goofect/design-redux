@@ -140,9 +140,7 @@ class BulkModal extends Modal {
       });
       const remove = line.createSpan({ cls: 'dr-bulk-chip-remove' });
       setIcon(remove, 'x');
-      remove.setAttribute('role', 'button');
-      remove.setAttribute('tabindex', '0');
-      remove.setAttribute('aria-label', 'Remove this condition');
+      asButton(remove, 'Remove this condition');
       onActivate(remove, () => {
         this.where.splice(this.where.indexOf(row), 1);
         this.renderWhere();
@@ -150,8 +148,7 @@ class BulkModal extends Modal {
       });
     });
     const add = el.createDiv({ cls: 'dr-bulk-where-add' });
-    add.setAttribute('role', 'button');
-    add.setAttribute('tabindex', '0');
+    asButton(add);
     setIcon(add.createSpan({ cls: 'dr-bulk-chip-icon' }), 'filter');
     add.createSpan({ text: this.where.length ? 'And where…' : 'Only notes where…' });
     onActivate(add, () => {
@@ -174,9 +171,7 @@ class BulkModal extends Modal {
       chip.setAttribute('aria-label', target.path);
       const remove = chip.createSpan({ cls: 'dr-bulk-chip-remove' });
       setIcon(remove, 'x');
-      remove.setAttribute('role', 'button');
-      remove.setAttribute('tabindex', '0');
-      remove.setAttribute('aria-label', `Remove ${name}`);
+      asButton(remove, `Remove ${name}`);
       onActivate(remove, () => {
         this.targets.splice(this.targets.indexOf(target), 1);
         this.renderTargets();
@@ -184,8 +179,7 @@ class BulkModal extends Modal {
       });
     });
     const pick = el.createDiv({ cls: 'dr-bulk-chip is-add' });
-    pick.setAttribute('role', 'button');
-    pick.setAttribute('tabindex', '0');
+    asButton(pick);
     // With folders chosen, just a round + beside them; with none, it says what it's for.
     pick.toggleClass('is-icon', this.targets.length > 0);
     setIcon(pick.createSpan({ cls: 'dr-bulk-chip-icon' }), this.targets.length ? 'plus' : 'folder-plus');
@@ -290,8 +284,7 @@ class BulkModal extends Modal {
       const text = el.createDiv({ cls: 'dr-bulk-line-text' });
       text.createSpan({ text: `${bulkCount(left, 'note')} left out. ` });
       const back = text.createSpan({ cls: 'dr-bulk-note dr-bulk-put-back', text: 'Put back' });
-      back.setAttribute('role', 'button');
-      back.setAttribute('tabindex', '0');
+      asButton(back);
       onActivate(back, () => {
         this.excluded.clear();
         this.update();
@@ -323,9 +316,7 @@ class BulkModal extends Modal {
       if (!this.whereEl) return;
       const leave = wrap.createSpan({ cls: 'dr-bulk-chip-remove dr-bulk-leave' });
       setIcon(leave, 'x');
-      leave.setAttribute('role', 'button');
-      leave.setAttribute('tabindex', '0');
-      leave.setAttribute('aria-label', `Leave out ${file.basename}`);
+      asButton(leave, `Leave out ${file.basename}`);
       onActivate(leave, () => {
         this.excluded.add(file.path);
         this.update();
@@ -333,8 +324,7 @@ class BulkModal extends Modal {
     });
     if (notes.length <= shown) return;
     const more = list.createSpan({ cls: 'dr-bulk-more', text: `and ${notes.length - shown} more` });
-    more.setAttribute('role', 'button');
-    more.setAttribute('tabindex', '0');
+    asButton(more);
     onActivate(more, () => this.noteList(list, notes, notes.length));
   }
 

@@ -130,9 +130,7 @@ class BrowseEditing {
 
     const grip = row.createDiv({ cls: 'dr-edit-grip' });
     setIcon(grip, 'grip-vertical');
-    grip.setAttribute('role', 'button');
-    grip.setAttribute('tabindex', '0');
-    grip.setAttribute('aria-label', `Move “${file.basename}” — drag, or Alt+↑ and Alt+↓`);
+    asButton(grip, `Move “${file.basename}” — drag, or Alt+↑ and Alt+↓`);
 
     row.createDiv({ cls: 'dr-track-num', text: String(index) });
     const name = row.createEl('input', { cls: 'dr-track-name dr-edit-name', type: 'text' });
@@ -144,9 +142,7 @@ class BrowseEditing {
     const tools = row.createDiv({ cls: 'dr-edit-tools' });
     const tool = (icon, label, run, cls) => {
       const el = tools.createDiv({ cls: `clickable-icon dr-edit-tool ${cls || ''}`.trim() });
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
-      el.setAttribute('aria-label', label);
+      asButton(el, label);
       setIcon(el, icon);
       onActivate(el, run);
     };
@@ -163,9 +159,7 @@ class BrowseEditing {
     head.addClass('is-editing');
     const grip = head.createDiv({ cls: 'dr-edit-grip' });
     setIcon(grip, 'grip-vertical');
-    grip.setAttribute('role', 'button');
-    grip.setAttribute('tabindex', '0');
-    grip.setAttribute('aria-label', `Move the folder “${disc.folder.name}” — drag it onto another`);
+    asButton(grip, `Move the folder “${disc.folder.name}” — drag it onto another`);
     this.dragDisc(head, grip, disc.folder, album);
     const name = head.createEl('input', { cls: 'dr-disc-title dr-edit-name', type: 'text' });
     name.value = disc.folder.name;
@@ -177,15 +171,11 @@ class BrowseEditing {
       text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes`,
     });
     const move = head.createDiv({ cls: 'clickable-icon dr-edit-tool' });
-    move.setAttribute('role', 'button');
-    move.setAttribute('tabindex', '0');
-    move.setAttribute('aria-label', `Move the folder “${disc.folder.name}” into another`);
+    asButton(move, `Move the folder “${disc.folder.name}” into another`);
     setIcon(move, 'folder-input');
     onActivate(move, () => this.pickFolderHome(disc.folder));
     const del = head.createDiv({ cls: 'clickable-icon dr-edit-tool mod-warning' });
-    del.setAttribute('role', 'button');
-    del.setAttribute('tabindex', '0');
-    del.setAttribute('aria-label', `Delete the folder “${disc.folder.name}”`);
+    asButton(del, `Delete the folder “${disc.folder.name}”`);
     setIcon(del, 'trash-2');
     onActivate(del, () => this.deleteEntry(disc.folder));
   }

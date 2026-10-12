@@ -282,8 +282,7 @@ class BrowseView extends ItemView {
   renderSidebarToggle(bar) {
     const el = bar.createDiv({ cls: 'dr-browse-up dr-sidebar-toggle' });
     el.setAttribute('aria-label', 'Show sidebar');
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
+    asButton(el);
     setIcon(el, 'panel-left');
     onActivate(el, () => this.app.workspace.leftSplit.expand());
   }
@@ -303,8 +302,7 @@ class BrowseView extends ItemView {
         el.addClass('is-disabled');
         return el;
       }
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
+      asButton(el);
       onActivate(el, onClick);
       return el;
     };
@@ -430,8 +428,7 @@ class BrowseView extends ItemView {
 
   tableRow(table, file, columns) {
     const row = table.createDiv({ cls: 'dr-tr' });
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
+    asButton(row);
 
     const title = row.createDiv({ cls: 'dr-td dr-td-title' });
     title.createSpan({ cls: 'dr-td-text', text: file.basename });
@@ -473,8 +470,7 @@ class BrowseView extends ItemView {
       setIcon(arrow, current.dir === 'asc' ? 'chevron-up' : 'chevron-down');
     }
 
-    cell.setAttribute('role', 'button');
-    cell.setAttribute('tabindex', '0');
+    asButton(cell);
     onActivate(cell, () => {
       // Text reads best ascending, time newest first.
       const next = active
@@ -766,8 +762,7 @@ class BrowseView extends ItemView {
     if (files.length <= limit) return;
 
     const more = list.createDiv({ cls: 'dr-track dr-track-more-row' });
-    more.setAttribute('role', 'button');
-    more.setAttribute('tabindex', '0');
+    asButton(more);
     more.createDiv({ cls: 'dr-track-num' });
     more.createDiv({
       cls: 'dr-track-name dr-more-label',
@@ -904,9 +899,7 @@ class BrowseView extends ItemView {
       if (disc.folder) {
         const here = !!album && disc.folder === album;
         if (!here) {
-          head.setAttribute('role', 'button');
-          head.setAttribute('tabindex', '0');
-          head.setAttribute('aria-label', `Open ${disc.folder.name}`);
+          asButton(head, `Open ${disc.folder.name}`);
           onActivate(head, () => this.openFolder(disc.folder));
         }
         onContextMenu(head, (evt) =>
@@ -929,8 +922,7 @@ class BrowseView extends ItemView {
   renderMoreRow(list, key, total, noun) {
     const expanded = this.expanded.has(key);
     const more = list.createDiv({ cls: 'dr-track dr-track-more-row' });
-    more.setAttribute('role', 'button');
-    more.setAttribute('tabindex', '0');
+    asButton(more);
     more.createDiv({ cls: 'dr-track-num' });
     more.createDiv({
       cls: 'dr-track-name dr-more-label',
@@ -976,16 +968,12 @@ class BrowseView extends ItemView {
       const tools = art.createDiv({ cls: 'dr-art-tools' });
       if (!spec.cover) {
         const tint = tools.createDiv({ cls: 'dr-art-edit' });
-        tint.setAttribute('role', 'button');
-        tint.setAttribute('tabindex', '0');
-        tint.setAttribute('aria-label', 'Cover colour');
+        asButton(tint, 'Cover colour');
         setIcon(tint, 'palette');
         onActivate(tint, () => this.plugin.chooseCoverColor(folder));
       }
       const change = tools.createDiv({ cls: 'dr-art-edit' });
-      change.setAttribute('role', 'button');
-      change.setAttribute('tabindex', '0');
-      change.setAttribute('aria-label', spec.cover ? 'Change cover image' : 'Set cover image');
+      asButton(change, spec.cover ? 'Change cover image' : 'Set cover image');
       setIcon(change, 'image');
       onActivate(change, () => this.plugin.setFolderCover(folder, () => this.render()));
     }
@@ -1005,8 +993,7 @@ class BrowseView extends ItemView {
         trail.forEach((f, i) => {
           if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
           const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
-          crumb.setAttribute('role', 'button');
-          crumb.setAttribute('tabindex', '0');
+          asButton(crumb);
           onActivate(crumb, () => this.openFolder(f));
         });
       }
@@ -1028,8 +1015,7 @@ class BrowseView extends ItemView {
       info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
     } else if (parent && !(parent.isRoot && parent.isRoot()) && !trail.length) {
       const up = info.createDiv({ cls: 'dr-detail-sub is-link', text: parent.name });
-      up.setAttribute('role', 'button');
-      up.setAttribute('tabindex', '0');
+      asButton(up);
       onActivate(up, () => this.openFolder(parent));
     }
 

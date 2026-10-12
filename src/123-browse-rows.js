@@ -10,8 +10,7 @@ class BrowseRows {
 
   trackRow(list, file, index) {
     const row = list.createDiv({ cls: 'dr-track' });
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
+    asButton(row);
 
     // Which disc the row belongs to, so a drop knows what it's over.
     if (file.parent) row.dataset.folder = file.parent.path;
@@ -223,8 +222,7 @@ class BrowseRows {
     const label = head.createDiv({ cls: 'dr-shelf-label' });
     const through = opts.head || (opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null);
     if (through) {
-      label.setAttribute('role', 'button');
-      label.setAttribute('tabindex', '0');
+      asButton(label);
       label.addClass('is-linked');
       onActivate(label, through);
     }
@@ -342,8 +340,7 @@ class BrowseRows {
 
   card(grid, title, subtitle) {
     const card = grid.createDiv({ cls: 'dr-card' });
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
+    asButton(card);
     card.createDiv({ cls: 'dr-card-art' });
     card.createDiv({ cls: 'dr-card-title', text: title });
     if (subtitle) card.createDiv({ cls: 'dr-card-sub', text: subtitle });

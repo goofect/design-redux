@@ -517,8 +517,7 @@ class FootnotesView extends ItemView {
     const tool = (icon, label, run) => {
       const el = tools.createDiv({ cls: 'clickable-icon' });
       el.setAttribute('aria-label', label);
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '0');
+      asButton(el);
       setIcon(el, icon);
       onActivate(el, run);
     };
@@ -549,8 +548,7 @@ class FootnotesView extends ItemView {
       const act = (icon, title, run) => {
         const el = actions.createDiv({ cls: 'clickable-icon' });
         el.setAttribute('aria-label', title);
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
+        asButton(el);
         setIcon(el, icon);
         onActivate(el, (evt) => {
           if (evt && evt.stopPropagation) evt.stopPropagation();
@@ -566,8 +564,7 @@ class FootnotesView extends ItemView {
         const before = text.slice(Math.max(0, ref.from - 90), ref.from).split('\n').pop();
         const words = before.replace(/\[\^[^\]]*\]/g, '').trim();
         where.setText(words ? `…${words.slice(-70)}` : 'At the start of a line');
-        item.setAttribute('role', 'button');
-        item.setAttribute('tabindex', '0');
+        asButton(item);
         onActivate(item, () => this.reveal(view, ref));
       } else {
         where.setText('Not cited in the text');

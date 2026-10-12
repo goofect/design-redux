@@ -48,8 +48,7 @@ class PropertiesSection extends PanelSection {
     // press and drag to move the property, click for its menu.
     const icon = keyEl.createSpan({ cls: 'dr-key-icon' });
     icon.setAttribute('aria-label', `${TYPE_LABELS[type] || type} — drag to move`);
-    icon.setAttribute('role', 'button');
-    icon.setAttribute('tabindex', '0');
+    asButton(icon);
     setIcon(icon, TYPE_ICONS[type] || 'text');
     icon.addEventListener('click', (evt) => {
       evt.stopPropagation();
@@ -89,9 +88,7 @@ class PropertiesSection extends PanelSection {
 
     // Taken off in one press, with an Undo, rather than from a menu.
     const remove = row.createDiv({ cls: 'clickable-icon dr-row-remove' });
-    remove.setAttribute('role', 'button');
-    remove.setAttribute('tabindex', '0');
-    remove.setAttribute('aria-label', `Remove ${key}`);
+    asButton(remove, `Remove ${key}`);
     setIcon(remove, 'x');
     onActivate(remove, () => this.remove(key));
   }

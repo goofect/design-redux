@@ -239,8 +239,7 @@ class AlbumStructure extends Feature {
       trail.forEach((f, i) => {
         if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
         const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
-        crumb.setAttribute('role', 'button');
-        crumb.setAttribute('tabindex', '0');
+        asButton(crumb);
         onActivate(crumb, () => view.openFolder(f));
       });
     }
@@ -395,8 +394,7 @@ class AlbumStructure extends Feature {
       }
       else {
         const make = box.createDiv({ cls: 'dr-album-lead-empty', text: 'No map yet — make one' });
-        make.setAttribute('role', 'button');
-        make.setAttribute('tabindex', '0');
+        asButton(make);
         onActivate(make, () => this.openMap(folder));
       }
       return box;

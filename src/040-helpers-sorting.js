@@ -311,6 +311,14 @@ function onActivate(el, handler, space = true) {
   });
 }
 
+/** An element that acts as a button: reached with Tab, and named for screen readers when given a label. */
+function asButton(el, label) {
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  if (label !== undefined) el.setAttribute('aria-label', label);
+  return el;
+}
+
 /** When, in the spirit of a track length: a glance, not a date. */
 function relativeDay(time) {
   const day = 86400000;
@@ -358,9 +366,7 @@ function countFilesIn(folder) {
  */
 function makeTrigger(cls, label, icon, onActivate) {
   const el = createDiv({ cls: `clickable-icon ${cls}` });
-  el.setAttribute('role', 'button');
-  el.setAttribute('tabindex', '0');
-  el.setAttribute('aria-label', label);
+  asButton(el, label);
   el.setAttribute('aria-expanded', 'false');
   el.setAttribute('data-tooltip-position', 'bottom');
   setIcon(el, icon);

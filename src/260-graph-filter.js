@@ -211,8 +211,7 @@ class GraphPropertyFilter extends Feature {
       section.toggleClass('is-collapsed', !state.open);
       icon.toggleClass('is-collapsed', !state.open);
     };
-    head.setAttribute('role', 'button');
-    head.setAttribute('tabindex', '0');
+    asButton(head);
     onActivate(head, () => {
       state.open = !state.open;
       fold();
@@ -268,8 +267,7 @@ class GraphPropertyFilter extends Feature {
 
       const remove = row.createDiv({ cls: 'clickable-icon dr-gp-remove' });
       remove.setAttribute('aria-label', 'Remove');
-      remove.setAttribute('role', 'button');
-      remove.setAttribute('tabindex', '0');
+      asButton(remove);
       setIcon(remove, 'x');
       onActivate(remove, () => {
         state.rules.splice(index, 1);
@@ -329,8 +327,7 @@ class GraphPropertyFilter extends Feature {
 
     const foot = body.createDiv({ cls: 'dr-gp-foot' });
     const add = foot.createDiv({ cls: 'dr-gp-add' });
-    add.setAttribute('role', 'button');
-    add.setAttribute('tabindex', '0');
+    asButton(add);
     setIcon(add.createSpan({ cls: 'dr-gp-add-icon' }), 'plus');
     add.createSpan({ text: state.rules.length ? 'Add another' : 'Add property filter' });
     onActivate(add, () => {

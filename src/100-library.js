@@ -312,8 +312,7 @@ class LibraryView extends ItemView {
     if (spec.screen) el.dataset.screen = spec.screen;
     if (spec.property) el.dataset.property = spec.property;
     if (spec.group) el.dataset.group = spec.group;
-    el.setAttribute('role', 'button');
-    el.setAttribute('tabindex', '0');
+    asButton(el);
 
     const gutter = el.createSpan({ cls: 'dr-lib-disclosure' });
     if (spec.disclosure) {

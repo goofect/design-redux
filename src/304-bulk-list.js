@@ -125,8 +125,7 @@ class PropertyListTool extends BulkModal {
       // artist sits under its title.
       const text = row.createDiv({ cls: 'dr-plist-text' });
       const name = text.createDiv({ cls: 'dr-plist-name', text: prop.name });
-      name.setAttribute('role', 'button');
-      name.setAttribute('tabindex', '0');
+      asButton(name);
       onActivate(name, () => this.startRename(row, name, prop));
       const values = text.createDiv({
         cls: 'dr-plist-values',
@@ -142,9 +141,7 @@ class PropertyListTool extends BulkModal {
       row.createDiv({ cls: 'dr-plist-cover', text: `${prop.count} of ${total}` });
 
       const more = row.createDiv({ cls: 'clickable-icon dr-plist-more' });
-      more.setAttribute('role', 'button');
-      more.setAttribute('tabindex', '0');
-      more.setAttribute('aria-label', `More for ${prop.name}`);
+      asButton(more, `More for ${prop.name}`);
       setIcon(more, 'more-horizontal');
       const menu = (evt) => this.propertyMenu(evt, row, name, prop, missing);
       more.addEventListener('click', menu);

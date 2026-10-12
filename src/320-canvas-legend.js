@@ -172,8 +172,7 @@ class CanvasLegend extends Feature {
       const group = controls.createDiv({ cls: 'canvas-control-group dr-legend-control' });
       const item = group.createDiv({ cls: 'canvas-control-item' });
       item.setAttribute('aria-label', 'Legend');
-      item.setAttribute('role', 'button');
-      item.setAttribute('tabindex', '0');
+      asButton(item);
       setIcon(item, 'list');
       onActivate(item, () => this.toggleHidden(view));
       state.control = group;
@@ -271,8 +270,7 @@ class CanvasLegend extends Feature {
     }
 
     const head = panel.createDiv({ cls: 'dr-legend-head' });
-    head.setAttribute('role', 'button');
-    head.setAttribute('tabindex', '0');
+    asButton(head);
     head.setAttribute('aria-expanded', String(!saved.collapsed));
     head.createSpan({ cls: 'dr-legend-title', text: 'Legend' });
     // Folded away, the colours still show, as a row of dots.
@@ -299,9 +297,7 @@ class CanvasLegend extends Feature {
       row.toggleClass('is-focused', state.focus === key);
       const dot = row.createDiv();
       this.swatch(dot, key);
-      dot.setAttribute('role', 'button');
-      dot.setAttribute('tabindex', '0');
-      dot.setAttribute('aria-label', `Show only the ${this.colourName(key).toLowerCase()} cards`);
+      asButton(dot, `Show only the ${this.colourName(key).toLowerCase()} cards`);
       dot.setAttribute('aria-pressed', String(state.focus === key));
       onActivate(dot, () => this.setFocus(view, key));
 
@@ -334,8 +330,7 @@ class CanvasLegend extends Feature {
 
     if (state.focus) {
       const all = panel.createDiv({ cls: 'dr-legend-all', text: 'Show every card' });
-      all.setAttribute('role', 'button');
-      all.setAttribute('tabindex', '0');
+      asButton(all);
       onActivate(all, () => this.setFocus(view, state.focus));
     }
   }

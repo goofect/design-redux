@@ -151,8 +151,7 @@ class FolderScreen extends BrowseScreen {
       head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
       if (disc.folder && disc.folder !== album) {
-        head.setAttribute('role', 'button');
-        head.setAttribute('tabindex', '0');
+        asButton(head);
         onActivate(head, () => view.openFolder(disc.folder));
       }
       const table = el.createDiv({ cls: 'dr-table' });
@@ -176,8 +175,7 @@ class FolderScreen extends BrowseScreen {
       const row = list.createDiv({ cls: 'dr-tree-row' });
       row.style.setProperty('--dr-tree-depth', String(depth));
       row.dataset.path = f.path;
-      row.setAttribute('role', 'button');
-      row.setAttribute('tabindex', '0');
+      asButton(row);
       setIcon(row.createSpan({ cls: 'dr-tree-icon' }), 'folder');
       row.createSpan({ cls: 'dr-tree-name', text: f.name });
       const kind = structure && structure.enabled ? structure.info(f).label : '';
@@ -205,8 +203,7 @@ class FolderScreen extends BrowseScreen {
       onActivate(name, (evt) => view.openFile(file, evt));
       row.createSpan({ cls: 'dr-gap-from', text: `${count} ${count === 1 ? 'link' : 'links'} · ${file.parent && file.parent.path !== '/' ? file.parent.name : this.app.vault.getName()}` });
       const take = row.createSpan({ cls: 'dr-linked-take', text: 'Show here' });
-      take.setAttribute('role', 'button');
-      take.setAttribute('tabindex', '0');
+      asButton(take);
       onActivate(take, async (evt) => {
         evt.stopPropagation();
         if (await structure.include(folder, file)) view.render();
@@ -269,8 +266,7 @@ class FolderScreen extends BrowseScreen {
       list.createDiv({ cls: 'dr-disc' }).createSpan({ cls: 'dr-disc-title', text: 'Not written yet' });
       gaps.unwritten.forEach((gap) => {
         const row = list.createDiv({ cls: 'dr-gap-row' });
-        row.setAttribute('role', 'button');
-        row.setAttribute('tabindex', '0');
+        asButton(row);
         row.createSpan({ cls: 'dr-gap-name', text: gap.name });
         row.createSpan({ cls: 'dr-gap-from', text: gap.count === 1 ? `linked from ${gap.from.basename}` : `linked from ${gap.count} notes` });
         // Opened as its link would be: Obsidian makes the note.
@@ -293,9 +289,7 @@ class FolderScreen extends BrowseScreen {
     const note = root.createDiv({ cls: 'dr-album-notice' });
     setIcon(note.createSpan({ cls: 'dr-album-notice-icon' }), 'link-2-off');
     note.createSpan({ text: `${about.missing.length === 1 ? 'A link in its properties leads' : 'Links in its properties lead'} nowhere: ${names}` });
-    note.setAttribute('role', 'button');
-    note.setAttribute('tabindex', '0');
-    note.setAttribute('aria-label', 'Open the folder note to fix it');
+    asButton(note, 'Open the folder note to fix it');
     onActivate(note, () => this.app.workspace.getLeaf(false).openFile(about.note));
   }
 
@@ -307,8 +301,7 @@ class FolderScreen extends BrowseScreen {
       head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
       if (disc.folder && disc.folder !== album) {
-        head.setAttribute('role', 'button');
-        head.setAttribute('tabindex', '0');
+        asButton(head);
         onActivate(head, () => view.openFolder(disc.folder));
       }
       const grid = root.createDiv({ cls: 'dr-grid' });
@@ -441,8 +434,7 @@ class PropertiesScreen extends BrowseScreen {
     props.forEach((prop) => {
       const row = list.createDiv({ cls: 'dr-split-row' });
       if (selected && prop.key === selected.key) row.addClass('is-selected');
-      row.setAttribute('role', 'button');
-      row.setAttribute('tabindex', '0');
+      asButton(row);
 
       const thumb = row.createDiv({ cls: 'dr-split-thumb is-blank' });
       setIcon(
@@ -742,8 +734,7 @@ class SearchScreen extends BrowseScreen {
     if (recents.length) {
       const head = this.heading(root, 'Recently searched');
       const clear = head.createDiv({ cls: 'dr-search-clear' });
-      clear.setAttribute('role', 'button');
-      clear.setAttribute('tabindex', '0');
+      asButton(clear);
       clear.setText('Clear');
       onActivate(clear, async () => {
         this.settings.recentSearches = [];
@@ -781,8 +772,7 @@ class SearchScreen extends BrowseScreen {
 
   recentCard(grid, term) {
     const card = grid.createDiv({ cls: 'dr-recent' });
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
+    asButton(card);
 
     const art = card.createDiv({ cls: 'dr-recent-art' });
     setIcon(art.createSpan({ cls: 'dr-card-glyph' }), 'search');
@@ -817,8 +807,7 @@ class SearchScreen extends BrowseScreen {
 
   categoryCard(grid, group) {
     const card = grid.createDiv({ cls: 'dr-cat' });
-    card.setAttribute('role', 'button');
-    card.setAttribute('tabindex', '0');
+    asButton(card);
 
     // No artwork to draw on, so the colour comes from the name itself —
     // stable, so a category keeps its colour between visits.
@@ -887,8 +876,7 @@ class SearchScreen extends BrowseScreen {
     });
 
     const full = head.createDiv({ cls: 'dr-search-full' });
-    full.setAttribute('role', 'button');
-    full.setAttribute('tabindex', '0');
+    asButton(full);
     setIcon(full.createSpan({ cls: 'dr-search-full-icon' }), 'file-search');
     full.createSpan({ text: 'Search inside notes' });
     onActivate(full, () => {
@@ -1003,9 +991,7 @@ class HomeScreen extends BrowseScreen {
     picks.forEach(({ caption, file }) => {
       const card = row.createDiv({ cls: 'dr-pick' });
       card.dataset.path = file.path;
-      card.setAttribute('role', 'button');
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', `${caption}: ${file.basename}`);
+      asButton(card, `${caption}: ${file.basename}`);
       card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
       const body = card.createDiv({ cls: 'dr-pick-body' });

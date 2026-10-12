@@ -153,8 +153,7 @@ class MentionsSection extends PanelSection {
   renderGroup(key, title, read) {
     const group = this.containerEl.createDiv({ cls: `dr-mention-group is-${key}` });
     const head = group.createDiv({ cls: 'dr-section-head' });
-    head.setAttribute('role', 'button');
-    head.setAttribute('tabindex', '0');
+    asButton(head);
     setIcon(head.createSpan({ cls: 'dr-section-chevron' }), 'chevron-down');
     head.createSpan({ cls: 'dr-section-title', text: title });
     const count = head.createSpan({ cls: 'dr-section-count' });
@@ -216,8 +215,7 @@ class MentionsSection extends PanelSection {
 
   renderMention(list, item) {
     const row = list.createDiv({ cls: 'dr-mention' });
-    row.setAttribute('role', 'button');
-    row.setAttribute('tabindex', '0');
+    asButton(row);
     row.createSpan({ cls: 'dr-mention-name', text: item.file.basename });
     if (item.count > 1) {
       row.createSpan({ cls: 'dr-mention-count', text: String(item.count) });

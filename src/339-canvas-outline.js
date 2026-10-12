@@ -211,8 +211,7 @@ class CanvasOutline extends CanvasFeature {
     const item = group.createDiv({ cls: 'canvas-control-item' });
     item.setAttribute('aria-label', 'Outline');
     item.setAttribute('data-tooltip-position', 'left');
-    item.setAttribute('role', 'button');
-    item.setAttribute('tabindex', '0');
+    asButton(item);
     setIcon(item, 'list-tree');
     onActivate(item, () => this.show());
     state.control = group;

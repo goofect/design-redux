@@ -362,8 +362,7 @@ class CanvasFold extends CanvasFeature {
     const most = 14;
     inside.slice(0, most).forEach((rec) => {
       const row = list.createDiv({ cls: 'dr-fold-list-row' });
-      row.setAttribute('role', 'button');
-      row.setAttribute('tabindex', '0');
+      asButton(row);
       colourMark(row, rec.color);
       row.createSpan({ cls: 'dr-fold-list-label', text: canvasCardLabel(rec) });
       const more = tuckedCount(model, rec.id);
@@ -516,8 +515,7 @@ class CanvasFold extends CanvasFeature {
     const outline = controls.querySelector(':scope > .dr-outline-control');
     if (outline) controls.insertBefore(group, outline);
     const item = group.createDiv({ cls: 'canvas-control-item' });
-    item.setAttribute('role', 'button');
-    item.setAttribute('tabindex', '0');
+    asButton(item);
     item.setAttribute('data-tooltip-position', 'left');
     item.setAttribute('aria-label', 'Folding');
     setIcon(item, 'chevrons-down-up');

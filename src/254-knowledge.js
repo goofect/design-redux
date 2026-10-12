@@ -71,8 +71,7 @@ class ConceptScreen extends BrowseScreen {
       chain.forEach((f, i) => {
         if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
         const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.basename });
-        crumb.setAttribute('role', 'button');
-        crumb.setAttribute('tabindex', '0');
+        asButton(crumb);
         onActivate(crumb, () => view.navigate({ mode: 'concept', property: f.path }));
       });
     }
@@ -99,8 +98,7 @@ class ConceptScreen extends BrowseScreen {
       group.items.forEach((item) => {
         const row = list.createDiv({ cls: 'dr-report-row' });
         row.dataset.path = item.file.path;
-        row.setAttribute('role', 'button');
-        row.setAttribute('tabindex', '0');
+        asButton(row);
         setIcon(row.createSpan({ cls: 'dr-report-icon' }), 'file-text');
         const text = row.createDiv({ cls: 'dr-report-text' });
         text.createDiv({ cls: 'dr-report-name', text: item.file.basename });
