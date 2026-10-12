@@ -1170,6 +1170,46 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('times a shelf of 50 and of 500 albums, and the sidebar beside them', async function () {
+    // A baseline, not a check: a folder of albums, each with one note.
+    this.timeout(300000);
+    const made = [];
+    for (const n of [50, 500]) {
+      const root = `Bench ${n} albums`;
+      made.push(root);
+      await browser.executeObsidian(async ({ app }, n, root) => {
+        if (!app.vault.getFolderByPath(root)) await app.vault.createFolder(root);
+        for (let i = 0; i < n; i++) {
+          const dir = `${root}/Album ${i}`;
+          if (!app.vault.getFolderByPath(dir)) await app.vault.createFolder(dir);
+          if (!app.vault.getFileByPath(`${dir}/Note.md`)) await app.vault.create(`${dir}/Note.md`, 'A note.');
+        }
+      }, n, root);
+      const times = await browser.executeObsidian(async ({ app, plugins }, root) => {
+        const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+        await library.browseMode({ mode: 'folder', path: root });
+        if (typeof library.reveal === 'function') await library.reveal();
+        const leaf = app.workspace.getLeavesOfType('design-redux-browse').find((l) => l.view && l.view.path === root);
+        const time = (fn) => {
+          const started = performance.now();
+          fn();
+          return Math.round(performance.now() - started);
+        };
+        const shelf = leaf ? time(() => leaf.view.render()) : null;
+        const side = app.workspace.getLeavesOfType('design-redux-library')[0];
+        const sidebar = side && side.view && typeof side.view.render === 'function' ? time(() => side.view.render()) : null;
+        return { shelf, sidebar };
+      }, root);
+      perf.push(`perf: shelf of ${n} albums: drawn ${times.shelf} ms, the sidebar ${times.sidebar} ms`);
+    }
+    await browser.executeObsidian(async ({ app }, roots) => {
+      for (const root of roots) {
+        const folder = app.vault.getFolderByPath(root);
+        if (folder) await app.vault.delete(folder, true);
+      }
+    }, made);
+  });
+
   it('times folding, unfolding and tidying canvases of 20, 100 and 500 cards', async function () {
     // A baseline, not a check: each canvas a tree, every card with up to four under it.
     this.timeout(180000);
