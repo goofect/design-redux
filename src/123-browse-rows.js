@@ -403,6 +403,30 @@ class BrowseRows {
     return card;
   }
 
+  /** A reading queue kept from Up Next: plays it — the first opened, the rest lined up. */
+  queueCard(grid, kept) {
+    const queue = this.plugin.queue;
+    const files = queue.filesOf(kept);
+    const card = this.card(grid, kept.name, `Reading queue · ${files.length === 1 ? '1 note' : `${files.length} notes`}`);
+    const key = `queue:${kept.id}`;
+    fillArt(card.querySelector('.dr-card-art'), null, 'list-ordered', coverGen(this.plugin.settings, kept.name, key), blankLook(this.plugin.settings, kept.name, key));
+    onActivate(card, () => queue.play(files, null, kept.name));
+    onContextMenu(card, (evt) => {
+      const menu = new Menu();
+      const section = (item, name) => (typeof item.setSection === 'function' ? item.setSection(name) : item);
+      menu.addItem((item) => section(item, 'action').setTitle('Play').setIcon('play').onClick(() => queue.play(files, null, kept.name)));
+      menu.addItem((item) => section(item, 'action').setTitle('Add to Up Next').setIcon('list-end').onClick(() => queue.add(files, false)));
+      menu.addItem((item) =>
+        section(item, 'danger').setTitle('Remove this reading queue').setIcon('trash-2').onClick(() => {
+          queue.forget(kept.id);
+          this.render();
+        })
+      );
+      showMenuAt(menu, evt);
+    });
+    return card;
+  }
+
   card(grid, title, subtitle) {
     const card = grid.createDiv({ cls: 'dr-card' });
     asButton(card);

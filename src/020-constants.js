@@ -56,6 +56,9 @@ const DEFAULTS = {
   // A property's menu gives its value to the rest of the note's album.
   propertyForAlbum: true,
   queue: [],
+  queueSource: '',
+  queuePrevious: null,
+  readingQueues: [],
   onePage: false,
   pinsExpanded: false,
   albumNoteLimit: 8,

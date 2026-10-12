@@ -724,13 +724,16 @@ class CollectionScreen extends BrowseScreen {
 
 /* -- subjects and collections, as tiles ------------------------------ */
 
-/** Your own collections, as tiles: smart albums, then albums that gather notes from elsewhere. */
+/** Your own collections, as tiles: smart albums, reading queues kept from Up Next, then albums that gather notes from elsewhere. */
 function collectionTiles(view) {
   const plugin = view.plugin;
   const items = [];
   const smart = plugin.feature(SmartAlbums);
   if (smart && smart.enabled) {
     smart.list().forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
+  }
+  if (plugin.settings.upNext && plugin.queue) {
+    plugin.queue.saved().filter((kept) => view.matches(kept.name)).forEach((kept) => items.push({ draw: (row) => view.queueCard(row, kept) }));
   }
   const structure = plugin.feature(AlbumStructure);
   if (structure && structure.enabled) {
@@ -757,7 +760,7 @@ class CollectionsScreen extends BrowseScreen {
     view.renderTitleBar(root, this.title());
     const items = collectionTiles(view);
     if (!items.length) {
-      view.emptyState(root, 'No collections yet: smart albums, and albums that gather notes from elsewhere, show here', 'library', null);
+      view.emptyState(root, 'No collections yet: smart albums, reading queues and albums that gather notes from elsewhere show here', 'library', null);
       return;
     }
     tileGrid(view, root, items);

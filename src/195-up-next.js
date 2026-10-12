@@ -44,6 +44,10 @@ class UpNext extends Feature {
       { id: 'up-next-add', name: 'Add this note to Up Next', menu: 'Add to Up Next', icon: 'list-end', on: 'file', when: (ctx) => queueable(ctx) && !this.queue.has(ctx.file), run: (ctx) => this.enqueue([ctx.file], false) },
       { id: 'up-next-remove', name: 'Remove from Up Next', icon: 'list-x', on: 'file', palette: false, when: (ctx) => queueable(ctx) && this.queue.has(ctx.file), run: (ctx) => this.queue.remove(ctx.file) },
       { id: 'up-next-clear', name: 'Clear Up Next', icon: 'list-x', when: () => this.enabled && this.queue.paths().length > 0, run: () => this.clear() },
+      { id: 'up-next-play-album', name: 'Play this album', menu: 'Play', icon: 'play', on: 'album', palette: false, when: (ctx) => notes(ctx).length > 0, run: (ctx) => this.queue.play(notes(ctx), ctx.folder) },
+      { id: 'up-next-play-from', name: 'Play from here', icon: 'play', on: 'file', palette: false, when: (ctx) => queueable(ctx) && this.inAlbum(ctx.file), run: (ctx) => this.playFrom(ctx.file) },
+      { id: 'up-next-save', name: 'Save Up Next as a reading queue…', icon: 'list-plus', when: () => this.enabled && this.queue.paths().length > 0, run: () => this.askToKeep() },
+      { id: 'up-next-resume', name: 'Resume the previous Up Next', icon: 'history', when: () => this.enabled && !!this.queue.previous(), run: () => this.queue.resume() },
       { id: 'up-next-add-album', name: 'Add to Up Next', icon: 'list-end', on: 'album', palette: false, when: (ctx) => notes(ctx).length > 0, run: (ctx) => this.enqueue(notes(ctx), false, ctx.folder.name) },
       { id: 'shuffle-album', name: 'Shuffle this album', menu: 'Shuffle', icon: 'shuffle', on: 'album', when: (ctx) => notes(ctx).length > 0, run: (ctx) => this.shuffle(ctx.folder) },
     ];
@@ -120,6 +124,26 @@ class UpNext extends Feature {
     return out;
   }
 
+  /** In an album: in a folder, not the vault's top. */
+  inAlbum(file) {
+    return !!file.parent && !(file.parent.isRoot && file.parent.isRoot());
+  }
+
+  /** This note opened, and the rest of its album lined up after it. */
+  playFrom(file) {
+    const notes = this.notesOf(file.parent);
+    const at = notes.indexOf(file);
+    return this.queue.play(at === -1 ? [file] : notes.slice(at), file.parent);
+  }
+
+  /** The queue kept under a name, to play again from Collections. */
+  askToKeep() {
+    new NamePrompt(this.app, 'Save Up Next as a reading queue', 'Name', (name) => {
+      const kept = this.queue.keep(String(name || '').trim());
+      if (kept) new Notice(`Saved “${kept.name}”: ${kept.paths.length} notes, in Collections.`);
+    }).open();
+  }
+
   /** Put notes in the queue, and say so. */
   enqueue(files, next, name) {
     const n = this.queue.add(files, next);
@@ -154,12 +178,11 @@ class UpNext extends Feature {
     if (leaf) leaf.openFile(file);
   }
 
-  /** Emptied, with an Undo — it may have been a long list. */
+  /** Emptied, with an Undo — it may have been a long list — and kept to resume. */
   clear() {
-    const was = this.queue.paths().slice();
-    if (!was.length) return;
-    this.queue.clear();
-    this.plugin.offerUndo('Cleared Up Next.', () => this.queue.set(was));
+    if (!this.queue.paths().length) return;
+    const was = this.queue.replace([], null);
+    this.plugin.offerUndo('Cleared Up Next.', () => this.queue.restore(was));
   }
 
   /**
@@ -181,13 +204,12 @@ class UpNext extends Feature {
     const here = pageFile(this.app);
     if (order.length > 1 && order[0] === here) order.push(order.shift());
     const first = order.shift();
-    const was = this.queue.paths().slice();
-    this.queue.set(order.map((f) => f.path));
+    const was = this.queue.replace(order.map((f) => f.path), folder || null);
     const leaf = pageLeaf(this.app) || this.app.workspace.getLeaf(false);
     if (leaf) leaf.openFile(first);
     if (order.length) {
       const name = folder ? folder.name : 'the album';
-      this.plugin.offerUndo(`Shuffled ${name}: ${order.length} up next.`, () => this.queue.set(was));
+      this.plugin.offerUndo(`Shuffled ${name}: ${order.length} up next.`, () => this.queue.restore(was));
     }
     return true;
   }
@@ -199,6 +221,15 @@ class UpNext extends Feature {
   showMenu(evt) {
     const files = this.queue.files();
     const menu = new Menu();
+    // Where it's playing from, and how far through: "From Law · 3 of 24".
+    const source = this.queue.source();
+    if (source) {
+      const here = pageFile(this.app);
+      const near = here && here.parent === source ? albumNeighbours(this.plugin, here) : null;
+      const place = near && near.index >= 0 ? ` · ${near.index + 1} of ${near.total}` : '';
+      menu.addItem((item) => item.setTitle(`From ${source.name}${place}`).setIcon('disc').setDisabled(true));
+      menu.addSeparator();
+    }
     files.slice(0, 20).forEach((file) => {
       menu.addItem((item) =>
         item
@@ -211,6 +242,8 @@ class UpNext extends Feature {
       menu.addItem((item) => item.setTitle(`and ${files.length - 20} more`).setDisabled(true));
     }
     menu.addSeparator();
+    menu.addItem((item) => item.setTitle('Save as a reading queue…').setIcon('list-plus').onClick(() => this.askToKeep()));
+    if (this.queue.previous()) menu.addItem((item) => item.setTitle('Resume the previous Up Next').setIcon('history').onClick(() => this.queue.resume()));
     menu.addItem((item) => item.setTitle('Clear Up Next').setIcon('list-x').onClick(() => this.clear()));
     showMenuAt(menu, evt);
   }

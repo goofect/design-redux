@@ -795,10 +795,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       return menu.items.map((i) => i.title);
     };
     const deterrence = app.vault.getFileByPath('IR/Deterrence.md');
-    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Add to Up Next']);
+    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Add to Up Next', 'Play from here']);
     upNext.enqueue([deterrence], true);
-    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Remove from Up Next']);
-    assert.deepStrictEqual(titles(app.vault.getFolderByPath('IR')), ['Add to Up Next', 'Shuffle']);
+    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Remove from Up Next', 'Play from here']);
+    assert.deepStrictEqual(titles(app.vault.getFolderByPath('IR')), ['Play', 'Add to Up Next', 'Shuffle']);
 
     // » goes to it before Cooperation, and reading it takes it off.
     strip.update();
@@ -838,6 +838,65 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).some((b) => b.textContent === 'Random'));
     strip.el.remove();
+  });
+
+  await t('Up Next plays an album from a note, says where from, keeps a queue under a name, and resumes the one before', async () => {
+    const { plugin, app, v, view } = setup();
+    plugin.queue = new R.Queue(plugin);
+    const upNext = new R.UpNext(plugin);
+    plugin.feature = (C) => (C === R.UpNext ? upNext : null);
+    const undo = [];
+    plugin.offerUndo = (msg, fn) => undo.push(fn);
+    v.vault.on('rename', (file, old) => plugin.queue.followRename(file, old));
+    v.vault.on('delete', (file) => plugin.queue.followDelete(file));
+    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file: null, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
+    app.workspace.rootSplit = {};
+    app.workspace.getMostRecentLeaf = () => leaf;
+    const q = plugin.queue;
+    const g = (p) => app.vault.getFileByPath(p);
+    q.add([g('IR/Theories/Realism.md')], false);
+
+    // Play from here: this note, then the rest of its album after it, from that album.
+    upNext.playFrom(g('IR/Balance.md'));
+    assert.strictEqual(leaf.view.file.basename, 'Balance');
+    assert.deepStrictEqual(q.paths(), ['IR/Cooperation.md', 'IR/Deterrence.md', 'IR/Theories/Liberalism.md', 'IR/Theories/Realism.md']);
+    assert.strictEqual(q.source().path, 'IR');
+
+    // The one it replaced is kept to resume, and Undo puts it back.
+    assert.deepStrictEqual(q.previous().paths, ['IR/Theories/Realism.md']);
+    undo.pop()();
+    assert.deepStrictEqual(q.paths(), ['IR/Theories/Realism.md']);
+    assert.strictEqual(q.source(), null);
+
+    // Played again, then resumed: the one before comes back, and this one is kept instead.
+    q.play([g('IR/Anarchy.md'), g('IR/Balance.md')], app.vault.getFolderByPath('IR'));
+    assert.ok(q.resume());
+    assert.deepStrictEqual(q.paths(), ['IR/Theories/Realism.md']);
+    assert.deepStrictEqual(q.previous().paths, ['IR/Balance.md']);
+
+    // Kept under a name, it follows renames and deletions, and plays from Collections.
+    q.add([g('IR/Cooperation.md')], false);
+    const kept = q.keep('Weekend');
+    assert.deepStrictEqual(q.saved().map((k) => k.name), ['Weekend']);
+    plugin.settings.upNext = true;
+    await view.setState({ mode: 'collections' }, {});
+    const tile = view.contentEl.querySelector('.dr-card');
+    assert.deepStrictEqual([tile.querySelector('.dr-card-title').textContent, tile.querySelector('.dr-card-sub').textContent], ['Weekend', 'Reading queue · 2 notes']);
+    click(tile);
+    assert.strictEqual(leaf.view.file.basename, 'Realism', 'played from Collections');
+    undo.pop()();
+    await app.fileManager.renameFile(app.vault.getFolderByPath('IR/Theories'), 'IR/Schools');
+    assert.deepStrictEqual(q.saved()[0].paths, ['IR/Schools/Realism.md', 'IR/Cooperation.md']);
+    assert.strictEqual(q.paths()[0], 'IR/Schools/Realism.md');
+    await app.fileManager.trashFile(g('IR/Cooperation.md'));
+    assert.deepStrictEqual(q.saved()[0].paths, ['IR/Schools/Realism.md']);
+    q.forget(kept.id);
+    assert.deepStrictEqual(q.saved(), []);
+
+    // Cleared: kept to resume too.
+    upNext.clear();
+    assert.deepStrictEqual(q.paths(), []);
+    assert.deepStrictEqual(q.previous().paths, ['IR/Schools/Realism.md']);
   });
 
   /* -- lengths, Home ------------------------------------------------------- */
