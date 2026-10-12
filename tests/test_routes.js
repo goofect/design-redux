@@ -39,7 +39,7 @@ class Setting {
   }
 }
 
-const obsidian = new Proxy({ Setting, Platform: { isMobile: false } }, { get: (t, k) => (k in t ? t[k] : class {}) });
+const obsidian = new Proxy({ Setting, Platform: { isMobile: false } }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);

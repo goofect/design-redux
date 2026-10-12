@@ -9,7 +9,7 @@
 node_modules
 
 # Built from src/ by build.mjs; releases carry it, the repository doesn't.
-main.js
+/main.js
 
 # Scratch copies the test suites write and delete as they run
 tests/_*.js

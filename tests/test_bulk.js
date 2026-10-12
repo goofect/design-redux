@@ -115,7 +115,7 @@ const obsidian = new Proxy({
   Platform: { isMobile: false, isPhone: false },
   parseYaml: (text) => yaml.load(text, SCHEMA),
   stringifyYaml: (obj) => yaml.dump(obj, { lineWidth: -1 }),
-}, { get: (t, k) => (k in t ? t[k] : class {}) });
+}, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);

@@ -55,7 +55,7 @@ const obsidian = new Proxy({
   ItemView, TFile, TFolder, Component,
   setIcon: (el, name) => { el.dataset.icon = name; },
   Notice: class {},
-}, { get: (t, k) => (k in t ? t[k] : class {}) });
+}, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {

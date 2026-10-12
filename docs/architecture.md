@@ -8,20 +8,20 @@ each milestone did.
 ## 0. Where it stands
 
 ```text
-build.mjs joins src/NNN-*.js in name order → main.js (one shared scope); 103 pieces
+esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.0, phase 1)
 
- 010–089  core          constants; helpers (art, colours 031, properties 045, text 047,     18 pieces  4,265 lines
-                        sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
-                        Queue; actions 078; Feature and mixInto 080; appearance
- 230–253  shared UI     pickers, covers, cover drop, image routing, property clipboard       5 pieces  1,258
- 090–139  library       sidebar, browse view 120 (+121–123), screens, filters; and the      17 pieces  7,899
- 254–261    and albums  album features, knowledge, library and knowledge checks
- 140–229  chrome        actions menu, properties panel, strip, Up Next, menus               11 pieces  2,910
- 260–269  links         graph filter and routes, quiet links 263–266                        6 pieces  2,701
- 270–289  editor        marked lists, scripts, footnotes                                     3 pieces  2,363
- 290–314  bulk          engine, dialogs 300–304, feature                                     7 pieces  4,055
- 315–347  canvas        tree (the model, saveCanvas), folds, layouts, arrows, outline, …   33 pieces 10,403
- 349–999  composition   the plugin (lifecycle, settings, features, delegates), settings      3 pieces    945
+ src/core/     constants; helpers (art, colours 031, properties 045, text 047,      19 modules  4,622 lines
+               sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
+               Queue, Selection 076; actions 078; Feature and mixInto 080; appearance
+ src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
+ src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the       18 modules  8,750
+               album features, knowledge, library and knowledge checks
+ src/chrome/   actions menu, properties panel, strip, Up Next, menus, modes         10 modules  2,994
+ src/links/    graph filter and routes, quiet links 263–266                          6 modules  2,736
+ src/editor/   marked lists, scripts, footnotes                                      3 modules  2,389
+ src/bulk/     engine, dialogs 300–304, feature                                      7 modules  4,118
+ src/canvas/   tree (the model, saveCanvas), folds, layouts, arrows, outline, …     33 modules 10,747
+ src/plugin/   the plugin (lifecycle, settings, features, delegates), settings      2 modules  1,076
 ```
 
 - **The rules, checked on every `npm test`:**
@@ -548,3 +548,36 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Docs:** `AGENTS.md` now states the layers, the services, `mixInto`, the events, the
   canvas helpers and `asButton`. The rules notes for albums, the canvas and quiet links say
   what moved. §0 above gives the current state.
+
+## 18. 2.0, phase 1: ES modules, done
+
+- **What changed:** each piece became a module in its area's folder,
+  `src/<area>/NNN-name.js`, importing what it uses and exporting what it
+  declares. `src/main.js` imports them all and exports the plugin; esbuild
+  bundles it into the one `main.js` (CommonJS, `obsidian` and `@codemirror/*`
+  left to Obsidian, nothing shaken out, the plugin class itself as
+  `module.exports`, as in 1.x). `010-imports` and `999-export` went.
+- **How:** the import and export lines were generated from what
+  `tests/map.js` already knew each piece declares and uses. A second,
+  independent scope analysis agreed on every piece.
+- **Load order:** ES modules run their imports first, so the old number
+  order no longer decides it. Of the 13 pairs of modules that use each other,
+  one needs the other as it loads: `SmartScreen extends BrowseScreen` (258 on
+  110), while 110 only reaches for `SmartAlbums` when drawing. A cycle runs
+  from the module imported first, so `src/main.js` imports 258 before the
+  rest. `tests/map.js` now records which names a module needs as it loads.
+- **What the build refuses, besides a name declared twice:** a name used
+  without importing it, or imported from the wrong module; a module that needs
+  a name as it loads from one that runs after it; an import across the layers
+  not on the known list (`tests/map.js --verify`); and a `main.js` that fails
+  as it loads, run with Obsidian stood in for.
+- **Tests:** unchanged in what they check. They still load the bundle, whose
+  top-level names are the modules' own (the build refuses a name declared
+  twice, so esbuild never renames one). A few changes: the Obsidian stand-ins
+  now keep the classes they make (the bundle reads `obsidian.X` at each use,
+  not once), the canvas suite takes `TFolder` from its stand-in, and the
+  settings-rows check reads `src/` rather than esbuild's reprint.
+- **Gate:** the 21 suites, the layer check and the real-Obsidian run (41
+  tests, latest version locally; both in CI) pass with no change in behaviour.
+- **Next:** suites that load only the modules they test, through a small
+  esbuild step, in place of the whole bundle.

@@ -91,7 +91,7 @@ const obsidian = new Proxy({
   Notice: class {},
   Platform: platform,
   editorLivePreviewField: livePreview,
-}, { get: (t, k) => (k in t ? t[k] : class {}) });
+}, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
@@ -462,7 +462,11 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   });
 
   await t('every settings row sits in a named group, and every row has a default', () => {
-    const src = fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8');
+    // The sources as written: main.js is esbuild's reprint of them.
+    const srcDir = path.join(__dirname, '..', 'src');
+    const src = fs.readdirSync(srcDir).filter((d) => fs.statSync(path.join(srcDir, d)).isDirectory())
+      .map((d) => fs.readdirSync(path.join(srcDir, d)).sort().map((f) => fs.readFileSync(path.join(srcDir, d, f), 'utf8')).join(''))
+      .join('');
     const keys = [];
     let at = 0;
     while ((at = src.indexOf('settingsSchema() {', at)) !== -1) {

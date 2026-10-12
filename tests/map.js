@@ -8,15 +8,17 @@
  *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 335 or 335-canvas-fold)
  *   node tests/map.js --areas      the areas (number ranges) and what each uses from the others, pieces
  *                                  that use each other, and uses that cross the layers
+ *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
+ *                                  no new use across the layers
  *   node tests/map.js --check      fails on a use crossing the layers that isn't in tests/snapshots/layers.json,
  *                                  or one listed there that's gone (--update rewrites the list); see
  *                                  docs/architecture.md
  *
- * The pieces share one scope, so --who and --deps are how to find callers
- * and callees. Each piece is parsed (acorn) and its top-level names and the
- * names it uses from outside itself — not its own locals of the same name —
- * are kept in .claude-cache/index.json by the piece's content hash, so only
- * pieces that changed are parsed again.
+ * --who and --deps are how to find callers and callees across the modules.
+ * Each module is parsed (acorn) and its top-level names, the names it uses
+ * from outside itself — not its own locals of the same name — and which of
+ * those it needs as it loads are kept in .claude-cache/index.json by the
+ * module's content hash, so only modules that changed are parsed again.
  */
 const fs = require('fs');
 const path = require('path');
@@ -25,7 +27,7 @@ const crypto = require('crypto');
 const root = path.join(__dirname, '..');
 const src = path.join(root, 'src');
 const cacheFile = path.join(root, '.claude-cache', 'index.json');
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 3;
 const read = (f) => fs.readFileSync(f, 'utf8');
 const escape = (s) => s.replace(/[$]/g, '\\$');
 const word = (name) => new RegExp(`(^|[^\\w$])${escape(name)}(?![\\w$])`, 'g');
@@ -71,22 +73,45 @@ function declaredIn(body, fnScope) {
 /** One piece: its top-level declarations (name → line) and the outside names it uses (name → the lines). */
 function analyse(text) {
   const acorn = require('acorn');
-  const ast = acorn.parse(text, { ecmaVersion: 'latest', locations: true, allowReturnOutsideFunction: true, allowHashBang: true });
+  const ast = acorn.parse(text, { ecmaVersion: 'latest', sourceType: 'module', locations: true, allowHashBang: true });
   const declared = {};
-  ast.body.forEach((s) => {
+  // Function declarations are hoisted through the whole bundle, so using one as it loads is safe.
+  const functions = [];
+  const imports = {};
+  ast.body.forEach((st) => {
+    if (st.type === 'ImportDeclaration') st.specifiers.forEach((sp) => (imports[sp.local.name] = st.source.value));
+    const s = st.type === 'ExportNamedDeclaration' || st.type === 'ExportDefaultDeclaration' ? st.declaration : st;
+    if (!s) return;
     if (s.type === 'VariableDeclaration') s.declarations.forEach((d) => bound(d.id, []).forEach((n) => (declared[n] = d.loc.start.line)));
-    else if ((s.type === 'FunctionDeclaration' || s.type === 'ClassDeclaration') && s.id) declared[s.id.name] = s.loc.start.line;
+    else if ((s.type === 'FunctionDeclaration' || s.type === 'ClassDeclaration') && s.id) {
+      declared[s.id.name] = s.loc.start.line;
+      if (s.type === 'FunctionDeclaration') functions.push(s.id.name);
+    }
   });
   const uses = {};
+  // Names used as the module loads — outside any function — not only when something runs.
+  const load = new Set();
   const visit = (node, scope, parent, key) => {
     if (!node || typeof node.type !== 'string') return;
     switch (node.type) {
       case 'Identifier': {
         // Not a property name, a key, or a label.
         if (parent && ((parent.type === 'MemberExpression' && key === 'property' && !parent.computed) || ((parent.type === 'Property' || parent.type === 'MethodDefinition' || parent.type === 'PropertyDefinition') && key === 'key' && !parent.computed) || /Label|Break|Continue/.test(parent.type))) return;
-        for (let s = scope; s; s = s.up) if (s.names.has(node.name)) return;
+        let inFunction = false;
+        for (let s = scope; s; s = s.up) {
+          if (s.names.has(node.name)) return;
+          if (s.fn) inFunction = true;
+        }
         if (!Object.prototype.hasOwnProperty.call(uses, node.name)) uses[node.name] = [];
         uses[node.name].push(node.loc.start.line);
+        if (!inFunction) load.add(node.name);
+        return;
+      }
+      case 'ImportDeclaration':
+        return;
+      case 'ExportNamedDeclaration':
+      case 'ExportDefaultDeclaration': {
+        visit(node.declaration, scope, node, 'declaration');
         return;
       }
       case 'FunctionDeclaration':
@@ -95,7 +120,7 @@ function analyse(text) {
         const names = new Set(node.params.reduce((acc, p) => bound(p, acc), []));
         if (node.type === 'FunctionExpression' && node.id) names.add(node.id.name);
         names.add('arguments');
-        const inner = { names, up: scope };
+        const inner = { names, up: scope, fn: true };
         node.params.forEach((p) => visitPattern(p, inner));
         if (node.body.type === 'BlockStatement') {
           declaredIn(node.body.body, true).forEach((n) => names.add(n));
@@ -107,7 +132,8 @@ function analyse(text) {
       case 'ClassExpression': {
         const inner = { names: new Set(node.id ? [node.id.name] : []), up: scope };
         if (node.superClass) visit(node.superClass, scope, node, 'superClass');
-        node.body.body.forEach((m) => visit(m, inner, node.body, 'body'));
+        // A field's value is worked out as each instance is made, not as the class is.
+        node.body.body.forEach((m) => visit(m, m.type === 'PropertyDefinition' && !m.static ? { names: new Set(), up: inner, fn: true } : inner, node.body, 'body'));
         return;
       }
       case 'BlockStatement':
@@ -161,7 +187,7 @@ function analyse(text) {
   // The piece's own top-level names are the shared scope's, so not its own locals: they count as uses where used.
   ast.body.forEach((s) => visit(s, null, ast, 'body'));
   Object.keys(declared).forEach((n) => delete uses[n]);
-  return { declared, uses };
+  return { declared, uses, load: [...load].filter((n) => !declared[n]), functions, imports };
 }
 
 /* -- the index, kept by content hash --------------------------------- */
@@ -175,13 +201,16 @@ function loadIndex() {
     cache = {};
   }
   let changed = false;
-  const pieces = fs
-    .readdirSync(src)
-    .filter((f) => f.endsWith('.js'))
-    .sort()
-    .map((f) => {
+  // Modules are src/<area>/NNN-name.js; src/main.js only imports them.
+  const files = [];
+  fs.readdirSync(src).forEach((d) => {
+    if (fs.statSync(path.join(src, d)).isDirectory()) fs.readdirSync(path.join(src, d)).filter((f) => f.endsWith('.js')).forEach((f) => files.push([d, f]));
+  });
+  const pieces = files
+    .sort((a, b) => a[1].localeCompare(b[1]))
+    .map(([area, f]) => {
       const name = f.replace(/\.js$/, '');
-      const text = read(path.join(src, f));
+      const text = read(path.join(src, area, f));
       const hash = crypto.createHash('sha1').update(text).digest('hex');
       let entry = cache[name];
       if (!entry || entry.hash !== hash) {
@@ -189,14 +218,14 @@ function loadIndex() {
         changed = true;
       }
       cache[name] = entry;
-      return Object.assign({ name, text }, entry);
+      return Object.assign({ name, area, file: `${area}/${f}`, text }, entry);
     });
   const names = new Set(pieces.map((p) => p.name));
   Object.keys(cache).forEach((k) => names.has(k) || ((changed = true), delete cache[k]));
   if (changed) {
     fs.mkdirSync(path.dirname(cacheFile), { recursive: true });
     const keep = {};
-    pieces.forEach((p) => (keep[p.name] = { hash: p.hash, declared: p.declared, uses: p.uses }));
+    pieces.forEach((p) => (keep[p.name] = { hash: p.hash, declared: p.declared, uses: p.uses, load: p.load, functions: p.functions, imports: p.imports }));
     fs.writeFileSync(cacheFile, JSON.stringify({ version: INDEX_VERSION, pieces: keep }));
   }
   return pieces;
@@ -261,7 +290,7 @@ if (args[0] === '--deps') {
 pieces.forEach((p) => {
   const heading = p.text.split('\n').slice(0, 4).map((l) => l.match(/^\/\* (\w.*?)\s*\*\/$/)).find((m) => m);
   p.heading = heading ? heading[1] : '';
-  const classes = Object.keys(p.declared).filter((n) => new RegExp(`^class ${escape(n)}\\b`, 'm').test(p.text));
+  const classes = Object.keys(p.declared).filter((n) => new RegExp(`^(?:export )?class ${escape(n)}\\b`, 'm').test(p.text));
   p.features = classes.map((n) => {
     const key = p.text.match(new RegExp(`^${escape(n)}\\.settingKey = '([\\w]+)'`, 'm'));
     return key ? `${n} (${key[1]})` : n;
@@ -274,24 +303,23 @@ pieces.forEach((p) => {
 
 /* -- areas and layers ---------------------------------------------------- */
 
-// The areas by number, and their layer: a piece may use its own area and
-// lower layers (shared UI is below every feature); composition, anything.
+// The areas, each a folder of src/, and their layer: a module may import
+// from its own area and lower layers (shared UI is below every feature);
+// the plugin, from anywhere. The library and its albums are one subsystem
+// (see .claude/rules/albums.md): album features draw inside the browse view
+// and add its screens.
 const AREAS = [
-  { name: 'core', from: 10, to: 89, level: 0 },
-  // The library and its albums are one subsystem (see .claude/rules/albums.md):
-  // album features draw inside the browse view and add its screens.
-  { name: 'library', from: 90, to: 139, level: 2 },
-  { name: 'chrome', from: 140, to: 229, level: 2 },
-  { name: 'shared-ui', from: 230, to: 253, level: 1 },
-  { name: 'library', from: 254, to: 259, level: 2 },
-  { name: 'links', from: 260, to: 269, level: 2 },
-  { name: 'editor', from: 270, to: 289, level: 2 },
-  { name: 'bulk', from: 290, to: 314, level: 2 },
-  { name: 'canvas', from: 315, to: 347, level: 2 },
-  { name: 'composition', from: 349, to: 999, level: 3 },
+  { name: 'core', level: 0 },
+  { name: 'ui', level: 1 },
+  { name: 'library', level: 2 },
+  { name: 'chrome', level: 2 },
+  { name: 'links', level: 2 },
+  { name: 'editor', level: 2 },
+  { name: 'bulk', level: 2 },
+  { name: 'canvas', level: 2 },
+  { name: 'plugin', level: 3 },
 ];
-const AREA_OF = { '261-knowledge-check': 'library', '348-workspace-modes': 'chrome' };
-const areaOf = (p) => AREAS.find((a) => a.name === AREA_OF[p.name]) || AREAS.find((a) => +p.name.slice(0, 3) >= a.from && +p.name.slice(0, 3) <= a.to);
+const areaOf = (p) => AREAS.find((a) => a.name === p.area) || { name: p.area, level: 2 };
 const crossing = (a, b) => a.name !== b.name && a.level !== 3 && b.level >= a.level;
 const crosses = (user, home) => crossing(areaOf(user), areaOf(home));
 /** Every use from another piece: [user, name, home]. */
@@ -312,7 +340,7 @@ if (args[0] === '--areas') {
   names.forEach((name) => {
     const parts = AREAS.filter((a) => a.name === name);
     const s = size.get(name) || { pieces: 0, lines: 0 };
-    console.log(`  ${name} (${parts.map((a) => `${a.from}–${a.to}`).join(', ')}, layer ${parts[0].level}): ${s.pieces} pieces, ${s.lines} lines`);
+    console.log(`  ${name} (src/${name}/, layer ${parts[0].level}): ${s.pieces} modules, ${s.lines} lines`);
   });
   const edges = new Map();
   uses().forEach(([u, n, h]) => {
@@ -335,6 +363,62 @@ if (args[0] === '--areas') {
   console.log(`pieces that use each other: ${pairs.length}`);
   pairs.forEach((x) => console.log(`  ${x}`));
   process.exit(0);
+}
+
+/*
+ * For the build: each name used from another module is imported from that
+ * module, and each import names something there; nothing a module needs as
+ * it loads comes from one that runs after it (in the order ES modules run:
+ * src/main.js's imports, each module's own imports first); and no use
+ * crosses the layers that isn't on the known list.
+ */
+if (args[0] === '--verify') {
+  const problems = [];
+  const byFile = new Map(pieces.map((p) => [p.file, p]));
+  const resolve = (p, spec) => (spec.startsWith('.') ? path.posix.normalize(path.posix.join(p.area, spec)) : null);
+  pieces.forEach((p) => {
+    Object.keys(p.uses).forEach((n) => {
+      const home = homeOf.get(n);
+      if (!home || home === p) return;
+      const from = p.imports[n];
+      if (!from) problems.push(`${p.file} uses ${n} from ${home.file} without importing it`);
+      else if (resolve(p, from) !== home.file) problems.push(`${p.file} imports ${n} from ${from}, but it's in ${home.file}`);
+    });
+    Object.keys(p.imports).forEach((n) => {
+      const target = resolve(p, p.imports[n]);
+      if (target && !(byFile.has(target) && byFile.get(target).declared[n])) problems.push(`${p.file} imports ${n} from ${p.imports[n]}, which doesn't declare it`);
+    });
+  });
+  // The order they run in, as ES modules do.
+  const entry = read(path.join(src, 'main.js'));
+  const order = [];
+  const seen = new Set();
+  const visitModule = (file) => {
+    if (seen.has(file) || !byFile.has(file)) return;
+    seen.add(file);
+    const p = byFile.get(file);
+    const specs = [...new Set(Object.values(p.imports))].filter((x) => x.startsWith('.'));
+    // In the order its import lines are written.
+    specs.sort((a, b) => p.text.indexOf(`'${a}'`) - p.text.indexOf(`'${b}'`)).forEach((x) => visitModule(resolve(p, x)));
+    order.push(file);
+  };
+  [...entry.matchAll(/^import (?:[^'\n]* from )?'\.\/([^']+)';$/gm)].forEach((m) => visitModule(m[1]));
+  pieces.filter((p) => !seen.has(p.file)).forEach((p) => problems.push(`${p.file} isn't imported by src/main.js`));
+  const at = new Map(order.map((f, i) => [f, i]));
+  pieces.forEach((p) => p.load.forEach((n) => {
+    const home = homeOf.get(n);
+    if (home && home !== p && !home.functions.includes(n) && at.get(home.file) > at.get(p.file)) problems.push(`${p.file} needs ${n} as it loads, but ${home.file} runs after it`);
+  }));
+  // Layers.
+  let known = {};
+  try {
+    known = JSON.parse(read(layersFile));
+  } catch (err) {
+    known = {};
+  }
+  uses().filter(([u, , h]) => crosses(u, h)).forEach(([u, n, h]) => (known[u.name] || []).includes(n) || problems.push(`${u.file} uses ${n} from ${h.file}, across the layers`));
+  problems.forEach((x) => console.log(x));
+  process.exit(problems.length ? 1 : 0);
 }
 
 if (args[0] === '--check') {

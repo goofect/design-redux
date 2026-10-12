@@ -1,0 +1,120 @@
+/* ------------------------------------------------------------------ */
+/* The plugin, as Obsidian loads it                                   */
+/*                                                                    */
+/* Every module, imported for what it does as it loads — registering  */
+/* screens, putting parts on a class — then the plugin, the default   */
+/* export. esbuild bundles them into the one main.js Obsidian loads.  */
+/*                                                                    */
+/* The order matters only where modules use each other: such a cycle  */
+/* is run from the module imported first. Smart albums come first:    */
+/* SmartScreen extends BrowseScreen as it loads, while the browse     */
+/* screens only reach for SmartAlbums when drawing.                   */
+/* ------------------------------------------------------------------ */
+
+import './library/258-smart-albums.js';
+import './core/020-constants.js';
+import './core/030-helpers-art.js';
+import './core/031-colours.js';
+import './core/032-drawn-covers.js';
+import './core/040-helpers-sorting.js';
+import './core/045-helpers-properties.js';
+import './core/047-helpers-text.js';
+import './core/050-helpers-dom.js';
+import './core/060-pins.js';
+import './core/065-lengths.js';
+import './core/070-orders.js';
+import './core/073-notes.js';
+import './core/074-files.js';
+import './core/075-queue.js';
+import './core/076-selection.js';
+import './core/078-actions.js';
+import './core/080-feature.js';
+import './core/082-panel-section.js';
+import './core/085-appearance.js';
+import './library/090-library-editor.js';
+import './library/100-library.js';
+import './library/105-list-keys.js';
+import './library/107-sidebar-drop.js';
+import './library/110-browse-screens.js';
+import './library/120-browse-view.js';
+import './library/121-browse-sorting.js';
+import './library/122-browse-editing.js';
+import './library/123-browse-rows.js';
+import './library/124-browse-preview.js';
+import './library/130-browse-filters.js';
+import './chrome/140-actions-menu.js';
+import './chrome/160-panel-properties.js';
+import './chrome/170-panel-native.js';
+import './chrome/180-panel.js';
+import './chrome/190-strip.js';
+import './chrome/195-up-next.js';
+import './chrome/200-one-page.js';
+import './chrome/210-menu-filter.js';
+import './chrome/220-settings-button.js';
+import './ui/230-pickers.js';
+import './ui/235-covers.js';
+import './ui/237-cover-drop.js';
+import './ui/240-image-router.js';
+import './ui/250-property-clipboard.js';
+import './library/254-knowledge.js';
+import './library/255-album-property.js';
+import './library/256-album-refactor.js';
+import './library/257-album-structure.js';
+import './library/259-library-check.js';
+import './links/260-graph-filter.js';
+import './library/261-knowledge-check.js';
+import './links/262-graph-routes.js';
+import './links/263-quiet-text.js';
+import './links/264-quiet-cache.js';
+import './links/265-quiet-links.js';
+import './links/266-quiet-editor.js';
+import './editor/270-lists.js';
+import './editor/280-scripts.js';
+import './editor/285-footnotes.js';
+import './bulk/290-bulk-engine.js';
+import './bulk/300-bulk-dialogs.js';
+import './bulk/301-bulk-properties.js';
+import './bulk/302-bulk-tags-values.js';
+import './bulk/303-bulk-types.js';
+import './bulk/304-bulk-list.js';
+import './bulk/310-bulk-feature.js';
+import './canvas/315-canvas-feature.js';
+import './canvas/316-canvas-tree.js';
+import './canvas/317-canvas-room.js';
+import './canvas/318-canvas-motion.js';
+import './canvas/319-canvas-arguments.js';
+import './canvas/320-canvas-legend.js';
+import './canvas/321-canvas-extras.js';
+import './canvas/322-canvas-cards.js';
+import './canvas/323-canvas-restructure.js';
+import './canvas/324-canvas-outlines.js';
+import './canvas/325-canvas-layouts.js';
+import './canvas/326-canvas-relations.js';
+import './canvas/327-canvas-check.js';
+import './canvas/328-canvas-vault-map.js';
+import './canvas/329-canvas-minimap.js';
+import './canvas/330-canvas-align.js';
+import './canvas/331-canvas-compare.js';
+import './canvas/332-canvas-arrows.js';
+import './canvas/333-canvas-arrange.js';
+import './canvas/334-canvas-mindmap.js';
+import './canvas/335-canvas-fold.js';
+import './canvas/336-canvas-tucks.js';
+import './canvas/337-canvas-peek.js';
+import './canvas/338-canvas-branches.js';
+import './canvas/339-canvas-outline.js';
+import './canvas/340-diagnostics.js';
+import './canvas/341-canvas-quick-add.js';
+import './canvas/342-canvas-paste.js';
+import './canvas/343-canvas-branch-drag.js';
+import './canvas/344-canvas-pins.js';
+import './canvas/345-canvas-outline-sync.js';
+import './canvas/346-canvas-views.js';
+import './canvas/347-canvas-depth.js';
+import './chrome/348-workspace-modes.js';
+import './plugin/350-plugin.js';
+import './plugin/360-settings-tab.js';
+
+import { DesignRedux } from './plugin/350-plugin.js';
+
+export default DesignRedux;

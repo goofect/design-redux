@@ -62,18 +62,20 @@ const obsidian = new Proxy({
   getAllTags: (cache) => (cache.tags || []).map((t) => t.tag),
   SuggestModal: class { constructor(app) { this.app = app; } setPlaceholder() {} open() {} },
   prepareFuzzySearch: (q) => (text) => (text.toLowerCase().includes(q.toLowerCase()) ? { score: -text.length } : null),
-}, { get: (t, k) => (k in t ? t[k] : class {}) });
+}, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
+// The folder class the plugin sees, for making folders it recognises.
+const TFolder = obsidian.TFolder;
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
 };
 const tmp = path.join(__dirname, '_canvas_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { CanvasTools, Menu, Notes, CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
+  '\nmodule.exports.__test = { CanvasTools, Notes, CANVAS_SPACE, actionCommands, canvasContext, modelFromData, canvasModel, arrowLinks, branchOf, branchSides, canvasHomes, unfoldRecord, openOldFolds, ' +
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, TFile, TFolder, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1417,13 +1419,13 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
 
   await t('a folder or a tag made into a canvas: its folders or narrower tags as branches, notes as cards, links as related arrows', async () => {
     const folder = (path, parent) => {
-      const f = Object.assign(new R.TFolder(), { path, name: path.split('/').pop(), children: [], parent, isRoot: () => !path });
+      const f = Object.assign(new TFolder(), { path, name: path.split('/').pop(), children: [], parent, isRoot: () => !path });
       if (parent) parent.children.push(f);
       return f;
     };
     const note = (path, parent, tags) => {
       const name = path.split('/').pop();
-      const f = Object.assign(new R.TFile(), { path, name, basename: name.replace(/\.md$/, ''), extension: 'md', parent, tags, stat: { mtime: 0, ctime: 0 } });
+      const f = Object.assign(new TFile(), { path, name, basename: name.replace(/\.md$/, ''), extension: 'md', parent, tags, stat: { mtime: 0, ctime: 0 } });
       parent.children.push(f);
       return f;
     };
@@ -1625,7 +1627,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
       });
     };
     canvas.getViewportBBox = () => ({ minX: 1000, minY: 1000, maxX: 1400, maxY: 1300 });
-    const file = (path) => Object.assign(new R.TFile(), { path, basename: path.split('/').pop().replace(/\.md$/, ''), parent: { path: path.split('/')[0] } });
+    const file = (path) => Object.assign(new TFile(), { path, basename: path.split('/').pop().replace(/\.md$/, ''), parent: { path: path.split('/')[0] } });
     const files = ['Politics/Anarchy.md', 'Politics/Realism.md', 'Politics/Liberalism.md', 'Anarchy notes.md'].map(file);
     const { p, fold } = plugin({ canvasQuickAdd: true });
     fold.watched.set(view, { file: view.file, schedule() {} });
@@ -2317,8 +2319,8 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     selection.add(card);
     assert.deepStrictEqual(shape(), ['Create: canvas-quick-add, canvas-add-child-card', 'Arrange: tidy-canvas-branch', 'Navigate: find-canvas-card', 'Look over: check-canvas']);
     const shown = [];
-    R.Menu.prototype.showAtMouseEvent = function () { shown.push(this); };
-    R.Menu.prototype.addSeparator = function () { return this; };
+    Menu.prototype.showAtMouseEvent = function () { shown.push(this); };
+    Menu.prototype.addSeparator = function () { return this; };
     tools.showMenu({ clientX: 1, clientY: 1 });
     const titles = shown[0].items.map((i) => i.title);
     assert.ok(titles.includes('Create: Add or connect a card…') && titles.includes('Canvas settings…'), titles.join(' | '));

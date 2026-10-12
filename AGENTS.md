@@ -7,16 +7,18 @@ Coffee N' Christmas.
 
 ## Files
 
-- `src/NNN-name.js` — the source: one plain-JavaScript script cut into pieces at
-  its section headings. **Not modules**: `build.mjs` joins them in name order
-  into `main.js`, and they share one scope — a piece uses anything declared in
-  an earlier one directly, and (inside functions) anything in a later one. A
-  class extending another must come after it. New pieces get a number between
-  their neighbours'. `obsidian`, `@codemirror/view` and `@codemirror/state` are
-  provided by Obsidian at runtime (required in `010-imports.js`).
-- `main.js` — built, not committed. `npm run build` (tests build it first).
-  Never edit it: edit `src/`. The build refuses a name declared twice or a
-  script that won't parse.
+- `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
+  (core, ui, library, chrome, links, editor, bulk, canvas, plugin). Each
+  imports what it uses and exports what it declares; `src/main.js` imports
+  them all and exports the plugin. A new module goes in its area with a number
+  between its neighbours'. `obsidian` and `@codemirror/*` are imported as
+  usual and provided by Obsidian at runtime.
+- `main.js` — built, not committed. `npm run build` (tests build it first):
+  esbuild bundles `src/main.js` into it. Never edit it: edit `src/`. The build
+  refuses a name declared in two modules, a name used without importing it, a
+  use across the layers that isn't on the known list, a module that needs a
+  name as it loads from one that runs after it (a cycle runs from the module
+  `src/main.js` imports first), and a `main.js` that fails as it loads.
 - `styles.css` — all styles.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself.
@@ -54,10 +56,10 @@ Coffee N' Christmas.
   `SETTINGS_TABS`; a new row's key must be added there.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
-- Layers, by piece number (`node tests/map.js --areas`): core 010–089, shared UI
-  230–253, then the features by area (library and albums, chrome, links, editor,
-  bulk, canvas), then the plugin 349–999. A piece uses its own area and those
-  below; `tests/test_layers.js` refuses a new use across.
+- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
+  then the features by area (library and albums, chrome, links, editor, bulk,
+  canvas), then the plugin. A module imports from its own area and those below;
+  the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
   `plugin.notes.write(file, change, { undo })`, whose Undo keeps what was edited
@@ -65,7 +67,7 @@ Coffee N' Christmas.
   back files and folder notes (the plugin's `moveFile` and so on pass to it).
 - A large class can be written in parts: a later piece writes `class Part {…}`
   and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–123, Knowledge's canvas side in 326). No `super` in a part.
+  120–124, Knowledge's canvas side in 326). No `super` in a part.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:canvas-changed`). On a canvas, after a change by hand:
@@ -119,8 +121,8 @@ Coffee N' Christmas.
   - Don't read a large `src/` file whole: grep, then read the lines needed.
   - Look before reading, narrowest first: file names → `node tests/map.js
     [words]` (pieces, their features and suites) → `--who NAME` or `--deps
-    PIECE` (where a name is declared and who uses it; the pieces share one
-    scope; `--who` gives the lines) → grep and the few lines needed → a whole
+    PIECE` (where a name is declared and who uses it; `--who` gives the
+    lines) → grep and the few lines needed → a whole
     file only when the change needs it. Soft limits, widened when correctness
     needs it: a first read of 100–200 lines, then only the direct callers and
     callees; passing tests as a summary, a failure as its own lines.

@@ -7,7 +7,7 @@ const path = require('path');
 const Module = require('module');
 const assert = require('assert');
 
-const obsidian = new Proxy({ Platform: { isMobile: false }, setIcon: () => {} }, { get: (t, k) => (k in t ? t[k] : class {}) });
+const obsidian = new Proxy({ Platform: { isMobile: false }, setIcon: () => {} }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
