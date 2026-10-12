@@ -8266,3 +8266,35 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   width: 14px;
   height: 14px;
 }
+
+/* The inspector's own settings, at its foot. */
+.dr-inspector-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  width: fit-content;
+  margin-top: var(--dr-space-4);
+  padding: var(--dr-space-1) 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-inspector-foot-icon {
+  display: inline-flex;
+}
+
+.dr-inspector-foot-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-inspector-foot:focus-visible {
+  color: var(--text-normal);
+}
+
+@media (any-hover: hover) {
+  .dr-inspector-foot:hover {
+    color: var(--text-normal);
+  }
+}

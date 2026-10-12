@@ -1067,6 +1067,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     click(row('Deterrence'));
     assert.strictEqual(opened[3].basename, 'Deterrence', 'set to always open');
+    // A card: a mark of its own where a cover would be, its first line for a name; and the inspector's settings at its foot.
+    const asked = [];
+    plugin.openSettingsAt = (key) => asked.push(key);
+    plugin.selection.set({ card: { getData: () => ({ type: 'text', text: '# Idea\nMore words' }) } });
+    panel.render();
+    assert.strictEqual(panel.contentEl.querySelector('.dr-props-title').textContent, 'Idea');
+    assert.ok(panel.contentEl.querySelector('.dr-props-head .dr-props-art'));
+    click(panel.contentEl.querySelector('.dr-inspector-foot'));
+    assert.deepStrictEqual(asked, ['inspector']);
     await panel.onClose();
     assert.strictEqual(plugin.selection.viewers.size, 0);
   });

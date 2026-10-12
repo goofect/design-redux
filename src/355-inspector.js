@@ -155,6 +155,7 @@ class InspectorView extends ItemView {
     if (item.file) this.renderNote(item.file);
     else if (item.folder) this.renderAlbum(item.folder);
     else if (item.card) this.renderCard(item.card);
+    this.renderFoot();
   }
 
   /** Round buttons under the head: [icon, label, run]. */
@@ -235,6 +236,8 @@ class InspectorView extends ItemView {
     }
     const lines = String(data.text || '').split('\n').map((l) => plainMarkdownLine(l)).filter(Boolean);
     const head = this.contentEl.createDiv({ cls: 'dr-props-head' });
+    // Cover-shaped, like a note's and an album's: a card has its own mark.
+    fillArt(head.createDiv({ cls: 'dr-props-art' }), null, 'sticky-note', null, null);
     const info = head.createDiv({ cls: 'dr-props-info' });
     info.createDiv({ cls: 'dr-props-title', text: lines[0] || 'Card' });
     let arrows = 0;
@@ -245,7 +248,20 @@ class InspectorView extends ItemView {
       arrows = 0;
     }
     info.createDiv({ cls: 'dr-props-meta', text: ['A card on this canvas', arrows === 1 ? '1 arrow' : arrows ? `${arrows} arrows` : ''].filter(Boolean).join('  ·  ') });
+    // What can be done with it: the canvas's tools, as they fit what's selected.
+    const tools = this.plugin.feature(CanvasTools);
+    if (tools && tools.enabled) this.buttons([['wrench', 'Tools', (evt) => tools.showMenu(evt)]]);
     if (lines.length > 1) this.contentEl.createDiv({ cls: 'dr-inspector-about', text: lines.slice(1, 8).join('\n') });
+  }
+
+  /** At the foot, quietly: the inspector's own settings. */
+  renderFoot() {
+    if (typeof this.plugin.openSettingsAt !== 'function') return;
+    const foot = this.contentEl.createDiv({ cls: 'dr-inspector-foot' });
+    asButton(foot, 'Inspector settings');
+    setIcon(foot.createSpan({ cls: 'dr-inspector-foot-icon' }), 'settings');
+    foot.createSpan({ text: 'Inspector settings' });
+    onActivate(foot, () => this.plugin.openSettingsAt('inspector'));
   }
 }
 
