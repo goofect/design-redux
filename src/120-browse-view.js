@@ -95,6 +95,8 @@ class BrowseView extends ItemView {
   async onOpen() {
     this.containerEl.addClass('dr-browse');
     this.render();
+    // What's picked is marked wherever it's listed.
+    if (this.plugin.selection) this.unpick = this.plugin.selection.onChange(() => this.markPicked());
     fullNameOnHover(this, this.containerEl);
 
     // "/" goes to Find from anywhere on the page. The keydown covers
@@ -233,6 +235,8 @@ class BrowseView extends ItemView {
   }
 
   async onClose() {
+    if (this.unpick) this.unpick();
+    this.unpick = null;
     // Replaced by a result opened in the same page.
     this.rememberSearch();
     // A pending redraw would otherwise run against a closed view.
@@ -447,7 +451,8 @@ class BrowseView extends ItemView {
       text: this.relative(file.stat.mtime),
     });
 
-    onActivate(row, (evt) => this.openFile(file, evt), false);
+    row.dataset.path = file.path;
+    this.pickOrOpen(row, { file }, (evt) => this.openFile(file, evt), false);
     onContextMenu(row, (evt) => this.fileMenu(evt, file));
   }
 

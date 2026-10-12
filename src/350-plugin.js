@@ -12,6 +12,7 @@ class DesignRedux extends Plugin {
     this.files = new Files(this);
     this.notes = new Notes(this);
     this.queue = new Queue(this);
+    this.selection = new Selection(this);
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
@@ -21,6 +22,7 @@ class DesignRedux extends Plugin {
       new SidebarDrop(this),
       new ActionsMenu(this),
       new PropertiesPanel(this),
+      new Inspector(this),
       new ContextStrip(this),
       new UpNext(this),
       new OnePage(this),
@@ -126,7 +128,12 @@ class DesignRedux extends Plugin {
           this.followFolderNote(file, oldPath);
         })
       );
-      this.registerEvent(this.app.vault.on('delete', (file) => this.orders.followDelete(file)));
+      this.registerEvent(
+        this.app.vault.on('delete', (file) => {
+          this.orders.followDelete(file);
+          this.selection.followDelete(file);
+        })
+      );
       this.registerEvent(
         this.app.workspace.on('active-leaf-change', () => this.queueSync())
       );

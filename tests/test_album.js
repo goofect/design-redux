@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, Inspector, InspectorView };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -964,6 +964,57 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.trackHeader = false;
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-track-head'));
+  });
+
+  await t('the inspector: a note or album picked in the library is shown without opening it; a double click or Enter opens it', async () => {
+    const { view, plugin, app, opened } = setup();
+    plugin.selection = new R.Selection(plugin);
+    view.unpick = plugin.selection.onChange(() => view.markPicked());
+    const inspector = new R.Inspector(plugin);
+    plugin.settings.inspector = true;
+    plugin.features = [inspector];
+    plugin.feature = (C) => (C === R.Inspector ? inspector : null);
+    app.metadataCache.on = () => ({});
+    app.workspace.getMostRecentLeaf = () => null;
+    const panel = new R.InspectorView({}, inspector);
+    panel.app = app;
+    await panel.onOpen();
+    assert.ok(panel.contentEl.querySelector('.dr-empty'), 'nothing picked, nothing open');
+
+    const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
+    click(row('Anarchy'));
+    assert.strictEqual(opened.length, 1, 'with the inspector away, a click opens as it always has');
+
+    panel.isShowing = () => true;
+    view.render();
+    click(row('Balance'));
+    assert.strictEqual(opened.length, 1, 'while it shows, a click picks');
+    assert.strictEqual(plugin.selection.get().file.basename, 'Balance');
+    assert.ok(row('Balance').classList.contains('is-selected'));
+    panel.render();
+    assert.strictEqual(panel.contentEl.querySelector('.dr-props-title').textContent, 'Balance');
+    assert.ok(panel.contentEl.querySelector('.dr-references-section'), 'its references');
+    assert.ok(Array.from(panel.contentEl.querySelectorAll('.dr-section-action')).some((b) => b.textContent === 'Open'));
+
+    row('Balance').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
+    assert.strictEqual(opened[1].basename, 'Balance', 'a double click opens');
+    row('Cooperation').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    assert.strictEqual(opened[2].basename, 'Cooperation', 'Enter opens');
+
+    await view.setState({ mode: 'folders' }, {});
+    click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
+    assert.strictEqual(plugin.selection.get().folder.path, 'IR');
+    panel.render();
+    assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead', '.dr-props-meta'].map((sel) => panel.contentEl.querySelector(sel).textContent), ['IR', 'Album', '6 items  ·  1 disc']);
+
+    plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
+    assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
+    plugin.settings.inspectorClick = 'never';
+    await view.setState({ mode: 'folder', path: 'IR' }, {});
+    click(row('Deterrence'));
+    assert.strictEqual(opened[3].basename, 'Deterrence', 'set to always open');
+    await panel.onClose();
+    assert.strictEqual(plugin.selection.viewers.size, 0);
   });
 
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {

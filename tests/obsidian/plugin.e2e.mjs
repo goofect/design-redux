@@ -816,6 +816,30 @@ describe('Design Redux in Obsidian', function () {
     expect(result.after.cls).toBe(false);
   });
 
+  it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const find = (name) => plugin.features.find((f) => f.constructor.name === name);
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      await find('Library').browseMode({ mode: 'folder', path: 'Politics' });
+      const page = app.workspace.activeLeaf;
+      const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      await until(() => !!row());
+      await find('Inspector').show();
+      const title = () => { const el = document.querySelector('.dr-inspector .dr-props-title'); return el ? el.textContent : ''; };
+      const showing = await until(() => plugin.selection.clickPicks());
+      row().click();
+      await until(() => title() === 'Anarchy');
+      const picked = { showing, title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected') };
+      row().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
+      await until(() => active() === 'Anarchy');
+      return { picked, opened: active() };
+    });
+    expect(result.picked).toEqual({ showing: true, title: 'Anarchy', still: 'design-redux-browse', marked: true });
+    expect(result.opened).toBe('Anarchy');
+  });
+
   it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const old = app.vault.getFileByPath('Paste.canvas');

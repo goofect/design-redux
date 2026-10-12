@@ -38,6 +38,7 @@ const SETTINGS_TABS = [
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
       { title: 'Properties', keys: ['propertiesDropdown', 'propertyForAlbum', 'showMentions', 'panelRelationships', 'panelPlaces'] },
+      { title: 'Inspector', keys: ['inspector', 'inspectorClick'] },
       { title: 'Links', keys: ['quietLinks'] },
       { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
       { title: 'Images', keys: ['routeImages', 'imageFolder'] },

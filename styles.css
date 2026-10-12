@@ -493,7 +493,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
  * together rather than assuming one shape.
  */
 
-.dr-props-popup .dr-row {
+:is(.dr-props-popup, .dr-inspector) .dr-row {
   display: flex;
   align-items: flex-start;
   gap: var(--dr-gutter);
@@ -501,7 +501,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   position: relative;
 }
 
-.dr-props-popup .dr-rows .dr-row + .dr-row {
+:is(.dr-props-popup, .dr-inspector) .dr-rows .dr-row + .dr-row {
   border-top: 1px solid var(--background-modifier-border);
 }
 
@@ -512,7 +512,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
  * The grip sits out in the panel's margin, keeping the label column put.
  */
 
-.dr-props-popup .dr-row-grip {
+:is(.dr-props-popup, .dr-inspector) .dr-row-grip {
   position: absolute;
   top: 10px;
   left: -13px;
@@ -523,12 +523,12 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   touch-action: none;
 }
 
-.dr-props-popup .dr-row-grip .svg-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-row-grip .svg-icon {
   width: 12px;
   height: 12px;
 }
 
-.dr-props-popup .dr-row-remove {
+:is(.dr-props-popup, .dr-inspector) .dr-row-remove {
   flex: 0 0 auto;
   align-self: flex-start;
   margin-top: 1px;
@@ -536,50 +536,50 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   opacity: 0;
 }
 
-.dr-props-popup .dr-row-remove .svg-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-row-remove .svg-icon {
   width: 13px;
   height: 13px;
 }
 
-.dr-props-popup .dr-row:focus-within .dr-row-remove,
-.dr-props-popup .dr-row-remove:focus-visible {
+:is(.dr-props-popup, .dr-inspector) .dr-row:focus-within .dr-row-remove,
+:is(.dr-props-popup, .dr-inspector) .dr-row-remove:focus-visible {
   opacity: 0.6;
 }
 
-.dr-props-popup .dr-row.is-dragging .dr-row-grip {
+:is(.dr-props-popup, .dr-inspector) .dr-row.is-dragging .dr-row-grip {
   opacity: 1;
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-row:hover .dr-row-grip {
+  :is(.dr-props-popup, .dr-inspector) .dr-row:hover .dr-row-grip {
     opacity: 1;
   }
 
-  .dr-props-popup .dr-row:hover .dr-row-remove {
+  :is(.dr-props-popup, .dr-inspector) .dr-row:hover .dr-row-remove {
     opacity: 0.6;
   }
 
-  .dr-props-popup .dr-row-remove:hover {
+  :is(.dr-props-popup, .dr-inspector) .dr-row-remove:hover {
     opacity: 1;
     color: var(--text-error, var(--color-red));
   }
 
-  .dr-props-popup .dr-row-grip:hover {
+  :is(.dr-props-popup, .dr-inspector) .dr-row-grip:hover {
     color: var(--text-normal);
   }
 }
 
-body.is-mobile .dr-props-popup .dr-row-grip {
+body.is-mobile :is(.dr-props-popup, .dr-inspector) .dr-row-grip {
   opacity: 0.6;
 }
 
-body.is-mobile .dr-props-popup .dr-row-remove {
+body.is-mobile :is(.dr-props-popup, .dr-inspector) .dr-row-remove {
   opacity: 0.5;
 }
 
 /* -- label ------------------------------------------------------------- */
 
-.dr-props-popup .dr-key {
+:is(.dr-props-popup, .dr-inspector) .dr-key {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -589,7 +589,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   padding-top: 3px;
 }
 
-.dr-props-popup input.dr-key-name {
+:is(.dr-props-popup, .dr-inspector) input.dr-key-name {
   flex: 0 1 auto;
   min-width: 0;
   width: auto;
@@ -607,15 +607,15 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   text-overflow: ellipsis;
 }
 
-.dr-props-popup input.dr-key-name:focus,
-.dr-props-popup input.dr-key-name:active {
+:is(.dr-props-popup, .dr-inspector) input.dr-key-name:focus,
+:is(.dr-props-popup, .dr-inspector) input.dr-key-name:active {
   background: transparent;
   box-shadow: none;
   color: var(--text-normal);
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup input.dr-key-name:hover {
+  :is(.dr-props-popup, .dr-inspector) input.dr-key-name:hover {
     background: transparent;
     box-shadow: none;
     color: var(--text-normal);
@@ -624,7 +624,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 /* Out of the way until the row is pointed at. */
 
-.dr-props-popup .dr-key-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-key-icon {
   display: inline-flex;
   flex: 0 0 auto;
   order: -1;
@@ -636,23 +636,23 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   cursor: grab;
 }
 
-.dr-props-popup .dr-key-icon:focus-visible {
+:is(.dr-props-popup, .dr-inspector) .dr-key-icon:focus-visible {
   opacity: 1;
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-row:hover .dr-key-icon {
+  :is(.dr-props-popup, .dr-inspector) .dr-row:hover .dr-key-icon {
     opacity: 1;
   }
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-key-icon:hover {
+  :is(.dr-props-popup, .dr-inspector) .dr-key-icon:hover {
     color: var(--text-accent);
   }
 }
 
-.dr-props-popup .dr-key-icon .svg-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-key-icon .svg-icon {
   width: 13px;
   height: 13px;
 }
@@ -665,14 +665,14 @@ body.is-mobile .dr-props-popup .dr-row-remove {
  * with the cursor until it's let go.
  */
 
-.dr-props-popup .dr-rows.is-sorting,
-.dr-props-popup .dr-rows.is-sorting * {
+:is(.dr-props-popup, .dr-inspector) .dr-rows.is-sorting,
+:is(.dr-props-popup, .dr-inspector) .dr-rows.is-sorting * {
   cursor: grabbing;
   -webkit-user-select: none;
   user-select: none;
 }
 
-.dr-props-popup .dr-row.is-dragging {
+:is(.dr-props-popup, .dr-inspector) .dr-row.is-dragging {
   position: relative;
   z-index: 1;
   border-radius: var(--dr-radius-sm);
@@ -680,27 +680,27 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   box-shadow: var(--dr-shadow-md);
 }
 
-.dr-props-popup .dr-row.is-dragging .dr-key-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-row.is-dragging .dr-key-icon {
   opacity: 1;
   color: var(--text-accent);
 }
 
 /* The hairlines either side of a lifted row would cut through it. */
-.dr-props-popup .dr-rows .dr-row.is-dragging,
-.dr-props-popup .dr-rows .dr-row.is-dragging + .dr-row {
+:is(.dr-props-popup, .dr-inspector) .dr-rows .dr-row.is-dragging,
+:is(.dr-props-popup, .dr-inspector) .dr-rows .dr-row.is-dragging + .dr-row {
   border-top-color: transparent;
 }
 
 /* -- value ------------------------------------------------------------- */
 
-.dr-props-popup .dr-value {
+:is(.dr-props-popup, .dr-inspector) .dr-value {
   flex: 1 1 auto;
   min-width: 0;
 }
 
 /* Every shape a widget might render, flattened to plain text. */
 
-.dr-props-popup .dr-value input[type="text"], .dr-props-popup .dr-value input[type="number"], .dr-props-popup .dr-value input[type="date"], .dr-props-popup .dr-value input[type="datetime-local"], .dr-props-popup .dr-value textarea, .dr-props-popup .dr-value .metadata-input-longtext, .dr-props-popup .dr-value .multi-select-container, .dr-props-popup .dr-input {
+:is(.dr-props-popup, .dr-inspector) .dr-value input[type="text"], :is(.dr-props-popup, .dr-inspector) .dr-value input[type="number"], :is(.dr-props-popup, .dr-inspector) .dr-value input[type="date"], :is(.dr-props-popup, .dr-inspector) .dr-value input[type="datetime-local"], :is(.dr-props-popup, .dr-inspector) .dr-value textarea, :is(.dr-props-popup, .dr-inspector) .dr-value .metadata-input-longtext, :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-container, :is(.dr-props-popup, .dr-inspector) .dr-input {
   width: 100%;
   min-height: 0;
   height: auto;
@@ -718,36 +718,36 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-value input[type="text"]:hover,
-  .dr-props-popup .dr-value textarea:hover,
-  .dr-props-popup .dr-value .metadata-input-longtext:hover,
-  .dr-props-popup .dr-value .multi-select-container:hover,
-  .dr-props-popup .dr-input:hover {
+  :is(.dr-props-popup, .dr-inspector) .dr-value input[type="text"]:hover,
+  :is(.dr-props-popup, .dr-inspector) .dr-value textarea:hover,
+  :is(.dr-props-popup, .dr-inspector) .dr-value .metadata-input-longtext:hover,
+  :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-container:hover,
+  :is(.dr-props-popup, .dr-inspector) .dr-input:hover {
     background-color: var(--background-modifier-hover);
   }
 }
 
-.dr-props-popup .dr-value input:focus, .dr-props-popup .dr-value textarea:focus, .dr-props-popup .dr-value .metadata-input-longtext:focus, .dr-props-popup .dr-value .multi-select-container:focus-within, .dr-props-popup .dr-input:focus {
+:is(.dr-props-popup, .dr-inspector) .dr-value input:focus, :is(.dr-props-popup, .dr-inspector) .dr-value textarea:focus, :is(.dr-props-popup, .dr-inspector) .dr-value .metadata-input-longtext:focus, :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-container:focus-within, :is(.dr-props-popup, .dr-inspector) .dr-input:focus {
   background-color: var(--background-modifier-form-field);
   box-shadow: none;
   outline: none;
 }
 
-.dr-props-popup .dr-value .metadata-input-longtext:empty::before {
+:is(.dr-props-popup, .dr-inspector) .dr-value .metadata-input-longtext:empty::before {
   content: attr(placeholder);
   color: var(--text-faint);
 }
 
 /* -- pills ------------------------------------------------------------- */
 
-.dr-props-popup .dr-value .multi-select-container {
+:is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-container {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-space-1);
 }
 
-.dr-props-popup .dr-value .multi-select-pill {
+:is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-pill {
   --pill-background: color-mix(in srgb, var(--text-accent) 14%, transparent);
   --pill-color: var(--text-accent);
   --pill-border-width: 0;
@@ -760,18 +760,18 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   line-height: 1.6;
 }
 
-.dr-props-popup .dr-value .multi-select-pill-remove-button {
+:is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-pill-remove-button {
   opacity: 0;
   transition: opacity var(--dr-dur-fast) var(--dr-ease);
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-value .multi-select-pill:hover .multi-select-pill-remove-button {
+  :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-pill:hover .multi-select-pill-remove-button {
     opacity: 0.6;
   }
 }
 
-.dr-props-popup .dr-value .multi-select-input {
+:is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-input {
   flex: 1 1 50px;
   min-width: 50px;
   padding: 0;
@@ -780,14 +780,14 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   font-size: var(--font-ui-smaller);
 }
 
-.dr-props-popup .dr-value input[type="checkbox"] {
+:is(.dr-props-popup, .dr-inspector) .dr-value input[type="checkbox"] {
   width: auto;
   margin: 2px 0 0 calc(var(--dr-u) * 1.5);
 }
 
 /* -- add --------------------------------------------------------------- */
 
-.dr-props-popup .dr-add {
+:is(.dr-props-popup, .dr-inspector) .dr-add {
   display: flex;
   align-items: center;
   gap: var(--dr-space-1);
@@ -796,7 +796,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   color: var(--text-faint);
 }
 
-.dr-props-popup .dr-add-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-add-icon {
   display: inline-flex;
   flex: 0 0 auto;
   width: calc(var(--dr-label-width) + var(--dr-gutter));
@@ -804,17 +804,17 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   padding-right: calc(var(--dr-u) * 1.5);
 }
 
-.dr-props-popup .dr-add-icon .svg-icon {
+:is(.dr-props-popup, .dr-inspector) .dr-add-icon .svg-icon {
   width: 13px;
   height: 13px;
 }
 
-.dr-props-popup .dr-add .dr-field {
+:is(.dr-props-popup, .dr-inspector) .dr-add .dr-field {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.dr-props-popup .dr-add input[type="text"] {
+:is(.dr-props-popup, .dr-inspector) .dr-add input[type="text"] {
   width: 100%;
   height: auto;
   padding: 2px calc(var(--dr-u) * 1.5);
@@ -827,27 +827,27 @@ body.is-mobile .dr-props-popup .dr-row-remove {
   font-size: var(--font-ui-small);
 }
 
-.dr-props-popup .dr-add input[type="text"]::placeholder {
+:is(.dr-props-popup, .dr-inspector) .dr-add input[type="text"]::placeholder {
   color: var(--text-faint);
 }
 
 @media (any-hover: hover) {
-  .dr-props-popup .dr-add input[type="text"]:hover {
+  :is(.dr-props-popup, .dr-inspector) .dr-add input[type="text"]:hover {
     background-color: var(--background-modifier-hover);
   }
 }
 
-.dr-props-popup .dr-add input[type="text"]:focus {
+:is(.dr-props-popup, .dr-inspector) .dr-add input[type="text"]:focus {
   background-color: var(--background-modifier-form-field);
   box-shadow: none;
   outline: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-props-popup .dr-key-icon,
-  .dr-props-popup .dr-value input,
-  .dr-props-popup .dr-value .metadata-input-longtext,
-  .dr-props-popup .dr-value .multi-select-pill-remove-button {
+  :is(.dr-props-popup, .dr-inspector) .dr-key-icon,
+  :is(.dr-props-popup, .dr-inspector) .dr-value input,
+  :is(.dr-props-popup, .dr-inspector) .dr-value .metadata-input-longtext,
+  :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-pill-remove-button {
     transition: none;
   }
 }
@@ -962,7 +962,7 @@ body.is-mobile .dr-props-popup .dr-row-remove {
  * own collapse state since there's no indicator here to reopen it.
  */
 
-.dr-props-popup .metadata-properties-heading .collapse-indicator {
+:is(.dr-props-popup, .dr-inspector) .metadata-properties-heading .collapse-indicator {
   display: none;
 }
 
@@ -4239,11 +4239,11 @@ body.is-mobile .dr-td-more {
   opacity: 0.6;
 }
 
-body.is-mobile .dr-props-popup .dr-key-icon {
+body.is-mobile :is(.dr-props-popup, .dr-inspector) .dr-key-icon {
   opacity: 1;
 }
 
-body.is-mobile .dr-props-popup .dr-value .multi-select-pill-remove-button {
+body.is-mobile :is(.dr-props-popup, .dr-inspector) .dr-value .multi-select-pill-remove-button {
   opacity: 0.6;
 }
 
@@ -8211,4 +8211,55 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 .canvas-edges g.dr-edge-assoc path.canvas-display-path,
 .canvas-edges g.dr-edge-assoc .canvas-path-end {
   opacity: var(--dr-edge-assoc-opacity);
+}
+
+/* -- the inspector ----------------------------------------------------- */
+
+.dr-inspector {
+  --dr-label-width: 84px;
+  --dr-gutter: 10px;
+  font-family: var(--font-interface);
+}
+
+.dr-inspector .view-content {
+  padding: var(--dr-space-3) calc(var(--dr-u) * 3.5);
+}
+
+.dr-inspector .dr-props-head {
+  animation: dr-appear var(--dr-dur-fast) ease-out;
+}
+
+.dr-inspector-about {
+  margin: var(--dr-space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.dr-inspector-actions {
+  margin: var(--dr-space-2) 0 var(--dr-space-3);
+}
+
+.dr-inspector > .view-content > .dr-empty {
+  padding: var(--dr-space-4) 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  text-align: center;
+}
+
+/* What's picked, wherever it's listed. */
+.dr-track.is-selected,
+.dr-tr.is-selected {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+
+.dr-card.is-selected .dr-card-art {
+  box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-inspector .dr-props-head {
+    animation: none;
+  }
 }

@@ -68,7 +68,39 @@ class BrowseRows {
 
     more.addEventListener('click', (evt) => this.fileMenu(evt, file));
     onContextMenu(row, (evt) => this.fileMenu(evt, file));
-    onActivate(row, (evt) => this.openFile(file, evt), false);
+    this.pickOrOpen(row, { file }, (evt) => this.openFile(file, evt), false);
+  }
+
+  /**
+   * What a click on a row or tile does: opens it — or, while what's
+   * picked is showing (in the inspector), picks it, and a double click or
+   * Enter opens it. With Ctrl, Cmd or Shift, a click always opens.
+   */
+  pickOrOpen(el, item, open, space = true) {
+    const selection = this.plugin.selection;
+    if (!selection) {
+      onActivate(el, open, space);
+      return;
+    }
+    if (selection.holds(item.file || item.folder)) el.addClass('is-selected');
+    onActivate(el, (evt) => {
+      if (evt.type === 'click' && !evt.ctrlKey && !evt.metaKey && !evt.shiftKey && selection.clickPicks()) selection.set(item);
+      else open(evt);
+    }, space);
+    el.addEventListener('dblclick', (evt) => {
+      if (selection.clickPicks()) open(evt);
+    });
+    // Moving through a list with the arrow keys moves what's picked.
+    el.addEventListener('focus', () => {
+      if (selection.clickPicks()) selection.set(item);
+    });
+  }
+
+  /** What's picked, marked: the rows and tiles that stand for it. */
+  markPicked() {
+    const item = this.plugin.selection && this.plugin.selection.get();
+    const target = item && (item.file || item.folder);
+    this.contentEl.querySelectorAll('.dr-track[data-path], .dr-tr[data-path], .dr-card[data-path]').forEach((el) => el.toggleClass('is-selected', !!target && el.dataset.path === target.path));
   }
 
   /** The names of the columns, above the rows, which then keep them lined up. */
@@ -315,7 +347,7 @@ class BrowseRows {
       else this.openFolder(folder);
     }, (evt) => this.folderMenu(evt, folder, src));
 
-    onActivate(card, () => this.openFolder(folder));
+    this.pickOrOpen(card, { folder }, () => this.openFolder(folder));
     onContextMenu(card, (evt) => this.folderMenu(evt, folder, src));
   }
 
@@ -333,7 +365,7 @@ class BrowseRows {
     if (progress > 0) art.createDiv({ cls: 'dr-card-progress' }).style.setProperty('--dr-progress', Math.min(1, progress).toFixed(4));
     this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
 
-    onActivate(card, (evt) => this.openFile(file, evt));
+    this.pickOrOpen(card, { file }, (evt) => this.openFile(file, evt));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
   }
 
