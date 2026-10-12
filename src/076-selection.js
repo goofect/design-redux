@@ -11,9 +11,6 @@ class Selection {
     this.plugin = plugin;
     this.item = null;
     this.listeners = new Set();
-    // Whatever shows the selection says whether it's showing now: while
-    // one is, a single click picks rather than opens.
-    this.viewers = new Set();
   }
 
   /** Told of every change, with the new item; returns a function to stop. */
@@ -54,25 +51,5 @@ class Selection {
   /** A deleted note or album is no longer picked. Renamed, it still is: the same file. */
   followDelete(file) {
     if (this.holds(file)) this.clear();
-  }
-
-  /** `isShown()` for something that shows the selection; returns a function to take it away. */
-  addViewer(isShown) {
-    this.viewers.add(isShown);
-    return () => this.viewers.delete(isShown);
-  }
-
-  /** Whether a single click picks: always, never, or — the default — while the selection is showing somewhere. */
-  clickPicks() {
-    const how = this.plugin.settings.inspectorClick || 'shown';
-    if (how === 'always') return true;
-    if (how === 'never') return false;
-    return Array.from(this.viewers).some((shown) => {
-      try {
-        return !!shown();
-      } catch (err) {
-        return false;
-      }
-    });
   }
 }

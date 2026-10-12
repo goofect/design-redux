@@ -22,7 +22,6 @@ class DesignRedux extends Plugin {
       new SidebarDrop(this),
       new ActionsMenu(this),
       new PropertiesPanel(this),
-      new Inspector(this),
       new ContextStrip(this),
       new UpNext(this),
       new OnePage(this),
@@ -119,6 +118,8 @@ class DesignRedux extends Plugin {
       });
 
       this.registerEvent(this.app.workspace.on('layout-change', () => this.queueSync()));
+      // The inspector that was in the right sidebar became the library's preview: its tab goes.
+      this.app.workspace.getLeavesOfType('design-redux-inspector').forEach((leaf) => leaf.detach());
       // Later, once the vault is surely all there.
       window.setTimeout(() => {
         if (!this.unloading) this.pruneLeftovers();

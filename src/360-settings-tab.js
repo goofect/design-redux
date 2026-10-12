@@ -17,7 +17,7 @@ const SETTINGS_TABS = [
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'homePath', 'homeShelves', 'hideEmptyFolders', 'sidebarDrop'] },
+      { keys: ['library', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
         desc: 'What the library lists, under your own headings.',
@@ -38,7 +38,6 @@ const SETTINGS_TABS = [
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
       { title: 'Properties', keys: ['propertiesDropdown', 'propertyForAlbum', 'showMentions', 'panelRelationships', 'panelPlaces'] },
-      { title: 'Inspector', keys: ['inspector', 'inspectorClick'] },
       { title: 'Links', keys: ['quietLinks'] },
       { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
       { title: 'Images', keys: ['routeImages', 'imageFolder'] },

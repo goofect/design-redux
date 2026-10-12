@@ -72,12 +72,13 @@ Coffee N' Christmas.
   `afterCanvasChange` or `glideAndSettle`; save with `saveCanvas`.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
-  instances (082), drawn between the properties and the mentions. The
-  inspector (355) shows the same sections for what's picked.
-- What's picked — a note, an album, a canvas card — is `plugin.selection`
-  (076), apart from what's open. In the browse view, rows and tiles go
-  through `pickOrOpen`. While the inspector shows, a click picks and a double
-  click or Enter opens.
+  instances (082), drawn between the properties and the mentions. The panel
+  is where a note is edited.
+- What's picked is `plugin.selection` (076), apart from what's open. In the
+  browse view, rows and tiles go through `pickOrOpen`. The browse view's
+  preview (124) shows what's picked, in brief: what it is, where it is,
+  Open / Reveal in album / More. While the preview shows, a click picks and
+  a double click or Enter opens. It doesn't repeat the panel.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback.

@@ -198,8 +198,6 @@ class WorkspaceModes extends Feature {
       if (outline && outline.enabled) await outline.show();
     } else if (id === 'research') {
       this.sidebars(true, true);
-      // What's picked, beside the note: its properties, relationships and references.
-      if (this.settings.inspector && this.app.commands && this.plugin.manifest) this.app.commands.executeCommandById(`${this.plugin.manifest.id}:open-inspector`);
       const note = this.recent('md');
       if (note) {
         await ws.getLeaf(false).openFile(note);

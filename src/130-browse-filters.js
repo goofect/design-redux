@@ -162,6 +162,20 @@ class Library extends Feature {
         suggest: 'file',
       },
       {
+        key: 'inspector',
+        name: 'Preview',
+        desc: 'A pane beside the library’s lists and covers, shown with the button by Sort and filter: what a picked note or album is, where it is, and Open, Reveal in album or More — without opening it. Editing stays in the note panel.',
+        showIf: 'library',
+      },
+      {
+        key: 'inspectorClick',
+        type: 'dropdown',
+        name: 'A single click in the library',
+        desc: 'While the preview shows, a click can pick what’s clicked, a double click or Enter opening it; or every click can open, as without it.',
+        options: { shown: 'Picks while the preview shows', never: 'Always opens' },
+        showIf: 'inspector',
+      },
+      {
         key: 'homeShelves',
         type: 'custom',
         name: 'Home shelves',
@@ -277,6 +291,18 @@ class Library extends Feature {
 
   actions() {
     return [
+      {
+        id: 'open-inspector',
+        name: 'Show or hide the preview in the library',
+        icon: 'panel-right',
+        when: () => this.enabled && this.settings.inspector !== false,
+        run: () => {
+          this.settings.libraryPreview = !this.settings.libraryPreview;
+          this.plugin.saveData(this.settings);
+          if (!this.settings.libraryPreview && this.plugin.selection) this.plugin.selection.clear();
+          this.plugin.refreshBrowse();
+        },
+      },
       {
         id: 'open-library',
         name: 'Open library',

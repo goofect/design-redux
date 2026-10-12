@@ -72,9 +72,9 @@ class BrowseRows {
   }
 
   /**
-   * What a click on a row or tile does: opens it — or, while what's
-   * picked is showing (in the inspector), picks it, and a double click or
-   * Enter opens it. With Ctrl, Cmd or Shift, a click always opens.
+   * What a click on a row or tile does: opens it — or, while the preview
+   * shows, picks it, and a double click or Enter opens it. With Ctrl,
+   * Cmd or Shift, a click always opens.
    */
   pickOrOpen(el, item, open, space = true) {
     const selection = this.plugin.selection;
@@ -84,15 +84,15 @@ class BrowseRows {
     }
     if (selection.holds(item.file || item.folder)) el.addClass('is-selected');
     onActivate(el, (evt) => {
-      if (evt.type === 'click' && !evt.ctrlKey && !evt.metaKey && !evt.shiftKey && selection.clickPicks()) selection.set(item);
+      if (evt.type === 'click' && !evt.ctrlKey && !evt.metaKey && !evt.shiftKey && this.clickPicks()) selection.set(item);
       else open(evt);
     }, space);
     el.addEventListener('dblclick', (evt) => {
-      if (selection.clickPicks()) open(evt);
+      if (this.clickPicks()) open(evt);
     });
     // Moving through a list with the arrow keys moves what's picked.
     el.addEventListener('focus', () => {
-      if (selection.clickPicks()) selection.set(item);
+      if (this.clickPicks()) selection.set(item);
     });
   }
 

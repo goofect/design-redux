@@ -565,6 +565,7 @@ class BrowseSorting {
 
   renderSearchField(bar) {
     this.renderFilterButton(bar);
+    this.renderPreviewToggle(bar);
 
     const search = bar.createDiv({ cls: 'dr-browse-search' });
     setIcon(search.createSpan({ cls: 'dr-browse-search-icon' }), 'search');

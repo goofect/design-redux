@@ -131,6 +131,7 @@ const DEFAULTS = {
   artworkSize: '',
   canvasTools: true,
   inspectorClick: 'shown',
+  libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
   // starting layout from the vault the first time it's shown".
   librarySections: [],

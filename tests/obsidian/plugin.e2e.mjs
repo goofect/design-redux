@@ -17,7 +17,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view'];
+const SHOTS = ['album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -816,33 +816,41 @@ describe('Design Redux in Obsidian', function () {
     expect(result.after.cls).toBe(false);
   });
 
-  it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {
+  it('previews a note picked in an album beside it, and opens it on a double click', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const find = (name) => plugin.features.find((f) => f.constructor.name === name);
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
-      const wasCollapsed = app.workspace.rightSplit.collapsed;
       await find('Library').browseMode({ mode: 'folder', path: 'Politics' });
       const page = app.workspace.activeLeaf;
-      const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
-      await until(() => !!row());
-      await find('Inspector').show();
-      const title = () => { const el = document.querySelector('.dr-inspector .dr-props-title'); return el ? el.textContent : ''; };
-      const showing = await until(() => plugin.selection.clickPicks());
+      const el = () => page.view.containerEl;
+      const row = () => el().querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
+      el().querySelector('.dr-preview-btn').click();
+      await until(() => !!el().querySelector('.dr-preview') && !!row());
+      const pane = el().querySelector('.dr-preview').getBoundingClientRect();
+      const list = el().querySelector('.view-content').getBoundingClientRect();
       row().click();
+      const title = () => { const t = el().querySelector('.dr-preview-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Anarchy');
-      const picked = { showing, title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected') };
-      row().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      return { title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected'), beside: pane.left >= list.right - 1 && pane.width > 100 };
+    });
+    expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, beside: true });
+    await shot('preview');
+    const opened = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      const row = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
       const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
       await until(() => active() === 'Anarchy');
-      const opened = active();
-      // The workspace as it was, for the tests after.
-      app.workspace.getLeavesOfType('design-redux-inspector').forEach((leaf) => leaf.detach());
-      if (wasCollapsed) app.workspace.rightSplit.collapse();
-      return { picked, opened };
+      // Hidden again, for the tests after.
+      plugin.settings.libraryPreview = false;
+      await plugin.saveData(plugin.settings);
+      plugin.selection.clear();
+      return active();
     });
-    expect(result.picked).toEqual({ showing: true, title: 'Anarchy', still: 'design-redux-browse', marked: true });
-    expect(result.opened).toBe('Anarchy');
+    expect(opened).toBe('Anarchy');
   });
 
   it('pastes several lines onto a selected card as cards below it, and nothing else', async function () {

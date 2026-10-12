@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, Inspector, InspectorView };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1017,67 +1017,70 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
   });
 
-  await t('the inspector: a note or album picked in the library is shown without opening it; a double click or Enter opens it', async () => {
+  await t('the preview: a note or album picked in the library, in brief, without opening it; a double click or Enter opens it', async () => {
     const { view, plugin, app, opened } = setup();
     plugin.selection = new R.Selection(plugin);
-    view.unpick = plugin.selection.onChange(() => view.markPicked());
-    const inspector = new R.Inspector(plugin);
-    plugin.settings.inspector = true;
-    plugin.features = [inspector];
-    plugin.feature = (C) => (C === R.Inspector ? inspector : null);
-    app.metadataCache.on = () => ({});
-    app.workspace.getMostRecentLeaf = () => null;
-    const panel = new R.InspectorView({}, inspector);
-    panel.app = app;
-    await panel.onOpen();
-    assert.ok(panel.contentEl.querySelector('.dr-empty'), 'nothing picked, nothing open');
-
+    view.unpick = plugin.selection.onChange(() => {
+      view.markPicked();
+      view.renderPreview();
+    });
     const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
-    click(row('Anarchy'));
-    assert.strictEqual(opened.length, 1, 'with the inspector away, a click opens as it always has');
-
-    panel.isShowing = () => true;
     view.render();
+    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'hidden until asked for');
+    click(row('Anarchy'));
+    assert.strictEqual(opened.length, 1, 'without it, a click opens as it always has');
+
+    // Shown with the button by Sort and filter, for every page of the library.
+    plugin.refreshBrowse = () => view.render();
+    click(view.contentEl.querySelector('.dr-preview-btn'));
+    assert.strictEqual(plugin.settings.libraryPreview, true);
+    const pane = () => view.containerEl.querySelector('.dr-preview');
+    assert.ok(pane().querySelector('.dr-preview-empty'));
     click(row('Balance'));
     assert.strictEqual(opened.length, 1, 'while it shows, a click picks');
-    assert.strictEqual(plugin.selection.get().file.basename, 'Balance');
     assert.ok(row('Balance').classList.contains('is-selected'));
-    panel.render();
-    assert.strictEqual(panel.contentEl.querySelector('.dr-props-title').textContent, 'Balance');
-    assert.ok(panel.contentEl.querySelector('.dr-references-section'), 'its references');
-    assert.ok(Array.from(panel.contentEl.querySelectorAll('.dr-section-action')).some((b) => b.textContent === 'Open'));
+    const facts = () => Array.from(pane().querySelectorAll('.dr-preview-label')).map((e) => e.textContent);
+    assert.strictEqual(pane().querySelector('.dr-preview-title').textContent, 'Balance');
+    assert.deepStrictEqual(facts(), ['In', 'Created', 'Modified']);
+    const buttons = () => Array.from(pane().querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
+    assert.deepStrictEqual(buttons(), ['Open', 'More'], 'already in its album: nothing to reveal');
+    assert.ok(!pane().querySelector('.dr-props-popup, .dr-row'), 'no properties to edit: that’s the note panel’s');
 
     row('Balance').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
     assert.strictEqual(opened[1].basename, 'Balance', 'a double click opens');
     row('Cooperation').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert.strictEqual(opened[2].basename, 'Cooperation', 'Enter opens');
 
+    // Elsewhere, it can take you to the note's album, still picked there.
+    const went = [];
+    view.leaf.setViewState = async (st) => went.push(st.state);
+    await view.setState({ mode: 'recents' }, {});
+    plugin.selection.set({ file: app.vault.getFileByPath('IR/Theories/Realism.md') });
+    assert.deepStrictEqual(buttons(), ['Open', 'Reveal in album', 'More']);
+    click(Array.from(pane().querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Reveal in album'));
+    assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR/Theories']);
+
+    // An album: what kind, what it holds, where it is.
     await view.setState({ mode: 'folders' }, {});
     click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
-    panel.render();
-    assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead', '.dr-props-meta'].map((sel) => panel.contentEl.querySelector(sel).textContent), ['IR', 'Album', '6 items  ·  1 disc']);
+    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => pane().querySelector(sel).textContent), ['IR', 'Album']);
+    assert.deepStrictEqual(facts(), ['Holds', 'In']);
 
     view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
     assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR') });
     plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
     assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
+
+    // Set always to open; and hidden again, nothing stays picked.
     plugin.settings.inspectorClick = 'never';
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     click(row('Deterrence'));
-    assert.strictEqual(opened[3].basename, 'Deterrence', 'set to always open');
-    // A card: a mark of its own where a cover would be, its first line for a name; and the inspector's settings at its foot.
-    const asked = [];
-    plugin.openSettingsAt = (key) => asked.push(key);
-    plugin.selection.set({ card: { getData: () => ({ type: 'text', text: '# Idea\nMore words' }) } });
-    panel.render();
-    assert.strictEqual(panel.contentEl.querySelector('.dr-props-title').textContent, 'Idea');
-    assert.ok(panel.contentEl.querySelector('.dr-props-head .dr-props-art'));
-    click(panel.contentEl.querySelector('.dr-inspector-foot'));
-    assert.deepStrictEqual(asked, ['inspector']);
-    await panel.onClose();
-    assert.strictEqual(plugin.selection.viewers.size, 0);
+    assert.strictEqual(opened[3].basename, 'Deterrence', 'set always to open');
+    plugin.selection.set({ folder: app.vault.getFolderByPath('IR/Theories') });
+    view.togglePreview();
+    assert.ok(!pane() && plugin.selection.get() === null);
   });
 
   await t('search finds albums, collections and notes, each under its name', async () => {

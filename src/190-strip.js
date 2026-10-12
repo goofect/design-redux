@@ -601,12 +601,6 @@ class ContextStrip extends Feature {
       });
     }
 
-    // What's picked, described beside the page.
-    const inspect = this.plugin.manifest && this.app.commands ? `${this.plugin.manifest.id}:open-inspector` : '';
-    if (this.settings.inspector && inspect) {
-      specs.push({ icon: 'panel-right', label: 'Inspector', role: 'inspector', secondary: true, run: () => this.app.commands.executeCommandById(inspect) });
-    }
-
     const overflow = this.isNarrow() ? specs.filter((spec) => spec.secondary) : [];
     specs.filter((spec) => overflow.indexOf(spec) === -1).forEach((spec) => this.stripButton(actions, spec));
 
