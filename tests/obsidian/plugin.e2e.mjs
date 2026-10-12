@@ -821,6 +821,7 @@ describe('Design Redux in Obsidian', function () {
       const plugin = plugins.designRedux;
       const find = (name) => plugin.features.find((f) => f.constructor.name === name);
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      const wasCollapsed = app.workspace.rightSplit.collapsed;
       await find('Library').browseMode({ mode: 'folder', path: 'Politics' });
       const page = app.workspace.activeLeaf;
       const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
@@ -834,7 +835,11 @@ describe('Design Redux in Obsidian', function () {
       row().dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
       const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
       await until(() => active() === 'Anarchy');
-      return { picked, opened: active() };
+      const opened = active();
+      // The workspace as it was, for the tests after.
+      app.workspace.getLeavesOfType('design-redux-inspector').forEach((leaf) => leaf.detach());
+      if (wasCollapsed) app.workspace.rightSplit.collapse();
+      return { picked, opened };
     });
     expect(result.picked).toEqual({ showing: true, title: 'Anarchy', still: 'design-redux-browse', marked: true });
     expect(result.opened).toBe('Anarchy');

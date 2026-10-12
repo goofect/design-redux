@@ -730,7 +730,7 @@ function collectionTiles(view) {
   const items = [];
   const smart = plugin.feature(SmartAlbums);
   if (smart && smart.enabled) {
-    smart.list().forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
+    smart.list().filter((album) => view.matches(album.name)).forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
   }
   if (plugin.settings.upNext && plugin.queue) {
     plugin.queue.saved().filter((kept) => view.matches(kept.name)).forEach((kept) => items.push({ draw: (row) => view.queueCard(row, kept) }));
@@ -950,7 +950,11 @@ class SearchScreen extends BrowseScreen {
         )
     );
 
-    const count = folders.length + notes.length;
+    // Your collections by name: smart albums and reading queues, and
+    // albums that gather notes from elsewhere not already among the albums.
+    const collections = collectionTiles(view).filter((item) => !(item instanceof TFolder) || folders.indexOf(item) === -1);
+
+    const count = folders.length + collections.length + notes.length;
     const head = root.createDiv({ cls: 'dr-search-head' });
     head.createSpan({
       cls: 'dr-search-count',
@@ -976,13 +980,26 @@ class SearchScreen extends BrowseScreen {
       return;
     }
 
+    // Grouped, each under its name, once there's more than one kind.
+    const kinds = [folders, collections, notes].filter((list) => list.length).length;
+    const titled = (text, n) => {
+      if (kinds > 1) this.heading(root, text).createSpan({ cls: 'dr-search-section-count', text: String(n) });
+    };
+
     if (folders.length) {
+      titled('Albums', folders.length);
       const grid = root.createDiv({ cls: 'dr-grid' });
       roveFocus(grid, '.dr-card');
       folders.forEach((f) => view.folderCard(grid, f, f.parent && f.parent.name));
     }
 
+    if (collections.length) {
+      titled('Collections', collections.length);
+      tileGrid(view, root, collections);
+    }
+
     if (notes.length) {
+      titled('Notes', notes.length);
       const list = root.createDiv({ cls: 'dr-tracks' });
       roveFocus(list, '.dr-track');
       view.renderLimited(list, notes, 'search', 40);

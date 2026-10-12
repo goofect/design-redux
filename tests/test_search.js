@@ -81,6 +81,7 @@ function makeView(recentSearches = []) {
     saveData: async (s) => saves.push(JSON.parse(JSON.stringify(s.recentSearches))),
     saveSettings: async () => { throw new Error('saveSettings should not run for a search'); },
     isFolderNote: () => false,
+    feature: () => null,
     folderHasNotes: () => true,
     recentFiles: () => [],
     pins: { files: () => [], folders: () => [], has: () => false },

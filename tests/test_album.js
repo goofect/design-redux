@@ -1076,6 +1076,27 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(plugin.selection.viewers.size, 0);
   });
 
+  await t('search finds albums, collections and notes, each under its name', async () => {
+    const { v, view, plugin } = setup();
+    const smart = new R.SmartAlbums(plugin);
+    smart.enabled = true;
+    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Reading list' }];
+    plugin.feature = (C) => (C === R.SmartAlbums ? smart : null);
+    v.folder('Readings');
+    v.file('Readings/One.md');
+    v.file('IR/Reading notes.md');
+    await view.setState({ mode: 'search' }, {});
+    view.query = 'reading';
+    view.render();
+    const heads = Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(heads, ['Albums', 'Collections', 'Notes']);
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Readings', 'Reading list']);
+    assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Reading notes.md"]'));
+    view.query = 'notes';
+    view.render();
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent), [], 'one kind: no headings');
+  });
+
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {
     const { v, view, plugin, app } = setup();
     f(app, 'IR/Balance.md').stat.ctime = 30;
