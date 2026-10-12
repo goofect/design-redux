@@ -380,19 +380,10 @@ class CanvasMindMap extends CanvasFeature {
     } catch (err) {
       /* the arrows as they were */
     }
-    const state = fold ? fold.watched.get(view) : null;
-    return new Promise((resolve) => {
-      glideCanvasModel(view, model, before, state, () => {
-        try {
-          canvas.requestSave();
-        } catch (err) {
-          /* saved with the next change */
-        }
-        if (fold) fold.schedule(view);
-        this.app.workspace.trigger('design-redux:canvas-changed', view);
-        if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
-        resolve(true);
-      });
+    // Saved whether or not a card moved: its arrows changed.
+    return glideAndSettle(this.plugin, view, model, before, { save: true }).then(() => {
+      if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
+      return true;
     });
   }
 

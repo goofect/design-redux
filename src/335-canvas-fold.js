@@ -35,6 +35,37 @@ function groupOpenHeight(model, rec) {
   return Math.max(rec.height, bottom + 40);
 }
 
+/**
+ * After a change made by hand — cards moved, arrows changed: the canvas
+ * saved if anything changed (`save` to save anyway; a save is a step of
+ * Undo, so a pass never calls this), the fold pass told to look again,
+ * and those watching the canvas told (`announce: false` not to).
+ */
+function afterCanvasChange(plugin, view, changed, opts = {}) {
+  if (changed || opts.save) {
+    try {
+      view.canvas.requestSave();
+    } catch (err) {
+      /* saved with the canvas's next change */
+    }
+  }
+  const fold = plugin.feature(CanvasFold);
+  if (fold) fold.schedule(view);
+  if (opts.announce !== false) plugin.app.workspace.trigger('design-redux:canvas-changed', view);
+}
+
+/** The cards glided to where the model has them, then afterCanvasChange; resolves whether any moved. */
+function glideAndSettle(plugin, view, model, before, opts = {}) {
+  const fold = plugin.feature(CanvasFold);
+  const state = fold ? fold.watched.get(view) : null;
+  return new Promise((resolve) => {
+    glideCanvasModel(view, model, before, state, (changed) => {
+      afterCanvasChange(plugin, view, changed, opts);
+      resolve(changed);
+    });
+  });
+}
+
 /** Whether a canvas card is a group. */
 function isGroupNode(node) {
   try {

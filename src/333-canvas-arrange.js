@@ -192,20 +192,8 @@ class CanvasArrange extends CanvasFeature {
       rec.width = to.width;
       rec.height = height;
     });
-    const state = fold ? fold.watched.get(view) : null;
-    return new Promise((resolve) => {
-      glideCanvasModel(view, model, before, state, (changed) => {
-        if (changed) {
-          try {
-            view.canvas.requestSave();
-          } catch (err) {
-            /* saved with the canvas's next change */
-          }
-        }
-        if (fold) fold.schedule(view);
-        resolve(changed);
-      });
-    });
+    // As it was written: the canvas outline isn't told of an arrangement.
+    return glideAndSettle(this.plugin, view, model, before, { announce: false });
   }
 
   addMenuItems(menu, nodes) {

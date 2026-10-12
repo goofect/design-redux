@@ -84,16 +84,7 @@ class CanvasBranches extends CanvasFeature {
       if (e.fromSide === fromSide && e.toSide === toSide) return;
       if (setEdgeSides(e.edge, fromSide, toSide)) changed = true;
     });
-    if (changed) {
-      try {
-        view.canvas.requestSave();
-      } catch (err) {
-        /* saved with the canvas's next change */
-      }
-    }
-    const fold = this.plugin.feature(CanvasFold);
-    if (fold) fold.schedule(view);
-    this.app.workspace.trigger('design-redux:canvas-changed', view);
+    afterCanvasChange(this.plugin, view, changed);
     return changed;
   }
 

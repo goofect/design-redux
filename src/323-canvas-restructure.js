@@ -117,19 +117,7 @@ class CanvasRestructure extends CanvasFeature {
     // The second to where the first began; the first after it.
     second.forEach((r) => shiftRecord(model, r, across, p.near(a) - p.near(b), moved));
     first.forEach((r) => shiftRecord(model, r, across, p.near(a) + b[p.size] + gap - p.near(a), moved));
-    const state = fold ? fold.watched.get(view) : null;
-    return new Promise((resolve) => {
-      glideCanvasModel(view, model, before, state, (changed) => {
-        try {
-          if (changed) view.canvas.requestSave();
-        } catch (err) {
-          /* saved with the canvas's next change */
-        }
-        if (fold) fold.schedule(view);
-        this.app.workspace.trigger('design-redux:canvas-changed', view);
-        resolve(changed);
-      });
-    });
+    return glideAndSettle(this.plugin, view, model, before);
   }
 
   /** The card a card would hang from a level up: the one its parent hangs from. */
