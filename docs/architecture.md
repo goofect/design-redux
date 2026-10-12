@@ -231,7 +231,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M1 | safety net — **done** | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
 | M2 | helpers in the right place, duplicates gone — **done** | low | no shared helper declared in a feature piece; nothing in core reaches up; 030 has no mutual pairs |
 | M3 | note and property operations; quiet links split — **done** | high | one read path and one write path for properties; undo doesn't overwrite later edits |
-| M4 | library, albums, the plugin class | high | 120 under ~1,200 lines; 350 only composes |
+| M4 | library, albums, the plugin class — **done** | high | 120 under ~1,200 lines; 350 only composes |
 | M5 | UI parts and CSS | medium | dialogs build from shared parts |
 | M6 | canvas | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
 | M7 | build (optional) | high | only if §4's conditions hold |
@@ -372,3 +372,46 @@ The 52 crossings left, by kind, and the milestone that takes each kind:
 - Split `120-browse-view`.
 - Decide where albums sit relative to the library.
 - Take on the `plugin.feature(X)` lookups between features.
+
+## 14. M4, done
+
+Behaviour is unchanged, and every suite passed at each step. The crossings went from 52 to 29,
+and the pairs of pieces that use each other from 14 to 12.
+
+- **`074-files`:** making notes, canvases and folders under a free name, moving files and
+  putting them back, and finding, making and renaming folder notes. It lives in
+  `plugin.files`. The plugin keeps one-line delegates, so features and tests ask it as before.
+- **The browse view is in four pieces:**
+  - `120-browse-view`: the class, navigation, screens and headers (1,188 lines, down from
+    2,723).
+  - `121-browse-sorting`.
+  - `122-browse-editing`, which includes pins in your own order.
+  - `123-browse-rows`: the list, shelves and cards.
+  - These are methods of `BrowseView`, put on it by `mixInto` (in `080`). It refuses a name
+    written twice. The methods that call `super` stay in the class.
+- **The bulk dialogs are in pieces by family:** `300` keeps `BulkModal` and the "where"
+  conditions; then `301` properties, `302` tags and values, `303` types and missing values,
+  and `304` the property list and the tools window.
+- **Albums and the library are one area** in `map.js` (090–139 and 254–259), as
+  `.claude/rules/albums.md` already says. Album features draw inside the browse view and add
+  its screens, so it's one subsystem. Splitting it would mean a delegate for every album panel,
+  for no gain.
+- **Bulk renames are announced** (`design-redux:renamed`, `design-redux:property-renamed`)
+  rather than handed to three features. The library moves open screens on
+  (`BrowseView.followRenamed`), and the graph filter follows. `tagUnder` and `renameTagText`
+  moved to `047`.
+- **Not done, and moved to M8:**
+  - **The plugin class still holds behaviour beyond composing:** covers (`folderCoverSrc`,
+    setting and clearing them), `newFolder`, `togglePin` and `pruneLeftovers`.
+  - **The library benchmarks with 50 and 500 albums.** M4 only moved code, so there's no
+    redraw change to measure.
+
+The 29 crossings left:
+- **Features asking each other for a capability through `plugin.feature(X)`:**
+  - the strip with Library, Knowledge, AlbumStructure and Footnotes;
+  - the panel with AlbumProperty, BulkEditing and QuietLinks;
+  - the browse view with ContextStrip, UpNext and BulkEditing;
+  - workspace modes and one-page;
+  - album property with the bulk notices;
+  - album structure with the canvas vault map.
+- **Knowledge mapping notes onto canvases:** 11 names, for M6.
