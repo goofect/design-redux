@@ -2,8 +2,10 @@
 # Waits for CI on a pushed commit (HEAD by default) and prints a few lines:
 # how it went, whether it was released, and, if something failed, only the
 # failing lines. Run it once after pushing instead of checking by hand.
+# The branch is main unless given: tests/ci.sh "" v2.
 sha=${1:-$(git rev-parse HEAD)}
-runs="repos/goofect/design-redux/actions/runs?head_sha=$sha&branch=main"
+branch=${2:-main}
+runs="repos/goofect/design-redux/actions/runs?head_sha=$sha&branch=$branch"
 state=
 for _ in $(seq 1 55); do
   state=$(gh api "$runs" --jq '.workflow_runs[0] | "\(.status) \(.conclusion)"' 2>/dev/null)
