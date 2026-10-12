@@ -1066,6 +1066,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     panel.render();
     assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead', '.dr-props-meta'].map((sel) => panel.contentEl.querySelector(sel).textContent), ['IR', 'Album', '6 items  ·  1 disc']);
 
+    view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
+    assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');
+    plugin.selection.set({ folder: app.vault.getFolderByPath('IR') });
     plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
     assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
     plugin.settings.inspectorClick = 'never';

@@ -1141,6 +1141,13 @@ class BrowseView extends ItemView {
     if (evt.key === 'Escape' && this.editing && !typing) {
       evt.preventDefault();
       this.setEditing(false);
+      return;
+    }
+    // Escape lets go of what's picked here; the inspector goes back to the note that's open.
+    const selection = this.plugin.selection;
+    if (evt.key === 'Escape' && !typing && selection && selection.get() && this.contentEl.querySelector('.is-selected')) {
+      evt.preventDefault();
+      selection.clear();
     }
   }
 
