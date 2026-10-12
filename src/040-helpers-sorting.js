@@ -1,6 +1,7 @@
 /* Screens with an order of their own, offered first on their filter button. */
 const OWN_ORDER = {
   recents: 'Most recently opened',
+  added: 'Most recently added',
   pinned: 'Order pinned',
 };
 

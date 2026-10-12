@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -951,6 +951,40 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);
     assert.deepStrictEqual(titles, ['Folders', 'Recently opened']);
     assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
+  });
+
+  await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {
+    const { v, view, plugin, app } = setup();
+    f(app, 'IR/Balance.md').stat.ctime = 30;
+    f(app, 'IR/Theories/Realism.md').stat.ctime = 20;
+    await view.setState({ mode: 'added' }, {});
+    const titles = () => Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(titles().slice(0, 2), ['Balance', 'Realism'], 'newest first');
+
+    await view.setState({ mode: 'collections' }, {});
+    assert.ok(view.contentEl.querySelector('.dr-empty'), 'none yet');
+    const smart = new R.SmartAlbums(plugin);
+    smart.enabled = true;
+    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Unread' }];
+    const structure = new R.AlbumStructure(plugin);
+    structure.enabled = true;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    v.folder('Reading');
+    const reading = v.file('Reading/Reading.md');
+    v.folder('Law');
+    const law = v.file('Law/Law.md');
+    const fms = new Map([[reading, { includes: ['[[Anarchy]]'] }], [law, { album: 'Subject' }]]);
+    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
+    plugin.feature = (C) => (C === R.SmartAlbums ? smart : C === R.AlbumStructure ? structure : null);
+    view.render();
+    assert.deepStrictEqual(titles(), ['Unread', 'Reading']);
+
+    await view.setState({ mode: 'subjects' }, {});
+    assert.deepStrictEqual(titles(), ['Law']);
+    const library = new R.Library(plugin);
+    const sections = library.defaultSections();
+    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Collections']);
+    assert.ok(sections[1].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

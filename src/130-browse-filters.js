@@ -235,11 +235,18 @@ class Library extends Feature {
     // Shaped after the app this borrows from: a few destinations, then
     // the ways into the whole vault, then the saved views.
     const library = [
-      { kind: 'builtin', id: 'bookmarks' },
+      { kind: 'builtin', id: 'added' },
       { kind: 'builtin', id: 'recents' },
-      { kind: 'builtin', id: 'properties' },
-      { kind: 'builtin', id: 'folders' },
       { kind: 'builtin', id: 'notes' },
+      { kind: 'builtin', id: 'folders' },
+      { kind: 'builtin', id: 'properties' },
+    ];
+    const structure = this.plugin.feature(AlbumStructure);
+    if (structure && structure.enabled && structure.ofKind('subject').length) library.push({ kind: 'builtin', id: 'subjects' });
+    const collections = [
+      { kind: 'builtin', id: 'collections' },
+      { kind: 'builtin', id: 'bookmarks' },
+      { kind: 'builtin', id: 'smart' },
     ];
 
     const sections = [
@@ -252,6 +259,7 @@ class Library extends Feature {
         ],
       },
       { title: 'Library', items: library },
+      { title: 'Collections', items: collections },
     ];
     if (folders.length) sections.push({ title: 'Folders', items: folders });
     if (bases.length) sections.push({ title: 'Bases', items: bases });

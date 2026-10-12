@@ -345,6 +345,15 @@ class BrowseRows {
     if (menu) button('ellipsis', 'More', menu, 'is-more');
   }
 
+  /** A smart album's tile: drawn as the covers are, for its name; opens the album. */
+  smartCard(grid, album) {
+    const card = this.card(grid, album.name, 'Smart album');
+    const key = `smart:${album.id}`;
+    fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.plugin.settings, album.name, key), blankLook(this.plugin.settings, album.name, key));
+    onActivate(card, () => this.navigate({ mode: 'smart', property: album.id, path: '/' }));
+    return card;
+  }
+
   card(grid, title, subtitle) {
     const card = grid.createDiv({ cls: 'dr-card' });
     asButton(card);

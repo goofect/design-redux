@@ -653,8 +653,21 @@ class CollectionScreen extends BrowseScreen {
     return this.view.mode === 'pinned';
   }
 
+  get added() {
+    return this.view.mode === 'added';
+  }
+
   title() {
-    return this.pinned ? 'Pinned' : 'Recently opened';
+    return this.pinned ? 'Pinned' : this.added ? 'Recently added' : 'Recently opened';
+  }
+
+  /** The notes made most lately, the newest first: albums' own notes aside. */
+  recentlyAdded() {
+    return this.app.vault
+      .getMarkdownFiles()
+      .filter((f) => !this.plugin.isFolderNote(f))
+      .sort((a, b) => b.stat.ctime - a.stat.ctime)
+      .slice(0, 100);
   }
 
   render(root) {
@@ -663,7 +676,9 @@ class CollectionScreen extends BrowseScreen {
 
     let files = (this.pinned
       ? this.plugin.pins.files()
-      : this.plugin.recentFiles()
+      : this.added
+        ? this.recentlyAdded()
+        : this.plugin.recentFiles()
     )
       .filter((f) => view.inFilter(f))
       .filter((f) => view.matches(f.basename));
@@ -684,7 +699,8 @@ class CollectionScreen extends BrowseScreen {
     const orderedFolders = view.keepsOwnOrder() ? folders : view.sortFolders(folders);
 
     if (!files.length && !folders.length) {
-      view.emptyState(root, this.pinned ? 'Nothing pinned yet' : 'Nothing opened yet', this.pinned ? 'pin' : 'clock', view.clearAction());
+      const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : ['Nothing opened yet', 'clock'];
+      view.emptyState(root, empty[0], empty[1], view.clearAction());
       return;
     }
 
@@ -703,6 +719,69 @@ class CollectionScreen extends BrowseScreen {
       files.forEach((file) => view.fileCard(grid, file));
     }
     if (this.pinned && view.keepsOwnOrder()) view.arrangeableTiles(grid);
+  }
+}
+
+/* -- subjects and collections, as tiles ------------------------------ */
+
+/** Your own collections, as tiles: smart albums, then albums that gather notes from elsewhere. */
+function collectionTiles(view) {
+  const plugin = view.plugin;
+  const items = [];
+  const smart = plugin.feature(SmartAlbums);
+  if (smart && smart.enabled) {
+    smart.list().forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
+  }
+  const structure = plugin.feature(AlbumStructure);
+  if (structure && structure.enabled) {
+    structure.gathering().filter((f) => view.folderInFilter(f) && view.matches(f.name)).forEach((f) => items.push(f));
+  }
+  return items;
+}
+
+/** Tiles in a grid: a folder's, or one drawn by its item. */
+function tileGrid(view, root, items) {
+  const grid = root.createDiv({ cls: 'dr-grid' });
+  roveFocus(grid, '.dr-card');
+  items.forEach((item) => (item instanceof TFolder ? view.folderCard(grid, item) : item.draw(grid)));
+  return grid;
+}
+
+class CollectionsScreen extends BrowseScreen {
+  title() {
+    return 'Collections';
+  }
+
+  render(root) {
+    const view = this.view;
+    view.renderTitleBar(root, this.title());
+    const items = collectionTiles(view);
+    if (!items.length) {
+      view.emptyState(root, 'No collections yet: smart albums, and albums that gather notes from elsewhere, show here', 'library', null);
+      return;
+    }
+    tileGrid(view, root, items);
+  }
+}
+
+/** The albums marked as a subject: the vault's fields of knowledge. */
+class SubjectsScreen extends BrowseScreen {
+  title() {
+    return 'Subjects';
+  }
+
+  render(root) {
+    const view = this.view;
+    view.renderTitleBar(root, this.title());
+    const structure = this.plugin.feature(AlbumStructure);
+    const subjects = structure && structure.enabled
+      ? view.sortFolders(structure.ofKind('subject').filter((f) => view.folderInFilter(f) && view.matches(f.name)))
+      : [];
+    if (!subjects.length) {
+      view.emptyState(root, 'No subjects yet: albums whose kind is Subject show here', 'book', null);
+      return;
+    }
+    tileGrid(view, root, subjects);
   }
 }
 
@@ -977,14 +1056,14 @@ class HomeScreen extends BrowseScreen {
 
     // The shelves, in the order and as many as the settings say.
     const continuing = this.continuing(recents, keep);
-    const collections = this.collections(view);
+    const collections = collectionTiles(view);
     const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
       continue: () => shelf('Continue reading', continuing),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
-      added: () => shelf('Recently added', added),
-      collections: () => shelf('Your collections', collections),
+      added: () => shelf('Recently added', added, { mode: 'added' }),
+      collections: () => shelf('Your collections', collections, { mode: 'collections' }),
       pinned: () => shelf('Pinned', pinned, { mode: 'pinned' }),
       rediscover: () => shelf('Rediscover', older.slice(1)),
       folders: () => shelf('Folders', folders, { mode: 'folders' }),
@@ -1012,29 +1091,6 @@ class HomeScreen extends BrowseScreen {
       items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}`, progress: (near.index + 1) / near.total });
     });
     return items;
-  }
-
-  /** Your own collections: smart albums, then albums that gather notes from elsewhere. */
-  collections(view) {
-    const items = [];
-    const smart = this.plugin.feature(SmartAlbums);
-    if (smart && smart.enabled) {
-      smart.list().forEach((album) => items.push({ draw: (row) => this.smartCard(row, album) }));
-    }
-    const structure = this.plugin.feature(AlbumStructure);
-    if (structure && structure.enabled) {
-      structure.gathering().filter((f) => view.folderInFilter(f) && view.matches(f.name)).forEach((f) => items.push(f));
-    }
-    return items;
-  }
-
-  /** A smart album's tile: drawn as the covers are, for its name; opens the album. */
-  smartCard(row, album) {
-    const view = this.view;
-    const card = view.card(row, album.name, 'Smart album');
-    const key = `smart:${album.id}`;
-    fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.settings, album.name, key), blankLook(this.settings, album.name, key));
-    onActivate(card, () => view.navigate({ mode: 'smart', property: album.id, path: '/' }));
   }
 
   /**
@@ -1116,5 +1172,8 @@ const BROWSE_SCREENS = {
   property: PropertiesScreen,
   recents: CollectionScreen,
   pinned: CollectionScreen,
+  added: CollectionScreen,
+  subjects: SubjectsScreen,
+  collections: CollectionsScreen,
 };
 

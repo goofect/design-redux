@@ -309,6 +309,16 @@ class AlbumStructure extends Feature {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  /** The albums of one kind ('subject' and so on), by name. */
+  ofKind(type) {
+    return this.app.vault
+      .getMarkdownFiles()
+      .filter((note) => note.parent && this.plugin.isFolderNote(note))
+      .map((note) => note.parent)
+      .filter((folder) => this.info(folder).type === type)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   /** The albums that include a note from elsewhere: those whose folder note names it under includes. */
   albumsIncluding(file) {
     return this.gathering().filter((folder) => folder !== file.parent && this.info(folder).includes.indexOf(file) !== -1);
