@@ -1012,19 +1012,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
   });
 
-  await t('an album\'s notes under the names of their columns, which can be turned off', async () => {
-    const { view, plugin } = setup();
-    plugin.settings.albumColumns = 'modified';
-    await view.setState({ mode: 'folder', path: 'IR' }, {});
-    const head = view.contentEl.querySelector('.dr-tracks.has-head > .dr-track-head');
-    assert.ok(head, 'a row of column names');
-    assert.deepStrictEqual(Array.from(head.children).map((c) => c.textContent).slice(0, 3), ['#', 'Title', 'Modified']);
-    assert.ok(!head.matches('.dr-track'), 'not a row to move through or open');
-    plugin.settings.trackHeader = false;
-    view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-track-head'));
-  });
-
   await t('the inspector: a note or album picked in the library is shown without opening it; a double click or Enter opens it', async () => {
     const { view, plugin, app, opened } = setup();
     plugin.selection = new R.Selection(plugin);

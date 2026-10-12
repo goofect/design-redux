@@ -103,23 +103,6 @@ class BrowseRows {
     this.contentEl.querySelectorAll('.dr-track[data-path], .dr-tr[data-path], .dr-card[data-path]').forEach((el) => el.toggleClass('is-selected', !!target && el.dataset.path === target.path));
   }
 
-  /** The names of the columns, above the rows, which then keep them lined up. */
-  trackHead(list) {
-    list.addClass('has-head');
-    const head = list.createDiv({ cls: 'dr-track-head' });
-    head.createDiv({ cls: 'dr-track-num', text: '#' });
-    head.createDiv({ cls: 'dr-track-name', text: 'Title' });
-    this.albumColumns().forEach((key) =>
-      head.createDiv({ cls: this.isTimeColumn(key) ? 'dr-track-time' : 'dr-track-sub', text: this.isTimeColumn(key) || key === 'folder' ? key.charAt(0).toUpperCase() + key.slice(1) : this.columnLabel(key) })
-    );
-    const style = this.lengthStyle();
-    if (style) head.createDiv({ cls: `dr-track-length${style === 'words' ? ' is-words' : ''}`, text: style === 'words' ? 'Words' : 'Length' });
-    // As wide as a row's More, unseen, so the columns end where theirs do.
-    const spacer = head.createDiv({ cls: 'clickable-icon dr-track-more', attr: { 'aria-hidden': 'true' } });
-    setIcon(spacer, 'ellipsis');
-    return head;
-  }
-
   /**
    * What each album row shows after the title, from settings. Property
    * names, plus three that aren't properties: modified, created and
