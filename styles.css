@@ -8246,3 +8246,23 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
   transition: background-color 600ms ease-out;
 }
+
+/* Find's way out to the whole library: a chip like the filters', without a ×. */
+.dr-chip-wide {
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-chip-wide .dr-chip-icon {
+  display: inline-flex;
+  padding-left: var(--dr-space-3);
+}
+
+.dr-chip-wide .dr-chip-label {
+  padding: 3px var(--dr-space-3) 3px 0;
+  border-radius: 0 var(--dr-radius-pill) var(--dr-radius-pill) 0;
+}
+
+.dr-chip-wide .dr-chip-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}

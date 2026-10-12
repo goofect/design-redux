@@ -1092,6 +1092,40 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent), [], 'one kind: no headings');
   });
 
+  await t('the sort menu says how an album shows and opens its display settings; Find offers the whole library', async () => {
+    const { v, view, plugin, app } = setup();
+    const structure = new R.AlbumStructure(plugin);
+    structure.enabled = true;
+    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
+    v.file('IR/IR.md');
+    const set = [];
+    structure.setLayout = async (folder, id) => set.push([folder.path, id]);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const opened = [];
+    plugin.openSettingsAt = (key) => opened.push(key);
+    await view.setState({ mode: 'folder', path: 'IR' }, {});
+    const menu = view.filterMenu();
+    const titles = menu.items.map((i) => i.title);
+    assert.ok(titles.includes('View as list') && titles.includes('View as covers'));
+    assert.strictEqual(menu.items.find((i) => i.title === 'View as list').checked, true);
+    menu.items.find((i) => i.title === 'View as covers').click();
+    await settle(0);
+    assert.deepStrictEqual(set, [['IR', 'covers']]);
+    menu.items.find((i) => i.title === 'Display settings…').click();
+    assert.deepStrictEqual(opened, ['albumColumns']);
+
+    const went = [];
+    view.leaf.setViewState = async (s) => went.push(s.state);
+    view.query = 'bal';
+    view.render();
+    const wide = view.contentEl.querySelector('.dr-chip-wide .dr-chip-label');
+    assert.strictEqual(wide.textContent, 'Search everywhere for “bal”');
+    click(wide);
+    assert.deepStrictEqual([went[0].mode, went[0].query], ['search', 'bal']);
+    await view.setState(went[0], {});
+    assert.strictEqual(view.query, 'bal', 'carried over');
+  });
+
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {
     const { v, view, plugin, app } = setup();
     f(app, 'IR/Balance.md').stat.ctime = 30;

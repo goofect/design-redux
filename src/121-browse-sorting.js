@@ -274,7 +274,7 @@ class BrowseSorting {
 
   renderFilterButton(bar) {
     const btn = bar.createDiv({ cls: 'clickable-icon dr-filter-btn' });
-    btn.setAttribute('aria-label', 'Sort and filter');
+    btn.setAttribute('aria-label', 'Sort, filter and view');
     setIcon(btn, 'list-filter');
     const usual = this.ownOrderLabel() ? 'own' : 'name';
     if (this.hasFilters() || this.currentSort() !== usual) btn.addClass('is-active');
@@ -327,6 +327,8 @@ class BrowseSorting {
           )
         );
     }
+
+    this.addViewItems(menu, redraw);
 
     menu.addSeparator();
     const filter = (title, icon, on, pick, clear) =>
@@ -390,7 +392,34 @@ class BrowseSorting {
           })
       );
     }
+
+    // What this screen shows, and how, in settings.
+    if (typeof this.plugin.openSettingsAt === 'function') {
+      menu.addSeparator();
+      const key = { home: 'homeShelves', folder: 'albumColumns', notes: 'tableColumns' }[this.mode] || 'gridDensity';
+      menu.addItem((item) => item.setTitle('Display settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt(key)));
+    }
     return menu;
+  }
+
+  /** An album shown as a list, covers, a table, an overview or its map — as its folder note says, set from here. */
+  addViewItems(menu, redraw) {
+    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const folder = this.mode === 'folder' ? this.folder() : null;
+    if (!structure || !structure.enabled || !folder || this.isShelf(folder)) return;
+    const now = structure.info(folder).layout;
+    menu.addSeparator();
+    ALBUM_LAYOUTS.forEach((l) =>
+      menu.addItem((item) =>
+        item
+          .setTitle(`View as ${l.label.toLowerCase()}`)
+          .setIcon(l.icon)
+          .setChecked(now === l.id)
+          .onClick(async () => {
+            if (await structure.setLayout(folder, l.id)) redraw();
+          })
+      )
+    );
   }
 
   pickFolder() {
@@ -459,9 +488,18 @@ class BrowseSorting {
     if (this.filterDate) {
       chips.push([dateFilterLabel(this.filterDate), () => this.pickDate(), () => (this.filterDate = null)]);
     }
-    if (!chips.length) return;
+    // Find looks in this screen; a press takes what's typed to the whole library.
+    const find = this.query.trim();
+    if (!chips.length && !(find && this.mode !== 'search')) return;
 
     const row = root.createDiv({ cls: 'dr-filter-chips' });
+    if (find && this.mode !== 'search') {
+      const wide = row.createDiv({ cls: 'dr-chip dr-chip-wide' });
+      setIcon(wide.createSpan({ cls: 'dr-chip-icon' }), 'search');
+      const label = wide.createSpan({ cls: 'dr-chip-label', text: `Search everywhere for “${find}”` });
+      asButton(label);
+      onActivate(label, () => this.navigate({ mode: 'search', property: null, path: '/', query: find }));
+    }
     chips.forEach(([label, change, clear]) => {
       const chip = row.createDiv({ cls: 'dr-chip' });
       const name = chip.createSpan({ cls: 'dr-chip-label', text: label });

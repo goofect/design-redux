@@ -75,7 +75,8 @@ class BrowseView extends ItemView {
       // screen keep their own state because they don't come through
       // here at all.
       this.selected = null;
-      this.query = '';
+      // Find starts empty, unless the move is a search carried over.
+      this.query = typeof state.query === 'string' ? state.query : '';
       this.clearFilters();
       this.smartLoaded = null;
       this.editing = false;
