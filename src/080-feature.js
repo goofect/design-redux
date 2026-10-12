@@ -55,6 +55,11 @@ class Feature {
     return [];
   }
 
+  /** Sections this feature adds to the note panel, below the properties: PanelSection instances. */
+  panelSections() {
+    return [];
+  }
+
   /**
    * Registrations that must happen at load: view types and anything
    * else Obsidian needs before it restores the workspace. Kept apart

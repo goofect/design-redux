@@ -262,6 +262,10 @@ class PropertiesPanel extends Feature {
   /** Sections in the order they appear, subject to settings. */
   build() {
     const sections = [new PropertiesSection(this)];
+    // What the features add: a note's relationships, where it's kept.
+    (this.plugin.features || []).forEach((f) => {
+      if (f.enabled && typeof f.panelSections === 'function') sections.push(...f.panelSections(this));
+    });
     if (this.settings.showMentions) sections.push(new MentionsSection(this));
     return sections;
   }
