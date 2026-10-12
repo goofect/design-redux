@@ -15,7 +15,6 @@ import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-a
 import { Feature } from '../core/080-feature.js';
 import { Library } from '../library/130-browse-filters.js';
 import { PropertiesPanel } from './180-panel.js';
-import { UpNext } from './195-up-next.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { AlbumStructure } from '../library/257-album-structure.js';
 import { Footnotes } from '../editor/285-footnotes.js';
@@ -62,7 +61,7 @@ export const STRIP_NARROW = 760;
  * told when that changes.
  */
 export const STRIP_ACTIONS = {
-  album: [['new-note-here', 'New note', false, 'file-plus'], ['shuffle-album', 'Shuffle', false]],
+  album: [['new-note-here', 'New note', false, 'file-plus']],
   canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
 };
 
@@ -123,22 +122,14 @@ export class ContextStrip extends Feature {
     };
     return [
       { id: 'previous-in-album', name: 'Previous note in album', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: () => this.skip('previous') },
-      { id: 'next-in-album', name: 'Next note in album', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next', true) },
+      { id: 'next-in-album', name: 'Next note in album', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next') },
     ];
   }
 
-  /**
-   * The note before or after this one in its album, opened in the same
-   * page. The strip's » takes Up Next's first before the album's next.
-   */
-  skip(dir, albumOnly) {
+  /** The note before or after this one in its album, opened in the same page. */
+  skip(dir) {
     const file = pageFile(this.app);
     if (!file) return false;
-    const queued = dir === 'next' && !albumOnly ? this.queuedAfter(file) : null;
-    if (queued) {
-      this.plugin.feature(UpNext).open(queued);
-      return true;
-    }
     const target = albumNeighbours(this.plugin, file)[dir];
     const leaf = pageLeaf(this.app);
     if (!target || !leaf) return false;
@@ -517,17 +508,10 @@ export class ContextStrip extends Feature {
     this.skipButton(center, near, 'next');
   }
 
-  /** The first note in Up Next, other than this one, while it's on. */
-  queuedAfter(file) {
-    const upNext = typeof UpNext === 'function' ? this.plugin.feature(UpNext) : null;
-    return upNext && upNext.enabled ? upNext.queue.peek(file) : null;
-  }
-
-  /** « or »: the note before or after this one — Up Next's first, for ». */
+  /** « or »: the note before or after this one in its album. */
   skipButton(parent, near, dir) {
-    const queued = dir === 'next' ? this.queuedAfter(pageFile(this.app)) : null;
-    const target = queued || near[dir];
-    const word = queued ? 'Up Next' : dir === 'previous' ? 'Previous' : 'Next';
+    const target = near[dir];
+    const word = dir === 'previous' ? 'Previous' : 'Next';
     const el = parent.createDiv({ cls: 'clickable-icon dr-strip-btn dr-strip-skip' });
     el.dataset.action = dir;
     setIcon(el, dir === 'previous' ? 'chevrons-left' : 'chevrons-right');
@@ -544,7 +528,7 @@ export class ContextStrip extends Feature {
   renderActions(strip, file, leaf) {
     const actions = strip.createDiv({ cls: 'dr-strip-actions' });
 
-    // Properties, More, and what's there only when it matters — footnotes, Up Next — always;
+    // Properties, More, and what's there only when it matters — footnotes — always;
     // reading mode, pin and the like when the strip is pointed at or tabbed into — or,
     // in a narrow window, in More.
     const specs = [];
@@ -590,11 +574,6 @@ export class ContextStrip extends Feature {
     if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
       specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: () => footnotes.showView() });
     }
-
-    // What's lined up, while anything is.
-    const upNext = typeof UpNext === 'function' ? this.plugin.feature(UpNext) : null;
-    const lined = upNext && upNext.enabled ? upNext.queue.files().length : 0;
-    if (lined) specs.push({ icon: 'list-ordered', label: `Up Next (${lined})`, role: 'up-next', run: (evt) => upNext.showMenu(evt) });
 
     // What can be done to it as a concept, the same as its menu offers.
     const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;

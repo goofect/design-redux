@@ -70,7 +70,7 @@ export const SETTINGS_TABS = [
     title: 'Workspace',
     sections: [
       { title: 'Modes', keys: ['workspaceModes'] },
-      { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'upNext', 'onePage', 'singleArea'] },
+      { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea'] },
       { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
       { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
     ],

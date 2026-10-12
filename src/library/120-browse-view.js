@@ -15,7 +15,6 @@ import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { BROWSE_SCREENS, FolderScreen, ROOT_MODES } from './110-browse-screens.js';
 import { ContextStrip } from '../chrome/190-strip.js';
-import { UpNext } from '../chrome/195-up-next.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
 
@@ -1075,11 +1074,7 @@ export class BrowseView extends ItemView {
       const target = files[0];
       if (target) this.app.workspace.getLeaf(false).openFile(target);
     }).addClass('is-primary');
-    // Shuffle lines the rest up after the one it opens, where Up Next is on.
-    const upNext = this.plugin.feature(UpNext);
-    const shuffling = !!(upNext && upNext.enabled);
-    this.action(actions, 'shuffle', shuffling ? 'Shuffle' : 'Random', () => {
-      if (shuffling && upNext.shuffle(folder, files)) return;
+    this.action(actions, 'shuffle', 'Random', () => {
       if (!files.length) return;
       const pick = files[Math.floor(Math.random() * files.length)];
       this.app.workspace.getLeaf(false).openFile(pick);

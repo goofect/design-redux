@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, Queue, UpNext, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -246,7 +246,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
-const HOME_OFF = ['picks', 'continue', 'upnext', 'added', 'collections', 'pinned', 'rediscover'];
+const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -772,131 +772,26 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     containerEl.remove();
   });
 
-  await t("Up Next: notes lined up from their menus come before the album's next, follow renames, and Shuffle lines up the rest", async () => {
-    const { plugin, app, view, v } = setup();
-    plugin.queue = new R.Queue(plugin);
-    const upNext = new R.UpNext(plugin);
+  await t("no player: the album page offers Random, and the strip's » goes to the album's next note", async () => {
+    const { plugin, app, view } = setup();
     const strip = new R.ContextStrip(plugin);
-    plugin.feature = (C) => (C === R.UpNext ? upNext : C === R.ContextStrip ? strip : null);
-    v.vault.on('rename', (file, old) => plugin.queue.followRename(file, old));
-    v.vault.on('delete', (file) => plugin.queue.followDelete(file));
+    plugin.feature = (C) => (C === R.ContextStrip ? strip : null);
     const file = app.vault.getFileByPath('IR/Balance.md');
     const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
     app.workspace.rootSplit = {};
     app.workspace.getMostRecentLeaf = () => leaf;
     app.commands = { executeCommandById() {} };
     strip.el = document.body.createDiv({ cls: 'dr-strip' });
-    assert.strictEqual(R.DEFAULTS.upNext, true);
-
-    // A note's menu: Read next, then Remove once it's in.
-    const titles = (target) => {
-      const menu = new Menu();
-      upNext.addMenuItems(menu, target, (item) => item);
-      return menu.items.map((i) => i.title);
-    };
-    const deterrence = app.vault.getFileByPath('IR/Deterrence.md');
-    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Add to Up Next', 'Play from here']);
-    upNext.enqueue([deterrence], true);
-    assert.deepStrictEqual(titles(deterrence), ['Read next', 'Remove from Up Next', 'Play from here']);
-    assert.deepStrictEqual(titles(app.vault.getFolderByPath('IR')), ['Play', 'Add to Up Next', 'Shuffle']);
-
-    // » goes to it before Cooperation, and reading it takes it off.
     strip.update();
-    const next = strip.el.querySelector('[data-action="next"]');
-    assert.strictEqual(next.getAttribute('aria-label'), 'Up Next: Deterrence');
-    assert.strictEqual(strip.el.querySelector('[data-action="up-next"]').getAttribute('aria-label'), 'Up Next (1)');
-    strip.skip('next');
-    assert.strictEqual(leaf.view.file.basename, 'Deterrence');
-    assert.deepStrictEqual(plugin.settings.queue, []);
-    assert.ok(!strip.el.querySelector('[data-action="up-next"]'), 'nothing lined up, no button');
-
-    // A folder's notes go in album order, and follow a rename and a delete.
-    upNext.enqueue([app.vault.getFolderByPath('IR/Theories')].flatMap((f) => upNext.notesOf(f)), false, 'Theories');
-    assert.deepStrictEqual(plugin.settings.queue, ['IR/Theories/Liberalism.md', 'IR/Theories/Realism.md']);
-    await app.fileManager.renameFile(app.vault.getFolderByPath('IR/Theories'), 'IR/Schools');
-    assert.deepStrictEqual(plugin.settings.queue, ['IR/Schools/Liberalism.md', 'IR/Schools/Realism.md']);
-    await app.fileManager.trashFile(app.vault.getFileByPath('IR/Schools/Realism.md'));
-    assert.deepStrictEqual(plugin.settings.queue, ['IR/Schools/Liberalism.md']);
-
-    // Shuffle on the album page: one opened, the rest lined up in place of what was there.
-    leaf.view.file = file;
-    view.render();
-    const shuffle = Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Shuffle');
-    assert.ok(shuffle, 'Random became Shuffle');
-    click(shuffle);
-    const opened = leaf.view.file;
-    // The album as the page shows it, its disc included.
-    assert.ok(plugin.settings.queue.indexOf(opened.path) === -1);
-    assert.deepStrictEqual(plugin.settings.queue.concat(opened.path).sort(), ['IR/Anarchy.md', 'IR/Balance.md', 'IR/Cooperation.md', 'IR/Deterrence.md', 'IR/Schools/Liberalism.md']);
-
-    // Off: no button, » is the album's again, and the page says Random.
-    plugin.settings.upNext = false;
-    leaf.view.file = file;
-    strip.update();
-    assert.ok(!strip.el.querySelector('[data-action="up-next"]'));
     assert.strictEqual(strip.el.querySelector('[data-action="next"]').getAttribute('aria-label'), 'Next: Cooperation');
+    assert.ok(!strip.el.querySelector('[data-action="up-next"]'), 'no queue');
+    strip.skip('next');
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation');
     view.render();
-    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).some((b) => b.textContent === 'Random'));
+    const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
+    assert.ok(actions.includes('Random') && !actions.includes('Shuffle'), actions.join(', '));
+    assert.strictEqual(R.DEFAULTS.upNext, undefined, 'the setting is retired');
     strip.el.remove();
-  });
-
-  await t('Up Next plays an album from a note, says where from, keeps a queue under a name, and resumes the one before', async () => {
-    const { plugin, app, v, view } = setup();
-    plugin.queue = new R.Queue(plugin);
-    const upNext = new R.UpNext(plugin);
-    plugin.feature = (C) => (C === R.UpNext ? upNext : null);
-    const undo = [];
-    plugin.offerUndo = (msg, fn) => undo.push(fn);
-    v.vault.on('rename', (file, old) => plugin.queue.followRename(file, old));
-    v.vault.on('delete', (file) => plugin.queue.followDelete(file));
-    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file: null, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
-    app.workspace.rootSplit = {};
-    app.workspace.getMostRecentLeaf = () => leaf;
-    const q = plugin.queue;
-    const g = (p) => app.vault.getFileByPath(p);
-    q.add([g('IR/Theories/Realism.md')], false);
-
-    // Play from here: this note, then the rest of its album after it, from that album.
-    upNext.playFrom(g('IR/Balance.md'));
-    assert.strictEqual(leaf.view.file.basename, 'Balance');
-    assert.deepStrictEqual(q.paths(), ['IR/Cooperation.md', 'IR/Deterrence.md', 'IR/Theories/Liberalism.md', 'IR/Theories/Realism.md']);
-    assert.strictEqual(q.source().path, 'IR');
-
-    // The one it replaced is kept to resume, and Undo puts it back.
-    assert.deepStrictEqual(q.previous().paths, ['IR/Theories/Realism.md']);
-    undo.pop()();
-    assert.deepStrictEqual(q.paths(), ['IR/Theories/Realism.md']);
-    assert.strictEqual(q.source(), null);
-
-    // Played again, then resumed: the one before comes back, and this one is kept instead.
-    q.play([g('IR/Anarchy.md'), g('IR/Balance.md')], app.vault.getFolderByPath('IR'));
-    assert.ok(q.resume());
-    assert.deepStrictEqual(q.paths(), ['IR/Theories/Realism.md']);
-    assert.deepStrictEqual(q.previous().paths, ['IR/Balance.md']);
-
-    // Kept under a name, it follows renames and deletions, and plays from Collections.
-    q.add([g('IR/Cooperation.md')], false);
-    const kept = q.keep('Weekend');
-    assert.deepStrictEqual(q.saved().map((k) => k.name), ['Weekend']);
-    plugin.settings.upNext = true;
-    await view.setState({ mode: 'collections' }, {});
-    const tile = view.contentEl.querySelector('.dr-card');
-    assert.deepStrictEqual([tile.querySelector('.dr-card-title').textContent, tile.querySelector('.dr-card-sub').textContent], ['Weekend', 'Reading queue · 2 notes']);
-    click(tile);
-    assert.strictEqual(leaf.view.file.basename, 'Realism', 'played from Collections');
-    undo.pop()();
-    await app.fileManager.renameFile(app.vault.getFolderByPath('IR/Theories'), 'IR/Schools');
-    assert.deepStrictEqual(q.saved()[0].paths, ['IR/Schools/Realism.md', 'IR/Cooperation.md']);
-    assert.strictEqual(q.paths()[0], 'IR/Schools/Realism.md');
-    await app.fileManager.trashFile(g('IR/Cooperation.md'));
-    assert.deepStrictEqual(q.saved()[0].paths, ['IR/Schools/Realism.md']);
-    q.forget(kept.id);
-    assert.deepStrictEqual(q.saved(), []);
-
-    // Cleared: kept to resume too.
-    upNext.clear();
-    assert.deepStrictEqual(q.paths(), []);
-    assert.deepStrictEqual(q.previous().paths, ['IR/Schools/Realism.md']);
   });
 
   /* -- lengths, Home ------------------------------------------------------- */
@@ -977,17 +872,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(cards('Continue reading'), [`${notes[2].basename} · IR · 3 of ${notes.length}`], 'the note after the last one opened, with how far along');
     assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress').style.getPropertyValue('--dr-progress'), (2 / notes.length).toFixed(4));
 
-    // What's Up Next comes first.
-    plugin.settings.upNext = true;
-    plugin.queue = new R.Queue(plugin);
-    plugin.queue.set([notes[0].path]);
-    view.render();
-    assert.deepStrictEqual(cards('Up Next'), [`${notes[0].basename} · 1 · IR`], 'the queue, in order, on a shelf of its own');
-    assert.notStrictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`);
-    plugin.settings.homeShelves = [{ id: 'upnext', on: false }];
-    view.render();
-    assert.strictEqual(cards('Continue reading')[0], `${notes[0].basename} · Up Next`, 'without that shelf, Continue reading leads with it');
-    plugin.settings.homeShelves = [];
 
     // Your collections: smart albums, then albums that gather notes from elsewhere.
     const smart = new R.SmartAlbums(plugin);
@@ -1009,7 +893,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Chosen and ordered in the settings; a shelf new since comes on at the end.
     plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
-    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'upnext:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
     plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
     await view.setState({ mode: 'home' }, {});
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);

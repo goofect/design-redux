@@ -56,13 +56,8 @@ export const DEFAULTS = {
   // A line along the strip's foot for how far down the note you are.
   stripProgress: true,
   // Notes lined up to read next, by path; the strip's » goes through them first.
-  upNext: true,
   // A property's menu gives its value to the rest of the note's album.
   propertyForAlbum: true,
-  queue: [],
-  queueSource: '',
-  queuePrevious: null,
-  readingQueues: [],
   onePage: false,
   pinsExpanded: false,
   albumNoteLimit: 8,

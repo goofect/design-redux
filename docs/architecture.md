@@ -12,7 +12,7 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 
  src/core/     constants; helpers (art, colours 031, properties 045, text 047,      19 modules  4,622 lines
                sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
-               Queue, Selection 076; actions 078; Feature and mixInto 080; appearance
+               Selection 076; actions 078; Feature and mixInto 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
  src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the       18 modules  8,750
                album features, knowledge, library and knowledge checks

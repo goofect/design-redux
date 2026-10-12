@@ -11,7 +11,6 @@ import { Lengths } from '../core/065-lengths.js';
 import { Orders, PATH_KEYED, SETTINGS_MIGRATIONS } from '../core/070-orders.js';
 import { Notes } from '../core/073-notes.js';
 import { Files } from '../core/074-files.js';
-import { Queue } from '../core/075-queue.js';
 import { Selection } from '../core/076-selection.js';
 import { Appearance } from '../core/085-appearance.js';
 import { ListKeys } from '../library/105-list-keys.js';
@@ -21,7 +20,6 @@ import { Library } from '../library/130-browse-filters.js';
 import { ActionsMenu } from '../chrome/140-actions-menu.js';
 import { PropertiesPanel } from '../chrome/180-panel.js';
 import { ContextStrip } from '../chrome/190-strip.js';
-import { UpNext } from '../chrome/195-up-next.js';
 import { OnePage } from '../chrome/200-one-page.js';
 import { MenuFilter } from '../chrome/210-menu-filter.js';
 import { SettingsButton } from '../chrome/220-settings-button.js';
@@ -84,7 +82,6 @@ export class DesignRedux extends Plugin {
     this.orders = new Orders(this);
     this.files = new Files(this);
     this.notes = new Notes(this);
-    this.queue = new Queue(this);
     this.selection = new Selection(this);
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
@@ -96,7 +93,6 @@ export class DesignRedux extends Plugin {
       new ActionsMenu(this),
       new PropertiesPanel(this),
       new ContextStrip(this),
-      new UpNext(this),
       new OnePage(this),
       new MenuFilter(this),
       new SettingsButton(this),
