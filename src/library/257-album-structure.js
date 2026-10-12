@@ -25,6 +25,7 @@ import { byName, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, noteTags, onActivate } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { ALBUM_RECENTS_FROM } from './110-browse-screens.js';
@@ -92,16 +93,15 @@ export class PlacesSection extends PanelSection {
         this.panel.close();
       });
     });
-    this.renderList('places-canvases', 'Canvases', canvasesWith(this.app, file), (list, canvas) => this.fileRow(list, canvas));
+    this.renderList('places-canvases', 'Canvases', canvasesWith(this.plugin, file), (list, canvas) => this.fileRow(list, canvas));
   }
 }
 
 /** The canvases with a card for a note, as Obsidian counts their links. */
-export function canvasesWith(app, file) {
-  const links = app.metadataCache.resolvedLinks || {};
-  return Object.keys(links)
-    .filter((p) => p.endsWith('.canvas') && links[p] && links[p][file.path])
-    .map((p) => app.vault.getFileByPath(p))
+export function canvasesWith(plugin, file) {
+  return Object.keys(libraryIndex(plugin).incoming(file))
+    .filter((p) => p.endsWith('.canvas'))
+    .map((p) => plugin.app.vault.getFileByPath(p))
     .filter(Boolean)
     .sort((a, b) => a.basename.localeCompare(b.basename));
 }
@@ -238,7 +238,7 @@ export class AlbumStructure extends Feature {
 
   /** Every folder note's values under any earlier name moved to the name now set, as one step of Undo. */
   async carryKeys() {
-    const notes = this.app.vault.getMarkdownFiles().filter((f) => this.plugin.isFolderNote(f));
+    const notes = libraryIndex(this.plugin).folderNotes().map((x) => x.note);
     const changes = [];
     for (const note of notes) {
       const fm = this.plugin.notes.props(note);
@@ -268,18 +268,18 @@ export class AlbumStructure extends Feature {
    */
   linked(folder, files) {
     const inAlbum = new Set(files.map((f) => f.path));
-    const resolved = this.app.metadataCache.resolvedLinks || {};
+    const index = libraryIndex(this.plugin);
     const counts = new Map();
     const bump = (path, n) => {
       if (inAlbum.has(path) || this.plugin.isFolderNote(this.app.vault.getFileByPath(path) || {})) return;
       counts.set(path, (counts.get(path) || 0) + n);
     };
-    Object.keys(resolved).forEach((from) => {
-      const out = resolved[from] || {};
-      Object.keys(out).forEach((to) => {
-        if (inAlbum.has(from) && !inAlbum.has(to)) bump(to, out[to]);
-        else if (inAlbum.has(to) && !inAlbum.has(from)) bump(from, out[to]);
-      });
+    // Links out of the album's notes, and into them.
+    files.forEach((file) => {
+      const out = index.outgoing(file);
+      Object.keys(out).forEach((to) => inAlbum.has(to) || bump(to, out[to]));
+      const into = index.incoming(file);
+      Object.keys(into).forEach((from) => inAlbum.has(from) || bump(from, into[from]));
     });
     return Array.from(counts.entries())
       .map(([path, count]) => ({ file: this.app.vault.getFileByPath(path), count }))
@@ -316,19 +316,18 @@ export class AlbumStructure extends Feature {
 
   /** The albums that gather notes from elsewhere: those whose folder note names some under includes, by name. */
   gathering() {
-    return this.app.vault
-      .getMarkdownFiles()
-      .filter((note) => note.parent && this.plugin.isFolderNote(note) && valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length)
-      .map((note) => note.parent)
+    return libraryIndex(this.plugin)
+      .folderNotes()
+      .filter(({ note }) => valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length)
+      .map(({ folder }) => folder)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /** The albums of one kind ('subject' and so on), by name. */
   ofKind(type) {
-    return this.app.vault
-      .getMarkdownFiles()
-      .filter((note) => note.parent && this.plugin.isFolderNote(note))
-      .map((note) => note.parent)
+    return libraryIndex(this.plugin)
+      .folderNotes()
+      .map(({ folder }) => folder)
       .filter((folder) => this.info(folder).type === type)
       .sort((a, b) => a.name.localeCompare(b.name));
   }

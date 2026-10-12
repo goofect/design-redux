@@ -10,6 +10,7 @@
  *                                  that use each other, and uses that cross the layers
  *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
  *                                  no new use across the layers
+ *   node tests/map.js --fix-imports  each module's import lines rewritten to what it uses
  *   node tests/map.js --check      fails on a use crossing the layers that isn't in tests/snapshots/layers.json,
  *                                  or one listed there that's gone (--update rewrites the list); see
  *                                  docs/architecture.md
@@ -372,10 +373,56 @@ if (args[0] === '--areas') {
  * src/main.js's imports, each module's own imports first); and no use
  * crosses the layers that isn't on the known list.
  */
+// What's taken from outside the plugin — Obsidian, CodeMirror — by name, and from where.
+const externals = new Map();
+pieces.forEach((p) => Object.keys(p.imports).forEach((n) => p.imports[n].startsWith('.') || externals.set(n, p.imports[n])));
+const resolve = (p, spec) => (spec.startsWith('.') ? path.posix.normalize(path.posix.join(p.area, spec)) : null);
+
+/** The import lines a module needs: what it uses from Obsidian and CodeMirror, then from other modules, in order. */
+function importLines(p) {
+  const from = new Map();
+  Object.keys(p.uses).forEach((n) => {
+    const home = homeOf.get(n);
+    let spec = null;
+    if (home && home !== p) spec = home.area === p.area ? `./${home.name}.js` : `../${home.area}/${home.name}.js`;
+    else if (!home && externals.has(n)) spec = externals.get(n);
+    if (spec) from.set(spec, (from.get(spec) || []).concat(n));
+  });
+  const order = (spec) => (spec.startsWith('.') ? `1${spec.replace(/^.*\//, '')}` : `0${spec}`);
+  return [...from.keys()].sort((a, b) => order(a).localeCompare(order(b))).map((spec) => `import { ${from.get(spec).sort((a, b) => a.localeCompare(b)).join(', ')} } from '${spec}';`);
+}
+
+if (args[0] === '--fix-imports') {
+  let changed = 0;
+  pieces.forEach((p) => {
+    const lines = p.text.split('\n');
+    const at = lines.findIndex((l) => /^import \{[^}]*\} from '[^']+';$/.test(l));
+    const kept = lines.filter((l) => !/^import \{[^}]*\} from '[^']+';$/.test(l));
+    const wanted = importLines(p);
+    let out;
+    if (at !== -1) out = [...kept.slice(0, at), ...wanted, ...kept.slice(at)];
+    else {
+      // After the header comment, with a blank line either side.
+      let i = 0;
+      while (i < kept.length && /^\/\*.*\*\/$/.test(kept[i])) i++;
+      out = wanted.length ? [...kept.slice(0, i), ...(i ? [''] : []), ...wanted, ...(kept[i] === '' ? [] : ['']), ...kept.slice(i)] : kept;
+    }
+    // A block left empty takes its blank line with it.
+    let text = out.join('\n');
+    if (at !== -1 && !wanted.length) text = text.replace(/\n\n\n/, '\n\n');
+    if (text !== p.text) {
+      fs.writeFileSync(path.join(src, p.file), text);
+      changed++;
+      console.log(`imports: ${p.file}`);
+    }
+  });
+  console.log(`${changed} modules' imports rewritten`);
+  process.exit(0);
+}
+
 if (args[0] === '--verify') {
   const problems = [];
   const byFile = new Map(pieces.map((p) => [p.file, p]));
-  const resolve = (p, spec) => (spec.startsWith('.') ? path.posix.normalize(path.posix.join(p.area, spec)) : null);
   pieces.forEach((p) => {
     Object.keys(p.uses).forEach((n) => {
       const home = homeOf.get(n);
@@ -383,6 +430,10 @@ if (args[0] === '--verify') {
       const from = p.imports[n];
       if (!from) problems.push(`${p.file} uses ${n} from ${home.file} without importing it`);
       else if (resolve(p, from) !== home.file) problems.push(`${p.file} imports ${n} from ${from}, but it's in ${home.file}`);
+    });
+    // Obsidian's and CodeMirror's names are imported too, or the bundle would look for them on the window.
+    Object.keys(p.uses).forEach((n) => {
+      if (!homeOf.get(n) && externals.has(n) && !p.imports[n]) problems.push(`${p.file} uses ${n} from ${externals.get(n)} without importing it`);
     });
     Object.keys(p.imports).forEach((n) => {
       const target = resolve(p, p.imports[n]);

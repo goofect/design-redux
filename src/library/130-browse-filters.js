@@ -8,6 +8,7 @@ import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } 
 import { SORTS } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { Appearance } from '../core/085-appearance.js';
 import { LibraryEditor } from './090-library-editor.js';
@@ -254,8 +255,8 @@ export class Library extends Feature {
 
     // Anywhere in the vault: bases are commonly kept in a folder of
     // their own, which the root-only scan missed.
-    const bases = this.app.vault
-      .getFiles()
+    const bases = libraryIndex(this.plugin)
+      .files()
       .filter((f) => f.extension === 'base')
       .sort((a, b) => a.basename.localeCompare(b.basename))
       .map((f) => ({ kind: 'file', path: f.path }));

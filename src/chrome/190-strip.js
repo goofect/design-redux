@@ -9,8 +9,9 @@
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
 import { albumNeighbours, canStep, drawFolderArt, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, showTargetMenu, step, valueText } from '../core/030-helpers-art.js';
-import { asButton, countFilesIn, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
+import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { Library } from '../library/130-browse-filters.js';
@@ -423,7 +424,7 @@ export class ContextStrip extends Feature {
     if (browse.mode === 'library-check') return 'What to look at';
     if (browse.mode === 'inbox') return 'Notes in no album';
     if (!folder || (folder.isRoot && folder.isRoot())) return vault;
-    const n = countFilesIn(folder);
+    const n = libraryIndex(this.plugin).count(folder);
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
     const kind = structure ? structure.info(folder).label : '';
     return [n === 1 ? '1 item' : `${n} items`, kind || (folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent.name : '')].filter(Boolean).join(' · ');

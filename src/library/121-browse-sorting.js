@@ -11,6 +11,7 @@ import { byName, composing, liveViews, showMenuAt, sortByOrder } from '../core/0
 import { asButton, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, noteTags, onActivate, OWN_ORDER, propertyFilterLabel, SORTS, TABLE_SORTS, vaultTags } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames, plainValue, propertyValues } from '../core/045-helpers-properties.js';
 import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
@@ -72,7 +73,7 @@ export class BrowseSorting {
   folderTime(folder, field) {
     if (!this.timeMemo) {
       const memo = { modified: new Map(), created: new Map() };
-      this.app.vault.getMarkdownFiles().forEach((file) => {
+      libraryIndex(this.plugin).markdown().forEach((file) => {
         for (let p = file.parent; p; p = p.parent) {
           memo.modified.set(p.path, Math.max(memo.modified.get(p.path) || 0, file.stat.mtime));
           memo.created.set(p.path, Math.max(memo.created.get(p.path) || 0, file.stat.ctime));
@@ -274,7 +275,7 @@ export class BrowseSorting {
     if (!this.filterTag && !this.filterProp && !this.filterDate) return true;
     if (!this.filterMemo) {
       const paths = new Set();
-      this.app.vault.getMarkdownFiles().forEach((file) => {
+      libraryIndex(this.plugin).markdown().forEach((file) => {
         if (!this.inFilter(file)) return;
         for (let p = file.parent; p && !(p.isRoot && p.isRoot()); p = p.parent) paths.add(p.path);
       });

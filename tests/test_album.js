@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1020,6 +1020,45 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([went[0].mode, went[0].query], ['search', 'bal']);
     await view.setState(went[0], {});
     assert.strictEqual(view.query, 'bal', 'carried over');
+  });
+
+  await t('the library index: worked out once while listening, forgotten as files come and go and links resolve', () => {
+    const { v, plugin, app } = setup();
+    const on = {};
+    app.vault.on = (type, fn) => ((on[type] = fn), {});
+    app.metadataCache.on = (type, fn) => ((on[type] = fn), {});
+    plugin.registerEvent = () => {};
+    let scans = 0;
+    const markdown = app.vault.getMarkdownFiles.bind(app.vault);
+    app.vault.getMarkdownFiles = () => (scans++, markdown());
+    const index = new R.LibraryIndex(plugin);
+    const ir = app.vault.getFolderByPath('IR');
+    // Not listening: worked out on each ask, as a stand-in vault needs.
+    index.notes();
+    index.notes();
+    assert.strictEqual(scans, 2);
+    index.listen();
+    scans = 0;
+    const before = index.notes().length;
+    index.notes().sort();
+    index.markdown();
+    assert.strictEqual(scans, 1, 'once, while listening');
+    assert.strictEqual(index.notes().length, before, 'a copy to sort, not what is kept');
+    assert.strictEqual(index.count(ir), 6);
+    v.file('IR/New.md');
+    assert.strictEqual(index.count(ir), 6, 'kept until told');
+    on.create();
+    assert.strictEqual(index.count(ir), 7);
+    assert.strictEqual(index.notes().length, before + 1);
+    // Links both ways, kept until Obsidian resolves again.
+    app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 2 } };
+    on.resolved();
+    assert.deepStrictEqual(index.incoming(app.vault.getFileByPath('IR/Balance.md')), { 'IR/Anarchy.md': 2 });
+    assert.deepStrictEqual(index.outgoing(app.vault.getFileByPath('IR/Anarchy.md')), { 'IR/Balance.md': 2 });
+    app.metadataCache.resolvedLinks = {};
+    assert.deepStrictEqual(index.incoming('IR/Balance.md'), { 'IR/Anarchy.md': 2 }, 'kept');
+    on.resolve();
+    assert.deepStrictEqual(index.incoming('IR/Balance.md'), {});
   });
 
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {

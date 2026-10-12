@@ -14,6 +14,7 @@ import { LIBRARY_VIEW } from '../core/020-constants.js';
 import { byName, liveViews, showMenuAt } from '../core/030-helpers-art.js';
 import { fmGet, plainValue } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { LibraryView } from './100-library.js';
 import { BROWSE_SCREENS, BrowseScreen } from './110-browse-screens.js';
@@ -154,8 +155,8 @@ export class SmartAlbums extends Feature {
   /** The notes through its filters and Find; folder notes stand for their folders, so aren't among them. */
   files(view) {
     const hide = this.settings.hideFolderNotes !== false;
-    return this.app.vault
-      .getMarkdownFiles()
+    return libraryIndex(this.plugin)
+      .markdown()
       .filter((f) => !(hide && this.plugin.isFolderNote(f)) && view.inFilter(f) && view.matches(f.basename));
   }
 
@@ -245,7 +246,7 @@ export class SmartAlbums extends Feature {
     // Where Obsidian won't list its properties, the notes' own.
     if (!keys.length) {
       const seen = new Set();
-      this.app.vault.getMarkdownFiles().forEach((f) => {
+      libraryIndex(this.plugin).markdown().forEach((f) => {
         Object.keys(noteProps(this.app, f)).forEach((k) => k !== 'position' && seen.add(k));
       });
       keys = Array.from(seen).sort(byName);

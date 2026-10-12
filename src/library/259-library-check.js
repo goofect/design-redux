@@ -22,6 +22,7 @@ import { byName } from '../core/030-helpers-art.js';
 import { asButton, noteTags, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { BROWSE_SCREENS, BrowseScreen } from './110-browse-screens.js';
 import { Library } from './130-browse-filters.js';
@@ -239,7 +240,7 @@ export class LibraryCheck extends Feature {
         out.push(c);
         walk(c);
       });
-    walk(this.app.vault.getRoot());
+    walk(libraryIndex(this.plugin).root());
     return out;
   }
 
@@ -253,7 +254,7 @@ export class LibraryCheck extends Feature {
     const included = new Set();
     if (structure && structure.enabled) this.folders().forEach((f) => structure.info(f).includes.forEach((t) => included.add(t)));
     const home = String(this.settings.homePath || '');
-    return (this.app.vault.getRoot().children || []).filter((c) => this.isNote(c) && c.path !== home && !included.has(c)).sort((a, b) => byName(a.basename, b.basename));
+    return (libraryIndex(this.plugin).root().children || []).filter((c) => this.isNote(c) && c.path !== home && !included.has(c)).sort((a, b) => byName(a.basename, b.basename));
   }
 
   /** What there is to look at: [{ target, problem, kind, section }]. */
@@ -294,7 +295,7 @@ export class LibraryCheck extends Feature {
         if (this.loops(start, takes)) add('hierarchy', start, 'loop', 'Takes in an album that takes it in');
       });
       // A note saying it's an album, without being a folder note.
-      this.app.vault.getMarkdownFiles().forEach((f) => {
+      libraryIndex(this.plugin).markdown().forEach((f) => {
         if (this.plugin.isFolderNote(f)) return;
         const kind = valueList(fmGet(noteProps(this.app, f), ALBUM_KEYS.type))[0];
         // Only the kinds it knows: an album property can mean a record's album.
@@ -307,7 +308,7 @@ export class LibraryCheck extends Feature {
       const v = valueList(fmGet(noteProps(this.app, f), key))[0];
       return v ? this.app.metadataCache.getFirstLinkpathDest(plainValue(v), f.path) : null;
     };
-    this.app.vault.getMarkdownFiles().forEach((f) => {
+    libraryIndex(this.plugin).markdown().forEach((f) => {
       if (this.loops(f, (n) => [parentOf(n)].filter(Boolean))) add('hierarchy', f, 'parents', `Its ${key} leads back round to it`);
     });
 
@@ -415,16 +416,14 @@ export class LibraryCheck extends Feature {
       (f.children || []).forEach((c) => this.isNote(c) && albumOf.set(c.path, f));
       if (structure && structure.enabled) structure.info(f).includes.forEach((t) => t instanceof TFile && !albumOf.has(t.path) && albumOf.set(t.path, f));
     });
-    const resolved = this.app.metadataCache.resolvedLinks || {};
-    const linksTo = new Map();
-    Object.keys(resolved).forEach((from) => Object.keys(resolved[from] || {}).forEach((to) => linksTo.set(to, (linksTo.get(to) || []).concat([[from, resolved[from][to]]]))));
+    const index = libraryIndex(this.plugin);
     const slug = (s) => String(s).toLowerCase().replace(/\s+/g, '-');
     const out = new Map();
     notes.forEach((file) => {
       const score = new Map();
       const add = (folder, n) => folder && score.set(folder, (score.get(folder) || 0) + n);
-      Object.entries(resolved[file.path] || {}).forEach(([to, n]) => add(albumOf.get(to), n));
-      (linksTo.get(file.path) || []).forEach(([from, n]) => add(albumOf.get(from), n));
+      Object.entries(index.outgoing(file)).forEach(([to, n]) => add(albumOf.get(to), n));
+      Object.entries(index.incoming(file)).forEach(([from, n]) => add(albumOf.get(from), n));
       const cache = this.app.metadataCache.getFileCache(file);
       const tags = noteTags(cache);
       const values = Object.values((cache && cache.frontmatter) || {}).reduce((acc, v) => acc.concat(valueList(v).map((x) => slug(plainValue(x)))), []);

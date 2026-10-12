@@ -12,6 +12,7 @@ import { TYPE_ICONS } from '../core/020-constants.js';
 import { albumNeighbours, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
 import { renamePropertyInPlace } from '../bulk/290-bulk-engine.js';
@@ -380,9 +381,7 @@ export class NotesScreen extends BrowseScreen {
     view.renderTitleBar(root, this.title());
 
     const notes = view.sortNotes(
-      this.app.vault
-        .getMarkdownFiles()
-        .filter((f) => !this.plugin.isFolderNote(f))
+      libraryIndex(this.plugin).notes()
         .filter((f) => view.inFilter(f))
         .filter((f) => view.matches(f.basename))
     );
@@ -673,9 +672,7 @@ export class CollectionScreen extends BrowseScreen {
 
   /** The notes made most lately, the newest first: albums' own notes aside. */
   recentlyAdded() {
-    return this.app.vault
-      .getMarkdownFiles()
-      .filter((f) => !this.plugin.isFolderNote(f))
+    return libraryIndex(this.plugin).notes()
       .sort((a, b) => b.stat.ctime - a.stat.ctime)
       .slice(0, 100);
   }
@@ -946,9 +943,7 @@ export class SearchScreen extends BrowseScreen {
     // Searching note bodies would mean reading every file on each
     // keystroke, so that's handed to Obsidian's own search instead.
     const notes = view.sortFiles(
-      this.app.vault
-        .getMarkdownFiles()
-        .filter((f) => !this.plugin.isFolderNote(f))
+      libraryIndex(this.plugin).notes()
         .filter((f) => view.inFilter(f))
         .filter(
           (f) =>
@@ -1055,9 +1050,7 @@ export class HomeScreen extends BrowseScreen {
 
     const recents = this.plugin.recentFiles().filter(keep);
     const pinned = this.plugin.pins.files().filter(keep).slice(0, 12);
-    const notes = this.app.vault
-      .getMarkdownFiles()
-      .filter((f) => !this.plugin.isFolderNote(f))
+    const notes = libraryIndex(this.plugin).notes()
       .filter(keep);
     const added = notes
       .slice()

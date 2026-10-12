@@ -5,11 +5,12 @@
 /* cards. Methods of BrowseView, put on by mixInto.                   */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Platform, setIcon, TFolder } from 'obsidian';
-import { blankLook, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, countFilesIn, onActivate, relativeDay, roveFocus } from '../core/040-helpers-sorting.js';
+import { Platform, setIcon, TFolder } from 'obsidian';
+import { blankLook, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
+import { asButton, onActivate, relativeDay, roveFocus } from '../core/040-helpers-sorting.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -406,7 +407,7 @@ export class BrowseRows {
   }
 
   countLabel(folder) {
-    const n = countFilesIn(folder);
+    const n = libraryIndex(this.plugin).count(folder);
     return n === 1 ? '1 item' : `${n} items`;
   }
 

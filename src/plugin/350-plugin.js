@@ -12,6 +12,7 @@ import { Orders, PATH_KEYED, SETTINGS_MIGRATIONS } from '../core/070-orders.js';
 import { Notes } from '../core/073-notes.js';
 import { Files } from '../core/074-files.js';
 import { Selection } from '../core/076-selection.js';
+import { LibraryIndex } from '../core/077-library-index.js';
 import { Appearance } from '../core/085-appearance.js';
 import { ListKeys } from '../library/105-list-keys.js';
 import { SidebarDrop } from '../library/107-sidebar-drop.js';
@@ -83,6 +84,9 @@ export class DesignRedux extends Plugin {
     this.files = new Files(this);
     this.notes = new Notes(this);
     this.selection = new Selection(this);
+    // What every screen reads of the vault, kept while files and links stay as they are.
+    this.libraryIndex = new LibraryIndex(this);
+    this.libraryIndex.listen();
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
@@ -368,7 +372,7 @@ export class DesignRedux extends Plugin {
   }
 
   folderHasNotes(folder) {
-    return this.files.folderHasNotes(folder);
+    return this.libraryIndex.hasNotes(folder);
   }
 
   isFolderNote(file) {
@@ -523,6 +527,8 @@ export class DesignRedux extends Plugin {
    * a settings field pauses, rather than once per letter.
    */
   async saveSettings() {
+    // Which notes stand for their folders is a setting.
+    if (this.libraryIndex) this.libraryIndex.forget();
     await this.saveData(this.settings);
     window.clearTimeout(this.refreshTimer);
     this.refreshTimer = window.setTimeout(() => {

@@ -11,6 +11,7 @@ import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js'
 import { blankLook, byName, canStep, drawFolderArt, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { BROWSE_SCREENS, FolderScreen, ROOT_MODES } from './110-browse-screens.js';
@@ -595,7 +596,7 @@ export class BrowseView extends ItemView {
   groupsByProperty(key) {
     const map = new Map();
 
-    this.app.vault.getMarkdownFiles().forEach((file) => {
+    libraryIndex(this.plugin).markdown().forEach((file) => {
       if (this.plugin.isFolderNote(file)) return;
       if (!this.inFilter(file)) return;
       const cache = this.app.metadataCache.getFileCache(file);

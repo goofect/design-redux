@@ -24,6 +24,7 @@ import { onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { plainValue } from '../core/045-helpers-properties.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { BROWSE_SCREENS } from './110-browse-screens.js';
 import { Library } from './130-browse-filters.js';
@@ -157,7 +158,7 @@ export function knowledgeFindings(k) {
 
   // The kinds the index was read with: the same objects its relationships hold.
   const kinds = idx.kinds || k.kinds();
-  const notes = app.vault.getMarkdownFiles();
+  const notes = libraryIndex(k.plugin).markdown();
   const outOf = (f) => idx.out.get(f.path) || [];
   const inOf = (f) => idx.into.get(f.path) || [];
   const isHier = (kind) => kind.category === 'hierarchy';

@@ -17,6 +17,7 @@ import { drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { actionsOn, addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
@@ -375,7 +376,7 @@ export class Knowledge extends Feature {
     const twice = [];
     const kinds = this.kinds();
     const push = (map, key, value) => map.set(key, (map.get(key) || []).concat(value));
-    this.app.vault.getMarkdownFiles().forEach((file) => {
+    libraryIndex(this.plugin).markdown().forEach((file) => {
       const cache = this.app.metadataCache.getFileCache(file);
       const fm = cache && cache.frontmatter;
       if (!fm) return;

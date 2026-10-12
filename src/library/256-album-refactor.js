@@ -12,6 +12,7 @@
 import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
 import { byName } from '../core/030-helpers-art.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { FolderPicker, NamePrompt } from '../ui/230-pickers.js';
@@ -144,12 +145,12 @@ export class AlbumRefactor extends Feature {
   /** Links into these files from notes not among them, as Obsidian counts them. */
   linksIn(files) {
     const paths = new Set(files.map((f) => f.path));
-    const resolved = this.app.metadataCache.resolvedLinks || {};
+    const index = libraryIndex(this.plugin);
     let n = 0;
-    Object.keys(resolved).forEach((from) => {
-      if (paths.has(from)) return;
-      Object.keys(resolved[from] || {}).forEach((to) => {
-        if (paths.has(to)) n += resolved[from][to];
+    files.forEach((file) => {
+      const into = index.incoming(file);
+      Object.keys(into).forEach((from) => {
+        if (!paths.has(from)) n += into[from];
       });
     });
     return n;

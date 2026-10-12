@@ -10,7 +10,8 @@ Coffee N' Christmas.
 - `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
   (core, ui, library, chrome, links, editor, bulk, canvas, plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
-  them all and exports the plugin. A new module goes in its area with a number
+  them all and exports the plugin. After using a name from another module,
+  `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
   between its neighbours'. `obsidian` and `@codemirror/*` are imported as
   usual and provided by Obsidian at runtime.
 - `main.js` — built, not committed. `npm run build` (tests build it first):
@@ -65,6 +66,10 @@ Coffee N' Christmas.
   `plugin.notes.write(file, change, { undo })`, whose Undo keeps what was edited
   since; never `processFrontMatter` directly. `plugin.files` makes, moves and puts
   back files and folder notes (the plugin's `moveFile` and so on pass to it).
+  `libraryIndex(plugin)` (077) is what screens read of the vault — `notes()`,
+  `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
+  `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
+  and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts: a later piece writes `class Part {…}`
   and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
   120–124, Knowledge's canvas side in 326). No `super` in a part.
