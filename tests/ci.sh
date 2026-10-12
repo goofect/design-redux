@@ -3,7 +3,7 @@
 # how it went, whether it was released, and, if something failed, only the
 # failing lines. Run it once after pushing instead of checking by hand.
 sha=${1:-$(git rev-parse HEAD)}
-runs="repos/goofect/design-redux/actions/runs?head_sha=$sha"
+runs="repos/goofect/design-redux/actions/runs?head_sha=$sha&branch=main"
 state=
 for _ in $(seq 1 55); do
   state=$(gh api "$runs" --jq '.workflow_runs[0] | "\(.status) \(.conclusion)"' 2>/dev/null)
@@ -19,6 +19,10 @@ tag=$(git tag --sort=-v:refname | head -1)
 if git merge-base --is-ancestor "$sha" "$tag" 2>/dev/null; then echo "released: $tag"; else echo "not released"; fi
 
 [ "$state" = "completed success" ] && exit 0
+# Which job failed: a release that failed after the tests passed usually lost
+# a race with a newer push, whose own run then releases this commit too.
+id=$(gh api "$runs" --jq '.workflow_runs[0].id')
+gh api "repos/goofect/design-redux/actions/runs/$id/jobs" --jq '[.jobs[] | "\(.name): \(.conclusion)"] | join(", ")'
 for f in simulation-tests.txt obsidian-tests.txt; do
   git show "origin/ci-results:$f" 2>/dev/null | grep -iE 'fail|error|✖|not ok' | head -n 25
 done
