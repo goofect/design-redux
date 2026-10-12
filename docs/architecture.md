@@ -233,7 +233,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M3 | note and property operations; quiet links split — **done** | high | one read path and one write path for properties; undo doesn't overwrite later edits |
 | M4 | library, albums, the plugin class — **done** | high | 120 under ~1,200 lines; 350 only composes |
 | M5 | UI parts and CSS — **done** | medium | dialogs build from shared parts |
-| M6 | canvas | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
+| M6 | canvas — **done** (target revised, §16) | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
 | M7 | build (optional) | high | only if §4's conditions hold |
 | M8 | cleanup | medium | docs match the code |
 
@@ -445,3 +445,43 @@ Behaviour and markup are unchanged, and every suite passed at each step.
 - One glide-and-save step for its 8 copies.
 - Knowledge's canvas mapping moved into the canvas area.
 - Benchmarks.
+
+## 16. M6, done
+
+Behaviour is unchanged, and every suite passed at each step. The crossings went from 29 to
+20, and the pairs of pieces that use each other from 12 to 11.
+
+- **`afterCanvasChange` and `glideAndSettle`** (in `335`, beside the fold pass) do what
+  followed every change made by hand: save if anything changed, tell the fold pass, tell those
+  watching. That was written out in restructure, layouts (twice), arrange, the mind map and
+  tidy. Arrange still doesn't announce, and the mind map still always saves, as before.
+- **`saveCanvas(canvas)`** (in `316`) replaces eight copies of the guarded save: four
+  `save(view)` methods alike in cards, arrows, fold and relations, and four try-blocks. Saves
+  inside larger steps (after `importData`) stay where they are.
+- **Relations:** the kinds and the keys an arrow carries (`RELATION_KEY`, `RELATED_KEY`,
+  `DEFAULT_RELATION_TYPES`) are shared data in `020`. `relationTypes(settings)` gives the kinds
+  as set, for the canvas and for knowledge alike.
+- **Knowledge's canvas side** moved to `326-canvas-relations` as `KnowledgeCanvas`, put on
+  `Knowledge` by `mixInto`. It finds a note's card, writes arrows into notes, draws
+  relationships as arrows and makes a map beside a note. Knowledge (library area) no longer
+  reaches into canvas pieces; one use the other way, `Knowledge` itself, replaces 11.
+- **Benchmarks:** the real-Obsidian suite times fold-all, unfold-all and tidy on trees of
+  20, 100 and 500 cards. It turns motion off, so it times the work, not the glide. The
+  `perf:` lines go into `ci-output/<version>-timings.txt`. The first run, on the latest
+  Obsidian locally:
+
+  | Cards | Fold all | Unfold all | Tidy |
+  |---|---|---|---|
+  | 20 | 9 ms | 5 ms | 7 ms |
+  | 100 | 31 ms | 12 ms | 25 ms |
+  | 500 | 79 ms | 21 ms | 15 ms |
+
+- **Target revised.** "Only 315/316 touch `view.canvas`" isn't worth it. The reads that
+  remain (`canvas.nodes` 41 times, `readonly` 18, `edges` 18) are plain property reads, already
+  guarded. Reading the canvas goes through `canvasModel`. Wrapping each read would churn 19
+  pieces and make nothing safer. The calls with side effects (saving, gliding, what follows a
+  change) are now each in one place, which was the point.
+- **Next:** M7 (ES modules) stays optional, per §4. M8 is cleanup:
+  - the plugin class's leftover behaviour (covers, new folder, pins, leftovers);
+  - the library benchmarks;
+  - docs and `AGENTS.md` brought up to date.
