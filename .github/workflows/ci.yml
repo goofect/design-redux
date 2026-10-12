@@ -169,6 +169,17 @@ jobs:
           fi
           echo "version=$next" >> "$GITHUB_OUTPUT"
 
+      # The build bundles src/ with esbuild, a dev dependency.
+      - uses: actions/setup-node@v4
+        if: steps.changed.outputs.release == 'yes'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.changed.outputs.release == 'yes'
+        run: npm ci
+
       - name: Build main.js
         if: steps.changed.outputs.release == 'yes'
         run: node build.mjs
