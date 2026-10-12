@@ -232,7 +232,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M2 | helpers in the right place, duplicates gone — **done** | low | no shared helper declared in a feature piece; nothing in core reaches up; 030 has no mutual pairs |
 | M3 | note and property operations; quiet links split — **done** | high | one read path and one write path for properties; undo doesn't overwrite later edits |
 | M4 | library, albums, the plugin class — **done** | high | 120 under ~1,200 lines; 350 only composes |
-| M5 | UI parts and CSS | medium | dialogs build from shared parts |
+| M5 | UI parts and CSS — **done** | medium | dialogs build from shared parts |
 | M6 | canvas | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
 | M7 | build (optional) | high | only if §4's conditions hold |
 | M8 | cleanup | medium | docs match the code |
@@ -415,3 +415,33 @@ The 29 crossings left:
   - album property with the bulk notices;
   - album structure with the canvas vault map.
 - **Knowledge mapping notes onto canvases:** 11 names, for M6.
+
+## 15. M5, done
+
+Behaviour and markup are unchanged, and every suite passed at each step.
+
+- **`asButton(el, label)`** (in `040`, beside `onActivate`) replaces the hand-written role, tab
+  stop and label in 81 places. It sets them in the same order, so redraw comparisons see the
+  same markup.
+- **`reportRow`** builds the rows of both the library check and the knowledge check. The
+  knowledge check used to build its rows line for line the same way, then add its own fix
+  button.
+- **The summary and note-link builders** were already shared in M3 (`BulkModal.showSummary`,
+  `noteList`), and the property paste preview builds on the same patterns.
+- **The checkbox rows stay as they are.** Property rows with icons and counts, note pick lists
+  and single options differ by design, each with its own markup and styles. Merging them would
+  change both for no gain.
+- **CSS:**
+  - A scan of all 512 `dr-` classes against the source found one rule nothing sets
+    (`.dr-quiet-hidden`, left from before quiet links were kept out of Obsidian's cache), and
+    it is gone. The two Style Settings toggles (`dr-flat-covers`, `dr-strip-flat`) are set by
+    that plugin.
+  - The map at the top of `styles.css` now names the pieces each part dresses.
+  - Rules stay in their order. Moving them could change which of two equally specific rules
+    wins, for no gain in behaviour.
+
+**Next, M6:** the canvas.
+- Internals reached only through `315`/`316`.
+- One glide-and-save step for its 8 copies.
+- Knowledge's canvas mapping moved into the canvas area.
+- Benchmarks.
