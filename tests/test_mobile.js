@@ -83,7 +83,7 @@ class Menu {
 }
 const settingNames = [];
 class Setting {
-  constructor(el) { this.el = el; }
+  constructor(el) { this.el = el; this.settingEl = el && el.createDiv ? el.createDiv({ cls: "setting-item" }) : null; }
   setName(n) { settingNames.push(n); return this; }
   setDesc() { return this; }
   setHeading() { return this; }
@@ -110,7 +110,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -286,6 +286,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(settingNames.includes('Context strip'));
     assert.ok(tab.containerEl.querySelector('.dr-settings-note'));
     phone(false);
+
+    // Opened at one setting, from where it shows: its tab, its row marked.
+    tab.query = 'single';
+    tab.reveal('contextStrip');
+    tab.display();
+    const row = Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === 'contextStrip');
+    assert.ok(row && row.classList.contains('is-revealed'));
+    assert.strictEqual(tab.tab, T.SETTINGS_TABS.find((s) => s.sections.some((sec) => sec.keys.includes('contextStrip'))).id);
+    assert.strictEqual(tab.query, '', 'a search left in the field would hide it');
   });
 
   /* -- browse view hooks ----------------------------------------------- */

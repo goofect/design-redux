@@ -8239,3 +8239,10 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
     animation: none;
   }
 }
+
+/* A setting opened to from where it shows: marked a moment. */
+.dr-settings .is-revealed {
+  border-radius: var(--dr-r, 6px);
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  transition: background-color 600ms ease-out;
+}

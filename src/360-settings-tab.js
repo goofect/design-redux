@@ -234,6 +234,26 @@ class DesignReduxSettingTab extends PluginSettingTab {
     this.search(this.query || '');
     containerEl.scrollTop = tops[0];
     if (scroller) scroller.scrollTop = tops[1];
+    this.showRevealed();
+  }
+
+  /** Opened next at one setting: its tab, and its row scrolled to and marked. */
+  reveal(key) {
+    const spec = SETTINGS_TABS.find((tab) => tab.sections.some((sec) => sec.keys.indexOf(key) !== -1));
+    if (spec) this.tab = spec.id;
+    this.query = '';
+    this.revealKey = key;
+  }
+
+  showRevealed() {
+    const key = this.revealKey;
+    this.revealKey = null;
+    if (!key) return;
+    const el = Array.from(this.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
+    if (!el) return;
+    if (typeof el.scrollIntoView === 'function') el.scrollIntoView({ block: 'center' });
+    el.addClass('is-revealed');
+    window.setTimeout(() => el.removeClass('is-revealed'), 1600);
   }
 
   /** Above the tabs: a search through every tab's settings, and the settings out to a file and back. */
@@ -389,6 +409,7 @@ class DesignReduxSettingTab extends PluginSettingTab {
         const host = parent && blocks[parent] ? blocks[parent]() : section;
         const el = this.row(host, row);
         if (el) el.dataset.drSearch = `${row.name || ''} ${row.desc || ''} ${row.key || ''}`.toLowerCase();
+        if (el && row.key) el.dataset.drKey = row.key;
         if (row.key && el) {
           let children = null;
           blocks[row.key] = () => {

@@ -84,7 +84,8 @@ class DesignRedux extends Plugin {
     // can be rebuilt rather than dropped.
     this.each((f) => f.registerTypes());
 
-    this.addSettingTab(new DesignReduxSettingTab(this.app, this));
+    this.settingTab = new DesignReduxSettingTab(this.app, this);
+    this.addSettingTab(this.settingTab);
 
     // Registered once, never withdrawn: Obsidian has no public way to
     // remove a command, so a disabled feature hides its own instead.
@@ -321,6 +322,26 @@ class DesignRedux extends Plugin {
 
   refreshBrowse() {
     liveViews(this.app, BROWSE_VIEW, BrowseView).forEach((v) => v.render());
+  }
+
+  /**
+   * The plugin's settings, opened at one setting: its tab, its row
+   * scrolled to and marked a moment — from wherever that setting shows.
+   * Obsidian has no public way to open its settings, so without one a
+   * notice says where to look.
+   */
+  openSettingsAt(key) {
+    const setting = this.app.setting;
+    if (!setting || typeof setting.open !== 'function' || typeof setting.openTabById !== 'function') {
+      new Notice('In Settings, under Design Redux.');
+      return false;
+    }
+    if (this.settingTab) this.settingTab.reveal(key);
+    setting.open();
+    setting.openTabById(this.manifest.id);
+    // Already showing this tab, Obsidian doesn't draw it again.
+    if (this.settingTab && this.settingTab.revealKey) this.settingTab.display();
+    return true;
   }
 
   /** One feature by its class, rather than by its name as a string. */
