@@ -171,17 +171,12 @@ class DesignRedux extends Plugin {
     if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
   }
 
-  /** Ask for an image and record it on the note itself. */
   setNoteCover(file) {
-    const covers = this.feature(CoverImages);
-    new ImagePicker(this.app, (image) =>
-      covers.setCover(file, covers.linkTo(image, file))
-    ).open();
+    return this.feature(CoverImages).setNoteCover(file);
   }
 
-  async clearNoteCover(file) {
-    const key = this.settings.coverProperty || 'cover';
-    await this.notes.write(file, (fm) => delete fm[key]);
+  clearNoteCover(file) {
+    return this.feature(CoverImages).clearNoteCover(file);
   }
 
   /** Every kind of file, most recent first. */
@@ -202,13 +197,7 @@ class DesignRedux extends Plugin {
 
   /** A property's display name, which keeps its own capitalisation. */
   propertyLabel(key) {
-    try {
-      const info = this.app.metadataTypeManager.getAllProperties()[key];
-      if (info && info.name) return info.name;
-    } catch (err) {
-      /* fall through */
-    }
-    return key.charAt(0).toUpperCase() + key.slice(1);
+    return propertyLabel(this.app, key);
   }
 
   /* -- files: done by plugin.files (074-files); asked of the plugin by features and tests -- */
@@ -252,26 +241,8 @@ class DesignRedux extends Plugin {
     }).open();
   }
 
-  /**
-   * Artwork for a folder, which has no properties of its own: its
-   * folder note's cover (or first image, where the setting has it), then
-   * an image called "cover" inside it. Shared
-   * by the browse view and the sidebar, so a folder looks the same in
-   * both.
-   */
   folderCoverSrc(folder) {
-    const note = this.folderNote(folder);
-    if (note) {
-      const src = noteCoverSrc(this, note);
-      if (src) return src;
-    }
-    const named = (folder.children || []).find(
-      (c) =>
-        c instanceof TFile &&
-        ['cover', '_cover', 'folder'].indexOf(c.basename.toLowerCase()) !== -1 &&
-        IMAGE_EXTENSIONS.indexOf(c.extension.toLowerCase()) !== -1
-    );
-    return named ? this.app.vault.getResourcePath(named) : null;
+    return this.feature(CoverImages).folderCoverSrc(folder);
   }
 
   folderNote(folder) {
@@ -325,43 +296,20 @@ class DesignRedux extends Plugin {
     return this.files.isFolderNote(file);
   }
 
-  /**
-   * Ask for an image and record it on the folder note, creating that
-   * note if it doesn't exist. Stored in the vault rather than in plugin
-   * settings, so the pairing survives being moved or rebuilt elsewhere.
-   */
-  /** Pick the colour a folder or note's generated cover takes. */
   chooseCoverColor(target) {
-    const name = target instanceof TFolder ? target.name : target.basename;
-    new CoverColorModal(this, target, name).open();
+    return this.feature(CoverImages).chooseCoverColor(target);
   }
 
   setFolderCover(folder, after) {
-    new ImagePicker(this.app, async (image) => {
-      try {
-        const note = await this.ensureFolderNote(folder);
-        const covers = this.feature(CoverImages);
-        await covers.setCover(note, covers.linkTo(image, note));
-        // The view redraws itself once the cache catches up.
-        if (after) after();
-      } catch (err) {
-        console.error('Design Redux: could not set the folder cover', err);
-        new Notice('Could not set the cover.');
-      }
-    }).open();
+    return this.feature(CoverImages).setFolderCover(folder, after);
   }
 
   ensureFolderNote(folder) {
     return this.files.ensureFolderNote(folder);
   }
 
-  async clearFolderCover(folder, after) {
-    const note = this.folderNote(folder);
-    if (!note) return;
-    const key = this.settings.coverProperty || 'cover';
-    if (!(await this.notes.write(note, (fm) => delete fm[key], { failure: false }))) return;
-    this.refreshBrowse();
-    if (after) after();
+  clearFolderCover(folder, after) {
+    return this.feature(CoverImages).clearFolderCover(folder, after);
   }
 
   refreshBrowse() {

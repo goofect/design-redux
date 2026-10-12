@@ -95,3 +95,14 @@ function propertyValues(app, key) {
     .map((e) => e[0])
     .slice(0, 200);
 }
+
+/** A property's name as the vault writes it — its own case — or the key with a capital. */
+function propertyLabel(app, key) {
+  try {
+    const info = app.metadataTypeManager.getAllProperties()[key];
+    if (info && info.name) return info.name;
+  } catch (err) {
+    /* fall through */
+  }
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
