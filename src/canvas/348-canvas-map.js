@@ -17,7 +17,7 @@
 import { Notice } from 'obsidian';
 import { canvasReadonly, cardKept, keepOnCard, liveCards, saveInCurrentStep } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, BRANCH_SIDES, canvasModel, groupContents, isGroupRecord, saveCanvas, shownChildren } from './316-canvas-tree.js';
+import { arrowLinks, boundsOf, BRANCH_SIDES, canvasModel, groupContents, indexModel, isGroupRecord, saveCanvas, shownChildren } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { BRANCH_LAYOUTS, faceArrows, layoutPlaces, orderedBranch, siblingOrder } from './325-canvas-layouts.js';
@@ -25,7 +25,7 @@ import { CanvasFold } from './335-canvas-fold.js';
 
 /* On a card: how far it was moved by hand from its spot, from its parent's: { dx, dy }. */
 export const NUDGE_KEY = 'drNudge';
-/* On a tree's first card: how the tree is laid out, one of BRANCH_LAYOUTS. */
+/* On a tree's first card, or any card whose branch grows its own way: how it's laid out, one of BRANCH_LAYOUTS. */
 export const MAP_LAYOUT_KEY = 'drLayout';
 /* On a group: the branch it's drawn round, and the room it leaves round it: { id, pad: [left, top, right, bottom] }. */
 export const FRAME_KEY = 'drFrames';
@@ -103,6 +103,61 @@ export function guessLayout(model, links, root) {
 }
 
 /**
+ * Where a tree's cards go by its layout, a branch with a layout of its
+ * own laid out by itself first and then placed as one block, its cards
+ * coming along: id -> { x, y }, with `sides` for the arrows and
+ * `branches` — each branch laid out its own way: { rec, mode, ids }.
+ */
+export function composedLayout(model, root, mode, links, depth) {
+  const kids = orderedBranch(model, root.id, links, siblingOrder);
+  // The nearest cards below with a layout of their own.
+  const own = [];
+  const queue = [root.id];
+  while (queue.length) {
+    (kids.get(queue.shift()) || []).forEach((c) => (keptLayout(c) && (depth || 0) < 20 ? own.push(c) : queue.push(c.id)));
+  }
+  if (!own.length) {
+    const laid = layoutPlaces(model, root.id, mode, links);
+    laid.branches = [];
+    return laid;
+  }
+  const blocks = own.map((c) => {
+    const sub = composedLayout(model, c, keptLayout(c), links, (depth || 0) + 1);
+    const box = boundsOf([c].concat(Array.from(sub.keys()).map((id) => Object.assign({}, model.byId.get(id), sub.get(id)))));
+    return { c, sub, box };
+  });
+  const blockOf = new Map(blocks.map((b) => [b.c.id, b]));
+  const below = new Set();
+  blocks.forEach((b) => b.sub.forEach((at, id) => below.add(id)));
+  // Each such card as the box its branch makes, what's below it out of the way.
+  const proxy = indexModel({
+    nodes: model.nodes.map((r) => {
+      const b = blockOf.get(r.id);
+      if (b) return Object.assign({}, r, b.box);
+      return below.has(r.id) ? Object.assign({}, r, { tuck: r.tuck || { by: root.id, dx: 0, dy: 0 } }) : r;
+    }),
+    edges: model.edges,
+  });
+  const laid = layoutPlaces(proxy, root.id, mode, links);
+  const out = new Map();
+  out.sides = new Map(laid.sides || []);
+  out.both = laid.both;
+  out.branches = [];
+  laid.forEach((at, id) => {
+    const b = blockOf.get(id);
+    if (!b) return out.set(id, at);
+    const dx = at.x - b.box.x;
+    const dy = at.y - b.box.y;
+    out.set(id, { x: b.c.x + dx, y: b.c.y + dy });
+    b.sub.forEach((p, sid) => out.set(sid, { x: p.x + dx, y: p.y + dy }));
+    (b.sub.sides || new Map()).forEach((side, sid) => out.sides.set(sid, side));
+    out.branches.push({ rec: b.c, mode: keptLayout(b.c), ids: Array.from(b.sub.keys()), sides: b.sub.sides });
+    b.sub.branches.forEach((x) => out.branches.push(x));
+  });
+  return out;
+}
+
+/**
  * Where each card of a map's trees goes: its spot by the layout alone
  * (`spots`), the card it hangs from (`parents`), and its place, with its
  * adjustment and those of the cards above it added (`places`) — id ->
@@ -119,7 +174,7 @@ export function mapLayout(model, links, modeOf) {
   mapRoots(model, links).forEach((root) => {
     if (claimed.has(root.id)) return;
     const mode = (modeOf && modeOf(root)) || keptLayout(root) || guessLayout(model, links, root);
-    const laid = layoutPlaces(model, root.id, mode, links);
+    const laid = composedLayout(model, root, mode, links);
     const kids = orderedBranch(model, root.id, links, siblingOrder);
     roots.push({ rec: root, mode, laid });
     claimed.add(root.id);
@@ -380,25 +435,38 @@ export class CanvasMap extends CanvasFeature {
     return this.layOut(view, state, model, layout, links, { save: true, changed: cleared });
   }
 
-  /** The tree a card is in laid out another way from now on, every card of it to its place. One step of Undo. */
+  /**
+   * A card's branch laid out another way from now on — the tree's
+   * layout, for its first card; one of its own, for any other, or none
+   * if that's the way the branch above it grows — and every card of it
+   * put in its place. One step of Undo.
+   */
   setLayout(view, node, mode) {
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
     const model = canvasModel(view.canvas);
     const links = arrowLinks(model);
     let layout = mapLayout(model, links);
-    let id = node.id;
-    while (layout.parents.has(id)) id = layout.parents.get(id);
-    const tree = layout.roots.find((t) => t.rec.id === id);
-    if (!tree) return Promise.resolve(false);
-    keepOnCard(tree.rec.node, MAP_LAYOUT_KEY, mode);
-    layout.parents.forEach((p, c) => {
-      let top = c;
-      while (layout.parents.has(top)) top = layout.parents.get(top);
-      if (top === id) keepOnCard(model.byId.get(c).node, NUDGE_KEY, undefined);
-    });
+    const rec = model.byId.get(node.id);
+    if (!rec || !layout.spots.has(rec.id)) return Promise.resolve(false);
+    keepOnCard(rec.node, MAP_LAYOUT_KEY, layout.parents.has(rec.id) && mode === this.layoutAbove(model, layout, rec.id) ? undefined : mode);
+    branchIds(layout, rec.id)
+      .slice(1)
+      .forEach((id) => keepOnCard(model.byId.get(id).node, NUDGE_KEY, undefined));
     layout = mapLayout(model, links);
     return this.layOut(view, this.watched.get(view) || {}, model, layout, links, { save: true, changed: true });
+  }
+
+  /** How the branch a card hangs in grows: the nearest card above with a layout of its own, or its tree's. */
+  layoutAbove(model, layout, id) {
+    let at = layout.parents.get(id);
+    while (at) {
+      const up = model.byId.get(at);
+      if (!layout.parents.has(at)) return (layout.roots.find((t) => t.rec.id === at) || {}).mode;
+      if (keptLayout(up)) return keptLayout(up);
+      at = layout.parents.get(at);
+    }
+    return null;
   }
 
   mount(view, state) {
@@ -540,7 +608,15 @@ export class CanvasMap extends CanvasFeature {
         state.gliding = false;
         let changed = !!glided || !!opts.changed;
         layout.roots.forEach(({ rec, mode, laid }) => {
-          if (faceArrows(model, rec.id, laid, links, mode)) changed = true;
+          // Each part of the tree as its own layout has it: a card belongs to the innermost branch growing its own way.
+          const owner = new Map();
+          laid.branches.forEach((b, i) => b.ids.forEach((id) => owner.set(id, i)));
+          const parts = [{ rec, mode, places: new Map() }].concat(laid.branches.map((b) => ({ rec: b.rec, mode: b.mode, places: new Map() })));
+          laid.forEach((at, id) => parts[owner.has(id) ? owner.get(id) + 1 : 0].places.set(id, at));
+          parts.forEach((part) => {
+            part.places.sides = laid.sides;
+            if (faceArrows(model, part.rec.id, part.places, links, part.mode)) changed = true;
+          });
         });
         this.remember(state, model, layout);
         if (opts.save) saveCanvas(view.canvas);

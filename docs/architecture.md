@@ -628,4 +628,11 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   stand as a tree of their own while the card above them is folded.
 - **Gate:** folding, unfolding and re-linking leave no drift (simulated
   over repeated rounds, and in Obsidian).
-- **Next in this phase:** a layout per branch.
+- **A layout per branch.** The tree's first card picks the layout; any
+  branch can have its own (`drLayout` on its card), set by "Lay out branch".
+  It's laid out by itself first, then placed as one block in the layout
+  above it (`composedLayout`), so nothing overlaps; set back to the way
+  above it, it follows the tree again.
+- **Phase 3 is done.** Next, phase 4: Tab and Enter placed by the layout,
+  dragging to re-link with a preview and to reorder siblings, arrow keys
+  along the tree, richer cards and one map toolbar (customizable).

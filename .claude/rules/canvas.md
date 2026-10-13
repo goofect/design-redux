@@ -30,7 +30,8 @@ paths:
 - Live mind maps (`348`): a canvas listed in `canvasMapFiles` lays itself out.
   A card's place is its spot by its tree's layout (`layoutPlaces`, 325) plus
   its `drNudge` and those of the cards above it; a tree's first card stays
-  put and its layout is `drLayout` on it. A pass turns cards moved by hand
+  put and its layout is `drLayout` on it; any other card's `drLayout` is its
+  branch's own, laid out first and placed as a block (`composedLayout`). A pass turns cards moved by hand
   into nudges (their branches follow) and lays out again when the tree's
   shape changes; it saves only what it changed, with `saveInCurrentStep`
   (Obsidian's `overrideHistory`), so the layout joins the step of Undo the

@@ -970,13 +970,58 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(n('b').unknownData.drNudge);
     assert.strictEqual(view.canvas.saves + view.canvas.overrides, 0, 'a look never saves');
     // Laid out downward: the tree under its card, every card in its place.
-    await map.setLayout(view, n('b'), 'bottom');
+    await map.setLayout(view, n('root'), 'bottom');
     assert.strictEqual(n('root').unknownData.drLayout, 'bottom');
     assert.ok(!n('b').unknownData.drNudge);
     assert.deepStrictEqual([at('a'), at('b')], [spot('a'), spot('b')]);
     assert.ok(n('a').y > 60 && n('b').y > 60, 'below it');
     assert.deepStrictEqual([view.canvas.edges.get('root-a').from.side, view.canvas.edges.get('root-a').to.side], ['bottom', 'top']);
     assert.strictEqual(view.canvas.saves, 1);
+  });
+
+  await t('in a mind map a branch can grow its own way, placed as one block in its tree; the way above it again, it follows the tree', async () => {
+    const { view, map, state, n, at, laid } = mapOf({
+      nodes: [
+        card('root', 0, 0, 200, 60),
+        card('a', 300, -100, 200, 60),
+        card('a1', 600, -150, 200, 60),
+        card('a2', 600, -50, 200, 60),
+        card('b', 300, 100, 200, 60),
+        card('b1', 600, 100, 200, 60),
+      ],
+      edges: [edge('root', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left'), edge('root', 'b', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    view.canvas.edges.forEach((e) => {
+      e.getData = () => ({ id: e.id, fromNode: e.from.node.id, toNode: e.to.node.id, fromSide: e.from.side, toSide: e.to.side });
+      e.setData = (d) => {
+        e.from.side = d.fromSide;
+        e.to.side = d.toSide;
+      };
+    });
+    await map.makeMap(view);
+    await map.setLayout(view, n('a'), 'bottom');
+    assert.strictEqual(n('a').unknownData.drLayout, 'bottom', 'a layout of its own');
+    assert.strictEqual(n('root').unknownData.drLayout, 'right', 'the tree’s as it was');
+    assert.ok(n('a1').y >= n('a').y + 60 && n('a2').y >= n('a').y + 60, 'a’s cards below it');
+    assert.notStrictEqual(n('a1').x, n('a2').x, 'side by side');
+    assert.deepStrictEqual([view.canvas.edges.get('a-a1').from.side, view.canvas.edges.get('a-a1').to.side], ['bottom', 'top']);
+    assert.deepStrictEqual([view.canvas.edges.get('b-b1').from.side, view.canvas.edges.get('b-b1').to.side], ['right', 'left']);
+    // Nothing overlaps: a’s branch is one block in the tree.
+    const ids = ['root', 'a', 'a1', 'a2', 'b', 'b1'];
+    ids.forEach((x, i) => ids.slice(i + 1).forEach((y) => {
+      const p = n(x);
+      const q = n(y);
+      assert.ok(p.x + p.width <= q.x || q.x + q.width <= p.x || p.y + p.height <= q.y || q.y + q.height <= p.y, `${x} and ${y} apart`);
+    }));
+    ids.forEach((id) => id !== 'root' && assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, laid().places.get(id)));
+    // A look over changes nothing.
+    const where = ids.map(at);
+    map.pass(view, state);
+    assert.deepStrictEqual(ids.map(at), where);
+    // The tree's way again: no layout of its own.
+    await map.setLayout(view, n('a'), 'right');
+    assert.ok(!n('a').unknownData.drLayout);
+    assert.strictEqual(laid().spots.get('a1').x, laid().spots.get('b1').x, 'in the tree’s columns');
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {
