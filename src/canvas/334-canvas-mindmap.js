@@ -13,13 +13,15 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { addArrows, addTextCard, canvasPoint, canvasReadonly, canvasWrapper, cardEditing, cardElement, colourCard, editCard, liveArrow, liveCard, liveCards, mountCard, pickOnCanvas, redrawCard, removeArrow, requestCanvasSave, showCard, stopEditingCard } from '../core/079-canvas-adapter.js';
+import { addArrows, addTextCard, canvasPoint, canvasReadonly, canvasWrapper, cardEditing, cardElement, colourCard, editCard, keepOnCard, liveArrow, liveCard, liveCards, mountCard, pickOnCanvas, redrawCard, removeArrow, requestCanvasSave, showCard, stopEditingCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, BRANCH_SIDES, branchOf, branchSide, canvasCardLabel, canvasGap, canvasHomes, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownAs, shownChildren, sideAxes, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tuckOf, withinRect } from './316-canvas-tree.js';
 import { axisParts, fitGroups, foldHomes, homesBefore, makeRoom, outBox, shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
+import { siblingOrder } from './325-canvas-layouts.js';
 import { nearestSides, soleCard } from './332-canvas-arrows.js';
 import { CanvasFold, glideAndSettle, isGroupNode } from './335-canvas-fold.js';
+import { CanvasMap, mapLayout, NUDGE_KEY, placeIn, treeNeighbour } from './348-canvas-map.js';
 
 /** A new id for a card or arrow, as the canvas makes them. */
 export function newCanvasId(canvas) {
@@ -350,6 +352,7 @@ export class CanvasMindMap extends CanvasFeature {
     const links = arrowLinks(model);
     const branch = branchOf(model, rec.id, links);
     if (branch.indexOf(target.id) !== -1) return Promise.resolve(false);
+    if (CanvasMap.of(this.plugin, view)) return this.relinkInMap(view, model, rec, target);
     const before = snapshotModel(model);
     // Its branch stayed where the card was before it was dragged: the two go together.
     const members = [rec].concat(branch.map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
@@ -384,6 +387,31 @@ export class CanvasMindMap extends CanvasFeature {
     }
     // Saved whether or not a card moved: its arrows changed.
     return glideAndSettle(this.plugin, view, model, before, { save: true }).then(() => {
+      if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
+      return true;
+    });
+  }
+
+  /**
+   * In a mind map: a card dropped onto another hangs from it — its
+   * arrows from elsewhere taken away, one from the new card drawn — and
+   * goes, with its branch, to its place there by the layout, what it was
+   * moved by hand let go. One step of Undo.
+   */
+  relinkInMap(view, model, rec, target) {
+    const canvas = view.canvas;
+    const before = snapshotModel(model);
+    const into = arrowsInto(model, rec.id);
+    into.forEach(([e, parent]) => parent !== target.id && e.edge && removeArrow(canvas, e.edge));
+    if (!into.some(([, parent]) => parent === target.id)) {
+      const sides = nearestSides(boxEdges(target), boxEdges(rec));
+      addArrows(canvas, [{ id: newCanvasId(canvas), fromNode: target.id, fromSide: sides.from, toNode: rec.id, toSide: sides.to }]);
+    }
+    keepOnCard(rec.node, NUDGE_KEY, undefined);
+    // The cards as they lie now, read again with the arrows as they are.
+    const now = canvasModel(canvas);
+    placeIn(now, mapLayout(now, arrowLinks(now)));
+    return glideAndSettle(this.plugin, view, now, before, { save: true }).then(() => {
       if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
       return true;
     });
@@ -478,7 +506,9 @@ export class CanvasMindMap extends CanvasFeature {
     }
     const axes = sideAxes(side);
     const size = this.sizeFor(view, kids.length ? kids[kids.length - 1] : null, parent);
-    if (this.placesFreely) {
+    // In a mind map the layout places it: it starts past the others, so it's the last of them.
+    const inMap = !!CanvasMap.of(this.plugin, view);
+    if (this.placesFreely && !inMap) {
       // Level with the cards after it, where it has some.
       let away = canvasGap(TIDY_DEPTH_GAP);
       if (kids.length) {
@@ -542,6 +572,18 @@ export class CanvasMindMap extends CanvasFeature {
     const across = axes.across;
     const aSize = across === 'x' ? 'width' : 'height';
     const size = this.sizeFor(view, card, card);
+    if (parent && CanvasMap.of(this.plugin, view)) {
+      // In a mind map the layout places it: it starts halfway to the next of its parent's, so it comes next.
+      const sibs = siblingOrder(parent, shownChildren(model, links, parent.id));
+      const i = sibs.indexOf(card);
+      const mid = (r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+      const at = mid(card);
+      const next = sibs[i + 1] ? mid(sibs[i + 1]) : null;
+      const prev = sibs[i - 1] ? mid(sibs[i - 1]) : null;
+      const to = next ? { x: (at.x + next.x) / 2, y: (at.y + next.y) / 2 } : prev ? { x: 2 * at.x - prev.x, y: 2 * at.y - prev.y } : Object.assign({}, at, { [across]: at[across] + card[aSize] });
+      const box = { x: Math.round(to.x - size.width / 2), y: Math.round(to.y - size.height / 2), width: size.width, height: size.height };
+      return this.grow(view, parent, box, join, across, card);
+    }
     if (this.placesFreely) {
       // Beside it, after it the way its siblings line up, in the nearest free space.
       const after = across === 'y' ? 'bottom' : 'right';
@@ -592,11 +634,16 @@ export class CanvasMindMap extends CanvasFeature {
     rec.tuck = { by: holder.id, dx: rec.x - holder.x, dy: rec.y - holder.y };
     const before = snapshotModel(model);
     rec.tuck = null;
-    // In free space nothing's in its way; in line, room is made for it.
     const close = this.settings.canvasCloseGaps !== false;
-    if (close && !free) this.makeWay(model, before, rec, holder, across || 'y');
-    // Its group grown round it — and round what moved for it — only where something now sticks out.
-    if ((close || free) && this.sticksOut(model, before)) fitGroups(model, before);
+    if (CanvasMap.of(this.plugin, view)) {
+      // In a mind map: every card to its place, the new one among them.
+      placeIn(model, mapLayout(model, arrowLinks(model)));
+    } else {
+      // In free space nothing's in its way; in line, room is made for it.
+      if (close && !free) this.makeWay(model, before, rec, holder, across || 'y');
+      // Its group grown round it — and round what moved for it — only where something now sticks out.
+      if ((close || free) && this.sticksOut(model, before)) fitGroups(model, before);
+    }
     const state = fold ? fold.watched.get(view) : null;
     return new Promise((resolve) => {
       glideCanvasModel(view, model, before, state, () => resolve(this.opened(view, node, true)));
@@ -664,7 +711,9 @@ export class CanvasMindMap extends CanvasFeature {
     const from = model.byId.get(node.id);
     const links = arrowLinks(model);
     const linked = new Set((links.parents.get(node.id) || []).concat(links.children.get(node.id) || []));
-    const to = from ? cardTowards(model, from, way, linked) : null;
+    // In a mind map, along its tree; where the tree goes nowhere that way, the nearest card that way.
+    const along = from && CanvasMap.of(this.plugin, view) ? treeNeighbour(model, mapLayout(model, links), from.id, way) : null;
+    const to = along || (from ? cardTowards(model, from, way, linked) : null);
     if (!to || !to.node) return null;
     pickOnCanvas(view.canvas, [to.node]);
     showCard(view.canvas, to.node);

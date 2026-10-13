@@ -7552,6 +7552,18 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   box-shadow: 0 0 0 3px var(--interactive-accent);
 }
 
+/* In a mind map, where a dragged card would land, let go now. */
+.dr-map-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: 2px dashed var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
+  transition: transform var(--dr-dur-fast) var(--dr-ease-out);
+}
+
 /* Title and details: a text card's first line as its title, the rest
    smaller beneath it. Headings keep their own size. */
 body.dr-card-titles .canvas-node.dr-text-card .markdown-preview-pusher ~ div:not(.el-h1):not(.el-h2):not(.el-h3):not(.el-h4):not(.el-h5):not(.el-h6) {

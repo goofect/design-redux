@@ -636,3 +636,15 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Phase 3 is done.** Next, phase 4: Tab and Enter placed by the layout,
   dragging to re-link with a preview and to reorder siblings, arrow keys
   along the tree, richer cards and one map toolbar (customizable).
+
+## 21. 2.0, phase 4: map editing, cards, toolbar
+
+- **Editing in a map:** Tab adds the last card of a branch and Enter the
+  next one after the selected card, each put straight in its place by the
+  layout (one glide out of the card it hangs from). Alt and an arrow key go
+  along the tree — the card above, the child that way, the next card beside
+  it — and to the nearest card that way where the tree doesn't go. A card
+  dragged past another beside it takes its place among them; dragged a
+  little, it keeps the adjustment; dropped onto a card it hangs from it,
+  placed by the layout. While it's dragged, a ghost shows where it would
+  land.

@@ -15,7 +15,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { canvasReadonly, cardKept, keepOnCard, liveCards, saveInCurrentStep } from '../core/079-canvas-adapter.js';
+import { canvasReadonly, cardElement, cardKept, keepOnCard, liveCards, saveInCurrentStep } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, BRANCH_SIDES, canvasModel, groupContents, indexModel, isGroupRecord, saveCanvas, shownChildren } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
@@ -163,9 +163,10 @@ export function composedLayout(model, root, mode, links, depth) {
  * adjustment and those of the cards above it added (`places`) — id ->
  * { x, y }. A tree's first card stays where it is, and so does a card
  * kept in place, its branch laid out from where it is. `roots` lists
- * each tree, its layout and the layout's own answer.
+ * each tree, its layout and the layout's own answer. `loose`: a card
+ * whose own adjustment is left out — where it would land, let go.
  */
-export function mapLayout(model, links, modeOf) {
+export function mapLayout(model, links, opts = {}) {
   const spots = new Map();
   const parents = new Map();
   const places = new Map();
@@ -173,7 +174,7 @@ export function mapLayout(model, links, modeOf) {
   const claimed = new Set();
   mapRoots(model, links).forEach((root) => {
     if (claimed.has(root.id)) return;
-    const mode = (modeOf && modeOf(root)) || keptLayout(root) || guessLayout(model, links, root);
+    const mode = keptLayout(root) || guessLayout(model, links, root);
     const laid = composedLayout(model, root, mode, links);
     const kids = orderedBranch(model, root.id, links, siblingOrder);
     roots.push({ rec: root, mode, laid });
@@ -193,7 +194,7 @@ export function mapLayout(model, links, modeOf) {
         const spot = { x: Math.round(at.x), y: Math.round(at.y) };
         spots.set(c.id, spot);
         const above = off.get(id);
-        const own = c.pinned ? { dx: c.x - spot.x - above.dx, dy: c.y - spot.y - above.dy } : nudgeOf(c) || { dx: 0, dy: 0 };
+        const own = c.pinned ? { dx: c.x - spot.x - above.dx, dy: c.y - spot.y - above.dy } : (opts.loose !== c.id && nudgeOf(c)) || { dx: 0, dy: 0 };
         const o = { dx: above.dx + own.dx, dy: above.dy + own.dy };
         off.set(c.id, o);
         places.set(c.id, { x: spot.x + o.dx, y: spot.y + o.dy });
@@ -265,6 +266,62 @@ function offPlace(rec, at) {
 /** Whether a group isn't at a place, or its size. */
 function offBox(rec, box) {
   return offPlace(rec, box) || Math.abs(rec.width - box.width) > 0.5 || Math.abs(rec.height - box.height) > 0.5;
+}
+
+/** The order of each card's children in a map, by where they lie: parent id -> [id]. */
+export function siblingOrders(model, layout) {
+  const kids = new Map();
+  layout.parents.forEach((p, c) => {
+    if (!kids.has(p)) kids.set(p, []);
+    kids.get(p).push(model.byId.get(c));
+  });
+  const out = new Map();
+  kids.forEach((cs, p) => out.set(p, siblingOrder(model.byId.get(p), cs).map((r) => r.id)));
+  return out;
+}
+
+/** Arrows as they'd read with a card hung from another instead: { parents, children }. */
+export function hungFrom(links, id, parent) {
+  const parents = new Map(links.parents);
+  const children = new Map();
+  links.children.forEach((cs, p) => children.set(p, cs.filter((c) => c !== id)));
+  parents.set(id, [parent]);
+  children.set(parent, (children.get(parent) || []).concat([id]));
+  return { parents, children };
+}
+
+/**
+ * The card one arrow key's way along a map's tree from a card: the card
+ * it hangs from, if that's the way; else the child that way nearest it;
+ * else the next card that way of those it hangs beside. Or null.
+ */
+export function treeNeighbour(model, layout, id, way) {
+  const rec = model.byId.get(id);
+  if (!rec || !layout.places.has(id)) return null;
+  const mid = (r) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+  const wayTo = (b) => {
+    const p = mid(rec);
+    const q = mid(b);
+    const dx = q.x - p.x;
+    const dy = q.y - p.y;
+    return Math.abs(dx) >= Math.abs(dy) ? (dx >= 0 ? 'right' : 'left') : dy >= 0 ? 'down' : 'up';
+  };
+  const gap = (b) => Math.hypot(mid(b).x - mid(rec).x, mid(b).y - mid(rec).y);
+  const under = (p) => {
+    const out = [];
+    layout.parents.forEach((q, c) => q === p && c !== id && out.push(model.byId.get(c)));
+    return out;
+  };
+  const parent = layout.parents.has(id) ? model.byId.get(layout.parents.get(id)) : null;
+  if (parent && wayTo(parent) === way) return parent;
+  const ahead = under(id).filter((k) => wayTo(k) === way).sort((a, b) => gap(a) - gap(b));
+  if (ahead.length) return ahead[0];
+  if (!parent) return null;
+  const axis = way === 'up' || way === 'down' ? 'y' : 'x';
+  const sign = way === 'down' || way === 'right' ? 1 : -1;
+  const along = (b) => (mid(b)[axis] - mid(rec)[axis]) * sign;
+  const beside = under(parent.id).filter((b) => along(b) > 0.5).sort((a, b) => along(a) - along(b));
+  return beside[0] || null;
 }
 
 /**
@@ -475,10 +532,20 @@ export class CanvasMap extends CanvasFeature {
     state.release = () => {
       if (!state.pressing) return;
       state.pressing = false;
+      this.ghost(state, null);
       state.schedule();
+    };
+    // While a card's dragged: a ghost where it would land, let go now.
+    state.drag = () => {
+      if (!state.pressing || state.previewing) return;
+      state.previewing = window.requestAnimationFrame(() => {
+        state.previewing = 0;
+        if (state.pressing && this.watched.get(view) === state) this.preview(view, state);
+      });
     };
     state.doc = view.containerEl.ownerDocument;
     view.containerEl.addEventListener('pointerdown', state.press, true);
+    view.containerEl.addEventListener('pointermove', state.drag, { passive: true });
     state.doc.addEventListener('pointerup', state.release, true);
     state.doc.addEventListener('pointercancel', state.release, true);
   }
@@ -486,8 +553,57 @@ export class CanvasMap extends CanvasFeature {
   cleanup(view, state) {
     if (!state || !state.press) return;
     view.containerEl.removeEventListener('pointerdown', state.press, true);
+    view.containerEl.removeEventListener('pointermove', state.drag);
     state.doc.removeEventListener('pointerup', state.release, true);
     state.doc.removeEventListener('pointercancel', state.release, true);
+    if (state.previewing) window.cancelAnimationFrame(state.previewing);
+    this.ghost(state, null);
+  }
+
+  /**
+   * Where the card being dragged would land if let go now — hung from
+   * the card it's over, or put in its new place among the cards beside
+   * it — shown as a ghost; none where it would stay where it's let go.
+   */
+  preview(view, state) {
+    if (!this.enabled || !this.isMap(view) || !state.laid) return this.ghost(state, null);
+    const model = canvasModel(view.canvas);
+    const links = arrowLinks(model);
+    const layout = mapLayout(model, links);
+    const moved = Array.from(layout.parents.keys()).filter((id) => state.laid.has(id) && offPlace(model.byId.get(id), state.laid.get(id)));
+    const movedSet = new Set(moved);
+    const tops = moved.filter((id) => !movedSet.has(layout.parents.get(id)));
+    if (tops.length !== 1) return this.ghost(state, null);
+    const rec = model.byId.get(tops[0]);
+    const over = view.contentEl.querySelector('[data-dr-drop-target]');
+    const target = over ? model.nodes.find((r) => r.node && cardElement(r.node) === over) : null;
+    let at = null;
+    if (target && target.id !== rec.id) at = mapLayout(model, hungFrom(links, rec.id, target.id), { loose: rec.id }).places.get(rec.id);
+    else if (this.reordered(state, model, layout, rec.id)) at = mapLayout(model, links, { loose: rec.id }).places.get(rec.id);
+    this.ghost(state, at ? { x: at.x, y: at.y, width: rec.width, height: rec.height, host: cardElement(rec.node) } : null);
+  }
+
+  /** The ghost drawn at a box, beside the card it's for — or taken away. */
+  ghost(state, box) {
+    if (!box || !box.host || !box.host.parentElement) {
+      if (state.ghostEl) state.ghostEl.remove();
+      state.ghostEl = null;
+      return;
+    }
+    if (!state.ghostEl || state.ghostEl.parentElement !== box.host.parentElement) {
+      if (state.ghostEl) state.ghostEl.remove();
+      state.ghostEl = box.host.parentElement.createDiv({ cls: 'dr-map-ghost' });
+    }
+    Object.assign(state.ghostEl.style, { transform: `translate(${box.x}px, ${box.y}px)`, width: `${box.width}px`, height: `${box.height}px` });
+  }
+
+  /** Whether a card now lies in another place among the cards beside it than it did. */
+  reordered(state, model, layout, id) {
+    const parent = layout.parents.get(id);
+    const was = state.order && state.order.get(parent);
+    if (!parent || !was) return false;
+    const now = siblingOrders(model, layout).get(parent) || [];
+    return was.indexOf(id) !== now.indexOf(id);
   }
 
   /** Whether cards are gliding somewhere: nothing's decided till they're there. */
@@ -534,8 +650,11 @@ export class CanvasMap extends CanvasFeature {
         this.remember(state, model, stray.length || framed ? mapLayout(model, links) : layout, shape);
         return;
       }
-      // Moved by hand: kept as adjustments, their branches to follow.
-      this.keep(model, layout, moved);
+      // Moved past a card beside it: into its new place among them. Moved otherwise: kept as
+      // adjustments, their branches to follow.
+      const reordered = moved.filter((id) => !moved.some((m) => m === layout.parents.get(id)) && this.reordered(state, model, layout, id));
+      this.keep(model, layout, moved.filter((id) => reordered.indexOf(id) === -1));
+      reordered.forEach((id) => keepOnCard(model.byId.get(id).node, NUDGE_KEY, undefined));
       layout = mapLayout(model, links);
       this.layOut(view, state, model, layout, links, { changed: true });
       return;
@@ -587,6 +706,7 @@ export class CanvasMap extends CanvasFeature {
     state.arrows = new Map(model.nodes.map((r) => [r.id, arrowSources(links, r.id)]));
     state.framed = new Map(model.nodes.filter((g) => isGroupRecord(g)).map((g) => [g.id, (layout.frames && layout.frames.get(g.id)) || { x: g.x, y: g.y, width: g.width, height: g.height }]));
     state.laid = new Map(layout.places);
+    state.order = siblingOrders(model, layout);
     state.shape = shape || mapShape(model, layout);
     state.cards = new Map(model.nodes.map((r) => [r.id, r.node]));
   }

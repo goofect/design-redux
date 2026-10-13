@@ -1563,6 +1563,21 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:unfold-canvas-everything'));
     await browser.pause(800);
     expect(await cards()).toEqual(made);
+    // Tab on the root: the new card goes straight to its place, the last of its column.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      canvas.selectOnly(canvas.nodes.get('root'));
+      canvas.wrapperEl.focus();
+    });
+    await browser.pause(300);
+    await browser.keys('Tab');
+    await browser.waitUntil(async () => !!(await added()), { timeout: 5000, timeoutMsg: 'Tab added no card' });
+    await browser.pause(800);
+    const tabbed = await added();
+    const after = await cards();
+    expect(tabbed.x).toBe(after.k1.x - 20);
+    expect(tabbed.y).toBeGreaterThan(after.k2.y);
+    await browser.keys('Escape');
   });
 
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {

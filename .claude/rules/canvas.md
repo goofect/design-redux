@@ -38,3 +38,7 @@ paths:
   change made — never a step of its own. Cards off their places with
   nothing moved (Undo, a file from elsewhere) get nudges that keep them
   there, unsaved. Tidy and "Lay out branch" in a map go through the map.
+  A card moved past one beside it (its index in `state.order` changes) is
+  reordered — its nudge let go — not adjusted. While a card's held, a
+  ghost (`.dr-map-ghost`, beside the cards in canvas coordinates) shows
+  where it would land.

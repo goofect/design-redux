@@ -816,6 +816,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const view = mindCanvas(data);
     view.canvas.overrides = 0;
     view.canvas.overrideHistory = () => view.canvas.overrides++;
+    view.canvas.removeEdge = (e) => view.canvas.edges.delete(e.id);
     // Arrows whose sides can be set, as the canvas's are.
     view.canvas.edges.forEach((e) => {
       e.getData = () => ({ id: e.id, fromNode: e.from.node.id, toNode: e.to.node.id, fromSide: e.from.side, toSide: e.to.side });
@@ -1022,6 +1023,77 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     await map.setLayout(view, n('a'), 'right');
     assert.ok(!n('a').unknownData.drLayout);
     assert.strictEqual(laid().spots.get('a1').x, laid().spots.get('b1').x, 'in the tree’s columns');
+  });
+
+  await t('in a mind map Tab adds the last card of a branch and Enter the next one, each placed by the layout', async () => {
+    const { view, map, state, n, laid, p } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, -60, 200, 60), card('b', 300, 60, 200, 60)],
+      edges: [edge('root', 'a', 'right', 'left'), edge('root', 'b', 'right', 'left')],
+    });
+    await map.makeMap(view);
+    await map.tidy(view, null);
+    const mind = new R.CanvasMindMap(p);
+    const saves = view.canvas.saves;
+    const child = await mind.addChild(view, n('root'));
+    map.pass(view, state);
+    const spotOf = (id) => laid().spots.get(id);
+    assert.deepStrictEqual({ x: child.x, y: child.y }, spotOf(child.id), 'at its place');
+    assert.ok(child.y > n('b').y, 'the last of them');
+    assert.ok(!child.unknownData.drNudge);
+    assert.strictEqual(view.canvas.saves, saves + 1, 'one step of Undo');
+    const sibling = await mind.addSibling(view, n('a'));
+    map.pass(view, state);
+    assert.deepStrictEqual({ x: sibling.x, y: sibling.y }, spotOf(sibling.id));
+    assert.ok(n('a').y < sibling.y && sibling.y < n('b').y, 'between a and the next');
+    assert.strictEqual(laid().parents.get(sibling.id), 'root');
+    ['a', 'b', child.id].forEach((id) => assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, spotOf(id), `${id} in its place`));
+    // Alt and an arrow key go along the tree: the next of its parent's, the card it hangs from, the child nearest it.
+    view.canvas.selectOnly(n('a'));
+    assert.strictEqual(mind.step(view, 'down').id, sibling.id);
+    assert.strictEqual(mind.step(view, 'up').id, 'a');
+    assert.strictEqual(mind.step(view, 'left').id, 'root');
+    const near = ['a', sibling.id, 'b', child.id].map(n).sort((x, y) => Math.abs(x.y + 30 - n('root').y - 30) - Math.abs(y.y + 30 - n('root').y - 30))[0];
+    assert.strictEqual(mind.step(view, 'right').id, near.id);
+  });
+
+  await t('in a mind map a card dragged past another takes its place, a ghost showing where; dropped onto a card it hangs from it there', async () => {
+    const { view, map, state, n, at, laid, p } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, -100, 200, 60), card('b', 300, 0, 200, 60), card('c', 300, 100, 200, 60), card('c1', 600, 100, 200, 60)],
+      edges: [edge('root', 'a', 'right', 'left'), edge('root', 'b', 'right', 'left'), edge('root', 'c', 'right', 'left'), edge('c', 'c1', 'right', 'left')],
+    });
+    await map.makeMap(view);
+    await map.tidy(view, null);
+    const spotOf = (id) => laid().spots.get(id);
+    // Held and dragged below b: a ghost where it would go.
+    state.pressing = true;
+    n('a').moveAndResize({ x: n('a').x + 15, y: n('b').y + 20, width: 200, height: 60 });
+    map.preview(view, state);
+    const ghost = view.contentEl.querySelector('.dr-map-ghost');
+    assert.ok(ghost, 'a ghost');
+    const after = R.mapLayout(R.canvasModel(view.canvas), R.arrowLinks(R.canvasModel(view.canvas)), { loose: 'a' }).places.get('a');
+    assert.strictEqual(ghost.style.transform, `translate(${after.x}px, ${after.y}px)`);
+    // Let go: it takes its new place, between b and c, nothing kept of where it was let go.
+    state.pressing = false;
+    map.ghost(state, null);
+    map.pass(view, state);
+    assert.ok(n('b').y < n('a').y && n('a').y < n('c').y, 'after b now');
+    assert.ok(!n('a').unknownData.drNudge);
+    ['a', 'b', 'c', 'c1'].forEach((id) => assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, spotOf(id), `${id} in its place`));
+    // Moved a little, not past another: kept where it's let go.
+    n('b').moveAndResize({ x: n('b').x + 25, y: n('b').y - 10, width: 200, height: 60 });
+    map.pass(view, state);
+    assert.deepStrictEqual(n('b').unknownData.drNudge, { dx: 25, dy: -10 });
+    // Dropped onto c: it hangs from c, in its place there, its adjustment let go; one step of Undo.
+    const mind = new R.CanvasMindMap(p);
+    const saves = view.canvas.saves;
+    const was = at('b');
+    n('b').moveAndResize({ x: n('c').x, y: n('c').y, width: 200, height: 60 });
+    await mind.relink(view, { id: 'b', x: was[0], y: was[1] }, n('c'));
+    map.pass(view, state);
+    assert.strictEqual(laid().parents.get('b'), 'c');
+    assert.ok(!n('b').unknownData.drNudge);
+    ['a', 'b', 'c', 'c1'].forEach((id) => assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, spotOf(id), `${id} in its place`));
+    assert.strictEqual(view.canvas.saves, saves + 1);
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {
