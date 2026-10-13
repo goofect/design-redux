@@ -21,6 +21,7 @@ import { FuzzySuggestModal, Modal, Notice, Setting } from 'obsidian';
 import { RELATED_KEY, RELATION_KEY, relationTypes } from '../core/020-constants.js';
 import { byName } from '../core/030-helpers-art.js';
 import { addActionEntries, addActionItems, canvasMenuContext } from '../core/078-actions.js';
+import { addArrows, arrowElements, arrowKept, canvasReadonly, cardElement, keepOnArrow, liveArrow, liveArrowEnds, liveArrows, liveCards, pickOnCanvas, removeArrow, requestCanvasSave, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { mixInto } from '../core/080-feature.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
@@ -39,7 +40,7 @@ export const RELATION_CATEGORIES = { hierarchy: 'Hierarchy', association: 'Assoc
 
 /** What an arrow means, or null. A kind's name alone, as kept before, reads as that kind. */
 export function relationInfo(edge) {
-  const value = edge && edge.unknownData && edge.unknownData[RELATION_KEY];
+  const value = arrowKept(edge, RELATION_KEY);
   if (!value) return null;
   if (typeof value === 'string') return { kind: value };
   return typeof value === 'object' && (value.kind || value.predicate) ? value : null;
@@ -85,7 +86,7 @@ export function edgeData(edge) {
 }
 
 export function isRelated(edge) {
-  return !!(edge && edge.unknownData && edge.unknownData[RELATED_KEY]);
+  return !!arrowKept(edge, RELATED_KEY);
 }
 
 export class RelationPicker extends FuzzySuggestModal {
@@ -244,7 +245,7 @@ export class CanvasRelations extends CanvasFeature {
     // The arrows it's for — only arrows — on a canvas that can be changed.
     const arrows = (ctx) => {
       const edges = ctx.nodes.filter(isCanvasEdge);
-      return this.enabled && !ctx.view.canvas.readonly && edges.length === ctx.nodes.length ? edges : [];
+      return this.enabled && !canvasReadonly(ctx.view.canvas) && edges.length === ctx.nodes.length ? edges : [];
     };
     const kindOf = (ctx) => {
       const edges = arrows(ctx);
@@ -379,9 +380,7 @@ export class CanvasRelations extends CanvasFeature {
         if (type && type.color) next.color = type.color;
         else if (was && was.color && String(next.color) === String(was.color)) delete next.color;
         edge.setData(next);
-        if (!edge.unknownData) edge.unknownData = {};
-        if (meaning) edge.unknownData[RELATION_KEY] = meaning;
-        else delete edge.unknownData[RELATION_KEY];
+        keepOnArrow(edge, RELATION_KEY, meaning || undefined);
         if (type || info) tree = this.markRelated(edge, !!type && type.category !== 'hierarchy') || tree;
         // Its line, drawn by the arrow styles.
         if (arrows && typeof arrows.setStyle === 'function' && (type || was)) {
@@ -433,8 +432,7 @@ export class CanvasRelations extends CanvasFeature {
       if (was && was.color && String(next.color) === String(was.color)) delete next.color;
       edge.setData(next);
       this.setEnds(edge, next.fromEnd, next.toEnd);
-      if (!edge.unknownData) edge.unknownData = {};
-      edge.unknownData[RELATION_KEY] = { predicate: next.label, subject: subject.id, object: object.id };
+      keepOnArrow(edge, RELATION_KEY, { predicate: next.label, subject: subject.id, object: object.id });
       const tree = this.markRelated(edge, true);
       const arrows = this.plugin.feature(CanvasArrows);
       if (was && arrows && typeof arrows.setStyle === 'function') arrows.setStyle(view, [edge], { line: 'solid' });
@@ -471,10 +469,7 @@ export class CanvasRelations extends CanvasFeature {
         }
         edge.setData(next);
         this.setEnds(edge, next.fromEnd, next.toEnd);
-        if (info) {
-          if (!edge.unknownData) edge.unknownData = {};
-          edge.unknownData[RELATION_KEY] = next[RELATION_KEY];
-        }
+        if (info) keepOnArrow(edge, RELATION_KEY, next[RELATION_KEY]);
         if (typeof edge.render === 'function') edge.render();
         any = true;
       } catch (err) {
@@ -498,18 +493,16 @@ export class CanvasRelations extends CanvasFeature {
   /** Out of the branches, or in; whether that changed. */
   markRelated(edge, on) {
     if (isRelated(edge) === on) return false;
-    if (!edge.unknownData) edge.unknownData = {};
-    if (on) edge.unknownData[RELATED_KEY] = true;
-    else delete edge.unknownData[RELATED_KEY];
+    keepOnArrow(edge, RELATED_KEY, on ? true : undefined);
     return true;
   }
 
   /** What the canvas states: each arrow given a kind or proposition, in words. */
   statements(view) {
     const out = [];
-    if (!view || !view.canvas || !view.canvas.edges) return out;
+    if (!view || !view.canvas) return out;
     const model = canvasModel(view.canvas);
-    view.canvas.edges.forEach((edge) => {
+    liveArrows(view.canvas).forEach((edge) => {
       const info = relationInfo(edge);
       if (!info) return;
       const type = info.kind ? this.typeNamed(info.kind) : null;
@@ -543,9 +536,9 @@ export class CanvasRelations extends CanvasFeature {
     try {
       const model = canvasModel(canvas);
       const box = boundsOf([model.byId.get(s.subject.id) || s.subject, model.byId.get(s.object.id) || s.object]);
-      if (typeof canvas.selectOnly === 'function') canvas.selectOnly(s.edge);
+      pickOnCanvas(canvas, [s.edge]);
       const pad = 60;
-      if (typeof canvas.zoomToBbox === 'function') canvas.zoomToBbox({ minX: box.x - pad, minY: box.y - pad, maxX: box.x + box.width + pad, maxY: box.y + box.height + pad });
+      zoomCanvasTo(canvas, { minX: box.x - pad, minY: box.y - pad, maxX: box.x + box.width + pad, maxY: box.y + box.height + pad });
     } catch (err) {
       /* left where it was */
     }
@@ -601,7 +594,7 @@ export class CanvasRelations extends CanvasFeature {
   /** The kinds used on a canvas, how many each, to pick one to show alone. */
   chooseShown(view) {
     const counts = new Map();
-    view.canvas.edges.forEach((e) => {
+    liveArrows(view.canvas).forEach((e) => {
       const k = relationOf(e);
       if (k) counts.set(k, (counts.get(k) || 0) + 1);
     });
@@ -660,12 +653,12 @@ export class CanvasRelations extends CanvasFeature {
 
   /** Each redraw: plain related arrows dashed, propositions' labels marked; while one kind is shown alone, it lit and the rest faded. */
   pass(view, state) {
-    if (!view || !view.canvas || !view.canvas.edges) return;
+    if (!view || !view.canvas) return;
     state = state || this.watched.get(view);
     const only = state && state.only;
     const lit = new Set();
     try {
-      view.canvas.edges.forEach((edge) => {
+      liveArrows(view.canvas).forEach((edge) => {
         const kind = relationOf(edge);
         const plain = isRelated(edge) && !kind;
         const shown = !!only && kind === only;
@@ -674,7 +667,7 @@ export class CanvasRelations extends CanvasFeature {
           if (edge.to && edge.to.node) lit.add(edge.to.node);
         }
         const label = edge.labelElement && edge.labelElement.wrapperEl;
-        [edge.lineGroupEl, edge.lineEndGroupEl, label].forEach((el) => {
+        arrowElements(edge).concat(label || []).forEach((el) => {
           if (!el || !el.classList) return;
           if (el !== label) el.classList.toggle('dr-related-edge', plain);
           el.classList.toggle('dr-proposition-edge', kind === PROPOSITION);
@@ -682,8 +675,9 @@ export class CanvasRelations extends CanvasFeature {
         });
       });
       view.contentEl.classList.toggle('dr-relation-only', !!only);
-      view.canvas.nodes.forEach((node) => {
-        if (node.nodeEl) node.nodeEl.classList.toggle('dr-relation-lit', lit.has(node));
+      liveCards(view.canvas).forEach((node) => {
+        const el = cardElement(node);
+        if (el) el.classList.toggle('dr-relation-lit', lit.has(node));
       });
     } catch (err) {
       /* drawn as the canvas draws them */
@@ -751,7 +745,7 @@ export class KnowledgeCanvas {
     const relations = typeof CanvasRelations === 'function' ? this.plugin.feature(CanvasRelations) : null;
     if (!view || !view.canvas || !relations) return 0;
     const writes = [];
-    view.canvas.edges.forEach((edge) => {
+    liveArrows(view.canvas).forEach((edge) => {
       const info = relationInfo(edge);
       if (!info || !info.kind) return;
       const kind = this.kinds().find((k) => k.name === info.kind);
@@ -786,17 +780,18 @@ export class KnowledgeCanvas {
    */
   drawOnCanvas(view) {
     const canvas = view && view.canvas;
-    if (!canvas || canvas.readonly || typeof canvas.importData !== 'function') return 0;
+    if (!canvas || canvasReadonly(canvas)) return 0;
     const cardOf = new Map();
-    canvas.nodes.forEach((node) => {
+    liveCards(canvas).forEach((node) => {
       const file = this.noteOfCard(node);
       if (file && !cardOf.has(file)) cardOf.set(file, node);
     });
     const joined = new Set();
-    canvas.edges.forEach((e) => {
-      if (e.from && e.to && e.from.node && e.to.node) {
-        joined.add(`${e.from.node.id}|${e.to.node.id}`);
-        joined.add(`${e.to.node.id}|${e.from.node.id}`);
+    liveArrows(canvas).forEach((e) => {
+      const ends = liveArrowEnds(e);
+      if (ends) {
+        joined.add(`${ends.from.id}|${ends.to.id}`);
+        joined.add(`${ends.to.id}|${ends.from.id}`);
       }
     });
     const edges = [];
@@ -827,21 +822,18 @@ export class KnowledgeCanvas {
       new Notice('Nothing to draw: every relationship between these notes has its arrow.');
       return 0;
     }
-    try {
-      canvas.importData({ nodes: [], edges });
-      canvas.requestSave();
-    } catch (err) {
-      console.error('Design Redux: could not draw the relationships', err);
+    if (!addArrows(canvas, edges)) {
       new Notice('Could not draw the relationships.');
       return 0;
     }
+    requestCanvasSave(canvas);
     const ids = edges.map((e) => e.id);
     this.plugin.offerUndo(`Drew ${edges.length} ${edges.length === 1 ? 'relationship' : 'relationships'}.`, () => {
       ids.forEach((id) => {
-        const edge = canvas.edges.get(id);
-        if (edge && typeof canvas.removeEdge === 'function') canvas.removeEdge(edge);
+        const edge = liveArrow(canvas, id);
+        if (edge) removeArrow(canvas, edge);
       });
-      canvas.requestSave();
+      requestCanvasSave(canvas);
     });
     return edges.length;
   }

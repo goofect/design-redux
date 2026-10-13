@@ -83,6 +83,11 @@ export function pickOnCanvas(canvas, items) {
   }, null);
 }
 
+/** These taken out of what's selected. */
+export function unpickOnCanvas(canvas, items) {
+  guarded(() => typeof canvas.deselect === 'function' && (items || []).forEach((item) => canvas.deselect(item)), null);
+}
+
 /** Saved — Obsidian's own save, a step of its Undo — or, where it can't be now, with the canvas's next change. */
 export function requestCanvasSave(canvas) {
   guarded(() => typeof canvas.requestSave === 'function' && canvas.requestSave(), null);
@@ -194,6 +199,11 @@ export function redrawCard(card) {
   guarded(() => typeof card.render === 'function' && card.render(), null);
 }
 
+/** A card listed again where it now is, for the canvas to find it there. */
+export function markCardMoved(canvas, card) {
+  guarded(() => typeof canvas.markMoved === 'function' && canvas.markMoved(card), null);
+}
+
 /** A card just made put on the page, if the canvas hasn't yet. */
 export function mountCard(card) {
   guarded(() => typeof card.attach === 'function' && card.nodeEl && !card.nodeEl.isConnected && card.attach(), null);
@@ -239,7 +249,26 @@ export function arrowKept(edge, key) {
   return guarded(() => (edge && edge.unknownData ? edge.unknownData[key] : undefined), undefined);
 }
 
+/** Kept on an arrow, or taken off it (undefined). */
+export function keepOnArrow(edge, key, value) {
+  guarded(() => {
+    if (!edge.unknownData) edge.unknownData = {};
+    if (value === undefined) delete edge.unknownData[key];
+    else edge.unknownData[key] = value;
+  }, null);
+}
+
 /** An arrow's drawn line, or null. */
 export function arrowElement(edge) {
   return guarded(() => edge.lineGroupEl || null, null);
+}
+
+/** An arrow's drawn line and head: [element]. */
+export function arrowElements(edge) {
+  return guarded(() => [edge.lineGroupEl, edge.lineEndGroupEl].filter(Boolean), []);
+}
+
+/** An arrow drawn again. */
+export function redrawArrow(edge) {
+  guarded(() => typeof edge.render === 'function' && edge.render(), null);
 }

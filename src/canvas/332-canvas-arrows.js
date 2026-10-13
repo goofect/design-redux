@@ -17,6 +17,7 @@
 
 import { Menu } from 'obsidian';
 import { around, menuGroup } from '../core/030-helpers-art.js';
+import { arrowElement, arrowKept, cardElement, keepOnArrow, liveArrows, redrawArrow } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { saveCanvas, tuckOf } from './316-canvas-tree.js';
 import { isGroupNode, menuButton } from './335-canvas-fold.js';
@@ -189,7 +190,7 @@ export function isCanvasEdge(item) {
 export function soleCard(selected) {
   if (selected.length !== 1) return null;
   const node = selected[0];
-  if (!node || !node.nodeEl || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
+  if (!node || !cardElement(node) || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return null;
   return node;
 }
 
@@ -225,7 +226,7 @@ export class CanvasArrows extends CanvasFeature {
 
   /** An arrow's style: its own, over the default in settings. */
   styleOf(edge) {
-    const own = (edge && edge.unknownData && edge.unknownData[ARROW_KEY]) || {};
+    const own = arrowKept(edge, ARROW_KEY) || {};
     const s = this.settings;
     return {
       shape: ARROW_SHAPES[own.shape] ? own.shape : ARROW_SHAPES[s.canvasArrowShape] ? s.canvasArrowShape : 'curve',
@@ -298,9 +299,7 @@ export class CanvasArrows extends CanvasFeature {
   /** Every arrow on a canvas drawn again. */
   redraw(view) {
     try {
-      view.canvas.edges.forEach((edge) => {
-        if (typeof edge.render === 'function') edge.render();
-      });
+      liveArrows(view.canvas).forEach((edge) => redrawArrow(edge));
     } catch (err) {
       /* drawn as they are */
     }
@@ -370,7 +369,7 @@ export class CanvasArrows extends CanvasFeature {
       const want = ARROW_HEAD_POINTS[style.head] || ARROW_HEAD_POINTS.arrow;
       if (poly && poly.getAttribute('points') !== want) poly.setAttribute('points', want);
     });
-    const group = edge.lineGroupEl;
+    const group = arrowElement(edge);
     if (group && group.classList) {
       group.classList.toggle('dr-line-dashed', style.line === 'dashed');
       group.classList.toggle('dr-line-dotted', style.line === 'dotted');
@@ -385,7 +384,7 @@ export class CanvasArrows extends CanvasFeature {
   firstArrows(view) {
     const state = this.watched.get(view);
     if (!state || state.styled) return;
-    const first = view.canvas && view.canvas.edges ? view.canvas.edges.values().next().value : null;
+    const first = view.canvas ? liveArrows(view.canvas)[0] : null;
     if (!first) return;
     state.styled = true;
     if (this.patch(first)) this.redraw(view);
@@ -400,9 +399,10 @@ export class CanvasArrows extends CanvasFeature {
   cleanup(view) {
     view.contentEl.querySelectorAll('.dr-arrow-button').forEach((el) => el.remove());
     try {
-      view.canvas.edges.forEach((edge) => {
+      liveArrows(view.canvas).forEach((edge) => {
         edge.drPoints = null;
-        if (edge.lineGroupEl && edge.lineGroupEl.classList) edge.lineGroupEl.classList.remove('dr-line-dashed', 'dr-line-dotted');
+        const line = arrowElement(edge);
+        if (line && line.classList) line.classList.remove('dr-line-dashed', 'dr-line-dotted');
         [edge.fromLineEnd, edge.toLineEnd].forEach((end) => {
           const poly = end && end.el && end.el.querySelector ? end.el.querySelector('polygon') : null;
           if (poly) poly.setAttribute('points', ARROW_HEAD_POINTS.arrow);
@@ -473,7 +473,7 @@ export class CanvasArrows extends CanvasFeature {
       if (!nested && typeof item.setSection === 'function') item.setSection('action');
       item.onClick(() => this.styleEverything(view, edges[0]));
     });
-    if (edges.some((e) => e.unknownData && e.unknownData[ARROW_KEY])) {
+    if (edges.some((e) => arrowKept(e, ARROW_KEY))) {
       menu.addItem((item) => {
         item.setTitle(nested ? 'Back to the default' : 'Arrow: back to the default').setIcon('rotate-ccw');
         if (!nested && typeof item.setSection === 'function') item.setSection('action');
@@ -491,21 +491,19 @@ export class CanvasArrows extends CanvasFeature {
   setStyle(view, edges, change, replace) {
     const defaults = this.defaults();
     edges.forEach((edge) => {
-      if (!edge.unknownData) edge.unknownData = {};
-      const own = change ? Object.assign({}, replace ? {} : edge.unknownData[ARROW_KEY] || {}, change) : {};
+      const own = change ? Object.assign({}, replace ? {} : arrowKept(edge, ARROW_KEY) || {}, change) : {};
       Object.keys(own).forEach((k) => {
         if (own[k] === defaults[k]) delete own[k];
       });
-      if (Object.keys(own).length) edge.unknownData[ARROW_KEY] = own;
-      else delete edge.unknownData[ARROW_KEY];
-      if (typeof edge.render === 'function') edge.render();
+      keepOnArrow(edge, ARROW_KEY, Object.keys(own).length ? own : undefined);
+      redrawArrow(edge);
     });
     this.save(view);
   }
 
   /** One arrow's style for every arrow on its canvas. */
   styleEverything(view, model) {
-    const edges = Array.from(view.canvas.edges.values()).filter(isCanvasEdge);
+    const edges = liveArrows(view.canvas).filter(isCanvasEdge);
     this.setStyle(view, edges, this.styleOf(model), true);
   }
 

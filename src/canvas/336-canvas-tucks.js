@@ -11,6 +11,7 @@
 /* there. One whose fold is gone, deleted, comes back where it was.     */
 /* ------------------------------------------------------------------ */
 
+import { arrowElements, cardElement, liveCards, markCardMoved, pickedOnCanvas, unpickOnCanvas } from '../core/079-canvas-adapter.js';
 import { branchSides, canvasHomes, isGroupRecord, shownAs, tuckOf } from './316-canvas-tree.js';
 import { branchRoom, giveRoomBack, makeRoom, shiftRecord, snapshotModel } from './317-canvas-room.js';
 
@@ -87,7 +88,8 @@ export function drawTucks(view, model, state) {
     const node = rec.node;
     if (!node) return;
     const into = rec.tuck ? (shownAs(model, rec) || {}).node : null;
-    if (node.nodeEl) node.nodeEl.toggleClass('dr-tucked', !!into);
+    const el = cardElement(node);
+    if (el) el.toggleClass('dr-tucked', !!into);
     if (into && into !== node) {
       node.drInto = into;
       if (node.getBBox !== tuckedBBox) node.getBBox = tuckedBBox;
@@ -95,11 +97,7 @@ export function drawTucks(view, model, state) {
       delete node.getBBox;
       delete node.drInto;
       // Listed again where it is, for the canvas to find.
-      try {
-        if (typeof canvas.markMoved === 'function') canvas.markMoved(node);
-      } catch (err) {
-        /* listed with its next move */
-      }
+      markCardMoved(canvas, node);
     }
   });
   model.edges.forEach((e) => {
@@ -110,7 +108,7 @@ export function drawTucks(view, model, state) {
     const involved = !!(a.tuck || b.tuck);
     const inside = involved && shownAs(model, a) === shownAs(model, b);
     const label = edge.labelElement && edge.labelElement.wrapperEl;
-    [edge.lineGroupEl, edge.lineEndGroupEl, label].forEach((el) => {
+    arrowElements(edge).concat(label || []).forEach((el) => {
       if (el && el.classList) el.classList.toggle('dr-tucked-edge', inside);
     });
     // Drawn again when an end is now drawn somewhere else.
@@ -125,24 +123,20 @@ export function drawTucks(view, model, state) {
       }
     }
   });
-  try {
-    const held = Array.from(canvas.selection || []).filter((n) => tuckOf(n));
-    if (held.length && typeof canvas.deselect === 'function') held.forEach((n) => canvas.deselect(n));
-  } catch (err) {
-    /* nothing selected to speak of */
-  }
+  unpickOnCanvas(canvas, pickedOnCanvas(canvas).filter((n) => tuckOf(n)));
 }
 
 /** Everything drawTucks did, undone: every card drawn as itself. */
 export function undrawTucks(view) {
   try {
-    view.canvas.nodes.forEach((node) => {
+    liveCards(view.canvas).forEach((node) => {
       if (node.getBBox === tuckedBBox) {
         delete node.getBBox;
         delete node.drInto;
-        if (typeof view.canvas.markMoved === 'function') view.canvas.markMoved(node);
+        markCardMoved(view.canvas, node);
       }
-      if (node.nodeEl) node.nodeEl.removeClass('dr-tucked');
+      const el = cardElement(node);
+      if (el) el.removeClass('dr-tucked');
     });
   } catch (err) {
     /* no cards */
