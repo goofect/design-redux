@@ -132,6 +132,24 @@ describe('Design Redux in Obsidian', function () {
     }
   });
 
+  it('shows one settings gear, in the sidebar header', async function () {
+    const gears = () =>
+      browser.executeObsidian(() =>
+        Array.from(document.querySelectorAll('.workspace .clickable-icon'))
+          .filter((el) => el.querySelector('svg.lucide-settings') && el.offsetParent !== null)
+          .map((el) => (el.closest('.workspace-tab-header-container') ? 'header' : el.parentElement.className))
+      );
+    await browser.waitUntil(async () => (await gears()).includes('header'), { timeout: 5000, timeoutMsg: 'the gear never reached the header' });
+    expect(await gears()).toEqual(['header']);
+    // The sidebar drawn again — as a new layout does — and still one.
+    await browser.executeObsidian(async ({ app }) => {
+      const layout = app.workspace.getLayout();
+      await app.workspace.changeLayout(layout);
+    });
+    await browser.waitUntil(async () => (await gears()).includes('header'), { timeout: 5000, timeoutMsg: 'the gear never came back to the header' });
+    expect(await gears()).toEqual(['header']);
+  });
+
   it('finds the unofficial parts of Obsidian it relies on', async function () {
     const compat = await browser.executeObsidian(({ app, obsidian }) => {
       const has = (fn) => {

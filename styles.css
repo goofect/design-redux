@@ -351,6 +351,11 @@ body {
    these are direct children of the flex row, so without this they
    stretch to its full height and their hover backdrop looks oversized. */
 
+/* Obsidian's gear drawn again where the moved one was: one is enough. */
+.dr-settings-spare {
+  display: none !important;
+}
+
 .workspace-tab-header-container .dr-trigger, .workspace-tab-header-container .dr-settings-moved {
   flex: 0 0 auto;
   align-self: center;

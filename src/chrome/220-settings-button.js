@@ -43,21 +43,31 @@ export class SettingsButton extends Feature {
    * ribbon is never taken for it.
    */
   find() {
-    const holders = ['.workspace-drawer-vault-actions', '.side-dock-settings', '.workspace-ribbon'];
-    for (const selector of holders) {
-      for (const holder of document.querySelectorAll(selector)) {
-        for (const icon of holder.querySelectorAll('.clickable-icon')) {
-          if (icon.querySelector('svg.lucide-settings, svg.settings')) return icon;
-        }
-      }
-    }
-    return null;
+    return this.gears()[0] || null;
+  }
+
+  /** Every gear of Obsidian's where it keeps them, in that order. */
+  gears() {
+    const out = [];
+    ['.workspace-drawer-vault-actions', '.side-dock-settings', '.workspace-ribbon'].forEach((selector) =>
+      document.querySelectorAll(selector).forEach((holder) =>
+        holder.querySelectorAll('.clickable-icon').forEach((icon) => {
+          if (icon !== this.el && out.indexOf(icon) === -1 && icon.querySelector('svg.lucide-settings, svg.settings')) out.push(icon);
+        })
+      )
+    );
+    return out;
+  }
+
+  /** Any other gear of Obsidian's — one it draws again where the moved one was — out of sight while the moved one stands in. */
+  hideSpares() {
+    if (this.el) this.gears().forEach((icon) => icon.addClass('dr-settings-spare'));
   }
 
   sync() {
     const header = document.querySelector(TAB_HEADER);
     if (!header) return;
-    if (this.el && this.el.isConnected && header.contains(this.el)) return;
+    if (this.el && this.el.isConnected && header.contains(this.el)) return this.hideSpares();
 
     // Moved already, and the header rebuilt since: the gear was taken
     // down with the old one, and is put back rather than searched for.
@@ -86,10 +96,12 @@ export class SettingsButton extends Feature {
     });
     makeHeaderDraggable(gear, 'settings', this.plugin);
     settleHeader(header, this.settings.headerOrder);
+    this.hideSpares();
   }
 
   /** The gear back where it was, as it was. */
   restore() {
+    document.querySelectorAll('.dr-settings-spare').forEach((icon) => icon.removeClass('dr-settings-spare'));
     const gear = this.el;
     if (gear) {
       gear.removeClass('dr-settings-moved');
