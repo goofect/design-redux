@@ -3,7 +3,7 @@
 # how it went, whether it was released, and, if something failed, only the
 # failing lines. Run it once after pushing instead of checking by hand.
 # The branch is main unless given: tests/ci.sh "" v2.
-sha=${1:-$(git rev-parse HEAD)}
+sha=$(git rev-parse "${1:-HEAD}")
 branch=${2:-main}
 runs="repos/goofect/design-redux/actions/runs?head_sha=$sha&branch=$branch"
 state=
@@ -17,8 +17,8 @@ case "$state" in completed*) ;; *) echo "(still running; run this again)"; exit 
 
 git fetch -q origin +ci-results:refs/remotes/origin/ci-results 'refs/tags/*:refs/tags/*'
 git show origin/ci-results:summary.txt | grep -E 'tests:'
-tag=$(git tag --sort=-v:refname | head -1)
-if git merge-base --is-ancestor "$sha" "$tag" 2>/dev/null; then echo "released: $tag"; else echo "not released"; fi
+tag=$(git tag --contains "$sha" --sort=v:refname 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+if [ -n "$tag" ]; then echo "released: $tag"; else echo "not released"; fi
 
 [ "$state" = "completed success" ] && exit 0
 # Which job failed: a release that failed after the tests passed usually lost

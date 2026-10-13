@@ -103,7 +103,13 @@ jobs:
           git add -A
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "Results for ${GITHUB_SHA::7}"
-          git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-results
+          # Two runs of one commit (main and a branch kept level with it) can
+          # publish at the same moment, and one push loses the race: try again.
+          for i in 1 2 3 4; do
+            git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-results && exit 0
+            sleep $((i * 5))
+          done
+          exit 1
 
       # The same results kept with the run itself, for two weeks.
       - name: Keep results with the run
