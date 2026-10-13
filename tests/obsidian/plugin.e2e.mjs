@@ -1596,6 +1596,57 @@ describe('Design Redux in Obsidian', function () {
     expect(await badge.getText()).toBe('1/3');
   });
 
+  it('opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getFolderByPath('Page album')) await app.vault.createFolder('Page album');
+      for (const [path, text] of [
+        ['Page album/Judicial review.md', 'Courts check power. See [[Page album/Standing]].'],
+        ['Page album/Standing.md', '---\nparent: "[[Judicial review]]"\n---\nWho may sue. Back to [[Page album/Judicial review]].'],
+      ]) {
+        const old = app.vault.getFileByPath(path);
+        if (old) await app.vault.delete(old);
+        await app.vault.create(path, text);
+      }
+    });
+    await obsidianPage.openFile('Page album/Standing.md');
+    const look = () =>
+      browser.executeObsidian(({ app }) => {
+        const view = app.workspace.activeLeaf.view;
+        const root = view.containerEl.querySelector(view.getMode() === 'preview' ? '.markdown-reading-view' : '.markdown-source-view');
+        const album = root.querySelector('.dr-note-album');
+        const title = root.querySelector('.inline-title');
+        const meta = root.querySelector('.dr-note-meta');
+        return {
+          album: album ? album.textContent : null,
+          above: !!album && !!title && album.nextElementSibling === title,
+          meta: meta ? meta.textContent : null,
+          shelves: Array.from(root.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent),
+        };
+      });
+    await browser.waitUntil(async () => (await look()).shelves.length > 0, { timeout: 5000, timeoutMsg: 'the note page was never drawn' });
+    let now = await look();
+    expect(now.album).toBe('Page album');
+    expect(now.above).toBe(true);
+    expect(now.meta.startsWith('Under Judicial review')).toBe(true);
+    expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›', 'More in Page album ›']);
+    // Reading: the same.
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'preview' }) });
+    });
+    await browser.waitUntil(async () => (await look()).shelves.length > 0, { timeout: 5000, timeoutMsg: 'not drawn in reading view' });
+    now = await look();
+    expect(now.album).toBe('Page album');
+    expect(now.shelves.length).toBe(3);
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source' }) });
+      // Its notes gone again, so later tests count the vault as it was.
+      const folder = app.vault.getFolderByPath('Page album');
+      if (folder) await app.vault.delete(folder, true);
+    });
+  });
+
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });

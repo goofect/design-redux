@@ -65,6 +65,12 @@ export const DEFAULTS = {
   albumColumns: 'domain, modified',
   // A grey line under each note in an album: its description, or its first sentence.
   albumExcerpts: true,
+  // A note's album above its title, and one grey line under it.
+  notePage: true,
+  // A note's properties as quiet chips under its title, the full block a click away.
+  notePageChips: false,
+  // Shelves at a note's end: linked from here, mentioned in, more in its album.
+  notePageShelves: true,
   // At an album's end, greyed: the notes its notes link to that aren't written yet.
   albumStillToWrite: true,
   // The property naming a note's parent, to nest an album's notes by; empty for a flat list.

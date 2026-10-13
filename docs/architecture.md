@@ -671,3 +671,11 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   and no count at its foot. At the end, "Still to write" — what its notes
   link to that isn't a note yet, greyed; a click writes it there — and a
   New note row.
+- **The note page** (`library/140`): a note opens with its album above its
+  title, in the accent colour (a click opens the album), and one grey line
+  under it — what it hangs from, its length, when it was edited. Its
+  properties can sit there as quiet chips, the full block a click away
+  (off to begin with). At its end, shelves: Linked from here, Mentioned in,
+  More in its album — each note its title and opening line. In editing and
+  reading views, only in the note's own layout (not an embed's), drawn again
+  only where what it says changed.

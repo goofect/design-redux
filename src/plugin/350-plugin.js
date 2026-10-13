@@ -19,6 +19,7 @@ import { SidebarDrop } from '../library/107-sidebar-drop.js';
 import { BrowseView } from '../library/120-browse-view.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ActionsMenu } from '../chrome/140-actions-menu.js';
+import { NotePage } from '../library/140-note-page.js';
 import { PropertiesPanel } from '../chrome/180-panel.js';
 import { ContextStrip } from '../chrome/190-strip.js';
 import { OnePage } from '../chrome/200-one-page.js';
@@ -94,6 +95,7 @@ export class DesignRedux extends Plugin {
     this.features = [
       new Appearance(this),
       new Library(this),
+      new NotePage(this),
       new ListKeys(this),
       new SidebarDrop(this),
       new ActionsMenu(this),

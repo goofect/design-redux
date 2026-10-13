@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -321,6 +321,52 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.albumStillToWrite = false;
     view.render();
     assert.ok(!view.contentEl.querySelector('.is-unwritten') && view.contentEl.querySelector('.dr-new-note-row'));
+  });
+
+  await t('a note opens with its album above its title, one grey line under it, chips, and shelves at its end', async () => {
+    const { v, plugin, app } = setup();
+    const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { parent: '[[Balance]]', status: 'draft', cover: 'a.png', tags: ['#law'] } : {} });
+    app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
+    v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
+    plugin.lengths = { label: () => '3 min read', measure: async () => false };
+    Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
+    // A note's view as Obsidian lays it out, editing.
+    const containerEl = document.createElement('div');
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    const title = sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
+    sizer.createDiv({ cls: 'metadata-container' });
+    const content = sizer.createDiv({ cls: 'cm-contentContainer' });
+    sizer.createDiv({ cls: 'embedded-backlinks' });
+    const view = { containerEl, file };
+    const page = new R.NotePage(plugin);
+    page.draw(view);
+    const album = sizer.querySelector('.dr-note-album');
+    assert.strictEqual(album.textContent, 'IR');
+    assert.strictEqual(album.nextElementSibling, title, 'above the title');
+    const meta = title.nextElementSibling;
+    assert.ok(meta.classList.contains('dr-note-meta'));
+    assert.ok(/^Under Balance {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
+    const chips = Array.from(sizer.querySelectorAll('.dr-note-chip')).map((c) => c.textContent);
+    assert.deepStrictEqual(chips, ['draft', 'law', 'Properties'], 'its parent and cover said elsewhere');
+    assert.ok(containerEl.classList.contains('dr-props-as-chips'));
+    sizer.querySelector('.dr-note-chip.is-more').click();
+    assert.ok(containerEl.classList.contains('dr-show-props'), 'the full block a click away');
+    const shelves = sizer.querySelector('.dr-note-shelves');
+    assert.strictEqual(shelves.previousElementSibling, content, 'after the text, before the backlinks');
+    assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);
+    assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf')[1].querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent), ['Cooperation']);
+    await settle();
+    assert.strictEqual(shelves.querySelector('.dr-note-tile-line').textContent, 'Balance begins here.');
+    // Drawn again with nothing changed: the same elements.
+    page.draw(view);
+    assert.strictEqual(sizer.querySelector('.dr-note-shelves'), shelves);
+    assert.strictEqual(sizer.querySelector('.dr-note-album'), album);
+    // Off: all of it gone.
+    plugin.settings.notePage = false;
+    page.draw(view);
+    assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves'));
+    assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {

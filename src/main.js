@@ -43,6 +43,7 @@ import './library/122-browse-editing.js';
 import './library/123-browse-rows.js';
 import './library/124-browse-preview.js';
 import './library/130-browse-filters.js';
+import './library/140-note-page.js';
 import './chrome/140-actions-menu.js';
 import './chrome/160-panel-properties.js';
 import './chrome/170-panel-native.js';
