@@ -654,3 +654,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   Which buttons, and their order, is a setting (`canvasToolbarItems`); the
   fold feature's own buttons give way to the toolbar's. The canvas settings
   are in six groups: Map, Cards, Arrows, Arrange, Find and focus, Check.
+- **Cards that hold more** (`CanvasCardFacts` in 322): a card shows how far
+  its checklist is done (3/5), a note card its cover and title like an album
+  tile, and the properties chosen in settings as chips. Cards can be tinted
+  by their branch or their depth (347), leaving cards' own colours as they
+  are.

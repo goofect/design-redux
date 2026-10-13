@@ -209,6 +209,12 @@ export const DEFAULTS = {
   canvasMaps: true,
   // { canvasPath: true } — the canvases made mind maps.
   canvasMapFiles: {},
+  // What a card holds, on it: checklist progress, a note's cover and title, chosen properties.
+  canvasCardFacts: true,
+  // Property names a note card shows as chips, separated by commas.
+  canvasCardChips: '',
+  // A tint for each card by its branch ('branch') or depth ('depth'), or none ('none').
+  canvasColourBy: 'none',
   // Buttons for what you do to a map, in the bar above the selected cards.
   canvasMapToolbar: true,
   // [{ id, on }] — the map toolbar's buttons, in order; empty for the first choice.

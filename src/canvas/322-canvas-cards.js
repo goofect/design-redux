@@ -5,10 +5,15 @@
 /* than scrolling inside, and shrinks back as far as it was when typing */
 /* began; a card below it in the way moves down. Fit to text sizes      */
 /* selected cards to their text. And a card's first line can read as   */
-/* its title, with the rest smaller beneath it as its details.         */
+/* its title, with the rest smaller beneath it as its details. What a   */
+/* card holds shows on it: how far its checklist is done, a note's      */
+/* cover and title, and the properties chosen, as chips.               */
 /* ------------------------------------------------------------------ */
 
-import { canvasReadonly, cardEditing, cardElement, liveCards } from '../core/079-canvas-adapter.js';
+import { TFile } from 'obsidian';
+import { noteCoverSrc } from '../core/030-helpers-art.js';
+import { noteProps } from '../core/073-notes.js';
+import { canvasReadonly, cardData, cardEditing, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasGap, canvasModel, isGroupRecord, saveCanvas, tuckOf, withinRect } from './316-canvas-tree.js';
 import { applyCanvasModel, fitGroups, homesBefore, makeRoom, snapshotModel } from './317-canvas-room.js';
@@ -239,3 +244,120 @@ export class CanvasCards extends CanvasFeature {
     saveCanvas(view.canvas);
   }
 }
+
+/** How far a checklist in some Markdown is done: { done, total }, or null with none. */
+export function checklistProgress(text) {
+  let done = 0;
+  let total = 0;
+  String(text || '')
+    .split('\n')
+    .forEach((line) => {
+      const m = /^\s*(?:[-*+]|\d+[.)])\s+\[(.)\]/.exec(line);
+      if (!m) return;
+      total++;
+      if (m[1] !== ' ') done++;
+    });
+  return total ? { done, total } : null;
+}
+
+/** A property's value as a chip says it. */
+function chipText(value) {
+  if (Array.isArray(value)) return value.map(chipText).filter(Boolean).join(', ');
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'boolean') return value ? 'yes' : 'no';
+  return String(value).replace(/^#/, '');
+}
+
+export class CanvasCardFacts extends CanvasFeature {
+  settingsSchema() {
+    return [
+      {
+        key: 'canvasCardFacts',
+        name: 'What a card holds, on it',
+        desc: 'How far a card’s checklist is done, as 3/5; a note’s cover and title, like an album tile; and the properties below, as chips.',
+      },
+      {
+        key: 'canvasCardChips',
+        type: 'text',
+        name: 'Properties shown on cards',
+        desc: 'Property names, separated by commas — a note card shows each it has as a chip.',
+        placeholder: 'status, tags',
+        showIf: 'canvasCardFacts',
+      },
+    ];
+  }
+
+  /** What a card shows of what it holds: { progress, cover, title, chips }. */
+  factsOf(node) {
+    const data = cardData(node);
+    const out = { progress: null, cover: null, title: null, chips: [] };
+    if ((data.type || 'text') === 'text') {
+      out.progress = checklistProgress(data.text);
+      return out;
+    }
+    const file = data.type === 'file' && data.file ? this.app.vault.getAbstractFileByPath(data.file) : null;
+    if (!(file instanceof TFile) || file.extension !== 'md') return out;
+    const cache = this.app.metadataCache.getFileCache(file) || {};
+    const tasks = (cache.listItems || []).filter((i) => typeof i.task === 'string');
+    if (tasks.length) out.progress = { done: tasks.filter((i) => i.task !== ' ').length, total: tasks.length };
+    if (!data.subpath) {
+      out.cover = noteCoverSrc(this.plugin, file);
+      if (out.cover) out.title = file.basename;
+    }
+    const props = noteProps(this.app, file);
+    String(this.settings.canvasCardChips || '')
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean)
+      .forEach((k) => {
+        const text = chipText(props[k]);
+        if (text) out.chips.push({ key: k, text });
+      });
+    return out;
+  }
+
+  /** Each redraw: what each card holds, on it — written only where it changed, as writing is itself a change seen. */
+  pass(view) {
+    if (!view || !view.canvas) return;
+    liveCards(view.canvas).forEach((node) => {
+      const el = cardElement(node);
+      if (!el) return;
+      const f = this.factsOf(node);
+      const key = JSON.stringify(f);
+      const has = (cls) => !!el.querySelector(`:scope > .${cls}`);
+      // Unchanged, and still there: the canvas can draw a card afresh.
+      if (el.dataset.drFacts === key && has('dr-card-progress') === !!f.progress && has('dr-card-cover') === !!f.cover && has('dr-card-chips') === f.chips.length > 0) return;
+      el.dataset.drFacts = key;
+      el.querySelectorAll(':scope > .dr-card-progress, :scope > .dr-card-cover, :scope > .dr-card-chips').forEach((x) => x.remove());
+      el.toggleClass('dr-has-cover', !!f.cover);
+      if (f.cover) {
+        const band = el.createDiv({ cls: 'dr-card-cover' });
+        const img = band.createEl('img');
+        img.setAttribute('src', f.cover);
+        img.setAttribute('alt', '');
+        img.setAttribute('draggable', 'false');
+        band.createDiv({ cls: 'dr-card-cover-title', text: f.title });
+      }
+      if (f.progress) {
+        const badge = el.createDiv({ cls: 'dr-card-progress', text: `${f.progress.done}/${f.progress.total}` });
+        badge.toggleClass('is-done', f.progress.done === f.progress.total);
+        badge.setAttribute('aria-label', `${f.progress.done} of ${f.progress.total} done`);
+      }
+      if (f.chips.length) {
+        const row = el.createDiv({ cls: 'dr-card-chips' });
+        f.chips.forEach((c) => row.createSpan({ cls: 'dr-card-chip', text: c.text }).setAttribute('aria-label', c.key));
+      }
+    });
+  }
+
+  cleanup(view) {
+    if (!view.contentEl) return;
+    view.contentEl.querySelectorAll('.dr-card-progress, .dr-card-cover, .dr-card-chips').forEach((x) => x.remove());
+    view.contentEl.querySelectorAll('[data-dr-facts]').forEach((el) => {
+      delete el.dataset.drFacts;
+      el.removeClass('dr-has-cover');
+    });
+  }
+}
+
+CanvasCardFacts.settingKey = 'canvasCardFacts';

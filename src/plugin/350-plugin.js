@@ -47,7 +47,7 @@ import { BulkEditing } from '../bulk/310-bulk-feature.js';
 import { CanvasArguments } from '../canvas/319-canvas-arguments.js';
 import { CanvasLegend } from '../canvas/320-canvas-legend.js';
 import { CanvasDuplicate, CanvasFind, CanvasFocus, CanvasTools } from '../canvas/321-canvas-extras.js';
-import { CanvasCards } from '../canvas/322-canvas-cards.js';
+import { CanvasCardFacts, CanvasCards } from '../canvas/322-canvas-cards.js';
 import { CanvasRestructure } from '../canvas/323-canvas-restructure.js';
 import { CanvasBranchNote, CanvasOutlineBranch } from '../canvas/324-canvas-outlines.js';
 import { CanvasLayouts } from '../canvas/325-canvas-layouts.js';
@@ -146,6 +146,7 @@ export class DesignRedux extends Plugin {
       new CanvasMap(this),
       new CanvasMapToolbar(this),
       new CanvasCards(this),
+      new CanvasCardFacts(this),
       new CanvasFold(this),
       new CanvasBranches(this),
       new CanvasOutline(this),

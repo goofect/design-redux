@@ -1580,6 +1580,22 @@ describe('Design Redux in Obsidian', function () {
     await browser.keys('Escape');
   });
 
+  it('shows on a card how far its checklist is done', async function () {
+    const data = {
+      nodes: [{ id: 'list', type: 'text', text: 'Essay\n\n- [x] plan\n- [ ] draft\n- [ ] edit', x: 0, y: 0, width: 260, height: 160 }],
+      edges: [],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const old = app.vault.getFileByPath('Checklist.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Checklist.canvas', JSON.stringify(data));
+    }, data);
+    await obsidianPage.openFile('Checklist.canvas');
+    const badge = await browser.$(ACTIVE + '.canvas-node .dr-card-progress');
+    await badge.waitForExist({ timeout: 5000 });
+    expect(await badge.getText()).toBe('1/3');
+  });
+
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });

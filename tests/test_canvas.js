@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1133,6 +1133,55 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.canvas.selectOnly(n('root'));
     fold.decorateMenu(view);
     assert.ok(!bar.querySelector('.dr-map-tools') && bar.querySelector('.dr-branch-button'));
+  });
+
+  await t('a card shows how far its checklist is done, a note card its cover and title and the properties chosen; tints by branch or depth', async () => {
+    assert.deepStrictEqual(R.checklistProgress('Plan\n- [x] read\n- [ ] write\n* [X] cite\n1. [ ] submit'), { done: 2, total: 4 });
+    assert.strictEqual(R.checklistProgress('No list here\n- just a point'), null);
+    const view = fakeCanvas({
+      nodes: [
+        card('t', 0, 0, 200, 80, { text: 'Essay\n- [x] plan\n- [ ] draft' }),
+        card('n', 300, 0, 240, 200, { type: 'file', file: 'Torts.md' }),
+        card('plain', 600, 0, 200, 60),
+      ],
+      edges: [],
+    });
+    const file = Object.assign(new obsidian.TFile(), { path: 'Torts.md', basename: 'Torts', extension: 'md' });
+    const app = {
+      vault: { getAbstractFileByPath: (p) => (p === 'Torts.md' ? file : null) },
+      metadataCache: {
+        getFileCache: () => ({
+          listItems: [{ task: 'x' }, { task: ' ' }, { task: 'x' }, {}],
+          frontmatter: { cover: 'https://example.com/torts.png', status: 'draft', tags: ['law', '#exam'] },
+        }),
+      },
+    };
+    const facts = new R.CanvasCardFacts({ app, settings: { canvasCardFacts: true, canvasCardChips: 'status, tags, missing', coverProperty: 'cover' } });
+    facts.pass(view);
+    const el = (id) => view.canvas.nodes.get(id).nodeEl;
+    assert.strictEqual(el('t').querySelector('.dr-card-progress').textContent, '1/2');
+    assert.strictEqual(el('n').querySelector('.dr-card-progress').textContent, '2/3');
+    assert.strictEqual(el('n').querySelector('.dr-card-cover img').getAttribute('src'), 'https://example.com/torts.png');
+    assert.strictEqual(el('n').querySelector('.dr-card-cover-title').textContent, 'Torts');
+    assert.ok(el('n').classList.contains('dr-has-cover'));
+    assert.deepStrictEqual(Array.from(el('n').querySelectorAll('.dr-card-chip')).map((c) => c.textContent), ['draft', 'law, exam']);
+    assert.ok(!el('plain').querySelector('.dr-card-progress, .dr-card-cover, .dr-card-chips'), 'nothing to show');
+    // Looked over again: nothing written, as nothing changed.
+    const badge = el('t').querySelector('.dr-card-progress');
+    facts.pass(view);
+    assert.strictEqual(el('t').querySelector('.dr-card-progress'), badge);
+    facts.cleanup(view);
+    assert.ok(!view.contentEl.querySelector('.dr-card-progress, .dr-card-cover, .dr-card-chips'));
+    // Tints: by the branch from the root, or by the steps out; a card with its own colour keeps it.
+    const model = R.modelFromData({
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -60, 100, 50), card('a1', 400, -60, 100, 50), card('b', 200, 60, 100, 50), card('c', 200, 160, 100, 50, { color: '3' })],
+      edges: [edge('r', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('r', 'c', 'right', 'left')],
+    });
+    const links = R.arrowLinks(model);
+    const depths = R.treeDepths(model, links);
+    assert.deepStrictEqual(Object.fromEntries(R.cardTints(model, links, depths, 'branch')), { a: 1, a1: 1, b: 2 });
+    assert.deepStrictEqual(Object.fromEntries(R.cardTints(model, links, depths, 'depth')), { a: 1, a1: 2, b: 1 });
+    assert.strictEqual(R.cardTints(model, links, depths, 'none').size, 0);
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {
