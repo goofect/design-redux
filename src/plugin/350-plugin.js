@@ -71,6 +71,7 @@ import { CanvasPins } from '../canvas/344-canvas-pins.js';
 import { CanvasOutlineSync } from '../canvas/345-canvas-outline-sync.js';
 import { CanvasViews } from '../canvas/346-canvas-views.js';
 import { CanvasDepth } from '../canvas/347-canvas-depth.js';
+import { CanvasMap } from '../canvas/348-canvas-map.js';
 import { WorkspaceModes } from '../chrome/348-workspace-modes.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
 
@@ -141,6 +142,7 @@ export class DesignRedux extends Plugin {
       new CanvasPins(this),
       new CanvasViews(this),
       new CanvasDepth(this),
+      new CanvasMap(this),
       new CanvasCards(this),
       new CanvasFold(this),
       new CanvasBranches(this),

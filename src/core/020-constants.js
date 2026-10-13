@@ -205,6 +205,10 @@ export const DEFAULTS = {
   canvasAlignments: {},
   // Selected cards lined up, spaced, sized alike, or laid out in a grid.
   canvasArrange: true,
+  // A canvas made a mind map lays itself out from its arrows as it changes.
+  canvasMaps: true,
+  // { canvasPath: true } — the canvases made mind maps.
+  canvasMapFiles: {},
   // Tab and Enter on a selected card add one after it or beside it.
   canvasMindMap: true,
   // Where Tab and Enter put a new card: 'free' for the nearest free space, 'line' in line with room made.

@@ -22,6 +22,7 @@ import { isCanvasEdge, nearestSides } from './332-canvas-arrows.js';
 import { boxEdges } from './334-canvas-mindmap.js';
 import { afterCanvasChange, CanvasFold, glideAndSettle, isGroupNode } from './335-canvas-fold.js';
 import { CanvasBranches, setEdgeSides } from './338-canvas-branches.js';
+import { CanvasMap } from './348-canvas-map.js';
 
 export const BRANCH_LAYOUTS = [
   ['right', 'To the right', 'arrow-right'],
@@ -690,15 +691,15 @@ export class CanvasLayouts extends CanvasFeature {
 
   /** Where the branch's cards go for a layout. */
   places(model, rootId, mode, links) {
-    if (mode === 'radial') return radialLayout(model, rootId, links);
-    if (mode === 'outline') return outlineLayout(model, rootId, links);
-    if (mode === 'concept') return conceptLayout(model, rootId, links);
-    return directedLayout(model, rootId, mode, links);
+    return layoutPlaces(model, rootId, mode, links);
   }
 
   /** The branch laid out, gliding there; its arrows then set to the sides that face, and saved. */
   layout(view, node, mode) {
     if (!view || !view.canvas || !node) return Promise.resolve(false);
+    // In a mind map: its tree laid out that way from now on.
+    const map = CanvasMap.of(this.plugin, view);
+    if (map) return map.setLayout(view, node, mode);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
     const model = canvasModel(view.canvas);
@@ -723,34 +724,49 @@ export class CanvasLayouts extends CanvasFeature {
 
   /** Each arrow within the branch from the side facing its card to the side facing back. */
   laidOut(view, model, rec, places, links, mode, changed) {
-    const inside = new Set(Array.from(places.keys()).concat([rec.id]));
-    model.edges.forEach((e) => {
-      const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
-      const parent = reversed ? e.to : e.from;
-      const child = reversed ? e.from : e.to;
-      if (!inside.has(parent) || !inside.has(child) || (links.children.get(parent) || []).indexOf(child) === -1) return;
-      let out;
-      let back;
-      if (mode === 'radial' || mode === 'concept') {
-        const sides = nearestSides(boxEdges(model.byId.get(parent)), boxEdges(model.byId.get(child)));
-        out = sides.from;
-        back = sides.to;
-      } else if (mode === 'outline') {
-        // Down out of the card, into the side of the one set in below it.
-        out = 'bottom';
-        back = 'left';
-      } else {
-        out = places.sides.get(child) || mode;
-        back = OPPOSITE_SIDE[out];
-      }
-      const fromSide = reversed ? back : out;
-      const toSide = reversed ? out : back;
-      if (e.fromSide === fromSide && e.toSide === toSide) return;
-      if (setEdgeSides(e.edge, fromSide, toSide)) changed = true;
-    });
+    if (faceArrows(model, rec.id, places, links, mode)) changed = true;
     afterCanvasChange(this.plugin, view, changed);
     return changed;
   }
+}
+
+/** Where a branch's cards go for a layout: id -> { x, y }. */
+export function layoutPlaces(model, rootId, mode, links) {
+  if (mode === 'radial') return radialLayout(model, rootId, links);
+  if (mode === 'outline') return outlineLayout(model, rootId, links);
+  if (mode === 'concept') return conceptLayout(model, rootId, links);
+  return directedLayout(model, rootId, mode, links);
+}
+
+/** Each arrow within a laid-out branch from the side facing its card to the side facing back; whether any changed. */
+export function faceArrows(model, rootId, places, links, mode) {
+  const inside = new Set(Array.from(places.keys()).concat([rootId]));
+  let changed = false;
+  model.edges.forEach((e) => {
+    const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
+    const parent = reversed ? e.to : e.from;
+    const child = reversed ? e.from : e.to;
+    if (!inside.has(parent) || !inside.has(child) || (links.children.get(parent) || []).indexOf(child) === -1) return;
+    let out;
+    let back;
+    if (mode === 'radial' || mode === 'concept') {
+      const sides = nearestSides(boxEdges(model.byId.get(parent)), boxEdges(model.byId.get(child)));
+      out = sides.from;
+      back = sides.to;
+    } else if (mode === 'outline') {
+      // Down out of the card, into the side of the one set in below it.
+      out = 'bottom';
+      back = 'left';
+    } else {
+      out = places.sides.get(child) || mode;
+      back = OPPOSITE_SIDE[out];
+    }
+    const fromSide = reversed ? back : out;
+    const toSide = reversed ? out : back;
+    if (e.fromSide === fromSide && e.toSide === toSide) return;
+    if (setEdgeSides(e.edge, fromSide, toSide)) changed = true;
+  });
+  return changed;
 }
 
 CanvasLayouts.settingKey = 'canvasLayouts';

@@ -98,6 +98,18 @@ export function requestCanvasSave(canvas) {
   guarded(() => typeof canvas.requestSave === 'function' && canvas.requestSave(), null);
 }
 
+/**
+ * Saved as part of the step of Undo now made — the change that set this
+ * off — rather than as a step of its own; or, where the canvas can't,
+ * saved without one.
+ */
+export function saveInCurrentStep(canvas) {
+  guarded(() => {
+    if (typeof canvas.overrideHistory === 'function') canvas.overrideHistory();
+    else if (typeof canvas.requestSave === 'function') canvas.requestSave(false);
+  }, null);
+}
+
 /** What the canvas holds, as its file would: { nodes, edges }, or null. */
 export function canvasDataOf(canvas) {
   return guarded(() => (typeof canvas.getData === 'function' ? canvas.getData() : null), null);

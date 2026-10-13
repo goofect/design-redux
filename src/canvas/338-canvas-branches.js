@@ -13,6 +13,7 @@ import { arrowLinks, branchSide, canvasModel, isGroupRecord, OPPOSITE_SIDE, show
 import { snapshotModel, tidyRecords } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { afterCanvasChange, CanvasFold } from './335-canvas-fold.js';
+import { CanvasMap } from './348-canvas-map.js';
 
 export class CanvasBranches extends CanvasFeature {
   settingsSchema() {
@@ -55,6 +56,9 @@ export class CanvasBranches extends CanvasFeature {
   /** The branch laid out as a tree, and its arrows leaving and arriving on the sides the tree grows by. */
   tidy(view, node) {
     if (!view || !view.canvas || !node) return Promise.resolve(false);
+    // In a mind map: its cards back to their places.
+    const map = CanvasMap.of(this.plugin, view);
+    if (map) return map.tidy(view, node);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
     const model = canvasModel(view.canvas);

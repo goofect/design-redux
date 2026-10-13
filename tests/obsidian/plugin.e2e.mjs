@@ -1481,6 +1481,64 @@ describe('Design Redux in Obsidian', function () {
     );
   });
 
+  it('lays out a canvas made a mind map as its tree changes, in the step of Undo the change made', async function () {
+    const data = {
+      nodes: [
+        { id: 'root', type: 'text', text: 'Law', x: 0, y: 0, width: 220, height: 60 },
+        { id: 'k1', type: 'text', text: 'Public', x: 320, y: -50, width: 200, height: 60 },
+        { id: 'k2', type: 'text', text: 'Private', x: 340, y: 90, width: 200, height: 60 },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'root', fromSide: 'right', toNode: 'k1', toSide: 'left' },
+        { id: 'e2', fromNode: 'root', fromSide: 'right', toNode: 'k2', toSide: 'left' },
+      ],
+    };
+    await browser.executeObsidian(async ({ app }, data) => {
+      const old = app.vault.getFileByPath('Live map.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Live map.canvas', JSON.stringify(data));
+    }, data);
+    await obsidianPage.openFile('Live map.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const cards = () =>
+      browser.executeObsidian(({ app }) => {
+        const out = {};
+        app.workspace.activeLeaf.view.canvas.nodes.forEach((n, id) => (out[id] = { x: n.x, y: n.y }));
+        return out;
+      });
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:canvas-make-mind-map'));
+    // Made a map: nothing moves, and it's a step of its own.
+    await browser.pause(600);
+    const made = await cards();
+    expect(made.k2).toEqual({ x: 340, y: 90 });
+    // A card added the canvas's own way goes to its place, after the others.
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      const node = canvas.createTextNode({ pos: { x: 900, y: 600 }, size: { width: 200, height: 60 }, text: 'Criminal', focus: false, save: false });
+      canvas.importData({ nodes: [], edges: [{ id: 'e3', fromNode: 'root', fromSide: 'right', toNode: node.id, toSide: 'left' }] });
+      node.nodeEl.setAttribute('data-test-id', 'added');
+      canvas.requestSave();
+    });
+    const added = async () => {
+      const now = await cards();
+      return Object.keys(now).filter((id) => !made[id]).map((id) => now[id])[0];
+    };
+    await browser.waitUntil(async () => {
+      const a = await added();
+      return !!a && a.x !== 900;
+    }, { timeout: 5000, timeoutMsg: 'the added card was never laid out' });
+    await browser.pause(400);
+    const now = await cards();
+    const card = await added();
+    // In the root's column — k1 keeps the 20 it was moved by hand — and below the others.
+    expect(card.x).toBe(now.k1.x - 20);
+    expect(card.y).toBeGreaterThan(now.k2.y);
+    // One Undo takes back the card and its layout together.
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.undo());
+    await browser.pause(600);
+    expect(await cards()).toEqual(made);
+  });
+
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });

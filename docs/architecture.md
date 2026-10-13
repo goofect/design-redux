@@ -602,3 +602,19 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   refuses a module that gains any. What's left is meant to be: the folds',
   the arrow styles' and the view history's patches of Obsidian's own
   methods, and the diagnostics, which check those internals are there.
+
+## 20. 2.0, phase 3: the map engine
+
+- **Live mind maps** (`canvas/348`, opt-in per canvas: "Make this canvas a
+  mind map"). Positions come from the tree: each card's spot is worked out
+  by its tree's layout (the same layouts as "Lay out branch", now
+  `layoutPlaces` in 325), and its place is that spot plus its adjustment
+  (`drNudge`) and those of the cards above it. Making a map keeps every card
+  where it is, as adjustments; Tidy clears them.
+- **When it lays out:** a card moved by hand keeps how far it moved, and its
+  branch follows; a change to the tree (a card added, taken away,
+  re-linked, resized, folded) lays the map out again, gliding. The result is
+  saved into the step of Undo the change made (Obsidian's
+  `overrideHistory`), so one Undo takes back both.
+- **Next in this phase:** folds that hide without room records, groups that
+  frame their branch, a layout per branch.

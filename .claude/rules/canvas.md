@@ -27,3 +27,13 @@ paths:
 - After a change made by hand: `afterCanvasChange` or `glideAndSettle` (335),
   which save (`saveCanvas`, 316), tell the fold pass and announce
   `design-redux:canvas-changed`. Never from a pass.
+- Live mind maps (`348`): a canvas listed in `canvasMapFiles` lays itself out.
+  A card's place is its spot by its tree's layout (`layoutPlaces`, 325) plus
+  its `drNudge` and those of the cards above it; a tree's first card stays
+  put and its layout is `drLayout` on it. A pass turns cards moved by hand
+  into nudges (their branches follow) and lays out again when the tree's
+  shape changes; it saves only what it changed, with `saveInCurrentStep`
+  (Obsidian's `overrideHistory`), so the layout joins the step of Undo the
+  change made — never a step of its own. Cards off their places with
+  nothing moved (Undo, a file from elsewhere) get nudges that keep them
+  there, unsaved. Tidy and "Lay out branch" in a map go through the map.

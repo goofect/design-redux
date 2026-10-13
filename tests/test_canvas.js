@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasMap, mapLayout, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -810,6 +810,117 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.canvas.selectOnly(n('k2'));
     assert.strictEqual(mind.step(view, 'right').id, grand.id);
     assert.ok(view.canvas.selection.has(grand));
+  });
+
+  const mapOf = (data) => {
+    const view = mindCanvas(data);
+    view.canvas.overrides = 0;
+    view.canvas.overrideHistory = () => view.canvas.overrides++;
+    // Arrows whose sides can be set, as the canvas's are.
+    view.canvas.edges.forEach((e) => {
+      e.getData = () => ({ id: e.id, fromNode: e.from.node.id, toNode: e.to.node.id, fromSide: e.from.side, toSide: e.to.side });
+      e.setData = (d) => {
+        e.from.side = d.fromSide;
+        e.to.side = d.toSide;
+      };
+    });
+    const { p, fold } = plugin({ canvasMaps: true, canvasMapFiles: {} });
+    fold.watched.set(view, { file: view.file, schedule() {} });
+    const map = new R.CanvasMap(p);
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMap ? map : null);
+    p.saveSettings = async () => {};
+    const state = { file: view.file, schedule() {} };
+    map.watched.set(view, state);
+    const n = (id) => view.canvas.nodes.get(id);
+    const at = (id) => [n(id).x, n(id).y];
+    const laid = () => {
+      const model = R.canvasModel(view.canvas);
+      return R.mapLayout(model, R.arrowLinks(model));
+    };
+    const spot = (id) => {
+      const s = laid().spots.get(id);
+      return [s.x, s.y];
+    };
+    return { view, map, state, n, at, laid, spot, p };
+  };
+
+  await t('a canvas made a mind map keeps every card where it is, then lays itself out as its tree changes', async () => {
+    const { view, map, state, n, at, laid, spot, p } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, -100, 200, 60), card('b', 330, 120, 200, 60), card('a1', 620, -100, 200, 60), card('free', 0, 500, 100, 50)],
+      edges: [edge('root', 'a', 'right', 'left'), edge('root', 'b', 'right', 'left'), edge('a', 'a1', 'right', 'left')],
+    });
+    await map.makeMap(view);
+    assert.ok(map.isMap(view) && p.settings.canvasMapFiles['Map.canvas']);
+    assert.deepStrictEqual(['root', 'a', 'b', 'a1', 'free'].map(at), [[0, 0], [300, -100], [330, 120], [620, -100], [0, 500]], 'nothing moves');
+    assert.strictEqual(n('root').unknownData.drLayout, 'right', 'the layout it grows by');
+    ['a', 'b', 'a1'].forEach((id) => assert.deepStrictEqual(laid().places.get(id), { x: n(id).x, y: n(id).y }, `${id} kept where it is`));
+    assert.ok(!laid().places.has('free'), 'a card in no tree is left be');
+    assert.strictEqual(view.canvas.saves, 1);
+    // Looked over again, with nothing changed: nothing to do.
+    map.pass(view, state);
+    assert.deepStrictEqual(at('a1'), [620, -100]);
+    assert.strictEqual(view.canvas.overrides, 0);
+    // A card added to the tree goes to its place; the others keep their adjustments.
+    const nudges = ['a', 'b', 'a1'].map((id) => n(id).unknownData.drNudge);
+    const added = view.canvas.createTextNode({ pos: { x: 900, y: 900 }, size: { width: 200, height: 60 } });
+    view.canvas.importData({ edges: [edge('root', added.id, 'right', 'left')] });
+    map.pass(view, state);
+    assert.deepStrictEqual(at(added.id), spot(added.id), 'placed by the layout');
+    assert.ok(added.y > n('b').y, 'after the others, as it was added below them');
+    assert.deepStrictEqual(['a', 'b', 'a1'].map((id) => n(id).unknownData.drNudge), nudges);
+    assert.strictEqual(view.canvas.overrides, 1, 'laid out in the step of Undo the change made');
+    assert.strictEqual(view.canvas.saves, 1);
+    // Moved by hand: it stays, and its branch comes along.
+    const was = at('a1');
+    n('a').moveAndResize({ x: n('a').x + 40, y: n('a').y - 30, width: 200, height: 60 });
+    map.pass(view, state);
+    assert.deepStrictEqual(at('a1'), [was[0] + 40, was[1] - 30], 'its branch follows');
+    assert.deepStrictEqual(laid().places.get('a'), { x: n('a').x, y: n('a').y });
+    // Re-linked: it goes to its place under its new card.
+    n('a1').moveAndResize({ x: n('a1').x, y: n('a1').y + 50, width: 200, height: 60 });
+    map.pass(view, state);
+    assert.ok(n('a1').unknownData.drNudge, 'moved by hand, kept');
+    view.canvas.edges.get('a-a1').from.node = n('b');
+    map.pass(view, state);
+    assert.ok(!n('a1').unknownData.drNudge, 'its adjustment let go');
+    assert.deepStrictEqual(laid().parents.get('a1'), 'b');
+    assert.deepStrictEqual(at('a1'), [laid().places.get('a1').x, laid().places.get('a1').y]);
+    // Tidy: every card to its spot.
+    await map.tidy(view, null);
+    ['a', 'b', 'a1', added.id].forEach((id) => {
+      assert.ok(!n(id).unknownData.drNudge, `${id} adjustment cleared`);
+      assert.deepStrictEqual(at(id), spot(id));
+    });
+    assert.strictEqual(view.canvas.saves, 2, 'Tidy by hand is a step of its own');
+    // Free again: adjustments forgotten, and nothing lays out.
+    n('a').moveAndResize({ x: 1000, y: 1000, width: 200, height: 60 });
+    map.pass(view, state);
+    await map.freeMap(view);
+    assert.ok(!map.isMap(view) && !n('a').unknownData.drNudge);
+    view.canvas.importData({ edges: [edge('free', 'root', 'right', 'left')] });
+    map.pass(view, state);
+    assert.deepStrictEqual(at('root'), [0, 0], 'a free canvas is left be');
+  });
+
+  await t('a mind map opened with cards off their places keeps them there, unsaved; a layout chosen puts its tree in place', async () => {
+    const { view, map, state, n, at, spot } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, 0, 200, 60), card('b', 300, 100, 200, 60)],
+      edges: [edge('root', 'a', 'right', 'left'), edge('root', 'b', 'right', 'left')],
+    });
+    map.settings.canvasMapFiles = { 'Map.canvas': true };
+    n('b').moveAndResize({ x: 360, y: 400, width: 200, height: 60 });
+    map.pass(view, state);
+    assert.deepStrictEqual(at('b'), [360, 400], 'where it was left');
+    assert.ok(n('b').unknownData.drNudge);
+    assert.strictEqual(view.canvas.saves + view.canvas.overrides, 0, 'a look never saves');
+    // Laid out downward: the tree under its card, every card in its place.
+    await map.setLayout(view, n('b'), 'bottom');
+    assert.strictEqual(n('root').unknownData.drLayout, 'bottom');
+    assert.ok(!n('b').unknownData.drNudge);
+    assert.deepStrictEqual([at('a'), at('b')], [spot('a'), spot('b')]);
+    assert.ok(n('a').y > 60 && n('b').y > 60, 'below it');
+    assert.deepStrictEqual([view.canvas.edges.get('root-a').from.side, view.canvas.edges.get('root-a').to.side], ['bottom', 'top']);
+    assert.strictEqual(view.canvas.saves, 1);
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {

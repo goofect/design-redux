@@ -58,7 +58,7 @@ export const SETTINGS_TABS = [
     sections: [
       { title: 'Cards', keys: ['canvasTools', 'canvasDepth', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
       { title: 'Arrows', keys: ['canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments'] },
-      { title: 'Building a map', keys: ['canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate'] },
+      { title: 'Building a map', keys: ['canvasMaps', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate'] },
       { title: 'Arranging and folding', keys: ['canvasBranches', 'canvasCloseGaps', 'canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasArrange', 'canvasSelectBranch'] },
       { title: 'Finding and focus', keys: ['canvasFind', 'canvasViews', 'canvasMinimap', 'canvasFocus', 'canvasFocusSelect'] },
       { title: 'Outlines and notes', keys: ['canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap'] },
