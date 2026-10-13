@@ -13,6 +13,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
+import { addArrows, addTextCard, canvasPoint, canvasReadonly, canvasWrapper, cardEditing, cardElement, colourCard, editCard, liveArrow, liveCard, liveCards, mountCard, pickOnCanvas, redrawCard, removeArrow, requestCanvasSave, showCard, stopEditingCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, BRANCH_SIDES, branchOf, branchSide, canvasCardLabel, canvasGap, canvasHomes, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownAs, shownChildren, sideAxes, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tuckOf, withinRect } from './316-canvas-tree.js';
 import { axisParts, fitGroups, foldHomes, homesBefore, makeRoom, outBox, shiftRecord, snapshotModel } from './317-canvas-room.js';
@@ -22,7 +23,7 @@ import { CanvasFold, glideAndSettle, isGroupNode } from './335-canvas-fold.js';
 
 /** A new id for a card or arrow, as the canvas makes them. */
 export function newCanvasId(canvas) {
-  const taken = (id) => (canvas && canvas.nodes && canvas.nodes.has(id)) || (canvas && canvas.edges && canvas.edges.has(id));
+  const taken = (id) => !!(liveCard(canvas, id) || liveArrow(canvas, id));
   let id = '';
   do {
     id = Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
@@ -215,7 +216,7 @@ export class CanvasMindMap extends CanvasFeature {
 
   actions() {
     const one = (ctx) => (this.keys ? soleCard(ctx.nodes) : null);
-    const open = (ctx) => (ctx.view.canvas.readonly ? null : one(ctx));
+    const open = (ctx) => (canvasReadonly(ctx.view.canvas) ? null : one(ctx));
     const ways = [
       ['left', 'Select the card to the left'],
       ['right', 'Select the card to the right'],
@@ -269,20 +270,16 @@ export class CanvasMindMap extends CanvasFeature {
   /** The card of this canvas an element is part of, or null. */
   nodeFor(view, el) {
     const cardEl = el && typeof el.closest === 'function' ? el.closest('.canvas-node') : null;
-    if (!cardEl || !view.canvas || !view.canvas.nodes) return null;
-    let found = null;
-    view.canvas.nodes.forEach((node) => {
-      if (node.nodeEl === cardEl) found = node;
-    });
-    return found;
+    if (!cardEl || !view.canvas) return null;
+    return liveCards(view.canvas).find((node) => cardElement(node) === cardEl) || null;
   }
 
   /** A press on a card: where it was, in case it's dragged onto another. */
   onPointerDown(view, state, evt) {
     state.drag = null;
-    if (!this.settings.canvasRelink || evt.button !== 0 || (view.canvas && view.canvas.readonly)) return;
+    if (!this.settings.canvasRelink || evt.button !== 0 || canvasReadonly(view.canvas)) return;
     const node = this.nodeFor(view, evt.target);
-    if (!node || isGroupNode(node) || tuckOf(node) || node.isEditing) return;
+    if (!node || isGroupNode(node) || tuckOf(node) || cardEditing(node)) return;
     state.drag = { id: node.id, x: node.x, y: node.y, over: null, branch: null };
   }
 
@@ -291,7 +288,7 @@ export class CanvasMindMap extends CanvasFeature {
     const drag = state.drag;
     if (!drag) return;
     const canvas = view.canvas;
-    const node = canvas && canvas.nodes && canvas.nodes.get(drag.id);
+    const node = liveCard(canvas, drag.id);
     const moved = !!node && (node.x !== drag.x || node.y !== drag.y);
     const alone = this.selectedNodes(view).length <= 1;
     this.markTarget(state, moved && alone ? this.dropTarget(view, node, drag, evt) : null);
@@ -314,16 +311,11 @@ export class CanvasMindMap extends CanvasFeature {
       const model = canvasModel(canvas);
       drag.branch = new Set(branchOf(model, node.id, arrowLinks(model)));
     }
-    let pos = null;
-    try {
-      if (typeof canvas.posFromEvt === 'function') pos = canvas.posFromEvt(evt);
-    } catch (err) {
-      pos = null;
-    }
+    let pos = canvasPoint(canvas, evt);
     if (!pos) pos = { x: node.x + node.width / 2, y: node.y + node.height / 2 };
     let found = null;
-    canvas.nodes.forEach((n) => {
-      if (n === node || drag.branch.has(n.id) || !n.nodeEl || isGroupNode(n) || tuckOf(n)) return;
+    liveCards(canvas).forEach((n) => {
+      if (n === node || drag.branch.has(n.id) || !cardElement(n) || isGroupNode(n) || tuckOf(n)) return;
       if (pos.x < n.x || pos.x > n.x + n.width || pos.y < n.y || pos.y > n.y + n.height) return;
       if (!found || (n.zIndex || 0) > (found.zIndex || 0)) found = n;
     });
@@ -332,9 +324,11 @@ export class CanvasMindMap extends CanvasFeature {
 
   /** The card a dragged one would hang from, marked — by an attribute, as the canvas redraws a card's classes as it goes. */
   markTarget(state, target) {
-    if (state.marked !== target && state.marked && state.marked.nodeEl) delete state.marked.nodeEl.dataset.drDropTarget;
+    const was = state.marked && state.marked !== target ? cardElement(state.marked) : null;
+    if (was) delete was.dataset.drDropTarget;
     state.marked = target || null;
-    if (target && target.nodeEl) target.nodeEl.dataset.drDropTarget = '';
+    const el = target ? cardElement(target) : null;
+    if (el) el.dataset.drDropTarget = '';
     if (state.drag) state.drag.over = target || null;
   }
 
@@ -379,11 +373,11 @@ export class CanvasMindMap extends CanvasFeature {
     const into = arrowsInto(model, rec.id);
     try {
       into.forEach(([e, parent]) => {
-        if (parent !== target.id && e.edge && typeof canvas.removeEdge === 'function') canvas.removeEdge(e.edge);
+        if (parent !== target.id && e.edge) removeArrow(canvas, e.edge);
       });
-      if (!into.some(([, parent]) => parent === target.id) && typeof canvas.importData === 'function') {
+      if (!into.some(([, parent]) => parent === target.id)) {
         const sides = spot ? { from: spot.side, to: OPPOSITE_SIDE[spot.side] } : nearestSides(boxEdges(target), boxEdges(rec));
-        canvas.importData({ nodes: [], edges: [{ id: newCanvasId(canvas), fromNode: target.id, fromSide: sides.from, toNode: rec.id, toSide: sides.to }] });
+        addArrows(canvas, [{ id: newCanvasId(canvas), fromNode: target.id, fromSide: sides.from, toNode: rec.id, toSide: sides.to }]);
       }
     } catch (err) {
       /* the arrows as they were */
@@ -415,9 +409,9 @@ export class CanvasMindMap extends CanvasFeature {
   onKey(view, evt) {
     if (!this.keys || evt.defaultPrevented || evt.isComposing || typingInto(evt.target)) return;
     const canvas = view.canvas;
-    if (!canvas || canvas.readonly) return;
+    if (!canvas || canvasReadonly(canvas)) return;
     const node = this.selectedCard(view);
-    if (!node || node.isEditing) return;
+    if (!node || cardEditing(node)) return;
     const plain = !evt.shiftKey && !evt.ctrlKey && !evt.metaKey && !evt.altKey;
     const arrows = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
     let done = null;
@@ -432,7 +426,7 @@ export class CanvasMindMap extends CanvasFeature {
 
   /** The card of this canvas being typed in that a key went to — in it, or in a page inside it — or null. */
   editingCard(view, target) {
-    if (!target || !view.canvas || !view.canvas.nodes) return null;
+    if (!target || !view.canvas) return null;
     let frame = null;
     try {
       const win = target.ownerDocument && target.ownerDocument.defaultView;
@@ -440,16 +434,12 @@ export class CanvasMindMap extends CanvasFeature {
     } catch (err) {
       frame = null;
     }
-    let found = null;
-    try {
-      view.canvas.nodes.forEach((node) => {
-        if (!node.isEditing || !node.nodeEl) return;
-        if (node.nodeEl.contains(target) || (frame && node.nodeEl.contains(frame))) found = node;
-      });
-    } catch (err) {
-      found = null;
-    }
-    return found;
+    return (
+      liveCards(view.canvas).find((node) => {
+        const el = cardEditing(node) ? cardElement(node) : null;
+        return !!el && (el.contains(target) || (!!frame && el.contains(frame)));
+      }) || null
+    );
   }
 
   /** Typing in a card ended, the card left selected, and the canvas given the keys again. */
@@ -457,10 +447,9 @@ export class CanvasMindMap extends CanvasFeature {
     const canvas = view.canvas;
     try {
       // Out of the editor, as clicking away puts it, but still selected.
-      if (typeof node.blur === 'function') node.blur();
-      if (typeof node.setIsEditing === 'function') node.setIsEditing(false);
-      canvas.selectOnly(node);
-      const wrapper = canvas.wrapperEl || view.contentEl.querySelector('.canvas-wrapper');
+      stopEditingCard(node);
+      pickOnCanvas(canvas, [node]);
+      const wrapper = canvasWrapper(canvas) || view.contentEl.querySelector('.canvas-wrapper');
       if (wrapper && typeof wrapper.focus === 'function') wrapper.focus();
     } catch (err) {
       /* left as it was */
@@ -589,22 +578,11 @@ export class CanvasMindMap extends CanvasFeature {
     const canvas = view.canvas;
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
-    if (typeof canvas.createTextNode !== 'function') return Promise.resolve(null);
-    let node = null;
-    try {
-      node = canvas.createTextNode({ pos: { x: box.x, y: box.y }, size: { width: box.width, height: box.height }, text: '', focus: false, save: false });
-      // The colour of the card beside it, as a branch keeps one.
-      if (like && like.color && typeof node.setColor === 'function') node.setColor(like.color);
-      if (join && typeof canvas.importData === 'function') {
-        canvas.importData({
-          nodes: [],
-          edges: [{ id: newCanvasId(canvas), fromNode: join.from.id, fromSide: join.fromSide, toNode: node.id, toSide: join.toSide }],
-        });
-      }
-    } catch (err) {
-      return Promise.resolve(node);
-    }
+    const node = addTextCard(canvas, box);
     if (!node) return Promise.resolve(null);
+    // The colour of the card beside it, as a branch keeps one.
+    if (like && like.color) colourCard(node, like.color);
+    if (join) addArrows(canvas, [{ id: newCanvasId(canvas), fromNode: join.from.id, fromSide: join.fromSide, toNode: node.id, toSide: join.toSide }]);
     const model = canvasModel(canvas);
     const rec = model.byId.get(node.id);
     const holder = model.byId.get(from.id);
@@ -666,16 +644,12 @@ export class CanvasMindMap extends CanvasFeature {
   /** The new card saved, selected and opened to type in. */
   opened(view, node, changed) {
     const canvas = view.canvas;
-    try {
-      canvas.requestSave();
-      if (typeof node.attach === 'function' && node.nodeEl && !node.nodeEl.isConnected) node.attach();
-      if (typeof node.render === 'function') node.render();
-      if (typeof canvas.selectOnly === 'function') canvas.selectOnly(node);
-      if (typeof canvas.panIntoView === 'function') canvas.panIntoView(node.getBBox());
-      if (typeof node.startEditing === 'function') node.startEditing();
-    } catch (err) {
-      /* made, if not opened */
-    }
+    requestCanvasSave(canvas);
+    mountCard(node);
+    redrawCard(node);
+    pickOnCanvas(canvas, [node]);
+    showCard(canvas, node);
+    editCard(node);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.schedule(view);
     if (changed) this.app.workspace.trigger('design-redux:canvas-changed', view);
@@ -692,12 +666,8 @@ export class CanvasMindMap extends CanvasFeature {
     const linked = new Set((links.parents.get(node.id) || []).concat(links.children.get(node.id) || []));
     const to = from ? cardTowards(model, from, way, linked) : null;
     if (!to || !to.node) return null;
-    try {
-      view.canvas.selectOnly(to.node);
-      if (typeof view.canvas.panIntoView === 'function') view.canvas.panIntoView(to.node.getBBox());
-    } catch (err) {
-      /* left where it was */
-    }
+    pickOnCanvas(view.canvas, [to.node]);
+    showCard(view.canvas, to.node);
     return to.node;
   }
 }

@@ -479,12 +479,12 @@ if (args[0] === '--verify') {
  * Obsidian's canvas, reached into directly rather than through the adapter
  * (core/079): the lines in each module that do. The list only shrinks.
  */
-const CANVAS_INTERNALS = /\b(?:canvas\.(?:nodes|edges|selection|readonly|getData|wrapperEl)|selectOnly|deselectAll|requestSave|importData|zoomToBbox|getViewportBBox|getIntersectingNodes|hitTestNode|posFromEvt|markMoved|createTextNode|createFileNode|createGroupNode|setViewport|panIntoView|unknownData|nodeEl|lineGroupEl|lineEndGroupEl|moveAndResize|getBBox|startEditing|setIsEditing)\b/;
+const CANVAS_INTERNALS = /\b(?:canvas\.(?:nodes|edges|selection|readonly|getData|wrapperEl)|selectOnly|deselectAll|requestSave|importData|zoomToBbox|getViewportBBox|getIntersectingNodes|hitTestNode|posFromEvt|markMoved|createTextNode|createFileNode|createGroupNode|setViewport|panIntoView|unknownData|nodeEl|lineGroupEl|lineEndGroupEl|moveAndResize|getBBox|startEditing|setIsEditing|isEditing|setColor|removeEdge|removeNode)\b/;
 if (args[0] === '--internals') {
   const file = path.join(__dirname, 'snapshots', 'canvas-internals.json');
   const found = {};
   pieces.filter((p) => p.file !== 'core/079-canvas-adapter.js').forEach((p) => {
-    const n = p.text.split('\n').filter((l) => CANVAS_INTERNALS.test(l) && !/^\s*(\*|\/\/|\/\*)/.test(l)).length;
+    const n = p.text.split('\n').filter((l) => CANVAS_INTERNALS.test(l.replace(/[dD]ocument\.createTextNode/g, '')) && !/^\s*(\*|\/\/|\/\*)/.test(l)).length;
     if (n) found[p.name] = n;
   });
   const total = Object.values(found).reduce((a, b) => a + b, 0);

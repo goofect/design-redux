@@ -38,6 +38,30 @@ export function liveCard(canvas, id) {
   return guarded(() => (canvas && canvas.nodes && typeof canvas.nodes.get === 'function' ? canvas.nodes.get(id) || null : null), null);
 }
 
+/** An arrow by its id, or null. */
+export function liveArrow(canvas, id) {
+  return guarded(() => (canvas && canvas.edges && typeof canvas.edges.get === 'function' ? canvas.edges.get(id) || null : null), null);
+}
+
+/** A new text card in a box, not yet saved or opened; null if one can't be made. */
+export function addTextCard(canvas, box, text) {
+  return guarded(() => {
+    if (typeof canvas.createTextNode !== 'function') return null;
+    const size = { width: box.width, height: box.height };
+    return canvas.createTextNode({ pos: { x: box.x, y: box.y }, size, text: text || '', focus: false, save: false }) || null;
+  }, null);
+}
+
+/** Arrows added, as its file writes them: [{ id, fromNode, fromSide, toNode, toSide }]. */
+export function addArrows(canvas, edges) {
+  return loadCanvasData(canvas, { nodes: [], edges });
+}
+
+/** An arrow taken off. */
+export function removeArrow(canvas, edge) {
+  guarded(() => typeof canvas.removeEdge === 'function' && canvas.removeEdge(edge), null);
+}
+
 /** The cards and arrows selected: [node or edge]. */
 export function pickedOnCanvas(canvas) {
   return guarded(() => (canvas && canvas.selection ? Array.from(canvas.selection) : []), []);
@@ -87,6 +111,16 @@ export function canvasReadonly(canvas) {
 /** The view brought to a box: { minX, minY, maxX, maxY }. */
 export function zoomCanvasTo(canvas, box) {
   guarded(() => typeof canvas.zoomToBbox === 'function' && canvas.zoomToBbox(box), null);
+}
+
+/** The view moved, as little as it takes, to show a card. */
+export function showCard(canvas, card) {
+  guarded(() => typeof canvas.panIntoView === 'function' && canvas.panIntoView(cardBox(card)), null);
+}
+
+/** The element the canvas takes its keys in, or null. */
+export function canvasWrapper(canvas) {
+  return guarded(() => canvas.wrapperEl || null, null);
 }
 
 /** What the view shows, as a box, or null. */
@@ -158,6 +192,34 @@ export function cardElement(card) {
 /** A card drawn again. */
 export function redrawCard(card) {
   guarded(() => typeof card.render === 'function' && card.render(), null);
+}
+
+/** A card just made put on the page, if the canvas hasn't yet. */
+export function mountCard(card) {
+  guarded(() => typeof card.attach === 'function' && card.nodeEl && !card.nodeEl.isConnected && card.attach(), null);
+}
+
+/** A card given a colour: '1'–'6' or a hex. */
+export function colourCard(card, color) {
+  guarded(() => typeof card.setColor === 'function' && card.setColor(color), null);
+}
+
+/** Whether a card is being typed in. */
+export function cardEditing(card) {
+  return guarded(() => !!card.isEditing, false);
+}
+
+/** A card opened to type in. */
+export function editCard(card) {
+  guarded(() => typeof card.startEditing === 'function' && card.startEditing(), null);
+}
+
+/** Typing in a card ended, as clicking away ends it. */
+export function stopEditingCard(card) {
+  guarded(() => {
+    if (typeof card.blur === 'function') card.blur();
+    if (typeof card.setIsEditing === 'function') card.setIsEditing(false);
+  }, null);
 }
 
 /* -- an arrow ------------------------------------------------------ */
