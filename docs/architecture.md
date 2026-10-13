@@ -581,3 +581,22 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   tests, latest version locally; both in CI) pass with no change in behaviour.
 - **Next:** suites that load only the modules they test, through a small
   esbuild step, in place of the whole bundle.
+
+## 19. 2.0, phase 2: foundations
+
+- **The library index** (`core/077`, `libraryIndex(plugin)`): every file, the
+  notes, the folders and their folder notes, what each folder holds, and the
+  links each way, worked out once and kept while files and links stay as they
+  are. The browse view, Home, smart albums, knowledge, the sidebar and the
+  canvas's links read it rather than walking the vault. Shelves and the
+  sidebar draw as fast as before (within noise).
+- **Design tokens:** durations, easings, glass blur, the interface font and
+  the cover radius are `--dr-*` variables, used in place of the numbers.
+- **The canvas adapter** (`core/079`): the one place that reads Obsidian's
+  canvas internals — the cards and arrows, what's picked, a card's data and
+  box, an arrow's ends, saving, zooming — each behind a check with a
+  fallback. The actions' canvas context, the canvas feature and the tree
+  model (`canvasModel`, which 20 modules read) go through it. The rest move
+  over piece by piece: `node tests/map.js --internals` counts the direct uses
+  left in each module (262 lines in 31 to start), and `tests/test_layers.js`
+  refuses a module that gains any.

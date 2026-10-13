@@ -12,6 +12,7 @@
 
 import { pageLeaf } from '../core/030-helpers-art.js';
 import { actionsOn, addActionEntries, canvasMenuContext } from '../core/078-actions.js';
+import { liveCards, pickedOnCanvas } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { canvasAction } from './321-canvas-extras.js';
 
@@ -63,20 +64,12 @@ export class CanvasFeature extends Feature {
 
   /** The cards selected on a canvas. */
   selectedNodes(view) {
-    try {
-      return view ? Array.from(view.canvas.selection || []) : [];
-    } catch (err) {
-      return [];
-    }
+    return view ? pickedOnCanvas(view.canvas) : [];
   }
 
   /** Every card on a canvas. */
   allNodes(view) {
-    try {
-      return view && view.canvas && view.canvas.nodes ? Array.from(view.canvas.nodes.values()) : [];
-    } catch (err) {
-      return [];
-    }
+    return view ? liveCards(view.canvas) : [];
   }
 
   watch(view) {

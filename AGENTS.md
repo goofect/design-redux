@@ -88,7 +88,11 @@ Coffee N' Christmas.
   a double click or Enter opens. It doesn't repeat the panel.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
-  checks, with a fallback.
+  checks, with a fallback. A canvas's go through the adapter (`core/079`:
+  `liveCards`, `pickedOnCanvas`, `cardData`, `liveArrowEnds`,
+  `requestCanvasSave`, …); `tests/test_layers.js` refuses a new direct use
+  outside it, and after moving some onto it, `node tests/map.js --internals
+  --update`.
 
 ## Rules that have bitten before
 

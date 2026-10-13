@@ -12,6 +12,7 @@
 
 import { CANVAS_SPACE, RELATED_KEY } from '../core/020-constants.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
+import { arrowKept, cardData, cardKept, liveArrowEnds, liveArrows, liveCards, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { FOLD_KEY, foldOf } from './335-canvas-fold.js';
 
 /* Where a tucked card keeps what it's tucked into, and where it was beside it. */
@@ -23,11 +24,7 @@ export const TUCK_KEY = 'drTuck';
  * made by hand: a pass never saves.
  */
 export function saveCanvas(canvas) {
-  try {
-    canvas.requestSave();
-  } catch (err) {
-    /* saved with the canvas's next change */
-  }
+  requestCanvasSave(canvas);
 }
 
 /* On a card: kept where it is — layouts and tidying leave it, and what hangs from it. */
@@ -35,7 +32,7 @@ export const PIN_KEY = 'drPinned';
 
 /** A card's tuck — { by, dx, dy } — or null. */
 export function tuckOf(node) {
-  const kept = node && node.unknownData && node.unknownData[TUCK_KEY];
+  const kept = cardKept(node, TUCK_KEY);
   return kept && typeof kept.by === 'string' && typeof kept.dx === 'number' && typeof kept.dy === 'number' ? kept : null;
 }
 
@@ -65,58 +62,44 @@ export function roomOf(kept) {
 export function canvasModel(canvas) {
   const nodes = [];
   const edges = [];
-  try {
-    canvas.nodes.forEach((node, key) => {
-      let data = {};
-      try {
-        data = (typeof node.getData === 'function' && node.getData()) || {};
-      } catch (err) {
-        data = {};
-      }
-      nodes.push({
-        id: node.id || key,
-        type: data.type || 'text',
-        x: node.x,
-        y: node.y,
-        width: node.width,
-        height: node.height,
-        label: data.label,
-        text: data.text,
-        file: data.file,
-        subpath: data.subpath,
-        url: data.url,
-        color: node.color !== undefined ? node.color : data.color,
-        tuck: tuckOf(node),
-        fold: foldOf(node),
-        room: roomOf(node.unknownData && node.unknownData[ROOM_KEY]),
-        master: !!(node.unknownData && node.unknownData[MASTER_KEY]),
-        pinned: !!(node.unknownData && node.unknownData[PIN_KEY]),
-        node,
-      });
+  liveCards(canvas).forEach((node) => {
+    const data = cardData(node);
+    nodes.push({
+      id: node.id || data.id,
+      type: data.type || 'text',
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      label: data.label,
+      text: data.text,
+      file: data.file,
+      subpath: data.subpath,
+      url: data.url,
+      color: node.color !== undefined ? node.color : data.color,
+      tuck: tuckOf(node),
+      fold: foldOf(node),
+      room: roomOf(cardKept(node, ROOM_KEY)),
+      master: !!cardKept(node, MASTER_KEY),
+      pinned: !!cardKept(node, PIN_KEY),
+      node,
     });
-  } catch (err) {
-    /* no cards to be had */
-  }
-  try {
-    canvas.edges.forEach((edge, key) => {
-      const from = edge.from && edge.from.node;
-      const to = edge.to && edge.to.node;
-      if (!from || !to) return;
-      edges.push({
-        id: edge.id || key,
-        from: from.id,
-        to: to.id,
-        fromSide: edge.from.side,
-        toSide: edge.to.side,
-        fromEnd: edge.from.end || 'none',
-        toEnd: edge.to.end || 'arrow',
-        related: !!(edge.unknownData && edge.unknownData[RELATED_KEY]),
-        edge,
-      });
+  });
+  liveArrows(canvas).forEach((edge) => {
+    const ends = liveArrowEnds(edge);
+    if (!ends) return;
+    edges.push({
+      id: edge.id,
+      from: ends.from.id,
+      to: ends.to.id,
+      fromSide: ends.fromSide,
+      toSide: ends.toSide,
+      fromEnd: ends.fromEnd,
+      toEnd: ends.toEnd,
+      related: !!arrowKept(edge, RELATED_KEY),
+      edge,
     });
-  } catch (err) {
-    /* no arrows to be had */
-  }
+  });
   return indexModel({ nodes, edges });
 }
 

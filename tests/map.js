@@ -11,6 +11,9 @@
  *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
  *                                  no new use across the layers
  *   node tests/map.js --fix-imports  each module's import lines rewritten to what it uses
+ *   node tests/map.js --internals  fails on more lines reaching into Obsidian's canvas than
+ *                                  tests/snapshots/canvas-internals.json allows a module (--update rewrites it);
+ *                                  the canvas adapter (core/079) is where they belong
  *   node tests/map.js --check      fails on a use crossing the layers that isn't in tests/snapshots/layers.json,
  *                                  or one listed there that's gone (--update rewrites the list); see
  *                                  docs/architecture.md
@@ -470,6 +473,39 @@ if (args[0] === '--verify') {
   uses().filter(([u, , h]) => crosses(u, h)).forEach(([u, n, h]) => (known[u.name] || []).includes(n) || problems.push(`${u.file} uses ${n} from ${h.file}, across the layers`));
   problems.forEach((x) => console.log(x));
   process.exit(problems.length ? 1 : 0);
+}
+
+/*
+ * Obsidian's canvas, reached into directly rather than through the adapter
+ * (core/079): the lines in each module that do. The list only shrinks.
+ */
+const CANVAS_INTERNALS = /\b(?:canvas\.(?:nodes|edges|selection|readonly|getData|wrapperEl)|selectOnly|deselectAll|requestSave|importData|zoomToBbox|getViewportBBox|getIntersectingNodes|hitTestNode|posFromEvt|markMoved|createTextNode|createFileNode|createGroupNode|setViewport|panIntoView|unknownData|nodeEl|lineGroupEl|lineEndGroupEl|moveAndResize|getBBox|startEditing|setIsEditing)\b/;
+if (args[0] === '--internals') {
+  const file = path.join(__dirname, 'snapshots', 'canvas-internals.json');
+  const found = {};
+  pieces.filter((p) => p.file !== 'core/079-canvas-adapter.js').forEach((p) => {
+    const n = p.text.split('\n').filter((l) => CANVAS_INTERNALS.test(l) && !/^\s*(\*|\/\/|\/\*)/.test(l)).length;
+    if (n) found[p.name] = n;
+  });
+  const total = Object.values(found).reduce((a, b) => a + b, 0);
+  if (args.includes('--update')) {
+    const sorted = {};
+    Object.keys(found).sort().forEach((k) => (sorted[k] = found[k]));
+    fs.writeFileSync(file, JSON.stringify(sorted, null, 1) + '\n');
+    console.log(`canvas internals: ${total} lines in ${Object.keys(found).length} modules recorded`);
+    process.exit(0);
+  }
+  let known = {};
+  try {
+    known = JSON.parse(read(file));
+  } catch (err) {
+    known = {};
+  }
+  const more = Object.keys(found).filter((k) => found[k] > (known[k] || 0)).map((k) => `${k}: ${found[k]} lines reach into the canvas, ${known[k] || 0} allowed — go through the adapter (core/079)`);
+  const fewer = Object.keys(known).filter((k) => (found[k] || 0) < known[k]).map((k) => `${k}: down to ${found[k] || 0} from ${known[k]} — record it with --internals --update`);
+  more.concat(fewer).forEach((x) => console.log(x));
+  if (!more.length && !fewer.length) console.log(`canvas internals: ${total} lines outside the adapter, in ${Object.keys(found).length} modules; none new`);
+  process.exit(more.length || fewer.length ? 1 : 0);
 }
 
 if (args[0] === '--check') {

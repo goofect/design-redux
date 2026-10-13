@@ -28,6 +28,7 @@ import './core/074-files.js';
 import './core/076-selection.js';
 import './core/077-library-index.js';
 import './core/078-actions.js';
+import './core/079-canvas-adapter.js';
 import './core/080-feature.js';
 import './core/082-panel-section.js';
 import './core/085-appearance.js';

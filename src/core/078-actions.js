@@ -24,6 +24,7 @@
 
 import { MarkdownView, Menu, TFile } from 'obsidian';
 import { isBrowseView, menuGroup, pageFolder, pageLeaf, showMenuAt } from './030-helpers-art.js';
+import { pickedOnCanvas } from './079-canvas-adapter.js';
 
 /** The note a command acts on: the one open. */
 export function activeNoteContext(app) {
@@ -74,13 +75,7 @@ export const ACTION_CONTEXTS = {
   canvas: (app) => {
     const view = pageView(app);
     if (!view || !view.canvas || !view.file || view.file.extension !== 'canvas') return null;
-    let nodes = [];
-    try {
-      nodes = Array.from(view.canvas.selection || []);
-    } catch (err) {
-      nodes = [];
-    }
-    return canvasContext(view, nodes, 'palette');
+    return canvasContext(view, pickedOnCanvas(view.canvas), 'palette');
   },
   album: (app) => {
     const folder = pageFolder(app);
