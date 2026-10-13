@@ -841,7 +841,7 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
       const s = laid().spots.get(id);
       return [s.x, s.y];
     };
-    return { view, map, state, n, at, laid, spot, p };
+    return { view, map, state, n, at, laid, spot, p, fold };
   };
 
   await t('a canvas made a mind map keeps every card where it is, then lays itself out as its tree changes', async () => {
@@ -900,6 +900,62 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     view.canvas.importData({ edges: [edge('free', 'root', 'right', 'left')] });
     map.pass(view, state);
     assert.deepStrictEqual(at('root'), [0, 0], 'a free canvas is left be');
+  });
+
+  await t('in a mind map, folding hides a branch and the map closes up; folding, unfolding and re-linking leave no drift', async () => {
+    const { view, map, state, n, at, laid, fold } = mapOf({
+      nodes: [
+        card('root', 0, 0, 200, 60),
+        card('a', 300, -100, 200, 60),
+        card('a1', 600, -150, 200, 60),
+        card('a2', 600, -50, 200, 60),
+        card('b', 300, 100, 200, 60),
+        card('b1', 600, 100, 200, 60),
+        card('g', 280, 60, 540, 120, { type: 'group', label: 'B' }),
+      ],
+      edges: [edge('root', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('a', 'a2', 'right', 'left'), edge('root', 'b', 'right', 'left'), edge('b', 'b1', 'right', 'left')],
+    });
+    fold.popover = { hide() {} };
+    fold.save = () => view.canvas.requestSave();
+    fold.pass = () => {};
+    await map.makeMap(view);
+    assert.deepStrictEqual(n('g').unknownData.drFrames, { id: 'b', pad: [20, 40, 20, 20] }, 'the group is drawn round b’s branch');
+    await map.tidy(view, null);
+    // One card moved by hand, to stay moved through it all.
+    n('a1').moveAndResize({ x: n('a1').x + 30, y: n('a1').y - 20, width: 200, height: 60 });
+    map.pass(view, state);
+    assert.deepStrictEqual(n('a1').unknownData.drNudge, { dx: 30, dy: -20 });
+    const ids = ['root', 'a', 'a1', 'a2', 'b', 'b1', 'g'];
+    const where = () => ids.map((id) => [n(id).x, n(id).y, n(id).width, n(id).height]);
+    const start = where();
+    assert.deepStrictEqual([n('g').x, n('g').y], [n('b').x - 20, n('b').y - 40], 'the group round its branch, in its place');
+    for (let round = 0; round < 3; round++) {
+      await fold.foldBranches(view, [n('a')], true);
+      map.pass(view, state);
+      assert.ok(n('a1').unknownData.drTuck && n('a2').unknownData.drTuck, 'hidden in the fold');
+      assert.ok(!n('a').unknownData.drRoom, 'nothing it moved noted');
+      ['a', 'b', 'b1'].forEach((id) => assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, laid().places.get(id), `${id} in its place`));
+      assert.notDeepStrictEqual(where(), start, 'the map closed up');
+      assert.deepStrictEqual([n('g').x, n('g').y], [n('b').x - 20, n('b').y - 40], 'the group goes with its branch');
+      await fold.foldBranches(view, [n('a')], false);
+      map.pass(view, state);
+      assert.deepStrictEqual(where(), start, `unfolded, every card where it was (round ${round + 1})`);
+    }
+    // Re-linked somewhere else and back: where it was.
+    view.canvas.edges.get('a-a2').from.node = n('b');
+    map.pass(view, state);
+    assert.strictEqual(laid().parents.get('a2'), 'b');
+    const top = Math.min(n('b').y, n('b1').y, n('a2').y);
+    assert.deepStrictEqual([n('g').x, n('g').y], [n('b').x - 20, top - 40], 'the group takes it in');
+    assert.ok(n('a2').y >= n('g').y && n('a2').y + 60 <= n('g').y + n('g').height);
+    view.canvas.edges.get('a-a2').from.node = n('a');
+    map.pass(view, state);
+    assert.deepStrictEqual(where(), start, 're-linked and back: no drift');
+    // A group drawn round a branch by hand is drawn round it from then on.
+    const h = new FakeNode(view.canvas, card('h', n('a').x - 10, n('a1').y - 30, 520, n('a2').y + 100 - n('a1').y, { type: 'group', label: 'A' }));
+    view.canvas.nodes.set('h', h);
+    map.pass(view, state);
+    assert.strictEqual(h.unknownData.drFrames && h.unknownData.drFrames.id, 'a');
   });
 
   await t('a mind map opened with cards off their places keeps them there, unsaved; a layout chosen puts its tree in place', async () => {

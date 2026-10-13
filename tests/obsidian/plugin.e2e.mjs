@@ -1537,6 +1537,14 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.canvas.undo());
     await browser.pause(600);
     expect(await cards()).toEqual(made);
+    // Folded and unfolded: every card back where it was.
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:fold-every-canvas-branch'));
+    await browser.pause(800);
+    const tucked = await browser.executeObsidian(({ app }) => Array.from(app.workspace.activeLeaf.view.canvas.nodes.values()).filter((n) => n.unknownData && n.unknownData.drTuck).length);
+    expect(tucked).toBe(2);
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:unfold-canvas-everything'));
+    await browser.pause(800);
+    expect(await cards()).toEqual(made);
   });
 
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {

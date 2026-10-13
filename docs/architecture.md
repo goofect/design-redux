@@ -616,5 +616,16 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   re-linked, resized, folded) lays the map out again, gliding. The result is
   saved into the step of Undo the change made (Obsidian's
   `overrideHistory`), so one Undo takes back both.
-- **Next in this phase:** folds that hide without room records, groups that
-  frame their branch, a layout per branch.
+- **Folds hide; they don't move.** In a map a fold only tucks its branch
+  away — no record of what moved — and the cards go straight to their map
+  places in the same glide; unfolding lays the branch out again. A card's
+  re-linking is told from its arrows, which a folded card keeps, so its
+  adjustment survives a fold.
+- **Groups frame branches.** A group holding one branch and nothing else is
+  drawn round it (`drFrames`: the branch and the room round it), so it
+  moves, folds and grows with its cards; sized by hand, it keeps the new
+  room. Master cards keep their branch out of folds above, as before, and
+  stand as a tree of their own while the card above them is folded.
+- **Gate:** folding, unfolding and re-linking leave no drift (simulated
+  over repeated rounds, and in Obsidian).
+- **Next in this phase:** a layout per branch.

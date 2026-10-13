@@ -8,15 +8,16 @@
 /* adjustment from its parent's, so its branch moves with it and every */
 /* layout after respects it. Tidy clears them. A change to the tree —  */
 /* a card added, taken away, re-linked, resized, folded — lays the map */
-/* out again, gliding, in the same step of Undo as the change. Making  */
-/* a canvas a map keeps every card where it is; canvases not made maps */
-/* aren't touched.                                                     */
+/* out again, gliding, in the same step of Undo as the change. Folding */
+/* hides a branch and the map closes up; a group round a branch is     */
+/* drawn round its cards wherever they go. Making a canvas a map keeps */
+/* every card where it is; canvases not made maps aren't touched.      */
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
 import { canvasReadonly, cardKept, keepOnCard, liveCards, saveInCurrentStep } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, BRANCH_SIDES, canvasModel, isGroupRecord, saveCanvas, shownChildren } from './316-canvas-tree.js';
+import { arrowLinks, boundsOf, BRANCH_SIDES, canvasModel, groupContents, isGroupRecord, saveCanvas, shownChildren } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { BRANCH_LAYOUTS, faceArrows, layoutPlaces, orderedBranch, siblingOrder } from './325-canvas-layouts.js';
@@ -26,6 +27,8 @@ import { CanvasFold } from './335-canvas-fold.js';
 export const NUDGE_KEY = 'drNudge';
 /* On a tree's first card: how the tree is laid out, one of BRANCH_LAYOUTS. */
 export const MAP_LAYOUT_KEY = 'drLayout';
+/* On a group: the branch it's drawn round, and the room it leaves round it: { id, pad: [left, top, right, bottom] }. */
+export const FRAME_KEY = 'drFrames';
 
 /** A card's adjustment, or none. */
 export function nudgeOf(rec) {
@@ -37,6 +40,35 @@ export function nudgeOf(rec) {
 export function keptLayout(rec) {
   const mode = rec && rec.node ? cardKept(rec.node, MAP_LAYOUT_KEY) : null;
   return BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
+}
+
+/** The branch a group is drawn round, or null. */
+export function frameOf(rec) {
+  const f = rec && rec.node ? cardKept(rec.node, FRAME_KEY) : null;
+  return f && typeof f.id === 'string' && Array.isArray(f.pad) && f.pad.length === 4 ? f : null;
+}
+
+/** A card of a map and the cards below it, as laid out: [id]. */
+export function branchIds(layout, id) {
+  const out = [id];
+  for (let i = 0; i < out.length; i++) layout.parents.forEach((p, c) => p === out[i] && out.push(c));
+  return out;
+}
+
+/**
+ * Whether a group holds one branch of a map and nothing else, as the
+ * cards lie now: { id, pad } — the card the branch starts at and the
+ * room round it — or null.
+ */
+export function framedBranch(model, layout, group) {
+  const ids = new Set(groupContents(model, group, false).filter((r) => !isGroupRecord(r)).map((r) => r.id));
+  const tops = Array.from(ids).filter((id) => !ids.has(layout.parents.get(id)));
+  if (tops.length !== 1 || !layout.spots.has(tops[0])) return null;
+  const branch = branchIds(layout, tops[0]);
+  if (branch.length !== ids.size || branch.some((id) => !ids.has(id))) return null;
+  const box = boundsOf(branch.map((id) => model.byId.get(id)));
+  const pad = [box.x - group.x, box.y - group.y, group.x + group.width - box.x - box.width, group.y + group.height - box.y - box.height];
+  return { id: tops[0], pad: pad.map((v) => Math.round(v)) };
 }
 
 /** The trees of a map: the cards with a branch that hang from nothing shown. */
@@ -114,7 +146,27 @@ export function mapLayout(model, links, modeOf) {
       });
     }
   });
-  return { roots, spots, parents, places };
+  const layout = { roots, spots, parents, places };
+  layout.frames = framePlaces(model, layout);
+  return layout;
+}
+
+/** Where each group drawn round a branch goes, round its cards in their places: id -> { x, y, width, height }. */
+export function framePlaces(model, layout) {
+  const out = new Map();
+  model.nodes.forEach((g) => {
+    const f = !g.tuck && isGroupRecord(g) ? frameOf(g) : null;
+    if (!f || !layout.places.has(f.id)) return;
+    const box = boundsOf(
+      branchIds(layout, f.id).map((id) => {
+        const r = model.byId.get(id);
+        const at = layout.places.get(id);
+        return { x: at.x, y: at.y, width: r.width, height: r.height };
+      })
+    );
+    out.set(g.id, { x: box.x - f.pad[0], y: box.y - f.pad[1], width: box.width + f.pad[0] + f.pad[2], height: box.height + f.pad[1] + f.pad[3] });
+  });
+  return out;
 }
 
 /** The adjustments that keep these cards where they are now, each from its parent's: id -> { dx, dy }. */
@@ -145,9 +197,47 @@ export function mapShape(model, layout) {
   return parts.join('|');
 }
 
+/** The cards a card's arrows come from, as a string to compare. */
+function arrowSources(links, id) {
+  return (links.parents.get(id) || []).slice().sort().join(',');
+}
+
 /** Whether a card isn't at a place. */
 function offPlace(rec, at) {
   return Math.abs(rec.x - at.x) > 0.5 || Math.abs(rec.y - at.y) > 0.5;
+}
+
+/** Whether a group isn't at a place, or its size. */
+function offBox(rec, box) {
+  return offPlace(rec, box) || Math.abs(rec.width - box.width) > 0.5 || Math.abs(rec.height - box.height) > 0.5;
+}
+
+/**
+ * A model's cards put in their places, and the groups drawn round
+ * branches round them — moved with what's tucked into them, nothing
+ * else. Whether anything moved.
+ */
+export function placeIn(model, layout) {
+  let moving = false;
+  const move = (rec, at, alone) => {
+    const once = new Set();
+    shiftRecord(model, rec, 'x', at.x - rec.x, once, alone);
+    once.clear();
+    shiftRecord(model, rec, 'y', at.y - rec.y, once, alone);
+    moving = true;
+  };
+  layout.places.forEach((at, id) => {
+    const rec = model.byId.get(id);
+    if (rec && offPlace(rec, at)) move(rec, at, false);
+  });
+  layout.frames.forEach((box, id) => {
+    const g = model.byId.get(id);
+    if (!g || !offBox(g, box)) return;
+    move(g, box, true);
+    g.width = box.width;
+    g.height = box.height;
+  });
+  return moving;
 }
 
 export class CanvasMap extends CanvasFeature {
@@ -206,7 +296,7 @@ export class CanvasMap extends CanvasFeature {
 
   /** The feature, if this canvas is a map it lays out. */
   static of(plugin, view) {
-    const map = plugin.feature(CanvasMap);
+    const map = plugin && typeof plugin.feature === 'function' ? plugin.feature(CanvasMap) : null;
     return map && map.enabled && map.isMap(view) ? map : null;
   }
 
@@ -233,6 +323,7 @@ export class CanvasMap extends CanvasFeature {
     });
     const layout = mapLayout(model, links);
     this.keep(model, layout, Array.from(layout.parents.keys()));
+    this.frame(model, layout, model.nodes.filter((g) => isGroupRecord(g) && !g.tuck));
     saveCanvas(view.canvas);
     await this.setMap(view, true);
     const state = this.watched.get(view);
@@ -364,8 +455,15 @@ export class CanvasMap extends CanvasFeature {
       const moved = state.laid ? tree.filter((id) => state.laid.has(id) && offPlace(model.byId.get(id), state.laid.get(id))) : [];
       const stray = tree.filter((id) => moved.indexOf(id) === -1 && offPlace(model.byId.get(id), layout.places.get(id)));
       if (stray.length) this.keep(model, layout, stray);
+      // A group drawn round a branch, or sized by hand: drawn round it from now on, as it is.
+      const groups = model.nodes.filter((g) => {
+        if (!isGroupRecord(g) || g.tuck) return false;
+        const was = state.framed && state.framed.get(g.id);
+        return !frameOf(g) ? !was : !!was && offBox(g, was) && !moved.length;
+      });
+      const framed = this.frame(model, layout, groups);
       if (!moved.length) {
-        this.remember(state, model, stray.length ? mapLayout(model, links) : layout, shape);
+        this.remember(state, model, stray.length || framed ? mapLayout(model, links) : layout, shape);
         return;
       }
       // Moved by hand: kept as adjustments, their branches to follow.
@@ -374,11 +472,11 @@ export class CanvasMap extends CanvasFeature {
       this.layOut(view, state, model, layout, links, { changed: true });
       return;
     }
-    // The tree changed. A card hung somewhere new goes to its place there.
+    // The tree changed. A card whose arrows now come from elsewhere goes to its place there.
     let relinked = false;
     layout.parents.forEach((parent, id) => {
       const rec = model.byId.get(id);
-      if (state.parents && state.parents.get(id) === parent) return;
+      if (state.arrows && state.arrows.get(id) === arrowSources(links, id)) return;
       if (!nudgeOf(rec)) return;
       keepOnCard(rec.node, NUDGE_KEY, undefined);
       relinked = true;
@@ -401,10 +499,26 @@ export class CanvasMap extends CanvasFeature {
     return any;
   }
 
-  /** What the map looks like now, to tell what changes next. */
+  /** These groups drawn round the branch each holds, as they are, if one; whether any changed. */
+  frame(model, layout, groups) {
+    let any = false;
+    groups.forEach((g) => {
+      const f = framedBranch(model, layout, g);
+      const was = frameOf(g);
+      if (!f && !was) return;
+      if (f && was && f.id === was.id && f.pad.every((v, i) => v === was.pad[i])) return;
+      keepOnCard(g.node, FRAME_KEY, f || undefined);
+      any = true;
+    });
+    return any;
+  }
+
+  /** What the map looks like now, to tell what changes next — and what each card's arrows come from, folded away or not. */
   remember(state, model, layout, shape) {
+    const links = arrowLinks(model);
+    state.arrows = new Map(model.nodes.map((r) => [r.id, arrowSources(links, r.id)]));
+    state.framed = new Map(model.nodes.filter((g) => isGroupRecord(g)).map((g) => [g.id, (layout.frames && layout.frames.get(g.id)) || { x: g.x, y: g.y, width: g.width, height: g.height }]));
     state.laid = new Map(layout.places);
-    state.parents = new Map(layout.parents);
     state.shape = shape || mapShape(model, layout);
     state.cards = new Map(model.nodes.map((r) => [r.id, r.node]));
   }
@@ -419,16 +533,7 @@ export class CanvasMap extends CanvasFeature {
     const fold = this.plugin.feature(CanvasFold);
     const holder = (fold && fold.watched.get(view)) || state;
     const before = snapshotModel(model);
-    let moving = false;
-    layout.places.forEach((at, id) => {
-      const rec = model.byId.get(id);
-      if (!rec || !offPlace(rec, at)) return;
-      const once = new Set();
-      shiftRecord(model, rec, 'x', at.x - rec.x, once);
-      once.clear();
-      shiftRecord(model, rec, 'y', at.y - rec.y, once);
-      moving = true;
-    });
+    const moving = placeIn(model, layout);
     state.gliding = moving;
     return new Promise((resolve) => {
       const done = (glided) => {

@@ -29,6 +29,7 @@ import { applyCanvasModel, foldBranch, snapshotModel, tuckedCount, unfoldBranch,
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { drawTucks, restoreOrphans, undrawTucks } from './336-canvas-tucks.js';
 import { colourMark, FoldPopover } from './337-canvas-peek.js';
+import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
 
 export const FOLD_KEY = 'drFold';
 
@@ -143,6 +144,16 @@ export class CanvasFold extends CanvasFeature {
     return this.settings.canvasCloseGaps !== false;
   }
 
+  /** Whether a fold on this canvas closes up the room it leaves: never in a mind map, which closes up and opens out by itself. */
+  closingIn(view) {
+    return this.closing && !CanvasMap.of(this.plugin, view);
+  }
+
+  /** In a mind map, once folds have changed: the cards put in their places, to glide there with the fold. */
+  placeForMap(view, model) {
+    if (CanvasMap.of(this.plugin, view)) placeIn(model, mapLayout(model, arrowLinks(model)));
+  }
+
   actions() {
     const model = (ctx) => canvasModel(ctx.view.canvas);
     // On a card's menu, its own branch; from the palette, any of the selected cards'.
@@ -252,14 +263,20 @@ export class CanvasFold extends CanvasFeature {
     this.settle(view);
     const model = canvasModel(view.canvas);
     const before = snapshotModel(model);
+    const close = this.closingIn(view);
+    const inMap = !!CanvasMap.of(this.plugin, view);
     let any = false;
     (nodes || []).forEach((node) => {
       const rec = model.byId.get(node.id);
       if (!rec || rec.tuck || isGroupRecord(rec)) return;
       const links = arrowLinks(model);
-      const ids = on ? foldBranch(model, rec, this.closing, links) : unfoldBranch(model, rec, this.closing, links);
+      // In a mind map, nothing a fold moved is noted, nor put back: the map lays itself out.
+      if (inMap) rec.room = null;
+      const ids = on ? foldBranch(model, rec, close, links) : unfoldBranch(model, rec, close, links);
+      if (inMap) rec.room = null;
       any = any || ids.length > 0;
     });
+    if (any) this.placeForMap(view, model);
     return this.finish(view, model, before, any);
   }
 
@@ -292,7 +309,8 @@ export class CanvasFold extends CanvasFeature {
     this.settle(view);
     const model = canvasModel(view.canvas);
     const before = snapshotModel(model);
-    const close = this.closing;
+    const close = this.closingIn(view);
+    const inMap = !!CanvasMap.of(this.plugin, view);
     const shown = () => model.nodes.filter((n) => !n.tuck);
     let any = false;
     if (what === 'branches') {
@@ -312,12 +330,15 @@ export class CanvasFold extends CanvasFeature {
         shown()
           .filter((r) => !isGroupRecord(r) && tuckedCount(model, r.id))
           .forEach((r) => {
+            if (inMap) r.room = null;
             if (!r.tuck && unfoldBranch(model, r, close, arrowLinks(model)).length) more = true;
           });
         if (!more) break;
         any = true;
       }
     }
+    if (inMap) model.nodes.forEach((r) => (r.room = null));
+    if (any) this.placeForMap(view, model);
     return this.finish(view, model, before, any);
   }
 
@@ -358,8 +379,9 @@ export class CanvasFold extends CanvasFeature {
     if (state && state.gliding) return;
     const model = canvasModel(view.canvas);
     const before = snapshotModel(model);
-    let changed = state ? restoreOrphans(model, state, this.closing) : false;
-    if (openOldFolds(model, this.closing)) changed = true;
+    const close = this.closingIn(view);
+    let changed = state ? restoreOrphans(model, state, close) : false;
+    if (openOldFolds(model, close)) changed = true;
     if (changed) applyCanvasModel(model, before);
     // Cards, not the groups folded away with them.
     const counts = new Map();
