@@ -7552,6 +7552,16 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   box-shadow: 0 0 0 3px var(--interactive-accent);
 }
 
+/* The map toolbar: its own group in the bar above the selection. */
+.canvas-menu .dr-map-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2-1);
+  margin-left: var(--size-2-2);
+  padding-left: var(--size-2-2);
+  border-left: 1px solid var(--background-modifier-border);
+}
+
 /* In a mind map, where a dragged card would land, let go now. */
 .dr-map-ghost {
   position: absolute;

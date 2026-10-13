@@ -209,6 +209,10 @@ export const DEFAULTS = {
   canvasMaps: true,
   // { canvasPath: true } — the canvases made mind maps.
   canvasMapFiles: {},
+  // Buttons for what you do to a map, in the bar above the selected cards.
+  canvasMapToolbar: true,
+  // [{ id, on }] — the map toolbar's buttons, in order; empty for the first choice.
+  canvasToolbarItems: [],
   // Tab and Enter on a selected card add one after it or beside it.
   canvasMindMap: true,
   // Where Tab and Enter put a new card: 'free' for the nearest free space, 'line' in line with room made.

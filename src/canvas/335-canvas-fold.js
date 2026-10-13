@@ -30,6 +30,7 @@ import { glideCanvasModel } from './318-canvas-motion.js';
 import { drawTucks, restoreOrphans, undrawTucks } from './336-canvas-tucks.js';
 import { colourMark, FoldPopover } from './337-canvas-peek.js';
 import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
+import { CanvasMapToolbar } from './349-canvas-map-toolbar.js';
 
 export const FOLD_KEY = 'drFold';
 
@@ -516,7 +517,10 @@ export class CanvasFold extends CanvasFeature {
     if (!bar) return;
     const roots = this.branchTargets(view);
     let branch = null;
-    if (roots.length) {
+    // The map toolbar's, where it shows them.
+    const ownFold = !CanvasMapToolbar.shows(this.plugin, 'fold-canvas-branch');
+    const ownMaster = !CanvasMapToolbar.shows(this.plugin, 'toggle-canvas-master-card');
+    if (roots.length && ownFold) {
       const model = canvasModel(view.canvas);
       const folded = roots.every((n) => tuckedCount(model, n.id) > 0);
       branch = { title: folded ? 'Unfold branch' : 'Fold branch', icon: folded ? 'chevrons-up-down' : 'chevrons-down-up' };
@@ -531,7 +535,7 @@ export class CanvasFold extends CanvasFeature {
     const on = these.length > 0 && these.every((r) => r.master);
     const many = these.length > 1;
     const title = on ? (many ? 'Master cards: on' : 'Master card: on') : many ? `Make ${these.length} master cards` : 'Make master card';
-    menuButton(bar, 'dr-master-button', these.length ? { title, icon: 'crown' } : null, () => {
+    menuButton(bar, 'dr-master-button', these.length && ownMaster ? { title, icon: 'crown' } : null, () => {
       const now = this.masterCandidates(view);
       if (now.length) this.setMaster(view, now.map((r) => r.node), !now.every((r) => r.master));
     });

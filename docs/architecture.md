@@ -648,3 +648,9 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   little, it keeps the adjustment; dropped onto a card it hangs from it,
   placed by the layout. While it's dragged, a ghost shows where it would
   land.
+- **One map toolbar** (`canvas/349`): a group of buttons in the bar above
+  the selected cards for what you do to a map — add a card after or beside,
+  fold, lay out, master card, focus — each shown only when its action fits.
+  Which buttons, and their order, is a setting (`canvasToolbarItems`); the
+  fold feature's own buttons give way to the toolbar's. The canvas settings
+  are in six groups: Map, Cards, Arrows, Arrange, Find and focus, Check.

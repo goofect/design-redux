@@ -112,6 +112,7 @@ import './canvas/345-canvas-outline-sync.js';
 import './canvas/346-canvas-views.js';
 import './canvas/347-canvas-depth.js';
 import './canvas/348-canvas-map.js';
+import './canvas/349-canvas-map-toolbar.js';
 import './chrome/348-workspace-modes.js';
 import './plugin/350-plugin.js';
 import './plugin/360-settings-tab.js';

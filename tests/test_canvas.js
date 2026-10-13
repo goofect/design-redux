@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasMap, mapLayout, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1094,6 +1094,45 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.ok(!n('b').unknownData.drNudge);
     ['a', 'b', 'c', 'c1'].forEach((id) => assert.deepStrictEqual({ x: n(id).x, y: n(id).y }, spotOf(id), `${id} in its place`));
     assert.strictEqual(view.canvas.saves, saves + 1);
+  });
+
+  await t('the map toolbar shows the buttons that fit the selection, in the order chosen; the fold buttons give way to it', async () => {
+    const { view, map, n, p, fold } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, 0, 200, 60)],
+      edges: [edge('root', 'a', 'right', 'left')],
+    });
+    const bar = view.contentEl.createDiv({ cls: 'canvas-menu' });
+    const mind = new R.CanvasMindMap(p);
+    const toolbar = new R.CanvasMapToolbar(p);
+    Object.assign(p.settings, { canvasMapToolbar: true, canvasToolbarItems: [] });
+    p.features = [mind, fold, map, toolbar];
+    p.feature = (C) => (C === R.CanvasFold ? fold : C === R.CanvasMap ? map : C === R.CanvasMapToolbar ? toolbar : C === R.CanvasMindMap ? mind : null);
+    fold.popover = { hide() {} };
+    view.canvas.selectOnly(n('root'));
+    const tools = () => Array.from(bar.querySelectorAll('.dr-map-tools .dr-map-tool')).map((b) => b.dataset.tool);
+    toolbar.pass(view);
+    const shown = tools();
+    ['canvas-add-child-card', 'canvas-add-sibling-card', 'fold-canvas-branch', 'toggle-canvas-master-card'].forEach((id) => assert.ok(shown.includes(id), id));
+    assert.deepStrictEqual(shown, R.MAP_TOOLS.map((t) => t.id).filter((id) => shown.includes(id)), 'in the first order');
+    // The fold feature's own buttons give way to the toolbar's.
+    fold.decorateMenu(view);
+    assert.ok(!bar.querySelector('.dr-branch-button') && !bar.querySelector('.dr-master-button'));
+    // Chosen: fold first, adding a card after off.
+    p.settings.canvasToolbarItems = [{ id: 'fold-canvas-branch', on: true }, { id: 'canvas-add-child-card', on: false }];
+    toolbar.pass(view);
+    assert.strictEqual(tools()[0], 'fold-canvas-branch');
+    assert.ok(!tools().includes('canvas-add-child-card'));
+    // A button does what its action does.
+    const before = view.canvas.nodes.size;
+    bar.querySelector('[data-tool="canvas-add-sibling-card"]').click();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(view.canvas.nodes.size, before + 1);
+    // Off: none of it, and the fold buttons are back.
+    p.settings.canvasMapToolbar = false;
+    toolbar.cleanup(view);
+    view.canvas.selectOnly(n('root'));
+    fold.decorateMenu(view);
+    assert.ok(!bar.querySelector('.dr-map-tools') && bar.querySelector('.dr-branch-button'));
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {

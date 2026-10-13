@@ -1029,7 +1029,7 @@ describe('Design Redux in Obsidian', function () {
     });
     await browser.$(ACTIVE + '.canvas-menu').waitForExist({ timeout: 5000 });
     await browser.pause(400);
-    expect(await browser.$(ACTIVE + '.canvas-menu .dr-branch-button').isExisting()).toBe(false);
+    expect(await browser.$(ACTIVE + '.canvas-menu [data-tool="fold-canvas-branch"]').isExisting()).toBe(false);
     expect(await browser.$(ACTIVE + '.canvas-menu .dr-fold-button').isExisting()).toBe(false);
     await browser.$(ACTIVE + '[data-test-id="c"]').click({ button: 'right' });
     await browser.waitUntil(async () => (await menuTitles()).length > 0, { timeout: 4000 }).catch(() => {});
@@ -1086,7 +1086,7 @@ describe('Design Redux in Obsidian', function () {
     // Realism's branch, from the bar above it: Power is tucked away;
     // Anarchy, which Waltz leads to too, stays out.
     await browser.$(ACTIVE + '[data-test-id="a"]').click();
-    const branchButton = await browser.$(ACTIVE + '.canvas-menu .dr-branch-button');
+    const branchButton = await browser.$(ACTIVE + '.canvas-menu [data-tool="fold-canvas-branch"]');
     await branchButton.waitForExist({ timeout: 5000 });
     await branchButton.click();
     await browser.waitUntil(async () => (await cards()).a2.hidden, { timeout: 5000, timeoutMsg: 'the branch never folded' });
