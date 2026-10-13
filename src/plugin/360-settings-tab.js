@@ -33,7 +33,7 @@ export const SETTINGS_TABS = [
         keys: ['librarySections'],
       },
       { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
-      { title: 'Screens', keys: ['albumColumns', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty'] },
+      { title: 'Screens', keys: ['albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty'] },
       { title: 'Albums', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
       { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },

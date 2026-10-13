@@ -63,6 +63,12 @@ export const DEFAULTS = {
   albumNoteLimit: 8,
   discNoteLimit: 10,
   albumColumns: 'domain, modified',
+  // A grey line under each note in an album: its description, or its first sentence.
+  albumExcerpts: true,
+  // At an album's end, greyed: the notes its notes link to that aren't written yet.
+  albumStillToWrite: true,
+  // The property naming a note's parent, to nest an album's notes by; empty for a flat list.
+  albumNestBy: 'parent',
   // What an album row ends with, where a track's length would be:
   // 'time' to read it, 'words', or 'none'.
   trackLength: 'time',

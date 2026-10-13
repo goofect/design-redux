@@ -130,6 +130,27 @@ export class Library extends Feature {
         suggestExtra: ['modified', 'created', 'folder'],
       },
       {
+        key: 'albumExcerpts',
+        showIf: 'library',
+        name: 'A line under each note',
+        desc: 'In an album, a short grey line under each title: the note’s description property, or its first sentence.',
+      },
+      {
+        key: 'albumStillToWrite',
+        showIf: 'library',
+        name: 'Still to write',
+        desc: 'At the end of an album, greyed: what its notes link to that isn’t a note yet. Click one to write it there.',
+      },
+      {
+        key: 'albumNestBy',
+        type: 'text',
+        showIf: 'library',
+        name: 'Nest notes by',
+        desc: 'The property naming a note’s parent: in an album, a note goes under its parent, a step in, folding open. Empty for a flat list.',
+        placeholder: 'parent',
+        suggest: 'properties',
+      },
+      {
         key: 'trackLength',
         type: 'dropdown',
         showIf: 'library',

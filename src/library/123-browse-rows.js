@@ -6,8 +6,10 @@
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFolder } from 'obsidian';
-import { blankLook, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
+import { blankLook, byName, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, relativeDay, roveFocus } from '../core/040-helpers-sorting.js';
+import { fmGet } from '../core/045-helpers-properties.js';
+import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -18,9 +20,13 @@ import { AlbumStructure } from './257-album-structure.js';
 export class BrowseRows {
   /* -- the list --------------------------------------------------- */
 
-  trackRow(list, file, index) {
+  trackRow(list, file, index, nest) {
     const row = list.createDiv({ cls: 'dr-track' });
     asButton(row);
+    if (nest && nest.depth) {
+      row.addClass('is-nested');
+      row.style.setProperty('--dr-nest', String(nest.depth));
+    }
 
     // Which disc the row belongs to, so a drop knows what it's over.
     if (file.parent) row.dataset.folder = file.parent.path;
@@ -47,6 +53,20 @@ export class BrowseRows {
     row.createDiv({ cls: 'dr-track-num', text: String(index) });
 
     const name = row.createDiv({ cls: 'dr-track-name' });
+    if (nest && nest.children) {
+      // A parent's notes fold away under it, and open again.
+      const folded = this.foldedNotes && this.foldedNotes.has(file.path);
+      const toggle = name.createSpan({ cls: 'dr-track-fold clickable-icon' });
+      toggle.setAttribute('aria-label', folded ? `Show the ${nest.children} under it` : 'Fold away what’s under it');
+      setIcon(toggle, folded ? 'chevron-right' : 'chevron-down');
+      toggle.addEventListener('click', (evt) => {
+        evt.stopPropagation();
+        if (!this.foldedNotes) this.foldedNotes = new Set();
+        if (folded) this.foldedNotes.delete(file.path);
+        else this.foldedNotes.add(file.path);
+        this.render();
+      });
+    }
     if (this.isPinned(file)) {
       // Pinned is this list's favourite: a mark beside the title.
       name.addClass('has-mark');
@@ -54,9 +74,13 @@ export class BrowseRows {
       const pin = name.createSpan({ cls: 'dr-track-pin' });
       pin.setAttribute('aria-label', 'Pinned');
       setIcon(pin, 'pin');
+    } else if (nest && nest.children) {
+      name.createSpan({ cls: 'dr-track-title', text: file.basename });
     } else {
       name.setText(file.basename);
     }
+
+    if (this.plugin.settings.albumExcerpts !== false) this.showExcerpt(name, file);
 
     this.albumColumns().forEach((key) =>
       row.createDiv({
@@ -79,6 +103,36 @@ export class BrowseRows {
     more.addEventListener('click', (evt) => this.fileMenu(evt, file));
     onContextMenu(row, (evt) => this.fileMenu(evt, file));
     this.pickOrOpen(row, { file }, (evt) => this.openFile(file, evt), false);
+  }
+
+  /**
+   * A short grey line under a note's title: its description, or its
+   * first sentence — read once, and again only when the note changes.
+   * Drawn by the styles from an attribute, so the title's text is only
+   * the title.
+   */
+  showExcerpt(el, file) {
+    const put = (text) => {
+      if (text) el.dataset.excerpt = text;
+      else delete el.dataset.excerpt;
+      el.toggleClass('has-excerpt', !!text);
+    };
+    const cache = this.app.metadataCache.getFileCache(file);
+    const said = cache ? fmGet(cache.frontmatter, 'description') : null;
+    if (typeof said === 'string' && said.trim()) return put(plainMarkdownLine(said));
+    const store = this.plugin.excerpts || (this.plugin.excerpts = new Map());
+    const key = `${file.path}|${file.stat ? file.stat.mtime : 0}`;
+    if (store.has(key)) return put(store.get(key));
+    if (!this.app.vault || typeof this.app.vault.cachedRead !== 'function') return;
+    this.app.vault
+      .cachedRead(file)
+      .then((text) => {
+        if (store.size > 4000) store.clear();
+        const line = noteOpening(text);
+        store.set(key, line);
+        if (el.isConnected) put(line);
+      })
+      .catch(() => {});
   }
 
   /**
@@ -119,10 +173,12 @@ export class BrowseRows {
    * folder.
    */
   albumColumns() {
+    // Nested by a property, the nesting says it: no column for it.
+    const nest = String(this.plugin.settings.albumNestBy || '').trim().toLowerCase();
     return (this.plugin.settings.albumColumns || '')
       .split(',')
       .map((k) => k.trim())
-      .filter(Boolean);
+      .filter((k) => k && k.toLowerCase() !== nest);
   }
 
   isTimeColumn(key) {
@@ -177,7 +233,59 @@ export class BrowseRows {
    * The end of an album, as the reference ends one: when it began, and
    * how much there is — small, under the last track.
    */
-  renderAlbumFoot(root, files) {
+  /**
+   * The names the album's notes link to that are no note yet, most
+   * linked first: [{ name, count }].
+   */
+  stillToWrite(folder, files) {
+    const links = (this.app.metadataCache && this.app.metadataCache.unresolvedLinks) || {};
+    const from = files.slice();
+    const own = this.plugin.folderNote(folder);
+    if (own) from.push(own);
+    const counts = new Map();
+    from.forEach((f) =>
+      Object.keys(links[f.path] || {}).forEach((text) => {
+        const name = text.split('/').pop().replace(/\.md$/i, '').trim();
+        // A missing image or other file is no note to write.
+        if (!name || /\.[a-z0-9]{1,5}$/i.test(name)) return;
+        counts.set(name, (counts.get(name) || 0) + links[f.path][text]);
+      })
+    );
+    return Array.from(counts, ([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || byName(a.name, b.name));
+  }
+
+  /**
+   * At the foot of an album's notes: what its notes link to that's not
+   * written yet, greyed — a click writes it here — and a row for a new
+   * note.
+   */
+  renderAlbumEnd(root, folder, files) {
+    if (!folder || (folder.isRoot && folder.isRoot())) return;
+    const list = root.createDiv({ cls: 'dr-tracks dr-album-end' });
+    const missing = this.plugin.settings.albumStillToWrite === false ? [] : this.stillToWrite(folder, files);
+    const cap = 12;
+    if (missing.length) {
+      const head = list.createDiv({ cls: 'dr-disc dr-still-head' });
+      head.createSpan({ cls: 'dr-disc-title', text: 'Still to write' });
+      head.createSpan({ cls: 'dr-disc-count', text: missing.length === 1 ? '1 note' : `${missing.length} notes` });
+      missing.slice(0, cap).forEach((m) => {
+        const row = list.createDiv({ cls: 'dr-end-row is-unwritten' });
+        asButton(row, `Write “${m.name}” here`);
+        row.createDiv({ cls: 'dr-track-num' });
+        row.createDiv({ cls: 'dr-track-name', text: m.name });
+        row.createDiv({ cls: 'dr-track-time', text: m.count === 1 ? '1 link' : `${m.count} links` });
+        onActivate(row, () => this.plugin.newNote(folder, m.name));
+      });
+      if (missing.length > cap) list.createDiv({ cls: 'dr-end-row is-unwritten dr-more-label', text: `And ${missing.length - cap} more` });
+    }
+    const add = list.createDiv({ cls: 'dr-end-row dr-new-note-row' });
+    asButton(add, 'New note');
+    setIcon(add.createDiv({ cls: 'dr-track-num' }), 'plus');
+    add.createDiv({ cls: 'dr-track-name', text: 'New note' });
+    onActivate(add, () => this.plugin.newNote(folder));
+  }
+
+  renderAlbumFoot(root, files, opts = {}) {
     if (!files.length) return;
     const first = files.reduce((t, f) => Math.min(t, f.stat.ctime || Infinity), Infinity);
     const foot = root.createDiv({ cls: 'dr-album-foot' });
@@ -186,6 +294,8 @@ export class BrowseRows {
         text: `Started ${new Date(first).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`,
       });
     }
+    // The count, where the header's isn't the whole of it: an album with discs.
+    if (opts.count === false) return;
     const count = files.length === 1 ? '1 note' : `${files.length} notes`;
     const length = this.totalLength(files);
     foot.createDiv({ text: length ? `${count}, ${length.replace(/ read$/, '')}` : count });

@@ -52,6 +52,54 @@ export function valueList(raw) {
   return (Array.isArray(raw) ? raw : [raw]).filter((v) => v !== null && v !== undefined && String(v).trim() !== '').map((v) => String(v).trim());
 }
 
+/**
+ * Notes set out under the note a property names as their parent —
+ * among these notes, in their order: each parent followed by the notes
+ * under it, a step in, at any depth. A note whose parent isn't among
+ * them, or that would hang from itself, stays at the top.
+ * [{ file, depth, children }], `children` the number directly under it.
+ */
+export function nestByProperty(app, files, key) {
+  const here = new Set(files);
+  const parentOf = new Map();
+  if (key) {
+    files.forEach((file) => {
+      const cache = app.metadataCache.getFileCache(file);
+      const raw = cache ? fmGet(cache.frontmatter, key) : undefined;
+      const found = valueList(raw)
+        .map((v) => app.metadataCache.getFirstLinkpathDest(plainValue(v), file.path))
+        .find((t) => t && t !== file && here.has(t));
+      if (found) parentOf.set(file, found);
+    });
+  }
+  // A ring of parents has no top: its notes stay at the top.
+  parentOf.forEach((p, file) => {
+    const seen = new Set([file]);
+    for (let at = p; at; at = parentOf.get(at)) {
+      if (seen.has(at)) {
+        parentOf.delete(file);
+        break;
+      }
+      seen.add(at);
+    }
+  });
+  const under = new Map();
+  files.forEach((f) => {
+    const p = parentOf.get(f);
+    if (!p) return;
+    if (!under.has(p)) under.set(p, []);
+    under.get(p).push(f);
+  });
+  const out = [];
+  const add = (file, depth) => {
+    const kids = under.get(file) || [];
+    out.push({ file, depth, children: kids.length });
+    kids.forEach((k) => add(k, depth + 1));
+  };
+  files.filter((f) => !parentOf.has(f)).forEach((f) => add(f, 0));
+  return out;
+}
+
 /** Property names in the vault, most used first. */
 export function knownPropertyNames(app) {
   try {

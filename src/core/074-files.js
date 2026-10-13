@@ -39,15 +39,16 @@ export class Files {
    * A note in a particular folder, opened with its title ready to type
    * over — the way the file explorer's New note behaves.
    */
-  async newNote(folder) {
+  async newNote(folder, name) {
     try {
       const file = await this.app.vault.create(
-        this.freeChildPath(folder, 'Untitled', 'md'),
+        this.freeChildPath(folder, name || 'Untitled', 'md'),
         ''
       );
+      // Untitled, it opens with its name ready to type; named, ready to write.
       await this.app.workspace
         .getLeaf(false)
-        .openFile(file, { active: true, eState: { rename: 'all' } });
+        .openFile(file, name ? { active: true } : { active: true, eState: { rename: 'all' } });
     } catch (err) {
       console.error('Design Redux: could not create the note', err);
       new Notice('Could not create the note.');

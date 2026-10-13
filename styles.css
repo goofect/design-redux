@@ -2100,7 +2100,8 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   margin-top: calc(var(--dr-u) * 1.5);
 }
 
-.dr-track {
+.dr-track,
+.dr-end-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -2110,13 +2111,15 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   cursor: pointer;
 }
 
-.dr-track:focus-visible {
+.dr-track:focus-visible,
+.dr-end-row:focus-visible {
   background-color: var(--dr-hover);
   outline: none;
 }
 
 @media (any-hover: hover) {
-  .dr-track:hover {
+  .dr-track:hover,
+  .dr-end-row:hover {
     background-color: var(--dr-hover);
     outline: none;
   }
@@ -2139,6 +2142,44 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   color: var(--text-normal);
   font-size: var(--font-ui-medium);
   font-weight: var(--font-medium, 500);
+}
+
+/* An album's end: notes still to write, greyed, and a row for a new note. */
+.dr-end-row.is-unwritten .dr-track-name,
+.dr-new-note-row .dr-track-name,
+.dr-new-note-row .dr-track-num {
+  color: var(--text-faint);
+  font-style: normal;
+}
+
+/* A note's description, or its first sentence, in grey under its title. */
+.dr-track-name.has-excerpt::after {
+  content: attr(data-excerpt);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+}
+
+/* Notes nested under their parent: a step in for each level, a fold on the parent. */
+.dr-track.is-nested .dr-track-name {
+  padding-left: calc(var(--dr-nest, 1) * var(--size-4-6));
+}
+
+.dr-track-fold {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 var(--size-2-2) 0 calc(-1 * var(--size-4-1));
+  padding: 0;
+  color: var(--text-faint);
+}
+
+.dr-track-fold .svg-icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
 }
 
 .dr-track-sub {

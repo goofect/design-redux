@@ -117,7 +117,8 @@ export class FolderScreen extends BrowseScreen {
       if (about && about.layout === 'covers') this.renderCovers(el, discs, folder);
       else if (about && about.layout === 'table') this.renderTable(el, discs, folder);
       else view.renderDiscs(el, discs, folder);
-      if (!view.editing) view.renderAlbumFoot(el, all);
+      if (!view.editing) view.renderAlbumEnd(el, folder, all);
+      if (!view.editing) view.renderAlbumFoot(el, all, { count: discs.length > 1 });
     };
     const panels = about ? this.panels(folder, about, all, drawNotes) : [];
     if (panels.length > 1) this.renderPanels(root, folder, about, panels);

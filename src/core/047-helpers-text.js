@@ -19,6 +19,33 @@ export function plainMarkdownLine(line) {
     .trim();
 }
 
+/**
+ * A note's opening as one short line: its first sentence of prose — past
+ * its properties, headings, embeds and rules — as plain words, at most
+ * `max` characters. Empty when it has none.
+ */
+export function noteOpening(text, max = 140) {
+  const body = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '');
+  const lines = [];
+  for (const raw of body.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) {
+      if (lines.length) break;
+      continue;
+    }
+    if (/^(#{1,6}\s|!\[\[|!\[|```|---|\*\*\*|\|)/.test(line) || /^%%/.test(line)) {
+      if (lines.length) break;
+      continue;
+    }
+    lines.push(plainMarkdownLine(line));
+  }
+  const para = lines.join(' ').replace(/\s+/g, ' ').trim();
+  if (!para) return '';
+  const m = /^(.+?[.!?])(\s|$)/.exec(para);
+  const first = m ? m[1] : para;
+  return first.length > max ? `${first.slice(0, max - 1).trimEnd()}…` : first;
+}
+
 /** A file name from a card's words: what a file name can't hold taken out. */
 export function noteNameFrom(label) {
   const name = String(label || '')

@@ -10,7 +10,7 @@ import { ItemView, Menu, Platform, Scope, setIcon, TFile, TFolder } from 'obsidi
 import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js';
 import { blankLook, byName, canStep, drawFolderArt, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
-import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
+import { fmGet, nestByProperty, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
@@ -785,10 +785,19 @@ export class BrowseView extends ItemView {
       files.forEach((file, i) => this.editRow(list, file, i + 1));
       return;
     }
+    // Notes under the note their property names as parent, a step in; what's under a folded one hidden.
+    const nestKey = String(this.plugin.settings.albumNestBy || '').trim();
+    const entries = [];
+    let hideBelow = -1;
+    (nestKey ? nestByProperty(this.app, files, nestKey) : files.map((file) => ({ file, depth: 0, children: 0 }))).forEach((e) => {
+      if (hideBelow >= 0 && e.depth > hideBelow) return;
+      hideBelow = e.children && this.foldedNotes && this.foldedNotes.has(e.file.path) ? e.depth : -1;
+      entries.push(e);
+    });
     const expanded = this.expanded.has(key);
-    const shown = expanded ? files : files.slice(0, limit);
-    shown.forEach((file, i) => this.trackRow(list, file, i + 1));
-    if (files.length <= limit) return;
+    const shown = expanded ? entries : entries.slice(0, limit);
+    shown.forEach((e, i) => this.trackRow(list, e.file, i + 1, e));
+    if (entries.length <= limit) return;
 
     const more = list.createDiv({ cls: 'dr-track dr-track-more-row' });
     asButton(more);
@@ -909,9 +918,15 @@ export class BrowseView extends ItemView {
     const cap = 24;
     const shown = this.expanded.has(key) ? discs : discs.slice(0, cap);
 
-    // Every disc is headed, including the folder's own notes and a
-    // lone disc, so an album reads the same whatever its shape.
+    // Every disc is headed, including the folder's own notes — but an
+    // album of its own notes alone, whose header already counts them,
+    // needs no heading for them.
+    const lone = !this.editing && discs.length === 1 && !!album && discs[0].folder === album;
     shown.forEach((disc) => {
+      if (lone) {
+        this.renderLimited(list, disc.files, `disc:${album.path}`, this.limitFrom('discNoteLimit', 10));
+        return;
+      }
       const head = list.createDiv({ cls: 'dr-disc' });
       if (disc.folder) head.dataset.folder = disc.folder.path;
       if (this.editing && disc.folder && album && disc.folder !== album) {

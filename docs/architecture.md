@@ -659,3 +659,15 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   tile, and the properties chosen in settings as chips. Cards can be tinted
   by their branch or their depth (347), leaving cards' own colours as they
   are.
+
+## 22. 2.0, phase 5: design, note-first
+
+- **A quieter album page.** Notes nest under the note their parent property
+  names (`albumNestBy`, `parent` to begin with; `nestByProperty` in 045),
+  a step in, folding open, and that property gets no column. Under each
+  title, a grey line: the note's description, or its first sentence
+  (`noteOpening` in 047, read once per change of the note). One count,
+  under the title: an album of its own notes alone has no heading for them
+  and no count at its foot. At the end, "Still to write" — what its notes
+  link to that isn't a note yet, greyed; a click writes it there — and a
+  New note row.

@@ -294,8 +294,8 @@ export class DesignRedux extends Plugin {
     return this.files.freeChildPath(folder, base, ext);
   }
 
-  newNote(folder) {
-    return this.files.newNote(folder);
+  newNote(folder, name) {
+    return this.files.newNote(folder, name);
   }
 
   newCanvas(folder) {

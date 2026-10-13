@@ -259,6 +259,70 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.moveBefore(['a', 'b', 'c'], 'a', null), ['b', 'c', 'a']);
   });
 
+  await t('an album nests each note under the note its parent property names, folding open; the property gets no column', () => {
+    const { v, plugin, app, view } = setup();
+    const parents = { Deterrence: '[[Anarchy]]', Cooperation: ['[[Deterrence|deterrence]]'], Balance: '[[Nowhere]]' };
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: parents[f.basename] ? { parent: parents[f.basename] } : {} });
+    app.metadataCache.getFirstLinkpathDest = (name) => v.vault.getMarkdownFiles().find((f) => f.basename === name) || null;
+    plugin.settings.albumColumns = 'parent, modified';
+    view.render();
+    assert.deepStrictEqual(names(view), ['Anarchy', 'Deterrence', 'Cooperation', 'Balance']);
+    const row = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"]`);
+    assert.deepStrictEqual(['Anarchy', 'Deterrence', 'Cooperation', 'Balance'].map((n) => row(n).style.getPropertyValue('--dr-nest') || '0'), ['0', '1', '2', '0']);
+    assert.strictEqual(row('Anarchy').querySelectorAll('.dr-track-time, .dr-track-sub').length, 1, 'no parent column');
+    // Folded: what's under it, at any depth, out of sight; and back.
+    click(row('Anarchy').querySelector('.dr-track-fold'));
+    assert.deepStrictEqual(names(view), ['Anarchy', 'Balance']);
+    click(row('Anarchy').querySelector('.dr-track-fold'));
+    assert.deepStrictEqual(names(view), ['Anarchy', 'Deterrence', 'Cooperation', 'Balance']);
+    // Not nested: a flat list, the property a column again.
+    plugin.settings.albumNestBy = '';
+    view.render();
+    assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
+    assert.ok(!view.contentEl.querySelector('.dr-track.is-nested, .dr-track-fold'));
+  });
+
+  await t('under each note in an album, a grey line: its description, or its first sentence', async () => {
+    const { v, plugin, app, view } = setup();
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: f.basename === 'Anarchy' ? { description: 'No **one** above the states' } : {} });
+    v.vault.cachedRead = async (f) => (f.basename === 'Balance' ? '---\ntags: x\n---\n# Balance\n\nStates [[Alliance|ally]] against power. Then more.' : '');
+    view.render();
+    await settle();
+    const line = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-track-name`).dataset.excerpt;
+    assert.strictEqual(line('Anarchy'), 'No one above the states');
+    assert.strictEqual(line('Balance'), 'States ally against power.');
+    assert.strictEqual(line('Cooperation'), undefined, 'nothing to say, no line');
+    assert.deepStrictEqual(names(view).slice(0, 2), ['Anarchy', 'Balance'], 'the title is only the title');
+    plugin.settings.albumExcerpts = false;
+    view.render();
+    assert.strictEqual(line('Anarchy'), undefined);
+    // An album of its own notes alone: one count, under its title — no heading for them, no count at the foot.
+    Object.assign(view, { path: 'IR/Theories' });
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.dr-disc'));
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 2);
+    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-album-foot div')).some((d) => /notes?\b/.test(d.textContent)));
+    assert.ok(/2 notes/.test(view.contentEl.querySelector('.dr-detail-meta').textContent));
+  });
+
+  await t('an album ends with what its notes link to that isn’t written yet, greyed — a click writes it there — and a New note row', () => {
+    const { plugin, app, view } = setup();
+    app.metadataCache.unresolvedLinks = { 'IR/Anarchy.md': { Hegemony: 2, 'pic.png': 1 }, 'IR/Balance.md': { 'Ideas/Hegemony': 1, 'Security dilemma': 1 } };
+    const made = [];
+    plugin.newNote = (folder, name) => made.push([folder.path, name]);
+    view.render();
+    const rows = Array.from(view.contentEl.querySelectorAll('.dr-end-row.is-unwritten'));
+    assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-track-name').textContent), ['Hegemony', 'Security dilemma']);
+    assert.strictEqual(rows[0].querySelector('.dr-track-time').textContent, '3 links');
+    click(rows[0]);
+    assert.deepStrictEqual(made, [['IR', 'Hegemony']]);
+    click(view.contentEl.querySelector('.dr-new-note-row'));
+    assert.deepStrictEqual(made[1], ['IR', undefined]);
+    plugin.settings.albumStillToWrite = false;
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.is-unwritten') && view.contentEl.querySelector('.dr-new-note-row'));
+  });
+
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
     const { view, plugin } = setup();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
