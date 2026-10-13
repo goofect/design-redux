@@ -11,6 +11,7 @@
 /* ------------------------------------------------------------------ */
 
 import { addActionItems, canvasMenuContext } from '../core/078-actions.js';
+import { arrowData, canvasReadonly, cardElement, cardKept, keepOnCard, liveArrowEnds, liveArrows, liveCards, redrawArrow, requestCanvasSave, setArrowData } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { canvasAction } from './321-canvas-extras.js';
@@ -30,7 +31,7 @@ export const ARGUMENT_ROLES = {
 };
 
 export function roleOf(node) {
-  const role = node && node.unknownData && node.unknownData[ROLE_KEY];
+  const role = cardKept(node, ROLE_KEY);
   return ARGUMENT_ROLES[role] ? role : null;
 }
 
@@ -63,7 +64,7 @@ export class CanvasArguments extends CanvasFeature {
     // The cards a menu is for, or selected: plain cards, on a canvas that can be changed.
     const cards = (ctx) => {
       const nodes = ctx.nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-      return this.enabled && nodes.length && nodes.length === ctx.nodes.length && !ctx.view.canvas.readonly ? nodes : null;
+      return this.enabled && nodes.length && nodes.length === ctx.nodes.length && !canvasReadonly(ctx.view.canvas) ? nodes : null;
     };
     const current = (ctx) => {
       const nodes = cards(ctx);
@@ -114,9 +115,7 @@ export class CanvasArguments extends CanvasFeature {
     let any = false;
     nodes.forEach((node) => {
       if (!node || roleOf(node) === role) return;
-      if (!node.unknownData) node.unknownData = {};
-      if (role) node.unknownData[ROLE_KEY] = role;
-      else delete node.unknownData[ROLE_KEY];
+      keepOnCard(node, ROLE_KEY, role || undefined);
       any = true;
     });
     if (!any) return false;
@@ -135,33 +134,27 @@ export class CanvasArguments extends CanvasFeature {
     if (!view || !view.canvas || !node || !mind) return null;
     const made = await mind.addChild(view, node);
     if (!made) return null;
-    if (!made.unknownData) made.unknownData = {};
-    made.unknownData[ROLE_KEY] = role;
+    keepOnCard(made, ROLE_KEY, role);
     const label = ARGUMENT_ROLES[role].arrow;
-    try {
-      view.canvas.edges.forEach((edge) => {
-        if (!label || !edge.from || !edge.to || edge.from.node !== node || edge.to.node !== made) return;
-        if (typeof edge.setData === 'function' && typeof edge.getData === 'function') {
-          edge.setData(Object.assign({}, edge.getData(), { label }));
-          if (typeof edge.render === 'function') edge.render();
-        }
-      });
-      view.canvas.requestSave();
-    } catch (err) {
-      /* the card made, its arrow unnamed */
-    }
+    liveArrows(view.canvas).forEach((edge) => {
+      const ends = liveArrowEnds(edge);
+      if (!label || !ends || ends.from !== node || ends.to !== made) return;
+      const was = arrowData(edge);
+      if (Object.keys(was).length && setArrowData(edge, Object.assign({}, was, { label }))) redrawArrow(edge);
+    });
+    requestCanvasSave(view.canvas);
     this.pass(view);
     return made;
   }
 
   /** Each redraw: each card's part above it, and a claim's count. */
   pass(view) {
-    if (!view || !view.canvas || !view.canvas.nodes) return;
+    if (!view || !view.canvas) return;
     let model = null;
     let links = null;
     try {
-      view.canvas.nodes.forEach((node) => {
-        const el = node.nodeEl;
+      liveCards(view.canvas).forEach((node) => {
+        const el = cardElement(node);
         if (!el) return;
         const role = this.enabled ? roleOf(node) : null;
         if (!role) {

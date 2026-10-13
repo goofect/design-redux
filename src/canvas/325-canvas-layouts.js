@@ -11,6 +11,7 @@
 
 import { Notice } from 'obsidian';
 import { addActionEntries, addActionItems, canvasMenuContext } from '../core/078-actions.js';
+import { canvasReadonly } from '../core/079-canvas-adapter.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, branchOf, canvasGap, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tidyOneWay, tuckOf } from './316-canvas-tree.js';
@@ -462,7 +463,7 @@ export class CanvasLayouts extends CanvasFeature {
 
   /** Each kind of layout, for the selected branches or the cards alone, and the canvas's whole. */
   actions() {
-    const open = (ctx) => this.enabled && !ctx.view.canvas.readonly;
+    const open = (ctx) => this.enabled && !canvasReadonly(ctx.view.canvas);
     const cards = (ctx) => ctx.nodes.filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
     const roots = (ctx) => (this.enabled ? this.rootsOf(ctx.view, ctx.nodes.filter((n) => !isCanvasEdge(n))) : []);
     const iconOf = (mode) => (BRANCH_LAYOUTS.find((b) => b[0] === mode) || BRANCH_LAYOUTS[0])[2];
@@ -541,7 +542,7 @@ export class CanvasLayouts extends CanvasFeature {
 
   /** What a layout can be given now: the whole map, the selected branches, the selected cards alone. */
   scopes(view) {
-    if (!view || !view.canvas || view.canvas.readonly) return [];
+    if (!view || !view.canvas || canvasReadonly(view.canvas)) return [];
     const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n));
     const out = [];
     const whole = this.wholeRoots(view);
@@ -671,7 +672,7 @@ export class CanvasLayouts extends CanvasFeature {
   }
 
   hasBranch(view, node) {
-    if (!view || !view.canvas || view.canvas.readonly || !node || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return false;
+    if (!view || !view.canvas || canvasReadonly(view.canvas) || !node || isCanvasEdge(node) || isGroupNode(node) || tuckOf(node)) return false;
     const model = canvasModel(view.canvas);
     return shownChildren(model, arrowLinks(model), node.id).some((c) => !isGroupRecord(c));
   }

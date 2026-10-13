@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
+import { canvasReadonly, cardEditing } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { growCards, OUTLINE_CARD_LIMIT, outlineFromMarkdown, outlineItems, outlineSize } from './324-canvas-outlines.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -42,9 +43,9 @@ export class CanvasPasteLines extends CanvasFeature {
 
   onPaste(view, evt) {
     if (!this.enabled || evt.defaultPrevented || typingInto(evt.target)) return;
-    if (this.pageCanvas() !== view || !view.canvas || view.canvas.readonly) return;
+    if (this.pageCanvas() !== view || !view.canvas || canvasReadonly(view.canvas)) return;
     const cards = this.selectedNodes(view).filter((n) => !isCanvasEdge(n));
-    if (cards.length !== 1 || isGroupNode(cards[0]) || cards[0].isEditing) return;
+    if (cards.length !== 1 || isGroupNode(cards[0]) || cardEditing(cards[0])) return;
     const text = evt.clipboardData ? evt.clipboardData.getData('text/plain') : '';
     const items = this.itemsOf(text);
     if (outlineSize(items) < 2) return;

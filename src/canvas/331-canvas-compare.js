@@ -10,6 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
+import { canvasDataOf, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, canvasCardLabel, canvasModel, isGroupRecord, modelFromData } from './316-canvas-tree.js';
@@ -196,8 +197,10 @@ export class CanvasCompare extends CanvasFeature {
 
   async keepSnapshot(view) {
     if (!view || !view.canvas || !view.file) return false;
+    const data = canvasDataOf(view.canvas);
+    if (!data) return false;
     const all = await this.readSnapshots();
-    all[view.file.path] = { time: Date.now(), data: view.canvas.getData() };
+    all[view.file.path] = { time: Date.now(), data };
     const ok = await this.writeSnapshots(all);
     new Notice(ok ? 'Snapshot kept. “Compare this canvas with…” compares with it.' : 'Could not keep the snapshot.');
     return ok;
@@ -245,7 +248,9 @@ export class CanvasCompare extends CanvasFeature {
   /* -- showing -------------------------------------------------------- */
 
   showVersions(view, then, name) {
-    const found = compareCanvases(view.canvas.getData(), then);
+    const now = canvasDataOf(view.canvas);
+    if (!now) return null;
+    const found = compareCanvases(now, then);
     const marks = new Map();
     const rows = [];
     ['added', 'reworded', 'moved'].forEach((kind) =>
@@ -342,10 +347,11 @@ export class CanvasCompare extends CanvasFeature {
   pass(view, state) {
     if (!state || !state.diff) return;
     try {
-      view.canvas.nodes.forEach((node, id) => {
-        const kind = state.diff.marks.get(node.id || id);
-        if (!node.nodeEl) return;
-        Object.keys(DIFF_KINDS).forEach((k) => node.nodeEl.classList.toggle(`dr-diff-${k}`, kind === k));
+      liveCards(view.canvas).forEach((node) => {
+        const kind = state.diff.marks.get(node.id);
+        const el = cardElement(node);
+        if (!el) return;
+        Object.keys(DIFF_KINDS).forEach((k) => el.classList.toggle(`dr-diff-${k}`, kind === k));
       });
     } catch (err) {
       /* unmarked */

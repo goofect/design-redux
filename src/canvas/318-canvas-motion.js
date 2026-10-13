@@ -9,6 +9,7 @@
 /* nothing on screen to watch — they're simply put there.              */
 /* ------------------------------------------------------------------ */
 
+import { arrowElements, cardElement, cardMovable, placeCard } from '../core/079-canvas-adapter.js';
 import { shownAs } from './316-canvas-tree.js';
 import { applyCanvasModel } from './317-canvas-room.js';
 import { tuckedBBox } from './336-canvas-tucks.js';
@@ -54,7 +55,7 @@ export function glideCanvasModel(view, model, before, state, done) {
   model.nodes.forEach((rec) => {
     const node = rec.node;
     const was = before.get(rec.id);
-    if (!node || !node.nodeEl || !was || typeof node.moveAndResize !== 'function') return;
+    if (!node || !cardElement(node) || !was || !cardMovable(node)) return;
     const own = boxOf(rec);
     if (rec.tuck && !was.tucked) {
       // Into the fold it's going into, fading.
@@ -87,8 +88,8 @@ export function glideCanvasModel(view, model, before, state, done) {
     const e = easeInOut(t);
     const at = (a, b) => Math.round(a + (b - a) * e);
     tracks.forEach(({ node, from, to, fade }) => {
-      node.moveAndResize({ x: at(from.x, to.x), y: at(from.y, to.y), width: at(from.width, to.width), height: at(from.height, to.height) });
-      if (fade) node.nodeEl.style.opacity = String(fade > 0 ? e : 1 - e);
+      placeCard(node, { x: at(from.x, to.x), y: at(from.y, to.y), width: at(from.width, to.width), height: at(from.height, to.height) });
+      if (fade) cardElement(node).style.opacity = String(fade > 0 ? e : 1 - e);
     });
   };
   const finish = () => {
@@ -96,8 +97,8 @@ export function glideCanvasModel(view, model, before, state, done) {
     over = true;
     if (frame) win.cancelAnimationFrame(frame);
     tracks.forEach(({ node, end, fade }) => {
-      node.moveAndResize(end);
-      if (fade) node.nodeEl.style.removeProperty('opacity');
+      placeCard(node, end);
+      if (fade) cardElement(node).style.removeProperty('opacity');
     });
     holder.gliding = false;
     holder.glide = null;
@@ -110,8 +111,9 @@ export function glideCanvasModel(view, model, before, state, done) {
   tracks.forEach(({ node, fade }) => {
     if (fade <= 0) return;
     coming.add(node);
-    node.nodeEl.style.opacity = '0';
-    node.nodeEl.removeClass('dr-tucked');
+    const el = cardElement(node);
+    el.style.opacity = '0';
+    el.removeClass('dr-tucked');
     if (typeof tuckedBBox === 'function' && node.getBBox === tuckedBBox) {
       delete node.getBBox;
       delete node.drInto;
@@ -124,7 +126,7 @@ export function glideCanvasModel(view, model, before, state, done) {
       const edge = e.edge;
       if (!edge || !a || !b || !(coming.has(a.node) || coming.has(b.node))) return;
       const label = edge.labelElement && edge.labelElement.wrapperEl;
-      [edge.lineGroupEl, edge.lineEndGroupEl, label].forEach((el) => {
+      arrowElements(edge).concat(label || []).forEach((el) => {
         if (el && el.classList) el.classList.remove('dr-tucked-edge');
       });
     });

@@ -11,6 +11,7 @@ import { FuzzySuggestModal, Menu, Notice, setIcon } from 'obsidian';
 import { menuGroup, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { actionContext, actionItem, actionLabel, applies } from '../core/078-actions.js';
+import { addToCanvas, arrowElements, canvasDataOf, cardEditing, cardElement, liveCard, pickOnCanvas, requestCanvasSave, showCard, zoomCanvasToPicked } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, branchSide, canvasCardLabel, canvasGap, canvasModel, isGroupRecord, shownAs, TUCK_KEY } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -140,15 +141,10 @@ export class CanvasFind extends CanvasFeature {
       if (!holder || holder === rec || !holder.node) break;
       await fold.foldBranches(view, [holder.node], false);
     }
-    const node = canvas.nodes.get(id);
+    const node = liveCard(canvas, id);
     if (!node) return;
-    try {
-      if (typeof canvas.selectOnly === 'function') canvas.selectOnly(node);
-      if (typeof canvas.zoomToSelection === 'function') canvas.zoomToSelection();
-      else if (typeof canvas.panIntoView === 'function') canvas.panIntoView(node.getBBox());
-    } catch (err) {
-      /* left where it was */
-    }
+    pickOnCanvas(canvas, [node]);
+    if (!zoomCanvasToPicked(canvas)) showCard(canvas, node);
   }
 }
 
@@ -249,7 +245,7 @@ export class CanvasFocus extends CanvasFeature {
     const soft = !ids && !!this.settings.canvasFocusSelect;
     if (soft) {
       const picked = this.selectedNodes(view).filter((n) => !isCanvasEdge(n) && !isGroupNode(n));
-      ids = picked.length === 1 && !picked[0].isEditing ? [picked[0].id] : null;
+      ids = picked.length === 1 && !cardEditing(picked[0]) ? [picked[0].id] : null;
       near = 1;
     }
     if (!ids) {
@@ -267,13 +263,14 @@ export class CanvasFocus extends CanvasFeature {
     host.addClass('dr-branch-focus');
     host.toggleClass('is-soft', soft);
     model.nodes.forEach((rec) => {
-      if (rec.node && rec.node.nodeEl) rec.node.nodeEl.toggleClass('dr-focus-lit', lit.has(rec.id));
+      const el = rec.node ? cardElement(rec.node) : null;
+      if (el) el.toggleClass('dr-focus-lit', lit.has(rec.id));
     });
     model.edges.forEach((e) => {
       const on = lit.has(e.from) && lit.has(e.to);
       const edge = e.edge;
       const label = edge && edge.labelElement && edge.labelElement.wrapperEl;
-      [edge && edge.lineGroupEl, edge && edge.lineEndGroupEl, label].forEach((el) => {
+      (edge ? arrowElements(edge) : []).concat(label || []).forEach((el) => {
         if (el && el.classList) el.classList.toggle('dr-focus-lit', on);
       });
     });
@@ -323,7 +320,7 @@ export class CanvasDuplicate extends CanvasFeature {
   /** The card and its branch copied, set beyond the original on the side its siblings line up. */
   duplicate(view, node) {
     const canvas = view && view.canvas;
-    if (!canvas || !node || typeof canvas.getData !== 'function' || typeof canvas.importData !== 'function') return;
+    if (!canvas || !node) return;
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
     const model = canvasModel(canvas);
@@ -332,7 +329,8 @@ export class CanvasDuplicate extends CanvasFeature {
     const links = arrowLinks(model);
     const ids = branchWithin(model, [root.id], links).filter((id) => !isGroupRecord(model.byId.get(id)));
     const inBranch = new Set(ids);
-    const data = canvas.getData();
+    const data = canvasDataOf(canvas);
+    if (!data) return;
     const byId = new Map((data.nodes || []).map((n) => [n.id, n]));
     // Where the copy goes: past the branch as it's drawn, across from where it grows.
     const shown = ids.map((id) => model.byId.get(id)).filter((r) => !r.tuck);
@@ -362,14 +360,14 @@ export class CanvasDuplicate extends CanvasFeature {
     const edges = (data.edges || [])
       .filter((e) => inBranch.has(e.fromNode) && inBranch.has(e.toNode))
       .map((e) => Object.assign(JSON.parse(JSON.stringify(e)), { id: newCanvasId(canvas), fromNode: fresh.get(e.fromNode), toNode: fresh.get(e.toNode) }));
-    try {
-      canvas.importData({ nodes, edges });
-      canvas.requestSave();
-      const copy = canvas.nodes.get(fresh.get(root.id));
-      if (copy && typeof canvas.selectOnly === 'function') canvas.selectOnly(copy);
-      if (copy && typeof canvas.panIntoView === 'function') canvas.panIntoView(copy.getBBox());
-    } catch (err) {
-      console.error('Design Redux: could not duplicate the branch', err);
+    if (addToCanvas(canvas, { nodes, edges })) {
+      requestCanvasSave(canvas);
+      const copy = liveCard(canvas, fresh.get(root.id));
+      if (copy) {
+        pickOnCanvas(canvas, [copy]);
+        showCard(canvas, copy);
+      }
+    } else {
       new Notice('Could not duplicate the branch.');
     }
     if (fold) fold.schedule(view);

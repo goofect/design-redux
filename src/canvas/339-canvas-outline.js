@@ -11,6 +11,7 @@
 import { ItemView, setIcon } from 'obsidian';
 import { pageLeaf } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { cardBox, liveCard, pickOnCanvas, zoomCanvasTo, zoomCanvasToPicked } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasModel, outlineTree } from './316-canvas-tree.js';
 import { CANVAS_COLOURS, canvasColorKey, canvasPresetColour } from './320-canvas-legend.js';
@@ -140,15 +141,10 @@ export class CanvasOutlineView extends ItemView {
   /** The card centred on the canvas, and selected. */
   reveal(view, id) {
     const canvas = view && view.canvas;
-    const node = canvas && canvas.nodes && canvas.nodes.get(id);
+    const node = canvas ? liveCard(canvas, id) : null;
     if (!node) return;
-    try {
-      if (typeof canvas.selectOnly === 'function') canvas.selectOnly(node);
-      if (typeof canvas.zoomToSelection === 'function') canvas.zoomToSelection();
-      else if (typeof canvas.zoomToBbox === 'function') canvas.zoomToBbox(node.getBBox());
-    } catch (err) {
-      /* left where it was */
-    }
+    pickOnCanvas(canvas, [node]);
+    if (!zoomCanvasToPicked(canvas)) zoomCanvasTo(canvas, cardBox(node));
   }
 
   /** The groups closed in the outline of a canvas. */
@@ -167,7 +163,7 @@ export class CanvasOutlineView extends ItemView {
       return;
     }
     const fold = this.plugin.feature(CanvasFold);
-    const node = view.canvas.nodes.get(item.id);
+    const node = liveCard(view.canvas, item.id);
     if (fold && node) fold.foldBranches(view, [node], !item.folded);
   }
 }

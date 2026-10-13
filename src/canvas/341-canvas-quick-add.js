@@ -13,12 +13,12 @@ import { Notice, prepareFuzzySearch, SuggestModal } from 'obsidian';
 import { RELATED_KEY } from '../core/020-constants.js';
 import { byName } from '../core/030-helpers-art.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
+import { addArrows, addToCanvas, canvasReadonly, canvasViewport, liveCard, pickOnCanvas, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasCardLabel, canvasModel } from './316-canvas-tree.js';
 import { CanvasFind } from './321-canvas-extras.js';
 import { growCards } from './324-canvas-outlines.js';
 import { MAP_NOTE_SIZE } from './328-canvas-vault-map.js';
-import { canvasViewport } from './329-canvas-minimap.js';
 import { isCanvasEdge, nearestSides } from './332-canvas-arrows.js';
 import { arrowsInto, boxEdges, newCanvasId } from './334-canvas-mindmap.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
@@ -70,7 +70,7 @@ export class CanvasQuickAdd extends CanvasFeature {
         name: 'Add or connect a card…',
         icon: 'circle-plus',
         on: 'canvas',
-        when: (ctx) => this.enabled && !ctx.view.canvas.readonly && (ctx.from === 'palette' || !!card(ctx)),
+        when: (ctx) => this.enabled && !canvasReadonly(ctx.view.canvas) && (ctx.from === 'palette' || !!card(ctx)),
         run: (ctx) => this.open(ctx.view, card(ctx)),
       },
     ];
@@ -149,15 +149,10 @@ export class CanvasQuickAdd extends CanvasFeature {
     const port = canvasViewport(canvas);
     const at = port ? { x: port.x + port.width / 2, y: port.y + port.height / 2 } : { x: 0, y: 0 };
     const data = Object.assign({ id: newCanvasId(canvas), x: Math.round(at.x - card.width / 2), y: Math.round(at.y - card.height / 2) }, card);
-    try {
-      canvas.importData({ nodes: [data], edges: [] });
-      canvas.requestSave();
-      const made = canvas.nodes.get(data.id);
-      if (made && typeof canvas.selectOnly === 'function') canvas.selectOnly(made);
-    } catch (err) {
-      console.error('Design Redux: could not add the card', err);
-      return null;
-    }
+    if (!addToCanvas(canvas, { nodes: [data], edges: [] })) return null;
+    requestCanvasSave(canvas);
+    const made = liveCard(canvas, data.id);
+    if (made) pickOnCanvas(canvas, [made]);
     return { nodes: [data], edges: [] };
   }
 
@@ -169,7 +164,7 @@ export class CanvasQuickAdd extends CanvasFeature {
    */
   join(view, node, id) {
     const canvas = view.canvas;
-    const target = canvas.nodes.get(id);
+    const target = liveCard(canvas, id);
     if (!target) return null;
     if (!node || node.id === id) {
       const find = this.plugin.feature(CanvasFind);
@@ -183,13 +178,8 @@ export class CanvasQuickAdd extends CanvasFeature {
     const sides = nearestSides(boxEdges(from), boxEdges(to));
     const edge = { id: newCanvasId(canvas), fromNode: node.id, fromSide: sides.from, toNode: id, toSide: sides.to };
     if (hangs) edge[RELATED_KEY] = true;
-    try {
-      canvas.importData({ nodes: [], edges: [edge] });
-      canvas.requestSave();
-    } catch (err) {
-      console.error('Design Redux: could not join the cards', err);
-      return null;
-    }
+    if (!addArrows(canvas, [edge])) return null;
+    requestCanvasSave(canvas);
     new Notice(hangs ? `Joined to “${canvasCardLabel(to)}”, as related: it hangs from another card already.` : `“${canvasCardLabel(to)}” now hangs from “${canvasCardLabel(from)}”.`);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.schedule(view);

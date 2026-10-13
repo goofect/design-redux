@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { setIcon } from 'obsidian';
+import { cardElement } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 
 /** Cards whose text can be centred: text cards, and notes. */
@@ -95,7 +96,8 @@ export class CanvasAlign extends CanvasFeature {
   apply(view) {
     const mine = this.alignments(view.file);
     this.allNodes(view).forEach((node) => {
-      if (node && node.nodeEl) node.nodeEl.toggleClass('dr-text-center', mine[node.id] === 'center');
+      const el = node ? cardElement(node) : null;
+      if (el) el.toggleClass('dr-text-center', mine[node.id] === 'center');
     });
   }
 

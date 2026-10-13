@@ -6,6 +6,7 @@
 /* a faint dashed outline, and kept in the card's own data.            */
 /* ------------------------------------------------------------------ */
 
+import { canvasReadonly, cardElement, cardKept, keepOnCard, liveCards } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { PIN_KEY, saveCanvas } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -26,7 +27,7 @@ export class CanvasPins extends CanvasFeature {
     // Cards only, on a canvas that can be changed.
     const cards = (ctx) => {
       const found = this.cardsOf(ctx.nodes);
-      return this.enabled && !ctx.view.canvas.readonly && found.length && found.length === ctx.nodes.length ? found : [];
+      return this.enabled && !canvasReadonly(ctx.view.canvas) && found.length && found.length === ctx.nodes.length ? found : [];
     };
     const pinned = (ctx) => cards(ctx).every((n) => this.isPinned(n));
     return [
@@ -48,7 +49,7 @@ export class CanvasPins extends CanvasFeature {
   }
 
   isPinned(node) {
-    return !!(node && node.unknownData && node.unknownData[PIN_KEY]);
+    return !!cardKept(node, PIN_KEY);
   }
 
   /** The cards kept in place, or let go. Saved, a step of Undo. */
@@ -56,9 +57,7 @@ export class CanvasPins extends CanvasFeature {
     let any = false;
     nodes.forEach((node) => {
       if (this.isPinned(node) === on) return;
-      if (!node.unknownData) node.unknownData = {};
-      if (on) node.unknownData[PIN_KEY] = true;
-      else delete node.unknownData[PIN_KEY];
+      keepOnCard(node, PIN_KEY, on ? true : undefined);
       any = true;
     });
     if (!any) return false;
@@ -69,9 +68,9 @@ export class CanvasPins extends CanvasFeature {
 
   /** Each redraw: kept cards marked. */
   pass(view) {
-    if (!view || !view.canvas || !view.canvas.nodes) return;
-    view.canvas.nodes.forEach((node) => {
-      const el = node.nodeEl;
+    if (!view || !view.canvas) return;
+    liveCards(view.canvas).forEach((node) => {
+      const el = cardElement(node);
       if (!el) return;
       const on = this.enabled && this.isPinned(node);
       if (on && !('drPinned' in el.dataset)) el.dataset.drPinned = '';

@@ -10,6 +10,7 @@
 /* first, and goes there with it.                                      */
 /* ------------------------------------------------------------------ */
 
+import { canvasReadonly, cardEditing, cardElement, liveCard, liveCards, placeCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, branchOf, canvasModel, saveCanvas, tuckOf } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -49,16 +50,13 @@ export class CanvasBranchDrag extends CanvasFeature {
   onDown(view, state, evt) {
     state.drag = null;
     const canvas = view.canvas;
-    if (!this.enabled || evt.button !== 0 || evt.shiftKey || evt.altKey || evt.ctrlKey || evt.metaKey || !canvas || canvas.readonly) return;
+    if (!this.enabled || evt.button !== 0 || evt.shiftKey || evt.altKey || evt.ctrlKey || evt.metaKey || !canvas || canvasReadonly(canvas)) return;
     const el = evt.target && typeof evt.target.closest === 'function' ? evt.target : null;
     const cardEl = el && el.closest('.canvas-node');
     // Not a resize handle, nor a point an arrow is drawn from.
     if (!cardEl || el.closest('.canvas-node-resizer, .canvas-node-connection-point')) return;
-    let node = null;
-    canvas.nodes.forEach((n) => {
-      if (n.nodeEl === cardEl) node = n;
-    });
-    if (!node || isGroupNode(node) || tuckOf(node) || node.isEditing) return;
+    const node = liveCards(canvas).find((n) => cardElement(n) === cardEl) || null;
+    if (!node || isGroupNode(node) || tuckOf(node) || cardEditing(node)) return;
     // Part of a selection of several: the canvas moves those.
     const selected = this.selectedNodes(view).filter((n) => !isCanvasEdge(n));
     if (selected.length > 1 && selected.indexOf(node) !== -1) return;
@@ -66,7 +64,7 @@ export class CanvasBranchDrag extends CanvasFeature {
     if (fold) fold.settle(view);
     const model = canvasModel(canvas);
     const members = branchOf(model, node.id, arrowLinks(model))
-      .map((id) => canvas.nodes.get(id))
+      .map((id) => liveCard(canvas, id))
       .filter((n) => n && !tuckOf(n));
     if (!members.length) return;
     state.drag = { node, x: node.x, y: node.y, width: node.width, height: node.height, members: members.map((n) => ({ node: n, x: n.x, y: n.y })), moved: false };
@@ -100,7 +98,7 @@ export class CanvasBranchDrag extends CanvasFeature {
     drag.moved = true;
     drag.members.forEach((m) => {
       try {
-        m.node.moveAndResize({ x: m.x + dx, y: m.y + dy, width: m.node.width, height: m.node.height });
+        placeCard(m.node, { x: m.x + dx, y: m.y + dy, width: m.node.width, height: m.node.height });
       } catch (err) {
         /* left where it was */
       }
@@ -122,7 +120,7 @@ export class CanvasBranchDrag extends CanvasFeature {
     if (drag.over) {
       drag.members.forEach((m) => {
         try {
-          m.node.moveAndResize({ x: m.x, y: m.y, width: m.node.width, height: m.node.height });
+          placeCard(m.node, { x: m.x, y: m.y, width: m.node.width, height: m.node.height });
         } catch (err) {
           /* left where it was */
         }

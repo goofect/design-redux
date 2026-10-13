@@ -13,6 +13,7 @@ import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.j
 import { fmGet } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-actions.js';
+import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { Library } from '../library/130-browse-filters.js';
 import { PropertiesPanel } from './180-panel.js';
@@ -489,7 +490,8 @@ export class ContextStrip extends Feature {
 
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: file.basename });
-    const cards = file.extension === 'canvas' && view && view.canvas && view.canvas.nodes ? view.canvas.nodes.size : -1;
+    const count = file.extension === 'canvas' && view && view.canvas ? cardCount(view.canvas) : null;
+    const cards = count === null ? -1 : count;
     const lead = cards >= 0 ? `${cards} ${cards === 1 ? 'card' : 'cards'}` : this.leadOf(file);
     // Where it falls in its album, as a player says "3 of 12".
     const place = this.settings.stripPlace !== false && near.index >= 0 && near.total > 1 ? `${near.index + 1} of ${near.total}` : '';

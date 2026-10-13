@@ -7,6 +7,7 @@
 /* own colours still say what they say. A card in no tree is left be.  */
 /* ------------------------------------------------------------------ */
 
+import { arrowElements, cardElement } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, canvasModel, isGroupRecord } from './316-canvas-tree.js';
 
@@ -59,7 +60,7 @@ export class CanvasDepth extends CanvasFeature {
 
   // Each redraw: each card's depth on it, for the styles to read.
   pass(view) {
-    if (!view || !view.canvas || !view.canvas.nodes) return;
+    if (!view || !view.canvas) return;
     const model = canvasModel(view.canvas);
     const links = arrowLinks(model);
     const depths = this.enabled ? treeDepths(model, links) : new Map();
@@ -69,7 +70,7 @@ export class CanvasDepth extends CanvasFeature {
       } else if (el.dataset[key] !== value) el.dataset[key] = value;
     };
     model.nodes.forEach((rec) => {
-      const el = rec.node && rec.node.nodeEl;
+      const el = rec.node ? cardElement(rec.node) : null;
       if (!el) return;
       const d = depths.get(rec.id);
       set(el, 'drDepth', d === undefined ? null : String(Math.min(d, 2)));
@@ -77,7 +78,7 @@ export class CanvasDepth extends CanvasFeature {
     });
     // Arrows: the tree's, and the ones that only associate.
     model.edges.forEach((e) => {
-      const els = e.edge ? [e.edge.lineGroupEl, e.edge.lineEndGroupEl].filter((x) => x && x.classList) : [];
+      const els = e.edge ? arrowElements(e.edge).filter((x) => x.classList) : [];
       const reversed = e.fromEnd === 'arrow' && e.toEnd !== 'arrow';
       const parent = reversed ? e.to : e.from;
       const child = reversed ? e.from : e.to;

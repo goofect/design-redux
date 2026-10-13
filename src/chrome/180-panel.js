@@ -13,6 +13,7 @@ import { MarkdownView, Notice, parseYaml, Platform, setIcon, stringifyYaml, TFil
 import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
 import { makeTrigger, relativeDay } from '../core/040-helpers-sorting.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
+import { cardElement, pickedOnCanvas, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
@@ -280,8 +281,8 @@ export class PropertiesPanel extends Feature {
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
     if (view instanceof MarkdownView) return view.file ? { file: view.file } : null;
     const canvas = view && view.canvas;
-    if (!canvas || !canvas.selection) return null;
-    const picked = Array.from(canvas.selection).filter((n) => n && n.nodeEl && typeof n.getData === 'function');
+    if (!canvas) return null;
+    const picked = pickedOnCanvas(canvas).filter((n) => n && cardElement(n) && typeof n.getData === 'function');
     if (picked.length !== 1) return { none: 'Select a card to see its properties.' };
     const node = picked[0];
     let data = {};
@@ -429,11 +430,7 @@ export class PropertiesPanel extends Feature {
     const next = withCardFrontmatter(data, parsed.body);
     if (next !== text) {
       node.setText(next);
-      try {
-        if (node.canvas && typeof node.canvas.requestSave === 'function') node.canvas.requestSave();
-      } catch (err) {
-        /* saved with the canvas's next change */
-      }
+      if (node.canvas) requestCanvasSave(node.canvas);
     }
     this.mountCard();
     if (this.trigger && this.trigger.isConnected) this.place(this.trigger);

@@ -9,6 +9,7 @@
 /* ------------------------------------------------------------------ */
 
 import { drawnMenu, menuGroup } from '../core/030-helpers-art.js';
+import { cardElement } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { boundsOf, canvasGap, canvasModel, isGroupRecord, withinRect } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
@@ -170,7 +171,7 @@ export class CanvasArrange extends CanvasFeature {
    */
   cards(view) {
     if (!view || !view.canvas) return [];
-    const ids = new Set(this.selectedNodes(view).filter((n) => n && n.nodeEl && !isCanvasEdge(n)).map((n) => n.id));
+    const ids = new Set(this.selectedNodes(view).filter((n) => n && cardElement(n) && !isCanvasEdge(n)).map((n) => n.id));
     if (ids.size < 2) return [];
     const model = canvasModel(view.canvas);
     const picked = model.nodes.filter((r) => ids.has(r.id) && !r.tuck);

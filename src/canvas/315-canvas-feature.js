@@ -31,7 +31,7 @@ export class CanvasFeature extends Feature {
     );
     this.plugin.registerEvent(
       ws.on('canvas:selection-menu', (menu, canvas) => {
-        if (this.enabled && canvas) this.addMenuItems(menu, Array.from(canvas.selection || []));
+        if (this.enabled && canvas) this.addMenuItems(menu, pickedOnCanvas(canvas));
       })
     );
     this.plugin.registerEvent(ws.on('file-open', () => this.plugin.queueSync()));

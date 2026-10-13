@@ -11,6 +11,7 @@ import { setIcon, TFile } from 'obsidian';
 import { pageLeaf } from '../core/030-helpers-art.js';
 import { normalHex } from '../core/031-colours.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { canvasDataOf, cardCount, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 
 /* Obsidian's six card colours, by the number a canvas file keeps them as. */
@@ -207,7 +208,7 @@ export class CanvasLegend extends Feature {
    */
   async nodesOf(view, file) {
     try {
-      const data = view.canvas && typeof view.canvas.getData === 'function' ? view.canvas.getData() : null;
+      const data = view.canvas ? canvasDataOf(view.canvas) : null;
       if (data && Array.isArray(data.nodes)) return data.nodes;
     } catch (err) {
       /* the file, then */
@@ -223,7 +224,8 @@ export class CanvasLegend extends Feature {
   /** How many cards the canvas holds now, where it can be asked. */
   cardCount(view) {
     try {
-      return view.canvas && view.canvas.nodes ? view.canvas.nodes.size : -2;
+      const n = view.canvas ? cardCount(view.canvas) : null;
+      return n === null ? -2 : n;
     } catch (err) {
       return -2;
     }
@@ -369,14 +371,12 @@ export class CanvasLegend extends Feature {
    */
   cardsOf(view) {
     try {
-      const nodes = view.canvas && view.canvas.nodes;
-      if (nodes && typeof nodes.forEach === 'function') {
-        const out = [];
-        nodes.forEach((node) => {
-          if (node && node.nodeEl) out.push({ el: node.nodeEl, key: canvasColorKey(node.color) });
-        });
-        if (out.length) return out;
-      }
+      const out = [];
+      (view.canvas ? liveCards(view.canvas) : []).forEach((node) => {
+        const el = cardElement(node);
+        if (el) out.push({ el, key: canvasColorKey(node.color) });
+      });
+      if (out.length) return out;
     } catch (err) {
       /* the page, then */
     }

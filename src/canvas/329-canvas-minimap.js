@@ -9,50 +9,12 @@
 /* ------------------------------------------------------------------ */
 
 import { SVG_NS } from '../core/032-drawn-covers.js';
+import { canvasViewport, lookAt } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { boundsOf, canvasModel, isGroupRecord, withinRect } from './316-canvas-tree.js';
 import { stopCanvasPointer } from './335-canvas-fold.js';
 
 export const MINIMAP_SIZE = { width: 200, height: 136 };
-
-/** What part of the canvas is on screen, as a box, or null. */
-export function canvasViewport(canvas) {
-  try {
-    if (typeof canvas.getViewportBBox === 'function') {
-      const b = canvas.getViewportBBox();
-      if (b && isFinite(b.minX) && isFinite(b.maxX)) return { x: b.minX, y: b.minY, width: b.maxX - b.minX, height: b.maxY - b.minY };
-    }
-    const el = canvas.wrapperEl;
-    if (typeof canvas.x === 'number' && typeof canvas.y === 'number' && typeof canvas.zoom === 'number' && el && el.clientWidth) {
-      const scale = Math.pow(2, canvas.zoom);
-      const width = el.clientWidth / scale;
-      const height = el.clientHeight / scale;
-      return { x: canvas.x - width / 2, y: canvas.y - height / 2, width, height };
-    }
-  } catch (err) {
-    /* not to be had */
-  }
-  return null;
-}
-
-/** The canvas looking at a point, as near as it was. */
-export function lookAt(canvas, point) {
-  try {
-    if (typeof canvas.setViewport === 'function' && typeof canvas.zoom === 'number') {
-      const zoom = typeof canvas.tZoom === 'number' ? canvas.tZoom : canvas.zoom;
-      canvas.setViewport(point.x, point.y, zoom);
-      return true;
-    }
-    const view = canvasViewport(canvas);
-    if (view && typeof canvas.zoomToBbox === 'function') {
-      canvas.zoomToBbox({ minX: point.x - view.width / 2, minY: point.y - view.height / 2, maxX: point.x + view.width / 2, maxY: point.y + view.height / 2 });
-      return true;
-    }
-  } catch (err) {
-    /* left where it was */
-  }
-  return false;
-}
 
 /**
  * How the canvas maps onto the minimap: its cards' box, scaled to fit,

@@ -593,10 +593,12 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Design tokens:** durations, easings, glass blur, the interface font and
   the cover radius are `--dr-*` variables, used in place of the numbers.
 - **The canvas adapter** (`core/079`): the one place that reads Obsidian's
-  canvas internals — the cards and arrows, what's picked, a card's data and
-  box, an arrow's ends, saving, zooming — each behind a check with a
-  fallback. The actions' canvas context, the canvas feature and the tree
-  model (`canvasModel`, which 20 modules read) go through it. The rest move
-  over piece by piece: `node tests/map.js --internals` counts the direct uses
-  left in each module (262 lines in 31 to start), and `tests/test_layers.js`
-  refuses a module that gains any.
+  canvas internals — the cards and arrows, what's picked, a card's data,
+  box, element and what the plugin keeps on it, an arrow's ends and data,
+  making cards and arrows, typing in a card, saving, the view — each behind
+  a check with a fallback. Every canvas feature goes through it.
+  `node tests/map.js --internals` counts the direct uses left in each module
+  (262 lines in 31 to start, 35 in 5 now), and `tests/test_layers.js`
+  refuses a module that gains any. What's left is meant to be: the folds',
+  the arrow styles' and the view history's patches of Obsidian's own
+  methods, and the diagnostics, which check those internals are there.

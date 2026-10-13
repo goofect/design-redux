@@ -7,6 +7,7 @@
 /* or colour together. From the card's right-click menu, or commands.  */
 /* ------------------------------------------------------------------ */
 
+import { pickOnCanvas } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, branchSide, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownChildren, tidyBranch } from './316-canvas-tree.js';
 import { snapshotModel, tidyRecords } from './317-canvas-room.js';
@@ -110,12 +111,7 @@ export class CanvasBranches extends CanvasFeature {
       });
     }
     const cards = Array.from(seen).map((id) => (model.byId.get(id) || {}).node).filter(Boolean);
-    try {
-      if (typeof canvas.deselectAll === 'function') canvas.deselectAll();
-      cards.forEach((n) => canvas.select(n));
-    } catch (err) {
-      /* left as it was */
-    }
+    pickOnCanvas(canvas, cards);
   }
 }
 

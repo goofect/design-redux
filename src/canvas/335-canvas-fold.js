@@ -22,6 +22,7 @@
 
 import { Menu, Modal, Notice, setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { cardElement, cardKept, keepOnCard, liveCard, pickOnCanvas, showCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, branchSides, canvasCardLabel, canvasModel, foldableBranch, isGroupRecord, MASTER_KEY, saveCanvas } from './316-canvas-tree.js';
 import { applyCanvasModel, foldBranch, snapshotModel, tuckedCount, unfoldBranch, unfoldRecord } from './317-canvas-room.js';
@@ -33,7 +34,7 @@ export const FOLD_KEY = 'drFold';
 
 /** A card or group folded on its own by an earlier version: its sizes, or null. */
 export function foldOf(node) {
-  const kept = node && node.unknownData && node.unknownData[FOLD_KEY];
+  const kept = cardKept(node, FOLD_KEY);
   return kept && typeof kept.height === 'number' ? kept : null;
 }
 
@@ -222,11 +223,7 @@ export class CanvasFold extends CanvasFeature {
   setMaster(view, nodes, on) {
     if (!view || !view.canvas || !nodes.length) return;
     this.settle(view);
-    nodes.forEach((node) => {
-      if (!node.unknownData) node.unknownData = {};
-      if (on) node.unknownData[MASTER_KEY] = true;
-      else delete node.unknownData[MASTER_KEY];
-    });
+    nodes.forEach((node) => keepOnCard(node, MASTER_KEY, on ? true : undefined));
     // Made master with no arrow leading into it: said why nothing above folds it yet.
     if (on) {
       const model = canvasModel(view.canvas);
@@ -373,7 +370,7 @@ export class CanvasFold extends CanvasFeature {
     const links = arrowLinks(model);
     model.nodes.forEach((rec) => {
       const node = rec.node;
-      if (!node || !node.nodeEl || rec.tuck) return;
+      if (!node || !cardElement(node) || rec.tuck) return;
       this.stack(node, (counts.get(rec.id) || 0) > 0);
       this.crown(node, this.canBranch && rec.master && !isGroupRecord(rec));
       if (!anyBranch && !isGroupRecord(rec) && ((counts.get(rec.id) || 0) > 0 || (links.children.get(rec.id) || []).length)) anyBranch = true;
@@ -408,22 +405,18 @@ export class CanvasFold extends CanvasFeature {
   async openTo(view, holderId, cardId) {
     this.popover.hide();
     const canvas = view.canvas;
-    const holder = canvas.nodes.get(holderId);
+    const holder = liveCard(canvas, holderId);
     if (!holder) return;
     await this.foldBranches(view, [holder], false);
-    const node = canvas.nodes.get(cardId);
+    const node = liveCard(canvas, cardId);
     if (!node) return;
-    try {
-      if (typeof canvas.selectOnly === 'function') canvas.selectOnly(node);
-      if (typeof canvas.panIntoView === 'function') canvas.panIntoView(node.getBBox());
-    } catch (err) {
-      /* left where it was */
-    }
+    pickOnCanvas(canvas, [node]);
+    showCard(canvas, node);
   }
 
   /** A master card: a crown on its top edge. */
   crown(node, on) {
-    const el = node.nodeEl;
+    const el = cardElement(node);
     const has = el.querySelector(':scope > .dr-master-mark');
     if (on && !has) {
       const mark = el.createDiv({ cls: 'dr-master-mark' });
@@ -437,7 +430,7 @@ export class CanvasFold extends CanvasFeature {
 
   /** Something holding tucked cards: drawn as a little stack of them. */
   stack(node, on) {
-    const el = node.nodeEl;
+    const el = cardElement(node);
     const has = el.querySelector(':scope > .dr-stack');
     el.toggleClass('dr-holds', on);
     if (on && !has) {
@@ -460,15 +453,16 @@ export class CanvasFold extends CanvasFeature {
     const sides = branchSides(model, arrowLinks(model));
     model.nodes.forEach((rec) => {
       const node = rec.node;
-      if (!node || !node.nodeEl) return;
-      let knob = node.nodeEl.querySelector(':scope > .dr-branch-knob');
+      const el = node ? cardElement(node) : null;
+      if (!el) return;
+      let knob = el.querySelector(':scope > .dr-branch-knob');
       const count = !rec.tuck && !isGroupRecord(rec) ? counts.get(rec.id) || 0 : 0;
       if (!count) {
         if (knob) knob.remove();
         return;
       }
       if (!knob) {
-        knob = node.nodeEl.createDiv({ cls: 'dr-branch-knob' });
+        knob = el.createDiv({ cls: 'dr-branch-knob' });
         knob.setAttribute('role', 'button');
         stopCanvasPointer(knob);
         knob.addEventListener('click', (evt) => {

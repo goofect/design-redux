@@ -9,6 +9,7 @@
 /* branch comes along, as when a card is dropped onto another.         */
 /* ------------------------------------------------------------------ */
 
+import { addArrows, addTextCard, arrowData, canvasReadonly, cardEditing, colourCard, removeArrow } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP } from './316-canvas-tree.js';
 import { axisParts, fitGroups, makeRoom, shiftRecord, snapshotModel } from './317-canvas-room.js';
@@ -48,7 +49,7 @@ export class CanvasRestructure extends CanvasFeature {
 
   actions() {
     // The one card it's for — not a group, nor one in a fold — on a canvas that can be changed.
-    const one = (ctx) => (this.enabled && !ctx.view.canvas.readonly ? soleCard(ctx.nodes) : null);
+    const one = (ctx) => (this.enabled && !canvasReadonly(ctx.view.canvas) ? soleCard(ctx.nodes) : null);
     const act = (id, name, menu, icon, can, run) => ({ id, name, menu, icon, on: 'canvas', when: (ctx) => !!one(ctx) && (!can || !!can(ctx.view, one(ctx))), run: (ctx) => run(ctx.view, one(ctx)) });
     return [
       act('canvas-add-parent-card', 'Add a card before the selected card', 'Add card before', 'git-pull-request-arrow', null, (v, n) => this.addParent(v, n)),
@@ -79,9 +80,9 @@ export class CanvasRestructure extends CanvasFeature {
     if (!evt.shiftKey || evt.ctrlKey || evt.metaKey) return;
     const arrow = { ArrowUp: -1, ArrowLeft: -1, ArrowDown: 1, ArrowRight: 1 }[evt.key];
     if (evt.altKey ? !arrow : evt.key !== 'Enter' && evt.key !== 'Tab') return;
-    if (!view.canvas || view.canvas.readonly) return;
+    if (!view.canvas || canvasReadonly(view.canvas)) return;
     const node = soleCard(this.selectedNodes(view));
-    if (!node || node.isEditing) return;
+    if (!node || cardEditing(node)) return;
     evt.preventDefault();
     evt.stopPropagation();
     if (evt.altKey) this.reorder(view, node, arrow);
@@ -173,7 +174,7 @@ export class CanvasRestructure extends CanvasFeature {
   addParent(view, node) {
     const canvas = view && view.canvas;
     const mind = this.plugin.feature(CanvasMindMap);
-    if (!canvas || !node || !mind || typeof canvas.createTextNode !== 'function') return Promise.resolve(null);
+    if (!canvas || !node || !mind) return Promise.resolve(null);
     const fold = this.plugin.feature(CanvasFold);
     if (fold) fold.settle(view);
     let model = canvasModel(canvas);
@@ -191,14 +192,9 @@ export class CanvasRestructure extends CanvasFeature {
       if (!spot) return Promise.resolve(null);
       box = { x: spot.x, y: spot.y, width: size.width, height: size.height };
     }
-    let made = null;
-    try {
-      made = canvas.createTextNode({ pos: { x: box.x, y: box.y }, size: { width: box.width, height: box.height }, text: '', focus: false, save: false });
-      if (made && rec.color && typeof made.setColor === 'function') made.setColor(rec.color);
-    } catch (err) {
-      made = null;
-    }
+    const made = addTextCard(canvas, box);
     if (!made) return Promise.resolve(null);
+    if (rec.color) colourCard(made, rec.color);
     model = canvasModel(canvas);
     const before = snapshotModel(model);
     const card = model.byId.get(rec.id);
@@ -212,16 +208,13 @@ export class CanvasRestructure extends CanvasFeature {
         const old = { fromNode: e.from, fromSide: e.fromSide, toNode: e.to, toSide: e.toSide };
         if (e.fromEnd !== 'none') old.fromEnd = e.fromEnd;
         if (e.toEnd !== 'arrow') old.toEnd = e.toEnd;
-        try {
-          if (e.edge && typeof e.edge.getData === 'function') Object.assign(old, e.edge.getData());
-        } catch (err) {
-          /* its ends and sides are enough */
-        }
+        // Or, where its data can't be had, its ends and sides.
+        if (e.edge) Object.assign(old, arrowData(e.edge));
         if (old.fromNode === rec.id) old.fromNode = made.id;
         else old.toNode = made.id;
         old.id = newCanvasId(canvas);
         edges.push(old);
-        if (e.edge && typeof canvas.removeEdge === 'function') canvas.removeEdge(e.edge);
+        if (e.edge) removeArrow(canvas, e.edge);
         const style = {};
         ['color', ARROW_KEY].forEach((k) => {
           if (old[k] !== undefined) style[k] = old[k];
@@ -230,7 +223,7 @@ export class CanvasRestructure extends CanvasFeature {
       } else {
         edges.push({ id: newCanvasId(canvas), fromNode: made.id, fromSide: side, toNode: rec.id, toSide: OPPOSITE_SIDE[side] });
       }
-      if (typeof canvas.importData === 'function') canvas.importData({ nodes: [], edges });
+      addArrows(canvas, edges);
     } catch (err) {
       /* the card made, its arrows as they could be */
     }

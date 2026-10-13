@@ -10,6 +10,7 @@
 
 import { Notice } from 'obsidian';
 import { noteNameFrom } from '../core/047-helpers-text.js';
+import { addToCanvas, canvasReadonly, liveCard, pickOnCanvas, requestCanvasSave, showCard, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, branchSides, canvasCardLabel, canvasGap, canvasModel, isGroupRecord, modelFromData, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP, tidyBranch, tuckOf } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -203,7 +204,7 @@ export function outlineItems(items, size) {
  */
 export function growCards(plugin, view, node, items, opts = {}) {
   const canvas = view && view.canvas;
-  if (!canvas || !node || !items.length || typeof canvas.importData !== 'function') return null;
+  if (!canvas || !node || !items.length) return null;
   const fold = plugin.feature(CanvasFold);
   if (fold) fold.settle(view);
   const model = canvasModel(canvas);
@@ -230,21 +231,16 @@ export function growCards(plugin, view, node, items, opts = {}) {
       n.y += spot.y - box.y;
     });
   }
-  try {
-    canvas.importData({ nodes: made.nodes, edges: made.edges });
-    canvas.requestSave();
-    const all = boundsOf([root].concat(made.nodes));
-    if (opts.zoom && typeof canvas.zoomToBbox === 'function') {
-      canvas.zoomToBbox({ minX: all.x, minY: all.y, maxX: all.x + all.width, maxY: all.y + all.height });
-    }
-    const first = opts.select && made.nodes[0] ? canvas.nodes.get(made.nodes[0].id) : null;
-    if (first && typeof canvas.selectOnly === 'function') canvas.selectOnly(first);
-    if (first && !opts.zoom && typeof canvas.panIntoView === 'function') canvas.panIntoView(first.getBBox());
-  } catch (err) {
-    console.error('Design Redux: could not make the cards', err);
+  if (!addToCanvas(canvas, { nodes: made.nodes, edges: made.edges })) {
     new Notice('Could not make the cards.');
     return null;
   }
+  requestCanvasSave(canvas);
+  const all = boundsOf([root].concat(made.nodes));
+  if (opts.zoom) zoomCanvasTo(canvas, { minX: all.x, minY: all.y, maxX: all.x + all.width, maxY: all.y + all.height });
+  const first = opts.select && made.nodes[0] ? liveCard(canvas, made.nodes[0].id) : null;
+  if (first) pickOnCanvas(canvas, [first]);
+  if (first && !opts.zoom) showCard(canvas, first);
   if (fold) fold.schedule(view);
   plugin.app.workspace.trigger('design-redux:canvas-changed', view);
   return made;
@@ -343,7 +339,7 @@ export class CanvasOutlineBranch extends CanvasFeature {
         menu: (ctx) => (this.kindOf(ctx.view, ctx.node) === 'list' ? 'Make cards from list' : 'Make cards from headings'),
         icon: 'list-tree',
         on: 'canvas',
-        when: (ctx) => this.enabled && !ctx.view.canvas.readonly && !!this.kindOf(ctx.view, ctx.node),
+        when: (ctx) => this.enabled && !canvasReadonly(ctx.view.canvas) && !!this.kindOf(ctx.view, ctx.node),
         run: (ctx) => this.expand(ctx.view, ctx.node),
       },
     ];

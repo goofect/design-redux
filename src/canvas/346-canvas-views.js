@@ -8,6 +8,7 @@
 /* public: asked carefully, and where it can't be, nothing's kept.     */
 /* ------------------------------------------------------------------ */
 
+import { setCanvasView, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, branchOf, canvasModel } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
@@ -95,30 +96,26 @@ export class CanvasViews extends CanvasFeature {
   back(view) {
     const state = view && this.watched.get(view);
     const look = state && state.history.pop();
-    if (!look || typeof view.canvas.setViewport !== 'function') return false;
+    if (!look) return false;
     state.going = true;
     try {
-      view.canvas.setViewport(look.x, look.y, look.zoom);
-    } catch (err) {
-      return false;
+      return setCanvasView(view.canvas, look.x, look.y, look.zoom);
     } finally {
       state.going = false;
     }
-    return true;
   }
 
   /** The card and its branch, as drawn, fitted on screen. */
   zoomToBranch(view, node) {
     const canvas = view && view.canvas;
-    if (!canvas || !node || typeof canvas.zoomToBbox !== 'function') return false;
+    if (!canvas || !node) return false;
     const model = canvasModel(canvas);
     const rec = model.byId.get(node.id);
     if (!rec) return false;
     const cards = [rec].concat(branchOf(model, rec.id, arrowLinks(model)).map((id) => model.byId.get(id)).filter((r) => r && !r.tuck));
     const box = boundsOf(cards);
     const pad = 40;
-    canvas.zoomToBbox({ minX: box.x - pad, minY: box.y - pad, maxX: box.x + box.width + pad, maxY: box.y + box.height + pad });
-    return true;
+    return zoomCanvasTo(canvas, { minX: box.x - pad, minY: box.y - pad, maxX: box.x + box.width + pad, maxY: box.y + box.height + pad });
   }
 }
 

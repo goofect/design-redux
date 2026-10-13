@@ -8,6 +8,7 @@
 /* its title, with the rest smaller beneath it as its details.         */
 /* ------------------------------------------------------------------ */
 
+import { canvasReadonly, cardEditing, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasGap, canvasModel, isGroupRecord, saveCanvas, tuckOf, withinRect } from './316-canvas-tree.js';
 import { applyCanvasModel, fitGroups, homesBefore, makeRoom, snapshotModel } from './317-canvas-room.js';
@@ -56,7 +57,7 @@ export function editingHeight(node, state) {
 
 /** How tall a card shown as text needs to be for all of it to show, or 0. */
 export function renderedHeight(node) {
-  const el = node && node.nodeEl;
+  const el = node ? cardElement(node) : null;
   const view = el && el.querySelector('.markdown-preview-view');
   const sizer = view && view.querySelector('.markdown-preview-sizer');
   if (!view || !sizer || !view.clientHeight) return 0;
@@ -118,7 +119,7 @@ export class CanvasCards extends CanvasFeature {
   }
 
   actions() {
-    const cards = (ctx) => (ctx.view.canvas.readonly ? [] : this.fitTargets(ctx.nodes));
+    const cards = (ctx) => (canvasReadonly(ctx.view.canvas) ? [] : this.fitTargets(ctx.nodes));
     return [
       {
         id: 'fit-canvas-cards',
@@ -134,7 +135,7 @@ export class CanvasCards extends CanvasFeature {
 
   /** The text cards of these, not being typed in. */
   fitTargets(nodes) {
-    return nodes.filter((n) => n && n.nodeEl && !n.isEditing && isTextCard(n) && !tuckOf(n));
+    return nodes.filter((n) => n && cardElement(n) && !cardEditing(n) && isTextCard(n) && !tuckOf(n));
   }
 
   mount(view, state) {
@@ -151,12 +152,13 @@ export class CanvasCards extends CanvasFeature {
 
   /* Text cards marked, for their title and details. */
   pass(view) {
-    if (!view.canvas || !view.canvas.nodes) return;
-    view.canvas.nodes.forEach((node) => {
-      if (!node.nodeEl) return;
+    if (!view.canvas) return;
+    liveCards(view.canvas).forEach((node) => {
+      const el = cardElement(node);
+      if (!el) return;
       const text = isTextCard(node);
-      node.nodeEl.toggleClass('dr-text-card', text);
-      if (text && this.settings.canvasCardTitles) markCardTitle(node.nodeEl);
+      el.toggleClass('dr-text-card', text);
+      if (text && this.settings.canvasCardTitles) markCardTitle(el);
     });
   }
 
@@ -166,10 +168,10 @@ export class CanvasCards extends CanvasFeature {
    */
   fitEditing(view, state) {
     const canvas = view.canvas;
-    if (!this.settings.canvasCardFit || !canvas || !canvas.nodes || canvas.readonly) return;
-    canvas.nodes.forEach((node) => {
+    if (!this.settings.canvasCardFit || !canvas || canvasReadonly(canvas)) return;
+    liveCards(canvas).forEach((node) => {
       const was = state.fitting.get(node.id);
-      if (!node.isEditing || !isTextCard(node)) {
+      if (!cardEditing(node) || !isTextCard(node)) {
         if (was) {
           state.fitting.delete(node.id);
           if (was.changed) this.save(view);

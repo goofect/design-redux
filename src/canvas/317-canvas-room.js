@@ -18,6 +18,7 @@
 /* closes only as far as it can.                                       */
 /* ------------------------------------------------------------------ */
 
+import { cardMovable, keepOnCard, placeCard } from '../core/079-canvas-adapter.js';
 import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, foldableBranch, groupContents, indexModel, isGroupRecord, ROOM_KEY, sideAxes, TIDY_SIBLING_GAP, tidyBranch, TUCK_KEY, withinRect } from './316-canvas-tree.js';
 import { FOLD_KEY } from './335-canvas-fold.js';
 
@@ -702,8 +703,8 @@ export function applyCanvasModel(model, before) {
     const was = before.get(rec.id);
     if (!node || !was) return;
     if (rec.x !== was.x || rec.y !== was.y || rec.width !== was.width || rec.height !== was.height) {
-      if (typeof node.moveAndResize === 'function') {
-        node.moveAndResize({ x: rec.x, y: rec.y, width: rec.width, height: rec.height });
+      if (cardMovable(node)) {
+        placeCard(node, { x: rec.x, y: rec.y, width: rec.width, height: rec.height });
         changed = true;
       }
     }
@@ -711,13 +712,9 @@ export function applyCanvasModel(model, before) {
     const fold = rec.fold ? JSON.stringify(rec.fold) : '';
     const room = rec.room ? JSON.stringify(rec.room) : '';
     if (tuck !== was.tuck || fold !== was.fold || room !== was.room) {
-      if (!node.unknownData) node.unknownData = {};
-      if (rec.tuck) node.unknownData[TUCK_KEY] = Object.assign({}, rec.tuck);
-      else delete node.unknownData[TUCK_KEY];
-      if (rec.fold) node.unknownData[FOLD_KEY] = Object.assign({}, rec.fold);
-      else delete node.unknownData[FOLD_KEY];
-      if (rec.room) node.unknownData[ROOM_KEY] = JSON.parse(room);
-      else delete node.unknownData[ROOM_KEY];
+      keepOnCard(node, TUCK_KEY, rec.tuck ? Object.assign({}, rec.tuck) : undefined);
+      keepOnCard(node, FOLD_KEY, rec.fold ? Object.assign({}, rec.fold) : undefined);
+      keepOnCard(node, ROOM_KEY, rec.room ? JSON.parse(room) : undefined);
       changed = true;
     }
   });

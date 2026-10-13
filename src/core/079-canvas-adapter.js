@@ -38,6 +38,11 @@ export function liveCard(canvas, id) {
   return guarded(() => (canvas && canvas.nodes && typeof canvas.nodes.get === 'function' ? canvas.nodes.get(id) || null : null), null);
 }
 
+/** How many cards a canvas holds, or null where it can't be asked. */
+export function cardCount(canvas) {
+  return guarded(() => (canvas.nodes && typeof canvas.nodes.size === 'number' ? canvas.nodes.size : null), null);
+}
+
 /** An arrow by its id, or null. */
 export function liveArrow(canvas, id) {
   return guarded(() => (canvas && canvas.edges && typeof canvas.edges.get === 'function' ? canvas.edges.get(id) || null : null), null);
@@ -54,7 +59,7 @@ export function addTextCard(canvas, box, text) {
 
 /** Arrows added, as its file writes them: [{ id, fromNode, fromSide, toNode, toSide }]. */
 export function addArrows(canvas, edges) {
-  return loadCanvasData(canvas, { nodes: [], edges });
+  return addToCanvas(canvas, { nodes: [], edges });
 }
 
 /** An arrow taken off. */
@@ -98,8 +103,8 @@ export function canvasDataOf(canvas) {
   return guarded(() => (typeof canvas.getData === 'function' ? canvas.getData() : null), null);
 }
 
-/** The canvas set to hold this, as its file would; false if it can't be. */
-export function loadCanvasData(canvas, data) {
+/** Cards and arrows added, as its file writes them: { nodes, edges }; false if they can't be. */
+export function addToCanvas(canvas, data) {
   return guarded(() => {
     if (typeof canvas.importData !== 'function') return false;
     canvas.importData(data);
@@ -113,9 +118,70 @@ export function canvasReadonly(canvas) {
   return guarded(() => !!canvas.readonly, false);
 }
 
-/** The view brought to a box: { minX, minY, maxX, maxY }. */
+/** The view brought to a box: { minX, minY, maxX, maxY }; false if it can't be. */
 export function zoomCanvasTo(canvas, box) {
-  guarded(() => typeof canvas.zoomToBbox === 'function' && canvas.zoomToBbox(box), null);
+  return guarded(() => {
+    if (typeof canvas.zoomToBbox !== 'function') return false;
+    canvas.zoomToBbox(box);
+    return true;
+  }, false);
+}
+
+/** The view set to look at a point, at a zoom; false if it can't be. */
+export function setCanvasView(canvas, x, y, zoom) {
+  return guarded(() => {
+    if (typeof canvas.setViewport !== 'function') return false;
+    canvas.setViewport(x, y, zoom);
+    return true;
+  }, false);
+}
+
+/** The view brought to what's selected; false if it can't be. */
+export function zoomCanvasToPicked(canvas) {
+  return guarded(() => {
+    if (typeof canvas.zoomToSelection !== 'function') return false;
+    canvas.zoomToSelection();
+    return true;
+  }, false);
+}
+
+/** What part of the canvas is on screen, as a box, or null. */
+export function canvasViewport(canvas) {
+  try {
+    if (typeof canvas.getViewportBBox === 'function') {
+      const b = canvas.getViewportBBox();
+      if (b && isFinite(b.minX) && isFinite(b.maxX)) return { x: b.minX, y: b.minY, width: b.maxX - b.minX, height: b.maxY - b.minY };
+    }
+    const el = canvas.wrapperEl;
+    if (typeof canvas.x === 'number' && typeof canvas.y === 'number' && typeof canvas.zoom === 'number' && el && el.clientWidth) {
+      const scale = Math.pow(2, canvas.zoom);
+      const width = el.clientWidth / scale;
+      const height = el.clientHeight / scale;
+      return { x: canvas.x - width / 2, y: canvas.y - height / 2, width, height };
+    }
+  } catch (err) {
+    /* not to be had */
+  }
+  return null;
+}
+
+/** The canvas looking at a point, as near as it was. */
+export function lookAt(canvas, point) {
+  try {
+    if (typeof canvas.setViewport === 'function' && typeof canvas.zoom === 'number') {
+      const zoom = typeof canvas.tZoom === 'number' ? canvas.tZoom : canvas.zoom;
+      canvas.setViewport(point.x, point.y, zoom);
+      return true;
+    }
+    const view = canvasViewport(canvas);
+    if (view && typeof canvas.zoomToBbox === 'function') {
+      canvas.zoomToBbox({ minX: point.x - view.width / 2, minY: point.y - view.height / 2, maxX: point.x + view.width / 2, maxY: point.y + view.height / 2 });
+      return true;
+    }
+  } catch (err) {
+    /* left where it was */
+  }
+  return false;
 }
 
 /** The view moved, as little as it takes, to show a card. */
@@ -181,6 +247,11 @@ export function cardBox(card) {
   ) || { minX: card.x, minY: card.y, maxX: card.x + card.width, maxY: card.y + card.height };
 }
 
+/** Whether a card can be moved and sized as the canvas does it. */
+export function cardMovable(card) {
+  return guarded(() => typeof card.moveAndResize === 'function', false);
+}
+
 /** A card moved and sized: { x, y, width, height }. */
 export function placeCard(card, rect) {
   guarded(() => {
@@ -242,6 +313,16 @@ export function liveArrowEnds(edge) {
     if (!from || !to) return null;
     return { from, to, fromSide: edge.from.side, toSide: edge.to.side, fromEnd: edge.from.end || 'none', toEnd: edge.to.end || 'arrow' };
   }, null);
+}
+
+/** An arrow's data, as its file holds it: { id, fromNode, toNode, label, … }. */
+export function arrowData(edge) {
+  return cardData(edge);
+}
+
+/** An arrow's data set; false if it can't be. */
+export function setArrowData(edge, data) {
+  return setCardData(edge, data);
 }
 
 /** A value the plugin keeps on an arrow. */
