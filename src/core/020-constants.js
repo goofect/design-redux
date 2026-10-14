@@ -73,7 +73,7 @@ export const DEFAULTS = {
   // A note's album above its title, and one grey line under it.
   notePage: true,
   // Menus, suggestions and the canvas's bar and controls as frosted glass.
-  glassPanels: true,
+  glassPanels: false,
   // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
   readingHistory: true,
   // { path: { opened, read, mtime } } — when each note was opened and read.
@@ -81,7 +81,7 @@ export const DEFAULTS = {
   // When the reading history began: notes made before it aren't news.
   readingSince: 0,
   // A soft glow of a note's cover, or its album's, behind its title.
-  notePageTint: true,
+  notePageTint: false,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.
@@ -310,7 +310,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 5,
+  settingsVersion: 6,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

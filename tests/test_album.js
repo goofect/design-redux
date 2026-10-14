@@ -330,6 +330,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
     plugin.lengths = { label: () => '3 min read', measure: async () => false };
+    plugin.settings.notePageTint = true;
     Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
     // A note's view as Obsidian lays it out, editing.
     const containerEl = document.createElement('div');
@@ -501,7 +502,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 5);
+    assert.strictEqual(s.settingsVersion, 6);
+    assert.strictEqual(s.glassPanels, false, 'the quieter look');
+    assert.strictEqual(s.notePageTint, false);
     assert.ok(!('upNext' in s), 'a retired setting dropped');
     assert.ok(written && !('upNext' in written), 'and written back without it');
     assert.deepStrictEqual(backups.map((b) => b[0]), ['.obsidian/plugins/design-redux/data.before-v4.json']);

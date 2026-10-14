@@ -98,6 +98,16 @@ export const SETTINGS_MIGRATIONS = [
       saved.librarySections.push({ title: 'More', folded: true, items: moved });
     },
   },
+  {
+    // A quieter look to begin with: no glass behind the panels, no tint
+    // from the cover behind a note. Both are a switch away in Appearance
+    // and on the note page.
+    to: 6,
+    run(saved) {
+      saved.glassPanels = false;
+      saved.notePageTint = false;
+    },
+  },
 ];
 
 export function movedPath(p, oldPath, newPath) {

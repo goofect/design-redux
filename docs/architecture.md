@@ -799,3 +799,6 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   with `folded` (its heading opens and closes it, remembered), holding the
   occasional places (`LIBRARY_MORE`). Step 5 moves those places in a saved
   layout under More, in their order, and drops a section they alone filled.
+- **Quieter to begin with** (settings step 6): glass panels and the note
+  page's tint are off by default, and turned off once for everyone on
+  updating; both are a switch away.
