@@ -18,7 +18,7 @@ export const SETTINGS_TABS = [
     id: 'appearance',
     title: 'Appearance',
     sections: [
-      { title: 'Look', keys: ['look', 'lookScope'] },
+      { title: 'Look', keys: ['look', 'lookScope', 'glassPanels'] },
       { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'artworkSize', 'canvasSpacing'] },
     ],
   },
@@ -43,7 +43,7 @@ export const SETTINGS_TABS = [
     id: 'notes',
     title: 'Notes',
     sections: [
-      { title: 'The note page', keys: ['notePage', 'notePageChips', 'notePageShelves'] },
+      { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves'] },
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },

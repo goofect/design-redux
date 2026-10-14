@@ -67,6 +67,10 @@ export const DEFAULTS = {
   albumExcerpts: true,
   // A note's album above its title, and one grey line under it.
   notePage: true,
+  // Menus, suggestions and the canvas's bar and controls as frosted glass.
+  glassPanels: true,
+  // A soft glow of a note's cover, or its album's, behind its title.
+  notePageTint: true,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.

@@ -39,6 +39,11 @@ export class Appearance extends Feature {
         showIf: (s) => s.look === 'editorial',
       },
       {
+        key: 'glassPanels',
+        name: 'Glass',
+        desc: 'Menus, suggestions and the canvas’s bar and controls turn to frosted glass, so the note stays the brightest thing on screen. Off where the system asks for less transparency.',
+      },
+      {
         key: 'artworkSize',
         type: 'dropdown',
         name: 'Cover size',
@@ -91,6 +96,7 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
     body.classList.toggle('dr-look-editorial', !off && this.settings.look === 'editorial');
+    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');
     CANVAS_SPACE.scale = (!off && CANVAS_SPACING_SCALE[this.settings.canvasSpacing]) || 1;
   }

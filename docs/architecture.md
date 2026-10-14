@@ -679,3 +679,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   More in its album — each note its title and opening line. In editing and
   reading views, only in the note's own layout (not an embed's), drawn again
   only where what it says changed.
+- **Colour from the cover, and glass.** A note's page takes a soft glow of
+  its cover, or its album's, behind its title; without one it stays plain
+  (`notePageTint`). Menus, suggestions and the canvas's bar and controls
+  are frosted glass (`glassPanels`, a class on the page), not in the
+  editorial look and not where the system asks for less transparency.

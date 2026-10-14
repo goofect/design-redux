@@ -326,7 +326,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('a note opens with its album above its title, one grey line under it, chips, and shelves at its end', async () => {
     const { v, plugin, app } = setup();
     const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
-    app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { parent: '[[Balance]]', status: 'draft', cover: 'a.png', tags: ['#law'] } : {} });
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { parent: '[[Balance]]', status: 'draft', cover: 'https://example.com/a.png', tags: ['#law'] } : {} });
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
     plugin.lengths = { label: () => '3 min read', measure: async () => false };
@@ -343,6 +343,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     page.draw(view);
     const album = sizer.querySelector('.dr-note-album');
     assert.strictEqual(album.textContent, 'IR');
+    assert.strictEqual(sizer.querySelector('.dr-note-glow img').getAttribute('src'), 'https://example.com/a.png', 'a glow of its cover');
+    assert.ok(sizer.classList.contains('dr-has-glow'));
     assert.strictEqual(album.nextElementSibling, title, 'above the title');
     const meta = title.nextElementSibling;
     assert.ok(meta.classList.contains('dr-note-meta'));
@@ -367,6 +369,20 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     page.draw(view);
     assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves'));
     assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
+  });
+
+  await t('glass is a class on the page, as set, and gone when switched off', () => {
+    const { plugin } = setup();
+    const look = new R.Appearance(plugin);
+    plugin.settings.glassPanels = true;
+    look.apply();
+    assert.ok(document.body.classList.contains('dr-glass'));
+    plugin.settings.glassPanels = false;
+    look.apply();
+    assert.ok(!document.body.classList.contains('dr-glass'));
+    plugin.settings.glassPanels = true;
+    look.apply(true);
+    assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
