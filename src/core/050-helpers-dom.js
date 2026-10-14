@@ -220,18 +220,25 @@ export function attachSuggest(field, input, opts) {
   const show = () => {
     // A list field suggests for the item being typed, not the whole line.
     const q = (opts.query ? opts.query() : input.value).trim().toLowerCase();
-    items = opts
-      .source()
-      .filter((t) => t.toLowerCase().includes(q) && t.toLowerCase() !== q)
-      .slice(0, 8);
+    const source = opts.source();
+    items = source.filter((t) => t.toLowerCase().includes(q) && t.toLowerCase() !== q).slice(0, 8);
+    // Something new, offered by name, where nothing has it yet.
+    const typed = (opts.query ? opts.query() : input.value).trim();
+    const fresh = opts.create && typed && !source.some((t) => t.toLowerCase() === q) ? typed : null;
+    if (fresh) items.push(fresh);
 
     list.empty();
     if (!items.length) return hide();
 
     items.forEach((t) => {
       const el = list.createDiv({ cls: 'dr-suggest-item' });
-      if (opts.icon) setIcon(el.createSpan({ cls: 'dr-suggest-icon' }), opts.icon);
-      el.createSpan({ text: t });
+      const isNew = t === fresh && items.indexOf(t) === items.length - 1;
+      if (isNew) el.addClass('is-create');
+      if (opts.icon) setIcon(el.createSpan({ cls: 'dr-suggest-icon' }), isNew ? 'plus' : opts.icon);
+      el.createSpan({ text: isNew ? opts.create(t) : t });
+      // A word about each, at the end: how many notes use it.
+      const note = !isNew && opts.note ? opts.note(t) : '';
+      if (note) el.createSpan({ cls: 'dr-suggest-note', text: note });
       // mousedown, not click: blur would tear the list down first.
       el.addEventListener('mousedown', (evt) => {
         evt.preventDefault();

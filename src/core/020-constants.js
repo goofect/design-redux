@@ -174,6 +174,12 @@ export const DEFAULTS = {
   headerOrder: {},
   ribbonInMenu: true,
   propertiesDropdown: true,
+  // The note panel's properties: 'compact', the main ones first and alone, or 'all'.
+  panelPropertiesView: 'compact',
+  // The main ones, by name.
+  panelPrimaryProps: 'type, domain, status',
+  // Under General, Relationships and Information: 'auto' (with many), 'on' or 'off'.
+  panelPropertyGroups: 'auto',
   showMentions: true,
   // The note panel's sections from relationships and albums.
   panelRelationships: true,

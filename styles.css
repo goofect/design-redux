@@ -561,7 +561,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   height: 12px;
 }
 
-.dr-props-popup .dr-row-remove {
+.dr-props-popup .dr-row-more {
   flex: 0 0 auto;
   align-self: flex-start;
   margin-top: 1px;
@@ -569,13 +569,13 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   opacity: 0;
 }
 
-.dr-props-popup .dr-row-remove .svg-icon {
+.dr-props-popup .dr-row-more .svg-icon {
   width: 13px;
   height: 13px;
 }
 
-.dr-props-popup .dr-row:focus-within .dr-row-remove,
-.dr-props-popup .dr-row-remove:focus-visible {
+.dr-props-popup .dr-row:focus-within .dr-row-more,
+.dr-props-popup .dr-row-more:focus-visible {
   opacity: 0.6;
 }
 
@@ -588,13 +588,12 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
     opacity: 1;
   }
 
-  .dr-props-popup .dr-row:hover .dr-row-remove {
+  .dr-props-popup .dr-row:hover .dr-row-more {
     opacity: 0.6;
   }
 
-  .dr-props-popup .dr-row-remove:hover {
+  .dr-props-popup .dr-row-more:hover {
     opacity: 1;
-    color: var(--text-error, var(--color-red));
   }
 
   .dr-props-popup .dr-row-grip:hover {
@@ -606,8 +605,88 @@ body.is-mobile .dr-props-popup .dr-row-grip {
   opacity: 0.6;
 }
 
-body.is-mobile .dr-props-popup .dr-row-remove {
+body.is-mobile .dr-props-popup .dr-row-more {
   opacity: 0.5;
+}
+
+/* -- heading, groups, the rest --------------------------------------------
+ *
+ * Properties read as information first: a quiet heading with + and ···,
+ * the main ones, then Show more for the rest; with many, small group
+ * names between them. All in the theme's own colours.
+ */
+
+.dr-props-popup .dr-props-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--dr-space-1);
+}
+
+.dr-props-popup .dr-props-title {
+  flex: 1 1 auto;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dr-props-popup .dr-props-head .clickable-icon {
+  padding: 2px;
+}
+
+.dr-props-popup .dr-props-head .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-props-popup .dr-row-group {
+  margin: var(--dr-space-3) 0 2px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dr-props-popup .dr-row-group:first-child {
+  margin-top: 0;
+}
+
+.dr-props-popup .is-secondary {
+  display: none;
+}
+
+.dr-props-popup .dr-props-more {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  margin-top: var(--dr-space-1);
+  padding: 2px 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-props-popup .dr-props-more-icon {
+  display: inline-flex;
+}
+
+.dr-props-popup .dr-props-more-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-props-popup .dr-props-more:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-props-more:hover {
+    color: var(--text-normal);
+  }
 }
 
 /* -- label ------------------------------------------------------------- */
@@ -951,6 +1030,16 @@ body.is-mobile .dr-props-popup .dr-row-remove {
 
 .dr-suggest.is-open {
   display: block;
+}
+
+.dr-suggest-note {
+  margin-left: auto;
+  padding-left: var(--dr-space-2);
+  color: var(--text-faint);
+}
+
+.dr-suggest-item.is-create {
+  color: var(--text-accent);
 }
 
 .dr-suggest-item {

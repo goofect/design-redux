@@ -210,11 +210,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Object.keys(stored.fm), ['status', 'parent', 'domain', 'tags', 'added']);
   });
 
-  await t('× takes a property off, and Undo puts it back in its place, value and all', async () => {
+  await t('Remove from note, in the row’s menu, takes a property off, and Undo puts it back in its place, value and all', async () => {
     const { section, list, stored } = setup();
     let undo = null;
     section.plugin.offerUndo = (message, fn) => { undo = fn; };
-    list.querySelector('.dr-row[data-key="parent"] .dr-row-remove').click();
+    list.querySelector('.dr-row[data-key="parent"] .dr-row-more').click();
+    menus.pop().items.find((i) => i.title === 'Remove from note').click();
     await settle();
     assert.deepStrictEqual(Object.keys(stored.fm), ['domain', 'status', 'tags']);
     await undo();

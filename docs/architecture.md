@@ -820,3 +820,24 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   collections, pins and a property's values (up to `VALUE_GRID_MOST`) as
   covers, and notes opened, added or read as a list; Covers and Lists set
   every screen one way (collections as rows: `folderRows`).
+
+## 29. A note's properties, as information
+
+- **How a property shows** (160 `propertyPresentation`, display only — the
+  note is never changed for it): its group (General; Relationships — it
+  names notes, or is called parent, broader, related…; Information — a date,
+  or created/modified), whether it's main (`panelPrimaryProps`), and what a
+  value does (`note-link`: a right-click offers Open, Open in new tab, Show
+  related notes, Show in its graph).
+- **The panel**: a heading with + and ··· (the main ones or all, grouped,
+  choose the main ones); the main ones — or the first three — with Show N
+  more for the rest (`panelPropertiesView`, `panel.showAllProps`); grouped
+  with eight or more (`panelPropertyGroups`, `GROUP_FROM`). Rows keep the
+  native value widgets; their grip and ··· show when pointed at; a
+  right-click or ··· opens the row's menu.
+- **The row's menu**, by reach: Change type ›, Rename across vault…, Move ›;
+  Find notes with each value and with the property; Manage across vault ›
+  (set for the collection, merge with another property, remove from every
+  note); Remove from note.
+- **Adding** suggests names in use with how many notes use each, Create for
+  a new one, and puts the cursor in its value.
