@@ -3851,6 +3851,62 @@ body.dr-single-area .status-bar {
 
 /* Recently searched --------------------------------------------------------- */
 
+/* Search, before anything's typed: the ways into the vault. */
+.dr-browse-by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-3);
+  margin-bottom: calc(var(--dr-u) * 6);
+}
+
+.dr-browse-by-item {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+  padding: calc(var(--dr-u) * 2) var(--dr-space-4);
+  border-radius: var(--dr-radius-md);
+  background-color: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-browse-by-icon {
+  display: inline-flex;
+  color: var(--text-accent);
+}
+
+.dr-browse-by-icon .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-browse-by-item:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+@media (any-hover: hover) {
+  .dr-browse-by-item:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-search-added {
+  margin-bottom: calc(var(--dr-u) * 6);
+}
+
+/* What notes say: found a moment after typing stops. */
+.dr-search-text {
+  margin-top: calc(var(--dr-u) * 5);
+}
+
+.dr-search-text-status {
+  padding: var(--dr-space-3) 2px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
 .dr-recent-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

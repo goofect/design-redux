@@ -6,7 +6,7 @@
 /* note as a table.                                                    */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, Menu, Platform, Scope, setIcon, TFile, TFolder } from 'obsidian';
+import { ItemView, Menu, Notice, Platform, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js';
 import { blankLook, byName, canStep, drawFolderArt, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
@@ -1156,11 +1156,31 @@ export class BrowseView extends ItemView {
   }
 
   fileMenu(evt, file) {
+    const first = this.noteOpenings(file);
     if (this.mode === 'pinned') {
-      showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), arrange: this.pinSteps(file) });
+      showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), arrange: this.pinSteps(file), first });
       return;
     }
-    showTargetMenu(this.plugin, evt, file, { redraw: () => this.render() });
+    showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), first });
+  }
+
+  /** A note's own ways out of a list: a new tab, its album where that isn't here, and a link to paste. */
+  noteOpenings(file) {
+    if (!(file instanceof TFile) || file.extension !== 'md') return [];
+    const out = [['Open in new tab', 'file-plus', () => this.app.workspace.getLeaf('tab').openFile(file)]];
+    const here = this.mode === 'folder' && file.parent && file.parent.path === this.path;
+    if (file.parent && !here && typeof this.revealInAlbum === 'function') out.push(['Reveal in album', 'folder-open', () => this.revealInAlbum(file)]);
+    out.push([
+      'Copy link',
+      'link',
+      () => {
+        const link = this.app.fileManager.generateMarkdownLink(file, '');
+        const clip = typeof navigator !== 'undefined' && navigator.clipboard;
+        if (!clip) return;
+        clip.writeText(link).then(() => new Notice('Link copied'), () => new Notice('Could not copy the link'));
+      },
+    ]);
+    return out;
   }
 
   folderMenu(evt, folder, _src, opts) {

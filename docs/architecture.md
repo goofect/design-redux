@@ -749,3 +749,14 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   screen keeps the filters as it moves (`keepFilters` in the state, which
   otherwise starts each screen clean) and says how many notes match, with
   Show them (Notes) and Search among them. Smart albums keep `more`.
+- **Search inside notes** (110 `renderText`, setting `searchNoteText`): for
+  three letters or more, a moment after typing stops (`TEXT_PAUSE`), notes'
+  text is read with `cachedRead`, forty at a time between yields, stopped
+  when the query changes; up to `TEXT_MOST` notes not already found by name,
+  each with its passage (core/048 `textExcerpt`), kept 15 s for redraws. The
+  kind row gains In text. Obsidian's own search stays a button.
+- **Search with nothing typed**: Recently searched, Browse by (Albums,
+  Properties, Tags), Recently added, then the categories if set.
+- **A note's menu in the library** opens with Open in new tab, Reveal in
+  album (when it isn't this album) and Copy link (`noteOpenings`, through
+  `showTargetMenu`'s `first`).

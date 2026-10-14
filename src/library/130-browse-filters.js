@@ -95,6 +95,12 @@ export class Library extends Feature {
         suggest: 'property',
       },
       {
+        key: 'searchNoteText',
+        name: 'Search inside notes',
+        desc: 'Search looks in what notes say as well as their names and properties, showing the passage it found.',
+        showIf: 'library',
+      },
+      {
         key: 'tableColumns',
         type: 'text',
         name: 'Notes table columns',

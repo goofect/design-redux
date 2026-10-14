@@ -12,7 +12,7 @@ import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
 import { albumNeighbours, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
-import { rankNote, searchWords } from '../core/048-search-rank.js';
+import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -416,6 +416,10 @@ export class NotesScreen extends BrowseScreen {
 }
 
 /* -- a property, as an artist list ----------------------------------- */
+
+/* How long Search waits after typing before reading notes' text, and how many it shows. */
+export const TEXT_PAUSE = 250;
+export const TEXT_MOST = 50;
 
 /* The Properties screen's name for the notes that leave a property empty, where a value would go. */
 export const EMPTY_VALUE = '\u2205';
@@ -1051,7 +1055,7 @@ export class SearchScreen extends BrowseScreen {
 
   /**
    * A screen in its own right rather than an empty box: what you looked
-   * for last, and a way into the vault by category.
+   * for last, the ways into the vault, what's new, and its categories.
    */
   renderIdle(root) {
     const recents = collapseSearches(this.settings.recentSearches).slice(0, 8);
@@ -1072,16 +1076,37 @@ export class SearchScreen extends BrowseScreen {
       recents.forEach((term) => this.recentCard(grid, term));
     }
 
-    const categories = this.categories();
-    if (!categories.length) {
-      if (!recents.length) {
-        root.createDiv({
-          cls: 'dr-split-empty',
-          text: 'Search notes, folders and properties',
-        });
-      }
-      return;
+    // The ways the vault is already arranged, whatever it's set up with.
+    this.heading(root, 'Browse by');
+    const ways = root.createDiv({ cls: 'dr-browse-by' });
+    roveFocus(ways, '.dr-browse-by-item');
+    [
+      ['Albums', 'library', { mode: 'folders', path: '/' }],
+      ['Properties', 'list', { mode: 'properties', property: null }],
+      ['Tags', 'tag', { mode: 'properties', property: 'tags' }],
+    ].forEach(([label, icon, state]) => {
+      const item = ways.createDiv({ cls: 'dr-browse-by-item' });
+      asButton(item);
+      setIcon(item.createSpan({ cls: 'dr-browse-by-icon' }), icon);
+      item.createSpan({ text: label });
+      onActivate(item, () => this.view.navigate(state));
+    });
+
+    // Somewhere to start with no searches behind you.
+    const added = libraryIndex(this.plugin)
+      .notes()
+      .slice()
+      .sort((a, b) => ((b.stat && b.stat.ctime) || 0) - ((a.stat && a.stat.ctime) || 0))
+      .slice(0, 5);
+    if (added.length) {
+      this.heading(root, 'Recently added');
+      const list = root.createDiv({ cls: 'dr-tracks dr-search-added' });
+      roveFocus(list, '.dr-track');
+      added.forEach((file, i) => this.view.trackRow(list, file, i + 1));
     }
+
+    const categories = this.categories();
+    if (!categories.length) return;
 
     this.heading(root, 'Browse categories');
     const grid = root.createDiv({ cls: 'dr-cat-grid' });
@@ -1216,8 +1241,10 @@ export class SearchScreen extends BrowseScreen {
       { id: 'collections', label: 'Collections', n: collections.length },
       { id: 'properties', label: 'Properties', n: properties.length },
     ];
+    // What notes say, read a moment after typing stops, for queries long enough to mean something.
+    const textOn = this.settings.searchNoteText !== false && q.length >= 3;
     let kind = view.searchKind || 'all';
-    if (kind !== 'all' && !kinds.some((k) => k.id === kind)) kind = 'all';
+    if (kind !== 'all' && !kinds.some((k) => k.id === kind) && !(kind === 'text' && textOn)) kind = 'all';
     const showing = (id) => kind === 'all' || kind === id;
 
     const count = kinds.reduce((n, k) => n + (showing(k.id) ? k.n : 0), 0);
@@ -1230,7 +1257,7 @@ export class SearchScreen extends BrowseScreen {
     const full = head.createDiv({ cls: 'dr-search-full' });
     asButton(full);
     setIcon(full.createSpan({ cls: 'dr-search-full-icon' }), 'file-search');
-    full.createSpan({ text: 'Search inside notes' });
+    full.createSpan({ text: textOn ? 'Obsidian search' : 'Search inside notes' });
     onActivate(full, () => {
       try {
         const search = this.app.internalPlugins.getPluginById('global-search');
@@ -1241,11 +1268,15 @@ export class SearchScreen extends BrowseScreen {
       }
     });
 
-    this.resultsBar(root, kinds, kind, sort);
+    this.resultsBar(root, textOn ? kinds.concat([{ id: 'text', label: 'In text', n: 1 }]) : kinds, kind, sort);
+    const skip = new Set(notes.map((f) => f.path));
+    const text = () => {
+      if (textOn && (kind === 'all' || kind === 'text')) this.renderText(root, q, skip);
+    };
 
     if (!count) {
-      root.createDiv({ cls: 'dr-split-empty', text: 'No matches' });
-      return;
+      if (kind !== 'text') root.createDiv({ cls: 'dr-split-empty dr-search-none', text: 'No matches by name or property' });
+      return text();
     }
 
     // Grouped, each under its name, once there's more than one kind.
@@ -1287,6 +1318,71 @@ export class SearchScreen extends BrowseScreen {
         onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value: null, query: '' }));
       });
     }
+    text();
+  }
+
+  /**
+   * Notes whose text holds the query, each with the passage — read once
+   * typing has paused, a few at a time so typing stays quick, and kept
+   * for a while so drawing the screen again doesn't read them again.
+   */
+  renderText(root, q, skip) {
+    const view = this.view;
+    const section = root.createDiv({ cls: 'dr-search-text' });
+    const head = section.createDiv({ cls: 'dr-search-section' });
+    head.createSpan({ cls: 'dr-search-section-title', text: 'In note text' });
+    const count = head.createSpan({ cls: 'dr-search-section-count' });
+    const status = section.createDiv({ cls: 'dr-search-text-status', text: 'Looking through notes…' });
+    const list = section.createDiv({ cls: 'dr-tracks dr-search-text-notes' });
+    roveFocus(list, '.dr-track');
+
+    const key = [q, view.filterFolder, view.filterTag, JSON.stringify(view.propFilters()), JSON.stringify(view.filterDate)].join('|');
+    const show = (hits) => {
+      status.remove();
+      count.setText(hits.length >= TEXT_MOST ? `${TEXT_MOST}+` : String(hits.length));
+      if (!hits.length) {
+        section.createDiv({ cls: 'dr-split-empty', text: 'No other notes say that' });
+        return;
+      }
+      if (!view.searchWhy) view.searchWhy = new Map();
+      hits.forEach((h) => view.searchWhy.set(h.file.path, h.excerpt));
+      hits.forEach((h, i) => view.trackRow(list, h.file, i + 1));
+    };
+    const kept = view.textFound;
+    if (kept && kept.key === key && Date.now() - kept.at < 15000) return show(kept.hits.filter((h) => !skip.has(h.file.path)));
+
+    const token = (view.textToken = (view.textToken || 0) + 1);
+    const live = () => view.textToken === token && section.isConnected;
+    window.setTimeout(async () => {
+      if (!live()) return;
+      const hits = await this.textHits(q, skip, live);
+      if (!hits || !live()) return;
+      view.textFound = { key, at: Date.now(), hits };
+      show(hits);
+    }, TEXT_PAUSE);
+  }
+
+  async textHits(q, skip, live) {
+    const view = this.view;
+    const files = libraryIndex(this.plugin)
+      .markdown()
+      .filter((f) => !skip.has(f.path) && !this.plugin.isFolderNote(f) && view.inFilter(f));
+    const hits = [];
+    for (let i = 0; i < files.length && hits.length < TEXT_MOST; i++) {
+      if (i && i % 40 === 0) {
+        await new Promise((r) => window.setTimeout(r, 0));
+        if (!live()) return null;
+      }
+      let body = '';
+      try {
+        body = await this.app.vault.cachedRead(files[i]);
+      } catch (err) {
+        continue;
+      }
+      const excerpt = textExcerpt(body, q);
+      if (excerpt) hits.push({ file: files[i], excerpt });
+    }
+    return hits;
   }
 
   /** All, Notes, Albums, Collections, Properties — those with results — and how notes are ordered. */

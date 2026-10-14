@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1247,6 +1247,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   await t('search finds albums, collections and notes, each under its name', async () => {
     const { v, view, plugin } = setup();
+    plugin.settings.searchNoteText = false;
     const smart = new R.SmartAlbums(plugin);
     smart.enabled = true;
     plugin.settings.smartAlbumList = [{ id: 's1', name: 'Reading list' }];
@@ -1307,6 +1308,81 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(rows(), [law.path, ism.path, sep.path]);
     assert.ok(view.contentEl.querySelector('.dr-search-sort').textContent.includes('Title'));
     view.searchSort = 'relevance';
+  });
+
+  await t('search reads what notes say a moment after typing, showing the passage; In text shows only those; off in settings, it reads nothing', async () => {
+    const { v, view, plugin, app } = setup();
+    const texts = {
+      'IR/Theories/Realism.md': '---\ntopic: x\n---\nStates seek power. Parliamentary sovereignty is a doctrine of the constitution, held since 1689.',
+      'IR/Deterrence.md': 'Nothing here.',
+    };
+    const sov = v.file('IR/Sovereignty.md');
+    texts[sov.path] = 'The sovereignty of parliament.';
+    let reads = 0;
+    app.vault.cachedRead = async (f) => {
+      reads++;
+      return texts[f.path] || '';
+    };
+    await view.setState({ mode: 'search' }, {});
+    view.query = 'sovereignty';
+    view.render();
+    assert.ok(view.contentEl.querySelector('.dr-search-text-status'), 'looking');
+    await new Promise((r) => setTimeout(r, R.TEXT_PAUSE + 100));
+    const found = () => Array.from(view.contentEl.querySelectorAll('.dr-search-text-notes .dr-track')).map((r) => r.dataset.path);
+    assert.deepStrictEqual(found(), ['IR/Theories/Realism.md'], 'the note named for it is listed above, not again');
+    const line = view.contentEl.querySelector('.dr-search-text-notes .dr-track-name').dataset.excerpt;
+    assert.ok(line.includes('Parliamentary sovereignty is a doctrine') && !line.includes('topic'), line);
+    assert.ok(view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="IR/Sovereignty.md"]'));
+
+    // Drawn again: not read again.
+    const before = reads;
+    view.render();
+    assert.deepStrictEqual(found(), ['IR/Theories/Realism.md']);
+    assert.strictEqual(reads, before);
+
+    // In text: only what notes say.
+    view.contentEl.querySelector('.dr-search-kind[data-kind="text"]').click();
+    assert.ok(!view.contentEl.querySelector('.dr-search-notes'));
+    assert.deepStrictEqual(found(), ['IR/Theories/Realism.md']);
+    view.searchKind = 'all';
+
+    plugin.settings.searchNoteText = false;
+    view.query = 'doctrine';
+    view.render();
+    await new Promise((r) => setTimeout(r, R.TEXT_PAUSE + 50));
+    assert.ok(!view.contentEl.querySelector('.dr-search-text'));
+    assert.ok(!view.contentEl.querySelector('.dr-search-kind[data-kind="text"]'));
+  });
+
+  await t('Search with nothing typed: ways into the vault and what was added last; a note offers a new tab, its album and its link', async () => {
+    const { v, view, app } = setup();
+    v.file('IR/Newest.md');
+    await view.setState({ mode: 'search' }, {});
+    view.query = '';
+    view.render();
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-browse-by-item')).map((e) => e.textContent), ['Albums', 'Properties', 'Tags']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-added .dr-track').dataset.path, 'IR/Newest.md');
+    const went = [];
+    view.leaf.setViewState = async (st) => went.push(st.state);
+    view.contentEl.querySelectorAll('.dr-browse-by-item')[2].click();
+    assert.strictEqual(went[0].mode, 'properties');
+    assert.strictEqual(went[0].property, 'tags');
+
+    const file = app.vault.getFileByPath('IR/Newest.md');
+    await view.setState({ mode: 'search' }, {});
+    assert.deepStrictEqual(view.noteOpenings(file).map((e) => e[0]), ['Open in new tab', 'Reveal in album', 'Copy link']);
+    await view.setState({ mode: 'folder', path: 'IR' }, {});
+    assert.deepStrictEqual(view.noteOpenings(file).map((e) => e[0]), ['Open in new tab', 'Copy link'], 'its own album needs no revealing');
+  });
+
+  await t('the passage found in a note: whole words around the query, the properties left out', () => {
+    const { textExcerpt } = R;
+    const text = '---\nstatus: sovereignty\n---\n' + 'word '.repeat(40) + 'the sovereignty of parliament ' + 'more '.repeat(40);
+    const got = textExcerpt(text, 'sovereignty of parliament', 60);
+    assert.ok(got.startsWith('…') && got.endsWith('…') && got.includes('sovereignty of parliament'), got);
+    assert.ok(!got.includes('status'));
+    assert.strictEqual(textExcerpt('the parliament is sovereign', 'parliament sovereign'), 'the parliament is sovereign');
+    assert.strictEqual(textExcerpt('nothing', 'parliament'), null);
   });
 
   await t('a note matches by its title, alias, a property, its album, or nearly its title — in that order', () => {

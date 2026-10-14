@@ -76,3 +76,44 @@ export function rankNote(parts, query) {
   if (hasAll(everything, words)) return { score: 30, why: 'Title and properties' };
   return null;
 }
+
+/** A note's text without its properties block. */
+export function noteBody(text) {
+  const t = String(text || '');
+  if (!t.startsWith('---')) return t;
+  const end = t.indexOf('\n---', 3);
+  return end === -1 ? t : t.slice(end + 4);
+}
+
+/**
+ * Whether a note's text holds every word of the query, and the passage
+ * around the first place it does: the whole query where it's there as
+ * typed, else its first word. Null for no match.
+ */
+export function textExcerpt(text, query, width = 110) {
+  const words = searchWords(query);
+  if (!words.length) return null;
+  const flat = noteBody(text).replace(/\s+/g, ' ').trim();
+  const low = flat.toLowerCase();
+  if (!words.every((w) => low.indexOf(w) !== -1)) return null;
+  const q = String(query).trim().toLowerCase();
+  let at = low.indexOf(q);
+  let len = q.length;
+  if (at === -1) {
+    at = low.indexOf(words[0]);
+    len = words[0].length;
+  }
+  const side = Math.max(0, Math.floor((width - len) / 2));
+  let from = Math.max(0, at - side);
+  let to = Math.min(flat.length, at + len + side);
+  // Whole words at the edges.
+  if (from > 0) {
+    const space = flat.indexOf(' ', from);
+    if (space !== -1 && space < at) from = space + 1;
+  }
+  if (to < flat.length) {
+    const space = flat.lastIndexOf(' ', to);
+    if (space > at + len) to = space;
+  }
+  return `${from > 0 ? '…' : ''}${flat.slice(from, to)}${to < flat.length ? '…' : ''}`;
+}

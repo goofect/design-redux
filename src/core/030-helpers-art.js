@@ -734,6 +734,10 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
       sectioned(item, 'open').setTitle('Open folder').setIcon('folder-open').onClick(opts.open)
     );
   }
+  // Ways to open a note the caller offers, first.
+  (opts.first || []).forEach(([title, icon, run]) =>
+    menu.addItem((item) => sectioned(item, 'open').setTitle(title).setIcon(icon).onClick(run))
+  );
   if (isFolder) {
     menuGroup(menu, 'New', 'plus', (m, nested) => {
       if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };

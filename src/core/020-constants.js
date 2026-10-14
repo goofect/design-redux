@@ -141,6 +141,7 @@ export const DEFAULTS = {
   sidebarDrop: true,
   tableColumns: 'domain, status',
   categoryProperty: 'domain',
+  searchNoteText: true,
   // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
   propertiesSort: 'name',
   recentSearches: [],
