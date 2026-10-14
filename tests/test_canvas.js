@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, growCards, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1182,6 +1182,29 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.deepStrictEqual(Object.fromEntries(R.cardTints(model, links, depths, 'branch')), { a: 1, a1: 1, b: 2 });
     assert.deepStrictEqual(Object.fromEntries(R.cardTints(model, links, depths, 'depth')), { a: 1, a1: 2, b: 1 });
     assert.strictEqual(R.cardTints(model, links, depths, 'none').size, 0);
+  });
+
+  await t('a canvas made a map keeps its folds folded and drops what they noted of the room; a list pasted into a map lands in its places', async () => {
+    const { view, map, state, n, laid, p } = mapOf({
+      nodes: [card('root', 0, 0, 200, 60), card('a', 300, 0, 200, 60), card('a1', 600, 0, 200, 60)],
+      edges: [edge('root', 'a', 'right', 'left'), edge('a', 'a1', 'right', 'left')],
+    });
+    n('a').unknownData.drRoom = { b: [0, -60, 0, 0] };
+    n('a1').unknownData.drTuck = { by: 'a', dx: 300, dy: 0 };
+    await map.makeMap(view);
+    assert.ok(!n('a').unknownData.drRoom, 'the room it noted, dropped');
+    assert.deepStrictEqual(n('a1').unknownData.drTuck, { by: 'a', dx: 300, dy: 0 }, 'still folded');
+    // A list grown from the root: every card where the map puts it, at once.
+    const add = view.canvas.importData;
+    view.canvas.importData = ({ nodes, edges }) => {
+      (nodes || []).forEach((d) => view.canvas.nodes.set(d.id, new FakeNode(view.canvas, d)));
+      add({ edges: edges || [] });
+    };
+    const made = R.growCards(p, view, n('root'), [{ card: { type: 'text', text: 'One', width: 200, height: 60 }, children: [] }, { card: { type: 'text', text: 'Two', width: 200, height: 60 }, children: [] }]);
+    assert.ok(made && made.nodes.length === 2);
+    made.nodes.forEach((d) => assert.deepStrictEqual({ x: n(d.id).x, y: n(d.id).y }, laid().places.get(d.id), `${d.text} in its place`));
+    map.pass(view, state);
+    made.nodes.forEach((d) => assert.deepStrictEqual({ x: n(d.id).x, y: n(d.id).y }, laid().places.get(d.id)));
   });
 
   await t('in free space: Tab and Enter put the new card in the nearest gap round the card, nothing else moving', async () => {

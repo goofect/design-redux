@@ -13,9 +13,11 @@ import { noteNameFrom } from '../core/047-helpers-text.js';
 import { addToCanvas, canvasReadonly, liveCard, pickOnCanvas, requestCanvasSave, showCard, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { arrowLinks, boundsOf, branchSides, canvasCardLabel, canvasGap, canvasModel, isGroupRecord, modelFromData, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP, tidyBranch, tuckOf } from './316-canvas-tree.js';
+import { applyCanvasModel, snapshotModel } from './317-canvas-room.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { CanvasMindMap, freeSpot, newCanvasId } from './334-canvas-mindmap.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
+import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
 
 /* Cards an outline makes never pass this many: it was likely the wrong note. */
 export const OUTLINE_CARD_LIMIT = 200;
@@ -234,6 +236,13 @@ export function growCards(plugin, view, node, items, opts = {}) {
   if (!addToCanvas(canvas, { nodes: made.nodes, edges: made.edges })) {
     new Notice('Could not make the cards.');
     return null;
+  }
+  // In a mind map: every card straight to its place, the new ones among them.
+  if (CanvasMap.of(plugin, view)) {
+    const now = canvasModel(canvas);
+    const was = snapshotModel(now);
+    placeIn(now, mapLayout(now, arrowLinks(now)));
+    applyCanvasModel(now, was);
   }
   requestCanvasSave(canvas);
   const all = boundsOf([root].concat(made.nodes));
