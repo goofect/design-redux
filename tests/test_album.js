@@ -498,8 +498,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(s.albumColumns, 'status, modified');
     assert.deepStrictEqual(s.canvasLegends, saved.canvasLegends);
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
-    assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'read', 'IR']);
-    assert.strictEqual(s.settingsVersion, 4);
+    assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
+    // Recently read, given after Pinned, waits under More with the other occasional places.
+    assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
+    assert.strictEqual(s.settingsVersion, 5);
     assert.ok(!('upNext' in s), 'a retired setting dropped');
     assert.ok(written && !('upNext' in written), 'and written back without it');
     assert.deepStrictEqual(backups.map((b) => b[0]), ['.obsidian/plugins/design-redux/data.before-v4.json']);
@@ -1526,11 +1528,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(titles(), ['Law']);
     const library = new R.Library(plugin);
     const sections = library.defaultSections();
-    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Your library']);
+    // A few places first, then Recent, then the rest under More, folded.
+    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Recent', 'More']);
+    assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home', 'notes', 'folders', 'bookmarks']);
+    assert.strictEqual(sections[2].folded, true);
     plugin.settings.libraryCheck = true;
     plugin.settings.knowledgeCheck = false;
-    assert.deepStrictEqual(library.defaultSections().pop().items.map((i) => i.id), ['library-check', 'inbox'], 'the tools last, those switched on');
-    assert.ok(sections[1].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
+    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-2), ['library-check', 'inbox'], 'the tools last, those switched on');
+    assert.ok(sections[2].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

@@ -209,6 +209,19 @@ t('drawn again with nothing changed, the rows on screen stay — their covers do
   assert.notStrictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'changed: drawn again');
 });
 
+t('More folds away the occasional places, and opens again, remembered', () => {
+  const { view } = setup({ page: browsePage('search') });
+  view.plugin.settings.librarySections.push({ title: 'More', folded: true, items: [{ kind: 'builtin', id: 'graph' }] });
+  view.render();
+  const labels = () => Array.from(view.contentEl.querySelectorAll('.dr-lib-label')).map((e) => e.textContent);
+  const head = () => view.contentEl.querySelector('.dr-lib-fold');
+  assert.ok(!labels().includes('Graph'));
+  assert.strictEqual(head().getAttribute('aria-expanded'), 'false');
+  head().click();
+  assert.ok(labels().includes('Graph'));
+  assert.strictEqual(view.plugin.settings.librarySections.pop().folded, false);
+});
+
 /* -- the highlight ------------------------------------------------- */
 
 t('Search screen highlights Search, and only Search', () => {
@@ -217,7 +230,7 @@ t('Search screen highlights Search, and only Search', () => {
 
 t('each library screen highlights its own entry', () => {
   const cases = { home: 'Home', recents: 'Recently opened', properties: 'Properties',
-    folders: 'Folders', notes: 'Notes' };
+    folders: 'Folders', notes: 'All Notes' };
   Object.entries(cases).forEach(([mode, label]) =>
     assert.deepStrictEqual(active(setup({ page: browsePage(mode) }).view), [label], mode));
 });

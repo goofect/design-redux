@@ -288,27 +288,16 @@ export class Library extends Feature {
       .sort((a, b) => a.basename.localeCompare(b.basename))
       .map((f) => ({ kind: 'file', path: f.path }));
 
-    // Shaped after the app this borrows from: a few destinations, then
-    // the ways into the whole vault, then the saved views.
-    // Where to go — the vault's ways in; then what's yours — pinned and
-    // collections of your own; then the tools that look the library over.
-    // Recently opened and added are Home's.
-    const library = [
-      { kind: 'builtin', id: 'notes' },
-      { kind: 'builtin', id: 'folders' },
-      { kind: 'builtin', id: 'collections' },
-    ];
+    // A few places first, as a music app's sidebar has: where to start,
+    // everything, the albums and what's pinned; then what you opened last;
+    // the rest under More, folded until wanted.
+    const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
     const structure = this.plugin.feature(AlbumStructure);
-    if (structure && structure.enabled && structure.ofKind('subject').length) library.push({ kind: 'builtin', id: 'subjects' });
-    library.push({ kind: 'builtin', id: 'properties' });
-    const yours = [
-      { kind: 'builtin', id: 'bookmarks' },
-      { kind: 'builtin', id: 'read' },
-      { kind: 'builtin', id: 'smart' },
-    ];
-    const tools = ['library-check', 'knowledge-check', 'inbox']
+    if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
+    more.push({ kind: 'builtin', id: 'read' }, { kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
+    ['library-check', 'knowledge-check', 'inbox']
       .filter((id) => this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'])
-      .map((id) => ({ kind: 'builtin', id }));
+      .forEach((id) => more.push({ kind: 'builtin', id }));
 
     const sections = [
       {
@@ -316,15 +305,16 @@ export class Library extends Feature {
         items: [
           { kind: 'builtin', id: 'search' },
           { kind: 'builtin', id: 'home' },
-          { kind: 'builtin', id: 'graph' },
+          { kind: 'builtin', id: 'notes' },
+          { kind: 'builtin', id: 'folders' },
+          { kind: 'builtin', id: 'bookmarks' },
         ],
       },
-      { title: 'Library', items: library },
-      { title: 'Your library', items: yours },
+      { title: 'Recent', items: [{ kind: 'builtin', id: 'recents' }] },
+      { title: 'More', folded: true, items: more },
     ];
     if (folders.length) sections.push({ title: 'Folders', items: folders });
     if (bases.length) sections.push({ title: 'Bases', items: bases });
-    if (tools.length) sections.push({ title: 'Utilities', items: tools });
     return sections;
   }
 

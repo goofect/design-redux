@@ -142,7 +142,21 @@ export class LibraryView extends ItemView {
     // again would make their covers flash.
     const fresh = root.ownerDocument.createElement('div');
     this.plugin.settings.librarySections.forEach((section) => {
-      if (section.title) {
+      // A section that folds — More, to begin with — has a heading that opens and closes it.
+      const folds = typeof section.folded === 'boolean';
+      if (section.title && folds) {
+        const head = fresh.createDiv({ cls: `dr-lib-group dr-lib-fold${section.folded ? ' is-folded' : ''}` });
+        asButton(head, section.folded ? `Show ${section.title}` : `Fold ${section.title}`);
+        head.setAttribute('aria-expanded', String(!section.folded));
+        head.createSpan({ text: section.title });
+        setIcon(head.createSpan({ cls: 'dr-lib-fold-icon' }), section.folded ? 'chevron-right' : 'chevron-down');
+        onActivate(head, () => {
+          section.folded = !section.folded;
+          this.plugin.saveData(this.plugin.settings);
+          this.render();
+        });
+        if (section.folded) return;
+      } else if (section.title) {
         fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
       }
       const list = fresh.createDiv({ cls: 'dr-lib-list' });

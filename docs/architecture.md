@@ -794,3 +794,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   `is-advanced` and hidden until Show all settings, a search (which finds
   every row), or a link to one of them (`reveal`, for as long as the tab is
   open). A tab or section with nothing everyday hides with them.
+- **A shorter library** (130 `defaultSections`, settings step 5): Search,
+  Home, All Notes, the albums and Pinned first; Recent; then More, a section
+  with `folded` (its heading opens and closes it, remembered), holding the
+  occasional places (`LIBRARY_MORE`). Step 5 moves those places in a saved
+  layout under More, in their order, and drops a section they alone filled.

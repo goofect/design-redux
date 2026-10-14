@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFolder } from 'obsidian';
+import { LIBRARY_MORE } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
 
@@ -70,6 +71,31 @@ export const SETTINGS_MIGRATIONS = [
       if (!home) return;
       const at = home.items.findIndex((i) => i && i.kind === 'builtin' && i.id === 'bookmarks');
       home.items.splice(at + 1, 0, { kind: 'builtin', id: 'read' });
+    },
+  },
+  {
+    // Fewer places up front: the occasional ones move under a folded More,
+    // in the order they were in. Nothing leaves the library.
+    to: 5,
+    run(saved) {
+      if (!Array.isArray(saved.librarySections)) return;
+      const items = (sec) => (sec && Array.isArray(sec.items) ? sec.items : []);
+      if (saved.librarySections.some((sec) => sec && typeof sec.folded === 'boolean')) return;
+      const moved = [];
+      const emptied = new Set();
+      saved.librarySections.forEach((sec) => {
+        if (!items(sec).length) return;
+        sec.items = sec.items.filter((i) => {
+          const goes = i && i.kind === 'builtin' && LIBRARY_MORE.indexOf(i.id) !== -1;
+          if (goes) moved.push(i);
+          return !goes;
+        });
+        if (!sec.items.length) emptied.add(sec);
+      });
+      if (!moved.length) return;
+      // A section only those filled goes with them; the rest keep their places.
+      saved.librarySections = saved.librarySections.filter((sec) => !emptied.has(sec));
+      saved.librarySections.push({ title: 'More', folded: true, items: moved });
     },
   },
 ];

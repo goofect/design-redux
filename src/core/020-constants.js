@@ -33,13 +33,16 @@ export const LIBRARY_BUILTINS = {
   collections: { label: 'Collections', icon: 'library' },
   properties: { label: 'Properties', icon: 'tags' },
   folders: { label: 'Folders', icon: 'folder' },
-  notes: { label: 'Notes', icon: 'file-text' },
+  notes: { label: 'All Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
   smart: { label: 'Smart albums', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
   'knowledge-check': { label: 'Knowledge check', icon: 'network', needs: 'knowledgeCheck' },
 };
+
+/* The library's places that wait under More, so the first few stand out. */
+export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check'];
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -307,7 +310,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 4,
+  settingsVersion: 5,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
