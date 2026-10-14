@@ -2144,6 +2144,23 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   font-weight: var(--font-medium, 500);
 }
 
+/* New to you: a dot beside its number. */
+.dr-track.is-unread .dr-track-num {
+  position: relative;
+}
+
+.dr-track.is-unread .dr-track-num::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+}
+
 /* An album's end: notes still to write, greyed, and a row for a new note. */
 .dr-end-row.is-unwritten .dr-track-name,
 .dr-new-note-row .dr-track-name,

@@ -12,6 +12,7 @@ import { TYPE_ICONS } from '../core/020-constants.js';
 import { albumNeighbours, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
+import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
@@ -667,8 +668,12 @@ export class CollectionScreen extends BrowseScreen {
     return this.view.mode === 'added';
   }
 
+  get read() {
+    return this.view.mode === 'read';
+  }
+
   title() {
-    return this.pinned ? 'Pinned' : this.added ? 'Recently added' : 'Recently opened';
+    return this.pinned ? 'Pinned' : this.added ? 'Recently added' : this.read ? 'Recently read' : 'Recently opened';
   }
 
   /** The notes made most lately, the newest first: albums' own notes aside. */
@@ -686,7 +691,9 @@ export class CollectionScreen extends BrowseScreen {
       ? this.plugin.pins.files()
       : this.added
         ? this.recentlyAdded()
-        : this.plugin.recentFiles()
+        : this.read
+          ? readingOf(this.plugin).latest('read', 100)
+          : this.plugin.recentFiles()
     )
       .filter((f) => view.inFilter(f))
       .filter((f) => view.matches(f.basename));
@@ -707,7 +714,7 @@ export class CollectionScreen extends BrowseScreen {
     const orderedFolders = view.keepsOwnOrder() ? folders : view.sortFolders(folders);
 
     if (!files.length && !folders.length) {
-      const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : ['Nothing opened yet', 'clock'];
+      const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : this.read ? ['Nothing read to the end yet', 'book-check'] : ['Nothing opened yet', 'clock'];
       view.emptyState(root, empty[0], empty[1], view.clearAction());
       return;
     }
@@ -1101,11 +1108,18 @@ export class HomeScreen extends BrowseScreen {
   continuing(recents, keep) {
     const items = [];
     const seen = new Set();
-    recents.forEach((file) => {
+    // With a reading history: by when you were last in each, and a note not read to its end is where you pick up.
+    const history = this.settings.readingHistory ? readingOf(this.plugin) : null;
+    const order = history ? history.latest('opened', 200).filter(keep) : recents;
+    (order.length ? order : recents).forEach((file) => {
       const album = file.parent;
       if (items.length >= 12 || !album || (album.isRoot && album.isRoot()) || this.plugin.isFolderNote(file) || seen.has(album.path)) return;
       seen.add(album.path);
       const near = albumNeighbours(this.plugin, file);
+      if (history && history.entry(file) && history.state(file) !== 'read' && keep(file) && !items.some((i) => i.file === file)) {
+        items.push({ file, subtitle: `${album.name} · ${near.index + 1} of ${near.total}`, progress: near.index / near.total });
+        return;
+      }
       if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
       items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}`, progress: (near.index + 1) / near.total });
     });
@@ -1192,6 +1206,7 @@ export const BROWSE_SCREENS = {
   recents: CollectionScreen,
   pinned: CollectionScreen,
   added: CollectionScreen,
+  read: CollectionScreen,
   subjects: SubjectsScreen,
   collections: CollectionsScreen,
 };

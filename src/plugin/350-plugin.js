@@ -11,6 +11,7 @@ import { Lengths } from '../core/065-lengths.js';
 import { Orders, PATH_KEYED, SETTINGS_MIGRATIONS } from '../core/070-orders.js';
 import { Notes } from '../core/073-notes.js';
 import { Files } from '../core/074-files.js';
+import { Reading } from '../core/075-reading.js';
 import { Selection } from '../core/076-selection.js';
 import { LibraryIndex } from '../core/077-library-index.js';
 import { Appearance } from '../core/085-appearance.js';
@@ -20,6 +21,7 @@ import { BrowseView } from '../library/120-browse-view.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ActionsMenu } from '../chrome/140-actions-menu.js';
 import { NotePage } from '../library/140-note-page.js';
+import { ReadingHistory } from '../library/145-reading-history.js';
 import { PropertiesPanel } from '../chrome/180-panel.js';
 import { ContextStrip } from '../chrome/190-strip.js';
 import { OnePage } from '../chrome/200-one-page.js';
@@ -89,12 +91,14 @@ export class DesignRedux extends Plugin {
     this.selection = new Selection(this);
     // What every screen reads of the vault, kept while files and links stay as they are.
     this.libraryIndex = new LibraryIndex(this);
+    this.reading = new Reading(this);
     this.libraryIndex.listen();
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
       new Appearance(this),
       new Library(this),
+      new ReadingHistory(this),
       new NotePage(this),
       new ListKeys(this),
       new SidebarDrop(this),

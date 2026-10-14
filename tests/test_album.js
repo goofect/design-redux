@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -383,6 +383,83 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.glassPanels = true;
     look.apply(true);
     assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
+  });
+
+  await t('reading history: what you opened and read, in the plugin’s data; changed since read is news; the latest kept', () => {
+    const { v, plugin } = setup();
+    plugin.saveData = () => {};
+    const r = new R.Reading(plugin);
+    const f = (n) => v.vault.getAbstractFileByPath(`IR/${n}.md`);
+    plugin.settings.readingSince = 0.5;
+    assert.strictEqual(r.state(f('Anarchy')), 'unread');
+    assert.ok(r.isNew(f('Anarchy')), 'made since the history began, not read');
+    r.opened(f('Anarchy'));
+    r.opened(f('Balance'));
+    plugin.settings.readingLog['IR/Balance.md'].opened += 5;
+    assert.ok(r.markRead(f('Anarchy')));
+    assert.ok(!r.markRead(f('Anarchy')), 'read already, as it is');
+    assert.strictEqual(r.state(f('Anarchy')), 'read');
+    assert.ok(!r.isNew(f('Anarchy')));
+    f('Anarchy').stat.mtime += 10000;
+    assert.strictEqual(r.state(f('Anarchy')), 'changed', 'changed since');
+    r.edited(f('Anarchy'));
+    assert.strictEqual(r.state(f('Anarchy')), 'read', 'your own change while reading keeps it read');
+    assert.strictEqual(r.countRead(['Anarchy', 'Balance', 'Cooperation'].map(f)), 1);
+    assert.deepStrictEqual(r.latest('read').map((x) => x.basename), ['Anarchy']);
+    assert.ok(plugin.settings.readingLog['IR/Balance.md'].opened >= plugin.settings.readingLog['IR/Anarchy.md'].opened);
+    assert.strictEqual(r.lastOpened(['Anarchy', 'Balance', 'Cooperation'].map(f)).basename, 'Balance');
+    // Kept within its size.
+    for (let i = 0; i < 3005; i++) plugin.settings.readingLog[`x/${i}.md`] = { opened: i + 1 };
+    r.prune();
+    assert.strictEqual(Object.keys(plugin.settings.readingLog).length, 3000);
+    assert.ok(R.atEnd({ scrollHeight: 1000, scrollTop: 560, clientHeight: 400 }) && !R.atEnd({ scrollHeight: 1000, scrollTop: 100, clientHeight: 400 }));
+  });
+
+  await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
+    const { v, plugin, view, opened } = setup();
+    plugin.saveData = () => {};
+    const r = R.readingOf(plugin);
+    const f = (n) => v.vault.getAbstractFileByPath(`IR/${n}.md`);
+    plugin.settings.readingSince = 0.5;
+    r.opened(f('Anarchy'));
+    r.markRead(f('Anarchy'));
+    r.opened(f('Cooperation'));
+    plugin.settings.readingLog['IR/Cooperation.md'].opened += 5;
+    view.render();
+    assert.ok(/1 of 6 read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent), view.contentEl.querySelector('.dr-detail-meta').textContent);
+    const row = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"]`);
+    assert.ok(!row('Anarchy').classList.contains('is-unread') && row('Balance').classList.contains('is-unread'));
+    const open = action(view, 'Continue');
+    assert.ok(open, 'Continue, where you were');
+    click(open);
+    assert.strictEqual(opened[opened.length - 1].basename, 'Cooperation');
+    await view.setState({ mode: 'read' }, {});
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Anarchy']);
+    // Home: Continue reading picks up the note you were partway through.
+    plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: id === 'continue' }));
+    await view.setState({ mode: 'home' }, {});
+    const head = Array.from(view.contentEl.querySelectorAll('.dr-shelf-head')).find((x) => /Continue reading/.test(x.textContent));
+    assert.ok(head, 'a Continue reading shelf');
+    assert.strictEqual(head.nextElementSibling.querySelector('.dr-card-title').textContent, 'Cooperation');
+    // Switched off: none of it.
+    plugin.settings.readingHistory = false;
+    Object.assign(view, { mode: 'folder', path: 'IR' });
+    view.render();
+    assert.ok(!/read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent));
+    assert.ok(!view.contentEl.querySelector('.dr-track.is-unread'));
+    assert.ok(action(view, 'Open'));
+  });
+
+  await t('settings step 4 puts Recently read in the library after Pinned, once', () => {
+    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 4);
+    const saved = { librarySections: [{ title: '', items: [{ kind: 'builtin', id: 'home' }] }, { title: 'Yours', items: [{ kind: 'builtin', id: 'bookmarks' }, { kind: 'builtin', id: 'smart' }] }] };
+    step.run(saved);
+    assert.deepStrictEqual(saved.librarySections[1].items.map((i) => i.id), ['bookmarks', 'read', 'smart']);
+    step.run(saved);
+    assert.strictEqual(saved.librarySections[1].items.filter((i) => i.id === 'read').length, 1);
+    const none = {};
+    step.run(none);
+    assert.deepStrictEqual(none, {});
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {

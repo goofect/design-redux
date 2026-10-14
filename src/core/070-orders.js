@@ -34,7 +34,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'albumSorts', 'knowledgeMeant'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -57,6 +57,19 @@ export const SETTINGS_MIGRATIONS = [
     to: 3,
     run(saved) {
       if (saved.coverFallback === undefined || saved.coverFallback === 'title') saved.coverFallback = 'art';
+    },
+  },
+  {
+    // Recently read joins the library, after Pinned.
+    to: 4,
+    run(saved) {
+      if (!Array.isArray(saved.librarySections)) return;
+      const items = (sec) => (sec && Array.isArray(sec.items) ? sec.items : []);
+      if (saved.librarySections.some((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'read'))) return;
+      const home = saved.librarySections.find((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'bookmarks'));
+      if (!home) return;
+      const at = home.items.findIndex((i) => i && i.kind === 'builtin' && i.id === 'bookmarks');
+      home.items.splice(at + 1, 0, { kind: 'builtin', id: 'read' });
     },
   },
 ];

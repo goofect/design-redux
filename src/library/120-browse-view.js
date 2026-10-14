@@ -11,6 +11,7 @@ import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js'
 import { blankLook, byName, canStep, drawFolderArt, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, nestByProperty, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
+import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
@@ -1075,6 +1076,12 @@ export class BrowseView extends ItemView {
     if (newest) meta.push(`Updated ${this.relative(newest)}`);
     const progress = about ? structure.progress(about, files) : null;
     if (progress) meta.push(`${progress.done} of ${progress.total} ${progress.word}`);
+    // How far through it you are, once you've read any of it.
+    else if (folder && this.plugin.settings.readingHistory) {
+      const notes = files.filter((f) => f.extension === 'md');
+      const read = readingOf(this.plugin).countRead(notes);
+      if (read) meta.push(`${read} of ${notes.length} read`);
+    }
     info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
     if (about && about.description) info.createDiv({ cls: 'dr-detail-desc', text: about.description });
 
@@ -1085,9 +1092,10 @@ export class BrowseView extends ItemView {
       this.action(actions, 'folder-plus', 'New folder', () => this.editNewFolder(folder));
       return;
     }
-    // Open leads, filled, as Play does.
-    this.action(actions, 'book-open', 'Open', () => {
-      const target = files[0];
+    // Open leads, filled, as Play does — at the note you were on, where you've been in it.
+    const resume = this.plugin.settings.readingHistory ? readingOf(this.plugin).lastOpened(files) : null;
+    this.action(actions, 'book-open', resume && resume !== files[0] ? 'Continue' : 'Open', () => {
+      const target = resume || files[0];
       if (target) this.app.workspace.getLeaf(false).openFile(target);
     }).addClass('is-primary');
     this.action(actions, 'shuffle', 'Random', () => {

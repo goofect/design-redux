@@ -12,6 +12,7 @@ import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
+import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
@@ -51,6 +52,11 @@ export class BrowseRows {
     }
 
     row.createDiv({ cls: 'dr-track-num', text: String(index) });
+    // New to you — made since, or changed since you read it: a dot by its number.
+    if (this.plugin.settings.readingHistory && file.extension === 'md' && readingOf(this.plugin).isNew(file)) {
+      row.addClass('is-unread');
+      row.setAttribute('aria-description', readingOf(this.plugin).state(file) === 'changed' ? 'Changed since you read it' : 'Not read yet');
+    }
 
     const name = row.createDiv({ cls: 'dr-track-name' });
     if (nest && nest.children) {

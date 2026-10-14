@@ -684,3 +684,18 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   (`notePageTint`). Menus, suggestions and the canvas's bar and controls
   are frosted glass (`glassPanels`, a class on the page), not in the
   editorial look and not where the system asks for less transparency.
+
+## 23. 2.0, phase 6: reading progress and Home
+
+- **Reading history** (`core/075`, `readingOf(plugin)`): when each note was
+  last opened and when it was read, in the plugin's data (`readingLog`,
+  path-keyed, the latest 3000), never in notes. A note is read once its
+  text has been on screen to its end (`library/145`: scrolled there, or
+  short enough to fit and open a few seconds); changed since, it's
+  "changed"; changed by you while open, still read.
+- **What it shows:** an album's header counts "12 of 17 read"; a row new to
+  you — made since the history began, or changed since you read it — has a
+  dot; Open on an album becomes Continue, at the note you were last on;
+  Recently read is a collection and joins the library after Pinned
+  (settings step 4); Home's Continue reading picks up a note you didn't
+  finish before the next one.

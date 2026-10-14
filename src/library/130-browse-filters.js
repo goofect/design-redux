@@ -297,6 +297,7 @@ export class Library extends Feature {
     library.push({ kind: 'builtin', id: 'properties' });
     const yours = [
       { kind: 'builtin', id: 'bookmarks' },
+      { kind: 'builtin', id: 'read' },
       { kind: 'builtin', id: 'smart' },
     ];
     const tools = ['library-check', 'knowledge-check', 'inbox']

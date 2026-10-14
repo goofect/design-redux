@@ -1647,6 +1647,34 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('remembers a note read to its end, in its own data, and shows the album how far through it is', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getFolderByPath('Read album')) await app.vault.createFolder('Read album');
+      for (const n of ['One', 'Two']) {
+        const old = app.vault.getFileByPath(`Read album/${n}.md`);
+        if (old) await app.vault.delete(old);
+        await app.vault.create(`Read album/${n}.md`, `${n}: short enough to fit.`);
+      }
+    });
+    await obsidianPage.openFile('Read album/One.md');
+    const log = () => browser.executeObsidian(({ plugins }) => plugins.designRedux.settings.readingLog['Read album/One.md'] || null);
+    await browser.waitUntil(async () => !!(await log()), { timeout: 4000, timeoutMsg: 'its opening was never noted' });
+    await browser.waitUntil(async () => !!((await log()) || {}).read, { timeout: 9000, timeoutMsg: 'a short note open a while was never counted read' });
+    const meta = await browser.executeObsidian(async ({ plugins }) => {
+      const p = plugins.designRedux;
+      const lib = p.features.find((f) => f.constructor.name === 'Library');
+      await lib.browseMode({ mode: 'folder', path: 'Read album' });
+      await new Promise((r) => setTimeout(r, 500));
+      const el = document.querySelector('.workspace-leaf.mod-active .dr-detail-meta');
+      return el ? el.textContent : '';
+    });
+    expect(meta).toContain('1 of 2 read');
+    await browser.executeObsidian(async ({ app }) => {
+      const folder = app.vault.getFolderByPath('Read album');
+      if (folder) await app.vault.delete(folder, true);
+    });
+  });
+
   it('draws an arrow in a style of its own, keeps it in the canvas file, and goes back to the default', async function () {
     await obsidianPage.openFile('Map.canvas');
     await browser.$(ACTIVE + '.canvas-controls .dr-fold-control').waitForExist({ timeout: 10000 });

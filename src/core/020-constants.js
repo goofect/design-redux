@@ -12,6 +12,7 @@ export const BUILTIN_SCREENS = {
   properties: 'properties',
   recents: 'recents',
   added: 'added',
+  read: 'read',
   subjects: 'subjects',
   collections: 'collections',
   bookmarks: 'pinned',
@@ -27,6 +28,7 @@ export const LIBRARY_BUILTINS = {
   bookmarks: { label: 'Pinned', icon: 'pin' },
   recents: { label: 'Recently opened', icon: 'clock' },
   added: { label: 'Recently added', icon: 'calendar-plus' },
+  read: { label: 'Recently read', icon: 'book-check' },
   subjects: { label: 'Subjects', icon: 'book' },
   collections: { label: 'Collections', icon: 'library' },
   properties: { label: 'Properties', icon: 'tags' },
@@ -69,6 +71,12 @@ export const DEFAULTS = {
   notePage: true,
   // Menus, suggestions and the canvas's bar and controls as frosted glass.
   glassPanels: true,
+  // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
+  readingHistory: true,
+  // { path: { opened, read, mtime } } — when each note was opened and read.
+  readingLog: {},
+  // When the reading history began: notes made before it aren't news.
+  readingSince: 0,
   // A soft glow of a note's cover, or its album's, behind its title.
   notePageTint: true,
   // A note's properties as quiet chips under its title, the full block a click away.
@@ -85,7 +93,7 @@ export const DEFAULTS = {
   defaultSort: 'name',
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
-  keepOwnOrder: { recents: true, pinned: true },
+  keepOwnOrder: { recents: true, pinned: true, read: true },
   // An album sorted from its filter button keeps that order, by its path.
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
@@ -292,7 +300,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 3,
+  settingsVersion: 4,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
