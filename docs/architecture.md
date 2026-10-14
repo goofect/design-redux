@@ -816,3 +816,7 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   album a Saved view, the screen of saved views and gathering collections
   Views, and a folder that holds collections a Shelf. Ids, class names,
   property names (`album`, `includes`…) and stored data keep the old words.
+- **Layout** (`libraryLayout`, 110 `showsCovers`): Automatic shows
+  collections, pins and a property's values (up to `VALUE_GRID_MOST`) as
+  covers, and notes opened, added or read as a list; Covers and Lists set
+  every screen one way (collections as rows: `folderRows`).

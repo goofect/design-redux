@@ -153,6 +153,8 @@ export const DEFAULTS = {
   settingsLevel: 'basic',
   // Canvas tools: 'tasks', a button for each, or 'one' with them all in its menu.
   canvasToolButtons: 'tasks',
+  // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
+  libraryLayout: 'auto',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

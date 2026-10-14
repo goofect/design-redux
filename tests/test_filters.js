@@ -129,7 +129,7 @@ note(misc, 'Shopping', { fm: {}, age: 1 });
 
 const plugin = {
   settings: {
-    defaultSort: 'name', recentSearches: [], categoryProperty: '', hideEmptyFolders: false,
+    defaultSort: 'name', libraryLayout: 'covers', recentSearches: [], categoryProperty: '', hideEmptyFolders: false,
     albumColumns: '', albumNoteLimit: 8, discNoteLimit: 10, coverProperty: 'cover', tableColumns: '',
   },
   saveData: async () => {},

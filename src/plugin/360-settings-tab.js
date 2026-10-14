@@ -26,7 +26,7 @@ export const SETTINGS_TABS = [
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
+      { keys: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
         desc: 'What the library lists, under your own headings.',
@@ -101,7 +101,7 @@ export const SETTINGS_TABS = [
  */
 export const BASIC_SETTINGS = new Set([
   'look', 'gridDensity', 'artworkSize',
-  'library', 'homePath', 'defaultSort', 'searchNoteText', 'smartAlbums',
+  'library', 'libraryLayout', 'homePath', 'defaultSort', 'searchNoteText', 'smartAlbums',
   'notePage', 'notePageShelves', 'readingHistory', 'knowledge',
   'canvasMaps', 'canvasMapToolbar', 'canvasTools',
   'workspaceModes', 'contextStrip', 'onePage',

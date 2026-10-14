@@ -180,7 +180,8 @@ function setup() {
   ['Anarchy', 'Balance', 'Cooperation', 'Deterrence'].forEach((n) => v.file(`IR/${n}.md`));
   ['Realism', 'Liberalism'].forEach((n) => v.file(`IR/Theories/${n}.md`));
   const plugin = {
-    settings: JSON.parse(JSON.stringify(R.DEFAULTS)),
+    // Covers, as the screens' own tests expect; Automatic and Lists have a test of their own.
+    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { libraryLayout: 'covers' }),
     saved: 0,
     saveData: async () => { plugin.saved++; },
     isFolderNote: (f) => f.basename === (f.parent && f.parent.name),
@@ -1410,6 +1411,25 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!got.includes('status'));
     assert.strictEqual(textExcerpt('the parliament is sovereign', 'parliament sovereign'), 'the parliament is sovereign');
     assert.strictEqual(textExcerpt('nothing', 'parliament'), null);
+  });
+
+  await t('layout: Automatic shows collections as covers and notes you opened as a list; Lists shows collections as rows too', async () => {
+    const { view, plugin, app } = setup();
+    plugin.settings.libraryLayout = 'auto';
+    plugin.recentFiles = () => [app.vault.getFileByPath('IR/Anarchy.md')];
+    await view.setState({ mode: 'recents' }, {});
+    assert.ok(view.contentEl.querySelector('.dr-collection-tracks .dr-track[data-path="IR/Anarchy.md"]'), 'recently opened: a list');
+    assert.ok(!view.contentEl.querySelector('.dr-card'));
+    await view.setState({ mode: 'folders' }, {});
+    assert.strictEqual(view.contentEl.querySelector('.dr-browse-title').textContent, 'Collections');
+    assert.ok(view.contentEl.querySelector('.dr-card'), 'collections: covers');
+    plugin.settings.libraryLayout = 'lists';
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.dr-card'));
+    assert.ok(view.contentEl.querySelector('.dr-folder-rows .dr-search-prop[data-path="IR"]'), 'collections: rows');
+    plugin.settings.libraryLayout = 'covers';
+    await view.setState({ mode: 'recents' }, {});
+    assert.ok(view.contentEl.querySelector('.dr-card'), 'covers, as set');
   });
 
   await t('a note matches by its title, alias, a property, its album, or nearly its title — in that order', () => {

@@ -345,7 +345,7 @@ export const ALBUM_RECENTS_FROM = 12;
 
 export class FoldersScreen extends BrowseScreen {
   title() {
-    return 'Folders';
+    return 'Collections';
   }
 
   render(root) {
@@ -369,7 +369,8 @@ export class FoldersScreen extends BrowseScreen {
       return;
     }
 
-    view.folderTiles(root, shown, (f) => f.parent && f.parent.name);
+    if (showsCovers(this.settings, 'collections')) view.folderTiles(root, shown, (f) => f.parent && f.parent.name);
+    else folderRows(view, root, shown);
   }
 }
 
@@ -420,6 +421,32 @@ export class NotesScreen extends BrowseScreen {
 /* How long Search waits after typing before reading notes' text, and how many it shows. */
 export const TEXT_PAUSE = 250;
 export const TEXT_MOST = 50;
+
+/** Whether a screen shows covers or a list: as set, or — Automatic — covers for collections, lists for notes. */
+export function showsCovers(settings, what) {
+  const as = settings.libraryLayout || 'auto';
+  if (as === 'covers') return true;
+  if (as === 'lists') return false;
+  return what !== 'notes';
+}
+
+/** Collections as rows, for Lists: a small cover, the name, how many it holds. */
+export function folderRows(view, root, folders) {
+  const list = root.createDiv({ cls: 'dr-search-props dr-folder-rows' });
+  roveFocus(list, '.dr-search-prop');
+  folders.forEach((folder) => {
+    const row = list.createDiv({ cls: 'dr-search-prop' });
+    asButton(row);
+    row.dataset.path = folder.path;
+    drawFolderArt(view.plugin, row.createDiv({ cls: 'dr-search-prop-art' }), folder);
+    const text = row.createDiv({ cls: 'dr-search-prop-text' });
+    text.createDiv({ cls: 'dr-search-prop-title', text: folder.name });
+    text.createDiv({ cls: 'dr-search-prop-sub', text: view.countLabel(folder) });
+    view.pickOrOpen(row, { folder }, () => view.openFolder(folder), false);
+    onContextMenu(row, (evt) => view.folderMenu(evt, folder, view.folderCover(folder)));
+  });
+  return list;
+}
 
 /** A value's cover: the first a note of it carries, else one drawn from its name — the same on its tile and its page. */
 export function valueArt(view, el, key, value, files) {
@@ -561,7 +588,9 @@ export class PropertiesScreen extends BrowseScreen {
   /** Values as covers or as a list: as chosen, or covers while there are few enough to take in. */
   showsGrid(n) {
     const as = this.settings.propertyValueView || 'auto';
-    return as === 'grid' || (as === 'auto' && n <= VALUE_GRID_MOST);
+    if (as !== 'auto') return as === 'grid';
+    const layout = this.settings.libraryLayout || 'auto';
+    return layout === 'covers' || (layout === 'auto' && n <= VALUE_GRID_MOST);
   }
 
   /**
@@ -1069,6 +1098,14 @@ export class CollectionScreen extends BrowseScreen {
     if (!files.length && !folders.length) {
       const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : this.read ? ['Nothing read to the end yet', 'book-check'] : ['Nothing opened yet', 'clock'];
       view.emptyState(root, empty[0], empty[1], view.clearAction());
+      return;
+    }
+
+    // Notes you opened, added or read are a list, unless set to covers; pins stay covers, in your order.
+    if (!this.pinned && !showsCovers(this.settings, 'notes')) {
+      const list = root.createDiv({ cls: 'dr-tracks dr-collection-tracks' });
+      roveFocus(list, '.dr-track');
+      files.forEach((file, i) => view.trackRow(list, file, i + 1));
       return;
     }
 

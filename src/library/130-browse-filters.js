@@ -172,6 +172,14 @@ export class Library extends Feature {
         options: GRID_DENSITIES,
       },
       {
+        key: 'libraryLayout',
+        type: 'dropdown',
+        showIf: 'library',
+        name: 'Layout',
+        desc: 'Covers or lists. Automatic shows collections, pins and a few values as covers, and notes — recently opened, added and read — as lists.',
+        options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' },
+      },
+      {
         key: 'tileGroups',
         type: 'dropdown',
         showIf: 'library',
