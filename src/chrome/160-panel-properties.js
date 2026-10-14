@@ -9,12 +9,13 @@
 
 import { Menu, Notice, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { composing } from '../core/030-helpers-art.js';
+import { composing, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { attachSuggest } from '../core/050-helpers-dom.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
+import { Library } from '../library/130-browse-filters.js';
 import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
@@ -331,6 +332,12 @@ export class PropertiesSection extends PanelSection {
     return 'text';
   }
 
+  /**
+   * A property's menu, by how far a choice reaches: its type and its
+   * place in this note first; then what goes across the vault, under
+   * Manage property, where the Properties screen shows what it touches;
+   * and last, taking it out of this note.
+   */
   showMenu(key, anchorEl) {
     const menu = new Menu();
     const current = this.typeOf(key);
@@ -340,6 +347,7 @@ export class PropertiesSection extends PanelSection {
         item.setTitle(TYPE_LABELS[type]);
         item.setIcon(TYPE_ICONS[type]);
         item.setChecked(type === current);
+        item.setSection('type');
         item.onClick(() => {
           try {
             this.app.metadataTypeManager.setType(key, type);
@@ -358,13 +366,12 @@ export class PropertiesSection extends PanelSection {
       ? Array.from(row.parentElement.querySelectorAll(':scope > .dr-row'))
       : [];
     const at = rows.indexOf(row);
-    menu.addSeparator();
     [
       ['Move up', 'arrow-up', -1, at > 0],
       ['Move down', 'arrow-down', 1, at !== -1 && at < rows.length - 1],
     ].forEach(([title, icon, delta, possible]) => {
       menu.addItem((item) => {
-        item.setTitle(title).setIcon(icon);
+        item.setTitle(title).setIcon(icon).setSection('order');
         if (typeof item.setDisabled === 'function') item.setDisabled(!possible);
         item.onClick(() => {
           if (possible) this.moveRow(row, delta);
@@ -372,35 +379,64 @@ export class PropertiesSection extends PanelSection {
       });
     });
 
-    menu.addSeparator();
-    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
-    if (bulk) {
-      menu.addItem((item) =>
-        item
-          .setTitle('Rename in every note…')
-          .setIcon('pencil')
-          .onClick(() => bulk.openRenameProperty(key))
-      );
-    }
-    const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
-    const file = this.file;
-    if (album && album.enabled && file && album.albumNotes(file).length) {
-      menu.addItem((item) =>
-        item
-          .setTitle(`Set for all of ${album.albumName(file)}`)
-          .setIcon('layers')
-          .onClick(() => album.apply(file, key))
+    const manage = this.manageEntries(key);
+    if (manage.length) {
+      menuGroup(
+        menu,
+        'Manage property',
+        'settings-2',
+        (sub, nested) =>
+          manage.forEach(([title, long, icon, run]) =>
+            sub.addItem((item) => item.setTitle(nested ? title : long).setIcon(icon).setSection('manage').onClick(run))
+          ),
+        'manage'
       );
     }
     menu.addItem((item) =>
       item
-        .setTitle('Remove property')
+        .setTitle('Remove from note')
         .setIcon('trash-2')
+        .setSection('remove')
         .onClick(() => this.remove(key))
     );
 
     const r = anchorEl.getBoundingClientRect();
     menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
+  }
+
+  /**
+   * What reaches past this note, each [short title, title when not
+   * nested, icon, run]: the notes using it and those sharing this note's
+   * value, in the Properties screen; renaming it everywhere; and setting
+   * it for the whole album.
+   */
+  manageEntries(key) {
+    const out = [];
+    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
+    if (library && library.enabled) {
+      // The Properties screen knows a property by Obsidian's key for it, in lower case.
+      const open = (value) => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: value || null });
+      out.push(['View all notes using it', `View all notes using ${key}`, 'list', () => open(null)]);
+      const raw = noteProps(this.app, this.file)[key];
+      const values = (Array.isArray(raw) ? raw : [raw])
+        .map((v) => (v === null || v === undefined ? '' : String(v)))
+        .map((v) => v.replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
+        .filter((v) => v && v.length <= 60);
+      values.slice(0, 3).forEach((v) =>
+        out.push([`View notes with “${v}”`, `View notes with “${v}”`, 'filter', () => open(v)])
+      );
+    }
+    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
+    if (bulk) {
+      out.push(['Rename across vault…', `Rename ${key} across vault…`, 'pencil', () => bulk.openRenameProperty(key)]);
+    }
+    const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
+    const file = this.file;
+    if (album && album.enabled && file && album.albumNotes(file).length) {
+      const name = `Set for all of ${album.albumName(file)}`;
+      out.push([name, name, 'layers', () => album.apply(file, key)]);
+    }
+    return out;
   }
 
   /**

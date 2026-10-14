@@ -738,3 +738,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   a way back. Values picked by their boxes merge into one, chosen or typed
   (`MergeValuesModal`, 302; `bulk.mergeValuesInto`, one step of Undo). The
   list sorts by name, notes or type (`propertiesSort`).
+- **A note's property menu** (160 `showMenu`): by reach — type and place in
+  this note; then Manage property (`manageEntries`, nested where Obsidian
+  allows): View all notes using it and View notes with each of its values
+  (the Properties screen, through `Library.browseMode`), Rename across vault,
+  Set for the album; last, Remove from note.

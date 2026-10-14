@@ -10,6 +10,7 @@
  "160-panel-properties": [
   "AlbumProperty",
   "BulkEditing",
+  "Library",
   "QuietLinks"
  ],
  "190-strip": [

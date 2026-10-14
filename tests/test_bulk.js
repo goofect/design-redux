@@ -128,7 +128,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
-  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes };\n');
+  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1136,15 +1136,31 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(offTag.items.length, 0);
   });
 
-  await t("the properties panel's menu renames a property in every note", () => {
-    const v = makeVault({ 'a.md': note({ domain: 'x' }) });
+  await t("the properties panel's menu: this note's choices, then what reaches the vault, then Remove from note", () => {
+    const v = makeVault({ 'a.md': note({ domain: ['[[Politics]]', 'Law'] }) });
     const { plugin } = makePlugin(v);
+    // The library, to see the notes using it.
+    const browsed = [];
+    const library = Object.create(R.Library.prototype);
+    Object.defineProperty(library, 'enabled', { value: true });
+    library.browseMode = (state) => browsed.push(state);
+    plugin.features.push(library);
     const popupEl = document.body.appendChild(document.createElement('div'));
     const section = new R.PropertiesSection({ plugin, popupEl });
     section.mount(popupEl, v.file('a.md'));
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-key-icon'));
     const m = menus.pop();
-    const item = m.items.find((i) => i.title === 'Rename in every note…');
+    const sections = m.items.map((i) => i.section).filter((x, i, all) => all.indexOf(x) === i);
+    assert.deepStrictEqual(sections, ['type', 'order', 'manage', 'remove']);
+    assert.strictEqual(m.items[m.items.length - 1].title, 'Remove from note');
+    assert.deepStrictEqual(m.items.filter((i) => i.section === 'manage').map((i) => i.title), [
+      'View all notes using domain', 'View notes with “Politics”', 'View notes with “Law”', 'Rename domain across vault…',
+    ]);
+    m.items.find((i) => i.title === 'View notes with “Politics”').click();
+    assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: 'Politics' });
+    m.items.find((i) => i.title === 'View all notes using domain').click();
+    assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: null });
+    const item = m.items.find((i) => i.title === 'Rename domain across vault…');
     assert.ok(item, `not offered: ${m.items.map((i) => i.title)}`);
     item.click();
     const opened = modals.pop();

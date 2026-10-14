@@ -41,6 +41,7 @@ class Menu {
     item.setTitle = (t) => { item.title = t; return item; };
     item.setIcon = () => item;
     item.setChecked = () => item;
+    item.setSection = () => item;
     item.setDisabled = (d) => { item.disabled = d; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item); this.items.push(item); return this;
