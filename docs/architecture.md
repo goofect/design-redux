@@ -774,3 +774,15 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   Browse Categories as tiles, with the property they come from chosen
   beside the heading (`categoryProperty`); with none, Albums, Properties and
   Tags instead.
+- **Properties as Artists** (110 `PropertiesScreen`): the list on the left;
+  a property's page on the right — its name, "N notes · N values · N empty",
+  then its values as covers (`valueArt`, the same on the value's page) or a
+  list (`propertyValueView`: auto shows covers up to `VALUE_GRID_MOST`),
+  "No value" last. A value opens as an album (`renderValuePage`, through
+  `renderAlbumHead`): cover, name, the property under it as the way back,
+  Open, Random and More, and its notes in the album list. Management is in
+  the menus — a value's: Open, Open in new tab, Rename value, Merge with
+  (Edit with it picked), Copy value, Narrow the library to these; a
+  property's: View values, Rename, Merge, Change type, Find notes missing
+  it, Copy name, Remove from every note. Edit on a property's page picks
+  values to merge; with none chosen, it renames and merges properties.

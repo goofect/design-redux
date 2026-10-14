@@ -7026,22 +7026,45 @@ body.is-phone .dr-td-length {
   padding: 0 0 var(--dr-space-1);
 }
 
-.dr-prop-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-3) calc(var(--dr-u) * 6);
-  margin: var(--dr-space-1) 2px calc(var(--dr-u) * 5);
+/* A property's page, as an artist's: its name large, a grey line, its values. */
+.dr-split-heading.dr-prop-page-title {
+  display: block;
+  margin: 0;
+  font-size: var(--dr-title-size, 1.6em);
+  font-weight: 700;
 }
 
-.dr-prop-fact-n {
-  font-size: var(--font-ui-large);
-  font-weight: 600;
-  color: var(--text-normal);
-}
-
-.dr-prop-fact-label {
-  font-size: var(--font-ui-smaller);
+.dr-prop-page-meta {
+  margin: 2px 2px var(--dr-space-3);
   color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-prop-view-toggle {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.dr-prop-view.is-active {
+  color: var(--text-accent);
+}
+
+.dr-prop-values-grid .dr-card.is-empty-value .dr-card-title {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.dr-prop-value-art {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-prop-value-art.is-blank {
+  background-color: var(--background-secondary);
 }
 
 .dr-prop-values {
@@ -7060,8 +7083,7 @@ body.is-phone .dr-td-length {
   cursor: pointer;
 }
 
-.dr-prop-value-tick,
-.dr-prop-value-tick-space {
+.dr-prop-value-tick {
   flex: 0 0 auto;
   width: 16px;
   margin: 0;
@@ -7091,8 +7113,7 @@ body.is-phone .dr-td-length {
   font-style: italic;
 }
 
-.dr-prop-value:focus-visible,
-.dr-prop-back:focus-visible {
+.dr-prop-value:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: -2px;
 }
@@ -7100,10 +7121,6 @@ body.is-phone .dr-td-length {
 @media (any-hover: hover) {
   .dr-prop-value:hover {
     background-color: var(--background-modifier-hover);
-  }
-
-  .dr-prop-back:hover {
-    color: var(--text-normal);
   }
 }
 
@@ -7128,54 +7145,6 @@ body.is-phone .dr-td-length {
   flex: 1 1 auto;
   font-size: var(--font-ui-small);
   color: var(--text-muted);
-}
-
-.dr-prop-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-bottom: var(--dr-space-3);
-  color: var(--text-accent);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-
-.dr-prop-back-icon {
-  display: inline-flex;
-}
-
-.dr-prop-back-icon .svg-icon {
-  width: 14px;
-  height: 14px;
-}
-
-/* One value's notes: the way back, and narrowing the library to them. */
-.dr-prop-detail-head {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-3);
-  margin-bottom: var(--dr-space-3);
-}
-
-.dr-prop-detail-head .dr-prop-back {
-  margin-bottom: 0;
-}
-
-.dr-prop-narrow {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  margin-left: auto;
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-prop-narrow-icon {
-  display: inline-flex;
-}
-
-.dr-prop-narrow-icon .svg-icon {
-  width: 12px;
-  height: 12px;
 }
 
 /* While property filters narrow the library: how many notes pass. */

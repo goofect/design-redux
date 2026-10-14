@@ -8,8 +8,8 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
-import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
-import { albumNeighbours, blankLook, coverGen, drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
+import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
+import { albumNeighbours, blankLook, drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
@@ -421,26 +421,45 @@ export class NotesScreen extends BrowseScreen {
 export const TEXT_PAUSE = 250;
 export const TEXT_MOST = 50;
 
+/** A value's cover: the first a note of it carries, else one drawn from its name — the same on its tile and its page. */
+export function valueArt(view, el, key, value, files) {
+  const name = String(value);
+  const src = view.groupCover({ files: files || [] });
+  view.fillArt(el, src, 'tag', view.genName(name, `value:${key}:${name}`), blankLook(view.plugin.settings, name));
+}
+
 /* The Properties screen's name for the notes that leave a property empty, where a value would go. */
 export const EMPTY_VALUE = '\u2205';
+
+/* Up to how many values a property shows as covers, unless set to always or never. */
+export const VALUE_GRID_MOST = 40;
 
 export class PropertiesScreen extends BrowseScreen {
   title() {
     return 'Properties';
   }
 
+  /**
+   * As a music app's Artists: the properties listed on the left, and the
+   * one chosen as a page of its own on the right — its values as covers,
+   * each opening as an album of the notes that carry it.
+   */
   render(root) {
     const view = this.view;
-    view.renderTitleBar(root, this.title());
+    const all = view.propertyList();
+    const chosen = all.find((p) => p.key === view.property) || null;
+    // A value is a page of its own, as an album is.
+    if (chosen && view.value && !view.editing) return this.renderValuePage(root, chosen, view.value);
 
-    const props = this.sortProps(view.propertyList().filter((p) => view.matches(p.name)));
-    this.editButton(root, props.length > 0);
+    view.renderTitleBar(root, this.title());
+    const props = this.sortProps(all.filter((p) => view.matches(p.name)));
+    this.editButton(root, props.length > 0, !!chosen);
     if (!view.editing) this.renderMatching(root);
     if (!props.length) {
       root.createDiv({ cls: 'dr-empty', text: 'No properties' });
       return;
     }
-    if (view.editing) {
+    if (view.editing && !chosen) {
       this.renderEditing(root, props);
       return;
     }
@@ -468,7 +487,7 @@ export class PropertiesScreen extends BrowseScreen {
       row.createDiv({ cls: 'dr-split-count', text: String(prop.count) });
 
       onActivate(row, () => view.navigate({ property: prop.key, keepFilters: true }));
-      onContextMenu(row, (evt) => this.propertyMenu(evt, prop.name));
+      onContextMenu(row, (evt) => this.propertyMenu(evt, prop));
     });
 
     if (!selected) {
@@ -476,14 +495,11 @@ export class PropertiesScreen extends BrowseScreen {
       return;
     }
 
-    // On a phone there's room for the list or the values, not both, so
+    // On a phone there's room for the list or the page, not both, so
     // choosing a property swaps one for the other — the way an artist
-    // opens from the Artists list — and back returns to the list. The
-    // heading says whose values these are, since the list isn't beside
-    // them to show it.
+    // opens from the Artists list — and back returns to the list.
     split.addClass('has-selection');
-    if (view.value) this.renderValue(detail, selected, view.value);
-    else this.renderOverview(detail, selected);
+    this.renderOverview(detail, selected);
   }
 
   /** The property list's order: by name, by how many notes use it, or by type. */
@@ -542,148 +558,221 @@ export class PropertiesScreen extends BrowseScreen {
       });
   }
 
+  /** Values as covers or as a list: as chosen, or covers while there are few enough to take in. */
+  showsGrid(n) {
+    const as = this.settings.propertyValueView || 'auto';
+    return as === 'grid' || (as === 'auto' && n <= VALUE_GRID_MOST);
+  }
+
   /**
-   * The property itself: how many notes use it, how many values it has
-   * and how many are left empty; then its values, each opening its notes.
-   * Two or more picked can be merged into one.
+   * A property's page, as an artist's: its name, how many notes and
+   * values, then the values — as covers, or a list when there are many —
+   * each opening its own page. Picking values to merge is Edit's.
    */
   renderOverview(detail, prop) {
     const view = this.view;
-    const heading = detail.createDiv({ cls: 'dr-split-heading', text: prop.name });
-    onContextMenu(heading, (evt) => this.propertyMenu(evt, prop.name));
-
-    // In the order the sort menu says, as an album's notes are.
     const groups = view.groupsByProperty(prop.key);
     const empty = this.emptyNotes(prop.key);
     const using = new Set(empty.map((f) => f.path));
     groups.forEach((g) => g.files.forEach((f) => using.add(f.path)));
+
+    const title = detail.createDiv({ cls: 'dr-split-heading dr-prop-page-title', text: prop.name });
+    onContextMenu(title, (evt) => this.propertyMenu(evt, prop));
+    const meta = [bulkCount(using.size, 'note'), bulkCount(groups.length, 'value')];
+    if (empty.length) meta.push(`${empty.length} empty`);
+    detail.createDiv({ cls: 'dr-prop-page-meta', text: meta.join('  ·  ') });
     if (!groups.length && !empty.length) {
       detail.createDiv({ cls: 'dr-split-empty', text: 'No notes carry this property' });
       return;
     }
 
-    const facts = detail.createDiv({ cls: 'dr-prop-facts' });
-    [
-      [bulkCount(using.size, 'note'), 'Used in'],
-      [String(groups.length), groups.length === 1 ? 'Value' : 'Values'],
-      [String(empty.length), 'Empty'],
-      [String(prop.type || 'text'), 'Type'],
-    ].forEach(([n, label]) => {
-      const fact = facts.createDiv({ cls: 'dr-prop-fact' });
-      fact.createDiv({ cls: 'dr-prop-fact-n', text: n });
-      fact.createDiv({ cls: 'dr-prop-fact-label', text: label });
-    });
-
-    const bulk = this.plugin.feature(BulkEditing);
-    const isTags = TAG_KEYS.indexOf(String(prop.key).toLowerCase()) !== -1;
-    const canMerge = !!bulk && !isTags;
-    if (!view.valuePicks || view.valuePicks.key !== prop.key) view.valuePicks = { key: prop.key, set: new Set() };
-    const picks = view.valuePicks.set;
-    Array.from(picks).forEach((v) => {
-      if (!groups.some((g) => String(g.value) === v)) picks.delete(v);
-    });
-
     const head = detail.createDiv({ cls: 'dr-search-section' });
     head.createSpan({ cls: 'dr-search-section-title', text: 'Values' });
     head.createSpan({ cls: 'dr-search-section-count', text: String(groups.length) });
-    const bar = canMerge ? detail.createDiv({ cls: 'dr-prop-merge-bar' }) : null;
-    const list = detail.createDiv({ cls: 'dr-prop-values' });
-    roveFocus(list, '.dr-prop-value');
-    const refresh = () => {
-      if (!bar) return;
-      bar.empty();
-      bar.toggleClass('is-empty', !picks.size);
-      if (!picks.size) return;
-      bar.createSpan({ cls: 'dr-prop-merge-said', text: picks.size === 1 ? '1 value picked. Pick another to merge them.' : `${picks.size} values picked.` });
-      const merge = bar.createEl('button', { cls: 'mod-cta dr-prop-merge-values', text: picks.size > 1 ? `Merge ${picks.size}…` : 'Merge…' });
-      merge.disabled = picks.size < 2;
-      merge.addEventListener('click', () => {
-        if (picks.size < 2) return;
-        bulk.openMergeValues(this.plugin.propertyLabel(prop.key), Array.from(picks));
-      });
-      const clear = bar.createEl('button', { cls: 'dr-prop-merge-clear', text: 'Clear' });
-      clear.addEventListener('click', () => {
-        picks.clear();
-        view.render();
-      });
-    };
+    if (view.editing) return this.renderValuePicks(detail, prop, groups);
 
-    const limit = view.expanded.has(`values:${prop.key}`) ? groups.length : 200;
-    groups.slice(0, limit).forEach((group) => {
-      const value = String(group.value);
-      const row = list.createDiv({ cls: 'dr-prop-value' });
-      asButton(row);
-      row.dataset.value = value;
-      if (canMerge) {
-        const tick = row.createEl('input', { cls: 'dr-prop-value-tick', type: 'checkbox' });
-        tick.checked = picks.has(value);
-        tick.setAttribute('aria-label', `Pick “${value}” to merge`);
-        row.toggleClass('is-picked', tick.checked);
-        tick.addEventListener('click', (evt) => evt.stopPropagation());
-        tick.addEventListener('keydown', (evt) => evt.stopPropagation());
-        tick.addEventListener('change', () => {
-          if (tick.checked) picks.add(value);
-          else picks.delete(value);
-          row.toggleClass('is-picked', tick.checked);
-          refresh();
-        });
-      }
-      row.createDiv({ cls: 'dr-prop-value-name', text: value });
-      row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
-      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value, keepFilters: true }));
-      onContextMenu(row, (evt) => this.valueMenu(evt, prop.key, value));
+    const grid = this.showsGrid(groups.length);
+    const toggle = head.createDiv({ cls: 'dr-prop-view-toggle' });
+    [
+      ['grid', 'layout-grid', 'Covers'],
+      ['list', 'list', 'List'],
+    ].forEach(([id, icon, label]) => {
+      const b = toggle.createDiv({ cls: 'clickable-icon dr-prop-view' });
+      asButton(b, `Show values as ${label.toLowerCase()}`);
+      b.dataset.view = id;
+      b.toggleClass('is-active', (id === 'grid') === grid);
+      setIcon(b, icon);
+      onActivate(b, () => {
+        this.settings.propertyValueView = id;
+        view.render();
+        this.plugin.saveData(this.settings);
+      });
     });
+
+    const open = (value) => view.navigate({ mode: 'properties', property: prop.key, value, keepFilters: true });
+    const limit = view.expanded.has(`values:${prop.key}`) ? groups.length : 200;
+    const shown = groups.slice(0, limit);
+    if (grid) {
+      const tiles = detail.createDiv({ cls: 'dr-grid dr-prop-values-grid' });
+      roveFocus(tiles, '.dr-card');
+      shown.forEach((group) => {
+        const value = String(group.value);
+        const card = view.card(tiles, value, bulkCount(group.files.length, 'note'));
+        card.dataset.value = value;
+        valueArt(view, card.querySelector('.dr-card-art'), prop.key, value, group.files);
+        onActivate(card, () => open(value));
+        onContextMenu(card, (evt) => this.valueMenu(evt, prop, value));
+      });
+      if (empty.length) {
+        const card = view.card(tiles, 'No value', bulkCount(empty.length, 'note'));
+        card.addClass('is-empty-value');
+        card.dataset.value = EMPTY_VALUE;
+        view.fillArt(card.querySelector('.dr-card-art'), null, 'circle-dashed', null, null);
+        onActivate(card, () => open(EMPTY_VALUE));
+      }
+    } else {
+      const list = detail.createDiv({ cls: 'dr-prop-values' });
+      roveFocus(list, '.dr-prop-value');
+      shown.forEach((group) => {
+        const value = String(group.value);
+        const row = list.createDiv({ cls: 'dr-prop-value' });
+        asButton(row);
+        row.dataset.value = value;
+        valueArt(view, row.createDiv({ cls: 'dr-prop-value-art' }), prop.key, value, group.files);
+        row.createDiv({ cls: 'dr-prop-value-name', text: value });
+        row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
+        onActivate(row, () => open(value));
+        onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
+      });
+      if (empty.length) {
+        const row = list.createDiv({ cls: 'dr-prop-value is-empty-value' });
+        asButton(row);
+        row.dataset.value = EMPTY_VALUE;
+        row.createDiv({ cls: 'dr-prop-value-art is-blank' });
+        row.createDiv({ cls: 'dr-prop-value-name', text: 'No value' });
+        row.createDiv({ cls: 'dr-prop-value-count', text: String(empty.length) });
+        onActivate(row, () => open(EMPTY_VALUE));
+      }
+    }
     if (groups.length > limit) {
-      const more = list.createDiv({ cls: 'dr-prop-value dr-prop-value-more', text: `Show all ${groups.length}` });
+      const more = detail.createDiv({ cls: 'dr-prop-value-more', text: `Show all ${groups.length}` });
       asButton(more);
       onActivate(more, () => {
         view.expanded.add(`values:${prop.key}`);
         view.render();
       });
     }
-    // Notes that carry it with nothing in it: there to fill in.
-    if (empty.length) {
-      const row = list.createDiv({ cls: 'dr-prop-value is-empty-value' });
-      asButton(row);
-      row.dataset.value = EMPTY_VALUE;
-      if (canMerge) row.createDiv({ cls: 'dr-prop-value-tick-space' });
-      row.createDiv({ cls: 'dr-prop-value-name', text: 'Empty' });
-      row.createDiv({ cls: 'dr-prop-value-count', text: String(empty.length) });
-      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value: EMPTY_VALUE, keepFilters: true }));
-    }
+  }
+
+  /** In Edit: the values as a list to pick from, and Merge for two or more. */
+  renderValuePicks(detail, prop, groups) {
+    const view = this.view;
+    const bulk = this.plugin.feature(BulkEditing);
+    const isTags = TAG_KEYS.indexOf(String(prop.key).toLowerCase()) !== -1;
+    if (!view.valuePicks || view.valuePicks.key !== prop.key) view.valuePicks = { key: prop.key, set: new Set() };
+    const picks = view.valuePicks.set;
+    Array.from(picks).forEach((v) => {
+      if (!groups.some((g) => String(g.value) === v)) picks.delete(v);
+    });
+    const bar = detail.createDiv({ cls: 'dr-prop-merge-bar' });
+    const list = detail.createDiv({ cls: 'dr-prop-values is-picking' });
+    const refresh = () => {
+      bar.empty();
+      bar.createSpan({
+        cls: 'dr-prop-merge-said',
+        text: isTags
+          ? 'Tags are renamed from their menu.'
+          : picks.size === 0
+          ? 'Pick two or more values to merge them into one.'
+          : picks.size === 1
+          ? '1 value picked. Pick another to merge them.'
+          : `${picks.size} values picked.`,
+      });
+      if (isTags || !bulk) return;
+      const merge = bar.createEl('button', { cls: 'mod-cta dr-prop-merge-values', text: picks.size > 1 ? `Merge ${picks.size}…` : 'Merge…' });
+      merge.disabled = picks.size < 2;
+      merge.addEventListener('click', () => {
+        if (picks.size < 2) return;
+        bulk.openMergeValues(this.plugin.propertyLabel(prop.key), Array.from(picks));
+      });
+    };
+    groups.forEach((group) => {
+      const value = String(group.value);
+      const row = list.createDiv({ cls: 'dr-prop-value' });
+      row.dataset.value = value;
+      if (!isTags && bulk) {
+        const tick = row.createEl('input', { cls: 'dr-prop-value-tick', type: 'checkbox' });
+        tick.checked = picks.has(value);
+        tick.setAttribute('aria-label', `Pick “${value}” to merge`);
+        row.toggleClass('is-picked', tick.checked);
+        tick.addEventListener('change', () => {
+          if (tick.checked) picks.add(value);
+          else picks.delete(value);
+          row.toggleClass('is-picked', tick.checked);
+          refresh();
+        });
+        row.addEventListener('click', (evt) => {
+          if (evt.target === tick) return;
+          tick.checked = !tick.checked;
+          tick.dispatchEvent(new Event('change'));
+        });
+      }
+      row.createDiv({ cls: 'dr-prop-value-name', text: value });
+      row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
+      onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
+    });
     refresh();
   }
 
-  /** One value's notes — or the notes that leave it empty — with the way back to the property above. */
-  renderValue(detail, prop, value) {
+  /**
+   * One value, as an album: its cover, its name, the property it's a
+   * value of — the way back — and its notes, in the album's own list.
+   * "No value" gathers the notes that leave the property empty.
+   */
+  renderValuePage(root, prop, value) {
     const view = this.view;
-    const head = detail.createDiv({ cls: 'dr-prop-detail-head' });
-    const back = head.createDiv({ cls: 'dr-prop-back' });
-    asButton(back, `Back to ${prop.name}`);
-    setIcon(back.createSpan({ cls: 'dr-prop-back-icon' }), 'chevron-left');
-    back.createSpan({ text: prop.name });
-    onActivate(back, () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
+    const bar = root.createDiv({ cls: 'dr-detail-bar' });
+    view.renderSidebarToggle(bar);
+    view.renderNav(bar);
+    view.renderSearchField(bar);
+    view.renderFilterChips(root);
 
-    if (value === EMPTY_VALUE) {
-      const files = view.sortFiles(this.emptyNotes(prop.key));
-      view.renderGroup(detail, { value: 'Empty', files }, true);
-      return;
-    }
-    const group = view.groupsByProperty(prop.key).find((g) => String(g.value) === String(value));
+    const isEmpty = value === EMPTY_VALUE;
+    const group = isEmpty
+      ? { value: 'No value', files: this.emptyNotes(prop.key) }
+      : view.groupsByProperty(prop.key).find((g) => String(g.value) === String(value));
     if (!group) {
-      detail.createDiv({ cls: 'dr-split-empty', text: `No notes have “${value}” as their ${prop.name}` });
+      root.createDiv({ cls: 'dr-split-empty', text: `No notes have “${value}” as their ${prop.name}` });
       return;
     }
-    // Kept as a filter, so another property's values are these notes' only.
-    const narrow = head.createEl('button', { cls: 'dr-prop-narrow', text: 'Narrow to these' });
-    setIcon(narrow.createSpan({ cls: 'dr-prop-narrow-icon' }), 'filter');
-    narrow.prepend(narrow.lastChild);
-    narrow.setAttribute('aria-label', `Keep to the notes whose ${prop.name} is ${value}, and choose another property`);
-    narrow.addEventListener('click', () => {
-      view.addPropFilter({ key: prop.name, value: String(value), negate: false });
-      view.navigate({ mode: 'properties', property: null, value: null, keepFilters: true });
+    const files = view.sortFiles(group.files.filter((f) => view.matches(f.basename)));
+    const title = String(group.value);
+    const id = `value:${prop.key}:${title}`;
+    view.renderAlbumHead(root, {
+      title,
+      sub: prop.name,
+      cover: isEmpty ? null : view.groupCover(group),
+      glyph: isEmpty ? 'circle-dashed' : 'tag',
+      genName: view.genName(title, id),
+      files,
+      onArtMenu: isEmpty ? null : (evt) => this.valueMenu(evt, prop, title),
     });
-    view.renderGroup(detail, group, true);
+    // The property it belongs to, under the name, is the way back to it — as an album's artist is.
+    const sub = root.querySelector('.dr-detail-sub');
+    if (sub) {
+      sub.addClass('is-link');
+      asButton(sub, `Back to ${prop.name}`);
+      onActivate(sub, () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
+    }
+    const actions = root.querySelector('.dr-detail-actions');
+    if (actions && !isEmpty) {
+      const more = view.action(actions, 'ellipsis', 'More', (evt) => this.valueMenu(evt, prop, title));
+      more.addClass('dr-value-more');
+    }
+
+    const list = root.createDiv({ cls: 'dr-tracks dr-value-tracks' });
+    roveFocus(list, '.dr-track');
+    view.renderLimited(list, files, `value:${prop.key}:${title}`, 1000);
   }
 
   /**
@@ -708,29 +797,43 @@ export class PropertiesScreen extends BrowseScreen {
     });
   }
 
-  /** A value's own menu: rename it everywhere, or see its notes. */
-  valueMenu(evt, key, value) {
-    const bulk = this.plugin.feature(BulkEditing);
-    if (!bulk) return;
+  /**
+   * A value's menu, as an album's: opening it first, then what changes
+   * it — renamed or merged everywhere — and copying it; last, narrowing
+   * the library to its notes.
+   */
+  valueMenu(evt, prop, value) {
+    const view = this.view;
     evt.preventDefault();
     const menu = new Menu();
-    if (TAG_KEYS.indexOf(String(key).toLowerCase()) !== -1) {
+    const bulk = this.plugin.feature(BulkEditing);
+    const state = { mode: 'properties', property: prop.key, value };
+    const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
+    add('Open', 'book-open', 'open', () => view.navigate(Object.assign({ keepFilters: true }, state)));
+    add('Open in new tab', 'file-plus', 'open', () =>
+      this.app.workspace.getLeaf('tab').setViewState({ type: BROWSE_VIEW, active: true, state: Object.assign({ path: '/' }, state) })
+    );
+    if (bulk && TAG_KEYS.indexOf(String(prop.key).toLowerCase()) !== -1) {
       const tag = value.replace(/^#/, '');
-      menu.addItem((item) => item.setTitle(`Rename #${tag} everywhere…`).setIcon('hash').setSection('action').onClick(() => bulk.openRenameTag(tag)));
-    } else {
-      menu.addItem((item) =>
-        item
-          .setTitle('Rename this value everywhere…')
-          .setIcon('pencil')
-          .setSection('action')
-          .onClick(() => bulk.openRenameValue(this.plugin.propertyLabel(key), value))
-      );
+      add(`Rename #${tag}…`, 'hash', 'action', () => bulk.openRenameTag(tag));
+    } else if (bulk) {
+      add('Rename value…', 'pencil', 'action', () => bulk.openRenameValue(this.plugin.propertyLabel(prop.key), value));
+      // Merging is picking: Edit on the property's page, this value picked.
+      add('Merge with…', 'git-merge', 'action', () => {
+        view.valuePicks = { key: prop.key, set: new Set([value]) };
+        Promise.resolve(view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true })).then(() => view.setEditing(true));
+      });
     }
+    add('Copy value', 'copy', 'action', () => copyText(value));
+    add('Narrow the library to these', 'filter', 'view', () => {
+      view.addPropFilter({ key: prop.name, value, negate: false });
+      view.navigate({ mode: 'properties', property: null, value: null, keepFilters: true });
+    });
     showMenuAt(menu, evt);
   }
 
-  /** Edit, beside Find, as an album has it; Done while editing. */
-  editButton(root, any) {
+  /** Edit, beside Find, as an album has it: on a property's page, to pick values to merge; else to rename and merge properties. */
+  editButton(root, any, onProperty) {
     const view = this.view;
     const bar = root.querySelector('.dr-detail-bar');
     if (!bar || (!any && !view.editing) || !this.plugin.feature(BulkEditing)) return;
@@ -738,9 +841,13 @@ export class PropertiesScreen extends BrowseScreen {
       cls: `dr-bar-edit${view.editing ? ' is-done' : ''}`,
       text: view.editing ? 'Done' : 'Edit',
     });
-    button.setAttribute('aria-label', view.editing ? 'Stop editing properties' : 'Rename and merge properties');
+    button.setAttribute(
+      'aria-label',
+      view.editing ? 'Stop editing' : onProperty ? 'Pick values to merge' : 'Rename and merge properties'
+    );
     button.addEventListener('click', () => {
       view.propPicks = new Set();
+      if (view.editing && view.valuePicks) view.valuePicks.set.clear();
       view.setEditing(!view.editing);
     });
     const next = bar.querySelector('.dr-filter-btn') || bar.querySelector('.dr-browse-search');
@@ -850,7 +957,7 @@ export class PropertiesScreen extends BrowseScreen {
         if (evt.target === name || pick.contains(evt.target)) return;
         flip();
       });
-      onContextMenu(row, (evt) => this.propertyMenu(evt, prop.name));
+      onContextMenu(row, (evt) => this.propertyMenu(evt, prop));
     });
     refresh();
   }
@@ -874,22 +981,33 @@ export class PropertiesScreen extends BrowseScreen {
     });
   }
 
-  /** A property's own menu, from its row or its heading: rename it everywhere. */
-  propertyMenu(evt, name) {
-    const bulk = this.plugin.feature(BulkEditing);
-    if (!bulk) return;
+  /** A property's menu: its values, then what changes it everywhere, and copying its name. */
+  propertyMenu(evt, prop) {
+    const view = this.view;
     evt.preventDefault();
     const menu = new Menu();
-    const root = this.app.vault.getRoot();
-    [
-      ['Rename everywhere…', 'pencil', () => bulk.openRenameProperty(name)],
-      ['Merge with…', 'git-merge', () => bulk.openMerge([name])],
-      ['Change type…', 'shapes', () => bulk.openChangeType(name)],
-      ['Find notes missing it…', 'list-checks', () => bulk.openMissing([root], name)],
-      ['Remove from every note…', 'list-minus', () => bulk.openRemove([root], [name])],
-    ].forEach(([title, icon, run]) => menu.addItem((item) => item.setTitle(title).setIcon(icon).onClick(run)));
+    const name = prop.name;
+    const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
+    add('View values', 'layout-grid', 'open', () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
+    const bulk = this.plugin.feature(BulkEditing);
+    if (bulk) {
+      const root = this.app.vault.getRoot();
+      add('Rename property…', 'pencil', 'action', () => bulk.openRenameProperty(name));
+      add('Merge property…', 'git-merge', 'action', () => bulk.openMerge([name]));
+      add('Change type…', 'shapes', 'action', () => bulk.openChangeType(name));
+      add('Find notes missing it…', 'list-checks', 'action', () => bulk.openMissing([root], name));
+    }
+    add('Copy property name', 'copy', 'action', () => copyText(name));
+    if (bulk) add('Remove from every note…', 'list-minus', 'remove', () => bulk.openRemove([this.app.vault.getRoot()], [name]));
     showMenuAt(menu, evt);
   }
+}
+
+/** Text to the clipboard, with a word that it's there. */
+function copyText(text) {
+  const clip = typeof navigator !== 'undefined' && navigator.clipboard;
+  if (!clip) return;
+  clip.writeText(text).then(() => new Notice('Copied'), () => new Notice('Could not copy'));
 }
 
 /* -- recents and pins, as tiles -------------------------------------- */
@@ -1411,12 +1529,8 @@ export class SearchScreen extends BrowseScreen {
     });
   }
 
-  /** A value's cover: the first a note of it carries, else one drawn from its name. */
   valueArt(el, key, value, files) {
-    const view = this.view;
-    const src = view.groupCover({ files: files || [] });
-    const id = `value:${key}:${value}`;
-    view.fillArt(el, src, 'tag', coverGen(this.settings, String(value), id), blankLook(this.settings, String(value), id));
+    valueArt(this.view, el, key, value, files);
   }
 
   /**

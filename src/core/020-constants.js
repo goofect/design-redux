@@ -144,6 +144,8 @@ export const DEFAULTS = {
   searchNoteText: true,
   // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
   propertiesSort: 'name',
+  // A property's values: 'auto' (covers while there are few), 'grid' or 'list'.
+  propertyValueView: 'auto',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

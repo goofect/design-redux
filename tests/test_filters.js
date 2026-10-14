@@ -65,6 +65,7 @@ class Menu {
     item.setTitle = (t) => { item.title = t; return item; };
     item.setIcon = () => item;
     item.setChecked = (c) => { item.checked = !!c; return item; };
+    item.setSection = () => item;
     item.onClick = (f) => { item.click = f; return item; };
     cb(item); this.items.push(item); return this;
   }
@@ -530,7 +531,7 @@ t("Home's folder shelf follows it", () => {
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');
-  const values = () => titles(view, '.dr-prop-value:not(.is-empty-value) .dr-prop-value-name');
+  const values = () => titles(view, '.dr-prop-values-grid .dr-card:not(.is-empty-value) .dr-card-title');
   assert.deepStrictEqual(props(), ['domain', 'status']);
   assert.deepStrictEqual(values(), ['Done', 'draft']);
   openMenu(view).find('Alphabetical (Z–A)').click();
@@ -540,41 +541,60 @@ t("the Properties screen's list and a property's values follow it", () => {
   assert.deepStrictEqual(values(), ['draft', 'Done'], 'draft has the newest note (Contract)');
 });
 
-t('a property shows its facts and values; a value opens its notes, Empty those left blank; picked values merge', () => {
+t('a property is a page, as an artist\'s: its values as covers or a list, each opening as an album of its notes; No value gathers the blank', () => {
   const opened = [];
   plugin.feature = () => ({ openMergeValues: (key, values) => opened.push([key, values]), openRenameValue() {} });
   const shopping = files.find((f) => f.basename === 'Shopping');
   caches.get(shopping).frontmatter = { status: '' };
   try {
     const view = page({ mode: 'properties', property: 'status' });
-    const facts = Array.from(view.contentEl.querySelectorAll('.dr-prop-fact')).map((f) => f.textContent);
-    assert.deepStrictEqual(facts.slice(0, 3), ['4 notesUsed in', '2Values', '1Empty']);
-    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-value'));
-    assert.deepStrictEqual(rows().map((r) => r.querySelector('.dr-prop-value-name').textContent), ['Done', 'draft', 'Empty']);
-    assert.deepStrictEqual(rows().map((r) => r.querySelector('.dr-prop-value-count').textContent), ['1', '2', '1']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-prop-page-title').textContent, 'status');
+    assert.strictEqual(view.contentEl.querySelector('.dr-prop-page-meta').textContent, '4 notes  ·  2 values  ·  1 empty');
+    const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-values-grid .dr-card'));
+    assert.deepStrictEqual(tiles().map((c) => c.querySelector('.dr-card-title').textContent), ['Done', 'draft', 'No value']);
+    assert.deepStrictEqual(tiles().map((c) => c.querySelector('.dr-card-sub').textContent), ['1 note', '2 notes', '1 note']);
+    assert.ok(!view.contentEl.querySelector('.dr-prop-value-tick'), 'no picking outside Edit');
 
-    // Two picked: Merge offers them.
-    const bar = () => view.contentEl.querySelector('.dr-prop-merge-bar');
-    assert.ok(bar().classList.contains('is-empty'));
-    rows().slice(0, 2).forEach((r) => r.querySelector('.dr-prop-value-tick').click());
-    assert.ok(!bar().classList.contains('is-empty'));
-    const merge = bar().querySelector('.dr-prop-merge-values');
+    // As a list instead.
+    view.contentEl.querySelector('.dr-prop-view[data-view="list"]').click();
+    assert.strictEqual(plugin.settings.propertyValueView, 'list');
+    assert.deepStrictEqual(titles(view, '.dr-prop-value-name'), ['Done', 'draft', 'No value']);
+    plugin.settings.propertyValueView = 'auto';
+    view.render();
+
+    // A value opens as an album: its name, the property under it as the way back, its notes.
+    tiles()[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(view.value, 'draft');
+    assert.strictEqual(view.contentEl.querySelector('.dr-detail-title').textContent, 'draft');
+    assert.deepStrictEqual(titles(view, '.dr-value-tracks .dr-track-name'), ['Contract', 'Tribunal']);
+    assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.startsWith('2 notes'));
+    const sub = view.contentEl.querySelector('.dr-detail-sub');
+    assert.strictEqual(sub.textContent, 'status');
+    sub.click();
+    assert.strictEqual(view.value, null);
+    tiles()[2].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.deepStrictEqual(titles(view, '.dr-value-tracks .dr-track-name'), ['Shopping'], 'No value: the note left blank');
+
+    // In Edit, the values to pick, and Merge for two.
+    view.navigate({ mode: 'properties', property: 'status', value: null });
+    view.contentEl.querySelector('.dr-bar-edit').click();
+    const picks = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-value-tick'));
+    assert.strictEqual(picks().length, 2);
+    picks().forEach((tick) => tick.click());
+    const merge = view.contentEl.querySelector('.dr-prop-merge-values');
     assert.strictEqual(merge.textContent, 'Merge 2…');
     merge.click();
     assert.deepStrictEqual(opened.pop(), ['status', ['Done', 'draft']]);
+    view.contentEl.querySelector('.dr-bar-edit').click();
+    assert.strictEqual(view.editing, false);
 
-    // A value opens its notes, and back is the property again.
-    rows()[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert.strictEqual(view.value, 'draft');
-    assert.deepStrictEqual(titles(view, '.dr-track-name'), ['Contract', 'Tribunal']);
-    assert.strictEqual(view.contentEl.querySelector('.dr-prop-back').textContent, 'status');
-    view.contentEl.querySelector('.dr-prop-back').click();
-    assert.strictEqual(view.value, null);
-    rows()[2].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert.deepStrictEqual(titles(view, '.dr-track-name'), ['Shopping'], 'Empty: the note left blank');
+    // A value's menu: open, rename, merge — which is Edit with it picked — copy, narrow.
+    menus = [];
+    tiles()[0].dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 1, clientY: 1 }));
+    const menu = menus.pop();
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Open', 'Open in new tab', 'Rename value…', 'Merge with…', 'Copy value', 'Narrow the library to these']);
 
     // The list: by name, or by how many notes use each.
-    view.navigate({ mode: 'properties', property: 'status', value: null });
     const sort = view.contentEl.querySelector('.dr-prop-sort');
     assert.ok(sort.textContent.startsWith('Sort: Name'));
     plugin.settings.propertiesSort = 'count';
@@ -585,41 +605,52 @@ t('a property shows its facts and values; a value opens its notes, Empty those l
     assert.deepStrictEqual(titles(view, '.dr-split-name'), ['status', 'domain'], 'status in 4, domain in 3');
   } finally {
     plugin.settings.propertiesSort = 'name';
+    plugin.settings.propertyValueView = 'auto';
     caches.get(shopping).frontmatter = {};
     plugin.feature = () => null;
   }
 });
 
-t('narrowing across properties: a value kept as a filter, then another property\'s values among those notes only; chips undo each', () => {
-  const view = page({ mode: 'properties', property: 'domain', value: 'Law' });
-  // Contract and Supreme Court have domain Law.
-  view.contentEl.querySelector('.dr-prop-narrow').click();
-  assert.strictEqual(view.property, null);
-  assert.deepStrictEqual(view.propFilters(), [{ key: 'domain', value: 'Law', negate: false }]);
-  assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '2 matching notes');
-  assert.deepStrictEqual(chips(view), ['domain is Law']);
+t('narrowing across properties, from a value\'s menu: then another property\'s values among those notes only; chips undo each', () => {
+  plugin.feature = () => ({ openRenameValue() {} });
+  const narrow = (view, value) => {
+    menus = [];
+    const tile = view.contentEl.querySelector(`.dr-prop-values-grid .dr-card[data-value="${value}"]`);
+    tile.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 1, clientY: 1 }));
+    menus.pop().items.find((i) => i.title === 'Narrow the library to these').click();
+  };
+  try {
+    const view = page({ mode: 'properties', property: 'domain' });
+    // Contract and Supreme Court have domain Law.
+    narrow(view, 'Law');
+    assert.strictEqual(view.property, null);
+    assert.deepStrictEqual(view.propFilters(), [{ key: 'domain', value: 'Law', negate: false }]);
+    assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '2 matching notes');
+    assert.deepStrictEqual(chips(view), ['domain is Law']);
 
-  // status among them: Contract's draft only.
-  view.navigate({ property: 'status', keepFilters: true });
-  const values = () => titles(view, '.dr-prop-value-name');
-  assert.deepStrictEqual(values(), ['draft']);
-  view.navigate({ mode: 'properties', property: 'status', value: 'draft', keepFilters: true });
-  view.contentEl.querySelector('.dr-prop-narrow').click();
-  assert.deepStrictEqual(chips(view), ['domain is Law', 'status is draft']);
-  assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '1 matching note');
+    // status among them: Contract's draft only.
+    view.navigate({ property: 'status', keepFilters: true });
+    assert.deepStrictEqual(titles(view, '.dr-prop-values-grid .dr-card:not(.is-empty-value) .dr-card-title'), ['draft']);
+    narrow(view, 'draft');
+    assert.deepStrictEqual(chips(view), ['domain is Law', 'status is draft']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '1 matching note');
 
-  // To the notes, still narrowed.
-  view.contentEl.querySelector('.dr-prop-matching-go[data-mode="notes"]').click();
-  assert.strictEqual(view.mode, 'notes');
-  assert.deepStrictEqual(shownNotes(view), ['Contract']);
+    // To the notes, still narrowed.
+    view.contentEl.querySelector('.dr-prop-matching-go[data-mode="notes"]').click();
+    assert.strictEqual(view.mode, 'notes');
+    assert.deepStrictEqual(shownNotes(view), ['Contract']);
 
-  // The first chip's × hands its place to the next.
-  view.contentEl.querySelector('.dr-chip-clear').click();
-  assert.deepStrictEqual(chips(view), ['status is draft']);
-  assert.deepStrictEqual(shownNotes(view), ['Contract', 'Tribunal']);
-  // Somewhere else, the filters start clean.
-  view.navigate({ mode: 'folders' });
-  assert.deepStrictEqual(view.propFilters(), []);
+    // The first chip's × hands its place to the next.
+    view.contentEl.querySelector('.dr-chip-clear').click();
+    assert.deepStrictEqual(chips(view), ['status is draft']);
+    assert.deepStrictEqual(shownNotes(view), ['Contract', 'Tribunal']);
+    // Somewhere else, the filters start clean.
+    plugin.feature = () => null;
+    view.navigate({ mode: 'folders' });
+    assert.deepStrictEqual(view.propFilters(), []);
+  } finally {
+    plugin.feature = () => null;
+  }
 });
 
 t('Properties, in Edit: names to change, circles to pick, and Merge for two or more', () => {
