@@ -441,6 +441,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const head = Array.from(view.contentEl.querySelectorAll('.dr-shelf-head')).find((x) => /Continue reading/.test(x.textContent));
     assert.ok(head, 'a Continue reading shelf');
     assert.strictEqual(head.nextElementSibling.querySelector('.dr-card-title').textContent, 'Cooperation');
+    // Read a month ago or more: the first to revisit.
+    plugin.settings.readingLog['IR/Anarchy.md'].read = Date.now() - 40 * 86400000;
+    plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: id === 'picks' }));
+    await view.setState({ mode: 'home' }, {});
+    const revisit = Array.from(view.contentEl.querySelectorAll('.dr-pick')).find((x) => /Rediscover/.test(x.textContent));
+    assert.ok(revisit && /Anarchy/.test(revisit.textContent), 'read long ago, up first');
     // Switched off: none of it.
     plugin.settings.readingHistory = false;
     Object.assign(view, { mode: 'folder', path: 'IR' });

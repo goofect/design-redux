@@ -1136,12 +1136,20 @@ export class HomeScreen extends BrowseScreen {
     const now = Date.now();
     const seen = new Set(recents.map((f) => f.path));
     const today = Math.floor(now / day);
-    return notes
-      .filter((f) => !seen.has(f.path) && now - f.stat.mtime > 30 * day)
+    // Due a revisit first: read a month ago or more, the longest ago first.
+    const history = this.settings.readingHistory ? readingOf(this.plugin) : null;
+    const due = history
+      ? notes
+          .filter((f) => !seen.has(f.path) && history.state(f) === 'read' && now - history.entry(f).read > 30 * day)
+          .sort((a, b) => history.entry(a).read - history.entry(b).read)
+      : [];
+    const dueSet = new Set(due);
+    const rest = notes
+      .filter((f) => !seen.has(f.path) && !dueSet.has(f) && now - f.stat.mtime > 30 * day)
       .map((f) => ({ file: f, order: stableHash(`${today}:${f.path}`) }))
       .sort((a, b) => a.order - b.order)
-      .slice(0, 13)
       .map((x) => x.file);
+    return due.concat(rest).slice(0, 13);
   }
 
   /**

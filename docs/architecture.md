@@ -698,4 +698,5 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   dot; Open on an album becomes Continue, at the note you were last on;
   Recently read is a collection and joins the library after Pinned
   (settings step 4); Home's Continue reading picks up a note you didn't
-  finish before the next one.
+  finish before the next one. Home's Rediscover leads with notes due a revisit: read a month ago or
+  more, the longest ago first.
