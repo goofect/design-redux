@@ -17,8 +17,8 @@ export class AlbumProperty extends Feature {
     return [
       {
         key: 'propertyForAlbum',
-        name: 'Set for the whole album',
-        desc: 'A property’s menu can give its value to every note in the album, with Undo.',
+        name: 'Set for the whole collection',
+        desc: 'A property’s menu can give its value to every note in the collection, with Undo.',
       },
     ];
   }
@@ -27,7 +27,7 @@ export class AlbumProperty extends Feature {
     return [
       {
         id: 'property-to-album',
-        name: 'Give a property of this note to its whole album…',
+        name: 'Give a property of this note to its whole collection…',
         icon: 'layers',
         on: 'note',
         menu: false,

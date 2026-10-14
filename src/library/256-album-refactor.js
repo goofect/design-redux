@@ -72,7 +72,7 @@ export class SplitChooser extends Modal {
     if (this.titleEl) this.titleEl.setText(`Split notes off ${this.folder.name}`);
     const picked = new Set();
     let name = '';
-    new Setting(contentEl).setName('New album').setDesc('Made beside this one.').addText((t) => t.setPlaceholder('Name').onChange((v) => (name = v.trim())));
+    new Setting(contentEl).setName('New collection').setDesc('Made beside this one.').addText((t) => t.setPlaceholder('Name').onChange((v) => (name = v.trim())));
     const list = contentEl.createDiv({ cls: 'dr-refactor-pick' });
     this.files.forEach((file) => {
       const row = list.createEl('label', { cls: 'dr-refactor-pick-row' });
@@ -106,8 +106,8 @@ export class AlbumRefactor extends Feature {
     return [
       {
         key: 'albumRefactor',
-        name: 'Reorganise albums safely',
-        desc: 'A folder’s menu can rename an album, move it into another collection, merge it into another or split notes off it — each shown before it’s done, with links kept and one Undo.',
+        name: 'Reorganise collections safely',
+        desc: 'A folder’s menu can rename a collection, move it into another folder, merge it into another or split notes off it — each shown before it’s done, with links kept and one Undo.',
       },
     ];
   }
@@ -117,10 +117,10 @@ export class AlbumRefactor extends Feature {
     const when = (ctx) => this.enabled && !(ctx.folder.isRoot && ctx.folder.isRoot());
     const act = (id, name, menu, icon, run) => ({ id, name, menu, icon, on: 'browse', when, run: (ctx) => run(ctx.folder) });
     return [
-      act('album-rename', 'Rename this album…', 'Rename…', 'pencil', (f) => this.askRename(f)),
-      act('album-move', 'Move this album into another collection…', 'Move into…', 'folder-input', (f) => this.askMove(f)),
-      act('album-merge', 'Merge this album into another…', 'Merge into…', 'merge', (f) => this.askMerge(f)),
-      act('album-split', 'Split notes off this album into a new one…', 'Split notes off…', 'split', (f) => this.askSplit(f)),
+      act('album-rename', 'Rename this collection…', 'Rename…', 'pencil', (f) => this.askRename(f)),
+      act('album-move', 'Move this collection into another folder…', 'Move into…', 'folder-input', (f) => this.askMove(f)),
+      act('album-merge', 'Merge this collection into another…', 'Merge into…', 'merge', (f) => this.askMerge(f)),
+      act('album-split', 'Split notes off this collection into a new one…', 'Split notes off…', 'split', (f) => this.askSplit(f)),
     ];
   }
 
@@ -186,7 +186,7 @@ export class AlbumRefactor extends Feature {
     const to = this.pathIn(folder.parent, name);
     const note = this.plugin.folderNote(folder);
     const lines = [`“${folder.name}” becomes “${name}”.`];
-    if (note) lines.push(`Its folder note becomes “${name}.md”, so it stays the album’s.`);
+    if (note) lines.push(`Its folder note becomes “${name}.md”, so it stays the collection’s.`);
     const links = this.linkLine(this.inside(folder));
     if (links) lines.push(links);
     let blocked = this.badName(name);
@@ -213,11 +213,11 @@ export class AlbumRefactor extends Feature {
     const notes = all.filter((f) => f instanceof TFile && f.extension === 'md').length;
     const subs = all.filter((f) => f instanceof TFolder).length;
     const lines = [`“${folder.name}” moves into “${target.isRoot && target.isRoot() ? this.app.vault.getName() : target.name}”.`];
-    lines.push(`${notes} ${notes === 1 ? 'note goes' : 'notes go'} with it${subs ? `, in ${subs} ${subs === 1 ? 'sub-album' : 'sub-albums'}` : ''}.`);
+    lines.push(`${notes} ${notes === 1 ? 'note goes' : 'notes go'} with it${subs ? `, in ${subs} ${subs === 1 ? 'sub-collection' : 'sub-collections'}` : ''}.`);
     const links = this.linkLine(all);
     if (links) lines.push(links);
     let blocked = null;
-    if (target === folder || target.path.startsWith(folder.path + '/')) blocked = 'An album can’t go inside itself.';
+    if (target === folder || target.path.startsWith(folder.path + '/')) blocked = 'A collection can’t go inside itself.';
     else if (folder.parent === target) blocked = 'It’s there already.';
     else if (this.app.vault.getAbstractFileByPath(to)) blocked = `Something called “${folder.name}” is there already.`;
     return {
@@ -241,7 +241,7 @@ export class AlbumRefactor extends Feature {
     const subs = children.filter((c) => c instanceof TFolder);
     const taken = (name) => !!this.app.vault.getAbstractFileByPath(this.pathIn(target, name));
     const lines = [`${notes.length} ${notes.length === 1 ? 'note moves' : 'notes move'} from “${folder.name}” into “${target.name}”.`];
-    if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-album moves' : 'sub-albums move'} too.`);
+    if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-collection moves' : 'sub-collections move'} too.`);
     const structure = this.plugin.feature(AlbumStructure);
     const fm = this.frontmatter(note);
     const carried = mergedKeys().filter((k) => valueList(fmGet(fm, k)).length);
@@ -255,7 +255,7 @@ export class AlbumRefactor extends Feature {
       .filter((c) => taken(c.name))
       .map((c) => `“${c.name}” is in both; the one from ${folder.name} is numbered so neither is lost.`);
     let blocked = null;
-    if (target === folder || target.path.startsWith(folder.path + '/')) blocked = 'An album can’t merge into itself, or into one inside it.';
+    if (target === folder || target.path.startsWith(folder.path + '/')) blocked = 'A collection can’t merge into itself, or into one inside it.';
     return {
       title: `Merge ${folder.name} into ${target.name}`,
       confirm: 'Merge',
@@ -271,7 +271,7 @@ export class AlbumRefactor extends Feature {
     name = String(name || '').trim();
     const parent = folder.parent;
     const to = this.pathIn(parent, name);
-    const lines = [`A new album, “${name}”, beside ${folder.name}.`];
+    const lines = [`A new collection, “${name}”, beside ${folder.name}.`];
     const shown = files.slice(0, 8).map((f) => f.basename).join(', ');
     lines.push(`${files.length} ${files.length === 1 ? 'note moves' : 'notes move'} into it: ${shown}${files.length > 8 ? ` and ${files.length - 8} more` : ''}.`);
     const links = this.linkLine(files);

@@ -521,7 +521,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     s.librarySections = [{ title: 'x', items: [{ kind: 'property', key: 'domain' }, { kind: 'builtin', id: 'home' }] }];
     s.graphFilters = { graph: { mode: 'all', rules: [{ key: 'domain', op: 'has' }], clause: '[domain]' } };
     const { changed, undo } = R.renamePropertyInSettings(s, 'domain', 'field');
-    assert.deepStrictEqual(changed, ['Search categories', 'Album columns', 'Notes table columns', 'Library', 'Graph property filters']);
+    assert.deepStrictEqual(changed, ['Search categories', 'Collection columns', 'Notes table columns', 'Library', 'Graph property filters']);
     assert.strictEqual(s.categoryProperty, 'field');
     assert.strictEqual(s.albumColumns, 'field, modified');
     assert.strictEqual(s.tableColumns, 'field, status');
@@ -905,7 +905,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.match(text, /1 note already has “field” too/);
     assert.match(text, /1 note has both, with different values/);
     assert.match(text, /Also changes 2 bases that use it: (Dash and Reading|Reading and Dash)/);
-    assert.match(text, /And in Design Redux: Search categories, Album columns and Notes table columns/);
+    assert.match(text, /And in Design Redux: Search categories, Collection columns and Notes table columns/);
     assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-bulk-note')).map((n) => n.textContent), ['c']);
     assert.strictEqual(el.querySelector('.mod-cta').textContent, 'Rename in 2 notes');
     enter(to);
@@ -1209,8 +1209,8 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const record = await done;
     assert.strictEqual(v.fm('IR/b.md').status, 'done');
     assert.strictEqual(v.fm('IR/c.md').status, 'done');
-    assert.strictEqual(v.fm('IR/IR.md').status, undefined, 'the folder note stands for the album');
-    assert.strictEqual(v.fm('IR/Sub/d.md').status, undefined, 'only the album, not the folders in it');
+    assert.strictEqual(v.fm('IR/IR.md').status, undefined, 'the folder note stands for the collection');
+    assert.strictEqual(v.fm('IR/Sub/d.md').status, undefined, 'only the collection, not the folders in it');
     assert.strictEqual(bulk.last, record);
     await bulk.undo();
     assert.strictEqual(v.text('IR/c.md'), before);

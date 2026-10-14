@@ -93,8 +93,8 @@ export class ContextStrip extends Feature {
       },
       {
         key: 'stripPlace',
-        name: 'Place in album',
-        desc: 'Show where the note falls in its album, as 3 of 12.',
+        name: 'Place in collection',
+        desc: 'Show where the note falls in its collection, as 3 of 12.',
         showIf: 'contextStrip',
       },
       {
@@ -123,8 +123,8 @@ export class ContextStrip extends Feature {
       return near && near[dir];
     };
     return [
-      { id: 'previous-in-album', name: 'Previous note in album', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: () => this.skip('previous') },
-      { id: 'next-in-album', name: 'Next note in album', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next') },
+      { id: 'previous-in-album', name: 'Previous note in collection', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: () => this.skip('previous') },
+      { id: 'next-in-album', name: 'Next note in collection', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next') },
     ];
   }
 
@@ -421,9 +421,9 @@ export class ContextStrip extends Feature {
   screenLine(browse, folder) {
     const vault = this.app.vault.getName();
     if (!browse) return vault;
-    if (browse.mode === 'smart') return 'Smart album';
+    if (browse.mode === 'smart') return 'Saved view';
     if (browse.mode === 'library-check') return 'What to look at';
-    if (browse.mode === 'inbox') return 'Notes in no album';
+    if (browse.mode === 'inbox') return 'Notes in no collection';
     if (!folder || (folder.isRoot && folder.isRoot())) return vault;
     const n = libraryIndex(this.plugin).count(folder);
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;

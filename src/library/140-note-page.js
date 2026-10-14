@@ -35,12 +35,12 @@ export class NotePage extends Feature {
       {
         key: 'notePage',
         name: 'The note page',
-        desc: 'Above a note’s title, its album; under it, one grey line — what it hangs from, its length, when it was edited.',
+        desc: 'Above a note’s title, its collection; under it, one grey line — what it hangs from, its length, when it was edited.',
       },
       {
         key: 'notePageTint',
         name: 'A tint from the cover',
-        desc: 'Behind a note’s title, a soft glow of its cover, or its album’s. A note with neither stays plain.',
+        desc: 'Behind a note’s title, a soft glow of its cover, or its collection’s. A note with neither stays plain.',
         showIf: 'notePage',
       },
       {
@@ -52,7 +52,7 @@ export class NotePage extends Feature {
       {
         key: 'notePageShelves',
         name: 'Shelves at the end',
-        desc: 'At a note’s end: what it links to, where it’s mentioned, and more in its album.',
+        desc: 'At a note’s end: what it links to, where it’s mentioned, and more in its collection.',
         showIf: 'notePage',
       },
     ];

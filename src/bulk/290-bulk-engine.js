@@ -761,7 +761,7 @@ export function renamePropertyInSettings(settings, from, to) {
   });
 
   [
-    ['albumColumns', 'Album columns'],
+    ['albumColumns', 'Collection columns'],
     ['tableColumns', 'Notes table columns'],
     ['stripDetail', 'Detail line'],
   ].forEach(([key, label]) => {

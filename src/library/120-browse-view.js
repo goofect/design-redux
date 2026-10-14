@@ -1037,7 +1037,7 @@ export class BrowseView extends ItemView {
       const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
       if (level) kicker.createSpan({ cls: 'dr-detail-kind', text: level });
       if (trail.length) {
-        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this album is' } });
+        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
         trail.forEach((f, i) => {
           if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
           const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
@@ -1071,7 +1071,7 @@ export class BrowseView extends ItemView {
     const notes = files.every((f) => f.extension === 'md');
     const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
     const subs = about ? this.visibleFolders(folder).length : 0;
-    if (subs) meta.push(subs === 1 ? '1 sub-album' : `${subs} sub-albums`);
+    if (subs) meta.push(subs === 1 ? '1 sub-collection' : `${subs} sub-collections`);
     // How long the album is, as an album gives its running time.
     const length = this.totalLength(files);
     if (length) meta.push(length);
@@ -1169,7 +1169,7 @@ export class BrowseView extends ItemView {
     if (!(file instanceof TFile) || file.extension !== 'md') return [];
     const out = [['Open in new tab', 'file-plus', () => this.app.workspace.getLeaf('tab').openFile(file)]];
     const here = this.mode === 'folder' && file.parent && file.parent.path === this.path;
-    if (file.parent && !here && typeof this.revealInAlbum === 'function') out.push(['Reveal in album', 'folder-open', () => this.revealInAlbum(file)]);
+    if (file.parent && !here && typeof this.revealInAlbum === 'function') out.push(['Reveal in collection', 'folder-open', () => this.revealInAlbum(file)]);
     out.push([
       'Copy link',
       'link',

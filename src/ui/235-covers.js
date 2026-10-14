@@ -33,7 +33,7 @@ export class CoverImages extends Feature {
       {
         key: 'coverFromFolder',
         name: 'Folder cover for notes',
-        desc: 'A note without a cover uses its folder’s, as a song uses its album’s.',
+        desc: 'A note without a cover uses its folder’s, as a song uses its collection’s.',
       },
       {
         key: 'coverFromFirstImage',
@@ -53,7 +53,7 @@ export class CoverImages extends Feature {
           name: 'A colour from its name',
           accent: 'The accent colour',
           custom: 'One colour for all',
-          kind: 'A symbol and colour for its kind of album',
+          kind: 'A symbol and colour for its kind of collection',
         },
       },
       {
@@ -66,8 +66,8 @@ export class CoverImages extends Feature {
       },
       {
         key: 'coverPrint',
-        name: 'Print albums’ names on their covers',
-        desc: 'An album without a picture has its kind, its name and the collection it’s in printed along the foot of its cover, in the same places on every album.',
+        name: 'Print collections’ names on their covers',
+        desc: 'A collection without a picture has its kind, its name and the shelf it’s in printed along the foot of its cover, in the same places on every collection.',
       },
     ];
   }

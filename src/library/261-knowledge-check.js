@@ -531,8 +531,8 @@ export class KnowledgeCheck extends Feature {
         key: 'knowledgeBroader',
         type: 'dropdown',
         name: 'Concepts need a broader one',
-        desc: 'Where a related note that comes under nothing is worth a look, while the rest of its album does come under something.',
-        options: { concept: 'In concept-map albums', most: 'In any album where most notes do', never: 'Never' },
+        desc: 'Where a related note that comes under nothing is worth a look, while the rest of its collection does come under something.',
+        options: { concept: 'In concept-map collections', most: 'In any collection where most notes do', never: 'Never' },
         showIf: 'knowledgeCheck',
       },
     ];

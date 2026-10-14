@@ -69,7 +69,7 @@ export class BrowsePreview {
     const item = this.plugin.selection ? this.plugin.selection.get() : null;
     if (item && item.file) this.previewNote(el, item.file);
     else if (item && item.folder) this.previewAlbum(el, item.folder);
-    else el.createDiv({ cls: 'dr-preview-empty', text: 'Click a note or an album to see what it is here.' });
+    else el.createDiv({ cls: 'dr-preview-empty', text: 'Click a note or a collection to see what it is here.' });
   }
 
   /** Name, kind, then a few facts, each label beside its value; one can lead somewhere. */
@@ -116,7 +116,7 @@ export class BrowsePreview {
     ]);
     this.previewButtons(el, [
       ['book-open', 'Open', (evt) => this.openFile(file, evt)],
-      album && !here ? ['folder-open', 'Reveal in album', () => this.revealInAlbum(file)] : null,
+      album && !here ? ['folder-open', 'Reveal in collection', () => this.revealInAlbum(file)] : null,
       ['ellipsis', 'More', (evt) => this.fileMenu(evt, file)],
     ]);
   }
@@ -126,7 +126,7 @@ export class BrowsePreview {
     const root = !!(folder.isRoot && folder.isRoot());
     el.createDiv({ cls: 'dr-preview-title', text: root ? this.app.vault.getName() : folder.name });
     const kind = albumKindOf(this.plugin, folder);
-    el.createDiv({ cls: 'dr-preview-lead', text: kind ? kind.label : 'Album' });
+    el.createDiv({ cls: 'dr-preview-lead', text: kind ? kind.label : 'Collection' });
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
     const about = structure && structure.enabled ? structure.info(folder).description : '';
     if (about) el.createDiv({ cls: 'dr-preview-about', text: about });

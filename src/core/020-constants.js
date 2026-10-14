@@ -30,12 +30,12 @@ export const LIBRARY_BUILTINS = {
   added: { label: 'Recently added', icon: 'calendar-plus' },
   read: { label: 'Recently read', icon: 'book-check' },
   subjects: { label: 'Subjects', icon: 'book' },
-  collections: { label: 'Collections', icon: 'library' },
+  collections: { label: 'Views', icon: 'library' },
   properties: { label: 'Properties', icon: 'tags' },
-  folders: { label: 'Folders', icon: 'folder' },
+  folders: { label: 'Collections', icon: 'folder' },
   notes: { label: 'All Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
-  smart: { label: 'Smart albums', icon: 'sparkles' },
+  smart: { label: 'Saved views', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
   'knowledge-check': { label: 'Knowledge check', icon: 'network', needs: 'knowledgeCheck' },
@@ -48,7 +48,7 @@ export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', '
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
 
 /* How screens of albums group their covers. */
-export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of album', collection: 'Collection' };
+export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collection: 'Shelf' };
 
 export const DEFAULTS = {
   library: true,

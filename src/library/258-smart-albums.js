@@ -34,7 +34,7 @@ export class SmartScreen extends BrowseScreen {
 
   title() {
     const album = this.album();
-    return album ? album.name : 'Smart album';
+    return album ? album.name : 'Saved view';
   }
 
   render(root) {
@@ -42,8 +42,8 @@ export class SmartScreen extends BrowseScreen {
     const smart = this.smart;
     const album = this.album();
     if (!album) {
-      view.renderTitleBar(root, 'Smart album');
-      view.emptyState(root, 'This smart album isn’t there any more.', 'sparkles');
+      view.renderTitleBar(root, 'Saved view');
+      view.emptyState(root, 'This saved view isn’t there any more.', 'sparkles');
       return;
     }
     // Its filters, once on arriving; after that the chips are yours to change.
@@ -60,7 +60,7 @@ export class SmartScreen extends BrowseScreen {
     const changed = !smart.same(view, album);
     view.renderAlbumHead(root, {
       title: album.name,
-      sub: album.group ? `Smart album · by ${this.plugin.propertyLabel(album.group)}` : 'Smart album',
+      sub: album.group ? `Saved view · by ${this.plugin.propertyLabel(album.group)}` : 'Saved view',
       cover: null,
       glyph: 'sparkles',
       genName: view.genName(album.name, `smart/${album.id}`),
@@ -95,8 +95,8 @@ export class SmartAlbums extends Feature {
     return [
       {
         key: 'smartAlbums',
-        name: 'Smart albums',
-        desc: 'The filter button keeps its filters, order and grouping as an album, listed in the library. The notes stay where they are.',
+        name: 'Saved views',
+        desc: 'The filter button keeps its filters, order and grouping as a collection, listed in the library. The notes stay where they are.',
       },
     ];
   }
@@ -105,14 +105,14 @@ export class SmartAlbums extends Feature {
     return [
       {
         id: 'smart-album-open',
-        name: 'Open a smart album…',
+        name: 'Open a saved view…',
         icon: 'sparkles',
         when: () => this.enabled && this.list().length > 0,
         run: () => this.choose(),
       },
       {
         id: 'smart-album-save',
-        name: 'Keep these filters as a smart album…',
+        name: 'Keep these filters as a saved view…',
         icon: 'sparkles',
         when: () => {
           const view = this.enabled ? this.app.workspace.getActiveViewOfType(BrowseView) : null;
@@ -237,7 +237,7 @@ export class SmartAlbums extends Feature {
 
   askName(view, album) {
     if (!view) return;
-    new NamePrompt(this.app, album ? 'Rename smart album' : 'New smart album', 'Name', (name) => {
+    new NamePrompt(this.app, album ? 'Rename saved view' : 'New saved view', 'Name', (name) => {
       if (!String(name || '').trim()) return;
       if (album) {
         this.change(album, { name: String(name).trim() });
@@ -266,7 +266,7 @@ export class SmartAlbums extends Feature {
 
   choose() {
     const items = this.list().map((a) => ({ label: a.name, note: '', a }));
-    new ComparePicker(this.app, items, 'Which smart album?', (item) => this.plugin.feature(Library).browseMode({ mode: 'smart', property: item.a.id })).open();
+    new ComparePicker(this.app, items, 'Which saved view?', (item) => this.plugin.feature(Library).browseMode({ mode: 'smart', property: item.a.id })).open();
   }
 
   menu(evt, view, album) {
@@ -278,7 +278,7 @@ export class SmartAlbums extends Feature {
     });
     add('Rename…', 'pencil', () => this.askName(view, album));
     add(album.group ? `Grouped by ${this.plugin.propertyLabel(album.group)}…` : 'Group by…', 'rows-3', () => this.chooseGroup(view, album));
-    add('Delete smart album', 'trash-2', () => {
+    add('Delete saved view', 'trash-2', () => {
       this.remove(album);
       view.navigate({ mode: 'home', property: null });
     });
@@ -289,7 +289,7 @@ export class SmartAlbums extends Feature {
   addFilterItems(menu, view) {
     if (!this.enabled || !view.hasFilters() || view.mode === 'smart') return;
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle('Keep as a smart album…').setIcon('sparkles').onClick(() => this.askName(view)));
+    menu.addItem((item) => item.setTitle('Keep as a saved view…').setIcon('sparkles').onClick(() => this.askName(view)));
   }
 
   /** In the library: a row each. */

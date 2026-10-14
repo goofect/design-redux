@@ -511,7 +511,7 @@ export class BrowseRows {
 
   /** A smart album's tile: drawn as the covers are, for its name; opens the album. */
   smartCard(grid, album) {
-    const card = this.card(grid, album.name, 'Smart album');
+    const card = this.card(grid, album.name, 'Saved view');
     const key = `smart:${album.id}`;
     fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.plugin.settings, album.name, key), blankLook(this.plugin.settings, album.name, key));
     onActivate(card, () => this.navigate({ mode: 'smart', property: album.id, path: '/' }));

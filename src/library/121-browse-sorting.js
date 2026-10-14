@@ -131,7 +131,7 @@ export class BrowseSorting {
   ownOrderLabel() {
     if (this.mode === 'folder') {
       const folder = this.folder();
-      return folder && this.plugin.orders.hasAlbum(folder) ? 'Album order' : null;
+      return folder && this.plugin.orders.hasAlbum(folder) ? 'Collection order' : null;
     }
     return OWN_ORDER[this.mode] || null;
   }

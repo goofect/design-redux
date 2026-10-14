@@ -45,7 +45,7 @@ export class ReadingHistory extends Feature {
       {
         key: 'readingHistory',
         name: 'Reading history',
-        desc: 'Notes you’ve read to the end are remembered — in the plugin’s data, never in your notes. Albums show how far through you are, lists mark what’s new or changed, and an album opens where you were.',
+        desc: 'Notes you’ve read to the end are remembered — in the plugin’s data, never in your notes. Collections show how far through you are, lists mark what’s new or changed, and a collection opens where you were.',
       },
     ];
   }

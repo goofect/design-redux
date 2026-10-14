@@ -127,7 +127,7 @@ export class FolderScreen extends BrowseScreen {
     if (panels.length > 1) this.renderPanels(root, folder, about, panels);
     else drawNotes(root);
     if (view.editing) return;
-    if (about && about.related.length) view.shelf(root, 'Related albums', about.related);
+    if (about && about.related.length) view.shelf(root, 'Related collections', about.related);
     view.renderMoreIn(root, folder);
   }
 
@@ -146,7 +146,7 @@ export class FolderScreen extends BrowseScreen {
       out.push({ id: 'map', label: 'Map', draw: (el) => structure.renderLead(el, folder, about, view, 'map') });
     }
     const subs = view.sortFolders(view.visibleFolders(folder));
-    if (subs.length) out.push({ id: 'albums', label: 'Sub-albums', count: subs.length, draw: (el) => view.folderTiles(el, subs) });
+    if (subs.length) out.push({ id: 'albums', label: 'Sub-collections', count: subs.length, draw: (el) => view.folderTiles(el, subs) });
     const sources = structure.sources(all);
     if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
     const gaps = structure.gaps(all);
@@ -206,7 +206,7 @@ export class FolderScreen extends BrowseScreen {
   renderLinked(el, folder, linked) {
     const view = this.view;
     const structure = this.plugin.feature(AlbumStructure);
-    el.createDiv({ cls: 'dr-report-lead', text: 'Notes kept elsewhere that link with this album’s. Shown here, they stay where they are.' });
+    el.createDiv({ cls: 'dr-report-lead', text: 'Notes kept elsewhere that link with this collection’s. Shown here, they stay where they are.' });
     const list = el.createDiv({ cls: 'dr-tracks dr-linked' });
     roveFocus(list, '.dr-gap-row');
     linked.forEach(({ file, count }) => {
@@ -1117,7 +1117,7 @@ export function tileGrid(view, root, items) {
 
 export class CollectionsScreen extends BrowseScreen {
   title() {
-    return 'Collections';
+    return 'Views';
   }
 
   render(root) {
@@ -1125,7 +1125,7 @@ export class CollectionsScreen extends BrowseScreen {
     view.renderTitleBar(root, this.title());
     const items = collectionTiles(view);
     if (!items.length) {
-      view.emptyState(root, 'No collections yet: smart albums, and albums that gather notes from elsewhere, show here', 'library', null);
+      view.emptyState(root, 'No views yet: saved views, and collections that gather notes from elsewhere, show here', 'library', null);
       return;
     }
     tileGrid(view, root, items);
@@ -1146,7 +1146,7 @@ export class SubjectsScreen extends BrowseScreen {
       ? view.sortFolders(structure.ofKind('subject').filter((f) => view.folderInFilter(f) && view.matches(f.name)))
       : [];
     if (!subjects.length) {
-      view.emptyState(root, 'No subjects yet: albums whose kind is Subject show here', 'book', null);
+      view.emptyState(root, 'No subjects yet: collections whose kind is Subject show here', 'book', null);
       return;
     }
     tileGrid(view, root, subjects);
@@ -1210,7 +1210,7 @@ export class SearchScreen extends BrowseScreen {
     const ways = root.createDiv({ cls: 'dr-browse-by' });
     roveFocus(ways, '.dr-browse-by-item');
     [
-      ['Albums', 'library', { mode: 'folders', path: '/' }],
+      ['Collections', 'library', { mode: 'folders', path: '/' }],
       ['Properties', 'list', { mode: 'properties', property: null }],
       ['Tags', 'tag', { mode: 'properties', property: 'tags' }],
     ].forEach(([label, icon, state]) => {
@@ -1405,10 +1405,10 @@ export class SearchScreen extends BrowseScreen {
     });
 
     const sections = {
-      albums: { title: 'Albums', n: albums.length, draw: (el, all) => this.albumsSection(el, all ? albums : albums.slice(0, 6)) },
+      albums: { title: 'Collections', n: albums.length, draw: (el, all) => this.albumsSection(el, all ? albums : albums.slice(0, 6)) },
       notes: { title: 'Notes', n: notes.length, draw: (el, all) => this.notesSection(el, all ? notes : notes.slice(0, 6), all) },
       properties: { title: 'Properties', n: props.length, draw: (el, all) => this.propertiesSection(el, all ? props : props.slice(0, 5)) },
-      collections: { title: 'Collections', n: collections.length, draw: (el, all) => tileGrid(view, el, all ? collections : collections.slice(0, 6)) },
+      collections: { title: 'Views', n: collections.length, draw: (el, all) => tileGrid(view, el, all ? collections : collections.slice(0, 6)) },
     };
     const limits = { albums: 6, notes: 6, properties: 5, collections: 6 };
     const skip = new Set(ranked.map((r) => r.file.path));
@@ -1477,7 +1477,7 @@ export class SearchScreen extends BrowseScreen {
       const folder = top.item;
       drawFolderArt(this.plugin, art, folder);
       title = folder.name;
-      sub = `Album · ${view.countLabel(folder)}`;
+      sub = `Collection · ${view.countLabel(folder)}`;
       card.dataset.path = folder.path;
       view.pickOrOpen(card, { folder }, () => view.openFolder(folder), false);
       onContextMenu(card, (evt) => view.folderMenu(evt, folder, view.folderCover(folder)));
@@ -1644,7 +1644,7 @@ export const HOME_SHELVES = [
   { id: 'continue', label: 'Continue reading' },
   { id: 'recents', label: 'Recently opened' },
   { id: 'added', label: 'Recently added' },
-  { id: 'collections', label: 'Your collections' },
+  { id: 'collections', label: 'Your views' },
   { id: 'pinned', label: 'Pinned' },
   { id: 'rediscover', label: 'Rediscover' },
   { id: 'folders', label: 'Folders' },
@@ -1712,7 +1712,7 @@ export class HomeScreen extends BrowseScreen {
       continue: () => shelf('Continue reading', continuing),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
-      collections: () => shelf('Your collections', collections, { mode: 'collections' }),
+      collections: () => shelf('Your views', collections, { mode: 'collections' }),
       pinned: () => shelf('Pinned', pinned, { mode: 'pinned' }),
       rediscover: () => shelf('Rediscover', older.slice(1)),
       folders: () => shelf('Folders', folders, { mode: 'folders' }),

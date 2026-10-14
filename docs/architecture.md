@@ -812,3 +812,7 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   as before). The library and its review are places: their old commands
   (`workspace-mode-library`, `-review`) open Home and the library check, so
   hotkeys keep working; anyone left in either is in Standard.
+- **One vocabulary** (interface only): an album is a Collection, a smart
+  album a Saved view, the screen of saved views and gathering collections
+  Views, and a folder that holds collections a Shelf. Ids, class names,
+  property names (`album`, `includes`…) and stored data keep the old words.

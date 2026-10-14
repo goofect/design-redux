@@ -274,7 +274,7 @@ export class CanvasCardFacts extends CanvasFeature {
       {
         key: 'canvasCardFacts',
         name: 'What a card holds, on it',
-        desc: 'How far a card’s checklist is done, as 3/5; a note’s cover and title, like an album tile; and the properties below, as chips.',
+        desc: 'How far a card’s checklist is done, as 3/5; a note’s cover and title, like a collection tile; and the properties below, as chips.',
       },
       {
         key: 'canvasCardChips',

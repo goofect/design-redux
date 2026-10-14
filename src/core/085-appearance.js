@@ -34,7 +34,7 @@ export class Appearance extends Feature {
         key: 'lookScope',
         type: 'dropdown',
         name: 'Editorial look on',
-        desc: 'The whole window — its notes, sidebars and menus too — or only what Design Redux draws: the library, album pages, the inspector, the strip and the note panel.',
+        desc: 'The whole window — its notes, sidebars and menus too — or only what Design Redux draws: the library, collection pages, the inspector, the strip and the note panel.',
         options: LOOK_SCOPES,
         showIf: (s) => s.look === 'editorial',
       },
@@ -47,7 +47,7 @@ export class Appearance extends Feature {
         key: 'artworkSize',
         type: 'dropdown',
         name: 'Cover size',
-        desc: 'How large covers are on screens of albums and notes, apart from the density of everything else.',
+        desc: 'How large covers are on screens of collections and notes, apart from the density of everything else.',
         options: ARTWORK_SIZES,
       },
       {

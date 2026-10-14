@@ -71,10 +71,10 @@ export class ReportScreen extends BrowseScreen {
     const loose = check.unclassified();
     root.createDiv({
       cls: 'dr-report-lead',
-      text: found.length || loose.length ? 'Things to look at, not rules: nothing here is changed until you change it.' : 'Nothing to look at: every album holds something and says what it is, and every note is in one.',
+      text: found.length || loose.length ? 'Things to look at, not rules: nothing here is changed until you change it.' : 'Nothing to look at: every collection holds something and says what it is, and every note is in one.',
     });
     if (loose.length && check.settings.libraryInbox !== false) {
-      const row = reportRow(root, 'inbox', `${loose.length} ${loose.length === 1 ? 'note' : 'notes'} in no album`, 'Open the inbox to put them in albums', '');
+      const row = reportRow(root, 'inbox', `${loose.length} ${loose.length === 1 ? 'note' : 'notes'} in no collection`, 'Open the inbox to put them in collections', '');
       onActivate(row, () => view.navigate({ mode: 'inbox', property: null }));
     }
     LIBRARY_SECTIONS.forEach((section) => {
@@ -124,10 +124,10 @@ export class InboxScreen extends BrowseScreen {
     // Only what's still here can stay picked.
     Array.from(picked).forEach((p) => notes.some((f) => f.path === p) || picked.delete(p));
     if (!notes.length) {
-      view.emptyState(root, 'Every note is in an album.', 'inbox');
+      view.emptyState(root, 'Every note is in a collection.', 'inbox');
       return;
     }
-    root.createDiv({ cls: 'dr-report-lead', text: 'Notes in no album. Pick some, then move them into one, or show them in one where they are.' });
+    root.createDiv({ cls: 'dr-report-lead', text: 'Notes in no collection. Pick some, then move them into one, or show them in one where they are.' });
     const bar = root.createDiv({ cls: 'dr-inbox-bar' });
     const chosen = () => notes.filter((f) => picked.has(f.path));
     const all = view.action(bar, 'check-check', picked.size === notes.length ? 'Pick none' : 'Pick all', () => {
@@ -136,7 +136,7 @@ export class InboxScreen extends BrowseScreen {
       view.render();
     });
     all.addClass('dr-inbox-all');
-    const move = view.action(bar, 'folder-input', 'Move into an album…', () => check.moveInto(chosen(), () => picked.clear()));
+    const move = view.action(bar, 'folder-input', 'Move into a collection…', () => check.moveInto(chosen(), () => picked.clear()));
     // Where each seems to belong, by its links and tags.
     const suggested = check.suggestions(notes);
     const placed = view.action(bar, 'wand-2', 'Put where suggested', async () => {
@@ -144,7 +144,7 @@ export class InboxScreen extends BrowseScreen {
       if (await check.moveEach(pairs)) picked.clear();
     });
     placed.toggleClass('is-disabled', !chosen().some((f) => suggested.has(f)));
-    const show = view.action(bar, 'link', 'Show in an album…', () => check.showIn(chosen(), () => picked.clear()));
+    const show = view.action(bar, 'link', 'Show in a collection…', () => check.showIn(chosen(), () => picked.clear()));
     [move, show].forEach((b) => b.toggleClass('is-disabled', !picked.size));
     const structure = this.plugin.feature(AlbumStructure);
     if (!structure || !structure.enabled) show.remove();
@@ -203,7 +203,7 @@ export class LibraryCheck extends Feature {
         key: 'libraryInbox',
         showIf: 'libraryCheck',
         name: 'Inbox',
-        desc: 'The notes in no album, in one place, to be moved into albums or shown in them a few at a time. Add it to the library from its layout, or open it from the report.',
+        desc: 'The notes in no collection, in one place, to be moved into collections or shown in them a few at a time. Add it to the library from its layout, or open it from the report.',
       },
     ];
   }
@@ -219,7 +219,7 @@ export class LibraryCheck extends Feature {
       },
       {
         id: 'library-inbox',
-        name: 'Open the inbox: notes in no album',
+        name: 'Open the inbox: notes in no collection',
         icon: 'inbox',
         when: () => this.enabled && this.settings.libraryInbox !== false,
         run: () => this.open('inbox'),
@@ -287,19 +287,19 @@ export class LibraryCheck extends Feature {
     // In no collection: at the top of the vault where others are kept in collections, and taken in by none.
     const topShelves = shelves.some((f) => f.parent && f.parent.isRoot && f.parent.isRoot());
     if (topShelves) {
-      albums.filter((f) => f.parent && f.parent.isRoot && f.parent.isRoot() && !takenIn.has(f)).forEach((f) => add('hierarchy', f, 'orphan', 'In no collection, and taken in by no album'));
+      albums.filter((f) => f.parent && f.parent.isRoot && f.parent.isRoot() && !takenIn.has(f)).forEach((f) => add('hierarchy', f, 'orphan', 'On no shelf, and taken in by no collection'));
     }
     if (shows) {
       const takes = (f) => (infos.get(f) ? infos.get(f).includes.filter((t) => t instanceof TFolder) : []);
       folders.forEach((start) => {
-        if (this.loops(start, takes)) add('hierarchy', start, 'loop', 'Takes in an album that takes it in');
+        if (this.loops(start, takes)) add('hierarchy', start, 'loop', 'Takes in a collection that takes it in');
       });
       // A note saying it's an album, without being a folder note.
       libraryIndex(this.plugin).markdown().forEach((f) => {
         if (this.plugin.isFolderNote(f)) return;
         const kind = valueList(fmGet(noteProps(this.app, f), ALBUM_KEYS.type))[0];
         // Only the kinds it knows: an album property can mean a record's album.
-        if (kind && ALBUM_TYPES.some((t) => t.id === String(kind).toLowerCase())) add('hierarchy', f, 'roles', `Says it’s a ${kind} album, but isn’t a folder’s note`);
+        if (kind && ALBUM_TYPES.some((t) => t.id === String(kind).toLowerCase())) add('hierarchy', f, 'roles', `Says it’s a ${kind} collection, but isn’t a folder’s note`);
       });
     }
     // Notes whose parents lead round to themselves.
@@ -369,13 +369,13 @@ export class LibraryCheck extends Feature {
     const usual = middleOf(albums.map((f) => own(f).length));
     albums.forEach((f) => {
       const n = own(f).length;
-      if (n >= BALANCE_NOTES && n > usual * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} notes; most albums hold ${usual}`);
+      if (n >= BALANCE_NOTES && n > usual * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} notes; most collections hold ${usual}`);
     });
     const sizeOf = (f) => (f.children || []).filter((c) => c instanceof TFolder).length;
     const usualShelf = middleOf(shelves.map(sizeOf));
     shelves.forEach((f) => {
       const n = sizeOf(f);
-      if (n >= BALANCE_ALBUMS && n > usualShelf * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} albums; most collections hold ${usualShelf}`);
+      if (n >= BALANCE_ALBUMS && n > usualShelf * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} collections; most shelves hold ${usualShelf}`);
     });
     return out;
   }
@@ -462,7 +462,7 @@ export class LibraryCheck extends Feature {
     if (!files.length) return;
     new FolderPicker(this.app, async (folder) => {
       if ((await this.moveFilesInto(files, folder)) && done) done();
-    }, { placeholder: `Move ${files.length} ${files.length === 1 ? 'note' : 'notes'} into which album?` }).open();
+    }, { placeholder: `Move ${files.length} ${files.length === 1 ? 'note' : 'notes'} into which collection?` }).open();
   }
 
   /** The notes moved into an album, as one step of Undo. */
@@ -486,7 +486,7 @@ export class LibraryCheck extends Feature {
     if (!files.length) return;
     new FolderPicker(this.app, async (folder) => {
       if ((await this.showFilesIn(files, folder)) && done) done();
-    }, { placeholder: `Show ${files.length} ${files.length === 1 ? 'note' : 'notes'} in which album?` }).open();
+    }, { placeholder: `Show ${files.length} ${files.length === 1 ? 'note' : 'notes'} in which collection?` }).open();
   }
 
   /** The notes listed in an album's includes, where they are, as one step of Undo. */

@@ -36,7 +36,7 @@ import { CanvasVaultMap } from '../canvas/328-canvas-vault-map.js';
 
 /* The folder note properties an album is read from; each can be given another name in settings, so none has to clash with your own. */
 export const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
-export const ALBUM_KEY_LABELS = { type: 'Kind', description: 'Description', includes: 'Notes and albums it takes in', related: 'Related albums', featured: 'Notes to start with', layout: 'How it opens' };
+export const ALBUM_KEY_LABELS = { type: 'Kind', description: 'Description', includes: 'Notes and collections it takes in', related: 'Related collections', featured: 'Notes to start with', layout: 'How it opens' };
 export const ALBUM_KEYS = Object.assign({}, ALBUM_KEY_DEFAULTS);
 
 /** The names set in settings, or the usual ones. */
@@ -82,9 +82,9 @@ export class PlacesSection extends PanelSection {
     this.renderLabel('Kept in');
     const folder = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
     const albums = (folder ? [{ folder, own: true }] : []).concat(this.structure.albumsIncluding(file).map((f) => ({ folder: f, own: false })));
-    this.renderList('places-albums', 'Albums', albums, (list, a) => {
+    this.renderList('places-albums', 'Collections', albums, (list, a) => {
       const row = list.createDiv({ cls: 'dr-mention' });
-      asButton(row, `Open the album ${a.folder.name}`);
+      asButton(row, `Open the collection ${a.folder.name}`);
       row.createSpan({ cls: 'dr-mention-name', text: a.folder.name });
       if (!a.own) row.createSpan({ cls: 'dr-mention-count', text: 'includes it' });
       onActivate(row, () => {
@@ -121,34 +121,34 @@ export class AlbumStructure extends Feature {
       {
         key: 'panelPlaces',
         name: 'Where a note is kept, in the note panel',
-        desc: 'Below a note’s properties: the album it’s in, the albums that include it from elsewhere, and the canvases it’s on.',
+        desc: 'Below a note’s properties: the collection it’s in, the collections that include it from elsewhere, and the canvases it’s on.',
         showIf: 'albumStructure',
       },
       {
         key: 'albumKeyNames',
         type: 'custom',
         showIf: 'albumStructure',
-        name: 'Album property names',
+        name: 'Collection property names',
         render: (containerEl) => this.renderKeyNames(containerEl),
       },
       {
         key: 'albumStructure',
-        name: 'Albums say what they are',
-        desc: 'A folder note’s album, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, albums beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. An album’s page shows the way down to it.',
+        name: 'Collections say what they are',
+        desc: 'A folder note’s collection, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, collections beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. A collection’s page shows the way down to it.',
       },
       {
         key: 'albumRecents',
         showIf: 'albumStructure',
-        name: 'Lately, in long albums',
-        desc: `An album of ${ALBUM_RECENTS_FROM} notes or more shows what changed and what was opened lately, apart from its own order.`,
+        name: 'Lately, in long collections',
+        desc: `A collection of ${ALBUM_RECENTS_FROM} notes or more shows what changed and what was opened lately, apart from its own order.`,
       },
     ];
   }
 
   actions() {
     return [
-      { id: 'album-set-type', name: 'Set what kind of album this is…', icon: 'shapes', when: () => this.enabled && !!this.currentFolder(), run: () => this.chooseType(this.currentFolder()) },
-      { id: 'album-include-note', name: 'Show this note in another album too…', icon: 'folder-input', on: 'note', menu: false, when: () => this.enabled, run: (ctx) => this.chooseAlbumFor(ctx.file) },
+      { id: 'album-set-type', name: 'Set what kind of collection this is…', icon: 'shapes', when: () => this.enabled && !!this.currentFolder(), run: () => this.chooseType(this.currentFolder()) },
+      { id: 'album-include-note', name: 'Show this note in another collection too…', icon: 'folder-input', on: 'note', menu: false, when: () => this.enabled, run: (ctx) => this.chooseAlbumFor(ctx.file) },
     ];
   }
 
@@ -215,8 +215,8 @@ export class AlbumStructure extends Feature {
     block.className = 'dr-album-keys';
     const names = Object.assign({}, this.settings.albumKeyNames || {});
     new Setting(block)
-      .setName('Album property names')
-      .setDesc('The folder note properties an album is read from. Give any another name where it would clash with one of yours; the usual name is used where left empty.')
+      .setName('Collection property names')
+      .setDesc('The folder note properties a collection is read from. Give any another name where it would clash with one of yours; the usual name is used where left empty.')
       .setHeading();
     Object.keys(ALBUM_KEY_DEFAULTS).forEach((k) => {
       new Setting(block).setName(ALBUM_KEY_LABELS[k]).addText((t) =>
@@ -294,10 +294,10 @@ export class AlbumStructure extends Feature {
     const info = this.info(folder);
     const head = root.createDiv({ cls: 'dr-collection-head' });
     const kicker = head.createDiv({ cls: 'dr-detail-kicker' });
-    kicker.createSpan({ cls: 'dr-detail-kind', text: top ? 'Library' : info.label || 'Collection' });
+    kicker.createSpan({ cls: 'dr-detail-kind', text: top ? 'Library' : info.label || 'Shelf' });
     const trail = top ? [] : this.trail(folder);
     if (trail.length) {
-      const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
+      const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this shelf is' } });
       trail.forEach((f, i) => {
         if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
         const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
@@ -305,7 +305,7 @@ export class AlbumStructure extends Feature {
         onActivate(crumb, () => view.openFolder(f));
       });
     }
-    head.createDiv({ cls: 'dr-detail-meta', text: count === 1 ? '1 album' : `${count} albums` });
+    head.createDiv({ cls: 'dr-detail-meta', text: count === 1 ? '1 collection' : `${count} collections` });
     if (info.description) head.createDiv({ cls: 'dr-detail-desc', text: info.description });
     return head;
   }
@@ -388,7 +388,7 @@ export class AlbumStructure extends Feature {
       note = await this.plugin.ensureFolderNote(folder);
     } catch (err) {
       console.error('Design Redux: could not make the folder note', err);
-      new Notice('Could not change the album.');
+      new Notice('Could not change the collection.');
       return false;
     }
     const record = await this.plugin.notes.write(
@@ -398,7 +398,7 @@ export class AlbumStructure extends Feature {
         if (value === '' || value === null || (Array.isArray(value) && !value.length)) delete fm[name];
         else fm[name] = value;
       },
-      { failure: 'Could not change the album.' }
+      { failure: 'Could not change the collection.' }
     );
     return !!record;
   }
@@ -412,7 +412,7 @@ export class AlbumStructure extends Feature {
     const now = this.info(folder).type;
     const items = ALBUM_TYPES.map((t) => ({ label: t.label, note: t.id === now ? 'Now' : '', id: t.id }));
     if (now) items.push({ label: 'None', note: '', id: '' });
-    new ComparePicker(this.app, items, `What kind of album is ${folder.name}?`, (item) => this.setType(folder, item.id)).open();
+    new ComparePicker(this.app, items, `What kind of collection is ${folder.name}?`, (item) => this.setType(folder, item.id)).open();
   }
 
   /** The note listed in another album's includes; it stays where it is. */
@@ -421,7 +421,7 @@ export class AlbumStructure extends Feature {
     new FolderPicker(
       this.app,
       (folder) => this.include(folder, file),
-      { placeholder: `Show ${file.basename} in which album too?` }
+      { placeholder: `Show ${file.basename} in which collection too?` }
     ).open();
   }
 
@@ -568,7 +568,7 @@ export class AlbumStructure extends Feature {
     const now = info.type;
     menuGroup(
       menu,
-      'Album layout',
+      'Collection layout',
       'layout-grid',
       (m, nested) => {
         if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
@@ -588,14 +588,14 @@ export class AlbumStructure extends Feature {
     );
     menuGroup(
       menu,
-      'Kind of album',
+      'Kind of collection',
       'shapes',
       (m, nested) => {
         if (!nested) m = { addItem: (fn) => menu.addItem((item) => fn(sectioned(item, 'action'))) };
         ALBUM_TYPES.forEach((t) =>
           m.addItem((item) =>
             item
-              .setTitle(nested ? t.label : `Album: ${t.label}`)
+              .setTitle(nested ? t.label : `Collection: ${t.label}`)
               .setIcon(t.icon)
               .setChecked(now === t.id)
               .onClick(async () => {
