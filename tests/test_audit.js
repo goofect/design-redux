@@ -161,6 +161,7 @@ function panelFor(initial) {
   await t("adding a name the note already has goes to it instead of emptying it", async () => {
     const { stored, popupEl } = panelFor({ domain: 'Law' });
     notices.length = 0;
+    popupEl.querySelector('.dr-props-add').click();
     const input = popupEl.querySelector('.dr-add input');
     input.value = 'DOMAIN';
     input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
@@ -174,6 +175,7 @@ function panelFor(initial) {
 
   await t('adding a new name writes it empty; Enter mid-composition does nothing', async () => {
     const { stored, popupEl } = panelFor({ domain: 'Law' });
+    popupEl.querySelector('.dr-props-add').click();
     const input = popupEl.querySelector('.dr-add input');
     input.value = 'rating';
     input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }));

@@ -9,9 +9,10 @@
 /* lines, which the card itself doesn't show.                          */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownView, Notice, parseYaml, Platform, setIcon, stringifyYaml, TFile } from 'obsidian';
+import { MarkdownView, Notice, parseYaml, Platform, setIcon, Setting, stringifyYaml, TFile } from 'obsidian';
 import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
 import { makeTrigger, relativeDay } from '../core/040-helpers-sorting.js';
+import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { cardElement, pickedOnCanvas, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
@@ -124,20 +125,25 @@ export class PropertiesPanel extends Feature {
       },
       {
         key: 'panelPrimaryProps',
-        type: 'text',
+        type: 'custom',
         name: 'Main properties',
-        desc: 'Shown first, and alone while only the main ones are: names, by commas.',
-        placeholder: 'type, domain, status',
-        suggest: 'property',
         showIf: 'propertiesDropdown',
+        render: (containerEl) => this.renderMainChoice(containerEl),
       },
       {
         key: 'panelPropertyGroups',
         type: 'dropdown',
         name: 'Group properties',
-        desc: 'Under General, Relationships and Information — only how they show; the note is left as it is.',
-        options: { auto: 'When a note has many', on: 'Always', off: 'Never' },
+        desc: 'Under the groups below — only how they show; the note is left as it is. Properties no group names go under Other.',
+        options: { off: 'No', on: 'Yes' },
         showIf: 'propertiesDropdown',
+      },
+      {
+        key: 'panelGroupList',
+        type: 'custom',
+        name: 'Property groups',
+        showIf: (s) => s.propertiesDropdown && s.panelPropertyGroups === 'on',
+        render: (containerEl) => this.renderGroupChoice(containerEl),
       },
       {
         key: 'showMentions',
@@ -146,6 +152,83 @@ export class PropertiesPanel extends Feature {
         showIf: 'propertiesDropdown',
       },
     ];
+  }
+
+  /** A list of property names to choose from, for a field in the settings window. */
+  nameChoices(doc, block) {
+    const list = block.appendChild(doc.createElement('datalist'));
+    list.id = `dr-names-${Math.random().toString(36).slice(2)}`;
+    knownPropertyNames(this.app).forEach((n) => {
+      const o = list.appendChild(doc.createElement('option'));
+      o.value = n;
+    });
+    return list.id;
+  }
+
+  /** Settings: the main properties, in the order they show — each moved or taken off, others added by name. */
+  renderMainChoice(containerEl) {
+    const doc = containerEl.ownerDocument;
+    const block = containerEl.appendChild(doc.createElement('div'));
+    block.className = 'dr-main-props';
+    const draw = () => {
+      block.empty();
+      const names = String(this.settings.panelPrimaryProps || '').split(',').map((n) => n.trim()).filter(Boolean);
+      const save = () => {
+        this.settings.panelPrimaryProps = names.join(', ');
+        this.plugin.saveSettings();
+        draw();
+      };
+      new Setting(block).setName('Main properties').setDesc('What a note shows first — and alone, while only the main ones show — in this order.').setHeading();
+      names.forEach((name, i) => {
+        const row = new Setting(block).setName(name).setClass('dr-main-prop');
+        row.addExtraButton((b) => b.setIcon('arrow-up').setTooltip('Move up').setDisabled(i === 0).onClick(() => i > 0 && (names.splice(i - 1, 0, names.splice(i, 1)[0]), save())));
+        row.addExtraButton((b) => b.setIcon('arrow-down').setTooltip('Move down').setDisabled(i === names.length - 1).onClick(() => i < names.length - 1 && (names.splice(i + 1, 0, names.splice(i, 1)[0]), save())));
+        row.addExtraButton((b) => b.setIcon('x').setTooltip('Take off').onClick(() => (names.splice(i, 1), save())));
+      });
+      const listId = this.nameChoices(doc, block);
+      new Setting(block).setName('Add a main property').addText((t) => {
+        t.setPlaceholder('Search properties…');
+        t.inputEl.setAttribute('list', listId);
+        t.inputEl.addEventListener('keydown', (evt) => {
+          if (evt.key !== 'Enter') return;
+          const name = t.getValue().trim();
+          if (!name || names.some((n) => n.toLowerCase() === name.toLowerCase())) return;
+          names.push(name);
+          save();
+        });
+      });
+    };
+    draw();
+  }
+
+  /** Settings: the groups, each a title and the properties under it, in the order they show. */
+  renderGroupChoice(containerEl) {
+    const doc = containerEl.ownerDocument;
+    const block = containerEl.appendChild(doc.createElement('div'));
+    block.className = 'dr-prop-groups';
+    const draw = () => {
+      block.empty();
+      const groups = (Array.isArray(this.settings.panelGroupList) ? this.settings.panelGroupList : []).map((g) => ({ title: g.title || '', keys: g.keys || '' }));
+      const save = (redraw) => {
+        this.settings.panelGroupList = groups;
+        this.plugin.saveSettings();
+        if (redraw) draw();
+      };
+      const listId = this.nameChoices(doc, block);
+      groups.forEach((g, i) => {
+        const row = new Setting(block).setClass('dr-prop-group');
+        row.addText((t) => t.setPlaceholder('Group').setValue(g.title).onChange((v) => ((g.title = v), save())));
+        row.addText((t) => {
+          t.setPlaceholder('Properties, by commas').setValue(g.keys).onChange((v) => ((g.keys = v), save()));
+          t.inputEl.setAttribute('list', listId);
+          t.inputEl.addClass('dr-prop-group-keys');
+        });
+        row.addExtraButton((b) => b.setIcon('arrow-up').setTooltip('Move up').setDisabled(i === 0).onClick(() => i > 0 && (groups.splice(i - 1, 0, groups.splice(i, 1)[0]), save(true))));
+        row.addExtraButton((b) => b.setIcon('x').setTooltip('Remove the group').onClick(() => (groups.splice(i, 1), save(true))));
+      });
+      new Setting(block).addButton((b) => b.setButtonText('Add group').onClick(() => (groups.push({ title: '', keys: '' }), save(true))));
+    };
+    draw();
   }
 
   actions() {

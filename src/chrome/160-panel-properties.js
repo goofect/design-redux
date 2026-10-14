@@ -11,8 +11,7 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { composing, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames, propertyCounter } from '../core/045-helpers-properties.js';
-import { attachSuggest } from '../core/050-helpers-dom.js';
+import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { Library } from '../library/130-browse-filters.js';
@@ -20,45 +19,52 @@ import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
 
-/* Names that say a property ties notes together, or tells when something happened. */
-const RELATION_NAMES = ['parent', 'broader', 'narrower', 'related', 'up', 'down', 'children', 'child', 'part of', 'see also'];
-const INFO_NAMES = ['created', 'modified', 'updated', 'date', 'created at', 'updated at'];
-
 /** The names in a comma list, lower case. */
-const nameSet = (text) =>
+export const propNames = (text) =>
   String(text || '')
     .split(',')
     .map((n) => n.trim().toLowerCase())
     .filter(Boolean);
 
+/** The groups set in settings, each { title, keys: [lower-case names] }. */
+export function propertyGroups(settings) {
+  const list = Array.isArray(settings && settings.panelGroupList) ? settings.panelGroupList : [];
+  return list
+    .filter((g) => g && String(g.title || '').trim())
+    .map((g) => ({ title: String(g.title).trim(), keys: propNames(Array.isArray(g.keys) ? g.keys.join(',') : g.keys) }));
+}
+
+/* Where a property no group names goes, while there are groups. */
+export const OTHER_GROUP = 'Other';
+
 /**
- * How a property shows in the panel, apart from how it's stored: its
- * group — general, relationships (it names notes) or information (when)
- * — whether it's one of the main ones, and what a press on its value
- * does: open the note it names, or edit it.
+ * How a property shows in the panel, apart from how it's stored: the
+ * group it's set under — only as set, nothing guessed from its name —
+ * whether it's one of the main ones, and whether its value names notes.
  */
 export function propertyPresentation(key, value, type, settings) {
   const lower = String(key).toLowerCase();
   const values = (Array.isArray(value) ? value : [value]).filter((v) => v !== null && v !== undefined && v !== '');
   const links = values.length > 0 && values.every((v) => typeof v === 'string' && /^\[\[[^\]]+\]\]$/.test(v.trim()));
-  const relation = RELATION_NAMES.indexOf(lower) !== -1 || lower === String((settings && settings.knowledgeBroader) || '').toLowerCase() || links;
-  const info = !relation && (type === 'date' || type === 'datetime' || INFO_NAMES.indexOf(lower) !== -1);
+  const group = propertyGroups(settings).find((g) => g.keys.indexOf(lower) !== -1);
   return {
     key,
-    group: relation ? 'relationships' : info ? 'information' : 'general',
-    primary: nameSet(settings && settings.panelPrimaryProps).indexOf(lower) !== -1,
+    group: group ? group.title : OTHER_GROUP,
+    primary: propNames(settings && settings.panelPrimaryProps).indexOf(lower) !== -1,
     interaction: links ? 'note-link' : 'edit',
   };
 }
 
-export const PROPERTY_GROUPS = [
-  { id: 'general', title: 'General' },
-  { id: 'relationships', title: 'Relationships' },
-  { id: 'information', title: 'Information' },
-];
-
-/* From how many properties a note's are grouped, set to group "when a note has many". */
-export const GROUP_FROM = 8;
+/** The notes a value names, as files. */
+function linkedFiles(app, value, from) {
+  const cache = app.metadataCache;
+  if (!cache || typeof cache.getFirstLinkpathDest !== 'function') return [];
+  return (Array.isArray(value) ? value : [value])
+    .map((v) => String(v || '').replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
+    .filter(Boolean)
+    .map((n) => cache.getFirstLinkpathDest(n, from))
+    .filter(Boolean);
+}
 
 export class PropertiesSection extends PanelSection {
   get cls() {
@@ -70,64 +76,88 @@ export class PropertiesSection extends PanelSection {
   }
 
   /**
-   * An information panel more than a form: the main properties, with
-   * the rest a press away; grouped when there are many; editing as
-   * immediate as ever, and managing in each row's menu.
+   * A light inspector while reading, a full editor once touched: a
+   * heading that folds the panel; the main properties, or all of them —
+   * remembered from note to note; groups only where set; each row its
+   * value to edit and, when pointed at or focused, its menu.
    */
   render() {
     this.dropSuggests();
     const fm = this.frontmatter;
     const keys = Object.keys(fm).filter((k) => k !== 'position');
-    const shown = keys.map((k) => propertyPresentation(k, fm[k], this.typeOf(k), this.settings));
-    const grouping = this.settings.panelPropertyGroups || 'auto';
-    const grouped = grouping === 'on' || (grouping === 'auto' && keys.length >= GROUP_FROM);
-    // Grouped, each group keeps the note's order within it.
-    const ordered = grouped ? PROPERTY_GROUPS.reduce((out, g) => out.concat(shown.filter((p) => p.group === g.id)), []) : shown;
-    // Compact: the main ones, or the first three where none are; the rest folded under Show more.
-    const compact = (this.settings.panelPropertiesView || 'compact') === 'compact' && !this.panel.showAllProps;
-    const anyMain = shown.some((p) => p.primary);
-    const isMain = (p, i) => (anyMain ? p.primary : i < 3);
-    const main = new Set(shown.filter(isMain).map((p) => p.key));
+    const settings = this.settings;
+    const shown = keys.map((k) => propertyPresentation(k, fm[k], this.typeOf(k), settings));
+    const collapsed = !!settings.panelPropsCollapsed;
 
-    this.renderHead(keys.length);
+    this.renderHead(keys.length, collapsed);
+    this.containerEl.toggleClass('is-collapsed', collapsed);
+    if (collapsed) return;
+
+    // The main ones: as set, in that order; where a note has none, its first three.
+    const mainNames = propNames(settings.panelPrimaryProps);
+    const anyMain = shown.some((p) => p.primary);
+    const main = anyMain
+      ? shown.filter((p) => p.primary).sort((a, b) => mainNames.indexOf(a.key.toLowerCase()) - mainNames.indexOf(b.key.toLowerCase()))
+      : shown.slice(0, 3);
+    const compact = (settings.panelPropertiesView || 'compact') === 'compact';
+    const rest = keys.length - main.length;
+    // Every row is drawn, so moving one keeps the rest in their places; in compact, the main ones lead and the rest wait folded.
+    const mainKeys = new Set(main.map((p) => p.key));
+    const visible = compact ? main.concat(shown.filter((p) => !mainKeys.has(p.key))) : shown;
+
+    const grouped = settings.panelPropertyGroups === 'on' && propertyGroups(settings).length > 0;
+    const order = grouped ? propertyGroups(settings).map((g) => g.title).concat([OTHER_GROUP]) : [null];
+    const folded = new Set(Array.isArray(settings.panelFoldedGroups) ? settings.panelFoldedGroups : []);
+
     const list = this.containerEl.createDiv({ cls: 'dr-rows' });
     if (!keys.length) {
-      list.createDiv({ cls: 'dr-empty', text: 'No properties' });
+      const empty = list.createDiv({ cls: 'dr-empty' });
+      empty.createSpan({ text: 'No properties. ' });
+      const add = empty.createSpan({ cls: 'dr-empty-add', text: 'Add one' });
+      asButton(add);
+      onActivate(add, () => this.openAddPicker());
     }
-    let group = null;
-    ordered.forEach((p) => {
-      const hidden = compact && !main.has(p.key);
-      if (grouped && p.group !== group) {
-        group = p.group;
-        const head = list.createDiv({ cls: 'dr-row-group', text: PROPERTY_GROUPS.find((g) => g.id === group).title });
-        head.dataset.group = group;
+    order.forEach((title) => {
+      const rows = grouped ? visible.filter((p) => p.group === title) : visible;
+      if (!rows.length) return;
+      const isFolded = grouped && folded.has(title);
+      const waiting = (p) => compact && !mainKeys.has(p.key);
+      if (grouped && rows.every(waiting)) {
+        rows.forEach((p) => this.renderRow(list, p.key, fm[p.key], p).addClass('is-secondary'));
+        return;
       }
-      const row = this.renderRow(list, p.key, fm[p.key], p);
-      if (hidden) row.addClass('is-secondary');
-    });
-    // A group whose rows are all folded away goes with them.
-    list.querySelectorAll('.dr-row-group').forEach((head) => {
-      let any = false;
-      for (let el = head.nextElementSibling; el && !el.hasClass('dr-row-group'); el = el.nextElementSibling) {
-        if (!el.hasClass('is-secondary')) any = true;
+      if (grouped) {
+        const head = list.createDiv({ cls: `dr-row-group${isFolded ? ' is-folded' : ''}` });
+        head.dataset.group = title;
+        asButton(head, isFolded ? `Show ${title}` : `Fold ${title}`);
+        head.setAttribute('aria-expanded', String(!isFolded));
+        setIcon(head.createSpan({ cls: 'dr-row-group-chevron' }), isFolded ? 'chevron-right' : 'chevron-down');
+        head.createSpan({ text: title });
+        onActivate(head, () => {
+          if (folded.has(title)) folded.delete(title);
+          else folded.add(title);
+          settings.panelFoldedGroups = Array.from(folded);
+          this.plugin.saveData(settings);
+          this.redraw();
+        });
       }
-      head.toggleClass('is-secondary', !any);
+      rows.forEach((p) => {
+        const row = this.renderRow(list, p.key, fm[p.key], p);
+        if (isFolded || waiting(p)) row.addClass('is-secondary');
+      });
     });
-    this.containerEl.toggleClass('is-compact', compact);
 
-    const rest = compact ? keys.length - main.size : 0;
-    if (rest > 0 || (this.panel.showAllProps && (this.settings.panelPropertiesView || 'compact') === 'compact')) {
+    if (rest > 0) {
       const more = this.containerEl.createDiv({ cls: 'dr-props-more' });
       asButton(more);
-      more.createSpan({ text: rest > 0 ? `Show ${rest} more ${rest === 1 ? 'property' : 'properties'}` : 'Show fewer' });
-      setIcon(more.createSpan({ cls: 'dr-props-more-icon' }), rest > 0 ? 'chevron-down' : 'chevron-up');
-      onActivate(more, () => {
-        this.panel.showAllProps = rest > 0;
+      more.createSpan({ text: compact ? `Show ${rest} more` : 'Show fewer' });
+      setIcon(more.createSpan({ cls: 'dr-props-more-icon' }), compact ? 'chevron-down' : 'chevron-up');
+      onActivate(more, async () => {
+        settings.panelPropertiesView = compact ? 'all' : 'compact';
+        await this.plugin.saveData(settings);
         this.redraw();
       });
     }
-    // With everything showing, the field to add another is there too.
-    if (!compact || rest === 0) this.renderAdd(this.containerEl, keys);
     if (this.focusKey) {
       const key = this.focusKey;
       this.focusKey = null;
@@ -135,27 +165,45 @@ export class PropertiesSection extends PanelSection {
       const target = row && row.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value textarea');
       if (target) target.focus();
     }
+    if (this.pickerOpen) {
+      this.pickerOpen = false;
+      this.openAddPicker();
+    }
   }
 
-  /** Over the rows: the heading, + to add one, and ··· for how they show. */
-  renderHead(count) {
+  /** The heading: a press folds or opens the panel; + adds a property; ··· for how they show. */
+  renderHead(count, collapsed) {
     const head = this.containerEl.createDiv({ cls: 'dr-props-head' });
-    head.createSpan({ cls: 'dr-props-title', text: 'Properties' });
+    const toggle = head.createDiv({ cls: 'dr-props-toggle' });
+    asButton(toggle, collapsed ? 'Show the properties' : 'Fold the properties');
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    toggle.createSpan({ cls: 'dr-props-title', text: 'Properties' });
+    if (collapsed && count) toggle.createSpan({ cls: 'dr-props-count', text: String(count) });
+    setIcon(toggle.createSpan({ cls: 'dr-props-chevron' }), collapsed ? 'chevron-right' : 'chevron-down');
+    onActivate(toggle, async () => {
+      this.settings.panelPropsCollapsed = !collapsed;
+      await this.plugin.saveData(this.settings);
+      this.redraw();
+    });
     const add = head.createDiv({ cls: 'clickable-icon dr-props-add' });
     asButton(add, 'Add property');
     setIcon(add, 'plus');
-    onActivate(add, () => {
-      // Adding wants the whole list, with its field.
-      this.panel.showAllProps = true;
+    onActivate(add, (evt) => {
+      if (evt && evt.stopPropagation) evt.stopPropagation();
+      if (!this.settings.panelPropsCollapsed) return this.openAddPicker();
+      // Adding needs the panel open.
+      this.settings.panelPropsCollapsed = false;
+      this.pickerOpen = true;
+      this.plugin.saveData(this.settings);
       this.redraw();
-      const input = this.containerEl && this.containerEl.querySelector('.dr-add input');
-      if (input) input.focus();
     });
     const more = head.createDiv({ cls: 'clickable-icon dr-props-menu' });
     asButton(more, 'How properties show');
     setIcon(more, 'ellipsis');
-    onActivate(more, (evt) => this.showViewMenu(evt));
-    head.dataset.count = String(count);
+    onActivate(more, (evt) => {
+      if (evt && evt.stopPropagation) evt.stopPropagation();
+      this.showViewMenu(evt);
+    });
   }
 
   /** How the panel shows properties: the main ones or all, grouped or not, and which are main. */
@@ -164,26 +212,22 @@ export class PropertiesSection extends PanelSection {
     const view = this.settings.panelPropertiesView || 'compact';
     const set = async (key, value) => {
       this.settings[key] = value;
-      this.panel.showAllProps = false;
       await this.plugin.saveData(this.settings);
       this.redraw();
     };
     menu.addItem((item) => item.setTitle('The main ones').setChecked(view === 'compact').setSection('view').onClick(() => set('panelPropertiesView', 'compact')));
     menu.addItem((item) => item.setTitle('All properties').setChecked(view === 'all').setSection('view').onClick(() => set('panelPropertiesView', 'all')));
-    const grouping = this.settings.panelPropertyGroups || 'auto';
-    menu.addItem((item) =>
-      item
-        .setTitle('Grouped')
-        .setChecked(grouping === 'on')
-        .setSection('group')
-        .onClick(() => set('panelPropertyGroups', grouping === 'on' ? 'off' : 'on'))
-    );
+    if (propertyGroups(this.settings).length) {
+      const on = this.settings.panelPropertyGroups === 'on';
+      menu.addItem((item) => item.setTitle('Grouped').setChecked(on).setSection('group').onClick(() => set('panelPropertyGroups', on ? 'off' : 'on')));
+    }
     if (typeof this.plugin.openSettingsAt === 'function') {
       menu.addItem((item) => item.setTitle('Choose the main properties…').setIcon('settings').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelPrimaryProps')));
+      menu.addItem((item) => item.setTitle('Set up groups…').setIcon('settings').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelGroupList')));
     }
-    const r = (evt && evt.currentTarget && evt.currentTarget.getBoundingClientRect) ? evt.currentTarget.getBoundingClientRect() : null;
-    if (r) menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
-    else menu.showAtPosition({ x: 0, y: 0 });
+    const el = evt && evt.currentTarget && evt.currentTarget.getBoundingClientRect ? evt.currentTarget : null;
+    const r = el ? el.getBoundingClientRect() : { left: 0, bottom: 0 };
+    menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
   }
 
   renderRow(parentEl, key, value, shown) {
@@ -246,11 +290,8 @@ export class PropertiesSection extends PanelSection {
     const quiet = typeof this.plugin.feature === 'function' ? this.plugin.feature(QuietLinks) : null;
     if (quiet && quiet.enabled) quiet.quietenProperties(valueEl, this.file.path);
 
-    // A note a value names: a press offers to open it, see what's related, or its graph.
-    if (shown && shown.interaction === 'note-link') {
-      row.addClass('is-link');
-      valueEl.addEventListener('contextmenu', (evt) => this.linkMenu(evt, value));
-    }
+    // A value naming notes opens them as links do; its menu offers them too.
+    if (shown && shown.interaction === 'note-link') row.addClass('is-link');
 
     // One menu for everything else, from ··· when the row is pointed at, or a right-click.
     const more = row.createDiv({ cls: 'clickable-icon dr-row-more' });
@@ -266,50 +307,6 @@ export class PropertiesSection extends PanelSection {
       this.showMenu(key, more);
     });
     return row;
-  }
-
-  /** A note named in a property: open it, here or in a new tab, its related notes, or its graph. */
-  linkMenu(evt, value) {
-    const names = (Array.isArray(value) ? value : [value])
-      .map((v) => String(v || '').replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
-      .filter(Boolean);
-    const cache = this.app.metadataCache;
-    if (!cache || typeof cache.getFirstLinkpathDest !== 'function') return;
-    const targets = names.map((n) => cache.getFirstLinkpathDest(n, this.file.path)).filter(Boolean);
-    // Over one pill, that note; anywhere else in the value, the first.
-    const pill = evt.target && evt.target.closest ? evt.target.closest('.multi-select-pill, .internal-link') : null;
-    const text = pill ? pill.textContent.trim() : '';
-    const file = targets.find((f) => f.basename === text) || targets[0];
-    if (!file) return;
-    evt.preventDefault();
-    const menu = new Menu();
-    const ws = this.app.workspace;
-    const close = () => typeof this.panel.close === 'function' && this.panel.close();
-    menu.addItem((item) => {
-      item.setTitle(file.basename).setIcon('file-text').setSection('title');
-      if (typeof item.setDisabled === 'function') item.setDisabled(true);
-    });
-    menu.addItem((item) => item.setTitle('Open note').setIcon('file-text').setSection('open').onClick(() => { ws.getLeaf(false).openFile(file); close(); }));
-    menu.addItem((item) => item.setTitle('Open in new tab').setIcon('file-plus').setSection('open').onClick(() => { ws.getLeaf('tab').openFile(file); close(); }));
-    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
-    if (library && library.enabled) {
-      menu.addItem((item) =>
-        item.setTitle('Show related notes').setIcon('waypoints').setSection('related').onClick(() => { library.browseMode({ mode: 'concept', path: '/', property: file.path }); close(); })
-      );
-    }
-    // Its own graph: Obsidian's local graph, beside the note opened.
-    menu.addItem((item) =>
-      item
-        .setTitle('Show in its graph')
-        .setIcon('git-fork')
-        .setSection('related')
-        .onClick(async () => {
-          await ws.getLeaf(false).openFile(file);
-          close();
-          if (this.app.commands && typeof this.app.commands.executeCommandById === 'function') this.app.commands.executeCommandById('graph:open-local');
-        })
-    );
-    menu.showAtMouseEvent(evt);
   }
 
   /**
@@ -475,65 +472,123 @@ export class PropertiesSection extends PanelSection {
     input.addEventListener('change', () => this.write(key, input.value, { redraw: false }));
   }
 
-  renderAdd(parentEl, existing) {
-    const add = parentEl.createDiv({ cls: 'dr-add' });
-    const icon = add.createSpan({ cls: 'dr-add-icon' });
-    setIcon(icon, 'plus');
+  /**
+   * Adding a property: a small searchable list under the heading, the
+   * names most used first and those the note has left out, Create for a
+   * new one; chosen, the property is added and its value is next.
+   */
+  openAddPicker() {
+    if (!this.containerEl) return;
+    const old = this.containerEl.querySelector('.dr-add');
+    if (old) {
+      const field = old.querySelector('input');
+      if (field) field.focus();
+      return;
+    }
+    const head = this.containerEl.querySelector('.dr-props-head');
+    const picker = head ? head.ownerDocument.createElement('div') : this.containerEl.createDiv();
+    picker.className = 'dr-add';
+    if (head) head.after(picker);
+    const input = picker.createEl('input', { type: 'text', cls: 'dr-add-search' });
+    input.placeholder = 'Search properties…';
+    input.setAttribute('aria-label', 'Add property');
+    const list = picker.createDiv({ cls: 'dr-add-list' });
+    list.setAttribute('role', 'listbox');
 
-    const field = add.createDiv({ cls: 'dr-field' });
-    const input = field.createEl('input', { type: 'text' });
-    input.placeholder = 'Add property';
-
-    // A name the note already has goes to that property instead of
-    // writing over it with an empty value.
-    const commit = (name) => {
-      const key = (name === undefined ? input.value : name).trim();
-      if (!key) return;
-      input.value = '';
-      const have = Object.keys(this.frontmatter).find(
-        (k) => k !== 'position' && k.toLowerCase() === key.toLowerCase()
-      );
-      if (have) {
-        const row = this.containerEl.querySelector(`.dr-row[data-key="${CSS.escape(have)}"]`);
-        const target = row && row.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value textarea');
-        if (target) target.focus();
-        new Notice(`This note already has "${have}".`);
+    const have = Object.keys(this.frontmatter).map((k) => k.toLowerCase());
+    const known = this.knownProperties().filter((n) => have.indexOf(n.toLowerCase()) === -1);
+    let items = [];
+    let active = 0;
+    const close = () => picker.remove();
+    const choose = (name) => {
+      close();
+      this.commitAdd(name);
+    };
+    const paint = () =>
+      Array.from(list.querySelectorAll('.dr-add-item')).forEach((el, i) => {
+        el.toggleClass('is-selected', i === active);
+        el.setAttribute('aria-selected', String(i === active));
+      });
+    let drawnFor = null;
+    const draw = () => {
+      const q = input.value.trim();
+      drawnFor = q;
+      const low = q.toLowerCase();
+      const names = known.filter((n) => !low || n.toLowerCase().includes(low)).slice(0, 8);
+      const exact = known.concat(Object.keys(this.frontmatter)).some((n) => n.toLowerCase() === low);
+      items = names.map((n) => ({ name: n, label: n })).concat(q && !exact ? [{ name: q, label: `Create “${q}”`, create: true }] : !q ? [{ name: '', label: 'Create new property', create: true }] : []);
+      active = Math.min(active, Math.max(0, items.length - 1));
+      list.empty();
+      if (names.length) list.createDiv({ cls: 'dr-add-heading', text: low ? 'Properties' : 'Suggested' });
+      items.forEach((item, i) => {
+        const el = list.createDiv({ cls: `dr-add-item${item.create ? ' is-create' : ''}` });
+        el.setAttribute('role', 'option');
+        if (item.create) setIcon(el.createSpan({ cls: 'dr-add-item-icon' }), 'plus');
+        el.createSpan({ text: item.label });
+        // mousedown, not click: the field's blur would close the list first.
+        el.addEventListener('mousedown', (evt) => {
+          evt.preventDefault();
+          active = i;
+          pick();
+        });
+      });
+      paint();
+    };
+    const pick = () => {
+      // What's typed is what's chosen from, even before the list caught up.
+      if (input.value.trim() !== drawnFor) draw();
+      const item = items[active];
+      // Nothing listed — a name the note has already, say: as typed.
+      if (!item) {
+        if (input.value.trim()) choose(input.value);
         return;
       }
-      // Its value is what's typed next.
-      this.focusKey = key;
-      this.write(key, '', { onlyNew: true });
+      // Create with nothing typed: the field is where its name goes.
+      if (item.create && !item.name) {
+        input.focus();
+        return;
+      }
+      choose(item.name);
     };
-
-    const have = existing.map((k) => k.toLowerCase());
-    // How many notes use each, so the one already in use is the one chosen.
-    const counts = new Map();
-    try {
-      const all = this.app.metadataTypeManager.getAllProperties() || {};
-      const count = propertyCounter(this.app);
-      Object.keys(all).forEach((k) => counts.set(((all[k] && all[k].name) || k).toLowerCase(), count(k, all[k])));
-    } catch (err) {
-      counts.clear();
-    }
-    this.suggests.push(attachSuggest(field, input, {
-      icon: 'tag',
-      source: () =>
-        this.knownProperties().filter(
-          (n) => have.indexOf(n.toLowerCase()) === -1
-        ),
-      note: (name) => {
-        const n = counts.get(name.toLowerCase());
-        return n ? `${n} ${n === 1 ? 'note' : 'notes'}` : '';
-      },
-      create: (name) => `Create “${name}”`,
-      onSelect: (v) => commit(v),
-    }));
-
-    input.addEventListener('keydown', (evt) => {
-      if (evt.key !== 'Enter' || composing(evt)) return;
-      evt.preventDefault();
-      commit();
+    input.addEventListener('input', () => {
+      active = 0;
+      draw();
     });
+    input.addEventListener('keydown', (evt) => {
+      if (evt.key === 'ArrowDown' || evt.key === 'ArrowUp') {
+        evt.preventDefault();
+        active = Math.max(0, Math.min(items.length - 1, active + (evt.key === 'ArrowDown' ? 1 : -1)));
+        paint();
+      } else if (evt.key === 'Enter' && !composing(evt)) {
+        evt.preventDefault();
+        pick();
+      } else if (evt.key === 'Escape') {
+        evt.preventDefault();
+        evt.stopPropagation();
+        close();
+      }
+    });
+    input.addEventListener('blur', () => window.setTimeout(() => picker.isConnected && !picker.contains(picker.ownerDocument.activeElement) && close(), 150));
+    draw();
+    input.focus();
+  }
+
+  /** A property added by name: one the note already has is gone to instead of written over. */
+  commitAdd(name) {
+    const key = String(name || '').trim();
+    if (!key) return;
+    const have = Object.keys(this.frontmatter).find((k) => k !== 'position' && k.toLowerCase() === key.toLowerCase());
+    if (have) {
+      const row = this.containerEl.querySelector(`.dr-row[data-key="${CSS.escape(have)}"]`);
+      const target = row && row.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value textarea');
+      if (target) target.focus();
+      new Notice(`This note already has "${have}".`);
+      return;
+    }
+    // Shown, whatever the view, and its value is what's typed next.
+    this.focusKey = key;
+    if ((this.settings.panelPropertiesView || 'compact') === 'compact') this.settings.panelPropertiesView = 'all';
+    this.write(key, '', { onlyNew: true });
   }
 
   /** Property names already used in the vault, most common first. */
@@ -556,10 +611,10 @@ export class PropertiesSection extends PanelSection {
 
   /**
    * A property's menu, by how far a choice reaches: the property itself —
-   * its type, which Obsidian keeps for every note, renaming it across the
-   * vault, its place here; then finding the notes that share it; then what
-   * changes other notes, under Manage across vault; last, taking it out
-   * of this note.
+   * its type (which Obsidian keeps for every note), its name here, its
+   * place; a note its value names; finding the notes that share it; then
+   * what changes other notes, under Manage across vault; last, taking it
+   * out of this note.
    */
   showMenu(key, anchorEl) {
     const menu = new Menu();
@@ -589,8 +644,18 @@ export class PropertiesSection extends PanelSection {
         ),
       'property'
     );
-    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
-    if (bulk) menu.addItem((item) => sectioned(item, 'property').setTitle('Rename across vault…').setIcon('pencil').onClick(() => bulk.openRenameProperty(key)));
+    // Renamed in this note: its name, ready to type over. Across the vault is under Manage.
+    menu.addItem((item) =>
+      sectioned(item, 'property')
+        .setTitle('Rename…')
+        .setIcon('pencil')
+        .onClick(() => {
+          const name = this.containerEl && this.containerEl.querySelector(`.dr-row[data-key="${CSS.escape(key)}"] .dr-key-name`);
+          if (!name) return;
+          name.focus();
+          name.select();
+        })
+    );
 
     // For touch, where a drag is harder to aim, and for anyone who'd rather not drag.
     const row = anchorEl.closest('.dr-row');
@@ -617,7 +682,49 @@ export class PropertiesSection extends PanelSection {
       'property'
     );
 
-    this.findEntries(key).forEach(([title, icon, run]) => menu.addItem((item) => sectioned(item, 'find').setTitle(title).setIcon(icon).onClick(run)));
+    // A note its value names: opened as its link would be, or in a new tab, or among its related notes.
+    const raw = this.frontmatter[key];
+    if (propertyPresentation(key, raw, current, this.settings).interaction === 'note-link') {
+      const files = linkedFiles(this.app, raw, this.file.path).slice(0, 3);
+      const ws = this.app.workspace;
+      const close = () => typeof this.panel.close === 'function' && this.panel.close();
+      files.forEach((file) =>
+        menu.addItem((item) => sectioned(item, 'open').setTitle(`Open “${file.basename}”`).setIcon('file-text').onClick(() => { ws.getLeaf(false).openFile(file); close(); }))
+      );
+      if (files.length === 1) {
+        menu.addItem((item) => sectioned(item, 'open').setTitle(`Open “${files[0].basename}” in new tab`).setIcon('file-plus').onClick(() => { ws.getLeaf('tab').openFile(files[0]); close(); }));
+      }
+      const library = this.plugin.feature ? this.plugin.feature(Library) : null;
+      if (files.length && library && library.enabled) {
+        menu.addItem((item) =>
+          sectioned(item, 'open')
+            .setTitle(`Show notes related to “${files[0].basename}”`)
+            .setIcon('waypoints')
+            .onClick(() => { library.browseMode({ mode: 'concept', path: '/', property: files[0].path }); close(); })
+        );
+      }
+    }
+
+    // The notes that share it, in the Properties screen.
+    const find = this.findEntries(key);
+    if (find.values.length === 1) {
+      menu.addItem((item) => sectioned(item, 'find').setTitle('Find notes with this value').setIcon('filter').onClick(find.values[0][1]));
+    } else if (find.values.length > 1) {
+      menuGroup(
+        menu,
+        'Find notes with this value',
+        'filter',
+        (m, nested) =>
+          find.values.forEach(([value, run]) =>
+            m.addItem((item) => {
+              item.setTitle(nested ? value : `Find notes with “${value}”`).setIcon('filter').onClick(run);
+              if (!nested) sectioned(item, 'find');
+            })
+          ),
+        'find'
+      );
+    }
+    if (find.all) menu.addItem((item) => sectioned(item, 'find').setTitle('Find notes with this property').setIcon('list').onClick(find.all));
 
     const manage = this.manageEntries(key);
     if (manage.length) {
@@ -642,12 +749,12 @@ export class PropertiesSection extends PanelSection {
   }
 
   /**
-   * The notes that share it, in the Properties screen, each [title, icon,
-   * run]: those with this note's value — each of a list's first three —
-   * and every note with the property.
+   * The notes that share it, in the Properties screen: `values`, each of
+   * this note's values — a list's first three — as [value, run]; and
+   * `all`, every note with the property. None without the library.
    */
   findEntries(key) {
-    const out = [];
+    const out = { values: [], all: null };
     const library = this.plugin.feature ? this.plugin.feature(Library) : null;
     if (!library || !library.enabled) return out;
     // The Properties screen knows a property by Obsidian's key for it, in lower case.
@@ -658,25 +765,26 @@ export class PropertiesSection extends PanelSection {
       .map((v) => v.replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
       .filter((v) => v && v.length <= 60)
       .slice(0, 3)
-      .forEach((v) => out.push([`Find notes with “${v}”`, 'filter', () => open(v)]));
-    out.push([`Find all notes with ${key}`, 'list', () => open(null)]);
+      .forEach((v) => out.values.push([v, () => open(v)]));
+    out.all = () => open(null);
     return out;
   }
 
   /**
    * What changes other notes, each [short title, title when not nested,
-   * icon, run]: setting it for the whole collection, merging it with
-   * another property, taking it out of every note.
+   * icon, run] — each shown first, with Undo: renaming it everywhere,
+   * applying it to the collection, merging it with another property,
+   * taking it out of every note.
    */
   manageEntries(key) {
     const out = [];
+    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
+    if (bulk) out.push(['Rename across vault…', `Rename ${key} across vault…`, 'pencil', () => bulk.openRenameProperty(key)]);
     const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
     const file = this.file;
     if (album && album.enabled && file && album.albumNotes(file).length) {
-      const name = `Set for all of ${album.albumName(file)}`;
-      out.push([name, name, 'layers', () => album.apply(file, key)]);
+      out.push(['Apply to collection…', `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);
     }
-    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
     if (bulk) {
       out.push(['Merge with another property…', `Merge ${key} with another property…`, 'git-merge', () => bulk.openMerge([key])]);
       out.push(['Remove from every note…', `Remove ${key} from every note…`, 'list-minus', () => bulk.openRemove([this.app.vault.getRoot()], [key])]);

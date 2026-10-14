@@ -84,7 +84,8 @@ function setup(initial = { parent: '[[Judiciary]]', domain: 'Law', status: 'draf
     },
   };
   const popupEl = document.body.appendChild(document.createElement('div'));
-  const plugin = { app, settings: {} };
+  // Every property showing: these are about moving them.
+  const plugin = { app, settings: { panelPropertiesView: 'all' } };
   plugin.notes = new Notes(plugin);
   const panel = { plugin, popupEl };
   const section = new PropertiesSection(panel);

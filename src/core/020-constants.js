@@ -178,8 +178,17 @@ export const DEFAULTS = {
   panelPropertiesView: 'compact',
   // The main ones, by name.
   panelPrimaryProps: 'type, domain, status',
-  // Under General, Relationships and Information: 'auto' (with many), 'on' or 'off'.
-  panelPropertyGroups: 'auto',
+  // Under the groups set below: 'on' or 'off'.
+  panelPropertyGroups: 'off',
+  // The groups, in order: { title, keys: names by commas }; what none names goes under Other.
+  panelGroupList: [
+    { title: 'General', keys: 'type, domain, status' },
+    { title: 'Relationships', keys: 'parent, broader, narrower, related' },
+    { title: 'Information', keys: 'created, modified' },
+  ],
+  // The panel folded to its heading, and groups folded in it, from note to note.
+  panelPropsCollapsed: false,
+  panelFoldedGroups: [],
   showMentions: true,
   // The note panel's sections from relationships and albums.
   panelRelationships: true,
@@ -320,7 +329,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 7,
+  settingsVersion: 8,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

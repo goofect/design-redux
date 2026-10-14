@@ -503,7 +503,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 7);
+    assert.strictEqual(s.settingsVersion, 8);
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);
     assert.ok(!('upNext' in s), 'a retired setting dropped');

@@ -88,9 +88,13 @@ class Setting {
   setDesc() { return this; }
   setHeading() { return this; }
   addToggle(cb) { const c = { setValue: () => c, onChange: () => c }; cb(c); return this; }
-  addText(cb) { const c = { setPlaceholder: () => c, setValue: () => c, onChange: () => c }; cb(c); return this; }
+  addText(cb) { const c = { inputEl: document.createElement('input'), setPlaceholder: () => c, setValue: (v) => ((c.inputEl.value = v), c), getValue: () => c.inputEl.value, onChange: () => c }; cb(c); return this; }
   addDropdown(cb) { const c = { addOption: () => c, setValue: () => c, onChange: () => c }; cb(c); return this; }
+  setClass() { return this; }
+  addExtraButton(cb) { const b = { setIcon: () => b, setTooltip: (t) => ((b.tip = t), b), setDisabled: () => b, onClick: (f) => ((b.click = f), b) }; cb(b); settingButtons.push(b); return this; }
+  addButton(cb) { const b = { setButtonText: (t) => ((b.tip = t), b), onClick: (f) => ((b.click = f), b) }; cb(b); settingButtons.push(b); return this; }
 }
+const settingButtons = [];
 class PluginSettingTab { constructor(app) { this.app = app; this.containerEl = document.createElement('div'); } }
 
 const obsidian = new Proxy({
@@ -110,7 +114,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab, SETTINGS_TABS };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -332,6 +336,27 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tab.hide();
     tab.display();
     assert.ok(tab.containerEl.classList.contains('dr-settings-basic'));
+  });
+
+  await t('settings: the main properties as a list to order, take off and add to by name', () => {
+    const p = fakePlugin(settings());
+    p.settings.panelPrimaryProps = 'type, domain, status';
+    p.saveSettings = () => {};
+    p.app.metadataTypeManager = { getAllProperties: () => ({ author: { name: 'author' } }) };
+    const panel = new T.PropertiesPanel(p);
+    const el = document.createElement('div');
+    settingNames.length = 0;
+    settingButtons.length = 0;
+    panel.renderMainChoice(el);
+    assert.deepStrictEqual(settingNames.slice(1, 4), ['type', 'domain', 'status']);
+    // domain up, status off.
+    settingButtons.filter((b) => b.tip === 'Move up')[1].click();
+    assert.strictEqual(p.settings.panelPrimaryProps, 'domain, type, status');
+    settingButtons.length = 0;
+    settingNames.length = 0;
+    panel.renderMainChoice(el);
+    settingButtons.filter((b) => b.tip === 'Take off')[2].click();
+    assert.strictEqual(p.settings.panelPrimaryProps, 'domain, type');
   });
 
   /* -- browse view hooks ----------------------------------------------- */

@@ -442,7 +442,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 }
 
 .dr-props-popup {
-  --dr-label-width: 84px;
+  --dr-label-width: 38%;
   --dr-gutter: 10px;
   position: fixed;
   z-index: calc(var(--layer-menu, 65) - 10);
@@ -452,7 +452,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   max-width: 400px;
   max-height: 56vh;
   overflow-y: auto;
-  padding: var(--dr-space-3) calc(var(--dr-u) * 3.5) calc(var(--dr-u) * 2.5);
+  padding: var(--dr-space-3) var(--dr-space-4);
   background-color: var(--dr-float-bg);
   backdrop-filter: blur(var(--dr-glass-blur));
   -webkit-backdrop-filter: blur(var(--dr-glass-blur));
@@ -526,16 +526,38 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
  * together rather than assuming one shape.
  */
 
+.dr-props-popup .dr-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* No borders between rows: a quiet highlight under the one pointed at or worked in. */
 .dr-props-popup .dr-row {
   display: flex;
   align-items: flex-start;
   gap: var(--dr-gutter);
-  padding: var(--dr-space-2) 2px;
+  min-height: 32px;
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-1);
+  border-radius: var(--dr-radius-sm, 4px);
   position: relative;
+  transition: background-color 120ms var(--dr-ease, ease);
 }
 
-.dr-props-popup .dr-rows .dr-row + .dr-row {
-  border-top: 1px solid var(--background-modifier-border);
+.dr-props-popup .dr-row:focus-within {
+  background-color: var(--background-modifier-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-props-popup .dr-row {
+    transition: none;
+  }
 }
 
 /* -- grip and remove ---------------------------------------------------
@@ -623,13 +645,43 @@ body.is-mobile .dr-props-popup .dr-row-more {
   margin-bottom: var(--dr-space-1);
 }
 
-.dr-props-popup .dr-props-title {
+.dr-props-popup .dr-props-toggle {
+  display: flex;
   flex: 1 1 auto;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
+  align-items: center;
+  gap: var(--dr-space-1);
+  min-width: 0;
+  cursor: pointer;
+  border-radius: var(--dr-radius-sm, 4px);
+}
+
+.dr-props-popup .dr-props-title {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold, 600);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+}
+
+.dr-props-popup .dr-props-count {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-props-popup .dr-props-chevron,
+.dr-props-popup .dr-row-group-chevron {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-props-popup .dr-props-chevron .svg-icon,
+.dr-props-popup .dr-row-group-chevron .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-props-popup .dr-props-toggle:focus-visible,
+.dr-props-popup .dr-row-group:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
 }
 
 .dr-props-popup .dr-props-head .clickable-icon {
@@ -642,7 +694,11 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 .dr-props-popup .dr-row-group {
-  margin: var(--dr-space-3) 0 2px;
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  cursor: pointer;
+  margin: var(--dr-space-4) 0 2px;
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold, 600);
@@ -652,6 +708,60 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 .dr-props-popup .dr-row-group:first-child {
   margin-top: 0;
+}
+
+/* Adding: a small searchable list under the heading. */
+.dr-props-popup .dr-add {
+  margin: var(--dr-space-1) 0 var(--dr-space-2);
+  padding: var(--dr-space-1);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-sm, 4px);
+  background-color: var(--background-primary);
+}
+
+.dr-props-popup input.dr-add-search {
+  width: 100%;
+}
+
+.dr-props-popup .dr-add-heading {
+  padding: var(--dr-space-1) var(--dr-space-2) 2px;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dr-props-popup .dr-add-item {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-radius-sm, 4px);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-props-popup .dr-add-item.is-selected {
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-props-popup .dr-add-item.is-create {
+  color: var(--text-accent);
+}
+
+.dr-props-popup .dr-add-item-icon {
+  display: inline-flex;
+}
+
+.dr-props-popup .dr-add-item-icon .svg-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.dr-props-popup .dr-empty-add {
+  color: var(--text-accent);
+  cursor: pointer;
 }
 
 .dr-props-popup .is-secondary {
@@ -897,34 +1007,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   margin: 2px 0 0 calc(var(--dr-u) * 1.5);
 }
 
-/* -- add --------------------------------------------------------------- */
-
-.dr-props-popup .dr-add {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  margin-top: 2px;
-  padding: calc(var(--dr-u) * 1.5) var(--dr-space-1);
-  color: var(--text-faint);
-}
-
-.dr-props-popup .dr-add-icon {
-  display: inline-flex;
-  flex: 0 0 auto;
-  width: calc(var(--dr-label-width) + var(--dr-gutter));
-  justify-content: flex-end;
-  padding-right: calc(var(--dr-u) * 1.5);
-}
-
-.dr-props-popup .dr-add-icon .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.dr-props-popup .dr-add .dr-field {
-  flex: 1 1 auto;
-  min-width: 0;
-}
+/* -- add: the search field in its list ------------------------------- */
 
 .dr-props-popup .dr-add input[type="text"] {
   width: 100%;
@@ -1030,16 +1113,6 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 .dr-suggest.is-open {
   display: block;
-}
-
-.dr-suggest-note {
-  margin-left: auto;
-  padding-left: var(--dr-space-2);
-  color: var(--text-faint);
-}
-
-.dr-suggest-item.is-create {
-  color: var(--text-accent);
 }
 
 .dr-suggest-item {

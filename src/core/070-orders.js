@@ -119,6 +119,14 @@ export const SETTINGS_MIGRATIONS = [
       }
     },
   },
+  {
+    // Grouping a note's properties is only as set now — nothing guessed
+    // from names — and off until groups are wanted.
+    to: 8,
+    run(saved) {
+      if (saved.panelPropertyGroups === 'auto') saved.panelPropertyGroups = 'off';
+    },
+  },
 ];
 
 export function movedPath(p, oldPath, newPath) {

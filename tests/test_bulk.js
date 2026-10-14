@@ -1154,19 +1154,19 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.deepStrictEqual(sections, ['property', 'find', 'manage', 'remove'], 'by how far each reaches');
     const titles = (section) => m.items.filter((i) => i.section === section).map((i) => i.title);
     // Menus that can't open beside one another list a group's entries in place, under longer names.
-    assert.deepStrictEqual(titles('property').filter((t) => !t.startsWith('Type: ')), ['Rename across vault…', 'Move up', 'Move down']);
+    assert.deepStrictEqual(titles('property').filter((t) => !t.startsWith('Type: ')), ['Rename…', 'Move up', 'Move down']);
     assert.ok(titles('property').includes('Type: Text'));
-    assert.deepStrictEqual(titles('find'), ['Find notes with “Politics”', 'Find notes with “Law”', 'Find all notes with domain']);
-    assert.deepStrictEqual(titles('manage'), ['Merge domain with another property…', 'Remove domain from every note…']);
+    assert.deepStrictEqual(titles('find'), ['Find notes with “Politics”', 'Find notes with “Law”', 'Find notes with this property']);
+    assert.deepStrictEqual(titles('manage'), ['Rename domain across vault…', 'Merge domain with another property…', 'Remove domain from every note…']);
     assert.strictEqual(m.items[m.items.length - 1].title, 'Remove from note');
     m.items.find((i) => i.title === 'Find notes with “Politics”').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: 'Politics' });
-    m.items.find((i) => i.title === 'Find all notes with domain').click();
+    m.items.find((i) => i.title === 'Find notes with this property').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: null });
     // The row's ··· and a right-click open the same menu.
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-row-more'));
     assert.deepStrictEqual(menus.pop().items.map((i) => i.title), m.items.map((i) => i.title));
-    const item = m.items.find((i) => i.title === 'Rename across vault…');
+    const item = m.items.find((i) => i.title === 'Rename domain across vault…');
     assert.ok(item, `not offered: ${m.items.map((i) => i.title)}`);
     item.click();
     const opened = modals.pop();
@@ -1176,11 +1176,12 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     popupEl.remove();
   });
 
-  await t('the properties panel reads as information: the main ones, Show more for the rest, groups when there are many, a menu on a note a value names', async () => {
-    const fm = { type: 'concept', domain: 'Law', status: 'draft', broader: '[[Politics]]', related: ['[[Courts]]'], created: '2026-10-14', source: 'x', author: 'y' };
-    const v = makeVault({ 'a.md': note(fm), 'Politics.md': note({}), 'Courts.md': note({}) });
+  await t('the properties panel reads as information: the heading folds it, the main ones in their order, Show more remembered, groups only as set', async () => {
+    const fm = { source: 'x', status: 'draft', type: 'concept', broader: '[[Politics]]', domain: 'Law', created: '2026-10-14' };
+    const v = makeVault({ 'a.md': note(fm), 'Politics.md': note({}) });
     const { plugin } = makePlugin(v);
     v.app.metadataCache.getFirstLinkpathDest = (name) => v.file(`${name}.md`);
+    plugin.saveData = async () => {};
     const browsed = [];
     const library = Object.create(R.Library.prototype);
     Object.defineProperty(library, 'enabled', { value: true });
@@ -1188,73 +1189,89 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     plugin.features.push(library);
     const popupEl = document.body.appendChild(document.createElement('div'));
     popupEl.className = 'dr-props-popup';
-    const panel = { plugin, popupEl, close() {} };
-    const section = new R.PropertiesSection(panel);
+    const section = new R.PropertiesSection({ plugin, popupEl, close() {} });
     section.mount(popupEl, v.file('a.md'));
     const shown = () => Array.from(popupEl.querySelectorAll('.dr-row:not(.is-secondary)')).map((r) => r.dataset.key);
-    const heads = () => Array.from(popupEl.querySelectorAll('.dr-row-group:not(.is-secondary)')).map((r) => r.textContent);
-    // Eight properties: grouped, and only the main ones showing.
+    const heads = () => Array.from(popupEl.querySelectorAll('.dr-row-group')).map((r) => r.textContent);
+    // The main ones, in the order set: type, domain, status.
     assert.deepStrictEqual(shown(), ['type', 'domain', 'status']);
-    assert.deepStrictEqual(heads(), ['General']);
-    const more = popupEl.querySelector('.dr-props-more');
-    assert.strictEqual(more.textContent, 'Show 5 more properties');
-    assert.ok(!popupEl.querySelector('.dr-add'), 'adding waits for the whole list');
-    more.click();
-    assert.deepStrictEqual(heads(), ['General', 'Relationships', 'Information']);
-    assert.deepStrictEqual(shown(), ['type', 'domain', 'status', 'source', 'author', 'broader', 'related', 'created']);
-    assert.strictEqual(popupEl.querySelector('.dr-props-more').textContent, 'Show fewer');
-    assert.ok(popupEl.querySelector('.dr-add input'));
+    assert.deepStrictEqual(heads(), [], 'no groups until asked for');
+    const more = () => popupEl.querySelector('.dr-props-more');
+    assert.strictEqual(more().textContent, 'Show 3 more');
+    assert.ok(!popupEl.querySelector('.dr-add'), 'adding is the heading’s +');
+    more().click();
+    await settle(10);
+    assert.strictEqual(plugin.settings.panelPropertiesView, 'all', 'remembered from note to note');
+    assert.deepStrictEqual(shown(), Object.keys(fm), 'all, in the note’s order');
+    assert.strictEqual(more().textContent, 'Show fewer');
 
-    // Grouping is only how it shows: the note is as it was.
+    // Groups, as set — nothing guessed — each folding on its own.
+    plugin.settings.panelPropertyGroups = 'on';
+    section.redraw();
+    assert.deepStrictEqual(heads(), ['General', 'Relationships', 'Information', 'Other']);
+    assert.deepStrictEqual(shown(), ['status', 'type', 'domain', 'broader', 'created', 'source']);
+    popupEl.querySelector('.dr-row-group[data-group="Relationships"]').click();
+    await settle(10);
+    assert.deepStrictEqual(plugin.settings.panelFoldedGroups, ['Relationships']);
+    assert.ok(!shown().includes('broader'));
+    // Only how they show: the note is as it was.
     assert.deepStrictEqual(Object.keys(v.fm('a.md')).filter((k) => k !== 'position'), Object.keys(fm));
 
-    // A note a value names: open it, in a new tab, its related notes, its graph.
-    const value = popupEl.querySelector('.dr-row[data-key="broader"] .dr-value');
-    assert.ok(value.closest('.dr-row').classList.contains('is-link'));
-    menus.length = 0;
-    value.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 1, clientY: 1 }));
-    const m = menus.pop();
-    assert.deepStrictEqual(m.items.map((i) => i.title), ['Politics', 'Open note', 'Open in new tab', 'Show related notes', 'Show in its graph']);
-    m.items.find((i) => i.title === 'Show related notes').click();
-    assert.deepStrictEqual(browsed.pop(), { mode: 'concept', path: '/', property: 'Politics.md' });
+    // The heading folds the whole panel, remembered.
+    popupEl.querySelector('.dr-props-toggle').click();
+    await settle(10);
+    assert.strictEqual(plugin.settings.panelPropsCollapsed, true);
+    assert.strictEqual(popupEl.querySelectorAll('.dr-row').length, 0);
+    assert.strictEqual(popupEl.querySelector('.dr-props-count').textContent, '6');
+    popupEl.querySelector('.dr-props-toggle').click();
+    await settle(10);
 
-    // The heading's ···: the main ones or all, grouped or not.
+    // A value naming a note: the row's menu offers it, as its link does.
     plugin.settings.panelPropertyGroups = 'off';
     section.redraw();
-    assert.deepStrictEqual(heads(), []);
+    menus.length = 0;
+    popupEl.querySelector('.dr-row[data-key="broader"]').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    const m = menus.pop();
+    assert.deepStrictEqual(m.items.filter((i) => i.section === 'open').map((i) => i.title), ['Open “Politics”', 'Open “Politics” in new tab', 'Show notes related to “Politics”']);
+    m.items.find((i) => i.title === 'Show notes related to “Politics”').click();
+    assert.deepStrictEqual(browsed.pop(), { mode: 'concept', path: '/', property: 'Politics.md' });
     popupEl.remove();
   });
 
-  await t('adding a property: names in use with how many notes use each, Create for a new one, and its value next', async () => {
-    const v = makeVault({ 'a.md': note({ type: 'x' }), 'b.md': note({ status: 'draft' }), 'c.md': note({ status: 'done' }) });
+  await t('adding a property: + opens a search of the names in use, most used first, Create for a new one, and its value is next', async () => {
+    const v = makeVault({ 'a.md': note({ type: 'x' }), 'b.md': note({ status: 'draft' }), 'c.md': note({ status: 'done', domain: 'Law' }) });
     const { plugin } = makePlugin(v);
     const popupEl = document.body.appendChild(document.createElement('div'));
     const section = new R.PropertiesSection({ plugin, popupEl });
     section.mount(popupEl, v.file('a.md'));
+    click(popupEl.querySelector('.dr-props-add'));
     const input = popupEl.querySelector('.dr-add input');
-    input.value = 'sta';
+    assert.strictEqual(document.activeElement, input, 'the search has the cursor');
+    const items = () => Array.from(popupEl.querySelectorAll('.dr-add-item')).map((e) => e.textContent);
+    assert.deepStrictEqual(items(), ['status', 'domain', 'Create new property'], 'most used first, the note’s own left out');
+    input.value = 'rat';
     input.dispatchEvent(new window.Event('input'));
-    const items = () => Array.from(document.querySelectorAll('.dr-suggest.is-open .dr-suggest-item')).map((e) => e.textContent);
-    assert.deepStrictEqual(items(), ['status2 notes', 'Create “sta”']);
-    input.value = 'rating';
-    input.dispatchEvent(new window.Event('input'));
-    assert.deepStrictEqual(items(), ['Create “rating”']);
-    document.querySelector('.dr-suggest.is-open .dr-suggest-item.is-create').dispatchEvent(new window.MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+    assert.deepStrictEqual(items(), ['Create “rat”']);
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
     await settle(50);
-    assert.ok('rating' in v.fm('a.md'));
-    assert.strictEqual(section.focusKey === null || section.focusKey === 'rating', true);
+    assert.ok('rat' in v.fm('a.md'));
+    assert.ok(!popupEl.querySelector('.dr-add'), 'closed once chosen');
+    // Escape closes it, adding nothing.
+    click(popupEl.querySelector('.dr-props-add'));
+    popupEl.querySelector('.dr-add input').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert.ok(!popupEl.querySelector('.dr-add'));
     section.destroy();
     popupEl.remove();
   });
 
-  await t('how a property shows: relationships name notes, information says when, the main ones by name', () => {
-    const s = { panelPrimaryProps: 'Type, status' };
-    assert.deepStrictEqual(R.propertyPresentation('broader', 'Politics', 'text', s), { key: 'broader', group: 'relationships', primary: false, interaction: 'edit' });
+  await t('how a property shows: its group only as set — nothing guessed from its name — the main ones by name, and whether it names notes', () => {
+    const s = { panelPrimaryProps: 'Type, status', panelGroupList: [{ title: 'Ties', keys: 'broader, related' }] };
+    assert.deepStrictEqual(R.propertyPresentation('broader', 'Politics', 'text', s), { key: 'broader', group: 'Ties', primary: false, interaction: 'edit' });
+    assert.strictEqual(R.propertyPresentation('parent', '[[A]]', 'text', s).group, 'Other', 'not guessed');
     assert.strictEqual(R.propertyPresentation('see', ['[[A]]', '[[B|b]]'], 'multitext', s).interaction, 'note-link');
-    assert.strictEqual(R.propertyPresentation('due', '2026-01-01', 'date', s).group, 'information');
     assert.strictEqual(R.propertyPresentation('type', 'concept', 'text', s).primary, true);
-    assert.strictEqual(R.propertyPresentation('domain', 'Law', 'text', s).group, 'general');
   });
+
 
   await t("a property's menu sets its value for the whole album, asking before it replaces a note's own, with one Undo", async () => {
     const v = makeVault({
@@ -1270,12 +1287,12 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     plugin.features.push(album);
     assert.strictEqual(R.DEFAULTS.propertyForAlbum, true);
 
-    // Offered on the row's menu, under the album's name.
+    // Offered on the row's menu, under Manage across vault, by the collection's name.
     const popupEl = document.body.appendChild(document.createElement('div'));
     const section = new R.PropertiesSection({ plugin, popupEl });
     section.mount(popupEl, v.file('IR/a.md'));
     click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    const item = menus.pop().items.find((i) => i.title === 'Set for all of IR');
+    const item = menus.pop().items.find((i) => i.title === 'Apply status to all of IR…');
     assert.ok(item, 'not offered');
     const before = v.text('IR/c.md');
     item.click();
@@ -1304,7 +1321,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     // Off: not on the menu.
     plugin.settings.propertyForAlbum = false;
     click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    assert.ok(!menus.pop().items.some((i) => i.title === 'Set for all of IR'));
+    assert.ok(!menus.pop().items.some((i) => i.title.startsWith('Apply ')));
     popupEl.remove();
   });
 
