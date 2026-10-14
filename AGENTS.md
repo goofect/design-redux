@@ -22,7 +22,8 @@ Coffee N' Christmas.
   `src/main.js` imports first), and a `main.js` that fails as it loads.
 - `styles.css` — all styles.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
-  workflow bumps the patch version itself.
+  workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
+  line releases that version instead (only when the author asks).
 - `README.md` — don't update unless asked.
 - `docs/architecture.md` — the architecture audit and the refactor roadmap
   (milestones M0–M8): read it before moving code between pieces.

@@ -4,6 +4,8 @@
 # without opening Actions. On the default branch, if the simulation tests pass
 # and src/ or styles.css changed since the last release, main.js is built and
 # a new release is published for BRAT: the patch version goes up by one.
+# A commit on the default branch with a "Release-As: X.Y.Z" line releases
+# that version instead (for a minor or major step), even with no change to src/.
 name: Test and release
 
 # Not on pull requests: a branch's own push already runs it. Not for changes
@@ -145,7 +147,11 @@ jobs:
         id: changed
         run: |
           last=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          if [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- src styles.css; then
+          want=$(git log -1 --format=%B | sed -n 's/^Release-As: *\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\) *$/\1/p' | tail -n 1)
+          if [ -n "$want" ] && ! git rev-parse -q --verify "refs/tags/$want" >/dev/null; then
+            echo "want=$want" >> "$GITHUB_OUTPUT"
+            echo "release=yes" >> "$GITHUB_OUTPUT"
+          elif [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- src styles.css; then
             echo "release=yes" >> "$GITHUB_OUTPUT"
           fi
 
@@ -154,12 +160,13 @@ jobs:
         id: version
         run: |
           current=$(node -p "require('./manifest.json').version")
-          if git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
-            node -e "
+          want="${{ steps.changed.outputs.want }}"
+          if [ -n "$want" ] && [ "$want" != "$current" ] || git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
+            WANT="$want" node -e "
               const fs = require('fs');
               const m = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
               const [a, b, c] = m.version.split('.').map(Number);
-              m.version = [a, b, c + 1].join('.');
+              m.version = process.env.WANT || [a, b, c + 1].join('.');
               fs.writeFileSync('manifest.json', JSON.stringify(m, null, 2) + '\n');
               const v = JSON.parse(fs.readFileSync('versions.json', 'utf8'));
               v[m.version] = m.minAppVersion;
