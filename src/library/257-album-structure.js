@@ -311,7 +311,7 @@ export class AlbumStructure extends Feature {
   }
 
   panelSections(panel) {
-    return this.settings.panelPlaces !== false ? [new PlacesSection(panel, this)] : [];
+    return this.settings.panelPlaces ? [new PlacesSection(panel, this)] : [];
   }
 
   /** The albums that gather notes from elsewhere: those whose folder note names some under includes, by name. */

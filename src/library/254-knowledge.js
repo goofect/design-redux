@@ -230,7 +230,7 @@ export class Knowledge extends Feature {
   }
 
   panelSections(panel) {
-    return this.settings.panelRelationships !== false ? [new RelationsSection(panel, this)] : [];
+    return this.settings.panelRelationships ? [new RelationsSection(panel, this)] : [];
   }
 
   /**

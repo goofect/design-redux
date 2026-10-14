@@ -127,6 +127,15 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.panelPropertyGroups === 'auto') saved.panelPropertyGroups = 'off';
     },
   },
+  {
+    // The note panel without Relationships and Kept in: properties and
+    // mentions only. Both are a switch away in Notes → Properties.
+    to: 9,
+    run(saved) {
+      saved.panelRelationships = false;
+      saved.panelPlaces = false;
+    },
+  },
 ];
 
 export function movedPath(p, oldPath, newPath) {

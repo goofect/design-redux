@@ -191,8 +191,8 @@ export const DEFAULTS = {
   panelFoldedGroups: [],
   showMentions: true,
   // The note panel's sections from relationships and albums.
-  panelRelationships: true,
-  panelPlaces: true,
+  panelRelationships: false,
+  panelPlaces: false,
   settingsInHeader: true,
   coverProperty: 'cover',
   // {{folder}} stands for the folder's own name, which is the common
@@ -329,7 +329,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 8,
+  settingsVersion: 9,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
