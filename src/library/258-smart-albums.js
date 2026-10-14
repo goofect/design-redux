@@ -135,7 +135,10 @@ export class SmartAlbums extends Feature {
   /** A view's filters, as kept: copies, so changing the chips doesn't change the album. */
   filtersOf(view) {
     const copy = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
-    return { folder: view.filterFolder || null, tag: view.filterTag || null, prop: copy(view.filterProp), date: copy(view.filterDate) };
+    const out = { folder: view.filterFolder || null, tag: view.filterTag || null, prop: copy(view.filterProp), date: copy(view.filterDate) };
+    // More property filters, only when there are: an album kept before them stays the same.
+    if (view.filterMore && view.filterMore.length) out.more = copy(view.filterMore);
+    return out;
   }
 
   apply(view, album) {
@@ -143,12 +146,14 @@ export class SmartAlbums extends Feature {
     view.filterFolder = album.folder || null;
     view.filterTag = album.tag || null;
     view.filterProp = copy(album.prop);
+    view.filterMore = copy(album.more) || [];
     view.filterDate = copy(album.date);
   }
 
   /** Whether the chips on screen are still the album's. */
   same(view, album) {
     const kept = { folder: album.folder || null, tag: album.tag || null, prop: album.prop || null, date: album.date || null };
+    if (album.more && album.more.length) kept.more = album.more;
     return JSON.stringify(this.filtersOf(view)) === JSON.stringify(kept);
   }
 

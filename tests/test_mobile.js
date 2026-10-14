@@ -334,6 +334,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       groupsByProperty: () => [],
       navigate() {},
       plugin: { settings: {}, feature: () => null },
+      propFilters: () => [],
     };
     const screen = new T.PropertiesScreen(view);
     screen.emptyNotes = () => [];

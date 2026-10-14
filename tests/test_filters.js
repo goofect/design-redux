@@ -590,6 +590,38 @@ t('a property shows its facts and values; a value opens its notes, Empty those l
   }
 });
 
+t('narrowing across properties: a value kept as a filter, then another property\'s values among those notes only; chips undo each', () => {
+  const view = page({ mode: 'properties', property: 'domain', value: 'Law' });
+  // Contract and Supreme Court have domain Law.
+  view.contentEl.querySelector('.dr-prop-narrow').click();
+  assert.strictEqual(view.property, null);
+  assert.deepStrictEqual(view.propFilters(), [{ key: 'domain', value: 'Law', negate: false }]);
+  assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '2 matching notes');
+  assert.deepStrictEqual(chips(view), ['domain is Law']);
+
+  // status among them: Contract's draft only.
+  view.navigate({ property: 'status', keepFilters: true });
+  const values = () => titles(view, '.dr-prop-value-name');
+  assert.deepStrictEqual(values(), ['draft']);
+  view.navigate({ mode: 'properties', property: 'status', value: 'draft', keepFilters: true });
+  view.contentEl.querySelector('.dr-prop-narrow').click();
+  assert.deepStrictEqual(chips(view), ['domain is Law', 'status is draft']);
+  assert.strictEqual(view.contentEl.querySelector('.dr-prop-matching-count').textContent, '1 matching note');
+
+  // To the notes, still narrowed.
+  view.contentEl.querySelector('.dr-prop-matching-go[data-mode="notes"]').click();
+  assert.strictEqual(view.mode, 'notes');
+  assert.deepStrictEqual(shownNotes(view), ['Contract']);
+
+  // The first chip's × hands its place to the next.
+  view.contentEl.querySelector('.dr-chip-clear').click();
+  assert.deepStrictEqual(chips(view), ['status is draft']);
+  assert.deepStrictEqual(shownNotes(view), ['Contract', 'Tribunal']);
+  // Somewhere else, the filters start clean.
+  view.navigate({ mode: 'folders' });
+  assert.deepStrictEqual(view.propFilters(), []);
+});
+
 t('Properties, in Edit: names to change, circles to pick, and Merge for two or more', () => {
   const opened = [];
   const renamed = [];

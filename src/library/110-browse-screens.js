@@ -431,6 +431,7 @@ export class PropertiesScreen extends BrowseScreen {
 
     const props = this.sortProps(view.propertyList().filter((p) => view.matches(p.name)));
     this.editButton(root, props.length > 0);
+    if (!view.editing) this.renderMatching(root);
     if (!props.length) {
       root.createDiv({ cls: 'dr-empty', text: 'No properties' });
       return;
@@ -462,7 +463,7 @@ export class PropertiesScreen extends BrowseScreen {
       row.createDiv({ cls: 'dr-split-name', text: prop.name });
       row.createDiv({ cls: 'dr-split-count', text: String(prop.count) });
 
-      onActivate(row, () => view.navigate({ property: prop.key }));
+      onActivate(row, () => view.navigate({ property: prop.key, keepFilters: true }));
       onContextMenu(row, (evt) => this.propertyMenu(evt, prop.name));
     });
 
@@ -625,7 +626,7 @@ export class PropertiesScreen extends BrowseScreen {
       }
       row.createDiv({ cls: 'dr-prop-value-name', text: value });
       row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
-      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value }));
+      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value, keepFilters: true }));
       onContextMenu(row, (evt) => this.valueMenu(evt, prop.key, value));
     });
     if (groups.length > limit) {
@@ -644,7 +645,7 @@ export class PropertiesScreen extends BrowseScreen {
       if (canMerge) row.createDiv({ cls: 'dr-prop-value-tick-space' });
       row.createDiv({ cls: 'dr-prop-value-name', text: 'Empty' });
       row.createDiv({ cls: 'dr-prop-value-count', text: String(empty.length) });
-      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value: EMPTY_VALUE }));
+      onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value: EMPTY_VALUE, keepFilters: true }));
     }
     refresh();
   }
@@ -652,11 +653,12 @@ export class PropertiesScreen extends BrowseScreen {
   /** One value's notes — or the notes that leave it empty — with the way back to the property above. */
   renderValue(detail, prop, value) {
     const view = this.view;
-    const back = detail.createDiv({ cls: 'dr-prop-back' });
+    const head = detail.createDiv({ cls: 'dr-prop-detail-head' });
+    const back = head.createDiv({ cls: 'dr-prop-back' });
     asButton(back, `Back to ${prop.name}`);
     setIcon(back.createSpan({ cls: 'dr-prop-back-icon' }), 'chevron-left');
     back.createSpan({ text: prop.name });
-    onActivate(back, () => view.navigate({ mode: 'properties', property: prop.key, value: null }));
+    onActivate(back, () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
 
     if (value === EMPTY_VALUE) {
       const files = view.sortFiles(this.emptyNotes(prop.key));
@@ -668,7 +670,38 @@ export class PropertiesScreen extends BrowseScreen {
       detail.createDiv({ cls: 'dr-split-empty', text: `No notes have “${value}” as their ${prop.name}` });
       return;
     }
+    // Kept as a filter, so another property's values are these notes' only.
+    const narrow = head.createEl('button', { cls: 'dr-prop-narrow', text: 'Narrow to these' });
+    setIcon(narrow.createSpan({ cls: 'dr-prop-narrow-icon' }), 'filter');
+    narrow.prepend(narrow.lastChild);
+    narrow.setAttribute('aria-label', `Keep to the notes whose ${prop.name} is ${value}, and choose another property`);
+    narrow.addEventListener('click', () => {
+      view.addPropFilter({ key: prop.name, value: String(value), negate: false });
+      view.navigate({ mode: 'properties', property: null, value: null, keepFilters: true });
+    });
     view.renderGroup(detail, group, true);
+  }
+
+  /**
+   * While property filters narrow the library: how many notes pass all of
+   * them, and the way to see them — as a list, or to search among them.
+   */
+  renderMatching(root) {
+    const view = this.view;
+    if (!view.propFilters().length) return;
+    const files = libraryIndex(this.plugin)
+      .markdown()
+      .filter((f) => !this.plugin.isFolderNote(f) && view.inFilter(f));
+    const line = root.createDiv({ cls: 'dr-prop-matching' });
+    line.createSpan({ cls: 'dr-prop-matching-count', text: `${bulkCount(files.length, 'matching note')}` });
+    [
+      ['Show them', 'notes'],
+      ['Search among them', 'search'],
+    ].forEach(([label, mode]) => {
+      const go = line.createEl('button', { cls: 'dr-prop-matching-go', text: label });
+      go.dataset.mode = mode;
+      go.addEventListener('click', () => view.navigate({ mode, property: null, value: null, path: '/', keepFilters: true }));
+    });
   }
 
   /** A value's own menu: rename it everywhere, or see its notes. */

@@ -91,7 +91,8 @@ export class BrowseView extends ItemView {
       this.selected = null;
       // Find starts empty, unless the move is a search carried over.
       this.query = typeof state.query === 'string' ? state.query : '';
-      this.clearFilters();
+      // Unless asked to keep them: narrowing step by step across properties.
+      if (!state.keepFilters) this.clearFilters();
       this.smartLoaded = null;
       this.editing = false;
     }

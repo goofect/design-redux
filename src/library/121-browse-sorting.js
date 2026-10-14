@@ -29,6 +29,7 @@ export class BrowseSorting {
       if (this.filterProp && String(this.filterProp.key).toLowerCase() === from.toLowerCase()) {
         this.filterProp = Object.assign({}, this.filterProp, { key: to });
       }
+      this.filterMore = (this.filterMore || []).map((f) => (String(f.key).toLowerCase() === from.toLowerCase() ? Object.assign({}, f, { key: to }) : f));
     }
     if (what.tag) {
       const [from, to] = what.tag;
@@ -43,6 +44,7 @@ export class BrowseSorting {
       if (this.filterProp && sameKey(this.filterProp.key) && this.filterProp.value === from) {
         this.filterProp = Object.assign({}, this.filterProp, { value: to });
       }
+      this.filterMore = (this.filterMore || []).map((f) => (sameKey(f.key) && f.value === from ? Object.assign({}, f, { value: to }) : f));
     }
   }
 
@@ -219,10 +221,31 @@ export class BrowseSorting {
     return this.sort;
   }
 
+  /** The property filters on: the first, and any more narrowing it — a note passes all of them. */
+  propFilters() {
+    return [this.filterProp].concat(this.filterMore || []).filter(Boolean);
+  }
+
+  /**
+   * One more property filter: in place of one on the same property, or
+   * beside those on others.
+   */
+  addPropFilter(f) {
+    const same = (g) => g && String(g.key).toLowerCase() === String(f.key).toLowerCase();
+    if (!this.filterProp || same(this.filterProp)) {
+      this.filterProp = f;
+      return;
+    }
+    const more = (this.filterMore || []).filter((g) => !same(g));
+    more.push(f);
+    this.filterMore = more;
+  }
+
   /** Through every filter that's set. */
   inFilter(file) {
     if (this.filterFolder && !file.path.startsWith(this.filterFolder + '/')) return false;
-    if (!this.filterTag && !this.filterProp && !this.filterDate) return true;
+    const props = this.propFilters();
+    if (!this.filterTag && !props.length && !this.filterDate) return true;
 
     if (this.filterDate) {
       const stat = file.stat || {};
@@ -237,8 +260,7 @@ export class BrowseSorting {
       if (!noteTags(cache).some((t) => t === want || t.startsWith(want + '/'))) return false;
     }
 
-    if (this.filterProp) {
-      const f = this.filterProp;
+    for (const f of props) {
       const fm = (cache && cache.frontmatter) || {};
       const name = Object.keys(fm).find((k) => k.toLowerCase() === f.key.toLowerCase());
       const raw = name === undefined ? undefined : fm[name];
@@ -255,13 +277,14 @@ export class BrowseSorting {
   }
 
   hasFilters() {
-    return !!(this.filterFolder || this.filterTag || this.filterProp || this.filterDate);
+    return !!(this.filterFolder || this.filterTag || this.propFilters().length || this.filterDate);
   }
 
   clearFilters() {
     this.filterFolder = null;
     this.filterTag = null;
     this.filterProp = null;
+    this.filterMore = [];
     this.filterDate = null;
   }
 
@@ -272,7 +295,7 @@ export class BrowseSorting {
    */
   folderInFilter(folder) {
     if (this.filterFolder && !folder.path.startsWith(this.filterFolder + '/')) return false;
-    if (!this.filterTag && !this.filterProp && !this.filterDate) return true;
+    if (!this.filterTag && !this.propFilters().length && !this.filterDate) return true;
     if (!this.filterMemo) {
       const paths = new Set();
       libraryIndex(this.plugin).markdown().forEach((file) => {
@@ -372,7 +395,16 @@ export class BrowseSorting {
       'list', !!this.filterProp,
       () => this.pickProperty(), () => (this.filterProp = null)
     );
+    (this.filterMore || []).forEach((f, i) =>
+      filter(propertyFilterLabel(f), 'list', true, () => {}, () => this.filterMore.splice(i, 1))
+    );
     if (this.filterProp) {
+      menu.addItem((item) =>
+        item
+          .setTitle('Another property…')
+          .setIcon('list-plus')
+          .onClick(() => this.pickProperty('new'))
+      );
       menu.addItem((item) =>
         item
           .setTitle('Exclude these instead')
@@ -454,8 +486,12 @@ export class BrowseSorting {
     }).open();
   }
 
-  /** The property, then its value — or any value at all. */
-  pickProperty() {
+  /**
+   * The property, then its value — or any value at all. In place of the
+   * first property filter; with 'new', one more beside it; with a number,
+   * in place of that one of the others.
+   */
+  pickProperty(slot) {
     const items = knownPropertyNames(this.app).map((name) => ({ label: name, value: name }));
     new ChoicePicker(this.app, 'Which property?', items, (item) => {
       const key = item.value;
@@ -463,7 +499,10 @@ export class BrowseSorting {
         propertyValues(this.app, key).map((v) => ({ label: v, value: v }))
       );
       new ChoicePicker(this.app, `${key} is…`, values, (choice) => {
-        this.filterProp = { key: key, value: choice.value, negate: false };
+        const f = { key: key, value: choice.value, negate: false };
+        if (slot === 'new') this.addPropFilter(f);
+        else if (typeof slot === 'number' && this.filterMore && this.filterMore[slot]) this.filterMore[slot] = f;
+        else this.filterProp = f;
         this.render();
       }).open();
     }).open();
@@ -496,8 +535,12 @@ export class BrowseSorting {
       chips.push([`#${this.filterTag}`, () => this.pickTag(), () => (this.filterTag = null)]);
     }
     if (this.filterProp) {
-      chips.push([propertyFilterLabel(this.filterProp), () => this.pickProperty(), () => (this.filterProp = null)]);
+      // The next one along takes the first's place.
+      chips.push([propertyFilterLabel(this.filterProp), () => this.pickProperty(), () => (this.filterProp = (this.filterMore || []).shift() || null)]);
     }
+    (this.filterMore || []).forEach((f, i) =>
+      chips.push([propertyFilterLabel(f), () => this.pickProperty(i), () => this.filterMore.splice(i, 1)])
+    );
     if (this.filterDate) {
       chips.push([dateFilterLabel(this.filterDate), () => this.pickDate(), () => (this.filterDate = null)]);
     }

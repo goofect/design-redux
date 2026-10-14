@@ -743,3 +743,9 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   allows): View all notes using it and View notes with each of its values
   (the Properties screen, through `Library.browseMode`), Rename across vault,
   Set for the album; last, Remove from note.
+- **Narrowing across properties** (121): `filterProp` and `filterMore`
+  (`propFilters()`, `addPropFilter`) — a note passes all of them; each is a
+  chip with its ×. A value's notes offer Narrow to these; the Properties
+  screen keeps the filters as it moves (`keepFilters` in the state, which
+  otherwise starts each screen clean) and says how many notes match, with
+  Show them (Notes) and Search among them. Smart albums keep `more`.
