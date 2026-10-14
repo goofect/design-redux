@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* Workspace modes                                                     */
 /*                                                                     */
-/* The workspace set out for one kind of work — browsing the library,  */
-/* reading, mapping, researching a note, reviewing — at a command, and */
+/* The workspace set out for one way of working — reading, research,  */
+/* a canvas — at a command, and Standard, the workspace as you keep it, */
 /* put back exactly as it was when the mode is left: the layout is     */
 /* kept on entering, and given back whole. Nothing changes until one  */
 /* is chosen; moving from one mode to another still goes back to how   */
@@ -19,13 +19,20 @@ import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { CanvasOutline } from '../canvas/339-canvas-outline.js';
 
+/*
+ * How you're working, not where you are: the library is a place, gone to
+ * from its sidebar, and reviewing it is one of its places. Standard is no
+ * mode — the workspace as you keep it. The Canvas mode keeps the id it had
+ * as Mapping, so its command and hotkey stay.
+ */
 export const WORKSPACE_MODES = [
-  { id: 'library', label: 'Library', icon: 'library', desc: 'Albums and collections to browse, the library beside them' },
   { id: 'study', label: 'Study', icon: 'book-open', desc: 'The note to read, and nothing else in the way' },
-  { id: 'mapping', label: 'Mapping', icon: 'layout-dashboard', desc: 'A canvas to arrange, its outline beside it' },
   { id: 'research', label: 'Research', icon: 'microscope', desc: 'A note with its relationships and properties beside it' },
-  { id: 'review', label: 'Review', icon: 'stethoscope', desc: 'What changed lately, and what needs looking at' },
+  { id: 'mapping', label: 'Canvas', icon: 'layout-dashboard', desc: 'A canvas to arrange, its outline beside it' },
 ];
+
+/* What were modes before, kept as commands to the places they opened — their hotkeys still work. */
+export const RETIRED_MODES = ['library', 'review'];
 
 export class WorkspaceModes extends Feature {
   settingsSchema() {
@@ -33,7 +40,7 @@ export class WorkspaceModes extends Feature {
       {
         key: 'workspaceModes',
         name: 'Workspace modes',
-        desc: 'Library, Study, Mapping, Research and Review, each setting the workspace out for that work at a command; leaving one puts the workspace back exactly as it was.',
+        desc: 'Study, Research and Canvas, each setting the workspace out for that way of working; Standard puts it back exactly as it was.',
       },
     ];
   }
@@ -49,7 +56,7 @@ export class WorkspaceModes extends Feature {
       },
       {
         id: 'workspace-mode-leave',
-        name: 'Leave the workspace mode, back to how it was',
+        name: 'Workspace mode: Standard, back to how it was',
         icon: 'undo-2',
         when: () => this.enabled && !!this.current(),
         run: () => this.leave(),
@@ -61,7 +68,12 @@ export class WorkspaceModes extends Feature {
         icon: m.icon,
         when: () => this.enabled && this.current() !== m.id,
         run: () => this.enter(m.id),
-      }))
+      })),
+      [
+        // Places now, not modes: the library's Home, and its check.
+        { id: 'workspace-mode-library', name: 'Open the library', icon: 'library', run: () => this.place('home') },
+        { id: 'workspace-mode-review', name: 'Review the library: what needs looking at', icon: 'stethoscope', run: () => this.place('library-check') },
+      ].map((a) => Object.assign({ when: () => this.enabled && !!this.plugin.feature(Library) }, a))
     );
   }
 
@@ -91,10 +103,25 @@ export class WorkspaceModes extends Feature {
     if (strip && strip.enabled && typeof strip.update === 'function') strip.update();
   }
 
-  /** The switcher's menu: each mode, the one on ticked; leaving it; and its settings. */
+  /** One of the library's places, in the page, its sidebar showing. */
+  async place(screen) {
+    const library = this.plugin.feature(Library);
+    if (!library) return;
+    if (typeof library.reveal === 'function') library.reveal();
+    await library.browseMode({ mode: screen });
+  }
+
+  /** The switcher's menu: Standard and each mode, the one on ticked; and its settings. */
   showMenu(evt) {
     const now = this.current();
     const menu = new Menu();
+    menu.addItem((item) =>
+      item
+        .setTitle('Standard')
+        .setIcon('layout-panel-left')
+        .setChecked(!now)
+        .onClick(() => (now ? this.leave() : null))
+    );
     WORKSPACE_MODES.forEach((m) =>
       menu.addItem((item) =>
         item
@@ -105,7 +132,6 @@ export class WorkspaceModes extends Feature {
       )
     );
     menu.addSeparator();
-    if (now) menu.addItem((item) => item.setTitle(`Leave ${this.mode(now).label}, back to how it was`).setIcon('log-out').onClick(() => this.leave()));
     if (typeof this.plugin.openSettingsAt === 'function') {
       menu.addItem((item) => item.setTitle('Mode settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt('workspaceModes')));
     }
@@ -114,8 +140,9 @@ export class WorkspaceModes extends Feature {
 
   choose() {
     const now = this.current();
-    const items = WORKSPACE_MODES.map((m) => ({ label: m.label, note: m.id === now ? 'Now' : m.desc, id: m.id }));
-    if (now) items.push({ label: 'Leave the mode', note: 'Back to how the workspace was', id: '' });
+    const items = [{ label: 'Standard', note: !now ? 'Now' : 'The workspace as you keep it, back as it was', id: '' }].concat(
+      WORKSPACE_MODES.map((m) => ({ label: m.label, note: m.id === now ? 'Now' : m.desc, id: m.id }))
+    );
     new ComparePicker(this.app, items, 'Which kind of work?', (item) => (item.id ? this.enter(item.id) : this.leave())).open();
   }
 
@@ -186,14 +213,7 @@ export class WorkspaceModes extends Feature {
   /** Each mode's layout. */
   async apply(id) {
     const ws = this.app.workspace;
-    const library = this.plugin.feature(Library);
-    if (id === 'library') {
-      this.sidebars(true, false);
-      if (library) {
-        if (typeof library.reveal === 'function') library.reveal();
-        await library.browseMode({ mode: 'home' });
-      }
-    } else if (id === 'study') {
+    if (id === 'study') {
       this.sidebars(false, false);
       const note = this.recent('md');
       if (note) {
@@ -217,9 +237,6 @@ export class WorkspaceModes extends Feature {
           await side.setViewState({ type: BROWSE_VIEW, active: false, state: { mode: 'concept', path: '/', property: note.path, value: null } });
         }
       }
-    } else if (id === 'review') {
-      this.sidebars(true, false);
-      if (library) await library.browseMode({ mode: 'library-check' });
     }
   }
 }

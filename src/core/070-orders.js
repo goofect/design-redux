@@ -108,6 +108,17 @@ export const SETTINGS_MIGRATIONS = [
       saved.notePageTint = false;
     },
   },
+  {
+    // The library and its review are places now, not modes: someone in
+    // either is in Standard, the workspace as it is.
+    to: 7,
+    run(saved) {
+      if (saved.workspaceMode === 'library' || saved.workspaceMode === 'review') {
+        saved.workspaceMode = '';
+        saved.workspaceModeLayout = null;
+      }
+    },
+  },
 ];
 
 export function movedPath(p, oldPath, newPath) {

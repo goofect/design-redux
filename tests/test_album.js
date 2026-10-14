@@ -502,7 +502,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 6);
+    assert.strictEqual(s.settingsVersion, 7);
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);
     assert.ok(!('upNext' in s), 'a retired setting dropped');
@@ -2429,7 +2429,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(fms.get(child).parent, '[[Government]]');
   });
 
-  await t('workspace modes: entered at a command, the layout kept first; another mode keeps the first layout; leaving puts it back whole', async () => {
+  await t('workspace modes — Study, Research, Canvas: entered at a command, the layout kept first; another keeps the first layout; Standard puts it back whole', async () => {
     const { plugin, app } = setup();
     const calls = [];
     let layout = { main: 'as it was' };
@@ -2451,23 +2451,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(document.body.classList.contains('dr-mode-study'));
     // Another mode: the layout from before the first is still the one kept.
     layout = { main: 'studying' };
-    await modes.enter('review');
+    await modes.enter('mapping');
     assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
-    assert.ok(!document.body.classList.contains('dr-mode-study') && document.body.classList.contains('dr-mode-review'));
-    // The switcher: every mode, the one on ticked, the way out, and its settings.
+    assert.ok(!document.body.classList.contains('dr-mode-study') && document.body.classList.contains('dr-mode-mapping'));
+    // The switcher: Standard and every mode, the one on ticked, and its settings.
     plugin.openSettingsAt = (key) => calls.push(['settings', key]);
     modes.showMenu({ clientX: 1, clientY: 1 });
     const menu = menus[menus.length - 1];
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Library', 'Study', 'Mapping', 'Research', 'Review', 'Leave Review, back to how it was', 'Mode settings…']);
-    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Review');
-    menu.items[6].click();
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Standard', 'Study', 'Research', 'Canvas', 'Mode settings…']);
+    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Canvas');
+    menu.items[4].click();
     assert.deepStrictEqual(calls[calls.length - 1], ['settings', 'workspaceModes']);
-    // Left: as it was.
-    await modes.leave();
+    // Standard: as it was.
+    menu.items[0].click();
+    await new Promise((r) => setTimeout(r, 0));
     assert.deepStrictEqual(calls[calls.length - 1], ['changeLayout', { main: 'as it was' }]);
     assert.strictEqual(modes.current(), null);
-    assert.ok(!document.body.classList.contains('dr-mode-review'));
+    assert.ok(!document.body.classList.contains('dr-mode-mapping'));
     assert.strictEqual(modes.commands().find((c) => c.id === 'workspace-mode-leave').check(), false);
+    // Library and Review were modes: their commands, and hotkeys, open those places now.
+    const went = [];
+    const library = { reveal: () => went.push('reveal'), browseMode: async (st) => went.push(st.mode) };
+    plugin.feature = (C) => (C === R.WorkspaceModes ? modes : C === R.Library ? library : null);
+    modes.commands().find((c) => c.id === 'workspace-mode-review').run();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.deepStrictEqual(went, ['reveal', 'library-check']);
+    assert.strictEqual(modes.current(), null, 'no mode');
   });
 
   await t('the note panel: a note’s relationships both ways, to open or take off, and the albums and canvases it’s in', async () => {

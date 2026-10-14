@@ -807,3 +807,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   what's selected — Add, Arrange, Connect, Focus, More (folding, master
   cards, notes from branches, checking, comparing) — redrawn only when that
   changes; or, set so, one button with all of them in its menu.
+- **Modes are ways of working** (348, settings step 7): Standard (no mode,
+  the workspace as you keep it), Study, Research and Canvas (id `mapping`,
+  as before). The library and its review are places: their old commands
+  (`workspace-mode-library`, `-review`) open Home and the library check, so
+  hotkeys keep working; anyone left in either is in Standard.
