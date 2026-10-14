@@ -530,7 +530,7 @@ t("Home's folder shelf follows it", () => {
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');
-  const values = () => titles(view, '.dr-album-name');
+  const values = () => titles(view, '.dr-prop-value:not(.is-empty-value) .dr-prop-value-name');
   assert.deepStrictEqual(props(), ['domain', 'status']);
   assert.deepStrictEqual(values(), ['Done', 'draft']);
   openMenu(view).find('Alphabetical (Z–A)').click();
@@ -538,6 +538,56 @@ t("the Properties screen's list and a property's values follow it", () => {
   assert.deepStrictEqual(values(), ['draft', 'Done']);
   openMenu(view).find('Recently modified').click();
   assert.deepStrictEqual(values(), ['draft', 'Done'], 'draft has the newest note (Contract)');
+});
+
+t('a property shows its facts and values; a value opens its notes, Empty those left blank; picked values merge', () => {
+  const opened = [];
+  plugin.feature = () => ({ openMergeValues: (key, values) => opened.push([key, values]), openRenameValue() {} });
+  const shopping = files.find((f) => f.basename === 'Shopping');
+  caches.get(shopping).frontmatter = { status: '' };
+  try {
+    const view = page({ mode: 'properties', property: 'status' });
+    const facts = Array.from(view.contentEl.querySelectorAll('.dr-prop-fact')).map((f) => f.textContent);
+    assert.deepStrictEqual(facts.slice(0, 3), ['4 notesUsed in', '2Values', '1Empty']);
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-value'));
+    assert.deepStrictEqual(rows().map((r) => r.querySelector('.dr-prop-value-name').textContent), ['Done', 'draft', 'Empty']);
+    assert.deepStrictEqual(rows().map((r) => r.querySelector('.dr-prop-value-count').textContent), ['1', '2', '1']);
+
+    // Two picked: Merge offers them.
+    const bar = () => view.contentEl.querySelector('.dr-prop-merge-bar');
+    assert.ok(bar().classList.contains('is-empty'));
+    rows().slice(0, 2).forEach((r) => r.querySelector('.dr-prop-value-tick').click());
+    assert.ok(!bar().classList.contains('is-empty'));
+    const merge = bar().querySelector('.dr-prop-merge-values');
+    assert.strictEqual(merge.textContent, 'Merge 2…');
+    merge.click();
+    assert.deepStrictEqual(opened.pop(), ['status', ['Done', 'draft']]);
+
+    // A value opens its notes, and back is the property again.
+    rows()[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(view.value, 'draft');
+    assert.deepStrictEqual(titles(view, '.dr-track-name'), ['Contract', 'Tribunal']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-prop-back').textContent, 'status');
+    view.contentEl.querySelector('.dr-prop-back').click();
+    assert.strictEqual(view.value, null);
+    rows()[2].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.deepStrictEqual(titles(view, '.dr-track-name'), ['Shopping'], 'Empty: the note left blank');
+
+    // The list: by name, or by how many notes use each.
+    view.navigate({ mode: 'properties', property: 'status', value: null });
+    const sort = view.contentEl.querySelector('.dr-prop-sort');
+    assert.ok(sort.textContent.startsWith('Sort: Name'));
+    plugin.settings.propertiesSort = 'count';
+    const all = app.metadataTypeManager.getAllProperties;
+    app.metadataTypeManager.getAllProperties = () => ({ status: { name: 'status', occurrences: 4 }, domain: { name: 'domain', occurrences: 3 } });
+    view.render();
+    app.metadataTypeManager.getAllProperties = all;
+    assert.deepStrictEqual(titles(view, '.dr-split-name'), ['status', 'domain'], 'status in 4, domain in 3');
+  } finally {
+    plugin.settings.propertiesSort = 'name';
+    caches.get(shopping).frontmatter = {};
+    plugin.feature = () => null;
+  }
 });
 
 t('Properties, in Edit: names to change, circles to pick, and Merge for two or more', () => {

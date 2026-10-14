@@ -732,3 +732,9 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   (`view.searchWhy`). A row above the results picks the kind (All, Notes,
   Albums, Collections, Properties — `view.searchKind`) and the order of notes
   (`view.searchSort`), neither touching the query. Search rows aren't nested.
+- **A property** (110 `renderOverview`): its facts — notes using it, values,
+  empty, type — then its values, in the sort menu's order, each opening its
+  notes (`view.value`; `EMPTY_VALUE` for the notes that leave it blank) with
+  a way back. Values picked by their boxes merge into one, chosen or typed
+  (`MergeValuesModal`, 302; `bulk.mergeValuesInto`, one step of Undo). The
+  list sorts by name, notes or type (`propertiesSort`).

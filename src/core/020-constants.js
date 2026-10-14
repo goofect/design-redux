@@ -141,6 +141,8 @@ export const DEFAULTS = {
   sidebarDrop: true,
   tableColumns: 'domain, status',
   categoryProperty: 'domain',
+  // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
+  propertiesSort: 'name',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

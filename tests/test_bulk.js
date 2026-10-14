@@ -127,7 +127,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
@@ -1294,6 +1294,43 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(record.bases.length, 1);
     await bulk.undo();
     v.files.forEach((f) => assert.strictEqual(v.texts.get(f), before.get(f), f.path));
+  });
+
+  await t('several values merged into one, in notes and bases, one Undo putting them back', async () => {
+    const v = vaultForTools();
+    const { bulk } = makePlugin(v);
+    const before = new Map(v.files.map((f) => [f, v.texts.get(f)]));
+    const record = await bulk.mergeValuesInto('domain', ['IR', 'Law'], 'Politics');
+    assert.strictEqual(v.fm('IR/a.md').domain, 'Politics');
+    assert.deepStrictEqual(v.fm('IR/b.md').domain, ['Politics'], 'two of them in one list become one');
+    assert.strictEqual(v.fm('IR/Sub/d.md').domain, 'Politics');
+    assert.ok(v.text('Plan.base').includes('domain == "Politics"'));
+    assert.ok(!v.writes.includes('IR/c.md'));
+    assert.strictEqual(record.files.length, 4);
+    await bulk.undo();
+    v.files.forEach((f) => assert.strictEqual(v.texts.get(f), before.get(f), f.path));
+    assert.strictEqual(await bulk.mergeValuesInto('domain', ['IR'], 'IR'), null, 'nothing to merge');
+  });
+
+  await t('Merge values: the most used kept, a typed one instead, what changes said, and Merge merges', async () => {
+    const v = vaultForTools();
+    const { plugin } = makePlugin(v);
+    const modal = new R.MergeValuesModal(plugin, 'domain', ['Law', 'IR']);
+    modal.open();
+    await settle(20);
+    const el = modal.contentEl;
+    const checked = () => Array.from(el.querySelectorAll('.dr-merge-value input')).filter((r) => r.checked).map((r) => r.value);
+    assert.deepStrictEqual(checked(), ['Law'], 'each in 2 notes: the first of the most used');
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /Changes “IR” to “Law” in 2 notes/);
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /1 note already has more than one of them/);
+    const typed = el.querySelector('.dr-bulk-field input');
+    type(typed, 'Politics');
+    assert.deepStrictEqual(checked(), []);
+    assert.match(el.querySelector('.dr-bulk-summary').textContent, /Changes “Law” and “IR” to “Politics” in 3 notes/);
+    click(el.querySelector('.mod-cta'));
+    await settle(200);
+    assert.deepStrictEqual(v.fm('IR/b.md').domain, ['Politics']);
+    assert.match(lastNotice().text, /Merged 2 values into “Politics” in 3 notes/);
   });
 
   await t('removing properties from a folder, subfolders included, and undoing it', async () => {

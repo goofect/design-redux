@@ -5,7 +5,7 @@ import { movedPath } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';
 import { keyLike } from './290-bulk-engine.js';
 import { DEFAULTS_DELAY, MergePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
-import { RenameTagModal, RenameValueModal } from './302-bulk-tags-values.js';
+import { MergeValuesModal, RenameTagModal, RenameValueModal } from './302-bulk-tags-values.js';
 import { ChangeTypeModal } from './303-bulk-types.js';
 import { PropertyToolsModal } from './304-bulk-list.js';
 
@@ -87,6 +87,10 @@ export class BulkEditing extends Feature {
 
   openRenameValue(key, value) {
     new RenameValueModal(this.plugin, key, value).open();
+  }
+
+  openMergeValues(key, values) {
+    new MergeValuesModal(this.plugin, key, values).open();
   }
 
   openChangeType(key) {

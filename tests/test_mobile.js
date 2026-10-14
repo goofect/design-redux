@@ -333,8 +333,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       value: null,
       groupsByProperty: () => [],
       navigate() {},
+      plugin: { settings: {}, feature: () => null },
     };
     const screen = new T.PropertiesScreen(view);
+    screen.emptyNotes = () => [];
     let root = document.createElement('div');
     screen.render(root);
     assert.ok(!root.querySelector('.dr-split').classList.contains('has-selection'));

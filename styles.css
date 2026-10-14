@@ -6892,6 +6892,161 @@ body.is-phone .dr-td-length {
   margin-left: var(--dr-space-2);
 }
 
+
+/* -- a property: its facts, its values, one value's notes --------------------- */
+
+.dr-split-list-head {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0 var(--dr-space-1);
+}
+
+.dr-prop-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-3) calc(var(--dr-u) * 6);
+  margin: var(--dr-space-1) 2px calc(var(--dr-u) * 5);
+}
+
+.dr-prop-fact-n {
+  font-size: var(--font-ui-large);
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.dr-prop-fact-label {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.dr-prop-values {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+}
+
+.dr-prop-value {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  padding: calc(var(--dr-u) * 2) var(--dr-space-3);
+  border-radius: var(--dr-radius-sm);
+  border-bottom: 1px solid var(--background-modifier-border);
+  cursor: pointer;
+}
+
+.dr-prop-value-tick,
+.dr-prop-value-tick-space {
+  flex: 0 0 auto;
+  width: 16px;
+  margin: 0;
+}
+
+.dr-prop-value-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-prop-value-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-prop-value.is-picked {
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-prop-value.is-empty-value .dr-prop-value-name,
+.dr-prop-value-more {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.dr-prop-value:focus-visible,
+.dr-prop-back:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+@media (any-hover: hover) {
+  .dr-prop-value:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-prop-back:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* Picked values, and Merge, kept in view while the values scroll. */
+.dr-prop-merge-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  max-width: 640px;
+  padding: var(--dr-space-3) 2px;
+  background-color: var(--background-primary);
+}
+
+.dr-prop-merge-bar.is-empty {
+  display: none;
+}
+
+.dr-prop-merge-said {
+  flex: 1 1 auto;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-prop-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-prop-back-icon {
+  display: inline-flex;
+}
+
+.dr-prop-back-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The merge dialog's values, one to keep. */
+.dr-merge-values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-merge-value {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+}
+
+.dr-merge-value-name {
+  flex: 1 1 auto;
+}
+
+.dr-merge-value-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
 .dr-prop-edit {
   max-width: 760px;
 }

@@ -283,3 +283,90 @@ export class RenameValueModal extends BulkModal {
     );
   }
 }
+
+/**
+ * Several values of one property made one — Politics, politics and
+ * Political Science, say: which they become, chosen from them or typed,
+ * and what that changes, before anything is.
+ */
+export class MergeValuesModal extends BulkModal {
+  constructor(plugin, key, values) {
+    super(plugin);
+    this.key = key;
+    this.values = (values || []).map(String);
+    this.idleLabel = 'Merge';
+  }
+
+  onOpen() {
+    this.frame(`Merge values of ${this.key}`);
+    const counts = new Map(this.values.map((v) => [v, this.bulk.planValueRename(this.key, v, v).files.length]));
+    // The most used is the likeliest to be the spelling to keep.
+    this.to = this.values.slice().sort((a, b) => counts.get(b) - counts.get(a))[0] || '';
+    const section = this.section('Merge into');
+    const list = section.createDiv({ cls: 'dr-merge-values' });
+    const name = `dr-merge-${Math.random().toString(36).slice(2)}`;
+    this.radios = [];
+    this.values.forEach((v) => {
+      const row = list.createEl('label', { cls: 'dr-merge-value' });
+      const radio = row.createEl('input', { type: 'radio' });
+      radio.name = name;
+      radio.value = v;
+      radio.checked = v === this.to;
+      radio.addEventListener('change', () => {
+        this.to = v;
+        this.toInput.value = '';
+        this.update();
+      });
+      this.radios.push(radio);
+      row.createSpan({ cls: 'dr-merge-value-name', text: v });
+      row.createSpan({ cls: 'dr-merge-value-count', text: bulkCount(counts.get(v), 'note') });
+    });
+    const other = this.field(section, 'Or a new value', 'Type a value');
+    this.toInput = other.input;
+    this.toInput.addEventListener('input', () => {
+      const typed = this.toInput.value.trim();
+      this.radios.forEach((r) => (r.checked = !typed && r.value === this.to));
+      this.update();
+    });
+    this.update();
+  }
+
+  target() {
+    const typed = this.toInput ? this.toInput.value.trim() : '';
+    return typed || this.to;
+  }
+
+  update() {
+    const to = this.target();
+    const froms = this.values.filter((v) => v !== to);
+    const lines = [];
+    if (!to || !froms.length) {
+      lines.push({ icon: 'info', cls: 'is-muted', text: 'Choose what they become.' });
+      return this.showSummary(lines, null);
+    }
+    const files = [];
+    let both = 0;
+    froms.forEach((from) => {
+      const plan = this.bulk.planValueRename(this.key, from, to);
+      plan.files.forEach((f) => {
+        if (files.indexOf(f) === -1) files.push(f);
+        else both++;
+      });
+      both += plan.merged;
+    });
+    lines.push({
+      icon: 'git-merge',
+      text: `Changes ${nameList(froms.map((v) => `“${v}”`), false)} to “${to}” in ${bulkCount(files.length, 'note')}.`,
+      notes: files,
+    });
+    if (both) lines.push({ icon: 'info', text: `${bulkCount(both, 'note')} already ${both === 1 ? 'has' : 'have'} more than one of them; they become one there.` });
+    this.showSummary(lines, {
+      label: `Merge in ${bulkCount(files.length, 'note')}`,
+      run: async () => {
+        const record = await this.bulk.mergeValuesInto(this.key, froms, to);
+        if (!record) return;
+        bulkNotice(this.bulk, `Merged ${bulkCount(froms.length + (this.values.indexOf(to) === -1 ? 0 : 1), 'value')} into “${to}” in ${bulkCount(notesChanged(record), 'note')}.` + bulkTail(record), record);
+      },
+    });
+  }
+}

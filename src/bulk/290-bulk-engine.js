@@ -1098,6 +1098,31 @@ export class BulkEdits {
     return record;
   }
 
+  /** Several values of a property made one, `to`, in every note and base: one step of Undo. */
+  async mergeValuesInto(key, froms, to) {
+    const app = this.app;
+    froms = froms.filter((f) => f !== to);
+    if (!froms.length) return null;
+    const record = await this.run(`Merging into “${to}”`, async (touch, step, rec) => {
+      const files = [];
+      froms.forEach((from) => this.planValueRename(key, from, to).files.forEach((f) => files.indexOf(f) === -1 && files.push(f)));
+      let done = 0;
+      for (const file of files) {
+        await touch(file, () =>
+          app.fileManager.processFrontMatter(file, (fm) => {
+            froms.forEach((from) => renameValueIn(fm, key, from, to));
+          })
+        );
+        step(++done, files.length);
+      }
+      rec.bases = [];
+      for (const from of froms) rec.bases = rec.bases.concat(await this.rewriteBases({ value: [key, from, to] }, touch));
+    });
+    if (!record) return null;
+    froms.forEach((from) => this.followRename({ value: [key, from, to] }));
+    return record;
+  }
+
   /** Take properties out of the notes. */
   async removeProperties(files, keys) {
     const fm = this.app.fileManager;
