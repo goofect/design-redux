@@ -84,6 +84,35 @@ export class NamePrompt extends Modal {
   }
 }
 
+/** A question to say yes to: a title, a line saying what will happen, and a button for it — a warning one if `warning`. */
+export class ConfirmModal extends Modal {
+  constructor(app, title, text, button, onYes, opts = {}) {
+    super(app);
+    this.titleText = title;
+    this.text = text;
+    this.button = button;
+    this.onYes = onYes;
+    this.opts = opts;
+  }
+
+  onOpen() {
+    this.titleEl.setText(this.titleText);
+    if (this.text) this.contentEl.createEl('p', { text: this.text });
+    const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
+    const yes = buttons.createEl('button', { cls: this.opts.warning ? 'mod-warning' : 'mod-cta', text: this.button });
+    yes.addEventListener('click', () => {
+      this.close();
+      this.onYes();
+    });
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
+    window.setTimeout(() => yes.focus(), 0);
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
 /**
  * A colour for a generated cover: a swatch, the theme's accent, one of
  * your own, or back to automatic — and, where covers are drawn, which

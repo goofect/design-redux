@@ -8737,3 +8737,66 @@ body.dr-look-classic .dr-track-name.has-excerpt::after,
 body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   display: none;
 }
+
+/* Editing an album: a box to tick on each note, and a bar for what's ticked. */
+.dr-edit-tick {
+  flex: none;
+  margin: 0;
+}
+
+.dr-track.is-editing.is-ticked {
+  background-color: var(--dr-hover);
+}
+
+.dr-bulk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--dr-r, var(--radius-m));
+  background: color-mix(in srgb, var(--background-primary) 85%, transparent);
+  border: 1px solid var(--background-modifier-border);
+  backdrop-filter: blur(var(--dr-glass-blur));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-bar.is-empty {
+  display: none;
+}
+
+.dr-bulk-count {
+  margin-right: auto;
+  font-weight: var(--font-semibold);
+}
+
+.dr-bulk-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.dr-bulk-action.mod-warning {
+  color: var(--text-error);
+}
+
+.dr-bulk-action .svg-icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-action:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}

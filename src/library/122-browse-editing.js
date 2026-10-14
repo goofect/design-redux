@@ -12,7 +12,7 @@ import { moveBefore } from '../core/070-orders.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
-import { FolderPicker, NamePrompt } from '../ui/230-pickers.js';
+import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseEditing {
@@ -28,6 +28,7 @@ export class BrowseEditing {
 
   setEditing(on) {
     this.editing = !!on;
+    if (!on && this.tickedPaths) this.tickedPaths.clear();
     this.render();
     if (!on) return;
     const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-track .dr-edit-name');
@@ -137,6 +138,7 @@ export class BrowseEditing {
     const row = list.createDiv({ cls: 'dr-track is-editing' });
     row.dataset.path = file.path;
     if (file.parent) row.dataset.folder = file.parent.path;
+    this.tickBox(row, file, list);
 
     const grip = row.createDiv({ cls: 'dr-edit-grip' });
     setIcon(grip, 'grip-vertical');
@@ -162,6 +164,109 @@ export class BrowseEditing {
     tool('trash-2', 'Delete', () => this.deleteEntry(file), 'mod-warning');
 
     this.dragRow(row, grip, file);
+  }
+
+  /* -- several notes at once, while editing ----------------------- */
+
+  /** The notes ticked while editing, by path. */
+  ticked() {
+    if (!this.tickedPaths) this.tickedPaths = new Set();
+    return this.tickedPaths;
+  }
+
+  /** A row's box to tick; Shift ticks every row from the last one ticked. */
+  tickBox(row, file, list) {
+    const box = row.createEl('input', { type: 'checkbox', cls: 'dr-edit-tick' });
+    box.checked = this.ticked().has(file.path);
+    box.setAttribute('aria-label', `Select “${file.basename}”`);
+    row.toggleClass('is-ticked', box.checked);
+    box.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      const ticked = this.ticked();
+      const rows = Array.from(list.querySelectorAll('.dr-track.is-editing'));
+      const paths = rows.map((r) => r.dataset.path);
+      const from = this.lastTick ? paths.indexOf(this.lastTick) : -1;
+      const to = paths.indexOf(file.path);
+      const run = evt.shiftKey && from !== -1 ? paths.slice(Math.min(from, to), Math.max(from, to) + 1) : [file.path];
+      run.forEach((p) => (box.checked ? ticked.add(p) : ticked.delete(p)));
+      this.lastTick = file.path;
+      rows.forEach((r) => {
+        const on = ticked.has(r.dataset.path);
+        r.toggleClass('is-ticked', on);
+        const b = r.querySelector('.dr-edit-tick');
+        if (b) b.checked = on;
+      });
+      this.renderBulkBar();
+    });
+  }
+
+  /** Above the notes while editing: how many are ticked, and what can be done to them all. */
+  renderBulkBar(root) {
+    if (root) this.bulkBar = root.createDiv({ cls: 'dr-bulk-bar' });
+    const bar = this.bulkBar;
+    if (!bar) return;
+    bar.empty();
+    const files = this.tickedFiles();
+    bar.toggleClass('is-empty', !files.length);
+    if (!files.length) return;
+    bar.createSpan({ cls: 'dr-bulk-count', text: files.length === 1 ? '1 note selected' : `${files.length} notes selected` });
+    const button = (icon, label, run, cls) => {
+      const el = bar.createDiv({ cls: `dr-bulk-action ${cls || ''}`.trim() });
+      asButton(el, label);
+      setIcon(el.createSpan(), icon);
+      el.createSpan({ text: label });
+      onActivate(el, run);
+    };
+    button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
+    button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
+    button('x', 'Clear', () => {
+      this.ticked().clear();
+      this.render();
+    });
+  }
+
+  /** The ticked notes still there. */
+  tickedFiles() {
+    return Array.from(this.ticked())
+      .map((p) => this.app.vault.getAbstractFileByPath(p))
+      .filter((f) => f instanceof TFile);
+  }
+
+  /** Every ticked note moved to a folder; one Undo puts them all back. */
+  async moveTicked(folder) {
+    const moved = [];
+    for (const file of this.tickedFiles()) {
+      const from = file.path;
+      const current = file.parent ? file.parent.path : '/';
+      const order = (this.plugin.settings.albumOrders || {})[current];
+      const kept = order ? JSON.parse(JSON.stringify(order)) : null;
+      if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
+    }
+    this.ticked().clear();
+    this.render();
+    if (!moved.length) return;
+    const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
+    this.plugin.offerUndo(`Moved ${moved.length === 1 ? '1 note' : `${moved.length} notes`} to ${where}.`, async () => {
+      for (const m of moved.slice().reverse()) await this.plugin.putBack(m.file, m.from, m.current, m.kept);
+    });
+  }
+
+  /** Every ticked note to the trash, once asked. */
+  deleteTicked() {
+    const files = this.tickedFiles();
+    if (!files.length) return;
+    const what = files.length === 1 ? `“${files[0].basename}”` : `${files.length} notes`;
+    new ConfirmModal(this.app, `Delete ${what}?`, 'They go to the trash, where they can be got back.', 'Delete', async () => {
+      for (const file of files) {
+        try {
+          await this.app.fileManager.trashFile(file);
+        } catch (err) {
+          console.error('Design Redux: could not delete', err);
+        }
+      }
+      this.ticked().clear();
+      this.render();
+    }, { warning: true }).open();
   }
 
   /** A subfolder's heading while editing: its name, and a way to delete it. */

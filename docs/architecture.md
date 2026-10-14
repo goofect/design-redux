@@ -713,3 +713,13 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Classic look** (Appearance → Look): the look from before 2.0 — no note
   header or shelves, no lines or dots under notes, no glass — for one
   release.
+
+## 25. Several notes at once
+
+- While an album is in Edit (122), each row has a tick box; Shift ticks a
+  run from the last one ticked. A bar at the top of the album says how many
+  are ticked and offers Move to…, Delete and Clear.
+- Moving goes through `plugin.moveFile`, each note's place in its album
+  kept; one Undo puts them all back (`putBack`, in reverse). Delete asks
+  first (`ConfirmModal`, ui/230) and sends the notes to the trash.
+- Leaving Edit clears the ticks.

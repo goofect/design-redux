@@ -507,6 +507,36 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.keys(R.DEFAULTS).forEach((k) => assert.ok(k in s, `${k} there`));
   });
 
+  await t('editing an album, notes ticked — Shift for a run — are moved together, one Undo putting them all back', async () => {
+    const { v, plugin, view } = setup();
+    let undo = null;
+    plugin.offerUndo = (message, fn) => { undo = [message, fn]; };
+    plugin.putBack = async (file, from) => { await v.fileManager.renameFile(file, from); return true; };
+    view.setEditing(true);
+    const tick = (n, shift) => {
+      const box = view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`);
+      box.dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
+    };
+    const bar = () => view.contentEl.querySelector('.dr-bulk-bar');
+    assert.ok(bar().classList.contains('is-empty'), 'nothing ticked, no bar');
+    tick('Anarchy');
+    tick('Cooperation', true);
+    assert.deepStrictEqual(Array.from(view.ticked()).sort(), ['IR/Anarchy.md', 'IR/Balance.md', 'IR/Cooperation.md'], 'the run between');
+    assert.strictEqual(bar().querySelector('.dr-bulk-count').textContent, '3 notes selected');
+    assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Balance.md"]').classList.contains('is-ticked'));
+    await view.moveTicked(v.vault.getAbstractFileByPath('IR/Theories'));
+    ['Anarchy', 'Balance', 'Cooperation'].forEach((n) => assert.ok(v.vault.getAbstractFileByPath(`IR/Theories/${n}.md`), `${n} moved`));
+    assert.strictEqual(view.ticked().size, 0);
+    assert.strictEqual(undo[0], 'Moved 3 notes to Theories.');
+    await undo[1]();
+    ['Anarchy', 'Balance', 'Cooperation'].forEach((n) => assert.ok(v.vault.getAbstractFileByPath(`IR/${n}.md`), `${n} back`));
+    // Leaving editing lets go of what was ticked.
+    tick('Deterrence');
+    view.setEditing(false);
+    assert.strictEqual(view.ticked().size, 0);
+    assert.ok(!view.contentEl.querySelector('.dr-edit-tick, .dr-bulk-bar'));
+  });
+
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
     const { view, plugin } = setup();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);

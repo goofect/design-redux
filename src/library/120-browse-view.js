@@ -909,6 +909,7 @@ export class BrowseView extends ItemView {
    * shows the first few dozen, with a row for the rest.
    */
   renderDiscs(root, discs, album) {
+    if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
     const list = root.createDiv({ cls: 'dr-tracks' });
     roveFocus(list, '.dr-track, .dr-disc[role="button"]');
     // Discs are folders, so dragging a note onto one moves it there; onto
