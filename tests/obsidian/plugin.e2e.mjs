@@ -2494,6 +2494,67 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('shows a note\'s properties as a light inspector: the main ones, + to add, one menu per row', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const path = 'Inspector note.md';
+      const old = app.vault.getFileByPath(path);
+      if (old) await app.vault.delete(old);
+      await app.vault.create(path, '---\nsource: book\ntype: concept\ndomain: Law\nstatus: draft\nbroader: "[[Balance of power]]"\ncreated: 2026-10-14\n---\nA note.');
+    });
+    await obsidianPage.openFile('Inspector note.md');
+    await browser.executeObsidianCommand('design-redux:open-properties');
+    await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
+    await browser.waitUntil(() => browser.execute(() => document.querySelectorAll('.dr-props-popup.is-open .dr-row').length === 6), { timeout: 5000 });
+    const look = await browser.execute(() => {
+      const pop = document.querySelector('.dr-props-popup.is-open');
+      const shown = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
+      const row = shown[0];
+      const key = row.querySelector('.dr-key');
+      const more = row.querySelector('.dr-row-more');
+      return {
+        shown: shown.map((r) => r.dataset.key),
+        more: (pop.querySelector('.dr-props-more') || {}).textContent,
+        labelShare: Math.round((key.getBoundingClientRect().width / row.getBoundingClientRect().width) * 100),
+        rowHeight: Math.round(row.getBoundingClientRect().height),
+        moreHidden: getComputedStyle(more).opacity === '0',
+        widgets: shown.filter((r) => r.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value .multi-select-container')).length,
+      };
+    });
+    expect(look.shown).toEqual(['type', 'domain', 'status']);
+    expect(look.more).toBe('Show 3 more');
+    expect(look.labelShare).toBeGreaterThanOrEqual(30);
+    expect(look.labelShare).toBeLessThanOrEqual(45);
+    expect(look.rowHeight).toBeGreaterThanOrEqual(32);
+    expect(look.moreHidden).toBe(true);
+    expect(look.widgets).toBe(3);
+    await shot('properties-inspector');
+
+    // + : the search, with the cursor in it.
+    await browser.execute(() => document.querySelector('.dr-props-popup.is-open .dr-props-add').click());
+    const picker = await browser.execute(() => ({
+      focused: document.activeElement && document.activeElement.classList.contains('dr-add-search'),
+      items: Array.from(document.querySelectorAll('.dr-props-popup .dr-add-item')).map((e) => e.textContent),
+    }));
+    expect(picker.focused).toBe(true);
+    expect(picker.items).toContain('Create new property');
+    expect(picker.items).not.toContain('type');
+    await browser.keys('Escape');
+
+    // The row's menu, by reach.
+    await browser.execute(() => document.querySelector('.dr-props-popup.is-open .dr-row[data-key="domain"] .dr-row-more').click());
+    await browser.$('.menu').waitForExist({ timeout: 3000 });
+    const items = await browser.execute(() => Array.from(document.querySelectorAll('.menu .menu-item-title')).map((e) => e.textContent));
+    for (const title of ['Change type', 'Rename…', 'Move', 'Find notes with this value', 'Find notes with this property', 'Manage across vault', 'Remove from note']) {
+      expect(items).toContain(title);
+    }
+    await browser.keys('Escape');
+    await browser.keys('Escape');
+    await browser.executeObsidian(async ({ app }) => {
+      const f = app.vault.getFileByPath('Inspector note.md');
+      if (f) await app.vault.delete(f);
+    });
+  });
+
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));
