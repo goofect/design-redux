@@ -802,3 +802,8 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Quieter to begin with** (settings step 6): glass panels and the note
   page's tint are off by default, and turned off once for everyone on
   updating; both are a switch away.
+- **Canvas tools by task** (321 `CANVAS_TASKS`, `canvasToolButtons`): among
+  the canvas's controls a button for each task with something that fits
+  what's selected — Add, Arrange, Connect, Focus, More (folding, master
+  cards, notes from branches, checking, comparing) — redrawn only when that
+  changes; or, set so, one button with all of them in its menu.

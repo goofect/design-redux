@@ -151,6 +151,8 @@ export const DEFAULTS = {
   propertyValueView: 'auto',
   // Settings shown: 'basic', the everyday ones, or 'all'.
   settingsLevel: 'basic',
+  // Canvas tools: 'tasks', a button for each, or 'one' with them all in its menu.
+  canvasToolButtons: 'tasks',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

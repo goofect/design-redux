@@ -386,7 +386,7 @@ CanvasDuplicate.settingKey = 'canvasDuplicate';
  */
 export const CANVAS_TASKS = [
   {
-    title: 'Create',
+    title: 'Add',
     icon: 'circle-plus',
     ids: ['canvas-quick-add', 'canvas-add-child-card', 'canvas-add-sibling-card', 'canvas-add-parent-card', 'duplicate-canvas-branch', 'canvas-outline-to-branch', 'canvas-make-claim', 'canvas-add-reason', 'canvas-add-objection', 'canvas-add-rebuttal', 'canvas-add-evidence'],
   },
@@ -396,19 +396,20 @@ export const CANVAS_TASKS = [
     ids: ['canvas-layout-choose', 'canvas-layout-everything', 'tidy-canvas-branch', 'canvas-spread-overlaps', 'fit-canvas-cards', 'center-canvas-text', 'canvas-promote-card', 'canvas-demote-card', 'canvas-card-earlier', 'canvas-card-later', 'canvas-toggle-keep-in-place', 'arrange-canvas-left', 'arrange-canvas-center', 'arrange-canvas-right', 'arrange-canvas-top', 'arrange-canvas-middle', 'arrange-canvas-bottom', 'arrange-canvas-space-across', 'arrange-canvas-space-down', 'arrange-canvas-width', 'arrange-canvas-height', 'arrange-canvas-grid', 'arrange-canvas-row', 'arrange-canvas-column'],
   },
   {
-    title: 'Navigate',
-    icon: 'compass',
+    title: 'Connect',
+    icon: 'waypoints',
+    ids: ['canvas-name-relationship', 'canvas-reverse-relationship', 'canvas-toggle-related', 'canvas-show-relationship', 'canvas-state-proposition'],
+  },
+  {
+    title: 'Focus',
+    icon: 'focus',
     ids: ['find-canvas-card', 'canvas-find-statement', 'focus-canvas-branch', 'canvas-zoom-to-branch', 'canvas-view-back', 'select-canvas-branch', 'open-canvas-outline', 'toggle-canvas-minimap', 'toggle-canvas-legend'],
   },
   {
-    title: 'Structure',
-    icon: 'network',
-    ids: ['fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything', 'toggle-canvas-master-card', 'canvas-state-proposition', 'canvas-name-relationship', 'canvas-reverse-relationship', 'canvas-toggle-related', 'canvas-show-relationship', 'canvas-branch-to-note', 'canvas-keep-outline', 'canvas-statements-note'],
-  },
-  {
-    title: 'Look over',
-    icon: 'microscope',
-    ids: ['check-canvas', 'canvas-compare-branches', 'canvas-keep-snapshot', 'canvas-compare', 'canvas-compare-done'],
+    // Folding, master cards, notes from branches, checking and comparing: the rest, a press further.
+    title: 'More',
+    icon: 'ellipsis',
+    ids: ['fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything', 'toggle-canvas-master-card', 'canvas-branch-to-note', 'canvas-keep-outline', 'canvas-statements-note', 'check-canvas', 'canvas-compare-branches', 'canvas-keep-snapshot', 'canvas-compare', 'canvas-compare-done'],
   },
 ];
 
@@ -418,7 +419,15 @@ export class CanvasTools extends CanvasFeature {
       {
         key: 'canvasTools',
         name: 'Canvas tools',
-        desc: 'A button among the canvas’s controls, and on the strip, with every canvas tool by what it’s for — create, arrange, navigate, structure, look over — only those that fit what’s selected.',
+        desc: 'Buttons among the canvas’s controls for what you’re doing — Add, Arrange, Connect, Focus, More — each showing only when something in it fits what’s selected.',
+      },
+      {
+        key: 'canvasToolButtons',
+        type: 'dropdown',
+        name: 'Canvas tool buttons',
+        desc: 'A button for each task, or one button with every task in its menu.',
+        options: { tasks: 'One for each task', one: 'One button' },
+        showIf: 'canvasTools',
       },
     ];
   }
@@ -450,7 +459,7 @@ export class CanvasTools extends CanvasFeature {
     })).filter((group) => group.items.length);
   }
 
-  /** A submenu for each task — or, where menus can't nest, one list, each name after its task's. */
+  /** Every task's tools: a submenu for each — or, where menus can't nest, one list, each name after its task's. */
   showMenu(evt) {
     const menu = new Menu();
     const groups = this.toolsByTask();
@@ -460,10 +469,7 @@ export class CanvasTools extends CanvasFeature {
       )
     );
     if (!groups.length) menu.addItem((item) => item.setTitle('Nothing to do here yet').setDisabled(true));
-    if (typeof this.plugin.openSettingsAt === 'function') {
-      menu.addSeparator();
-      menu.addItem((item) => item.setTitle('Canvas settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt('canvasTools')));
-    }
+    this.settingsItem(menu);
     // From the palette there's no press to open it at: it opens at the button.
     if (!evt) {
       const view = this.pageCanvas();
@@ -474,18 +480,59 @@ export class CanvasTools extends CanvasFeature {
     showMenuAt(menu, evt);
   }
 
-  /** Among the canvas's controls, the button that opens them. */
+  /** One task's tools, from its button. */
+  showTask(evt, title) {
+    const group = this.toolsByTask().find((g) => g.task.title === title);
+    const menu = new Menu();
+    (group ? group.items : []).forEach(({ action, ctx }) =>
+      menu.addItem((item) => actionItem(item, action, Object.assign(ctx, { from: 'tools' }), actionLabel(action, ctx)))
+    );
+    if (!group) menu.addItem((item) => item.setTitle('Nothing to do here now').setDisabled(true));
+    if (title === 'More') this.settingsItem(menu);
+    showMenuAt(menu, evt);
+  }
+
+  settingsItem(menu) {
+    if (typeof this.plugin.openSettingsAt !== 'function') return;
+    menu.addSeparator();
+    menu.addItem((item) => item.setTitle('Canvas settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt('canvasTools')));
+  }
+
+  /** Among the canvas's controls, a group for the tools' buttons. */
   mount(view, state) {
     const controls = view.containerEl.querySelector('.canvas-controls');
     if (!controls) return;
-    const group = controls.createDiv({ cls: 'canvas-control-group dr-tools-control' });
-    const item = group.createDiv({ cls: 'canvas-control-item' });
-    item.setAttribute('aria-label', 'Canvas tools');
-    item.setAttribute('data-tooltip-position', 'left');
-    asButton(item);
-    setIcon(item, 'wrench');
-    onActivate(item, (evt) => this.showMenu(evt));
-    state.control = group;
+    state.control = controls.createDiv({ cls: 'canvas-control-group dr-tools-control' });
+    this.drawButtons(state);
+  }
+
+  /** Drawn again when what's selected changes what fits — only then: drawing is a change the watcher sees. */
+  pass(view, state) {
+    if (state && state.control) this.drawButtons(state);
+  }
+
+  drawButtons(state) {
+    const one = this.settings.canvasToolButtons === 'one';
+    const groups = one ? [] : this.toolsByTask();
+    const key = one ? 'one' : groups.map((g) => g.task.title).join('|');
+    const group = state.control;
+    if (group.dataset.key === key) return;
+    group.dataset.key = key;
+    group.empty();
+    const button = (label, icon, open, task) => {
+      const item = group.createDiv({ cls: 'canvas-control-item dr-tool-task' });
+      if (task) item.dataset.task = task;
+      item.setAttribute('aria-label', label);
+      item.setAttribute('data-tooltip-position', 'left');
+      asButton(item);
+      setIcon(item, icon);
+      onActivate(item, open);
+    };
+    if (one) {
+      button('Canvas tools', 'wrench', (evt) => this.showMenu(evt));
+      return;
+    }
+    groups.forEach(({ task }) => button(task.title, task.icon, (evt) => this.showTask(evt, task.title), task.title));
   }
 
   cleanup(view, state) {

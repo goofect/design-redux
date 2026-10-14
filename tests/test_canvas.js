@@ -2710,19 +2710,37 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     const tools = new R.CanvasTools(plugin);
     plugin.features.push(tools);
     const shape = () => tools.toolsByTask().map((g) => `${g.task.title}: ${g.items.map((i) => i.action.id).join(', ')}`);
-    assert.deepStrictEqual(shape(), ['Create: canvas-quick-add', 'Navigate: find-canvas-card', 'Look over: check-canvas'], 'nothing selected: making, finding, looking over');
+    assert.deepStrictEqual(shape(), ['Add: canvas-quick-add', 'Focus: find-canvas-card', 'More: check-canvas'], 'nothing selected: adding, finding, looking over');
+    // A button for each task that has something that fits, among the canvas's controls.
+    const controls = view.containerEl.createDiv({ cls: 'canvas-controls' });
+    const state = {};
+    tools.mount(view, state);
+    const buttons = () => Array.from(controls.querySelectorAll('.dr-tool-task')).map((b) => b.dataset.task);
+    assert.deepStrictEqual(buttons(), ['Add', 'Focus', 'More']);
     selection.add(card);
-    assert.deepStrictEqual(shape(), ['Create: canvas-quick-add, canvas-add-child-card', 'Arrange: tidy-canvas-branch', 'Navigate: find-canvas-card', 'Look over: check-canvas']);
+    assert.deepStrictEqual(shape(), ['Add: canvas-quick-add, canvas-add-child-card', 'Arrange: tidy-canvas-branch', 'Focus: find-canvas-card', 'More: check-canvas']);
+    tools.pass(view, state);
+    assert.deepStrictEqual(buttons(), ['Add', 'Arrange', 'Focus', 'More'], 'a card picked: Arrange too');
+    const before = controls.querySelector('.dr-tool-task');
+    tools.pass(view, state);
+    assert.strictEqual(controls.querySelector('.dr-tool-task'), before, 'nothing changed: not drawn again');
+    plugin.settings.canvasToolButtons = 'one';
+    tools.pass(view, state);
+    assert.deepStrictEqual(Array.from(controls.querySelectorAll('.dr-tool-task')).map((b) => b.getAttribute('aria-label')), ['Canvas tools']);
+    plugin.settings.canvasToolButtons = 'tasks';
     const shown = [];
     Menu.prototype.showAtMouseEvent = function () { shown.push(this); };
     Menu.prototype.addSeparator = function () { return this; };
     tools.showMenu({ clientX: 1, clientY: 1 });
     const titles = shown[0].items.map((i) => i.title);
-    assert.ok(titles.includes('Create: Add or connect a card…') && titles.includes('Canvas settings…'), titles.join(' | '));
-    shown[0].items.find((i) => i.title === 'Create: Add or connect a card…').click();
+    assert.ok(titles.includes('Add: Add or connect a card…') && titles.includes('Canvas settings…'), titles.join(' | '));
+    shown[0].items.find((i) => i.title === 'Add: Add or connect a card…').click();
     assert.deepStrictEqual(ran, ['add']);
     shown[0].items.find((i) => i.title === 'Canvas settings…').click();
     assert.deepStrictEqual(opened, ['canvasTools']);
+    // A task's button: its tools alone, by their own names.
+    tools.showTask({ clientX: 1, clientY: 1 }, 'Add');
+    assert.deepStrictEqual(shown[1].items.map((i) => i.title), ['Add or connect a card…', 'Add a card the selected card leads to']);
   });
 
   console.log(`\n${passed} passed`);

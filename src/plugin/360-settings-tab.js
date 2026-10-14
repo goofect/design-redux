@@ -64,7 +64,7 @@ export const SETTINGS_TABS = [
           'canvasBranches', 'canvasCloseGaps', 'canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap',
         ],
       },
-      { title: 'Cards', keys: ['canvasTools', 'canvasDepth', 'canvasColourBy', 'canvasCardFacts', 'canvasCardChips', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
+      { title: 'Cards', keys: ['canvasTools', 'canvasToolButtons', 'canvasDepth', 'canvasColourBy', 'canvasCardFacts', 'canvasCardChips', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
       { title: 'Arrows', keys: ['canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments'] },
       { title: 'Arrange', keys: ['canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasArrange', 'canvasSelectBranch'] },
       { title: 'Find and focus', keys: ['canvasFind', 'canvasViews', 'canvasMinimap', 'canvasFocus', 'canvasFocusSelect'] },
