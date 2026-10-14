@@ -86,7 +86,13 @@ export class BrowseRows {
       name.setText(file.basename);
     }
 
-    if (this.plugin.settings.albumExcerpts !== false) this.showExcerpt(name, file);
+    // In search, the grey line says why it matched instead.
+    const why = this.mode === 'search' && this.searchWhy ? this.searchWhy.get(file.path) : null;
+    if (why) {
+      name.dataset.excerpt = why;
+      name.addClass('has-excerpt');
+      name.addClass('is-why');
+    } else if (this.plugin.settings.albumExcerpts !== false) this.showExcerpt(name, file);
 
     this.albumColumns().forEach((key) =>
       row.createDiv({

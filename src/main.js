@@ -19,6 +19,7 @@ import './core/032-drawn-covers.js';
 import './core/040-helpers-sorting.js';
 import './core/045-helpers-properties.js';
 import './core/047-helpers-text.js';
+import './core/048-search-rank.js';
 import './core/050-helpers-dom.js';
 import './core/060-pins.js';
 import './core/065-lengths.js';

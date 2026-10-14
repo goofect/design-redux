@@ -787,7 +787,8 @@ export class BrowseView extends ItemView {
       return;
     }
     // Notes under the note their property names as parent, a step in; what's under a folded one hidden.
-    const nestKey = String(this.plugin.settings.albumNestBy || '').trim();
+    // Not in search, whose order is how well each matches.
+    const nestKey = this.mode === 'search' ? '' : String(this.plugin.settings.albumNestBy || '').trim();
     const entries = [];
     let hideBelow = -1;
     (nestKey ? nestByProperty(this.app, files, nestKey) : files.map((file) => ({ file, depth: 0, children: 0 }))).forEach((e) => {

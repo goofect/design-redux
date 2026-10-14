@@ -3473,6 +3473,70 @@ body.dr-mentions-active
   height: 14px;
 }
 
+/* Which kind of result shows, and how notes are ordered: a quiet row
+   above the results, apart from the query. */
+.dr-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  margin: calc(var(--dr-u) * -1.5) 0 calc(var(--dr-u) * 3.5);
+  padding: 0 2px;
+}
+
+.dr-search-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-1);
+}
+
+.dr-search-kind,
+.dr-search-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) var(--dr-space-3);
+  border-radius: var(--dr-radius-pill);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-search-kind.is-active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-search-sort {
+  margin-left: auto;
+}
+
+.dr-search-sort-icon {
+  display: inline-flex;
+}
+
+.dr-search-sort-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-search-kind:focus-visible,
+.dr-search-sort:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+@media (any-hover: hover) {
+  .dr-search-kind:not(.is-active):hover,
+  .dr-search-sort:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+.dr-search-props {
+  margin-bottom: var(--dr-space-4);
+}
+
 /* Home ------------------------------------------------------------------------
  *
  * Large cards first — where you were, what's next, the home note, one to

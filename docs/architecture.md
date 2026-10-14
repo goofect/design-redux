@@ -723,3 +723,12 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   kept; one Undo puts them all back (`putBack`, in reverse). Delete asks
   first (`ConfirmModal`, ui/230) and sends the notes to the trash.
 - Leaving Edit clears the ticks.
+
+## 26. Search and properties, reworked
+
+- **Ranked search** (core/048 `rankNote`): a note's title, aliases, one
+  property, its album, or its letters nearly in order, scored so the note
+  named for the query comes first; the reason shows as the row's grey line
+  (`view.searchWhy`). A row above the results picks the kind (All, Notes,
+  Albums, Collections, Properties — `view.searchKind`) and the order of notes
+  (`view.searchSort`), neither touching the query. Search rows aren't nested.

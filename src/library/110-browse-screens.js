@@ -12,6 +12,8 @@ import { TYPE_ICONS } from '../core/020-constants.js';
 import { albumNeighbours, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
+import { rankNote, searchWords } from '../core/048-search-rank.js';
+import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -936,13 +938,21 @@ export class SearchScreen extends BrowseScreen {
 
   /* -- results ----------------------------------------------------- */
 
+  /**
+   * What matches, the best first: a note named for what you typed before
+   * one that only mentions it in a property, each saying why it matched.
+   * A row above picks which kind to show and how notes are ordered,
+   * neither of them touching the query.
+   */
   renderResults(root, q) {
     const view = this.view;
+    const words = searchWords(q);
+    const hasAll = (text) => words.every((w) => text.indexOf(w) !== -1);
 
     const folders = [];
     const walk = (folder) =>
       view.visibleFolders(folder).forEach((child) => {
-        if (child.name.toLowerCase().includes(q) && view.folderInFilter(child)) folders.push(child);
+        if (hasAll(child.name.toLowerCase()) && view.folderInFilter(child)) folders.push(child);
         walk(child);
       });
     walk(this.app.vault.getRoot());
@@ -950,21 +960,38 @@ export class SearchScreen extends BrowseScreen {
     // Names and property values, both of which the cache already holds.
     // Searching note bodies would mean reading every file on each
     // keystroke, so that's handed to Obsidian's own search instead.
-    const notes = view.sortFiles(
-      libraryIndex(this.plugin).notes()
-        .filter((f) => view.inFilter(f))
-        .filter(
-          (f) =>
-            f.basename.toLowerCase().includes(q) ||
-            view.propertyText(f).includes(q)
-        )
-    );
+    const ranked = [];
+    libraryIndex(this.plugin)
+      .notes()
+      .forEach((f) => {
+        if (!view.inFilter(f)) return;
+        const parent = f.parent && f.parent.path !== '/' ? f.parent.path : '';
+        const match = rankNote({ title: f.basename, props: noteProps(this.app, f), album: parent }, q);
+        if (match) ranked.push({ file: f, score: match.score, why: match.why });
+      });
+    const sort = view.searchSort || 'relevance';
+    if (sort === 'relevance') ranked.sort((a, b) => b.score - a.score || a.file.basename.localeCompare(b.file.basename));
+    else if (sort === 'title') ranked.sort((a, b) => a.file.basename.localeCompare(b.file.basename));
+    else ranked.sort((a, b) => ((b.file.stat && b.file.stat.mtime) || 0) - ((a.file.stat && a.file.stat.mtime) || 0));
+    const notes = ranked.map((r) => r.file);
+    view.searchWhy = new Map(ranked.map((r) => [r.file.path, r.why]));
 
     // Your collections by name: smart albums and reading queues, and
     // albums that gather notes from elsewhere not already among the albums.
     const collections = collectionTiles(view).filter((item) => !(item instanceof TFolder) || folders.indexOf(item) === -1);
+    const properties = view.propertyList().filter((p) => hasAll(p.name.toLowerCase()));
 
-    const count = folders.length + collections.length + notes.length;
+    const kinds = [
+      { id: 'notes', label: 'Notes', n: notes.length },
+      { id: 'albums', label: 'Albums', n: folders.length },
+      { id: 'collections', label: 'Collections', n: collections.length },
+      { id: 'properties', label: 'Properties', n: properties.length },
+    ];
+    let kind = view.searchKind || 'all';
+    if (kind !== 'all' && !kinds.some((k) => k.id === kind)) kind = 'all';
+    const showing = (id) => kind === 'all' || kind === id;
+
+    const count = kinds.reduce((n, k) => n + (showing(k.id) ? k.n : 0), 0);
     const head = root.createDiv({ cls: 'dr-search-head' });
     head.createSpan({
       cls: 'dr-search-count',
@@ -985,35 +1012,98 @@ export class SearchScreen extends BrowseScreen {
       }
     });
 
+    this.resultsBar(root, kinds, kind, sort);
+
     if (!count) {
       root.createDiv({ cls: 'dr-split-empty', text: 'No matches' });
       return;
     }
 
     // Grouped, each under its name, once there's more than one kind.
-    const kinds = [folders, collections, notes].filter((list) => list.length).length;
+    const several = kinds.filter((k) => showing(k.id) && k.n).length > 1;
     const titled = (text, n) => {
-      if (kinds > 1) this.heading(root, text).createSpan({ cls: 'dr-search-section-count', text: String(n) });
+      if (several) this.heading(root, text).createSpan({ cls: 'dr-search-section-count', text: String(n) });
     };
 
-    if (folders.length) {
+    // Notes first: they're what's searched for most.
+    if (showing('notes') && notes.length) {
+      titled('Notes', notes.length);
+      const list = root.createDiv({ cls: 'dr-tracks dr-search-notes' });
+      roveFocus(list, '.dr-track');
+      view.renderLimited(list, notes, 'search', kind === 'notes' ? 200 : 40);
+    }
+
+    if (showing('albums') && folders.length) {
       titled('Albums', folders.length);
       const grid = root.createDiv({ cls: 'dr-grid' });
       roveFocus(grid, '.dr-card');
       folders.forEach((f) => view.folderCard(grid, f, f.parent && f.parent.name));
     }
 
-    if (collections.length) {
+    if (showing('collections') && collections.length) {
       titled('Collections', collections.length);
       tileGrid(view, root, collections);
     }
 
-    if (notes.length) {
-      titled('Notes', notes.length);
-      const list = root.createDiv({ cls: 'dr-tracks' });
-      roveFocus(list, '.dr-track');
-      view.renderLimited(list, notes, 'search', 40);
+    if (showing('properties') && properties.length) {
+      titled('Properties', properties.length);
+      const list = root.createDiv({ cls: 'dr-split-list dr-search-props' });
+      roveFocus(list, '.dr-split-row');
+      properties.forEach((prop) => {
+        const row = list.createDiv({ cls: 'dr-split-row' });
+        asButton(row);
+        setIcon(row.createDiv({ cls: 'dr-split-thumb is-blank' }).createSpan({ cls: 'dr-card-glyph' }), TYPE_ICONS[prop.type] || 'tag');
+        row.createDiv({ cls: 'dr-split-name', text: prop.name });
+        row.createDiv({ cls: 'dr-split-count', text: String(prop.count) });
+        onActivate(row, () => view.navigate({ mode: 'properties', property: prop.key, value: null, query: '' }));
+      });
     }
+  }
+
+  /** All, Notes, Albums, Collections, Properties — those with results — and how notes are ordered. */
+  resultsBar(root, kinds, kind, sort) {
+    const view = this.view;
+    const bar = root.createDiv({ cls: 'dr-search-bar' });
+    const tabs = bar.createDiv({ cls: 'dr-search-kinds' });
+    tabs.setAttribute('role', 'tablist');
+    [{ id: 'all', label: 'All', n: 1 }].concat(kinds).forEach((k) => {
+      if (!k.n && k.id !== kind) return;
+      const tab = tabs.createDiv({ cls: 'dr-search-kind', text: k.label });
+      asButton(tab);
+      tab.setAttribute('role', 'tab');
+      tab.dataset.kind = k.id;
+      tab.setAttribute('aria-selected', String(k.id === kind));
+      tab.toggleClass('is-active', k.id === kind);
+      onActivate(tab, () => {
+        view.searchKind = k.id;
+        view.render();
+      });
+    });
+    const sorts = [
+      ['relevance', 'Relevance'],
+      ['title', 'Title'],
+      ['modified', 'Recently changed'],
+    ];
+    const order = bar.createDiv({ cls: 'dr-search-sort' });
+    asButton(order);
+    order.createSpan({ text: `Sort: ${(sorts.find((s) => s[0] === sort) || sorts[0])[1]}` });
+    setIcon(order.createSpan({ cls: 'dr-search-sort-icon' }), 'chevron-down');
+    onActivate(order, (evt) => {
+      const menu = new Menu();
+      sorts.forEach(([id, label]) =>
+        menu.addItem((item) =>
+          item
+            .setTitle(label)
+            .setChecked(id === sort)
+            .setSection('action')
+            .onClick(() => {
+              view.searchSort = id;
+              view.render();
+            })
+        )
+      );
+      showMenuAt(menu, evt);
+    });
   }
 }
 

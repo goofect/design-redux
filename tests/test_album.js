@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1258,12 +1258,71 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.query = 'reading';
     view.render();
     const heads = Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent);
-    assert.deepStrictEqual(heads, ['Albums', 'Collections', 'Notes']);
+    assert.deepStrictEqual(heads, ['Notes', 'Albums', 'Collections']);
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Readings', 'Reading list']);
     assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Reading notes.md"]'));
     view.query = 'notes';
     view.render();
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent), [], 'one kind: no headings');
+  });
+
+  await t('search puts the note named for the query first, says why each matched, and narrows by kind without losing the query', async () => {
+    const { v, view, app } = setup();
+    const law = v.file('IR/Constitutional Law.md');
+    const ism = v.file('IR/Constitutionalism.md');
+    const sep = v.file('IR/Separation of Powers.md');
+    const fms = new Map([[sep, { domain: 'Constitutional Law' }], [law, { domain: 'Politics' }]]);
+    app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
+    await view.setState({ mode: 'search' }, {});
+    view.query = 'constitutional law';
+    view.render();
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-search-notes .dr-track')).map((r) => r.dataset.path);
+    const why = (p) => view.contentEl.querySelector(`.dr-track[data-path="${p}"] .dr-track-name`).dataset.excerpt;
+    assert.deepStrictEqual(rows(), [law.path, sep.path], 'the title before the property');
+    assert.strictEqual(why(law.path), 'Exact title match');
+    assert.strictEqual(why(sep.path), 'Property: domain = Constitutional Law');
+    view.query = 'constitutional';
+    view.render();
+    assert.deepStrictEqual(rows().slice(0, 2).sort(), [law.path, ism.path].sort(), 'titles first');
+    assert.strictEqual(rows()[2], sep.path);
+    assert.ok(why(ism.path).startsWith('Title match'));
+
+    // A kind picked keeps the query; a kind with no results isn't offered.
+    const tabs = () => Array.from(view.contentEl.querySelectorAll('.dr-search-kind')).map((e) => e.textContent);
+    assert.ok(tabs().includes('Notes') && !tabs().includes('Collections'));
+    view.query = 'theor';
+    view.render();
+    assert.ok(tabs().includes('Albums') && tabs().includes('Notes'), tabs().join());
+    view.contentEl.querySelector('.dr-search-kind[data-kind="albums"]').click();
+    assert.strictEqual(view.query, 'theor');
+    assert.ok(!view.contentEl.querySelector('.dr-search-notes'), 'notes hidden');
+    assert.ok(view.contentEl.querySelector('.dr-card'), 'albums shown');
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-kind.is-active').textContent, 'Albums');
+    view.searchKind = 'all';
+
+    // Ordered by title instead, from the sort menu.
+    view.query = 'constitutional';
+    view.searchSort = 'title';
+    view.render();
+    assert.deepStrictEqual(rows(), [law.path, ism.path, sep.path]);
+    assert.ok(view.contentEl.querySelector('.dr-search-sort').textContent.includes('Title'));
+    view.searchSort = 'relevance';
+  });
+
+  await t('a note matches by its title, alias, a property, its album, or nearly its title — in that order', () => {
+    const { rankNote } = R;
+    const score = (parts, q) => (rankNote(parts, q) || { score: 0 }).score;
+    const title = score({ title: 'Deterrence' }, 'deterrence');
+    const starts = score({ title: 'Deterrence theory' }, 'deterrence');
+    const alias = score({ title: 'X', props: { aliases: ['Deterrence'] } }, 'deterrence');
+    const near = score({ title: 'Deterrence' }, 'dtrnc');
+    const prop = score({ title: 'X', props: { topic: 'nuclear deterrence' } }, 'deterrence');
+    const album = score({ title: 'X', album: 'Security/Deterrence' }, 'deterrence');
+    assert.ok(title > starts && starts > alias && alias > prop && prop > album, [title, starts, alias, prop, album].join());
+    assert.ok(near > prop && near < alias);
+    assert.strictEqual(rankNote({ title: 'X', props: { aliases: ['Deterrence'] } }, 'deterrence').why, 'Alias: Deterrence');
+    assert.strictEqual(rankNote({ title: 'Balance' }, 'deterrence'), null);
+    assert.strictEqual(rankNote({ title: 'Deterrence' }, 'zzz'), null);
   });
 
   await t('the sort menu says how an album shows and opens its display settings; Find offers the whole library', async () => {
