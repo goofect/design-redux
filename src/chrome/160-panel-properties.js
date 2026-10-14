@@ -7,7 +7,7 @@
 /* ones. Writes go through processFrontMatter, which is atomic.        */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Notice, setIcon } from 'obsidian';
+import { Menu, Notice, Platform, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { composing, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
@@ -53,17 +53,6 @@ export function propertyPresentation(key, value, type, settings) {
     primary: propNames(settings && settings.panelPrimaryProps).indexOf(lower) !== -1,
     interaction: links ? 'note-link' : 'edit',
   };
-}
-
-/** The notes a value names, as files. */
-function linkedFiles(app, value, from) {
-  const cache = app.metadataCache;
-  if (!cache || typeof cache.getFirstLinkpathDest !== 'function') return [];
-  return (Array.isArray(value) ? value : [value])
-    .map((v) => String(v || '').replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
-    .filter(Boolean)
-    .map((n) => cache.getFirstLinkpathDest(n, from))
-    .filter(Boolean);
 }
 
 export class PropertiesSection extends PanelSection {
@@ -206,7 +195,7 @@ export class PropertiesSection extends PanelSection {
     });
   }
 
-  /** How the panel shows properties: the main ones or all, grouped or not, and which are main. */
+  /** How the panel shows properties: all or the main ones, grouped or not, and the settings for both. */
   showViewMenu(evt) {
     const menu = new Menu();
     const view = this.settings.panelPropertiesView || 'compact';
@@ -215,15 +204,13 @@ export class PropertiesSection extends PanelSection {
       await this.plugin.saveData(this.settings);
       this.redraw();
     };
-    menu.addItem((item) => item.setTitle('The main ones').setChecked(view === 'compact').setSection('view').onClick(() => set('panelPropertiesView', 'compact')));
-    menu.addItem((item) => item.setTitle('All properties').setChecked(view === 'all').setSection('view').onClick(() => set('panelPropertiesView', 'all')));
+    menu.addItem((item) => item.setTitle('Show all properties').setChecked(view === 'all').setSection('view').onClick(() => set('panelPropertiesView', view === 'all' ? 'compact' : 'all')));
     if (propertyGroups(this.settings).length) {
       const on = this.settings.panelPropertyGroups === 'on';
-      menu.addItem((item) => item.setTitle('Grouped').setChecked(on).setSection('group').onClick(() => set('panelPropertyGroups', on ? 'off' : 'on')));
+      menu.addItem((item) => item.setTitle('Group properties').setChecked(on).setSection('view').onClick(() => set('panelPropertyGroups', on ? 'off' : 'on')));
     }
     if (typeof this.plugin.openSettingsAt === 'function') {
-      menu.addItem((item) => item.setTitle('Choose the main properties…').setIcon('settings').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelPrimaryProps')));
-      menu.addItem((item) => item.setTitle('Set up groups…').setIcon('settings').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelGroupList')));
+      menu.addItem((item) => item.setTitle('Property settings…').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelPrimaryProps')));
     }
     const el = evt && evt.currentTarget && evt.currentTarget.getBoundingClientRect ? evt.currentTarget : null;
     const r = el ? el.getBoundingClientRect() : { left: 0, bottom: 0 };
@@ -610,44 +597,46 @@ export class PropertiesSection extends PanelSection {
   }
 
   /**
-   * A property's menu, by how far a choice reaches: the property itself —
-   * its type (which Obsidian keeps for every note), its name here, its
-   * place; a note its value names; finding the notes that share it; then
-   * what changes other notes, under Manage across vault; last, taking it
-   * out of this note.
+   * A property's menu, kept to five: its type, its name, the notes that
+   * share it, what reaches other notes — all a press further — and taking
+   * it off this note. Moving is the grip's (and Alt+arrows'); on touch,
+   * where dragging is harder to aim, it's here too. A note a value names
+   * opens as its link does.
    */
   showMenu(key, anchorEl) {
     const menu = new Menu();
     const current = this.typeOf(key);
     const sectioned = (item, section) => (typeof item.setSection === 'function' ? item.setSection(section) : item);
+    const group = (title, icon, section, entries) =>
+      menuGroup(
+        menu,
+        title,
+        icon,
+        (m, nested) =>
+          entries.forEach(([short, long, run, checked]) =>
+            m.addItem((item) => {
+              item.setTitle(nested ? short : long).onClick(run);
+              if (checked !== undefined) item.setChecked(checked);
+              if (!nested) sectioned(item, section);
+            })
+          ),
+        section
+      );
 
-    menuGroup(
-      menu,
-      'Change type',
-      TYPE_ICONS[current] || 'shapes',
-      (m, nested) =>
-        Object.keys(TYPE_ICONS).forEach((type) =>
-          m.addItem((item) => {
-            item.setTitle(nested ? TYPE_LABELS[type] : `Type: ${TYPE_LABELS[type]}`);
-            item.setIcon(TYPE_ICONS[type]);
-            item.setChecked(type === current);
-            if (!nested) sectioned(item, 'property');
-            item.onClick(() => {
-              try {
-                this.app.metadataTypeManager.setType(key, type);
-                this.forceRefresh();
-              } catch (err) {
-                console.error('Design Redux: could not set the type', err);
-              }
-            });
-          })
-        ),
-      'property'
-    );
-    // Renamed in this note: its name, ready to type over. Across the vault is under Manage.
+    // Type, kept by Obsidian for every note.
+    const setType = (type) => () => {
+      try {
+        this.app.metadataTypeManager.setType(key, type);
+        this.forceRefresh();
+      } catch (err) {
+        console.error('Design Redux: could not set the type', err);
+      }
+    };
+    group('Type', TYPE_ICONS[current] || 'shapes', 'edit', Object.keys(TYPE_ICONS).map((type) => [TYPE_LABELS[type], `Type: ${TYPE_LABELS[type]}`, setType(type), type === current]));
+    // Renamed here: its name, ready to type over. Across the vault is a press further.
     menu.addItem((item) =>
-      sectioned(item, 'property')
-        .setTitle('Rename…')
+      sectioned(item, 'edit')
+        .setTitle('Rename')
         .setIcon('pencil')
         .onClick(() => {
           const name = this.containerEl && this.containerEl.querySelector(`.dr-row[data-key="${CSS.escape(key)}"] .dr-key-name`);
@@ -656,93 +645,26 @@ export class PropertiesSection extends PanelSection {
           name.select();
         })
     );
-
-    // For touch, where a drag is harder to aim, and for anyone who'd rather not drag.
-    const row = anchorEl.closest('.dr-row');
-    const rows = row && row.parentElement ? Array.from(row.parentElement.querySelectorAll(':scope > .dr-row')) : [];
-    const at = rows.indexOf(row);
-    menuGroup(
-      menu,
-      'Move',
-      'arrow-up-down',
-      (m, nested) =>
-        [
-          ['Up', 'Move up', 'arrow-up', -1, at > 0],
-          ['Down', 'Move down', 'arrow-down', 1, at !== -1 && at < rows.length - 1],
-        ].forEach(([short, long, icon, delta, possible]) =>
-          m.addItem((item) => {
-            item.setTitle(nested ? short : long).setIcon(icon);
-            if (!nested) sectioned(item, 'property');
-            if (typeof item.setDisabled === 'function') item.setDisabled(!possible);
-            item.onClick(() => {
-              if (possible) this.moveRow(row, delta);
-            });
-          })
-        ),
-      'property'
-    );
-
-    // A note its value names: opened as its link would be, or in a new tab, or among its related notes.
-    const raw = this.frontmatter[key];
-    if (propertyPresentation(key, raw, current, this.settings).interaction === 'note-link') {
-      const files = linkedFiles(this.app, raw, this.file.path).slice(0, 3);
-      const ws = this.app.workspace;
-      const close = () => typeof this.panel.close === 'function' && this.panel.close();
-      files.forEach((file) =>
-        menu.addItem((item) => sectioned(item, 'open').setTitle(`Open “${file.basename}”`).setIcon('file-text').onClick(() => { ws.getLeaf(false).openFile(file); close(); }))
-      );
-      if (files.length === 1) {
-        menu.addItem((item) => sectioned(item, 'open').setTitle(`Open “${files[0].basename}” in new tab`).setIcon('file-plus').onClick(() => { ws.getLeaf('tab').openFile(files[0]); close(); }));
-      }
-      const library = this.plugin.feature ? this.plugin.feature(Library) : null;
-      if (files.length && library && library.enabled) {
-        menu.addItem((item) =>
-          sectioned(item, 'open')
-            .setTitle(`Show notes related to “${files[0].basename}”`)
-            .setIcon('waypoints')
-            .onClick(() => { library.browseMode({ mode: 'concept', path: '/', property: files[0].path }); close(); })
-        );
-      }
+    if (Platform.isMobile) {
+      const row = anchorEl.closest('.dr-row');
+      const rows = row && row.parentElement ? Array.from(row.parentElement.querySelectorAll(':scope > .dr-row')) : [];
+      const at = rows.indexOf(row);
+      [['Move up', 'arrow-up', -1, at > 0], ['Move down', 'arrow-down', 1, at !== -1 && at < rows.length - 1]].forEach(([title, icon, delta, possible]) => {
+        if (possible) menu.addItem((item) => sectioned(item, 'edit').setTitle(title).setIcon(icon).onClick(() => this.moveRow(row, delta)));
+      });
     }
 
-    // The notes that share it, in the Properties screen.
+    // The notes that share it.
     const find = this.findEntries(key);
-    if (find.values.length === 1) {
-      menu.addItem((item) => sectioned(item, 'find').setTitle('Find notes with this value').setIcon('filter').onClick(find.values[0][1]));
-    } else if (find.values.length > 1) {
-      menuGroup(
-        menu,
-        'Find notes with this value',
-        'filter',
-        (m, nested) =>
-          find.values.forEach(([value, run]) =>
-            m.addItem((item) => {
-              item.setTitle(nested ? value : `Find notes with “${value}”`).setIcon('filter').onClick(run);
-              if (!nested) sectioned(item, 'find');
-            })
-          ),
-        'find'
-      );
-    }
-    if (find.all) menu.addItem((item) => sectioned(item, 'find').setTitle('Find notes with this property').setIcon('list').onClick(find.all));
+    const finds = find.values.map(([value, run]) => [find.values.length === 1 ? 'With this value' : `With “${value}”`, find.values.length === 1 ? 'Notes with this value' : `Notes with “${value}”`, run]);
+    if (find.all) finds.push(['With this property', 'Notes with this property', find.all]);
+    if (finds.length) group('Find notes', 'search', 'find', finds);
 
-    const manage = this.manageEntries(key);
-    if (manage.length) {
-      menuGroup(
-        menu,
-        'Manage across vault',
-        'globe',
-        (sub, nested) =>
-          manage.forEach(([title, long, icon, run]) =>
-            sub.addItem((item) => {
-              item.setTitle(nested ? title : long).setIcon(icon).onClick(run);
-              if (!nested) sectioned(item, 'manage');
-            })
-          ),
-        'manage'
-      );
-    }
-    menu.addItem((item) => sectioned(item, 'remove').setTitle('Remove from note').setIcon('trash-2').onClick(() => this.remove(key)));
+    // What changes other notes: each shown before it's done.
+    const manage = this.manageEntries(key).map(([short, long, , run]) => [short, long, run]);
+    if (manage.length) group('Across the vault', 'globe', 'vault', manage);
+
+    menu.addItem((item) => sectioned(item, 'remove').setTitle('Remove').setIcon('trash-2').onClick(() => this.remove(key)));
 
     const r = anchorEl.getBoundingClientRect();
     menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
@@ -779,15 +701,15 @@ export class PropertiesSection extends PanelSection {
   manageEntries(key) {
     const out = [];
     const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
-    if (bulk) out.push(['Rename across vault…', `Rename ${key} across vault…`, 'pencil', () => bulk.openRenameProperty(key)]);
+    if (bulk) out.push(['Rename everywhere…', `Rename ${key} everywhere…`, 'pencil', () => bulk.openRenameProperty(key)]);
     const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
     const file = this.file;
     if (album && album.enabled && file && album.albumNotes(file).length) {
-      out.push(['Apply to collection…', `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);
+      out.push([`Apply to ${album.albumName(file)}…`, `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);
     }
     if (bulk) {
-      out.push(['Merge with another property…', `Merge ${key} with another property…`, 'git-merge', () => bulk.openMerge([key])]);
-      out.push(['Remove from every note…', `Remove ${key} from every note…`, 'list-minus', () => bulk.openRemove([this.app.vault.getRoot()], [key])]);
+      out.push(['Merge with…', `Merge ${key} with…`, 'git-merge', () => bulk.openMerge([key])]);
+      out.push(['Remove everywhere…', `Remove ${key} everywhere…`, 'list-minus', () => bulk.openRemove([this.app.vault.getRoot()], [key])]);
     }
     return out;
   }

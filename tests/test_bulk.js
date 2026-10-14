@@ -1151,22 +1151,24 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-key-icon'));
     const m = menus.pop();
     const sections = m.items.map((i) => i.section).filter((x, i, all) => all.indexOf(x) === i);
-    assert.deepStrictEqual(sections, ['property', 'find', 'manage', 'remove'], 'by how far each reaches');
+    assert.deepStrictEqual(sections, ['edit', 'find', 'vault', 'remove'], 'by how far each reaches');
     const titles = (section) => m.items.filter((i) => i.section === section).map((i) => i.title);
     // Menus that can't open beside one another list a group's entries in place, under longer names.
-    assert.deepStrictEqual(titles('property').filter((t) => !t.startsWith('Type: ')), ['Rename…', 'Move up', 'Move down']);
-    assert.ok(titles('property').includes('Type: Text'));
-    assert.deepStrictEqual(titles('find'), ['Find notes with “Politics”', 'Find notes with “Law”', 'Find notes with this property']);
-    assert.deepStrictEqual(titles('manage'), ['Rename domain across vault…', 'Merge domain with another property…', 'Remove domain from every note…']);
-    assert.strictEqual(m.items[m.items.length - 1].title, 'Remove from note');
-    m.items.find((i) => i.title === 'Find notes with “Politics”').click();
+    // Five entries where menus open beside one another: Type ›, Rename, Find notes ›, Across the vault ›, Remove.
+    assert.deepStrictEqual(titles('edit').filter((t) => !t.startsWith('Type: ')), ['Rename'], 'moving is the grip’s, with a pointer');
+    assert.ok(titles('edit').includes('Type: Text'));
+    assert.deepStrictEqual(titles('find'), ['Notes with “Politics”', 'Notes with “Law”', 'Notes with this property']);
+    assert.deepStrictEqual(titles('vault'), ['Rename domain everywhere…', 'Merge domain with…', 'Remove domain everywhere…']);
+    assert.deepStrictEqual(titles('remove'), ['Remove']);
+    assert.strictEqual(m.items[m.items.length - 1].title, 'Remove');
+    m.items.find((i) => i.title === 'Notes with “Politics”').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: 'Politics' });
-    m.items.find((i) => i.title === 'Find notes with this property').click();
+    m.items.find((i) => i.title === 'Notes with this property').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: null });
     // The row's ··· and a right-click open the same menu.
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-row-more'));
     assert.deepStrictEqual(menus.pop().items.map((i) => i.title), m.items.map((i) => i.title));
-    const item = m.items.find((i) => i.title === 'Rename domain across vault…');
+    const item = m.items.find((i) => i.title === 'Rename domain everywhere…');
     assert.ok(item, `not offered: ${m.items.map((i) => i.title)}`);
     item.click();
     const opened = modals.pop();
@@ -1226,15 +1228,14 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     popupEl.querySelector('.dr-props-toggle').click();
     await settle(10);
 
-    // A value naming a note: the row's menu offers it, as its link does.
+    // A value naming a note opens as its link does; the row's menu stays short.
     plugin.settings.panelPropertyGroups = 'off';
     section.redraw();
     menus.length = 0;
     popupEl.querySelector('.dr-row[data-key="broader"]').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     const m = menus.pop();
-    assert.deepStrictEqual(m.items.filter((i) => i.section === 'open').map((i) => i.title), ['Open “Politics”', 'Open “Politics” in new tab', 'Show notes related to “Politics”']);
-    m.items.find((i) => i.title === 'Show notes related to “Politics”').click();
-    assert.deepStrictEqual(browsed.pop(), { mode: 'concept', path: '/', property: 'Politics.md' });
+    assert.ok(!m.items.some((i) => i.title.startsWith('Open')));
+    assert.ok(popupEl.querySelector('.dr-row[data-key="broader"]').classList.contains('is-link'));
     popupEl.remove();
   });
 

@@ -836,10 +836,12 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   (`panelPropertiesView`). Every row is drawn, the waiting ones hidden, so
   moving one keeps the rest in place. Groups (`panelPropertyGroups`, off to
   begin with) fold one by one (`panelFoldedGroups`).
-- **A row**: its name muted, its value in the native widget; when pointed
-  at or worked in, a highlight, the grip and ···. A right-click or ··· opens
-  its menu: Change type ›, Rename… (here), Move ›; a note its value names —
-  open, in a new tab, its related notes; Find notes with this value (each
-  of a list's) and with this property; Manage across vault › — Rename across
-  vault, Apply to collection, Merge with another property, Remove from every
-  note, each shown before it's done; last, Remove from note, with Undo.
+- **A row**: its name muted, its value in the native widget (a note it names
+  opens as its link does); when pointed at or worked in, a highlight, the
+  grip and ···. Its menu, right-click or ···, is five entries: Type ›,
+  Rename (here), Find notes › (with each value, with the property), Across
+  the vault › (Rename everywhere, Apply to the collection, Merge with,
+  Remove everywhere — each shown before it's done), Remove (Undo). Move up
+  and down join it only on touch; with a pointer, the grip and Alt+arrows.
+  The heading's ··· holds Show all properties, Group properties and
+  Property settings.

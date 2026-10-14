@@ -49,11 +49,12 @@ class Menu {
   addSeparator() { return this; }
   showAtPosition() { menus.push(this); }
 }
+const Platform = { isMobile: false };
 const obsidian = new Proxy({
   Menu,
   setIcon: (el, name) => { el.dataset.icon = name; },
   Notice: class { constructor(m) { notices.push(m); } },
-  Platform: { isMobile: false },
+  Platform,
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const notices = [];
 const origLoad = Module._load;
@@ -189,19 +190,22 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(stored.writes, 1, 'moved past the end');
   });
 
-  await t('the menu has Move up and Move down, unavailable at the ends', async () => {
+  await t('on touch, the menu moves a property up or down — where it can go; with a pointer, the grip does', async () => {
     const { list, stored } = setup();
     menus = [];
     icon(list, 'parent').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    const first = Object.fromEntries(menus[0].items.map((i) => [i.title, i]));
-    assert.strictEqual(first['Move up'].disabled, true);
-    assert.strictEqual(first['Move down'].disabled, false);
-    first['Move down'].click();
-    await settle();
-    assert.deepStrictEqual(Object.keys(stored.fm), ['domain', 'parent', 'status', 'tags']);
-    icon(list, 'tags').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    const last = Object.fromEntries(menus[1].items.map((i) => [i.title, i]));
-    assert.strictEqual(last['Move down'].disabled, true);
+    assert.ok(!menus[0].items.some((i) => i.title.startsWith('Move')), 'not with a pointer');
+    Platform.isMobile = true;
+    try {
+      icon(list, 'parent').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+      const first = menus[1].items.map((i) => i.title);
+      assert.ok(!first.includes('Move up') && first.includes('Move down'), 'the first only goes down');
+      menus[1].items.find((i) => i.title === 'Move down').click();
+      await settle();
+      assert.deepStrictEqual(Object.keys(stored.fm), ['domain', 'parent', 'status', 'tags']);
+    } finally {
+      Platform.isMobile = false;
+    }
   });
 
   await t('a property added elsewhere meanwhile keeps its place at the end', async () => {
@@ -211,12 +215,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Object.keys(stored.fm), ['status', 'parent', 'domain', 'tags', 'added']);
   });
 
-  await t('Remove from note, in the row’s menu, takes a property off, and Undo puts it back in its place, value and all', async () => {
+  await t('Remove, in the row’s menu, takes a property off, and Undo puts it back in its place, value and all', async () => {
     const { section, list, stored } = setup();
     let undo = null;
     section.plugin.offerUndo = (message, fn) => { undo = fn; };
     list.querySelector('.dr-row[data-key="parent"] .dr-row-more').click();
-    menus.pop().items.find((i) => i.title === 'Remove from note').click();
+    menus.pop().items.find((i) => i.title === 'Remove').click();
     await settle();
     assert.deepStrictEqual(Object.keys(stored.fm), ['domain', 'status', 'tags']);
     await undo();
