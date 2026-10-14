@@ -760,3 +760,17 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **A note's menu in the library** opens with Open in new tab, Reveal in
   album (when it isn't this album) and Copy link (`noteOpenings`, through
   `showTargetMenu`'s `first`).
+
+## 27. Search and Properties as a music app's
+
+- **Search results** (110 `renderResults`): Top Result — the best of the
+  ranked notes, an album named for the query, or a value that is the query —
+  large, then Albums (covers), Notes (rows, each saying why), Properties
+  (values as "domain: Law" and properties by name, `propertyHits`, one pass
+  over the notes), Collections, and In Notes (what notes say). A few of each;
+  See All (`view.searchKind`) shows one kind whole, with All results back.
+  The kind pills and the sort are gone.
+- **Search with nothing typed**: Recently Searched as a short list, then
+  Browse Categories as tiles, with the property they come from chosen
+  beside the heading (`categoryProperty`); with none, Albums, Properties and
+  Tags instead.

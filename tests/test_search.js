@@ -116,7 +116,7 @@ const typeInto = (input, text) => {
   }
 };
 const titles = (view) =>
-  Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
+  Array.from(view.contentEl.querySelectorAll('.dr-search-top-title, .dr-track-name')).map((e) => e.textContent);
 
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };

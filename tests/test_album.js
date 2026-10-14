@@ -1245,7 +1245,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!pane() && plugin.selection.get() === null);
   });
 
-  await t('search finds albums, collections and notes, each under its name', async () => {
+  await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {
     const { v, view, plugin } = setup();
     plugin.settings.searchNoteText = false;
     const smart = new R.SmartAlbums(plugin);
@@ -1258,17 +1258,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'search' }, {});
     view.query = 'reading';
     view.render();
-    const heads = Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent);
-    assert.deepStrictEqual(heads, ['Notes', 'Albums', 'Collections']);
+    const heads = () => Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(heads(), ['Top Result', 'Albums', 'Notes', 'Collections']);
+    const top = view.contentEl.querySelector('.dr-search-top');
+    assert.strictEqual(top.dataset.path, 'IR/Reading notes.md', 'the note whose name starts with it');
+    assert.strictEqual(top.querySelector('.dr-search-top-sub').textContent, 'Note · IR');
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Readings', 'Reading list']);
-    assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Reading notes.md"]'));
-    view.query = 'notes';
+    assert.ok(!view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="IR/Reading notes.md"]'), 'not again below');
+    assert.ok(view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="Readings/One.md"]'), 'in the album named for it');
+
+    // An album named exactly so is the top result.
+    view.query = 'readings';
     view.render();
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent), [], 'one kind: no headings');
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.kind, 'albums');
+
+    // More than six notes: See All shows them all, and back again.
+    for (let i = 0; i < 8; i++) v.file(`IR/Reading ${i}.md`);
+    view.query = 'reading';
+    view.render();
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-track').length, 6);
+    view.contentEl.querySelector('.dr-search-see-all[data-kind="notes"]').click();
+    assert.strictEqual(view.query, 'reading');
+    assert.deepStrictEqual(heads(), ['Notes']);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-track').length, 9, 'all but the top result');
+    view.contentEl.querySelector('.dr-search-back').click();
+    assert.strictEqual(view.searchKind, null);
+    assert.ok(heads().includes('Top Result'));
   });
 
-  await t('search puts the note named for the query first, says why each matched, and narrows by kind without losing the query', async () => {
-    const { v, view, app } = setup();
+  await t('search puts the note named for the query first and says why each matched; values named so are among Properties', async () => {
+    const { v, view, app, plugin } = setup();
+    plugin.settings.searchNoteText = false;
     const law = v.file('IR/Constitutional Law.md');
     const ism = v.file('IR/Constitutionalism.md');
     const sep = v.file('IR/Separation of Powers.md');
@@ -1279,38 +1299,24 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-search-notes .dr-track')).map((r) => r.dataset.path);
     const why = (p) => view.contentEl.querySelector(`.dr-track[data-path="${p}"] .dr-track-name`).dataset.excerpt;
-    assert.deepStrictEqual(rows(), [law.path, sep.path], 'the title before the property');
-    assert.strictEqual(why(law.path), 'Exact title match');
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.path, law.path, 'the exact title on top');
+    assert.deepStrictEqual(rows(), [sep.path]);
     assert.strictEqual(why(sep.path), 'Property: domain = Constitutional Law');
+    const props = () => Array.from(view.contentEl.querySelectorAll('.dr-search-prop-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(props(), ['domain: Constitutional Law']);
+    const went = [];
+    view.leaf.setViewState = async (st) => went.push(st.state);
+    view.contentEl.querySelector('.dr-search-prop').click();
+    assert.deepStrictEqual([went[0].mode, went[0].property, went[0].value], ['properties', 'domain', 'Constitutional Law']);
+
     view.query = 'constitutional';
     view.render();
-    assert.deepStrictEqual(rows().slice(0, 2).sort(), [law.path, ism.path].sort(), 'titles first');
-    assert.strictEqual(rows()[2], sep.path);
-    assert.ok(why(ism.path).startsWith('Title match'));
-
-    // A kind picked keeps the query; a kind with no results isn't offered.
-    const tabs = () => Array.from(view.contentEl.querySelectorAll('.dr-search-kind')).map((e) => e.textContent);
-    assert.ok(tabs().includes('Notes') && !tabs().includes('Collections'));
-    view.query = 'theor';
-    view.render();
-    assert.ok(tabs().includes('Albums') && tabs().includes('Notes'), tabs().join());
-    view.contentEl.querySelector('.dr-search-kind[data-kind="albums"]').click();
-    assert.strictEqual(view.query, 'theor');
-    assert.ok(!view.contentEl.querySelector('.dr-search-notes'), 'notes hidden');
-    assert.ok(view.contentEl.querySelector('.dr-card'), 'albums shown');
-    assert.strictEqual(view.contentEl.querySelector('.dr-search-kind.is-active').textContent, 'Albums');
-    view.searchKind = 'all';
-
-    // Ordered by title instead, from the sort menu.
-    view.query = 'constitutional';
-    view.searchSort = 'title';
-    view.render();
-    assert.deepStrictEqual(rows(), [law.path, ism.path, sep.path]);
-    assert.ok(view.contentEl.querySelector('.dr-search-sort').textContent.includes('Title'));
-    view.searchSort = 'relevance';
+    const shown = [view.contentEl.querySelector('.dr-search-top').dataset.path].concat(rows());
+    assert.deepStrictEqual(shown.slice(0, 2).sort(), [law.path, ism.path].sort(), 'titles first');
+    assert.strictEqual(shown[2], sep.path);
   });
 
-  await t('search reads what notes say a moment after typing, showing the passage; In text shows only those; off in settings, it reads nothing', async () => {
+  await t('search reads what notes say a moment after typing, showing the passage; See All shows only those; off in settings, it reads nothing', async () => {
     const { v, view, plugin, app } = setup();
     const texts = {
       'IR/Theories/Realism.md': '---\ntopic: x\n---\nStates seek power. Parliamentary sovereignty is a doctrine of the constitution, held since 1689.',
@@ -1332,7 +1338,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(found(), ['IR/Theories/Realism.md'], 'the note named for it is listed above, not again');
     const line = view.contentEl.querySelector('.dr-search-text-notes .dr-track-name').dataset.excerpt;
     assert.ok(line.includes('Parliamentary sovereignty is a doctrine') && !line.includes('topic'), line);
-    assert.ok(view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="IR/Sovereignty.md"]'));
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.path, 'IR/Sovereignty.md');
 
     // Drawn again: not read again.
     const before = reads;
@@ -1340,28 +1346,44 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(found(), ['IR/Theories/Realism.md']);
     assert.strictEqual(reads, before);
 
-    // In text: only what notes say.
-    view.contentEl.querySelector('.dr-search-kind[data-kind="text"]').click();
+    // See All for In Notes: only what notes say.
+    view.searchKind = 'text';
+    view.render();
     assert.ok(!view.contentEl.querySelector('.dr-search-notes'));
     assert.deepStrictEqual(found(), ['IR/Theories/Realism.md']);
-    view.searchKind = 'all';
+    view.searchKind = null;
 
     plugin.settings.searchNoteText = false;
     view.query = 'doctrine';
     view.render();
     await new Promise((r) => setTimeout(r, R.TEXT_PAUSE + 50));
     assert.ok(!view.contentEl.querySelector('.dr-search-text'));
-    assert.ok(!view.contentEl.querySelector('.dr-search-kind[data-kind="text"]'));
   });
 
-  await t('Search with nothing typed: ways into the vault and what was added last; a note offers a new tab, its album and its link', async () => {
-    const { v, view, app } = setup();
+  await t('Search with nothing typed: searches as a short list, categories as tiles from a property you choose — else the ways in; a note offers a new tab, its album and its link', async () => {
+    const { v, view, app, plugin } = setup();
     v.file('IR/Newest.md');
+    plugin.settings.recentSearches = ['realism', 'anarchy'];
+    plugin.settings.categoryProperty = '';
     await view.setState({ mode: 'search' }, {});
     view.query = '';
     view.render();
+    const heads = () => Array.from(view.contentEl.querySelectorAll('.dr-search-section-title')).map((e) => e.textContent);
+    assert.deepStrictEqual(heads(), ['Recently Searched', 'Browse Categories']);
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-recent-list .dr-recent-title')).map((e) => e.textContent), ['realism', 'anarchy']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-cat-choice').textContent, 'Choose a property');
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-browse-by-item')).map((e) => e.textContent), ['Albums', 'Properties', 'Tags']);
-    assert.strictEqual(view.contentEl.querySelector('.dr-search-added .dr-track').dataset.path, 'IR/Newest.md');
+    // With a property chosen, its values are the tiles.
+    view.groupsByProperty = (key) => (key === 'domain' ? [{ value: 'Law', files: [app.vault.getFileByPath('IR/Newest.md')] }] : []);
+    plugin.propertyLabel = (k) => k;
+    plugin.settings.categoryProperty = 'domain';
+    view.render();
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-cat-name')).map((e) => e.textContent), ['Law']);
+    assert.ok(!view.contentEl.querySelector('.dr-browse-by'));
+    assert.strictEqual(view.contentEl.querySelector('.dr-cat-choice').textContent, 'domain');
+    delete view.groupsByProperty;
+    plugin.settings.categoryProperty = '';
+    view.render();
     const went = [];
     view.leaf.setViewState = async (st) => went.push(st.state);
     view.contentEl.querySelectorAll('.dr-browse-by-item')[2].click();

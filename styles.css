@@ -3473,23 +3473,7 @@ body.dr-mentions-active
   height: 14px;
 }
 
-/* Which kind of result shows, and how notes are ordered: a quiet row
-   above the results, apart from the query. */
-.dr-search-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-3);
-  margin: calc(var(--dr-u) * -1.5) 0 calc(var(--dr-u) * 3.5);
-  padding: 0 2px;
-}
-
-.dr-search-kinds {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-1);
-}
-
-.dr-search-kind,
+/* The library's small sort control, as a pill. */
 .dr-search-sort {
   display: flex;
   align-items: center;
@@ -3499,11 +3483,6 @@ body.dr-mentions-active
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
-}
-
-.dr-search-kind.is-active {
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
 }
 
 .dr-search-sort {
@@ -3519,22 +3498,146 @@ body.dr-mentions-active
   height: 12px;
 }
 
-.dr-search-kind:focus-visible,
-.dr-search-sort:focus-visible {
+.dr-search-sort:focus-visible,
+.dr-search-see-all:focus-visible,
+.dr-search-back:focus-visible,
+.dr-search-top:focus-visible,
+.dr-search-prop:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 1px;
 }
 
 @media (any-hover: hover) {
-  .dr-search-kind:not(.is-active):hover,
   .dr-search-sort:hover {
     background-color: var(--background-modifier-hover);
     color: var(--text-normal);
   }
+
+  .dr-search-see-all:hover,
+  .dr-search-back:hover {
+    text-decoration: underline;
+  }
+
+  .dr-search-top:hover,
+  .dr-search-prop:hover {
+    background-color: var(--background-modifier-hover);
+  }
 }
 
+/* See All, at the end of a section's heading. */
+.dr-search-see-all {
+  margin-left: auto;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal, 400);
+  cursor: pointer;
+}
+
+.dr-search-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-search-back-icon {
+  display: inline-flex;
+}
+
+.dr-search-back-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The best match on its own, large, as a music app's Top Result. */
+.dr-search-top {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-4);
+  max-width: 460px;
+  margin-bottom: calc(var(--dr-u) * 6);
+  padding: var(--dr-space-4);
+  border-radius: var(--dr-radius-lg);
+  background-color: var(--background-secondary);
+  cursor: pointer;
+}
+
+.dr-search-top-art {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-cover);
+}
+
+.dr-search-top-text {
+  min-width: 0;
+}
+
+.dr-search-top-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-large);
+  font-weight: 700;
+}
+
+.dr-search-top-sub {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Properties and their values among the results: small art, a name, a count. */
 .dr-search-props {
-  margin-bottom: var(--dr-space-4);
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  margin-bottom: calc(var(--dr-u) * 6);
+}
+
+.dr-search-prop {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-search-prop-art {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-search-prop-art.is-blank {
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+}
+
+.dr-search-prop-text {
+  min-width: 0;
+}
+
+.dr-search-prop-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-search-prop-sub {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
 /* Home ------------------------------------------------------------------------
@@ -3907,20 +4010,21 @@ body.dr-single-area .status-bar {
   font-size: var(--font-ui-small);
 }
 
-.dr-recent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--dr-space-3);
+/* Searches you made: a short list, as a music app keeps them. */
+.dr-recent-list {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  margin-bottom: calc(var(--dr-u) * 6);
 }
 
 .dr-recent {
   display: flex;
   align-items: center;
   gap: var(--dr-space-3);
-  padding: calc(var(--dr-u) * 2.5) var(--dr-space-3);
-  border-radius: var(--dr-radius-md);
-  background-color: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
+  padding: calc(var(--dr-u) * 2) var(--dr-space-1);
+  border-bottom: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-sm);
   cursor: pointer;
 }
 
@@ -3936,43 +4040,26 @@ body.dr-single-area .status-bar {
   }
 }
 
-.dr-recent-art {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--dr-radius-sm);
-  background-color: var(--background-modifier-hover);
+.dr-recent-icon {
+  display: inline-flex;
   color: var(--text-faint);
 }
 
-.dr-recent-art .svg-icon {
-  width: 18px;
-  height: 18px;
-}
-
-.dr-recent-text {
-  min-width: 0;
-}
-
-.dr-recent-title,
-.dr-recent-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.dr-recent-icon .svg-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .dr-recent-title {
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-medium, 500);
-  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-accent);
 }
 
-.dr-recent-sub {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
+/* Which property the categories come from, beside their heading. */
+.dr-cat-choice {
+  margin-left: auto;
 }
 
 /* Browse categories --------------------------------------------------------
@@ -4848,26 +4935,8 @@ body.is-phone .dr-props-popup {
  * notes table's menu at the row's end.
  */
 
-body.is-phone .dr-recent-grid {
-  gap: 0;
-}
-
 body.is-phone .dr-recent {
-  position: relative;
   padding: var(--dr-space-2) var(--dr-space-1);
-  border: none;
-  border-radius: var(--dr-radius-md);
-  background-color: transparent;
-}
-
-body.is-phone .dr-recent + .dr-recent::before {
-  content: "";
-  position: absolute;
-  left: 58px;
-  right: 0;
-  top: 0;
-  height: 1px;
-  background-color: var(--background-modifier-border);
 }
 
 body.is-phone .dr-album-art.is-blank {
