@@ -8384,6 +8384,11 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   margin-bottom: calc(var(--dr-u) * 3.5);
 }
 
+/* The everyday settings first: the rest wait for Show all settings, or a search. */
+.dr-settings-basic:not(.is-searching) .is-advanced {
+  display: none !important;
+}
+
 .dr-set-search {
   display: flex;
   flex: 1 1 auto;

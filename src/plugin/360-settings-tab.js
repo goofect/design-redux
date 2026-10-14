@@ -95,6 +95,19 @@ export const SETTINGS_TABS = [
 ];
 
 /**
+ * The settings shown to begin with: those that change everyday use. The
+ * rest are there under Show all settings, and a search or a link to one
+ * finds them whichever is set.
+ */
+export const BASIC_SETTINGS = new Set([
+  'look', 'gridDensity', 'artworkSize',
+  'library', 'homePath', 'defaultSort', 'searchNoteText', 'smartAlbums',
+  'notePage', 'notePageShelves', 'readingHistory', 'knowledge',
+  'canvasMaps', 'canvasMapToolbar', 'canvasTools',
+  'workspaceModes', 'contextStrip', 'onePage',
+]);
+
+/**
  * Suggestions under a settings field: notes, folders, or property names
  * — for a comma list, just the name being typed after the last comma.
  */
@@ -191,6 +204,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     const tops = [containerEl.scrollTop, scroller ? scroller.scrollTop : 0];
     containerEl.empty();
     containerEl.addClass('dr-settings');
+    const all = this.settings.settingsLevel === 'all' || this.revealAll;
+    containerEl.toggleClass('dr-settings-basic', !all);
 
     const rows = this.rows();
     const placed = new Set();
@@ -208,6 +223,10 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     const rest = rows.filter((row) => !placed.has(row));
     if (rest.length) tabs[tabs.length - 1].sections.push({ title: 'Other', rows: rest });
 
+    // A tab with nothing basic in it isn't shown until all are; one open there moves to the first.
+    const basic = (spec) => spec.sections.some((sec) => sec.rows.some((row) => BASIC_SETTINGS.has(row.key)));
+    if (!all && !tabs.some((t) => t.spec.id === this.tab && basic(t))) this.tab = (tabs.find(basic) || tabs[0]).spec.id;
+
     this.renderTools(containerEl);
     const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
     bar.setAttribute('role', 'tablist');
@@ -221,6 +240,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
       button.setAttribute('aria-selected', String(on));
       button.id = `dr-set-tab-${spec.id}`;
       button.toggleClass('is-active', on);
+      button.toggleClass('is-advanced', !basic({ sections }));
       button.setText(spec.title);
 
       const pane = containerEl.createDiv({ cls: 'dr-set-pane' });
@@ -251,10 +271,17 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     this.showRevealed();
   }
 
+  hide() {
+    this.revealAll = false;
+    if (typeof super.hide === 'function') super.hide();
+  }
+
   /** Opened next at one setting: its tab, and its row scrolled to and marked. */
   reveal(key) {
     const spec = SETTINGS_TABS.find((tab) => tab.sections.some((sec) => sec.keys.indexOf(key) !== -1));
     if (spec) this.tab = spec.id;
+    // One that isn't among the first shown shows the rest too, while the tab is open.
+    if (!BASIC_SETTINGS.has(key)) this.revealAll = true;
     this.query = '';
     this.revealKey = key;
   }
@@ -291,6 +318,16 @@ export class DesignReduxSettingTab extends PluginSettingTab {
         this.query = '';
         this.search('');
       }
+    });
+
+    const all = this.settings.settingsLevel === 'all';
+    const level = tools.createEl('button', { cls: 'dr-set-level', text: all ? 'Show fewer settings' : 'Show all settings' });
+    level.setAttribute('aria-pressed', String(all));
+    level.addEventListener('click', async () => {
+      this.settings.settingsLevel = all ? 'basic' : 'all';
+      this.revealAll = false;
+      await this.plugin.saveData(this.settings);
+      this.display();
     });
 
     const exportBtn = tools.createEl('button', { text: 'Export…' });
@@ -412,6 +449,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
       // Each section in a block of its own, so a search can hide what has nothing to show.
       const section = pane.createDiv({ cls: 'dr-set-block' });
       section.dataset.drSearch = `${sec.title || ''} ${sec.desc || ''}`.toLowerCase();
+      // Hidden until all are shown, where nothing in it is among the first.
+      section.toggleClass('is-advanced', !visible.some((row) => BASIC_SETTINGS.has(row.key)));
       if (sec.title) {
         const head = new Setting(section).setName(sec.title).setHeading();
         if (sec.desc) head.setDesc(sec.desc);
@@ -424,6 +463,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
         const el = this.row(host, row);
         if (el) el.dataset.drSearch = `${row.name || ''} ${row.desc || ''} ${row.key || ''}`.toLowerCase();
         if (el && row.key) el.dataset.drKey = row.key;
+        if (el) el.toggleClass('is-advanced', !BASIC_SETTINGS.has(row.key));
         if (row.key && el) {
           let children = null;
           blocks[row.key] = () => {

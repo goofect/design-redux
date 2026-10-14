@@ -786,3 +786,11 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   property's: View values, Rename, Merge, Change type, Find notes missing
   it, Copy name, Remove from every note. Edit on a property's page picks
   values to merge; with none chosen, it renames and merges properties.
+
+## 28. Simpler to begin with
+
+- **Settings, everyday first** (360 `BASIC_SETTINGS`, `settingsLevel`):
+  the rows that change everyday use show; the rest are marked
+  `is-advanced` and hidden until Show all settings, a search (which finds
+  every row), or a link to one of them (`reveal`, for as long as the tab is
+  open). A tab or section with nothing everyday hides with them.

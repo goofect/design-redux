@@ -303,6 +303,7 @@
   "scripts",
   "searchNoteText",
   "settingsInHeader",
+  "settingsLevel",
   "settingsVersion",
   "showMentions",
   "sidebarDrop",

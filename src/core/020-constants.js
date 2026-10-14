@@ -146,6 +146,8 @@ export const DEFAULTS = {
   propertiesSort: 'name',
   // A property's values: 'auto' (covers while there are few), 'grid' or 'list'.
   propertyValueView: 'auto',
+  // Settings shown: 'basic', the everyday ones, or 'all'.
+  settingsLevel: 'basic',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

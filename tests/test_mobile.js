@@ -297,6 +297,43 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(tab.query, '', 'a search left in the field would hide it');
   });
 
+  await t('settings show the everyday ones first; Show all settings, a search or a link to one shows the rest', async () => {
+    const p = fakePlugin(Object.assign(settings(), { library: false, settingsLevel: 'basic' }));
+    p.saveData = async () => {};
+    p.features = [{ settingsSchema: () => [
+      { key: 'contextStrip', name: 'Context strip' },
+      { key: 'stripDetail', name: 'Strip detail' },
+      { key: 'graphRoutes', name: 'Graph routes' },
+    ] }];
+    const tab = new T.DesignReduxSettingTab(p.app, p);
+    tab.display();
+    const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
+    assert.ok(tab.containerEl.classList.contains('dr-settings-basic'));
+    assert.ok(!row('contextStrip').classList.contains('is-advanced'));
+    assert.ok(row('stripDetail').classList.contains('is-advanced'));
+    assert.ok(row('graphRoutes').closest('.dr-set-block').classList.contains('is-advanced'), 'a section with nothing everyday');
+    const tabs = Array.from(tab.containerEl.querySelectorAll('.dr-set-tab'));
+    assert.ok(tabs.find((b) => b.textContent === 'Advanced').classList.contains('is-advanced'));
+    assert.strictEqual(tab.tab, 'workspace', 'opens where there is something to show');
+
+    const level = tab.containerEl.querySelector('.dr-set-level');
+    assert.strictEqual(level.textContent, 'Show all settings');
+    level.click();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(p.settings.settingsLevel, 'all');
+    assert.ok(!tab.containerEl.classList.contains('dr-settings-basic'));
+    assert.strictEqual(tab.containerEl.querySelector('.dr-set-level').textContent, 'Show fewer settings');
+
+    // Back to the few; a link to one of the rest shows them all while the tab is open.
+    p.settings.settingsLevel = 'basic';
+    tab.reveal('graphRoutes');
+    tab.display();
+    assert.ok(!tab.containerEl.classList.contains('dr-settings-basic'));
+    tab.hide();
+    tab.display();
+    assert.ok(tab.containerEl.classList.contains('dr-settings-basic'));
+  });
+
   /* -- browse view hooks ----------------------------------------------- */
 
   const browseView = () => {
