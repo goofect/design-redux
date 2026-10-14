@@ -383,6 +383,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.glassPanels = true;
     look.apply(true);
     assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
+    // Classic: 1.x's look, no glass.
+    plugin.settings.look = 'classic';
+    look.apply();
+    assert.ok(document.body.classList.contains('dr-look-classic') && !document.body.classList.contains('dr-glass'));
+    plugin.settings.look = 'theme';
+    look.apply();
+    assert.ok(!document.body.classList.contains('dr-look-classic'));
   });
 
   await t('reading history: what you opened and read, in the plugin’s data; changed since read is news; the latest kept', () => {
@@ -466,6 +473,38 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const none = {};
     step.run(none);
     assert.deepStrictEqual(none, {});
+  });
+
+  await t('1.x settings open on 2.0 with nothing lost: kept as they were, a backup first, retired ones dropped, the library given Recently read', async () => {
+    const saved = {
+      settingsVersion: 3,
+      coverFallback: 'art',
+      albumColumns: 'status, modified',
+      canvasLegends: { 'Map.canvas': { labels: { 1: 'Cases' } } },
+      homeShelves: [{ id: 'continue', on: false }],
+      upNext: true,
+      librarySections: [{ title: 'Yours', items: [{ kind: 'builtin', id: 'bookmarks' }, { kind: 'folder', path: 'IR' }] }],
+    };
+    const backups = [];
+    let written = null;
+    const ctx = {
+      loadData: async () => JSON.parse(JSON.stringify(saved)),
+      saveData: async (d) => (written = d),
+      manifest: { dir: '.obsidian/plugins/design-redux' },
+      app: { vault: { adapter: { write: async (path, data) => backups.push([path, JSON.parse(data)]) } } },
+    };
+    await R.DesignRedux.prototype.loadSettings.call(ctx);
+    const s = ctx.settings;
+    assert.strictEqual(s.albumColumns, 'status, modified');
+    assert.deepStrictEqual(s.canvasLegends, saved.canvasLegends);
+    assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
+    assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'read', 'IR']);
+    assert.strictEqual(s.settingsVersion, 4);
+    assert.ok(!('upNext' in s), 'a retired setting dropped');
+    assert.ok(written && !('upNext' in written), 'and written back without it');
+    assert.deepStrictEqual(backups.map((b) => b[0]), ['.obsidian/plugins/design-redux/data.before-v4.json']);
+    assert.strictEqual(backups[0][1].upNext, true, 'the backup is the file as it was');
+    Object.keys(R.DEFAULTS).forEach((k) => assert.ok(k in s, `${k} there`));
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {

@@ -700,3 +700,16 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   (settings step 4); Home's Continue reading picks up a note you didn't
   finish before the next one. Home's Rediscover leads with notes due a revisit: read a month ago or
   more, the longest ago first.
+
+## 24. 2.0, phase 7: carry over and polish
+
+- **Settings** come through each numbered step with a backup of the file
+  as it was (`data.before-vN.json`); only settings still known are kept,
+  retired ones dropped. A test opens 1.x settings and checks nothing else
+  is lost.
+- **Canvases:** free canvases are untouched. Making one a mind map keeps its
+  earlier folds folded and drops their room records; pasted lists in a map
+  land in their places.
+- **Classic look** (Appearance → Look): the look from before 2.0 — no note
+  header or shelves, no lines or dots under notes, no glass — for one
+  release.

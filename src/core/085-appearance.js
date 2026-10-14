@@ -13,7 +13,7 @@ import { Notice } from 'obsidian';
 import { CANVAS_SPACE } from './020-constants.js';
 import { Feature } from './080-feature.js';
 
-export const LOOKS = { theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines' };
+export const LOOKS = { theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines', classic: 'Classic: as before 2.0' };
 export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux only' };
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
@@ -27,7 +27,7 @@ export class Appearance extends Feature {
         key: 'look',
         type: 'dropdown',
         name: 'Look',
-        desc: 'The theme’s own colours and depth, or an editorial look: monochrome surfaces a step apart, fine lines instead of shadows, small corners, and covers without colour unless they have art.',
+        desc: 'The theme’s own colours and depth, or an editorial look: monochrome surfaces a step apart, fine lines instead of shadows, small corners, and covers without colour unless they have art. Classic keeps the look from before 2.0 — no note header or shelves, no lines under notes, no glass — for one release.',
         options: LOOKS,
       },
       {
@@ -96,7 +96,9 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
     body.classList.toggle('dr-look-editorial', !off && this.settings.look === 'editorial');
-    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
+    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false && this.settings.look !== 'classic');
+    // 1.x's styling, for those not ready for 2.0's: kept for one release.
+    body.classList.toggle('dr-look-classic', !off && this.settings.look === 'classic');
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');
     CANVAS_SPACE.scale = (!off && CANVAS_SPACING_SCALE[this.settings.canvasSpacing]) || 1;
   }
