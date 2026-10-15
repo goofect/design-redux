@@ -129,6 +129,8 @@ export class BrowseRows {
       else delete el.dataset.excerpt;
       el.toggleClass('has-excerpt', !!text);
     };
+    // Only a note has text to read a line from: a PDF or an image would be its bytes.
+    if (!file || file.extension !== 'md') return put('');
     const cache = this.app.metadataCache.getFileCache(file);
     const said = cache ? fmGet(cache.frontmatter, 'description') : null;
     if (typeof said === 'string' && said.trim()) return put(plainMarkdownLine(said));

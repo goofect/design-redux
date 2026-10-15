@@ -1432,6 +1432,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-card'), 'covers, as set');
   });
 
+  await t('a PDF in a list has no grey line: only a note has text to read one from', async () => {
+    const { v, view, app } = setup();
+    const pdf = v.file('IR/Keohane.pdf');
+    let read = 0;
+    app.vault.cachedRead = async () => { read++; return '%PDF-1.6 binary'; };
+    const el = document.createElement('div');
+    view.showExcerpt(el, pdf);
+    await new Promise((r) => setTimeout(r, 10));
+    assert.strictEqual(read, 0, 'not read');
+    assert.ok(!el.dataset.excerpt && !el.classList.contains('has-excerpt'));
+  });
+
   await t('a note matches by its title, alias, a property, its album, or nearly its title — in that order', () => {
     const { rankNote } = R;
     const score = (parts, q) => (rankNote(parts, q) || { score: 0 }).score;

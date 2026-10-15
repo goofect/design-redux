@@ -283,6 +283,8 @@ export class NotePage extends Feature {
 
   /** A note's opening line into an element, read once per change of the note. */
   opening(file, el) {
+    // Only a note has an opening line: a PDF or an image would be its bytes.
+    if (!file || file.extension !== 'md') return;
     const store = this.plugin.excerpts || (this.plugin.excerpts = new Map());
     const key = `${file.path}|${file.stat ? file.stat.mtime : 0}`;
     if (store.has(key)) return el.setText(store.get(key));
