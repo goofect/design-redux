@@ -101,7 +101,7 @@ export class NotePage extends Feature {
   clear(view) {
     view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.querySelectorAll('.dr-has-glow').forEach((el) => el.removeClass('dr-has-glow'));
-    view.containerEl.removeClass('dr-props-as-chips', 'dr-show-props');
+    view.containerEl.removeClass('dr-props-as-chips');
   }
 
   /** The sizers a note's view lays its text in: editing's and reading's, each with where its header and end go. */
@@ -246,9 +246,6 @@ export class NotePage extends Feature {
           const chip = el.createSpan({ cls: 'dr-note-chip', text: c.text });
           chip.setAttribute('aria-label', c.key);
         });
-        const more = el.createSpan({ cls: 'dr-note-chip is-more', text: 'Properties' });
-        more.setAttribute('role', 'button');
-        more.addEventListener('click', () => view.containerEl.toggleClass('dr-show-props', !view.containerEl.hasClass('dr-show-props')));
       });
       // At the end, the shelves.
       const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => f.path).join(',')}`).join('|');

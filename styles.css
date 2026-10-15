@@ -9184,13 +9184,8 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   line-height: 20px;
 }
 
-.dr-note-chip.is-more {
-  cursor: pointer;
-  color: var(--text-faint);
-  background: transparent;
-}
-
-.dr-props-as-chips:not(.dr-show-props) .metadata-container {
+/* The chips stand for the properties block; editing them is the Properties button's. */
+.dr-props-as-chips .metadata-container {
   display: none !important;
 }
 

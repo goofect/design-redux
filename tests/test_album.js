@@ -352,10 +352,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(meta.classList.contains('dr-note-meta'));
     assert.ok(/^Under Balance {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
     const chips = Array.from(sizer.querySelectorAll('.dr-note-chip')).map((c) => c.textContent);
-    assert.deepStrictEqual(chips, ['draft', 'law', 'Properties'], 'its parent and cover said elsewhere');
+    assert.deepStrictEqual(chips, ['draft', 'law'], 'its parent and cover said elsewhere; nothing more beside them');
     assert.ok(containerEl.classList.contains('dr-props-as-chips'));
-    sizer.querySelector('.dr-note-chip.is-more').click();
-    assert.ok(containerEl.classList.contains('dr-show-props'), 'the full block a click away');
     const shelves = sizer.querySelector('.dr-note-shelves');
     assert.strictEqual(shelves.previousElementSibling, content, 'after the text, before the backlinks');
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);
