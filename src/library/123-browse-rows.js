@@ -115,6 +115,7 @@ export class BrowseRows {
     more.addEventListener('click', (evt) => this.fileMenu(evt, file));
     onContextMenu(row, (evt) => this.fileMenu(evt, file));
     this.pickOrOpen(row, { file }, (evt) => this.openFile(file, evt), false);
+    return row;
   }
 
   /**

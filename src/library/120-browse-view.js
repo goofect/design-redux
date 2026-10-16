@@ -918,6 +918,18 @@ export class BrowseView extends ItemView {
     // a row of its own disc, it goes there in the album's order.
     if (!Platform.isMobile && !this.editing) this.acceptDrops(list);
 
+    // PDFs aren't notes in the album's order: they wait at the end, in a list of their own, unnumbered.
+    const pdfs = [];
+    if (!this.editing) {
+      discs = discs
+        .map((disc) => {
+          const notes = disc.files.filter((f) => f.extension !== 'pdf');
+          disc.files.forEach((f) => f.extension === 'pdf' && pdfs.push(f));
+          return notes.length === disc.files.length ? disc : Object.assign({}, disc, { files: notes });
+        })
+        .filter((disc) => disc.files.length);
+    }
+
     const key = `discs:${album ? album.path : ''}`;
     const cap = 24;
     const shown = this.expanded.has(key) ? discs : discs.slice(0, cap);
@@ -964,6 +976,21 @@ export class BrowseView extends ItemView {
     });
 
     if (discs.length > cap) this.renderMoreRow(list, key, discs.length, 'discs');
+    if (pdfs.length) this.renderPdfs(root, pdfs, album);
+  }
+
+  /** A folder's PDFs: under their own heading, after its notes, each a row without a number. */
+  renderPdfs(root, pdfs, album) {
+    const list = root.createDiv({ cls: 'dr-tracks dr-pdf-list' });
+    roveFocus(list, '.dr-track');
+    const head = list.createDiv({ cls: 'dr-disc' });
+    head.createSpan({ cls: 'dr-disc-title', text: 'PDFs' });
+    head.createSpan({ cls: 'dr-disc-count', text: pdfs.length === 1 ? '1 PDF' : `${pdfs.length} PDFs` });
+    const key = `pdfs:${album ? album.path : ''}`;
+    const limit = this.limitFrom('discNoteLimit', 10);
+    const shown = this.expanded.has(key) ? pdfs : pdfs.slice(0, limit);
+    shown.forEach((file) => this.trackRow(list, file, '').addClass('is-unnumbered'));
+    if (pdfs.length > limit) this.renderMoreRow(list, key, pdfs.length, 'PDFs');
   }
 
   /** "Show all N …" / "Show less", remembered across redraws. */

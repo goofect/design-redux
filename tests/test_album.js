@@ -1432,6 +1432,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-card'), 'covers, as set');
   });
 
+  await t('a folder’s PDFs wait after its notes, in a list of their own without numbers', async () => {
+    const { v, view } = setup();
+    v.file('IR/Keohane.pdf');
+    v.file('IR/Martin.pdf');
+    await view.setState({ mode: 'folder', path: 'IR' }, {});
+    const notes = Array.from(view.contentEl.querySelectorAll('.dr-tracks:not(.dr-pdf-list) .dr-track')).map((r) => r.dataset.path);
+    assert.ok(notes.length && notes.every((p) => !p.endsWith('.pdf')), 'none among the notes');
+    const pdfs = view.contentEl.querySelector('.dr-pdf-list');
+    assert.strictEqual(pdfs.querySelector('.dr-disc-title').textContent, 'PDFs');
+    assert.deepStrictEqual(Array.from(pdfs.querySelectorAll('.dr-track')).map((r) => r.dataset.path).sort(), ['IR/Keohane.pdf', 'IR/Martin.pdf']);
+    assert.ok(Array.from(pdfs.querySelectorAll('.dr-track')).every((r) => r.classList.contains('is-unnumbered') && r.querySelector('.dr-track-num').textContent === ''));
+  });
+
   await t('a PDF in a list has no grey line: only a note has text to read one from', async () => {
     const { v, view, app } = setup();
     const pdf = v.file('IR/Keohane.pdf');

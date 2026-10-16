@@ -2331,6 +2331,15 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   font-style: normal;
 }
 
+/* A folder's PDFs, after its notes: a list of their own, without numbers. */
+.dr-pdf-list {
+  margin-top: var(--dr-space-5);
+}
+
+.dr-track.is-unnumbered .dr-track-num {
+  visibility: hidden;
+}
+
 /* A note's description, or its first sentence, in grey under its title. */
 .dr-track-name.has-excerpt::after {
   content: attr(data-excerpt);
