@@ -652,6 +652,61 @@ describe('Design Redux in Obsidian', function () {
     await closeMenus();
   });
 
+  it('presents a three-card map: Right steps on, the rest fade, Escape puts the view back', async function () {
+    const text = JSON.stringify({
+      nodes: [
+        { id: 'r', type: 'text', text: 'Root', x: 0, y: 0, width: 180, height: 60 },
+        { id: 'a', type: 'text', text: 'First', x: 300, y: -100, width: 180, height: 60 },
+        { id: 'b', type: 'text', text: 'Second', x: 300, y: 100, width: 180, height: 60 },
+      ],
+      edges: [
+        { id: 'e1', fromNode: 'r', fromSide: 'right', toNode: 'a', toSide: 'left' },
+        { id: 'e2', fromNode: 'r', fromSide: 'right', toNode: 'b', toSide: 'left' },
+      ],
+    });
+    await browser.executeObsidian(async ({ app }, text) => {
+      const old = app.vault.getAbstractFileByPath('Present.canvas');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Present.canvas', text);
+    }, text);
+    await obsidianPage.openFile('Present.canvas');
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    const before = await browser.executeObsidian(async ({ app, plugins }) => {
+      const view = app.workspace.activeLeaf.view;
+      const canvas = view.canvas;
+      await new Promise((r) => setTimeout(r, 300));
+      const camera = { x: Math.round(canvas.tx), y: Math.round(canvas.ty), zoom: Math.round(canvas.tZoom * 100) };
+      plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasPresent').start(view, null);
+      return camera;
+    });
+    const lit = () => browser.execute(() => {
+      const now = document.querySelector('.workspace-leaf.mod-active .canvas-node.dr-present-now');
+      return now ? now.textContent.trim() : null;
+    });
+    expect(await readUntil(lit, (t) => t === 'Root')).toBe('Root');
+    await browser.keys('ArrowRight');
+    expect(await readUntil(lit, (t) => t === 'First')).toBe('First');
+    await browser.keys('ArrowRight');
+    expect(await readUntil(lit, (t) => t === 'Second')).toBe('Second');
+    const dim = await browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .canvas-node.dr-present-dim')).map((n) => n.textContent.trim()));
+    expect(dim).toEqual(['First']);
+    await browser.keys('Escape');
+    const after = await readUntil(
+      () => browser.executeObsidian(async ({ app }) => {
+        const canvas = app.workspace.activeLeaf.view.canvas;
+        return {
+          marks: document.querySelectorAll('.dr-presenting, .dr-present-now, .dr-present-dim, .dr-present-bar').length,
+          camera: { x: Math.round(canvas.tx), y: Math.round(canvas.ty), zoom: Math.round(canvas.tZoom * 100) },
+          file: await app.vault.read(app.vault.getAbstractFileByPath('Present.canvas')),
+        };
+      }),
+      (r) => r.marks === 0 && r.camera.x === before.x && r.camera.y === before.y
+    );
+    expect(after.marks).toBe(0);
+    expect(after.camera).toEqual(before);
+    expect(after.file).toBe(text);
+  });
+
   it('shows a minimap while the cards don’t all fit, and goes where it’s pressed', async function () {
     await obsidianPage.openFile('Map.canvas');
     // Close in on one corner, so the rest is off screen.

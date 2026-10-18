@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, growCards, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments };\n');
+  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, growCards, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments, presentationOrder, CanvasPresent };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2741,6 +2741,63 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     // A task's button: its tools alone, by their own names.
     tools.showTask({ clientX: 1, clientY: 1 }, 'Add');
     assert.deepStrictEqual(shown[1].items.map((i) => i.title), ['Add or connect a card…', 'Add a card the selected card leads to']);
+  });
+
+  await t('present a map: depth first from the root, each card once; leaving puts back the view, the selection and the canvas', () => {
+    const data = {
+      nodes: [card('r', 0, 0, 100, 50), card('a', 200, -100, 100, 50), card('b', 200, 100, 100, 50), card('a1', 400, -100, 100, 50), card('x', 0, 400, 100, 50), card('y', 200, 400, 100, 50), card('s', 0, 600, 100, 50)],
+      edges: [edge('r', 'a', 'right', 'left'), edge('r', 'b', 'right', 'left'), edge('a', 'a1', 'right', 'left'), edge('b', 'a1', 'right', 'left'), edge('x', 'y', 'right', 'left'), edge('y', 'x', 'left', 'right')],
+    };
+    const model = R.modelFromData(data);
+    const order = R.presentationOrder(model);
+    assert.deepStrictEqual(order.map((o) => o.id), ['r', 'a', 'a1', 'b', 's', 'x', 'y'], 'siblings in the order they lie; a cross-link changes nothing; a cycle once; a lone card its own step');
+    assert.deepStrictEqual(order[2].ancestors, ['r', 'a']);
+    const tree = R.modelFromData({ nodes: data.nodes, edges: data.edges.filter((e) => e.id !== 'b-a1') });
+    assert.deepStrictEqual(R.presentationOrder(tree, 'a').map((o) => o.id), ['a', 'a1'], 'from a card: its branch');
+    assert.deepStrictEqual(R.presentationOrder(R.modelFromData({ nodes: [card('only', 0, 0, 100, 50)], edges: [] })).map((o) => o.id), ['only']);
+    const folded = R.modelFromData({ nodes: data.nodes.map((n) => (n.id === 'a1' ? Object.assign({}, n, { drTuck: { by: 'a', dx: 200, dy: 0 } }) : n)), edges: data.edges });
+    assert.deepStrictEqual(R.presentationOrder(folded, 'r').map((o) => o.id), ['r', 'a', 'b'], 'a folded branch is one step');
+
+    // Live: stepped through, then everything as it was.
+    const view = fakeCanvas({ nodes: data.nodes.slice(0, 4), edges: data.edges.slice(0, 4) });
+    const canvas = view.canvas;
+    Object.assign(canvas, { x: 10, y: 20, zoom: -1, readonly: false });
+    const set = [];
+    canvas.setViewport = (x, y, zoom) => { set.push([x, y, zoom]); Object.assign(canvas, { x, y, zoom }); };
+    canvas.zoomToBbox = (b) => Object.assign(canvas, { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2, zoom: 0 });
+    canvas.setReadonly = (on) => (canvas.readonly = on);
+    canvas.selectOnly = (n) => { canvas.selection.clear(); canvas.selection.add(n); };
+    const b = canvas.nodes.get('b');
+    canvas.selection.add(b);
+    document.body.appendChild(view.containerEl);
+    const plugin = { settings: { canvasPresent: true, presentDimLevel: 0.2, presentCaption: false }, app: { vault: {}, workspace: { rootSplit: {}, getMostRecentLeaf: () => ({ view }) } } };
+    const present = new R.CanvasPresent(plugin);
+    const state = { file: view.file };
+    present.watched.set(view, state);
+    present.start(view, null);
+    const cls = (id, c) => canvas.nodes.get(id).nodeEl.classList.contains(c);
+    assert.ok(view.contentEl.classList.contains('dr-presenting') && canvas.readonly, 'read-only while it runs');
+    assert.strictEqual(canvas.selection.size, 0);
+    assert.ok(cls('r', 'dr-present-now') && cls('a', 'dr-present-dim'));
+    assert.deepStrictEqual([canvas.x, canvas.y], [50, 25], 'the view at the first card');
+    pressKey(window, 'ArrowRight');
+    pressKey(window, 'ArrowRight');
+    assert.ok(cls('a1', 'dr-present-now') && !cls('a', 'dr-present-dim') && !cls('r', 'dr-present-dim') && cls('b', 'dr-present-dim'), 'the card and those above it at full strength');
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-present-crumb')).map((e) => e.textContent), ['r', 'a', 'a1'], 'the trail: root to card');
+    assert.strictEqual(view.contentEl.querySelector('.dr-present-count').textContent, '3 of 4');
+    pressKey(window, 'ArrowUp');
+    assert.ok(cls('a', 'dr-present-now'), 'up: its parent');
+    pressKey(window, 'r');
+    assert.ok(cls('b', 'dr-present-hidden') && !cls('a', 'dr-present-hidden'), 'reveal: not yet reached, hidden');
+    view.contentEl.querySelector('.dr-present-crumb').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.ok(cls('r', 'dr-present-now'), 'a name in the trail goes to its card');
+    pressKey(window, 'Escape');
+    assert.ok(!view.contentEl.classList.contains('dr-presenting') && !view.contentEl.querySelector('.dr-present-bar, .dr-present-now, .dr-present-dim, .dr-present-hidden'));
+    assert.deepStrictEqual(set[set.length - 1], [10, 20, -1], 'the view as it was');
+    assert.deepStrictEqual(Array.from(canvas.selection), [b], 'the selection as it was');
+    assert.strictEqual(canvas.readonly, false);
+    assert.strictEqual(canvas.saves, 0, 'nothing saved');
+    view.containerEl.remove();
   });
 
   console.log(`\n${passed} passed`);

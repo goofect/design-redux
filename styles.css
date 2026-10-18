@@ -9646,3 +9646,107 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   background: var(--text-highlight-bg, rgba(255, 208, 0, 0.4));
   border-radius: 2px;
 }
+
+/* Presenting a map ----------------------------------------------------------------
+ *
+ * One card lit, those above it kept, the rest faded back — or hidden till
+ * reached — and a trail along the foot.
+ */
+
+.dr-presenting .canvas-node {
+  transition: opacity 240ms ease;
+}
+
+.dr-presenting .canvas-node.dr-present-dim {
+  opacity: var(--dr-present-dim, 0.15);
+}
+
+.dr-presenting .canvas-node.dr-present-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dr-presenting .canvas-node.dr-present-now .canvas-node-container {
+  box-shadow: 0 0 0 3px var(--interactive-accent), var(--shadow-l);
+}
+
+.dr-presenting .canvas-edges {
+  opacity: 0.5;
+}
+
+.dr-presenting .canvas-card-menu,
+.dr-presenting .canvas-menu-container {
+  display: none;
+}
+
+.dr-present-bar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--dr-space-5) + 48px);
+  z-index: 30;
+  max-width: min(720px, calc(100% - 32px));
+  padding: var(--dr-space-2) var(--dr-space-4);
+  border-radius: var(--radius-l);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  transform: translateX(-50%);
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-small);
+}
+
+.dr-present-caption {
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.dr-present-caption:empty {
+  display: none;
+}
+
+.dr-present-caption:not(:empty) {
+  margin-bottom: var(--dr-space-1);
+}
+
+.dr-present-trail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-1);
+}
+
+.dr-present-crumb {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-present-crumb.is-now {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  cursor: default;
+}
+
+.dr-present-sep,
+.dr-present-count,
+.dr-present-mode {
+  color: var(--text-faint);
+}
+
+.dr-present-count {
+  margin-inline-start: var(--dr-space-2);
+}
+
+.dr-present-exit {
+  margin-inline-start: auto;
+}
+
+@media (any-hover: hover) {
+  .dr-present-crumb:not(.is-now):hover {
+    color: var(--text-accent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-presenting .canvas-node {
+    transition: none;
+  }
+}

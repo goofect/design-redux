@@ -27,6 +27,7 @@ export const MAP_TOOLS = [
   { id: 'duplicate-canvas-branch', on: false },
   { id: 'canvas-zoom-to-branch', on: false },
   { id: 'canvas-toggle-keep-in-place', on: false },
+  { id: 'present-map', on: true },
 ];
 
 /** The toolbar's buttons as set — in the order chosen, each on or off — with any the setting doesn't name yet after them. */

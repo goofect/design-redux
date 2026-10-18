@@ -65,7 +65,7 @@ export const STRIP_NARROW = 760;
  */
 export const STRIP_ACTIONS = {
   album: [['new-note-here', 'New note', false, 'file-plus']],
-  canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true]],
+  canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true], ['present-map', 'Present', true]],
 };
 
 export const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };

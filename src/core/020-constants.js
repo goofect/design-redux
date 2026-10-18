@@ -83,6 +83,10 @@ export const DEFAULTS = {
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
+  // A tree of cards stepped through like a talk, the rest faded to this.
+  canvasPresent: true,
+  presentDimLevel: 0.15,
+  presentCaption: true,
   // Notes in studied collections come back to be revisited, on a ladder of days.
   studyEnabled: false,
   studyLadder: '1, 3, 7, 21, 60',

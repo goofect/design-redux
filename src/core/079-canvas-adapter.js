@@ -148,6 +148,59 @@ export function setCanvasView(canvas, x, y, zoom) {
   }, false);
 }
 
+/** Where the view is: { x, y, zoom } — where it's going, if it's on its way — or null. */
+export function canvasCamera(canvas) {
+  return guarded(() => {
+    const x = typeof canvas.tx === 'number' ? canvas.tx : canvas.x;
+    const y = typeof canvas.ty === 'number' ? canvas.ty : canvas.y;
+    const zoom = typeof canvas.tZoom === 'number' ? canvas.tZoom : canvas.zoom;
+    return typeof x === 'number' && typeof y === 'number' && typeof zoom === 'number' ? { x, y, zoom } : null;
+  }, null);
+}
+
+/** The view put back where it was: { x, y, zoom }; false if it can't be. */
+export function setCanvasCamera(canvas, camera) {
+  if (!camera) return false;
+  return guarded(() => {
+    if (typeof canvas.setViewport === 'function') {
+      canvas.setViewport(camera.x, camera.y, camera.zoom);
+      return true;
+    }
+    // No way to ask: the transform set as the canvas keeps it.
+    canvas.tx = canvas.x = camera.x;
+    canvas.ty = canvas.y = camera.y;
+    canvas.tZoom = canvas.zoom = camera.zoom;
+    if (typeof canvas.markViewportChanged === 'function') canvas.markViewportChanged();
+    return true;
+  }, false);
+}
+
+/** The view brought to a card, with room round it — at once, not gliding, when `instant`; false if it can't be. */
+export function zoomToCard(canvas, card, padding = 80, instant = false) {
+  const b = cardBox(card);
+  const done = zoomCanvasTo(canvas, { minX: b.minX - padding, minY: b.minY - padding, maxX: b.maxX + padding, maxY: b.maxY + padding }) || lookAt(canvas, { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 });
+  if (done && instant) {
+    guarded(() => {
+      if (typeof canvas.tx !== 'number' || typeof canvas.tZoom !== 'number') return;
+      canvas.x = canvas.tx;
+      canvas.y = canvas.ty;
+      canvas.zoom = canvas.tZoom;
+      if (typeof canvas.markViewportChanged === 'function') canvas.markViewportChanged();
+    }, null);
+  }
+  return done;
+}
+
+/** The canvas made read-only, or editable again; what it was before, or null if it can't be. */
+export function setCanvasReadonly(canvas, on) {
+  return guarded(() => {
+    const was = !!canvas.readonly;
+    if (typeof canvas.setReadonly === 'function') canvas.setReadonly(on);
+    else return null;
+    return was;
+  }, null);
+}
+
 /** The view brought to what's selected; false if it can't be. */
 export function zoomCanvasToPicked(canvas) {
   return guarded(() => {

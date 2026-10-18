@@ -234,6 +234,41 @@ export function orderedBranch(model, rootId, links, order) {
 }
 
 /**
+ * The cards as a presentation steps through them: depth first from the
+ * root, children in the order they lie, each card once — a card reached
+ * by more than one arrow under the first, a cycle walked once. A folded
+ * branch is one step: its tucked cards aren't shown. With no root, every
+ * tree on the canvas, the top-left first. [{ id, ancestors }], the
+ * ancestors root first.
+ */
+export function presentationOrder(model, rootId, links) {
+  links = links || arrowLinks(model);
+  const out = [];
+  const seen = new Set();
+  const card = (n) => n && !n.tuck && !isGroupRecord(n);
+  const reading = (a, b) => a.y - b.y || a.x - b.x;
+  const visit = (id) => {
+    const kids = orderedBranch(model, id, links, siblingOrder);
+    const walk = (at, ancestors) => {
+      if (seen.has(at)) return;
+      seen.add(at);
+      out.push({ id: at, ancestors });
+      (kids.get(at) || []).forEach((c) => walk(c.id, ancestors.concat([at])));
+    };
+    walk(id, []);
+  };
+  if (rootId) {
+    if (card(model.byId.get(rootId))) visit(rootId);
+    return out;
+  }
+  const hasParent = (n) => (links.parents.get(n.id) || []).some((p) => card(model.byId.get(p)));
+  model.nodes.filter((n) => card(n) && !hasParent(n)).sort(reading).forEach((n) => visit(n.id));
+  // Cards only in a cycle, or reached only across trees: on their own, after.
+  model.nodes.filter((n) => card(n) && !seen.has(n.id)).sort(reading).forEach((n) => visit(n.id));
+  return out;
+}
+
+/**
  * A branch as a tidy tree growing one way, or — 'both' — out both sides,
  * its first cards to the right and the rest to the left, by how many
  * cards each takes. id -> { x, y }, with `sides` and `both` as tidyBranch.
