@@ -1161,6 +1161,31 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('keeps a .mindmap file’s links to a note as the note is renamed', async function () {
+    const text = await browser.executeObsidian(async ({ app }) => {
+      for (const p of ['Rename target.md', 'Renamed target.md', 'Links.mindmap']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      const target = await app.vault.create('Rename target.md', '# Target\n');
+      await app.vault.create('Links.mindmap', JSON.stringify({ v: 1, root: { id: 'r', text: 'Map', children: [{ id: 'a', text: 'See [[Rename target]]' }] } }, null, 2) + '\n');
+      await app.fileManager.renameFile(target, 'Renamed target.md');
+      const end = Date.now() + 5000;
+      let now = '';
+      while (Date.now() < end) {
+        now = await app.vault.read(app.vault.getAbstractFileByPath('Links.mindmap'));
+        if (now.includes('[[Renamed target]]')) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      for (const p of ['Renamed target.md', 'Links.mindmap']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      return now;
+    });
+    expect(text).toContain('See [[Renamed target]]');
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

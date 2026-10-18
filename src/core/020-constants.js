@@ -97,6 +97,7 @@ export const DEFAULTS = {
   mindmapViews: true,
   mindmapRelations: true,
   mindmapArguments: true,
+  mindmapBranchNotes: true,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',

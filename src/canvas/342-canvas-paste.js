@@ -10,10 +10,11 @@
 import { Notice } from 'obsidian';
 import { canvasReadonly, cardEditing } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { growCards, OUTLINE_CARD_LIMIT, outlineFromMarkdown, outlineItems, outlineSize } from './324-canvas-outlines.js';
+import { growCards, OUTLINE_CARD_LIMIT, outlineItems } from './324-canvas-outlines.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { typingInto } from './334-canvas-mindmap.js';
 import { isGroupNode } from './335-canvas-fold.js';
+import { outlineFromMarkdown, outlineSize } from '../tree/408-tree-notes.js';
 
 export class CanvasPasteLines extends CanvasFeature {
   settingsSchema() {

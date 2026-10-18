@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -681,6 +681,62 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.draw();
     assert.ok(!('role' in el(claim).dataset), 'switched off: nothing shown');
     plugin.settings.mindmapArguments = true;
+  });
+
+  await t('a branch as a note: a heading for each node as deep as it is, past six a list, its details beneath; a node’s own headings bold', async () => {
+    let text = '---\nmindmap: true\n---\n- Map\n\t- Root\n\t  what it is\n';
+    let pad = '\t\t';
+    for (let i = 1; i <= 7; i++) {
+      text += `${pad}- Depth ${i}\n`;
+      pad += '\t';
+    }
+    text += '\t\t- [[Zed]]\n';
+    const view = await open(text);
+    const root = view.model.root.children[0];
+    // A node's own heading kept bold, so it doesn't break the outline.
+    view.apply(R.setText(view.model, root.children[1].id, '[[Zed]]\n## inner'));
+    assert.strictEqual(R.branchNoteText(root), [
+      'what it is', '',
+      '# Depth 1', '', '## Depth 2', '', '### Depth 3', '', '#### Depth 4', '', '##### Depth 5', '', '###### Depth 6', '',
+      '- Depth 7', '',
+      '# [[Zed]]', '', '**inner**', '',
+    ].join('\n').replace(/\n+$/, '\n'));
+  });
+
+  await t('a branch made a note beside the map, its node a link to it in one step; a link’s note made nodes under it; .mindmap links follow a rename', async () => {
+    const view = await open(NOTE);
+    const created = [];
+    const files = new Map();
+    view.plugin = Object.assign({}, plugin, { freeChildPath: (folder, base, ext) => `${base}.${ext}` });
+    view.app = {
+      vault: {
+        create: async (path, text) => { const f = new TFile(path); files.set(path, text); created.push([path, text]); return f; },
+        cachedRead: async (f) => files.get(f.path),
+        modify: async () => {},
+      },
+      metadataCache: {
+        fileToLinktext: (f) => f.basename,
+        getFirstLinkpathDest: (target) => (files.has(`${target}.md`) ? new TFile(`${target}.md`) : null),
+      },
+      workspace: {},
+    };
+    const build = view.model.root.children[1];
+    view.model.relations.push({ from: build.children[0].id, to: view.model.root.children[2].id, label: '', attrs: {} });
+    await view.branchToNote(build.id);
+    assert.deepStrictEqual(created, [['Build.md', '# API\n\n# UI\n']]);
+    assert.strictEqual(build.text, '[[Build]]');
+    assert.strictEqual(build.children.length, 0);
+    assert.strictEqual(view.model.relations.length, 0, 'relations into the branch gone with it');
+    view.undoStep(false);
+    assert.deepStrictEqual([build.text, build.children.map((c) => c.text), view.model.relations.length], ['Build', ['API', 'UI'], 1], 'one step of Undo');
+    view.undoStep(true);
+    // And back: the note's headings as nodes.
+    files.set('Build.md', '# API\n## Auth\n# UI\n');
+    assert.ok(view.linkedNote(build));
+    await view.noteToBranch(build.id);
+    assert.deepStrictEqual(build.children.map((c) => [c.text, c.children.map((x) => x.text)]), [['API', ['Auth']], ['UI', []]]);
+    // A rename, in a .mindmap file's text.
+    assert.strictEqual(R.relinkText('See [[Build]] and [[build|it]] and ![[Build#Top]], not [[Builder]]', ['Build'], 'Plans/Make'), 'See [[Plans/Make]] and [[Plans/Make|it]] and ![[Plans/Make#Top]], not [[Builder]]');
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

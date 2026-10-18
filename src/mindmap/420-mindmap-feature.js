@@ -10,13 +10,14 @@ import { Notice, TFile, TFolder } from 'obsidian';
 import { MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
-import { nodeById, treeModel } from '../tree/400-tree-model.js';
+import { nodeById, treeModel, walk } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
-import { writeMindmapJson } from '../tree/402-tree-json.js';
+import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
 import { branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { NODE_ROLES, nodeRole, relationsOf, setRelationMeaning } from '../tree/407-tree-relations.js';
+import { relinkText } from '../tree/408-tree-notes.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
@@ -70,6 +71,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapViews', showIf: 'mindmaps', name: 'Saved views and Back', desc: 'Keep a view of a map by name, go back to it, and step back after each jump.' },
       { key: 'mindmapRelations', showIf: 'mindmaps', name: 'Relations', desc: 'Relate any two nodes — by command, or dragging one onto the other with Alt held — and say what it means: a kind of relationship, or your own words.' },
       { key: 'mindmapArguments', showIf: 'mindmaps', name: 'Arguments', desc: 'A node can be a claim, a reason, an objection, a rebuttal or evidence, shown above it; a claim counts what’s for and against it.' },
+      { key: 'mindmapBranchNotes', showIf: 'mindmaps', name: 'Branches and notes', desc: 'A branch can be made into a note beside the map, its node a link to it; a node linking to a note can take the note’s headings as nodes.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -108,6 +110,8 @@ export class MindMaps extends Feature {
       { id: 'mindmap-remove-relation', name: 'Mind map: remove a relation of the selected node…', icon: 'unlink', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && !!ctx.node && relationsOf(ctx.model, ctx.node.id).length > 0, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.removeRelationAt(i)) },
       { id: 'mindmap-find-statement', name: 'Mind map: find a statement…', icon: 'search', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && ctx.view.statements().length > 0, run: (ctx) => ctx.view.findStatement() },
       { id: 'mindmap-statements-note', name: 'Mind map: write what the map states as a note', icon: 'file-text', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && ctx.view.statements().length > 0, run: (ctx) => ctx.view.statementsNote() },
+      { id: 'mindmap-branch-to-note', name: 'Mind map: make a note from the selected node’s branch', icon: 'file-output', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapBranchNotes !== false && !!ctx.node && ctx.node !== ctx.model.root && ctx.node.children.length > 0, run: (ctx) => ctx.view.branchToNote(ctx.node.id) },
+      { id: 'mindmap-note-to-branch', name: 'Mind map: make nodes from the linked note’s headings', icon: 'file-input', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapBranchNotes !== false && !!ctx.view.linkedNote(ctx.node), run: (ctx) => ctx.view.noteToBranch(ctx.node.id) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -125,6 +129,8 @@ export class MindMaps extends Feature {
     });
     this.plugin.register(() => setMindMapContext(null));
     registerMindMapHandlers();
+    // A note renamed: links to it in .mindmap files follow, as Obsidian keeps them up in notes.
+    this.plugin.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.followRename(file, oldPath)));
     const take = () => this.takeOver();
     ['file-open', 'active-leaf-change', 'layout-change'].forEach((type) => this.plugin.registerEvent(ws.on(type, take)));
     // Flagged just now — "Make this note a mind map", or typed into its properties.
@@ -178,6 +184,35 @@ export class MindMaps extends Feature {
     if (!done) return;
     const leaf = this.app.workspace.activeLeaf;
     if (leaf && leaf.view && leaf.view.file === file) await this.openAsMap(leaf);
+  }
+
+  /** Links in .mindmap files to a note renamed, pointed at its new name. */
+  async followRename(file, oldPath) {
+    if (!(file instanceof TFile) || file.extension !== 'md' || !this.enabled) return;
+    const oldBase = oldPath.split('/').pop().replace(/\.md$/, '');
+    const olds = [oldBase, oldPath.replace(/\.md$/, '')];
+    const vault = this.app.vault;
+    for (const map of vault.getFiles().filter((f) => f.extension === MINDMAP_EXTENSION)) {
+      const text = await vault.read(map);
+      if (!olds.some((o) => text.toLowerCase().includes(`[[${o.toLowerCase()}`))) continue;
+      let model;
+      try {
+        model = parseMindmapJson(text);
+      } catch (err) {
+        continue;
+      }
+      const cache = this.app.metadataCache;
+      const next = cache && typeof cache.fileToLinktext === 'function' ? cache.fileToLinktext(file, map.path, true) : file.basename;
+      let changed = false;
+      walk(model, (n) => {
+        const t = relinkText(n.text, olds, next);
+        if (t !== n.text) {
+          n.text = t;
+          changed = true;
+        }
+      });
+      if (changed) await vault.modify(map, writeMindmapJson(model));
+    }
   }
 
   /** A new map, as the setting says it's made — or asked, the first time. */
@@ -274,6 +309,10 @@ export function registerMindMapHandlers() {
     if (role !== 'claim') handlers[`canvas-add-${role}`] = { when: arguing, run: (ctx) => ctx.view.answer(ctx.node.id, role) };
   });
   handlers['canvas-clear-part'] = { when: (ctx) => arguing(ctx) && !!nodeRole(ctx.node), run: (ctx) => ctx.view.setRole(ctx.node.id, null) };
+  // Branches and notes.
+  const notes = (ctx) => ctx.view.plugin && ctx.view.plugin.settings.mindmapBranchNotes !== false;
+  handlers['canvas-branch-to-note'] = { when: (ctx) => notes(ctx) && !!ctx.node && ctx.node !== ctx.model.root && ctx.node.children.length > 0, run: (ctx) => ctx.view.branchToNote(ctx.node.id) };
+  handlers['canvas-outline-to-branch'] = { when: (ctx) => notes(ctx) && !!ctx.view.linkedNote(ctx.node), run: (ctx) => ctx.view.noteToBranch(ctx.node.id) };
   // Moving a node about the tree, under the canvas's names for it.
   const notRoot = (ctx) => !!ctx.node && ctx.node !== ctx.model.root;
   handlers['canvas-promote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) };
