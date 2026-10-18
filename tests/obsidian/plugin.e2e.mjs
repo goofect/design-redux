@@ -1038,6 +1038,8 @@ describe('Design Redux in Obsidian', function () {
     });
     const input = await browser.$(ACTIVE + '.dr-browse-search input');
     await input.waitForExist({ timeout: 8000 });
+    // A notice left by an earlier test can sit over the field.
+    await browser.execute(() => document.querySelectorAll('.notice').forEach((n) => n.remove()));
     await input.click();
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
