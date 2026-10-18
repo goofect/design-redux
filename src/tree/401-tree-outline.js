@@ -449,15 +449,17 @@ export function writeOutline(model, previousText, opts = {}) {
       wroteLayout = true;
     }
   });
-  // Sections the note didn't have yet, when there's something to put in them: before the layout block.
+  // Sections the note didn't have yet, when there's something to put in them: under their heading if
+  // it's there with nothing under it (all its items taken out since), else before the layout block.
   const tail = [];
   if (!wroteFree && model.free.length) {
-    tail.push('', '## Free nodes');
-    emit(model.free, 0, null, tail);
+    const lines = [];
+    emit(model.free, 0, null, lines);
+    if (!underHeading(out, FREE_HEAD, lines)) tail.push('', '## Free nodes', ...lines);
   }
   if (!wroteRelations && model.relations.length) {
-    tail.push('', '## Relations');
-    model.relations.forEach((r) => tail.push(relationLine(r)));
+    const lines = model.relations.map((r) => relationLine(r));
+    if (!underHeading(out, RELATIONS_HEAD, lines)) tail.push('', '## Relations', ...lines);
   }
   if (tail.length) {
     const at = wroteLayout ? out.findIndex((l) => LAYOUT_OPEN.test(l)) : -1;
@@ -466,6 +468,22 @@ export function writeOutline(model, previousText, opts = {}) {
   }
   if (!wroteLayout && model.layout) appendBlock(out, [''].concat(layoutLines(model.layout)));
   return out.join(source.eol);
+}
+
+/** Lines put straight under the first heading `re` matches outside a code block; whether there was one. */
+function underHeading(out, re, lines) {
+  let fence = null;
+  for (let i = 0; i < out.length; i++) {
+    const f = FENCE.exec(out[i]);
+    if (fence) {
+      if (f && out[i].trim().startsWith(fence)) fence = null;
+    } else if (f) fence = f[1];
+    else if (re.test(out[i])) {
+      out.splice(i + 1, 0, ...lines);
+      return true;
+    }
+  }
+  return false;
 }
 
 /** Lines added at the end of the note, before the blank line it ends with, if it ends with one. */

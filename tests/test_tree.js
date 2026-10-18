@@ -418,6 +418,29 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.ok(!R.nodeById(m, id), 'added and named, undone at once');
   });
 
+  await t('relations and free nodes taken out and added again go under the heading still there, not a second one', () => {
+    let text = '- A\n\t- B\n\t- C\n';
+    const m = R.parseOutline(text).model;
+    const save = () => {
+      text = R.writeOutline(m, text);
+      R.bindSource(m, text);
+    };
+    const [b, c] = m.root.children;
+    R.addRelation(m, b.id, c.id, {}, 'x');
+    m.free.push(R.newNode('Loose'));
+    save();
+    R.removeRelation(m, 0);
+    m.free.length = 0;
+    save();
+    R.addRelation(m, c.id, b.id, {}, 'y');
+    m.free.push(R.newNode('Loose again'));
+    save();
+    assert.strictEqual((text.match(/## Relations/g) || []).length, 1, text);
+    assert.strictEqual((text.match(/## Free nodes/g) || []).length, 1, text);
+    const back = R.parseOutline(text).model;
+    assert.deepStrictEqual([back.relations.length, back.free.map((n) => n.text)], [1, ['Loose again']]);
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());
