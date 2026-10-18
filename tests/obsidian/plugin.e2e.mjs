@@ -1077,6 +1077,17 @@ describe('Design Redux in Obsidian', function () {
     const nodes = () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-mindmap-node')).map((n) => n.textContent.replace(/\d+$/, '')));
     const drawn = await readUntil(nodes, (n) => n.length === 4);
     expect(drawn.slice().sort()).toEqual(['API', 'Build', 'Launch plan', 'Research']);
+    // Each node measured by its text, and drawn at that size.
+    const measured = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const v = app.workspace.activeLeaf.view;
+        if (!v.sizes || v.sizes.size < 4) return null;
+        const root = v.renderer.nodeEls.get(v.model.root.id);
+        return { sizes: v.sizes.size, width: root.offsetWidth, box: v.scene.boxes.get(v.model.root.id).width };
+      }),
+      (m) => !!m
+    );
+    expect(measured && measured.width).toBe(measured && measured.box);
     // As text: the list, as it was written.
     await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:open-mind-map-as-text'));
     const text = await readUntil(
@@ -1137,9 +1148,11 @@ describe('Design Redux in Obsidian', function () {
     expect(await readUntil(read, (t) => t === start)).toBe(start);
     // Edited outside, as text: the map follows.
     await browser.executeObsidian(async ({ app }, text) => {
-      await app.vault.modify(app.vault.getAbstractFileByPath('Edit map.md'), text + '\t- Ship\n');
+      await app.vault.modify(app.vault.getAbstractFileByPath('Edit map.md'), text + '\t- Ship [[Home]]\n');
     }, start);
-    expect((await readUntil(nodes, (n) => n.includes('Ship'))).includes('Ship')).toBe(true);
+    expect((await readUntil(nodes, (n) => n.includes('Ship Home'))).includes('Ship Home')).toBe(true);
+    // Its text rendered as markdown: the link a link.
+    expect(await browser.execute(() => !!document.querySelector('.workspace-leaf.mod-active .dr-mindmap-node a.internal-link[data-href="Home"]'))).toBe(true);
     await browser.executeObsidian(async ({ app }) => {
       app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
       await new Promise((r) => setTimeout(r, 600));

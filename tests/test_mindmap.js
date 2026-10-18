@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -104,7 +104,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       'getState', 'setState', 'getEphemeralState', 'setEphemeralState', 'onResize', 'onPaneMenu', 'onHeaderMenu', 'close', 'open', 'handleDrop', 'onFileOpen',
       'loadFile', 'onLoadFile', 'onUnloadFile', 'onRename', 'save', 'requestSave', 'canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
     const own = Object.getOwnPropertyNames(R.MindMapView.prototype);
-    const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
+    const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose', 'onResize'];
     assert.deepStrictEqual(own.filter((n) => OBSIDIAN.includes(n) && !meant.includes(n)), []);
   });
 
@@ -418,6 +418,86 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     } finally {
       delete window.matchMedia;
     }
+  });
+
+  await t('a node’s first line is its title and the rest its details; it’s as big as its text, measured once and kept', async () => {
+    const text = '---\nmindmap: true\n---\n- Plan\n\t- Build\n\t  with care\n\t  and tests\n\t- Ship\n';
+    const view = await open(text);
+    const build = view.model.root.children[0];
+    assert.strictEqual(build.text, 'Build\nwith care\nand tests');
+    const el = view.renderer.nodeEls.get(build.id);
+    assert.strictEqual(el.querySelector('.dr-mindmap-text').textContent, 'Build');
+    assert.strictEqual(el.querySelector('.dr-mindmap-details').textContent, 'with care\nand tests');
+    const ship = view.scene.boxes.get(view.model.root.children[1].id);
+    assert.ok(view.scene.boxes.get(build.id).height > ship.height, 'its details make it taller');
+    // Where things have a size: measured off screen, and the map laid out by what was measured.
+    const P = window.HTMLElement.prototype;
+    const size = (w, h) => function () {
+      if (this.classList.contains('dr-mindmap')) return w === 'w' ? 1000 : 700;
+      const m = this.closest && this.closest('.dr-mindmap-measure');
+      if (!m) return 0;
+      return w === 'w' ? (this.textContent.startsWith('Build') ? 150 : 90) : this.textContent.startsWith('Build') ? 76 : 36;
+    };
+    Object.defineProperty(P, 'offsetWidth', { get: size('w'), configurable: true });
+    Object.defineProperty(P, 'offsetHeight', { get: size('h'), configurable: true });
+    try {
+      view.draw();
+      await new Promise((r) => setTimeout(r, 0));
+      assert.deepStrictEqual([view.scene.boxes.get(build.id).width, view.scene.boxes.get(build.id).height], [150, 76], 'measured');
+      assert.ok(!view.root.querySelector('.dr-mindmap-measure .dr-mindmap-node'), 'nothing left where it was measured');
+      const kept = view.sizes.size;
+      view.draw();
+      await new Promise((r) => setTimeout(r, 0));
+      assert.strictEqual(view.sizes.size, kept, 'measured once');
+    } finally {
+      delete P.offsetWidth;
+      delete P.offsetHeight;
+    }
+  });
+
+  await t('a node’s text as markdown where Obsidian renders it: a link in it is a link, and opens', async () => {
+    const calls = [];
+    obsidian.MarkdownRenderer = { render: (app, md, el) => { el.innerHTML = `<p>${md.replace(/\[\[([^\]]+)\]\]/g, '<a class="internal-link" data-href="$1">$1</a>')}</p>`; return Promise.resolve(); } };
+    Component.prototype.load = function () {};
+    Component.prototype.unload = function () { this.gone = true; };
+    try {
+      const view = await open(NOTE);
+      view.app = { workspace: { openLinkText: (...a) => calls.push(a) } };
+      view.renderer.nodeEls.forEach((el) => el.remove());
+      view.renderer.nodeEls.clear();
+      view.draw();
+      const link = view.contentEl.querySelector('.dr-mindmap-node a.internal-link');
+      assert.ok(link && link.textContent === 'Competitor notes', 'rendered as a link');
+      link.dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
+      assert.deepStrictEqual(calls, [['Competitor notes', 'Plan.md', false]]);
+      const parts = Array.from(view.textParts);
+      await view.onClose();
+      assert.ok(parts.length && parts.every((c) => c.gone), 'let go as the view closes');
+    } finally {
+      delete obsidian.MarkdownRenderer;
+      delete Component.prototype.load;
+      delete Component.prototype.unload;
+    }
+  });
+
+  await t('edges take their branch’s colour; a relation is drawn as its attributes say', async () => {
+    const view = await open(NOTE);
+    const [research, build, ship] = view.model.root.children;
+    view.apply(R.setAttr(view.model, build.id, 'color', '1'));
+    view.apply(R.setAttr(view.model, research.id, 'color', '#ff0000'));
+    const edges = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-edge'));
+    assert.strictEqual(edges.filter((p) => p.getAttribute('data-color') === '1').length, 3, 'into Build, and on to API and UI');
+    assert.strictEqual(edges.filter((p) => p.style.stroke === 'rgb(255, 0, 0)' || p.style.stroke === '#ff0000').length, 3);
+    view.model.relations.push({ from: build.id, to: ship.id, label: '', attrs: { style: 'dotted', shape: 'elbow', head: 'diamond' } });
+    view.model.relations.push({ from: research.id, to: ship.id, label: '', attrs: {} });
+    view.draw();
+    const [styled, plain] = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-relation'));
+    assert.strictEqual(styled.getAttribute('data-line'), 'dotted');
+    assert.ok(/ H /.test(styled.getAttribute('d')), 'square corners');
+    assert.ok(/-diamond\)$/.test(styled.getAttribute('marker-end')));
+    assert.ok(view.contentEl.querySelector(`marker[id="${styled.getAttribute('marker-end').slice(5, -1)}"]`), 'its head drawn');
+    assert.strictEqual(plain.getAttribute('data-line'), 'dashed', 'unstyled: dashed with a triangle head');
+    assert.ok(/-arrow\)$/.test(plain.getAttribute('marker-end')));
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

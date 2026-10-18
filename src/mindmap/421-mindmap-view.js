@@ -91,7 +91,11 @@ export class MindMapView extends TextFileView {
     this.root = this.contentEl.createDiv({ cls: 'dr-mindmap' });
     this.root.setAttribute('tabindex', '0');
     this.root.setAttribute('role', 'tree');
-    this.renderer = new MindMapRenderer(this.root, { knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id) });
+    this.renderer = new MindMapRenderer(this.root, {
+      knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id),
+      card: typeof this.fillCard === 'function' ? (el, n) => this.fillCard(el, n) : null,
+      drop: typeof this.dropText === 'function' ? (el) => this.dropText(el) : null,
+    });
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());
     this.tool('Lay out…', 'layout-dashboard', () => this.feature && typeof this.feature.chooseLayout === 'function' && this.feature.chooseLayout(this));
@@ -131,7 +135,8 @@ export class MindMapView extends TextFileView {
       this.scene = null;
       return;
     }
-    this.scene = layoutScene(this.model, (n) => estimateSize(nodeLabel(n)), this.mode);
+    const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));
+    this.scene = layoutScene(this.model, sizeOf, this.mode);
     if (typeof this.glideFrom === 'function') this.glideFrom(glide ? before : null);
   }
 
@@ -150,6 +155,12 @@ export class MindMapView extends TextFileView {
     this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode });
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
+    if (!this.gliding && typeof this.measureShown === 'function') this.measureShown();
+  }
+
+  /** The tab resized or shown again: what's on screen now drawn. */
+  onResize() {
+    this.draw();
   }
 
   /** The view brought to a node's branch, whole. */
@@ -320,6 +331,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.closeEditor === 'function') this.closeEditor(true);
     if (typeof this.stopGlide === 'function') this.stopGlide();
     if (typeof this.closePeek === 'function') this.closePeek();
+    if (typeof this.dropAllText === 'function') this.dropAllText();
     if (typeof this.flushSave === 'function') this.flushSave();
   }
 }

@@ -95,6 +95,7 @@ class MindMapInput {
       const id = this.renderer.nodeAt(evt.target);
       if (id && !(evt.target.closest && evt.target.closest('.dr-mindmap-knob'))) this.edit(id);
     });
+    this.registerDomEvent(root, 'click', (evt) => typeof this.linkClick === 'function' && this.linkClick(evt));
     this.registerDomEvent(root, 'wheel', (evt) => this.wheel(evt), { passive: false });
     this.registerDomEvent(root, 'keydown', (evt) => this.key(evt));
     this.registerDomEvent(root, 'paste', (evt) => this.paste(evt));

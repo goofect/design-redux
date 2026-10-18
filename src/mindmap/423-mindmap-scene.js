@@ -28,13 +28,30 @@ export function nodeLabel(node) {
   return plainMarkdownLine(first) || (node && node.virtual ? 'Untitled' : '');
 }
 
-/** A box for text, estimated from its length until it's been measured: { width, height }. */
+/** A node's text in two: its first line, the title, and the lines after it, its details. */
+export function nodeParts(node) {
+  const lines = String((node && node.text) || '').split('\n');
+  const title = lines[0] || (node && node.virtual ? 'Untitled' : '');
+  return { title, details: lines.slice(1).join('\n').trim() };
+}
+
+/* Details are set smaller than the title. */
+export const DETAIL_LINE = 18;
+export const DETAIL_CHAR = 6.6;
+
+/** A box for a node's text, estimated from its length until it's been measured: { width, height }. */
 export function estimateSize(text) {
-  const chars = String(text || '').length;
+  const [title, ...rest] = String(text || '').split('\n');
   const inner = NODE_MAX_WIDTH - NODE_PAD.x * 2;
-  const wide = Math.min(inner, Math.max(NODE_MIN_WIDTH - NODE_PAD.x * 2, Math.ceil(chars * CHAR_WIDTH)));
-  const lines = Math.max(1, Math.ceil((chars * CHAR_WIDTH) / inner));
-  return { width: Math.round(wide + NODE_PAD.x * 2), height: lines * NODE_LINE + NODE_PAD.y * 2 };
+  const chars = plainMarkdownLine(title).length || String(title || '').length;
+  let wide = Math.min(inner, Math.max(NODE_MIN_WIDTH - NODE_PAD.x * 2, Math.ceil(chars * CHAR_WIDTH)));
+  let height = Math.max(1, Math.ceil((chars * CHAR_WIDTH) / inner)) * NODE_LINE;
+  rest.filter((l) => l.trim()).forEach((line) => {
+    const w = line.trim().length * DETAIL_CHAR;
+    wide = Math.min(inner, Math.max(wide, Math.ceil(w)));
+    height += Math.max(1, Math.ceil(w / inner)) * DETAIL_LINE;
+  });
+  return { width: Math.round(wide + NODE_PAD.x * 2), height: height + NODE_PAD.y * 2 };
 }
 
 /** The nodes shown: the root's tree, but not what's folded away. */
@@ -146,8 +163,18 @@ export function screenToPlane(camera, width, height, sx, sy) {
   return { x: camera.x + (sx - width / 2) / camera.zoom, y: camera.y + (sy - height / 2) / camera.zoom };
 }
 
-/** The way an edge leaves its parent's box and enters its child's, as an SVG path. */
-export function edgePath(from, to, mode) {
+/** The way an edge leaves its parent's box and enters its child's, as an SVG path; `shape` straight or with square corners if asked. */
+export function edgePath(from, to, mode, shape) {
+  if (shape === 'straight' || shape === 'elbow') {
+    const right = to.x + to.width / 2 >= from.x + from.width / 2;
+    const x1 = right ? from.x + from.width : from.x;
+    const y1 = from.y + from.height / 2;
+    const x2 = right ? to.x : to.x + to.width;
+    const y2 = to.y + to.height / 2;
+    if (shape === 'straight') return `M ${x1} ${y1} L ${x2} ${y2}`;
+    const mx = (x1 + x2) / 2;
+    return `M ${x1} ${y1} H ${mx} V ${y2} H ${x2}`;
+  }
   const vertical = mode === 'bottom' || mode === 'top' || mode === 'outline';
   if (mode === 'outline') {
     const x = from.x + 16;

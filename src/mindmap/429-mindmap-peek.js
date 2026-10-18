@@ -8,12 +8,12 @@
 
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { mixInto } from '../core/080-feature.js';
+import { FoldPopover } from '../ui/245-hover-popover.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
-import { FoldPopover } from '../ui/245-hover-popover.js';
 import { MindMapView } from './421-mindmap-view.js';
-import { countBelow } from './424-mindmap-render.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { countBelow } from './424-mindmap-render.js';
 
 /* How many of a fold's nodes the list shows. */
 export const PEEK_MOST = 14;

@@ -9820,6 +9820,26 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   opacity: 0.6;
 }
 
+.dr-mindmap-relation[data-line='solid'] { stroke-dasharray: none; }
+.dr-mindmap-relation[data-line='dotted'] { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+
+.dr-mindmap-head > path:not([fill='none']),
+.dr-mindmap-head > circle {
+  fill: var(--text-accent);
+}
+
+.dr-mindmap-head > path[fill='none'] {
+  stroke: var(--text-accent);
+}
+
+/* A branch's colour runs along its edges. */
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='1'] { stroke: var(--color-red); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='2'] { stroke: var(--color-orange); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='3'] { stroke: var(--color-yellow); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='4'] { stroke: var(--color-green); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='5'] { stroke: var(--color-cyan); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='6'] { stroke: var(--color-purple); }
+
 .dr-mindmap-node {
   position: absolute;
   box-sizing: border-box;
@@ -9834,8 +9854,57 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   user-select: none;
 }
 
-.dr-mindmap-text {
+.dr-mindmap-text,
+.dr-mindmap-details {
   overflow-wrap: anywhere;
+}
+
+.dr-mindmap-details {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 18px;
+  white-space: pre-line;
+}
+
+.dr-mindmap-node.is-root .dr-mindmap-details {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* Rendered markdown keeps to the card's own spacing. */
+.dr-mindmap-text > :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote),
+.dr-mindmap-details > :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote) {
+  margin: 0;
+}
+
+.dr-mindmap-text :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.dr-mindmap-details > :is(ul, ol) {
+  padding-inline-start: 1.2em;
+  white-space: normal;
+}
+
+.dr-mindmap-node .internal-link {
+  cursor: pointer;
+}
+
+/* Where nodes are measured: off screen, sized by their text. */
+.dr-mindmap-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dr-mindmap-measure .dr-mindmap-node {
+  width: max-content;
+  min-width: 72px;
+  max-width: 280px;
 }
 
 .dr-mindmap-node.is-root {

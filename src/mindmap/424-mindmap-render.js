@@ -11,6 +11,11 @@ import { DRAW_MARGIN, edgePath, meets, nodeLabel, viewBox } from './423-mindmap-
 
 const SVG = 'http://www.w3.org/2000/svg';
 
+/* What a relation's attributes may say, as the canvas's arrow styles do. */
+export const RELATION_LINES = ['solid', 'dashed', 'dotted'];
+export const RELATION_SHAPES = ['curve', 'straight', 'elbow'];
+export const RELATION_HEADS = ['arrow', 'open', 'dot', 'diamond'];
+
 export class MindMapRenderer {
   constructor(host, hooks) {
     this.host = host;
@@ -85,12 +90,14 @@ export class MindMapRenderer {
       this.nodeEls.set(n.id, el);
     }
     const label = nodeLabel(n);
-    const key = `${label}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}`;
+    const key = `${n.text}|${n.virtual ? 'v' : ''}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}`;
     if (el.dataset.key !== key || el.dataset.id !== n.id) {
       el.dataset.id = n.id;
       el.dataset.key = key;
+      if (this.hooks.drop) this.hooks.drop(el);
       el.empty();
-      el.createDiv({ cls: 'dr-mindmap-text', text: label });
+      if (this.hooks.card) this.hooks.card(el, n);
+      else el.createDiv({ cls: 'dr-mindmap-text', text: label });
       if (n.children.length) {
         const knob = el.createDiv({ cls: 'dr-mindmap-knob' });
         knob.setAttribute('role', 'button');
@@ -118,36 +125,92 @@ export class MindMapRenderer {
     el.style.minHeight = `${b.height}px`;
   }
 
-  /** An edge for each shown node from its parent, drawn where either end is on screen; and the relations, dashed. */
+  /**
+   * An edge for each shown node from its parent, in its branch's colour,
+   * drawn where either end is on screen; and the relations, each as its
+   * attributes say: line, shape, head and colour.
+   */
   drawEdges(model, scene, view, mode) {
     const want = [];
-    const walk = (n) => {
+    const walk = (n, colour) => {
       if (n.attrs && n.attrs.fold) return;
       const from = scene.boxes.get(n.id);
       n.children.forEach((c) => {
+        const own = c.attrs && c.attrs.color !== undefined && c.attrs.color !== '' ? String(c.attrs.color) : colour;
         const to = scene.boxes.get(c.id);
-        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge' });
-        walk(c);
+        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge', colour: own });
+        walk(c, own);
       });
     };
-    if (model.root) walk(model.root);
+    if (model.root) walk(model.root, model.root.attrs && model.root.attrs.color !== undefined && model.root.attrs.color !== '' ? String(model.root.attrs.color) : null);
     (model.relations || []).forEach((r) => {
       const from = scene.boxes.get(r.from);
       const to = scene.boxes.get(r.to);
-      if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, 'right'), cls: 'dr-mindmap-relation' });
+      const a = r.attrs || {};
+      if (!from || !to || !(meets(from, view) || meets(to, view))) return;
+      want.push({
+        d: edgePath(from, to, 'right', RELATION_SHAPES.includes(a.shape) ? a.shape : 'curve'),
+        cls: 'dr-mindmap-relation',
+        colour: a.color !== undefined && a.color !== '' ? String(a.color) : null,
+        line: RELATION_LINES.includes(a.style) ? a.style : 'dashed',
+        head: a.head === 'none' ? null : RELATION_HEADS.includes(a.head) ? a.head : 'arrow',
+      });
     });
+    if (want.some((w) => w.head)) this.markers();
     while (this.paths.length < want.length) {
       const p = this.host.ownerDocument.createElementNS(SVG, 'path');
       this.svg.appendChild(p);
       this.paths.push(p);
     }
     this.paths.forEach((p, k) => {
-      if (k < want.length) {
-        p.setAttribute('d', want[k].d);
-        p.setAttribute('class', want[k].cls);
-        p.style.display = '';
-      } else p.style.display = 'none';
+      const w = want[k];
+      if (!w) {
+        p.style.display = 'none';
+        return;
+      }
+      p.setAttribute('d', w.d);
+      p.setAttribute('class', w.cls);
+      p.style.display = '';
+      const preset = w.colour && /^[1-6]$/.test(w.colour);
+      if (preset) p.setAttribute('data-color', w.colour);
+      else p.removeAttribute('data-color');
+      p.style.stroke = w.colour && !preset ? w.colour : '';
+      if (w.line) p.setAttribute('data-line', w.line);
+      else p.removeAttribute('data-line');
+      if (w.head) p.setAttribute('marker-end', `url(#${this.markerId}-${w.head})`);
+      else p.removeAttribute('marker-end');
     });
+  }
+
+  /** The heads a relation can end in, made once: they take the line's colour. */
+  markers() {
+    if (this.markerId) return;
+    this.markerId = `dr-mm-${Math.random().toString(36).slice(2, 8)}`;
+    const doc = this.host.ownerDocument;
+    const defs = doc.createElementNS(SVG, 'defs');
+    const shapes = {
+      arrow: ['path', { d: 'M 0 0 L 10 5 L 0 10 z' }],
+      open: ['path', { d: 'M 0 0 L 10 5 L 0 10', fill: 'none', 'stroke-width': '1.5' }],
+      dot: ['circle', { cx: '5', cy: '5', r: '4' }],
+      diamond: ['path', { d: 'M 0 5 L 5 0 L 10 5 L 5 10 z' }],
+    };
+    RELATION_HEADS.forEach((head) => {
+      const m = doc.createElementNS(SVG, 'marker');
+      m.setAttribute('id', `${this.markerId}-${head}`);
+      m.setAttribute('viewBox', '0 0 10 10');
+      m.setAttribute('refX', head === 'dot' || head === 'diamond' ? '5' : '9');
+      m.setAttribute('refY', '5');
+      m.setAttribute('markerWidth', '7');
+      m.setAttribute('markerHeight', '7');
+      m.setAttribute('orient', 'auto-start-reverse');
+      m.setAttribute('class', 'dr-mindmap-head');
+      const [tag, attrs] = shapes[head];
+      const el = doc.createElementNS(SVG, tag);
+      Object.keys(attrs).forEach((k) => el.setAttribute(k, attrs[k]));
+      m.appendChild(el);
+      defs.appendChild(m);
+    });
+    this.svg.insertBefore(defs, this.svg.firstChild);
   }
 
   /** The node an element is part of, by id, or null. */
