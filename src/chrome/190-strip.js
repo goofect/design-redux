@@ -15,7 +15,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
-import { dueNotes } from '../core/081-study.js';
+import { dueNotes, sessionPlace } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
 import { PropertiesPanel } from './180-panel.js';
 import { Knowledge } from '../library/254-knowledge.js';
@@ -282,7 +282,7 @@ export class ContextStrip extends Feature {
     if (!view) return;
 
     this.renderNav(this.el);
-    this.renderRevisit(this.el);
+    this.renderRevisit(this.el, file);
     const reading = !!file && this.settings.stripProgress !== false;
     if (file) {
       this.renderNow(this.el, file, view);
@@ -397,6 +397,13 @@ export class ContextStrip extends Feature {
     return out;
   }
 
+  /** An action by its id run where it applies now. */
+  runAction(id) {
+    const action = this.findAction(id);
+    const ctx = action && actionContext(this.app, action);
+    if (ctx && applies(action, ctx)) action.run(Object.assign(ctx, { from: 'strip' }));
+  }
+
   /** An action by its id, from whichever feature defines it; which feature that is, remembered. */
   findAction(id) {
     if (!this.actionHomes) this.actionHomes = new Map();
@@ -422,7 +429,20 @@ export class ContextStrip extends Feature {
   }
 
   /** Notes due to be revisited: a chip with how many, a step to the first. */
-  renderRevisit(strip) {
+  renderRevisit(strip, file) {
+    // A study session under way: where you are in it, and its own buttons.
+    const place = sessionPlace(this.plugin, file);
+    if (place) {
+      const line = strip.createDiv({ cls: 'dr-strip-chip dr-strip-session', text: place.index === -1 ? `Session · ${place.total}` : `Session · ${place.index + 1} of ${place.total}` });
+      asButton(line, 'Next note in this session');
+      onActivate(line, () => this.runAction('study-session-next'));
+      [['study-mark-revisit', 'Mark to revisit', 'bookmark-plus'], ['study-end-session', 'End the session', 'square']].forEach(([id, label, icon]) => {
+        const action = this.findAction(id);
+        const ctx = action && actionContext(this.app, action);
+        if (ctx && applies(action, ctx)) this.stripButton(strip, { icon, label, role: id, run: () => this.runAction(id) });
+      });
+      return;
+    }
     const due = dueNotes(this.plugin);
     if (!due.length) return;
     const chip = strip.createDiv({ cls: 'dr-strip-chip dr-strip-revisit', text: `${due.length} to revisit` });

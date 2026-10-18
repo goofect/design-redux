@@ -94,8 +94,22 @@ class TFolder extends TAbstractFile {
   isRoot() { return this.path === '/'; }
 }
 class MarkdownView {}
+// Enough of a settings row for a dialog's buttons: each a <button>, clicked as Obsidian's are.
+class Setting {
+  constructor(el) { this.settingEl = el.createDiv({ cls: 'setting-item' }); }
+  setName() { return this; }
+  setDesc() { return this; }
+  setClass() { return this; }
+  addButton(cb) {
+    const el = this.settingEl.createEl('button');
+    const b = { buttonEl: el, setButtonText: (t) => { el.textContent = t; return b; }, setCta: () => b, setDisabled: (d) => { el.disabled = d; return b; }, onClick: (f) => { el.addEventListener('click', f); return b; } };
+    cb(b);
+    return this;
+  }
+  addExtraButton(cb) { return this.addButton((b) => cb(Object.assign(b, { setIcon: () => b, setTooltip: () => b }))); }
+}
 const obsidian = new Proxy({
-  Menu, Modal, FuzzySuggestModal, Component, ItemView, TFile, TFolder, TAbstractFile, MarkdownView,
+  Menu, Modal, FuzzySuggestModal, Component, ItemView, TFile, TFolder, TAbstractFile, MarkdownView, Setting,
   // As Obsidian's: an icon must be named.
   setIcon: (el, name) => { if (typeof name !== 'string') throw new TypeError("Cannot read properties of undefined (reading 'startsWith')"); el.dataset.icon = name; },
   Notice: class { constructor(m) { notices.push(m); } },
@@ -108,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -683,7 +697,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(R.studyOf(plugin).item('IR/Balance.md').rung, 1);
     await study.addEvery(f('IR'));
     assert.strictEqual(Object.keys(R.studyOf(plugin).data.items).length, 6, 'every note in it, however deep');
-    clearTimeout(R.studyOf(plugin).timer);
+
+    // Sessions: the notes not read yet, then those due; the summary matches the reading log.
+    const sum = R.sessionSummary({ list: ['a', 'b', 'c'], startedAt: 100, marked: ['b'] }, (p) => ({ a: 150, b: 50 })[p] || 0, 100 + 41 * 60000);
+    assert.deepStrictEqual(sum, { total: 3, read: 1, marked: 1, minutes: 41, left: ['b', 'c'] });
+    const reading = R.readingOf(plugin);
+    const sstore = R.studyOf(plugin);
+    sstore.item('IR/Cooperation.md').due = Date.now() - 1;
+    reading.markRead(f('IR/Cooperation.md'));
+    reading.markRead(f('IR/Deterrence.md'));
+    assert.deepStrictEqual(study.sessionList(f('IR')), ['IR/Anarchism.md', 'IR/Balance.md', 'IR/Schools/Liberalism.md', 'IR/Schools/Realism.md', 'IR/Cooperation.md'], 'unread in order, then the read one due');
+    const session = await study.startSession(f('IR'));
+    assert.ok(session && session.list.indexOf('IR/Deterrence.md') === -1, 'read and not due: left out');
+    assert.deepStrictEqual(R.sessionPlace(plugin, f(session.list[1])), { index: 1, total: session.list.length });
+    study.markForRevisit(f(session.list[1]));
+    study.markForRevisit(f(session.list[1]));
+    assert.deepStrictEqual(session.marked, [session.list[1]], 'marked once');
+    sstore.remove(f(session.list[1]));
+    reading.markRead(f(session.list[0]));
+    session.startedAt -= 5 * 60000;
+    reading.log['IR/Cooperation.md'].read -= 10 * 60000;
+    const ended = study.endSession();
+    assert.deepStrictEqual([ended.read, ended.total, ended.marked, ended.minutes], [1, session.list.length, 1, 5]);
+    assert.strictEqual(R.sessionPlace(plugin, f(session.list[0])), null, 'ended');
+    assert.deepStrictEqual(sstore.lastSession(f('IR')).read, 1, 'kept with the latest');
+    const dialog = modals[modals.length - 1];
+    assert.ok(/1 of \d+ read · 1 marked to revisit · 5 min/.test(dialog.contentEl.textContent), dialog.contentEl.textContent);
+    const add = Array.from(dialog.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Add it to the revisits');
+    click(add);
+    await settle();
+    assert.ok(sstore.item(session.list[1]), 'the marked one added');
+    clearTimeout(sstore.timer);
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {

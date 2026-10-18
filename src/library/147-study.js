@@ -7,10 +7,11 @@
 /* of grades under its title. Off, nothing shows and nothing is kept.   */
 /* ------------------------------------------------------------------ */
 
-import { Notice, Setting, TFile, TFolder } from 'obsidian';
+import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
+import { readingOf } from '../core/075-reading.js';
 import { actionsOn, addActionEntries } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
-import { DAY, dueNotes, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
+import { DAY, dueNotes, sessionSummary, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
 
 /* What a grade is called, on its button and in the palette. */
 export const STUDY_GRADES = [
@@ -86,6 +87,10 @@ export class Study extends Feature {
       { id: 'study-add-every-note', name: 'Add every note in this collection to the revisits', icon: 'list-plus', on: 'album', menu: 'Add every note to the revisits', when: (ctx) => on() && this.isStudied(ctx.folder), run: (ctx) => this.addEvery(ctx.folder) },
       { id: 'study-add-note', name: 'Add this note to the revisits', icon: 'calendar-plus', on: 'note', menu: false, when: (ctx) => on() && ctx.file.extension === 'md' && !item(ctx), run: (ctx) => this.addNote(ctx.file) },
       ...STUDY_GRADES.map(grade),
+      { id: 'study-start-session', name: 'Start a study session in this collection', icon: 'book-open-check', on: 'album', menu: 'Study session', when: (ctx) => on() && !this.store.session, run: (ctx) => this.startSession(ctx.folder) },
+      { id: 'study-session-next', name: 'Next note in this study session', icon: 'skip-forward', menu: false, when: () => on() && !!this.store.session, run: () => this.openSessionNext() },
+      { id: 'study-mark-revisit', name: 'Mark to revisit after this session', icon: 'bookmark-plus', on: 'note', menu: false, when: (ctx) => on() && this.inSession(ctx.file) && !this.isMarked(ctx.file), run: (ctx) => this.markForRevisit(ctx.file) },
+      { id: 'study-end-session', name: 'End the study session', icon: 'square', menu: false, when: () => on() && !!this.store.session, run: () => this.endSession() },
       { id: 'study-open-next-due', name: 'Open the next note to revisit', icon: 'graduation-cap', menu: false, when: () => on() && dueNotes(this.plugin).length > 0, run: () => this.openNextDue() },
     ];
   }
@@ -189,6 +194,108 @@ export class Study extends Feature {
     if (next) this.app.workspace.getLeaf(false).openFile(next);
   }
 
+  /** A collection's notes, however deep, in its own order, each folder's after the notes beside it. */
+  notesIn(folder) {
+    const out = [];
+    const walk = (f) => {
+      const files = (f.children || []).filter((c) => c instanceof TFile && c.extension === 'md' && !this.plugin.isFolderNote(c));
+      const sort = (list) => list.slice().sort((a, b) => a.basename.localeCompare(b.basename));
+      const ordered = this.plugin.orders && typeof this.plugin.orders.arrangeAlbum === 'function' ? this.plugin.orders.arrangeAlbum(f, files, sort) : sort(files);
+      out.push(...ordered);
+      (f.children || [])
+        .filter((c) => c instanceof TFolder)
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .forEach(walk);
+    };
+    walk(folder);
+    return out;
+  }
+
+  /** What a session goes through: the notes not read yet, then those due again. */
+  sessionList(folder) {
+    const reading = readingOf(this.plugin);
+    const now = Date.now();
+    const notes = this.notesIn(folder);
+    const unread = notes.filter((f) => reading.state(f) !== 'read');
+    const due = notes.filter((f) => reading.state(f) === 'read' && this.store.item(f) && this.store.item(f).due <= now);
+    return unread.concat(due).map((f) => f.path);
+  }
+
+  async startSession(folder, list) {
+    await this.store.load();
+    const paths = list || this.sessionList(folder);
+    if (!paths.length) {
+      new Notice(`Nothing to study in ${folder.name}: every note is read, and none is due.`);
+      return null;
+    }
+    // Study mode first, so the session's first note opens into it.
+    await this.runAction('workspace-mode-study');
+    this.store.session = { album: folder.path, startedAt: Date.now(), list: paths, marked: [] };
+    this.openPath(paths[0]);
+    this.changed();
+    return this.store.session;
+  }
+
+  /** Another feature's action, by its id, without reaching into it. */
+  async runAction(id) {
+    for (const f of this.plugin.features || []) {
+      const action = f.actions().find((a) => a.id === id);
+      if (action && (!action.when || action.when({}))) return action.run({});
+    }
+    return null;
+  }
+
+  openPath(path) {
+    const file = this.app.vault.getAbstractFileByPath(path);
+    if (file instanceof TFile) this.app.workspace.getLeaf(false).openFile(file);
+  }
+
+  inSession(file) {
+    const s = this.store.session;
+    return !!s && !!file && s.list.indexOf(file.path) !== -1;
+  }
+
+  isMarked(file) {
+    const s = this.store.session;
+    return !!s && !!file && s.marked.indexOf(file.path) !== -1;
+  }
+
+  markForRevisit(file) {
+    if (!this.inSession(file) || this.isMarked(file)) return;
+    this.store.session.marked.push(file.path);
+    new Notice(`${file.basename}: marked to revisit.`);
+    this.changed();
+  }
+
+  /** The next note in the session after the open one that isn't read yet; at the end, the session's end. */
+  openSessionNext() {
+    const s = this.store.session;
+    if (!s) return;
+    const reading = readingOf(this.plugin);
+    const readAt = (p) => (reading.log[p] && reading.log[p].read) || 0;
+    const active = this.app.workspace.getActiveFile();
+    const at = active ? s.list.indexOf(active.path) : -1;
+    const after = s.list.slice(at + 1).concat(s.list.slice(0, at + 1));
+    const next = after.find((p) => readAt(p) < s.startedAt && (!active || p !== active.path));
+    if (next) this.openPath(next);
+    else this.endSession();
+  }
+
+  /** The session ended: kept, and summed up. */
+  endSession() {
+    const s = this.store.session;
+    if (!s) return null;
+    const reading = readingOf(this.plugin);
+    const now = Date.now();
+    const summary = sessionSummary(s, (p) => (reading.log[p] && reading.log[p].read) || 0, now);
+    this.store.addSession({ album: s.album, startedAt: s.startedAt, endedAt: now, read: summary.read, revisit: summary.marked, minutes: summary.minutes });
+    this.store.session = null;
+    this.changed();
+    const folder = this.app.vault.getAbstractFileByPath(s.album);
+    if (typeof Modal === 'function') new StudySummary(this, folder instanceof TFolder ? folder : null, s, summary).open();
+    return summary;
+  }
+
   /** The studied collections, each with a way to stop. */
   renderAlbums(containerEl) {
     const block = containerEl.appendChild(containerEl.ownerDocument.createElement('div'));
@@ -226,3 +333,60 @@ export class Study extends Feature {
 }
 
 Study.settingKey = 'studyEnabled';
+
+/** At a session's end: how it went, the marked notes to add, and another go at what's left. */
+export class StudySummary extends Modal {
+  constructor(study, folder, session, summary) {
+    super(study.app);
+    this.study = study;
+    this.folder = folder;
+    this.session = session;
+    this.summary = summary;
+  }
+
+  onOpen() {
+    const { contentEl, summary } = this;
+    contentEl.empty();
+    contentEl.addClass('dr-study-summary');
+    if (this.titleEl) this.titleEl.setText(this.folder ? `Studied ${this.folder.name}` : 'Study session');
+    const parts = [`${summary.read} of ${summary.total} read`];
+    if (summary.marked) parts.push(`${summary.marked} marked to revisit`);
+    parts.push(`${summary.minutes} min`);
+    contentEl.createDiv({ cls: 'dr-study-summary-line', text: parts.join(' · ') });
+    const buttons = new Setting(contentEl);
+    if (summary.marked) {
+      buttons.addButton((b) =>
+        b
+          .setButtonText(summary.marked === 1 ? 'Add it to the revisits' : `Add ${summary.marked} to the revisits`)
+          .setCta()
+          .onClick(async () => {
+            await this.addMarked();
+            b.setDisabled(true).setButtonText('Added');
+          })
+      );
+    }
+    if (summary.left.length && this.folder) {
+      buttons.addButton((b) =>
+        b.setButtonText(`Study the ${summary.left.length} left`).onClick(() => {
+          this.close();
+          this.study.startSession(this.folder, summary.left);
+        })
+      );
+    }
+    buttons.addButton((b) => b.setButtonText('Done').onClick(() => this.close()));
+  }
+
+  async addMarked() {
+    const store = this.study.store;
+    await store.load();
+    this.session.marked.forEach((p) => {
+      const file = this.app.vault.getAbstractFileByPath(p);
+      if (file instanceof TFile && !store.item(file)) store.grade(file, 'read', this.study.ladder);
+    });
+    this.study.changed();
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}

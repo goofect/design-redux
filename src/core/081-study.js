@@ -103,6 +103,8 @@ export class StudyStore {
     this.loaded = false;
     this.loading = null;
     this.timer = 0;
+    // The study session under way, if any: { album, startedAt, list: [path], marked: [path] }. Not kept.
+    this.session = null;
   }
 
   get app() {
@@ -285,6 +287,29 @@ export function dueNotes(plugin, now = Date.now()) {
   return dueNow(plugin.study.data.items, now, Number(plugin.settings.studyDailyMax) || 0)
     .map((p) => vault.getAbstractFileByPath(p))
     .filter((f) => f instanceof TFile);
+}
+
+/**
+ * How a session went: of its notes, how many were read since it began,
+ * how many marked to revisit, how long it took, and what's left.
+ * readAt(path) → when that note was last read, or 0.
+ */
+export function sessionSummary(session, readAt, now) {
+  const read = session.list.filter((p) => readAt(p) >= session.startedAt);
+  return {
+    total: session.list.length,
+    read: read.length,
+    marked: (session.marked || []).length,
+    minutes: Math.max(0, Math.round((now - session.startedAt) / 60000)),
+    left: session.list.filter((p) => read.indexOf(p) === -1),
+  };
+}
+
+/** Where a note is in the session under way: { index, total }, index -1 when it isn't in it; null with no session. */
+export function sessionPlace(plugin, file) {
+  const session = plugin.settings.studyEnabled && plugin.study ? plugin.study.session : null;
+  if (!session) return null;
+  return { index: file ? session.list.indexOf(file.path) : -1, total: session.list.length };
 }
 
 /** Whether a note is due now. */

@@ -9562,3 +9562,13 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
     background: var(--background-modifier-active-hover);
   }
 }
+
+.dr-strip-session {
+  color: var(--text-normal);
+}
+
+.dr-study-summary-line {
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-medium);
+}

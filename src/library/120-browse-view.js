@@ -14,6 +14,7 @@ import { fmGet, nestByProperty, plainValue, propertyCounter } from '../core/045-
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
+import { studyReady } from '../core/081-study.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { BROWSE_SCREENS, FolderScreen, ROOT_MODES } from './110-browse-screens.js';
 import { ContextStrip } from '../chrome/190-strip.js';
@@ -1112,6 +1113,9 @@ export class BrowseView extends ItemView {
       const read = readingOf(this.plugin).countRead(notes);
       if (read) meta.push(`${read} of ${notes.length} read`);
     }
+    // Studied: when you last sat down with it.
+    const studied = folder && studyReady(this.plugin) ? this.plugin.study.lastSession(folder) : null;
+    if (studied) meta.push(`Last studied ${this.relative(studied.endedAt)}`);
     info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
     if (about && about.description) info.createDiv({ cls: 'dr-detail-desc', text: about.description });
 
