@@ -505,3 +505,89 @@ export function findOutlineItem(items, id) {
   }
   return null;
 }
+
+/* -- a mind map's tree ------------------------------------------------- */
+
+/*
+ * A mind map as a tree of nodes, whatever file it came from:
+ *   Node      = { id, text, attrs, children, parent, anchor }
+ *   TreeModel = { root, free: [Node], relations: [Relation], layout, rest }
+ * `text` is the node's markdown; `attrs` its %%{…}%% object; `anchor`
+ * whether its id is written (^id) — only when something points to it.
+ * A Relation is { from, to, label, attrs }. `layout` is the layout
+ * block's object; `rest` whatever the file holds that isn't the map.
+ */
+
+/** A node, with an id to be known by. */
+export function newNode(text, attrs, id) {
+  return { id: id || newId(), text: text || '', attrs: attrs || {}, children: [], parent: null, anchor: false };
+}
+
+let idCount = 0;
+
+/** A short id, unlikely to meet another: a time stamp and a count, in base 36. */
+export function newId() {
+  idCount = (idCount + 1) % 1296;
+  return (Date.now() % 2176782336).toString(36) + idCount.toString(36).padStart(2, '0');
+}
+
+/** An empty map: one root, nothing else. */
+export function treeModel(rootText) {
+  return { root: newNode(rootText || ''), free: [], relations: [], layout: null, rest: null };
+}
+
+/** Each node, the root's tree depth first and then the free nodes: fn(node, depth). */
+export function walk(model, fn) {
+  const go = (n, depth) => {
+    fn(n, depth);
+    n.children.forEach((c) => go(c, depth + 1));
+  };
+  if (model.root) go(model.root, 0);
+  (model.free || []).forEach((n) => go(n, 0));
+}
+
+/** A node by its id, or null. */
+export function nodeById(model, id) {
+  let found = null;
+  walk(model, (n) => {
+    if (!found && n.id === id) found = n;
+  });
+  return found;
+}
+
+/** The nodes from the top down to this one. */
+export function pathOf(node) {
+  const out = [];
+  for (let n = node; n; n = n.parent) out.unshift(n);
+  return out;
+}
+
+/** A copy that shares nothing with the original: the same ids, new objects. */
+export function cloneModel(model) {
+  const copy = (n, parent) => {
+    const c = { id: n.id, text: n.text, attrs: JSON.parse(JSON.stringify(n.attrs || {})), children: [], parent, anchor: !!n.anchor };
+    if (n.virtual) c.virtual = true;
+    c.children = n.children.map((k) => copy(k, c));
+    return c;
+  };
+  return {
+    root: model.root ? copy(model.root, null) : null,
+    free: (model.free || []).map((n) => copy(n, null)),
+    relations: (model.relations || []).map((r) => Object.assign({}, r, { attrs: Object.assign({}, r.attrs || {}) })),
+    layout: model.layout ? JSON.parse(JSON.stringify(model.layout)) : null,
+    rest: model.rest,
+  };
+}
+
+/* The order a node's attributes are written in; any others after, by name. */
+export const ATTR_ORDER = ['color', 'fold', 'master', 'pin', 'group', 'style', 'claim', 'status', 'due'];
+
+/** Attributes as written: in a fixed order, so the text doesn't change for nothing. */
+export function orderedAttrs(attrs) {
+  const keys = Object.keys(attrs || {}).filter((k) => attrs[k] !== undefined);
+  const known = ATTR_ORDER.filter((k) => keys.indexOf(k) !== -1);
+  const rest = keys.filter((k) => ATTR_ORDER.indexOf(k) === -1).sort();
+  const out = {};
+  known.concat(rest).forEach((k) => (out[k] = attrs[k]));
+  return out;
+}

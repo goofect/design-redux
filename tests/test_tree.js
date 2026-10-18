@@ -88,6 +88,163 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.deepStrictEqual(R.presentationOrder(tree()).map((o) => o.id), ['r', 'a', 'a1', 'a2', 'b', 'c', 'd']);
   });
 
+  // -- the files ---------------------------------------------------------
+
+  const HAND = [
+    ['the plan’s own example', [
+      '---', 'mindmap: true', 'mindmap-layout: right', '---',
+      '- Launch plan ^root %%{"color":2}%%',
+      '    - Research',
+      '        - [[Competitor notes]]',
+      '        - Interview script %%{"fold":1}%%',
+      '    - Build ^build',
+      '        - API',
+      '        - UI %%{"master":1}%%',
+      '    - Ship',
+      '', '## Free nodes', '- Open question ^q1', '',
+      '## Relations', '- ^build -> ^q1 "blocks" %%{"style":"dashed"}%%', '',
+      '```design-redux-layout', '{"v":1,"nudge":{"build":[40,-12]},"view":[0,0,1]}', '```', ''].join('\n')],
+    ['a hand-written list, tabs', '- Topic\n\t- One\n\t\t- One a\n\t- Two\n'],
+    ['several items at the top', '- Alpha\n- Beta\n  - Beta one\n- Gamma'],
+    ['prose round the list', '# Notes\n\nSome writing first.\n\n- Root\n  - Child\n\nAnd writing after, with a [[link]].\n'],
+    ['odd indentation', '- Root\n   - three spaces\n      - six\n   - three again\n'],
+    ['numbered and starred', '1. First\n   * nested star\n   * another\n2. Second\n'],
+    ['a node over several lines', '- Root\n  - A long node\n    that goes on here\n    and here\n  - Short\n'],
+    ['blank lines between items', '- Root\n\n  - One\n\n  - Two\n\n'],
+    ['no list at all', '---\nmindmap: true\n---\nJust words.\n'],
+    ['an empty note', ''],
+    ['crlf line ends', '- Root\r\n  - One\r\n  - Two\r\n'],
+    ['code with a dash in it', '- Root\n  - Child\n\n```\n- not a node\n```\n'],
+    ['checkboxes and tags', '- Plan\n  - [ ] call #todo\n  - [x] write\n'],
+    ['attributes that aren’t JSON', '- Root %%{not json}%%\n  - Child %%a comment%%\n'],
+    ['a relation line it can’t read', '- A ^a\n  - B ^b\n\n## Relations\n- ^a -> ^b\n- something else\n'],
+  ];
+  // Maps made at random, the same each run.
+  let seed = 7;
+  const rand = (n) => ((seed = (seed * 1103515245 + 12345) % 2147483648), seed % n);
+  const words = ['alpha', 'beta', '[[Gamma note]]', '#tag', 'delta epsilon', '**bold**', 'zeta', 'eta theta iota', '`code`', 'kappa'];
+  const generated = (k) => {
+    const unit = ['\t', '  ', '   ', '    '][rand(4)];
+    const marker = ['-', '*', '+'][rand(3)];
+    const lines = [];
+    if (rand(2)) lines.push('---', 'mindmap: true', '---');
+    if (rand(3) === 0) lines.push('Some prose above.', '');
+    const node = (depth) => {
+      let text = Array.from({ length: 1 + rand(3) }, () => words[rand(words.length)]).join(' ');
+      if (rand(5) === 0) text += ` ^id${k}x${lines.length}`;
+      if (rand(6) === 0) text += ` %%{"color":${rand(6)}}%%`;
+      lines.push(unit.repeat(depth) + marker + ' ' + text);
+      if (rand(8) === 0) lines.push(unit.repeat(depth) + '  continued text');
+      if (rand(10) === 0) lines.push('');
+      if (depth < 4) for (let c = rand(4 - depth); c > 0; c--) node(depth + 1);
+    };
+    node(0);
+    if (rand(3) === 0) lines.push('', '## Free nodes', `${marker} free one`);
+    if (rand(3) === 0) lines.push('', '```design-redux-layout', '{"v":1}', '```');
+    if (rand(2)) lines.push('');
+    return lines.join('\n');
+  };
+  const CORPUS = HAND.concat(Array.from({ length: 15 }, (_, k) => [`generated ${k + 1}`, generated(k)]));
+
+  await t(`the markdown file: ${CORPUS.length} maps read and written with no change come back byte for byte`, () => {
+    assert.ok(CORPUS.length >= 30);
+    CORPUS.forEach(([name, text]) => {
+      const { model } = R.parseOutline(text, { title: 'Map' });
+      assert.strictEqual(R.writeOutline(model, text), text, name);
+    });
+  });
+
+  await t('the grammar: the root, ids where written, attributes, free nodes, relations, the layout block', () => {
+    const { model } = R.parseOutline(HAND[0][1]);
+    assert.strictEqual(model.root.text, 'Launch plan');
+    assert.deepStrictEqual([model.root.id, model.root.anchor, model.root.attrs], ['root', true, { color: 2 }]);
+    assert.deepStrictEqual(model.root.children.map((c) => c.text), ['Research', 'Build', 'Ship']);
+    assert.deepStrictEqual(model.root.children[0].children[1].attrs, { fold: 1 });
+    assert.strictEqual(model.root.children[0].anchor, false, 'an id only where one is written');
+    assert.deepStrictEqual(model.free.map((n) => [n.id, n.text]), [['q1', 'Open question']]);
+    assert.deepStrictEqual(model.relations, [{ from: 'build', to: 'q1', label: 'blocks', attrs: { style: 'dashed' } }]);
+    assert.deepStrictEqual(model.layout, { v: 1, nudge: { build: [40, -12] }, view: [0, 0, 1] });
+    assert.strictEqual(model.mode, 'right');
+    const several = R.parseOutline(HAND[2][1], { title: 'My map' }).model;
+    assert.deepStrictEqual([several.root.virtual, several.root.text, several.root.children.map((c) => c.text)], [true, 'My map', ['Alpha', 'Beta', 'Gamma']]);
+    const long = R.parseOutline(HAND[6][1]).model;
+    assert.strictEqual(long.root.children[0].text, 'A long node\nthat goes on here\nand here');
+    const bad = R.parseOutline(HAND[13][1]).model;
+    assert.deepStrictEqual([bad.root.text, bad.root.attrs], ['Root %%{not json}%%', {}], 'a comment that isn’t JSON stays text');
+  });
+
+  await t('a change writes only the lines it has to; the rest stay exactly as they were', () => {
+    const text = HAND[0][1];
+    const { model } = R.parseOutline(text);
+    const diff = (a, b) => {
+      const x = a.split('\n');
+      const y = b.split('\n');
+      return { changed: x.filter((l, k) => l !== y[k]).length, lengths: [x.length, y.length] };
+    };
+    model.root.children[2].text = 'Ship it';
+    let next = R.writeOutline(model, text);
+    assert.deepStrictEqual(diff(text, next), { changed: 1, lengths: [23, 23] });
+    assert.ok(next.includes('    - Ship it\n'), 'the new line indented as the list is');
+    R.bindSource(model, next);
+    // A child added: one line more, nothing else touched.
+    const kid = R.newNode('Launch party');
+    kid.parent = model.root.children[2];
+    model.root.children[2].children.push(kid);
+    const after = R.writeOutline(model, next);
+    assert.strictEqual(after.split('\n').length, 24);
+    assert.ok(after.includes('    - Ship it\n        - Launch party\n'));
+    R.bindSource(model, after);
+    // A node moved: its own line written again at its new depth; its children follow.
+    const research = model.root.children[0];
+    model.root.children.splice(0, 1);
+    model.root.children[0].children.push(research);
+    research.parent = model.root.children[0];
+    const moved = R.writeOutline(model, after);
+    assert.ok(moved.includes('    - Build ^build\n        - API\n        - UI %%{"master":1}%%\n        - Research\n            - [[Competitor notes]]'), moved);
+    // An attribute set, and an id needed by a new relation.
+    R.bindSource(model, moved);
+    const api = model.root.children[0].children[0];
+    api.attrs.color = 4;
+    api.anchor = true;
+    model.relations.push({ from: api.id, to: 'q1', label: '', attrs: {} });
+    const linked = R.writeOutline(model, moved);
+    assert.ok(linked.includes(`- API ^${api.id} %%{"color":4}%%`));
+    assert.ok(linked.includes(`- ^${api.id} -> ^q1`));
+    assert.ok(linked.endsWith('```design-redux-layout\n{"v":1,"nudge":{"build":[40,-12]},"view":[0,0,1]}\n```\n'), 'the layout block still last');
+  });
+
+  await t('a new map: a flagged note with its root; sections and the layout block added only when there’s something for them', () => {
+    const model = R.treeModel('Launch plan');
+    let text = R.writeOutline(model);
+    assert.strictEqual(text, '---\nmindmap: true\n---\n- Launch plan\n');
+    const back = R.parseOutline(text).model;
+    assert.strictEqual(back.root.text, 'Launch plan');
+    back.free.push(R.newNode('Loose end'));
+    back.layout = { v: 1, view: [0, 0, 1] };
+    back.mode = 'bottom';
+    text = R.writeOutline(back, text);
+    assert.strictEqual(text, '---\nmindmap: true\nmindmap-layout: bottom\n---\n- Launch plan\n\n## Free nodes\n- Loose end\n\n```design-redux-layout\n{"v":1,"view":[0,0,1]}\n```\n');
+  });
+
+  await t('the .mindmap file: the same tree as JSON, read and written stably, and either way without loss', () => {
+    const { model } = R.parseOutline(HAND[0][1]);
+    const json = R.writeMindmapJson(model);
+    const again = R.parseMindmapJson(json);
+    assert.strictEqual(R.writeMindmapJson(again), json, 'byte for byte');
+    assert.deepStrictEqual([again.mode, again.root.attrs, again.free[0].text, again.relations[0].label, again.layout.nudge], ['right', { color: 2 }, 'Open question', 'blocks', { build: [40, -12] }]);
+    assert.ok(json.startsWith('{\n  "v": 1,\n  "layout": "right",\n  "root": {\n    "id": "root",\n    "text": "Launch plan",\n    "color": 2,'));
+    // To a note and back: the same tree, attributes and all.
+    const note = R.writeOutline(again);
+    const there = R.parseOutline(note).model;
+    const shape = (m) => {
+      const out = [];
+      R.walk(m, (n, d) => out.push(`${d}:${n.text}:${JSON.stringify(n.attrs)}`));
+      return out;
+    };
+    assert.deepStrictEqual(shape(there), shape(model));
+    assert.throws(() => R.parseMindmapJson('[1,2]'));
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

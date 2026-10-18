@@ -12,6 +12,8 @@
 /* ------------------------------------------------------------------ */
 
 import './tree/400-tree-model.js';
+import './tree/401-tree-outline.js';
+import './tree/402-tree-json.js';
 import './tree/403-tree-layouts.js';
 import './library/258-smart-albums.js';
 import './core/020-constants.js';
