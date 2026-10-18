@@ -11,10 +11,11 @@
 import { drawnMenu, menuGroup } from '../core/030-helpers-art.js';
 import { cardElement } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { boundsOf, canvasGap, canvasModel, isGroupRecord, withinRect } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { CanvasFold, glideAndSettle, menuButton } from './335-canvas-fold.js';
+import { boundsOf, canvasGap, isGroupRecord, withinRect } from '../tree/400-tree-model.js';
 
 /* The room left between cards laid out in a grid, a row or a column. */
 export const ARRANGE_GAP = 40;

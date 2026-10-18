@@ -15,13 +15,14 @@
 import { Notice } from 'obsidian';
 import { addArrows, addTextCard, canvasPoint, canvasReadonly, canvasWrapper, cardEditing, cardElement, colourCard, editCard, keepOnCard, liveArrow, liveCard, liveCards, mountCard, pickOnCanvas, redrawCard, removeArrow, requestCanvasSave, showCard, stopEditingCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, BRANCH_SIDES, branchOf, branchSide, canvasCardLabel, canvasGap, canvasHomes, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownAs, shownChildren, sideAxes, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tuckOf, withinRect } from './316-canvas-tree.js';
+import { canvasModel, tuckOf } from './316-canvas-tree.js';
 import { axisParts, fitGroups, foldHomes, homesBefore, makeRoom, outBox, shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
-import { siblingOrder } from './325-canvas-layouts.js';
 import { nearestSides, soleCard } from './332-canvas-arrows.js';
 import { CanvasFold, glideAndSettle, isGroupNode } from './335-canvas-fold.js';
 import { CanvasMap, mapLayout, NUDGE_KEY, placeIn, treeNeighbour } from './348-canvas-map.js';
+import { arrowLinks, boundsOf, BRANCH_SIDES, branchOf, branchSide, canvasCardLabel, canvasGap, canvasHomes, isGroupRecord, OPPOSITE_SIDE, shownAs, shownChildren, sideAxes, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, withinRect } from '../tree/400-tree-model.js';
+import { siblingOrder } from '../tree/403-tree-layouts.js';
 
 /** A new id for a card or arrow, as the canvas makes them. */
 export function newCanvasId(canvas) {

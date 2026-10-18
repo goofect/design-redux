@@ -26,12 +26,13 @@ import { mixInto } from '../core/080-feature.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { boundsOf, canvasCardLabel, canvasModel, saveCanvas } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { canvasAction, CanvasFind } from './321-canvas-extras.js';
 import { canvasCardLink } from './324-canvas-outlines.js';
 import { CanvasArrows, isCanvasEdge, nearestSides } from './332-canvas-arrows.js';
 import { boxEdges, newCanvasId, typingInto } from './334-canvas-mindmap.js';
 import { CanvasFold } from './335-canvas-fold.js';
+import { boundsOf, canvasCardLabel } from '../tree/400-tree-model.js';
 
 export const PROPOSITION = 'Proposition';
 

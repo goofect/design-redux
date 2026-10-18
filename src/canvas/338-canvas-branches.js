@@ -9,11 +9,12 @@
 
 import { pickOnCanvas } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, branchSide, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownChildren, tidyBranch } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { snapshotModel, tidyRecords } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { afterCanvasChange, CanvasFold } from './335-canvas-fold.js';
 import { CanvasMap } from './348-canvas-map.js';
+import { arrowLinks, branchSide, isGroupRecord, OPPOSITE_SIDE, shownChildren, tidyBranch } from '../tree/400-tree-model.js';
 
 export class CanvasBranches extends CanvasFeature {
   settingsSchema() {

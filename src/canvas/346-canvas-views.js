@@ -10,8 +10,9 @@
 
 import { setCanvasView, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, branchOf, canvasModel } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
+import { arrowLinks, boundsOf, branchOf } from '../tree/400-tree-model.js';
 
 export const VIEW_HISTORY_LIMIT = 30;
 

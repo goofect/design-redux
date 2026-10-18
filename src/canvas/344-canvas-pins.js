@@ -8,9 +8,10 @@
 
 import { canvasReadonly, cardElement, cardKept, keepOnCard, liveCards } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { PIN_KEY, saveCanvas } from './316-canvas-tree.js';
+import { saveCanvas } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { isGroupNode } from './335-canvas-fold.js';
+import { PIN_KEY } from '../tree/400-tree-model.js';
 
 export class CanvasPins extends CanvasFeature {
   settingsSchema() {

@@ -15,13 +15,14 @@ import { byName } from '../core/030-helpers-art.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
 import { addArrows, addToCanvas, canvasReadonly, canvasViewport, liveCard, pickOnCanvas, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { canvasCardLabel, canvasModel } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { CanvasFind } from './321-canvas-extras.js';
 import { growCards } from './324-canvas-outlines.js';
 import { MAP_NOTE_SIZE } from './328-canvas-vault-map.js';
 import { isCanvasEdge, nearestSides } from './332-canvas-arrows.js';
 import { arrowsInto, boxEdges, newCanvasId } from './334-canvas-mindmap.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
+import { canvasCardLabel } from '../tree/400-tree-model.js';
 
 export const QUICK_ADD_LIMIT = 30;
 

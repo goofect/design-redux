@@ -9,8 +9,9 @@
 
 import { FuzzySuggestModal, Notice } from 'obsidian';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, canvasCardLabel, canvasModel, isGroupRecord } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { CanvasFind } from './321-canvas-extras.js';
+import { arrowLinks, canvasCardLabel, isGroupRecord } from '../tree/400-tree-model.js';
 
 /**
  * What wants a look on a canvas: [{ id, label, problem }], in reading

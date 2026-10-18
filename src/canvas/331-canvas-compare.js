@@ -13,11 +13,12 @@ import { Notice } from 'obsidian';
 import { canvasDataOf, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, canvasCardLabel, canvasModel, isGroupRecord, modelFromData } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { branchWithin, CanvasFind } from './321-canvas-extras.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { typingInto } from './334-canvas-mindmap.js';
 import { stopCanvasPointer } from './335-canvas-fold.js';
+import { arrowLinks, canvasCardLabel, isGroupRecord, modelFromData } from '../tree/400-tree-model.js';
 
 export const SNAPSHOT_LIMIT = 30;
 

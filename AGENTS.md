@@ -8,7 +8,8 @@ Coffee N' Christmas.
 ## Files
 
 - `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
-  (core, ui, library, chrome, links, editor, bulk, canvas, plugin). Each
+  (core, ui, tree, library, chrome, links, editor, bulk, canvas, mindmap,
+  plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
   them all and exports the plugin. After using a name from another module,
   `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
@@ -58,8 +59,8 @@ Coffee N' Christmas.
   `SETTINGS_TABS`; a new row's key must be added there.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
-- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
-  then the features by area (library and albums, chrome, links, editor, bulk,
+- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`)
+  and the pure map tree (`tree`, which imports only core), then the features by area (library and albums, chrome, links, editor, bulk,
   canvas), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's

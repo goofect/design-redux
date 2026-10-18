@@ -13,10 +13,11 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { actionContext, actionItem, actionLabel, applies } from '../core/078-actions.js';
 import { addToCanvas, arrowElements, canvasDataOf, cardEditing, cardElement, liveCard, pickOnCanvas, requestCanvasSave, showCard, zoomCanvasToPicked } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, branchSide, canvasCardLabel, canvasGap, canvasModel, isGroupRecord, shownAs, TUCK_KEY } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { newCanvasId, typingInto } from './334-canvas-mindmap.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
+import { arrowLinks, boundsOf, branchSide, canvasCardLabel, canvasGap, isGroupRecord, shownAs, TUCK_KEY } from '../tree/400-tree-model.js';
 
 /** The cards below some cards by their arrows, shown and tucked alike, with them. Ids. */
 export function branchWithin(model, ids, links) {

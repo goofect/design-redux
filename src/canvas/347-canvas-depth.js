@@ -9,8 +9,9 @@
 
 import { arrowElements, cardElement } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, canvasModel, isGroupRecord, shownChildren } from './316-canvas-tree.js';
-import { siblingOrder } from './325-canvas-layouts.js';
+import { canvasModel } from './316-canvas-tree.js';
+import { arrowLinks, isGroupRecord, shownChildren } from '../tree/400-tree-model.js';
+import { siblingOrder } from '../tree/403-tree-layouts.js';
 
 /**
  * A tint for each card of a tree with no colour of its own, 1–6: by

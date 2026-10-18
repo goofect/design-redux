@@ -15,9 +15,10 @@ import { noteCoverSrc } from '../core/030-helpers-art.js';
 import { noteProps } from '../core/073-notes.js';
 import { canvasReadonly, cardData, cardEditing, cardElement, liveCards } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { canvasGap, canvasModel, isGroupRecord, saveCanvas, tuckOf, withinRect } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas, tuckOf } from './316-canvas-tree.js';
 import { applyCanvasModel, fitGroups, homesBefore, makeRoom, snapshotModel } from './317-canvas-room.js';
 import { FREE_GAP } from './334-canvas-mindmap.js';
+import { canvasGap, isGroupRecord, withinRect } from '../tree/400-tree-model.js';
 
 /* The tallest a card grows to by itself. */
 export const CARD_FIT_MAX = 800;

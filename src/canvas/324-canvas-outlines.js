@@ -12,12 +12,13 @@ import { Notice } from 'obsidian';
 import { noteNameFrom } from '../core/047-helpers-text.js';
 import { addToCanvas, canvasReadonly, liveCard, pickOnCanvas, requestCanvasSave, showCard, zoomCanvasTo } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, branchSides, canvasCardLabel, canvasGap, canvasModel, isGroupRecord, modelFromData, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP, tidyBranch, tuckOf } from './316-canvas-tree.js';
+import { canvasModel, tuckOf } from './316-canvas-tree.js';
 import { applyCanvasModel, snapshotModel } from './317-canvas-room.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { CanvasMindMap, freeSpot, newCanvasId } from './334-canvas-mindmap.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
 import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
+import { arrowLinks, boundsOf, branchSides, canvasCardLabel, canvasGap, isGroupRecord, modelFromData, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP, tidyBranch } from '../tree/400-tree-model.js';
 
 /* Cards an outline makes never pass this many: it was likely the wrong note. */
 export const OUTLINE_CARD_LIMIT = 200;

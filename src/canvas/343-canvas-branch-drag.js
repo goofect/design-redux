@@ -12,9 +12,10 @@
 
 import { canvasReadonly, cardEditing, cardElement, liveCard, liveCards, placeCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, branchOf, canvasModel, saveCanvas, tuckOf } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas, tuckOf } from './316-canvas-tree.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { CanvasFold, isGroupNode } from './335-canvas-fold.js';
+import { arrowLinks, branchOf } from '../tree/400-tree-model.js';
 
 export class CanvasBranchDrag extends CanvasFeature {
   settingsSchema() {

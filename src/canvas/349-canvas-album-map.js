@@ -18,14 +18,15 @@ import { noteProps } from '../core/073-notes.js';
 import { actionsOn, addActionEntries } from '../core/078-actions.js';
 import { addToCanvas, cardData, cardElement, cardKept, liveCard, liveCards, removeArrow, removeCard, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, canvasModel, tuckOf } from './316-canvas-tree.js';
+import { canvasModel, tuckOf } from './316-canvas-tree.js';
 import { canvasAction } from './321-canvas-extras.js';
 import { treeCards } from './324-canvas-outlines.js';
-import { BRANCH_LAYOUTS } from './325-canvas-layouts.js';
 import { MAP_NOTE_SIZE, MAP_ROOT_SIZE } from './328-canvas-vault-map.js';
 import { nearestSides } from './332-canvas-arrows.js';
 import { boxEdges, newCanvasId } from './334-canvas-mindmap.js';
 import { MAP_LAYOUT_KEY } from './348-canvas-map.js';
+import { arrowLinks } from '../tree/400-tree-model.js';
+import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 
 /* On an album map's cards: the root, and a note from outside the album (its folder's name). */
 export const ALBUM_ROOT_KEY = 'drAlbumRoot';

@@ -13,9 +13,10 @@ import { pageLeaf } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { cardBox, liveCard, pickOnCanvas, zoomCanvasTo, zoomCanvasToPicked } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { canvasModel, outlineTree } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { CANVAS_COLOURS, canvasColorKey, canvasPresetColour } from './320-canvas-legend.js';
 import { CanvasFold } from './335-canvas-fold.js';
+import { outlineTree } from '../tree/400-tree-model.js';
 
 export const CANVAS_OUTLINE_VIEW = 'design-redux-canvas-outline';
 

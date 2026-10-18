@@ -17,11 +17,13 @@
 import { Notice } from 'obsidian';
 import { canvasReadonly, cardElement, cardKept, keepOnCard, liveCards, saveInCurrentStep } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, BRANCH_SIDES, canvasModel, groupContents, indexModel, isGroupRecord, ROOM_KEY, saveCanvas, shownChildren } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
-import { BRANCH_LAYOUTS, faceArrows, layoutPlaces, orderedBranch, siblingOrder } from './325-canvas-layouts.js';
+import { faceArrows } from './325-canvas-layouts.js';
 import { CanvasFold } from './335-canvas-fold.js';
+import { arrowLinks, boundsOf, BRANCH_SIDES, groupContents, indexModel, isGroupRecord, ROOM_KEY, shownChildren } from '../tree/400-tree-model.js';
+import { BRANCH_LAYOUTS, layoutPlaces, orderedBranch, siblingOrder } from '../tree/403-tree-layouts.js';
 
 /* On a card: how far it was moved by hand from its spot, from its parent's: { dx, dy }. */
 export const NUDGE_KEY = 'drNudge';

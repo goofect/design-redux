@@ -13,11 +13,12 @@
 import { addActionItems, canvasMenuContext } from '../core/078-actions.js';
 import { arrowData, canvasReadonly, cardElement, cardKept, keepOnCard, liveArrowEnds, liveArrows, liveCards, redrawArrow, requestCanvasSave, setArrowData } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, canvasModel, saveCanvas } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { canvasAction } from './321-canvas-extras.js';
 import { isCanvasEdge } from './332-canvas-arrows.js';
 import { CanvasMindMap } from './334-canvas-mindmap.js';
 import { isGroupNode } from './335-canvas-fold.js';
+import { arrowLinks } from '../tree/400-tree-model.js';
 
 export const ROLE_KEY = 'drRole';
 

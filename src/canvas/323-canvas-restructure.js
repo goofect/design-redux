@@ -11,12 +11,13 @@
 
 import { addArrows, addTextCard, arrowData, canvasReadonly, cardEditing, colourCard, removeArrow } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, canvasModel, isGroupRecord, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { axisParts, fitGroups, makeRoom, shiftRecord, snapshotModel } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { ARROW_KEY, soleCard } from './332-canvas-arrows.js';
 import { arrowsInto, CanvasMindMap, freeSpot, newCanvasId, typingInto } from './334-canvas-mindmap.js';
 import { CanvasFold, glideAndSettle } from './335-canvas-fold.js';
+import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, isGroupRecord, OPPOSITE_SIDE, shownChildren, sideAxes, TIDY_DEPTH_GAP } from '../tree/400-tree-model.js';
 
 /** The shown card a card hangs from, and the arrow that makes it: { parent, edge }, or null. */
 export function hangsFrom(model, id) {

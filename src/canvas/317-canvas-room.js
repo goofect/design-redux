@@ -19,8 +19,7 @@
 /* ------------------------------------------------------------------ */
 
 import { cardMovable, keepOnCard, placeCard } from '../core/079-canvas-adapter.js';
-import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, foldableBranch, groupContents, indexModel, isGroupRecord, ROOM_KEY, sideAxes, TIDY_SIBLING_GAP, tidyBranch, TUCK_KEY, withinRect } from './316-canvas-tree.js';
-import { FOLD_KEY } from './335-canvas-fold.js';
+import { arrowLinks, boundsOf, branchOf, branchSide, canvasGap, canvasHomes, FOLD_KEY, foldableBranch, groupContents, indexModel, isGroupRecord, ROOM_KEY, sideAxes, TIDY_SIBLING_GAP, tidyBranch, TUCK_KEY, withinRect } from '../tree/400-tree-model.js';
 
 /** Each record's place and whether it's tucked, to compare with later. */
 export function snapshotModel(model) {

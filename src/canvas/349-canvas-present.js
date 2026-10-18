@@ -14,8 +14,9 @@ import { pageLeaf } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { canvasCamera, cardBox, cardData, cardElement, liveCard, liveCards, pickedOnCanvas, pickOnCanvas, setCanvasCamera, setCanvasReadonly, zoomCanvasTo, zoomToCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { canvasCardLabel, canvasModel } from './316-canvas-tree.js';
-import { presentationOrder } from './325-canvas-layouts.js';
+import { canvasModel } from './316-canvas-tree.js';
+import { canvasCardLabel } from '../tree/400-tree-model.js';
+import { presentationOrder } from '../tree/403-tree-layouts.js';
 
 /* The classes a presentation puts on cards, all taken off when it ends. */
 const PRESENT_CLASSES = ['dr-present-now', 'dr-present-dim', 'dr-present-hidden'];

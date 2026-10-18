@@ -11,8 +11,9 @@
 import { SVG_NS } from '../core/032-drawn-covers.js';
 import { canvasViewport, lookAt } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { boundsOf, canvasModel, isGroupRecord, withinRect } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { stopCanvasPointer } from './335-canvas-fold.js';
+import { boundsOf, isGroupRecord, withinRect } from '../tree/400-tree-model.js';
 
 export const MINIMAP_SIZE = { width: 200, height: 136 };
 

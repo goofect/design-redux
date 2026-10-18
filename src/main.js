@@ -11,6 +11,8 @@
 /* screens only reach for SmartAlbums when drawing.                   */
 /* ------------------------------------------------------------------ */
 
+import './tree/400-tree-model.js';
+import './tree/403-tree-layouts.js';
 import './library/258-smart-albums.js';
 import './core/020-constants.js';
 import './core/030-helpers-art.js';

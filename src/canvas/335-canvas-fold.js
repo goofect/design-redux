@@ -24,15 +24,14 @@ import { Menu, Modal, Notice, setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { cardElement, cardKept, keepOnCard, liveCard, pickOnCanvas, showCard } from '../core/079-canvas-adapter.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, branchSides, canvasCardLabel, canvasModel, foldableBranch, isGroupRecord, MASTER_KEY, saveCanvas } from './316-canvas-tree.js';
+import { canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { applyCanvasModel, foldBranch, snapshotModel, tuckedCount, unfoldBranch, unfoldRecord } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { drawTucks, restoreOrphans, undrawTucks } from './336-canvas-tucks.js';
 import { colourMark, FoldPopover } from './337-canvas-peek.js';
 import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
 import { CanvasMapToolbar } from './349-canvas-map-toolbar.js';
-
-export const FOLD_KEY = 'drFold';
+import { arrowLinks, branchSides, canvasCardLabel, FOLD_KEY, foldableBranch, isGroupRecord, MASTER_KEY } from '../tree/400-tree-model.js';
 
 /** A card or group folded on its own by an earlier version: its sizes, or null. */
 export function foldOf(node) {

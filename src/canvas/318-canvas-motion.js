@@ -10,9 +10,9 @@
 /* ------------------------------------------------------------------ */
 
 import { arrowElements, cardElement, cardMovable, placeCard } from '../core/079-canvas-adapter.js';
-import { shownAs } from './316-canvas-tree.js';
 import { applyCanvasModel } from './317-canvas-room.js';
 import { tuckedBBox } from './336-canvas-tucks.js';
+import { shownAs } from '../tree/400-tree-model.js';
 
 export const GLIDE_MS = 240;
 

@@ -17,9 +17,10 @@ import { RELATED_KEY } from '../core/020-constants.js';
 import { fmGet, plainValue } from '../core/045-helpers-properties.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
 import { CanvasFeature } from './315-canvas-feature.js';
-import { arrowLinks, branchSides, canvasCardLabel, canvasModel, isGroupRecord, modelFromData, sideAxes } from './316-canvas-tree.js';
+import { canvasModel } from './316-canvas-tree.js';
 import { isCanvasEdge, nearestSides } from './332-canvas-arrows.js';
 import { boxEdges } from './334-canvas-mindmap.js';
+import { arrowLinks, branchSides, canvasCardLabel, isGroupRecord, modelFromData, sideAxes } from '../tree/400-tree-model.js';
 
 export const OUTLINE_OF = 'outline-of';
 export const OUTLINE_ROOT = 'outline-root';

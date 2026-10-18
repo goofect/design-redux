@@ -12,8 +12,9 @@
 /* ------------------------------------------------------------------ */
 
 import { arrowElements, cardElement, liveCards, markCardMoved, pickedOnCanvas, unpickOnCanvas } from '../core/079-canvas-adapter.js';
-import { branchSides, canvasHomes, isGroupRecord, shownAs, tuckOf } from './316-canvas-tree.js';
+import { tuckOf } from './316-canvas-tree.js';
 import { branchRoom, giveRoomBack, makeRoom, shiftRecord, snapshotModel } from './317-canvas-room.js';
+import { branchSides, canvasHomes, isGroupRecord, shownAs } from '../tree/400-tree-model.js';
 
 /* A tucked card's box: the fold's. */
 export function tuckedBBox() {
