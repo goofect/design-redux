@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -794,6 +794,92 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(view.renderer.nodeEls.get('b').dataset.mark, 'reworded');
     view.closeFindings();
     assert.ok(!view.renderer.nodeEls.get('b').dataset.mark);
+  });
+
+  await t('a folder or a tag made into a mind map: its folders or narrower tags as branches, notes as links, links between them as relations', async () => {
+    obsidian.getAllTags = (cache) => cache.tags.map((x) => x.tag);
+    const TFolder = obsidian.TFolder;
+    const folder = (path, parent) => {
+      const f = Object.assign(new TFolder(), { path, name: path.split('/').pop(), children: [], parent, isRoot: () => !path });
+      if (parent) parent.children.push(f);
+      return f;
+    };
+    const note = (path, parent, tags) => {
+      const f = Object.assign(new TFile(path), { parent, tags, stat: { mtime: 0, ctime: 0 } });
+      parent.children.push(f);
+      return f;
+    };
+    const root = folder('', null);
+    const law = folder('Law', root);
+    const courts = folder('Law/Courts', law);
+    folder('Law/Empty', law);
+    const files = [
+      note('Law/Law.md', law, []), note('Law/Statute.md', law, ['#law']), note('Law/Equity.md', law, []),
+      note('Law/Courts/Appeal.md', courts, ['#law/court']), note('Law/Courts/Trial.md', courts, ['#law/court', '#law']),
+    ];
+    const created = [];
+    const opened = [];
+    const isFolderNote = (f) => !!f.parent && f.basename === f.parent.name;
+    const p = {
+      settings: Object.assign({}, plugin.settings, { defaultSort: 'name', mindmapDefaultFormat: 'md' }),
+      isFolderNote,
+      folderNote: (fo) => fo.children.find((c) => c.basename === fo.name) || null,
+      files: { folderHasNotes: () => true },
+      orders: { arrangeAlbum: (fo, list, sorter) => sorter(list) },
+      freeChildPath: (fo, base, ext) => `${fo.path ? fo.path + '/' : ''}${base}.${ext}`,
+      app: {
+        vault: {
+          getName: () => 'Vault', getRoot: () => root, getMarkdownFiles: () => files,
+          create: async (path, text) => { created.push([path, text]); return new TFile(path); },
+        },
+        metadataCache: {
+          resolvedLinks: { 'Law/Statute.md': { 'Law/Courts/Appeal.md': 1, 'Elsewhere.md': 1 }, 'Law/Courts/Appeal.md': { 'Law/Statute.md': 2 } },
+          getFileCache: (f) => ({ tags: f.tags.map((tag) => ({ tag })) }),
+          fileToLinktext: (f) => f.basename,
+        },
+        fileManager: { getNewFileParent: () => root },
+        workspace: { getLeaf: () => ({ openFile: async (f) => opened.push(f.path) }) },
+      },
+    };
+    const maps = new R.MindMaps(p);
+    await maps.mapFolderAsMindMap(law);
+    const [path, text] = created[0];
+    assert.strictEqual(path, 'Law/Law map.md');
+    assert.deepStrictEqual(opened, ['Law/Law map.md']);
+    const m = R.parseOutline(text).model;
+    const shape = (n) => [n.text.replace(/ \^\w+$/, ''), n.children.map(shape)];
+    assert.deepStrictEqual(shape(m.root), ['[[Law]]', [['[[Equity]]', []], ['[[Statute]]', []], ['Courts', [['[[Appeal]]', []], ['[[Trial]]', []]]]]], 'the folder note at the root, notes then folders, an empty folder left out');
+    const title = (id) => R.nodeParts(R.nodeById(m, id)).title;
+    assert.deepStrictEqual(m.relations.map((r) => [title(r.from), title(r.to)].sort().join(' ~ ')), ['[[Appeal]] ~ [[Statute]]'], 'a link both ways is one relation; one to a note not mapped, none');
+    await maps.mapTagAsMindMap('#law');
+    const tagMap = R.parseOutline(created[1][1]).model;
+    assert.strictEqual(created[1][0], 'law map.md');
+    assert.deepStrictEqual(shape(tagMap.root), ['#law', [['[[Statute]]', []], ['#court', [['[[Appeal]]', []], ['[[Trial]]', []]]]]], 'each note once, under its narrowest tag');
+    assert.strictEqual(tagMap.relations.length, 1);
+    delete obsidian.getAllTags;
+  });
+
+  await t('the minimap: the map small, the part on screen outlined, there only while it doesn’t all fit; pressing goes there', async () => {
+    const view = await open(NOTE);
+    view.fit();
+    const el = () => view.contentEl.querySelector('.dr-mindmap-minimap');
+    assert.ok(el().hasClass('is-hidden'), 'it all fits: no minimap');
+    view.camera = { x: 0, y: 0, zoom: 3 };
+    view.draw();
+    assert.ok(!el().hasClass('is-hidden'));
+    assert.strictEqual(el().querySelectorAll('.dr-minimap-card').length, view.scene.boxes.size);
+    const rect = el().querySelector('.dr-minimap-view');
+    assert.ok(Number(rect.getAttribute('width')) > 0);
+    const svg = el().querySelector('svg');
+    svg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 136 });
+    const p = Object.assign({}, view.minimapPlane);
+    el().dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 100, clientY: 68 }));
+    assert.ok(Math.abs(view.camera.x - (p.minX + p.maxX) / 2) < 1 && Math.abs(view.camera.y - (p.minY + p.maxY) / 2) < 1, 'the middle of the minimap: the middle of the map');
+    assert.strictEqual(view.camera.zoom, 3, 'as near as it was');
+    plugin.settings.mindmapMinimap = false;
+    view.draw();
+    assert.ok(el().hasClass('is-hidden'), 'switched off');
+    plugin.settings.mindmapMinimap = true;
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

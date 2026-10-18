@@ -7,7 +7,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile, TFolder } from 'obsidian';
-import { MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
+import { actionsOn, addActionEntries, MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById, treeModel, walk } from '../tree/400-tree-model.js';
@@ -75,6 +75,8 @@ export class MindMaps extends Feature {
       { key: 'mindmapBranchNotes', showIf: 'mindmaps', name: 'Branches and notes', desc: 'A branch can be made into a note beside the map, its node a link to it; a node linking to a note can take the note’s headings as nodes.' },
       { key: 'mindmapCheck', showIf: 'mindmaps', name: 'Check a map', desc: 'Lists what may be wrong: nodes there twice, empty ones, links to notes that are gone, relations round in a circle.' },
       { key: 'mindmapCompare', showIf: 'mindmaps', name: 'Compare maps', desc: 'Keep a snapshot of a map and compare with it later, or with another map, or one branch with another.' },
+      { key: 'mindmapVaultMap', showIf: 'mindmaps', name: 'Map a folder or tag', desc: 'A folder’s menu, or a command, makes a mind map of its notes: folders or narrower tags as branches, links between notes as relations.' },
+      { key: 'mindmapMinimap', showIf: 'mindmaps', name: 'Minimap', desc: 'The whole map small in the corner while it doesn’t all fit, the part on screen outlined. Press it to go there.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -115,6 +117,8 @@ export class MindMaps extends Feature {
       { id: 'mindmap-statements-note', name: 'Mind map: write what the map states as a note', icon: 'file-text', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && ctx.view.statements().length > 0, run: (ctx) => ctx.view.statementsNote() },
       { id: 'mindmap-branch-to-note', name: 'Mind map: make a note from the selected node’s branch', icon: 'file-output', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapBranchNotes !== false && !!ctx.node && ctx.node !== ctx.model.root && ctx.node.children.length > 0, run: (ctx) => ctx.view.branchToNote(ctx.node.id) },
       { id: 'mindmap-note-to-branch', name: 'Mind map: make nodes from the linked note’s headings', icon: 'file-input', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapBranchNotes !== false && !!ctx.view.linkedNote(ctx.node), run: (ctx) => ctx.view.noteToBranch(ctx.node.id) },
+      { id: 'mindmap-map-folder', name: 'Make a mind map of this folder', menu: 'Make a mind map', icon: 'network', on: 'album', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: (ctx) => this.mapFolderAsMindMap(ctx.folder) },
+      { id: 'mindmap-map-tag', name: 'Make a mind map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: () => this.chooseTagToMap() },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -132,6 +136,12 @@ export class MindMaps extends Feature {
     });
     this.plugin.register(() => setMindMapContext(null));
     registerMindMapHandlers();
+    // A folder's menu: a mind map of it.
+    this.plugin.registerEvent(
+      ws.on('file-menu', (menu, target) => {
+        if (target instanceof TFolder && this.enabled) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, 'action');
+      })
+    );
     // A note renamed: links to it in .mindmap files follow, as Obsidian keeps them up in notes.
     this.plugin.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.followRename(file, oldPath)));
     const take = () => this.takeOver();
@@ -187,6 +197,20 @@ export class MindMaps extends Feature {
     if (!done) return;
     const leaf = this.app.workspace.activeLeaf;
     if (leaf && leaf.view && leaf.view.file === file) await this.openAsMap(leaf);
+  }
+
+  /** A tag picked from those in the vault, and mapped. */
+  chooseTagToMap() {
+    const cache = this.app.metadataCache;
+    const counts = typeof cache.getTags === 'function' ? cache.getTags() : {};
+    const items = Object.keys(counts)
+      .sort((a, b) => a.localeCompare(b))
+      .map((tag) => ({ label: tag, note: String(counts[tag]), tag }));
+    if (!items.length) {
+      new Notice('There are no tags to map.');
+      return;
+    }
+    new ChoicePicker(this.app, 'Make a mind map of a tag…', items, (item) => this.mapTagAsMindMap(item.tag)).open();
   }
 
   /** A map's kept snapshot, moved with it to its new path. */

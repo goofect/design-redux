@@ -8705,6 +8705,10 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   touch-action: none;
 }
 
+.dr-mindmap-minimap .dr-minimap-view {
+  vector-effect: non-scaling-stroke;
+}
+
 .dr-minimap.is-hidden {
   display: none;
 }

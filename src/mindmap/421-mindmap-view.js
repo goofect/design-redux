@@ -158,6 +158,7 @@ export class MindMapView extends TextFileView {
     const tints = nodeTints(this.model, settings.mindmapColourBy);
     this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null });
     if (typeof this.drawLegend === 'function') this.drawLegend();
+    if (typeof this.drawMinimap === 'function') this.drawMinimap(this.scene);
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
     if (!this.gliding && typeof this.measureShown === 'function') this.measureShown();
