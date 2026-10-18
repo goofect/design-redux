@@ -1226,6 +1226,8 @@ describe('Design Redux in Obsidian', function () {
       app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
       await new Promise((r) => setTimeout(r, 700));
       await app.vault.delete(app.vault.getAbstractFileByPath('Sync album'), true);
+      // The parent written offers Undo in a notice: gone, so it can't sit over a later test's buttons.
+      document.querySelectorAll('.notice').forEach((n) => n.remove());
       return { first, followed, props };
     });
     expect(result.first).toBe('[[Pa]]');
