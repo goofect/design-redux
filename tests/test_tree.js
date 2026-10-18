@@ -245,6 +245,114 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.throws(() => R.parseMindmapJson('[1,2]'));
   });
 
+  // -- changes and Undo --------------------------------------------------
+
+  const shapeOf = (m) => {
+    const out = [];
+    R.walk(m, (n, d) => out.push(`${d}|${n.id}|${n.text}|${JSON.stringify(n.attrs)}|${n.anchor ? 1 : 0}|${n.parent ? n.parent.id : '-'}`));
+    return out.join('\n') + '\n' + JSON.stringify(m.relations) + JSON.stringify(m.mode || null) + JSON.stringify(m.layout || null);
+  };
+  const sample = () => R.parseOutline('- Root ^root\n\t- A ^a\n\t\t- A1\n\t\t- A2\n\t- B ^b\n\t\t- B1\n\t- C\n\n## Relations\n- ^a -> ^b "leads to"\n').model;
+
+  await t('changes: add, insert a parent, indent, outdent, reorder, split, merge, duplicate, paste — each as asked', () => {
+    let m = sample();
+    const id = (text) => { let f = null; R.walk(m, (n) => { if (n.text === text) f = n.id; }); return f; };
+    const kids = (text) => R.nodeById(m, id(text)).children.map((c) => c.text);
+    R.addChild(m, id('B'), 'B2');
+    assert.deepStrictEqual(kids('B'), ['B1', 'B2']);
+    R.addSibling(m, id('A1'), 'A1½');
+    assert.deepStrictEqual(kids('A'), ['A1', 'A1½', 'A2']);
+    R.addParent(m, id('C'), 'Group');
+    assert.deepStrictEqual(kids('Group'), ['C']);
+    R.indentNode(m, id('A2'));
+    assert.deepStrictEqual(kids('A1½'), ['A2']);
+    R.outdentNode(m, id('A2'));
+    assert.deepStrictEqual(kids('A'), ['A1', 'A1½', 'A2']);
+    R.reorderNode(m, id('A2'), -2);
+    assert.deepStrictEqual(kids('A'), ['A2', 'A1', 'A1½']);
+    R.splitNode(m, id('A1½'), 2);
+    assert.deepStrictEqual(kids('A'), ['A2', 'A1', 'A1', '½']);
+    R.mergeIntoPrevious(m, R.nodeById(m, id('A')).children[3].id);
+    assert.deepStrictEqual(kids('A'), ['A2', 'A1', 'A1 ½']);
+    R.duplicateBranch(m, id('B'));
+    assert.deepStrictEqual(R.nodeById(m, 'root').children.map((c) => c.text), ['A', 'B', 'B', 'Group']);
+    R.pasteLines(m, id('Group'), '- One\n  - One a\n- Two\nplain three');
+    assert.deepStrictEqual(kids('Group'), ['C', 'One', 'Two', 'plain three']);
+    assert.deepStrictEqual(kids('One'), ['One a']);
+    R.removeNode(m, 'b');
+    assert.deepStrictEqual(m.relations, [], 'a relation goes with the node it pointed to');
+    assert.strictEqual(R.moveNode(m, 'a', id('A2')), null, 'not into its own branch');
+    assert.strictEqual(R.removeNode(m, 'root'), null, 'not the root');
+  });
+
+  await t('every change undone by its own patch: 10,000 random sequences, each undone back to exactly where it began', () => {
+    let seed = 12345;
+    const rnd = (n) => ((seed = (seed * 1103515245 + 12345) % 2147483648), seed % n);
+    const all = (m) => { const out = []; R.walk(m, (n) => out.push(n)); return out; };
+    const pick = (m) => { const ns = all(m); return ns[rnd(ns.length)]; };
+    const changes = [
+      (m) => R.addChild(m, pick(m).id, `new ${rnd(99)}`),
+      (m) => R.addSibling(m, pick(m).id, `sib ${rnd(99)}`, rnd(2) === 0),
+      (m) => R.addParent(m, pick(m).id, 'parent'),
+      (m) => R.removeNode(m, pick(m).id),
+      (m) => R.moveNode(m, pick(m).id, pick(m).id, rnd(4)),
+      (m) => R.indentNode(m, pick(m).id),
+      (m) => R.outdentNode(m, pick(m).id),
+      (m) => R.reorderNode(m, pick(m).id, rnd(2) ? 1 : -1),
+      (m) => R.setText(m, pick(m).id, `text ${rnd(999)}`),
+      (m) => R.setAttr(m, pick(m).id, ['color', 'fold', 'pin'][rnd(3)], rnd(3) ? rnd(6) : undefined),
+      (m) => R.duplicateBranch(m, pick(m).id),
+      (m) => { const n = pick(m); return R.splitNode(m, n.id, rnd(Math.max(1, n.text.length))); },
+      (m) => R.mergeIntoPrevious(m, pick(m).id),
+      (m) => R.pasteLines(m, pick(m).id, '- x\n  - y\nz'),
+      (m) => R.applyPatch(m, [{ type: 'relation-add', relation: { from: pick(m).id, to: pick(m).id, label: 'r', attrs: {} } }]),
+      (m) => R.applyPatch(m, [{ type: 'mode', mode: ['right', 'bottom', null][rnd(3)] }]),
+    ];
+    for (let k = 0; k < 10000; k++) {
+      const m = sample();
+      const start = shapeOf(m);
+      const patches = [];
+      const steps = 1 + rnd(12);
+      for (let s = 0; s < steps; s++) {
+        const p = changes[rnd(changes.length)](m);
+        if (p) patches.push(p);
+      }
+      patches.reverse().forEach((p) => R.undoPatch(m, p));
+      if (shapeOf(m) !== start) assert.fail(`sequence ${k} didn't undo back`);
+    }
+  });
+
+  await t('Undo and Redo: typing in one node a moment apart is one step; a change of shape is its own; redone until something new', () => {
+    const m = sample();
+    const u = new R.UndoStack();
+    const a = R.nodeById(m, 'a');
+    u.push(R.setText(m, 'a', 'A b'), 'a', ['a'], 1000);
+    u.push(R.setText(m, 'a', 'A bc'), 'a', ['a'], 1300);
+    u.push(R.addChild(m, 'a', 'new'), null, ['a'], 1400);
+    u.push(R.setText(m, 'a', 'A bcd'), 'a', ['a'], 1500);
+    u.undo(m);
+    assert.strictEqual(a.text, 'A bc');
+    u.undo(m);
+    assert.deepStrictEqual(a.children.map((c) => c.text), ['A1', 'A2']);
+    assert.deepStrictEqual(u.undo(m), ['a']);
+    assert.strictEqual(a.text, 'A', 'both keystrokes in one step');
+    u.redo(m);
+    assert.strictEqual(a.text, 'A bc');
+    u.push(R.setText(m, 'a', 'Other'), null, ['a'], 9000);
+    assert.ok(!u.canRedo, 'something new: nothing to redo');
+    assert.ok(u.keepWhere((id) => !!R.nodeById(m, id)));
+    assert.ok(!u.keepWhere(() => false) && !u.canUndo, 'read afresh without its nodes: cleared');
+    // A node added, then named a while later: one step.
+    const added = R.addChild(m, 'a', '');
+    const id = added.selection[0];
+    u.push(added, null, ['a'], 10000);
+    u.naming(id);
+    u.push(R.setText(m, id, 'N'), id, [id], 20000);
+    u.push(R.setText(m, id, 'Na'), id, [id], 20100);
+    u.undo(m);
+    assert.ok(!R.nodeById(m, id), 'added and named, undone at once');
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

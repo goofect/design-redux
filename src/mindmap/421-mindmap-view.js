@@ -2,11 +2,11 @@
 /* Mind map: the view                                                  */
 /*                                                                    */
 /* One view for a flagged note and for a .mindmap file alike: the file */
-/* read through its format into the tree, laid out, and drawn. Pan by  */
-/* dragging the background or scrolling, zoom with a pinch or Ctrl and  */
-/* the wheel; click a node to select it, its knob to fold it; arrow     */
-/* keys walk the tree, Space folds. A file that can't be read is shown */
-/* as it is, with what went wrong, and never written over.             */
+/* read through its format into the tree, laid out, and drawn. Every    */
+/* change is a patch, kept for Undo and written a moment later. Input   */
+/* (425), the card editor (426) and saving (427) are parts put on it.   */
+/* A file that can't be read is shown as it is, with what went wrong,  */
+/* and never written over.                                            */
 /* ------------------------------------------------------------------ */
 
 import { setIcon, TextFileView } from 'obsidian';
@@ -14,7 +14,9 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { bindSource, parseOutline, writeOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
-import { estimateSize, fitCamera, layoutScene, nodeLabel, screenToPlane } from './423-mindmap-scene.js';
+import { applyPatch, setAttr } from '../tree/404-tree-ops.js';
+import { UndoStack } from '../tree/405-tree-history.js';
+import { boundsOfBoxes, estimateSize, fitCamera, layoutScene, nodeLabel } from './423-mindmap-scene.js';
 import { MindMapRenderer } from './424-mindmap-render.js';
 
 export const MINDMAP_VIEW = 'design-redux-mindmap';
@@ -49,7 +51,13 @@ export class MindMapView extends TextFileView {
     this.selected = null;
     this.failure = null;
     this.frame = 0;
-    this.data = '';
+    this.text = '';
+    this.undo = new UndoStack();
+    // Changes since the file was last written: put again onto the file if it changes outside.
+    this.pending = [];
+    this.saveTimer = 0;
+    this.lastWritten = null;
+    this.editing = null;
   }
 
   getViewType() {
@@ -95,7 +103,6 @@ export class MindMapView extends TextFileView {
   tool(label, icon, run) {
     const b = this.bar.createDiv({ cls: 'clickable-icon dr-mindmap-tool' });
     asButton(b, label);
-    b.dataset.icon = icon;
     if (typeof b.setAttribute === 'function') b.setAttribute('data-tooltip-position', 'bottom');
     setIcon(b, icon);
     onActivate(b, run);
@@ -103,40 +110,16 @@ export class MindMapView extends TextFileView {
   }
 
   getViewData() {
-    return this.data;
-  }
-
-  /** The file's text, read into the map. A new file centres the view; the same one keeps where it was. */
-  setViewData(data, clear) {
-    this.data = data;
-    try {
-      const model = this.format.parse(data, this.file);
-      if (this.format.id === 'md' && !model.source) bindSource(model, data);
-      const keep = this.selected;
-      this.model = model;
-      this.failure = null;
-      this.selected = keep && nodeById(model, keep) ? keep : null;
-    } catch (err) {
-      this.model = null;
-      this.failure = err;
-    }
-    this.relayout();
-    if (clear || !this.camera) this.fit(true);
-    this.draw();
+    return this.text;
   }
 
   clear() {
-    this.data = '';
+    this.text = '';
     this.model = null;
     this.camera = null;
     this.selected = null;
-  }
-
-  /** The map written back to its file — only the lines that changed, for a note. */
-  commit() {
-    if (!this.model || this.failure) return;
-    this.data = this.format.write(this.model, this.data, this.file);
-    if (typeof this.requestSave === 'function') this.requestSave();
+    this.pending = [];
+    this.undo.clear();
   }
 
   relayout() {
@@ -154,15 +137,33 @@ export class MindMapView extends TextFileView {
     if (!quiet) this.draw();
   }
 
-  /** Drawn on the next frame, once, however many asks came. */
   draw() {
     if (!this.renderer) return;
     this.showFailure();
     if (!this.model || !this.scene || !this.camera) return;
     this.renderer.draw({ model: this.model, scene: this.scene, camera: this.camera, selected: this.selected, mode: this.mode });
     if (this.outlineEl) this.drawOutline();
+    if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
   }
 
+  /** The view brought to a node's branch, whole. */
+  fitBranch(id) {
+    const n = this.model && nodeById(this.model, id);
+    if (!n || !this.scene) return;
+    const boxes = [];
+    const go = (x) => {
+      const b = this.scene.boxes.get(x.id);
+      if (b) boxes.push(b);
+      if (!x.attrs.fold) x.children.forEach(go);
+    };
+    go(n);
+    const { width, height } = this.renderer.size();
+    this.camera = fitCamera(boundsOfBoxes(boxes), width, height);
+    this.select(id);
+    this.draw();
+  }
+
+  /** Drawn on the next frame, once, however many asks came. */
   queueDraw() {
     if (this.frame) return;
     const win = this.contentEl.ownerDocument.defaultView || window;
@@ -188,7 +189,37 @@ export class MindMapView extends TextFileView {
       const clip = typeof navigator !== 'undefined' && navigator.clipboard;
       if (clip) clip.writeText(String(this.failure && this.failure.message));
     });
-    banner.createEl('pre', { cls: 'dr-mindmap-failure-text', text: this.data });
+    banner.createEl('pre', { cls: 'dr-mindmap-failure-text', text: this.text });
+  }
+
+  /**
+   * A change made to the map: kept for Undo, laid out, drawn and written
+   * a moment later. `typing` names the node being typed in, so its
+   * keystrokes join one step.
+   */
+  apply(patch, typing) {
+    if (!patch || !this.model) return null;
+    this.undo.push(patch, typing, this.selected ? [this.selected] : []);
+    this.pending.push(patch);
+    if (patch.selection && patch.selection.length && !typing) this.selected = patch.selection[0];
+    this.relayout();
+    this.draw();
+    if (typeof this.scheduleSave === 'function') this.scheduleSave();
+    return patch;
+  }
+
+  undoStep(redo) {
+    if (!this.model) return;
+    // What the step will do, kept as a change not yet written, like any other.
+    const step = redo ? this.undo.undone[this.undo.undone.length - 1] : this.undo.done[this.undo.done.length - 1];
+    const ops = step ? (redo ? step.step.patch.ops : step.patch.inverse) : [];
+    const ids = redo ? this.undo.redo(this.model) : this.undo.undo(this.model);
+    if (ids === null) return;
+    this.pending.push({ ops, inverse: [], selection: ids });
+    this.selected = ids.find((id) => nodeById(this.model, id)) || (this.selected && nodeById(this.model, this.selected) ? this.selected : null);
+    this.relayout();
+    this.draw();
+    if (typeof this.scheduleSave === 'function') this.scheduleSave();
   }
 
   /* -- folding ------------------------------------------------------ */
@@ -196,146 +227,39 @@ export class MindMapView extends TextFileView {
   toggleFold(id) {
     const n = this.model && nodeById(this.model, id);
     if (!n || !n.children.length) return;
-    if (n.attrs.fold) delete n.attrs.fold;
-    else n.attrs.fold = 1;
-    // The selection, if it was folded away, goes to the fold.
-    if (this.selected && this.selected !== id) {
+    const folding = !n.attrs.fold;
+    // The selection, if it's folded away, goes to the fold.
+    if (folding && this.selected && this.selected !== id) {
       const sel = nodeById(this.model, this.selected);
-      for (let p = sel && sel.parent; p; p = p.parent) if (p === n && n.attrs.fold) this.selected = id;
+      for (let p = sel && sel.parent; p; p = p.parent) if (p === n) this.selected = id;
     }
-    this.changed();
+    this.apply(setAttr(this.model, id, 'fold', folding ? 1 : undefined));
   }
 
-  /** Every branch folded below the root's own children — or everything unfolded. */
+  /** Every branch folded below the root's own children — or everything unfolded. One step of Undo. */
   foldAll(on) {
     if (!this.model) return;
-    let any = false;
+    const ops = [];
     walk(this.model, (n, depth) => {
       if (!n.children.length) return;
-      if (on && depth >= 1 && !n.attrs.fold) {
-        n.attrs.fold = 1;
-        any = true;
-      }
-      if (!on && n.attrs.fold) {
-        delete n.attrs.fold;
-        any = true;
-      }
+      if (on && depth >= 1 && !n.attrs.fold) ops.push({ type: 'attr', id: n.id, key: 'fold', value: 1 });
+      if (!on && n.attrs.fold) ops.push({ type: 'attr', id: n.id, key: 'fold', value: undefined });
     });
+    if (!ops.length) return;
     if (on && this.selected) {
       const sel = nodeById(this.model, this.selected);
       const path = [];
       for (let p = sel; p; p = p.parent) path.unshift(p);
-      const fold = path.find((p) => p.attrs.fold && p !== sel);
+      const fold = path.find((p, k) => k >= 1 && p.children.length && p !== sel);
       if (fold) this.selected = fold.id;
     }
-    if (any) this.changed();
-  }
-
-  /** The map changed: laid out, drawn, written. */
-  changed() {
-    this.relayout();
-    this.draw();
-    this.commit();
-  }
-
-  /* -- input -------------------------------------------------------- */
-
-  listen() {
-    const root = this.root;
-    let drag = null;
-    this.registerDomEvent(root, 'pointerdown', (evt) => {
-      if (evt.button !== 0 || (evt.target.closest && evt.target.closest('.dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-failure'))) return;
-      if (typeof root.focus === 'function') root.focus();
-      const knob = evt.target.closest && evt.target.closest('.dr-mindmap-knob');
-      const id = this.renderer.nodeAt(evt.target);
-      if (knob && id) {
-        this.toggleFold(id);
-        return;
-      }
-      if (id) {
-        this.select(id);
-        return;
-      }
-      if (!this.camera) return;
-      drag = { x: evt.clientX, y: evt.clientY, cx: this.camera.x, cy: this.camera.y, moved: false };
-      if (typeof root.setPointerCapture === 'function' && evt.pointerId !== undefined) {
-        try {
-          root.setPointerCapture(evt.pointerId);
-        } catch (err) {
-          /* not captured: the moves still come while over it */
-        }
-      }
-    });
-    this.registerDomEvent(root, 'pointermove', (evt) => {
-      if (!drag) return;
-      const dx = evt.clientX - drag.x;
-      const dy = evt.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-      this.camera = { x: drag.cx - dx / this.camera.zoom, y: drag.cy - dy / this.camera.zoom, zoom: this.camera.zoom };
-      this.queueDraw();
-    });
-    const end = () => {
-      if (drag && !drag.moved) this.select(null);
-      drag = null;
-    };
-    this.registerDomEvent(root, 'pointerup', end);
-    this.registerDomEvent(root, 'pointercancel', () => (drag = null));
-    this.registerDomEvent(root, 'wheel', (evt) => this.wheel(evt), { passive: false });
-    this.registerDomEvent(root, 'keydown', (evt) => this.key(evt));
-  }
-
-  /** Scrolling pans; with Ctrl or a pinch, it zooms about the pointer. */
-  wheel(evt) {
-    if (!this.camera) return;
-    evt.preventDefault();
-    if (evt.ctrlKey || evt.metaKey) {
-      const box = typeof this.root.getBoundingClientRect === 'function' ? this.root.getBoundingClientRect() : { left: 0, top: 0 };
-      const { width, height } = this.renderer.size();
-      const sx = evt.clientX - box.left;
-      const sy = evt.clientY - box.top;
-      const before = screenToPlane(this.camera, width, height, sx, sy);
-      const zoom = Math.max(0.1, Math.min(3, this.camera.zoom * Math.exp(-evt.deltaY * 0.01)));
-      // The point under the pointer stays under it.
-      this.camera = { zoom, x: before.x - (sx - width / 2) / zoom, y: before.y - (sy - height / 2) / zoom };
-    } else {
-      this.camera = { x: this.camera.x + evt.deltaX / this.camera.zoom, y: this.camera.y + evt.deltaY / this.camera.zoom, zoom: this.camera.zoom };
-    }
-    this.queueDraw();
+    this.apply(applyPatch(this.model, ops, this.selected ? [this.selected] : []));
   }
 
   select(id) {
     if (this.selected === id) return;
     this.selected = id;
     this.draw();
-  }
-
-  /** Arrow keys walk the tree as it's laid out; Space folds; Escape lets go. */
-  key(evt) {
-    if (!this.model || evt.metaKey || evt.ctrlKey || evt.altKey) return;
-    const sel = this.selected ? nodeById(this.model, this.selected) : null;
-    const go = (n) => {
-      if (!n) return;
-      evt.preventDefault();
-      this.select(n.id);
-      this.reveal(n.id);
-    };
-    if (!sel) {
-      if (evt.key.startsWith('Arrow')) go(this.model.root);
-      return;
-    }
-    const siblings = sel.parent ? sel.parent.children : [sel];
-    const at = siblings.indexOf(sel);
-    const open = sel.children.length && !sel.attrs.fold ? sel.children[0] : null;
-    const vertical = this.mode === 'bottom' || this.mode === 'top' || this.mode === 'outline';
-    const leftward = this.mode === 'left';
-    const keys = vertical
-      ? { ArrowDown: open, ArrowUp: sel.parent, ArrowRight: siblings[at + 1], ArrowLeft: siblings[at - 1] }
-      : { [leftward ? 'ArrowLeft' : 'ArrowRight']: open, [leftward ? 'ArrowRight' : 'ArrowLeft']: sel.parent, ArrowDown: siblings[at + 1], ArrowUp: siblings[at - 1] };
-    if (evt.key in keys) return go(keys[evt.key]);
-    if (evt.key === ' ') {
-      evt.preventDefault();
-      this.toggleFold(sel.id);
-    } else if (evt.key === 'Escape') this.select(null);
   }
 
   /** The view moved, as little as it takes, to show a node. */
@@ -387,5 +311,7 @@ export class MindMapView extends TextFileView {
 
   async onClose() {
     if (this.frame) (this.contentEl.ownerDocument.defaultView || window).cancelAnimationFrame(this.frame);
+    if (typeof this.closeEditor === 'function') this.closeEditor(true);
+    if (typeof this.flushSave === 'function') this.flushSave();
   }
 }

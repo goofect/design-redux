@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -88,11 +88,26 @@ async function open(text, name = 'Plan.md') {
   view.setViewData(text, true);
   return view;
 }
+// As Obsidian passes a change made outside: its own `data` set first, then the view told.
+const changedOutside = (view, text) => {
+  view.data = text;
+  view.setViewData(text, false);
+};
 const shown = (view) => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node')).map((el) => el.textContent.replace(/\d+$/, ''));
 
 const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- [[Competitor notes]]\n\t\t- Interview script\n\t- Build\n\t\t- API\n\t\t- UI\n\t- Ship\n';
 
 (async () => {
+  await t('the view’s parts write none of the names Obsidian calls on a view itself', async () => {
+    // Obsidian calls these on every view; one written over (load, as it was once) leaves the tab empty.
+    const OBSIDIAN = ['load', 'onload', 'unload', 'onunload', 'addChild', 'removeChild', 'register', 'registerEvent', 'registerDomEvent', 'registerInterval',
+      'getState', 'setState', 'getEphemeralState', 'setEphemeralState', 'onResize', 'onPaneMenu', 'onHeaderMenu', 'close', 'open', 'handleDrop', 'onFileOpen',
+      'loadFile', 'onLoadFile', 'onUnloadFile', 'onRename', 'save', 'requestSave', 'canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
+    const own = Object.getOwnPropertyNames(R.MindMapView.prototype);
+    const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
+    assert.deepStrictEqual(own.filter((n) => OBSIDIAN.includes(n) && !meant.includes(n)), []);
+  });
+
   await t('a note’s list drawn as a map: a box for each node, an edge for each branch, the root at the middle', async () => {
     const view = await open(NOTE);
     assert.deepStrictEqual(shown(view).sort(), ['API', 'Build', 'Competitor notes', 'Interview script', 'Launch plan', 'Research', 'Ship', 'UI']);
@@ -122,15 +137,19 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     key(map, ' ');
     assert.ok(!shown(view).includes('Interview script'), 'folded away');
     assert.strictEqual(node('Research').querySelector('.dr-mindmap-knob').textContent, '2', 'the fold says how many it holds');
+    assert.strictEqual(view.saves, 0, 'written a moment later, not at once');
+    await settle(450);
     assert.strictEqual(view.saves, 1);
-    assert.strictEqual(view.data, NOTE.replace('\t- Research\n', '\t- Research %%{"fold":1}%%\n'), 'only its own line changed');
+    assert.strictEqual(view.text, NOTE.replace('\t- Research\n', '\t- Research %%{"fold":1}%%\n'), 'only its own line changed');
     // The knob unfolds.
     pointer(node('Research').querySelector('.dr-mindmap-knob'), 'pointerdown');
-    assert.strictEqual(view.data, NOTE, 'and back, byte for byte');
+    view.flushSave();
+    assert.strictEqual(view.text, NOTE, 'and back, byte for byte');
     view.foldAll(true);
     assert.deepStrictEqual(shown(view).sort(), ['Build', 'Launch plan', 'Research', 'Ship']);
     view.foldAll(false);
-    assert.strictEqual(view.data, NOTE);
+    view.flushSave();
+    assert.strictEqual(view.text, NOTE);
   });
 
   await t('only what’s on screen is drawn; a pan draws what comes into view', async () => {
@@ -161,7 +180,8 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual(shown(json).sort(), ['Centre', 'Spoke']);
     json.toggleFold('a');
     assert.ok(shown(json).includes('Hidden'));
-    assert.ok(json.data.startsWith('{\n  "v": 1,\n  "root": {\n    "id": "r",'), 'written as a .mindmap file');
+    json.flushSave();
+    assert.ok(json.text.startsWith('{\n  "v": 1,\n  "root": {\n    "id": "r",'), 'written as a .mindmap file');
   });
 
   await t('a file that can’t be read is shown as it is, with what went wrong, and never written', async () => {
@@ -169,7 +189,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.ok(view.contentEl.querySelector('.dr-mindmap-failure'));
     assert.ok(view.contentEl.querySelector('.dr-mindmap-failure-text').textContent.includes('{ broken'));
     view.foldAll(true);
-    view.commit();
+    view.flushSave();
     assert.strictEqual(view.saves, 0);
   });
 
@@ -198,6 +218,119 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     await R.takeOverLeaves(app);
     assert.strictEqual(set.length, 1, 'asked for text: left as text');
     assert.ok(R.keptAsText(leaf, 'Plan.md'));
+  });
+
+  await t('editing with the keys: Enter adds after, Tab under, typing starts a node over, Delete removes; Alt and the arrows move — each one step of Undo', async () => {
+    const view = await open(NOTE);
+    const map = view.contentEl.querySelector('.dr-mindmap');
+    const sel = () => view.contentEl.querySelector('.is-selected').textContent.replace(/\d+$/, '');
+    const kids = (text) => { let f = null; (function w(n) { if (n.text === text) f = n; n.children.forEach(w); })(view.model.root); return f.children.map((c) => c.text); };
+    view.select(view.model.root.children[2].id);
+    key(map, 'Enter');
+    assert.ok(view.editing, 'a node after Ship, being typed in');
+    view.editing.editor.dispatch({ changes: { from: 0, insert: 'Launch' } });
+    view.editing.editor.contentDOM.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    assert.ok(!view.editing);
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Research', 'Build', 'Ship', 'Launch']);
+    key(map, 'Tab');
+    view.editing.editor.dispatch({ changes: { from: 0, insert: 'Party' } });
+    view.closeEditor(true);
+    assert.deepStrictEqual(kids('Launch'), ['Party']);
+    key(map, 'x');
+    assert.strictEqual(view.editing.editor.state.doc.toString(), 'x', 'typing on a node starts it over');
+    view.closeEditor(true);
+    assert.deepStrictEqual(kids('Launch'), ['x']);
+    view.select(view.model.root.children[1].children[0].id);
+    key(map, 'ArrowDown');
+    assert.strictEqual(sel(), 'UI');
+    map.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', altKey: true, bubbles: true, cancelable: true }));
+    assert.deepStrictEqual(kids('Build'), ['UI', 'API'], 'Alt and up: a step up');
+    key(map, 'Delete');
+    assert.deepStrictEqual(kids('Build'), ['API']);
+    // Undo, step by step: the delete, the move, the typing, the child with its name, the new node with its.
+    const z = (shift) => map.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'z', ctrlKey: true, shiftKey: !!shift, bubbles: true, cancelable: true }));
+    z();
+    assert.deepStrictEqual(kids('Build'), ['UI', 'API']);
+    z();
+    assert.deepStrictEqual(kids('Build'), ['API', 'UI']);
+    z();
+    assert.deepStrictEqual(kids('Launch'), ['Party']);
+    z();
+    assert.deepStrictEqual(kids('Launch'), [], 'a node added and named: one step');
+    z();
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Research', 'Build', 'Ship']);
+    view.flushSave();
+    assert.strictEqual(view.text, NOTE, 'undone all the way: the note as it was');
+    z(true);
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Research', 'Build', 'Ship', 'Launch'], 'redone, named');
+  });
+
+  await t('a node dragged onto another hangs there; onto its edge, beside it — not into its own branch', async () => {
+    const view = await open(NOTE);
+    const id = (text) => { let f = null; (function w(n) { if (n.text === text) f = n.id; n.children.forEach(w); })(view.model.root); return f; };
+    const at = (text, part) => { const b = view.scene.boxes.get(id(text)); return { x: b.x + b.width / 2, y: b.y + b.height * part }; };
+    assert.deepStrictEqual(R.dropTarget(view.model, view.scene, id('Ship'), at('API', 0.5), false), { parentId: id('API'), index: 0, target: id('API'), zone: 'child' });
+    assert.deepStrictEqual(R.dropTarget(view.model, view.scene, id('Ship'), at('API', 0.1), false).zone, 'before');
+    assert.strictEqual(R.dropTarget(view.model, view.scene, id('Build'), at('API', 0.5), false), null, 'not into its own branch');
+    view.dropNode({ node: id('Ship'), target: R.dropTarget(view.model, view.scene, id('Ship'), at('UI', 0.9), false) });
+    const build = view.model.root.children.find((c) => c.text === 'Build');
+    assert.deepStrictEqual(build.children.map((c) => c.text), ['API', 'UI', 'Ship']);
+  });
+
+  await t('lines pasted under the selected node keep their nesting', async () => {
+    const view = await open(NOTE);
+    view.select(view.model.root.children[2].id);
+    const evt = new window.Event('paste', { bubbles: true, cancelable: true });
+    evt.clipboardData = { getData: () => '- Launch\n  - Party\n- Review' };
+    view.contentEl.querySelector('.dr-mindmap').dispatchEvent(evt);
+    const ship = view.model.root.children[2];
+    assert.deepStrictEqual(ship.children.map((c) => c.text), ['Launch', 'Review']);
+    assert.deepStrictEqual(ship.children[0].children.map((c) => c.text), ['Party']);
+  });
+
+  await t('the note changed outside while typing: nothing typed is lost, the outside change is kept, own writes aren’t news', async () => {
+    const view = await open(NOTE);
+    const writes = [];
+    view.app = { vault: { modify: async (f, text) => writes.push(text) } };
+    const build = view.model.root.children[1];
+    view.edit(build.id);
+    view.editing.editor.dispatch({ changes: { from: view.editing.editor.state.doc.length, insert: ' it' } });
+    // Meanwhile, as text: a node added under Ship and Research renamed.
+    const outside = NOTE.replace('\t- Ship\n', '\t- Ship\n\t\t- Launch party\n').replace('\t- Research\n', '\t- Research and notes\n');
+    changedOutside(view, outside);
+    assert.ok(view.editing && view.editing.id === build.id, 'still typing in the same node');
+    view.editing.editor.dispatch({ changes: { from: view.editing.editor.state.doc.length, insert: '!' } });
+    view.closeEditor(true);
+    view.flushSave();
+    const text = writes[writes.length - 1];
+    assert.ok(text.includes('\t- Build it!\n'), 'what was typed, before and after');
+    assert.ok(text.includes('\t\t- Launch party\n') && text.includes('\t- Research and notes\n'), 'and the outside change');
+    const before = writes.length;
+    changedOutside(view, text);
+    assert.strictEqual(writes.length, before);
+    assert.strictEqual(view.pending.length, 0, 'its own write back: nothing new');
+    // A node changed here and deleted outside: the outside wins, the change set aside.
+    const ship = view.model.root.children.find((c) => c.text === 'Ship');
+    view.select(ship.id);
+    view.edit(ship.id);
+    view.editing.editor.dispatch({ changes: { from: 0, insert: 'Go ' } });
+    changedOutside(view, text.replace(/\t- Ship\n\t\t- Launch party\n/, ''));
+    assert.ok(!view.model.root.children.some((c) => /Ship/.test(c.text)), 'gone outside: gone');
+    assert.strictEqual((view.setAside || []).length, 1, 'the change here set aside');
+    assert.ok(!view.editing, 'and its editor with it');
+  });
+
+  await t('the canvas’s commands act on a mind map under the same ids', async () => {
+    const view = await open(NOTE);
+    R.registerMindMapHandlers();
+    R.setMindMapContext(() => ({ view, model: view.model, node: view.selected ? view.model.root.children.find((c) => c.id === view.selected) : null }));
+    const commands = R.actionCommands([{ id: 'fold-canvas-branch', name: 'Fold', on: 'canvas', run: () => assert.fail('the canvas’s own') }], () => null);
+    view.select(view.model.root.children[0].id);
+    assert.ok(commands[0].check());
+    commands[0].run();
+    assert.strictEqual(view.model.root.children[0].attrs.fold, 1, 'Fold branch folded the node');
+    R.setMindMapContext(null);
+    assert.ok(!commands[0].check(), 'with no map, the canvas’s again');
   });
 
   await t('2,000 nodes: laid out and drawn at once, only what’s on screen, and a pan in well under a frame', async () => {

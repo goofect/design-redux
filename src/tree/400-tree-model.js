@@ -591,3 +591,48 @@ export function orderedAttrs(attrs) {
   known.concat(rest).forEach((k) => (out[k] = attrs[k]));
   return out;
 }
+
+/**
+ * A map read afresh given the ids of the map it replaces: each node
+ * that's the same node keeps its id — by its written id; else by its
+ * text under the same parent; else by its place, the same parent and the
+ * same position; else by its text anywhere — so a selection, a node being
+ * typed in and Undo still find it. Nodes new since keep their own.
+ */
+export function adoptIds(old, fresh) {
+  const olds = [];
+  walk(old, (n) => olds.push(n));
+  const news = [];
+  walk(fresh, (n) => news.push(n));
+  const used = new Set();
+  const done = new Set();
+  const byId = new Map(olds.map((n) => [n.id, n]));
+  const take = (n, o) => {
+    used.add(o.id);
+    done.add(n);
+    n.id = o.id;
+  };
+  news.forEach((n) => {
+    if (n.anchor && byId.has(n.id)) take(n, byId.get(n.id));
+  });
+  if (old.root && fresh.root && !done.has(fresh.root) && !used.has(old.root.id)) take(fresh.root, old.root);
+  const parentOf = (n) => (n.parent ? n.parent.id : null);
+  // Text under the same parent, then place under the same parent, then text anywhere.
+  news.forEach((n) => {
+    if (done.has(n)) return;
+    const o = olds.find((x) => !used.has(x.id) && !x.anchor && x.text === n.text && parentOf(x) === parentOf(n));
+    if (o) take(n, o);
+  });
+  news.forEach((n) => {
+    if (done.has(n) || !n.parent || !done.has(n.parent)) return;
+    const was = byId.get(n.parent.id);
+    const o = was && was.children[n.parent.children.indexOf(n)];
+    if (o && !used.has(o.id) && !o.anchor) take(n, o);
+  });
+  news.forEach((n) => {
+    if (done.has(n)) return;
+    const o = olds.find((x) => !used.has(x.id) && !x.anchor && x.text === n.text);
+    if (o) take(n, o);
+  });
+  return fresh;
+}

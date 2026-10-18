@@ -1105,6 +1105,49 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('edits a mind map — a node added and typed in, written to the note, Undo puts it back — and follows an edit made outside', async function () {
+    const start = '---\nmindmap: true\n---\n- Launch plan\n\t- Research\n\t- Build\n';
+    await browser.executeObsidian(async ({ app }, text) => {
+      const old = app.vault.getAbstractFileByPath('Edit map.md');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Edit map.md', text);
+    }, start);
+    await obsidianPage.openFile('Edit map.md');
+    const nodes = () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-mindmap-node')).map((n) => n.textContent.replace(/\d+$/, '')));
+    expect((await readUntil(nodes, (n) => n.length === 3)).length).toBe(3);
+    const read = () => browser.executeObsidian(({ app }) => app.vault.read(app.vault.getAbstractFileByPath('Edit map.md')));
+    // Build selected, Tab: a node under it, typed in, then Escape.
+    await browser.executeObsidian(({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      leaf.view.select(leaf.view.model.root.children[1].id);
+      leaf.view.root.focus();
+    });
+    await browser.keys('Tab');
+    await browser.$('.workspace-leaf.mod-active .dr-mindmap-editor .cm-content').waitForExist({ timeout: 5000 });
+    await browser.keys('API'.split(''));
+    // Enter, in the editor: a node after it, typed in; Escape stops.
+    await browser.keys('Enter');
+    await browser.keys('UI'.split(''));
+    await browser.keys('Escape');
+    expect(await readUntil(read, (t) => t.includes('\t\t- UI'))).toBe(start + '\t\t- API\n\t\t- UI\n');
+    await browser.keys(['Control', 'z']);
+    expect(await readUntil(read, (t) => !t.includes('UI'))).toBe(start + '\t\t- API\n');
+    // Undo, a node added and named at a time: back as it was.
+    await browser.keys(['Control', 'z']);
+    expect(await readUntil(read, (t) => t === start)).toBe(start);
+    // Edited outside, as text: the map follows.
+    await browser.executeObsidian(async ({ app }, text) => {
+      await app.vault.modify(app.vault.getAbstractFileByPath('Edit map.md'), text + '\t- Ship\n');
+    }, start);
+    expect((await readUntil(nodes, (n) => n.includes('Ship'))).includes('Ship')).toBe(true);
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
+      await new Promise((r) => setTimeout(r, 600));
+      const f = app.vault.getAbstractFileByPath('Edit map.md');
+      if (f) await app.vault.delete(f);
+    });
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

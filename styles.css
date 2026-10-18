@@ -9964,3 +9964,53 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
     background: var(--background-modifier-hover);
   }
 }
+
+/* Typing in a node, and dragging one. */
+.dr-mindmap-editor {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  font-size: var(--font-ui-small);
+  line-height: 20px;
+  cursor: text;
+}
+
+.dr-mindmap-editor .cm-editor {
+  padding: 6px 10px;
+}
+
+.dr-mindmap-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.dr-mindmap-ghost {
+  position: absolute;
+  z-index: 4;
+  padding: 4px 10px;
+  border-radius: var(--radius-m);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  opacity: 0.85;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.dr-mindmap-node.is-dragged {
+  opacity: 0.4;
+}
+
+.dr-mindmap-node.is-drop-child {
+  box-shadow: 0 0 0 3px var(--interactive-accent);
+}
+
+.dr-mindmap-node.is-drop-before {
+  box-shadow: 0 -3px 0 0 var(--interactive-accent);
+}
+
+.dr-mindmap-node.is-drop-after {
+  box-shadow: 0 3px 0 0 var(--interactive-accent);
+}

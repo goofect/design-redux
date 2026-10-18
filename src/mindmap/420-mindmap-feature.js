@@ -7,11 +7,13 @@
 /* ------------------------------------------------------------------ */
 
 import { FuzzySuggestModal, Notice, TFile, TFolder } from 'obsidian';
+import { MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
-import { treeModel } from '../tree/400-tree-model.js';
+import { nodeById, treeModel } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
+import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 
@@ -92,12 +94,29 @@ export class MindMaps extends Feature {
       { id: 'new-mind-map', name: 'New mind map', icon: 'network', menu: false, when: () => this.enabled, run: () => this.newMap() },
       { id: 'make-note-mind-map', name: 'Make this note a mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && ctx.file.extension === 'md' && !isMindMapNote(this.app, ctx.file), run: (ctx) => this.makeMap(ctx.file) },
       { id: 'open-mind-map-as-text', name: 'Open as text', icon: 'file-text', menu: false, when: () => this.enabled && !!mapView() && mapView().view.file.extension === 'md', run: () => this.openAsText(mapView()) },
+      { id: 'mindmap-edit-node', name: 'Mind map: edit the selected node', icon: 'pencil', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.edit(ctx.node.id) },
+      { id: 'mindmap-delete-node', name: 'Mind map: delete the selected node and its branch', icon: 'trash', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node && ctx.node !== ctx.model.root, run: (ctx) => ctx.view.apply(removeNode(ctx.model, ctx.node.id)) },
+      { id: 'mindmap-indent-node', name: 'Mind map: move the node under the one before it', icon: 'indent', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(indentNode(ctx.model, ctx.node.id)) },
+      { id: 'mindmap-outdent-node', name: 'Mind map: move the node out a level', icon: 'outdent', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) },
+      { id: 'mindmap-move-node-up', name: 'Mind map: move the node up', icon: 'arrow-up', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, -1)) },
+      { id: 'mindmap-move-node-down', name: 'Mind map: move the node down', icon: 'arrow-down', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) },
+      { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
+      { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
     ];
   }
 
   register() {
     const ws = this.app.workspace;
+    // The mind map in use, for its own actions and for canvas actions that act on it too.
+    setMindMapContext(() => {
+      const leaf = this.enabled ? this.app.workspace.activeLeaf : null;
+      const view = leaf && leaf.view instanceof MindMapView ? leaf.view : null;
+      if (!view || !view.model || view.failure) return null;
+      return { view, file: view.file, model: view.model, node: view.selected ? nodeById(view.model, view.selected) : null, from: 'palette' };
+    });
+    this.plugin.register(() => setMindMapContext(null));
+    registerMindMapHandlers();
     const take = () => this.takeOver();
     ['file-open', 'active-leaf-change', 'layout-change'].forEach((type) => this.plugin.registerEvent(ws.on(type, take)));
     // Flagged just now — "Make this note a mind map", or typed into its properties.
@@ -186,3 +205,25 @@ export class MindMaps extends Feature {
 }
 
 MindMaps.settingKey = 'mindmaps';
+
+/** What the canvas's commands do on a mind map: the same ids, so their hotkeys work on either. */
+export function registerMindMapHandlers() {
+  const node = (ctx) => ctx.node || ctx.model.root;
+  const addThen = (make) => (ctx) => {
+    const p = ctx.view.apply(make(ctx));
+    if (p && p.selection[0]) ctx.view.edit(p.selection[0]);
+  };
+  const handlers = {
+    'canvas-quick-add': { run: addThen((ctx) => addChild(ctx.model, node(ctx).id, '')) },
+    'canvas-add-child-card': { run: addThen((ctx) => addChild(ctx.model, node(ctx).id, '')) },
+    'canvas-add-sibling-card': { when: (ctx) => !!ctx.node, run: addThen((ctx) => addSibling(ctx.model, ctx.node.id, '')) },
+    'canvas-add-parent-card': { when: (ctx) => !!ctx.node && ctx.node !== ctx.model.root, run: addThen((ctx) => addParent(ctx.model, ctx.node.id, '')) },
+    'fold-canvas-branch': { when: (ctx) => !!ctx.node && ctx.node.children.length > 0, run: (ctx) => ctx.view.toggleFold(ctx.node.id) },
+    'fold-every-canvas-branch': { run: (ctx) => ctx.view.foldAll(true) },
+    'unfold-canvas-everything': { run: (ctx) => ctx.view.foldAll(false) },
+    'duplicate-canvas-branch': { when: (ctx) => !!ctx.node && ctx.node !== ctx.model.root, run: (ctx) => ctx.view.apply(duplicateBranch(ctx.model, ctx.node.id)) },
+    'canvas-zoom-to-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.fitBranch(ctx.node.id) },
+    'fit-canvas-cards': { run: (ctx) => ctx.view.fit() },
+  };
+  Object.keys(handlers).forEach((id) => MINDMAP_HANDLERS.set(id, handlers[id]));
+}

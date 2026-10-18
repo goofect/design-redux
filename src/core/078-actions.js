@@ -77,6 +77,7 @@ export const ACTION_CONTEXTS = {
     if (!view || !view.canvas || !view.file || view.file.extension !== 'canvas') return null;
     return canvasContext(view, pickedOnCanvas(view.canvas), 'palette');
   },
+  mindmap: () => mindMapNow(),
   album: (app) => {
     const folder = pageFolder(app);
     return folder ? { folder, from: 'palette' } : null;
@@ -129,14 +130,39 @@ export function actionCommands(actions, context) {
       icon: a.icon,
       ...(a.hotkeys ? { hotkeys: a.hotkeys } : {}),
       check: () => {
+        if (onMindMap(a)) return true;
         const ctx = context(a);
         return !!ctx && applies(a, ctx);
       },
       run: () => {
+        const map = onMindMap(a);
+        if (map) return map.handler.run(map.ctx);
         const ctx = context(a);
         if (ctx && applies(a, ctx)) a.run(ctx);
       },
     }));
+}
+
+/*
+ * A canvas action can act on a mind map too, under the same id, so a
+ * hotkey works on either: the mind-map feature names what it does there.
+ * id -> { when(ctx), run(ctx) }.
+ */
+export const MINDMAP_HANDLERS = new Map();
+
+/* The mind map in use, as an action sees it — or null: set by the mind-map feature. */
+let mindMapNow = () => null;
+
+export function setMindMapContext(find) {
+  mindMapNow = typeof find === 'function' ? find : () => null;
+}
+
+/** Where a canvas action is to act on the mind map in use: { handler, ctx }, or null. */
+function onMindMap(a) {
+  if (a.on !== 'canvas') return null;
+  const handler = MINDMAP_HANDLERS.get(a.id);
+  const ctx = handler ? mindMapNow() : null;
+  return ctx && (!handler.when || handler.when(ctx)) ? { handler, ctx } : null;
 }
 
 /** The actions that apply here, for a menu. */
