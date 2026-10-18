@@ -7100,19 +7100,6 @@ body.is-phone .dr-td-length {
   cursor: pointer;
 }
 
-/* Notes made by quiet links elsewhere: the list to fold them in. */
-.dr-stray-modal {
-  width: min(560px, calc(100vw - 32px));
-}
-
-.dr-stray-intro {
-  margin-bottom: var(--dr-space-2);
-}
-
-.dr-stray-list .setting-item-name {
-  overflow-wrap: anywhere;
-}
-
 /* Footnotes in place --------------------------------------------------------- */
 
 /* The box at the cursor: a number, the citation, and a way out. */

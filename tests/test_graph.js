@@ -47,7 +47,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_graph_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, portableSpans, rewriteSpans, strayLinkpath, renameQuietLinksIn, quietPointsAt, QuietLinkSuggest, QuietLinks, quietLinksIn, quietHint };\n');
+  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues, quietLabel, splitQuiet, quietMatches, quietRefs, linkAtCursor, toggledLink, settleQuietLinks, unsettleQuietLinks, quietSpans, renameQuietLinksIn, quietPointsAt, QuietLinkSuggest, QuietLinks, quietHint };\n');
 const G = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -428,7 +428,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(caches['Triple.md'].links.map((r) => r.original), ['[[[Anarchy]]', '[[[Anarchy|words]]', '[[Idea]]']);
   });
 
-  await t('quiet links become ordinary ones with a hidden mark, for sharing, and back — code and edits left alone', () => {
+  await t('a note’s quiet links where Obsidian found them — not in code, not where the text has moved on', () => {
     const text = 'See [[[Anarchy]]] and [[[Deterrence|deterrence]]].\n```\nx = a[[[1]]]\n```\n';
     const at = (s) => text.indexOf(s);
     const span = (s) => ({ position: { start: { offset: at(s) }, end: { offset: at(s) + s.length - 1 } } });
@@ -442,49 +442,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     };
     const spans = G.quietSpans(text, cache);
     assert.deepStrictEqual(spans.map((s) => s.inner), ['Anarchy', 'Deterrence|deterrence']);
-    const shared = G.rewriteSpans(text, spans, (inner) => `[[${inner}]]%%quiet%%`);
-    assert.strictEqual(shared, 'See [[Anarchy]]%%quiet%% and [[Deterrence|deterrence]]%%quiet%%.\n```\nx = a[[[1]]]\n```\n');
-    const back = G.rewriteSpans(shared, G.portableSpans(shared), (inner) => `[[[${inner}]]]`);
-    assert.strictEqual(back, text);
   });
 
-  await t('a note’s quiet links, each once, with the lines and properties they’re in — not code', () => {
-    const text = 'See [[[Anarchy]]].\nAgain [[[anarchy|it]]] and [[[Realism#Roots]]].\n```\nx = a[[[1]]]\n```\n';
-    const at = (s) => text.indexOf(s);
-    const span = (s, original) => Object.assign({ link: '[' + original.slice(3).split('|')[0], original }, { position: { start: { offset: at(s) }, end: { offset: at(s) + s.length - 1 } } });
-    const cache = {
-      drQuietLinks: [span('[[[Anarchy]]]', '[[[Anarchy]]'), span('[[[anarchy|it]]]', '[[[anarchy|it]]'), span('[[[Realism#Roots]]]', '[[[Realism#Roots]]')],
-      frontmatterLinks: [{ key: 'related', link: '[Anarchy]', original: '[[[Anarchy]]]' }],
-    };
-    const links = G.quietLinksIn(text, cache);
-    assert.deepStrictEqual(links.map((l) => [l.target, l.count, l.lines, l.keys]), [
-      ['Anarchy', 3, [1, 2], ['related']],
-      ['Realism#Roots', 1, [2], []],
-    ]);
-    assert.strictEqual(links[1].path, 'Realism');
+  await t('a quiet link’s hint names the note and heading, and says when it isn’t made yet', () => {
     assert.strictEqual(G.quietHint('Realism#Roots'), 'Quiet link to Realism > Roots — kept off the graph and backlinks');
     assert.match(G.quietHint('Gone', true), /Gone \(not made yet\)/);
-  });
-
-  await t('a note made by a quiet link elsewhere is known by its bracket, and only when a quiet link points at it', () => {
-    assert.strictEqual(G.strayLinkpath('[Anarchy.md'), 'Anarchy');
-    assert.strictEqual(G.strayLinkpath('Inbox/[Anarchy.md'), 'Anarchy');
-    assert.strictEqual(G.strayLinkpath('[Politics/Anarchy.md'), 'Politics/Anarchy');
-    assert.strictEqual(G.strayLinkpath('[[Odd.md'), null);
-    assert.strictEqual(G.strayLinkpath('Notes/Plain.md'), null);
-    assert.strictEqual(G.strayLinkpath('[Anarchy.png'), null);
-    const files = ['[Anarchy.md', '[Draft] Essay.md', 'Anarchy.md', 'Quiet.md', '[Missing.md'].map((p) => ({ path: p, basename: p.replace(/\.md$/, '') }));
-    const caches = { 'Quiet.md': { drQuietLinks: [{ link: '[Anarchy', original: '[[[Anarchy]]' }, { link: '[Missing', original: '[[[Missing]]' }] } };
-    const plugin = { settings: { quietLinks: true } };
-    plugin.app = {
-      vault: { getMarkdownFiles: () => files },
-      metadataCache: {
-        getFileCache: (f) => caches[f.path] || null,
-        getFirstLinkpathDest: (name) => files.find((f) => f.path === `${name}.md`) || null,
-      },
-    };
-    const found = new G.QuietLinks(plugin).strays().map((s) => [s.file.path, s.real && s.real.path]);
-    assert.deepStrictEqual(found, [['[Anarchy.md', 'Anarchy.md'], ['[Missing.md', null]]);
   });
 
   await t('a rename rewrites the quiet links to the note, heading and words kept, and nothing else', () => {

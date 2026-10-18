@@ -14,7 +14,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_preserve_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { renameQuietLinksIn, renameSpans, quietSpans, portableSpans, rewriteSpans, tagSpots, renameTagsAt };\n');
+  '\nmodule.exports.__test = { renameQuietLinksIn, renameSpans, quietSpans, tagSpots, renameTagsAt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -82,14 +82,6 @@ t('text edited since Obsidian read it: the links it no longer finds are left alo
   const out = R.renameQuietLinksIn(edited, [{ oldPath: 'Anarchy.md', linktext: 'Anarchism' }], null, R.renameSpans(edited, cache));
   // Only the property's link, found in the text itself, is renamed.
   assert.strictEqual(out.text, edited.replace('related: "[[[Anarchy]]]"', 'related: "[[[Anarchism]]]"'));
-});
-
-t('made shareable and quiet again, the note is byte for byte what it was', () => {
-  const shared = R.rewriteSpans(text, R.quietSpans(text, cache), (inner) => `[[${inner}]]%%quiet%%`);
-  assert.notStrictEqual(shared, text);
-  assert.ok(shared.includes('```\n[[[Anarchy]]] #law\n```'), 'code left as written');
-  const back = R.rewriteSpans(shared, R.portableSpans(shared), (inner) => `[[[${inner}]]]`);
-  assert.strictEqual(back, text);
 });
 
 t('renaming a tag renames it and the tags under it where Obsidian found them; not #lawyer, not in code', () => {

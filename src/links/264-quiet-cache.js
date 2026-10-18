@@ -123,29 +123,3 @@ export function renameSpans(text, cache) {
   const end = head ? head[0].length : 0;
   return quietMatches(text.slice(0, end)).concat(quietSpans(text, cache).filter((s) => s.from >= end));
 }
-
-/**
- * The notes a note links to quietly, each once: { target, path, count,
- * lines, keys } — from what Obsidian read as links in its text (so not
- * in code), and from its properties.
- */
-export function quietLinksIn(text, cache) {
-  const out = new Map();
-  const entry = (target) => {
-    const low = target.toLowerCase();
-    if (!out.has(low)) out.set(low, { target, path: splitQuiet(target).path, count: 0, lines: [], keys: [] });
-    const found = out.get(low);
-    found.count++;
-    return found;
-  };
-  quietSpans(text, cache).forEach((span) => {
-    entry(splitQuiet(span.inner).target).lines.push(text.slice(0, span.from).split('\n').length);
-  });
-  quietRefs(cache)
-    .filter((ref) => ref.key)
-    .forEach((ref) => {
-      const found = entry(ref.path);
-      if (found.keys.indexOf(ref.key) === -1) found.keys.push(ref.key);
-    });
-  return Array.from(out.values());
-}
