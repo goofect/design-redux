@@ -16,6 +16,22 @@ export const READING_KEEP = 3000;
 /* A change this soon after reading is the reading's own save, not news. */
 export const READ_GRACE = 2000;
 
+/** The line at the top of a note's view, or null. */
+export function noteLine(view) {
+  const mode = view && view.currentMode;
+  if (!mode || typeof mode.getScroll !== 'function') return null;
+  const line = mode.getScroll();
+  return typeof line === 'number' && line >= 0 ? line : null;
+}
+
+/** A note's view scrolled to a line, in whichever mode it's in. */
+export function scrollNoteTo(view, line) {
+  if (!view || !(line >= 0)) return;
+  const mode = view.currentMode;
+  if (mode && typeof mode.applyScroll === 'function') mode.applyScroll(line);
+  else if (typeof view.setEphemeralState === 'function') view.setEphemeralState({ line });
+}
+
 export class Reading {
   constructor(plugin) {
     this.plugin = plugin;
@@ -26,7 +42,7 @@ export class Reading {
     return this.plugin.app;
   }
 
-  /** { path: { opened, read, mtime } }. */
+  /** { path: { opened, read, mtime, line, lineAt } }. */
   get log() {
     const s = this.plugin.settings;
     if (!s.readingLog || typeof s.readingLog !== 'object' || Array.isArray(s.readingLog)) s.readingLog = {};
@@ -70,6 +86,26 @@ export class Reading {
     this.log[file.path] = e;
     this.save();
     return true;
+  }
+
+  /** Where you were in a note, by line: written a moment later with the rest, not on every scroll. */
+  place(file, line) {
+    if (!(file instanceof TFile) || file.extension !== 'md' || !(line >= 0)) return;
+    const e = this.log[file.path] || {};
+    const at = Math.floor(line);
+    if (e.line === at) return;
+    e.line = at;
+    e.lineAt = Date.now();
+    if (!e.opened) e.opened = e.lineAt;
+    this.log[file.path] = e;
+    this.prune();
+    this.save();
+  }
+
+  /** The line you were on in a note, or null. */
+  where(file) {
+    const e = this.entry(file);
+    return e && typeof e.line === 'number' ? e.line : null;
   }
 
   /** Changed while open, by you: still read. */
@@ -130,7 +166,7 @@ export class Reading {
     const log = this.log;
     const paths = Object.keys(log);
     if (paths.length <= READING_KEEP) return;
-    const when = (p) => Math.max(log[p].opened || 0, log[p].read || 0);
+    const when = (p) => Math.max(log[p].opened || 0, log[p].read || 0, log[p].lineAt || 0);
     paths
       .sort((a, b) => when(b) - when(a))
       .slice(READING_KEEP)

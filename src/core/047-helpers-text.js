@@ -72,3 +72,42 @@ export function renameTagText(tag, from, to) {
   const bare = text.replace(/^#/, '');
   return hash + to + bare.slice(String(from).replace(/^#/, '').length);
 }
+
+/**
+ * Of a note's headings ({ level, line }), the one a line falls under —
+ * the last at or before it — by index; -1 before the first.
+ */
+export function currentHeading(headings, line) {
+  let at = -1;
+  (headings || []).forEach((h, i) => {
+    if (h.line <= line) at = i;
+  });
+  return at;
+}
+
+/** Where each heading's section ends: the line of the next heading of the same or a higher level, or `total`. */
+export function sectionEnds(headings, total) {
+  const list = headings || [];
+  return list.map((h, i) => {
+    for (let j = i + 1; j < list.length; j++) if (list[j].level <= h.level) return list[j].line;
+    return total;
+  });
+}
+
+/**
+ * The words under each heading: from the line after it to the next
+ * heading of the same or a higher level, so a section counts the ones
+ * nested in it.
+ */
+export function sectionWords(text, headings) {
+  const lines = String(text || '').split('\n');
+  const ends = sectionEnds(headings, lines.length);
+  return (headings || []).map((h, i) =>
+    lines
+      .slice(h.line + 1, ends[i])
+      .filter((l) => !/^#{1,6}\s/.test(l))
+      .join(' ')
+      .split(/\s+/)
+      .filter((w) => /[\p{L}\p{N}]/u.test(w)).length
+  );
+}

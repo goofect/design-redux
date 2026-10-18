@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -420,6 +420,101 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     r.prune();
     assert.strictEqual(Object.keys(plugin.settings.readingLog).length, 3000);
     assert.ok(R.atEnd({ scrollHeight: 1000, scrollTop: 560, clientHeight: 400 }) && !R.atEnd({ scrollHeight: 1000, scrollTop: 100, clientHeight: 400 }));
+  });
+
+  await t('reading outline: the heading you’re at, the words in each section, a row goes to its heading; a note opens where you were', async () => {
+    const H = [{ level: 1, line: 0 }, { level: 2, line: 3 }, { level: 2, line: 6 }, { level: 1, line: 9 }];
+    assert.strictEqual(R.currentHeading([], 5), -1, 'no headings');
+    assert.strictEqual(R.currentHeading([{ level: 2, line: 4 }], 2), -1, 'before the first');
+    assert.strictEqual(R.currentHeading(H, 3), 1, 'on a heading');
+    assert.strictEqual(R.currentHeading(H, 7), 2, 'equal levels: the later');
+    assert.strictEqual(R.currentHeading(H, 99), 3, 'after the last');
+    const text = ['# One', 'a b', '', '## Two', 'c d e', '', '## Three', 'f', '', '# Four', 'g h'].join('\n');
+    assert.deepStrictEqual(R.sectionWords(text, H), [6, 3, 1, 2], 'a section counts the ones nested in it, not their headings');
+    assert.deepStrictEqual(R.sectionEnds(H, 11), [9, 6, 9, 11]);
+
+    // Where you were: kept by line, and kept through pruning as recent.
+    const { v, plugin, app } = setup();
+    plugin.saveData = () => {};
+    const r = R.readingOf(plugin);
+    const f = v.vault.getAbstractFileByPath('IR/Anarchy.md');
+    assert.strictEqual(r.where(f), null);
+    r.place(f, 6.7);
+    assert.strictEqual(r.where(f), 6);
+    r.place(f, -1);
+    assert.strictEqual(r.where(f), 6, 'nonsense ignored');
+    for (let i = 0; i < 3005; i++) plugin.settings.readingLog[`x/${i}.md`] = { opened: i + 1 };
+    r.prune();
+    assert.strictEqual(r.where(f), 6, 'just placed: kept');
+    assert.ok(!plugin.settings.readingLog['x/0.md'] && plugin.settings.readingLog['x/3004.md'], 'the oldest go');
+    plugin.settings.readingLog = { 'IR/Anarchy.md': { opened: 1, line: 6, lineAt: 1 } };
+
+    // The panel.
+    if (!window.requestAnimationFrame) window.requestAnimationFrame = (fn) => setTimeout(fn, 0);
+    let scroll = 0;
+    const applied = [];
+    const noteView = Object.assign(new MarkdownView(), {
+      file: f,
+      containerEl: document.createElement('div'),
+      getMode: () => 'source',
+      currentMode: { getScroll: () => scroll, applyScroll: (l) => { applied.push(l); scroll = l; } },
+    });
+    document.body.appendChild(noteView.containerEl);
+    const heads = ['One', 'Two', 'Three', 'Four'].map((heading, i) => ({ heading, level: H[i].level, position: { start: { line: H[i].line } } }));
+    app.metadataCache.getFileCache = (file) => (file === f ? { headings: heads } : null);
+    app.metadataCache.on = () => ({});
+    app.vault.cachedRead = async () => text;
+    app.workspace.on = () => ({});
+    app.workspace.getMostRecentLeaf = () => ({ view: noteView });
+    app.workspace.getActiveViewOfType = () => noteView;
+    const ov = new R.ReadingOutlineView({}, new R.ReadingOutline(plugin));
+    ov.app = app;
+    document.body.appendChild(ov.containerEl);
+    await ov.onOpen();
+    await settle();
+    const rows = () => Array.from(ov.contentEl.querySelectorAll('.dr-reading-row'));
+    const words = () => rows().map((row) => row.querySelector('.dr-reading-words').textContent);
+    assert.deepStrictEqual(rows().map((row) => row.querySelector('.dr-reading-name').textContent), ['One', 'Two', 'Three', 'Four']);
+    assert.strictEqual(rows()[1].style.getPropertyValue('--dr-depth'), '1', 'indented by level');
+    assert.ok(rows()[0].classList.contains('is-current'));
+    assert.deepStrictEqual(words(), ['6', '3', '1', '2']);
+    scroll = 7;
+    ov.light();
+    assert.ok(rows()[2].classList.contains('is-current') && rows()[1].classList.contains('is-done') && rows()[0].classList.contains('is-done') && !rows()[3].classList.contains('is-done'));
+    assert.strictEqual(rows()[2].style.getPropertyValue('--dr-through-n'), '0.333', 'a third through its section');
+    click(rows()[3]);
+    assert.deepStrictEqual(applied, [9], 'a row goes to its heading');
+    ov.light();
+    assert.ok(rows()[3].classList.contains('is-current'));
+    rows()[0].focus();
+    key(rows()[0], 'ArrowDown');
+    assert.strictEqual(document.activeElement, rows()[1], 'arrow keys move through the rows');
+    plugin.settings.outlineWordCounts = false;
+    ov.light();
+    assert.deepStrictEqual(words(), ['', '', '', '']);
+    app.metadataCache.getFileCache = () => ({ headings: [] });
+    ov.render();
+    assert.strictEqual(ov.contentEl.textContent, 'No headings in this note');
+
+    // Opened again: back where you were, unless something already put it elsewhere.
+    const hist = new R.ReadingHistory(plugin);
+    scroll = 0;
+    hist.onOpen(f);
+    await settle(200);
+    assert.strictEqual(scroll, 6, 'opens where you were');
+    scroll = 3;
+    hist.onOpen(f);
+    await settle(200);
+    assert.strictEqual(scroll, 3, 'a link to a heading wins');
+    scroll = 20;
+    hist.track(f);
+    assert.strictEqual(r.where(f), 20, 'kept as you scroll');
+    plugin.settings.rememberPlace = false;
+    scroll = 0;
+    hist.onOpen(f);
+    await settle(200);
+    assert.strictEqual(scroll, 0, 'switched off: from the top');
+    clearTimeout(hist.glance);
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {

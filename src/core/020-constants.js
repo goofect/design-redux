@@ -76,7 +76,13 @@ export const DEFAULTS = {
   glassPanels: false,
   // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
   readingHistory: true,
-  // { path: { opened, read, mtime } } — when each note was opened and read.
+  // A note opens at the line you were on.
+  rememberPlace: true,
+  // The open note's headings in the right sidebar, the one you're reading lit.
+  readingOutline: true,
+  // Beside each heading in the outline, the words in its section.
+  outlineWordCounts: true,
+  // { path: { opened, read, mtime, line, lineAt } } — when each note was opened and read, and where you were.
   readingLog: {},
   // When the reading history began: notes made before it aren't news.
   readingSince: 0,

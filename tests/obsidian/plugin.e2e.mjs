@@ -812,6 +812,45 @@ describe('Design Redux in Obsidian', function () {
     expect(result.parent).toBe('s');
   });
 
+  it('follows a long note in the reading outline, and a row goes to its heading', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getAbstractFileByPath('Long read.md');
+      if (old) await app.vault.delete(old);
+      const para = Array.from({ length: 40 }, (_, i) => `Line ${i} of the section, with a few words in it.`).join('\n\n');
+      await app.vault.create('Long read.md', ['One', 'Two', 'Three', 'Four'].map((h) => `## ${h}\n\n${para}\n`).join('\n'));
+    });
+    await obsidianPage.openFile('Long read.md');
+    const lit = () => browser.execute(() => {
+      const row = document.querySelector('.dr-reading-outline .dr-reading-row.is-current .dr-reading-name');
+      return row ? row.textContent : null;
+    });
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 100)); };
+      await until(() => (app.metadataCache.getFileCache(app.workspace.getActiveFile()) || {}).headings);
+      await plugins.designRedux.features.find((f) => f.constructor.name === 'ReadingOutline').show();
+    });
+    expect(await readUntil(lit, (t) => t === 'One')).toBe('One');
+    // Scrolled to the third heading: the lit row follows.
+    await browser.executeObsidian(({ app, obsidian }) => {
+      const view = app.workspace.getActiveViewOfType(obsidian.MarkdownView);
+      const line = app.metadataCache.getFileCache(view.file).headings[2].position.start.line;
+      view.currentMode.applyScroll(line);
+    });
+    expect(await readUntil(lit, (t) => t === 'Three')).toBe('Three');
+    // A row clicked: the note goes to its heading.
+    await browser.execute(() => document.querySelectorAll('.dr-reading-outline .dr-reading-row')[1].click());
+    const at = await readUntil(
+      () => browser.executeObsidian(({ app, obsidian }) => {
+        const view = app.workspace.getActiveViewOfType(obsidian.MarkdownView);
+        return { top: Math.round(view.currentMode.getScroll()), heading: app.metadataCache.getFileCache(view.file).headings[1].position.start.line };
+      }),
+      (r) => Math.abs(r.top - r.heading) <= 1
+    );
+    expect(Math.abs(at.top - at.heading)).toBeLessThanOrEqual(1);
+    expect(await readUntil(lit, (t) => t === 'Two')).toBe('Two');
+    await browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-outline').forEach((l) => l.detach()));
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

@@ -52,6 +52,7 @@ import './chrome/160-panel-properties.js';
 import './chrome/170-panel-native.js';
 import './chrome/180-panel.js';
 import './chrome/190-strip.js';
+import './chrome/195-reading-outline.js';
 import './chrome/200-one-page.js';
 import './chrome/210-menu-filter.js';
 import './chrome/220-settings-button.js';

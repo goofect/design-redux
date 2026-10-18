@@ -15,6 +15,7 @@ import { showMenuAt } from '../core/030-helpers-art.js';
 import { Feature } from '../core/080-feature.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ContextStrip } from './190-strip.js';
+import { ReadingOutline } from './195-reading-outline.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { CanvasOutline } from '../canvas/339-canvas-outline.js';
@@ -214,12 +215,15 @@ export class WorkspaceModes extends Feature {
   async apply(id) {
     const ws = this.app.workspace;
     if (id === 'study') {
-      this.sidebars(false, false);
+      const outline = typeof ReadingOutline === 'function' ? this.plugin.feature(ReadingOutline) : null;
+      const withOutline = !!(outline && outline.enabled);
+      this.sidebars(false, withOutline);
       const note = this.recent('md');
       if (note) {
         const leaf = ws.getLeaf(false);
         await leaf.setViewState({ type: 'markdown', state: { file: note.path, mode: 'preview' }, active: true });
       }
+      if (withOutline) await outline.show();
     } else if (id === 'mapping') {
       this.sidebars(false, true);
       const canvas = this.recent('canvas');

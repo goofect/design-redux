@@ -43,7 +43,8 @@ export const SETTINGS_TABS = [
     id: 'notes',
     title: 'Notes',
     sections: [
-      { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory'] },
+      { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace'] },
+      { title: 'Reading outline', keys: ['readingOutline', 'outlineWordCounts'] },
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },

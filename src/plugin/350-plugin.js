@@ -24,6 +24,7 @@ import { NotePage } from '../library/140-note-page.js';
 import { ReadingHistory } from '../library/145-reading-history.js';
 import { PropertiesPanel } from '../chrome/180-panel.js';
 import { ContextStrip } from '../chrome/190-strip.js';
+import { ReadingOutline } from '../chrome/195-reading-outline.js';
 import { OnePage } from '../chrome/200-one-page.js';
 import { MenuFilter } from '../chrome/210-menu-filter.js';
 import { SettingsButton } from '../chrome/220-settings-button.js';
@@ -99,6 +100,7 @@ export class DesignRedux extends Plugin {
       new Appearance(this),
       new Library(this),
       new ReadingHistory(this),
+      new ReadingOutline(this),
       new NotePage(this),
       new ListKeys(this),
       new SidebarDrop(this),
