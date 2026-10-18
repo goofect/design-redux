@@ -207,8 +207,8 @@ export function orderedBranch(model, rootId, links, order) {
   const mine = new Set(branchOf(model, rootId, links));
   const seen = new Set([rootId]);
   const queue = [root];
-  while (queue.length) {
-    const n = queue.shift();
+  for (let at = 0; at < queue.length; at++) {
+    const n = queue[at];
     const cs = shownChildren(model, links, n.id).filter((c) => mine.has(c.id) && !seen.has(c.id) && !isGroupRecord(c));
     cs.forEach((c) => seen.add(c.id));
     const sorted = order(n, cs);
@@ -414,8 +414,8 @@ export function selectionLinks(model, recs) {
   const tree = new Map(ids.map((id) => [id, []]));
   const seen = new Set([root]);
   const queue = [root];
-  while (queue.length) {
-    const id = queue.shift();
+  for (let at = 0; at < queue.length; at++) {
+    const id = queue[at];
     tree.get(id).length = 0;
     children.get(id).forEach((c) => {
       if (seen.has(c)) return;

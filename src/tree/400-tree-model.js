@@ -176,8 +176,8 @@ export function branchOf(model, rootId, links, folding) {
   const found = [];
   const set = new Set();
   const queue = [rootId];
-  while (queue.length) {
-    const id = queue.shift();
+  for (let at = 0; at < queue.length; at++) {
+    const id = queue[at];
     (links.children.get(id) || []).forEach((c) => {
       const rec = model.byId.get(c);
       if (!rec || rec.tuck || c === rootId || set.has(c) || (folding && rec.master)) return;

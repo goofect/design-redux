@@ -309,9 +309,17 @@ export function bindSource(model, text, opts = {}) {
   if (same) mine.forEach(([n], k) => pairs.push([n, theirs[k][0]]));
   else {
     const left = new Map(theirs.map(([n]) => [n.id, n]));
+    // Theirs by text, in order: the first still left with the same text.
+    const byText = new Map();
+    theirs.forEach(([n]) => (byText.get(n.text) || byText.set(n.text, []).get(n.text)).push(n));
+    const firstLeft = (text) => {
+      const list = byText.get(text);
+      while (list && list.length && !left.has(list[0].id)) list.shift();
+      return list && list.length ? list[0] : null;
+    };
     mine.forEach(([n]) => {
       let t = n.anchor ? left.get(n.id) : null;
-      if (!t) t = Array.from(left.values()).find((x) => x.text === n.text);
+      if (!t) t = firstLeft(n.text);
       if (t) {
         pairs.push([n, t]);
         left.delete(t.id);

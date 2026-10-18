@@ -10,7 +10,7 @@
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { arrowLinks, modelFromData, sideAxes } from '../tree/400-tree-model.js';
-import { BRANCH_LAYOUTS, composedLayout } from '../tree/403-tree-layouts.js';
+import { BRANCH_LAYOUTS, composedLayout, layoutPlaces } from '../tree/403-tree-layouts.js';
 import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
 /* A node's box: as wide as its words want, up to a limit. */
@@ -140,7 +140,10 @@ export function layoutScene(model, sizeOf, mode) {
     nodes.push(rec);
   });
   const cards = modelFromData({ nodes, edges });
-  const places = composedLayout(cards, cards.byId.get(model.root.id), way, arrowLinks(cards), (rec) => branchLayoutOf(model, rec.id));
+  const links = arrowLinks(cards);
+  // No branch with a layout of its own: one layout, without looking for them.
+  const branchy = model.layout && model.layout.branch && Object.keys(model.layout.branch).length;
+  const places = branchy ? composedLayout(cards, cards.byId.get(model.root.id), way, links, (rec) => branchLayoutOf(model, rec.id)) : layoutPlaces(cards, model.root.id, way, links);
   const wayOf = new Map();
   (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
   // Hand nudges, from the layout block, on top: each node's and those above it. A pinned node is where it's pinned.
