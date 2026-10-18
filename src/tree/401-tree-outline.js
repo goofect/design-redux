@@ -67,6 +67,8 @@ export function escapeItemEnd(text) {
 
 /** A node's first line as read: an escaped ending put back as typed. */
 export function unescapeItemEnd(text) {
+  // Nothing escaped without a backslash: most lines.
+  if (text.indexOf('\\') < 0) return text;
   const tail = attrsTail(text);
   if (tail && tail.slashes) return text.slice(0, tail.at - 1) + text.slice(tail.at);
   const b = /([ \t]+)(\\+)(\^[A-Za-z0-9-]+[ \t]*)$/.exec(text);
@@ -84,7 +86,7 @@ export function splitItemText(raw) {
     rest = rest.slice(0, tail.at).replace(/[ \t]+$/, '');
   }
   let anchor = null;
-  const m = ANCHOR_AT_END.exec(rest);
+  const m = rest.indexOf('^') >= 0 ? ANCHOR_AT_END.exec(rest) : null;
   if (m) {
     anchor = m[1];
     rest = rest.slice(0, m.index);
@@ -348,8 +350,9 @@ function indentUnit(sources) {
 
 /** An attribute object as written: compact, in the fixed order. */
 function attrsText(attrs) {
-  const o = orderedAttrs(attrs);
-  return Object.keys(o).length ? JSON.stringify(o) : '';
+  // Most nodes have none: nothing to put in order.
+  for (const k in attrs) if (attrs[k] !== undefined) return JSON.stringify(orderedAttrs(attrs));
+  return '';
 }
 
 /** A node's lines, written new. */

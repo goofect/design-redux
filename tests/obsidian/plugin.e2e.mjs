@@ -1260,9 +1260,16 @@ describe('Design Redux in Obsidian', function () {
       const time = (fn) => { const a = performance.now(); fn(); return performance.now() - a; };
       const best = (fn) => Math.min(fn(), fn(), fn());
       const parse = best(() => time(() => view.format.parse(text, file)));
-      const model = view.format.parse(text, file);
-      model.root.children[0].text += ' and more';
-      const write = best(() => time(() => view.format.write(model, text, file)));
+      // Writing an edited map back over the text it was read from, each time freshly read: what a save does.
+      const edited = () => {
+        const model = view.format.parse(text, file);
+        model.root.children[0].text += ' and more';
+        return model;
+      };
+      const write = best(() => {
+        const model = edited();
+        return time(() => view.format.write(model, text, file));
+      });
       const node = view.model.root.children[1].children[0];
       let k = 0;
       const base = node.text;
