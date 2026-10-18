@@ -55,6 +55,8 @@ export class MindMaps extends Feature {
         desc: 'Unless the map says otherwise, in its mindmap-layout property.',
         options: Object.fromEntries(BRANCH_LAYOUTS.filter(([m]) => m !== 'concept').map(([mode, title]) => [mode, title])),
       },
+      { key: 'mindmapGlide', showIf: 'mindmaps', name: 'Nodes glide to their places', desc: 'As the map changes. Never when your system asks for less motion.' },
+      { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
 

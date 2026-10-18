@@ -88,6 +88,8 @@ export const DEFAULTS = {
   mindmapTakeover: true,
   mindmapDefaultFormat: '',
   mindmapLayout: 'right',
+  mindmapGlide: true,
+  mindmapPeek: true,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',

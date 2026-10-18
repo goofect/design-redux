@@ -58,6 +58,7 @@ export class MindMapView extends TextFileView {
     this.saveTimer = 0;
     this.lastWritten = null;
     this.editing = null;
+    this.gliding = null;
   }
 
   getViewType() {
@@ -90,7 +91,7 @@ export class MindMapView extends TextFileView {
     this.root = this.contentEl.createDiv({ cls: 'dr-mindmap' });
     this.root.setAttribute('tabindex', '0');
     this.root.setAttribute('role', 'tree');
-    this.renderer = new MindMapRenderer(this.root);
+    this.renderer = new MindMapRenderer(this.root, { knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id) });
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());
     this.tool('Lay out…', 'layout-dashboard', () => this.feature && typeof this.feature.chooseLayout === 'function' && this.feature.chooseLayout(this));
@@ -123,12 +124,15 @@ export class MindMapView extends TextFileView {
     this.undo.clear();
   }
 
-  relayout() {
+  /** Laid out again; nodes that moved glide to their places (428), unless `glide` is false. */
+  relayout(glide = true) {
+    const before = this.gliding ? this.gliding.scene : this.scene;
     if (!this.model) {
       this.scene = null;
       return;
     }
     this.scene = layoutScene(this.model, (n) => estimateSize(nodeLabel(n)), this.mode);
+    if (typeof this.glideFrom === 'function') this.glideFrom(glide ? before : null);
   }
 
   fit(quiet) {
@@ -142,7 +146,8 @@ export class MindMapView extends TextFileView {
     if (!this.renderer) return;
     this.showFailure();
     if (!this.model || !this.scene || !this.camera) return;
-    this.renderer.draw({ model: this.model, scene: this.scene, camera: this.camera, selected: this.selected, mode: this.mode });
+    const scene = this.gliding ? this.gliding.scene : this.scene;
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode });
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
   }
@@ -203,7 +208,7 @@ export class MindMapView extends TextFileView {
     this.undo.push(patch, typing, this.selected ? [this.selected] : []);
     this.pending.push(patch);
     if (patch.selection && patch.selection.length && !typing) this.selected = patch.selection[0];
-    this.relayout();
+    this.relayout(!typing);
     this.draw();
     if (typeof this.scheduleSave === 'function') this.scheduleSave();
     return patch;
@@ -313,6 +318,8 @@ export class MindMapView extends TextFileView {
   async onClose() {
     if (this.frame) (this.contentEl.ownerDocument.defaultView || window).cancelAnimationFrame(this.frame);
     if (typeof this.closeEditor === 'function') this.closeEditor(true);
+    if (typeof this.stopGlide === 'function') this.stopGlide();
+    if (typeof this.closePeek === 'function') this.closePeek();
     if (typeof this.flushSave === 'function') this.flushSave();
   }
 }

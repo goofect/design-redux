@@ -44,7 +44,7 @@ class MindMapSaving {
       this.model = null;
       this.failure = err;
     }
-    this.relayout();
+    this.relayout(false);
     if (centre || !this.camera) this.fit(true);
     this.draw();
   }

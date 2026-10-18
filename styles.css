@@ -8382,6 +8382,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   align-items: center;
   gap: var(--dr-space-2);
   padding: var(--dr-space-1) var(--dr-space-2);
+  padding-inline-start: calc(var(--dr-space-2) + var(--dr-depth, 0) * 14px);
   border-radius: var(--dr-radius-sm);
   font-size: var(--font-ui-small);
   cursor: pointer;

@@ -354,6 +354,72 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(view.model.layout, null, 'nothing left in the layout block');
   });
 
+  await t('nodes glide to their places as a branch folds — not while typing, not with the setting off, never when less motion is asked for', async () => {
+    let reduce = false;
+    const frames = [];
+    window.matchMedia = (q) => ({ matches: q.includes('reduced-motion') ? reduce : q.includes('any-hover'), addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+    const realFrame = window.requestAnimationFrame;
+    window.requestAnimationFrame = (fn) => (frames.push(fn), frames.length);
+    const run = (ms) => { const fns = frames.splice(0); fns.forEach((fn) => fn(window.performance.now() + ms)); };
+    try {
+      const view = await open(NOTE);
+      const build = view.model.root.children[1];
+      const el = () => view.renderer.nodeEls.get(build.id);
+      const was = parseFloat(el().style.top);
+      view.toggleFold(view.model.root.children[0].id);
+      const end = view.scene.boxes.get(build.id).y;
+      assert.ok(view.gliding, 'gliding');
+      assert.strictEqual(parseFloat(el().style.top), was, 'from where it was');
+      run(120);
+      const mid = parseFloat(el().style.top);
+      assert.ok(mid !== was && mid !== end, `part of the way: ${was} → ${mid} → ${end}`);
+      run(400);
+      assert.ok(!view.gliding && parseFloat(el().style.top) === end, 'there');
+      view.edit(build.id);
+      view.typed('Build it all the way through');
+      assert.ok(!view.gliding, 'typing: no glide');
+      view.closeEditor(true);
+      plugin.settings.mindmapGlide = false;
+      view.toggleFold(view.model.root.children[0].id);
+      assert.ok(!view.gliding, 'setting off');
+      plugin.settings.mindmapGlide = true;
+      reduce = true;
+      view.toggleFold(view.model.root.children[0].id);
+      assert.ok(!view.gliding, 'less motion asked for');
+    } finally {
+      delete window.matchMedia;
+      window.requestAnimationFrame = realFrame;
+    }
+  });
+
+  await t('a peek into a folded branch lists what it holds; picking one opens the way to it, in one step', async () => {
+    window.matchMedia = (q) => ({ matches: q.includes('any-hover'), addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+    try {
+      const view = await open(NOTE);
+      const map = view.contentEl.querySelector('.dr-mindmap');
+      const research = view.model.root.children[0];
+      view.toggleFold(research.id);
+      view.select(research.id);
+      map.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', shiftKey: true, bubbles: true, cancelable: true }));
+      assert.ok(research.attrs.fold, 'Shift-Space peeks; it doesn’t unfold');
+      const rows = () => Array.from(document.querySelectorAll('.dr-fold-pop .dr-fold-list-row')).map((r) => r.textContent);
+      assert.deepStrictEqual(rows(), ['Competitor notes', 'Interview script']);
+      document.querySelectorAll('.dr-fold-pop .dr-fold-list-row')[1].click();
+      assert.ok(!research.attrs.fold && !document.querySelector('.dr-fold-pop'), 'opened, the peek gone');
+      assert.strictEqual(view.selected, research.children[1].id, 'and gone to');
+      view.undoStep(false);
+      assert.ok(research.attrs.fold, 'one step of Undo');
+      // Pointing at the count, a moment: the same list.
+      const knob = view.renderer.nodeEls.get(research.id).querySelector('.dr-mindmap-knob');
+      knob.dispatchEvent(new window.MouseEvent('pointerenter', { bubbles: false }));
+      await new Promise((r) => setTimeout(r, 520));
+      assert.deepStrictEqual(rows(), ['Competitor notes', 'Interview script']);
+      view.closePeek();
+    } finally {
+      delete window.matchMedia;
+    }
+  });
+
   await t('lines pasted under the selected node keep their nesting', async () => {
     const view = await open(NOTE);
     view.select(view.model.root.children[2].id);

@@ -23,12 +23,13 @@
 import { Menu, Modal, Notice, setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { cardElement, cardKept, keepOnCard, liveCard, pickOnCanvas, showCard } from '../core/079-canvas-adapter.js';
+import { FoldPopover } from '../ui/245-hover-popover.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasModel, saveCanvas } from './316-canvas-tree.js';
 import { applyCanvasModel, foldBranch, snapshotModel, tuckedCount, unfoldBranch, unfoldRecord } from './317-canvas-room.js';
 import { glideCanvasModel } from './318-canvas-motion.js';
 import { drawTucks, restoreOrphans, undrawTucks } from './336-canvas-tucks.js';
-import { colourMark, FoldPopover } from './337-canvas-peek.js';
+import { colourMark } from './337-canvas-peek.js';
 import { CanvasMap, mapLayout, placeIn } from './348-canvas-map.js';
 import { CanvasMapToolbar } from './349-canvas-map-toolbar.js';
 import { arrowLinks, branchSides, canvasCardLabel, FOLD_KEY, foldableBranch, isGroupRecord, MASTER_KEY } from '../tree/400-tree-model.js';

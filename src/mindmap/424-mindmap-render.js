@@ -96,6 +96,7 @@ export class MindMapRenderer {
         knob.setAttribute('role', 'button');
         knob.setAttribute('aria-label', n.attrs && n.attrs.fold ? `Unfold (${n.children.length})` : 'Fold');
         if (n.attrs && n.attrs.fold) knob.setText(String(countBelow(n)));
+        if (this.hooks.knob) this.hooks.knob(knob, n.id);
       }
       el.setAttribute('role', 'treeitem');
       el.setAttribute('aria-label', label);

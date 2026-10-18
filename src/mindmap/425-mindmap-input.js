@@ -7,8 +7,8 @@
 /* another to hang it there — onto its top or bottom edge to go beside  */
 /* it — with a ghost showing where it would land. Keys: arrows walk;    */
 /* Enter adds after, Tab under; Delete removes; Alt and the arrows move */
-/* a node; Space folds; Ctrl or Cmd Z and Y undo and redo. Paste puts   */
-/* lines in as nodes.                                                  */
+/* a node; Space folds, Shift-Space peeks; Ctrl or Cmd Z and Y undo and */
+/* redo. Paste puts lines in as nodes.                                  */
 /* ------------------------------------------------------------------ */
 
 import { mixInto } from '../core/080-feature.js';
@@ -221,6 +221,9 @@ class MindMapInput {
     } else if (evt.key === 'Delete' || evt.key === 'Backspace') {
       done();
       this.apply(removeNode(this.model, sel.id));
+    } else if (evt.key === ' ' && evt.shiftKey && sel.attrs.fold && typeof this.peek === 'function') {
+      done();
+      this.peek(sel.id);
     } else if (evt.key === ' ') {
       done();
       this.toggleFold(sel.id);
