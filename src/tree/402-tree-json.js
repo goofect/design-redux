@@ -29,7 +29,7 @@ function readNode(o, parent, used) {
 }
 
 /* The parts of the layout block, kept at the top of a .mindmap file. */
-export const LAYOUT_PARTS = ['nudge', 'branch', 'legend', 'views', 'view'];
+export const LAYOUT_PARTS = ['nudge', 'branch', 'legend', 'views', 'album', 'view'];
 
 function readLayout(data) {
   const parts = LAYOUT_PARTS.filter((k) => data[k] !== undefined && data[k] !== null);

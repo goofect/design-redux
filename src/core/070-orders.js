@@ -46,6 +46,18 @@ export const MINDMAP_TWINS = [
   ['canvasViews', 'mindmapViews'],
 ];
 
+/* The twins mind maps took on with their knowledge tools. */
+export const MINDMAP_TWINS_KNOWLEDGE = [
+  ['canvasRelations', 'mindmapRelations'],
+  ['canvasArguments', 'mindmapArguments'],
+  ['canvasBranchNote', 'mindmapBranchNotes'],
+  ['canvasCheck', 'mindmapCheck'],
+  ['canvasCompare', 'mindmapCompare'],
+  ['canvasVaultMap', 'mindmapVaultMap'],
+  ['canvasMinimap', 'mindmapMinimap'],
+  ['canvasPresent', 'mindmapPresent'],
+];
+
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
  * or reshaped, a step here carries the old value across, so a choice
@@ -152,6 +164,16 @@ export const SETTINGS_MIGRATIONS = [
     run(saved) {
       MINDMAP_TWINS.forEach(([from, to, as]) => {
         if (saved[from] !== undefined) saved[to] = as ? as(saved[from]) : saved[from];
+      });
+    },
+  },
+  {
+    // The same for the tools mind maps took on next: relations, arguments,
+    // branches as notes, check, compare, maps of the vault, the minimap, present.
+    to: 11,
+    run(saved) {
+      MINDMAP_TWINS_KNOWLEDGE.forEach(([from, to]) => {
+        if (saved[from] !== undefined) saved[to] = saved[from];
       });
     },
   },

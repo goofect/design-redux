@@ -47,6 +47,8 @@ class MindMapSaving {
     this.relayout(false);
     if (centre || !this.camera) this.fit(true);
     this.draw();
+    // A collection's map: in step with its notes as soon as it's open.
+    if (this.model && typeof this.syncAlbum === 'function') this.albumLater();
   }
 
   /** The file changed outside the view: read in, with what isn't written yet put on top. */

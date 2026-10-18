@@ -10,13 +10,14 @@
 /* its note: it's left out of the map until it's added back.           */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
+import { FuzzySuggestModal, Notice, TFile, TFolder } from 'obsidian';
 import { RELATED_KEY } from '../core/020-constants.js';
 import { sortByOrder } from '../core/030-helpers-art.js';
 import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { actionsOn, addActionEntries } from '../core/078-actions.js';
 import { addToCanvas, cardData, cardElement, cardKept, liveCard, liveCards, removeArrow, removeCard, requestCanvasSave } from '../core/079-canvas-adapter.js';
+import { SetParentPrompt } from '../ui/230-pickers.js';
 import { CanvasFeature } from './315-canvas-feature.js';
 import { canvasModel, tuckOf } from './316-canvas-tree.js';
 import { canvasAction } from './321-canvas-extras.js';
@@ -27,6 +28,7 @@ import { boxEdges, newCanvasId } from './334-canvas-mindmap.js';
 import { MAP_LAYOUT_KEY } from './348-canvas-map.js';
 import { arrowLinks } from '../tree/400-tree-model.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
+import { albumParentTree } from '../tree/413-tree-album.js';
 
 /* On an album map's cards: the root, and a note from outside the album (its folder's name). */
 export const ALBUM_ROOT_KEY = 'drAlbumRoot';
@@ -34,65 +36,6 @@ export const ALBUM_OUTSIDE_KEY = 'drAlbumOutside';
 
 /* How long the notes are left to settle before the map follows them. */
 export const ALBUM_MAP_WAIT = 500;
-
-/**
- * An album's notes as a tree by their parent property: what each hangs
- * from (the root for none), the other parents as cross-links, cycles
- * broken at the first repeat, parents naming no note, and notes outside
- * the album named as parents. notes: [path], in the album's order;
- * parentsOf(path) → { found: [path], missing: [name] }; root: a path or ''.
- */
-export function albumParentTree(notes, parentsOf, root) {
-  const inAlbum = new Set(notes);
-  const parent = new Map();
-  const cross = [];
-  const cycles = [];
-  const missing = [];
-  const outside = [];
-  const keepOutside = (p) => {
-    if (!inAlbum.has(p) && p !== root && outside.indexOf(p) === -1) outside.push(p);
-  };
-  notes.forEach((n) => {
-    const got = parentsOf(n) || { found: [], missing: [] };
-    const found = (got.found || []).filter((p) => p !== n);
-    if (!found.length) {
-      parent.set(n, root);
-      if (got.missing && got.missing.length) missing.push({ note: n, name: got.missing[0] });
-      return;
-    }
-    const first = found[0];
-    found.slice(1).forEach((p) => {
-      keepOutside(p);
-      cross.push([p, n]);
-    });
-    if (!inAlbum.has(first) && first !== root) {
-      keepOutside(first);
-      parent.set(n, first);
-      return;
-    }
-    // Would hanging it here close a loop? Then that arrow's a cross-link, and it hangs from the root.
-    let up = first;
-    const passed = new Set();
-    let loops = false;
-    while (up && up !== root && !passed.has(up)) {
-      if (up === n) {
-        loops = true;
-        break;
-      }
-      passed.add(up);
-      up = parent.get(up);
-    }
-    if (loops) {
-      cycles.push([n, first]);
-      cross.push([first, n]);
-      parent.set(n, root);
-    } else {
-      parent.set(n, first);
-    }
-  });
-  outside.forEach((o) => parent.set(o, root));
-  return { parent, cross, cycles, missing, outside };
-}
 
 /**
  * What a map needs to follow its notes: notes to add, cards to take
@@ -124,37 +67,6 @@ export function albumMapChanges(tree, cards, parentsOn, mapped, leftOut, rootId)
     if (parentsOn(id).indexOf(upId) === -1) out.relink.push({ path, parent: up || '' });
   });
   return out;
-}
-
-/** Asked when a card's re-linked on an album map: set its note's parent? */
-export class SetParentPrompt extends Modal {
-  constructor(app, child, parent, choose) {
-    super(app);
-    this.child = child;
-    this.parent = parent;
-    this.choose = choose;
-    this.chosen = false;
-  }
-
-  onOpen() {
-    const { contentEl } = this;
-    if (this.titleEl) this.titleEl.setText('Set the note’s parent?');
-    contentEl.createEl('p', { text: this.parent ? `Set the parent of “${this.child.basename}” to “${this.parent.basename}”?` : `Take the parent off “${this.child.basename}”, so it hangs from the collection?` });
-    const pick = (choice) => {
-      this.chosen = true;
-      this.close();
-      this.choose(choice);
-    };
-    new Setting(contentEl)
-      .addButton((b) => b.setButtonText('Set').setCta().onClick(() => pick('set')))
-      .addButton((b) => b.setButtonText('Just on the map').onClick(() => pick('map')))
-      .addButton((b) => b.setButtonText('Always set').onClick(() => pick('always')));
-  }
-
-  onClose() {
-    this.contentEl.empty();
-    if (!this.chosen) this.choose('map');
-  }
 }
 
 /** A left-out note to put back on the map. */

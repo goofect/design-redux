@@ -1186,6 +1186,50 @@ describe('Design Redux in Obsidian', function () {
     expect(text).toContain('See [[Renamed target]]');
   });
 
+  it('keeps a collection’s mind map in step with its notes’ parents, both ways', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 100)); return ok(); };
+      const old = app.vault.getAbstractFileByPath('Sync album');
+      if (old) await app.vault.delete(old, true);
+      await app.vault.createFolder('Sync album');
+      await app.vault.create('Sync album/Pa.md', '# Pa\n');
+      await app.vault.create('Sync album/Qu.md', '---\nparent: "[[Pa]]"\nrating: 3\n---\n# Qu\n');
+      await until(() => !!app.metadataCache.getFileCache(app.vault.getAbstractFileByPath('Sync album/Qu.md'))?.frontmatter);
+      const maps = plugins.designRedux.features.find((f) => f.constructor.name === 'MindMaps');
+      await maps.mapAlbumAsMindMap(app.vault.getAbstractFileByPath('Sync album'));
+      const view = () => app.workspace.getLeavesOfType('design-redux-mindmap').map((l) => l.view).find((v) => v.file && v.file.path === 'Sync album/Sync album map.md');
+      const parentOf = (name) => {
+        const v = view();
+        let out = null;
+        (function w(n, up) { if (n.text === `[[${name}]]`) out = up; n.children.forEach((c) => w(c, n.text)); })(v.model.root, null);
+        return out;
+      };
+      const opened = await until(() => !!view() && parentOf('Qu') === '[[Pa]]');
+      if (!opened) return { first: null };
+      const first = parentOf('Qu');
+      // The notes change: a new one under Qu.
+      await app.vault.create('Sync album/Ro.md', '---\nparent: "[[Qu]]"\n---\n# Ro\n');
+      await until(() => parentOf('Ro') === '[[Qu]]');
+      const followed = parentOf('Ro');
+      // The map changes: Qu moved onto the root sets its note's parent off.
+      maps.settings.albumMapWritesParent = 'always';
+      const v = view();
+      const qu = (function find(n) { if (n.text === '[[Qu]]') return n; for (const c of n.children) { const f = find(c); if (f) return f; } return null; })(v.model.root);
+      v.dropNode({ node: qu.id, target: { parentId: v.model.root.id, index: 0, target: v.model.root.id, zone: 'child' } });
+      const quFile = app.vault.getAbstractFileByPath('Sync album/Qu.md');
+      await until(() => { const fm = app.metadataCache.getFileCache(quFile)?.frontmatter || {}; return !('parent' in fm); });
+      const props = Object.assign({}, app.metadataCache.getFileCache(quFile).frontmatter);
+      delete props.position;
+      app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
+      await new Promise((r) => setTimeout(r, 700));
+      await app.vault.delete(app.vault.getAbstractFileByPath('Sync album'), true);
+      return { first, followed, props };
+    });
+    expect(result.first).toBe('[[Pa]]');
+    expect(result.followed).toBe('[[Qu]]');
+    expect(result.props).toEqual({ rating: 3 });
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

@@ -230,8 +230,24 @@ export class MindMapView extends TextFileView {
     }
     this.undo.push(patch, typing, this.selected ? [this.selected] : []);
     this.pending.push(patch);
+    if (typeof this.afterChange === 'function') this.afterChange(patch);
     if (patch.selection && patch.selection.length && !typing) this.selected = patch.selection[0];
     this.relayout(!typing);
+    this.draw();
+    if (typeof this.scheduleSave === 'function') this.scheduleSave();
+    return patch;
+  }
+
+  /**
+   * A change the map makes to follow something outside it — its notes,
+   * say: written like any other, but no step of Undo, as a change made
+   * outside isn't.
+   */
+  applySync(patch) {
+    if (!patch || !this.model) return null;
+    this.pending.push(patch);
+    this.undo.keepWhere((id) => !!nodeById(this.model, id));
+    this.relayout();
     this.draw();
     if (typeof this.scheduleSave === 'function') this.scheduleSave();
     return patch;
@@ -346,6 +362,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.closePeek === 'function') this.closePeek();
     if (typeof this.closeFindings === 'function') this.closeFindings();
     if (typeof this.endPresent === 'function') this.endPresent();
+    if (this.albumTimer) clearTimeout(this.albumTimer);
     if (typeof this.dropAllText === 'function') this.dropAllText();
     if (typeof this.flushSave === 'function') this.flushSave();
   }

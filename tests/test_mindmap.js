@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -607,6 +607,10 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       [false, false, 'branch', false, true, R.DEFAULTS.settingsVersion]
     );
     assert.strictEqual(saved.canvasLegend, false, 'the canvas keeps its own');
+    // And the knowledge tools, saved by 2.0.34 or so.
+    const later = { settingsVersion: 10, canvasPresent: false, canvasMinimap: false, canvasBranchNote: false, mindmapPresent: true };
+    R.SETTINGS_MIGRATIONS.filter((m) => m.to > 10).forEach((m) => m.run(later));
+    assert.deepStrictEqual([later.mindmapPresent, later.mindmapMinimap, later.mindmapBranchNotes, later.mindmapCheck], [false, false, false, undefined]);
     const none = { settingsVersion: 9, canvasColourBy: 'none' };
     R.SETTINGS_MIGRATIONS.filter((m) => m.to > 9).forEach((m) => m.run(none));
     assert.strictEqual(none.mindmapColourBy, '', 'no tint');
@@ -845,6 +849,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     await maps.mapFolderAsMindMap(law);
     const [path, text] = created[0];
     assert.strictEqual(path, 'Law/Law map.md');
+    assert.ok(text.startsWith('---\nmindmap: true\n---\n'), 'flagged, so it opens as a map');
     assert.deepStrictEqual(opened, ['Law/Law map.md']);
     const m = R.parseOutline(text).model;
     const shape = (n) => [n.text.replace(/ \^\w+$/, ''), n.children.map(shape)];
@@ -921,6 +926,157 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(view.selected, 'b', 'the selection as it was');
     view.flushSave();
     assert.strictEqual(view.text, text, 'nothing written');
+  });
+
+  // A collection in a vault of its own: notes with properties, Obsidian's metadata, and a notes service writing them.
+  const albumVault = (count, parentOf, extra) => {
+    const TFolder = obsidian.TFolder;
+    const root = Object.assign(new TFolder(), { path: '', name: '', children: [], isRoot: () => true });
+    const folder = Object.assign(new TFolder(), { path: 'Album', name: 'Album', children: [], parent: root, isRoot: () => false });
+    const files = new Map();
+    const fm = new Map();
+    const add = (name, props, where) => {
+      const f = Object.assign(new TFile(`${(where || folder).path}/${name}.md`), { parent: where || folder, stat: { mtime: 0, ctime: 0 } });
+      (where || folder).children.push(f);
+      files.set(f.path, f);
+      fm.set(f.path, props);
+      return f;
+    };
+    add('Album', { kind: 'album' });
+    for (let i = 0; i < count; i++) add(`N${i}`, Object.assign({ rating: i % 5, tags: ['t' + (i % 3)], status: 'draft' }, parentOf(i) ? { parent: parentOf(i) } : {}, extra ? extra(i) : {}));
+    const created = new Map();
+    const app = {
+      vault: {
+        getAbstractFileByPath: (p) => files.get(p) || (p === 'Album' ? folder : null),
+        getFiles: () => Array.from(files.values()),
+        create: async (path, text) => { const f = new TFile(path); created.set(path, text); return f; },
+        read: async (f) => created.get(f.path),
+        modify: async () => {},
+      },
+      metadataCache: {
+        getFileCache: (f) => ({ frontmatter: fm.get(f.path) }),
+        getFirstLinkpathDest: (link) => Array.from(files.values()).find((f) => f.basename === link || f.path === `${link}.md`) || null,
+        fileToLinktext: (f) => f.basename,
+      },
+      fileManager: { processFrontMatter: async (f, fn) => fn(fm.get(f.path)) },
+      workspace: { getLeaf: () => ({ openFile: async () => {} }), getLeavesOfType: () => [] },
+    };
+    const p = {
+      settings: Object.assign({}, plugin.settings, { defaultSort: 'name', graphRouteProperty: 'parent', albumMapWritesParent: 'always' }),
+      app,
+      isFolderNote: (f) => !!f.parent && f.basename === f.parent.name,
+      folderNote: (fo) => fo.children.find((c) => c.basename === fo.name) || null,
+      orders: { arrangeAlbum: (fo, list, sorter) => sorter(list) },
+      saveSettings: async () => {},
+    };
+    p.notes = new R.Notes(p);
+    return { folder, files, fm, created, app, p, add };
+  };
+
+  // The map open on what was made: a view of it, followed as Obsidian would follow it.
+  const openAlbumMap = async (v, maps) => {
+    const view = await open(v.created.get('Album/Album map.md'), 'Album/Album map.md');
+    Object.assign(view, { app: v.app, plugin: v.p, feature: maps });
+    view.file.parent = v.folder;
+    view.syncAlbum();
+    return view;
+  };
+  const shapeOf = (view, n) => {
+    const out = {};
+    const go = (x, up) => {
+      const path = view.feature.albumNotePath(x, view.file.path);
+      if (path) out[path.replace(/^Album\/|\.md$/g, '')] = up;
+      x.children.forEach((c) => go(c, path ? path.replace(/^Album\/|\.md$/g, '') : up));
+    };
+    (n || view.model.root).children.forEach((c) => go(c, 'root'));
+    return out;
+  };
+
+  await t('a collection as a map by parent: chains, siblings, loops, several parents and outside notes; the map follows the notes; a node moved sets the parent as the setting says', async () => {
+    const v = albumVault(0, () => null);
+    v.add('A', { parent: '[[B]]' });
+    v.add('B', { parent: '[[A]]' });
+    v.add('C', { parent: ['[[A]]', '[[D]]'] });
+    v.add('D', {});
+    v.add('E', { parent: '[[Elsewhere]]' });
+    v.add('F', { parent: '[[Outside]]' });
+    const out = Object.assign(new obsidian.TFolder(), { path: 'Other', name: 'Other', children: [] });
+    v.add('Outside', {}, out);
+    const maps = new R.MindMaps(v.p);
+    await maps.mapAlbumAsMindMap(v.folder);
+    const view = await openAlbumMap(v, maps);
+    assert.ok(v.created.get('Album/Album map.md').startsWith('---\nmindmap: true\n---\n'), 'flagged, so it opens as a map');
+    assert.strictEqual(R.nodeParts(view.model.root).title, '[[Album]]', 'the folder note at the root');
+    assert.deepStrictEqual(shapeOf(view), { A: 'B', B: 'root', C: 'A', D: 'root', E: 'root', F: 'Other/Outside', 'Other/Outside': 'root' }, 'a loop broken; the first of several parents; a missing parent at the root; a parent from outside shown');
+    const rel = view.model.relations.map((r) => [r.from, r.to].map((id) => view.feature.albumNotePath(R.nodeById(view.model, id), '').replace(/^Album\/|\.md$/g, '')).join('→'));
+    assert.deepStrictEqual(rel.sort(), ['A→B', 'D→C'].sort(), 'the loop and the second parent as dashed relations');
+    assert.deepStrictEqual(R.albumEntry(view.model), { path: 'Album', leftOut: [] }, 'the collection kept in the map');
+  });
+
+  await t('a 200-note collection: its map follows the notes, moving a node sets the parent, and no note’s other properties change', async () => {
+    const v = albumVault(200, (i) => (i ? `[[N${Math.floor((i - 1) / 3)}]]` : null));
+    const before = new Map(Array.from(v.fm.entries()).map(([k, x]) => [k, JSON.parse(JSON.stringify(x))]));
+    const maps = new R.MindMaps(v.p);
+    const t0 = Date.now();
+    await maps.mapAlbumAsMindMap(v.folder);
+    const view = await openAlbumMap(v, maps);
+    const want = (fmOf) => {
+      const out = {};
+      for (let i = 0; i < 200; i++) {
+        const raw = fmOf(`Album/N${i}.md`).parent;
+        out[`N${i}`] = raw ? raw.replace(/\[\[|\]\]/g, '') : 'root';
+      }
+      return out;
+    };
+    assert.deepStrictEqual(shapeOf(view), want((p) => v.fm.get(p)), 'every note under its parent');
+    assert.ok(Date.now() - t0 < 2000, `made and followed in ${Date.now() - t0} ms`);
+    const id = (name) => { let f = null; (function w(n) { if (n.text === `[[${name}]]`) f = n.id; n.children.forEach(w); })(view.model.root); return f; };
+    // The notes change: a new parent, a new note, a note gone.
+    v.fm.get('Album/N5.md').parent = '[[N1]]';
+    v.add('N200', { parent: '[[N3]]' });
+    const n7 = v.files.get('Album/N7.md');
+    v.folder.children.splice(v.folder.children.indexOf(n7), 1);
+    v.files.delete(n7.path);
+    const kidsOf7 = R.nodeById(view.model, id('N7')).children.map((c) => c.text);
+    view.syncAlbum();
+    assert.strictEqual(shapeOf(view).N5, 'N1');
+    assert.strictEqual(shapeOf(view).N200, 'N3');
+    assert.ok(!id('N7'), 'a note gone takes its node');
+    assert.deepStrictEqual(kidsOf7.filter((t) => R.nodeById(view.model, id(t.replace(/\[\[|\]\]/g, '')))).length, kidsOf7.length, 'what hung from it kept');
+    // A node taken off by hand: its note left out, untouched.
+    view.apply(R.removeNode(view.model, id('N9')));
+    view.syncAlbum();
+    assert.ok(!id('N9') && R.albumEntry(view.model).leftOut.includes('Album/N9.md'), 'left out, not put back');
+    // Moving nodes sets their notes' parents.
+    view.apply(R.moveNode(view.model, id('N10'), id('N2'), 0));
+    view.apply(R.moveNode(view.model, id('N20'), view.model.root.id, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(v.fm.get('Album/N10.md').parent, '[[N2]]');
+    assert.ok(!('parent' in v.fm.get('Album/N20.md')), 'onto the root: no parent');
+    // Round trip: the notes' parents and the map agree, and nothing else about a note changed.
+    view.syncAlbum();
+    const agreed = want((p) => v.fm.get(p) || {});
+    delete agreed.N7;
+    // Taken off by hand with its branch: those notes left out.
+    R.albumEntry(view.model).leftOut.forEach((pth) => delete agreed[pth.replace(/^Album\/|\.md$/g, '')]);
+    const under9 = (i) => { for (let k = i; k > 0; k = Math.floor((k - 1) / 3)) if (k === 9) return true; return false; };
+    const expectOut = []; for (let i = 0; i < 200; i++) if (under9(i)) expectOut.push(`Album/N${i}.md`);
+    assert.deepStrictEqual(R.albumEntry(view.model).leftOut.sort(), expectOut.sort(), 'N9 and its branch');
+    const shown = shapeOf(view);
+    delete shown.N200;
+    // A child of a gone note now hangs where it was moved up to: from its note's own view, its parent is gone.
+    Object.keys(agreed).forEach((k) => { if (agreed[k] === 'N7') agreed[k] = shown[k]; });
+    assert.deepStrictEqual(shown, agreed, 'the map and the notes agree');
+    before.forEach((props, path) => {
+      const now = v.fm.get(path);
+      if (!now) return;
+      const strip = (x) => { const c = Object.assign({}, x); delete c.parent; return c; };
+      assert.deepStrictEqual(strip(now), strip(props), `${path}: nothing but its parent changed`);
+    });
+    ['Album/N10.md', 'Album/N20.md'].forEach((pth) => before.delete(pth));
+    let same = 0;
+    before.forEach((props, path) => { if (v.fm.get(path) && JSON.stringify(v.fm.get(path)) === JSON.stringify(props)) same++; });
+    assert.ok(same >= 196, `${same} notes untouched, as they were written`);
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

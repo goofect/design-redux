@@ -131,7 +131,7 @@ class MindMapVaultMap {
       return null;
     }
     const model = vaultMapModel(title, items, this.vaultLinks());
-    const text = kind === MINDMAP_EXTENSION ? writeMindmapJson(model) : writeOutline(model, '', { title: name });
+    const text = kind === MINDMAP_EXTENSION ? writeMindmapJson(model) : writeOutline(model, null, { title: name });
     let file = null;
     try {
       file = await this.app.vault.create(path, text);

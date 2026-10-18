@@ -165,3 +165,18 @@ export function setSavedView(model, name, id, zoom) {
     else delete block.views[key];
   });
 }
+
+/** The collection a map follows, as kept: { path, leftOut: [paths] }, or null. */
+export function albumEntry(model) {
+  const a = model.layout && model.layout.album;
+  return a && typeof a.path === 'string' ? { path: a.path, leftOut: Array.isArray(a.leftOut) ? a.leftOut.slice() : [] } : null;
+}
+
+/** The ops that keep a map's collection entry as given — or, given null, none. */
+export function albumEntryOps(model, entry) {
+  const block = copyBlock(model);
+  if (entry) block.album = entry.leftOut && entry.leftOut.length ? { path: entry.path, leftOut: entry.leftOut } : { path: entry.path };
+  else delete block.album;
+  const next = tidyBlock(block);
+  return JSON.stringify(next) === JSON.stringify(model.layout || null) ? [] : [{ type: 'layout', layout: next }];
+}

@@ -103,6 +103,7 @@ export const DEFAULTS = {
   mindmapVaultMap: true,
   mindmapMinimap: true,
   mindmapPresent: true,
+  mindmapAlbumMap: true,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',
@@ -379,7 +380,7 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 10,
+  settingsVersion: 11,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

@@ -15,7 +15,7 @@ import { writeOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
-import { branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
+import { albumEntry, branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { NODE_ROLES, nodeRole, relationsOf, setRelationMeaning } from '../tree/407-tree-relations.js';
 import { relinkText } from '../tree/408-tree-notes.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
@@ -78,6 +78,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapVaultMap', showIf: 'mindmaps', name: 'Map a folder or tag', desc: 'A folder’s menu, or a command, makes a mind map of its notes: folders or narrower tags as branches, links between notes as relations.' },
       { key: 'mindmapMinimap', showIf: 'mindmaps', name: 'Minimap', desc: 'The whole map small in the corner while it doesn’t all fit, the part on screen outlined. Press it to go there.' },
       { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, Escape to leave. Nothing is changed.' },
+      { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -120,6 +121,7 @@ export class MindMaps extends Feature {
       { id: 'mindmap-note-to-branch', name: 'Mind map: make nodes from the linked note’s headings', icon: 'file-input', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapBranchNotes !== false && !!ctx.view.linkedNote(ctx.node), run: (ctx) => ctx.view.noteToBranch(ctx.node.id) },
       { id: 'mindmap-map-folder', name: 'Make a mind map of this folder', menu: 'Make a mind map', icon: 'network', on: 'album', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: (ctx) => this.mapFolderAsMindMap(ctx.folder) },
       { id: 'mindmap-map-tag', name: 'Make a mind map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: () => this.chooseTagToMap() },
+      { id: 'mindmap-map-album', name: 'Make a mind map of this collection by its notes’ parents', menu: 'Mind map by parent', icon: 'network', on: 'album', when: (ctx) => this.enabled && this.settings.mindmapAlbumMap !== false && !!ctx.folder && !(ctx.folder.isRoot && ctx.folder.isRoot()), run: (ctx) => this.mapAlbumAsMindMap(ctx.folder) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -142,6 +144,20 @@ export class MindMaps extends Feature {
       ws.on('file-menu', (menu, target) => {
         if (target instanceof TFolder && this.enabled) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, 'action');
       })
+    );
+    // A collection's open maps follow its notes; a collection renamed, its maps follow it.
+    const touch = (paths) => {
+      if (!this.enabled || this.settings.mindmapAlbumMap === false || this.settings.albumMapAuto === false) return;
+      this.albumMapsTouching(paths).forEach((view) => view.albumLater());
+    };
+    this.plugin.registerEvent(this.app.metadataCache.on('changed', (file) => touch([file.path])));
+    ['create', 'delete', 'rename'].forEach((type) =>
+      this.plugin.registerEvent(
+        this.app.vault.on(type, (file, oldPath) => {
+          if (type === 'rename' && file instanceof TFolder && this.enabled) this.followAlbumRename(file, oldPath);
+          touch([file.path, oldPath]);
+        })
+      )
     );
     // A note renamed: links to it in .mindmap files follow, as Obsidian keeps them up in notes.
     this.plugin.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.followRename(file, oldPath)));
@@ -372,6 +388,10 @@ export function registerMindMapHandlers() {
   handlers['canvas-compare'] = { when: on('mindmapCompare'), run: (ctx) => ctx.view.chooseComparison() };
   handlers['canvas-compare-branches'] = { when: (ctx) => on('mindmapCompare')(ctx) && !!ctx.node && ctx.node.children.length > 0, run: (ctx) => ctx.view.chooseBranchComparison(ctx.node.id) };
   handlers['canvas-compare-done'] = { when: (ctx) => !!ctx.view.findingsEl, run: (ctx) => ctx.view.closeFindings() };
+  // A collection's map.
+  const album = (ctx) => !!ctx.view.albumFolder();
+  handlers['refresh-album-map'] = { when: album, run: (ctx) => ctx.view.syncAlbum({ tell: true }) };
+  handlers['add-left-out-note'] = { when: (ctx) => album(ctx) && albumEntry(ctx.model).leftOut.length > 0, run: (ctx) => ctx.view.putBackLeftOut() };
   // Presenting a map.
   const presenting = (ctx) => !!ctx.view.presenting;
   handlers['present-map'] = { when: (ctx) => on('mindmapPresent')(ctx) && !presenting(ctx), run: (ctx) => ctx.view.present(ctx.node && ctx.node !== ctx.model.root ? ctx.node.id : null) };
