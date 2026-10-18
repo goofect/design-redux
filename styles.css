@@ -9750,3 +9750,18 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
     transition: none;
   }
 }
+
+/* On a collection's map, a parent from outside the collection: faint, with its folder's name. */
+.canvas-node.dr-album-outside {
+  opacity: 0.55;
+}
+
+.canvas-node.dr-album-outside::after {
+  content: attr(data-dr-folder);
+  position: absolute;
+  top: -20px;
+  left: 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}

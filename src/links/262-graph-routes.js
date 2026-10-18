@@ -31,7 +31,7 @@
 
 import { Setting } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
-import { fmGet } from '../core/045-helpers-properties.js';
+import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
 
 export const ROUTE_SEP = '\n';
@@ -690,11 +690,7 @@ export class GraphRoutes extends Feature {
       const raw = cache && fmGet(cache.frontmatter, prop);
       if (raw === undefined || raw === null || raw === '') return;
       const found = [];
-      (Array.isArray(raw) ? raw : [raw]).forEach((value) => {
-        if (value === null || typeof value === 'object') return;
-        const m = /^\s*!?\[\[([^\]|#]+)/.exec(String(value));
-        const linkpath = (m ? m[1] : String(value)).trim();
-        if (!linkpath) return;
+      parentLinkpaths(raw).forEach((linkpath) => {
         const dest = mc.getFirstLinkpathDest(linkpath, id);
         if (dest && dest.path !== id && found.indexOf(dest.path) === -1) found.push(dest.path);
       });

@@ -63,7 +63,7 @@ export const SETTINGS_TABS = [
         title: 'Map',
         keys: [
           'canvasMaps', 'canvasMapToolbar', 'canvasToolbarItems', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate',
-          'canvasBranches', 'canvasCloseGaps', 'canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap', 'canvasPresent', 'presentDimLevel', 'presentCaption',
+          'canvasBranches', 'canvasCloseGaps', 'canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap', 'albumMapAuto', 'albumMapWritesParent', 'albumMapLayout', 'canvasPresent', 'presentDimLevel', 'presentCaption',
         ],
       },
       { title: 'Cards', keys: ['canvasTools', 'canvasToolButtons', 'canvasDepth', 'canvasColourBy', 'canvasCardFacts', 'canvasCardChips', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },

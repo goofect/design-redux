@@ -67,6 +67,11 @@ export function removeArrow(canvas, edge) {
   guarded(() => typeof canvas.removeEdge === 'function' && canvas.removeEdge(edge), null);
 }
 
+/** A card taken off the canvas — the card only, never the note it shows. */
+export function removeCard(canvas, card) {
+  guarded(() => typeof canvas.removeNode === 'function' && canvas.removeNode(card), null);
+}
+
 /** The cards and arrows selected: [node or edge]. */
 export function pickedOnCanvas(canvas) {
   return guarded(() => (canvas && canvas.selection ? Array.from(canvas.selection) : []), []);

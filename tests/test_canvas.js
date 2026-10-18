@@ -75,7 +75,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'foldBranch, unfoldBranch, tidyBranch, tidyRecords, outlineTree, canvasCardLabel, snapshotModel, applyCanvasModel, CanvasFold, CanvasBranches, ' +
   'tuckedBBox, selectionLinks, cardRole, Knowledge, branchItems, syncedOutlineItems, outlineText, shapeOf, CanvasOutlineSync, ' +
   'CanvasArrows, elbowPoints, nearestSides, roundedPath, polylineMiddle, ARROW_HEAD_POINTS, ' +
-  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, growCards, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments, presentationOrder, CanvasPresent };\n');
+  'CanvasMap, CanvasMapToolbar, MAP_TOOLS, mapLayout, growCards, CanvasCardFacts, checklistProgress, cardTints, CanvasArrange, arrangePlaces, CanvasMindMap, cardTowards, freeSpot, CanvasFind, CanvasFocus, CanvasDuplicate, CanvasCards, PropertiesPanel, cardFrontmatter, CanvasRestructure, outlineFromMarkdown, branchMarkdown, CanvasBranchNote, CanvasOutlineBranch, directedLayout, radialLayout, outlineLayout, conceptLayout, CanvasLayouts, CanvasPins, CanvasViews, CanvasDepth, treeDepths, neighbourhood, CanvasRelations, canvasProblems, CanvasVaultMap, vaultMapData, CanvasQuickAdd, CanvasPasteLines, CanvasBranchDrag, CanvasMinimap, compareCanvases, compareBranches, CanvasCompare, CanvasArguments, presentationOrder, CanvasPresent, albumParentTree, albumMapChanges, AlbumMap, SetParentPrompt, parentLinkpaths };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2798,6 +2798,75 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     assert.strictEqual(canvas.readonly, false);
     assert.strictEqual(canvas.saves, 0, 'nothing saved');
     view.containerEl.remove();
+  });
+
+  await t('an album as a map by parent: chains, siblings, loops, several parents and outside notes; the map follows the notes; a re-link sets the parent as the setting says', async () => {
+    assert.deepStrictEqual(R.parentLinkpaths(['[[Folder/Note|shown]]', '[[Other#Part]]', 'Plain name', '![[Embed]]', 3, null, '[[Other]]']), ['Folder/Note', 'Other', 'Plain name', 'Embed', '3']);
+    const parents = {
+      'A/one.md': ['A/A.md'],
+      'A/two.md': ['A/one.md'],
+      'A/three.md': ['A/one.md'],
+      'A/x.md': ['A/y.md'],
+      'A/y.md': ['A/x.md'],
+      'A/many.md': ['A/two.md', 'A/three.md'],
+      'A/out.md': ['B/far.md'],
+      'A/lost.md': [],
+      'A/free.md': [],
+    };
+    const missingOf = { 'A/lost.md': ['Nowhere'] };
+    const notes = Object.keys(parents);
+    const tree = R.albumParentTree(notes, (p) => ({ found: parents[p], missing: missingOf[p] || [] }), 'A/A.md');
+    const up = (p) => tree.parent.get(p);
+    assert.deepStrictEqual([up('A/one.md'), up('A/two.md'), up('A/three.md')], ['A/A.md', 'A/one.md', 'A/one.md'], 'a chain, and siblings');
+    assert.deepStrictEqual([up('A/x.md'), up('A/y.md')], ['A/y.md', 'A/A.md'], 'a loop broken at the first repeat: the later arrow');
+    assert.deepStrictEqual(tree.cycles, [['A/y.md', 'A/x.md']]);
+    assert.strictEqual(up('A/many.md'), 'A/two.md', 'the first of several parents is the tree');
+    assert.ok(tree.cross.some(([f, n]) => f === 'A/three.md' && n === 'A/many.md') && tree.cross.some(([f, n]) => f === 'A/x.md' && n === 'A/y.md'), 'the rest, and the loop, dashed links');
+    assert.deepStrictEqual([up('A/out.md'), tree.outside, up('B/far.md')], ['B/far.md', ['B/far.md'], 'A/A.md'], 'a parent outside the album: its own card, under the root');
+    assert.deepStrictEqual([up('A/lost.md'), up('A/free.md'), tree.missing], ['A/A.md', 'A/A.md', [{ note: 'A/lost.md', name: 'Nowhere' }]], 'no parent, or one naming no note: under the root');
+
+    // Following the notes: new notes added, gone ones taken off, a changed parent re-linked, a card taken off left out.
+    const small = R.albumParentTree(['n1', 'n2', 'n3', 'n4'], (p) => ({ found: { n2: ['n1'], n3: ['n1'], n4: [] }[p] || [], missing: [] }), '');
+    const cards = new Map([['n1', 'c1'], ['n2', 'c2'], ['gone', 'cg']]);
+    const parentsOn = (id) => ({ c1: ['root'], c2: ['root'], cg: ['c1'] })[id] || [];
+    const plan = R.albumMapChanges(small, cards, parentsOn, new Set(['n1', 'n2', 'n3', 'gone']), [], 'root');
+    assert.deepStrictEqual(plan, { add: ['n4'], remove: ['gone'], relink: [{ path: 'n2', parent: 'n1' }], leaveOut: ['n3'] });
+    assert.deepStrictEqual(R.albumMapChanges(small, cards, parentsOn, new Set(), ['n3', 'n4'], 'root').add, [], 'left out: not added back');
+
+    // A re-link on the map: the note's parent set, or not, as the setting says.
+    const file = (path) => Object.assign(new TFile(), { path, basename: path.split('/').pop().replace(/\.md$/, ''), extension: 'md' });
+    const files = { 'A/one.md': file('A/one.md'), 'A/two.md': file('A/two.md') };
+    const view = fakeCanvas({ nodes: [card('root', 0, 0, 100, 50), Object.assign(card('c1', 200, 0, 100, 50), { type: 'file', file: 'A/one.md' }), Object.assign(card('c2', 400, 0, 100, 50), { type: 'file', file: 'A/two.md' })], edges: [] });
+    view.canvas.nodes.get('root').unknownData.drAlbumRoot = true;
+    const written = [];
+    const plugin = {
+      settings: { canvasVaultMap: true, albumMapWritesParent: 'never', graphRouteProperty: 'parent', canvasMapFiles: { 'Map.canvas': { album: 'A', via: 'parent', leftOut: [] } } },
+      saveSettings: async () => {},
+      notes: { write: async (f, change, opts) => { const fm = { Parent: 'old' }; change(fm); written.push([f.path, fm, opts.undo]); return {}; } },
+      app: { vault: { getAbstractFileByPath: (p) => files[p] || null }, workspace: {} },
+    };
+    const albums = new R.AlbumMap(plugin);
+    albums.relinked(view, 'c2', 'c1');
+    assert.deepStrictEqual(written, [], 'never: only the map');
+    plugin.settings.albumMapWritesParent = 'always';
+    await albums.relinked(view, 'c2', 'c1');
+    assert.deepStrictEqual(written[0].slice(0, 2), ['A/two.md', { Parent: '[[one]]' }], 'always: written, in the name the note already uses');
+    assert.ok(/now has “one” as its parent/.test(written[0][2]), 'with Undo');
+    await albums.relinked(view, 'c2', 'root');
+    assert.deepStrictEqual(written[1][1], {}, 'onto the collection itself: no parent');
+    plugin.settings.albumMapWritesParent = 'ask';
+    const asked = [];
+    R.SetParentPrompt.prototype.open = function () { asked.push(this); };
+    albums.relinked(view, 'c1', 'c2');
+    assert.strictEqual(asked.length, 1, 'ask: asked');
+    await asked[0].choose('map');
+    assert.strictEqual(written.length, 2, 'Just on the map: nothing written');
+    await asked[0].choose('always');
+    assert.strictEqual(written.length, 3);
+    assert.strictEqual(plugin.settings.albumMapWritesParent, 'always', 'Always set: from now on');
+    plugin.settings.canvasMapFiles = { 'Map.canvas': true };
+    albums.relinked(view, 'c2', 'c1');
+    assert.strictEqual(written.length, 3, 'a map that isn’t a collection’s: never');
   });
 
   console.log(`\n${passed} passed`);

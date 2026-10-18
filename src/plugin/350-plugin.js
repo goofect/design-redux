@@ -78,6 +78,7 @@ import { CanvasViews } from '../canvas/346-canvas-views.js';
 import { CanvasDepth } from '../canvas/347-canvas-depth.js';
 import { CanvasMap } from '../canvas/348-canvas-map.js';
 import { WorkspaceModes } from '../chrome/348-workspace-modes.js';
+import { AlbumMap } from '../canvas/349-canvas-album-map.js';
 import { CanvasMapToolbar } from '../canvas/349-canvas-map-toolbar.js';
 import { CanvasPresent } from '../canvas/349-canvas-present.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
@@ -162,6 +163,7 @@ export class DesignRedux extends Plugin {
       new CanvasBranches(this),
       new CanvasOutline(this),
       new CanvasPresent(this),
+      new AlbumMap(this),
       new CanvasFind(this),
       new CanvasFocus(this),
       new CanvasDuplicate(this),

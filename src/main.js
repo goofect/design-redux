@@ -121,6 +121,7 @@ import './canvas/347-canvas-depth.js';
 import './canvas/348-canvas-map.js';
 import './canvas/349-canvas-map-toolbar.js';
 import './canvas/349-canvas-present.js';
+import './canvas/349-canvas-album-map.js';
 import './chrome/348-workspace-modes.js';
 import './plugin/350-plugin.js';
 import './plugin/360-settings-tab.js';

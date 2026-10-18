@@ -155,3 +155,20 @@ export function propertyLabel(app, key) {
   }
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
+
+/**
+ * The notes a parent property names, as link paths to resolve: from
+ * [[Note]], [[Note|alias]], [[folder/Note#heading]], a path or plain
+ * text, one value or a list. What the graph's routes and an album's map
+ * both read, so they read it the same way.
+ */
+export function parentLinkpaths(raw) {
+  const out = [];
+  (Array.isArray(raw) ? raw : [raw]).forEach((value) => {
+    if (value === null || value === undefined || typeof value === 'object') return;
+    const m = /^\s*!?\[\[([^\]|#]+)/.exec(String(value));
+    const linkpath = (m ? m[1] : String(value)).trim();
+    if (linkpath && out.indexOf(linkpath) === -1) out.push(linkpath);
+  });
+  return out;
+}

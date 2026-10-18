@@ -707,6 +707,70 @@ describe('Design Redux in Obsidian', function () {
     expect(after.file).toBe(text);
   });
 
+  it('maps a collection by its notes’ parents, follows a changed parent, and sets one when a card is re-linked', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getAbstractFileByPath('Mapped');
+      if (old) await app.vault.delete(old, true);
+      await app.vault.createFolder('Mapped');
+      await app.vault.create('Mapped/Mapped.md', 'The collection.');
+      await app.vault.create('Mapped/Law.md', 'Law.');
+      await app.vault.create('Mapped/Rights.md', '---\nparent: "[[Law]]"\n---\nRights.');
+      await app.vault.create('Mapped/Duties.md', 'Duties.');
+    });
+    await browser.pause(500);
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const albums = plugins.designRedux.features.find((f) => f.constructor.name === 'AlbumMap');
+      await albums.mapAlbum(app.vault.getAbstractFileByPath('Mapped'));
+    });
+    await browser.$(ACTIVE + '.canvas-node').waitForExist({ timeout: 10000 });
+    // Who hangs from whom on the map, by note name.
+    const tree = () => browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      const name = (node) => {
+        const d = node.getData();
+        return d.file ? d.file.split('/').pop().replace(/\.md$/, '') : d.text;
+      };
+      const out = {};
+      canvas.edges.forEach((e) => (out[name(e.to.node)] = name(e.from.node)));
+      return out;
+    });
+    expect(await readUntil(tree, (t) => t.Rights === 'Law')).toEqual({ Law: 'Mapped', Rights: 'Law', Duties: 'Mapped' });
+    // A parent given in the note's properties: its card moves under it.
+    await browser.executeObsidian(async ({ app }) => {
+      await app.fileManager.processFrontMatter(app.vault.getAbstractFileByPath('Mapped/Duties.md'), (fm) => (fm.parent = '[[Law]]'));
+    });
+    expect((await readUntil(tree, (t) => t.Duties === 'Law', 4000)).Duties).toBe('Law');
+    // A card re-linked on the map: asked, Set, and the note's parent is the new one.
+    await browser.executeObsidian(({ app, plugins }) => {
+      plugins.designRedux.settings.albumMapWritesParent = 'ask';
+      const view = app.workspace.activeLeaf.view;
+      const byName = (n) => Array.from(view.canvas.nodes.values()).find((node) => (node.getData().file || '').endsWith(`/${n}.md`));
+      const mind = plugins.designRedux.features.find((f) => f.constructor.name === 'CanvasMindMap');
+      const rights = byName('Rights');
+      mind.relink(view, { id: rights.id, x: rights.x, y: rights.y }, byName('Duties'));
+    });
+    const set = await browser.$('.modal .mod-cta');
+    await set.waitForExist({ timeout: 5000 });
+    await set.click();
+    const parent = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const cache = app.metadataCache.getFileCache(app.vault.getAbstractFileByPath('Mapped/Rights.md'));
+        return cache && cache.frontmatter ? cache.frontmatter.parent : null;
+      }),
+      (p) => p === '[[Duties]]'
+    );
+    expect(parent).toBe('[[Duties]]');
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('canvas').filter((l) => l.view.file && l.view.file.path.startsWith('Mapped/')).forEach((l) => l.detach());
+      // The map's own save, still to come, made before its folder goes.
+      await new Promise((r) => setTimeout(r, 2500));
+      const old = app.vault.getAbstractFileByPath('Mapped');
+      if (old) await app.vault.delete(old, true);
+      // Its notices gone, so they cover nothing a later test presses.
+      document.querySelectorAll('.notice').forEach((n) => n.remove());
+    });
+  });
+
   it('shows a minimap while the cards don’t all fit, and goes where it’s pressed', async function () {
     await obsidianPage.openFile('Map.canvas');
     // Close in on one corner, so the rest is off screen.

@@ -83,6 +83,10 @@ export const DEFAULTS = {
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
+  // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
+  albumMapAuto: true,
+  albumMapWritesParent: 'ask',
+  albumMapLayout: 'right',
   // A tree of cards stepped through like a talk, the rest faded to this.
   canvasPresent: true,
   presentDimLevel: 0.15,

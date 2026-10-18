@@ -388,6 +388,9 @@ export class CanvasMindMap extends CanvasFeature {
     // Saved whether or not a card moved: its arrows changed.
     return glideAndSettle(this.plugin, view, model, before, { save: true }).then(() => {
       if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
+      // Told, for what keeps the cards and their notes in step.
+      const ws = this.app && this.app.workspace;
+      if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:canvas-relinked', view, rec.id, target.id);
       return true;
     });
   }
@@ -413,6 +416,9 @@ export class CanvasMindMap extends CanvasFeature {
     placeIn(now, mapLayout(now, arrowLinks(now)));
     return glideAndSettle(this.plugin, view, now, before, { save: true }).then(() => {
       if (typeof Notice === 'function') new Notice(`“${canvasCardLabel(rec)}” now hangs from “${canvasCardLabel(target)}”. Undo puts it back.`);
+      // Told, for what keeps the cards and their notes in step.
+      const ws = this.app && this.app.workspace;
+      if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:canvas-relinked', view, rec.id, target.id);
       return true;
     });
   }
