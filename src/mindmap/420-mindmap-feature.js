@@ -79,6 +79,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapMinimap', showIf: 'mindmaps', name: 'Minimap', desc: 'The whole map small in the corner while it doesn’t all fit, the part on screen outlined. Press it to go there.' },
       { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, Escape to leave. Nothing is changed.' },
       { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
+      { key: 'mindmapConvert', showIf: 'mindmaps', name: 'Convert maps', desc: 'Make a mind map of a canvas — its trees, folds, layouts and relations kept — or a .mindmap file of a note’s map and back, or export a map as a canvas. The original is left as it is.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -122,6 +123,10 @@ export class MindMaps extends Feature {
       { id: 'mindmap-map-folder', name: 'Make a mind map of this folder', menu: 'Make a mind map', icon: 'network', on: 'album', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: (ctx) => this.mapFolderAsMindMap(ctx.folder) },
       { id: 'mindmap-map-tag', name: 'Make a mind map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled && this.settings.mindmapVaultMap !== false, run: () => this.chooseTagToMap() },
       { id: 'mindmap-map-album', name: 'Make a mind map of this collection by its notes’ parents', menu: 'Mind map by parent', icon: 'network', on: 'album', when: (ctx) => this.enabled && this.settings.mindmapAlbumMap !== false && !!ctx.folder && !(ctx.folder.isRoot && ctx.folder.isRoot()), run: (ctx) => this.mapAlbumAsMindMap(ctx.folder) },
+      { id: 'mindmap-convert-canvas', name: 'Make a mind map of this canvas', menu: 'Make a mind map', icon: 'network', on: 'file', when: (ctx) => this.enabled && this.settings.mindmapConvert !== false && !!ctx.file && ctx.file.extension === 'canvas', run: (ctx) => this.convertCanvas(ctx.file) },
+      { id: 'mindmap-convert-to-mindmap-file', name: 'Mind map: make a .mindmap file of this map', icon: 'file-json', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file && ctx.file.extension === 'md', run: (ctx) => this.convertMapFormat(ctx.view, MINDMAP_EXTENSION) },
+      { id: 'mindmap-convert-to-note', name: 'Mind map: make a note of this map', icon: 'file-text', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file && ctx.file.extension === MINDMAP_EXTENSION, run: (ctx) => this.convertMapFormat(ctx.view, 'md') },
+      { id: 'mindmap-export-canvas', name: 'Mind map: export as a canvas', icon: 'layout-dashboard', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file, run: (ctx) => this.exportCanvas(ctx.view) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -143,6 +148,7 @@ export class MindMaps extends Feature {
     this.plugin.registerEvent(
       ws.on('file-menu', (menu, target) => {
         if (target instanceof TFolder && this.enabled) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, 'action');
+        if (target instanceof TFile && target.extension === 'canvas' && this.enabled) addActionEntries(menu, actionsOn(this.actions(), 'file'), { file: target, from: 'menu' }, 'action');
       })
     );
     // A collection's open maps follow its notes; a collection renamed, its maps follow it.

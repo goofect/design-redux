@@ -1,0 +1,101 @@
+{
+	"nodes": [
+		{
+			"id": "r",
+			"type": "text",
+			"text": "Plan",
+			"x": 0,
+			"y": 0,
+			"width": 180,
+			"height": 60,
+			"drLayout": "right"
+		},
+		{
+			"id": "a",
+			"type": "text",
+			"text": "Design",
+			"x": 300,
+			"y": -80,
+			"width": 180,
+			"height": 60,
+			"drLayout": "bottom"
+		},
+		{
+			"id": "a1",
+			"type": "text",
+			"text": "Sketches",
+			"x": 200,
+			"y": 60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "a2",
+			"type": "text",
+			"text": "Mock-ups",
+			"x": 420,
+			"y": 60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "b",
+			"type": "text",
+			"text": "Build",
+			"x": 300,
+			"y": 120,
+			"width": 180,
+			"height": 60,
+			"drNudge": {
+				"dx": 40,
+				"dy": 20
+			}
+		},
+		{
+			"id": "b1",
+			"type": "text",
+			"text": "Code",
+			"x": 600,
+			"y": 140,
+			"width": 180,
+			"height": 60
+		}
+	],
+	"edges": [
+		{
+			"id": "e-r-a",
+			"fromNode": "r",
+			"fromSide": "right",
+			"toNode": "a",
+			"toSide": "left"
+		},
+		{
+			"id": "e-r-b",
+			"fromNode": "r",
+			"fromSide": "right",
+			"toNode": "b",
+			"toSide": "left"
+		},
+		{
+			"id": "e-a-a1",
+			"fromNode": "a",
+			"fromSide": "bottom",
+			"toNode": "a1",
+			"toSide": "top"
+		},
+		{
+			"id": "e-a-a2",
+			"fromNode": "a",
+			"fromSide": "bottom",
+			"toNode": "a2",
+			"toSide": "top"
+		},
+		{
+			"id": "e-b-b1",
+			"fromNode": "b",
+			"fromSide": "right",
+			"toNode": "b1",
+			"toSide": "left"
+		}
+	]
+}

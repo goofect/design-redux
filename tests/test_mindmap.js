@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1077,6 +1077,98 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     let same = 0;
     before.forEach((props, path) => { if (v.fm.get(path) && JSON.stringify(v.fm.get(path)) === JSON.stringify(props)) same++; });
     assert.ok(same >= 196, `${same} notes untouched, as they were written`);
+  });
+
+  const fixtures = fs.readdirSync(path.join(__dirname, 'fixtures', 'canvas')).filter((f) => f.endsWith('.canvas')).sort();
+  const fixture = (name) => fs.readFileSync(path.join(__dirname, 'fixtures', 'canvas', name), 'utf8');
+  // A map's shape by its nodes' words — a node without an id gets a new one each time it's read.
+  const shapeOfModel = (m) => {
+    const go = (n) => [n.text, n.attrs, n.children.map(go)];
+    const text = (id) => R.nodeById(m, id).text;
+    return [go(m.root), m.free.map(go), m.relations.map((r) => [text(r.from), text(r.to), r.label, r.attrs]), m.layout, m.mode || null];
+  };
+
+  await t('every canvas fixture converts to a map, written either way and read back the same, laid out where the canvas’s own map engine puts it', async () => {
+    assert.ok(fixtures.length >= 6, fixtures.join());
+    fixtures.forEach((name) => {
+      const data = JSON.parse(fixture(name));
+      const title = name.replace(/\.canvas$/, '');
+      const { model } = R.mapFromCanvas(data, { title });
+      const md = R.parseOutline(R.writeOutline(model, null, { title }), { title }).model;
+      assert.deepStrictEqual(shapeOfModel(md), shapeOfModel(model), `${name}: as a note and back`);
+      assert.deepStrictEqual(shapeOfModel(R.parseMindmapJson(R.writeMindmapJson(model))), shapeOfModel(model), `${name}: as a .mindmap file and back`);
+      if (model.root.virtual) return;
+      // The same cards laid out by the canvas's map engine, and by the map: within a pixel, the root where it is.
+      const cards = R.modelFromData(data);
+      cards.nodes.forEach((r) => { r.node = { unknownData: data.nodes.find((n) => n.id === r.id) }; });
+      const places = R.mapLayout(cards, R.arrowLinks(cards)).places;
+      const size = new Map(data.nodes.map((n) => [n.id, { width: n.width, height: n.height }]));
+      const scene = R.layoutScene(model, (n) => size.get(n.id), model.mode || 'right');
+      const root = places.get(model.root.id);
+      scene.boxes.forEach((b, id) => {
+        const at = places.get(id);
+        assert.ok(at && Math.abs(at.x - root.x - b.x) <= 1 && Math.abs(at.y - root.y - b.y) <= 1, `${name}: ${id} at ${b.x},${b.y}; on the canvas ${at && at.x - root.x},${at && at.y - root.y}`);
+      });
+    });
+  });
+
+  await t('a canvas’s kept keys find their place in the map: folds, master, pins, colours, parts, groups, relations and their styles, layouts and nudges', async () => {
+    const conv = (name) => R.mapFromCanvas(JSON.parse(fixture(name)), { title: name });
+    const node = (m, id) => R.nodeById(m, id);
+    let { model, report } = conv('folds.canvas');
+    assert.deepStrictEqual([node(model, 'a').attrs.fold, node(model, 'a').children.map((c) => c.id)], [1, ['a1', 'a2']], 'a fold, what it holds under it');
+    assert.deepStrictEqual([node(model, 'b').attrs.master, node(model, 'b').attrs.color], [1, '4']);
+    assert.deepStrictEqual(node(model, 'p').attrs.pin, [300, 200], 'pinned where it lay, from the root');
+    ({ model } = conv('branch-layout.canvas'));
+    assert.strictEqual(model.mode, 'right');
+    assert.deepStrictEqual([model.layout.branch, model.layout.nudge], [{ a: 'bottom' }, { b: [40, 20] }]);
+    assert.ok(node(model, 'a').anchor && node(model, 'b').anchor, 'given their ids');
+    ({ model } = conv('relations.canvas'));
+    assert.deepStrictEqual(model.relations, [
+      { from: 'a', to: 'b', label: 'contrasts with', attrs: { kind: 'contrasts with', style: 'dotted', shape: 'elbow', head: 'diamond', color: '1' } },
+      { from: 'c', to: 'b', label: 'constrains', attrs: { predicate: 'constrains' } },
+      { from: 'c', to: 'c1', label: '', attrs: { style: 'dashed' } },
+    ]);
+    assert.strictEqual(node(model, 'c1').parent.id, 'a', 'two parents: the first to reach it, as the canvas reads it; the other a dashed relation');
+    assert.deepStrictEqual([node(model, 'c').attrs.role, node(model, 'c1').attrs.role], ['claim', 'reason']);
+    ({ model, report } = conv('groups-notes.canvas'));
+    assert.ok(model.root.virtual, 'two trees: a root of their own');
+    assert.deepStrictEqual(model.root.children.map((c) => c.id), ['r', 't2']);
+    assert.deepStrictEqual(model.free.map((n) => n.id), ['loose'], 'a card joined to nothing: free');
+    assert.deepStrictEqual([node(model, 'f').text, node(model, 'f').attrs.group, node(model, 'u').text], ['[[Notes/Deterrence]]', 'Sources', '[https://example.com](https://example.com)']);
+    assert.deepStrictEqual(report, ['The group “Loose ends”'], 'what has no place, said');
+  });
+
+  await t('converting a canvas leaves it byte for byte as it was; a map exported as a canvas converts back to the same tree', async () => {
+    const text = fixture('relations.canvas');
+    const created = new Map();
+    const app = {
+      vault: {
+        read: async () => text,
+        create: async (pth, t) => { created.set(pth, t); return new TFile(pth); },
+        modify: async () => { throw new Error('the canvas written to'); },
+        getAbstractFileByPath: () => null,
+        getRoot: () => ({ path: '/' }),
+      },
+      metadataCache: {},
+      workspace: { getLeaf: () => ({ openFile: async () => {} }) },
+    };
+    const p = { settings: Object.assign({}, plugin.settings, { mindmapDefaultFormat: 'md' }), app, freeChildPath: (fo, base, ext) => `${base}.${ext}` };
+    const maps = new R.MindMaps(p);
+    const canvasFile = new TFile('relations.canvas');
+    await maps.convertCanvas(canvasFile);
+    assert.deepStrictEqual(Array.from(created.keys()), ['relations map.md']);
+    assert.strictEqual(text, fixture('relations.canvas'), 'the canvas as it was');
+    // Exported, and read back.
+    const view = await open(created.get('relations map.md'), 'relations map.md');
+    view.app = app;
+    view.plugin = p;
+    created.clear();
+    await maps.exportCanvas(view);
+    const back = R.mapFromCanvas(JSON.parse(created.get('relations map.canvas')));
+    const ids = (m) => { const go = (n) => [n.id, n.children.map(go)]; return go(m.root); };
+    assert.deepStrictEqual(ids(back.model), ids(view.model));
+    assert.deepStrictEqual(back.model.relations.map((r) => [r.from, r.to, r.attrs.kind || r.attrs.predicate || '']), view.model.relations.map((r) => [r.from, r.to, r.attrs.kind || r.attrs.predicate || '']));
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {
