@@ -37,6 +37,15 @@ export function moveBefore(list, item, before) {
 /* Settings kept by a file or folder's path, which follow it when it moves. */
 export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums'];
 
+/* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
+export const MINDMAP_TWINS = [
+  ['canvasLegend', 'mindmapLegend'],
+  ['canvasDepth', 'mindmapDepth'],
+  ['canvasColourBy', 'mindmapColourBy', (v) => (v === 'branch' || v === 'depth' ? v : '')],
+  ['canvasPins', 'mindmapPins'],
+  ['canvasViews', 'mindmapViews'],
+];
+
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
  * or reshaped, a step here carries the old value across, so a choice
@@ -134,6 +143,16 @@ export const SETTINGS_MIGRATIONS = [
     run(saved) {
       saved.panelRelationships = false;
       saved.panelPlaces = false;
+    },
+  },
+  {
+    // Mind maps of their own take the choices made for the canvas's maps:
+    // the legend, depth, tints, pinned cards and views. The canvas keeps its own.
+    to: 10,
+    run(saved) {
+      MINDMAP_TWINS.forEach(([from, to, as]) => {
+        if (saved[from] !== undefined) saved[to] = as ? as(saved[from]) : saved[from];
+      });
     },
   },
 ];

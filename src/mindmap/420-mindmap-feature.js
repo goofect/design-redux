@@ -15,7 +15,7 @@ import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
-import { branchLayoutOf, clearNudges, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
+import { branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
@@ -246,5 +246,19 @@ export function registerMindMapHandlers() {
     'canvas-map-tidy': { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) },
     'tidy-canvas-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(clearNudges(ctx.model, ctx.node.id)) },
   };
+  // Arrange and align, on a map, are the layout's: a row or a column is a branch's layout; lining up puts its children back in line.
+  const withKids = (ctx) => !!ctx.node && ctx.node.children.length > 0;
+  handlers['arrange-canvas-row'] = { when: withKids, run: (ctx) => ctx.view.apply(setBranchLayout(ctx.model, ctx.node.id, 'bottom')) };
+  handlers['arrange-canvas-column'] = { when: withKids, run: (ctx) => ctx.view.apply(setBranchLayout(ctx.model, ctx.node.id, 'right')) };
+  ['left', 'center', 'right', 'top', 'middle', 'bottom', 'space-across', 'space-down'].forEach((a) => {
+    handlers[`arrange-canvas-${a}`] = { when: withKids, run: (ctx) => ctx.view.apply(lineUpChildren(ctx.model, ctx.node.id)) };
+  });
+  handlers['canvas-spread-overlaps'] = { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) };
+  // Moving a node about the tree, under the canvas's names for it.
+  const notRoot = (ctx) => !!ctx.node && ctx.node !== ctx.model.root;
+  handlers['canvas-promote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) };
+  handlers['canvas-demote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(indentNode(ctx.model, ctx.node.id)) };
+  handlers['canvas-card-earlier'] = { when: notRoot, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, -1)) };
+  handlers['canvas-card-later'] = { when: notRoot, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) };
   Object.keys(handlers).forEach((id) => MINDMAP_HANDLERS.set(id, handlers[id]));
 }

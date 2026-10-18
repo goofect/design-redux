@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -577,6 +577,39 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     R.MINDMAP_HANDLERS.get('canvas-view-back').run({ view });
     assert.deepStrictEqual(view.camera, before, 'and back to where it began');
     assert.ok(!R.MINDMAP_HANDLERS.get('canvas-view-back').when({ view }), 'nothing more to go back to');
+  });
+
+  await t('arrange and align on a map are the layout’s: a row or a column lays the branch out so; lining up puts the children back in line', async () => {
+    const view = await open(NOTE);
+    R.registerMindMapHandlers();
+    const build = view.model.root.children[1];
+    const run = (id, node) => R.MINDMAP_HANDLERS.get(id).run({ view, model: view.model, node });
+    run('arrange-canvas-row', build);
+    assert.strictEqual(R.branchLayoutOf(view.model, build.id), 'bottom');
+    run('arrange-canvas-column', build);
+    assert.strictEqual(R.branchLayoutOf(view.model, build.id), 'right');
+    view.apply(R.setNudge(view.model, build.children[0].id, 20, 10));
+    view.apply(R.setNudge(view.model, build.id, 5, 5));
+    run('arrange-canvas-left', build);
+    assert.strictEqual(R.nodeNudge(view.model, build.children[0].id), null, 'the children lined up');
+    assert.deepStrictEqual(R.nodeNudge(view.model, build.id), [5, 5], 'Build itself left be');
+    run('canvas-card-earlier', build);
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Build', 'Research', 'Ship'], 'the canvas’s names for moving a node about');
+    run('canvas-demote-card', view.model.root.children[1]);
+    assert.deepStrictEqual(build.children.map((c) => c.text), ['API', 'UI', 'Research']);
+  });
+
+  await t('settings saved by 2.0: the mind map takes the canvas maps’ legend, depth, tints, pins and views', async () => {
+    const saved = { settingsVersion: 9, canvasLegend: false, canvasDepth: false, canvasColourBy: 'branch', canvasPins: false, canvasViews: true, mindmapLegend: true, canvasTidy: false };
+    R.SETTINGS_MIGRATIONS.filter((m) => m.to > saved.settingsVersion).sort((a, b) => a.to - b.to).forEach((m) => { m.run(saved); saved.settingsVersion = m.to; });
+    assert.deepStrictEqual(
+      [saved.mindmapLegend, saved.mindmapDepth, saved.mindmapColourBy, saved.mindmapPins, saved.mindmapViews, saved.settingsVersion],
+      [false, false, 'branch', false, true, R.DEFAULTS.settingsVersion]
+    );
+    assert.strictEqual(saved.canvasLegend, false, 'the canvas keeps its own');
+    const none = { settingsVersion: 9, canvasColourBy: 'none' };
+    R.SETTINGS_MIGRATIONS.filter((m) => m.to > 9).forEach((m) => m.run(none));
+    assert.strictEqual(none.mindmapColourBy, '', 'no tint');
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

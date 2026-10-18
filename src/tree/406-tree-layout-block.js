@@ -82,6 +82,16 @@ export function clearNudges(model, branchId) {
   }, branchId ? [branchId] : []);
 }
 
+/** A node's children back in line, as the layout puts them: their own nudges let go, what's below them left be. */
+export function lineUpChildren(model, id) {
+  const n = nodeById(model, id);
+  if (!n || !n.children.length) return null;
+  const kids = new Set(n.children.map((c) => c.id));
+  return changeBlock(model, [], (block) => {
+    if (block.nudge) Object.keys(block.nudge).forEach((k) => kids.has(k) && delete block.nudge[k]);
+  }, [id]);
+}
+
 /**
  * A branch laid out its own way — or, for the root, the whole map. No
  * mode, for a branch, has it grow as the branch above it does.
