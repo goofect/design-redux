@@ -265,8 +265,8 @@ export class Study extends Feature {
     let top = null;
     liveCards(canvas).forEach((card) => {
       const box = cardBox(card);
-      right = Math.max(right, box.x + box.width);
-      top = top === null ? box.y : Math.min(top, box.y);
+      right = Math.max(right, box.maxX);
+      top = top === null ? box.minY : Math.min(top, box.minY);
     });
     const card = addTextCard(canvas, { x: right + 60, y: top || 0, width: 320, height: 140 }, `> ${h.text}\n\n— [[${h.file.basename}]]`);
     if (!card) return false;

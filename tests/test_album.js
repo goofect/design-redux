@@ -793,6 +793,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(kept[cards[0].key].grade, 'got');
     assert.strictEqual(kept[cards[1].key].lapses, 1);
     assert.deepStrictEqual(await study.quizCards(), [], 'the day’s cap reached');
+    // As a card on the open canvas, to the right of what's there.
+    const made = [];
+    const canvas = { nodes: new Map([['n', { getBBox: () => ({ minX: 0, minY: 40, maxX: 200, maxY: 100 }) }]]), createTextNode: (o) => (made.push(o), {}), requestSave: () => {} };
+    app.workspace.getLeavesOfType = (t) => (t === 'canvas' ? [{ view: { canvas, file: { basename: 'Map' } } }] : []);
+    assert.ok(study.addToCanvas(cards[0]));
+    assert.deepStrictEqual([made[0].pos, made[0].text], [{ x: 260, y: 40 }, `> ${cards[0].text}\n\n— [[${cards[0].file.basename}]]`]);
+    app.workspace.getLeavesOfType = () => [];
     // A renamed note keeps its passages' schedule.
     R.studyOf(plugin).followRename({ path: 'IR/Anarchism.md' }, 'IR/Anarchy.md');
     assert.ok(Object.keys(R.studyOf(plugin).data.cards).some((k) => k.startsWith('IR/Anarchism.md#')));
