@@ -102,6 +102,7 @@ export const DEFAULTS = {
   mindmapCompare: true,
   mindmapVaultMap: true,
   mindmapMinimap: true,
+  mindmapPresent: true,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',

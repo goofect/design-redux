@@ -14,7 +14,7 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { bindSource, parseOutline, writeOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
-import { applyPatch, setAttr } from '../tree/404-tree-ops.js';
+import { applyPatch, setAttr, undoPatch } from '../tree/404-tree-ops.js';
 import { UndoStack } from '../tree/405-tree-history.js';
 import { boundsOfBoxes, estimateSize, fitCamera, layoutScene, nodeLabel, nodeTints } from './423-mindmap-scene.js';
 import { MindMapRenderer } from './424-mindmap-render.js';
@@ -156,7 +156,7 @@ export class MindMapView extends TextFileView {
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null });
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null });
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (typeof this.drawMinimap === 'function') this.drawMinimap(this.scene);
     if (this.outlineEl) this.drawOutline();
@@ -223,6 +223,11 @@ export class MindMapView extends TextFileView {
    */
   apply(patch, typing) {
     if (!patch || !this.model) return null;
+    // A presentation changes nothing: what was made of the patch is put back.
+    if (this.presenting) {
+      undoPatch(this.model, patch);
+      return null;
+    }
     this.undo.push(patch, typing, this.selected ? [this.selected] : []);
     this.pending.push(patch);
     if (patch.selection && patch.selection.length && !typing) this.selected = patch.selection[0];
@@ -233,7 +238,7 @@ export class MindMapView extends TextFileView {
   }
 
   undoStep(redo) {
-    if (!this.model) return;
+    if (!this.model || this.presenting) return;
     // What the step will do, kept as a change not yet written, like any other.
     const step = redo ? this.undo.undone[this.undo.undone.length - 1] : this.undo.done[this.undo.done.length - 1];
     const ops = step ? (redo ? step.step.patch.ops : step.patch.inverse) : [];
@@ -340,6 +345,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.stopGlide === 'function') this.stopGlide();
     if (typeof this.closePeek === 'function') this.closePeek();
     if (typeof this.closeFindings === 'function') this.closeFindings();
+    if (typeof this.endPresent === 'function') this.endPresent();
     if (typeof this.dropAllText === 'function') this.dropAllText();
     if (typeof this.flushSave === 'function') this.flushSave();
   }

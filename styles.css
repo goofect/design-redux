@@ -9658,8 +9658,30 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
  * reached — and a trail along the foot.
  */
 
-.dr-presenting .canvas-node {
+.dr-presenting .canvas-node,
+.dr-presenting .dr-mindmap-node {
   transition: opacity 240ms ease;
+}
+
+.dr-presenting .dr-mindmap-node.dr-present-dim {
+  opacity: var(--dr-present-dim, 0.15);
+}
+
+.dr-presenting .dr-mindmap-node.dr-present-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dr-presenting .dr-mindmap-node.dr-present-now {
+  box-shadow: 0 0 0 3px var(--interactive-accent), var(--shadow-l);
+}
+
+.dr-mindmap.dr-presenting .dr-mindmap-edges {
+  opacity: 0.5;
+}
+
+.dr-mindmap.dr-presenting :is(.dr-mindmap-bar, .dr-mindmap-legend, .dr-mindmap-minimap, .dr-mindmap-findings) {
+  display: none;
 }
 
 .dr-presenting .canvas-node.dr-present-dim {
@@ -9751,7 +9773,8 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-presenting .canvas-node {
+  .dr-presenting .canvas-node,
+  .dr-presenting .dr-mindmap-node {
     transition: none;
   }
 }

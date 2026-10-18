@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -880,6 +880,47 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.draw();
     assert.ok(el().hasClass('is-hidden'), 'switched off');
     plugin.settings.mindmapMinimap = true;
+  });
+
+  await t('present a map: depth first from the root, each node once; nothing changes while it runs; leaving puts back the view and the selection', async () => {
+    const m = R.parseOutline('- r ^r\n\t- a ^a\n\t\t- a1 ^a1\n\t- b ^b\n\t\t- b1 ^b1 %%{"fold":1}%%\n\t\t\t- hidden\n\n## Free nodes\n- s ^s\n').model;
+    const order = R.mapPresentation(m);
+    assert.deepStrictEqual(order.map((o) => o.id), ['r', 'a', 'a1', 'b', 'b1', 's'], 'in the list’s order; a folded branch one step; free nodes after');
+    assert.deepStrictEqual(order[2].ancestors, ['r', 'a']);
+    assert.deepStrictEqual(R.mapPresentation(m, 'a').map((o) => o.id), ['a', 'a1'], 'from a node: its branch');
+    // Live.
+    const view = await open('- r ^r\n\t- a ^a\n\t\t- a1 ^a1\n\t- b ^b\n');
+    view.select('b');
+    const camera = Object.assign({}, view.camera);
+    const text = view.text;
+    plugin.settings.presentDimLevel = 0.2;
+    view.present(null);
+    const cls = (id, c) => view.renderer.nodeEls.get(id).hasClass(c);
+    assert.ok(view.root.hasClass('dr-presenting') && view.selected === null);
+    assert.ok(cls('r', 'dr-present-now') && cls('a', 'dr-present-dim'));
+    const press = (key) => window.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    view.app = { workspace: { activeLeaf: view.leaf } };
+    press('ArrowRight');
+    press('ArrowRight');
+    assert.ok(cls('a1', 'dr-present-now') && !cls('a', 'dr-present-dim') && !cls('r', 'dr-present-dim') && cls('b', 'dr-present-dim'), 'the node and those above it at full strength');
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-present-crumb')).map((e) => e.textContent), ['r', 'a', 'a1'], 'the trail: root to node');
+    assert.strictEqual(view.contentEl.querySelector('.dr-present-count').textContent, '3 of 4');
+    press('ArrowUp');
+    assert.ok(cls('a', 'dr-present-now'), 'up: its parent');
+    press('r');
+    assert.ok(cls('b', 'dr-present-hidden') && !cls('a', 'dr-present-hidden'), 'reveal: not yet reached, hidden');
+    // Nothing changes while it runs.
+    view.dropNode({ node: 'b', target: { parentId: 'a', index: 0, target: 'a', zone: 'child' } });
+    view.edit('a');
+    assert.ok(!view.editing && view.model.root.children.map((c) => c.id).join() === 'a,b', 'no move, no typing');
+    view.contentEl.querySelector('.dr-present-crumb').click();
+    assert.ok(cls('r', 'dr-present-now'), 'a name in the trail goes to its node');
+    press('Escape');
+    assert.ok(!view.root.hasClass('dr-presenting') && !view.contentEl.querySelector('.dr-present-bar, .dr-present-now, .dr-present-dim, .dr-present-hidden'));
+    assert.deepStrictEqual(view.camera, camera, 'the view as it was');
+    assert.strictEqual(view.selected, 'b', 'the selection as it was');
+    view.flushSave();
+    assert.strictEqual(view.text, text, 'nothing written');
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

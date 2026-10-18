@@ -56,6 +56,7 @@ export class MindMapRenderer {
     this.fade = state.fade || null;
     this.roles = state.roles !== false;
     this.marks = state.marks || null;
+    this.present = state.present || null;
     this.place(camera);
     const { width, height } = this.size();
     const view = viewBox(camera, width, height, DRAW_MARGIN / camera.zoom);
@@ -129,6 +130,10 @@ export class MindMapRenderer {
     else delete el.dataset.tint;
     el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
     el.toggleClass('is-pinned', !!pinOf(n));
+    const pr = this.present;
+    el.toggleClass('dr-present-now', !!pr && pr.now === n.id);
+    el.toggleClass('dr-present-dim', !!pr && !pr.lit.has(n.id));
+    el.toggleClass('dr-present-hidden', !!pr && pr.reveal && !pr.seen.has(n.id));
     const mark = this.marks && this.marks.get(n.id);
     if (mark) el.dataset.mark = mark;
     else delete el.dataset.mark;

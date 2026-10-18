@@ -34,7 +34,7 @@ export function linkCompletions(app) {
 class MindMapEditing {
   /** A node edited: its text in an editor over its box. `replace` starts it over with those characters. */
   edit(id, replace) {
-    if (!this.model || this.failure) return;
+    if (!this.model || this.failure || this.presenting) return;
     const n = nodeById(this.model, id);
     if (!n || n.virtual) return;
     this.closeEditor(true);

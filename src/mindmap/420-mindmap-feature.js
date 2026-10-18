@@ -77,6 +77,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapCompare', showIf: 'mindmaps', name: 'Compare maps', desc: 'Keep a snapshot of a map and compare with it later, or with another map, or one branch with another.' },
       { key: 'mindmapVaultMap', showIf: 'mindmaps', name: 'Map a folder or tag', desc: 'A folder’s menu, or a command, makes a mind map of its notes: folders or narrower tags as branches, links between notes as relations.' },
       { key: 'mindmapMinimap', showIf: 'mindmaps', name: 'Minimap', desc: 'The whole map small in the corner while it doesn’t all fit, the part on screen outlined. Press it to go there.' },
+      { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, Escape to leave. Nothing is changed.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -371,6 +372,12 @@ export function registerMindMapHandlers() {
   handlers['canvas-compare'] = { when: on('mindmapCompare'), run: (ctx) => ctx.view.chooseComparison() };
   handlers['canvas-compare-branches'] = { when: (ctx) => on('mindmapCompare')(ctx) && !!ctx.node && ctx.node.children.length > 0, run: (ctx) => ctx.view.chooseBranchComparison(ctx.node.id) };
   handlers['canvas-compare-done'] = { when: (ctx) => !!ctx.view.findingsEl, run: (ctx) => ctx.view.closeFindings() };
+  // Presenting a map.
+  const presenting = (ctx) => !!ctx.view.presenting;
+  handlers['present-map'] = { when: (ctx) => on('mindmapPresent')(ctx) && !presenting(ctx), run: (ctx) => ctx.view.present(ctx.node && ctx.node !== ctx.model.root ? ctx.node.id : null) };
+  handlers['present-next'] = { when: presenting, run: (ctx) => ctx.view.presentGo(ctx.view.presenting.at + 1) };
+  handlers['present-back'] = { when: presenting, run: (ctx) => ctx.view.presentGo(ctx.view.presenting.at - 1) };
+  handlers['present-exit'] = { when: presenting, run: (ctx) => ctx.view.endPresent() };
   // Moving a node about the tree, under the canvas's names for it.
   const notRoot = (ctx) => !!ctx.node && ctx.node !== ctx.model.root;
   handlers['canvas-promote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) };
