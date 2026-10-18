@@ -16,6 +16,7 @@ import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
 import { branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
+import { NODE_ROLES, nodeRole, relationsOf, setRelationMeaning } from '../tree/407-tree-relations.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
@@ -67,6 +68,8 @@ export class MindMaps extends Feature {
       },
       { key: 'mindmapPins', showIf: 'mindmaps', name: 'Pin nodes in place', desc: 'Keep in place pins the selected node where it is; the layout leaves it, and what hangs from it, there.' },
       { key: 'mindmapViews', showIf: 'mindmaps', name: 'Saved views and Back', desc: 'Keep a view of a map by name, go back to it, and step back after each jump.' },
+      { key: 'mindmapRelations', showIf: 'mindmaps', name: 'Relations', desc: 'Relate any two nodes — by command, or dragging one onto the other with Alt held — and say what it means: a kind of relationship, or your own words.' },
+      { key: 'mindmapArguments', showIf: 'mindmaps', name: 'Arguments', desc: 'A node can be a claim, a reason, an objection, a rebuttal or evidence, shown above it; a claim counts what’s for and against it.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -82,6 +85,7 @@ export class MindMaps extends Feature {
   }
 
   actions() {
+    const rel = () => this.settings.mindmapRelations !== false;
     const mapView = () => {
       const leaf = this.app.workspace.activeLeaf;
       return leaf && leaf.view instanceof MindMapView ? leaf : null;
@@ -100,6 +104,10 @@ export class MindMaps extends Feature {
       { id: 'mindmap-save-view', name: 'Mind map: keep this view…', icon: 'bookmark-plus', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && !!ctx.view.camera, run: (ctx) => ctx.view.saveView() },
       { id: 'mindmap-go-to-view', name: 'Mind map: go to a kept view…', icon: 'bookmark', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && Object.keys(savedViews(ctx.model)).length > 0, run: (ctx) => ctx.view.chooseView(false) },
       { id: 'mindmap-forget-view', name: 'Mind map: forget a kept view…', icon: 'bookmark-x', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && Object.keys(savedViews(ctx.model)).length > 0, run: (ctx) => ctx.view.chooseView(true) },
+      { id: 'mindmap-relate-node', name: 'Mind map: relate the selected node to another…', icon: 'waypoints', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && !!ctx.node, run: (ctx) => ctx.view.relateFrom(ctx.node.id) },
+      { id: 'mindmap-remove-relation', name: 'Mind map: remove a relation of the selected node…', icon: 'unlink', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && !!ctx.node && relationsOf(ctx.model, ctx.node.id).length > 0, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.removeRelationAt(i)) },
+      { id: 'mindmap-find-statement', name: 'Mind map: find a statement…', icon: 'search', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && ctx.view.statements().length > 0, run: (ctx) => ctx.view.findStatement() },
+      { id: 'mindmap-statements-note', name: 'Mind map: write what the map states as a note', icon: 'file-text', on: 'mindmap', menu: false, when: (ctx) => rel(ctx) && ctx.view.statements().length > 0, run: (ctx) => ctx.view.statementsNote() },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -254,6 +262,18 @@ export function registerMindMapHandlers() {
     handlers[`arrange-canvas-${a}`] = { when: withKids, run: (ctx) => ctx.view.apply(lineUpChildren(ctx.model, ctx.node.id)) };
   });
   handlers['canvas-spread-overlaps'] = { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) };
+  // Relations and arguments, under the canvas's names for them.
+  const related = (ctx) => !!ctx.node && relationsOf(ctx.model, ctx.node.id).length > 0 && ctx.view.plugin && ctx.view.plugin.settings.mindmapRelations !== false;
+  handlers['canvas-name-relationship'] = { when: related, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.nameRelation(i)) };
+  handlers['canvas-state-proposition'] = { when: related, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.stateProposition(i)) };
+  handlers['canvas-reverse-relationship'] = { when: related, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.reverseRelationAt(i)) };
+  handlers['canvas-relation-none'] = { when: related, run: (ctx) => ctx.view.pickRelation(ctx.node.id, (i) => ctx.view.apply(setRelationMeaning(ctx.model, i, null))) };
+  const arguing = (ctx) => !!ctx.node && !ctx.node.virtual && ctx.view.plugin && ctx.view.plugin.settings.mindmapArguments !== false;
+  Object.keys(NODE_ROLES).forEach((role) => {
+    handlers[`canvas-make-${role}`] = { when: arguing, run: (ctx) => ctx.view.setRole(ctx.node.id, role) };
+    if (role !== 'claim') handlers[`canvas-add-${role}`] = { when: arguing, run: (ctx) => ctx.view.answer(ctx.node.id, role) };
+  });
+  handlers['canvas-clear-part'] = { when: (ctx) => arguing(ctx) && !!nodeRole(ctx.node), run: (ctx) => ctx.view.setRole(ctx.node.id, null) };
   // Moving a node about the tree, under the canvas's names for it.
   const notRoot = (ctx) => !!ctx.node && ctx.node !== ctx.model.root;
   handlers['canvas-promote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) };

@@ -7,6 +7,7 @@
 /* elements of nodes gone off screen are kept to be used again.        */
 /* ------------------------------------------------------------------ */
 
+import { NODE_ROLES, nodeRole, roleLabel } from '../tree/407-tree-relations.js';
 import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, pinOf, viewBox } from './423-mindmap-scene.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -53,6 +54,7 @@ export class MindMapRenderer {
     const { model, scene, camera, selected, mode } = state;
     this.tints = state.tints || new Map();
     this.fade = state.fade || null;
+    this.roles = state.roles !== false;
     this.place(camera);
     const { width, height } = this.size();
     const view = viewBox(camera, width, height, DRAW_MARGIN / camera.zoom);
@@ -126,6 +128,14 @@ export class MindMapRenderer {
     else delete el.dataset.tint;
     el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
     el.toggleClass('is-pinned', !!pinOf(n));
+    const role = this.roles ? nodeRole(n) : null;
+    if (role) {
+      el.dataset.role = role;
+      el.dataset.roleLabel = roleLabel(n);
+    } else if (el.dataset.role) {
+      delete el.dataset.role;
+      delete el.dataset.roleLabel;
+    }
     el.style.left = `${b.x}px`;
     el.style.top = `${b.y}px`;
     el.style.width = `${b.width}px`;
@@ -145,7 +155,10 @@ export class MindMapRenderer {
       n.children.forEach((c) => {
         const own = colourKey(c) || colour;
         const to = scene.boxes.get(c.id);
-        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge', colour: own || this.tints.get(c.id) || null });
+        if (from && to && (meets(from, view) || meets(to, view))) {
+          const role = this.roles ? nodeRole(c) : null;
+          want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge', colour: own || this.tints.get(c.id) || null, label: role ? NODE_ROLES[role].edge : '', from, to });
+        }
         walk(c, own);
       });
     };
@@ -161,6 +174,9 @@ export class MindMapRenderer {
         colour: a.color !== undefined && a.color !== '' ? String(a.color) : null,
         line: RELATION_LINES.includes(a.style) ? a.style : 'dashed',
         head: a.head === 'none' ? null : RELATION_HEADS.includes(a.head) ? a.head : 'arrow',
+        label: r.label || '',
+        from,
+        to,
       });
     });
     if (want.some((w) => w.head)) this.markers();
@@ -186,6 +202,35 @@ export class MindMapRenderer {
       else p.removeAttribute('data-line');
       if (w.head) p.setAttribute('marker-end', `url(#${this.markerId}-${w.head})`);
       else p.removeAttribute('marker-end');
+    });
+    this.drawLabels(want.filter((w) => w.label));
+  }
+
+  /** What an edge or relation says, written halfway along it. */
+  drawLabels(labelled) {
+    if (!this.labels) this.labels = [];
+    const doc = this.host.ownerDocument;
+    while (this.labels.length < labelled.length) {
+      const t = doc.createElementNS(SVG, 'text');
+      t.setAttribute('class', 'dr-mindmap-label');
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('dominant-baseline', 'central');
+      this.svg.appendChild(t);
+      this.labels.push(t);
+    }
+    this.labels.forEach((t, k) => {
+      const w = labelled[k];
+      if (!w) {
+        t.style.display = 'none';
+        return;
+      }
+      const x = (w.from.x + w.from.width / 2 + w.to.x + w.to.width / 2) / 2;
+      const y = (w.from.y + w.from.height / 2 + w.to.y + w.to.height / 2) / 2;
+      t.setAttribute('x', String(Math.round(x)));
+      t.setAttribute('y', String(Math.round(y)));
+      t.classList.toggle('is-relation', w.cls === 'dr-mindmap-relation');
+      if (t.textContent !== w.label) t.textContent = w.label;
+      t.style.display = '';
     });
   }
 

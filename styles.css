@@ -9840,6 +9840,43 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 :is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='5'] { stroke: var(--color-cyan); }
 :is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='6'] { stroke: var(--color-purple); }
 
+.dr-mindmap-label {
+  fill: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  paint-order: stroke;
+  stroke: var(--background-primary);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.dr-mindmap-label.is-relation {
+  fill: var(--text-accent);
+}
+
+/* A node's part in an argument, above it, and a stripe down its side. */
+.dr-mindmap-node[data-role-label]::before {
+  content: attr(data-role-label);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 2px);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dr-mindmap-node[data-role] { border-left-width: 3px; }
+.dr-mindmap-node[data-role='claim'] { border-left-color: var(--interactive-accent); }
+.dr-mindmap-node[data-role='reason'],
+.dr-mindmap-node[data-role='evidence'] { border-left-color: var(--color-green); }
+.dr-mindmap-node[data-role='objection'] { border-left-color: var(--color-red); }
+.dr-mindmap-node[data-role='rebuttal'] { border-left-color: var(--color-orange); }
+
+.dr-mindmap-node.is-drop-relate {
+  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--text-accent);
+}
+
 .dr-mindmap-node {
   position: absolute;
   box-sizing: border-box;

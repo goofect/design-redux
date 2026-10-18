@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -610,6 +610,77 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     const none = { settingsVersion: 9, canvasColourBy: 'none' };
     R.SETTINGS_MIGRATIONS.filter((m) => m.to > 9).forEach((m) => m.run(none));
     assert.strictEqual(none.mindmapColourBy, '', 'no tint');
+  });
+
+  await t('relations: two nodes related by Alt-dragging one onto the other; a kind or a proposition said, turned round, listed and written out; kept in the note', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Law\n\t- Courts\n\t- Legislatures\n\t- Judicial review\n');
+    R.registerMindMapHandlers();
+    const [a, b, c] = view.model.root.children;
+    view.dropNode({ node: a.id, relate: true, target: { target: b.id, zone: 'relate' } });
+    view.dropNode({ node: c.id, relate: true, target: { target: a.id, zone: 'relate' } });
+    assert.deepStrictEqual(view.model.relations.map((r) => [r.from, r.to]), [[a.id, b.id], [c.id, a.id]]);
+    assert.ok(a.anchor && b.anchor && c.anchor, 'each end given its id');
+    assert.deepStrictEqual(view.model.root.children.map((n) => n.text), ['Courts', 'Legislatures', 'Judicial review'], 'nothing moved');
+    const kinds = R.relationTypes(plugin.settings);
+    // A kind: its name the label, its line and colour the relation's.
+    view.apply(R.setRelationMeaning(view.model, 0, { kind: 'contrasts with' }, kinds.find((k) => k.name === 'contrasts with')));
+    assert.deepStrictEqual([view.model.relations[0].label, view.model.relations[0].attrs], ['contrasts with', { kind: 'contrasts with', style: 'dotted' }]);
+    const rel = view.contentEl.querySelector('.dr-mindmap-relation');
+    assert.strictEqual(rel.getAttribute('data-line'), 'dotted');
+    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-mindmap-label.is-relation')).some((l) => l.textContent === 'contrasts with'), 'its label along it');
+    // A proposition: Judicial review constrains Courts; turned round, Courts constrains Judicial review.
+    view.apply(R.setRelationMeaning(view.model, 1, { predicate: ' constrains ' }));
+    assert.deepStrictEqual([view.model.relations[1].label, view.model.relations[1].attrs.predicate], ['constrains', 'constrains']);
+    view.reverseRelationAt(1);
+    assert.deepStrictEqual([view.model.relations[1].from, view.model.relations[1].to, view.model.relations[1].label], [a.id, c.id, 'constrains']);
+    // A hierarchy kind, and what the map states.
+    view.apply(R.setRelationMeaning(view.model, 0, { kind: 'is a type of' }, kinds.find((k) => k.name === 'is a type of')));
+    const st = view.statements();
+    assert.deepStrictEqual(st.map((x) => [x.category, x.subject.text, x.verb, x.object.text]), [['hierarchy', 'Courts', 'is a type of', 'Legislatures'], ['proposition', 'Courts', 'constrains', 'Judicial review']]);
+    assert.strictEqual(R.statementsMarkdown(st, (n) => R.nodeParts(n).title), '## Hierarchy\n\n- Courts is a type of Legislatures\n\n## Propositions\n\n- Courts constrains Judicial review\n');
+    view.goToStatement(st[1]);
+    assert.strictEqual(view.selected, a.id, 'gone to: its first node picked, both in view');
+    // Kept in the note, and read back the same.
+    view.flushSave();
+    assert.ok(view.text.includes(`- ^${a.id} -> ^${b.id} "is a type of" %%{"style":"solid","kind":"is a type of"}%%`), view.text);
+    const again = await open(view.text);
+    assert.deepStrictEqual(again.statements().map((x) => [x.category, x.verb]), [['hierarchy', 'is a type of'], ['proposition', 'constrains']]);
+    // Says nothing again: the plain relation it was.
+    view.select(c.id);
+    R.MINDMAP_HANDLERS.get('canvas-relation-none').run({ view, model: view.model, node: c });
+    assert.ok(view.model.relations.some((r) => !r.label && !r.attrs.kind && !r.attrs.predicate), 'one said nothing');
+  });
+
+  await t('arguments: a node given a part shows it above itself; a reason or objection added names its edge; a claim counts for and against', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Debate\n\t- Judicial review constrains legislatures\n');
+    R.registerMindMapHandlers();
+    const claim = view.model.root.children[0];
+    const run = (id, node) => R.MINDMAP_HANDLERS.get(id).run({ view, model: view.model, node });
+    run('canvas-make-claim', claim);
+    assert.strictEqual(claim.attrs.role, 'claim');
+    const el = (n) => view.renderer.nodeEls.get(n.id);
+    assert.strictEqual(el(claim).dataset.roleLabel, 'Claim');
+    run('canvas-add-reason', claim);
+    assert.ok(view.editing, 'the reason opened to type in');
+    view.typed('Courts protect rights');
+    view.closeEditor(true);
+    run('canvas-add-objection', claim);
+    view.closeEditor(true);
+    const [reason, objection] = claim.children;
+    assert.deepStrictEqual([reason.attrs.role, objection.attrs.role], ['reason', 'objection']);
+    const labels = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-label:not(.is-relation)')).filter((l) => l.style.display !== 'none').map((l) => l.textContent);
+    assert.deepStrictEqual(labels.sort(), ['opposes', 'supports']);
+    assert.strictEqual(el(claim).dataset.roleLabel, 'Claim · 1 for, 1 against');
+    assert.strictEqual(el(objection).dataset.role, 'objection');
+    view.undoStep(false);
+    assert.strictEqual(claim.children.length, 1, 'an answer added: one step of Undo');
+    view.undoStep(true);
+    run('canvas-clear-part', claim.children[1]);
+    assert.ok(!('role' in el(claim.children[1]).dataset));
+    plugin.settings.mindmapArguments = false;
+    view.draw();
+    assert.ok(!('role' in el(claim).dataset), 'switched off: nothing shown');
+    plugin.settings.mindmapArguments = true;
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

@@ -156,7 +156,7 @@ export class MindMapView extends TextFileView {
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null });
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false });
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();

@@ -15,6 +15,7 @@ import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode, setAttr } from '../tree/404-tree-ops.js';
 import { nodeNudge, setNudge } from '../tree/406-tree-layout-block.js';
+import { addRelation } from '../tree/407-tree-relations.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { pinOf, screenToPlane } from './423-mindmap-scene.js';
 
@@ -120,8 +121,10 @@ class MindMapInput {
     d.ghost.style.left = `${point.x + 8}px`;
     d.ghost.style.top = `${point.y + 8}px`;
     const vertical = this.mode === 'bottom' || this.mode === 'top';
-    d.target = dropTarget(this.model, this.scene, d.node, point, vertical);
-    this.root.querySelectorAll('.is-drop-child, .is-drop-before, .is-drop-after').forEach((el) => el.removeClass('is-drop-child', 'is-drop-before', 'is-drop-after'));
+    // With Alt held, a drop onto a node relates the two, and moves nothing.
+    d.relate = !!evt.altKey && typeof this.relateFrom === 'function';
+    d.target = d.relate ? this.relateTarget(d.node, point) : dropTarget(this.model, this.scene, d.node, point, vertical);
+    this.root.querySelectorAll('.is-drop-child, .is-drop-before, .is-drop-after, .is-drop-relate').forEach((el) => el.removeClass('is-drop-child', 'is-drop-before', 'is-drop-after', 'is-drop-relate'));
     const t = d.target && this.renderer.nodeEls.get(d.target.target);
     if (t) t.addClass(`is-drop-${d.target.zone}`);
   }
@@ -130,7 +133,9 @@ class MindMapInput {
   dropNode(d) {
     const target = d.target;
     this.clearDrag(d);
+    if (target && target.zone === 'relate') return this.apply(addRelation(this.model, d.node, target.target));
     if (target) return this.apply(moveNode(this.model, d.node, target.parentId, target.index));
+    if (d.relate) return null;
     if (!d.last || !this.camera) return null;
     const z = this.camera.zoom;
     const pinned = pinOf(nodeById(this.model, d.node));
@@ -139,10 +144,19 @@ class MindMapInput {
     return this.apply(setNudge(this.model, d.node, was[0] + (d.last.x - d.x) / z, was[1] + (d.last.y - d.y) / z));
   }
 
+  /** The node under a point to relate a dragged one to: any but itself. */
+  relateTarget(id, point) {
+    let found = null;
+    this.scene.boxes.forEach((b, other) => {
+      if (!found && other !== id && point.x >= b.x && point.x <= b.x + b.width && point.y >= b.y && point.y <= b.y + b.height) found = other;
+    });
+    return found ? { target: found, zone: 'relate' } : null;
+  }
+
   clearDrag(d) {
     if (d.ghost) d.ghost.remove();
     d.ghost = null;
-    this.root.querySelectorAll('.is-dragged, .is-drop-child, .is-drop-before, .is-drop-after').forEach((el) => el.removeClass('is-dragged', 'is-drop-child', 'is-drop-before', 'is-drop-after'));
+    this.root.querySelectorAll('.is-dragged, .is-drop-child, .is-drop-before, .is-drop-after, .is-drop-relate').forEach((el) => el.removeClass('is-dragged', 'is-drop-child', 'is-drop-before', 'is-drop-after', 'is-drop-relate'));
   }
 
   /** Scrolling pans; with Ctrl or a pinch, it zooms about the pointer. */
