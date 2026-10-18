@@ -1244,6 +1244,22 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual([drawn.from, drawn.to, drawn.label, drawn.attrs.kind], ['c', 'p', 'supports', 'supports']);
   });
 
+  await t('the parity matrix: every canvas module and scenario has its place on a map, and each proving test is there', async () => {
+    const parity = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', 'parity.json'), 'utf8'));
+    const modules = fs.readdirSync(path.join(__dirname, '..', 'src', 'canvas')).map((f) => f.replace(/\.js$/, '')).sort();
+    const titles = (file) => Array.from(fs.readFileSync(path.join(__dirname, file), 'utf8').matchAll(/await t\('((?:[^'\\]|\\.)*)'/g)).map((m) => m[1]);
+    const scenarios = titles('test_canvas.js');
+    const proofs = titles('test_mindmap.js').concat(titles('test_tree.js'));
+    assert.deepStrictEqual(Object.keys(parity.modules).sort(), modules, 'one entry for each canvas module');
+    assert.deepStrictEqual(Object.keys(parity.scenarios).sort(), scenarios.slice().sort(), 'one entry for each canvas scenario');
+    const statuses = ['ported', 'automatic', 'replaced', 'not needed'];
+    Object.entries(Object.assign({}, parity.modules, parity.scenarios)).forEach(([name, entry]) => {
+      assert.ok(statuses.includes(entry.status), `${name}: ${entry.status}`);
+      if (entry.status === 'not needed') assert.ok(entry.reason && entry.reason.length > 10, `${name}: why it isn’t needed`);
+      else assert.ok(entry.test && proofs.some((t) => t.includes(entry.test)), `${name}: no test proves it (${entry.test})`);
+    });
+  });
+
   await t('lines pasted under the selected node keep their nesting', async () => {
     const view = await open(NOTE);
     view.select(view.model.root.children[2].id);
@@ -1298,6 +1314,19 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(view.model.root.children[0].attrs.fold, 1, 'Fold branch folded the node');
     R.setMindMapContext(null);
     assert.ok(!commands[0].check(), 'with no map, the canvas’s again');
+    // Every canvas command a map answers, there; a few run.
+    ['canvas-quick-add', 'canvas-add-child-card', 'canvas-add-sibling-card', 'canvas-add-parent-card', 'fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything', 'duplicate-canvas-branch', 'canvas-zoom-to-branch', 'fit-canvas-cards', 'canvas-layout-choose', 'canvas-layout-everything', 'canvas-map-tidy', 'tidy-canvas-branch', 'toggle-canvas-legend', 'canvas-toggle-keep-in-place', 'canvas-view-back', 'find-canvas-card', 'focus-canvas-branch', 'focus-canvas-near', 'present-map', 'check-canvas', 'canvas-compare', 'canvas-branch-to-note', 'canvas-outline-to-branch', 'canvas-name-relationship', 'canvas-make-claim', 'canvas-add-reason', 'canvas-promote-card', 'canvas-demote-card', 'canvas-card-earlier', 'canvas-card-later', 'arrange-canvas-row', 'arrange-canvas-left', 'knowledge-canvas-write', 'knowledge-canvas-draw', 'refresh-album-map'].forEach((id) => assert.ok(R.MINDMAP_HANDLERS.has(id), `${id} acts on a map`));
+    const ctx = { view, model: view.model, node: view.model.root.children[1] };
+    R.MINDMAP_HANDLERS.get('unfold-canvas-everything').run(ctx);
+    R.MINDMAP_HANDLERS.get('fold-every-canvas-branch').run(ctx);
+    assert.ok(view.model.root.children[1].attrs.fold, 'every branch folded');
+    R.MINDMAP_HANDLERS.get('unfold-canvas-everything').run(ctx);
+    assert.ok(!view.model.root.children.some((c) => c.attrs.fold), 'and unfolded');
+    const before = view.model.root.children[1].children.length;
+    R.MINDMAP_HANDLERS.get('canvas-quick-add').run(ctx);
+    assert.strictEqual(view.model.root.children[1].children.length, before + 1, 'quick add: a node under it, to type in');
+    assert.ok(view.editing);
+    view.closeEditor(true);
   });
 
   await t('2,000 nodes: laid out and drawn at once, only what’s on screen, and a pan in well under a frame', async () => {
