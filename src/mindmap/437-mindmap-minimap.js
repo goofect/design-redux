@@ -40,9 +40,19 @@ class MindMapMinimap {
     // The nodes as one path: a map of thousands is one element, redrawn only when the map's laid out again.
     if (this.minimapScene !== scene) {
       this.minimapScene = scene;
+      // To half a minimap pixel or finer: an edit that moves nothing the minimap can show leaves its path as it was.
+      const span = Math.max(b.maxX - b.minX, b.maxY - b.minY);
+      const unit = Math.pow(2, Math.floor(Math.log2(Math.max(1, span / (MAP_MINIMAP_SIZE.width * 2)))));
+      const at = (v) => Math.round(v / unit) * unit;
       const parts = [];
-      scene.boxes.forEach((box) => parts.push(`M${Math.round(box.x)} ${Math.round(box.y)}h${Math.round(box.width)}v${Math.round(box.height)}h${-Math.round(box.width)}z`));
-      this.minimapEl.nodes.setAttribute('d', parts.join(''));
+      scene.boxes.forEach((box) => {
+        const x = at(box.x);
+        const y = at(box.y);
+        const w = Math.max(unit, at(box.x + box.width) - x);
+        parts.push(`M${x} ${y}h${w}v${Math.max(unit, at(box.y + box.height) - y)}h${-w}z`);
+      });
+      const d = parts.join('');
+      if (d !== this.minimapD) this.minimapEl.nodes.setAttribute('d', (this.minimapD = d));
     }
     const v = this.minimapEl.view;
     v.setAttribute('x', String(port.minX));
@@ -83,6 +93,7 @@ class MindMapMinimap {
       this.draw();
     });
     this.minimapEl = el;
+    this.minimapD = null;
   }
 }
 

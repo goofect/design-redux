@@ -288,7 +288,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       (function w(n, depth) {
         const b = view.scene.boxes.get(n.id);
         const along = depth * 1000 * (mode === 'left' || mode === 'top' ? -1 : 1);
-        const across = depth ? order++ * 1000 : 0;
+        const across = depth ? ++order * 1000 : 0;
         const down = mode === 'bottom' || mode === 'top';
         nodes.push({ id: n.id, type: 'text', x: down ? across : along, y: down ? along : across, width: b.width, height: b.height });
         if (n.parent) edges.push({ id: `e${n.id}`, fromNode: n.parent.id, toNode: n.id });

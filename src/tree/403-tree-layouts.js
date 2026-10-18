@@ -260,12 +260,20 @@ export function presentationOrder(model, rootId, links) {
  */
 export function directedLayout(model, rootId, way, links) {
   links = links || arrowLinks(model);
+  const root = model.byId.get(rootId);
+  if (!root) return Object.assign(new Map(), { sides: new Map(), both: way === 'both' });
+  return directedPlaces(root, way, orderedBranch(model, rootId, links, siblingOrder));
+}
+
+/**
+ * The same, for a tree already known: `kids` is id -> [records], each
+ * card's children in their order. A mind map, a tree already, starts here.
+ */
+export function directedPlaces(root, way, kids) {
+  const rootId = root.id;
   const out = new Map();
   out.sides = new Map();
   out.both = way === 'both';
-  const root = model.byId.get(rootId);
-  if (!root) return out;
-  const kids = orderedBranch(model, rootId, links, siblingOrder);
   // Copies lined up in their order the way their siblings will, so the tidy keeps it.
   const ways = way === 'both' ? ['right', 'left'] : [way];
   const copies = new Map();

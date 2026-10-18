@@ -10,7 +10,7 @@
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { arrowLinks, modelFromData, sideAxes } from '../tree/400-tree-model.js';
-import { BRANCH_LAYOUTS, composedLayout, layoutPlaces } from '../tree/403-tree-layouts.js';
+import { BRANCH_LAYOUTS, composedLayout, directedPlaces, layoutPlaces } from '../tree/403-tree-layouts.js';
 import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
 /* A node's box: as wide as its words want, up to a limit. */
@@ -112,6 +112,9 @@ export function shownNodes(model) {
   return out;
 }
 
+/* The layouts that don't grow a tree out one way or two. */
+const UNDIRECTED = new Set(['radial', 'outline', 'concept']);
+
 /**
  * Where everything goes: Map id -> { x, y, width, height, depth, way },
  * and the whole's bounds. `sizeOf(node)` gives a box's size; `mode` the
@@ -125,6 +128,7 @@ export function layoutScene(model, sizeOf, mode) {
   const boxes = new Map();
   if (!shown.length) return { boxes, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } };
   // Laid out as the canvas's cards are, set out first in the list's order so the layout keeps it.
+  // Each a step on from its parent across, so siblings lie to one side of it whatever their sizes.
   const axes = sideAxes(way === 'left' || way === 'top' ? way : way === 'bottom' ? 'bottom' : 'right');
   const nodes = [];
   const edges = [];
@@ -134,16 +138,26 @@ export function layoutScene(model, sizeOf, mode) {
     const rec = { id: node.id, type: 'text', x: 0, y: 0, width: size.width, height: size.height };
     if (depth > 0) {
       rec[axes.depth] = (axes.forward ? 1 : -1) * depth * 1000;
-      rec[axes.across] = order++ * 1000;
+      rec[axes.across] = ++order * 1000;
       edges.push({ id: `e-${node.id}`, fromNode: parent.id, toNode: node.id });
     }
     nodes.push(rec);
   });
-  const cards = modelFromData({ nodes, edges });
-  const links = arrowLinks(cards);
-  // No branch with a layout of its own: one layout, without looking for them.
+  // No branch with a layout of its own and a layout that goes one way or two: the tree as it is, children in order.
   const branchy = model.layout && model.layout.branch && Object.keys(model.layout.branch).length;
-  const places = branchy ? composedLayout(cards, cards.byId.get(model.root.id), way, links, (rec) => branchLayoutOf(model, rec.id)) : layoutPlaces(cards, model.root.id, way, links);
+  let places;
+  if (!branchy && !UNDIRECTED.has(way)) {
+    const byId = new Map(nodes.map((r) => [r.id, r]));
+    const kids = new Map(nodes.map((r) => [r.id, []]));
+    // Each node once, under the first to reach it, as the canvas's tree reads it.
+    const placed = new Set([model.root.id]);
+    shown.forEach(({ node, parent }) => parent && !placed.has(node.id) && (placed.add(node.id), kids.get(parent.id).push(byId.get(node.id))));
+    places = directedPlaces(byId.get(model.root.id), way, kids);
+  } else {
+    const cards = modelFromData({ nodes, edges });
+    const links = arrowLinks(cards);
+    places = branchy ? composedLayout(cards, cards.byId.get(model.root.id), way, links, (rec) => branchLayoutOf(model, rec.id)) : layoutPlaces(cards, model.root.id, way, links);
+  }
   const wayOf = new Map();
   (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
   // Hand nudges, from the layout block, on top: each node's and those above it. A pinned node is where it's pinned.
@@ -160,7 +174,7 @@ export function layoutScene(model, sizeOf, mode) {
     off.set(node.id, own ? [above[0] + own[0], above[1] + own[1]] : above);
   });
   const depthOf = new Map(shown.map((s) => [s.node.id, s.depth]));
-  cards.nodes.forEach((r) => {
+  nodes.forEach((r) => {
     const at = r.id === model.root.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
     const d = off.get(r.id) || [0, 0];
     boxes.set(r.id, { x: at.x + d[0], y: at.y + d[1], width: r.width, height: r.height, depth: depthOf.get(r.id) || 0, way: wayOf.get(r.id) || way });

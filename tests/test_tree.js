@@ -418,6 +418,12 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.ok(!R.nodeById(m, id), 'added and named, undone at once');
   });
 
+  await t('ids never repeat, however many are made in a moment', () => {
+    const ids = new Set();
+    for (let k = 0; k < 5000; k++) ids.add(R.newId());
+    assert.strictEqual(ids.size, 5000);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

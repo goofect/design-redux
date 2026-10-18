@@ -344,7 +344,13 @@ export function tidyOneWay(root, way, first, kids, out) {
   const deep = (n) => (vertical ? n.height : n.width);
   const breadth = (n) => (vertical ? n.width : n.height);
   const middle = (n) => n[across] + breadth(n) / 2;
-  const kidsOf = (n) => (n === root ? first : kids.get(n.id) || []).slice().sort((a, b) => middle(a) - middle(b));
+  // Each card's children in the order they lie across, sorted once: nothing here moves a card.
+  const sorted = new Map();
+  const kidsOf = (n) => {
+    let cs = sorted.get(n);
+    if (!cs) sorted.set(n, (cs = (n === root ? first : kids.get(n.id) || []).slice().sort((a, b) => middle(a) - middle(b))));
+    return cs;
+  };
   // How deep each level is: as deep as its deepest card.
   const depths = [];
   const measure = (n, level) =>
@@ -524,11 +530,20 @@ export function newNode(text, attrs, id) {
 }
 
 let idCount = 0;
+let idTime = -1;
 
 /** A short id, unlikely to meet another: a time stamp and a count, in base 36. */
 export function newId() {
-  idCount = (idCount + 1) % 1296;
-  return (Date.now() % 2176782336).toString(36) + idCount.toString(36).padStart(2, '0');
+  const now = Date.now() % 2176782336;
+  // Never the same twice: past 1,296 in a millisecond, the next millisecond's.
+  if (now > idTime) {
+    idTime = now;
+    idCount = 0;
+  } else if (++idCount === 1296) {
+    idTime += 1;
+    idCount = 0;
+  }
+  return idTime.toString(36) + idCount.toString(36).padStart(2, '0');
 }
 
 /** An empty map: one root, nothing else. */

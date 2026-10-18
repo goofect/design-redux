@@ -33,8 +33,15 @@ class MindMapCards {
 
   /** A node's size: measured, or estimated until it is. */
   sizeOf(n) {
-    const known = this.sizes && this.model && this.sizes.get(sizeKey(this.model, n, this.depthShown()));
-    return known || estimateSize(n.text || (n.virtual ? 'Untitled' : ''));
+    // Kept on the node while its text and how it's set stay: thousands of nodes, no key made for each.
+    const tier = this.model ? nodeTier(this.model, n, this.depthShown()) : '';
+    const text = n.text || (n.virtual ? 'Untitled' : '');
+    const memo = this.sizeMemo && this.sizeMemo.get(n);
+    if (memo && memo.text === text && memo.tier === tier) return memo.size;
+    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}`)) || estimateSize(text);
+    if (!this.sizeMemo) this.sizeMemo = new WeakMap();
+    this.sizeMemo.set(n, { text, tier, size });
+    return size;
   }
 
   /** A part of a node's text into an element: markdown where Obsidian renders it, plain text where not. Its promise, if it takes a moment. */
@@ -118,6 +125,7 @@ class MindMapCards {
         if (!size.width || !size.height) return;
         const was = this.sizeOf(n);
         this.sizes.set(key, size);
+        this.sizeMemo = null;
         if (Math.abs(was.width - size.width) > 1 || Math.abs(was.height - size.height) > 1) changed = true;
       });
       if (changed && this.model === model) {
