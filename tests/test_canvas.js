@@ -308,6 +308,17 @@ const at = (model, id) => { const n = model.byId.get(id); return [n.x, n.y, n.wi
     ]);
   });
 
+  await t('the outline of arrows that go round in a loop: each card once, nothing lost', () => {
+    const m = R.modelFromData({
+      nodes: [card('a', 0, 0, 100, 50), card('b', 200, 0, 100, 50), card('c', 400, 0, 100, 50), card('d', 0, 200, 100, 50)],
+      edges: [edge('a', 'b'), edge('b', 'c'), edge('c', 'a'), edge('d', 'a')],
+    });
+    const labels = [];
+    const walk = (items) => items.forEach((i) => (labels.push(i.label), walk(i.children)));
+    walk(R.outlineTree(m));
+    assert.deepStrictEqual(labels.slice().sort(), ['a', 'b', 'c', 'd']);
+  });
+
   // -- on a canvas ---------------------------------------------------------
 
   class FakeNode {

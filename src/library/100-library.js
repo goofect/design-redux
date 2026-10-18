@@ -137,6 +137,10 @@ export class LibraryView extends ItemView {
   }
 
   render() {
+    // How long each part takes, for the timing test: performance marks, and the last drawing's here.
+    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const times = { items: {} };
+    const t0 = now();
     const root = this.contentEl;
     // Drawn aside first, and put in only if it's different: a note it
     // lists changes with every key typed in it, and drawing the same rows
@@ -162,8 +166,14 @@ export class LibraryView extends ItemView {
       }
       const list = fresh.createDiv({ cls: 'dr-lib-list' });
       roveFocus(list, '.dr-lib-row');
-      (section.items || []).forEach((item) => this.renderItem(list, item));
+      (section.items || []).forEach((item) => {
+        const t = now();
+        this.renderItem(list, item);
+        const key = item.kind === 'builtin' ? item.id : item.kind;
+        times.items[key] = (times.items[key] || 0) + now() - t;
+      });
     });
+    const t1 = now();
     // What's marked, still arriving, or given its full name under the
     // pointer isn't a difference in what's listed.
     const norm = (html) =>
@@ -179,7 +189,11 @@ export class LibraryView extends ItemView {
       root.empty();
       while (fresh.firstChild) root.appendChild(fresh.firstChild);
     }
+    const t2 = now();
     this.markActive();
+    const t3 = now();
+    Object.assign(times, { build: t1 - t0, compare: t2 - t1, mark: t3 - t2 });
+    this.lastTimes = times;
   }
 
   /* -- the configured list ---------------------------------------- */

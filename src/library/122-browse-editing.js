@@ -15,6 +15,10 @@ import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { AlbumStructure } from './257-album-structure.js';
 
+/* A shelf's tiles drawn at once, and then a frame at a time. */
+export const TILES_AT_ONCE = 60;
+export const TILES_A_FRAME = 120;
+
 export class BrowseEditing {
   /* -- editing an album -------------------------------------------- */
 
@@ -666,7 +670,10 @@ export class BrowseEditing {
     const draw = (list) => {
       const grid = root.createDiv({ cls: 'dr-grid' });
       roveFocus(grid, '.dr-card');
-      list.forEach((f) => this.folderCard(grid, f, subtitle ? subtitle(f) : undefined));
+      const card = (f) => this.folderCard(grid, f, subtitle ? subtitle(f) : undefined);
+      // The first rows at once; the rest a batch a frame, so a shelf of hundreds shows straight away.
+      list.slice(0, TILES_AT_ONCE).forEach(card);
+      this.drawLater(grid, list.slice(TILES_AT_ONCE), card);
       return grid;
     };
     const groups = new Map();
@@ -681,22 +688,39 @@ export class BrowseEditing {
   }
 
   /** Tiles that can be dragged into order, on desktop: pins, or a shelf's albums. */
+  /** Tiles drawn a batch a frame, into a grid still on the page; those that can be arranged made draggable as they come. */
+  drawLater(grid, rest, draw) {
+    if (!rest.length) return;
+    const win = grid.ownerDocument.defaultView || window;
+    const next = () => {
+      if (!grid.isConnected) return;
+      rest.splice(0, TILES_A_FRAME).forEach(draw);
+      if (grid.drArrange) grid.querySelectorAll('.dr-card[data-path]:not([draggable])').forEach((card) => card.setAttribute('draggable', 'true'));
+      if (rest.length) win.requestAnimationFrame(next);
+    };
+    win.requestAnimationFrame(next);
+  }
+
   arrangeableTiles(grid) {
     const order = this.tileOrder();
     if (Platform.isMobile || !order) return;
     let dragged = null;
-    grid.querySelectorAll('.dr-card[data-path]').forEach((card) => {
-      card.setAttribute('draggable', 'true');
-      card.addEventListener('dragstart', (evt) => {
-        dragged = card.dataset.path;
-        evt.dataTransfer.setData('text/dr-pin', dragged);
-        evt.dataTransfer.effectAllowed = 'move';
-        card.addClass('is-dragging');
-      });
-      card.addEventListener('dragend', () => {
-        dragged = null;
-        card.removeClass('is-dragging');
-      });
+    // Listened for on the grid, so tiles drawn later are arranged the same.
+    grid.drArrange = true;
+    grid.querySelectorAll('.dr-card[data-path]').forEach((card) => card.setAttribute('draggable', 'true'));
+    const held = (evt) => (evt.target && typeof evt.target.closest === 'function' ? evt.target.closest('.dr-card[data-path]') : null);
+    grid.addEventListener('dragstart', (evt) => {
+      const card = held(evt);
+      if (!card) return;
+      dragged = card.dataset.path;
+      evt.dataTransfer.setData('text/dr-pin', dragged);
+      evt.dataTransfer.effectAllowed = 'move';
+      card.addClass('is-dragging');
+    });
+    grid.addEventListener('dragend', (evt) => {
+      const card = held(evt);
+      dragged = null;
+      if (card) card.removeClass('is-dragging');
     });
     const clear = () =>
       grid.querySelectorAll('.is-drop-before, .is-drop-after').forEach((el) => el.removeClass('is-drop-before', 'is-drop-after'));

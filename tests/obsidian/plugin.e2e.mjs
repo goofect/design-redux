@@ -1031,6 +1031,42 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('searches: words from a note show their passage; the note named for the query comes first, and Enter opens it', async function () {
+    await browser.executeObsidian(async ({ plugins }) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'search' });
+    });
+    const input = await browser.$(ACTIVE + '.dr-browse-search input');
+    await input.waitForExist({ timeout: 8000 });
+    await input.click();
+    // Words from a note's text: the passage they're in, shown.
+    await browser.keys('lettered item'.split(''));
+    const passage = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active [data-excerpt]')).map((e) => e.dataset.excerpt)),
+      (w) => w.some((x) => /lettered item/i.test(x))
+    );
+    expect(passage.some((x) => /lettered item/i.test(x))).toBe(true);
+    await browser.execute(() => {
+      const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
+      field.value = '';
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+      field.focus();
+    });
+    await browser.keys('Deterrence'.split(''));
+    const top = await readUntil(
+      () => browser.execute(() => {
+        const el = document.querySelector('.workspace-leaf.mod-active .dr-search-top-title');
+        return el ? el.textContent : null;
+      }),
+      (t) => t === 'Deterrence'
+    );
+    expect(top).toBe('Deterrence');
+    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-search-top').focus());
+    await browser.keys('Enter');
+    const opened = await readUntil(() => browser.executeObsidian(({ app }) => (app.workspace.getActiveFile() || {}).path), (p) => p === 'Politics/Deterrence.md');
+    expect(opened).toBe('Politics/Deterrence.md');
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');
@@ -1472,9 +1508,11 @@ describe('Design Redux in Obsidian', function () {
         const shelf = leaf ? time(() => leaf.view.render()) : null;
         const side = app.workspace.getLeavesOfType('design-redux-library')[0];
         const sidebar = side && side.view && typeof side.view.render === 'function' ? time(() => side.view.render()) : null;
-        return { shelf, sidebar };
+        const parts = side && side.view && side.view.lastTimes;
+        const round = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v === 'number' && v >= 1).map(([k, v]) => [k, Math.round(v)]));
+        return { shelf, sidebar, parts: parts ? JSON.stringify(Object.assign(round(parts), { items: round(parts.items) })) : '' };
       }, root);
-      perf.push(`perf: shelf of ${n} albums: drawn ${times.shelf} ms, the sidebar ${times.sidebar} ms`);
+      perf.push(`perf: shelf of ${n} albums: drawn ${times.shelf} ms, the sidebar ${times.sidebar} ms ${times.parts}`);
     }
     await browser.executeObsidian(async ({ app }, roots) => {
       for (const root of roots) {

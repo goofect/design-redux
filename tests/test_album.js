@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -421,6 +421,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!r.markRead(f('Anarchy')), 'read already, as it is');
     assert.strictEqual(r.state(f('Anarchy')), 'read');
     assert.ok(!r.isNew(f('Anarchy')));
+    f('Anarchy').stat.mtime += R.READ_GRACE - 500;
+    assert.strictEqual(r.state(f('Anarchy')), 'read', 'a change just after reading is the reading’s own save');
     f('Anarchy').stat.mtime += 10000;
     assert.strictEqual(r.state(f('Anarchy')), 'changed', 'changed since');
     r.edited(f('Anarchy'));
@@ -804,6 +806,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     R.studyOf(plugin).followRename({ path: 'IR/Anarchism.md' }, 'IR/Anarchy.md');
     assert.ok(Object.keys(R.studyOf(plugin).data.cards).some((k) => k.startsWith('IR/Anarchism.md#')));
     clearTimeout(R.studyOf(plugin).timer);
+  });
+
+  await t('images added go to the image folder once a note links them: names with spaces, any case; a folder made if missing; one gone first left alone', async () => {
+    const { v, plugin, app } = setup();
+    Object.assign(plugin.settings, { routeImages: true, imageFolder: '/Media files/' });
+    const moved = [];
+    plugin.moveFile = async (file, folder) => moved.push([file.path, folder]);
+    const handlers = [];
+    app.metadataCache = Object.assign(app.metadataCache, { on: (type, fn) => (handlers.push(fn), fn), offref: (ref) => handlers.splice(handlers.indexOf(ref), 1), resolvedLinks: {} });
+    const router = new R.ImageRouter(plugin);
+    router.app = app;
+    const pic = v.file('IR/Pic One.PNG');
+    await router.route(pic);
+    assert.strictEqual(handlers.length, 1, 'waits for a note to link it');
+    app.metadataCache.resolvedLinks['IR/Anarchy.md'] = { 'IR/Pic One.PNG': 1 };
+    await handlers[0]({ path: 'IR/Anarchy.md' });
+    await settle();
+    assert.deepStrictEqual(moved, [['IR/Pic One.PNG', 'Media files']], 'any case of its extension; spaces in names');
+    assert.ok(app.vault.getFolderByPath('Media files'), 'the folder made');
+    assert.strictEqual(handlers.length, 0, 'stops listening');
+    v.folder('Media files/Old');
+    await router.route(v.file('Media files/Old/Inside.png'));
+    await router.route(v.file('IR/Notes.txt'));
+    assert.strictEqual(handlers.length, 0, 'beneath the folder already, or not an image: left');
+    const gone = v.file('IR/Gone.jpg');
+    await router.route(gone);
+    await v.fileManager.trashFile(gone);
+    app.metadataCache.resolvedLinks['IR/Balance.md'] = { 'IR/Gone.jpg': 1 };
+    await handlers[0]({ path: 'IR/Balance.md' });
+    await settle();
+    assert.strictEqual(moved.length, 1, 'gone before it could move: nothing');
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {

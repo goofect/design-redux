@@ -438,7 +438,13 @@ export function albumNeighbours(plugin, file) {
  * clicking into the sidebar doesn't change what "the page" means.
  */
 export function pageLeaf(app) {
-  return app.workspace.getMostRecentLeaf(app.workspace.rootSplit) || null;
+  const ws = app.workspace;
+  // The leaf in use, when it's in the main area, is the most recent there.
+  // Asked of Obsidian only otherwise: since 1.14 that question lays the
+  // window out first, which right after a large redraw costs tens of ms.
+  const active = ws.activeLeaf;
+  if (active && typeof active.getRoot === 'function' && active.getRoot() === ws.rootSplit) return active;
+  return ws.getMostRecentLeaf(ws.rootSplit) || null;
 }
 
 /**

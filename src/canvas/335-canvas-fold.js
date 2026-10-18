@@ -314,15 +314,14 @@ export class CanvasFold extends CanvasFeature {
     const inMap = !!CanvasMap.of(this.plugin, view);
     const shown = () => model.nodes.filter((n) => !n.tuck);
     let any = false;
+    // Read once: folding moves cards and tucks them, but no arrow changes.
+    const links = arrowLinks(model);
     if (what === 'branches') {
-      const top = (r) => {
-        const links = arrowLinks(model);
-        return !(links.parents.get(r.id) || []).some((p) => model.byId.get(p) && !model.byId.get(p).tuck);
-      };
+      const top = (r) => !(links.parents.get(r.id) || []).some((p) => model.byId.get(p) && !model.byId.get(p).tuck);
       shown()
         .filter((r) => !isGroupRecord(r) && (top(r) || r.master))
         .forEach((r) => {
-          if (!r.tuck && foldBranch(model, r, close, arrowLinks(model)).length) any = true;
+          if (!r.tuck && foldBranch(model, r, close, links).length) any = true;
         });
     } else if (what === 'everything') {
       // Unfolded until nothing's left folded: what comes out of one may hold another.
@@ -332,7 +331,7 @@ export class CanvasFold extends CanvasFeature {
           .filter((r) => !isGroupRecord(r) && tuckedCount(model, r.id))
           .forEach((r) => {
             if (inMap) r.room = null;
-            if (!r.tuck && unfoldBranch(model, r, close, arrowLinks(model)).length) more = true;
+            if (!r.tuck && unfoldBranch(model, r, close, links).length) more = true;
           });
         if (!more) break;
         any = true;
