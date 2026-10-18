@@ -863,6 +863,55 @@ describe('Design Redux in Obsidian', function () {
     expect(await readUntil(lit, (t) => t === 'Two')).toBe('Two');
   }
 
+  it('brings a note read in a studied collection back when it’s due, and lets it go once graded', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const old = app.vault.getAbstractFileByPath('Politics/Study me.md');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Politics/Study me.md', 'A short note to remember.');
+      plugin.settings.studyEnabled = true;
+      await plugin.saveSettings();
+      plugin.refresh();
+      const study = plugin.features.find((f) => f.constructor.name === 'Study');
+      await plugin.study.load();
+      await study.setStudied(app.vault.getAbstractFileByPath('Politics'), true);
+      // Read to its end.
+      plugin.features.find((f) => f.constructor.name === 'ReadingHistory').read(app.vault.getAbstractFileByPath('Politics/Study me.md'));
+    });
+    const item = await readUntil(
+      () => browser.executeObsidian(({ plugins }) => plugins.designRedux.study.item('Politics/Study me.md')),
+      (i) => !!i
+    );
+    expect(item && item.rung).toBe(0);
+    // A day on: due.
+    await browser.executeObsidian(({ app, plugins }) => {
+      plugins.designRedux.study.item('Politics/Study me.md').due = Date.now() - 1000;
+      app.workspace.trigger('design-redux:study-changed');
+    });
+    await obsidianPage.openFile('Politics/Study me.md');
+    const grade = await browser.$(ACTIVE + '.dr-note-study-grade[data-grade="got"]');
+    await grade.waitForExist({ timeout: 8000 });
+    expect(await browser.execute(() => (document.querySelector('.dr-strip-revisit') || {}).textContent)).toBe('1 to revisit');
+    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-note-study-grade[data-grade="got"]').click());
+    const after = await readUntil(
+      () => browser.executeObsidian(({ plugins }) => {
+        const i = plugins.designRedux.study.item('Politics/Study me.md');
+        return { rung: i.rung, due: i.due > Date.now(), chip: !!document.querySelector('.dr-strip-revisit'), row: !!document.querySelector('.workspace-leaf.mod-active .dr-note-study') };
+      }),
+      (r) => r.rung === 1 && !r.chip && !r.row
+    );
+    expect(after).toEqual({ rung: 1, due: true, chip: false, row: false });
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      plugin.settings.studyEnabled = false;
+      plugin.settings.studyAlbums = {};
+      await plugin.saveSettings();
+      plugin.refresh();
+      const note = app.vault.getAbstractFileByPath('Politics/Study me.md');
+      if (note) await app.vault.delete(note);
+    });
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

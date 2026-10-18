@@ -13,6 +13,7 @@ import { Menu, Notice } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
 import { showMenuAt } from '../core/030-helpers-art.js';
 import { Feature } from '../core/080-feature.js';
+import { dueNotes } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ContextStrip } from './190-strip.js';
 import { ReadingOutline } from './195-reading-outline.js';
@@ -218,7 +219,8 @@ export class WorkspaceModes extends Feature {
       const outline = typeof ReadingOutline === 'function' ? this.plugin.feature(ReadingOutline) : null;
       const withOutline = !!(outline && outline.enabled);
       this.sidebars(false, withOutline);
-      const note = this.recent('md');
+      // What's due to be revisited first, the most overdue; else the note you were reading.
+      const note = dueNotes(this.plugin)[0] || this.recent('md');
       if (note) {
         const leaf = ws.getLeaf(false);
         await leaf.setViewState({ type: 'markdown', state: { file: note.path, mode: 'preview' }, active: true });

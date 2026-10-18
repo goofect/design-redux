@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -247,7 +247,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
-const HOME_OFF = ['picks', 'continue', 'fromReading', 'added', 'collections', 'pinned', 'rediscover'];
+const HOME_OFF = ['picks', 'revisit', 'continue', 'fromReading', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -587,6 +587,103 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(await check.thinNotes(), [], '0 turns it off');
     plugin.settings.thinNoteWords = 60;
     assert.ok(plugin.lengths.thin(f('IR/Balance.md'), 60) && !plugin.lengths.thin(f('IR/Deterrence.md'), 60));
+  });
+
+  await t('study: a ladder of revisits, kept in its own file that follows renames, and survives being broken', async () => {
+    const L = [1, 3, 7];
+    const now = 1000 * R.DAY;
+    const first = R.nextDue(null, 'read', L, now);
+    assert.deepStrictEqual([first.rung, first.due, first.lapses, first.grade], [0, now + R.DAY, 0, null], 'read: due after the first rung');
+    assert.deepStrictEqual(R.nextDue(first, 'read', L, now + 5), first, 'read again: unchanged');
+    const got = R.nextDue(first, 'got', L, now);
+    assert.deepStrictEqual([got.rung, got.due, got.grade], [1, now + 3 * R.DAY, 'got']);
+    const top = R.nextDue(R.nextDue(got, 'got', L, now), 'got', L, now);
+    assert.deepStrictEqual([top.rung, top.due], [2, now + 7 * R.DAY], 'at the top it stays, at the top interval');
+    const again = R.nextDue(top, 'again', L, now);
+    assert.deepStrictEqual([again.rung, again.due, again.lapses], [0, now + R.DAY, 1], 'again: back to the start, due tomorrow, a lapse');
+    const later = R.nextDue(got, 'later', L, now);
+    assert.deepStrictEqual([later.rung, later.due], [1, now + R.DAY], 'later: a day on, the same rung');
+    assert.deepStrictEqual(R.studyLadder('2, 5 ,x, 9'), [2, 5, 9]);
+    assert.deepStrictEqual(R.studyLadder(''), [1, 3, 7, 21, 60]);
+    // What's due: the most overdue first, within the day's cap less those graded today.
+    const items = { a: { due: now - 3 }, b: { due: now - 9 }, c: { due: now + 9 }, d: { due: now - 1 }, e: { due: now + 5, grade: 'got', last: now } };
+    assert.deepStrictEqual(R.dueNow(items, now, 20), ['b', 'a', 'd']);
+    assert.deepStrictEqual(R.dueNow(items, now, 2), ['b'], 'one graded today already');
+
+    // The store: its own file, apart from the settings.
+    const { v, plugin, app, view } = setup();
+    plugin.saveData = () => {};
+    plugin.manifest = { dir: '.obsidian/plugins/design-redux' };
+    const disk = {};
+    app.vault.adapter = {
+      exists: async (p) => p in disk,
+      read: async (p) => disk[p],
+      write: async (p, text) => { disk[p] = text; },
+    };
+    const file = '.obsidian/plugins/design-redux/study.json';
+    let store = new R.StudyStore(plugin);
+    assert.ok(!(await store.exists()));
+    await store.load();
+    assert.deepStrictEqual(Object.keys(store.data.items), [], 'missing: starts empty');
+    assert.ok(!(file in disk), 'and writes nothing until something changes');
+    disk[file] = '{ not json';
+    store = new R.StudyStore(plugin);
+    await store.load();
+    await settle();
+    assert.strictEqual(disk[file + '.bad'], '{ not json', 'broken: kept aside');
+    assert.deepStrictEqual(JSON.parse(disk[file]).items, {}, 'and a new one started');
+    const f = (p) => v.vault.getAbstractFileByPath(p);
+    store.grade(f('IR/Anarchy.md'), 'read', L, now);
+    store.grade(f('IR/Theories/Realism.md'), 'read', L, now);
+    store.data.cards['IR/Anarchy.md#abc'] = { rung: 0 };
+    store.flush();
+    store.timer = 1;
+    store.flush();
+    await settle();
+    assert.ok(JSON.parse(disk[file]).items['IR/Anarchy.md']);
+    await v.fileManager.renameFile(f('IR/Anarchy.md'), 'IR/Anarchism.md');
+    store.followRename(f('IR/Anarchism.md'), 'IR/Anarchy.md');
+    assert.ok(store.item('IR/Anarchism.md') && !store.item('IR/Anarchy.md') && store.data.cards['IR/Anarchism.md#abc'], 'a renamed note keeps its schedule');
+    await v.fileManager.renameFile(f('IR/Theories'), 'IR/Schools');
+    store.followRename(f('IR/Schools'), 'IR/Theories');
+    assert.ok(store.item('IR/Schools/Realism.md'), 'and a renamed folder its notes’');
+    store.followDelete({ path: 'IR/Schools' });
+    assert.ok(!store.item('IR/Schools/Realism.md'), 'deleted: gone');
+    clearTimeout(store.timer);
+
+    // The feature: off, nothing; on, a note read in a studied collection comes back.
+    for (const k of Object.keys(disk)) delete disk[k];
+    plugin.study = null;
+    plugin.features = [];
+    plugin.saveSettings = async () => {};
+    app.workspace.trigger = () => {};
+    const study = new R.Study(plugin);
+    plugin.feature = (C) => (C === R.Study ? study : null);
+    study.onRead(f('IR/Balance.md'));
+    await settle();
+    assert.deepStrictEqual(Object.keys(disk), [], 'off: nothing kept');
+    plugin.settings.studyEnabled = true;
+    study.enable();
+    await settle();
+    await study.setStudied(f('IR'), true);
+    assert.ok(plugin.settings.studyAlbums.IR);
+    study.onRead(f('IR/Balance.md'));
+    study.onRead(f('Elsewhere.md'));
+    await settle();
+    const item = R.studyOf(plugin).item('IR/Balance.md');
+    assert.ok(item && item.rung === 0, 'read in a studied collection: on the ladder');
+    assert.strictEqual(Object.keys(R.studyOf(plugin).data.items).length, 1);
+    assert.deepStrictEqual(R.dueNotes(plugin), [], 'not due yet');
+    item.due = Date.now() - 1;
+    assert.deepStrictEqual(R.dueNotes(plugin).map((x) => x.basename), ['Balance']);
+    await view.setState({ mode: 'home' }, {});
+    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).some((e) => e.textContent === 'To revisit · 1'), 'on Home, with a count');
+    study.gradeNote(f('IR/Balance.md'), 'got');
+    assert.deepStrictEqual(R.dueNotes(plugin), [], 'graded: off the shelf');
+    assert.strictEqual(R.studyOf(plugin).item('IR/Balance.md').rung, 1);
+    await study.addEvery(f('IR'));
+    assert.strictEqual(Object.keys(R.studyOf(plugin).data.items).length, 6, 'every note in it, however deep');
+    clearTimeout(R.studyOf(plugin).timer);
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
@@ -1344,7 +1441,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Chosen and ordered in the settings; a shelf new since comes on at the end.
     plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
-    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'fromReading:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'revisit:true', 'continue:true', 'fromReading:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
     plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
     await view.setState({ mode: 'home' }, {});
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);

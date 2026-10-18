@@ -9508,3 +9508,57 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }
+
+/* Study -------------------------------------------------------------------------
+ *
+ * What's due to be revisited: a chip in the strip, and a quiet row of grades
+ * under a due note's title.
+ */
+
+.dr-strip-chip {
+  flex: 0 0 auto;
+  padding: 0 var(--dr-space-2);
+  border-radius: var(--radius-l);
+  background: var(--background-modifier-hover);
+  color: var(--text-accent);
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.dr-note-study {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin: var(--dr-space-2) 0;
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-note-study-label {
+  color: var(--text-muted);
+  margin-inline-end: var(--dr-space-1);
+}
+
+.dr-note-study .dr-note-study-grade {
+  height: 22px;
+  padding: 0 var(--dr-space-2);
+  border-radius: var(--radius-l);
+  font-size: var(--font-ui-smaller);
+  box-shadow: none;
+}
+
+.dr-note-study .dr-note-study-grade[data-grade='got'] {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-strip-chip:hover {
+    background: var(--background-modifier-active-hover);
+  }
+}

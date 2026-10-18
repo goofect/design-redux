@@ -236,6 +236,7 @@ export class ReadingHistory extends Feature {
   /** A note read: noted, and what shows it drawn again. */
   read(file) {
     if (!(file instanceof TFile) || !readingOf(this.plugin).markRead(file)) return;
+    this.app.workspace.trigger('design-redux:read', file);
     if (typeof this.plugin.refreshBrowse === 'function') this.plugin.refreshBrowse();
   }
 }

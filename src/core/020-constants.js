@@ -82,6 +82,12 @@ export const DEFAULTS = {
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
+  // Notes in studied collections come back to be revisited, on a ladder of days.
+  studyEnabled: false,
+  studyLadder: '1, 3, 7, 21, 60',
+  studyDailyMax: 20,
+  // { path: { added } } — the collections studied.
+  studyAlbums: {},
   // A note opens at the line you were on.
   rememberPlace: true,
   // The open note's headings in the right sidebar, the one you're reading lit.

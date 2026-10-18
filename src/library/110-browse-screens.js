@@ -16,6 +16,7 @@ import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { dueNotes } from '../core/081-study.js';
 import { fromReading } from './145-reading-history.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
@@ -1679,6 +1680,7 @@ export class SearchScreen extends BrowseScreen {
 /* Home's shelves, in the order they first come; which show, and in what order, is the homeShelves setting. */
 export const HOME_SHELVES = [
   { id: 'picks', label: 'Highlights' },
+  { id: 'revisit', label: 'To revisit' },
   { id: 'continue', label: 'Continue reading' },
   { id: 'fromReading', label: 'From what you read' },
   { id: 'recents', label: 'Recently opened' },
@@ -1748,6 +1750,10 @@ export class HomeScreen extends BrowseScreen {
     const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
+      revisit: () => {
+        const due = dueNotes(this.plugin);
+        return shelf(`To revisit · ${due.length}`, due.slice(0, 12));
+      },
       continue: () => shelf('Continue reading', continuing),
       fromReading: () => shelf('From what you read', this.fromReading(keep)),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
