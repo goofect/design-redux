@@ -89,14 +89,26 @@ export function pinOf(n) {
   return Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === 'number' && isFinite(v)) ? p : null;
 }
 
-/** The nodes shown: the root's tree, but not what's folded away. */
+/**
+ * The nodes shown under one: its children — or, folded, only the master
+ * nodes below it, which stay out of folds with what hangs from them.
+ */
+export function visibleChildren(n) {
+  if (!(n.attrs && n.attrs.fold)) return n.children;
+  const out = [];
+  const find = (x) => x.children.forEach((c) => (c.attrs && c.attrs.master ? out.push(c) : find(c)));
+  find(n);
+  return out;
+}
+
+/** The nodes shown: the root's tree, but not what's folded away — each with the shown node it hangs from. */
 export function shownNodes(model) {
   const out = [];
-  const go = (n, depth) => {
-    out.push({ node: n, depth });
-    if (!(n.attrs && n.attrs.fold)) n.children.forEach((c) => go(c, depth + 1));
+  const go = (n, depth, parent) => {
+    out.push({ node: n, depth, parent });
+    visibleChildren(n).forEach((c) => go(c, depth + 1, n));
   };
-  if (model.root) go(model.root, 0);
+  if (model.root) go(model.root, 0, null);
   return out;
 }
 
@@ -117,13 +129,13 @@ export function layoutScene(model, sizeOf, mode) {
   const nodes = [];
   const edges = [];
   let order = 0;
-  shown.forEach(({ node, depth }) => {
+  shown.forEach(({ node, depth, parent }) => {
     const size = sizeOf(node);
     const rec = { id: node.id, type: 'text', x: 0, y: 0, width: size.width, height: size.height };
     if (depth > 0) {
       rec[axes.depth] = (axes.forward ? 1 : -1) * depth * 1000;
       rec[axes.across] = order++ * 1000;
-      edges.push({ id: `e-${node.id}`, fromNode: node.parent.id, toNode: node.id });
+      edges.push({ id: `e-${node.id}`, fromNode: parent.id, toNode: node.id });
     }
     nodes.push(rec);
   });
@@ -133,8 +145,8 @@ export function layoutScene(model, sizeOf, mode) {
   (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
   // Hand nudges, from the layout block, on top: each node's and those above it. A pinned node is where it's pinned.
   const off = new Map();
-  shown.forEach(({ node }) => {
-    const above = node.parent ? off.get(node.parent.id) || [0, 0] : [0, 0];
+  shown.forEach(({ node, parent }) => {
+    const above = parent ? off.get(parent.id) || [0, 0] : [0, 0];
     const pin = node === model.root ? null : pinOf(node);
     if (pin) {
       const spot = places.get(node.id) || { x: 0, y: 0 };

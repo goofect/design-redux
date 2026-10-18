@@ -9867,6 +9867,28 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 :is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='5'] { stroke: var(--color-cyan); }
 :is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='6'] { stroke: var(--color-purple); }
 
+.dr-mindmap-groups {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.dr-mindmap-group {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 2px 10px;
+  border: 1px dashed var(--background-modifier-border-hover);
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  pointer-events: none;
+}
+
+.dr-mindmap-node.is-unfocused {
+  opacity: 0.2;
+}
+
 .dr-mindmap-label {
   fill: var(--text-muted);
   font-size: var(--font-ui-smaller);

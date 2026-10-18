@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1169,6 +1169,79 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     const ids = (m) => { const go = (n) => [n.id, n.children.map(go)]; return go(m.root); };
     assert.deepStrictEqual(ids(back.model), ids(view.model));
     assert.deepStrictEqual(back.model.relations.map((r) => [r.from, r.to, r.attrs.kind || r.attrs.predicate || '']), view.model.relations.map((r) => [r.from, r.to, r.attrs.kind || r.attrs.predicate || '']));
+  });
+
+  await t('a master node stays out of the folds above it, with what hangs from it; a group frames its branch, named', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Root ^r\n\t- Topic ^t %%{"group":"Phase 1"}%%\n\t\t- Detail ^d\n\t\t- Key idea ^k %%{"master":1}%%\n\t\t\t- Its example ^e\n\t- Other ^o\n');
+    const frame = view.contentEl.querySelector('.dr-mindmap-group');
+    assert.ok(frame && frame.textContent === 'Phase 1', 'the group framed and named');
+    const t = view.scene.boxes.get('t');
+    const e = view.scene.boxes.get('e');
+    assert.ok(parseFloat(frame.style.left) < t.x && parseFloat(frame.style.left) + parseFloat(frame.style.width) > e.x + e.width, 'round the whole branch');
+    view.toggleFold('t');
+    assert.deepStrictEqual(['d', 'k', 'e'].map((id) => view.scene.boxes.has(id)), [false, true, true], 'folded: the master and what hangs from it stay');
+    const edges = view.contentEl.querySelectorAll('.dr-mindmap-edge');
+    assert.strictEqual(Array.from(edges).filter((p) => p.style.display !== 'none').length, 4, 'the master hangs from the fold');
+  });
+
+  await t('find goes to a node, opening the folds on the way; focus on a branch, or on what’s near a node, wider and narrower by keys', async () => {
+    const view = await open(NOTE);
+    R.registerMindMapHandlers();
+    const research = view.model.root.children[0];
+    const script = research.children[1];
+    view.toggleFold(research.id);
+    view.openTo(script.id);
+    assert.ok(!research.attrs.fold && view.selected === script.id, 'found: the fold opened, the node selected');
+    const dim = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node.is-unfocused')).map((el) => el.textContent.replace(/\d+$/, '')).sort();
+    R.MINDMAP_HANDLERS.get('focus-canvas-branch').run({ view, model: view.model, node: research });
+    assert.deepStrictEqual(dim(), ['API', 'Build', 'Launch plan', 'Ship', 'UI'], 'all but Research and its branch dimmed');
+    R.MINDMAP_HANDLERS.get('focus-canvas-branch').run({ view, model: view.model, node: research });
+    assert.deepStrictEqual(dim(), [], 'asked again: off');
+    const build = view.model.root.children[1];
+    R.MINDMAP_HANDLERS.get('focus-canvas-near').run({ view, model: view.model, node: build });
+    assert.deepStrictEqual(dim(), ['Competitor notes', 'Interview script', 'Research', 'Ship'], 'a step from Build: the root, API and UI');
+    const map = view.contentEl.querySelector('.dr-mindmap');
+    key(map, '+');
+    assert.deepStrictEqual(dim(), ['Competitor notes', 'Interview script'], 'wider');
+    key(map, '-');
+    key(map, 'Escape');
+    assert.deepStrictEqual(dim(), [], 'Escape: off');
+  });
+
+  await t('a map and its notes’ relationships, both ways: relations with a kind written into the notes, and notes’ relationships drawn as relations', async () => {
+    const files = {};
+    ['Government', 'Parliamentarism', 'Courts'].forEach((n) => (files[`Ideas/${n}.md`] = Object.assign(new TFile(`Ideas/${n}.md`), {})));
+    const fms = new Map([[files['Ideas/Courts.md'], { supports: '[[Parliamentarism]]' }]]);
+    const app = {
+      vault: { getFileByPath: (p) => files[p] || null, getMarkdownFiles: () => Object.values(files), getAbstractFileByPath: (p) => files[p] || null },
+      metadataCache: {
+        getFileCache: (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null),
+        getFirstLinkpathDest: (l) => Object.values(files).find((f) => f.basename === l) || null,
+        fileToLinktext: (f) => f.basename,
+        on: () => ({}),
+      },
+      fileManager: { processFrontMatter: async (f, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(f) || {})); fn(fm); fms.set(f, fm); } },
+      workspace: { trigger() {} },
+    };
+    let undo = null;
+    const p = { settings: Object.assign({}, plugin.settings, { knowledge: true, graphRouteProperty: 'parent' }), app, offerUndo: (m, fn) => { undo = fn; }, refreshBrowse() {} };
+    p.notes = new R.Notes(p);
+    const k = new R.Knowledge(p);
+    k.enabled = true;
+    p.feature = (C) => (C === R.Knowledge ? k : null);
+    const view = await open('---\nmindmap: true\n---\n- [[Government]] ^g\n\t- [[Parliamentarism]] ^p\n\t- [[Courts]] ^c\n\n## Relations\n- ^p -> ^g "is a type of" %%{"kind":"is a type of"}%%\n', 'Ideas/Map.md');
+    Object.assign(view, { app, plugin: p });
+    // The map into the notes: the first note says it.
+    assert.strictEqual(await view.writeRelationsToNotes(), 1);
+    assert.deepStrictEqual(fms.get(files['Ideas/Parliamentarism.md'])['is a type of'], ['[[Government]]']);
+    assert.strictEqual(await view.writeRelationsToNotes(), 0, 'in them already');
+    await undo();
+    assert.ok(!('is a type of' in fms.get(files['Ideas/Parliamentarism.md'])));
+    // The notes onto the map: a relation for each relationship not drawn, labelled and given its kind.
+    k.cache = null;
+    assert.strictEqual(view.drawNoteRelations(), 1);
+    const drawn = view.model.relations[1];
+    assert.deepStrictEqual([drawn.from, drawn.to, drawn.label, drawn.attrs.kind], ['c', 'p', 'supports', 'supports']);
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

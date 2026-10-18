@@ -398,6 +398,12 @@ export function registerMindMapHandlers() {
   const album = (ctx) => !!ctx.view.albumFolder();
   handlers['refresh-album-map'] = { when: album, run: (ctx) => ctx.view.syncAlbum({ tell: true }) };
   handlers['add-left-out-note'] = { when: (ctx) => album(ctx) && albumEntry(ctx.model).leftOut.length > 0, run: (ctx) => ctx.view.putBackLeftOut() };
+  // Finding and focusing, and the notes' own relationships.
+  handlers['find-canvas-card'] = { run: (ctx) => ctx.view.findNode() };
+  handlers['focus-canvas-branch'] = { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.toggleFocus('branch', ctx.node.id) };
+  handlers['focus-canvas-near'] = { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.toggleFocus('near', ctx.node.id) };
+  handlers['knowledge-canvas-write'] = { when: (ctx) => !!ctx.view.knowledge(), run: (ctx) => ctx.view.writeRelationsToNotes() };
+  handlers['knowledge-canvas-draw'] = { when: (ctx) => !!ctx.view.knowledge(), run: (ctx) => ctx.view.drawNoteRelations() };
   // Presenting a map.
   const presenting = (ctx) => !!ctx.view.presenting;
   handlers['present-map'] = { when: (ctx) => on('mindmapPresent')(ctx) && !presenting(ctx), run: (ctx) => ctx.view.present(ctx.node && ctx.node !== ctx.model.root ? ctx.node.id : null) };

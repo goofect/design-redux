@@ -155,6 +155,7 @@ import './mindmap/434-mindmap-notes.js';
 import './mindmap/435-mindmap-check.js';
 import './mindmap/437-mindmap-minimap.js';
 import './mindmap/438-mindmap-present.js';
+import './mindmap/441-mindmap-focus.js';
 import './mindmap/420-mindmap-feature.js';
 import './mindmap/436-mindmap-vault-map.js';
 import './mindmap/439-mindmap-album.js';

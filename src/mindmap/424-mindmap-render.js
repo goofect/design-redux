@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { NODE_ROLES, nodeRole, roleLabel } from '../tree/407-tree-relations.js';
-import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, pinOf, viewBox } from './423-mindmap-scene.js';
+import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, pinOf, viewBox, visibleChildren } from './423-mindmap-scene.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -57,6 +57,7 @@ export class MindMapRenderer {
     this.roles = state.roles !== false;
     this.marks = state.marks || null;
     this.present = state.present || null;
+    this.focus = state.focus || null;
     this.place(camera);
     const { width, height } = this.size();
     const view = viewBox(camera, width, height, DRAW_MARGIN / camera.zoom);
@@ -65,7 +66,7 @@ export class MindMapRenderer {
     const visit = (n) => {
       const b = scene.boxes.get(n.id);
       if (b && meets(b, view)) nodes.push([n, b]);
-      if (b && !(n.attrs && n.attrs.fold)) n.children.forEach(visit);
+      if (b) visibleChildren(n).forEach(visit);
     };
     if (model.root) visit(model.root);
     (model.free || []).forEach((n) => {
@@ -84,6 +85,7 @@ export class MindMapRenderer {
       this.spare.push(el);
     });
     this.drawn = seen.size;
+    this.drawGroups(model, scene);
     this.drawEdges(model, scene, view, mode);
   }
 
@@ -130,6 +132,7 @@ export class MindMapRenderer {
     else delete el.dataset.tint;
     el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
     el.toggleClass('is-pinned', !!pinOf(n));
+    el.toggleClass('is-unfocused', !!this.focus && !this.focus.has(n.id));
     const pr = this.present;
     el.toggleClass('dr-present-now', !!pr && pr.now === n.id);
     el.toggleClass('dr-present-dim', !!pr && !pr.lit.has(n.id));
@@ -159,9 +162,8 @@ export class MindMapRenderer {
   drawEdges(model, scene, view, mode) {
     const want = [];
     const walk = (n, colour) => {
-      if (n.attrs && n.attrs.fold) return;
       const from = scene.boxes.get(n.id);
-      n.children.forEach((c) => {
+      visibleChildren(n).forEach((c) => {
         const own = colourKey(c) || colour;
         const to = scene.boxes.get(c.id);
         if (from && to && (meets(from, view) || meets(to, view))) {
@@ -213,6 +215,56 @@ export class MindMapRenderer {
       else p.removeAttribute('marker-end');
     });
     this.drawLabels(want.filter((w) => w.label));
+  }
+
+  /** A frame round each branch whose first node names a group, with the group's name: behind the nodes. */
+  drawGroups(model, scene) {
+    const want = [];
+    const branchBoxes = (n, out) => {
+      const b = scene.boxes.get(n.id);
+      if (b) out.push(b);
+      visibleChildren(n).forEach((c) => branchBoxes(c, out));
+      return out;
+    };
+    const go = (n) => {
+      const name = n.attrs && n.attrs.group;
+      if (name && scene.boxes.has(n.id)) {
+        const boxes = branchBoxes(n, []);
+        const minX = Math.min(...boxes.map((b) => b.x));
+        const minY = Math.min(...boxes.map((b) => b.y));
+        const maxX = Math.max(...boxes.map((b) => b.x + b.width));
+        const maxY = Math.max(...boxes.map((b) => b.y + b.height));
+        want.push({ name: String(name), minX, minY, maxX, maxY });
+      }
+      visibleChildren(n).forEach(go);
+    };
+    if (model.root) go(model.root);
+    (model.free || []).forEach(go);
+    if (!want.length && !this.groupLayer) return;
+    if (!this.groupLayer) {
+      this.groupLayer = this.host.ownerDocument.createElement('div');
+      this.groupLayer.className = 'dr-mindmap-groups';
+      this.plane.insertBefore(this.groupLayer, this.layer);
+      this.frames = [];
+    }
+    while (this.frames.length < want.length) this.frames.push(this.groupLayer.createDiv({ cls: 'dr-mindmap-group' }));
+    const pad = 16;
+    this.frames.forEach((el, k) => {
+      const g = want[k];
+      if (!g) {
+        el.style.display = 'none';
+        return;
+      }
+      el.style.display = '';
+      el.style.left = `${g.minX - pad}px`;
+      el.style.top = `${g.minY - pad - 14}px`;
+      el.style.width = `${g.maxX - g.minX + pad * 2}px`;
+      el.style.height = `${g.maxY - g.minY + pad * 2 + 14}px`;
+      if (el.dataset.name !== g.name) {
+        el.dataset.name = g.name;
+        el.setText(g.name);
+      }
+    });
   }
 
   /** What an edge or relation says, written halfway along it. */
