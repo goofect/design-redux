@@ -2107,7 +2107,8 @@ describe('Design Redux in Obsidian', function () {
           shelves: Array.from(root.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent),
         };
       });
-    await browser.waitUntil(async () => (await look()).shelves.length > 0, { timeout: 5000, timeoutMsg: 'the note page was never drawn' });
+    // The link shelves come once Obsidian has the links: all three, not the first drawn.
+    await browser.waitUntil(async () => (await look()).shelves.length >= 3, { timeout: 5000, timeoutMsg: 'the note page was never drawn with its shelves' });
     let now = await look();
     expect(now.album).toBe('Page album');
     expect(now.above).toBe(true);
@@ -2843,7 +2844,9 @@ describe('Design Redux in Obsidian', function () {
     const listed = shown && shown[0];
     expect(['parent', 'Parent']).toContain(listed);
     const other = listed === 'parent' ? 'Parent' : 'parent';
-    expect(shown).toEqual([listed, `“${other}” in ${listed === 'parent' ? 2 : 1}`]);
+    // Notes left by earlier tests may write it too: the other way's count, from the vault itself.
+    const others = await browser.executeObsidian(({ app }, key) => app.vault.getMarkdownFiles().filter((f) => key in ((app.metadataCache.getFileCache(f) || {}).frontmatter || {})).length, other);
+    expect(shown).toEqual([listed, `“${other}” in ${others}`]);
     await (await browser.$('[data-test="fix"]')).click();
     await browser.pause(1500);
     const after = await browser.executeObsidian(async ({ app, plugins }) => {
