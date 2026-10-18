@@ -1097,7 +1097,8 @@ describe('Design Redux in Obsidian', function () {
         const view = app.workspace.activeLeaf.view;
         return view.getViewType() === 'markdown' ? view.editor.getValue() : null;
       }),
-      (t) => typeof t === 'string'
+      // The editor's empty for a moment before the note's text is in it.
+      (t) => typeof t === 'string' && t.length > 0
     );
     expect(text).toBe('---\nmindmap: true\n---\n- Launch plan\n\t- Research\n\t- Build\n\t\t- API\n');
     // And it stays text, though the note's opened again in the same tab.
