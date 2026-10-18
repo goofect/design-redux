@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -861,6 +861,25 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(created[1][0], 'law map.md');
     assert.deepStrictEqual(shape(tagMap.root), ['#law', [['[[Statute]]', []], ['#court', [['[[Appeal]]', []], ['[[Trial]]', []]]]]], 'each note once, under its narrowest tag');
     assert.strictEqual(tagMap.relations.length, 1);
+    // New maps are mind maps: the canvas ones are offered only when canvases are kept.
+    const ids = (Ctor, settings) => {
+      const f = new Ctor(Object.assign({}, p, { settings: Object.assign({}, p.settings, settings) }));
+      return f.actions().filter((a) => a.when({ folder: law, from: 'menu' })).map((a) => a.id);
+    };
+    assert.deepStrictEqual([ids(R.CanvasVaultMap, {}), ids(R.AlbumMap, {})], [[], []], 'no canvas map by default');
+    assert.deepStrictEqual([ids(R.CanvasVaultMap, { mindmapKeepCanvasMaps: true }), ids(R.AlbumMap, { mindmapKeepCanvasMaps: true })], [['canvas-map-folder', 'canvas-map-tag'], ['map-album']]);
+    // A note's relationships: a mind map, a branch for each kind.
+    const statute = files[1];
+    const knowledge = { plugin: { feature: () => maps }, groups: () => [{ label: 'Sits under', items: [{ file: files[0] }] }, { label: 'Cites', items: [{ file: files[3] }, { file: files[4] }] }] };
+    Object.setPrototypeOf(knowledge, R.Knowledge.prototype);
+    await knowledge.mapAsMindMap(statute);
+    const [relPath, relText] = created[2];
+    assert.strictEqual(relPath, 'Law/Statute relationships.md');
+    assert.ok(relText.startsWith('---\nmindmap: true\n---\n'));
+    assert.deepStrictEqual(shape(R.parseOutline(relText).model.root), ['[[Statute]]', [['Sits under', [['[[Law]]', []]]], ['Cites', [['[[Appeal]]', []], ['[[Trial]]', []]]]]]);
+    p.settings.mindmaps = false;
+    assert.strictEqual(knowledge.mapAsMindMap(statute), undefined, 'mind maps off: the canvas is made instead');
+    p.settings.mindmaps = true;
     delete obsidian.getAllTags;
   });
 

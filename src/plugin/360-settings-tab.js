@@ -19,7 +19,7 @@ export const SETTINGS_TABS = [
     title: 'Appearance',
     sections: [
       { title: 'Look', keys: ['look', 'lookScope', 'glassPanels', 'albumProgressRing'] },
-      { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'artworkSize', 'canvasSpacing'] },
+      { title: 'Density', desc: 'How much room things get across the interface.', keys: ['gridDensity', 'artworkSize'] },
     ],
   },
   {
@@ -57,11 +57,12 @@ export const SETTINGS_TABS = [
   },
   {
     id: 'canvas',
-    title: 'Canvas',
+    title: 'Maps',
     sections: [
-      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapDefaultFormat', 'mindmapLayout', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapAlbumMap', 'mindmapConvert'] },
+      { title: 'Maps', desc: 'For every map, mind map or canvas: what a new one is, and how far apart things are put.', keys: ['mindmapKeepCanvasMaps', 'mindmapDefaultFormat', 'mindmapLayout', 'canvasSpacing'] },
+      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapAlbumMap', 'mindmapConvert'] },
       {
-        title: 'Map',
+        title: 'Canvas maps',
         keys: [
           'canvasMaps', 'canvasMapToolbar', 'canvasToolbarItems', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate',
           'canvasBranches', 'canvasCloseGaps', 'canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap', 'albumMapAuto', 'albumMapWritesParent', 'albumMapLayout', 'canvasPresent', 'presentDimLevel', 'presentCaption',

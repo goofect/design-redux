@@ -318,6 +318,12 @@ export class DesignRedux extends Plugin {
     return this.files.newCanvas(folder);
   }
 
+  /** A new mind map in the folder, where mind maps are on. */
+  newMindMap(folder) {
+    const maps = this.feature(MindMaps);
+    return maps && maps.enabled ? maps.newMap(folder) : null;
+  }
+
   /**
    * A folder in a particular folder, asked for by name, then opened —
    * so the next thing, putting a note in it, is right there. An empty

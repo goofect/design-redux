@@ -839,9 +839,14 @@ export class KnowledgeCanvas {
     return edges.length;
   }
 
-  /** A canvas beside the note: it at the centre, what it relates to round it, each arrow labelled. */
+  /** A map beside the note — a mind map, unless canvases are kept — or a canvas: it at the centre, what it relates to round it, each arrow labelled. */
   async map(file) {
     if (!file) return null;
+    // New maps are mind maps, unless canvases are kept: the mind maps' own, where they're on.
+    if (!this.settings.mindmapKeepCanvasMaps && typeof this.mapAsMindMap === 'function') {
+      const made = await this.mapAsMindMap(file);
+      if (made !== undefined) return made;
+    }
     const rel = this.relationsOf(file);
     const others = [];
     rel.out.forEach((r) => others.push({ file: r.file, kind: r.kind, out: true }));

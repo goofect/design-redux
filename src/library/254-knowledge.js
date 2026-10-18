@@ -248,7 +248,7 @@ export class Knowledge extends Feature {
       { id: 'knowledge-broader', name: 'Find what this concept comes under…', menu: 'Find broader concepts…', icon: 'arrow-up-to-line', on: 'note', when: (ctx) => on(ctx) && up(ctx), run: (ctx) => this.chooseBroader(ctx.file) },
       { id: 'knowledge-in-canvas', name: 'Open this note in a canvas', menu: 'Open in canvas', icon: 'layout-dashboard', on: 'note', when: (ctx) => on(ctx) && ctx.from !== 'canvas', run: (ctx) => this.openInCanvas(ctx.file) },
       { id: 'knowledge-in-album', name: 'Open this note’s collection', menu: 'Open in collection', icon: 'disc', on: 'note', when: on, run: (ctx) => this.openInAlbum(ctx.file) },
-      { id: 'knowledge-map', name: 'Map this note’s relationships on a canvas', menu: 'Map its relationships', icon: 'network', on: 'note', when: on, run: (ctx) => this.map(ctx.file) },
+      { id: 'knowledge-map', name: 'Map this note’s relationships', menu: 'Map its relationships', icon: 'network', on: 'note', when: on, run: (ctx) => this.map(ctx.file) },
       { id: 'knowledge-create', name: 'Create a concept…', menu: false, icon: 'file-plus', on: 'app', when: () => this.enabled, run: () => this.createConcept(null) },
       { id: 'knowledge-canvas-write', name: 'Write this canvas’s relationships into its notes', menu: false, icon: 'file-input', on: 'canvas', when: () => this.enabled, run: (ctx) => this.writeFromCanvas(ctx.view) },
       { id: 'knowledge-canvas-draw', name: 'Draw its notes’ relationships on this canvas', menu: false, icon: 'git-branch-plus', on: 'canvas', when: () => this.enabled, run: (ctx) => this.drawOnCanvas(ctx.view) },

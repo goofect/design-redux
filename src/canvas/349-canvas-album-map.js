@@ -122,7 +122,7 @@ export class AlbumMap extends CanvasFeature {
   actions() {
     const map = (ctx) => this.enabled && !!this.entryOf(ctx.view);
     return [
-      { id: 'map-album', name: 'Map this collection by its notes’ parents', menu: 'Map by parent', icon: 'network', on: 'album', when: (ctx) => this.enabled && ctx.folder && !(ctx.folder.isRoot && ctx.folder.isRoot()), run: (ctx) => this.mapAlbum(ctx.folder) },
+      { id: 'map-album', name: 'Map this collection by its notes’ parents', menu: 'Map by parent', icon: 'network', on: 'album', when: (ctx) => this.enabled && !!this.settings.mindmapKeepCanvasMaps && ctx.folder && !(ctx.folder.isRoot && ctx.folder.isRoot()), run: (ctx) => this.mapAlbum(ctx.folder) },
       { id: 'refresh-album-map', name: 'Bring this collection map up to date', menu: 'Bring up to date', icon: 'refresh-cw', on: 'canvas', when: map, run: (ctx) => this.refresh(ctx.view, { tell: true }) },
       { id: 'add-left-out-note', name: 'Put a left-out note back on the map', menu: 'Put back a left-out note', icon: 'file-plus', on: 'canvas', when: (ctx) => map(ctx) && this.leftOutFiles(ctx.view).length > 0, run: (ctx) => this.putBack(ctx.view) },
     ];

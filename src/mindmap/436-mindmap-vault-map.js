@@ -116,6 +116,20 @@ class MindMapVaultMap {
     return this.writeVaultMap(`${tag.replace(/^#/, '').replace(/\//g, ' ')} map`, folder, (from) => ({ title: tag, items: this.tagMapItems(tag, from) }));
   }
 
+  /** A note's relationships as a mind map beside it: the note at the root, a branch for each kind, the notes under it. */
+  mapNoteRelationships(file, knowledge) {
+    if (!(file instanceof TFile) || !knowledge) return Promise.resolve(null);
+    const groups = knowledge.groups(file);
+    if (!groups.length) {
+      new Notice(`${file.basename} has no relationships to map yet.`);
+      return Promise.resolve(null);
+    }
+    return this.writeVaultMap(`${file.basename} relationships`, file.parent, (from) => ({
+      title: this.noteItem(file, from).text,
+      items: groups.map((g) => ({ text: g.label, children: g.items.map((i) => this.noteItem(i.file, from)) })),
+    }));
+  }
+
   /** The map worked out — for links written from where it'll be — written in the format new maps take, and opened. */
   async writeVaultMap(name, folder, build) {
     const kind = this.settings.mindmapDefaultFormat === MINDMAP_EXTENSION ? MINDMAP_EXTENSION : 'md';

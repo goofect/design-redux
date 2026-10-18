@@ -96,8 +96,8 @@ export class CanvasVaultMap extends Feature {
 
   actions() {
     return [
-      { id: 'canvas-map-folder', name: 'Make a canvas map of this folder', menu: 'Make a canvas map', icon: 'network', on: 'album', when: () => this.enabled, run: (ctx) => this.mapFolder(ctx.folder) },
-      { id: 'canvas-map-tag', name: 'Make a canvas map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled, run: () => new TagPicker(this.app, this.allTags(), (tag) => this.mapTag(tag)).open() },
+      { id: 'canvas-map-folder', name: 'Make a canvas map of this folder', menu: 'Make a canvas map', icon: 'network', on: 'album', when: () => this.enabled && !!this.settings.mindmapKeepCanvasMaps, run: (ctx) => this.mapFolder(ctx.folder) },
+      { id: 'canvas-map-tag', name: 'Make a canvas map of a tag…', menu: false, icon: 'tags', on: 'app', when: () => this.enabled && !!this.settings.mindmapKeepCanvasMaps, run: () => new TagPicker(this.app, this.allTags(), (tag) => this.mapTag(tag)).open() },
     ];
   }
 

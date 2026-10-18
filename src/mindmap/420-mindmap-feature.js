@@ -80,6 +80,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, Escape to leave. Nothing is changed.' },
       { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
       { key: 'mindmapConvert', showIf: 'mindmaps', name: 'Convert maps', desc: 'Make a mind map of a canvas — its trees, folds, layouts and relations kept — or a .mindmap file of a note’s map and back, or export a map as a canvas. The original is left as it is.' },
+      { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -290,13 +291,13 @@ export class MindMaps extends Feature {
   }
 
   /** A new map, as the setting says it's made — or asked, the first time. */
-  newMap() {
+  newMap(folder) {
     const kind = this.settings.mindmapDefaultFormat;
-    if (kind === 'md' || kind === 'mindmap') return this.create(kind);
+    if (kind === 'md' || kind === 'mindmap') return this.create(kind, folder);
     new ChoicePicker(this.app, 'Make the new mind map as…', MINDMAP_FORMATS.map((f) => Object.assign({ note: f.desc }, f)), async (chosen) => {
       this.settings.mindmapDefaultFormat = chosen.id;
       await this.plugin.saveSettings();
-      this.create(chosen.id);
+      this.create(chosen.id, folder);
     }).open();
     return null;
   }
@@ -315,9 +316,9 @@ export class MindMaps extends Feature {
     }).open();
   }
 
-  async create(kind) {
+  async create(kind, into) {
     const active = this.app.workspace.getActiveFile();
-    const folder = active && active.parent instanceof TFolder ? active.parent : this.app.vault.getRoot();
+    const folder = into instanceof TFolder ? into : active && active.parent instanceof TFolder ? active.parent : this.app.vault.getRoot();
     const model = treeModel('Mind map');
     const text = kind === 'mindmap' ? writeMindmapJson(model) : writeOutline(model);
     const path = this.plugin.freeChildPath(folder, 'Mind map', kind === 'mindmap' ? MINDMAP_EXTENSION : 'md');

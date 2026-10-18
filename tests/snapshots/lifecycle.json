@@ -343,6 +343,7 @@
   "mindmapDefaultFormat",
   "mindmapDepth",
   "mindmapGlide",
+  "mindmapKeepCanvasMaps",
   "mindmapLayout",
   "mindmapLegend",
   "mindmapMinimap",
