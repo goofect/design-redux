@@ -1,0 +1,170 @@
+/* ------------------------------------------------------------------ */
+/* Mind map: the scene                                                 */
+/*                                                                    */
+/* The map's tree as boxes on a plane: each shown node sized from its  */
+/* text, laid out by the tree's own layouts from the root at 0,0 — the */
+/* list's order is the siblings' order — free nodes in a row beneath.  */
+/* And the maths of looking at it: what's on screen, where a point is.  */
+/* No DOM here but what a size is measured with.                      */
+/* ------------------------------------------------------------------ */
+
+import { plainMarkdownLine } from '../core/047-helpers-text.js';
+import { arrowLinks, modelFromData, sideAxes } from '../tree/400-tree-model.js';
+import { BRANCH_LAYOUTS, layoutPlaces } from '../tree/403-tree-layouts.js';
+
+/* A node's box: as wide as its words want, up to a limit. */
+export const NODE_MIN_WIDTH = 72;
+export const NODE_MAX_WIDTH = 280;
+export const NODE_LINE = 20;
+export const NODE_PAD = { x: 12, y: 8 };
+export const CHAR_WIDTH = 7.4;
+/* Room round what's on screen that's drawn too, so a pan doesn't show an edge. */
+export const DRAW_MARGIN = 200;
+
+/** A node's text as one plain line, for its box and its size. */
+export function nodeLabel(node) {
+  const first = String((node && node.text) || '').split('\n')[0];
+  return plainMarkdownLine(first) || (node && node.virtual ? 'Untitled' : '');
+}
+
+/** A box for text, estimated from its length until it's been measured: { width, height }. */
+export function estimateSize(text) {
+  const chars = String(text || '').length;
+  const inner = NODE_MAX_WIDTH - NODE_PAD.x * 2;
+  const wide = Math.min(inner, Math.max(NODE_MIN_WIDTH - NODE_PAD.x * 2, Math.ceil(chars * CHAR_WIDTH)));
+  const lines = Math.max(1, Math.ceil((chars * CHAR_WIDTH) / inner));
+  return { width: Math.round(wide + NODE_PAD.x * 2), height: lines * NODE_LINE + NODE_PAD.y * 2 };
+}
+
+/** The nodes shown: the root's tree, but not what's folded away. */
+export function shownNodes(model) {
+  const out = [];
+  const go = (n, depth) => {
+    out.push({ node: n, depth });
+    if (!(n.attrs && n.attrs.fold)) n.children.forEach((c) => go(c, depth + 1));
+  };
+  if (model.root) go(model.root, 0);
+  return out;
+}
+
+/**
+ * Where everything goes: Map id -> { x, y, width, height, depth }, and
+ * the whole's bounds. `sizeOf(node)` gives a box's size; `mode` the
+ * layout, one of the tree's.
+ */
+export function layoutScene(model, sizeOf, mode) {
+  const way = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : 'right';
+  const shown = shownNodes(model);
+  const boxes = new Map();
+  if (!shown.length) return { boxes, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } };
+  // Laid out as the canvas's cards are, set out first in the list's order so the layout keeps it.
+  const axes = sideAxes(way === 'left' || way === 'top' ? way : way === 'bottom' ? 'bottom' : 'right');
+  const nodes = [];
+  const edges = [];
+  let order = 0;
+  shown.forEach(({ node, depth }) => {
+    const size = sizeOf(node);
+    const rec = { id: node.id, type: 'text', x: 0, y: 0, width: size.width, height: size.height };
+    if (depth > 0) {
+      rec[axes.depth] = (axes.forward ? 1 : -1) * depth * 1000;
+      rec[axes.across] = order++ * 1000;
+      edges.push({ id: `e-${node.id}`, fromNode: node.parent.id, toNode: node.id });
+    }
+    nodes.push(rec);
+  });
+  const cards = modelFromData({ nodes, edges });
+  const places = layoutPlaces(cards, model.root.id, way, arrowLinks(cards));
+  const depthOf = new Map(shown.map((s) => [s.node.id, s.depth]));
+  cards.nodes.forEach((r) => {
+    const at = r.id === model.root.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
+    boxes.set(r.id, { x: at.x, y: at.y, width: r.width, height: r.height, depth: depthOf.get(r.id) || 0 });
+  });
+  // Hand nudges, from the layout block, on top.
+  const nudge = (model.layout && model.layout.nudge) || {};
+  Object.keys(nudge).forEach((id) => {
+    const b = boxes.get(id);
+    const d = nudge[id];
+    if (b && Array.isArray(d)) {
+      b.x += Number(d[0]) || 0;
+      b.y += Number(d[1]) || 0;
+    }
+  });
+  let bounds = boundsOfBoxes(boxes.values());
+  // Free nodes: in a row under the tree.
+  let x = bounds.minX;
+  const y = bounds.maxY + 80;
+  (model.free || []).forEach((n) => {
+    const size = sizeOf(n);
+    boxes.set(n.id, { x, y, width: size.width, height: size.height, depth: 0, free: true });
+    x += size.width + 30;
+  });
+  bounds = boundsOfBoxes(boxes.values());
+  return { boxes, bounds };
+}
+
+/** The box round some boxes. */
+export function boundsOfBoxes(boxes) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const b of boxes) {
+    minX = Math.min(minX, b.x);
+    minY = Math.min(minY, b.y);
+    maxX = Math.max(maxX, b.x + b.width);
+    maxY = Math.max(maxY, b.y + b.height);
+  }
+  return minX === Infinity ? { minX: 0, minY: 0, maxX: 0, maxY: 0 } : { minX, minY, maxX, maxY };
+}
+
+/** What a view of a given size shows, at a pan and zoom: a box on the plane. */
+export function viewBox(camera, width, height, margin = 0) {
+  const w = width / camera.zoom;
+  const h = height / camera.zoom;
+  return { minX: camera.x - w / 2 - margin, minY: camera.y - h / 2 - margin, maxX: camera.x + w / 2 + margin, maxY: camera.y + h / 2 + margin };
+}
+
+/** Whether a box meets another. */
+export function meets(b, view) {
+  return b.x < view.maxX && b.x + b.width > view.minX && b.y < view.maxY && b.y + b.height > view.minY;
+}
+
+/** The camera that shows a box whole, at no more than full size. */
+export function fitCamera(bounds, width, height, pad = 60) {
+  const w = Math.max(1, bounds.maxX - bounds.minX + pad * 2);
+  const h = Math.max(1, bounds.maxY - bounds.minY + pad * 2);
+  const zoom = Math.min(1, width / w, height / h);
+  return { x: (bounds.minX + bounds.maxX) / 2, y: (bounds.minY + bounds.maxY) / 2, zoom: Math.max(0.1, zoom) };
+}
+
+/** A point on screen, relative to the view's corner, as a point on the plane. */
+export function screenToPlane(camera, width, height, sx, sy) {
+  return { x: camera.x + (sx - width / 2) / camera.zoom, y: camera.y + (sy - height / 2) / camera.zoom };
+}
+
+/** The way an edge leaves its parent's box and enters its child's, as an SVG path. */
+export function edgePath(from, to, mode) {
+  const vertical = mode === 'bottom' || mode === 'top' || mode === 'outline';
+  if (mode === 'outline') {
+    const x = from.x + 16;
+    const y1 = from.y + from.height;
+    const y2 = to.y + to.height / 2;
+    return `M ${x} ${y1} L ${x} ${y2} L ${to.x} ${y2}`;
+  }
+  if (vertical) {
+    const down = to.y > from.y;
+    const x1 = from.x + from.width / 2;
+    const y1 = down ? from.y + from.height : from.y;
+    const x2 = to.x + to.width / 2;
+    const y2 = down ? to.y : to.y + to.height;
+    const my = (y1 + y2) / 2;
+    return `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
+  }
+  const right = to.x + to.width / 2 >= from.x + from.width / 2;
+  const x1 = right ? from.x + from.width : from.x;
+  const y1 = from.y + from.height / 2;
+  const x2 = right ? to.x : to.x + to.width;
+  const y2 = to.y + to.height / 2;
+  const mx = (x1 + x2) / 2;
+  return `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+}

@@ -59,6 +59,7 @@ export const SETTINGS_TABS = [
     id: 'canvas',
     title: 'Canvas',
     sections: [
+      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapDefaultFormat', 'mindmapLayout'] },
       {
         title: 'Map',
         keys: [

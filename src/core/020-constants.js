@@ -83,6 +83,11 @@ export const DEFAULTS = {
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
+  // Mind maps: a note flagged mindmap: true, or a .mindmap file, opened as a map.
+  mindmaps: true,
+  mindmapTakeover: true,
+  mindmapDefaultFormat: '',
+  mindmapLayout: 'right',
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',

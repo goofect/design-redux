@@ -82,6 +82,7 @@ import { AlbumMap } from '../canvas/349-canvas-album-map.js';
 import { CanvasMapToolbar } from '../canvas/349-canvas-map-toolbar.js';
 import { CanvasPresent } from '../canvas/349-canvas-present.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
+import { MindMaps } from '../mindmap/420-mindmap-feature.js';
 
 export class DesignRedux extends Plugin {
   async onload() {
@@ -164,6 +165,7 @@ export class DesignRedux extends Plugin {
       new CanvasOutline(this),
       new CanvasPresent(this),
       new AlbumMap(this),
+      new MindMaps(this),
       new CanvasFind(this),
       new CanvasFocus(this),
       new CanvasDuplicate(this),

@@ -1067,6 +1067,44 @@ describe('Design Redux in Obsidian', function () {
     expect(opened).toBe('Politics/Deterrence.md');
   });
 
+  it('opens a mind-map note as a map, and Open as text gives back its list', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getAbstractFileByPath('Plan map.md');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Plan map.md', '---\nmindmap: true\n---\n- Launch plan\n\t- Research\n\t- Build\n\t\t- API\n');
+    });
+    await obsidianPage.openFile('Plan map.md');
+    const nodes = () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-mindmap-node')).map((n) => n.textContent.replace(/\d+$/, '')));
+    const drawn = await readUntil(nodes, (n) => n.length === 4);
+    expect(drawn.slice().sort()).toEqual(['API', 'Build', 'Launch plan', 'Research']);
+    // As text: the list, as it was written.
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:open-mind-map-as-text'));
+    const text = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const view = app.workspace.activeLeaf.view;
+        return view.getViewType() === 'markdown' ? view.editor.getValue() : null;
+      }),
+      (t) => typeof t === 'string'
+    );
+    expect(text).toBe('---\nmindmap: true\n---\n- Launch plan\n\t- Research\n\t- Build\n\t\t- API\n');
+    // And it stays text, though the note's opened again in the same tab.
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      await leaf.openFile(app.vault.getAbstractFileByPath('Home.md'));
+      await leaf.openFile(app.vault.getAbstractFileByPath('Plan map.md'));
+    });
+    await browser.pause(500);
+    expect(await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.getViewType())).toBe('markdown');
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:open-note-as-mind-map'));
+    expect((await readUntil(nodes, (n) => n.length === 4)).length).toBe(4);
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
+      await new Promise((r) => setTimeout(r, 300));
+      const f = app.vault.getAbstractFileByPath('Plan map.md');
+      if (f) await app.vault.delete(f);
+    });
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');
