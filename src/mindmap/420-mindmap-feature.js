@@ -21,6 +21,7 @@ import { relinkText } from '../tree/408-tree-notes.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MAP_SNAPSHOTS } from './435-mindmap-check.js';
 
 /* The kinds of file a new map can be. */
 export const MINDMAP_FORMATS = [
@@ -72,6 +73,8 @@ export class MindMaps extends Feature {
       { key: 'mindmapRelations', showIf: 'mindmaps', name: 'Relations', desc: 'Relate any two nodes — by command, or dragging one onto the other with Alt held — and say what it means: a kind of relationship, or your own words.' },
       { key: 'mindmapArguments', showIf: 'mindmaps', name: 'Arguments', desc: 'A node can be a claim, a reason, an objection, a rebuttal or evidence, shown above it; a claim counts what’s for and against it.' },
       { key: 'mindmapBranchNotes', showIf: 'mindmaps', name: 'Branches and notes', desc: 'A branch can be made into a note beside the map, its node a link to it; a node linking to a note can take the note’s headings as nodes.' },
+      { key: 'mindmapCheck', showIf: 'mindmaps', name: 'Check a map', desc: 'Lists what may be wrong: nodes there twice, empty ones, links to notes that are gone, relations round in a circle.' },
+      { key: 'mindmapCompare', showIf: 'mindmaps', name: 'Compare maps', desc: 'Keep a snapshot of a map and compare with it later, or with another map, or one branch with another.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -186,9 +189,33 @@ export class MindMaps extends Feature {
     if (leaf && leaf.view && leaf.view.file === file) await this.openAsMap(leaf);
   }
 
+  /** A map's kept snapshot, moved with it to its new path. */
+  async moveSnapshot(from, to) {
+    const dir = this.plugin.manifest && this.plugin.manifest.dir;
+    const adapter = this.app.vault.adapter;
+    const at = dir ? `${dir}/${MAP_SNAPSHOTS}` : null;
+    if (!at || !adapter || !(await adapter.exists(at))) return;
+    try {
+      const all = JSON.parse(await adapter.read(at)) || {};
+      if (!all[from]) return;
+      all[to] = all[from];
+      delete all[from];
+      await adapter.write(at, JSON.stringify(all));
+    } catch (err) {
+      console.error('Design Redux: could not move the map’s snapshot', err);
+    }
+  }
+
+  /** Whether a file is a mind map: a .mindmap file, or a note flagged as one. */
+  isMap(file) {
+    return file instanceof TFile && (file.extension === MINDMAP_EXTENSION || (file.extension === 'md' && isMindMapNote(this.app, file)));
+  }
+
   /** Links in .mindmap files to a note renamed, pointed at its new name. */
   async followRename(file, oldPath) {
-    if (!(file instanceof TFile) || file.extension !== 'md' || !this.enabled) return;
+    if (!(file instanceof TFile) || !this.enabled) return;
+    if (this.isMap(file)) await this.moveSnapshot(oldPath, file.path);
+    if (file.extension !== 'md') return;
     const oldBase = oldPath.split('/').pop().replace(/\.md$/, '');
     const olds = [oldBase, oldPath.replace(/\.md$/, '')];
     const vault = this.app.vault;
@@ -313,6 +340,13 @@ export function registerMindMapHandlers() {
   const notes = (ctx) => ctx.view.plugin && ctx.view.plugin.settings.mindmapBranchNotes !== false;
   handlers['canvas-branch-to-note'] = { when: (ctx) => notes(ctx) && !!ctx.node && ctx.node !== ctx.model.root && ctx.node.children.length > 0, run: (ctx) => ctx.view.branchToNote(ctx.node.id) };
   handlers['canvas-outline-to-branch'] = { when: (ctx) => notes(ctx) && !!ctx.view.linkedNote(ctx.node), run: (ctx) => ctx.view.noteToBranch(ctx.node.id) };
+  // Looking a map over, and comparing.
+  const on = (key) => (ctx) => ctx.view.plugin && ctx.view.plugin.settings[key] !== false;
+  handlers['check-canvas'] = { when: on('mindmapCheck'), run: (ctx) => ctx.view.checkMap() };
+  handlers['canvas-keep-snapshot'] = { when: (ctx) => on('mindmapCompare')(ctx) && !!ctx.view.file, run: (ctx) => ctx.view.keepSnapshot() };
+  handlers['canvas-compare'] = { when: on('mindmapCompare'), run: (ctx) => ctx.view.chooseComparison() };
+  handlers['canvas-compare-branches'] = { when: (ctx) => on('mindmapCompare')(ctx) && !!ctx.node && ctx.node.children.length > 0, run: (ctx) => ctx.view.chooseBranchComparison(ctx.node.id) };
+  handlers['canvas-compare-done'] = { when: (ctx) => !!ctx.view.findingsEl, run: (ctx) => ctx.view.closeFindings() };
   // Moving a node about the tree, under the canvas's names for it.
   const notRoot = (ctx) => !!ctx.node && ctx.node !== ctx.model.root;
   handlers['canvas-promote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) };

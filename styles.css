@@ -10032,6 +10032,70 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   visibility: hidden;
 }
 
+/* Findings — a check's, or a comparison's — in the top corner, their nodes marked. */
+.dr-mindmap-findings {
+  position: absolute;
+  right: var(--dr-space-3, 12px);
+  top: 48px;
+  width: 280px;
+  max-height: calc(100% - 72px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  font-size: var(--font-ui-smaller);
+  cursor: default;
+}
+
+.dr-mindmap-findings-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2, 8px);
+  padding: var(--dr-space-2, 8px);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-mindmap-findings-title {
+  flex: 1;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-mindmap-findings-rows {
+  overflow-y: auto;
+  padding: var(--dr-space-1, 4px);
+}
+
+.dr-mindmap-findings-row {
+  display: flex;
+  flex-direction: column;
+  padding: 3px var(--dr-space-2, 8px);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.dr-mindmap-findings-row.is-gone {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.dr-mindmap-findings-text {
+  color: var(--text-muted);
+}
+
+@media (any-hover: hover) {
+  .dr-mindmap-findings-row:not(.is-gone):hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.dr-mindmap-node[data-mark] { outline: 2px solid var(--text-accent); outline-offset: 3px; }
+.dr-mindmap-node[data-mark='problem'] { outline-color: var(--color-orange); }
+.dr-mindmap-node[data-mark='added'] { outline-color: var(--color-green); }
+.dr-mindmap-node[data-mark='reworded'] { outline-color: var(--color-yellow); }
+.dr-mindmap-node[data-mark='moved'] { outline-color: var(--color-cyan); outline-style: dashed; }
+
 .dr-mindmap-legend {
   position: absolute;
   left: var(--dr-space-3, 12px);

@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -737,6 +737,63 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual(build.children.map((c) => [c.text, c.children.map((x) => x.text)]), [['API', ['Auth']], ['UI', []]]);
     // A rename, in a .mindmap file's text.
     assert.strictEqual(R.relinkText('See [[Build]] and [[build|it]] and ![[Build#Top]], not [[Builder]]', ['Build'], 'Plans/Make'), 'See [[Plans/Make]] and [[Plans/Make|it]] and ![[Plans/Make#Top]], not [[Builder]]');
+  });
+
+  await t('looking a map over: empty and twice-named nodes, notes gone, free nodes joined to nothing, relations round in a circle or leading nowhere', async () => {
+    const m = R.parseOutline('- Law\n\t- Rule of law ^a\n\t\t- Judicial review ^b\n\t- judicial review ^c\n\t- [[Gone]] ^f\n\t- %%{"color":"1"}%%\n\t- X ^x\n\t- Y ^y\n\n## Free nodes\n- Alone ^l\n- Joined ^j\n\n## Relations\n- ^x -> ^y\n- ^y -> ^x\n- ^j -> ^a\n- ^a -> ^zz\n').model;
+    const empty = m.root.children[3].id;
+    const found = R.mapProblems(m, (target) => target !== 'Gone').map((p) => `${p.id === empty ? 'empty' : p.id}: ${p.problem}`);
+    assert.deepStrictEqual(found.sort(), [
+      'a: A relation of it leads nowhere',
+      'b: On the map 2 times',
+      'c: On the map 2 times',
+      'empty: Has nothing in it',
+      'f: Its note is gone',
+      'l: Not joined to anything',
+      'x: Its relations lead round in a circle',
+      'y: Its relations lead round in a circle',
+    ].sort());
+    // On the map: listed, marked, a row going to its node, until Done.
+    const view = await open(NOTE);
+    view.apply(R.setText(view.model, view.model.root.children[2].id, 'Research'));
+    view.checkMap();
+    const rows = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-findings-row')).map((r) => r.textContent);
+    assert.deepStrictEqual(rows, ['ResearchOn the map 2 times', 'ResearchOn the map 2 times']);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-mindmap-node[data-mark="problem"]').length, 2);
+    view.contentEl.querySelectorAll('.dr-mindmap-findings-row')[1].click();
+    assert.strictEqual(view.selected, view.model.root.children[2].id);
+    Array.from(view.contentEl.querySelectorAll('.dr-mindmap-findings button')).find((b) => b.textContent === 'Done').click();
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-findings') && !view.contentEl.querySelector('[data-mark]'));
+  });
+
+  await t('a map compared with how it was: new, reworded, moved and gone nodes, by id or else by title; two branches compared; a snapshot kept', async () => {
+    const then = R.parseOutline('- Root ^a\n\t- Courts ^b\n\t- Appeal ^c\n\t- Gone one ^d\n\n## Free nodes\n- Copied ^old\n\n## Relations\n- ^b -> ^c\n').model;
+    const now = R.parseOutline('- Root ^a\n\t- Law courts ^b\n\t\t- Appeal ^c\n\t- Brand new ^e\n\n## Free nodes\n- Copied ^copy\n\n## Relations\n- ^c -> ^b\n').model;
+    const found = R.compareMaps(now, then);
+    const ids = (list) => list.map((r) => r.id);
+    assert.deepStrictEqual(ids(found.added), ['e']);
+    assert.deepStrictEqual(ids(found.removed), ['d']);
+    assert.deepStrictEqual(found.reworded, [{ id: 'b', label: 'Law courts', was: 'Courts' }]);
+    assert.deepStrictEqual(found.moved.map((r) => [r.id, r.was]), [['c', 'hung from “Root”']], 'a new node isn’t moved as well');
+    assert.deepStrictEqual(found.relations, { added: 1, removed: 1 });
+    const tree = R.parseOutline('- M\n\t- X ^x\n\t\t- Shared ^x1\n\t\t- Only X ^x2\n\t- Y ^y\n\t\t- shared ^y1\n\t\t- Only Y ^y2\n').model;
+    const branches = R.compareMapBranches(tree, 'x', 'y');
+    assert.deepStrictEqual([ids(branches.onlyA), ids(branches.onlyB), ids(branches.both)], [['x2'], ['y2'], ['x1']]);
+    // On the map: a snapshot kept, compared with, marked and counted until Done.
+    const files = {};
+    const view = await open('- Root ^a\n\t- Courts ^b\n\t- Appeal ^c\n');
+    view.plugin = Object.assign({}, plugin, { manifest: { dir: '.obsidian/plugins/design-redux' } });
+    view.app = { vault: { adapter: { exists: async (f) => f in files, read: async (f) => files[f], write: async (f, x) => { files[f] = x; } }, modify: async () => {} } };
+    await view.keepSnapshot();
+    const kept = JSON.parse(files['.obsidian/plugins/design-redux/mindmap-snapshots.json'])['Plan.md'];
+    assert.ok(kept && kept.text.includes('Courts'));
+    view.apply(R.setText(view.model, 'b', 'Law courts'));
+    view.apply(R.addChild(view.model, 'a', 'Brand new'));
+    view.compareWithText(kept.text, view.file, 'the snapshot');
+    assert.strictEqual(view.contentEl.querySelector('.dr-mindmap-findings-title').textContent, 'Against the snapshot: 1 new, 1 reworded');
+    assert.strictEqual(view.renderer.nodeEls.get('b').dataset.mark, 'reworded');
+    view.closeFindings();
+    assert.ok(!view.renderer.nodeEls.get('b').dataset.mark);
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

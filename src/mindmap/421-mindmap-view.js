@@ -156,7 +156,7 @@ export class MindMapView extends TextFileView {
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false });
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null });
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
@@ -338,6 +338,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.closeEditor === 'function') this.closeEditor(true);
     if (typeof this.stopGlide === 'function') this.stopGlide();
     if (typeof this.closePeek === 'function') this.closePeek();
+    if (typeof this.closeFindings === 'function') this.closeFindings();
     if (typeof this.dropAllText === 'function') this.dropAllText();
     if (typeof this.flushSave === 'function') this.flushSave();
   }

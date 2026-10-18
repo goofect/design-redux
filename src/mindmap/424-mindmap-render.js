@@ -55,6 +55,7 @@ export class MindMapRenderer {
     this.tints = state.tints || new Map();
     this.fade = state.fade || null;
     this.roles = state.roles !== false;
+    this.marks = state.marks || null;
     this.place(camera);
     const { width, height } = this.size();
     const view = viewBox(camera, width, height, DRAW_MARGIN / camera.zoom);
@@ -128,6 +129,9 @@ export class MindMapRenderer {
     else delete el.dataset.tint;
     el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
     el.toggleClass('is-pinned', !!pinOf(n));
+    const mark = this.marks && this.marks.get(n.id);
+    if (mark) el.dataset.mark = mark;
+    else delete el.dataset.mark;
     const role = this.roles ? nodeRole(n) : null;
     if (role) {
       el.dataset.role = role;
