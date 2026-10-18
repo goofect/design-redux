@@ -7,7 +7,7 @@
 /* elements of nodes gone off screen are kept to be used again.        */
 /* ------------------------------------------------------------------ */
 
-import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, viewBox } from './423-mindmap-scene.js';
+import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, pinOf, viewBox } from './423-mindmap-scene.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -125,7 +125,7 @@ export class MindMapRenderer {
     if (tint) el.dataset.tint = tint;
     else delete el.dataset.tint;
     el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
-    el.toggleClass('is-pinned', Array.isArray(n.attrs && n.attrs.pin));
+    el.toggleClass('is-pinned', !!pinOf(n));
     el.style.left = `${b.x}px`;
     el.style.top = `${b.y}px`;
     el.style.width = `${b.width}px`;

@@ -142,6 +142,7 @@ export class MindMapView extends TextFileView {
 
   fit(quiet) {
     if (!this.scene) return;
+    if (!quiet && typeof this.rememberLook === 'function') this.rememberLook();
     const { width, height } = this.renderer.size();
     this.camera = fitCamera(this.scene.bounds, width, height);
     if (!quiet) this.draw();
@@ -171,6 +172,7 @@ export class MindMapView extends TextFileView {
   fitBranch(id) {
     const n = this.model && nodeById(this.model, id);
     if (!n || !this.scene) return;
+    if (typeof this.rememberLook === 'function') this.rememberLook();
     const boxes = [];
     const go = (x) => {
       const b = this.scene.boxes.get(x.id);
@@ -322,6 +324,7 @@ export class MindMapView extends TextFileView {
       el.toggleClass('is-selected', this.selected === n.id);
       asButton(el);
       onActivate(el, () => {
+        if (typeof this.rememberLook === 'function') this.rememberLook();
         this.select(n.id);
         this.reveal(n.id);
       });

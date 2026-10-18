@@ -15,7 +15,7 @@ import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
-import { branchLayoutOf, clearNudges, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
+import { branchLayoutOf, clearNudges, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
@@ -65,6 +65,8 @@ export class MindMaps extends Feature {
         name: 'Tint nodes with no colour',
         options: { '': 'No tint', branch: 'By the branch they’re in', depth: 'By how deep they are' },
       },
+      { key: 'mindmapPins', showIf: 'mindmaps', name: 'Pin nodes in place', desc: 'Keep in place pins the selected node where it is; the layout leaves it, and what hangs from it, there.' },
+      { key: 'mindmapViews', showIf: 'mindmaps', name: 'Saved views and Back', desc: 'Keep a view of a map by name, go back to it, and step back after each jump.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -95,6 +97,9 @@ export class MindMaps extends Feature {
       { id: 'mindmap-move-node-up', name: 'Mind map: move the node up', icon: 'arrow-up', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, -1)) },
       { id: 'mindmap-move-node-down', name: 'Mind map: move the node down', icon: 'arrow-down', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) },
       { id: 'mindmap-colour-node', name: 'Mind map: colour the selected node…', icon: 'palette', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.chooseColour(ctx.node.id) },
+      { id: 'mindmap-save-view', name: 'Mind map: keep this view…', icon: 'bookmark-plus', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && !!ctx.view.camera, run: (ctx) => ctx.view.saveView() },
+      { id: 'mindmap-go-to-view', name: 'Mind map: go to a kept view…', icon: 'bookmark', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && Object.keys(savedViews(ctx.model)).length > 0, run: (ctx) => ctx.view.chooseView(false) },
+      { id: 'mindmap-forget-view', name: 'Mind map: forget a kept view…', icon: 'bookmark-x', on: 'mindmap', menu: false, when: (ctx) => !!this.settings.mindmapViews && Object.keys(savedViews(ctx.model)).length > 0, run: (ctx) => ctx.view.chooseView(true) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -236,6 +241,8 @@ export function registerMindMapHandlers() {
     'canvas-layout-choose': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view) },
     'canvas-layout-everything': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view, true) },
     'toggle-canvas-legend': { run: (ctx) => ctx.view.toggleLegend() },
+    'canvas-toggle-keep-in-place': { when: (ctx) => !!ctx.node && ctx.node !== ctx.model.root && ctx.view.plugin && ctx.view.plugin.settings.mindmapPins !== false, run: (ctx) => ctx.view.togglePin(ctx.node.id) },
+    'canvas-view-back': { when: (ctx) => !!(ctx.view.looks && ctx.view.looks.length), run: (ctx) => ctx.view.lookBack() },
     'canvas-map-tidy': { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) },
     'tidy-canvas-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(clearNudges(ctx.model, ctx.node.id)) },
   };

@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName, setSavedView, setMapLayout };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -540,6 +540,43 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.draw();
     assert.ok(!view.root.hasClass('is-depth'));
     plugin.settings.mindmapDepth = true;
+  });
+
+  await t('a pinned node stays where it is as the layout changes, its branch with it; a kept view goes back to its node; Back steps back', async () => {
+    const view = await open(NOTE);
+    R.registerMindMapHandlers();
+    const build = view.model.root.children[1];
+    const api = build.children[0];
+    view.select(build.id);
+    const ctx = () => ({ view, model: view.model, node: build });
+    const at = Object.assign({}, view.scene.boxes.get(build.id));
+    R.MINDMAP_HANDLERS.get('canvas-toggle-keep-in-place').run(ctx());
+    assert.deepStrictEqual(build.attrs.pin, [Math.round(at.x), Math.round(at.y)]);
+    assert.ok(view.renderer.nodeEls.get(build.id).hasClass('is-pinned'));
+    view.apply(R.setMapLayout(view.model, 'left'));
+    const b = view.scene.boxes.get(build.id);
+    assert.deepStrictEqual([b.x, b.y], build.attrs.pin, 'laid out to the left: Build stays');
+    const a = view.scene.boxes.get(api.id);
+    assert.ok(a.x < b.x, 'API hangs to its left, as the layout says, from where Build is');
+    // Dragged clear of the others: the pin moves.
+    view.dropNode({ node: build.id, target: null, x: 0, y: 0, last: { x: 50 * view.camera.zoom, y: 0 } });
+    assert.deepStrictEqual(build.attrs.pin, [Math.round(at.x) + 50, Math.round(at.y)]);
+    R.MINDMAP_HANDLERS.get('canvas-toggle-keep-in-place').run(ctx());
+    assert.strictEqual(build.attrs.pin, undefined, 'let go');
+    // A kept view, and Back.
+    view.apply(R.setSavedView(view.model, 'The build', api.id, 1.5));
+    const before = Object.assign({}, view.camera);
+    view.goToView('The build');
+    const ab = view.scene.boxes.get(api.id);
+    assert.deepStrictEqual(view.camera, { x: ab.x + ab.width / 2, y: ab.y + ab.height / 2, zoom: 1.5 });
+    assert.strictEqual(view.selected, api.id);
+    view.fitBranch(view.model.root.children[0].id);
+    assert.ok(R.MINDMAP_HANDLERS.get('canvas-view-back').when({ view }));
+    R.MINDMAP_HANDLERS.get('canvas-view-back').run({ view });
+    assert.strictEqual(view.camera.zoom, 1.5, 'back to the kept view');
+    R.MINDMAP_HANDLERS.get('canvas-view-back').run({ view });
+    assert.deepStrictEqual(view.camera, before, 'and back to where it began');
+    assert.ok(!R.MINDMAP_HANDLERS.get('canvas-view-back').when({ view }), 'nothing more to go back to');
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

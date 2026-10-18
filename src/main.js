@@ -141,6 +141,7 @@ import './mindmap/428-mindmap-motion.js';
 import './mindmap/429-mindmap-peek.js';
 import './mindmap/430-mindmap-cards.js';
 import './mindmap/431-mindmap-legend.js';
+import './mindmap/432-mindmap-views.js';
 import './mindmap/420-mindmap-feature.js';
 import './chrome/348-workspace-modes.js';
 import './plugin/350-plugin.js';

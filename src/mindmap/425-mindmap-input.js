@@ -13,10 +13,10 @@
 
 import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
-import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode } from '../tree/404-tree-ops.js';
+import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode, setAttr } from '../tree/404-tree-ops.js';
 import { nodeNudge, setNudge } from '../tree/406-tree-layout-block.js';
 import { MindMapView } from './421-mindmap-view.js';
-import { screenToPlane } from './423-mindmap-scene.js';
+import { pinOf, screenToPlane } from './423-mindmap-scene.js';
 
 /* How far a node is dragged before it's a drag and not a click. */
 export const DRAG_START = 5;
@@ -132,8 +132,10 @@ class MindMapInput {
     this.clearDrag(d);
     if (target) return this.apply(moveNode(this.model, d.node, target.parentId, target.index));
     if (!d.last || !this.camera) return null;
-    const was = nodeNudge(this.model, d.node) || [0, 0];
     const z = this.camera.zoom;
+    const pinned = pinOf(nodeById(this.model, d.node));
+    if (pinned) return this.apply(setAttr(this.model, d.node, 'pin', [Math.round(pinned[0] + (d.last.x - d.x) / z), Math.round(pinned[1] + (d.last.y - d.y) / z)]));
+    const was = nodeNudge(this.model, d.node) || [0, 0];
     return this.apply(setNudge(this.model, d.node, was[0] + (d.last.x - d.x) / z, was[1] + (d.last.y - d.y) / z));
   }
 

@@ -74,6 +74,7 @@ class MindMapPeek {
     const ops = [];
     for (let p = n.parent; p; p = p.parent) if (p.attrs.fold) ops.unshift({ type: 'attr', id: p.id, key: 'fold', value: undefined });
     if (ops.length) this.apply(applyPatch(this.model, ops, [id]));
+    if (typeof this.rememberLook === 'function') this.rememberLook();
     this.select(id);
     this.reveal(id);
     if (this.root && typeof this.root.focus === 'function') this.root.focus();

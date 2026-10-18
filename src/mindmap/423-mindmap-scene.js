@@ -83,6 +83,12 @@ export function nodeTints(model, by) {
   return out;
 }
 
+/** Where a node is pinned: [x, y], or null. */
+export function pinOf(n) {
+  const p = n && n.attrs ? n.attrs.pin : null;
+  return Array.isArray(p) && p.length === 2 && p.every((v) => typeof v === 'number' && isFinite(v)) ? p : null;
+}
+
 /** The nodes shown: the root's tree, but not what's folded away. */
 export function shownNodes(model) {
   const out = [];
@@ -125,10 +131,16 @@ export function layoutScene(model, sizeOf, mode) {
   const places = composedLayout(cards, cards.byId.get(model.root.id), way, arrowLinks(cards), (rec) => branchLayoutOf(model, rec.id));
   const wayOf = new Map();
   (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
-  // Hand nudges, from the layout block, on top: each node's and those above it.
+  // Hand nudges, from the layout block, on top: each node's and those above it. A pinned node is where it's pinned.
   const off = new Map();
   shown.forEach(({ node }) => {
     const above = node.parent ? off.get(node.parent.id) || [0, 0] : [0, 0];
+    const pin = node === model.root ? null : pinOf(node);
+    if (pin) {
+      const spot = places.get(node.id) || { x: 0, y: 0 };
+      off.set(node.id, [pin[0] - spot.x, pin[1] - spot.y]);
+      return;
+    }
     const own = node === model.root ? null : nodeNudge(model, node.id);
     off.set(node.id, own ? [above[0] + own[0], above[1] + own[1]] : above);
   });
@@ -144,8 +156,9 @@ export function layoutScene(model, sizeOf, mode) {
   const y = bounds.maxY + 80;
   (model.free || []).forEach((n) => {
     const size = sizeOf(n);
+    const pin = pinOf(n);
     const d = nodeNudge(model, n.id) || [0, 0];
-    boxes.set(n.id, { x: x + d[0], y: y + d[1], width: size.width, height: size.height, depth: 0, free: true, way });
+    boxes.set(n.id, pin ? { x: pin[0], y: pin[1], width: size.width, height: size.height, depth: 0, free: true, way } : { x: x + d[0], y: y + d[1], width: size.width, height: size.height, depth: 0, free: true, way });
     x += size.width + 30;
   });
   bounds = boundsOfBoxes(boxes.values());
