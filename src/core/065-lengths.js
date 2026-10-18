@@ -27,6 +27,18 @@ export function countWords(text) {
   return unspaced + spaced;
 }
 
+/** Words of a note's own writing: its properties, headings and embedded content left out. */
+export function bodyWords(text) {
+  const body = String(text || '')
+    .replace(/^---\r?\n[\s\S]*?\r?\n---[ \t]*(\r?\n|$)/, '')
+    .split('\n')
+    .filter((line) => !/^\s{0,3}#{1,6}\s/.test(line))
+    .join('\n')
+    .replace(/!\[\[[^\]]*\]\]/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ');
+  return countWords(body);
+}
+
 /** "<1 min", "4 min", "1 hr 5 min". */
 export function readingTime(words) {
   const minutes = Math.round(words / WORDS_PER_MINUTE);
@@ -51,7 +63,7 @@ export const LENGTH_STYLES = {
 export class Lengths {
   constructor(plugin) {
     this.plugin = plugin;
-    // path -> { mtime, words }
+    // path -> { mtime, words, body }
     this.known = new Map();
     // path + mtime -> the read under way
     this.reading = new Map();
@@ -66,6 +78,19 @@ export class Lengths {
     if (!(file instanceof TFile) || file.extension !== 'md') return null;
     const kept = this.known.get(file.path);
     return kept && kept.mtime === file.stat.mtime ? kept.words : null;
+  }
+
+  /** Words of a note's own writing (bodyWords), or null until it has been counted as it is now. */
+  bodyWords(file) {
+    if (!(file instanceof TFile) || file.extension !== 'md') return null;
+    const kept = this.known.get(file.path);
+    return kept && kept.mtime === file.stat.mtime ? kept.body : null;
+  }
+
+  /** Whether a note, as counted, has fewer than `under` words of its own; never while it's uncounted or `under` is 0. */
+  thin(file, under) {
+    const body = this.bodyWords(file);
+    return under > 0 && body !== null && body < under;
   }
 
   /** Whether a length can be known for this file at all: notes only. */
@@ -96,9 +121,9 @@ export class Lengths {
     if (this.reading.has(key)) return this.reading.get(key);
     const job = this.app.vault
       .cachedRead(file)
-      .then(countWords, () => 0)
-      .then((words) => {
-        this.known.set(file.path, { mtime: mtime, words: words });
+      .then((text) => ({ words: countWords(text), body: bodyWords(text) }), () => ({ words: 0, body: 0 }))
+      .then(({ words, body }) => {
+        this.known.set(file.path, { mtime: mtime, words: words, body: body });
         this.reading.delete(key);
       });
     this.reading.set(key, job);

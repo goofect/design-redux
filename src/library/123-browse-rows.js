@@ -106,6 +106,11 @@ export class BrowseRows {
     if (style) {
       const length = row.createDiv({ cls: 'dr-track-length', text: this.lengthLabel(file) });
       if (style === 'words') length.addClass('is-words');
+      // Too thin to be much use yet: underlined, as the library check lists it.
+      if (this.plugin.lengths.thin(file, this.plugin.settings.thinNoteWords)) {
+        length.addClass('is-thin');
+        length.setAttribute('aria-label', `Thin: ${this.plugin.lengths.bodyWords(file)} words of its own`);
+      }
     }
 
     const more = row.createDiv({ cls: 'clickable-icon dr-track-more' });

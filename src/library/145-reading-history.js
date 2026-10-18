@@ -22,6 +22,35 @@ export const READ_GLANCE = 4000;
 /* How often the line you're on is kept while you scroll. */
 export const PLACE_EVERY = 5000;
 
+/**
+ * The notes your recent reading points to, that you haven't opened:
+ * ranked by how many of the notes you read link to them, then by how
+ * lately one of those was read. recent: [{ path, at }], read times;
+ * outgoing(path) → { to: count }; opened(path) → whether it's been
+ * opened. [{ path, count, from, at }], at most `limit`.
+ */
+export function fromReading(recent, outgoing, opened, now, days = 14, limit = 12) {
+  const since = now - days * 86400000;
+  const reading = recent.filter((r) => r.at >= since);
+  const read = new Set(reading.map((r) => r.path));
+  const found = new Map();
+  reading.forEach((r) => {
+    Object.keys(outgoing(r.path) || {}).forEach((to) => {
+      if (to === r.path || read.has(to) || !/\.md$/i.test(to) || opened(to)) return;
+      const f = found.get(to) || { path: to, count: 0, from: r.path, at: 0 };
+      f.count++;
+      if (r.at > f.at) {
+        f.at = r.at;
+        f.from = r.path;
+      }
+      found.set(to, f);
+    });
+  });
+  return Array.from(found.values())
+    .sort((a, b) => b.count - a.count || b.at - a.at || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+    .slice(0, limit);
+}
+
 /** Whether a scroller shows its end. */
 export function atEnd(el) {
   return !!el && el.scrollHeight - el.scrollTop - el.clientHeight <= READ_END;
@@ -50,6 +79,12 @@ export class ReadingHistory extends Feature {
         key: 'readingHistory',
         name: 'Reading history',
         desc: 'Notes you’ve read to the end are remembered — in the plugin’s data, never in your notes. Collections show how far through you are, lists mark what’s new or changed, and a collection opens where you were.',
+      },
+      {
+        key: 'albumProgressRing',
+        showIf: 'readingHistory',
+        name: 'Progress rings on covers',
+        desc: 'A small ring on a collection’s cover while you’re partway through it, and a tick once it’s all read.',
       },
       {
         key: 'rememberPlace',

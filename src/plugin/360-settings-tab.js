@@ -18,7 +18,7 @@ export const SETTINGS_TABS = [
     id: 'appearance',
     title: 'Appearance',
     sections: [
-      { title: 'Look', keys: ['look', 'lookScope', 'glassPanels'] },
+      { title: 'Look', keys: ['look', 'lookScope', 'glassPanels', 'albumProgressRing'] },
       { title: 'Density', desc: 'How much room things get: the whole interface, and canvases apart.', keys: ['gridDensity', 'artworkSize', 'canvasSpacing'] },
     ],
   },
@@ -26,7 +26,7 @@ export const SETTINGS_TABS = [
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
+      { keys: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'fromReadingDays', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
       {
         title: 'Layout',
         desc: 'What the library lists, under your own headings.',
@@ -34,7 +34,7 @@ export const SETTINGS_TABS = [
       },
       { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
       { title: 'Screens', keys: ['albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText'] },
-      { title: 'Collections', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
+      { title: 'Collections', keys: ['albumStructure', 'albumKeyNames', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor'] },
       { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
       { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },
     ],

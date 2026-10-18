@@ -76,6 +76,12 @@ export const DEFAULTS = {
   glassPanels: false,
   // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
   readingHistory: true,
+  // On a collection's cover, a ring for how much of it you've read.
+  albumProgressRing: true,
+  // Home's From what you read: notes linked from what you read in this many days.
+  fromReadingDays: 14,
+  // Notes with fewer words of their own than this are thin; 0 for no check.
+  thinNoteWords: 60,
   // A note opens at the line you were on.
   rememberPlace: true,
   // The open note's headings in the right sidebar, the one you're reading lit.

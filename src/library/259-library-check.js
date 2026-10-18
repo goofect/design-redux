@@ -91,6 +91,25 @@ export class ReportScreen extends BrowseScreen {
         onActivate(row, () => check.goTo(p));
       });
     });
+    this.renderThin(root, check);
+  }
+
+  /** The notes too thin to be much use yet, once they're counted: newest first. */
+  renderThin(root, check) {
+    if (!(check.settings.thinNoteWords > 0)) return;
+    const box = root.createDiv({ cls: 'dr-report-thin' });
+    check.thinNotes().then((thin) => {
+      if (!thin.length || !box.isConnected) return;
+      const head = box.createDiv({ cls: 'dr-report-head' });
+      head.createSpan({ text: 'Thin notes' });
+      head.createSpan({ cls: 'dr-report-count', text: String(thin.length) });
+      const list = box.createDiv({ cls: 'dr-report-list' });
+      roveFocus(list, '.dr-report-row');
+      thin.forEach(({ file, words }) => {
+        const row = reportRow(list, 'file-text', file.basename, words === 1 ? '1 word of its own' : `${words} words of its own`, file.parent && file.parent.path !== '/' ? file.parent.path : '');
+        onActivate(row, () => this.app.workspace.getLeaf(false).openFile(file));
+      });
+    });
   }
 
 }
@@ -205,6 +224,13 @@ export class LibraryCheck extends Feature {
         name: 'Inbox',
         desc: 'The notes in no collection, in one place, to be moved into collections or shown in them a few at a time. Add it to the library from its layout, or open it from the report.',
       },
+      {
+        key: 'thinNoteWords',
+        type: 'number',
+        showIf: 'libraryCheck',
+        name: 'Thin notes: fewer words than',
+        desc: 'Notes with fewer words of their own — properties, headings and embeds aside — are listed in the report and underlined in lists. 0 turns it off.',
+      },
     ];
   }
 
@@ -255,6 +281,25 @@ export class LibraryCheck extends Feature {
     if (structure && structure.enabled) this.folders().forEach((f) => structure.info(f).includes.forEach((t) => included.add(t)));
     const home = String(this.settings.homePath || '');
     return (libraryIndex(this.plugin).root().children || []).filter((c) => this.isNote(c) && c.path !== home && !included.has(c)).sort((a, b) => byName(a.basename, b.basename));
+  }
+
+  /**
+   * Notes with fewer words of their own than the setting says: [{ file,
+   * words }], newest first. Folder notes and files Obsidian is set to
+   * exclude are left out.
+   */
+  async thinNotes() {
+    const under = Number(this.settings.thinNoteWords) || 0;
+    const lengths = this.plugin.lengths;
+    if (under <= 0 || !lengths) return [];
+    const meta = this.app.metadataCache;
+    const ignored = (f) => typeof meta.isUserIgnored === 'function' && meta.isUserIgnored(f.path);
+    const notes = libraryIndex(this.plugin).notes().filter((f) => !ignored(f));
+    await lengths.measure(notes);
+    return notes
+      .filter((f) => lengths.thin(f, under))
+      .sort((a, b) => (b.stat.ctime || 0) - (a.stat.ctime || 0))
+      .map((file) => ({ file, words: lengths.bodyWords(file) }));
   }
 
   /** What there is to look at: [{ target, problem, kind, section }]. */

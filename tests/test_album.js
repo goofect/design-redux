@@ -108,7 +108,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -247,7 +247,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
-const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
+const HOME_OFF = ['picks', 'continue', 'fromReading', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -516,6 +516,77 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await settle(200);
     assert.strictEqual(scroll, 0, 'switched off: from the top');
     clearTimeout(hist.glance);
+  });
+
+  await t('a library that notices: rings on covers for how far through, notes your reading points to, notes too thin to be much use', async () => {
+    const { v, plugin, app } = setup();
+    plugin.saveData = () => {};
+    const r = R.readingOf(plugin);
+    const f = (p) => v.vault.getAbstractFileByPath(p);
+    // Rings: nothing for none read, a ring for some, a tick for all; sub-collections count.
+    const ir = f('IR');
+    const theories = f('IR/Theories');
+    assert.deepStrictEqual(r.albumProgress(ir), { read: 0, total: 6 });
+    r.markRead(f('IR/Anarchy.md'));
+    r.markRead(f('IR/Theories/Realism.md'));
+    assert.deepStrictEqual(r.albumProgress(ir), { read: 2, total: 6 }, 'its sub-collections count');
+    assert.deepStrictEqual(r.albumProgress(theories), { read: 1, total: 2 });
+    assert.strictEqual(R.progressRing(document, 0, 6), null);
+    const some = R.progressRing(document, 3, 6);
+    assert.ok(some.querySelector('svg .dr-ring-fill') && some.getAttribute('aria-label') === '3 of 6 read');
+    assert.strictEqual(some.style.getPropertyValue('--dr-ring'), '0.500');
+    assert.ok(R.progressRing(document, 6, 6).classList.contains('is-done'), 'all read: a tick');
+    const art = () => {
+      const el = document.createElement('div');
+      R.drawFolderArt(plugin, el, theories);
+      return el.querySelector('.dr-progress-ring');
+    };
+    assert.ok(art() && !art().classList.contains('is-done'), 'on the cover, wherever covers are drawn');
+    r.markRead(f('IR/Theories/Liberalism.md'));
+    assert.ok(art().classList.contains('is-done'));
+    plugin.settings.albumProgressRing = false;
+    assert.strictEqual(art(), null, 'switched off');
+    plugin.settings.albumProgressRing = true;
+    // A screen of covers walks the vault once: 500 albums, well under the budget.
+    const big = { children: [] };
+    for (let i = 0; i < 500; i++) {
+      const folder = new TFolder(`Big/${i}`);
+      folder.children = [0, 1, 2, 3].map((n) => Object.assign(new TFile(`Big/${i}/${n}.md`), { parent: folder }));
+      big.children.push(folder);
+    }
+    const realRoot = app.vault.getRoot;
+    app.vault.getRoot = () => big;
+    r.version++;
+    const started = Date.now();
+    big.children.forEach((folder) => R.progressRing(document, r.albumProgress(folder).read, 4) || 0);
+    const took = Date.now() - started;
+    assert.ok(took < 100, `500 albums' progress in ${took} ms`);
+    app.vault.getRoot = realRoot;
+    r.version++;
+
+    // From what you read: linked from what you read lately, not opened, by how many point there, then how lately.
+    const now = 100 * 86400000;
+    const recent = [{ path: 'a.md', at: now - 1000 }, { path: 'b.md', at: now - 2000 }, { path: 'old.md', at: now - 30 * 86400000 }];
+    const links = { 'a.md': { 'x.md': 1, 'y.md': 2, 'b.md': 1, 'pic.png': 1 }, 'b.md': { 'y.md': 1, 'z.md': 1, 'seen.md': 1 }, 'old.md': { 'w.md': 1 } };
+    const got = R.fromReading(recent, (p) => links[p], (p) => p === 'seen.md', now, 14);
+    assert.deepStrictEqual(got.map((g) => g.path), ['y.md', 'x.md', 'z.md'], 'two point to y; then x, linked from the later read');
+    assert.deepStrictEqual([got[0].count, got[0].from], [2, 'a.md']);
+    assert.deepStrictEqual(R.fromReading([], (p) => links[p], () => false, now, 14), [], 'nothing read: nothing');
+
+    // Thin notes: words of their own, properties, headings and embeds aside.
+    assert.strictEqual(R.bodyWords('---\ntags: a b c\n---\n# A long heading here\nOne two three ![[Big note]] four ![pic](x.png)\n## More\n'), 4);
+    plugin.lengths = new R.Lengths(plugin);
+    const texts = { Anarchy: '# Anarchy\n' + 'word '.repeat(80), Balance: '---\nsummary: many words in the properties here\n---\n# Balance\nJust a few words.\n![[Anarchy]]', Cooperation: 'word '.repeat(59), Deterrence: 'word '.repeat(60) };
+    app.vault.cachedRead = async (file) => texts[file.basename] || 'word '.repeat(100);
+    f('IR/Cooperation.md').stat.ctime = 5;
+    f('IR/Balance.md').stat.ctime = 3;
+    const check = new R.LibraryCheck(plugin);
+    const thin = await check.thinNotes();
+    assert.deepStrictEqual(thin.map((t) => `${t.file.basename} ${t.words}`), ['Cooperation 59', 'Balance 4'], 'under 60, the newest first');
+    plugin.settings.thinNoteWords = 0;
+    assert.deepStrictEqual(await check.thinNotes(), [], '0 turns it off');
+    plugin.settings.thinNoteWords = 60;
+    assert.ok(plugin.lengths.thin(f('IR/Balance.md'), 60) && !plugin.lengths.thin(f('IR/Deterrence.md'), 60));
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
@@ -1273,7 +1344,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Chosen and ordered in the settings; a shelf new since comes on at the end.
     plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
-    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'fromReading:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
     plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
     await view.setState({ mode: 'home' }, {});
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);

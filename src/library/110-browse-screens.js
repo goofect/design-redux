@@ -16,6 +16,7 @@ import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { fromReading } from './145-reading-history.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
 import { renamePropertyInPlace } from '../bulk/290-bulk-engine.js';
@@ -1679,6 +1680,7 @@ export class SearchScreen extends BrowseScreen {
 export const HOME_SHELVES = [
   { id: 'picks', label: 'Highlights' },
   { id: 'continue', label: 'Continue reading' },
+  { id: 'fromReading', label: 'From what you read' },
   { id: 'recents', label: 'Recently opened' },
   { id: 'added', label: 'Recently added' },
   { id: 'collections', label: 'Your views' },
@@ -1747,6 +1749,7 @@ export class HomeScreen extends BrowseScreen {
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
       continue: () => shelf('Continue reading', continuing),
+      fromReading: () => shelf('From what you read', this.fromReading(keep)),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
       collections: () => shelf('Your views', collections, { mode: 'collections' }),
@@ -1756,6 +1759,28 @@ export class HomeScreen extends BrowseScreen {
     };
     const drawn = homeShelves(this.settings).filter((s) => s.on && shelves[s.id]()).length;
     if (!drawn) root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
+  }
+
+  /** Notes what you've read lately links to, not opened yet: why each is there, under it. */
+  fromReading(keep) {
+    if (!this.settings.readingHistory) return [];
+    const history = readingOf(this.plugin);
+    const index = libraryIndex(this.plugin);
+    const vault = this.app.vault;
+    const recent = history.latest('read', 40).map((f) => ({ path: f.path, at: history.entry(f).read }));
+    const outgoing = (p) => {
+      const f = vault.getAbstractFileByPath(p);
+      return f instanceof TFile ? index.outgoing(f) : {};
+    };
+    const opened = (p) => !!(history.log[p] && history.log[p].opened);
+    return fromReading(recent, outgoing, opened, Date.now(), Number(this.settings.fromReadingDays) || 14, 40)
+      .map((r) => ({ r, file: vault.getAbstractFileByPath(r.path) }))
+      .filter(({ file }) => file instanceof TFile && keep(file) && !this.plugin.isFolderNote(file))
+      .slice(0, 12)
+      .map(({ r, file }) => {
+        const from = vault.getAbstractFileByPath(r.from);
+        return { file, subtitle: r.count > 1 ? `From ${r.count} notes you read` : `From ${from ? from.basename : 'a note you read'}` };
+      });
   }
 
   /**

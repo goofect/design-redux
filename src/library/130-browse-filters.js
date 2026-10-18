@@ -233,6 +233,13 @@ export class Library extends Feature {
         render: (containerEl) => this.renderHomeShelves(containerEl),
       },
       {
+        key: 'fromReadingDays',
+        type: 'number',
+        showIf: 'library',
+        name: 'From what you read: days back',
+        desc: 'Home’s From what you read shelf lists notes linked from what you’ve read in this many days, that you haven’t opened yet.',
+      },
+      {
         key: 'librarySections',
         type: 'custom',
         name: 'Library layout',

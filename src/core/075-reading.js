@@ -8,7 +8,7 @@
 /* opens where you were. Kept by path, so it follows renames.          */
 /* ------------------------------------------------------------------ */
 
-import { TFile } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 
 /* How many notes the history keeps, the latest. */
 export const READING_KEEP = 3000;
@@ -36,6 +36,8 @@ export class Reading {
   constructor(plugin) {
     this.plugin = plugin;
     this.timer = 0;
+    // Counted up on every change, so what's worked out from the log knows when it's stale.
+    this.version = 0;
   }
 
   get app() {
@@ -131,6 +133,45 @@ export class Reading {
     return ((file.stat && file.stat.ctime) || 0) > this.since();
   }
 
+  /**
+   * How far through each folder you are: Map folder → { read, total },
+   * its notes however deep, folder notes left out. Worked out in one walk
+   * and kept a moment, so a screen of covers walks the vault once.
+   */
+  progressByFolder() {
+    const now = Date.now();
+    const kept = this.progressKept;
+    if (kept && kept.version === this.version && now - kept.at < 1000) return kept.map;
+    const map = new Map();
+    const plugin = this.plugin;
+    const folderNote = (f) => typeof plugin.isFolderNote === 'function' && plugin.isFolderNote(f);
+    const walk = (folder) => {
+      let read = 0;
+      let total = 0;
+      (folder.children || []).forEach((c) => {
+        if (c instanceof TFolder) {
+          const p = walk(c);
+          read += p.read;
+          total += p.total;
+        } else if (c instanceof TFile && c.extension === 'md' && !folderNote(c)) {
+          total++;
+          if (this.state(c) === 'read') read++;
+        }
+      });
+      const p = { read, total };
+      map.set(folder, p);
+      return p;
+    };
+    walk(this.app.vault.getRoot());
+    this.progressKept = { version: this.version, at: now, map };
+    return map;
+  }
+
+  /** How far through an album you are: { read, total }. */
+  albumProgress(folder) {
+    return this.progressByFolder().get(folder) || { read: 0, total: 0 };
+  }
+
   /** How many of these notes are read. */
   countRead(files) {
     return files.filter((f) => f.extension === 'md' && this.state(f) === 'read').length;
@@ -175,6 +216,7 @@ export class Reading {
 
   /** Written to the plugin's data a moment after the last change, not on every one. */
   save() {
+    this.version++;
     if (this.timer) clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       this.timer = 0;

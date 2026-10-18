@@ -9,8 +9,9 @@
 
 import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, showTargetMenu } from '../core/030-helpers-art.js';
+import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, progressRing, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { readingOf } from '../core/075-reading.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { SmartAlbums } from './258-smart-albums.js';
@@ -237,7 +238,7 @@ export class LibraryView extends ItemView {
 
     if (target instanceof TFolder) {
       const open = () => this.browseMode({ mode: 'folder', path: target.path });
-      this.row(list, {
+      const row = this.row(list, {
         depth: depth,
         icon: 'folder',
         art: this.plugin.folderCoverSrc(target),
@@ -246,6 +247,13 @@ export class LibraryView extends ItemView {
         onClick: open,
         onMenu: (evt) => menu(evt, open),
       });
+      // Partway through it: a small ring at the end of its row.
+      const s = this.plugin.settings;
+      if (s.albumProgressRing && s.readingHistory) {
+        const { read, total } = readingOf(this.plugin).albumProgress(target);
+        const ring = read < total ? progressRing(row.ownerDocument, read, total) : null;
+        if (ring) row.appendChild(ring);
+      }
       return;
     }
     this.row(list, {
