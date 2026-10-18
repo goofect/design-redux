@@ -36,7 +36,8 @@ export function noteHeadings(app, file) {
 export function readingAt(view, headings) {
   const top = noteLine(view);
   if (top === null) return { index: -1, line: 0 };
-  let index = currentHeading(headings, top);
+  // A view scrolled to a heading can report a hair above its line.
+  let index = currentHeading(headings, Math.ceil(top - 0.01));
   let line = top;
   const preview = typeof view.getMode === 'function' && view.getMode() === 'preview';
   const scroller = preview ? view.containerEl.querySelector('.markdown-preview-view') : null;

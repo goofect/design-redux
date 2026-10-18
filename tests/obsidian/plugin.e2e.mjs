@@ -820,6 +820,19 @@ describe('Design Redux in Obsidian', function () {
       await app.vault.create('Long read.md', ['One', 'Two', 'Three', 'Four'].map((h) => `## ${h}\n\n${para}\n`).join('\n'));
     });
     await obsidianPage.openFile('Long read.md');
+    // The right sidebar left as it was found, whatever happens: later tests need the room.
+    const wasCollapsed = await browser.executeObsidian(({ app }) => !!app.workspace.rightSplit.collapsed);
+    try {
+      await followOutline();
+    } finally {
+      await browser.executeObsidian(({ app }, collapse) => {
+        app.workspace.getLeavesOfType('design-redux-outline').forEach((l) => l.detach());
+        if (collapse) app.workspace.rightSplit.collapse();
+      }, wasCollapsed);
+    }
+  });
+
+  async function followOutline() {
     const lit = () => browser.execute(() => {
       const row = document.querySelector('.dr-reading-outline .dr-reading-row.is-current .dr-reading-name');
       return row ? row.textContent : null;
@@ -848,8 +861,7 @@ describe('Design Redux in Obsidian', function () {
     );
     expect(Math.abs(at.top - at.heading)).toBeLessThanOrEqual(1);
     expect(await readUntil(lit, (t) => t === 'Two')).toBe('Two');
-    await browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-outline').forEach((l) => l.detach()));
-  });
+  }
 
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {

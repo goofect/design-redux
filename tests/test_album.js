@@ -484,8 +484,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(rows()[2].style.getPropertyValue('--dr-through-n'), '0.333', 'a third through its section');
     click(rows()[3]);
     assert.deepStrictEqual(applied, [9], 'a row goes to its heading');
+    scroll = 8.995;
     ov.light();
-    assert.ok(rows()[3].classList.contains('is-current'));
+    assert.ok(rows()[3].classList.contains('is-current'), 'a view scrolled to a heading may say a hair above it');
     rows()[0].focus();
     key(rows()[0], 'ArrowDown');
     assert.strictEqual(document.activeElement, rows()[1], 'arrow keys move through the rows');
