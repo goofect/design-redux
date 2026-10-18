@@ -93,6 +93,7 @@ export class MindMapView extends TextFileView {
     this.renderer = new MindMapRenderer(this.root);
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());
+    this.tool('Lay out…', 'layout-dashboard', () => this.feature && typeof this.feature.chooseLayout === 'function' && this.feature.chooseLayout(this));
     this.tool('Fold every branch', 'chevrons-down-up', () => this.foldAll(true));
     this.tool('Unfold everything', 'chevrons-up-down', () => this.foldAll(false));
     this.tool('Outline', 'list-tree', () => this.toggleOutline());

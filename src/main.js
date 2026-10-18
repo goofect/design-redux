@@ -17,6 +17,7 @@ import './tree/402-tree-json.js';
 import './tree/403-tree-layouts.js';
 import './tree/404-tree-ops.js';
 import './tree/405-tree-history.js';
+import './tree/406-tree-layout-block.js';
 import './library/258-smart-albums.js';
 import './core/020-constants.js';
 import './core/030-helpers-art.js';

@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -275,6 +275,83 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.dropNode({ node: id('Ship'), target: R.dropTarget(view.model, view.scene, id('Ship'), at('UI', 0.9), false) });
     const build = view.model.root.children.find((c) => c.text === 'Build');
     assert.deepStrictEqual(build.children.map((c) => c.text), ['API', 'UI', 'Ship']);
+  });
+
+  await t('every layout puts the nodes where the canvas’s mind map puts the same cards, within a pixel — a branch with its own layout and a nudge too', async () => {
+    const view = await open(NOTE);
+    const byText = (text) => { let f = null; (function w(n) { if (n.text === text) f = n; n.children.forEach(w); })(view.model.root); return f; };
+    // The same cards on a canvas, set out in the list's order, laid out by the canvas's own map engine.
+    const onCanvas = (mode, own, nudges) => {
+      const nodes = [];
+      const edges = [];
+      let order = 0;
+      (function w(n, depth) {
+        const b = view.scene.boxes.get(n.id);
+        const along = depth * 1000 * (mode === 'left' || mode === 'top' ? -1 : 1);
+        const across = depth ? order++ * 1000 : 0;
+        const down = mode === 'bottom' || mode === 'top';
+        nodes.push({ id: n.id, type: 'text', x: down ? across : along, y: down ? along : across, width: b.width, height: b.height });
+        if (n.parent) edges.push({ id: `e${n.id}`, fromNode: n.parent.id, toNode: n.id });
+        n.children.forEach((c) => w(c, depth + 1));
+      })(view.model.root, 0);
+      const cards = R.modelFromData({ nodes, edges });
+      cards.nodes.forEach((r) => {
+        const kept = {};
+        if (r.id === view.model.root.id) kept.drLayout = mode;
+        if (own[r.id]) kept.drLayout = own[r.id];
+        if (nudges[r.id]) kept.drNudge = { dx: nudges[r.id][0], dy: nudges[r.id][1] };
+        r.node = { unknownData: kept };
+      });
+      return R.mapLayout(cards, R.arrowLinks(cards)).places;
+    };
+    const same = (mode, own, nudges) => {
+      const places = onCanvas(mode, own, nudges);
+      view.scene.boxes.forEach((b, id) => {
+        const at = places.get(id);
+        assert.ok(at && Math.abs(at.x - b.x) <= 1 && Math.abs(at.y - b.y) <= 1, `${mode}: ${id} at ${b.x},${b.y}; on the canvas ${at && at.x},${at && at.y}`);
+      });
+    };
+    for (const [mode] of R.BRANCH_LAYOUTS) {
+      view.apply(R.setBranchLayout(view.model, view.model.root.id, mode));
+      assert.strictEqual(view.mode, mode);
+      same(mode, {}, {});
+    }
+    view.apply(R.setBranchLayout(view.model, view.model.root.id, 'right'));
+    const build = byText('Build');
+    view.apply(R.setBranchLayout(view.model, build.id, 'bottom'));
+    assert.ok(build.anchor, 'a branch with a layout of its own gets its id');
+    const research = byText('Research');
+    view.apply(R.setNudge(view.model, research.id, 30, -20));
+    same('right', { [build.id]: 'bottom' }, { [research.id]: [30, -20] });
+    // The edges of the branch laid out downward go down.
+    assert.strictEqual(view.scene.boxes.get(byText('API').id).way, 'bottom');
+  });
+
+  await t('a node dropped clear of the others stays where it’s put, its branch with it; Undo and Tidy put it back; the note keeps it by its id', async () => {
+    const view = await open(NOTE);
+    const build = view.model.root.children[1];
+    const api = build.children[0];
+    const before = Object.assign({}, view.scene.boxes.get(build.id));
+    const apiBefore = Object.assign({}, view.scene.boxes.get(api.id));
+    view.dropNode({ node: build.id, target: null, x: 100, y: 100, last: { x: 160, y: 140 } });
+    const z = view.camera.zoom;
+    const b = view.scene.boxes.get(build.id);
+    assert.ok(Math.abs(b.x - before.x - 60 / z) <= 1 && Math.abs(b.y - before.y - 40 / z) <= 1, 'moved as far as it was dragged');
+    assert.ok(Math.abs(view.scene.boxes.get(api.id).x - apiBefore.x - 60 / z) <= 1, 'its branch came along');
+    view.flushSave();
+    const id = build.id;
+    assert.ok(view.text.includes(`\t- Build ^${id}\n`), 'given its id in the note');
+    assert.ok(view.text.includes('```design-redux-layout') && view.text.includes(`"${id}":[`), 'the nudge in the layout block');
+    // Read again: the same nudge, on the same node.
+    const again = await open(view.text);
+    assert.deepStrictEqual(R.nodeNudge(again.model, id), R.nodeNudge(view.model, id));
+    view.undoStep(false);
+    assert.deepStrictEqual(view.scene.boxes.get(build.id).x, before.x, 'undone');
+    view.undoStep(true);
+    R.registerMindMapHandlers();
+    R.MINDMAP_HANDLERS.get('canvas-map-tidy').run({ view, model: view.model, node: null });
+    assert.deepStrictEqual(view.scene.boxes.get(build.id).x, before.x, 'tidied: back in its place');
+    assert.strictEqual(view.model.layout, null, 'nothing left in the layout block');
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

@@ -125,7 +125,7 @@ export class MindMapRenderer {
       const from = scene.boxes.get(n.id);
       n.children.forEach((c) => {
         const to = scene.boxes.get(c.id);
-        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, mode), cls: 'dr-mindmap-edge' });
+        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge' });
         walk(c);
       });
     };

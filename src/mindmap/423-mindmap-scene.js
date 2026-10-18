@@ -10,7 +10,8 @@
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { arrowLinks, modelFromData, sideAxes } from '../tree/400-tree-model.js';
-import { BRANCH_LAYOUTS, layoutPlaces } from '../tree/403-tree-layouts.js';
+import { BRANCH_LAYOUTS, composedLayout } from '../tree/403-tree-layouts.js';
+import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
 /* A node's box: as wide as its words want, up to a limit. */
 export const NODE_MIN_WIDTH = 72;
@@ -48,9 +49,11 @@ export function shownNodes(model) {
 }
 
 /**
- * Where everything goes: Map id -> { x, y, width, height, depth }, and
- * the whole's bounds. `sizeOf(node)` gives a box's size; `mode` the
- * layout, one of the tree's.
+ * Where everything goes: Map id -> { x, y, width, height, depth, way },
+ * and the whole's bounds. `sizeOf(node)` gives a box's size; `mode` the
+ * map's layout, one of the tree's. A branch with a layout of its own in
+ * the layout block grows its own way, and `way` is the layout that
+ * placed each box, for its edge. A node moved by hand takes its branch.
  */
 export function layoutScene(model, sizeOf, mode) {
   const way = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : 'right';
@@ -73,21 +76,21 @@ export function layoutScene(model, sizeOf, mode) {
     nodes.push(rec);
   });
   const cards = modelFromData({ nodes, edges });
-  const places = layoutPlaces(cards, model.root.id, way, arrowLinks(cards));
+  const places = composedLayout(cards, cards.byId.get(model.root.id), way, arrowLinks(cards), (rec) => branchLayoutOf(model, rec.id));
+  const wayOf = new Map();
+  (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
+  // Hand nudges, from the layout block, on top: each node's and those above it.
+  const off = new Map();
+  shown.forEach(({ node }) => {
+    const above = node.parent ? off.get(node.parent.id) || [0, 0] : [0, 0];
+    const own = node === model.root ? null : nodeNudge(model, node.id);
+    off.set(node.id, own ? [above[0] + own[0], above[1] + own[1]] : above);
+  });
   const depthOf = new Map(shown.map((s) => [s.node.id, s.depth]));
   cards.nodes.forEach((r) => {
     const at = r.id === model.root.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
-    boxes.set(r.id, { x: at.x, y: at.y, width: r.width, height: r.height, depth: depthOf.get(r.id) || 0 });
-  });
-  // Hand nudges, from the layout block, on top.
-  const nudge = (model.layout && model.layout.nudge) || {};
-  Object.keys(nudge).forEach((id) => {
-    const b = boxes.get(id);
-    const d = nudge[id];
-    if (b && Array.isArray(d)) {
-      b.x += Number(d[0]) || 0;
-      b.y += Number(d[1]) || 0;
-    }
+    const d = off.get(r.id) || [0, 0];
+    boxes.set(r.id, { x: at.x + d[0], y: at.y + d[1], width: r.width, height: r.height, depth: depthOf.get(r.id) || 0, way: wayOf.get(r.id) || way });
   });
   let bounds = boundsOfBoxes(boxes.values());
   // Free nodes: in a row under the tree.
@@ -95,7 +98,8 @@ export function layoutScene(model, sizeOf, mode) {
   const y = bounds.maxY + 80;
   (model.free || []).forEach((n) => {
     const size = sizeOf(n);
-    boxes.set(n.id, { x, y, width: size.width, height: size.height, depth: 0, free: true });
+    const d = nodeNudge(model, n.id) || [0, 0];
+    boxes.set(n.id, { x: x + d[0], y: y + d[1], width: size.width, height: size.height, depth: 0, free: true, way });
     x += size.width + 30;
   });
   bounds = boundsOfBoxes(boxes.values());

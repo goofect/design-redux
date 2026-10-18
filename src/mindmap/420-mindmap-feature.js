@@ -6,42 +6,25 @@
 /* and "Open as mind map" go between the two; "New mind map" makes one. */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Notice, TFile, TFolder } from 'obsidian';
+import { Notice, TFile, TFolder } from 'obsidian';
 import { MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
+import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById, treeModel } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
+import { branchLayoutOf, clearNudges, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
+import { nodeLabel } from './423-mindmap-scene.js';
 
 /* The kinds of file a new map can be. */
 export const MINDMAP_FORMATS = [
   { id: 'md', label: 'A note', desc: 'Indexed, searched and linked like any note: its nodes are a list' },
   { id: 'mindmap', label: 'A .mindmap file', desc: 'For diagrams and large maps that shouldn’t show among notes' },
 ];
-
-export class FormatPicker extends FuzzySuggestModal {
-  constructor(app, onChoose) {
-    super(app);
-    this.onChoose = onChoose;
-    this.setPlaceholder('Make the new mind map as…');
-  }
-
-  getItems() {
-    return MINDMAP_FORMATS;
-  }
-
-  getItemText(f) {
-    return `${f.label} — ${f.desc}`;
-  }
-
-  onChooseItem(f) {
-    this.onChoose(f.id);
-  }
-}
 
 export class MindMaps extends Feature {
   settingsSchema() {
@@ -176,12 +159,26 @@ export class MindMaps extends Feature {
   newMap() {
     const kind = this.settings.mindmapDefaultFormat;
     if (kind === 'md' || kind === 'mindmap') return this.create(kind);
-    new FormatPicker(this.app, async (chosen) => {
-      this.settings.mindmapDefaultFormat = chosen;
+    new ChoicePicker(this.app, 'Make the new mind map as…', MINDMAP_FORMATS.map((f) => Object.assign({ note: f.desc }, f)), async (chosen) => {
+      this.settings.mindmapDefaultFormat = chosen.id;
       await this.plugin.saveSettings();
-      this.create(chosen);
+      this.create(chosen.id);
     }).open();
     return null;
+  }
+
+  /** How a branch grows — or, from the root or with nothing picked, the whole map — asked. */
+  chooseLayout(view, whole) {
+    const model = view.model;
+    if (!model || !model.root) return;
+    const node = !whole && view.selected ? nodeById(model, view.selected) : null;
+    const branch = node && node !== model.root && !model.free.includes(node) ? node : null;
+    const items = BRANCH_LAYOUTS.map(([mode, label]) => ({ label, mode }));
+    if (branch && branchLayoutOf(model, branch.id)) items.unshift({ label: 'As the branch above', mode: null });
+    const ask = branch ? `Lay out “${nodeLabel(branch)}” and what's under it…` : 'Lay out the whole map…';
+    new ChoicePicker(this.app, ask, items, (item) => {
+      view.apply(branch ? setBranchLayout(model, branch.id, item.mode) : setMapLayout(model, item.mode));
+    }).open();
   }
 
   async create(kind) {
@@ -224,6 +221,10 @@ export function registerMindMapHandlers() {
     'duplicate-canvas-branch': { when: (ctx) => !!ctx.node && ctx.node !== ctx.model.root, run: (ctx) => ctx.view.apply(duplicateBranch(ctx.model, ctx.node.id)) },
     'canvas-zoom-to-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.fitBranch(ctx.node.id) },
     'fit-canvas-cards': { run: (ctx) => ctx.view.fit() },
+    'canvas-layout-choose': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view) },
+    'canvas-layout-everything': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view, true) },
+    'canvas-map-tidy': { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) },
+    'tidy-canvas-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(clearNudges(ctx.model, ctx.node.id)) },
   };
   Object.keys(handlers).forEach((id) => MINDMAP_HANDLERS.set(id, handlers[id]));
 }

@@ -6,7 +6,7 @@
 /* cards are walked in. Pure: given records and their sizes.          */
 /* ------------------------------------------------------------------ */
 
-import { arrowLinks, branchOf, canvasGap, isGroupRecord, shownChildren, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tidyOneWay } from './400-tree-model.js';
+import { arrowLinks, boundsOf, branchOf, canvasGap, indexModel, isGroupRecord, shownChildren, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tidyOneWay } from './400-tree-model.js';
 
 export const BRANCH_LAYOUTS = [
   ['right', 'To the right', 'arrow-right'],
@@ -470,4 +470,60 @@ export function layoutPlaces(model, rootId, mode, links) {
   if (mode === 'outline') return outlineLayout(model, rootId, links);
   if (mode === 'concept') return conceptLayout(model, rootId, links);
   return directedLayout(model, rootId, mode, links);
+}
+
+/**
+ * Where a tree's cards go by its layout, a branch with a layout of its
+ * own laid out by itself first and then placed as one block, its cards
+ * coming along: id -> { x, y }, with `sides` for the arrows and
+ * `branches` — each branch laid out its own way: { rec, mode, ids }.
+ * `layoutOf(rec)` names a card's own layout, or nothing.
+ */
+export function composedLayout(model, root, mode, links, layoutOf, depth) {
+  const kids = orderedBranch(model, root.id, links, siblingOrder);
+  // The nearest cards below with a layout of their own.
+  const own = [];
+  const queue = [root.id];
+  while (queue.length) {
+    (kids.get(queue.shift()) || []).forEach((c) => (layoutOf(c) && (depth || 0) < 20 ? own.push(c) : queue.push(c.id)));
+  }
+  if (!own.length) {
+    const laid = layoutPlaces(model, root.id, mode, links);
+    laid.branches = [];
+    return laid;
+  }
+  const blocks = own.map((c) => {
+    const sub = composedLayout(model, c, layoutOf(c), links, layoutOf, (depth || 0) + 1);
+    const box = boundsOf([c].concat(Array.from(sub.keys()).map((id) => Object.assign({}, model.byId.get(id), sub.get(id)))));
+    return { c, sub, box };
+  });
+  const blockOf = new Map(blocks.map((b) => [b.c.id, b]));
+  const below = new Set();
+  blocks.forEach((b) => b.sub.forEach((at, id) => below.add(id)));
+  // Each such card as the box its branch makes, what's below it out of the way.
+  const proxy = indexModel({
+    nodes: model.nodes.map((r) => {
+      const b = blockOf.get(r.id);
+      if (b) return Object.assign({}, r, b.box);
+      return below.has(r.id) ? Object.assign({}, r, { tuck: r.tuck || { by: root.id, dx: 0, dy: 0 } }) : r;
+    }),
+    edges: model.edges,
+  });
+  const laid = layoutPlaces(proxy, root.id, mode, links);
+  const out = new Map();
+  out.sides = new Map(laid.sides || []);
+  out.both = laid.both;
+  out.branches = [];
+  laid.forEach((at, id) => {
+    const b = blockOf.get(id);
+    if (!b) return out.set(id, at);
+    const dx = at.x - b.box.x;
+    const dy = at.y - b.box.y;
+    out.set(id, { x: b.c.x + dx, y: b.c.y + dy });
+    b.sub.forEach((p, sid) => out.set(sid, { x: p.x + dx, y: p.y + dy }));
+    (b.sub.sides || new Map()).forEach((side, sid) => out.sides.set(sid, side));
+    out.branches.push({ rec: b.c, mode: layoutOf(b.c), ids: Array.from(b.sub.keys()), sides: b.sub.sides });
+    b.sub.branches.forEach((x) => out.branches.push(x));
+  });
+  return out;
 }

@@ -322,6 +322,31 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     }
   });
 
+  await t('the layout block: a branch’s own layout and a nudge, by id; the whole map laid out one way lets them go, its nudges kept', () => {
+    const m = sample();
+    const c = m.root.children[2];
+    R.setBranchLayout(m, c.id, 'bottom');
+    assert.ok(c.anchor && R.branchLayoutOf(m, c.id) === 'bottom', 'C given its id and its layout');
+    const nudged = R.setNudge(m, 'a', 12.4, -3.6);
+    assert.deepStrictEqual(R.nodeNudge(m, 'a'), [12, -4]);
+    const text = R.writeOutline(m, '');
+    const back = R.parseOutline(text).model;
+    assert.strictEqual(R.branchLayoutOf(back, c.id), 'bottom', 'read back by its id');
+    assert.deepStrictEqual(R.nodeNudge(back, 'a'), [12, -4]);
+    R.undoPatch(m, nudged);
+    assert.strictEqual(R.nodeNudge(m, 'a'), null);
+    assert.strictEqual(R.setNudge(m, 'b', 0, 0), null, 'no nudge to take off: no change');
+    R.setNudge(m, 'b', 5, 5);
+    R.setMapLayout(m, 'radial');
+    assert.strictEqual(m.mode, 'radial');
+    assert.strictEqual(R.branchLayoutOf(m, c.id), null, 'its own layout let go');
+    assert.deepStrictEqual(R.nodeNudge(m, 'b'), [5, 5], 'nudges kept');
+    R.clearNudges(m, 'b');
+    assert.strictEqual(m.layout, null, 'nothing left: no block');
+    R.setBranchLayout(m, m.root.id, 'left');
+    assert.strictEqual(m.mode, 'left', 'the root’s layout is the map’s');
+  });
+
   await t('Undo and Redo: typing in one node a moment apart is one step; a change of shape is its own; redone until something new', () => {
     const m = sample();
     const u = new R.UndoStack();

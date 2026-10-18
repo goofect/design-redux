@@ -14,6 +14,7 @@
 import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode } from '../tree/404-tree-ops.js';
+import { nodeNudge, setNudge } from '../tree/406-tree-layout-block.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { screenToPlane } from './423-mindmap-scene.js';
 
@@ -114,6 +115,7 @@ class MindMapInput {
     const box = typeof this.root.getBoundingClientRect === 'function' ? this.root.getBoundingClientRect() : { left: 0, top: 0 };
     const { width, height } = this.renderer.size();
     const point = screenToPlane(this.camera, width, height, evt.clientX - box.left, evt.clientY - box.top);
+    d.last = { x: evt.clientX, y: evt.clientY };
     d.ghost.style.left = `${point.x + 8}px`;
     d.ghost.style.top = `${point.y + 8}px`;
     const vertical = this.mode === 'bottom' || this.mode === 'top';
@@ -123,11 +125,15 @@ class MindMapInput {
     if (t) t.addClass(`is-drop-${d.target.zone}`);
   }
 
+  /** Dropped on a node: moved there. Dropped clear of them all: left where it's put, as a nudge its branch follows. */
   dropNode(d) {
     const target = d.target;
     this.clearDrag(d);
-    if (!target) return;
-    this.apply(moveNode(this.model, d.node, target.parentId, target.index));
+    if (target) return this.apply(moveNode(this.model, d.node, target.parentId, target.index));
+    if (!d.last || !this.camera) return null;
+    const was = nodeNudge(this.model, d.node) || [0, 0];
+    const z = this.camera.zoom;
+    return this.apply(setNudge(this.model, d.node, was[0] + (d.last.x - d.x) / z, was[1] + (d.last.y - d.y) / z));
   }
 
   clearDrag(d) {
