@@ -167,7 +167,12 @@ export class QuietLinks extends Feature {
     );
     this.queueStrayCheck(5000);
 
-    const follow = () => this.watchPanes();
+    // Obsidian can draw a note's properties block a moment after it says the note opened: looked for again then.
+    const follow = () => {
+      this.watchPanes();
+      window.clearTimeout(this.paneTimer);
+      this.paneTimer = window.setTimeout(() => this.watchPanes(), 300);
+    };
     this.plugin.registerEvent(this.app.workspace.on('layout-change', follow));
     this.plugin.registerEvent(this.app.workspace.on('active-leaf-change', follow));
     this.plugin.registerEvent(this.app.workspace.on('file-open', follow));
@@ -178,6 +183,7 @@ export class QuietLinks extends Feature {
     );
     this.plugin.register(() => {
       window.clearTimeout(this.sweepTimer);
+      window.clearTimeout(this.paneTimer);
       this.unwatchPanes();
       this.restoreAll();
     });
