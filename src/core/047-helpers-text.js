@@ -111,3 +111,67 @@ export function sectionWords(text, headings) {
       .filter((w) => /[\p{L}\p{N}]/u.test(w)).length
   );
 }
+
+/**
+ * The passages marked ==like this== in a note's text: [{ text, line,
+ * before, after }], before and after being the rest of its line. Not in
+ * the properties, code blocks or inline code; == inside a link isn't a
+ * mark. A mark inside a mark is part of the one passage.
+ */
+export function highlightsIn(text) {
+  const out = [];
+  const lines = String(text || '').split('\n');
+  let fence = null;
+  let i = 0;
+  if (lines[0] === '---') {
+    const end = lines.indexOf('---', 1);
+    if (end !== -1) i = end + 1;
+  }
+  // \u0001 stands for an = that isn't a mark: inside a link or inline code.
+  const plain = (s) =>
+    s
+      .replace(/==/g, '')
+      .replace(/\u0001/g, '=')
+      .replace(/\[\[([^\]|]*)\|([^\]]*)\]\]/g, '$2')
+      .replace(/\[\[([^\]]*)\]\]/g, '$1')
+      .trim();
+  for (; i < lines.length; i++) {
+    const raw = lines[i];
+    const opens = /^\s*(```|~~~)/.exec(raw);
+    if (fence) {
+      if (opens && opens[1] === fence) fence = null;
+      continue;
+    }
+    if (opens) {
+      fence = opens[1];
+      continue;
+    }
+    if (raw.indexOf('==') === -1) continue;
+    const line = raw.replace(/`[^`]*`|\[\[[^\]]*\]\]|\]\([^)]*\)/g, (m) => m.replace(/=/g, '\u0001'));
+    // Each == opens a mark when a word follows it and closes one when a word comes before; marks inside marks belong to the outer one.
+    const open = [];
+    for (let at = line.indexOf('=='); at !== -1; at = line.indexOf('==', at + 2)) {
+      const prev = line[at - 1];
+      const next = line[at + 2];
+      const canClose = prev !== undefined && /\S/.test(prev) && prev !== '=';
+      const canOpen = next !== undefined && /\S/.test(next) && next !== '=';
+      if (canClose && open.length) {
+        const from = open.pop();
+        if (!open.length) {
+          out.push({ text: plain(line.slice(from + 2, at)), line: i, before: plain(line.slice(0, from)), after: plain(line.slice(at + 2)) });
+        }
+      } else if (canOpen) {
+        open.push(at);
+      }
+    }
+  }
+  return out;
+}
+
+/** A short, stable key for a passage: the same words, the same key. */
+export function passageHash(text) {
+  let h = 5381;
+  const s = String(text || '');
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}

@@ -39,10 +39,11 @@ export const LIBRARY_BUILTINS = {
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
   'knowledge-check': { label: 'Knowledge check', icon: 'network', needs: 'knowledgeCheck' },
+  highlights: { label: 'Highlighted passages', icon: 'highlighter', needs: 'studyEnabled' },
 };
 
 /* The library's places that wait under More, so the first few stand out. */
-export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check'];
+export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights'];
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -88,6 +89,9 @@ export const DEFAULTS = {
   studyDailyMax: 20,
   // { path: { added } } — the collections studied.
   studyAlbums: {},
+  // Passages marked ==like this== gathered, and asked back as a quiz.
+  studyHighlights: true,
+  studyCardMax: 10,
   // A note opens at the line you were on.
   rememberPlace: true,
   // The open note's headings in the right sidebar, the one you're reading lit.

@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace };\n');
+  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -728,6 +728,75 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await settle();
     assert.ok(sstore.item(session.list[1]), 'the marked one added');
     clearTimeout(sstore.timer);
+  });
+
+  await t('study: highlighted passages gathered from notes, on a screen of their own, and asked back as a quiz', async () => {
+    const text = ['---', 'note: ==not this==', '---', 'Say ==this one== and `==code==` and [[A==B]] ==[[Link|shown]] too==', '```', '==fenced==', '```', '==outer ==inner== more==', 'a == b and c == d'].join('\n');
+    assert.deepStrictEqual(R.highlightsIn(text), [
+      { text: 'this one', line: 3, before: 'Say', after: 'and `==code==` and A==B shown too' },
+      { text: 'shown too', line: 3, before: 'Say this one and `==code==` and A==B', after: '' },
+      { text: 'outer inner more', line: 7, before: '', after: '' },
+    ], 'not in properties, code or links; a mark inside a mark is one passage');
+    assert.strictEqual(R.passageHash('x y'), R.passageHash('x y'));
+    assert.notStrictEqual(R.passageHash('x y'), R.passageHash('x z'));
+
+    const { v, plugin, app, view, opened } = setup();
+    plugin.saveData = () => {};
+    plugin.saveSettings = async () => {};
+    plugin.manifest = { dir: 'p' };
+    const disk = {};
+    app.vault.adapter = { exists: async (p) => p in disk, read: async (p) => disk[p], write: async (p, t) => { disk[p] = t; } };
+    app.workspace.trigger = () => {};
+    app.workspace.getLeavesOfType = () => [];
+    const texts = { Anarchy: 'States are ==self-help actors== in anarchy.\nAnd ==no world government==.', Balance: 'Plain.', 'Realism': 'Power ==matters most==.' };
+    app.vault.cachedRead = async (f) => texts[f.basename] || '';
+    plugin.settings.studyEnabled = true;
+    const study = new R.Study(plugin);
+    plugin.feature = (C) => (C === R.Study ? study : null);
+    await R.studyOf(plugin).load();
+    const f = (p) => v.vault.getAbstractFileByPath(p);
+    const found = await study.highlightsOf([f('IR/Anarchy.md'), f('IR/Balance.md')]);
+    assert.deepStrictEqual(found.map((h) => `${h.file.basename}:${h.line}:${h.text}`), ['Anarchy:0:self-help actors', 'Anarchy:1:no world government']);
+    let reads = 0;
+    app.vault.cachedRead = async (file) => { reads++; return texts[file.basename] || ''; };
+    await study.highlightsOf([f('IR/Anarchy.md')]);
+    assert.strictEqual(reads, 0, 'unchanged since: not read again');
+
+    // The screen, for a collection: each passage under its note, a click from its line.
+    await view.setState({ mode: 'highlights', property: 'IR' }, {});
+    await settle(30);
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-highlight-text')).map((e) => e.textContent), ['self-help actors', 'no world government', 'matters most']);
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-highlights-note')).map((e) => e.textContent), ['Anarchy', 'Realism']);
+    click(view.contentEl.querySelectorAll('.dr-highlight')[1]);
+    assert.strictEqual(opened[opened.length - 1].basename, 'Anarchy');
+
+    // The quiz: from the collections studied, within the day's cap; answered on the ladder.
+    assert.deepStrictEqual(await study.quizCards(), [], 'nothing studied: nothing asked');
+    plugin.settings.studyAlbums = { 'IR/Theories': { added: 1 } };
+    let cards = await study.quizCards();
+    assert.deepStrictEqual(cards.map((c) => c.text), ['matters most']);
+    plugin.settings.studyAlbums = { IR: { added: 1 } };
+    plugin.settings.studyCardMax = 2;
+    cards = await study.quizCards();
+    assert.strictEqual(cards.length, 2, 'at most the day’s cap');
+    const quiz = new R.StudyQuiz(study, cards);
+    quiz.open();
+    assert.ok(/_{4}/.test(quiz.contentEl.querySelector('.dr-study-quiz-blank').textContent), 'the marked words hidden');
+    const button = (label) => Array.from(quiz.contentEl.querySelectorAll('button')).find((b) => b.textContent === label);
+    click(button('Show'));
+    assert.strictEqual(quiz.contentEl.querySelector('.dr-study-quiz-answer').textContent, cards[0].text);
+    click(button('Got it'));
+    click(button('Show'));
+    click(button('Again'));
+    assert.ok(/Done: 1 of 2 known/.test(quiz.contentEl.textContent));
+    const kept = R.studyOf(plugin).data.cards;
+    assert.strictEqual(kept[cards[0].key].grade, 'got');
+    assert.strictEqual(kept[cards[1].key].lapses, 1);
+    assert.deepStrictEqual(await study.quizCards(), [], 'the day’s cap reached');
+    // A renamed note keeps its passages' schedule.
+    R.studyOf(plugin).followRename({ path: 'IR/Anarchism.md' }, 'IR/Anarchy.md');
+    assert.ok(Object.keys(R.studyOf(plugin).data.cards).some((k) => k.startsWith('IR/Anarchism.md#')));
+    clearTimeout(R.studyOf(plugin).timer);
   });
 
   await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {

@@ -7,11 +7,17 @@
 /* of grades under its title. Off, nothing shows and nothing is kept.   */
 /* ------------------------------------------------------------------ */
 
-import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
+import { Modal, Notice, setIcon, Setting, TFile, TFolder } from 'obsidian';
+import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { highlightsIn, passageHash } from '../core/047-helpers-text.js';
 import { readingOf } from '../core/075-reading.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { actionsOn, addActionEntries } from '../core/078-actions.js';
+import { addTextCard, cardBox, liveCards, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
-import { DAY, dueNotes, sessionSummary, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
+import { DAY, dueNotes, nextDue, sessionSummary, startOfDay, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
+import { BROWSE_SCREENS, BrowseScreen, copyText } from './110-browse-screens.js';
+import { Library } from './130-browse-filters.js';
 
 /* What a grade is called, on its button and in the palette. */
 export const STUDY_GRADES = [
@@ -50,6 +56,19 @@ export class Study extends Feature {
         showIf: 'studyEnabled',
         name: 'Revisits a day',
         desc: 'At most this many come back in a day, so a long backlog doesn’t arrive at once.',
+      },
+      {
+        key: 'studyHighlights',
+        showIf: 'studyEnabled',
+        name: 'Highlighted passages',
+        desc: 'Passages you mark ==like this== gathered on a screen of their own, and asked back as a quiz from the collections you study.',
+      },
+      {
+        key: 'studyCardMax',
+        type: 'number',
+        showIf: 'studyEnabled',
+        name: 'Quiz passages a day',
+        desc: 'At most this many passages are asked in a day.',
       },
       {
         key: 'studyAlbums',
@@ -91,6 +110,9 @@ export class Study extends Feature {
       { id: 'study-session-next', name: 'Next note in this study session', icon: 'skip-forward', menu: false, when: () => on() && !!this.store.session, run: () => this.openSessionNext() },
       { id: 'study-mark-revisit', name: 'Mark to revisit after this session', icon: 'bookmark-plus', on: 'note', menu: false, when: (ctx) => on() && this.inSession(ctx.file) && !this.isMarked(ctx.file), run: (ctx) => this.markForRevisit(ctx.file) },
       { id: 'study-end-session', name: 'End the study session', icon: 'square', menu: false, when: () => on() && !!this.store.session, run: () => this.endSession() },
+      { id: 'study-highlights', name: 'Show highlighted passages', icon: 'highlighter', menu: false, when: () => this.highlightsOn, run: () => this.showHighlights(null) },
+      { id: 'study-album-highlights', name: 'Show the highlighted passages in this collection', icon: 'highlighter', on: 'album', menu: 'Highlighted passages', when: () => this.highlightsOn, run: (ctx) => this.showHighlights(ctx.folder) },
+      { id: 'study-quiz', name: 'Quiz me on highlighted passages', icon: 'help-circle', menu: false, when: () => this.highlightsOn && on(), run: () => this.quiz() },
       { id: 'study-open-next-due', name: 'Open the next note to revisit', icon: 'graduation-cap', menu: false, when: () => on() && dueNotes(this.plugin).length > 0, run: () => this.openNextDue() },
     ];
   }
@@ -192,6 +214,107 @@ export class Study extends Feature {
   openNextDue() {
     const next = dueNotes(this.plugin)[0];
     if (next) this.app.workspace.getLeaf(false).openFile(next);
+  }
+
+  get highlightsOn() {
+    return this.enabled && this.settings.studyHighlights !== false;
+  }
+
+  /**
+   * The passages marked in these notes: [{ file, text, line, before,
+   * after }]. Each note read once as it is now and remembered by its
+   * modified time; a few at a time, never the vault at once.
+   */
+  async highlightsOf(files) {
+    if (!this.marks) this.marks = new Map();
+    const vault = this.app.vault;
+    const todo = files.filter((f) => {
+      const kept = this.marks.get(f.path);
+      return !kept || kept.mtime !== f.stat.mtime;
+    });
+    let next = 0;
+    const worker = async () => {
+      while (next < todo.length) {
+        const f = todo[next++];
+        let text = '';
+        try {
+          text = await vault.cachedRead(f);
+        } catch (err) {
+          text = '';
+        }
+        this.marks.set(f.path, { mtime: f.stat.mtime, list: highlightsIn(text) });
+      }
+    };
+    await Promise.all([1, 2, 3, 4, 5, 6].map(worker));
+    const out = [];
+    files.forEach((file) => (this.marks.get(file.path) || { list: [] }).list.forEach((h) => out.push(Object.assign({ file }, h))));
+    return out;
+  }
+
+  showHighlights(folder) {
+    const library = this.plugin.feature(Library);
+    if (library) library.browseMode({ mode: 'highlights', property: folder ? folder.path : null });
+  }
+
+  /** A passage as a card on the canvas open now, beside what's there. */
+  addToCanvas(h) {
+    const leaf = this.app.workspace.getLeavesOfType('canvas').find((l) => !l.isDeferred && l.view && l.view.canvas);
+    const canvas = leaf ? leaf.view.canvas : null;
+    if (!canvas) return false;
+    let right = 0;
+    let top = null;
+    liveCards(canvas).forEach((card) => {
+      const box = cardBox(card);
+      right = Math.max(right, box.x + box.width);
+      top = top === null ? box.y : Math.min(top, box.y);
+    });
+    const card = addTextCard(canvas, { x: right + 60, y: top || 0, width: 320, height: 140 }, `> ${h.text}\n\n— [[${h.file.basename}]]`);
+    if (!card) return false;
+    requestCanvasSave(canvas);
+    new Notice(`Added to ${leaf.view.file ? leaf.view.file.basename : 'the canvas'}.`);
+    return true;
+  }
+
+  /** The passages to ask today: those due, then new ones, within the day's cap. */
+  async quizCards(now = Date.now()) {
+    await this.store.load();
+    const albums = Object.keys(this.settings.studyAlbums || {})
+      .map((p) => this.app.vault.getAbstractFileByPath(p))
+      .filter((f) => f instanceof TFolder);
+    const files = [];
+    albums.forEach((folder) => this.notesIn(folder).forEach((f) => files.indexOf(f) === -1 && files.push(f)));
+    const cards = this.store.data.cards;
+    const all = (await this.highlightsOf(files)).map((h) => Object.assign(h, { key: `${h.file.path}#${passageHash(h.text)}` }));
+    const today = startOfDay(now);
+    const asked = Object.keys(cards).filter((k) => cards[k].last >= today && cards[k].grade).length;
+    const room = Math.max(0, (Number(this.settings.studyCardMax) || 10) - asked);
+    const due = all.filter((h) => cards[h.key] && cards[h.key].due <= now).sort((a, b) => cards[a.key].due - cards[b.key].due);
+    const fresh = all.filter((h) => !cards[h.key]);
+    return due.concat(fresh).slice(0, room);
+  }
+
+  /** A passage answered: on the same ladder as notes. A new one known already starts on the first rung. */
+  gradeCard(key, grade, now = Date.now()) {
+    const cards = this.store.data.cards;
+    let card = cards[key] || null;
+    if (!card) {
+      card = nextDue(null, 'read', this.ladder, now);
+      card = grade === 'got' ? Object.assign(card, { grade: 'got', last: now }) : nextDue(card, grade, this.ladder, now);
+    } else {
+      card = nextDue(card, grade, this.ladder, now);
+    }
+    cards[key] = card;
+    this.store.save();
+    return card;
+  }
+
+  async quiz() {
+    const cards = await this.quizCards();
+    if (!cards.length) {
+      new Notice('Nothing to ask today: no highlighted passages due in the collections you study.');
+      return;
+    }
+    new StudyQuiz(this, cards).open();
   }
 
   /** A collection's notes, however deep, in its own order, each folder's after the notes beside it. */
@@ -390,3 +513,123 @@ export class StudySummary extends Modal {
     this.contentEl.empty();
   }
 }
+
+/** A passage asked back: its line with the marked words hidden; shown, then Got it or Again. */
+export class StudyQuiz extends Modal {
+  constructor(study, cards) {
+    super(study.app);
+    this.study = study;
+    this.cards = cards;
+    this.at = 0;
+    this.right = 0;
+  }
+
+  onOpen() {
+    this.contentEl.addClass('dr-study-quiz');
+    if (this.titleEl) this.titleEl.setText('Quiz');
+    this.draw();
+  }
+
+  draw(shown) {
+    const { contentEl } = this;
+    contentEl.empty();
+    const card = this.cards[this.at];
+    if (!card) {
+      contentEl.createDiv({ cls: 'dr-study-quiz-done', text: `Done: ${this.right} of ${this.cards.length} known.` });
+      new Setting(contentEl).addButton((b) => b.setButtonText('Close').setCta().onClick(() => this.close()));
+      return;
+    }
+    contentEl.createDiv({ cls: 'dr-study-quiz-count', text: `${this.at + 1} of ${this.cards.length} · ${card.file.basename}` });
+    const line = contentEl.createDiv({ cls: 'dr-study-quiz-line' });
+    if (card.before) line.createSpan({ text: `${card.before} ` });
+    const hidden = line.createSpan({ cls: shown ? 'dr-study-quiz-answer' : 'dr-study-quiz-blank', text: shown ? card.text : card.text.replace(/\S/g, '_') });
+    hidden.setAttribute('aria-label', shown ? card.text : 'Hidden');
+    if (card.after) line.createSpan({ text: ` ${card.after}` });
+    const buttons = new Setting(contentEl);
+    if (!shown) {
+      buttons.addButton((b) => b.setButtonText('Show').setCta().onClick(() => this.draw(true)));
+      return;
+    }
+    const answer = (grade) => {
+      this.study.gradeCard(card.key, grade);
+      if (grade === 'got') this.right++;
+      this.at++;
+      this.draw();
+    };
+    buttons.addButton((b) => b.setButtonText('Got it').setCta().onClick(() => answer('got')));
+    buttons.addButton((b) => b.setButtonText('Again').onClick(() => answer('again')));
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
+/** Highlighted passages, vault-wide or in a collection: each with its note, a click from its line. */
+export class HighlightsScreen extends BrowseScreen {
+  title() {
+    const folder = this.folder();
+    return folder ? `Highlighted in ${folder.name}` : 'Highlighted passages';
+  }
+
+  folder() {
+    const p = this.view.property;
+    const f = p ? this.app.vault.getAbstractFileByPath(p) : null;
+    return f instanceof TFolder ? f : null;
+  }
+
+  render(root) {
+    const view = this.view;
+    const study = this.plugin.feature(Study);
+    view.renderTitleBar(root, this.title());
+    if (!study || !study.highlightsOn) {
+      root.createDiv({ cls: 'dr-empty', text: 'Highlighted passages are gathered once Study is on in settings.' });
+      return;
+    }
+    const folder = this.folder();
+    const files = folder ? study.notesIn(folder) : libraryIndex(this.plugin).notes();
+    const box = root.createDiv({ cls: 'dr-highlights' });
+    const wait = box.createDiv({ cls: 'dr-empty', text: 'Gathering highlighted passages…' });
+    study.highlightsOf(files).then((found) => {
+      // Drawn again since: this drawing's done with.
+      if (!box.isConnected) return;
+      wait.remove();
+      if (!found.length) {
+        box.createDiv({ cls: 'dr-empty', text: 'No highlighted passages yet. Mark one ==like this== in a note.' });
+        return;
+      }
+      let current = null;
+      let list = null;
+      found.forEach((h) => {
+        if (h.file !== current) {
+          current = h.file;
+          const head = box.createDiv({ cls: 'dr-highlights-note', text: h.file.basename });
+          asButton(head);
+          onActivate(head, () => this.app.workspace.getLeaf(false).openFile(h.file));
+          list = box.createDiv({ cls: 'dr-highlights-list' });
+        }
+        const row = list.createDiv({ cls: 'dr-highlight' });
+        asButton(row);
+        row.createDiv({ cls: 'dr-highlight-text', text: h.text });
+        onActivate(row, (evt) => {
+          if (evt.target && evt.target.closest && evt.target.closest('.dr-highlight-actions')) return;
+          this.app.workspace.getLeaf(false).openFile(h.file, { eState: { line: h.line } });
+        });
+        const actions = row.createDiv({ cls: 'dr-highlight-actions' });
+        const act = (icon, label, run) => {
+          const b = actions.createDiv({ cls: 'clickable-icon' });
+          asButton(b, label);
+          setIcon(b, icon);
+          onActivate(b, (evt) => {
+            evt.stopPropagation();
+            run();
+          });
+        };
+        act('quote', 'Copy as a quote', () => copyText(`> ${h.text}\n> — [[${h.file.basename}]]`));
+        if (this.app.workspace.getLeavesOfType('canvas').length) act('sticky-note', 'Add to the open canvas', () => study.addToCanvas(h));
+      });
+    });
+  }
+}
+
+BROWSE_SCREENS.highlights = HighlightsScreen;

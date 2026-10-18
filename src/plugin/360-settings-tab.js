@@ -45,7 +45,7 @@ export const SETTINGS_TABS = [
     sections: [
       { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace'] },
       { title: 'Reading outline', keys: ['readingOutline', 'outlineWordCounts'] },
-      { title: 'Study', keys: ['studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums'] },
+      { title: 'Study', keys: ['studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax'] },
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },

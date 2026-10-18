@@ -1035,7 +1035,7 @@ export class PropertiesScreen extends BrowseScreen {
 }
 
 /** Text to the clipboard, with a word that it's there. */
-function copyText(text) {
+export function copyText(text) {
   const clip = typeof navigator !== 'undefined' && navigator.clipboard;
   if (!clip) return;
   clip.writeText(text).then(() => new Notice('Copied'), () => new Notice('Could not copy'));
