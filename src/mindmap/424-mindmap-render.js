@@ -7,7 +7,7 @@
 /* elements of nodes gone off screen are kept to be used again.        */
 /* ------------------------------------------------------------------ */
 
-import { DRAW_MARGIN, edgePath, meets, nodeLabel, viewBox } from './423-mindmap-scene.js';
+import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, viewBox } from './423-mindmap-scene.js';
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -51,6 +51,8 @@ export class MindMapRenderer {
   /** Everything on screen drawn: nodes, edges, which is selected. */
   draw(state) {
     const { model, scene, camera, selected, mode } = state;
+    this.tints = state.tints || new Map();
+    this.fade = state.fade || null;
     this.place(camera);
     const { width, height } = this.size();
     const view = viewBox(camera, width, height, DRAW_MARGIN / camera.zoom);
@@ -119,6 +121,11 @@ export class MindMapRenderer {
     if (n.attrs && n.attrs.color !== undefined && n.attrs.color !== '') el.dataset.color = String(n.attrs.color);
     else delete el.dataset.color;
     el.dataset.depth = String(Math.min(b.depth, 4));
+    const tint = this.tints.get(n.id);
+    if (tint) el.dataset.tint = tint;
+    else delete el.dataset.tint;
+    el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
+    el.toggleClass('is-pinned', Array.isArray(n.attrs && n.attrs.pin));
     el.style.left = `${b.x}px`;
     el.style.top = `${b.y}px`;
     el.style.width = `${b.width}px`;
@@ -136,13 +143,13 @@ export class MindMapRenderer {
       if (n.attrs && n.attrs.fold) return;
       const from = scene.boxes.get(n.id);
       n.children.forEach((c) => {
-        const own = c.attrs && c.attrs.color !== undefined && c.attrs.color !== '' ? String(c.attrs.color) : colour;
+        const own = colourKey(c) || colour;
         const to = scene.boxes.get(c.id);
-        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge', colour: own });
+        if (from && to && (meets(from, view) || meets(to, view))) want.push({ d: edgePath(from, to, to.way || mode), cls: 'dr-mindmap-edge', colour: own || this.tints.get(c.id) || null });
         walk(c, own);
       });
     };
-    if (model.root) walk(model.root, model.root.attrs && model.root.attrs.color !== undefined && model.root.attrs.color !== '' ? String(model.root.attrs.color) : null);
+    if (model.root) walk(model.root, colourKey(model.root));
     (model.relations || []).forEach((r) => {
       const from = scene.boxes.get(r.from);
       const to = scene.boxes.get(r.to);

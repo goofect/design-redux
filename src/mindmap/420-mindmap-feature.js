@@ -56,6 +56,15 @@ export class MindMaps extends Feature {
         options: Object.fromEntries(BRANCH_LAYOUTS.filter(([m]) => m !== 'concept').map(([mode, title]) => [mode, title])),
       },
       { key: 'mindmapGlide', showIf: 'mindmaps', name: 'Nodes glide to their places', desc: 'As the map changes. Never when your system asks for less motion.' },
+      { key: 'mindmapLegend', showIf: 'mindmaps', name: 'Legend', desc: 'A corner list naming what each colour means on the map. Pick a colour to fade the rest.' },
+      { key: 'mindmapDepth', showIf: 'mindmaps', name: 'Show how deep a node is', desc: 'The root larger, the nodes a step from it heavier.' },
+      {
+        key: 'mindmapColourBy',
+        type: 'dropdown',
+        showIf: 'mindmaps',
+        name: 'Tint nodes with no colour',
+        options: { '': 'No tint', branch: 'By the branch they’re in', depth: 'By how deep they are' },
+      },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -85,6 +94,7 @@ export class MindMaps extends Feature {
       { id: 'mindmap-outdent-node', name: 'Mind map: move the node out a level', icon: 'outdent', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(outdentNode(ctx.model, ctx.node.id)) },
       { id: 'mindmap-move-node-up', name: 'Mind map: move the node up', icon: 'arrow-up', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, -1)) },
       { id: 'mindmap-move-node-down', name: 'Mind map: move the node down', icon: 'arrow-down', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) },
+      { id: 'mindmap-colour-node', name: 'Mind map: colour the selected node…', icon: 'palette', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.chooseColour(ctx.node.id) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -225,6 +235,7 @@ export function registerMindMapHandlers() {
     'fit-canvas-cards': { run: (ctx) => ctx.view.fit() },
     'canvas-layout-choose': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view) },
     'canvas-layout-everything': { when: (ctx) => !!ctx.view.feature && typeof ctx.view.feature.chooseLayout === 'function', run: (ctx) => ctx.view.feature.chooseLayout(ctx.view, true) },
+    'toggle-canvas-legend': { run: (ctx) => ctx.view.toggleLegend() },
     'canvas-map-tidy': { when: (ctx) => !!(ctx.model.layout && ctx.model.layout.nudge), run: (ctx) => ctx.view.apply(clearNudges(ctx.model)) },
     'tidy-canvas-branch': { when: (ctx) => !!ctx.node, run: (ctx) => ctx.view.apply(clearNudges(ctx.model, ctx.node.id)) },
   };

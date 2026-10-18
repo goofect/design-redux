@@ -28,6 +28,17 @@ function readNode(o, parent, used) {
   return node;
 }
 
+/* The parts of the layout block, kept at the top of a .mindmap file. */
+export const LAYOUT_PARTS = ['nudge', 'branch', 'legend', 'views', 'view'];
+
+function readLayout(data) {
+  const parts = LAYOUT_PARTS.filter((k) => data[k] !== undefined && data[k] !== null);
+  if (!parts.length) return null;
+  const layout = { v: 1 };
+  parts.forEach((k) => (layout[k] = data[k]));
+  return layout;
+}
+
 /** A .mindmap file read as a map; a file that can't be read throws, so the view can say so rather than write over it. */
 export function parseMindmapJson(text) {
   const data = JSON.parse(String(text || '').trim() || '{}');
@@ -43,7 +54,7 @@ export function parseMindmapJson(text) {
         Object.keys(r).forEach((k) => RELATION_KEYS.indexOf(k) === -1 && (attrs[k] = r[k]));
         return { from: r.from, to: r.to, label: typeof r.label === 'string' ? r.label : '', attrs };
       }),
-    layout: data.nudge || data.view ? Object.assign({ v: 1 }, data.nudge ? { nudge: data.nudge } : {}, data.view ? { view: data.view } : {}) : null,
+    layout: readLayout(data),
     rest: null,
     mode: typeof data.layout === 'string' ? data.layout : null,
   };
@@ -67,7 +78,9 @@ export function writeMindmapJson(model) {
     out.relations = model.relations.map((r) => Object.assign({ from: r.from, to: r.to }, r.label ? { label: r.label } : {}, orderedAttrs(r.attrs)));
   }
   const layout = model.layout || {};
-  if (layout.nudge && Object.keys(layout.nudge).length) out.nudge = layout.nudge;
-  if (layout.view) out.view = layout.view;
+  LAYOUT_PARTS.forEach((k) => {
+    const v = layout[k];
+    if (v && (Array.isArray(v) || typeof v !== 'object' || Object.keys(v).length)) out[k] = v;
+  });
   return JSON.stringify(out, null, 2) + '\n';
 }

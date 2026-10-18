@@ -9928,6 +9928,37 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--interactive-accent);
 }
 
+/* Depth: the root larger, its own children heavier. */
+.dr-mindmap.is-depth .dr-mindmap-node.is-root {
+  font-size: var(--font-ui-medium);
+  line-height: 22px;
+}
+
+.dr-mindmap.is-depth .dr-mindmap-node[data-depth='1']:not(.is-free) {
+  font-weight: var(--font-semibold, 600);
+}
+
+/* A tint for a node with no colour of its own. */
+.dr-mindmap-node[data-tint='1'] { border-color: var(--color-red); background: color-mix(in srgb, var(--color-red) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='2'] { border-color: var(--color-orange); background: color-mix(in srgb, var(--color-orange) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='3'] { border-color: var(--color-yellow); background: color-mix(in srgb, var(--color-yellow) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='4'] { border-color: var(--color-green); background: color-mix(in srgb, var(--color-green) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='5'] { border-color: var(--color-cyan); background: color-mix(in srgb, var(--color-cyan) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='6'] { border-color: var(--color-purple); background: color-mix(in srgb, var(--color-purple) 10%, var(--background-secondary)); }
+
+.dr-mindmap-node.is-faded {
+  opacity: 0.25;
+}
+
+.dr-mindmap-node.is-pinned::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px dashed var(--text-faint);
+  border-radius: calc(var(--radius-m) + 3px);
+  pointer-events: none;
+}
+
 .dr-mindmap-node[data-color='1'] { border-color: var(--color-red); }
 .dr-mindmap-node[data-color='2'] { border-color: var(--color-orange); }
 .dr-mindmap-node[data-color='3'] { border-color: var(--color-yellow); }
@@ -9962,6 +9993,90 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 /* Far out: boxes without words. */
 .dr-mindmap.is-far .dr-mindmap-text {
   visibility: hidden;
+}
+
+.dr-mindmap-legend {
+  position: absolute;
+  left: var(--dr-space-3, 12px);
+  bottom: var(--dr-space-3, 12px);
+  min-width: 160px;
+  max-width: 240px;
+  padding: var(--dr-space-1, 4px);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  font-size: var(--font-ui-smaller);
+  cursor: default;
+}
+
+.dr-mindmap-legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2, 8px);
+  padding: 2px var(--dr-space-2, 8px);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.dr-mindmap-legend-row.is-faded {
+  opacity: 0.45;
+}
+
+.dr-mindmap-legend-row.is-picked {
+  background: var(--background-modifier-active-hover);
+}
+
+.dr-mindmap-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.dr-mindmap-swatch[data-color='1'] { background: var(--color-red); }
+.dr-mindmap-swatch[data-color='2'] { background: var(--color-orange); }
+.dr-mindmap-swatch[data-color='3'] { background: var(--color-yellow); }
+.dr-mindmap-swatch[data-color='4'] { background: var(--color-green); }
+.dr-mindmap-swatch[data-color='5'] { background: var(--color-cyan); }
+.dr-mindmap-swatch[data-color='6'] { background: var(--color-purple); }
+
+.dr-mindmap-legend-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-mindmap-legend-count {
+  color: var(--text-faint);
+}
+
+.dr-mindmap-legend-rename {
+  padding: 2px;
+  opacity: 0;
+}
+
+.dr-mindmap-legend-row:focus-within .dr-mindmap-legend-rename {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .dr-mindmap-legend-row:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  .dr-mindmap-legend-row:hover .dr-mindmap-legend-rename {
+    opacity: 1;
+  }
+}
+
+@media (any-hover: none) {
+  .dr-mindmap-legend-rename {
+    opacity: 1;
+  }
 }
 
 .dr-mindmap-bar {

@@ -16,7 +16,7 @@ const copyBlock = (model) => JSON.parse(JSON.stringify(model.layout || { v: 1 })
 
 /** The block with nothing left in a part dropped, or null if nothing's left at all. */
 function tidyBlock(block) {
-  ['nudge', 'branch'].forEach((k) => {
+  ['nudge', 'branch', 'legend', 'views'].forEach((k) => {
     if (block[k] && !Object.keys(block[k]).length) delete block[k];
   });
   return Object.keys(block).some((k) => k !== 'v') ? block : null;
@@ -116,4 +116,42 @@ export function setMapLayout(model, mode) {
   if ((model.mode || null) !== valid) ops.push({ type: 'mode', mode: valid });
   if (JSON.stringify(next) !== JSON.stringify(model.layout || null)) ops.push({ type: 'layout', layout: next });
   return ops.length ? applyPatch(model, ops, model.root ? [model.root.id] : []) : null;
+}
+
+/** What a colour means on this map, as its legend names it, or null. */
+export function legendName(model, key) {
+  const name = model.layout && model.layout.legend && model.layout.legend[key];
+  return typeof name === 'string' && name ? name : null;
+}
+
+/** A colour named in the map's legend; no name takes it out. */
+export function setLegendName(model, key, name) {
+  const value = String(name || '').trim();
+  return changeBlock(model, [], (block) => {
+    block.legend = block.legend || {};
+    if (value) block.legend[key] = value;
+    else delete block.legend[key];
+  });
+}
+
+/** The map's saved views: name -> { id, zoom }. */
+export function savedViews(model) {
+  const views = (model.layout && model.layout.views) || {};
+  const out = {};
+  Object.keys(views).forEach((name) => {
+    const v = views[name];
+    if (Array.isArray(v) && typeof v[0] === 'string' && typeof v[1] === 'number') out[name] = { id: v[0], zoom: v[1] };
+  });
+  return out;
+}
+
+/** A view kept by name — a node to look at and how near — or, with no node, let go. */
+export function setSavedView(model, name, id, zoom) {
+  const key = String(name || '').trim();
+  if (!key) return null;
+  return changeBlock(model, id ? [id] : [], (block) => {
+    block.views = block.views || {};
+    if (id) block.views[key] = [id, Math.round(zoom * 100) / 100];
+    else delete block.views[key];
+  });
 }

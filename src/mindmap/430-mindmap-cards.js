@@ -15,15 +15,25 @@ import { nodeById } from '../tree/400-tree-model.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { estimateSize, nodeParts } from './423-mindmap-scene.js';
 
-/** What a node's size is kept under: its text, and whether it's the root, which is set bolder. */
-export function sizeKey(model, n) {
-  return `${n === model.root ? 'R' : ''}|${n.text || (n.virtual ? 'Untitled' : '')}`;
+/** How a node's text is set: the root larger, and — with depth shown — the root's own children heavier. */
+export function nodeTier(model, n, depth) {
+  if (n === model.root) return 'R';
+  return depth && n.parent === model.root ? '1' : '';
+}
+
+/** What a node's size is kept under: its text, and how it's set. */
+export function sizeKey(model, n, depth) {
+  return `${nodeTier(model, n, depth)}|${n.text || (n.virtual ? 'Untitled' : '')}`;
 }
 
 class MindMapCards {
+  depthShown() {
+    return !this.plugin || this.plugin.settings.mindmapDepth !== false;
+  }
+
   /** A node's size: measured, or estimated until it is. */
   sizeOf(n) {
-    const known = this.sizes && this.model && this.sizes.get(sizeKey(this.model, n));
+    const known = this.sizes && this.model && this.sizes.get(sizeKey(this.model, n, this.depthShown()));
     return known || estimateSize(n.text || (n.virtual ? 'Untitled' : ''));
   }
 
@@ -82,7 +92,7 @@ class MindMapCards {
     this.renderer.nodeEls.forEach((el, id) => {
       const n = nodeById(this.model, id);
       if (!n) return;
-      const key = sizeKey(this.model, n);
+      const key = sizeKey(this.model, n, this.depthShown());
       if (!this.sizes.has(key) && !this.measuring.has(key)) todo.push({ n, key });
     });
     if (!todo.length) return;
@@ -91,7 +101,9 @@ class MindMapCards {
     todo.forEach((m) => {
       this.measuring.add(m.key);
       m.el = this.measureBox.createDiv({ cls: 'dr-mindmap-node' });
-      m.el.toggleClass('is-root', m.n === this.model.root);
+      const tier = nodeTier(this.model, m.n, this.depthShown());
+      m.el.toggleClass('is-root', tier === 'R');
+      m.el.dataset.depth = tier === 'R' ? '0' : tier === '1' ? '1' : '2';
       waits.push(...this.fillCard(m.el, m.n));
     });
     const model = this.model;

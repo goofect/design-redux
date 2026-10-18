@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setLegendName };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -498,6 +498,48 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.ok(view.contentEl.querySelector(`marker[id="${styled.getAttribute('marker-end').slice(5, -1)}"]`), 'its head drawn');
     assert.strictEqual(plain.getAttribute('data-line'), 'dashed', 'unstyled: dashed with a triangle head');
     assert.ok(/-arrow\)$/.test(plain.getAttribute('marker-end')));
+  });
+
+  await t('the legend names the map’s colours and counts them; a colour picked fades the rest; uncoloured nodes tinted as set; depth shown', async () => {
+    const view = await open(NOTE);
+    const [research, build, ship] = view.model.root.children;
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-legend'), 'no colours: no legend');
+    view.apply(R.setAttr(view.model, build.id, 'color', '1'));
+    view.apply(R.setAttr(view.model, ship.id, 'color', '1'));
+    view.apply(R.setAttr(view.model, research.id, 'color', '4'));
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-legend-row')).map((r) => `${r.querySelector('.dr-mindmap-legend-name').textContent} ${r.querySelector('.dr-mindmap-legend-count').textContent}`);
+    assert.deepStrictEqual(rows(), ['Red 2', 'Green 1', 'No colour 5']);
+    view.apply(R.setLegendName(view.model, '1', 'Risky'));
+    assert.deepStrictEqual(rows()[0], 'Risky 2', 'named in the map');
+    view.flushSave();
+    assert.ok(view.text.includes('"legend":{"1":"Risky"}'), 'the name kept in the layout block');
+    view.contentEl.querySelectorAll('.dr-mindmap-legend-row')[0].click();
+    const faded = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node.is-faded')).length;
+    assert.strictEqual(faded(), 6, 'all but the two red faded');
+    view.contentEl.querySelectorAll('.dr-mindmap-legend-row')[0].click();
+    assert.strictEqual(faded(), 0, 'picked again: back');
+    R.registerMindMapHandlers();
+    R.MINDMAP_HANDLERS.get('toggle-canvas-legend').run({ view, model: view.model });
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-legend'), 'hidden');
+    R.MINDMAP_HANDLERS.get('toggle-canvas-legend').run({ view, model: view.model });
+    assert.ok(view.contentEl.querySelector('.dr-mindmap-legend'));
+    // Tints: by branch, the uncoloured below each of the root's children.
+    plugin.settings.mindmapColourBy = 'branch';
+    view.apply(R.setAttr(view.model, research.id, 'color', undefined));
+    view.draw();
+    const tint = (n) => view.renderer.nodeEls.get(n.id).dataset.tint;
+    assert.deepStrictEqual([tint(research), tint(research.children[0]), tint(build), tint(build.children[0])], ['1', '1', undefined, '2'], 'Build has its own colour; what’s below it the second branch’s tint');
+    plugin.settings.mindmapColourBy = 'depth';
+    view.draw();
+    assert.deepStrictEqual([tint(research), tint(research.children[0])], ['1', '2']);
+    plugin.settings.mindmapColourBy = '';
+    view.draw();
+    assert.strictEqual(tint(research), undefined);
+    assert.ok(view.root.hasClass('is-depth'), 'depth shown');
+    plugin.settings.mindmapDepth = false;
+    view.draw();
+    assert.ok(!view.root.hasClass('is-depth'));
+    plugin.settings.mindmapDepth = true;
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

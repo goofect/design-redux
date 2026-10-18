@@ -165,8 +165,8 @@ class MindMapInput {
   /** The keys of the map, while nothing's being typed in. */
   key(evt) {
     if (!this.model || this.editing || this.failure) return;
-    // A key the card editor took — Escape closing it, say — isn't the map's too.
-    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor'))) return;
+    // A key the card editor took — Escape closing it, say — isn't the map's too; nor one on the bar, the outline or the legend.
+    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor, .dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-legend'))) return;
     const mod = evt.ctrlKey || evt.metaKey;
     if (mod && !evt.altKey && (evt.key === 'z' || evt.key === 'Z' || evt.key === 'y')) {
       evt.preventDefault();

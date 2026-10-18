@@ -54,6 +54,35 @@ export function estimateSize(text) {
   return { width: Math.round(wide + NODE_PAD.x * 2), height: height + NODE_PAD.y * 2 };
 }
 
+/* The six colours a node can take by number, as the canvas has them. */
+export const NODE_COLOURS = { 1: 'Red', 2: 'Orange', 3: 'Yellow', 4: 'Green', 5: 'Cyan', 6: 'Purple' };
+
+/** A node's own colour as a key: '1'–'6', a #hex, or null. */
+export function colourKey(n) {
+  const c = n && n.attrs ? n.attrs.color : undefined;
+  if (c === undefined || c === null || c === '') return null;
+  const s = String(c).trim();
+  return /^[1-6]$/.test(s) || /^#[0-9a-f]{3,8}$/i.test(s) ? s.toLowerCase() : null;
+}
+
+/**
+ * A tint, 1–6, for each node with no colour of its own: by the branch
+ * from the root it's in ('branch'), or how many steps out it is
+ * ('depth'). The root has none.
+ */
+export function nodeTints(model, by) {
+  const out = new Map();
+  if (!model.root || (by !== 'branch' && by !== 'depth')) return out;
+  model.root.children.forEach((top, i) => {
+    const go = (n, depth) => {
+      if (!colourKey(n)) out.set(n.id, String(by === 'depth' ? ((depth - 1) % 6) + 1 : (i % 6) + 1));
+      n.children.forEach((c) => go(c, depth + 1));
+    };
+    go(top, 1);
+  });
+  return out;
+}
+
 /** The nodes shown: the root's tree, but not what's folded away. */
 export function shownNodes(model) {
   const out = [];

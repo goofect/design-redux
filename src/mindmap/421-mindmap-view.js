@@ -16,7 +16,7 @@ import { bindSource, parseOutline, writeOutline } from '../tree/401-tree-outline
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
 import { applyPatch, setAttr } from '../tree/404-tree-ops.js';
 import { UndoStack } from '../tree/405-tree-history.js';
-import { boundsOfBoxes, estimateSize, fitCamera, layoutScene, nodeLabel } from './423-mindmap-scene.js';
+import { boundsOfBoxes, estimateSize, fitCamera, layoutScene, nodeLabel, nodeTints } from './423-mindmap-scene.js';
 import { MindMapRenderer } from './424-mindmap-render.js';
 
 export const MINDMAP_VIEW = 'design-redux-mindmap';
@@ -152,7 +152,11 @@ export class MindMapView extends TextFileView {
     this.showFailure();
     if (!this.model || !this.scene || !this.camera) return;
     const scene = this.gliding ? this.gliding.scene : this.scene;
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode });
+    const settings = this.plugin ? this.plugin.settings : {};
+    this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
+    const tints = nodeTints(this.model, settings.mindmapColourBy);
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null });
+    if (typeof this.drawLegend === 'function') this.drawLegend();
     if (this.outlineEl) this.drawOutline();
     if (this.editing && typeof this.placeEditor === 'function') this.placeEditor();
     if (!this.gliding && typeof this.measureShown === 'function') this.measureShown();

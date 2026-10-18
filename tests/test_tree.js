@@ -345,6 +345,20 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.strictEqual(m.layout, null, 'nothing left: no block');
     R.setBranchLayout(m, m.root.id, 'left');
     assert.strictEqual(m.mode, 'left', 'the root’s layout is the map’s');
+    // All of it kept in a .mindmap file too.
+    R.setBranchLayout(m, c.id, 'top');
+    R.setNudge(m, 'a', 4, 4);
+    R.setLegendName(m, '1', 'Risks');
+    R.setSavedView(m, 'Build work', 'b', 1.25);
+    const json = R.parseMindmapJson(R.writeMindmapJson(m));
+    assert.strictEqual(R.branchLayoutOf(json, c.id), 'top');
+    assert.deepStrictEqual(R.nodeNudge(json, 'a'), [4, 4]);
+    assert.strictEqual(R.legendName(json, '1'), 'Risks');
+    assert.deepStrictEqual(R.savedViews(json), { 'Build work': { id: 'b', zoom: 1.25 } });
+    R.setSavedView(m, 'Build work', null);
+    R.setLegendName(m, '1', '');
+    assert.deepStrictEqual(R.savedViews(m), {});
+    assert.strictEqual(R.legendName(m, '1'), null);
   });
 
   await t('Undo and Redo: typing in one node a moment apart is one step; a change of shape is its own; redone until something new', () => {
