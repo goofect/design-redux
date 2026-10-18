@@ -8,6 +8,7 @@
 import { browser, expect } from '@wdio/globals';
 import { obsidianPage } from 'wdio-obsidian-service';
 import fs from 'fs';
+import { createRequire } from 'module';
 import path from 'path';
 
 const OUT = path.resolve('ci-output');
@@ -1233,6 +1234,57 @@ describe('Design Redux in Obsidian', function () {
     expect(result.first).toBe('[[Pa]]');
     expect(result.followed).toBe('[[Qu]]');
     expect(result.props).toEqual({ rating: 3 });
+  });
+
+  it('keeps a 2,000-node mind map within its budgets: parse and write, open, an edit, a fold of 500, a pan, memory', async function () {
+    const require = createRequire(import.meta.url);
+    const { mapText } = require('../mapgen.js');
+    const text = mapText(2000);
+    const BUDGET = { parse: 20, write: 20, open: 300, edit: 50, fold: 50, pan: 1000 / 60, memory: 30 };
+    const m = await browser.executeObsidian(async ({ app }, text) => {
+      const until = async (ok, ms = 10000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 20)); return ok(); };
+      const old = app.vault.getAbstractFileByPath('Budget map.md');
+      if (old) await app.vault.delete(old);
+      const file = await app.vault.create('Budget map.md', text);
+      await until(() => !!app.metadataCache.getFileCache(file)?.frontmatter);
+      const heap = () => (performance.memory ? performance.memory.usedJSHeapSize : 0);
+      const before = heap();
+      const leaf = app.workspace.getLeaf(true);
+      const t0 = performance.now();
+      await leaf.setViewState({ type: 'design-redux-mindmap', state: { file: file.path }, active: true });
+      await until(() => leaf.view.model && leaf.view.renderer && leaf.view.renderer.drawn > 0);
+      const open = performance.now() - t0;
+      // What the open map holds, before anything else is measured.
+      const memory = (heap() - before) / 1048576;
+      const view = leaf.view;
+      const time = (fn) => { const a = performance.now(); fn(); return performance.now() - a; };
+      const best = (fn) => Math.min(fn(), fn(), fn());
+      const parse = best(() => time(() => view.format.parse(text, file)));
+      const model = view.format.parse(text, file);
+      model.root.children[0].text += ' and more';
+      const write = best(() => time(() => view.format.write(model, text, file)));
+      const node = view.model.root.children[1].children[0];
+      let k = 0;
+      const base = node.text;
+      const edit = best(() => time(() => {
+        node.text = `${base} ${k++}`;
+        view.apply({ ops: [{ type: 'text', id: node.id, text: node.text }], inverse: [{ type: 'text', id: node.id, text: base }], selection: [node.id] });
+      }));
+      const big = view.model.root.children[0];
+      const fold = best(() => { const took = time(() => view.toggleFold(big.id)); view.toggleFold(big.id); return took; });
+      view.camera = { x: view.camera.x, y: view.camera.y, zoom: 1 };
+      const pan = time(() => { for (let i = 0; i < 20; i++) { view.camera = { x: view.camera.x + 40, y: view.camera.y, zoom: 1 }; view.draw(); } }) / 20;
+      view.pending = [];
+      leaf.detach();
+      await new Promise((r) => setTimeout(r, 300));
+      await app.vault.delete(app.vault.getAbstractFileByPath('Budget map.md'));
+      return { parse, write, open, edit, fold, pan, memory, measured: !!performance.memory };
+    }, text);
+    perf.push(`perf: mind map of 2000 nodes: parse ${m.parse.toFixed(1)} ms, write ${m.write.toFixed(1)} ms, open ${m.open.toFixed(0)} ms, edit ${m.edit.toFixed(1)} ms, fold ${m.fold.toFixed(1)} ms, pan ${m.pan.toFixed(1)} ms, memory ${m.measured ? m.memory.toFixed(1) : '?'} MB`);
+    Object.keys(BUDGET).forEach((key) => {
+      if (key === 'memory' && !m.measured) return;
+      expect(`${key} ${Math.round(m[key] * 10) / 10}`).toBe(m[key] <= BUDGET[key] * 1.5 ? `${key} ${Math.round(m[key] * 10) / 10}` : `${key} within ${BUDGET[key] * 1.5}`);
+    });
   });
 
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {

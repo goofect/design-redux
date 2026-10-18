@@ -17,8 +17,9 @@ import { newId, newNode, orderedAttrs } from './400-tree-model.js';
 
 const ITEM = /^([ \t]*)([-*+]|\d+[.)])(?:([ \t]+)(.*))?$/;
 const FENCE = /^[ \t]*(```|~~~)/;
-const ATTRS_AT_END = /[ \t]*%%(\{.*\})%%[ \t]*$/;
 const ANCHOR_AT_END = /[ \t]+\^([A-Za-z0-9-]+)[ \t]*$/;
+// Text ending in what looks like an id: written with a backslash more before the ^, read with one less.
+const LIKE_ANCHOR = /([ \t]+)(\\*)(\^[A-Za-z0-9-]+[ \t]*)$/;
 const FREE_HEAD = /^#{1,6}[ \t]+Free nodes[ \t]*$/i;
 const RELATIONS_HEAD = /^#{1,6}[ \t]+Relations[ \t]*$/i;
 const LAYOUT_OPEN = /^```design-redux-layout[ \t]*$/;
@@ -31,22 +32,56 @@ function widthOf(indent) {
   return w;
 }
 
+/**
+ * Where a line's attributes would begin: the last %%{ from which the rest
+ * of the line is a JSON object closed by %% — { at, attrs, slashes }, with
+ * how many backslashes stand before it — or null. Text that only looks
+ * like attributes is written with a backslash before it, and read with
+ * one less.
+ */
+function attrsTail(text) {
+  for (let at = text.lastIndexOf('%%{'); at >= 0; at = at > 0 ? text.lastIndexOf('%%{', at - 1) : -1) {
+    const m = /^%%(\{.*\})%%[ \t]*$/.exec(text.slice(at));
+    if (!m) continue;
+    let attrs;
+    try {
+      attrs = JSON.parse(m[1]);
+    } catch (err) {
+      continue;
+    }
+    if (!attrs || typeof attrs !== 'object' || Array.isArray(attrs)) continue;
+    let slashes = 0;
+    while (at - slashes - 1 >= 0 && text[at - slashes - 1] === '\\') slashes++;
+    return { at, attrs, slashes };
+  }
+  return null;
+}
+
+/** A node's first line as written: an ending that would read as an id or attributes, escaped. */
+export function escapeItemEnd(text) {
+  const tail = attrsTail(text);
+  if (tail) return `${text.slice(0, tail.at)}\\${text.slice(tail.at)}`;
+  if (LIKE_ANCHOR.test(text)) return text.replace(LIKE_ANCHOR, (all, space, slashes, rest) => `${space}\\${slashes}${rest}`);
+  return text;
+}
+
+/** A node's first line as read: an escaped ending put back as typed. */
+export function unescapeItemEnd(text) {
+  const tail = attrsTail(text);
+  if (tail && tail.slashes) return text.slice(0, tail.at - 1) + text.slice(tail.at);
+  const b = /([ \t]+)(\\+)(\^[A-Za-z0-9-]+[ \t]*)$/.exec(text);
+  if (b) return text.slice(0, b.index) + b[1] + b[2].slice(1) + b[3];
+  return text;
+}
+
 /** A node's first line taken apart: its text, its ^id, its attributes. */
 export function splitItemText(raw) {
   let rest = raw;
   let attrs = {};
-  let attrsOk = true;
-  const a = ATTRS_AT_END.exec(rest);
-  if (a) {
-    try {
-      const parsed = JSON.parse(a[1]);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        attrs = parsed;
-        rest = rest.slice(0, a.index);
-      } else attrsOk = false;
-    } catch (err) {
-      attrsOk = false;
-    }
+  const tail = attrsTail(rest);
+  if (tail && !tail.slashes) {
+    attrs = tail.attrs;
+    rest = rest.slice(0, tail.at).replace(/[ \t]+$/, '');
   }
   let anchor = null;
   const m = ANCHOR_AT_END.exec(rest);
@@ -54,7 +89,7 @@ export function splitItemText(raw) {
     anchor = m[1];
     rest = rest.slice(0, m.index);
   }
-  return { text: rest, attrs, anchor, attrsOk };
+  return { text: unescapeItemEnd(rest), attrs, anchor, attrsOk: true };
 }
 
 /** The lines of a list block made into nodes: the top ones, each node's source lines kept by its id. */
@@ -314,7 +349,7 @@ function nodeLines(node, depth, unit, marker) {
   const indent = unit.repeat(depth);
   const [first, ...more] = String(node.text || '').split('\n');
   const tail = (node.anchor ? ` ^${node.id}` : '') + (attrsText(node.attrs) ? ` %%${attrsText(node.attrs)}%%` : '');
-  const out = [`${indent}${marker} ${first}${tail}`.replace(/[ \t]+$/, (m) => (first || tail ? m : ''))];
+  const out = [`${indent}${marker} ${escapeItemEnd(first)}${tail}`.replace(/[ \t]+$/, (m) => (first || tail ? m : ''))];
   more.forEach((l) => out.push(`${indent}${' '.repeat(marker.length + 1)}${l}`));
   return out;
 }

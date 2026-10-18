@@ -12,6 +12,12 @@ import { colourKey, DRAW_MARGIN, edgePath, meets, nodeLabel, pinOf, viewBox, vis
 
 const SVG = 'http://www.w3.org/2000/svg';
 
+/* Below this zoom, nodes are drawn as plain blocks. */
+export const FAR_ZOOM = 0.4;
+
+/* How many elements of nodes off screen are kept for those nodes to come back to. */
+export const PARKED_MOST = 3000;
+
 /* What a relation's attributes may say, as the canvas's arrow styles do. */
 export const RELATION_LINES = ['solid', 'dashed', 'dotted'];
 export const RELATION_SHAPES = ['curve', 'straight', 'elbow'];
@@ -29,6 +35,7 @@ export class MindMapRenderer {
     this.layer = this.plane.createDiv({ cls: 'dr-mindmap-nodes' });
     this.nodeEls = new Map();
     this.spare = [];
+    this.parked = new Map();
     this.paths = [];
     this.drawn = 0;
   }
@@ -46,12 +53,14 @@ export class MindMapRenderer {
     const tx = width / 2 - camera.x * camera.zoom;
     const ty = height / 2 - camera.y * camera.zoom;
     this.plane.style.transform = `translate(${tx}px, ${ty}px) scale(${camera.zoom})`;
-    this.host.toggleClass('is-far', camera.zoom < 0.4);
+    this.host.toggleClass('is-far', camera.zoom < FAR_ZOOM);
   }
 
   /** Everything on screen drawn: nodes, edges, which is selected. */
   draw(state) {
     const { model, scene, camera, selected, mode } = state;
+    // Zoomed far out, a node is a plain block: its text would be too small to read, and costs the most to draw.
+    this.far = camera.zoom < FAR_ZOOM;
     this.tints = state.tints || new Map();
     this.fade = state.fade || null;
     this.roles = state.roles !== false;
@@ -77,13 +86,18 @@ export class MindMapRenderer {
       seen.add(n.id);
       this.drawNode(n, b, selected === n.id);
     });
-    // Off screen now: their elements kept for others.
+    // Off screen now: their elements parked by node, for when they come back — the oldest given over to others past a limit.
     this.nodeEls.forEach((el, id) => {
       if (seen.has(id)) return;
       el.remove();
       this.nodeEls.delete(id);
-      this.spare.push(el);
+      this.parked.set(id, el);
     });
+    while (this.parked.size > PARKED_MOST) {
+      const [id, el] = this.parked.entries().next().value;
+      this.parked.delete(id);
+      this.spare.push(el);
+    }
     this.drawn = seen.size;
     this.drawGroups(model, scene);
     this.drawEdges(model, scene, view, mode);
@@ -92,19 +106,25 @@ export class MindMapRenderer {
   drawNode(n, b, isSelected) {
     let el = this.nodeEls.get(n.id);
     if (!el) {
-      el = this.spare.pop() || this.host.ownerDocument.createElement('div');
-      el.className = 'dr-mindmap-node';
+      el = this.parked.get(n.id);
+      if (el) this.parked.delete(n.id);
+      else {
+        el = this.spare.pop() || this.host.ownerDocument.createElement('div');
+        el.className = 'dr-mindmap-node';
+        el.drState = '';
+      }
       this.layer.appendChild(el);
       this.nodeEls.set(n.id, el);
     }
     const label = nodeLabel(n);
-    const key = `${n.text}|${n.virtual ? 'v' : ''}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}`;
+    const key = `${this.far ? 'far|' : ''}${n.text}|${n.virtual ? 'v' : ''}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}`;
     if (el.dataset.key !== key || el.dataset.id !== n.id) {
       el.dataset.id = n.id;
       el.dataset.key = key;
       if (this.hooks.drop) this.hooks.drop(el);
       el.empty();
-      if (this.hooks.card) this.hooks.card(el, n);
+      if (this.far) el.createDiv({ cls: 'dr-mindmap-text' });
+      else if (this.hooks.card) this.hooks.card(el, n);
       else el.createDiv({ cls: 'dr-mindmap-text', text: label });
       if (n.children.length) {
         const knob = el.createDiv({ cls: 'dr-mindmap-knob' });
@@ -118,36 +138,53 @@ export class MindMapRenderer {
       if (n.children.length) el.setAttribute('aria-expanded', String(!(n.attrs && n.attrs.fold)));
       else el.removeAttribute('aria-expanded');
     }
-    el.toggleClass('is-root', !n.parent && !b.free);
-    el.toggleClass('is-virtual', !!n.virtual);
-    el.toggleClass('is-free', !!b.free);
-    el.toggleClass('is-folded', !!(n.attrs && n.attrs.fold));
-    el.toggleClass('is-selected', isSelected);
-    el.setAttribute('aria-selected', String(isSelected));
-    if (n.attrs && n.attrs.color !== undefined && n.attrs.color !== '') el.dataset.color = String(n.attrs.color);
-    else delete el.dataset.color;
-    el.dataset.depth = String(Math.min(b.depth, 4));
-    const tint = this.tints.get(n.id);
-    if (tint) el.dataset.tint = tint;
-    else delete el.dataset.tint;
-    el.toggleClass('is-faded', !!this.fade && (colourKey(n) || 'none') !== this.fade);
-    el.toggleClass('is-pinned', !!pinOf(n));
-    el.toggleClass('is-unfocused', !!this.focus && !this.focus.has(n.id));
+    // What's shown of it besides its text, all at once: nothing touched when nothing changed.
     const pr = this.present;
-    el.toggleClass('dr-present-now', !!pr && pr.now === n.id);
-    el.toggleClass('dr-present-dim', !!pr && !pr.lit.has(n.id));
-    el.toggleClass('dr-present-hidden', !!pr && pr.reveal && !pr.seen.has(n.id));
-    const mark = this.marks && this.marks.get(n.id);
-    if (mark) el.dataset.mark = mark;
-    else delete el.dataset.mark;
     const role = this.roles ? nodeRole(n) : null;
-    if (role) {
-      el.dataset.role = role;
-      el.dataset.roleLabel = roleLabel(n);
-    } else if (el.dataset.role) {
-      delete el.dataset.role;
-      delete el.dataset.roleLabel;
-    }
+    const look = {
+      root: !n.parent && !b.free,
+      virtual: !!n.virtual,
+      free: !!b.free,
+      folded: !!(n.attrs && n.attrs.fold),
+      selected: isSelected,
+      color: n.attrs && n.attrs.color !== undefined && n.attrs.color !== '' ? String(n.attrs.color) : '',
+      depth: String(Math.min(b.depth, 4)),
+      tint: this.tints.get(n.id) || '',
+      faded: !!this.fade && (colourKey(n) || 'none') !== this.fade,
+      pinned: !!pinOf(n),
+      unfocused: !!this.focus && !this.focus.has(n.id),
+      now: !!pr && pr.now === n.id,
+      dim: !!pr && !pr.lit.has(n.id),
+      hidden: !!pr && pr.reveal && !pr.seen.has(n.id),
+      mark: (this.marks && this.marks.get(n.id)) || '',
+      role: role || '',
+      roleLabel: role ? roleLabel(n) : '',
+    };
+    const state = `${Object.values(look).join('|')}|${b.x}|${b.y}|${b.width}|${b.height}`;
+    if (el.drState === state) return;
+    el.drState = state;
+    el.toggleClass('is-root', look.root);
+    el.toggleClass('is-virtual', look.virtual);
+    el.toggleClass('is-free', look.free);
+    el.toggleClass('is-folded', look.folded);
+    el.toggleClass('is-selected', look.selected);
+    el.setAttribute('aria-selected', String(look.selected));
+    const data = (key, value) => {
+      if (value) el.dataset[key] = value;
+      else delete el.dataset[key];
+    };
+    data('color', look.color);
+    el.dataset.depth = look.depth;
+    data('tint', look.tint);
+    el.toggleClass('is-faded', look.faded);
+    el.toggleClass('is-pinned', look.pinned);
+    el.toggleClass('is-unfocused', look.unfocused);
+    el.toggleClass('dr-present-now', look.now);
+    el.toggleClass('dr-present-dim', look.dim);
+    el.toggleClass('dr-present-hidden', look.hidden);
+    data('mark', look.mark);
+    data('role', look.role);
+    data('roleLabel', look.roleLabel);
     el.style.left = `${b.x}px`;
     el.style.top = `${b.y}px`;
     el.style.width = `${b.width}px`;

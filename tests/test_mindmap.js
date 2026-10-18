@@ -872,7 +872,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.camera = { x: 0, y: 0, zoom: 3 };
     view.draw();
     assert.ok(!el().hasClass('is-hidden'));
-    assert.strictEqual(el().querySelectorAll('.dr-minimap-card').length, view.scene.boxes.size);
+    assert.strictEqual((el().querySelector('.dr-minimap-card').getAttribute('d').match(/M/g) || []).length, view.scene.boxes.size, 'a box for each node, in one path');
     const rect = el().querySelector('.dr-minimap-view');
     assert.ok(Number(rect.getAttribute('width')) > 0);
     const svg = el().querySelector('svg');
@@ -1258,6 +1258,47 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       if (entry.status === 'not needed') assert.ok(entry.reason && entry.reason.length > 10, `${name}: why it isn’t needed`);
       else assert.ok(entry.test && proofs.some((t) => t.includes(entry.test)), `${name}: no test proves it (${entry.test})`);
     });
+  });
+
+  await t('the budgets on a 2,000-node map: parse and write, open, layout after an edit, fold of 500 nodes, a pan — each under 1.5 times its target', async () => {
+    const { mapText } = require('./mapgen');
+    const BUDGET = { parse: 20, write: 20, open: 300, edit: 50, fold: 50, pan: 1000 / 60 };
+    const measure = async (count) => {
+      const text = mapText(count);
+      const ms = (fn) => { const t0 = process.hrtime.bigint(); const out = fn(); return [Number(process.hrtime.bigint() - t0) / 1e6, out]; };
+      const [parse, parsed] = ms(() => R.parseOutline(text));
+      const first = parsed.model.root.children[0];
+      R.setText(parsed.model, first.id, first.text + ' and more');
+      const [write] = ms(() => R.writeOutline(parsed.model, text));
+      const t0 = Date.now();
+      const view = await open(text, 'Big.md');
+      const openMs = Date.now() - t0;
+      // Edit and fold: the best of three, as a machine's hiccup isn't the map's.
+      const node = view.model.root.children[1].children[0];
+      const edit = Math.min(...[1, 2, 3].map((k) => ms(() => view.apply(R.setText(view.model, node.id, `${node.text} changed ${k}`)))[0]));
+      const big = view.model.root.children[0];
+      const fold = Math.min(...[1, 2, 3].map(() => {
+        const [took] = ms(() => view.toggleFold(big.id));
+        view.toggleFold(big.id);
+        return took;
+      }));
+      view.camera = { x: view.camera.x, y: view.camera.y, zoom: 1 };
+      const [pans] = ms(() => {
+        for (let k = 0; k < 20; k++) {
+          view.camera = { x: view.camera.x + 40, y: view.camera.y, zoom: 1 };
+          view.draw();
+        }
+      });
+      let below = 0;
+      (function c(x) { x.children.forEach((k) => { below++; c(k); }); })(big);
+      return { parse, write, open: openMs, edit, fold, pan: pans / 20, below };
+    };
+    const t2 = await measure(2000);
+    const t5 = await measure(5000);
+    const show = (m) => Object.keys(BUDGET).map((k) => `${k} ${m[k].toFixed(1)} ms`).join(', ');
+    if (process.env.SHOW_TIMES) console.log(`    2,000 nodes: ${show(t2)}\n    5,000 nodes: ${show(t5)}`);
+    assert.ok(t2.below + 1 >= 499, `the folded branch holds ${t2.below} nodes`);
+    Object.keys(BUDGET).forEach((k) => assert.ok(t2[k] <= BUDGET[k] * 1.5, `${k}: ${t2[k].toFixed(1)} ms, over 1.5 × ${BUDGET[k].toFixed(1)} ms`));
   });
 
   await t('lines pasted under the selected node keep their nesting', async () => {

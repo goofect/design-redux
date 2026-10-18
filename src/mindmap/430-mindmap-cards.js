@@ -85,7 +85,8 @@ class MindMapCards {
    * where nothing has a size — the view hidden, or no layout at all.
    */
   measureShown() {
-    if (!this.renderer || !this.model || !this.root.offsetWidth) return;
+    // Zoomed far out, nodes are blocks without text: measured once they're near enough to read.
+    if (!this.renderer || !this.model || !this.root.offsetWidth || this.renderer.far) return;
     if (!this.sizes) this.sizes = new Map();
     if (!this.measuring) this.measuring = new Set();
     const todo = [];

@@ -361,6 +361,32 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.strictEqual(R.legendName(m, '1'), null);
   });
 
+  await t('random text in every node: written as a note and read back, the same words; a .mindmap file too', () => {
+    let seed = 99;
+    const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+    const pieces = ['word', 'two words', '[[A link]]', '#tag', '**bold**', 'a ^b', 'x %% y', 'tab\there', '- dash', '1. one', '> quote', '`code`', 'émoji 🌳', 'ends with ^', '%%{"fake":1}%%', '  lead', 'trail  ', '$math$', '<b>html</b>', '\\back', '"quoted"', 'colon: here', '---', '|pipe|'];
+    const text = () => {
+      const n = 1 + Math.floor(rand() * 3);
+      return Array.from({ length: n }, () => pieces[Math.floor(rand() * pieces.length)]).join(' ').trim() || 'x';
+    };
+    for (let round = 0; round < 300; round++) {
+      const m = R.treeModel('Root');
+      const all = [m.root];
+      for (let k = 0; k < 12; k++) {
+        const parent = all[Math.floor(rand() * all.length)];
+        const p = R.addChild(m, parent.id, '');
+        const id = p.selection[0];
+        R.setText(m, id, text());
+        all.push(R.nodeById(m, id));
+      }
+      const words = (model) => { const out = []; R.walk(model, (n) => out.push(n.text)); return out; };
+      const md = R.writeOutline(m, null);
+      const back = R.parseOutline(md).model;
+      assert.deepStrictEqual(words(back), words(m), `round ${round}:\n${md}`);
+      assert.deepStrictEqual(words(R.parseMindmapJson(R.writeMindmapJson(m))), words(m), `round ${round}, as JSON`);
+    }
+  });
+
   await t('Undo and Redo: typing in one node a moment apart is one step; a change of shape is its own; redone until something new', () => {
     const m = sample();
     const u = new R.UndoStack();

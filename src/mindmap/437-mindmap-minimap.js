@@ -3,8 +3,8 @@
 /*                                                                    */
 /* In the corner, the whole map small, the part on screen outlined —   */
 /* there only while the map doesn't all fit. Pressing it goes there.   */
-/* The nodes are drawn again only when the map's laid out again; a pan */
-/* moves just the outline.                                            */
+/* The nodes are one path, drawn again only when the map's laid out  */
+/* again; a pan moves just the outline.                               */
 /* ------------------------------------------------------------------ */
 
 import { mixInto } from '../core/080-feature.js';
@@ -37,20 +37,12 @@ class MindMapMinimap {
     const all = { minX: Math.min(b.minX, port.minX) - pad, minY: Math.min(b.minY, port.minY) - pad, maxX: Math.max(b.maxX, port.maxX) + pad, maxY: Math.max(b.maxY, port.maxY) + pad };
     this.minimapEl.svg.setAttribute('viewBox', `${all.minX} ${all.minY} ${all.maxX - all.minX} ${all.maxY - all.minY}`);
     this.minimapPlane = all;
+    // The nodes as one path: a map of thousands is one element, redrawn only when the map's laid out again.
     if (this.minimapScene !== scene) {
       this.minimapScene = scene;
-      const g = this.minimapEl.nodes;
-      while (g.firstChild) g.removeChild(g.firstChild);
-      const doc = this.root.ownerDocument;
-      scene.boxes.forEach((box) => {
-        const r = doc.createElementNS(MINIMAP_SVG, 'rect');
-        r.setAttribute('class', 'dr-minimap-card');
-        r.setAttribute('x', String(box.x));
-        r.setAttribute('y', String(box.y));
-        r.setAttribute('width', String(box.width));
-        r.setAttribute('height', String(box.height));
-        g.appendChild(r);
-      });
+      const parts = [];
+      scene.boxes.forEach((box) => parts.push(`M${Math.round(box.x)} ${Math.round(box.y)}h${Math.round(box.width)}v${Math.round(box.height)}h${-Math.round(box.width)}z`));
+      this.minimapEl.nodes.setAttribute('d', parts.join(''));
     }
     const v = this.minimapEl.view;
     v.setAttribute('x', String(port.minX));
@@ -66,7 +58,8 @@ class MindMapMinimap {
     svg.setAttribute('width', String(MAP_MINIMAP_SIZE.width));
     svg.setAttribute('height', String(MAP_MINIMAP_SIZE.height));
     svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-    const nodes = doc.createElementNS(MINIMAP_SVG, 'g');
+    const nodes = doc.createElementNS(MINIMAP_SVG, 'path');
+    nodes.setAttribute('class', 'dr-minimap-card');
     const view = doc.createElementNS(MINIMAP_SVG, 'rect');
     view.setAttribute('class', 'dr-minimap-view');
     svg.appendChild(nodes);
