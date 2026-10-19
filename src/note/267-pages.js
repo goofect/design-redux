@@ -18,7 +18,7 @@ import { showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
-import { hiddenRanges, newPageName, openPage, parsePages, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from '../core/090-pages.js';
+import { bodyStart, hiddenRanges, nameFromText, newPageName, openPage, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from '../core/090-pages.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
@@ -26,8 +26,6 @@ export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'ima
 
 /** The colours a page can take: the theme's accents. */
 export const PAGE_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'];
-
-const DEFAULT_ICON = 'file-text';
 
 /** Tells an editor which page is open. */
 export const setOpenPage = StateEffect.define();
@@ -37,7 +35,7 @@ export function pagesExtension() {
   const build = (state, open) => {
     if (!scriptLivePreview(state)) return Decoration.none;
     const text = state.doc.toString();
-    const ranges = hiddenRanges(text, open);
+    const ranges = hiddenRanges(text, open, state.selection.ranges.map((r) => r.head));
     if (!ranges.length) return Decoration.none;
     return Decoration.set(ranges.map(([from, to]) => Decoration.replace({ block: true }).range(from, to)), true);
   };
@@ -46,7 +44,7 @@ export function pagesExtension() {
     update(value, tr) {
       let open = value.open;
       tr.effects.forEach((e) => e.is(setOpenPage) && (open = e.value));
-      if (!tr.docChanged && open === value.open && scriptLivePreview(tr.startState) === scriptLivePreview(tr.state)) return value;
+      if (!tr.docChanged && !tr.selection && open === value.open && scriptLivePreview(tr.startState) === scriptLivePreview(tr.state)) return value;
       return { open, deco: build(tr.state, open) };
     },
     provide: (f) => EditorView.decorations.from(f, (v) => v.deco),
@@ -55,6 +53,13 @@ export function pagesExtension() {
 }
 
 export class NotePages extends Feature {
+  constructor(plugin) {
+    super(plugin);
+    /** Which page each view is showing, and where each page was left: scroll and cursor. */
+    this.shown = new WeakMap();
+    this.places_ = new Map();
+  }
+
   settingsSchema() {
     return [
       {
@@ -158,7 +163,7 @@ export class NotePages extends Feature {
   /** A page's icon and colour, from the note's `pages` property. */
   look(file, name) {
     const meta = (this.plugin.notes.get(file, 'pages') || {})[name];
-    return { icon: (meta && meta.icon) || DEFAULT_ICON, color: (meta && meta.color) || '' };
+    return { icon: (meta && meta.icon) || '', color: (meta && meta.color) || '' };
   }
 
   /** The sizers a note's view lays its text in, with where the control goes in each. */
@@ -205,33 +210,98 @@ export class NotePages extends Feature {
       const page = bounds.find((b) => line >= b.from && line < b.to);
       el.toggleClass('dr-page-off', !!page && page.name !== open);
     });
-    const key = `${file.path}|${open}|${pages.map((p) => `${p.name}:${this.look(file, p.name).icon}:${this.look(file, p.name).color}`).join(',')}`;
+    // What the control is made of, apart from which page is open: that only slides the pill.
+    const struct = `${file.path}|${pages.map((p) => `${p.name}:${this.look(file, p.name).icon}:${this.look(file, p.name).color}`).join(',')}`;
     this.places(view).forEach((place) => {
       let bar = place.head.querySelector(':scope > .dr-pages');
-      if (bar && bar.dataset.key === key) return;
+      if (bar && bar.dataset.struct === struct) {
+        if (bar.dataset.open !== open) this.select(bar, open, true);
+        return;
+      }
       if (bar) bar.remove();
       bar = place.head.ownerDocument.createElement('div');
       bar.className = 'dr-pages';
-      bar.dataset.key = key;
+      bar.dataset.struct = struct;
       if (place.before && place.before.parentElement === place.head) place.head.insertBefore(bar, place.before);
       else place.head.appendChild(bar);
       this.drawBar(bar, file, pages, open);
     });
+    // A page just chosen: the one before is put away with its scroll and cursor, this one's put back.
+    if (this.shown.get(view) !== open) {
+      const before = this.shown.get(view);
+      if (before !== undefined) this.keepPlace(view, before);
+      this.shown.set(view, open);
+      if (before !== undefined) {
+        view.containerEl.addClass('dr-page-fade');
+        window.setTimeout(() => view.containerEl.removeClass('dr-page-fade'), 160);
+        window.setTimeout(() => this.restorePlace(view, open), 60);
+      }
+    }
+  }
+
+  /** The scrolling element the note shows in: reading view's, or the editor's. */
+  scroller(view) {
+    return Array.from(view.containerEl.querySelectorAll('.markdown-preview-view, .cm-scroller')).find((el) => el.clientHeight > 0) || null;
+  }
+
+  /** Where a page was left: how far down, and the cursor. */
+  keepPlace(view, name) {
+    const scroller = this.scroller(view);
+    const cm = view.editor && view.editor.cm;
+    const head = cm && cm.state ? cm.state.selection.main.head : null;
+    this.places_.set(`${view.file.path}|${name}`, { top: scroller ? scroller.scrollTop : 0, head });
+  }
+
+  restorePlace(view, name) {
+    const place = this.places_.get(`${view.file.path}|${name}`);
+    const scroller = this.scroller(view);
+    if (scroller) scroller.scrollTop = place ? place.top : 0;
+    const cm = view.editor && view.editor.cm;
+    if (place && place.head !== null && cm && cm.state && place.head <= cm.state.doc.length) {
+      try {
+        cm.dispatch({ selection: { anchor: place.head } });
+      } catch (err) {
+        /* an editor that moved on */
+      }
+    }
+  }
+
+  /** The pill slides to the open page; the labels change colour. */
+  select(bar, open, slide) {
+    bar.dataset.open = open;
+    let target = null;
+    bar.querySelectorAll('.dr-page-tab').forEach((tab) => {
+      const on = tab.dataset.page === open;
+      tab.toggleClass('is-open', on);
+      tab.setAttribute('aria-selected', String(on));
+      if (on) target = tab;
+    });
+    const pill = bar.querySelector('.dr-pages-pill');
+    if (!pill || !target) return;
+    pill.toggleClass('is-set', true);
+    pill.toggleClass('is-sliding', !!slide);
+    pill.style.setProperty('--dr-pill-x', `${target.offsetLeft + 2}px`);
+    pill.style.setProperty('--dr-pill-w', `${Math.max(0, target.offsetWidth - 4)}px`);
+    if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   drawBar(bar, file, pages, open) {
     bar.setAttribute('role', 'tablist');
     const capsule = bar.createDiv({ cls: 'dr-pages-capsule' });
+    capsule.createDiv({ cls: 'dr-pages-pill' });
     pages.forEach((p) => {
       const look = this.look(file, p.name);
       const tab = capsule.createDiv({ cls: 'dr-page-tab' });
+      tab.dataset.page = p.name;
       tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-selected', String(p.name === open));
       tab.setAttribute('aria-label', p.name);
-      if (p.name === open) tab.addClass('is-open');
       if (look.color) tab.dataset.drColor = look.color;
       asButton(tab, p.name);
-      setIcon(tab.createSpan({ cls: 'dr-page-icon' }), look.icon);
+      // No icon until one is chosen: a control full of identical icons is clutter.
+      if (look.icon) {
+        tab.addClass('has-icon');
+        setIcon(tab.createSpan({ cls: 'dr-page-icon' }), look.icon);
+      }
       tab.createSpan({ cls: 'dr-page-name', text: p.name });
       onActivate(tab, () => this.open(file, p.name));
       tab.addEventListener('dblclick', () => this.renameInline(file, p.name, tab.querySelector('.dr-page-name')));
@@ -248,6 +318,8 @@ export class NotePages extends Feature {
     asButton(add, 'Add a page');
     setIcon(add, 'plus');
     onActivate(add, () => this.add(file));
+    // Laid out first, so the pill has somewhere to start from.
+    window.requestAnimationFrame(() => this.select(bar, open, false));
   }
 
   /** A page opened, and remembered for the note. */
@@ -322,8 +394,10 @@ export class NotePages extends Feature {
 
   async add(file) {
     const view = this.views().find((v) => v.file === file);
-    const pages = parsePages(view ? this.textOf(view) : await this.app.vault.read(file));
-    const name = newPageName(pages.length ? pages : [{ name: 'Page 1' }]);
+    const text0 = view ? this.textOf(view) : await this.app.vault.read(file);
+    const pages = parsePages(text0);
+    const body = text0.slice(bodyStart(text0));
+    const name = pages.length ? newPageName(pages) : uniqueName('Untitled', [nameFromText(body)]);
     await this.rewrite(file, (text) => withPageAdded(text, name), 'Page added.');
     // The new page opens with its name ready to type over, so naming it is the next keystroke.
     this.fresh = `${file.path}:${name}`;

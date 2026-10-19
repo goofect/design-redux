@@ -1107,24 +1107,40 @@ describe('Design Redux in Obsidian', function () {
       await wait(1500);
       const root = leaf.view.containerEl;
       const content = () => leaf.view.contentEl.querySelector('.cm-content').textContent;
-      const first = { tabs: root.querySelectorAll('.markdown-source-view .dr-page-tab').length, text: content() };
-      root.querySelectorAll('.markdown-source-view .dr-page-tab')[1].click();
+      const tabEls = () => Array.from(root.querySelectorAll('.markdown-source-view .dr-page-tab'));
+      const lines = () => Array.from(leaf.view.contentEl.querySelectorAll('.cm-line')).filter((l) => l.offsetHeight > 0).map((l) => l.textContent.trim()).filter(Boolean);
+      const first = {
+        tabs: tabEls().length,
+        text: content(),
+        height: root.querySelector('.markdown-source-view .dr-pages-capsule').offsetHeight,
+        widthOpen: tabEls()[0].offsetWidth,
+        firstLine: lines()[0],
+      };
+      tabEls()[1].click();
       await wait(1000);
-      const second = { text: content(), open: root.querySelector('.markdown-source-view .dr-page-tab.is-open .dr-page-name').textContent };
+      first.widthClosed = tabEls()[0].offsetWidth;
+      first.slide = getComputedStyle(root.querySelector('.markdown-source-view .dr-pages-pill')).transitionDuration;
+      const second = { firstLine: lines()[0], text: content(), open: root.querySelector('.markdown-source-view .dr-page-tab.is-open .dr-page-name').textContent };
       await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'preview' }, active: true });
       await wait(1800);
-      const reading = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-sizer [data-dr-line]')).map((el) => [el.textContent.trim(), el.classList.contains('dr-page-off')]);
+      const reading = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-sizer [data-dr-line]')).map((el) => [el.textContent.trim(), el.classList.contains('dr-page-off'), el.offsetHeight]);
       leaf.detach();
       await app.vault.delete(file);
       return { first, second, reading };
     });
     expect(result.first.tabs).toBe(2);
+    expect(result.first.height).toBe(32);
+    expect(result.first.widthClosed).toBe(result.first.widthOpen);
+    expect(result.first.firstLine).toBe('Alpha text');
+    expect(result.second.firstLine).toBe('Beta text');
+    expect(result.first.slide).toContain('0.22s');
     expect(result.first.text).toContain('Alpha text');
     expect(result.first.text).not.toContain('Beta text');
     expect(result.second.open).toBe('Sources');
     expect(result.second.text).toContain('Beta text');
     expect(result.second.text).not.toContain('Alpha text');
     expect(result.reading.find((r) => r[0].includes('Alpha text'))[1]).toBe(true);
+    expect(result.reading.find((r) => r[0].includes('Alpha text'))[2]).toBe(0);
     expect(result.reading.find((r) => r[0].includes('Beta text'))[1]).toBe(false);
   });
 
@@ -1140,8 +1156,11 @@ describe('Design Redux in Obsidian', function () {
       const before = leaf.view.containerEl.querySelectorAll('.dr-pages').length;
       app.workspace.setActiveLeaf(leaf, { focus: true });
       app.commands.executeCommandById('design-redux:add-page');
-      await wait(1500);
-      const el = leaf.view.containerEl.querySelector('.markdown-source-view .dr-page-name.is-editing');
+      let el = null;
+      for (let i = 0; i < 40 && !el; i++) {
+        await wait(100);
+        el = leaf.view.containerEl.querySelector('.markdown-source-view .dr-page-name.is-editing');
+      }
       const editing = !!el;
       if (el) {
         el.textContent = 'Sources';
@@ -1156,9 +1175,9 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(result.before).toBe(0);
     expect(result.editing).toBe(true);
-    expect(result.text).toContain('%%page: Page 1%%\nSome words');
+    expect(result.text).toContain('%%page: Untitled%%\nSome words');
     expect(result.text).toContain('%%page: Sources%%');
-    expect(result.names).toEqual(['Page 1', 'Sources']);
+    expect(result.names).toEqual(['Untitled', 'Sources']);
   });
 
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {

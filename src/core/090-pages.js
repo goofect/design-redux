@@ -11,6 +11,21 @@
 
 export const PAGE_MARKER = /^%%page:[ \t]*(.*?)[ \t]*%%[ \t]*$/;
 
+/** A page's name from its first heading, else Untitled. */
+export function nameFromText(body) {
+  const m = /^ {0,3}#{1,6}[ \t]+(.+?)[ \t#]*$/m.exec(body || '');
+  return m ? m[1].replace(/[*_`%]/g, '').trim() || 'Untitled' : 'Untitled';
+}
+
+/** A name nobody else has: the name, then the name 2, 3… */
+export function uniqueName(name, taken) {
+  const used = new Set(taken);
+  if (!used.has(name)) return name;
+  let n = 2;
+  while (used.has(`${name} ${n}`)) n++;
+  return `${name} ${n}`;
+}
+
 /** The text of a marker line for a page. */
 export const pageMarker = (name) => `%%page: ${name}%%`;
 
@@ -39,7 +54,7 @@ export function parsePages(text) {
       else if (f[1][0] === fence) fence = null;
     }
     const m = !fence && !f ? PAGE_MARKER.exec(line) : null;
-    if (m) pages.push({ name: m[1] || `Page ${pages.length + 1}`, marker: [pos, pos + raw.length], from: Math.min(pos + raw.length + 1, text.length), to: text.length });
+    if (m) pages.push({ name: m[1] || 'Untitled', marker: [pos, pos + raw.length], from: Math.min(pos + raw.length + 1, text.length), to: text.length });
     pos += raw.length + 1;
   }
   pages.forEach((p, i) => {
@@ -54,8 +69,8 @@ export function openPage(pages, name) {
   return pages.find((p) => p.name === name) || pages[0] || null;
 }
 
-/** Every range of text out of sight while `open` is the page shown: other pages' text, and all markers. */
-export function hiddenRanges(text, open) {
+/** Every range of text out of sight while `open` is the page shown: other pages' text, and the markers (but a marker the cursor is on). */
+export function hiddenRanges(text, open, cursors = []) {
   const pages = parsePages(text);
   if (!pages.length) return [];
   const shown = openPage(pages, open);
@@ -63,27 +78,26 @@ export function hiddenRanges(text, open) {
   pages.forEach((p, i) => {
     if (p.preface && p !== shown) out.push([p.preface[0], p.preface[1] - 1 < p.preface[0] ? p.preface[0] : p.preface[1] - 1]);
     // The marker's line, whole, and the one break after it.
-    out.push([p.marker[0], Math.min(p.marker[1] + 1, text.length)]);
+    // — shown only while the cursor is on it.
+    if (!cursors.some((c) => c > p.marker[0] && c <= p.marker[1] + 1)) out.push([p.marker[0], Math.min(p.marker[1] + 1, text.length)]);
     if (p !== shown && p.to > p.from) out.push([p.from, p.to]);
   });
   return out.filter(([a, b]) => b > a);
 }
 
-/** A name for a new page that no other page has: Page 2, Page 3… */
+/** A name for a new page — nothing is on it yet, so Untitled — that no other page has. */
 export function newPageName(pages) {
-  const taken = new Set(pages.map((p) => p.name));
-  let n = pages.length + 1;
-  while (taken.has(`Page ${n}`)) n++;
-  return `Page ${n}`;
+  return uniqueName('Untitled', pages.map((p) => p.name));
 }
 
-/** The text with a page added at the end — a plain note first gets a marker above what it has, named Page 1. */
+/** The text with a page added at the end — a plain note first gets a marker above what it has, named from its first heading. */
 export function withPageAdded(text, name) {
   const pages = parsePages(text);
   const tail = text.endsWith('\n') ? '' : '\n';
   if (pages.length) return `${text}${tail}\n${pageMarker(name)}\n`;
   const start = bodyStart(text);
-  return `${text.slice(0, start)}${pageMarker('Page 1')}\n${text.slice(start)}${tail}\n${pageMarker(name)}\n`;
+  const first = uniqueName(nameFromText(text.slice(start)), [name]);
+  return `${text.slice(0, start)}${pageMarker(first)}\n${text.slice(start)}${tail}\n${pageMarker(name)}\n`;
 }
 
 /** The text with a page renamed. */

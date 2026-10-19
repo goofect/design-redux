@@ -10219,56 +10219,75 @@ body.dr-strip-side .dr-strip-text {
   display: none;
 }
 
-/* Pages: one note, several pages. A small segmented control under the title; a soft pill marks the open page. */
+/* Pages: one note, several pages. A segmented control under the title: a 32px capsule, no border,
+   a soft pill that slides behind the open page. Every value is a number or a theme variable. */
 .dr-pages {
   display: flex;
   justify-content: center;
-  margin: var(--dr-space-3) 0 var(--dr-space-4);
-  container-type: inline-size;
+  margin: 16px 0 20px;
 }
 
 .dr-pages-capsule {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 0;
+  height: 32px;
   max-width: 100%;
-  padding: 3px;
   overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: none;
-  border-radius: var(--dr-radius-pill);
-  background-color: color-mix(in srgb, var(--text-normal) 7%, transparent);
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--text-normal) 8%, var(--background-primary));
 }
 
 .dr-pages-capsule::-webkit-scrollbar {
   display: none;
 }
 
-.dr-page-tab,
-.dr-page-add {
+.dr-pages-pill {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  height: 28px;
+  width: var(--dr-pill-w, 0);
+  transform: translateX(var(--dr-pill-x, 0));
+  border-radius: 9999px;
+  background-color: color-mix(in srgb, var(--text-normal) 14%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dr-pages-pill.is-set {
+  opacity: 1;
+}
+
+.dr-pages-pill.is-sliding {
+  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1), width 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.dr-page-tab {
+  position: relative;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  gap: var(--dr-space-2);
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 var(--dr-space-3);
-  border-radius: var(--dr-radius-pill);
+  min-width: 72px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 9999px;
   color: var(--text-muted);
-  font-size: var(--font-ui-small);
+  font-family: var(--font-interface);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
+  transition: color 150ms ease;
 }
 
 .dr-page-tab.is-open {
-  background-color: var(--background-primary);
   color: var(--text-normal);
-  font-weight: var(--font-semibold, 600);
-  box-shadow: 0 0 0 1px var(--background-modifier-border);
-}
-
-.dr-page-tab.is-open[data-dr-color] {
-  box-shadow: 0 0 0 2px var(--dr-page-color);
 }
 
 .dr-page-tab:focus-visible,
@@ -10276,24 +10295,17 @@ body.dr-strip-side .dr-strip-text {
   outline: 2px solid var(--interactive-accent);
 }
 
-@media (any-hover: hover) {
-  .dr-page-tab:hover,
-  .dr-page-add:hover {
-    color: var(--text-normal);
-  }
-}
-
-.dr-page-icon,
-.dr-page-add {
+.dr-page-icon {
   display: inline-flex;
+  margin-right: 6px;
 }
 
-.dr-page-icon .svg-icon,
-.dr-page-add .svg-icon {
-  width: var(--dr-control-icon);
-  height: var(--dr-control-icon);
+.dr-page-icon .svg-icon {
+  width: 14px;
+  height: 14px;
 }
 
+/* A chosen colour tints that page's selected label and nothing else. */
 [data-dr-color='red'] { --dr-page-color: var(--color-red); }
 [data-dr-color='orange'] { --dr-page-color: var(--color-orange); }
 [data-dr-color='yellow'] { --dr-page-color: var(--color-yellow); }
@@ -10303,21 +10315,56 @@ body.dr-strip-side .dr-strip-text {
 [data-dr-color='purple'] { --dr-page-color: var(--color-purple); }
 [data-dr-color='pink'] { --dr-page-color: var(--color-pink); }
 
-.dr-page-tab[data-dr-color] .dr-page-icon {
+.dr-page-tab.is-open[data-dr-color] {
   color: var(--dr-page-color);
 }
 
-/* Short of room, icons only; past about six pages the capsule scrolls sideways. */
+.dr-page-add {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.dr-page-add .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+@media (any-hover: hover) {
+  .dr-page-tab:not(.is-open):hover {
+    color: var(--text-normal);
+  }
+
+  .dr-page-add:hover {
+    background-color: color-mix(in srgb, var(--text-normal) 8%, transparent);
+  }
+}
+
+/* Short of room, a page with an icon shows the icon alone. */
 @container (max-width: 420px) {
-  .dr-page-tab:not(.is-open) .dr-page-name {
+  .dr-page-tab.has-icon:not(.is-open) .dr-page-name {
     display: none;
   }
 }
 
-body.is-mobile .dr-page-tab,
-body.is-mobile .dr-page-add {
-  min-width: 44px;
-  min-height: 44px;
+.dr-pages {
+  container-type: inline-size;
+}
+
+/* 44px to hit on touch, though the control stays 32px. */
+body.is-mobile .dr-page-tab::before,
+body.is-mobile .dr-page-add::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
 }
 
 /* In plain source mode the text is shown whole, so there is nothing to switch. */
@@ -10325,9 +10372,33 @@ body.is-mobile .dr-page-add {
   display: none;
 }
 
-/* The pages that aren't open, in reading view. */
+/* The pages that aren't open, in reading view: no height at all. */
 .dr-page-off {
   display: none !important;
+}
+
+/* The page text cross-fades in; it doesn't move. */
+@keyframes dr-page-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.dr-page-fade .cm-content,
+.dr-page-fade .markdown-preview-sizer > div:not(.dr-pages):not(.mod-header) {
+  animation: dr-page-in 150ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-pages-pill.is-sliding,
+  .dr-page-tab,
+  .dr-page-add {
+    transition: none;
+  }
+
+  .dr-page-fade .cm-content,
+  .dr-page-fade .markdown-preview-sizer > div {
+    animation: none;
+  }
 }
 
 .dr-page-name.is-editing {
