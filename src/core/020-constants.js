@@ -113,6 +113,7 @@ export const DEFAULTS = {
   mindmapEmbeds: true,
   mindmapTemplateFolder: '',
   mindmapQueries: true,
+  mindmapHistory: 20,
   // New maps of a folder, tag, collection or note's relationships are mind maps; on, canvas maps are offered beside them.
   mindmapKeepCanvasMaps: false,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.

@@ -90,6 +90,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapEmbeds', showIf: 'mindmaps', name: 'Maps in notes', desc: 'A mindmap code block — a list in it — is drawn as a map. ![[Map]] of a map note draws it in reading view; of a .mindmap file, in either view. Read-only; a click opens the map.' },
       { key: 'mindmapTemplateFolder', type: 'text', showIf: 'mindmaps', name: 'Folder of map templates', desc: 'Maps in this folder are offered by New mind map from template, beside the meeting, project, argument and study maps built in. {{title}} and {{date}} in a template are filled in.', placeholder: 'Templates/Maps' },
       { key: 'mindmapQueries', showIf: 'mindmaps', name: 'Query nodes', desc: 'A node can ask for notes — tag:#law folder:Law status:Doing links:[[Home]] — and the notes that answer hang under it, kept current, never written; Freeze writes them as nodes.' },
+      { key: 'mindmapHistory', type: 'dropdown', showIf: 'mindmaps', name: 'Keep a map’s history', desc: 'Before a save a couple of minutes after the last, the map as it was is kept, to compare with or put back from Map history. How many to keep for each map.', options: { 0: 'None', 10: 'The last 10', 20: 'The last 20', 50: 'The last 50' } },
       { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
@@ -158,6 +159,8 @@ export class MindMaps extends Feature {
       { id: 'mindmap-copy-node-link', name: 'Mind map: copy a link to the selected node', icon: 'link', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node && !ctx.node.virtual && !!ctx.file, run: (ctx) => ctx.view.copyNodeLink(ctx.node.id) },
       { id: 'mindmap-query-node', name: 'Mind map: hang the notes a query finds under the node…', icon: 'search', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapQueries !== false && !!ctx.node && !ctx.node.queried, run: (ctx) => ctx.view.chooseQuery(ctx.node.id) },
       { id: 'mindmap-freeze-query', name: 'Mind map: write the query’s notes as nodes', icon: 'snowflake', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapQueries !== false && !!ctx.node && !!ctx.node.attrs.query, run: (ctx) => ctx.view.freezeQuery(ctx.node.id) },
+      { id: 'mindmap-history-compare', name: 'Mind map: compare with how it was…', icon: 'history', on: 'mindmap', menu: false, when: (ctx) => !!ctx.file && Number(this.settings.mindmapHistory) > 0, run: (ctx) => ctx.view.chooseHistory(false) },
+      { id: 'mindmap-history-restore', name: 'Mind map: put the map back as it was…', icon: 'rotate-ccw', on: 'mindmap', menu: false, when: (ctx) => !!ctx.file && Number(this.settings.mindmapHistory) > 0, run: (ctx) => ctx.view.chooseHistory(true) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -301,7 +304,10 @@ export class MindMaps extends Feature {
   /** Links in .mindmap files to a note renamed, pointed at its new name. */
   async followRename(file, oldPath) {
     if (!(file instanceof TFile) || !this.enabled) return;
-    if (this.isMap(file)) await this.moveSnapshot(oldPath, file.path);
+    if (this.isMap(file)) {
+      await this.moveSnapshot(oldPath, file.path);
+      if (typeof this.moveHistory === 'function') await this.moveHistory(oldPath, file.path);
+    }
     if (file.extension !== 'md') return;
     const oldBase = oldPath.split('/').pop().replace(/\.md$/, '');
     const olds = [oldBase, oldPath.replace(/\.md$/, '')];

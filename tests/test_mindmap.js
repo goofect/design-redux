@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1921,6 +1921,38 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.undoStep(false);
     assert.deepStrictEqual([inForce.children.length, !!inForce.attrs.query], [0, true]);
     delete obsidian.getAllTags;
+  });
+
+  await t('map history: a state kept before a save after a pause, capped, put back as one step of Undo', async () => {
+    // Pure: the gap, the same text twice, the limit a map, the cap for all, the oldest let go first.
+    let all = R.withHistory({}, 'A.md', 'one', 1000, { gap: 100 });
+    assert.strictEqual(R.withHistory(all, 'A.md', 'two', 1050, { gap: 100 }), all, 'within the gap');
+    assert.strictEqual(R.withHistory(all, 'A.md', 'one', 5000, { gap: 100 }), all, 'the same text');
+    for (let k = 0; k < 5; k++) all = R.withHistory(all, 'A.md', 'v' + k, 2000 + k * 200, { gap: 100, limit: 3 });
+    assert.deepStrictEqual(all['A.md'].map((e) => e.text), ['v2', 'v3', 'v4']);
+    all = R.withHistory(all, 'B.md', 'bbbb', 9000, { gap: 100, cap: 8 });
+    assert.deepStrictEqual([all['A.md'] && all['A.md'].map((e) => e.text), all['B.md'].length], [['v3', 'v4'], 1], 'oldest anywhere dropped');
+    // The view: kept through the adapter, put back as it was, and Undo.
+    const files = {};
+    const adapter = { exists: async (p2) => p2 in files, read: async (p2) => files[p2], write: async (p2, d) => { files[p2] = d; } };
+    const view = await open(NOTE);
+    view.app = { vault: { adapter } };
+    view.plugin = Object.assign({}, plugin, { manifest: { dir: '.obsidian/plugins/dr' } });
+    const before = view.text;
+    await view.keepHistory(before);
+    const kept = JSON.parse(files['.obsidian/plugins/dr/mindmap-history.json']);
+    assert.deepStrictEqual(kept['Plan.md'].map((e) => e.text), [before]);
+    const build = view.model.root.children[1];
+    view.apply(R.setText(view.model, build.id, 'Make'));
+    view.apply(R.removeNode(view.model, view.model.root.children[2].id));
+    view.putBack(before);
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Research', 'Build', 'Ship']);
+    assert.strictEqual(view.model.root.children[1].id, build.id, 'the same nodes keep their ids');
+    view.undoStep(false);
+    assert.deepStrictEqual(view.model.root.children.map((c) => c.text), ['Research', 'Make']);
+    // Switched off: nothing kept.
+    view.plugin.settings = Object.assign({}, plugin.settings, { mindmapHistory: 0 });
+    assert.strictEqual(view.keepHistory('other'), null);
   });
 
   console.log(`\n${passed} passed`);

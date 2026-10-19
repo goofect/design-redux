@@ -112,6 +112,8 @@ class MindMapSaving {
     const text = this.format.write(this.model, this.text, this.file);
     this.pending = [];
     if (text === this.text) return null;
+    // How it was before this save, kept in its history where it's been a while.
+    if (typeof this.keepHistory === 'function') this.keepHistory(this.text);
     this.text = text;
     this.lastWritten = text;
     const vault = this.app && this.app.vault;

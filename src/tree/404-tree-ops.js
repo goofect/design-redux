@@ -320,3 +320,27 @@ export function pasteLines(model, parentId, text) {
   roots.forEach((r, k) => ops.push({ type: 'insert', parentId, index: start + k, node: r }));
   return applyPatch(model, ops, [roots[roots.length - 1].id]);
 }
+
+/**
+ * The map made as another is — its tree under the same root, its free
+ * nodes, relations, layout block and layout — in one patch: one step of
+ * Undo. Ids `then` shares with the map are kept.
+ */
+export function replaceMap(model, then) {
+  const ops = [];
+  for (let k = model.relations.length - 1; k >= 0; k--) ops.push({ type: 'relation-remove', index: k });
+  model.root.children.slice().reverse().forEach((c) => ops.push({ type: 'remove', id: c.id }));
+  (model.free || []).slice().reverse().forEach((n) => ops.push({ type: 'remove', id: n.id }));
+  const top = then.root;
+  if (top.text !== model.root.text) ops.push({ type: 'text', id: model.root.id, text: top.text });
+  Object.keys(Object.assign({}, model.root.attrs, top.attrs)).forEach((key) => {
+    if (JSON.stringify(model.root.attrs[key]) !== JSON.stringify(top.attrs[key])) ops.push({ type: 'attr', id: model.root.id, key, value: top.attrs[key] });
+  });
+  top.children.forEach((c, i) => ops.push({ type: 'insert', parentId: model.root.id, index: i, node: snapshotNode(c) }));
+  (then.free || []).forEach((n, i) => ops.push({ type: 'insert', parentId: null, index: i, node: snapshotNode(n) }));
+  const rootOf = (id) => (id === top.id ? model.root.id : id);
+  (then.relations || []).forEach((r) => ops.push({ type: 'relation-add', relation: Object.assign({}, r, { from: rootOf(r.from), to: rootOf(r.to) }) }));
+  ops.push({ type: 'layout', layout: then.layout || null });
+  if ((then.mode || null) !== (model.mode || null)) ops.push({ type: 'mode', mode: then.mode || null });
+  return applyPatch(model, ops, []);
+}
