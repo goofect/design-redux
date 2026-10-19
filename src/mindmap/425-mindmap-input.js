@@ -47,7 +47,7 @@ class MindMapInput {
     const root = this.root;
     let drag = null;
     this.registerDomEvent(root, 'pointerdown', (evt) => {
-      if (evt.button !== 0 || (evt.target.closest && evt.target.closest('.dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-failure, .dr-mindmap-editor'))) return;
+      if (evt.button !== 0 || (evt.target.closest && evt.target.closest('.dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-failure, .dr-mindmap-editor, .dr-mindmap-alt'))) return;
       if (typeof root.focus === 'function') root.focus();
       if (this.editing) this.closeEditor(false);
       const knob = evt.target.closest && evt.target.closest('.dr-mindmap-knob');
@@ -98,7 +98,7 @@ class MindMapInput {
     });
     this.registerDomEvent(root, 'dblclick', (evt) => {
       const id = this.renderer.nodeAt(evt.target);
-      if (id && !(evt.target.closest && evt.target.closest('.dr-mindmap-knob'))) this.edit(id);
+      if (id && !(evt.target.closest && evt.target.closest('.dr-mindmap-knob, .dr-mindmap-alt'))) this.edit(id);
     });
     this.registerDomEvent(root, 'click', (evt) => typeof this.linkClick === 'function' && this.linkClick(evt));
     this.registerDomEvent(root, 'wheel', (evt) => this.wheel(evt), { passive: false });
@@ -165,7 +165,8 @@ class MindMapInput {
 
   /** Scrolling pans; with Ctrl or a pinch, it zooms about the pointer. */
   wheel(evt) {
-    if (!this.camera) return;
+    // Shown as a list or a table: it scrolls as a page does.
+    if (!this.camera || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-alt'))) return;
     evt.preventDefault();
     if (evt.ctrlKey || evt.metaKey) {
       const box = typeof this.root.getBoundingClientRect === 'function' ? this.root.getBoundingClientRect() : { left: 0, top: 0 };
@@ -186,7 +187,7 @@ class MindMapInput {
   key(evt) {
     if (!this.model || this.editing || this.failure) return;
     // A key the card editor took — Escape closing it, say — isn't the map's too; nor one on the bar, the outline or the legend.
-    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor, .dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-legend'))) return;
+    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor, .dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-legend, .dr-mindmap-alt'))) return;
     if (typeof this.focusKey === 'function' && this.focusKey(evt)) return;
     const mod = evt.ctrlKey || evt.metaKey;
     if (mod && !evt.altKey && (evt.key === 'z' || evt.key === 'Z' || evt.key === 'y')) {

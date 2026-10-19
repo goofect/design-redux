@@ -103,6 +103,7 @@ export class MindMapView extends TextFileView {
     this.tool('Fold every branch', 'chevrons-down-up', () => this.foldAll(true));
     this.tool('Unfold everything', 'chevrons-up-down', () => this.foldAll(false));
     this.tool('Outline', 'list-tree', () => this.toggleOutline());
+    if (typeof this.chooseShowAs === 'function') this.showAsTool = this.tool('Show as…', 'layout-list', (evt) => this.chooseShowAs(evt));
     if (typeof this.addAction === 'function') this.addAction('file-text', 'Open as text', () => this.feature && this.feature.openAsText(this.leaf));
     this.listen();
   }
@@ -160,6 +161,8 @@ export class MindMapView extends TextFileView {
     if (!this.renderer) return;
     this.showFailure();
     if (!this.model || !this.scene || !this.camera) return;
+    // Shown another way — an outline, a board, a timeline, a table — drawn so instead.
+    if (typeof this.drawAlt === 'function' && this.drawAlt()) return;
     const scene = this.gliding ? this.gliding.scene : this.scene;
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);

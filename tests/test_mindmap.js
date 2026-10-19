@@ -1464,6 +1464,71 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     plugin.settings.mindmapTasks = true;
   });
 
+  await t('shown as an outline, a board, a timeline or a table: each edits the map, a board card dragged changes its status and nothing else in the file', async () => {
+    const text = '---\nmindmap: true\n---\n- Launch\n\t- [ ] Book hall %%{"status":"Doing","due":"2026-10-21"}%%\n\t- [ ] Order cake\n\t- Notes\n';
+    const view = await open(text);
+    const alt = () => view.contentEl.querySelector('.dr-mindmap-alt');
+    const [hall, cake, notes] = view.model.root.children;
+    // The board: the done-when of E1.
+    view.showAs('kanban');
+    view.flushSave();
+    const before = view.text;
+    assert.ok(before.includes('"view":"kanban"'), 'how it’s shown kept in the file');
+    assert.ok(view.root.hasClass('is-alt'));
+    const column = (label) => Array.from(alt().querySelectorAll('.dr-alt-column')).find((c) => c.querySelector('.dr-alt-column-head span').textContent === label);
+    assert.deepStrictEqual(Array.from(alt().querySelectorAll('.dr-alt-column-head span:first-child')).map((e) => e.textContent), ['No status', 'To do', 'Doing', 'Waiting', 'Done']);
+    const card = column('No status').querySelector(`[data-id="${cake.id}"]`);
+    card.dispatchEvent(new window.Event('dragstart', { bubbles: true }));
+    column('Waiting').dispatchEvent(new window.Event('drop', { bubbles: true, cancelable: true }));
+    assert.strictEqual(cake.attrs.status, 'Waiting');
+    view.flushSave();
+    const changed = before.split('\n').map((l, k) => [l, view.text.split('\n')[k]]).filter(([a, b]) => a !== b);
+    assert.deepStrictEqual(changed, [['\t- [ ] Order cake', '\t- [ ] Order cake %%{"status":"Waiting"}%%']], 'one line, one attribute');
+    assert.ok(column('Waiting').querySelector(`[data-id="${cake.id}"]`), 'drawn in its new column');
+    view.undoStep(false);
+    assert.ok(!('status' in cake.attrs), 'one step of Undo');
+    // The outline: type, Enter for the next line, Tab in.
+    view.showAs('outline');
+    const row = (id) => alt().querySelector(`[data-id="${id}"] .dr-alt-edit`);
+    assert.strictEqual(row(hall.id).value, 'Book hall', 'a task’s line without its box');
+    row(notes.id).value = 'Notes and ideas';
+    row(notes.id).dispatchEvent(new window.Event('change'));
+    assert.strictEqual(notes.text, 'Notes and ideas');
+    row(notes.id).dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    const added = view.model.root.children[3];
+    assert.ok(added && added.text === '', 'a line after it');
+    assert.strictEqual(document.activeElement, row(added.id), 'and the cursor there');
+    row(added.id).dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+    assert.strictEqual(added.parent, notes, 'Tab: under the line before');
+    row(added.id).dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+    assert.ok(!R.nodeById(view.model, added.id), 'Backspace on an empty line takes it out');
+    // The map's keys stay out of it: Enter in a row adds no node on the map's account.
+    const count = view.model.root.children.length;
+    key(alt(), 'Delete');
+    assert.strictEqual(view.model.root.children.length, count);
+    // The timeline and the table.
+    view.showAs('timeline');
+    assert.deepStrictEqual(Array.from(alt().querySelectorAll('.dr-alt-item-text')).map((e) => e.textContent), ['Book hall']);
+    const date = alt().querySelector('.dr-alt-date');
+    date.value = '2026-11-01';
+    date.dispatchEvent(new window.Event('change'));
+    assert.strictEqual(hall.attrs.due, '2026-11-01');
+    view.showAs('table');
+    assert.deepStrictEqual(Array.from(alt().querySelectorAll('th')).map((e) => e.textContent), ['Node', 'Done', 'Status', 'Due']);
+    const status = alt().querySelector(`tr[data-id="${cake.id}"] td[data-column="status"] input`);
+    status.value = 'Doing';
+    status.dispatchEvent(new window.Event('change'));
+    assert.strictEqual(cake.attrs.status, 'Doing');
+    alt().querySelector(`tr[data-id="${notes.id}"] .dr-alt-make-task`).click();
+    assert.strictEqual(notes.text, '[ ] Notes and ideas');
+    // Back to the map.
+    view.showAs(null);
+    assert.ok(!view.root.hasClass('is-alt'));
+    view.flushSave();
+    assert.ok(!view.text.includes('"view"'));
+    assert.ok(view.contentEl.querySelectorAll('.dr-mindmap-node').length >= 4);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

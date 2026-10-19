@@ -10439,3 +10439,110 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 }
 
 .dr-mindmap-progress.is-complete span { color: var(--interactive-accent); }
+
+/* Mind map shown another way: an outline, a board, a timeline, a table */
+.dr-mindmap.is-alt .dr-mindmap-plane,
+.dr-mindmap.is-alt .dr-mindmap-minimap,
+.dr-mindmap.is-alt .dr-mindmap-legend { display: none; }
+
+.dr-mindmap-alt {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: calc(var(--dr-space-2) * 2 + 36px) var(--dr-space-4, 24px) var(--dr-space-4, 24px);
+  box-sizing: border-box;
+}
+
+.dr-mindmap:not(.is-alt) .dr-mindmap-alt { display: none; }
+
+.dr-alt-edit,
+.dr-alt-cell {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  font-size: var(--font-ui-medium);
+}
+
+.dr-alt-edit:focus,
+.dr-alt-cell:focus { background: var(--background-modifier-form-field); box-shadow: none; }
+
+.dr-alt-empty { color: var(--text-muted); padding: var(--dr-space-3, 12px) 0; }
+
+/* The outline */
+.dr-alt-outline { max-width: 720px; margin: 0 auto; }
+
+.dr-alt-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: calc(var(--dr-depth) * 22px);
+  border-radius: var(--radius-s);
+}
+
+.dr-alt-row.is-selected { background: var(--background-modifier-hover); }
+.dr-alt-fold { flex: none; width: 16px; height: 16px; color: var(--text-faint); cursor: pointer; display: flex; align-items: center; }
+.dr-alt-fold .svg-icon { width: 14px; height: 14px; }
+.dr-alt-row .dr-mindmap-chip { flex: none; }
+
+/* The board */
+.dr-alt-head { display: flex; gap: 4px; margin-bottom: var(--dr-space-3, 12px); }
+.dr-alt-switch.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+
+.dr-alt-board {
+  display: flex;
+  gap: var(--dr-space-3, 12px);
+  align-items: flex-start;
+}
+
+.dr-alt-column {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.dr-alt-column.is-drop { outline: 2px dashed var(--interactive-accent); }
+.dr-alt-column-head { display: flex; justify-content: space-between; font-weight: var(--font-semibold); padding: 0 2px 4px; }
+.dr-alt-count { color: var(--text-faint); font-weight: normal; }
+
+.dr-alt-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  cursor: grab;
+}
+
+.dr-alt-card.is-selected { outline: 2px solid var(--interactive-accent); }
+.dr-alt-card-text { flex: 1 1 0; min-width: 0; }
+.dr-alt-card.is-done .dr-alt-card-text,
+.dr-alt-item.is-done .dr-alt-item-text { color: var(--text-muted); text-decoration: line-through; }
+.dr-alt-add { align-self: flex-start; font-size: var(--font-ui-small); }
+
+/* The timeline */
+.dr-alt-timeline { max-width: 720px; margin: 0 auto; }
+.dr-alt-day { margin-bottom: var(--dr-space-3, 12px); }
+.dr-alt-day-head { font-weight: var(--font-semibold); padding: 4px 0; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-day.is-past .dr-alt-day-head { color: var(--color-red); }
+.dr-alt-day.is-today .dr-alt-day-head { color: var(--color-orange); }
+.dr-alt-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.dr-alt-item-text { flex: 1 1 0; min-width: 0; }
+.dr-alt-under { color: var(--text-faint); font-size: var(--font-ui-small); }
+.dr-alt-date { flex: none; width: auto; font-size: var(--font-ui-small); }
+
+/* The table */
+.dr-alt-table { width: 100%; border-collapse: collapse; }
+.dr-alt-table th { text-align: left; color: var(--text-muted); font-weight: var(--font-medium); font-size: var(--font-ui-small); padding: 4px; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-table td { padding: 1px 4px; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-table td[data-column='text'] { padding-left: calc(var(--dr-depth) * 18px + 4px); }
+.dr-alt-table tr.is-selected td { background: var(--background-modifier-hover); }
+.dr-alt-make-task { padding: 0 6px; height: 20px; color: var(--text-faint); background: transparent; box-shadow: none; }

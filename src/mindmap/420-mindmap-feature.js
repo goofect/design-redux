@@ -23,6 +23,7 @@ import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 import { MAP_SNAPSHOTS } from './435-mindmap-check.js';
+import { VIEW_CHOICES } from './451-mindmap-views.js';
 
 /* The kinds of file a new map can be. */
 export const MINDMAP_FORMATS = [
@@ -82,6 +83,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
       { key: 'mindmapConvert', showIf: 'mindmaps', name: 'Convert maps', desc: 'Make a mind map of a canvas — its trees, folds, layouts and relations kept — or a .mindmap file of a note’s map and back, or export a map as a canvas. The original is left as it is.' },
       { key: 'mindmapTasks', showIf: 'mindmaps', name: 'Tasks', desc: 'A node can be a task, written - [ ] in the note: a box to tick, a due date typed as “tomorrow” or “+2w”, a status. A node with tasks below it shows how many are done; Show open tasks only dims the rest.' },
+      { key: 'mindmapOtherViews', showIf: 'mindmaps', name: 'Show a map another way', desc: 'Show as… in the map’s bar: an outline to type into, a board by status or by tag with cards to drag between columns, a timeline of what’s due, or a table of the nodes and their attributes. Each changes the map itself.' },
       { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
@@ -136,6 +138,7 @@ export class MindMaps extends Feature {
       { id: 'mindmap-set-due', name: 'Mind map: set the node’s due date…', icon: 'calendar', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !ctx.node.virtual, run: (ctx) => ctx.view.chooseDue(ctx.node.id) },
       { id: 'mindmap-set-status', name: 'Mind map: set the node’s status…', icon: 'circle-dot', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !ctx.node.virtual, run: (ctx) => ctx.view.chooseStatus(ctx.node.id) },
       { id: 'mindmap-open-tasks', name: 'Mind map: show open tasks only, or everything', icon: 'list-checks', on: 'mindmap', menu: false, when: () => tasks(), run: (ctx) => ctx.view.toggleOpenTasks() },
+      ...VIEW_CHOICES.map(([view, label, icon]) => ({ id: `mindmap-show-as-${view || 'map'}`, name: `Mind map: show as ${label.toLowerCase()}`, icon, on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapOtherViews !== false && ctx.view.shownAs() !== view, run: (ctx) => ctx.view.showAs(view) })),
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },

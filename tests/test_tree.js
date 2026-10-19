@@ -471,6 +471,30 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.deepStrictEqual([hall.text, hall.attrs], ['Book hall', {}], 'a plain node again: its box, date and status off');
   });
 
+  await t('a map seen another way: outline rows past folds, a board by status or tag, a timeline by day, a table’s columns; a card moved changes one thing', () => {
+    const m = R.parseOutline('- Launch\n\t- [ ] Book hall #venue %%{"status":"Doing","due":"2026-10-21"}%%\n\t- [ ] Order cake #food %%{"due":"2026-10-20"}%%\n\t- Notes %%{"fold":1,"owner":"Sam"}%%\n\t\t- Hidden\n').model;
+    const [hall, cake, notes] = m.root.children;
+    assert.deepStrictEqual(R.outlineRows(m).map((r) => `${r.depth} ${r.node.text.split(' ')[0]}`), ['0 Launch', '1 [', '1 [', '1 Notes'], 'a folded branch left out');
+    const cols = R.kanbanColumns(m, 'status', ['To do', 'Doing']);
+    assert.deepStrictEqual(cols.map((c) => [c.label, c.cards.length]), [['No status', 1], ['To do', 0], ['Doing', 1]]);
+    assert.deepStrictEqual(R.kanbanColumns(m, 'tag').map((c) => [c.label, c.cards.length]), [['#venue', 1], ['#food', 1]]);
+    assert.deepStrictEqual(R.timelineDays(m).map((d) => [d.due, d.items.length]), [['2026-10-20', 1], ['2026-10-21', 1]]);
+    assert.deepStrictEqual(R.tableColumns(m), ['text', 'done', 'status', 'due', 'owner'], 'drawn attributes like fold get no column');
+    R.moveCard(m, cake.id, 'status', null, 'To do');
+    assert.strictEqual(cake.attrs.status, 'To do');
+    R.moveCard(m, hall.id, 'status', 'Doing', null);
+    assert.ok(!('status' in hall.attrs), 'to No status: taken off');
+    R.moveCard(m, hall.id, 'tag', 'venue', 'place');
+    assert.strictEqual(hall.text, '[ ] Book hall #place');
+    R.moveCard(m, cake.id, 'tag', 'food', null);
+    assert.strictEqual(cake.text, '[ ] Order cake');
+    assert.deepStrictEqual(R.nodeTags({ text: 'Plan #a and #b/c, not a#d #a' }), ['a', 'b/c']);
+    assert.strictEqual(R.mapViewOf(m), null);
+    R.setMapView(m, 'kanban');
+    assert.strictEqual(R.mapViewOf(m), 'kanban');
+    assert.ok(notes);
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());

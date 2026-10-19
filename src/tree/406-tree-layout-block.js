@@ -166,6 +166,23 @@ export function setSavedView(model, name, id, zoom) {
   });
 }
 
+/* The ways a map can be shown besides as a map: kept in the layout block's view. */
+export const MAP_VIEWS = ['outline', 'kanban', 'kanban-tag', 'timeline', 'table'];
+
+/** How the map is shown, as kept: one of MAP_VIEWS, or null for the map itself. */
+export function mapViewOf(model) {
+  const v = model.layout && model.layout.view;
+  return MAP_VIEWS.includes(v) ? v : null;
+}
+
+/** The map shown another way, or as itself (null). */
+export function setMapView(model, view) {
+  return changeBlock(model, [], (block) => {
+    if (MAP_VIEWS.includes(view)) block.view = view;
+    else delete block.view;
+  });
+}
+
 /** The collection a map follows, as kept: { path, leftOut: [paths] }, or null. */
 export function albumEntry(model) {
   const a = model.layout && model.layout.album;
