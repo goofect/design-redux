@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, LOOK_KEYS, featureKeys, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, LOOK_KEYS, featureKeys, parsePages, hiddenRanges, withPageAdded, withPageRenamed, withPageRemoved, withPageMoved, newPageName, openPage, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -489,6 +489,31 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       assert.ok(keys.indexOf(k) !== -1, k + ' has a row');
       assert.ok(k in R.DEFAULTS, k + ' has a default');
     });
+  });
+
+  await t('pages: markers found outside code fences; the others\' text and every marker hidden; a second page added; a note round-trips', () => {
+    const text = '---\nfoo: 1\n---\nIntro\n%%page: A%%\nalpha\n\n```\n%%page: fake%%\n```\n%%page: B%%\nbeta\n';
+    const pages = R.parsePages(text);
+    assert.deepStrictEqual(pages.map((p) => p.name), ['A', 'B'], 'a marker in a code fence is not one');
+    assert.strictEqual(text.slice(pages[1].from, pages[1].to), 'beta\n');
+    // The text before the first marker belongs to the first page.
+    assert.deepStrictEqual(R.hiddenRanges(text, 'A').map(([a, b]) => text.slice(a, b)), ['%%page: A%%\n', '%%page: B%%\n', 'beta\n']);
+    assert.deepStrictEqual(R.hiddenRanges(text, 'B').map(([a, b]) => text.slice(a, b)), ['Intro', '%%page: A%%\n', 'alpha\n\n```\n%%page: fake%%\n```', '%%page: B%%\n']);
+    assert.deepStrictEqual(R.hiddenRanges('plain note\n', 'A'), [], 'nothing is added to a plain note');
+    assert.strictEqual(R.openPage(pages, 'nope').name, 'A', 'an unknown page opens the first');
+    // A plain note gets a marker above its text, named Page 1, and one for the new page.
+    const plain = '---\nx: 1\n---\nHello\n';
+    const two = R.withPageAdded(plain, 'Page 2');
+    assert.strictEqual(two, '---\nx: 1\n---\n%%page: Page 1%%\nHello\n\n%%page: Page 2%%\n');
+    assert.strictEqual(R.newPageName(R.parsePages(two)), 'Page 3');
+    // Take the markers away and it is one plain page again, unchanged.
+    assert.strictEqual(R.withPageRemoved(R.withPageRemoved(two, 'Page 2'), 'Page 1').trim(), plain.trim());
+    assert.strictEqual(R.withPageRenamed(two, 'Page 2', 'Sources'), two.replace('Page 2', 'Sources'));
+    const moved = R.withPageMoved(two, 'Page 2', -1);
+    assert.deepStrictEqual(R.parsePages(moved).map((p) => p.name), ['Page 2', 'Page 1']);
+    assert.ok(moved.includes('Hello'));
+    assert.strictEqual(R.withPageMoved(two, 'Page 1', -1), two, 'the first cannot go earlier');
+    assert.ok('pagesOpen' in R.DEFAULTS && 'notePages' in R.DEFAULTS);
   });
 
   await t('settings for things deleted while the plugin was off are let go; not while the vault is loading', () => {

@@ -46,6 +46,7 @@ import { PropertyDates } from '../library/260-property-dates.js';
 import { KnowledgeCheck } from '../library/261-knowledge-check.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
 import { QuietLinks } from '../note/265-quiet-links.js';
+import { NotePages } from '../note/267-pages.js';
 import { MarkedLists } from '../note/270-lists.js';
 import { Scripts } from '../note/280-scripts.js';
 import { Footnotes } from '../note/285-footnotes.js';
@@ -108,6 +109,7 @@ export class DesignRedux extends Plugin {
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
       new QuietLinks(this),
+      new NotePages(this),
       new MindMaps(this),
       new Diagnostics(this),
       new BulkEditing(this),

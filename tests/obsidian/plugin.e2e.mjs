@@ -1096,6 +1096,38 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('shows one page of a note with pages, in editing and in reading view', async function () {
+    const result = await browser.executeObsidian(async ({ app }) => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const old = app.vault.getFileByPath('Pages note.md');
+      if (old) await app.vault.delete(old);
+      const file = await app.vault.create('Pages note.md', '---\ntype: test\n---\n%%page: Overview%%\nAlpha text\n\n%%page: Sources%%\nBeta text\n');
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      await wait(1500);
+      const root = leaf.view.containerEl;
+      const content = () => leaf.view.contentEl.querySelector('.cm-content').textContent;
+      const first = { tabs: root.querySelectorAll('.markdown-source-view .dr-page-tab').length, text: content() };
+      root.querySelectorAll('.markdown-source-view .dr-page-tab')[1].click();
+      await wait(1000);
+      const second = { text: content(), open: root.querySelector('.markdown-source-view .dr-page-tab.is-open .dr-page-name').textContent };
+      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'preview' }, active: true });
+      await wait(1800);
+      const reading = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-sizer [data-dr-line]')).map((el) => [el.textContent.trim(), el.classList.contains('dr-page-off')]);
+      leaf.detach();
+      await app.vault.delete(file);
+      return { first, second, reading };
+    });
+    expect(result.first.tabs).toBe(2);
+    expect(result.first.text).toContain('Alpha text');
+    expect(result.first.text).not.toContain('Beta text');
+    expect(result.second.open).toBe('Sources');
+    expect(result.second.text).toContain('Beta text');
+    expect(result.second.text).not.toContain('Alpha text');
+    expect(result.reading.find((r) => r[0].includes('Alpha text'))[1]).toBe(true);
+    expect(result.reading.find((r) => r[0].includes('Beta text'))[1]).toBe(false);
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

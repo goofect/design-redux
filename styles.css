@@ -10254,3 +10254,114 @@ body.dr-strip-side .dr-strip-text,
 body.dr-strip-side .dr-strip-progress {
   display: none;
 }
+
+/* Pages: one note, several pages. A small segmented control under the title; a soft pill marks the open page. */
+.dr-pages {
+  display: flex;
+  justify-content: center;
+  margin: var(--dr-space-3) 0 var(--dr-space-4);
+  container-type: inline-size;
+}
+
+.dr-pages-capsule {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-radius: var(--dr-radius-pill);
+  background-color: color-mix(in srgb, var(--text-normal) 7%, transparent);
+}
+
+.dr-pages-capsule::-webkit-scrollbar {
+  display: none;
+}
+
+.dr-page-tab,
+.dr-page-add {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-space-2);
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 var(--dr-space-3);
+  border-radius: var(--dr-radius-pill);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-page-tab.is-open {
+  background-color: var(--background-primary);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+  box-shadow: 0 0 0 1px var(--background-modifier-border);
+}
+
+.dr-page-tab.is-open[data-dr-color] {
+  box-shadow: 0 0 0 2px var(--dr-page-color);
+}
+
+.dr-page-tab:focus-visible,
+.dr-page-add:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-page-tab:hover,
+  .dr-page-add:hover {
+    color: var(--text-normal);
+  }
+}
+
+.dr-page-icon,
+.dr-page-add {
+  display: inline-flex;
+}
+
+.dr-page-icon .svg-icon,
+.dr-page-add .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+[data-dr-color='red'] { --dr-page-color: var(--color-red); }
+[data-dr-color='orange'] { --dr-page-color: var(--color-orange); }
+[data-dr-color='yellow'] { --dr-page-color: var(--color-yellow); }
+[data-dr-color='green'] { --dr-page-color: var(--color-green); }
+[data-dr-color='cyan'] { --dr-page-color: var(--color-cyan); }
+[data-dr-color='blue'] { --dr-page-color: var(--color-blue); }
+[data-dr-color='purple'] { --dr-page-color: var(--color-purple); }
+[data-dr-color='pink'] { --dr-page-color: var(--color-pink); }
+
+.dr-page-tab[data-dr-color] .dr-page-icon {
+  color: var(--dr-page-color);
+}
+
+/* Short of room, icons only; past about six pages the capsule scrolls sideways. */
+@container (max-width: 420px) {
+  .dr-page-tab:not(.is-open) .dr-page-name {
+    display: none;
+  }
+}
+
+body.is-mobile .dr-page-tab,
+body.is-mobile .dr-page-add {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* In plain source mode the text is shown whole, so there is nothing to switch. */
+.markdown-source-view:not(.is-live-preview) .dr-pages {
+  display: none;
+}
+
+/* The pages that aren't open, in reading view. */
+.dr-page-off {
+  display: none !important;
+}

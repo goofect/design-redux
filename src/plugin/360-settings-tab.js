@@ -86,6 +86,14 @@ export const SETTINGS_TABS = [
         keys: ['footnotes', 'footnotesAside', 'footnoteOrder', 'letterLists', 'romanLists', 'scripts', 'routeImages', 'scriptSyntax', 'autoOrdinals', 'imageFolder'],
       },
       {
+        id: 'pages',
+        icon: 'files',
+        name: 'Pages',
+        desc: 'A note with several separate pages, one open at a time, switched under its title; the file stays one ordinary note.',
+        switch: 'notePages',
+        keys: [],
+      },
+      {
         id: 'quietLinks',
         icon: 'link-2-off',
         name: 'Quiet links',
