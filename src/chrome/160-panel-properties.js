@@ -14,7 +14,9 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
+import { optionFor } from '../core/088-property-options.js';
 import { Library } from '../library/130-browse-filters.js';
+import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
@@ -273,6 +275,7 @@ export class PropertiesSection extends PanelSection {
     if (!this.renderWidget(valueEl, key, value, type)) {
       this.renderFallback(valueEl, key, value);
     }
+    this.paintValues(valueEl, key, value);
     // A quiet link in a property shows as the note it names.
     const quiet = typeof this.plugin.feature === 'function' ? this.plugin.feature(QuietLinks) : null;
     if (quiet && quiet.enabled) quiet.quietenProperties(valueEl, this.file.path);
@@ -453,6 +456,18 @@ export class PropertiesSection extends PanelSection {
   }
 
   /** Plain text, for when a widget isn't available. */
+  /** Values with a colour or an icon of their own show them: each item of a list as a pill does, one value by a mark at its side. */
+  paintValues(valueEl, key, value) {
+    if (!valueOptionsOn(this.plugin)) return;
+    const pills = valueEl.querySelectorAll('.multi-select-pill');
+    if (pills.length) {
+      pills.forEach((pill) => paintValue(pill, this.plugin, key, (pill.querySelector('.multi-select-pill-content') || pill).textContent.trim()));
+      return;
+    }
+    const option = value !== null && value !== undefined && typeof value !== 'object' ? optionFor(this.settings.propertyOptions, key, String(value)) : null;
+    if (option && option.color) valueEl.dataset.drColor = option.color;
+  }
+
   renderFallback(parentEl, key, value) {
     const input = parentEl.createEl('input', { cls: 'dr-input', type: 'text' });
     input.value = value == null ? '' : String(value);

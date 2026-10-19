@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1931,6 +1931,26 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
       { key: 'judges', type: 'multitext' },
       { key: 'court', type: 'text', default: 'High' },
     ]);
+  });
+
+  await t('a value’s colour and icon: a swatch, an icon by name, saved under the property; Clear takes them off', async () => {
+    const v = makeVault({ 'a.md': '' });
+    const { plugin } = makePlugin(v);
+    let then = 0;
+    const modal = new R.ValueOptionModal(plugin, 'status', 'Done', () => then++);
+    modal.open();
+    click(modal.contentEl.querySelector('.dr-value-swatch[data-dr-color="green"]'));
+    type(modal.contentEl.querySelector('.dr-value-option-icon'), 'check');
+    assert.strictEqual(modal.contentEl.querySelector('.dr-value-option-sample .dr-value-painted').dataset.drColor, 'green');
+    click(modal.contentEl.querySelector('.mod-cta'));
+    await settle();
+    assert.deepStrictEqual(plugin.settings.propertyOptions, { status: { Done: { color: 'green', icon: 'check' } } });
+    const again = new R.ValueOptionModal(plugin, 'Status', 'done', () => then++);
+    again.open();
+    assert.strictEqual(again.contentEl.querySelector('.dr-value-option-icon').value, 'check', 'what’s kept shown, whatever the case');
+    Array.from(again.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Clear').click();
+    await settle();
+    assert.deepStrictEqual([plugin.settings.propertyOptions, then], [{}, 2]);
   });
 
   console.log(`\n${passed} passed`);

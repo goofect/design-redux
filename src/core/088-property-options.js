@@ -32,6 +32,9 @@ export function withOption(options, key, value, option) {
   const want = String(key).toLowerCase();
   const name = Object.keys(next).find((k) => k.toLowerCase() === want) || key;
   const byValue = Object.assign({}, next[name] || {});
+  // The value as already kept, in whatever case or form, is the one changed.
+  const plain = plainOf(value);
+  Object.keys(byValue).forEach((v) => v !== String(value) && plainOf(v) === plain && delete byValue[v]);
   const color = option && OPTION_COLOURS.includes(option.color) ? option.color : undefined;
   const icon = option && typeof option.icon === 'string' && option.icon.trim() ? option.icon.trim() : undefined;
   if (color || icon) byValue[String(value)] = Object.assign({}, color ? { color } : {}, icon ? { icon } : {});

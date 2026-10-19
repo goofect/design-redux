@@ -207,6 +207,11 @@ export class PropertySchemas extends Feature {
         name: 'Property schemas',
         desc: 'A folder can say what its notes’ properties should be — required, of a type, from some values — and the note panel marks a note that falls short, with a fix where it’s plain. Set one from a folder’s Property schema….',
       },
+      {
+        key: 'propertyValueChips',
+        name: 'Colours and icons for values',
+        desc: 'A property’s value can take a colour and an icon — from its menu on the property’s page, Colour and icon… — shown wherever it shows: the note panel, the note page, album rows and filters.',
+      },
     ];
   }
 

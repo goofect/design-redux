@@ -19,6 +19,7 @@ import { Feature } from '../core/080-feature.js';
 import { isDue } from '../core/081-study.js';
 import { Library } from './130-browse-filters.js';
 import { Study, STUDY_GRADES } from './147-study.js';
+import { paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
 export const NOTE_SHELF_SIZE = 10;
@@ -161,7 +162,7 @@ export class NotePage extends Feature {
     const skip = new Set(['position', 'aliases', 'cssclasses', String(this.settings.coverProperty || 'cover').toLowerCase(), String(this.settings.albumNestBy || '').toLowerCase()]);
     return Object.keys(fm)
       .filter((k) => !skip.has(k.toLowerCase()))
-      .map((k) => ({ key: k, text: chipValue(fm[k]) }))
+      .map((k) => ({ key: k, text: chipValue(fm[k]), raw: Array.isArray(fm[k]) && fm[k].length === 1 ? fm[k][0] : fm[k] }))
       .filter((c) => c.text);
   }
 
@@ -248,6 +249,7 @@ export class NotePage extends Feature {
         chips.forEach((c) => {
           const chip = el.createSpan({ cls: 'dr-note-chip', text: c.text });
           chip.setAttribute('aria-label', c.key);
+          if (c.raw !== null && typeof c.raw !== 'object') paintValue(chip, this.plugin, c.key, String(c.raw));
         });
       });
       // Due to be revisited: a quiet row of grades.

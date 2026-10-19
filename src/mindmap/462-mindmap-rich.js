@@ -8,16 +8,14 @@
 /* Kept as the node's attributes and in the layout block.              */
 /* ------------------------------------------------------------------ */
 
-import { setIcon, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, ImagePicker, NamePrompt } from '../ui/230-pickers.js';
+import { putIcon } from '../ui/248-value-options.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { MAP_THEMES, mapThemeOf, NODE_SHAPES, nodeShape, setMapTheme } from '../tree/406-tree-layout-block.js';
 import { MindMapView } from './421-mindmap-view.js';
-
-/* A Lucide icon's name, as opposed to an emoji or a word. */
-const ICON_NAME = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 
 const SHAPE_NAMES = { box: 'A box', pill: 'A pill', underline: 'A line under it', plain: 'No outline' };
 
@@ -69,9 +67,7 @@ class MindMapRich {
       el.addClass('has-icon');
       const icon = el.createSpan({ cls: 'dr-mindmap-icon' });
       icon.setAttribute('aria-hidden', 'true');
-      const name = String(a.icon).trim();
-      if (ICON_NAME.test(name) && typeof setIcon === 'function') setIcon(icon, name);
-      if (!icon.firstChild) icon.setText(name);
+      putIcon(icon, a.icon);
     }
   }
 

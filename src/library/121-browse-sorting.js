@@ -15,6 +15,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
+import { paintValue } from '../ui/248-value-options.js';
 import { ALBUM_LAYOUTS, AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
@@ -536,10 +537,10 @@ export class BrowseSorting {
     }
     if (this.filterProp) {
       // The next one along takes the first's place.
-      chips.push([propertyFilterLabel(this.filterProp), () => this.pickProperty(), () => (this.filterProp = (this.filterMore || []).shift() || null)]);
+      chips.push([propertyFilterLabel(this.filterProp), () => this.pickProperty(), () => (this.filterProp = (this.filterMore || []).shift() || null), this.filterProp]);
     }
     (this.filterMore || []).forEach((f, i) =>
-      chips.push([propertyFilterLabel(f), () => this.pickProperty(i), () => this.filterMore.splice(i, 1)])
+      chips.push([propertyFilterLabel(f), () => this.pickProperty(i), () => this.filterMore.splice(i, 1), f])
     );
     if (this.filterDate) {
       chips.push([dateFilterLabel(this.filterDate), () => this.pickDate(), () => (this.filterDate = null)]);
@@ -556,9 +557,11 @@ export class BrowseSorting {
       asButton(label);
       onActivate(label, () => this.navigate({ mode: 'search', property: null, path: '/', query: find }));
     }
-    chips.forEach(([label, change, clear]) => {
+    chips.forEach(([label, change, clear, prop]) => {
       const chip = row.createDiv({ cls: 'dr-chip' });
       const name = chip.createSpan({ cls: 'dr-chip-label', text: label });
+      // A property's value with a colour or an icon of its own: the chip shows them.
+      if (prop && !prop.negate && typeof prop.value === 'string') paintValue(chip, this.plugin, prop.key, prop.value);
       asButton(name, `Change: ${label}`);
       onActivate(name, change);
       const x = chip.createSpan({ cls: 'dr-chip-clear' });

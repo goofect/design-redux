@@ -49,7 +49,7 @@ export const SETTINGS_TABS = [
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
-      { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'showMentions', 'panelRelationships', 'panelPlaces'] },
+      { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyValueChips', 'showMentions', 'panelRelationships', 'panelPlaces'] },
       { title: 'Links', keys: ['quietLinks'] },
       { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
       { title: 'Images', keys: ['routeImages', 'imageFolder'] },

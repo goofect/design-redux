@@ -85,6 +85,7 @@ import './ui/235-covers.js';
 import './ui/237-cover-drop.js';
 import './ui/240-image-router.js';
 import './ui/245-hover-popover.js';
+import './ui/248-value-options.js';
 import './ui/250-property-clipboard.js';
 import './library/254-knowledge.js';
 import './library/255-album-property.js';

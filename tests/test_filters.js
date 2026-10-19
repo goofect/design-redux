@@ -528,6 +528,32 @@ t("Home's folder shelf follows it", () => {
     ['Politics', 'Misc', 'Law']);
 });
 
+t('a value with a colour and an icon shows them: on its property’s page, in album rows and in filter chips; switched off, nowhere', () => {
+  plugin.settings.propertyOptions = { Status: { done: { color: 'green', icon: 'check' } } };
+  plugin.settings.propertyValueView = 'list';
+  try {
+    const painted = (el) => !!el && el.classList.contains('dr-value-painted') && el.dataset.drColor === 'green' && el.querySelector('.dr-value-icon').dataset.icon === 'check';
+    let view = page({ mode: 'properties', property: 'status' });
+    const name = (text) => Array.from(view.contentEl.querySelectorAll('.dr-prop-value-name')).find((e) => e.textContent === text);
+    assert.ok(painted(name('Done')) && !name('draft').classList.contains('dr-value-painted'));
+    plugin.settings.albumColumns = 'status';
+    view = page({ mode: 'folder', path: 'Law' });
+    const cell = (n) => view.contentEl.querySelector(`.dr-track[data-path="Law/${n}.md"] .dr-track-sub`);
+    assert.ok(painted(cell('Tort')) && !cell('Contract').classList.contains('dr-value-painted'));
+    view.addPropFilter({ key: 'status', value: 'Done', negate: false });
+    view.render();
+    assert.ok(painted(view.contentEl.querySelector('.dr-filter-chips .dr-chip')));
+    plugin.settings.propertyValueChips = false;
+    view.render();
+    assert.ok(!view.contentEl.querySelector('.dr-value-painted'));
+  } finally {
+    delete plugin.settings.propertyOptions;
+    delete plugin.settings.propertyValueChips;
+    plugin.settings.albumColumns = '';
+    plugin.settings.propertyValueView = 'auto';
+  }
+});
+
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');
@@ -592,7 +618,7 @@ t('a property is a page, as an artist\'s: its values as covers or a list, each o
     menus = [];
     tiles()[0].dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 1, clientY: 1 }));
     const menu = menus.pop();
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Open', 'Open in new tab', 'Rename value…', 'Merge with…', 'Copy value', 'Narrow the library to these']);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Open', 'Open in new tab', 'Rename value…', 'Merge with…', 'Colour and icon…', 'Copy value', 'Narrow the library to these']);
 
     // The list: by name, or by how many notes use each.
     const sort = view.contentEl.querySelector('.dr-prop-sort');

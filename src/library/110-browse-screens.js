@@ -18,6 +18,7 @@ import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { dueNotes } from '../core/081-study.js';
 import { fromReading } from './145-reading-history.js';
+import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
 import { renamePropertyInPlace } from '../bulk/290-bulk-engine.js';
@@ -670,7 +671,7 @@ export class PropertiesScreen extends BrowseScreen {
         asButton(row);
         row.dataset.value = value;
         valueArt(view, row.createDiv({ cls: 'dr-prop-value-art' }), prop.key, value, group.files);
-        row.createDiv({ cls: 'dr-prop-value-name', text: value });
+        paintValue(row.createDiv({ cls: 'dr-prop-value-name', text: value }), this.plugin, prop.key, value);
         row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
         onActivate(row, () => open(value));
         onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
@@ -748,7 +749,7 @@ export class PropertiesScreen extends BrowseScreen {
           tick.dispatchEvent(new Event('change'));
         });
       }
-      row.createDiv({ cls: 'dr-prop-value-name', text: value });
+      paintValue(row.createDiv({ cls: 'dr-prop-value-name', text: value }), this.plugin, prop.key, value);
       row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
       onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
     });
@@ -854,6 +855,9 @@ export class PropertiesScreen extends BrowseScreen {
         view.valuePicks = { key: prop.key, set: new Set([value]) };
         Promise.resolve(view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true })).then(() => view.setEditing(true));
       });
+    }
+    if (valueOptionsOn(this.plugin) && TAG_KEYS.indexOf(String(prop.key).toLowerCase()) === -1) {
+      add('Colour and icon…', 'palette', 'action', () => new ValueOptionModal(this.plugin, prop.key, value, () => view.render()).open());
     }
     add('Copy value', 'copy', 'action', () => copyText(value));
     add('Narrow the library to these', 'filter', 'view', () => {
