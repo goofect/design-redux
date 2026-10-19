@@ -1165,6 +1165,51 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('opens the note panel from a mind map’s bar, with the node picked: its text edited there is the map’s', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getAbstractFileByPath('Panel map.md');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Panel map.md', '---\nmindmap: true\n---\n- Launch\n\t- Research %%{"status":"Doing"}%%\n\t- Build\n');
+    });
+    await obsidianPage.openFile('Panel map.md');
+    const ready = () => browser.execute(() => document.querySelectorAll('.workspace-leaf.mod-active .dr-mindmap-node').length);
+    await readUntil(ready, (n) => n === 3);
+    await browser.executeObsidian(({ app }) => {
+      const view = app.workspace.activeLeaf.view;
+      view.select(view.model.root.children[0].id);
+    });
+    await (await browser.$('.workspace-leaf.mod-active .dr-mindmap-tool[aria-label="Node and note panel"]')).click();
+    const section = await browser.$('.dr-node-section .dr-node-text');
+    await section.waitForExist({ timeout: 5000 });
+    expect(await section.getValue()).toBe('Research');
+    const attrs = await browser.execute(() => Array.from(document.querySelectorAll('.dr-node-section .dr-node-attr')).map((r) => r.textContent));
+    expect(attrs).toEqual(['statusDoing']);
+    // Another node picked: the section follows.
+    await browser.executeObsidian(({ app }) => {
+      const view = app.workspace.getLeavesOfType('design-redux-mindmap')[0].view;
+      view.select(view.model.root.children[1].id);
+    });
+    const value = () => browser.execute(() => { const t = document.querySelector('.dr-node-section .dr-node-text'); return t ? t.value : null; });
+    expect(await readUntil(value, (v) => v === 'Build')).toBe('Build');
+    const text = await browser.executeObsidian(async ({ app }) => {
+      const t = document.querySelector('.dr-node-section .dr-node-text');
+      t.value = 'Build it';
+      t.dispatchEvent(new Event('change'));
+      const view = app.workspace.getLeavesOfType('design-redux-mindmap')[0].view;
+      view.flushSave();
+      await new Promise((r) => setTimeout(r, 300));
+      return app.vault.read(app.vault.getAbstractFileByPath('Panel map.md'));
+    });
+    expect(text).toContain('\t- Build it\n');
+    await browser.keys('Escape');
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
+      await new Promise((r) => setTimeout(r, 600));
+      const f = app.vault.getAbstractFileByPath('Panel map.md');
+      if (f) await app.vault.delete(f);
+    });
+  });
+
   it('keeps a .mindmap file’s links to a note as the note is renamed', async function () {
     const text = await browser.executeObsidian(async ({ app }) => {
       for (const p of ['Rename target.md', 'Renamed target.md', 'Links.mindmap']) {

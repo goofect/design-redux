@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1563,6 +1563,41 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.notesChanged();
     assert.deepStrictEqual(facts(), []);
     plugin.settings.mindmapLinkedCards = true;
+  });
+
+  await t('the selected node in the note panel: its text to edit, attributes to take off, what points to it, a note made of it; told when the pick changes', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Launch ^root\n\t- Research %%{"status":"Doing"}%%\n\t- Build ^b1\n');
+    const [research, build] = view.model.root.children;
+    view.model.relations.push({ from: build.id, to: research.id, label: 'needs', attrs: {} });
+    const told = [];
+    view.app = { workspace: { trigger: (name, file) => told.push([name, file && file.path]), getLeaf: () => ({ openFile: () => {} }) }, metadataCache: {}, vault: {} };
+    view.select(research.id);
+    assert.deepStrictEqual(told.pop(), ['design-redux:panel-changed', 'Plan.md'], 'the panel told the pick changed');
+    const panel = { plugin: Object.assign({}, plugin, { app: view.app }), leaf: { view } };
+    const section = new R.NodeSection(panel);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    section.renderLabel = function (t) { this.containerEl.createDiv({ cls: 'dr-section-label', text: t }); };
+    section.mount(host, view.file);
+    assert.strictEqual(host.querySelector('.dr-node-text').value, 'Research');
+    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-node-attr')).map((r) => r.textContent), ['statusDoing']);
+    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-mention-row .dr-mention-title')).map((e) => e.textContent), ['Launch', 'Build'], 'the node above, and the relation into it');
+    assert.ok(host.querySelector('.dr-node-make'), 'a note can be made of it');
+    const text = host.querySelector('.dr-node-text');
+    text.value = 'Research\nWho buys, and why.';
+    text.dispatchEvent(new window.Event('change'));
+    assert.strictEqual(research.text, 'Research\nWho buys, and why.');
+    host.querySelector('.dr-node-attr-off').click();
+    assert.ok(!('status' in research.attrs), 'taken off');
+    // Notes linking to the node by its ^id: of those linking to the map.
+    const other = new TFile('Notes/Week.md');
+    const cache = { getFileCache: (f) => (f === other ? { links: [{ link: 'Plan#^b1' }, { link: 'Plan' }] } : null) };
+    const linkers = R.linkingNotes({ metadataCache: cache }, { libraryIndex: { incoming: () => [other] } }, view.file, build);
+    assert.deepStrictEqual(linkers.map((f) => f.path), ['Notes/Week.md']);
+    assert.deepStrictEqual(R.linkingNotes({ metadataCache: cache }, { libraryIndex: { incoming: () => [other] } }, view.file, view.model.root), [], 'a link to the map, but not to this node');
+    assert.deepStrictEqual(R.linkingNotes({}, {}, view.file, research), [], 'a node with no ^id: nothing can link to it');
+    section.destroy();
+    host.remove();
   });
 
   console.log(`\n${passed} passed`);

@@ -95,6 +95,11 @@ export function fillNoteMeta(plugin, meta, file) {
   );
 }
 
+/** Whether a view says what the panel is about itself: a mind map does. */
+function hostsPanel(view) {
+  return !!view && typeof view.panelTarget === 'function';
+}
+
 export class PropertiesPanel extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -269,8 +274,15 @@ export class PropertiesPanel extends Feature {
         // active-leaf-change does not cover.
         if (!this.isOpen() || !file || file === this.file) return;
         const leaf = this.app.workspace.activeLeaf;
-        if (leaf && leaf.view instanceof MarkdownView) this.follow(leaf, true);
+        if (leaf && (leaf.view instanceof MarkdownView || hostsPanel(leaf.view))) this.follow(leaf, true);
         else this.close();
+      })
+    );
+    // A view hosting the panel asks for it, against its own button; and says when what it shows changed.
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
+    this.plugin.registerEvent(
+      this.app.workspace.on('design-redux:panel-changed', (file) => {
+        if (this.isOpen() && file === this.file) this.sections.forEach((sec) => sec.refresh(file));
       })
     );
     this.plugin.registerEvent(
@@ -388,6 +400,8 @@ export class PropertiesPanel extends Feature {
   targetOf(leaf) {
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
     if (view instanceof MarkdownView) return view.file ? { file: view.file } : null;
+    // A view of a note's own kind — a mind map — says what the panel is about.
+    if (hostsPanel(view)) return view.panelTarget();
     const canvas = view && view.canvas;
     if (!canvas) return null;
     const picked = pickedOnCanvas(canvas).filter((n) => n && cardElement(n) && typeof n.getData === 'function');
@@ -549,12 +563,13 @@ export class PropertiesPanel extends Feature {
     if (!this.isOpen()) return;
     if (!force && this.leaf === leaf) return;
 
-    if (!leaf || !(leaf.view instanceof MarkdownView) || !leaf.view.file) {
+    const target = leaf && hostsPanel(leaf.view) ? leaf.view.panelTarget() : null;
+    if (!leaf || !(leaf.view instanceof MarkdownView || (target && target.file)) || !leaf.view.file) {
       this.close();
       return;
     }
 
-    this.file = leaf.view.file;
+    this.file = target && target.file ? target.file : leaf.view.file;
     this.leaf = leaf;
     this.mount();
 

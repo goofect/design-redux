@@ -103,6 +103,7 @@ export class MindMapView extends TextFileView {
     this.tool('Fold every branch', 'chevrons-down-up', () => this.foldAll(true));
     this.tool('Unfold everything', 'chevrons-up-down', () => this.foldAll(false));
     this.tool('Outline', 'list-tree', () => this.toggleOutline());
+    if (typeof this.togglePanel === 'function') this.panelTool = this.tool('Node and note panel', 'info', () => this.togglePanel(this.panelTool));
     if (typeof this.chooseShowAs === 'function') this.showAsTool = this.tool('Show as…', 'layout-list', (evt) => this.chooseShowAs(evt));
     if (typeof this.addAction === 'function') this.addAction('file-text', 'Open as text', () => this.feature && this.feature.openAsText(this.leaf));
     this.listen();
@@ -139,6 +140,7 @@ export class MindMapView extends TextFileView {
       return;
     }
     if (typeof this.countTasks === 'function') this.countTasks();
+    this.panelDirty = true;
     const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));
     this.scene = layoutScene(this.model, sizeOf, this.mode);
     if (typeof this.glideFrom === 'function') this.glideFrom(glide ? before : null);
@@ -162,6 +164,12 @@ export class MindMapView extends TextFileView {
     if (!this.renderer) return;
     this.showFailure();
     if (!this.model || !this.scene || !this.camera) return;
+    // The note panel told, when the node it shows — or the map — changed.
+    if (typeof this.panelChanged === 'function' && (this.selected !== this.panelShown || this.panelDirty)) {
+      this.panelShown = this.selected;
+      this.panelDirty = false;
+      this.panelChanged();
+    }
     // Shown another way — an outline, a board, a timeline, a table — drawn so instead.
     if (typeof this.drawAlt === 'function' && this.drawAlt()) return;
     const scene = this.gliding ? this.gliding.scene : this.scene;

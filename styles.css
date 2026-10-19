@@ -10560,3 +10560,19 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* The selected node, in the note panel */
+.dr-node-text {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-size: var(--font-ui-small);
+}
+
+.dr-node-attrs { display: flex; flex-direction: column; gap: 2px; margin: 6px 0; }
+.dr-node-attr { display: flex; align-items: center; gap: 8px; font-size: var(--font-ui-small); }
+.dr-node-attr-key { color: var(--text-muted); min-width: 64px; }
+.dr-node-attr-value { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dr-node-attr-off { flex: none; }
+.dr-node-make { margin-top: 8px; }
+.dr-mention-note { color: var(--text-faint); font-size: var(--font-ui-smaller); margin-left: auto; }

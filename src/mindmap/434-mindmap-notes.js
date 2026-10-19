@@ -30,10 +30,11 @@ class MindMapNotes {
     return cache.getFirstLinkpathDest(link.target, this.file ? this.file.path : '') || null;
   }
 
-  /** The branch written as a note beside the map, and the node a link to it: one step of Undo. */
+  /** The branch — or one node, its details — written as a note beside the map, and the node a link to it: one step of Undo. */
   async branchToNote(id) {
     const n = this.model && nodeById(this.model, id);
-    if (!n || n === this.model.root || !n.children.length || !this.file) return null;
+    if (!n || n === this.model.root || n.virtual || !this.file) return null;
+    const whole = n.children.length > 0;
     const vault = this.app.vault;
     const folder = this.file.parent || null;
     const base = noteNameFrom(nodeLabel(n)) || 'Untitled';
@@ -67,7 +68,7 @@ class MindMapNotes {
     ops.push({ type: 'text', id, text: `[[${linktext}]]` });
     if (now.attrs.fold) ops.push({ type: 'attr', id, key: 'fold', value: undefined });
     this.apply(applyPatch(this.model, ops, [id]));
-    new Notice(`Made “${file.basename}” from the branch.`);
+    new Notice(`Made “${file.basename}” from the ${whole ? 'branch' : 'node'}.`);
     return file;
   }
 
