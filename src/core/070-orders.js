@@ -36,7 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews'];
 
 /* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
 export const MINDMAP_TWINS = [

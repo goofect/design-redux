@@ -16,7 +16,7 @@ import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { optionFor } from '../core/088-property-options.js';
 import { Library } from '../library/130-browse-filters.js';
-import { LinkNotePicker } from '../ui/230-pickers.js';
+import { LinkNotePicker, NamePrompt } from '../ui/230-pickers.js';
 import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
@@ -58,6 +58,17 @@ export function propertyPresentation(key, value, type, settings) {
   };
 }
 
+/** The folder whose own main properties a note takes: the nearest up from it that has some, or null. */
+export function panelViewFolder(settings, file) {
+  const views = (settings && settings.panelFolderViews) || {};
+  for (let f = file && file.parent; f; f = f.parent) {
+    const v = views[f.path || '/'];
+    if (v && typeof v.main === 'string' && v.main.trim()) return f.path || '/';
+    if (!f.path || f.path === '/') break;
+  }
+  return null;
+}
+
 export class PropertiesSection extends PanelSection {
   get cls() {
     return 'dr-properties';
@@ -73,11 +84,17 @@ export class PropertiesSection extends PanelSection {
    * remembered from note to note; groups only where set; each row its
    * value to edit and, when pointed at or focused, its menu.
    */
+  /** Settings as this note's panel reads them: its folder's own main properties, where it has some, in place of the vault's. */
+  viewSettings() {
+    const at = this.file ? panelViewFolder(this.settings, this.file) : null;
+    return at ? Object.assign({}, this.settings, { panelPrimaryProps: this.settings.panelFolderViews[at].main }) : this.settings;
+  }
+
   render() {
     this.dropSuggests();
     const fm = this.frontmatter;
     const keys = Object.keys(fm).filter((k) => k !== 'position');
-    const settings = this.settings;
+    const settings = this.viewSettings();
     const shown = keys.map((k) => propertyPresentation(k, fm[k], this.typeOf(k), settings));
     const collapsed = !!settings.panelPropsCollapsed;
 
@@ -211,6 +228,28 @@ export class PropertiesSection extends PanelSection {
     if (propertyGroups(this.settings).length) {
       const on = this.settings.panelPropertyGroups === 'on';
       menu.addItem((item) => item.setTitle('Group properties').setChecked(on).setSection('view').onClick(() => set('panelPropertyGroups', on ? 'off' : 'on')));
+    }
+    // The main properties kept for the folder the note is in, the folders below taking them too.
+    const folder = this.file && this.file.parent;
+    if (folder) {
+      const path = folder.path || '/';
+      const views = this.settings.panelFolderViews || {};
+      const own = views[path] && views[path].main;
+      const keep = async (main) => {
+        const next = Object.assign({}, views);
+        if (main && main.trim()) next[path] = { main: propNames(main).join(', ') };
+        else delete next[path];
+        this.settings.panelFolderViews = next;
+        await this.plugin.saveData(this.settings);
+        this.redraw();
+      };
+      menu.addItem((item) =>
+        item
+          .setTitle('Main properties for this folder…')
+          .setSection('settings')
+          .onClick(() => new NamePrompt(this.app, `Main properties in ${folder.name || this.app.vault.getName()}`, 'Their names, by commas, in order', keep, { value: this.viewSettings().panelPrimaryProps || '', button: 'Keep', allowEmpty: true }).open())
+      );
+      if (own) menu.addItem((item) => item.setTitle('Main properties as the vault’s').setSection('settings').onClick(() => keep('')));
     }
     if (typeof this.plugin.openSettingsAt === 'function') {
       menu.addItem((item) => item.setTitle('Property settings…').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelPrimaryProps')));

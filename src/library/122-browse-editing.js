@@ -17,6 +17,7 @@ import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
+import { PropertyClipboard } from '../ui/250-property-clipboard.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 /* A shelf's tiles drawn at once, and then a frame at a time. */
@@ -227,6 +228,8 @@ export class BrowseEditing {
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
     button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
+    const clip = this.plugin.feature(PropertyClipboard);
+    if (clip) button('table', 'Copy as table', () => clip.copyTable(this.tickedFiles()));
     button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
     button('x', 'Clear', () => {
       this.ticked().clear();

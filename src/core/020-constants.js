@@ -413,6 +413,8 @@ export const DEFAULTS = {
   propertyInspector: true,
   propertyInlineEdit: false,
   propertyLinks: true,
+  // { folderPath: { main: 'status, due' } } — the note panel's main properties for notes there.
+  panelFolderViews: {},
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.

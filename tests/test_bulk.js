@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker, propertiesTable, parseTable, tablePlan, TablePasteModal, panelViewFolder };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2138,6 +2138,46 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(picker.getItemText(picker.getItems().slice(-1)[0]), 'Create “Theory”');
     picker.inputEl = { value: 'b' };
     assert.ok(!picker.getItems().some((i) => i.create), 'a name taken: nothing to make');
+  });
+
+  await t('a table of notes’ properties out, and one pasted back in: only the cells that differ change, one step of Undo', async () => {
+    const v = makeVault({ 'Law/a.md': note({ status: 'Open', tags: ['x'], year: 2001 }), 'Law/b.md': note({ status: 'Closed' }), 'Law/c.md': note({}) });
+    const { plugin, bulk } = makePlugin(v);
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    const out = R.propertiesTable(['a', 'b'].map((n) => ({ name: n, fm: fmOf(`Law/${n}.md`) })), ['status', 'tags', 'year']);
+    assert.strictEqual(out, 'note\tstatus\ttags\tyear\na\tOpen\tx\t2001\nb\tClosed\t\t\n');
+    const md = R.parseTable('| note | status | year |\n|---|---|---|\n| a | Open | 2002 |\n| Nowhere | x | |\n');
+    assert.deepStrictEqual(md, { keys: ['status', 'year'], rows: [{ name: 'a', cells: { status: 'Open', year: '2002' } }, { name: 'Nowhere', cells: { status: 'x', year: '' } }] });
+    const table = R.parseTable('note\tstatus\ttags\tyear\na\tOpen\tx, y\t2002\nb\tClosed\t\t\nc\tDraft\t\t\nzz\tOpen\t\t\n');
+    const noteOf = (n) => (['a', 'b', 'c'].includes(n) ? { file: v.file(`Law/${n}.md`), fm: fmOf(`Law/${n}.md`) } : null);
+    const plan = R.tablePlan(table, noteOf);
+    assert.deepStrictEqual(plan.changes.map((c) => `${c.name} ${c.key}: ${JSON.stringify(c.to)}`), ['a tags: ["x","y"]', 'a year: 2002', 'c status: "Draft"'], 'a list stays a list, a number a number; what’s the same and what’s blank left alone');
+    assert.deepStrictEqual(plan.missing, ['zz']);
+    const modal = new R.TablePasteModal(plugin, plan);
+    modal.open();
+    assert.strictEqual(modal.contentEl.querySelector('.mod-cta').textContent, 'Change 2 notes');
+    await modal.apply();
+    assert.deepStrictEqual([fmOf('Law/a.md'), fmOf('Law/c.md')], [{ status: 'Open', tags: ['x', 'y'], year: 2002 }, { status: 'Draft' }]);
+    await bulk.undo();
+    assert.deepStrictEqual([fmOf('Law/a.md'), fmOf('Law/c.md')], [{ status: 'Open', tags: ['x'], year: 2001 }, {}]);
+  });
+
+  await t('the note panel’s main properties kept for a folder: the nearest folder up deciding, the vault’s elsewhere', () => {
+    const v = makeVault({ 'Law/Cases/a.md': note({ court: 'High', status: 'Open', year: 1 }), 'Other/b.md': note({ status: 'x' }) });
+    const settings = { panelPrimaryProps: 'status', panelFolderViews: { Law: { main: 'court, year' } } };
+    assert.strictEqual(R.panelViewFolder(settings, v.file('Law/Cases/a.md')), 'Law');
+    assert.strictEqual(R.panelViewFolder(settings, v.file('Other/b.md')), null);
+    const { plugin } = makePlugin(v);
+    Object.assign(plugin.settings, settings);
+    const popupEl = document.body.appendChild(document.createElement('div'));
+    const section = new R.PropertiesSection({ plugin, popupEl });
+    section.mount(popupEl, v.file('Law/Cases/a.md'));
+    const main = () => Array.from(popupEl.querySelectorAll('.dr-row:not(.is-secondary)')).map((r) => r.dataset.key);
+    assert.deepStrictEqual(main(), ['court', 'year']);
+    section.destroy();
+    section.mount(popupEl, v.file('Other/b.md'));
+    assert.deepStrictEqual(main(), ['status']);
+    section.destroy();
   });
 
   console.log(`\n${passed} passed`);

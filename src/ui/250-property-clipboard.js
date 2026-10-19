@@ -9,7 +9,8 @@
 /* way, as a template.                                                 */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownView, Modal, Notice } from 'obsidian';
+import { MarkdownView, Modal, Notice, TFile } from 'obsidian';
+import { pageFolder } from '../core/030-helpers-art.js';
 import { plainValue, valueList } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
 import { ComparePicker, NamePrompt } from './230-pickers.js';
@@ -206,6 +207,132 @@ export class PropertyPasteModal extends Modal {
   }
 }
 
+/* -- tables: notes' properties out to a spreadsheet, and back in ------- */
+
+/** A cell as a table shows it: a list by commas, nothing as blank. */
+function cellText(v) {
+  if (v === null || v === undefined) return '';
+  return Array.isArray(v) ? v.map((x) => String(x)).join(', ') : String(v);
+}
+
+/** Notes' properties as a table to paste into a spreadsheet: the note, then a column a property; tab-separated. `rows` is [{ name, fm }]. */
+export function propertiesTable(rows, keys) {
+  const clean = (t) => String(t).replace(/[\t\n\r]+/g, ' ');
+  const lines = [['note'].concat(keys).map(clean).join('\t')];
+  rows.forEach(({ name, fm }) => {
+    lines.push([name].concat(keys.map((k) => {
+      const have = Object.keys(fm || {}).find((x) => x.toLowerCase() === k.toLowerCase());
+      return cellText(have === undefined ? null : fm[have]);
+    })).map(clean).join('\t'));
+  });
+  return lines.join('\n') + '\n';
+}
+
+/** A pasted table — tab-separated, or written as Markdown — as { keys, rows: [{ name, cells }] }: the first column names the note. */
+export function parseTable(text) {
+  let lines = String(text || '').split(/\r?\n/).filter((l) => l.trim());
+  let split = (l) => l.split('\t');
+  if (lines.length && /^\s*\|/.test(lines[0])) {
+    lines = lines.filter((l) => !/^\s*\|?\s*:?-{2,}/.test(l));
+    split = (l) => l.trim().replace(/^\||\|$/g, '').split('|');
+  }
+  if (lines.length < 2) return { keys: [], rows: [] };
+  const head = split(lines[0]).map((c) => c.trim());
+  const keys = head.slice(1).filter(Boolean);
+  const rows = lines.slice(1).map((l) => {
+    const c = split(l).map((x) => x.trim());
+    const cells = {};
+    head.slice(1).forEach((k, i) => k && (cells[k] = c[i + 1] === undefined ? '' : c[i + 1]));
+    return { name: c[0], cells };
+  }).filter((r) => r.name);
+  return { keys, rows };
+}
+
+/** A cell as the note would keep it, taking the shape of what's there: a list, a number, a checkbox, or text. */
+function tableCellValue(text, now) {
+  if (Array.isArray(now)) return text.split(',').map((x) => x.trim()).filter(Boolean);
+  if (typeof now === 'number' && text !== '' && Number.isFinite(Number(text))) return Number(text);
+  if (typeof now === 'boolean' && /^(true|false)$/i.test(text)) return /^true$/i.test(text);
+  return text;
+}
+
+/**
+ * What a pasted table changes: { changes: [{ name, file, key, from, to }],
+ * missing: [names] } — only the cells that differ from the note; a blank
+ * cell leaves the property as it is. `noteOf(name)` gives { file, fm } or null.
+ */
+export function tablePlan(table, noteOf) {
+  const changes = [];
+  const missing = [];
+  table.rows.forEach((row) => {
+    const note = noteOf(row.name);
+    if (!note) return missing.push(row.name);
+    table.keys.forEach((key) => {
+      const text = row.cells[key];
+      if (text === undefined || text === '') return;
+      const have = Object.keys(note.fm || {}).find((x) => x.toLowerCase() === key.toLowerCase());
+      const from = have === undefined ? undefined : note.fm[have];
+      const to = tableCellValue(text, from);
+      if (JSON.stringify(from === undefined ? null : from) === JSON.stringify(to)) return;
+      changes.push({ name: row.name, file: note.file, key: have || key, from, to });
+    });
+  });
+  return { changes, missing };
+}
+
+/** What a pasted table would do, shown first: each note's changes, any names matching no note; then one step of Undo for them all. */
+export class TablePasteModal extends Modal {
+  constructor(plugin, plan) {
+    super(plugin.app);
+    this.plugin = plugin;
+    this.plan = plan;
+  }
+
+  onOpen() {
+    this.titleEl.setText('Update notes from the table');
+    const { changes, missing } = this.plan;
+    const files = Array.from(new Set(changes.map((c) => c.file)));
+    if (!changes.length) this.contentEl.createDiv({ cls: 'dr-empty', text: 'Nothing in the table differs from the notes.' });
+    const list = this.contentEl.createDiv({ cls: 'dr-rule-preview' });
+    changes.slice(0, 100).forEach((c) => {
+      const row = list.createDiv({ cls: 'dr-rule-preview-row' });
+      row.createSpan({ cls: 'dr-rule-preview-name', text: c.name });
+      row.createSpan({ cls: 'dr-rule-preview-set', text: `${c.key}: ${cellText(c.from) || '—'} → ${cellText(c.to)}` });
+    });
+    if (changes.length > 100) list.createDiv({ cls: 'dr-bulk-more', text: `and ${changes.length - 100} more` });
+    if (missing.length) this.contentEl.createDiv({ cls: 'dr-rules-state', text: `No note is named ${missing.slice(0, 5).map((n) => `“${n}”`).join(', ')}${missing.length > 5 ? ` and ${missing.length - 5} more` : ''}: left out.` });
+    const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
+    if (changes.length) {
+      buttons.createEl('button', { cls: 'mod-cta', text: `Change ${files.length === 1 ? '1 note' : `${files.length} notes`}` }).addEventListener('click', async () => {
+        this.close();
+        await this.apply();
+      });
+    }
+    buttons.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
+  }
+
+  /** Every change written, a note at a time: one step of Undo for them all. */
+  apply() {
+    const bulk = this.plugin.bulk;
+    const byFile = new Map();
+    this.plan.changes.forEach((c) => byFile.set(c.file, (byFile.get(c.file) || []).concat([c])));
+    return bulk.run('Updating from the table', async (touch, step) => {
+      let done = 0;
+      for (const [file, list] of byFile) {
+        await touch(file, () => this.app.fileManager.processFrontMatter(file, (fm) => list.forEach((c) => (fm[c.key] = JSON.parse(JSON.stringify(c.to))))));
+        step(++done, byFile.size);
+      }
+    }).then((record) => {
+      if (record && typeof this.plugin.offerUndo === 'function' && record.files.length) this.plugin.offerUndo(`Updated ${record.files.length === 1 ? '1 note' : `${record.files.length} notes`} from the table.`, () => bulk.undo());
+      return record;
+    });
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
 export class PropertyClipboard extends Feature {
   actions() {
     const sets = () => Object.keys(this.settings.propertySets || {});
@@ -224,8 +351,53 @@ export class PropertyClipboard extends Feature {
       { id: 'paste-properties', name: 'Paste properties', on: 'note', menu: false, run: (ctx) => this.paste(ctx.file) },
       { id: 'property-set-save', name: 'Keep this note’s properties as a set…', icon: 'bookmark-plus', on: 'note', menu: false, when: (ctx) => this.keysOf(ctx.file).length > 0, run: (ctx) => this.saveSet(ctx.file) },
       { id: 'property-set-apply', name: 'Apply a property set…', icon: 'stamp', on: 'note', menu: false, when: () => sets().length > 0, run: (ctx) => this.chooseSet(ctx.file) },
+      { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', icon: 'table', menu: false, when: () => !!pageFolder(this.app), run: () => this.copyTable(pageFolder(this.app).children.filter((f) => f instanceof TFile && f.extension === 'md')) },
+      { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', icon: 'table-properties', menu: false, run: () => this.pasteTable() },
       { id: 'property-set-remove', name: 'Remove a property set…', icon: 'bookmark-minus', menu: false, when: () => sets().length > 0, run: () => this.removeSet() },
     ];
+  }
+
+  /** Notes' properties onto the clipboard as a table: every property any of them has, in the order first met. */
+  async copyTable(files) {
+    const rows = files.map((file) => ({ name: file.basename, fm: this.plugin.notes.props(file) }));
+    const keys = [];
+    const seen = new Set();
+    rows.forEach(({ fm }) => Object.keys(fm).forEach((k) => k !== 'position' && !seen.has(k.toLowerCase()) && (seen.add(k.toLowerCase()), keys.push(k))));
+    const text = propertiesTable(rows, keys);
+    try {
+      await navigator.clipboard.writeText(text);
+      new Notice(`The properties of ${rows.length === 1 ? '1 note' : `${rows.length} notes`} copied as a table.`);
+    } catch (err) {
+      new Notice('Could not copy to the clipboard.');
+    }
+    return text;
+  }
+
+  /** A table from the clipboard, matched to notes by name — or path — and shown before anything's changed. */
+  async pasteTable(text) {
+    let got = text;
+    if (got === undefined) {
+      try {
+        got = await navigator.clipboard.readText();
+      } catch (err) {
+        new Notice('Could not read the clipboard.');
+        return null;
+      }
+    }
+    const table = parseTable(got);
+    if (!table.rows.length || !table.keys.length) {
+      new Notice('The clipboard holds no table: a row of property names under “note”, then a row a note.');
+      return null;
+    }
+    const notes = this.app.vault.getMarkdownFiles();
+    const noteOf = (name) => {
+      const want = String(name).replace(/\.md$/i, '').toLowerCase();
+      const found = notes.filter((f) => f.path.replace(/\.md$/i, '').toLowerCase() === want || f.basename.toLowerCase() === want);
+      return found.length === 1 ? { file: found[0], fm: this.plugin.notes.props(found[0]) } : null;
+    };
+    const modal = new TablePasteModal(this.plugin, tablePlan(table, noteOf));
+    modal.open();
+    return modal;
   }
 
   activeEditor() {
