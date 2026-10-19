@@ -88,6 +88,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapNodePanel', showIf: 'mindmaps', name: 'The node in the note panel', desc: 'The map’s bar opens the note panel, with a section for the node picked: its text and attributes, what points to it, and Make a note from this node.' },
       { key: 'mindmapFilters', showIf: 'mindmaps', name: 'Filter, levels, one branch alone', desc: 'Filter in the map’s bar dims all but the nodes with some words, a tag, a status, a colour or down to a depth. Show levels shows so many levels; a branch can be shown alone, the nodes above it at the top to step back.' },
       { key: 'mindmapEmbeds', showIf: 'mindmaps', name: 'Maps in notes', desc: 'A mindmap code block — a list in it — is drawn as a map. ![[Map]] of a map note draws it in reading view; of a .mindmap file, in either view. Read-only; a click opens the map.' },
+      { key: 'mindmapTemplateFolder', type: 'text', showIf: 'mindmaps', name: 'Folder of map templates', desc: 'Maps in this folder are offered by New mind map from template, beside the meeting, project, argument and study maps built in. {{title}} and {{date}} in a template are filled in.', placeholder: 'Templates/Maps' },
       { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
@@ -111,6 +112,8 @@ export class MindMaps extends Feature {
       return leaf && leaf.view instanceof MindMapView ? leaf : null;
     };
     return [
+      { id: 'new-mind-map-from-template', name: 'New mind map from template…', icon: 'layout-template', menu: false, when: () => this.enabled, run: () => this.newFromTemplate() },
+      { id: 'mindmap-save-as-template', name: 'Mind map: save this map as a template', icon: 'copy-plus', on: 'mindmap', menu: false, when: (ctx) => !!this.templateFolder() && !!ctx.file, run: (ctx) => this.saveAsTemplate(ctx.view) },
       { id: 'new-mind-map', name: 'New mind map', icon: 'network', menu: false, when: () => this.enabled, run: () => this.newMap() },
       { id: 'make-note-mind-map', name: 'Make this note a mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && ctx.file.extension === 'md' && !isMindMapNote(this.app, ctx.file), run: (ctx) => this.makeMap(ctx.file) },
       { id: 'open-mind-map-as-text', name: 'Open as text', icon: 'file-text', menu: false, when: () => this.enabled && !!mapView() && mapView().view.file.extension === 'md', run: () => this.openAsText(mapView()) },

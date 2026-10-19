@@ -60,6 +60,7 @@ class MarkdownRenderChild extends Component {
 }
 const obsidian = new Proxy({
   Component, ItemView, TextFileView, TFile, MarkdownRenderChild,
+  normalizePath: (p) => String(p).replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, ''),
   setIcon: (el, name) => { el.dataset.icon = name; },
   Notice: class {},
   Platform: { isMobile: false },
@@ -70,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1737,6 +1738,44 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     await settle();
     assert.strictEqual(ship.children.slice(-1)[0].text, 'Launch day');
     assert.deepStrictEqual(ship.children.slice(-1)[0].children.map((n) => n.text), ['Press']);
+  });
+
+  await t('templates: the built-in four read as maps; {{title}} and {{date}} filled; a map made from one, and one saved as a template', async () => {
+    for (const tpl of R.BUILT_IN_TEMPLATES) {
+      const filled = R.fillTemplate(tpl.text, 'Launch', '2026-10-19');
+      assert.ok(!/\{\{/.test(filled), `${tpl.name}: no placeholder left`);
+      const m = R.parseOutline(filled).model;
+      assert.ok(m.root && !m.root.virtual && m.root.text.startsWith('Launch'), `${tpl.name}: a map with its title at the root`);
+    }
+    assert.strictEqual(R.parseOutline(R.fillTemplate(R.BUILT_IN_TEMPLATES[2].text, 'X', '')).model.root.attrs.role, 'claim', 'the argument’s parts set');
+    const created = [];
+    const opened = [];
+    const folder = Object.assign(new obsidian.TFolder(), { path: 'Templates/Maps', children: [] });
+    const mine = new TFile('Templates/Maps/Retro.md');
+    folder.children.push(mine);
+    const p = Object.assign({}, plugin, {
+      settings: Object.assign({}, plugin.settings, { mindmapTemplateFolder: 'Templates/Maps' }),
+      freeChildPath: (fo, base, ext) => `${fo.path ? fo.path + '/' : ''}${base}.${ext}`,
+      app: {
+        vault: {
+          getAbstractFileByPath: (path) => (path === 'Templates/Maps' ? folder : null),
+          getRoot: () => ({ path: '' }),
+          cachedRead: async () => '---\nmindmap: true\n---\n- {{title}} on {{date}}\n\t- Went well\n',
+          create: async (path, text) => { created.push([path, text]); return new TFile(path); },
+        },
+        metadataCache: { getFileCache: (f) => (f === mine ? { frontmatter: { mindmap: true } } : null) },
+        workspace: { getActiveFile: () => null, getLeaf: () => ({ setViewState: async (st) => opened.push(st) }) },
+      },
+    });
+    const maps = new R.MindMaps(p);
+    assert.deepStrictEqual(maps.templateFiles().map((f) => f.path), ['Templates/Maps/Retro.md']);
+    await maps.makeFromTemplate({ file: mine, label: 'Retro' }, 'Sprint 9', null);
+    assert.strictEqual(created[0][0], 'Sprint 9.md');
+    assert.ok(created[0][1].includes(`- Sprint 9 on ${R.dayKey()}\n`), created[0][1]);
+    // The open map saved as a template: its root's words as {{title}}.
+    const view = await open('---\nmindmap: true\n---\n- Weekly review\n\t- Wins\n', 'Review.md');
+    await maps.saveAsTemplate(view);
+    assert.deepStrictEqual(created[1], ['Templates/Maps/Review.md', '---\nmindmap: true\n---\n- {{title}}\n\t- Wins\n']);
   });
 
   console.log(`\n${passed} passed`);
