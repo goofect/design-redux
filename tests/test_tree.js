@@ -522,6 +522,31 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.notStrictEqual(copy.id, 'h1');
   });
 
+  await t('OPML round-trips the fixture maps — words, details, attributes, shape; FreeMind and a note’s headings read as maps', () => {
+    const { mapText } = require('./mapgen');
+    const shape = (n) => ({ text: n.text, attrs: JSON.stringify(R.orderedAttrs(n.attrs)), kids: n.children.map(shape) });
+    const fixtures = [
+      '- Launch plan ^root\n\t- Research\n\t\t- [[Competitor notes]]\n\t\t- Interview script\n\t- Build\n\t\t- API & UI <v2>\n\t- Ship\n',
+      '- [ ] Book hall %%{"status":"Doing","due":"2026-10-20"}%%\n\t  Ring on Monday, "early".\n\t- Chairs %%{"color":"1","fold":1}%%\n\t\t- Forty\n',
+      '- One\n- Two\n- Three\n',
+      mapText(300, 5),
+    ];
+    fixtures.forEach((text, k) => {
+      const m = R.parseOutline(text, { title: 'Fixture' }).model;
+      const back = R.mapFromOpml(R.opmlFromMap(m, 'Fixture'), 'Fixture');
+      assert.deepStrictEqual(shape(back.root), shape(m.root), `fixture ${k}`);
+      assert.strictEqual(!!back.root.virtual, !!m.root.virtual, `fixture ${k}: a root of its own as before`);
+    });
+    // FreeMind: nodes, a note as details, a fold; entities read.
+    const mm = '<map version="1.0.1"><!-- made by FreeMind --><node TEXT="Trip &amp; plans"><node TEXT="Book" FOLDED="true"><node TEXT="Train"/><richcontent TYPE="NOTE"><html><body><p>Before Friday</p></body></html></richcontent></node><node><richcontent TYPE="NODE"><html><body><p>Pack</p></body></html></richcontent></node></node></map>';
+    const fm = R.mapFromFreeMind(mm, 'Trip');
+    assert.deepStrictEqual(shape(fm.root), { text: 'Trip & plans', attrs: '{}', kids: [{ text: 'Book\nBefore Friday', attrs: '{"fold":1}', kids: [{ text: 'Train', attrs: '{}', kids: [] }] }, { text: 'Pack', attrs: '{}', kids: [] }] });
+    // Headings: several at the top, under the note's name.
+    const hd = R.mapFromHeadings('# Intro\n\nText.\n\n## Why\n\n# Method\n', 'Paper');
+    assert.deepStrictEqual([hd.root.virtual, hd.root.text, hd.root.children.map((n) => n.text), hd.root.children[0].children.map((n) => n.text)], [true, 'Paper', ['Intro', 'Method'], ['Why']]);
+    assert.throws(() => R.mapFromOpml('<html></html>'), /OPML/);
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());

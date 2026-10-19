@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1776,6 +1776,51 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     const view = await open('---\nmindmap: true\n---\n- Weekly review\n\t- Wins\n', 'Review.md');
     await maps.saveAsTemplate(view);
     assert.deepStrictEqual(created[1], ['Templates/Maps/Review.md', '---\nmindmap: true\n---\n- {{title}}\n\t- Wins\n']);
+  });
+
+  await t('import and export: an OPML or FreeMind file made a map beside it; the open map written as OPML or an SVG picture; a PDF built around a picture', async () => {
+    const created = [];
+    const files = { 'In/Plan.opml': '<?xml version="1.0"?><opml version="2.0"><head><title>Plan</title></head><body><outline text="Plan"><outline text="Step one" _note="Soon"/></outline></body></opml>', 'In/Bad.mm': '<html/>' };
+    const p = Object.assign({}, plugin, {
+      freeChildPath: (fo, base, ext) => `${fo && fo.path ? fo.path + '/' : ''}${base}.${ext}`,
+      app: {
+        vault: {
+          getFiles: () => Object.keys(files).map((path) => Object.assign(new TFile(path), { parent: { path: 'In' } })),
+          getRoot: () => ({ path: '' }),
+          cachedRead: async (f) => files[f.path],
+          create: async (path, text) => { created.push([path, text]); return new TFile(path); },
+        },
+        metadataCache: { getFileCache: () => null },
+        workspace: { getActiveFile: () => null, getLeaf: () => ({ setViewState: async () => {} }) },
+      },
+    });
+    const maps = new R.MindMaps(p);
+    const [opml, bad] = p.app.vault.getFiles();
+    await maps.importFile(opml);
+    assert.strictEqual(created[0][0], 'In/Plan.md');
+    assert.ok(created[0][1].startsWith('---\nmindmap: true\n---\n- Plan\n\t- Step one\n'), created[0][1]);
+    assert.strictEqual(await maps.importFile(bad), null, 'not a FreeMind map: nothing made');
+    // Export: OPML and SVG beside the open map.
+    const view = await open('---\nmindmap: true\n---\n- Garden %%{"color":"4"}%%\n\t- Beds & paths\n\t- Pond\n', 'Garden.md');
+    view.file.parent = { path: 'Maps' };
+    await maps.exportAs(view, 'opml');
+    assert.strictEqual(created[1][0], 'Maps/Garden.opml');
+    assert.ok(created[1][1].includes('<outline text="Beds &amp; paths"/>'));
+    await maps.exportAs(view, 'svg');
+    assert.strictEqual(created[2][0], 'Maps/Garden.svg');
+    const svg = created[2][1];
+    assert.strictEqual((svg.match(/<rect x=/g) || []).length, 3, 'a box for each node');
+    assert.strictEqual((svg.match(/<path /g) || []).length, 2, 'an edge for each branch');
+    assert.ok(svg.includes('>Beds &amp; paths</text>') && svg.includes('stroke="#08b94e"'), 'the words, and the colour');
+    // The PDF: its offsets where its table says.
+    const jpeg = new Uint8Array([0xff, 0xd8, 1, 2, 3, 0xff, 0xd9]);
+    const pdf = new TextDecoder('latin1').decode(R.pdfFromJpeg(jpeg, 200, 100));
+    assert.ok(pdf.startsWith('%PDF-1.4') && pdf.trimEnd().endsWith('%%EOF'));
+    assert.ok(pdf.includes('/MediaBox [0 0 150 75]') && pdf.includes('/Width 200 /Height 100'));
+    const table = /xref\n0 6\n0000000000 65535 f \n((?:\d{10} 00000 n \n){5})/.exec(pdf)[1].trim().split('\n').map((l) => Number(l.slice(0, 10)));
+    table.forEach((at, k) => assert.ok(pdf.slice(at).startsWith(`${k + 1} 0 obj`), `object ${k + 1} where the table says`));
+    const start = Number(/startxref\n(\d+)/.exec(pdf)[1]);
+    assert.ok(pdf.slice(start).startsWith('xref'));
   });
 
   console.log(`\n${passed} passed`);

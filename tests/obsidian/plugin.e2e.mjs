@@ -1241,6 +1241,40 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('exports a mind map as a PNG and a PDF beside it', async function () {
+    const out = await browser.executeObsidian(async ({ app, plugins }) => {
+      for (const p of ['Export map.md', 'Export map.png', 'Export map.pdf']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      const file = await app.vault.create('Export map.md', '---\nmindmap: true\n---\n- Garden\n\t- Beds\n\t- Pond\n');
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.setViewState({ type: 'design-redux-mindmap', state: { file: file.path }, active: true });
+      const end = Date.now() + 5000;
+      while (!(leaf.view.model && leaf.view.renderer) && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
+      const maps = plugins.designRedux.features.find((f) => f.constructor.name === 'MindMaps');
+      await maps.exportAs(leaf.view, 'png');
+      await maps.exportAs(leaf.view, 'pdf');
+      const head = async (p) => {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (!f) return null;
+        const bytes = new Uint8Array(await app.vault.readBinary(f));
+        return { start: Array.from(bytes.slice(0, 4)), size: bytes.length };
+      };
+      const result = { png: await head('Export map.png'), pdf: await head('Export map.pdf') };
+      leaf.detach();
+      for (const p of ['Export map.md', 'Export map.png', 'Export map.pdf']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      return result;
+    });
+    expect(out.png.start).toEqual([0x89, 0x50, 0x4e, 0x47]);
+    expect(out.png.size > 1000).toBe(true);
+    expect(out.pdf.start).toEqual([0x25, 0x50, 0x44, 0x46]);
+    expect(out.pdf.size > 1000).toBe(true);
+  });
+
   it('keeps a .mindmap file’s links to a note as the note is renamed', async function () {
     const text = await browser.executeObsidian(async ({ app }) => {
       for (const p of ['Rename target.md', 'Renamed target.md', 'Links.mindmap']) {
