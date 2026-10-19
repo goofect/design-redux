@@ -12,7 +12,7 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { highlightsIn, passageHash } from '../core/047-helpers-text.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { actionsOn, addActionEntries } from '../core/078-actions.js';
+import { actionsOn, addActionItems } from '../core/078-actions.js';
 import { addTextCard, cardBox, liveCards, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { DAY, dueNotes, nextDue, sessionSummary, startOfDay, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
@@ -126,7 +126,7 @@ export class Study extends Feature {
     this.plugin.registerEvent(this.app.vault.on('delete', (file) => this.follow((s) => s.followDelete(file))));
     this.plugin.registerEvent(
       ws.on('file-menu', (menu, target) => {
-        if (target instanceof TFolder && this.enabled) addActionEntries(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, 'action');
+        if (target instanceof TFolder && this.enabled) addActionItems(menu, actionsOn(this.actions(), 'album'), { folder: target, from: 'menu' }, 'Study', 'graduation-cap');
       })
     );
     this.plugin.register(() => this.store.flush());

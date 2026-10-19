@@ -13,7 +13,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Platform } from 'obsidian';
-import { actionCommands, actionContext } from './078-actions.js';
+import { actionCommands, actionContext, featurePlace } from './078-actions.js';
 
 export class Feature {
   constructor(plugin) {
@@ -50,7 +50,7 @@ export class Feature {
 
   /** [{ id, name, check?, run }] — check gates palette visibility. Its actions, by default. */
   commands() {
-    return actionCommands(this.actions(), (a) => actionContext(this.app, a));
+    return actionCommands(this.actions(), (a) => actionContext(this.app, a), featurePlace(this));
   }
 
   /** Rows for the settings tab, in order. */

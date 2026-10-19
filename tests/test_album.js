@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2798,6 +2798,26 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), ['knowledge-check', 'knowledge-check-note']);
     plugin.settings.knowledgeCheck = false;
     assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), []);
+  });
+
+  await t('actions: a place prefixes the palette name, never the id; a home says which surface shows it beyond the palette', () => {
+    assert.strictEqual(R.placedName('Mark to revisit', 'Note'), 'Note: Mark to revisit');
+    assert.strictEqual(R.placedName('Note: Mark', 'Note'), 'Note: Mark', 'not twice');
+    assert.strictEqual(R.placedName('Mind map: fold the branch', 'Maps'), 'Maps: fold the branch');
+    assert.strictEqual(R.placedName('Anything', null), 'Anything');
+    const cmds = R.actionCommands([{ id: 'x', name: 'Do x', run() {} }, { id: 'y', name: 'Do y', place: 'Tools', run() {} }], () => ({}), 'Library');
+    assert.deepStrictEqual(cmds.map((c) => [c.id, c.name]), [['x', 'Library: Do x'], ['y', 'Tools: Do y']]);
+    assert.strictEqual(R.featurePlace(new R.Knowledge({ settings: {}, app: {} })), 'Note');
+    const btn = document.createElement('div');
+    btn.createSpan = (o) => { const e = document.createElement('span'); if (o.cls) e.className = o.cls; if (o.text) e.textContent = o.text; btn.appendChild(e); return e; };
+    R.iconWord(btn, 'clock', 'Length');
+    assert.strictEqual(btn.getAttribute('aria-label'), 'Length', 'the word is the tooltip');
+    assert.strictEqual(btn.querySelector('.dr-icon-label').textContent, 'Length', 'and a span the setting can drop');
+    assert.ok(btn.querySelector('.dr-icon-glyph'));
+    const acts = [{ id: 'a' }, { id: 'b', menu: false }, { id: 'c', home: 'strip' }, { id: 'd', home: 'panel' }];
+    assert.deepStrictEqual(acts.map((a) => R.homeOf(a)), ['menu', 'palette', 'strip', 'panel']);
+    assert.deepStrictEqual(R.menuActions(acts, {}).map((a) => a.id), ['a'], 'menus show what lives on menus');
+    assert.deepStrictEqual(R.menuActions(acts, {}, 'strip').map((a) => a.id), ['c']);
   });
 
   await t('appearance: density and the look as classes on the page, canvas spacing as a scale; a command for each; gone when unloaded', async () => {

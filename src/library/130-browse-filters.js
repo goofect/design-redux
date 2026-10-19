@@ -354,6 +354,7 @@ export class Library extends Feature {
       {
         id: 'open-library',
         name: 'Open library',
+        icon: 'library',
         when: () => this.enabled,
         run: () => this.reveal(),
       },
@@ -379,18 +380,21 @@ export class Library extends Feature {
       {
         id: 'go-back',
         name: 'Go back',
+        icon: 'arrow-left',
         when: () => canStep(pageLeaf(this.app), 'back'),
         run: () => step(pageLeaf(this.app), 'back'),
       },
       {
         id: 'go-forward',
         name: 'Go forward',
+        icon: 'arrow-right',
         when: () => canStep(pageLeaf(this.app), 'forward'),
         run: () => step(pageLeaf(this.app), 'forward'),
       },
       {
         id: 'new-note-here',
         name: 'New note in the current folder',
+        icon: 'file-plus',
         on: 'album',
         menu: false,
         run: (ctx) => this.plugin.newNote(ctx.folder),
@@ -398,6 +402,7 @@ export class Library extends Feature {
       {
         id: 'new-folder-here',
         name: 'New folder in the current folder',
+        icon: 'folder-plus',
         on: 'album',
         menu: false,
         run: (ctx) => this.plugin.newFolder(ctx.folder),
@@ -405,6 +410,7 @@ export class Library extends Feature {
       {
         id: 'browse-vault',
         name: 'Browse vault as a grid',
+        icon: 'layout-grid',
         when: () => this.enabled,
         run: () => this.browseRoot(),
       },

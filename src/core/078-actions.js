@@ -19,7 +19,11 @@
 /* strip. `menu` is its short name on a menu (a function of ctx when   */
 /* it changes, false to keep it off menus), `menuIcon(ctx)` its icon   */
 /* there when that changes, `checked(ctx)` a tick beside it; `hotkeys` */
-/* and `palette: false` (menus only) as needed.                        */
+/* and `palette: false` (menus only) as needed. `home` is the one     */
+/* surface that shows it beyond the palette — menu (the default; panel,*/
+/* strip or palette when given) — so moving an entry is a one-line     */
+/* change. `place` (library, note, maps, tools: its feature's, unless  */
+/* it says) prefixes its name in the palette; its id never changes.    */
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Menu, TFile } from 'obsidian';
@@ -120,13 +124,33 @@ export function actionItem(item, action, ctx, title) {
   return item.onClick(() => action.run(ctx));
 }
 
+/** The four places the plugin is organised in, by feature: where its commands are found in the palette. */
+export const FEATURE_PLACES = {
+  Library: ['Library', 'SidebarDrop', 'AlbumStructure', 'AlbumRefactor', 'AlbumProperty', 'SmartAlbums', 'LibraryCheck', 'CoverImages', 'CoverDrop'],
+  Note: ['Footnotes', 'Scripts', 'MarkedLists', 'ListKeys', 'QuietLinks', 'NotePage', 'ReadingHistory', 'ReadingOutline', 'Study', 'Knowledge', 'KnowledgeCheck', 'ImageRouter', 'PropertiesPanel', 'PropertyClipboard', 'PropertyDates', 'PropertyRules', 'PropertyHistory', 'PropertySchemas', 'PropertyLinks'],
+  Maps: ['MindMaps'],
+  Tools: ['BulkEditing', 'ContextStrip', 'WorkspaceModes', 'GraphPropertyFilter', 'GraphRoutes', 'Diagnostics', 'OnePage', 'SettingsButton', 'ActionsMenu', 'MenuFilter', 'Appearance'],
+};
+
+/** A feature's place, by its class's name: 'Library', 'Note', 'Maps', 'Tools', or null. */
+export function featurePlace(feature) {
+  const name = feature && feature.constructor && feature.constructor.name;
+  return Object.keys(FEATURE_PLACES).find((place) => FEATURE_PLACES[place].indexOf(name) !== -1) || null;
+}
+
+/** A name in the palette under its place — 'Note: Mark to revisit' — the id it answers to untouched. */
+export function placedName(name, place) {
+  if (!place || name.indexOf(`${place}: `) === 0) return name;
+  return `${place}: ${name.replace(/^Mind map: /, '')}`;
+}
+
 /** Actions as commands: offered while there's something they apply to; run on it. */
-export function actionCommands(actions, context) {
+export function actionCommands(actions, context, place) {
   return actions
     .filter((a) => a.palette !== false)
     .map((a) => ({
       id: a.id,
-      name: a.name,
+      name: placedName(a.name, a.place || place),
       icon: a.icon,
       ...(a.hotkeys ? { hotkeys: a.hotkeys } : {}),
       check: () => {
@@ -147,9 +171,15 @@ export function setMindMapContext(find) {
   mindMapNow = typeof find === 'function' ? find : () => null;
 }
 
-/** The actions that apply here, for a menu. */
-export function menuActions(actions, ctx) {
-  return actions.filter((a) => a.menu !== false && applies(a, ctx));
+/** The one surface an action is shown on beyond the palette: its own `home`, else the menus unless it keeps off them. */
+export function homeOf(action) {
+  return action.home || (action.menu === false ? 'palette' : 'menu');
+}
+
+/** The actions that apply here, for a menu (or another surface, by name). */
+export function menuActions(actions, ctx, surface) {
+  const home = surface || 'menu';
+  return actions.filter((a) => homeOf(a) === home && applies(a, ctx));
 }
 
 /** The actions that apply, as one group on a menu, each by its short name. */

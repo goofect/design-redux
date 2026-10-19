@@ -340,15 +340,16 @@ export class PropertyClipboard extends Feature {
       {
         id: 'sort-properties',
         name: 'Sort properties alphabetically',
+        icon: 'arrow-down-a-z',
         when: () => {
           const editor = this.activeEditor();
           return !!(editor && typeof editor.sortProperties === 'function');
         },
         run: () => this.activeEditor().sortProperties(),
       },
-      { id: 'copy-properties', name: 'Copy properties', on: 'note', menu: false, run: (ctx) => this.copy(ctx.file) },
+      { id: 'copy-properties', name: 'Copy properties', icon: 'copy', on: 'note', menu: false, run: (ctx) => this.copy(ctx.file) },
       { id: 'copy-some-properties', name: 'Copy some of this note’s properties…', icon: 'copy-check', on: 'note', menu: false, when: (ctx) => this.keysOf(ctx.file).length > 0, run: (ctx) => this.copy(ctx.file, true) },
-      { id: 'paste-properties', name: 'Paste properties', on: 'note', menu: false, run: (ctx) => this.paste(ctx.file) },
+      { id: 'paste-properties', name: 'Paste properties', icon: 'clipboard-paste', on: 'note', menu: false, run: (ctx) => this.paste(ctx.file) },
       { id: 'property-set-save', name: 'Keep this note’s properties as a set…', icon: 'bookmark-plus', on: 'note', menu: false, when: (ctx) => this.keysOf(ctx.file).length > 0, run: (ctx) => this.saveSet(ctx.file) },
       { id: 'property-set-apply', name: 'Apply a property set…', icon: 'stamp', on: 'note', menu: false, when: () => sets().length > 0, run: (ctx) => this.chooseSet(ctx.file) },
       { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', icon: 'table', menu: false, when: () => !!pageFolder(this.app), run: () => this.copyTable(pageFolder(this.app).children.filter((f) => f instanceof TFile && f.extension === 'md')) },

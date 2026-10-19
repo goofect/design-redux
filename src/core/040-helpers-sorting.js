@@ -324,6 +324,18 @@ export function asButton(el, label) {
   return el;
 }
 
+/**
+ * An icon with its word beside it. The word is what the Icons setting
+ * and a narrow place may drop (the `dr-icon-label` span), and is always
+ * the tooltip, so a button of an icon alone still has its name.
+ */
+export function iconWord(el, icon, label) {
+  el.setAttribute('aria-label', label);
+  setIcon(el.createSpan({ cls: 'dr-icon-glyph' }), icon);
+  el.createSpan({ cls: 'dr-icon-label', text: label });
+  return el;
+}
+
 /** When, in the spirit of a track length: a glance, not a date. */
 export function relativeDay(time) {
   const day = 86400000;

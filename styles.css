@@ -2232,11 +2232,13 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
   }
 }
 
-.dr-detail-action-icon {
+.dr-detail-action-icon,
+.dr-icon-glyph {
   display: inline-flex;
 }
 
-.dr-detail-action-icon .svg-icon {
+.dr-detail-action-icon .svg-icon,
+.dr-icon-glyph .svg-icon {
   width: var(--dr-control-icon);
   height: var(--dr-control-icon);
 }
@@ -10231,5 +10233,46 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 }
 
 .dr-references-section.is-empty {
+  display: none;
+}
+
+/* Icons and words: an icon with its word beside it (iconWord), the word dropped where the
+   Icons setting says, or where it's narrow — it stays as the tooltip. Targets stay big enough to hit. */
+.dr-preview-actions {
+  container-type: inline-size;
+}
+
+body.dr-icons-only .dr-icon-label {
+  display: none;
+}
+
+body.dr-icons-words .dr-icon-glyph {
+  display: none;
+}
+
+@container (max-width: 240px) {
+  body:not(.dr-icons-words) .dr-preview-actions .dr-icon-label {
+    display: none;
+  }
+
+  body:not(.dr-icons-words) .dr-preview-actions .dr-detail-action {
+    min-width: 28px;
+    padding: var(--dr-space-2) var(--dr-space-3);
+  }
+}
+
+body.dr-icons-only .dr-detail-action {
+  min-width: 28px;
+  min-height: 28px;
+  padding: var(--dr-space-2) var(--dr-space-3);
+}
+
+body.is-mobile.dr-icons-only .dr-detail-action {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* A table's column heads are an icon, the word its tooltip — unless the words are asked for. */
+body:not(.dr-icons-words) .dr-td .dr-icon-label {
   display: none;
 }

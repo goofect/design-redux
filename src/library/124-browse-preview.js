@@ -11,7 +11,7 @@
 
 import { Platform, setIcon } from 'obsidian';
 import { albumKindOf, drawFolderArt, drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -92,8 +92,7 @@ export class BrowsePreview {
     buttons.filter(Boolean).forEach(([icon, label, run]) => {
       const b = bar.createDiv({ cls: 'dr-detail-action' });
       asButton(b);
-      setIcon(b.createSpan({ cls: 'dr-detail-action-icon' }), icon);
-      b.createSpan({ text: label });
+      iconWord(b, icon, label);
       onActivate(b, run);
     });
   }

@@ -91,8 +91,8 @@ export class CoverImages extends Feature {
         when: () => !!this.coverColorTarget(),
         run: () => this.plugin.chooseCoverColor(this.coverColorTarget()),
       },
-      { id: 'set-folder-cover', name: 'Set cover image for a folder', run: () => new FolderPicker(this.app, (folder) => this.plugin.setFolderCover(folder)).open() },
-      { id: 'remove-folder-cover', name: 'Remove cover image from a folder', run: () => new FolderPicker(this.app, (folder) => this.plugin.clearFolderCover(folder)).open() },
+      { id: 'set-folder-cover', name: 'Set cover image for a folder', icon: 'image-plus', run: () => new FolderPicker(this.app, (folder) => this.plugin.setFolderCover(folder)).open() },
+      { id: 'remove-folder-cover', name: 'Remove cover image from a folder', icon: 'image-minus', run: () => new FolderPicker(this.app, (folder) => this.plugin.clearFolderCover(folder)).open() },
     ];
   }
 

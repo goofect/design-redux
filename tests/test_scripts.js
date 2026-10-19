@@ -256,7 +256,7 @@ t('commands with icons, for the palette and the phone toolbar; on only while edi
   plugin.app.workspace.getActiveViewOfType = () => active;
   const cmds = f.commands();
   assert.deepStrictEqual(cmds.map((c) => [c.id, c.name, c.icon]),
-    [['superscript', 'Superscript', 'superscript'], ['subscript', 'Subscript', 'subscript']]);
+    [['superscript', 'Note: Superscript', 'superscript'], ['subscript', 'Note: Subscript', 'subscript']]);
   assert.strictEqual(cmds[0].check(), false, 'no note open');
   const view = editor('mc2', 2);
   view.dispatch({ selection: { anchor: 2, head: 3 } });

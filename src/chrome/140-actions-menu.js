@@ -40,6 +40,7 @@ export class ActionsMenu extends Feature {
       {
         id: 'open-actions',
         name: 'Open actions menu',
+        icon: 'more-horizontal',
         when: () => this.enabled,
         run: () => {
           // The trigger lives in the left sidebar's tab header, so there

@@ -9,7 +9,7 @@
 import { ItemView, Menu, Notice, Platform, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js';
 import { blankLook, byName, canStep, drawFolderArt, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
-import { asButton, fullNameOnHover, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
+import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, nestByProperty, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -500,7 +500,9 @@ export class BrowseView extends ItemView {
     const active = current.key === key;
     if (active) cell.addClass('is-sorted');
 
-    cell.createSpan({ cls: 'dr-td-text', text: label });
+    // Modified is a calendar, to be read at a glance; its word is the tooltip.
+    if (key === 'modified') iconWord(cell.createSpan({ cls: 'dr-td-text' }), 'calendar', label);
+    else cell.createSpan({ cls: 'dr-td-text', text: label });
     if (active) {
       const arrow = cell.createSpan({ cls: 'dr-th-arrow' });
       setIcon(arrow, current.dir === 'asc' ? 'chevron-up' : 'chevron-down');

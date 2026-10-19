@@ -241,6 +241,7 @@ export class PropertiesPanel extends Feature {
       {
         id: 'open-properties',
         name: 'Open properties',
+        icon: 'list',
         when: () => {
           const leaf = this.app.workspace.activeLeaf;
           return this.enabled && !!leaf && leaf.view instanceof MarkdownView;

@@ -642,6 +642,7 @@ export class GraphRoutes extends Feature {
       {
         id: 'toggle-graph-routes',
         name: 'Graph: links through notes between, on or off',
+        icon: 'route',
         when: () => this.enabled && !!this.commandGraph(),
         run: () => {
           const graph = this.commandGraph();

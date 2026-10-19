@@ -10,7 +10,7 @@
 import { Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { albumNeighbours, blankLook, drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { asButton, collapseSearches, iconWord, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { typeOfProperty } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
@@ -178,8 +178,8 @@ export class FolderScreen extends BrowseScreen {
       const th = table.createDiv({ cls: 'dr-tr dr-th' });
       th.createDiv({ cls: 'dr-td dr-td-title', text: 'Title' });
       columns.forEach((key) => th.createDiv({ cls: 'dr-td', text: view.columnLabel(key) }));
-      if (view.lengthStyle()) th.createDiv({ cls: 'dr-td dr-td-length', text: view.lengthStyle() === 'words' ? 'Words' : 'Length' });
-      th.createDiv({ cls: 'dr-td dr-td-time', text: 'Modified' });
+      if (view.lengthStyle()) iconWord(th.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
+      iconWord(th.createDiv({ cls: 'dr-td dr-td-time' }), 'calendar', 'Modified');
       disc.files.forEach((file) => view.tableRow(table, file, columns));
     });
   }
@@ -410,7 +410,7 @@ export class NotesScreen extends BrowseScreen {
     view.headerCell(head, 'title', 'Title', 'dr-td-title');
     columns.forEach((key) => view.headerCell(head, key, view.columnLabel(key)));
     if (view.lengthStyle()) {
-      head.createDiv({ cls: 'dr-td dr-td-length', text: view.lengthStyle() === 'words' ? 'Words' : 'Length' });
+      iconWord(head.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
     }
     view.headerCell(head, 'modified', 'Modified', 'dr-td-time');
 

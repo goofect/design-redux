@@ -16,6 +16,7 @@ export class BulkEditing extends Feature {
       {
         id: 'add-properties-to-folders',
         name: 'Add properties to folders…',
+        icon: 'list-plus',
         run: () => {
           const folder = pageFolder(this.app);
           this.openAdd(folder && !(folder.isRoot && folder.isRoot()) ? [folder] : []);
@@ -24,52 +25,62 @@ export class BulkEditing extends Feature {
       {
         id: 'rename-property-everywhere',
         name: 'Rename a property everywhere…',
+        icon: 'pencil',
         run: () => this.openRenameProperty(),
       },
       {
         id: 'merge-properties',
         name: 'Merge properties…',
+        icon: 'merge',
         run: () => this.openMerge(),
       },
       {
         id: 'rename-tag-everywhere',
         name: 'Rename a tag everywhere…',
+        icon: 'tag',
         run: () => this.openRenameTag(),
       },
       {
         id: 'remove-properties-from-folders',
         name: 'Remove properties from folders…',
+        icon: 'list-minus',
         run: () => this.openRemove(this.pageFolderTargets()),
       },
       {
         id: 'rename-value-everywhere',
         name: 'Rename a property value everywhere…',
+        icon: 'replace',
         run: () => this.openRenameValue(),
       },
       {
         id: 'clean-up-property-values',
         name: 'Clean up a property’s values…',
+        icon: 'sparkles',
         run: () => new CleanUpValuesModal(this.plugin).open(),
       },
       {
         id: 'change-property-type',
         name: 'Change a property’s type…',
+        icon: 'shapes',
         run: () => this.openChangeType(),
       },
       {
         id: 'find-missing-properties',
         name: 'Find notes missing a property…',
+        icon: 'search',
         run: () => this.openMissing(this.pageFolderTargets()),
       },
       {
         id: 'folder-default-properties',
         name: 'Default properties for this folder…',
+        icon: 'folder-cog',
         when: () => this.pageFolderTargets().length > 0,
         run: () => this.openDefaults(this.pageFolderTargets()[0]),
       },
       {
         id: 'undo-bulk-change',
         name: 'Undo the last bulk change',
+        icon: 'undo-2',
         when: () => !!this.plugin.bulk.last,
         run: () => this.plugin.bulk.undo(),
       },
