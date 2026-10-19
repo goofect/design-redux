@@ -1368,7 +1368,8 @@ describe('Design Redux in Obsidian', function () {
       const memory = (heap() - before) / 1048576;
       const view = leaf.view;
       const time = (fn) => { const a = performance.now(); fn(); return performance.now() - a; };
-      const best = (fn) => Math.min(fn(), fn(), fn());
+      // The best of five: a runner busy with something else isn't the map's time.
+      const best = (fn) => Math.min(fn(), fn(), fn(), fn(), fn());
       const parse = best(() => time(() => view.format.parse(text, file)));
       // Writing an edited map back over the text it was read from, each time freshly read: what a save does.
       const edited = () => {
