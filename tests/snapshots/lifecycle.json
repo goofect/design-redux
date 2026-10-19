@@ -118,6 +118,7 @@
   "mindmap-convert-canvas",
   "mindmap-convert-to-mindmap-file",
   "mindmap-convert-to-note",
+  "mindmap-copy-node-link",
   "mindmap-delete-node",
   "mindmap-edit-node",
   "mindmap-export-canvas",

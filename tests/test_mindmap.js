@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -110,7 +110,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       'getState', 'setState', 'getEphemeralState', 'setEphemeralState', 'onResize', 'onPaneMenu', 'onHeaderMenu', 'close', 'open', 'handleDrop', 'onFileOpen',
       'loadFile', 'onLoadFile', 'onUnloadFile', 'onRename', 'save', 'requestSave', 'canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
     const own = Object.getOwnPropertyNames(R.MindMapView.prototype);
-    const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose', 'onResize'];
+    const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose', 'onResize', 'setEphemeralState'];
     assert.deepStrictEqual(own.filter((n) => OBSIDIAN.includes(n) && !meant.includes(n)), []);
   });
 
@@ -1821,6 +1821,50 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     table.forEach((at, k) => assert.ok(pdf.slice(at).startsWith(`${k + 1} 0 obj`), `object ${k + 1} where the table says`));
     const start = Number(/startxref\n(\d+)/.exec(pdf)[1]);
     assert.ok(pdf.slice(start).startsWith('xref'));
+  });
+
+  await t('a screen reader walks the map by the arrow keys: the picked node is the tree’s active item, said in a live line with its level and place; [[Map#^id]] opens at the node', async () => {
+    const view = await open(NOTE);
+    const map = view.contentEl.querySelector('.dr-mindmap');
+    const live = () => view.contentEl.querySelector('.dr-mindmap-live[aria-live="polite"]').textContent;
+    const active = () => document.getElementById(map.getAttribute('aria-activedescendant'));
+    view.select(view.model.root.id);
+    assert.strictEqual(live(), 'Launch plan, level 1, open');
+    const heard = [];
+    for (const k of ['ArrowRight', 'ArrowDown', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp']) {
+      key(map, k);
+      heard.push(live());
+      assert.strictEqual(active().getAttribute('role'), 'treeitem');
+      assert.strictEqual(active().getAttribute('aria-selected'), 'true', 'the active item is the one picked');
+    }
+    assert.deepStrictEqual(heard, [
+      'Research, level 2, 1 of 3, open',
+      'Build, level 2, 2 of 3, open',
+      'API, level 3, 1 of 2',
+      'UI, level 3, 2 of 2',
+      'Build, level 2, 2 of 3, open',
+      'Research, level 2, 1 of 3, open',
+    ]);
+    assert.deepStrictEqual(['aria-level', 'aria-posinset', 'aria-setsize'].map((a) => active().getAttribute(a)), ['2', '1', '3']);
+    key(map, ' ');
+    assert.strictEqual(live(), 'Research, level 2, 1 of 3, folded, 2 below', 'a fold said');
+    // [[Map#^root]]: the map opened at that node, even before it's read.
+    const other = new R.MindMapView({}, feature);
+    other.file = new TFile('Plan.md');
+    document.body.appendChild(other.containerEl);
+    await other.onOpen();
+    other.setEphemeralState({ subpath: '#^root' });
+    other.setViewData(NOTE.replace('\t- Ship\n', '\t- Ship ^s9\n'), true);
+    assert.strictEqual(other.selected, 'root');
+    other.setEphemeralState({ subpath: '#^s9' });
+    assert.strictEqual(R.nodeById(other.model, other.selected).text, 'Ship');
+    // Copy a link to a node: the node given its id, written in the note.
+    const research = other.model.root.children[0];
+    other.app = { metadataCache: { fileToLinktext: (f) => f.basename } };
+    const link = await other.copyNodeLink(research.id);
+    assert.strictEqual(link, `[[Plan#^${research.id}|Research]]`);
+    other.flushSave();
+    assert.ok(other.text.includes(`\t- Research ^${research.id}\n`));
   });
 
   console.log(`\n${passed} passed`);

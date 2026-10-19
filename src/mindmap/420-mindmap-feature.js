@@ -154,6 +154,7 @@ export class MindMaps extends Feature {
       { id: 'mindmap-clear-filter', name: 'Mind map: clear the filter, levels and branch shown alone', icon: 'filter-x', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapFilters !== false && !!(ctx.view.filterEl || ctx.view.levels || ctx.view.soloId), run: (ctx) => ctx.view.clearFilters() },
       { id: 'mindmap-show-levels', name: 'Mind map: show so many levels…', icon: 'list-tree', on: 'mindmap', menu: false, when: () => this.settings.mindmapFilters !== false, run: (ctx) => ctx.view.chooseLevels() },
       { id: 'mindmap-solo-branch', name: 'Mind map: show the selected branch alone, or the whole map', icon: 'focus', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapFilters !== false && (!!ctx.view.soloId || (!!ctx.node && ctx.node !== ctx.model.root && !ctx.node.virtual)), run: (ctx) => ctx.view.toggleSolo(ctx.view.soloId && (!ctx.node || ctx.node.id === ctx.view.soloId) ? ctx.view.soloId : ctx.node.id) },
+      { id: 'mindmap-copy-node-link', name: 'Mind map: copy a link to the selected node', icon: 'link', on: 'mindmap', menu: false, when: (ctx) => !!ctx.node && !ctx.node.virtual && !!ctx.file, run: (ctx) => ctx.view.copyNodeLink(ctx.node.id) },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -172,6 +173,7 @@ export class MindMaps extends Feature {
     this.plugin.register(() => setMindMapContext(null));
     registerMindMapHandlers();
     if (typeof this.registerEmbeds === 'function') this.registerEmbeds();
+    if (typeof this.patchOpenFile === 'function') this.patchOpenFile();
     // A folder's menu: a mind map of it.
     this.plugin.registerEvent(
       ws.on('file-menu', (menu, target) => {

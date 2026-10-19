@@ -10629,3 +10629,13 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 
 /* Mind map: the node something's dropped on */
 .dr-mindmap-node.is-drop { outline: 2px dashed var(--interactive-accent); outline-offset: 3px; }
+
+/* Mind map: the line a screen reader hears as the picked node changes */
+.dr-mindmap-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

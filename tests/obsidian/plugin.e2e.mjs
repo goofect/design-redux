@@ -1275,6 +1275,30 @@ describe('Design Redux in Obsidian', function () {
     expect(out.pdf.size > 1000).toBe(true);
   });
 
+  it('opens [[Map#^id]] at that node', async function () {
+    const picked = await browser.executeObsidian(async ({ app }) => {
+      const old = app.vault.getAbstractFileByPath('Linked map.md');
+      if (old) await app.vault.delete(old);
+      await app.vault.create('Linked map.md', '---\nmindmap: true\n---\n- Garden\n\t- Beds\n\t- Pond ^pond1\n');
+      await new Promise((r) => setTimeout(r, 300));
+      await app.workspace.openLinkText('Linked map#^pond1', '', true);
+      const end = Date.now() + 5000;
+      let view = null;
+      while (Date.now() < end) {
+        view = app.workspace.getLeavesOfType('design-redux-mindmap').map((l) => l.view).find((v) => v.file && v.file.path === 'Linked map.md');
+        if (view && view.selected) break;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      const id = view ? view.selected : null;
+      app.workspace.getLeavesOfType('design-redux-mindmap').forEach((l) => l.detach());
+      await new Promise((r) => setTimeout(r, 300));
+      const f = app.vault.getAbstractFileByPath('Linked map.md');
+      if (f) await app.vault.delete(f);
+      return id;
+    });
+    expect(picked).toBe('pond1');
+  });
+
   it('keeps a .mindmap file’s links to a note as the note is renamed', async function () {
     const text = await browser.executeObsidian(async ({ app }) => {
       for (const p of ['Rename target.md', 'Renamed target.md', 'Links.mindmap']) {

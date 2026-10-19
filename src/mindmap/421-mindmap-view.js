@@ -180,6 +180,7 @@ export class MindMapView extends TextFileView {
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
     this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null, focus: this.lit(), top: typeof this.topNode === 'function' ? this.topNode() : null });
+    if (typeof this.announce === 'function') this.announce();
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (typeof this.drawMinimap === 'function') this.drawMinimap(this.scene);
     if (this.outlineEl) this.drawOutline();

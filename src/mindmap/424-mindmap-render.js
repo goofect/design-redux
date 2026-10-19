@@ -161,6 +161,9 @@ export class MindMapRenderer {
       mark: (this.marks && this.marks.get(n.id)) || '',
       role: role || '',
       roleLabel: role ? roleLabel(n) : '',
+      level: String(b.depth + 1),
+      pos: n.parent ? String(n.parent.children.indexOf(n) + 1) : '',
+      size: n.parent ? String(n.parent.children.length) : '',
     };
     const state = `${Object.values(look).join('|')}|${b.x}|${b.y}|${b.width}|${b.height}`;
     if (el.drState === state) return;
@@ -187,6 +190,15 @@ export class MindMapRenderer {
     data('mark', look.mark);
     data('role', look.role);
     data('roleLabel', look.roleLabel);
+    // Where it sits in the tree, for a screen reader walking it.
+    el.setAttribute('aria-level', look.level);
+    if (look.pos) {
+      el.setAttribute('aria-posinset', look.pos);
+      el.setAttribute('aria-setsize', look.size);
+    } else {
+      el.removeAttribute('aria-posinset');
+      el.removeAttribute('aria-setsize');
+    }
     el.style.left = `${b.x}px`;
     el.style.top = `${b.y}px`;
     el.style.width = `${b.width}px`;

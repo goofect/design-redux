@@ -170,6 +170,7 @@ import './mindmap/455-mindmap-embed.js';
 import './mindmap/456-mindmap-drop.js';
 import './mindmap/457-mindmap-templates.js';
 import './mindmap/458-mindmap-import-export.js';
+import './mindmap/459-mindmap-access.js';
 import './mindmap/420-mindmap-feature.js';
 import './mindmap/436-mindmap-vault-map.js';
 import './mindmap/439-mindmap-album.js';
