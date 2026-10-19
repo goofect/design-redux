@@ -11,7 +11,8 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames, propertyValues } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { schemaWithDefaults } from '../core/086-property-schema.js';
-import { assignedEntry, assignedEntryDiffers, bulkNotice, bulkTail, LIST_TYPES, nameList, notesChanged, parseTypedValue, propertiesIn, propertyNameProblem, propertyType, renamedText } from './290-bulk-engine.js';
+import { assignedEntry, assignedEntryDiffers, LIST_TYPES, parseTypedValue, propertiesIn, propertyNameProblem, propertyType, renamedText } from './288-bulk-values.js';
+import { bulkNotice, bulkTail, nameList, notesChanged } from './290-bulk-engine.js';
 import { BulkModal } from './300-bulk-dialogs.js';
 
 /**

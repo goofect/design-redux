@@ -11,7 +11,8 @@ import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js'
 import { plainValue } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
-import { propertyType, renamePropertyInPlace } from './290-bulk-engine.js';
+import { propertyType } from './288-bulk-values.js';
+import { renamePropertyInPlace } from './290-bulk-engine.js';
 import { BulkModal, whereHolds, whereReady } from './300-bulk-dialogs.js';
 import { AddPropertiesModal, FolderDefaultsModal, MergePropertiesModal, RemovePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
 import { ChangeTypeModal, MissingPropertyModal } from './303-bulk-types.js';

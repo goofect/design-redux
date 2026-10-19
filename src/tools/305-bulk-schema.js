@@ -22,7 +22,8 @@ import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { checkNote, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
 import { nearDuplicates } from '../core/088-property-options.js';
-import { bulkNotice, bulkTail, notesChanged, parseTypedValue, propertyType } from './290-bulk-engine.js';
+import { parseTypedValue, propertyType } from './288-bulk-values.js';
+import { bulkNotice, bulkTail, notesChanged } from './290-bulk-engine.js';
 import { BulkModal } from './300-bulk-dialogs.js';
 
 /** A folder's key in the schemas: its path, or '/' for the vault. */

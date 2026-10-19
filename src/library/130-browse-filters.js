@@ -13,7 +13,7 @@ import { Feature } from '../core/080-feature.js';
 import { Appearance } from '../core/085-appearance.js';
 import { LibraryEditor } from './090-library-editor.js';
 import { LibraryView } from './100-library.js';
-import { homeShelves } from './110-browse-screens.js';
+import { homeShelves } from './109-home-shelves.js';
 import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
 

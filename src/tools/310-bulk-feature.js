@@ -3,7 +3,7 @@ import { pageFolder } from '../core/030-helpers-art.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { movedPath } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';
-import { keyLike } from './290-bulk-engine.js';
+import { keyLike } from './288-bulk-values.js';
 import { DEFAULTS_DELAY, MergePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
 import { MergeValuesModal, RenameTagModal, RenameValueModal } from './302-bulk-tags-values.js';
 import { ChangeTypeModal } from './303-bulk-types.js';

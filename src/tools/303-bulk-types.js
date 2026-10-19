@@ -9,7 +9,8 @@ import { composing } from '../core/030-helpers-art.js';
 import { onActivate } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
-import { bulkNotice, bulkTail, isBlank, LIST_TYPES, nameList, notesChanged, parseTypedValue, propertyType } from './290-bulk-engine.js';
+import { isBlank, LIST_TYPES, parseTypedValue, propertyType } from './288-bulk-values.js';
+import { bulkNotice, bulkTail, nameList, notesChanged } from './290-bulk-engine.js';
 import { BulkModal } from './300-bulk-dialogs.js';
 
 /**

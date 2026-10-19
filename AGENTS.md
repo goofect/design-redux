@@ -75,7 +75,7 @@ Coffee N' Christmas.
   and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts: a later piece writes `class Part {…}`
   and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–124, MindMapView in the maps area). No `super` in a part.
+  120–125, MindMapView in the maps area). No `super` in a part.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).

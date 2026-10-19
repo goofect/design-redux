@@ -12,7 +12,7 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { diffProps, historyOf, withEntry } from '../core/089-property-history.js';
-import { keyLike } from './290-bulk-engine.js';
+import { keyLike } from './288-bulk-values.js';
 
 /* How long after a change its history is saved: changes in a burst saved once. */
 const HISTORY_SAVE_DELAY = 1500;

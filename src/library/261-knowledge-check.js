@@ -26,7 +26,7 @@ import { plainValue } from '../core/045-helpers-properties.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { BROWSE_SCREENS } from './110-browse-screens.js';
+import { BROWSE_SCREENS } from './119-browse-registry.js';
 import { Library } from './130-browse-filters.js';
 import { Knowledge } from './254-knowledge.js';
 import { AlbumStructure } from './257-album-structure.js';
