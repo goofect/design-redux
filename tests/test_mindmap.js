@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath, setMapTheme, nodeShape };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2035,6 +2035,43 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     m2.mode = 'fishbone';
     const cards = R.canvasFromMap(m2, R.layoutScene(m2, sizeOf, 'fishbone').boxes);
     assert.strictEqual(cards.nodes.find((n) => n.id === 'r').drLayout, 'left');
+  });
+
+  await t('rich nodes: a shape, an icon and an image on a node; a theme a shape for each level; each a step of Undo, and kept in the note', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Root ^r\n\t- A ^a\n\t\t- A1 ^a1\n');
+    const el = (id) => view.renderer.nodeEls.get(id);
+    assert.ok(el('a').hasClass('is-shape-box') && el('r').hasClass('is-shape-box'), 'cards: boxes all through');
+    const plain = view.sizeOf(view.model.root.children[0]);
+    // A shape of its own.
+    view.apply(R.setAttr(view.model, 'a', 'shape', 'pill'));
+    assert.ok(el('a').hasClass('is-shape-pill') && !el('a').hasClass('is-shape-box'));
+    // An icon: Lucide's drawn, an emoji written.
+    view.apply(R.setAttr(view.model, 'a', 'icon', '🔥'));
+    assert.strictEqual(el('a').querySelector('.dr-mindmap-icon').textContent, '🔥');
+    assert.ok(el('a').hasClass('has-icon'));
+    assert.ok(view.sizeOf(view.model.root.children[0]).width > plain.width, 'room for the icon');
+    // An image from the vault.
+    const pic = new TFile('Pics/cat.png');
+    view.app = Object.assign({}, view.app, { metadataCache: { getFirstLinkpathDest: (l) => (l === 'cat.png' ? pic : null) }, vault: { getResourcePath: (f) => 'app://' + f.path } });
+    view.apply(R.setAttr(view.model, 'a1', 'image', 'cat.png'));
+    assert.strictEqual(el('a1').querySelector('img.dr-mindmap-image').getAttribute('src'), 'app://Pics/cat.png');
+    assert.ok(view.sizeOf(view.model.root.children[0].children[0]).height > 110, 'taller by the image');
+    view.flushSave();
+    assert.ok(view.text.includes('"shape":"pill"') && view.text.includes('"icon":"🔥"') && view.text.includes('"image":"cat.png"'), view.text);
+    // A theme: the root a pill, its children lines, the rest no outline — A keeps its own shape.
+    view.apply(R.setMapTheme(view.model, 'quiet'));
+    assert.deepStrictEqual(['r', 'a', 'a1'].map((id) => R.nodeShape(view.model, R.nodeById(view.model, id), view.mapTheme())), ['pill', 'pill', 'plain']);
+    assert.ok(el('r').hasClass('is-shape-pill') && el('a1').hasClass('is-shape-plain'));
+    view.flushSave();
+    assert.ok(/"theme":"quiet"/.test(view.text));
+    view.undoStep(false);
+    assert.ok(el('a1').hasClass('is-shape-box'), 'Undo: the theme off');
+    // Switched off: none of it shown.
+    plugin.settings.mindmapRichNodes = false;
+    view.relayout(false);
+    view.draw();
+    assert.ok(!el('a').hasClass('is-shape-pill') && !el('a').querySelector('.dr-mindmap-icon') && !el('a1').querySelector('img'));
+    plugin.settings.mindmapRichNodes = true;
   });
 
   console.log(`\n${passed} passed`);

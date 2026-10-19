@@ -10,7 +10,7 @@
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { arrowLinks, modelFromData, nodeById, sideAxes } from '../tree/400-tree-model.js';
-import { composedLayout, directedPlaces, layoutPlaces, MAP_LAYOUTS, shapedPlaces, SHAPED_LAYOUTS } from '../tree/403-tree-layouts.js';
+import { composedLayout, directedPlaces, layoutPlaces, MAP_LAYOUTS, SHAPED_LAYOUTS, shapedPlaces } from '../tree/403-tree-layouts.js';
 import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
 /* A node's box: as wide as its words want, up to a limit. */
@@ -41,10 +41,14 @@ export const DETAIL_CHAR = 6.6;
 
 /* A row of chips under a node's text: its height, and the room its date takes. */
 export const CHIP_LINE = 22;
+/* An icon's room before a title, and an image's height over a node and the narrowest it's shown. */
+export const ICON_ROOM = 24;
+export const IMAGE_HEIGHT = 110;
+export const IMAGE_MIN_WIDTH = 180;
 const CHIP_WIDTH = 96;
 
 /** A box for a node's text — and its rows of chips, if it has any — estimated from its length until it's been measured: { width, height }. */
-export function estimateSize(text, chips) {
+export function estimateSize(text, chips, rich) {
   const [title, ...rest] = String(text || '').split('\n');
   const inner = NODE_MAX_WIDTH - NODE_PAD.x * 2;
   const chars = plainMarkdownLine(title).length || String(title || '').length;
@@ -58,6 +62,12 @@ export function estimateSize(text, chips) {
   if (chips) {
     height += CHIP_LINE * Number(chips);
     wide = Math.min(inner, Math.max(wide, CHIP_WIDTH));
+  }
+  // An icon before the title; an image over it all.
+  if (rich && rich.icon) wide = Math.min(inner, wide + ICON_ROOM);
+  if (rich && rich.image) {
+    height += IMAGE_HEIGHT + 6;
+    wide = Math.max(wide, IMAGE_MIN_WIDTH - NODE_PAD.x * 2);
   }
   return { width: Math.round(wide + NODE_PAD.x * 2), height: height + NODE_PAD.y * 2 };
 }

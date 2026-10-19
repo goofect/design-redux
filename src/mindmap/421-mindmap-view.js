@@ -95,7 +95,7 @@ export class MindMapView extends TextFileView {
       knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id),
       card: typeof this.fillCard === 'function' ? (el, n) => this.fillCard(el, n) : null,
       drop: typeof this.dropText === 'function' ? (el) => this.dropText(el) : null,
-      cardKey: (n) => (typeof this.taskKey === 'function' ? this.taskKey(n) : '') + (typeof this.noteKey === 'function' ? this.noteKey(n) : ''),
+      cardKey: (n) => (typeof this.taskKey === 'function' ? this.taskKey(n) : '') + (typeof this.noteKey === 'function' ? this.noteKey(n) : '') + (typeof this.richKeyOf === 'function' ? this.richKeyOf(n) : ''),
     });
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());

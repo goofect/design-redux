@@ -33,6 +33,26 @@ function chipsKey(n) {
   return a && (a.status || a.due) ? `|${a.status || ''}|${dueState(n) ? a.due : ''}` : '';
 }
 
+/* How long a measure waits for a node's images to come in. */
+const IMAGE_WAIT = 1500;
+
+/** The images in some elements loaded, or given up on. */
+function imagesIn(els) {
+  const imgs = [];
+  els.forEach((el) => el.querySelectorAll('img').forEach((img) => !img.complete && img.getAttribute('src') && imgs.push(img)));
+  if (!imgs.length) return null;
+  return Promise.all(
+    imgs.map(
+      (img) =>
+        new Promise((done) => {
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+          window.setTimeout(done, IMAGE_WAIT);
+        })
+    )
+  );
+}
+
 class MindMapCards {
   depthShown() {
     return !this.plugin || this.plugin.settings.mindmapDepth !== false;
@@ -49,13 +69,19 @@ class MindMapCards {
     const tier = this.model ? nodeTier(this.model, n, this.depthShown()) : '';
     const text = n.text || (n.virtual ? 'Untitled' : '');
     const notes = this.notesKey(n);
-    const chips = chipsKey(n) + notes;
+    const rich = this.richKey(n);
+    const chips = chipsKey(n) + notes + rich;
     const memo = this.sizeMemo && this.sizeMemo.get(n);
     if (memo && memo.text === text && memo.tier === tier && memo.chips === chips) return memo.size;
-    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}${chips}`)) || estimateSize(text, (chipsKey(n) ? 1 : 0) + (notes ? 2 : 0));
+    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}${chips}`)) || estimateSize(text, (chipsKey(n) ? 1 : 0) + (notes ? 2 : 0), rich && n.attrs);
     if (!this.sizeMemo) this.sizeMemo = new WeakMap();
     this.sizeMemo.set(n, { text, tier, chips, size });
     return size;
+  }
+
+  /** What a node's shape, icon and image add to the key its size is kept under. */
+  richKey(n) {
+    return typeof this.richKeyOf === 'function' ? this.richKeyOf(n) : '';
   }
 
   /** A part of a node's text into an element: markdown where Obsidian renders it, plain text where not. Its promise, if it takes a moment. */
@@ -91,6 +117,7 @@ class MindMapCards {
   /** A node's title and details into its element; promises for what's still rendering. */
   fillCard(el, n) {
     const waits = [];
+    if (typeof this.richCard === 'function') this.richCard(el, n);
     if (typeof this.taskBox === 'function') this.taskBox(el, n);
     const title = el.createDiv({ cls: 'dr-mindmap-text' });
     const t = this.renderText(title, n, 'title');
@@ -119,7 +146,7 @@ class MindMapCards {
     this.renderer.nodeEls.forEach((el, id) => {
       const n = nodeById(this.model, id);
       if (!n) return;
-      const key = sizeKey(this.model, n, this.depthShown()) + this.notesKey(n);
+      const key = sizeKey(this.model, n, this.depthShown()) + this.notesKey(n) + this.richKey(n);
       if (!this.sizes.has(key) && !this.measuring.has(key)) todo.push({ n, key });
     });
     if (!todo.length) return;
@@ -134,7 +161,9 @@ class MindMapCards {
       waits.push(...this.fillCard(m.el, m.n));
     });
     const model = this.model;
-    Promise.all(waits).then(() => {
+    Promise.all(waits)
+      .then(() => imagesIn(todo.map((m) => m.el)))
+      .then(() => {
       let changed = false;
       todo.forEach(({ n, key, el }) => {
         this.measuring.delete(key);
@@ -151,7 +180,7 @@ class MindMapCards {
         this.relayout(false);
         this.draw();
       }
-    });
+      });
   }
 
   /** The rendered parts of an element let go. */

@@ -10039,6 +10039,76 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--interactive-accent);
 }
 
+/* A node's shape: its own, or its map's theme's for its level. A box is the card as it is. */
+.dr-mindmap .dr-mindmap-node.is-shape-pill {
+  border-radius: 999px;
+}
+
+.dr-mindmap .dr-mindmap-node.is-shape-underline,
+.dr-mindmap .dr-mindmap-node.is-shape-plain {
+  border-width: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-normal);
+}
+
+.dr-mindmap .dr-mindmap-node.is-shape-underline {
+  border-bottom-width: 2px;
+}
+
+.dr-mindmap .dr-mindmap-node.is-root.is-shape-underline {
+  border-bottom-color: var(--interactive-accent);
+}
+
+/* An icon before the title, an image over the node, and images in its text kept to its size. */
+.dr-mindmap-node.has-icon {
+  padding-inline-start: 36px;
+}
+
+.dr-mindmap-icon {
+  position: absolute;
+  top: 9px;
+  left: 12px;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  line-height: 18px;
+}
+
+.dr-mindmap-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-mindmap-node.has-image {
+  min-width: 180px;
+}
+
+.dr-mindmap-node.has-image .dr-mindmap-icon {
+  top: 125px;
+}
+
+.dr-mindmap-image {
+  display: block;
+  width: 100%;
+  height: 110px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+}
+
+.dr-mindmap-image.is-missing {
+  background: var(--background-modifier-hover);
+}
+
+.dr-mindmap-text img,
+.dr-mindmap-details img {
+  max-width: 100%;
+  max-height: 160px;
+}
+
 /* Depth: the root larger, its own children heavier. */
 .dr-mindmap.is-depth .dr-mindmap-node.is-root {
   font-size: var(--font-ui-medium);

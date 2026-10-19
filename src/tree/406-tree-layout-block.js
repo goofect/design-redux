@@ -183,6 +183,39 @@ export function setMapView(model, view) {
   });
 }
 
+/* A node's shapes: its own, or its map's theme's for its level. */
+export const NODE_SHAPES = ['box', 'pill', 'underline', 'plain'];
+
+/* A map's themes: a shape for the root, the root's children, and the rest. */
+export const MAP_THEMES = {
+  cards: { name: 'Cards', R: 'box', 1: 'box', 0: 'box' },
+  soft: { name: 'Soft', R: 'pill', 1: 'pill', 0: 'pill' },
+  lines: { name: 'Lines', R: 'box', 1: 'underline', 0: 'underline' },
+  quiet: { name: 'Quiet', R: 'pill', 1: 'underline', 0: 'plain' },
+};
+
+/** A map's own theme, or null. */
+export function mapThemeOf(model) {
+  const t = model.layout && model.layout.theme;
+  return Object.prototype.hasOwnProperty.call(MAP_THEMES, t) ? t : null;
+}
+
+/** The map given a theme of its own, or none (null). */
+export function setMapTheme(model, theme) {
+  return changeBlock(model, [], (block) => {
+    if (Object.prototype.hasOwnProperty.call(MAP_THEMES, theme)) block.theme = theme;
+    else delete block.theme;
+  });
+}
+
+/** The shape a node takes: its own, else its theme's for its level. */
+export function nodeShape(model, n, theme) {
+  const own = n.attrs && n.attrs.shape;
+  if (NODE_SHAPES.includes(own)) return own;
+  const t = MAP_THEMES[theme] || MAP_THEMES.cards;
+  return n === model.root ? t.R : n.parent === model.root ? t[1] : t[0];
+}
+
 /** The collection a map follows, as kept: { path, leftOut: [paths] }, or null. */
 export function albumEntry(model) {
   const a = model.layout && model.layout.album;
