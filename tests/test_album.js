@@ -1307,16 +1307,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     cmds['next-in-album'].run();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.strictEqual(cmds['next-in-album'].check(), false, 'offered past the last note');
-    // The strip shows previous, next and More; the rest of what it did is inside More, first in its menu.
+    // Only what's needed shown until it's pointed at: Properties and More always, the rest waiting.
+    const secondary = Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action);
+    assert.deepStrictEqual(secondary, ['mode', 'pin']);
+    // In a narrow window those go into More instead, first in its menu.
     app.workspace.trigger = () => {};
-    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['more']);
-    click(strip.el.querySelector('[data-action="more"]'));
-    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
-    // Narrow or not, the same.
     Object.defineProperty(window, 'innerWidth', { value: 600, configurable: true });
     strip.update();
     assert.ok(strip.el.classList.contains('is-narrow'));
-    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['more']);
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')), []);
+    click(strip.el.querySelector('[data-action="more"]'));
+    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     // An album's strip: the actions written for albums elsewhere, sorting, and More.
     const made = [];
@@ -1442,42 +1443,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(said('none'), '');
     assert.strictEqual(R.DEFAULTS.stripDetail, '');
     assert.ok(JSON.stringify(R.SETTINGS_TABS).includes('"stripDetail"'), 'a row in settings');
-  });
-
-  await t("the strip's line shows how far down the note you are, and goes when it's switched off", () => {
-    const { plugin, app } = setup();
-    const file = app.vault.getFileByPath('IR/Balance.md');
-    const containerEl = document.body.createDiv();
-    const scroller = containerEl.createDiv({ cls: 'markdown-preview-view' });
-    Object.defineProperty(scroller, 'clientHeight', { value: 400, configurable: true });
-    Object.defineProperty(scroller, 'scrollHeight', { value: 1400, configurable: true });
-    const view = Object.assign(new MarkdownView(), { file, containerEl, getMode: () => 'preview' });
-    const leaf = { isDeferred: false, view, openFile() {} };
-    app.workspace.rootSplit = {};
-    app.workspace.getMostRecentLeaf = () => leaf;
-    app.workspace.on = () => ({});
-    app.metadataCache.on = () => ({});
-    app.commands = { executeCommandById() {} };
-    plugin.pins.has = () => false;
-    const strip = new R.ContextStrip(plugin);
-    strip.el = document.body.createDiv({ cls: 'dr-strip' });
-    assert.strictEqual(R.DEFAULTS.stripProgress, true);
-    strip.update();
-    assert.ok(strip.el.querySelector('.dr-strip-progress'));
-    scroller.scrollTop = 250;
-    strip.measureScroll();
-    assert.strictEqual(strip.el.style.getPropertyValue('--dr-progress'), '0.2500');
-    assert.ok(strip.el.classList.contains('has-progress'));
-    // A short note has nowhere to go: no line.
-    Object.defineProperty(scroller, 'scrollHeight', { value: 404, configurable: true });
-    strip.measureScroll();
-    assert.ok(!strip.el.classList.contains('has-progress'));
-    plugin.settings.stripProgress = false;
-    strip.update();
-    assert.ok(!strip.el.querySelector('.dr-strip-progress'));
-    assert.strictEqual(strip.scrollHost, null, 'no longer listening');
-    strip.disable();
-    containerEl.remove();
   });
 
   await t("no player: the album page offers Random, and the strip's » goes to the album's next note", async () => {

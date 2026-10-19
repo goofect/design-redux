@@ -503,13 +503,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     return cs;
   };
 
-  await t('the strip keeps previous, next and More: the rest is inside More', () => {
+  await t('the strip names its buttons, so a phone can keep two', () => {
     document.body.innerHTML = '';
     const cs = stripFor();
     cs.update();
     const roles = Array.from(cs.el.querySelectorAll('.dr-strip-actions .dr-strip-btn'))
       .map((b) => b.dataset.action);
-    assert.deepStrictEqual(roles, ['more']);
+    assert.deepStrictEqual(roles, ['mode', 'pin', 'properties', 'more']);
   });
 
   await t('the strip sits above the bottom bar, at its height and stacking', () => {

@@ -73,15 +73,6 @@ export class ContextStrip extends Feature {
   constructor(plugin) {
     super(plugin);
     this.el = null;
-    this.scrollHost = null;
-    this.scrollFrame = 0;
-    this.onScroll = () => {
-      if (this.scrollFrame) return;
-      this.scrollFrame = window.requestAnimationFrame(() => {
-        this.scrollFrame = 0;
-        this.measureScroll();
-      });
-    };
   }
 
   settingsSchema() {
@@ -114,12 +105,6 @@ export class ContextStrip extends Feature {
         name: 'Where it sits',
         desc: 'Along the bottom, or as a slim rail at the side with only the cover, previous, next and more — for narrow windows and split panes.',
         options: { bottom: 'Along the bottom', side: 'A rail at the side' },
-        showIf: 'contextStrip',
-      },
-      {
-        key: 'stripProgress',
-        name: 'Reading progress',
-        desc: 'A thin line along the bar for how far down the note you are.',
         showIf: 'contextStrip',
       },
     ];
@@ -232,7 +217,6 @@ export class ContextStrip extends Feature {
   }
 
   disable() {
-    this.watchScroll(null);
     document.body.removeClass('dr-strip-active');
     document.body.removeClass('dr-strip-side');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
@@ -291,49 +275,12 @@ export class ContextStrip extends Feature {
     if (!view) return;
 
     this.renderNav(this.el);
-    const reading = !!file && this.settings.stripProgress !== false;
     if (file) {
       this.renderNow(this.el, file, view);
       this.renderActions(this.el, file, leaf);
-      if (reading) this.el.createDiv({ cls: 'dr-strip-progress' });
     } else {
       this.renderScreen(this.el, view);
     }
-    this.watchScroll(reading ? view : null);
-  }
-
-  /**
-   * How far down the note the page is, as a line along the strip's foot —
-   * the way a player's bar shows how far into the song it is. Scrolling
-   * is listened to where it happens, inside the note's view.
-   */
-  watchScroll(view) {
-    const host = view && view.containerEl ? view.containerEl : null;
-    if (this.scrollHost !== host) {
-      if (this.scrollHost) this.scrollHost.removeEventListener('scroll', this.onScroll, true);
-      this.scrollHost = host;
-      if (host) host.addEventListener('scroll', this.onScroll, true);
-    }
-    if (!host && this.scrollFrame) {
-      window.cancelAnimationFrame(this.scrollFrame);
-      this.scrollFrame = 0;
-    }
-    this.measureScroll();
-    // A note just opened isn't laid out yet: measured again once it is.
-    if (host) window.setTimeout(() => this.measureScroll(), 400);
-  }
-
-  measureScroll() {
-    if (!this.el) return;
-    const host = this.scrollHost;
-    // Reading view and the editor each scroll themselves: whichever is showing.
-    const scroller = host
-      ? Array.from(host.querySelectorAll('.markdown-preview-view, .cm-scroller')).find((el) => el.clientHeight > 0)
-      : null;
-    const room = scroller ? scroller.scrollHeight - scroller.clientHeight : 0;
-    this.el.toggleClass('has-progress', room > 8);
-    const part = room > 8 ? Math.min(1, Math.max(0, scroller.scrollTop / room)) : 0;
-    this.el.style.setProperty('--dr-progress', part.toFixed(4));
   }
 
   /**
@@ -496,6 +443,22 @@ export class ContextStrip extends Feature {
     asButton(toggle);
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
+
+    [
+      ['chevron-left', 'Back', 'back'],
+      ['chevron-right', 'Forward', 'forward'],
+    ].forEach(([icon, label, dir]) => {
+      // Back and forward through what was open: there when wanted, quiet otherwise.
+      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary' });
+      el.setAttribute('aria-label', label);
+      setIcon(el, icon);
+      if (!this.canGo(dir)) {
+        el.addClass('is-disabled');
+        return;
+      }
+      asButton(el);
+      onActivate(el, () => this.go(dir));
+    });
   }
 
   /** The note itself: cover, name, and one property beneath it — for a canvas, how many cards. */
@@ -621,12 +584,11 @@ export class ContextStrip extends Feature {
       });
     }
 
-    // Everything but previous and next is inside More: what the strip showed as a row of buttons,
-    // back and forward, the workspace mode, and study — the count of what is due on the button.
-    const entries = specs.slice();
-    ['back', 'forward'].forEach((dir) => {
-      if (this.canGo(dir)) entries.push({ icon: dir === 'back' ? 'chevron-left' : 'chevron-right', label: dir === 'back' ? 'Back' : 'Forward', role: dir, run: () => this.go(dir) });
-    });
+    // The buttons that matter show; the quieter ones fold away until the strip is pointed at (it
+    // widens to show them), or, in a narrow window, wait in More with study and the workspace mode.
+    const overflow = this.isNarrow() ? specs.filter((spec) => spec.secondary) : [];
+    specs.filter((spec) => overflow.indexOf(spec) === -1).forEach((spec) => this.stripButton(actions, spec));
+    const entries = overflow.slice();
     const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
     if (modes && modes.enabled) {
       const mode = modes.mode(modes.current());

@@ -8023,41 +8023,6 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   text-align: center;
 }
 
-/* How far down the note you are: a line along the strip's foot, as a
-   player's bar shows how far into the song it is. */
-.dr-strip-progress {
-  position: absolute;
-  left: 22px;
-  right: 22px;
-  bottom: 4px;
-  height: 2px;
-  overflow: hidden;
-  border-radius: 2px;
-  background-color: color-mix(in srgb, var(--text-normal) 10%, transparent);
-  opacity: 0;
-  transition: opacity var(--dr-dur-normal) var(--dr-ease);
-  pointer-events: none;
-}
-
-.dr-strip-progress::after {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: calc(var(--dr-progress, 0) * 100%);
-  border-radius: 2px;
-  background-color: var(--interactive-accent);
-}
-
-.dr-strip.has-progress .dr-strip-progress {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dr-strip-progress {
-    transition: none;
-  }
-}
-
 /* -- the map minimap ---------------------------------------------------- */
 
 .dr-minimap {
@@ -10250,8 +10215,7 @@ body.dr-strip-side .dr-strip-actions {
   gap: var(--dr-space-2);
 }
 
-body.dr-strip-side .dr-strip-text,
-body.dr-strip-side .dr-strip-progress {
+body.dr-strip-side .dr-strip-text {
   display: none;
 }
 

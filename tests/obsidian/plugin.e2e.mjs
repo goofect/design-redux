@@ -1815,11 +1815,11 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(page).toEqual({ citesShown: false, textShown: true });
 
-    // The strip's More menu has the footnotes, with how many; it opens the view.
-    const more = await browser.$('.dr-strip-btn[data-action="more"]');
-    await more.waitForExist({ timeout: 5000 });
-    await more.click();
-    await clickText('.menu .menu-item-title', 'Footnotes (2)');
+    // The footnote button along the bottom opens the view.
+    const button = await browser.$('.dr-strip-btn[data-action="footnotes"]');
+    await button.waitForExist({ timeout: 5000 });
+    expect(await button.getAttribute('aria-label')).toBe('Footnotes (2)');
+    await button.click();
     await browser.$('.dr-fn-view .dr-fn-item').waitForExist({ timeout: 5000 });
     const listed = await browser.execute(() =>
       Array.from(document.querySelectorAll('.dr-fn-view .dr-fn-item')).map((i) => [
