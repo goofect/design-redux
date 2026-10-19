@@ -110,6 +110,7 @@ export class MindMapView extends TextFileView {
     this.listen();
     if (typeof this.watchNotes === 'function') this.watchNotes();
     if (typeof this.listenForDrops === 'function') this.listenForDrops();
+    if (typeof this.watchQueries === 'function') this.watchQueries();
   }
 
   tool(label, icon, run) {
@@ -141,6 +142,7 @@ export class MindMapView extends TextFileView {
       this.scene = null;
       return;
     }
+    if (typeof this.answerQueries === 'function') this.answerQueries();
     if (typeof this.countTasks === 'function') this.countTasks();
     this.panelDirty = true;
     const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));

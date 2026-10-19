@@ -161,6 +161,7 @@ export class MindMapRenderer {
       mark: (this.marks && this.marks.get(n.id)) || '',
       role: role || '',
       roleLabel: role ? roleLabel(n) : '',
+      queried: !!n.queried,
       level: String(b.depth + 1),
       pos: n.parent ? String(n.parent.children.indexOf(n) + 1) : '',
       size: n.parent ? String(n.parent.children.length) : '',
@@ -183,6 +184,7 @@ export class MindMapRenderer {
     data('tint', look.tint);
     el.toggleClass('is-faded', look.faded);
     el.toggleClass('is-pinned', look.pinned);
+    el.toggleClass('is-queried', look.queried);
     el.toggleClass('is-unfocused', look.unfocused);
     el.toggleClass('dr-present-now', look.now);
     el.toggleClass('dr-present-dim', look.dim);

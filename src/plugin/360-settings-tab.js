@@ -60,7 +60,7 @@ export const SETTINGS_TABS = [
     title: 'Maps',
     sections: [
       { title: 'Maps', desc: 'For every map, mind map or canvas: what a new one is, and how far apart things are put.', keys: ['mindmapKeepCanvasMaps', 'mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing'] },
-      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds'] },
+      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries'] },
       {
         title: 'Canvas maps',
         keys: [

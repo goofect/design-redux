@@ -98,11 +98,13 @@ export function pinOf(n) {
 }
 
 /**
- * The nodes shown under one: its children — or, folded, only the master
- * nodes below it, which stay out of folds with what hangs from them.
+ * The nodes shown under one: its children, and a query node's notes — or,
+ * folded, only the master nodes below it, which stay out of folds with
+ * what hangs from them.
  */
 export function visibleChildren(n) {
-  if (!(n.attrs && n.attrs.fold)) return n.children;
+  // A query node's notes, drawn and laid out under it but never written.
+  if (!(n.attrs && n.attrs.fold)) return n.queryKids ? n.children.concat(n.queryKids) : n.children;
   const out = [];
   const find = (x) => x.children.forEach((c) => (c.attrs && c.attrs.master ? out.push(c) : find(c)));
   find(n);

@@ -56,6 +56,11 @@ class MindMapInput {
         this.toggleFold(id);
         return;
       }
+      // A query's note: opened, as it isn't the map's to pick or move.
+      if (id && id.startsWith('q:') && typeof this.openQueried === 'function') {
+        this.openQueried(id);
+        return;
+      }
       if (id && evt.target.closest && evt.target.closest('.dr-mindmap-task') && typeof this.tickTask === 'function') {
         this.tickTask(id);
         return;

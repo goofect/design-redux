@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1865,6 +1865,62 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(link, `[[Plan#^${research.id}|Research]]`);
     other.flushSave();
     assert.ok(other.text.includes(`\t- Research ^${research.id}\n`));
+  });
+
+  await t('query nodes: the notes a query finds hang under it, kept current, never written; under 100 ms over 500 notes; Freeze writes them', async () => {
+    assert.deepStrictEqual(R.parseQuery('tag:#Law folder:/Cases/ status:"In force" links:[[Home|h]]'), [
+      { kind: 'tag', value: 'law' }, { kind: 'folder', value: 'Cases' }, { kind: 'property', key: 'status', value: 'in force' }, { kind: 'links', value: 'Home' },
+    ]);
+    obsidian.getAllTags = (c) => (c.tags || []).map((t) => t.tag);
+    const home = new TFile('Home.md');
+    const notes = [];
+    const caches = new Map();
+    for (let k = 0; k < 500; k++) {
+      const f = Object.assign(new TFile(`Cases/Case ${String(k).padStart(3, '0')}.md`), { parent: { path: 'Cases' } });
+      notes.push(f);
+      caches.set(f, { tags: k % 5 === 0 ? [{ tag: '#law' }] : [], frontmatter: { status: k % 10 === 0 ? 'In force' : 'Repealed' } });
+    }
+    const resolved = {};
+    notes.forEach((f, k) => { resolved[f.path] = k % 20 === 0 ? { 'Home.md': 1 } : {}; });
+    const handlers = {};
+    const app = {
+      vault: { getMarkdownFiles: () => notes, getFiles: () => notes, getAbstractFileByPath: (p2) => notes.find((f) => f.path === p2) || null, on: (n, fn) => ((handlers[n] = fn), {}) },
+      metadataCache: { getFileCache: (f) => caches.get(f) || null, getFirstLinkpathDest: (l) => (l === 'Home' ? home : null), fileToLinktext: (f) => f.basename, resolvedLinks: resolved, on: (n, fn) => ((handlers['m:' + n] = fn), {}) },
+      workspace: {},
+    };
+    const view = await open('---\nmindmap: true\n---\n- Law\n\t- In force %%{"query":"tag:#law status:\\"In force\\""}%%\n\t- Cited\n');
+    view.app = app;
+    view.plugin = Object.assign({}, plugin, { app, isFolderNote: () => false, libraryIndex: null });
+    view.watchQueries();
+    view.relayout(false);
+    view.draw();
+    const [inForce, cited] = view.model.root.children;
+    assert.strictEqual(inForce.queryKids.length, 50, 'every tenth note: tagged law and in force');
+    assert.strictEqual(inForce.queryKids[0].text, '[[Case 000]]');
+    view.flushSave();
+    assert.ok(!view.text.includes('Case 000'), 'drawn, never written');
+    assert.ok(view.contentEl.querySelector('.dr-mindmap-node.is-queried'));
+    // A note changes: answered again, quickly.
+    caches.get(notes[1]).tags = [{ tag: '#law' }];
+    caches.get(notes[1]).frontmatter.status = 'In force';
+    handlers['m:changed'](notes[1]);
+    const t0 = process.hrtime.bigint();
+    view.relayout(false);
+    view.draw();
+    const ms = Number(process.hrtime.bigint() - t0) / 1e6;
+    assert.strictEqual(inForce.queryKids.length, 51);
+    assert.ok(ms < 100, `refreshed in ${ms.toFixed(1)} ms`);
+    // Links: a second query, by command's way of setting it.
+    view.apply(R.setAttr(view.model, cited.id, 'query', 'links:[[Home]]'));
+    assert.strictEqual(cited.queryKids.length, 25);
+    // Freeze: written as nodes, the query off, one step of Undo.
+    view.freezeQuery(inForce.id);
+    assert.deepStrictEqual([inForce.children.length, inForce.attrs.query, !!inForce.queryKids], [51, undefined, false]);
+    view.flushSave();
+    assert.ok(view.text.includes('\t\t- [[Case 000]]\n'));
+    view.undoStep(false);
+    assert.deepStrictEqual([inForce.children.length, !!inForce.attrs.query], [0, true]);
+    delete obsidian.getAllTags;
   });
 
   console.log(`\n${passed} passed`);
