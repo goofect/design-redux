@@ -395,8 +395,14 @@ export const DEFAULTS = {
   canvasArrowSides: false,
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
+  // { folderPath: [{ key, type, required, values, default }] } — what notes there should have; '/' for the vault.
+  propertySchemas: {},
+  // { key: { value: { color, icon } } } — how a value shows wherever it's shown.
+  propertyOptions: {},
+  propertySchemaMarks: true,
+  propertyValueChips: true,
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 11,
+  settingsVersion: 12,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

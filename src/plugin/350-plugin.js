@@ -48,6 +48,7 @@ import { MarkedLists } from '../editor/270-lists.js';
 import { Scripts } from '../editor/280-scripts.js';
 import { Footnotes } from '../editor/285-footnotes.js';
 import { BulkEdits } from '../bulk/290-bulk-engine.js';
+import { PropertySchemas } from '../bulk/305-bulk-schema.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
 import { CanvasArguments } from '../canvas/319-canvas-arguments.js';
 import { CanvasLegend } from '../canvas/320-canvas-legend.js';
@@ -171,6 +172,7 @@ export class DesignRedux extends Plugin {
       new CanvasDuplicate(this),
       new Diagnostics(this),
       new BulkEditing(this),
+      new PropertySchemas(this),
     ];
 
     this.syncFrame = 0;

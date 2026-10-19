@@ -128,7 +128,8 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
-  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation };\n');
+  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -520,8 +521,11 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     s.coverProperty = 'Cover';
     s.librarySections = [{ title: 'x', items: [{ kind: 'property', key: 'domain' }, { kind: 'builtin', id: 'home' }] }];
     s.graphFilters = { graph: { mode: 'all', rules: [{ key: 'domain', op: 'has' }], clause: '[domain]' } };
+    s.propertySchemas = { Law: [{ key: 'Domain', required: true }, { key: 'year' }] };
+    s.propertyOptions = { domain: { Law: { color: 'red' } } };
     const { changed, undo } = R.renamePropertyInSettings(s, 'domain', 'field');
-    assert.deepStrictEqual(changed, ['Search categories', 'Collection columns', 'Notes table columns', 'Library', 'Graph property filters']);
+    assert.deepStrictEqual(changed, ['Search categories', 'Collection columns', 'Notes table columns', 'Library', 'Property schemas', 'Value colours and icons', 'Graph property filters']);
+    assert.deepStrictEqual([s.propertySchemas.Law[0], s.propertyOptions], [{ key: 'field', required: true }, { field: { Law: { color: 'red' } } }]);
     assert.strictEqual(s.categoryProperty, 'field');
     assert.strictEqual(s.albumColumns, 'field, modified');
     assert.strictEqual(s.tableColumns, 'field, status');
@@ -535,6 +539,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(s.albumColumns, 'domain, modified');
     assert.strictEqual(s.tableColumns, 'field');
     assert.strictEqual(s.graphFilters.graph.rules[0].key, 'domain');
+    assert.deepStrictEqual([s.propertySchemas.Law[0].key, Object.keys(s.propertyOptions)], ['Domain', ['domain']]);
     assert.strictEqual(R.renameInNameList('status, Domain', 'domain', 'status'), 'status', 'no repeats');
   });
 
@@ -1610,6 +1615,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     await settle(150);
     assert.deepStrictEqual(plugin.settings.folderDefaults.IR, [{ key: 'course', value: 'POL101', type: 'text' }]);
     assert.strictEqual(v.fm('IR/Sub/d.md').course, 'POL101');
+    assert.deepStrictEqual(plugin.settings.propertySchemas.IR, [{ key: 'course', type: 'text', default: 'POL101' }], 'the schema keeps the same default');
     // Opened again, it shows what's saved.
     const again = new R.FolderDefaultsModal(plugin, v.folders.IR);
     again.open();
@@ -1820,6 +1826,111 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(modal.contentEl.querySelector('.mod-cta'));
     await settle();
     assert.deepStrictEqual(v.fm('b.md'), { kind: 'statute', court: '', position: {} }, 'its kind kept; the empty court added');
+  });
+
+  await t('schemas: a note held to its folders’ schemas, the nearest winning; issues with reasons and plain fixes; folder defaults carried over', () => {
+    const v = makeVault({ 'Law/Cases/a.md': '', 'Loose.md': '' });
+    const schemas = {
+      '/': [{ key: 'created', type: 'date' }],
+      Law: [{ key: 'status', required: true, values: ['Open', 'Closed'], default: 'Open' }, { key: 'year', type: 'number' }],
+      'Law/Cases': [{ key: 'Status', required: true, values: ['Open', 'Closed', 'Appeal'] }, { key: 'judges', type: 'multitext' }],
+    };
+    const schema = R.schemaFor(schemas, v.file('Law/Cases/a.md'));
+    assert.deepStrictEqual(schema.map((e) => e.key), ['created', 'Status', 'year', 'judges'], 'the nearest folder’s “Status” in place of “status”');
+    assert.deepStrictEqual(R.schemaFor(schemas, v.file('Loose.md')).map((e) => e.key), ['created']);
+    const kinds = (fm) => R.checkNote(schema, fm).map((i) => `${i.key}:${i.kind}${i.fix ? '=' + JSON.stringify(i.fix.value) : ''}`);
+    assert.deepStrictEqual(kinds({}), ['Status:missing'], 'required and missing, no default to give');
+    assert.deepStrictEqual(kinds({ status: '' }), ['Status:empty']);
+    assert.deepStrictEqual(kinds({ status: 'closed.', year: '1,999', judges: 'Kirby', created: '3/4/2025' }),
+      ['created:type="2025-04-03"', 'Status:value="Closed"', 'year:type=1999', 'judges:type=["Kirby"]']);
+    assert.deepStrictEqual(kinds({ status: 'Pending' }), ['Status:value']);
+    assert.ok(/“Pending” isn’t one of “Open”, “Closed” or “Appeal”/.test(R.checkNote(schema, { status: 'Pending' })[0].reason));
+    assert.deepStrictEqual(kinds({ status: 'Open', year: 2001, judges: ['A'], created: '2025-01-02' }), []);
+    // A fix written under the name the note has it by.
+    const fm = { STATUS: 'open ' };
+    R.fixFor(R.checkNote(schema, fm)[0])(fm);
+    assert.deepStrictEqual(fm, { STATUS: 'Open' });
+    // A default fills what's missing.
+    const law = R.schemaFor(schemas, { parent: v.folders.Law });
+    assert.deepStrictEqual(R.checkNote(law, {}).map((i) => i.fix && i.fix.value), ['Open']);
+    // Folder defaults, as schemas: defaults only; the migration does it.
+    const saved = { settingsVersion: 11, folderDefaults: { Law: [{ key: 'court', value: 'High', type: 'text' }, { key: 'year', value: null, type: 'number' }] }, propertySchemas: { Law: [{ key: 'Court', required: true }] } };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 12).run(saved);
+    assert.deepStrictEqual(saved.propertySchemas.Law, [{ key: 'Court', required: true }, { key: 'year', type: 'number' }], 'one already there kept; defaults only');
+    assert.deepStrictEqual(saved.folderDefaults.Law.length, 2, 'the defaults themselves stay');
+  });
+
+  await t('value options and near duplicates: “Done”, “done ” and “done.” one value; small typos in words, not numbers', () => {
+    const groups = R.nearDuplicates([['Done', 40], ['done ', 3], ['done.', 1], ['In progress', 12], ['In progres', 1], ['Chapter 1', 5], ['Chapter 2', 5], ['2024', 3], ['2025', 4], ['[[Open]]', 2], ['open', 9]]);
+    assert.deepStrictEqual(groups.map((g) => [g.keep, g.values.map((x) => x.value)]), [
+      ['Done', ['Done', 'done ', 'done.']],
+      ['In progress', ['In progress', 'In progres']],
+      ['open', ['open', '[[Open]]']],
+    ]);
+    // A corpus of messy values: quick, and only the real groups.
+    const messy = [];
+    for (let k = 0; k < 600; k++) messy.push([`Topic ${k}`, 1], [`Subject number ${String.fromCharCode(97 + (k % 26))}${k}`, 1]);
+    const t0 = Date.now();
+    assert.deepStrictEqual(R.nearDuplicates(messy), []);
+    assert.ok(Date.now() - t0 < 2000);
+    let options = R.withOption({}, 'Status', 'Done', { color: 'green', icon: 'check' });
+    options = R.withOption(options, 'status', 'Open', { color: 'nope', icon: '' });
+    assert.deepStrictEqual(options, { Status: { Done: { color: 'green', icon: 'check' } } }, 'an unknown colour and no icon: nothing kept');
+    assert.deepStrictEqual(R.optionFor(options, 'STATUS', 'done.'), { color: 'green', icon: 'check' });
+    assert.strictEqual(R.optionFor(options, 'status', 'Open'), null);
+  });
+
+  await t('a folder schema marks a note with a wrong value in the panel; Fix puts it right, Undo puts it back; the dialog keeps defaults in step', async () => {
+    const v = makeVault({ 'Law/a.md': note({ status: 'closed.', year: '1999' }, 'Body\n'), 'Law/b.md': note({ status: 'Open', year: 2001 }), 'Law/c.md': '' });
+    const { plugin } = makePlugin(v);
+    plugin.settings.propertySchemas = { Law: [{ key: 'status', required: true, values: ['Open', 'Closed'], default: 'Open' }, { key: 'year', type: 'number' }] };
+    const feature = new R.PropertySchemas(plugin);
+    const panel = { plugin };
+    const show = (p) => {
+      const [sec] = feature.panelSections(panel);
+      sec.mount(document.body, v.file(p));
+      return sec;
+    };
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    let sec = show('Law/a.md');
+    const rows = () => Array.from(sec.containerEl.querySelectorAll('.dr-schema-issue')).map((r) => r.querySelector('.dr-schema-key').textContent + ': ' + r.querySelector('.dr-schema-reason').textContent);
+    assert.deepStrictEqual(rows(), ['status: “closed.” isn’t one of “Open” or “Closed”.', 'year: “year” should be a number.']);
+    assert.ok(show('Law/b.md').containerEl.hasClass('is-empty'), 'a note that fits: nothing shown');
+    assert.deepStrictEqual(Array.from(show('Law/c.md').containerEl.querySelectorAll('.dr-schema-key')).map((e) => e.textContent), ['status']);
+    // Fix one: written through the notes service; Undo puts it back.
+    sec = show('Law/a.md');
+    const record = await sec.fix(sec.issues().slice(0, 1));
+    assert.deepStrictEqual(fmOf('Law/a.md'), { status: 'Closed', year: '1999' });
+    assert.ok(v.text('Law/a.md').endsWith('Body\n'));
+    await plugin.notes.undo([record]);
+    assert.deepStrictEqual(fmOf('Law/a.md'), { status: 'closed.', year: '1999' });
+    // Fix all: one write.
+    click(sec.containerEl.querySelector('.dr-schema-fix-all'));
+    await settle();
+    assert.deepStrictEqual(fmOf('Law/a.md'), { status: 'Closed', year: 1999 });
+    // The dialog: what's saved shown; saved again, the schema and the folder's defaults together.
+    const modal = new R.SchemaModal(plugin, v.folders.Law);
+    modal.open();
+    const keys = () => Array.from(modal.contentEl.querySelectorAll('.dr-schema-row-key')).map((e) => e.value);
+    assert.deepStrictEqual(keys(), ['status', 'year']);
+    click(modal.contentEl.querySelector('.dr-schema-add'));
+    const row = modal.contentEl.querySelectorAll('.dr-schema-row')[2];
+    type(row.querySelector('.dr-schema-row-key'), 'judges');
+    row.querySelector('.dr-schema-row-type').value = 'multitext';
+    row.querySelector('.dr-schema-row-type').dispatchEvent(new window.Event('change'));
+    type(row.querySelector('.dr-schema-row-default'), 'Kirby, Mason');
+    click(modal.contentEl.querySelector('.mod-cta'));
+    await settle();
+    assert.deepStrictEqual(plugin.settings.propertySchemas.Law[2], { key: 'judges', type: 'multitext', default: ['Kirby', 'Mason'] });
+    assert.deepStrictEqual(plugin.settings.folderDefaults.Law.map((d) => [d.key, d.value]), [['status', 'Open'], ['judges', ['Kirby', 'Mason']]]);
+    // Defaults changed the old way: the schema follows; an entry left with nothing but its name goes.
+    const next = R.schemaWithDefaults(plugin.settings.propertySchemas, 'Law', [{ key: 'status', value: 'Closed' }, { key: 'court', value: 'High', type: 'text' }]);
+    assert.deepStrictEqual(next.Law, [
+      { key: 'status', required: true, values: ['Open', 'Closed'], default: 'Closed' },
+      { key: 'year', type: 'number' },
+      { key: 'judges', type: 'multitext' },
+      { key: 'court', type: 'text', default: 'High' },
+    ]);
   });
 
   console.log(`\n${passed} passed`);

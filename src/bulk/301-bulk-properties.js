@@ -10,6 +10,7 @@ import { composing, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames, propertyValues } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
+import { schemaWithDefaults } from '../core/086-property-schema.js';
 import { assignedEntry, assignedEntryDiffers, bulkNotice, bulkTail, LIST_TYPES, nameList, notesChanged, parseTypedValue, propertiesIn, propertyNameProblem, propertyType, renamedText } from './290-bulk-engine.js';
 import { BulkModal } from './300-bulk-dialogs.js';
 
@@ -464,6 +465,8 @@ export class FolderDefaultsModal extends AddPropertiesModal {
         if (props.length) all[this.folder.path] = props.map((p) => ({ key: p.key, value: p.value, type: p.type }));
         else delete all[this.folder.path];
         this.plugin.settings.folderDefaults = all;
+        // The folder's schema keeps the same defaults.
+        this.plugin.settings.propertySchemas = schemaWithDefaults(this.plugin.settings.propertySchemas, this.folder.path, all[this.folder.path] || []);
         await this.plugin.saveData(this.plugin.settings);
         if (changing.length) {
           const record = await this.bulk.addProperties(files, props, false);

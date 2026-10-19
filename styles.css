@@ -10737,3 +10737,97 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 
 /* Mind map: a query's notes, drawn under it but not the map's own */
 .dr-mindmap-node.is-queried { border-style: dashed; opacity: 0.85; cursor: pointer; }
+
+/* Property schemas: a note that falls short of its folder's, in the panel. */
+.dr-schema-section.is-empty {
+  display: none;
+}
+
+.dr-schema-mark {
+  display: inline-flex;
+  color: var(--text-warning);
+}
+
+.dr-schema-mark svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-schema-fix-all,
+.dr-schema-fix {
+  margin-inline-start: auto;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-schema-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+}
+
+.dr-schema-issue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-small);
+}
+
+.dr-schema-key {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-schema-reason {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* The schema dialog: a row a property. */
+.dr-schema-modal {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.dr-schema-intro {
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-schema-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+.dr-schema-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto auto minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-schema-row-required {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+}
+
+.dr-schema-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  margin-top: var(--dr-space-2);
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .dr-schema-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}

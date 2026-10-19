@@ -11,6 +11,7 @@ import { TFolder } from 'obsidian';
 import { LIBRARY_MORE } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
+import { schemasFromDefaults } from './086-property-schema.js';
 
 /**
  * Items in a saved order: the ones it names, in its order, then any it
@@ -35,7 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas'];
 
 /* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
 export const MINDMAP_TWINS = [
@@ -175,6 +176,14 @@ export const SETTINGS_MIGRATIONS = [
       MINDMAP_TWINS_KNOWLEDGE.forEach(([from, to]) => {
         if (saved[from] !== undefined) saved[to] = saved[from];
       });
+    },
+  },
+  {
+    // Folder defaults become schemas: the same properties, as defaults
+    // only, nothing required. The defaults themselves stay as they were.
+    to: 12,
+    run(saved) {
+      if (saved.folderDefaults && typeof saved.folderDefaults === 'object') saved.propertySchemas = schemasFromDefaults(saved.folderDefaults, saved.propertySchemas);
     },
   },
 ];

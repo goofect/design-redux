@@ -783,6 +783,24 @@ export function renamePropertyInSettings(settings, from, to) {
     keep('Library', () => settings.librarySections, (v) => (settings.librarySections = v))(renamedSections);
   }
 
+  // Schemas name the property in each folder's entries; value options keep it as their key.
+  const schemas = settings.propertySchemas || {};
+  const renamedSchemas = {};
+  Object.keys(schemas).forEach((path) => {
+    renamedSchemas[path] = (schemas[path] || []).map((e) => (e && String(e.key).toLowerCase() === low ? Object.assign({}, e, { key: to }) : e));
+  });
+  if (!sameValue(renamedSchemas, schemas)) keep('Property schemas', () => settings.propertySchemas, (v) => (settings.propertySchemas = v))(renamedSchemas);
+  const options = settings.propertyOptions || {};
+  const optionKey = Object.keys(options).find((k) => k.toLowerCase() === low);
+  if (optionKey !== undefined && optionKey !== to) {
+    const renamedOptions = {};
+    Object.keys(options).forEach((k) => {
+      if (k === optionKey) renamedOptions[to] = Object.assign({}, options[to] || {}, options[k]);
+      else if (k !== to) renamedOptions[k] = options[k];
+    });
+    keep('Value colours and icons', () => settings.propertyOptions, (v) => (settings.propertyOptions = v))(renamedOptions);
+  }
+
   // Graph conditions are put back one by one: an open graph re-saves
   // its own entry as soon as it follows the rename, so the entry as a
   // whole won't read as this left it by the time of an undo.
