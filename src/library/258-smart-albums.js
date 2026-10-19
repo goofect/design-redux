@@ -277,6 +277,7 @@ export class SmartAlbums extends Feature {
       view.render();
     });
     add('Rename…', 'pencil', () => this.askName(view, album));
+    add('Properties of these notes…', 'list', () => view.propertyToolsFor(this.files(view)));
     add(album.group ? `Grouped by ${this.plugin.propertyLabel(album.group)}…` : 'Group by…', 'rows-3', () => this.chooseGroup(view, album));
     add('Delete saved view', 'trash-2', () => {
       this.remove(album);

@@ -222,6 +222,7 @@ export class BrowseEditing {
       onActivate(el, run);
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
+    button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
     button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
     button('x', 'Clear', () => {
       this.ticked().clear();

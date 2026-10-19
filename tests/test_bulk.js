@@ -2044,6 +2044,20 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(R.parseTypedValue('text', 'tomorrow'), 'tomorrow', 'only for a date');
   });
 
+  await t('the property tools over notes picked rather than folders: many shown as a few and “and N more”', async () => {
+    const spec = {};
+    for (let k = 0; k < 12; k++) spec[`N/n${k}.md`] = note({ status: 'draft' });
+    const v = makeVault(spec);
+    const { plugin } = makePlugin(v);
+    const modal = new R.AddPropertiesModal(plugin, v.files.slice());
+    modal.open();
+    const chips = () => Array.from(modal.contentEl.querySelectorAll('.dr-bulk-chip:not(.is-add)')).map((c) => c.textContent);
+    assert.deepStrictEqual(chips(), ['n0', 'n1', 'n2', 'n3', 'n4', 'n5', 'and 6 more']);
+    click(modal.contentEl.querySelector('.dr-bulk-chip.is-more'));
+    assert.strictEqual(chips().length, 12);
+    modal.close();
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

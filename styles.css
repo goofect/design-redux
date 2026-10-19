@@ -10982,3 +10982,8 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 .dr-due.is-soon {
   color: var(--text-accent);
 }
+
+.dr-bulk-chip.is-more {
+  color: var(--text-muted);
+  cursor: pointer;
+}

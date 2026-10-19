@@ -1480,9 +1480,17 @@ export class SearchScreen extends BrowseScreen {
       if (!s.n) return;
       const h = this.heading(root, s.title);
       if (s.n > limits[id]) this.seeAll(h, id);
+      if (id === 'notes' && s.n > 1) this.notesTools(h, ranked.map((r) => r.file));
       s.draw(root, false);
     });
     if (textOn) this.renderText(root, q, skip, 5);
+  }
+
+  /** Properties…, at the notes' heading: the property tools over every note found. */
+  notesTools(head, files) {
+    const tools = head.createSpan({ cls: 'dr-search-see-all dr-search-props', text: 'Properties…' });
+    asButton(tools, `The properties of these ${files.length} notes`);
+    onActivate(tools, () => this.view.propertyToolsFor(files));
   }
 
   /** "See All", at a section's heading: that kind, whole. */

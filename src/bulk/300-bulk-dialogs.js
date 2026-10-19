@@ -172,7 +172,9 @@ export class BulkModal extends Modal {
   renderTargets() {
     const el = this.targetsEl;
     el.empty();
-    this.targets.forEach((target) => {
+    // Many notes picked: the first few, and the rest on asking.
+    const many = !this.allTargets && this.targets.length > 8;
+    (many ? this.targets.slice(0, 6) : this.targets).forEach((target) => {
       const chip = el.createDiv({ cls: 'dr-bulk-chip' });
       const isFolder = target instanceof TFolder;
       setIcon(chip.createSpan({ cls: 'dr-bulk-chip-icon' }), isFolder ? 'folder' : 'file-text');
@@ -188,6 +190,14 @@ export class BulkModal extends Modal {
         this.update();
       });
     });
+    if (many) {
+      const more = el.createDiv({ cls: 'dr-bulk-chip is-more', text: `and ${this.targets.length - 6} more` });
+      asButton(more);
+      onActivate(more, () => {
+        this.allTargets = true;
+        this.renderTargets();
+      });
+    }
     const pick = el.createDiv({ cls: 'dr-bulk-chip is-add' });
     asButton(pick);
     // With folders chosen, just a round + beside them; with none, it says what it's for.

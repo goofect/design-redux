@@ -559,6 +559,12 @@ export class BrowseView extends ItemView {
     return key.charAt(0).toUpperCase() + key.slice(1);
   }
 
+  /** The property tools over some notes — those picked, found or in a saved view — rather than folders. */
+  propertyToolsFor(files) {
+    const bulk = this.plugin.feature(BulkEditing);
+    if (bulk && files.length) bulk.openTools(files.slice(), null);
+  }
+
   valueOf(file, key) {
     const cache = this.app.metadataCache.getFileCache(file);
     const v = cache && fmGet(cache.frontmatter, key);

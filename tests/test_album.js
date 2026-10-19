@@ -947,6 +947,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Array.from(view.ticked()).sort(), ['IR/Anarchy.md', 'IR/Balance.md', 'IR/Cooperation.md'], 'the run between');
     assert.strictEqual(bar().querySelector('.dr-bulk-count').textContent, '3 notes selected');
     assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Balance.md"]').classList.contains('is-ticked'));
+    // Properties…: the property tools over the notes ticked.
+    const opened = [];
+    const feature = plugin.feature;
+    plugin.feature = (C) => (C && C.name === 'BulkEditing' ? { openTools: (targets, tab) => opened.push([targets.map((f) => f.basename).sort(), tab]) } : feature.call(plugin, C));
+    Array.from(bar().querySelectorAll('.dr-bulk-action')).find((b) => b.textContent === 'Properties…').click();
+    plugin.feature = feature;
+    assert.deepStrictEqual(opened, [[['Anarchy', 'Balance', 'Cooperation'], null]]);
     await view.moveTicked(v.vault.getAbstractFileByPath('IR/Theories'));
     ['Anarchy', 'Balance', 'Cooperation'].forEach((n) => assert.ok(v.vault.getAbstractFileByPath(`IR/Theories/${n}.md`), `${n} moved`));
     assert.strictEqual(view.ticked().size, 0);
