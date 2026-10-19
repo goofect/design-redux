@@ -16,7 +16,6 @@ import { Feature } from '../core/080-feature.js';
 import { dueNotes } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ContextStrip } from './190-strip.js';
-import { ReadingOutline } from './195-reading-outline.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
 
@@ -223,7 +222,7 @@ export class WorkspaceModes extends Feature {
   async apply(id) {
     const ws = this.app.workspace;
     if (id === 'study') {
-      const outline = typeof ReadingOutline === 'function' ? this.plugin.feature(ReadingOutline) : null;
+      const outline = this.plugin.featureNamed('ReadingOutline');
       const withOutline = !!(outline && outline.enabled);
       this.sidebars(false, withOutline);
       // What's due to be revisited first, the most overdue; else the note you were reading.

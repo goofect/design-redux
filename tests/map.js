@@ -318,11 +318,9 @@ const AREAS = [
   // A map's tree, pure: below every feature, above only core.
   { name: 'tree', level: 1 },
   { name: 'library', level: 2 },
-  { name: 'chrome', level: 2 },
-  { name: 'links', level: 2 },
-  { name: 'editor', level: 2 },
-  { name: 'bulk', level: 2 },
-  { name: 'mindmap', level: 2 },
+  { name: 'note', level: 2 },
+  { name: 'maps', level: 2 },
+  { name: 'tools', level: 2 },
   { name: 'plugin', level: 3 },
 ];
 const areaOf = (p) => AREAS.find((a) => a.name === p.area) || { name: p.area, level: 2 };

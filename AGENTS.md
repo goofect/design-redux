@@ -8,8 +8,8 @@ Coffee N' Christmas.
 ## Files
 
 - `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
-  (core, ui, tree, library, chrome, links, editor, bulk, mindmap,
-  plugin). Each
+  (core, ui, tree, then the four places — library, note, maps, tools —
+  and plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
   them all and exports the plugin. After using a name from another module,
   `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
@@ -60,8 +60,9 @@ Coffee N' Christmas.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
 - Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`)
-  and the pure map tree (`tree`, which imports only core), then the features by area (library and albums, chrome, links, editor, bulk,
-  mindmap), then the plugin. A module imports from its own area and those below;
+  and the pure map tree (`tree`, which imports only core), then the features by place (library
+  and albums; note: panel, footnotes, scripts, quiet links; maps: mind maps; tools: bulk edits,
+  strip, modes, graph), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
@@ -74,7 +75,7 @@ Coffee N' Christmas.
   and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts: a later piece writes `class Part {…}`
   and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–124, MindMapView in the mindmap area). No `super` in a part.
+  120–124, MindMapView in the maps area). No `super` in a part.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).

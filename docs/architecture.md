@@ -8,8 +8,9 @@ each milestone did.
 ## 0. Where it stands
 
 Canvas maps were retired in 3.0 (`docs/plans/canvas-retirement.md`): the canvas area is
-gone, maps are mind maps, and `core/079` keeps only the asks of a plain canvas. What
-follows about canvas pieces is the record from before.
+gone, maps are mind maps, and `core/079` keeps only the asks of a plain canvas. The source
+folders are the four places of the reform — library, note, maps, tools — with core and ui below
+them; what follows about canvas pieces and the old folders is the record from before.
 
 ```text
 esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.0, phase 1)
@@ -18,18 +19,19 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
                sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
                Selection 076; actions 078; Feature and mixInto 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
- src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the       18 modules  8,750
-               album features, knowledge, library and knowledge checks
- src/chrome/   actions menu, properties panel, strip, Up Next, menus, modes         10 modules  2,994
- src/links/    graph filter and routes, quiet links 263–266                          6 modules  2,736
- src/editor/   marked lists, scripts, footnotes                                      3 modules  2,389
- src/bulk/     engine, dialogs 300–304, feature                                      7 modules  4,118
- src/canvas/   tree (the model, saveCanvas), folds, layouts, arrows, outline, …     33 modules 10,747
+ src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
+               album features, note page, study, knowledge, library checks
+ src/note/     properties panel (160–180), reading outline, marked lists, scripts,    (the note place)
+               footnotes, quiet links 263–266
+ src/maps/     mind maps: view, editor, layouts, views, import/export, history        (the maps place)
+ src/tree/     the map's tree, pure: model, layouts, conversions                      (below every place)
+ src/tools/    actions menu, strip, one page, modes, graph filter and routes, bulk    (the tools place)
+               engine, dialogs, schema, rules
  src/plugin/   the plugin (lifecycle, settings, features, delegates), settings      2 modules  1,076
 ```
 
 - **The rules, checked on every `npm test`:**
-  - **Layers:** a piece uses its own area and those below. 20 known crossings remain, and
+  - **Layers:** a piece uses its own area and those below. 17 known crossings remain, and
     the list in `tests/snapshots/layers.json` only shrinks. From 88 at M0.
   - **Lifecycle:** no leftovers after switching off or unloading, and no command id or
     setting key lost.

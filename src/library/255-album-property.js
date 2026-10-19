@@ -10,7 +10,7 @@ import { FuzzySuggestModal, Notice, TFile } from 'obsidian';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction } from '../ui/230-pickers.js';
-import { bulkNotice, bulkTail } from '../bulk/290-bulk-engine.js';
+import { bulkNotice, bulkTail } from '../tools/290-bulk-engine.js';
 
 export class AlbumProperty extends Feature {
   settingsSchema() {

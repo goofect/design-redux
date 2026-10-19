@@ -22,8 +22,8 @@ import { fromReading } from './145-reading-history.js';
 import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
-import { renamePropertyInPlace } from '../bulk/290-bulk-engine.js';
-import { BulkEditing } from '../bulk/310-bulk-feature.js';
+import { renamePropertyInPlace } from '../tools/290-bulk-engine.js';
+import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class BrowseScreen {
   constructor(view) {

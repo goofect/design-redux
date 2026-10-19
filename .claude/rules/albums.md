@@ -1,8 +1,8 @@
 ---
 paths:
-  - "src/1[0-3][0-9]-*.js"
-  - "src/235-covers.js"
-  - "src/25[5-9]-*.js"
+  - "src/library/*.js"
+  - "src/ui/235-covers.js"
+  - "src/library/25[5-9]-*.js"
   - "tests/test_album.js"
 ---
 

@@ -17,10 +17,9 @@ import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { dueNotes, sessionPlace } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
-import { PropertiesPanel } from './180-panel.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { AlbumStructure } from '../library/257-album-structure.js';
-import { Footnotes } from '../editor/285-footnotes.js';
+import { Footnotes } from '../note/285-footnotes.js';
 import { WorkspaceModes } from './348-workspace-modes.js';
 
 /*
@@ -627,8 +626,8 @@ export class ContextStrip extends Feature {
         label: 'Properties',
         role: 'properties',
         run: (evt) => {
-          const panel = this.plugin.feature(PropertiesPanel);
-          if (panel && panel.enabled && leaf) panel.toggleFrom(leaf, evt.currentTarget);
+          // The panel answers if it's on: the strip doesn't know it.
+          if (leaf) this.app.workspace.trigger('design-redux:open-panel', leaf, evt.currentTarget);
         },
       });
     }

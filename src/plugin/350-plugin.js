@@ -15,21 +15,21 @@ import { Reading } from '../core/075-reading.js';
 import { Selection } from '../core/076-selection.js';
 import { LibraryIndex } from '../core/077-library-index.js';
 import { Appearance } from '../core/085-appearance.js';
-import { ListKeys } from '../library/105-list-keys.js';
+import { ListKeys } from '../note/105-list-keys.js';
 import { SidebarDrop } from '../library/107-sidebar-drop.js';
 import { BrowseView } from '../library/120-browse-view.js';
 import { Library } from '../library/130-browse-filters.js';
-import { ActionsMenu } from '../chrome/140-actions-menu.js';
+import { ActionsMenu } from '../tools/140-actions-menu.js';
 import { NotePage } from '../library/140-note-page.js';
 import { ReadingHistory } from '../library/145-reading-history.js';
 import { Study } from '../library/147-study.js';
-import { PropertyLinks } from '../chrome/165-panel-references.js';
-import { PropertiesPanel } from '../chrome/180-panel.js';
-import { ContextStrip } from '../chrome/190-strip.js';
-import { ReadingOutline } from '../chrome/195-reading-outline.js';
-import { OnePage } from '../chrome/200-one-page.js';
-import { MenuFilter } from '../chrome/210-menu-filter.js';
-import { SettingsButton } from '../chrome/220-settings-button.js';
+import { PropertyLinks } from '../note/165-panel-references.js';
+import { PropertiesPanel } from '../note/180-panel.js';
+import { ContextStrip } from '../tools/190-strip.js';
+import { ReadingOutline } from '../note/195-reading-outline.js';
+import { OnePage } from '../tools/200-one-page.js';
+import { MenuFilter } from '../tools/210-menu-filter.js';
+import { SettingsButton } from '../tools/220-settings-button.js';
 import { NamePrompt } from '../ui/230-pickers.js';
 import { CoverImages } from '../ui/235-covers.js';
 import { CoverDrop } from '../ui/237-cover-drop.js';
@@ -41,23 +41,23 @@ import { AlbumRefactor } from '../library/256-album-refactor.js';
 import { AlbumStructure } from '../library/257-album-structure.js';
 import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
-import { GraphPropertyFilter } from '../links/260-graph-filter.js';
+import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { PropertyDates } from '../library/260-property-dates.js';
 import { KnowledgeCheck } from '../library/261-knowledge-check.js';
-import { GraphRoutes } from '../links/262-graph-routes.js';
-import { QuietLinks } from '../links/265-quiet-links.js';
-import { MarkedLists } from '../editor/270-lists.js';
-import { Scripts } from '../editor/280-scripts.js';
-import { Footnotes } from '../editor/285-footnotes.js';
-import { BulkEdits } from '../bulk/290-bulk-engine.js';
-import { PropertySchemas } from '../bulk/305-bulk-schema.js';
-import { PropertyHistory } from '../bulk/306-bulk-history.js';
-import { PropertyRules } from '../bulk/307-bulk-rules.js';
-import { BulkEditing } from '../bulk/310-bulk-feature.js';
-import { WorkspaceModes } from '../chrome/348-workspace-modes.js';
+import { GraphRoutes } from '../tools/262-graph-routes.js';
+import { QuietLinks } from '../note/265-quiet-links.js';
+import { MarkedLists } from '../note/270-lists.js';
+import { Scripts } from '../note/280-scripts.js';
+import { Footnotes } from '../note/285-footnotes.js';
+import { BulkEdits } from '../tools/290-bulk-engine.js';
+import { PropertySchemas } from '../tools/305-bulk-schema.js';
+import { PropertyHistory } from '../tools/306-bulk-history.js';
+import { PropertyRules } from '../tools/307-bulk-rules.js';
+import { BulkEditing } from '../tools/310-bulk-feature.js';
+import { WorkspaceModes } from '../tools/348-workspace-modes.js';
 import { Diagnostics } from './355-diagnostics.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
-import { MindMaps } from '../mindmap/420-mindmap-feature.js';
+import { MindMaps } from '../maps/420-mindmap-feature.js';
 
 export class DesignRedux extends Plugin {
   async onload() {
@@ -394,6 +394,11 @@ export class DesignRedux extends Plugin {
   /** One feature by its class, rather than by its name as a string. */
   feature(Ctor) {
     return (this.features || []).find((f) => f instanceof Ctor) || null;
+  }
+
+  /** One feature by its class's name, for a feature that mustn't import the one it asks for (that would cross the places). */
+  featureNamed(name) {
+    return (this.features || []).find((f) => f.constructor.name === name) || null;
   }
 
   /** A throw in one feature must not leave the others half set up. */

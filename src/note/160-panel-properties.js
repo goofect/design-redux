@@ -19,8 +19,8 @@ import { Library } from '../library/130-browse-filters.js';
 import { LinkNotePicker, NamePrompt } from '../ui/230-pickers.js';
 import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumProperty } from '../library/255-album-property.js';
-import { QuietLinks } from '../links/265-quiet-links.js';
-import { BulkEditing } from '../bulk/310-bulk-feature.js';
+import { QuietLinks } from './265-quiet-links.js';
+import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 /** The names in a comma list, lower case. */
 export const propNames = (text) =>

@@ -204,6 +204,7 @@ function setup() {
     folderNote: () => null,
     folderCoverSrc: () => null,
     feature: () => null,
+    featureNamed: () => null,
     refreshBrowse: () => views.forEach((view) => view.render()),
     moveFile: async (file, folderPath) => {
       await v.fileManager.renameFile(file, `${folderPath === '/' ? '' : folderPath + '/'}${file.name}`);

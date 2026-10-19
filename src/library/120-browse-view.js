@@ -17,9 +17,9 @@ import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { studyReady } from '../core/081-study.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { BROWSE_SCREENS, FolderScreen, ROOT_MODES } from './110-browse-screens.js';
-import { ContextStrip } from '../chrome/190-strip.js';
+import { ContextStrip } from '../tools/190-strip.js';
 import { AlbumStructure } from './257-album-structure.js';
-import { BulkEditing } from '../bulk/310-bulk-feature.js';
+import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class BrowseView extends ItemView {
   constructor(leaf, plugin) {

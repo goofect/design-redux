@@ -1,13 +1,13 @@
 ---
 paths:
   - "src/core/079-canvas-adapter.js"
-  - "src/chrome/190-*.js"
-  - "src/chrome/180-*.js"
+  - "src/tools/190-*.js"
+  - "src/note/180-*.js"
 ---
 
 # The canvas adapter
 
-Canvas maps are gone (3.0): maps are mind maps (`src/mindmap/`, `.md` notes
+Canvas maps are gone (3.0): maps are mind maps (`src/maps/`, `.md` notes
 with a list, or `.mindmap` files). What's left of Obsidian's canvas is a few
 asks of a plain canvas, all through `core/079`:
 
