@@ -12,6 +12,7 @@ import { Notice, parseYaml, stringifyYaml, TFile, TFolder } from 'obsidian';
 import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
 import { byName } from '../core/030-helpers-art.js';
 import { noteTags } from '../core/040-helpers-sorting.js';
+import { parseDateInput } from '../core/045-helpers-properties.js';
 import { bulkCount, renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { noteProps, sameValue } from '../core/073-notes.js';
 import { checkNote, fixFor, schemaFor } from '../core/086-property-schema.js';
@@ -142,6 +143,11 @@ export function parseTypedValue(type, raw) {
   if (type === 'number') {
     const n = Number(text);
     return Number.isFinite(n) ? n : text;
+  }
+  // A date typed as tomorrow, +2w or friday is written as the date.
+  if ((type === 'date' || type === 'datetime') && !/^\d{4}-\d{2}-\d{2}/.test(text)) {
+    const day = parseDateInput(text);
+    if (day) return type === 'datetime' ? `${day}T00:00` : day;
   }
   return text;
 }

@@ -16,7 +16,7 @@ import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
-import { paintValue } from '../ui/248-value-options.js';
+import { markDue, paintValue } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseRows {
@@ -99,7 +99,10 @@ export class BrowseRows {
       const text = this.columnValue(file, key);
       const cell = row.createDiv({ cls: this.isTimeColumn(key) ? 'dr-track-time' : 'dr-track-sub', text });
       // A value with a colour or an icon of its own shows them.
-      if (text && !this.isTimeColumn(key)) paintValue(cell, this.plugin, key, text);
+      if (text && !this.isTimeColumn(key)) {
+        paintValue(cell, this.plugin, key, text);
+        markDue(cell, this.plugin, key, text);
+      }
     });
 
     // Its length, where a track's would be: the last column, lined up.

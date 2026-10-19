@@ -41,6 +41,7 @@ import { AlbumStructure } from '../library/257-album-structure.js';
 import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../links/260-graph-filter.js';
+import { PropertyDates } from '../library/260-property-dates.js';
 import { KnowledgeCheck } from '../library/261-knowledge-check.js';
 import { GraphRoutes } from '../links/262-graph-routes.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
@@ -175,6 +176,7 @@ export class DesignRedux extends Plugin {
       new BulkEditing(this),
       new PropertySchemas(this),
       new PropertyHistory(this),
+      new PropertyDates(this),
     ];
 
     this.syncFrame = 0;

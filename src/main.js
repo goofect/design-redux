@@ -93,6 +93,7 @@ import './library/255-album-property.js';
 import './library/256-album-refactor.js';
 import './library/257-album-structure.js';
 import './library/259-library-check.js';
+import './library/260-property-dates.js';
 import './links/260-graph-filter.js';
 import './library/261-knowledge-check.js';
 import './links/262-graph-routes.js';

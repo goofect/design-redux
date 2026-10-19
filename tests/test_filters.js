@@ -554,6 +554,32 @@ t('a value with a colour and an icon shows them: on its property’s page, in al
   }
 });
 
+t('a due date marked in album rows — overdue, today, soon — and a filter for what’s due soon or overdue', () => {
+  const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const contract = files.find((f) => f.basename === 'Contract');
+  const tort = files.find((f) => f.basename === 'Tort');
+  const saved = [caches.get(contract).frontmatter, caches.get(tort).frontmatter];
+  caches.get(contract).frontmatter = Object.assign({}, saved[0], { due: day(-1) });
+  caches.get(tort).frontmatter = Object.assign({}, saved[1], { due: day(20) });
+  plugin.settings.albumColumns = 'due';
+  plugin.settings.propertyDueKeys = 'due';
+  try {
+    let view = page({ mode: 'folder', path: 'Law' });
+    const cell = (n) => view.contentEl.querySelector(`.dr-track[data-path="Law/${n}.md"] .dr-track-sub`);
+    assert.ok(cell('Contract').classList.contains('is-overdue') && cell('Tort').classList.contains('is-later'));
+    view = page({ mode: 'notes', path: '/' });
+    view.addPropFilter({ key: 'due', value: null, negate: false, due: true });
+    view.render();
+    assert.deepStrictEqual(shownNotes(view), ['Contract']);
+    assert.strictEqual(view.contentEl.querySelector('.dr-filter-chips .dr-chip-label').textContent, 'due due soon or overdue');
+  } finally {
+    caches.get(contract).frontmatter = saved[0];
+    caches.get(tort).frontmatter = saved[1];
+    plugin.settings.albumColumns = '';
+    delete plugin.settings.propertyDueKeys;
+  }
+});
+
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');

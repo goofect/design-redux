@@ -78,6 +78,7 @@ export function dateFloor(range, now = Date.now()) {
 
 /** How a property filter reads: "status is draft", "has domain". */
 export function propertyFilterLabel(f) {
+  if (f.due) return f.negate ? `${f.key} not due yet` : `${f.key} due soon or overdue`;
   if (f.value === null || f.value === undefined) return f.negate ? `No ${f.key}` : `Has ${f.key}`;
   return `${f.key} ${f.negate ? 'is not' : 'is'} ${f.value}`;
 }

@@ -404,6 +404,8 @@ export const DEFAULTS = {
   // { notePath: [{ at, changes: { key: [before, after, how] } }] } — the last changes written to each note.
   propertyHistory: {},
   propertyHistoryLimit: 20,
+  propertyDueChips: true,
+  propertyDueKeys: 'due, deadline',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 12,
   graphProperties: true,

@@ -9,7 +9,7 @@ import { Menu, setIcon } from 'obsidian';
 import { BROWSE_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { byName, composing, liveViews, showMenuAt, sortByOrder } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, noteTags, onActivate, OWN_ORDER, propertyFilterLabel, SORTS, TABLE_SORTS, vaultTags } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames, plainValue, propertyValues } from '../core/045-helpers-properties.js';
+import { dateDueState, dueKeys, knownPropertyNames, plainValue, propertyValues } from '../core/045-helpers-properties.js';
 import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { mixInto } from '../core/080-feature.js';
@@ -268,8 +268,9 @@ export class BrowseSorting {
       const values = (Array.isArray(raw) ? raw : [raw])
         .filter((v) => v !== null && v !== undefined && v !== '')
         .map((v) => plainValue(v).toLowerCase());
-      const has =
-        f.value === null || f.value === undefined
+      const has = f.due
+        ? values.some((v) => ['overdue', 'today', 'soon'].indexOf(dateDueState(v)) !== -1)
+        : f.value === null || f.value === undefined
           ? values.length > 0
           : values.indexOf(String(f.value).toLowerCase()) !== -1;
       if (has === !!f.negate) return false;
@@ -413,6 +414,19 @@ export class BrowseSorting {
           .setChecked(!!this.filterProp.negate)
           .onClick(() => {
             this.filterProp.negate = !this.filterProp.negate;
+            redraw();
+          })
+      );
+    }
+    // What's due: a date property due within a few days, or past it.
+    const dueKey = dueKeys(this.plugin.settings)[0];
+    if (dueKey && this.plugin.settings.propertyDueChips !== false && !this.propFilters().some((f) => f.due)) {
+      menu.addItem((item) =>
+        item
+          .setTitle(`Due soon or overdue (${dueKey})`)
+          .setIcon('alarm-clock')
+          .onClick(() => {
+            this.addPropFilter({ key: dueKey, value: null, negate: false, due: true });
             redraw();
           })
       );

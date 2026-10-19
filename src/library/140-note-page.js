@@ -12,14 +12,14 @@
 import { TFile } from 'obsidian';
 import { noteCoverSrc } from '../core/030-helpers-art.js';
 import { relativeDay } from '../core/040-helpers-sorting.js';
-import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { dateDueState, fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteOpening } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { isDue } from '../core/081-study.js';
 import { Library } from './130-browse-filters.js';
 import { Study, STUDY_GRADES } from './147-study.js';
-import { paintValue } from '../ui/248-value-options.js';
+import { markDue, paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
 export const NOTE_SHELF_SIZE = 10;
@@ -244,12 +244,16 @@ export class NotePage extends Feature {
       // Under it, the one grey line, then the chips.
       const after = title ? title.nextSibling : place.head.firstChild;
       const line = this.put(place.head, 'dr-note-meta', meta, after, (el) => el.setText(meta));
-      const chipKey = chips.map((c) => `${c.key}=${c.text}`).join('|');
+      // A due date's state is part of what's drawn: a day on, it may be due.
+      const chipKey = chips.map((c) => `${c.key}=${c.text}=${dateDueState(c.raw) || ''}`).join('|');
       this.put(place.head, 'dr-note-chips', chipKey, line ? line.nextSibling : after, (el) => {
         chips.forEach((c) => {
           const chip = el.createSpan({ cls: 'dr-note-chip', text: c.text });
           chip.setAttribute('aria-label', c.key);
-          if (c.raw !== null && typeof c.raw !== 'object') paintValue(chip, this.plugin, c.key, String(c.raw));
+          if (c.raw !== null && typeof c.raw !== 'object') {
+            paintValue(chip, this.plugin, c.key, String(c.raw));
+            markDue(chip, this.plugin, c.key, String(c.raw));
+          }
         });
       });
       // Due to be revisited: a quiet row of grades.

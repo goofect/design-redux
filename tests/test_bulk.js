@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2031,6 +2031,17 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const before = JSON.stringify(plugin.settings.propertyHistory);
     await plugin.notes.write(file, (fm) => { fm.status = 'x'; });
     assert.strictEqual(JSON.stringify(plugin.settings.propertyHistory), before);
+  });
+
+  await t('dates typed as words: tomorrow, +2w, friday, in 5 days; due states against today; the property tools write the date', () => {
+    const wed = new Date(2026, 9, 14, 9, 0); // a Wednesday
+    const p = (s) => R.parseDateInput(s, wed);
+    assert.deepStrictEqual(['today', 'tomorrow', 'yesterday', '+3d', '+2w', '-1m', '+1y', 'in 5 days', 'fri', 'next wednesday', '2026-12-01', 'soon'].map(p),
+      ['2026-10-14', '2026-10-15', '2026-10-13', '2026-10-17', '2026-10-28', '2026-09-14', '2027-10-14', '2026-10-19', '2026-10-16', '2026-10-21', '2026-12-01', null]);
+    assert.deepStrictEqual(['2026-10-13', '2026-10-14', '2026-10-17', '2026-10-18', 'x'].map((d) => R.dateDueState(d, wed)), ['overdue', 'today', 'soon', 'later', null]);
+    assert.strictEqual(R.parseTypedValue('date', 'tomorrow'), R.parseDateInput('tomorrow'));
+    assert.strictEqual(R.parseTypedValue('datetime', '+1d'), `${R.parseDateInput('+1d')}T00:00`);
+    assert.strictEqual(R.parseTypedValue('text', 'tomorrow'), 'tomorrow', 'only for a date');
   });
 
   console.log(`\n${passed} passed`);

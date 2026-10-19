@@ -172,3 +172,66 @@ export function parentLinkpaths(raw) {
   });
   return out;
 }
+
+/** A date as Obsidian keeps one: YYYY-MM-DD, in local time. */
+export function isoDay(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+/**
+ * A date as typed — today, tomorrow, yesterday, +3d, +2w, -1m, +1y, in
+ * 5 days, friday or next fri, or a date already — as YYYY-MM-DD; null
+ * for anything else. `today` (a Date or its time) for the day it counts
+ * from.
+ */
+export function parseDateInput(text, today) {
+  const s = String(text === null || text === undefined ? '' : text).trim().toLowerCase();
+  if (!s) return null;
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const base = today === undefined ? new Date() : new Date(today);
+  base.setHours(12, 0, 0, 0);
+  const shifted = (n, unit) => {
+    const d = new Date(base);
+    if (unit === 'w') d.setDate(d.getDate() + 7 * n);
+    else if (unit === 'm') d.setMonth(d.getMonth() + n);
+    else if (unit === 'y') d.setFullYear(d.getFullYear() + n);
+    else d.setDate(d.getDate() + n);
+    return isoDay(d);
+  };
+  if (s === 'today' || s === 'now') return shifted(0);
+  if (s === 'tomorrow') return shifted(1);
+  if (s === 'yesterday') return shifted(-1);
+  let m = /^([+-])\s*(\d+)\s*([dwmy])?[a-z]*$/.exec(s) || /^in\s+()(\d+)\s*([dwmy])[a-z]*$/.exec(s);
+  if (m) return shifted(Number(m[2]) * (m[1] === '-' ? -1 : 1), m[3] || 'd');
+  m = /^(?:next\s+)?(sun|mon|tue|wed|thu|fri|sat)[a-z]*$/.exec(s);
+  if (m) {
+    const ahead = (WEEKDAYS.indexOf(m[1]) - base.getDay() + 7) % 7 || 7;
+    return shifted(ahead);
+  }
+  return null;
+}
+
+/* How many days ahead a date counts as soon. */
+export const DUE_SOON = 3;
+
+/** Where a date stands against today: overdue, today, soon (within DUE_SOON days) or later; null for what isn't a date. */
+export function dateDueState(value, today) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value === null || value === undefined ? '' : value).trim());
+  if (!m) return null;
+  const base = today === undefined ? new Date() : new Date(today);
+  const day = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const now = Date.UTC(base.getFullYear(), base.getMonth(), base.getDate());
+  const days = Math.round((day - now) / 86400000);
+  return days < 0 ? 'overdue' : days === 0 ? 'today' : days <= DUE_SOON ? 'soon' : 'later';
+}
+
+/** The properties whose dates are due dates, as settings name them. */
+export function dueKeys(settings) {
+  return String((settings && settings.propertyDueKeys) || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
