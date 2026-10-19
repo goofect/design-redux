@@ -1700,6 +1700,44 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     page.remove();
   });
 
+  await t('copy and cut a branch as a list; a note, an image or text dropped on a node hangs under it', async () => {
+    const view = await open(NOTE);
+    const [research, build] = view.model.root.children;
+    const clip = () => { const data = {}; return { data, setData: (k, v) => { data[k] = v; }, getData: (k) => data[k] || '' }; };
+    const fire = (type, init) => { const evt = new window.Event(type, { bubbles: true, cancelable: true }); Object.assign(evt, init); view.root.dispatchEvent(evt); return evt; };
+    view.select(build.id);
+    const c = clip();
+    fire('copy', { clipboardData: c });
+    assert.strictEqual(c.data['text/plain'], '- Build\n\t- API\n\t- UI\n');
+    fire('cut', { clipboardData: clip() });
+    assert.ok(!R.nodeById(view.model, build.id), 'cut: taken out');
+    view.select(research.id);
+    fire('paste', { clipboardData: c });
+    assert.deepStrictEqual(research.children.map((n) => n.text).slice(-1), ['Build']);
+    assert.deepStrictEqual(research.children.slice(-1)[0].children.map((n) => n.text), ['API', 'UI'], 'pasted back as it was, under another node');
+    // Dropped: a note from the file list, onto the node it lands on.
+    const note = new TFile('People/Ada.md');
+    view.app = { dragManager: { draggable: { type: 'file', file: note } }, metadataCache: { fileToLinktext: (f) => f.basename }, vault: {}, fileManager: {} };
+    const ship = view.model.root.children[1];
+    const onto = view.renderer.nodeEls.get(ship.id);
+    const drop = (target, init) => { const evt = new window.Event('drop', { bubbles: true, cancelable: true }); Object.assign(evt, init); target.dispatchEvent(evt); return evt; };
+    drop(onto, { dataTransfer: { files: [], getData: () => '' } });
+    await settle();
+    assert.deepStrictEqual(ship.children.map((n) => n.text), ['[[Ada]]']);
+    // An image from outside the vault: saved, then embedded.
+    const saved = [];
+    view.app = { dragManager: { draggable: null }, metadataCache: { fileToLinktext: (f) => f.name }, vault: { createBinary: async (path, data) => { saved.push(path); return new TFile(path); } }, fileManager: { getAvailablePathForAttachment: async (name) => `Attachments/${name}` } };
+    drop(view.renderer.nodeEls.get(ship.id), { dataTransfer: { files: [{ name: 'Plan.PNG', arrayBuffer: async () => new ArrayBuffer(4) }, { name: 'notes.txt' }], getData: () => '' } });
+    await settle(10);
+    assert.deepStrictEqual(saved, ['Attachments/Plan.PNG']);
+    assert.strictEqual(ship.children.slice(-1)[0].text, '![[Plan.PNG]]', 'only the image, embedded');
+    // Text: a branch.
+    drop(view.renderer.nodeEls.get(ship.id), { dataTransfer: { files: [], getData: () => '- Launch day\n  - Press\n' } });
+    await settle();
+    assert.strictEqual(ship.children.slice(-1)[0].text, 'Launch day');
+    assert.deepStrictEqual(ship.children.slice(-1)[0].children.map((n) => n.text), ['Press']);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

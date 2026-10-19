@@ -365,6 +365,17 @@ function nodeLines(node, depth, unit, marker) {
   return out;
 }
 
+/** A node's branch as list lines, as the map writes them but with no ids: what Copy puts on the clipboard. */
+export function branchLines(node, unit = '\t') {
+  const out = [];
+  const go = (n, depth) => {
+    out.push(...nodeLines(Object.assign({}, n, { anchor: false }), depth, unit, '-'));
+    n.children.forEach((c) => go(c, depth + 1));
+  };
+  go(node, 0);
+  return out;
+}
+
 /** Whether a node is as it was read: the same text, attributes, id shown, depth and parent. */
 function unchanged(node, src, depth, parentId) {
   const t = src && src.then;

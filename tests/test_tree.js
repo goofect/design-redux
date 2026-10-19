@@ -510,6 +510,18 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.deepStrictEqual(R.pathTo(m, interviews.id).map((n) => n.text.split(' ')[0]), ['Launch', 'Research', 'Interviews']);
   });
 
+  await t('a branch copied as list lines and pasted into another map: the same words, details and attributes, new ids', () => {
+    const a = R.parseOutline('- Map\n\t- [ ] Book hall ^h1 %%{"status":"Doing"}%%\n\t  Ring on Monday.\n\t\t- Ask about chairs #venue\n').model;
+    const hall = a.root.children[0];
+    const lines = R.branchLines(hall);
+    assert.deepStrictEqual(lines, ['- [ ] Book hall %%{"status":"Doing"}%%', '  Ring on Monday.', '\t- Ask about chairs #venue'], 'no id: the copy gets its own');
+    const b = R.parseOutline('- Other\n').model;
+    R.pasteLines(b, b.root.id, lines.join('\n'));
+    const copy = b.root.children[0];
+    assert.deepStrictEqual([copy.text, copy.attrs, copy.children.map((c) => c.text)], ['[ ] Book hall\nRing on Monday.', { status: 'Doing' }, ['Ask about chairs #venue']]);
+    assert.notStrictEqual(copy.id, 'h1');
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());

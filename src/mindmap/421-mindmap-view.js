@@ -109,6 +109,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.addAction === 'function') this.addAction('file-text', 'Open as text', () => this.feature && this.feature.openAsText(this.leaf));
     this.listen();
     if (typeof this.watchNotes === 'function') this.watchNotes();
+    if (typeof this.listenForDrops === 'function') this.listenForDrops();
   }
 
   tool(label, icon, run) {

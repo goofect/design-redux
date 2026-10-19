@@ -9,6 +9,7 @@
 /* ------------------------------------------------------------------ */
 
 import { newId, newNode, nodeById } from './400-tree-model.js';
+import { splitItemText } from './401-tree-outline.js';
 
 /** A node and what's below it as plain data, ids kept. */
 export function snapshotNode(n) {
@@ -290,12 +291,23 @@ export function mergeIntoPrevious(model, id) {
 export function pasteLines(model, parentId, text) {
   const lines = String(text || '').split(/\r?\n/).filter((l) => l.trim() !== '');
   if (!lines.length) return null;
+  const MARKED = /^([ \t]*)([-*+]|\d+[.)])[ \t]+(.*)$/;
+  const inList = lines.some((l) => MARKED.test(l));
   const roots = [];
   const stack = [];
   lines.forEach((line) => {
-    const m = /^([ \t]*)(?:[-*+]|\d+[.)])?[ \t]*(.*)$/.exec(line);
+    const marked = MARKED.exec(line);
+    const m = marked || /^([ \t]*)()(.*)$/.exec(line);
     const width = m[1].replace(/\t/g, '    ').length;
-    const node = fresh(m[2].trim());
+    const top = stack[stack.length - 1];
+    // In a list, a line without a mark set in under an item goes on with its text, as Markdown has it.
+    if (!marked && inList && top && width > top.width) {
+      top.node.text += `\n${m[3].trim()}`;
+      return;
+    }
+    // Its words, attributes and escapes read as the map writes them; an id it had is left, the node's new.
+    const parts = splitItemText(m[3].trim());
+    const node = fresh(parts.text, parts.attrs);
     while (stack.length && stack[stack.length - 1].width >= width) stack.pop();
     if (stack.length) stack[stack.length - 1].node.children.push(node);
     else roots.push(node);

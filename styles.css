@@ -10626,3 +10626,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 @media (any-hover: hover) {
   .dr-mindmap-embed[tabindex]:hover { border-color: var(--interactive-accent); }
 }
+
+/* Mind map: the node something's dropped on */
+.dr-mindmap-node.is-drop { outline: 2px dashed var(--interactive-accent); outline-offset: 3px; }
