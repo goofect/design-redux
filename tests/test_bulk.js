@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -2056,6 +2056,62 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(modal.contentEl.querySelector('.dr-bulk-chip.is-more'));
     assert.strictEqual(chips().length, 12);
     modal.close();
+  });
+
+  await t('rules: fire on the change, not the state; a note moved into a folder gets its status once; its own write fires nothing; a dry run sets nothing; a run over 50 notes is one Undo', async () => {
+    const rule = R.tidyRule({ id: 'r1', when: { kind: 'folder', folder: '/Law/' }, set: R.parseSetLines('status: Open\nreviewed: today') });
+    assert.deepStrictEqual([rule.when, rule.set.map((x) => x.key), rule.name], [{ kind: 'folder', folder: 'Law' }, ['status', 'reviewed'], 'When a note comes into Law, set status, reviewed']);
+    const tagRule = R.tidyRule({ when: { kind: 'tag', tag: '#Done' }, set: [{ key: 'done', value: 'true' }] });
+    const st = (tags) => ({ tags, props: {} });
+    assert.deepStrictEqual([
+      R.ruleFires(tagRule, { path: 'x.md', before: st([]), after: st(['done']) }),
+      R.ruleFires(tagRule, { path: 'x.md', before: st(['done']), after: st(['done', 'more']) }),
+      R.ruleFires(rule, { path: 'Law/x.md', before: null, after: st([]) }),
+      R.ruleFires(rule, { path: 'Law/x.md', from: 'Law/y.md', before: st([]), after: st([]) }),
+    ], [true, false, true, false], 'tagged now and not before; made in the folder; moved within it: no');
+    const spec = { 'Inbox/a.md': note({ title: 'A' }), 'Inbox/b.md': note({}), 'Law/old.md': note({ status: 'Closed', reviewed: '2020-01-01' }) };
+    for (let k = 0; k < 50; k++) spec[`Law/n${k}.md`] = note({});
+    const v = makeVault(spec);
+    const { plugin, bulk } = makePlugin(v);
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    Object.assign(plugin.settings, { propertyRulesOn: true, propertyRulesDryRun: false, propertyRules: [rule] });
+    const rules = new R.PropertyRules(plugin);
+    rules.register();
+    rules.known();
+    const move = (f, to) => { const from = f.path; f.path = to; return rules.moved(f, from); };
+    const a = v.file('Inbox/a.md');
+    await move(a, 'Law/a.md');
+    const today = R.parseDateInput('today');
+    assert.deepStrictEqual(fmOf('Law/a.md'), { title: 'A', status: 'Open', reviewed: today });
+    // Its own write fires nothing; a change by hand afterwards fires nothing either: the note didn't come into the folder.
+    assert.strictEqual(rules.changed(a), null);
+    await plugin.notes.write(a, (fm) => { fm.status = 'Closed'; });
+    assert.strictEqual(await rules.changed(a), null);
+    assert.strictEqual(fmOf('Law/a.md').status, 'Closed', 'set once');
+    // A dry run says, and sets nothing.
+    plugin.settings.propertyRulesDryRun = true;
+    const b = v.file('Inbox/b.md');
+    const dry = await move(b, 'Law/b.md');
+    assert.ok(dry.dry && dry.plan.length === 2);
+    assert.deepStrictEqual(fmOf('Law/b.md'), {});
+    // Over the notes there now: shown first, then one step of Undo.
+    plugin.settings.propertyRulesDryRun = false;
+    const found = rules.planNow(rule);
+    assert.strictEqual(found.length, 51, 'the 50, and the one the dry run left; not the note set already');
+    await rules.runNow(rule, found);
+    assert.deepStrictEqual(fmOf('Law/n7.md'), { status: 'Open', reviewed: today });
+    assert.strictEqual(fmOf('Law/old.md').status, 'Closed', 'only where empty');
+    await bulk.undo();
+    assert.deepStrictEqual([fmOf('Law/n7.md'), fmOf('Law/n49.md')], [{}, {}]);
+    // The dialog keeps them tidy.
+    const modal = new R.RulesModal(plugin, rules);
+    modal.open();
+    assert.strictEqual(modal.contentEl.querySelectorAll('.dr-rule').length, 1);
+    assert.strictEqual(modal.contentEl.querySelector('.dr-rule-set').value, 'status: Open\nreviewed: today');
+    click(modal.contentEl.querySelector('.dr-schema-add'));
+    click(modal.contentEl.querySelector('.mod-cta'));
+    await settle();
+    assert.strictEqual(plugin.settings.propertyRules.length, 1, 'a rule saying nothing isn’t kept');
   });
 
   console.log(`\n${passed} passed`);

@@ -406,6 +406,10 @@ export const DEFAULTS = {
   propertyHistoryLimit: 20,
   propertyDueChips: true,
   propertyDueKeys: 'due, deadline',
+  // [{ id, name, on, when: { kind, folder | tag | key, value }, set: [{ key, value }], replace }]
+  propertyRules: [],
+  propertyRulesOn: false,
+  propertyRulesDryRun: true,
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 12,
   graphProperties: true,

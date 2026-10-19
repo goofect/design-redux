@@ -797,6 +797,16 @@ export function renamePropertyInSettings(settings, from, to) {
     renamedSchemas[path] = (schemas[path] || []).map((e) => (e && String(e.key).toLowerCase() === low ? Object.assign({}, e, { key: to }) : e));
   });
   if (!sameValue(renamedSchemas, schemas)) keep('Property schemas', () => settings.propertySchemas, (v) => (settings.propertySchemas = v))(renamedSchemas);
+  // Rules name it in what they look for and what they set.
+  const rules = Array.isArray(settings.propertyRules) ? settings.propertyRules : [];
+  const named = (k) => String(k || '').toLowerCase() === low;
+  const renamedRules = rules.map((r) =>
+    !r ? r : Object.assign({}, r, {
+      when: r.when && named(r.when.key) ? Object.assign({}, r.when, { key: to }) : r.when,
+      set: Array.isArray(r.set) ? r.set.map((s) => (s && named(s.key) ? Object.assign({}, s, { key: to }) : s)) : r.set,
+    })
+  );
+  if (!sameValue(renamedRules, rules)) keep('Property rules', () => settings.propertyRules, (v) => (settings.propertyRules = v))(renamedRules);
   const options = settings.propertyOptions || {};
   const optionKey = Object.keys(options).find((k) => k.toLowerCase() === low);
   if (optionKey !== undefined && optionKey !== to) {

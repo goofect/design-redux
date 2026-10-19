@@ -51,6 +51,7 @@ import { Footnotes } from '../editor/285-footnotes.js';
 import { BulkEdits } from '../bulk/290-bulk-engine.js';
 import { PropertySchemas } from '../bulk/305-bulk-schema.js';
 import { PropertyHistory } from '../bulk/306-bulk-history.js';
+import { PropertyRules } from '../bulk/307-bulk-rules.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
 import { CanvasArguments } from '../canvas/319-canvas-arguments.js';
 import { CanvasLegend } from '../canvas/320-canvas-legend.js';
@@ -177,6 +178,7 @@ export class DesignRedux extends Plugin {
       new PropertySchemas(this),
       new PropertyHistory(this),
       new PropertyDates(this),
+      new PropertyRules(this),
     ];
 
     this.syncFrame = 0;

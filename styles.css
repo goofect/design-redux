@@ -10987,3 +10987,72 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   color: var(--text-muted);
   cursor: pointer;
 }
+
+/* Property rules: a card for each rule. */
+.dr-rules-modal {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.dr-rules-state {
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-3);
+}
+
+.dr-rule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+  padding: var(--dr-space-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.dr-rule-when,
+.dr-rule-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-small);
+}
+
+.dr-rule-set {
+  width: 100%;
+  min-height: 3em;
+  resize: vertical;
+}
+
+.dr-rule-try {
+  margin-inline-start: auto;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-rule-preview {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.dr-rule-preview-row {
+  display: flex;
+  gap: var(--dr-space-2);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-rule-preview-name {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-rule-preview-set {
+  min-width: 0;
+  color: var(--text-muted);
+}
