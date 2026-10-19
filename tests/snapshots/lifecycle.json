@@ -436,6 +436,7 @@
   "propertyForAlbum",
   "propertyHistory",
   "propertyHistoryLimit",
+  "propertyInspector",
   "propertyOptions",
   "propertyRules",
   "propertyRulesDryRun",

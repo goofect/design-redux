@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
-import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
+import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { albumNeighbours, blankLook, drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { bulkCount } from '../core/047-helpers-text.js';
@@ -592,6 +592,51 @@ export class PropertiesScreen extends BrowseScreen {
       });
   }
 
+  /** A property's facts, as Obsidian counts them: its type, how many notes have it and don't, its top values, when last changed — each with its fix a click away. */
+  inspect(key) {
+    const want = String(key).toLowerCase();
+    const all = libraryIndex(this.plugin).markdown();
+    let last = 0;
+    const using = all.filter((file) => {
+      const fm = noteProps(this.app, file);
+      const has = Object.keys(fm).some((k) => k !== 'position' && k.toLowerCase() === want);
+      if (has) last = Math.max(last, file.stat ? file.stat.mtime : 0);
+      return has;
+    });
+    let type = 'text';
+    try {
+      const info = this.app.metadataTypeManager && typeof this.app.metadataTypeManager.getTypeInfo === 'function' ? this.app.metadataTypeManager.getTypeInfo(want) : null;
+      type = (info && info.expected && info.expected.type) || (info && info.inferred && info.inferred.type) || type;
+    } catch (err) {
+      /* the type as text */
+    }
+    return { type, uses: using.length, without: all.length - using.length, last };
+  }
+
+  renderInspector(detail, prop, groups) {
+    const facts = this.inspect(prop.key);
+    const bulk = this.plugin.feature(BulkEditing);
+    const root = this.app.vault.getRoot();
+    const box = detail.createDiv({ cls: 'dr-prop-facts' });
+    const fact = (label, text, fix) => {
+      const el = box.createDiv({ cls: 'dr-prop-fact' });
+      el.createDiv({ cls: 'dr-prop-fact-label', text: label });
+      const value = el.createDiv({ cls: 'dr-prop-fact-value', text });
+      if (fix && bulk) {
+        const go = value.createSpan({ cls: 'dr-prop-fact-fix', text: fix[0] });
+        asButton(go, fix[0]);
+        onActivate(go, fix[1]);
+      }
+      return el;
+    };
+    fact('Type', TYPE_LABELS[facts.type] || facts.type, ['Change…', () => bulk.openChangeType(prop.name)]);
+    fact('In', bulkCount(facts.uses, 'note'));
+    fact('Without it', bulkCount(facts.without, 'note'), facts.without ? ['Fill in…', () => bulk.openMissing([root], prop.name)] : null);
+    const top = groups.slice().sort((a, b) => b.files.length - a.files.length).slice(0, 3).map((g) => `${g.value} (${g.files.length})`);
+    fact('Values', top.length ? `${groups.length}: ${top.join(', ')}${groups.length > 3 ? '…' : ''}` : 'None', groups.length > 1 ? ['Clean up…', () => bulk.openTools([root], 'cleanup', { key: prop.name })] : null);
+    if (facts.last) fact('Last changed', this.view.relative(facts.last));
+  }
+
   /** Values as covers or as a list: as chosen, or covers while there are few enough to take in. */
   showsGrid(n) {
     const as = this.settings.propertyValueView || 'auto';
@@ -621,6 +666,7 @@ export class PropertiesScreen extends BrowseScreen {
       detail.createDiv({ cls: 'dr-split-empty', text: 'No notes carry this property' });
       return;
     }
+    if (this.settings.propertyInspector !== false && !view.editing) this.renderInspector(detail, prop, groups);
 
     const head = detail.createDiv({ cls: 'dr-search-section' });
     head.createSpan({ cls: 'dr-search-section-title', text: 'Values' });

@@ -580,6 +580,23 @@ t('a due date marked in album rows — overdue, today, soon — and a filter for
   }
 });
 
+t('a property’s facts on its page: type, notes with it and without, top values, last changed — each with its fix', () => {
+  const asked = [];
+  const feature = plugin.feature;
+  plugin.feature = () => ({ openChangeType: (k) => asked.push(['type', k]), openMissing: (t, k) => asked.push(['missing', k]), openTools: (t, tab, a) => asked.push([tab, a.key]) });
+  try {
+    const view = page({ mode: 'properties', property: 'status' });
+    const facts = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-fact')).map((f) => `${f.querySelector('.dr-prop-fact-label').textContent}: ${f.querySelector('.dr-prop-fact-value').firstChild.textContent}`);
+    const counted = files.filter((f) => 'status' in (caches.get(f).frontmatter || {})).length;
+    assert.deepStrictEqual(facts().slice(0, 4), ['Type: Text', `In: ${counted} notes`, `Without it: ${files.length - counted} notes`, 'Values: 2: draft (2), Done (1)']);
+    assert.ok(/^Last changed: /.test(facts()[4]));
+    view.contentEl.querySelectorAll('.dr-prop-fact-fix').forEach((b) => b.click());
+    assert.deepStrictEqual(asked, [['type', 'status'], ['missing', 'status'], ['cleanup', 'status']]);
+  } finally {
+    plugin.feature = feature;
+  }
+});
+
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');
