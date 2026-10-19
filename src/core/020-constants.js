@@ -412,6 +412,7 @@ export const DEFAULTS = {
   propertyRulesDryRun: true,
   propertyInspector: true,
   propertyInlineEdit: false,
+  propertyLinks: true,
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.

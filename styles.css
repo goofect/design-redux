@@ -11105,3 +11105,7 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   max-width: 100%;
   font-size: inherit;
 }
+
+.dr-references-section.is-empty {
+  display: none;
+}

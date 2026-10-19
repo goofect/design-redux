@@ -510,3 +510,33 @@ export class SetParentPrompt extends Modal {
     if (!this.chosen) this.choose('map');
   }
 }
+
+/**
+ * A note to link to, by name — and, where what's typed names none,
+ * Create to make it. `onChoose(file)` gets the note, or `onCreate(name)`
+ * the name typed.
+ */
+export class LinkNotePicker extends FuzzySuggestModal {
+  constructor(app, onChoose, onCreate) {
+    super(app);
+    this.onChooseNote = onChoose;
+    this.onCreate = onCreate;
+    this.setPlaceholder('A note to link to, or a new one’s name');
+  }
+
+  getItems() {
+    const typed = (this.inputEl && this.inputEl.value ? this.inputEl.value : '').trim();
+    const notes = this.app.vault.getMarkdownFiles().map((file) => ({ file }));
+    const taken = typed && notes.some((n) => n.file.basename.toLowerCase() === typed.toLowerCase());
+    return typed && !taken && this.onCreate ? notes.concat([{ create: typed }]) : notes;
+  }
+
+  getItemText(item) {
+    return item.create ? `Create “${item.create}”` : item.file.path.replace(/\.md$/, '');
+  }
+
+  onChooseItem(item) {
+    if (item.create) this.onCreate(item.create);
+    else this.onChooseNote(item.file);
+  }
+}

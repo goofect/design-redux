@@ -75,6 +75,7 @@ import './library/145-reading-history.js';
 import './library/147-study.js';
 import './chrome/140-actions-menu.js';
 import './chrome/160-panel-properties.js';
+import './chrome/165-panel-references.js';
 import './chrome/170-panel-native.js';
 import './chrome/180-panel.js';
 import './chrome/190-strip.js';

@@ -23,6 +23,7 @@ import { ActionsMenu } from '../chrome/140-actions-menu.js';
 import { NotePage } from '../library/140-note-page.js';
 import { ReadingHistory } from '../library/145-reading-history.js';
 import { Study } from '../library/147-study.js';
+import { PropertyLinks } from '../chrome/165-panel-references.js';
 import { PropertiesPanel } from '../chrome/180-panel.js';
 import { ContextStrip } from '../chrome/190-strip.js';
 import { ReadingOutline } from '../chrome/195-reading-outline.js';
@@ -179,6 +180,7 @@ export class DesignRedux extends Plugin {
       new PropertyHistory(this),
       new PropertyDates(this),
       new PropertyRules(this),
+      new PropertyLinks(this),
     ];
 
     this.syncFrame = 0;

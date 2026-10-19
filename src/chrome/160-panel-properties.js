@@ -7,15 +7,16 @@
 /* ones. Writes go through processFrontMatter, which is atomic.        */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Notice, Platform, setIcon } from 'obsidian';
+import { Menu, normalizePath, Notice, Platform, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { composing, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames } from '../core/045-helpers-properties.js';
+import { fmGet, knownPropertyNames } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { optionFor } from '../core/088-property-options.js';
 import { Library } from '../library/130-browse-filters.js';
+import { LinkNotePicker } from '../ui/230-pickers.js';
 import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
 import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from '../links/265-quiet-links.js';
@@ -456,6 +457,34 @@ export class PropertiesSection extends PanelSection {
   }
 
   /** Plain text, for when a widget isn't available. */
+  /** A note linked from a property: added to a list, or made the value — one step of Undo. A new note is made beside this one. */
+  linkNote(key, type) {
+    const file = this.file;
+    if (!file) return;
+    const link = (target) => {
+      const text = this.app.metadataCache.fileToLinktext(target, file.path, true);
+      return this.plugin.notes.write(
+        file,
+        (fm) => {
+          const name = Object.keys(fm).find((k) => k.toLowerCase() === key.toLowerCase()) || key;
+          const now = fm[name];
+          const value = `[[${text}]]`;
+          if (Array.isArray(now)) {
+            if (!now.includes(value)) now.push(value);
+          } else if (type === 'multitext') fm[name] = now === null || now === undefined || now === '' ? [value] : [now, value];
+          else fm[name] = value;
+        },
+        { undo: `Linked “${target.basename}” in ${key}.` }
+      );
+    };
+    new LinkNotePicker(this.app, link, async (name) => {
+      const parent = this.app.fileManager.getNewFileParent(file.path);
+      const where = parent && parent.path && parent.path !== '/' ? `${parent.path}/` : '';
+      const made = await this.app.vault.create(normalizePath(`${where}${name.replace(/[\\/:*?"<>|#^[\]]/g, ' ').trim()}.md`), '');
+      return link(made);
+    }).open();
+  }
+
   /** Values with a colour or an icon of their own show them: each item of a list as a pill does, one value by a mark at its side. */
   paintValues(valueEl, key, value) {
     if (!valueOptionsOn(this.plugin)) return;
@@ -660,6 +689,17 @@ export class PropertiesSection extends PanelSection {
           name.select();
         })
     );
+    // A note linked from it: picked, or made.
+    const held = this.file ? fmGet(noteProps(this.app, this.file), key) : undefined;
+    const links = (Array.isArray(held) ? held : [held]).some((v) => /\[\[/.test(String(v === null || v === undefined ? '' : v)));
+    if (this.settings.propertyLinks !== false && links && ['text', 'multitext'].indexOf(current) !== -1) {
+      menu.addItem((item) =>
+        sectioned(item, 'edit')
+          .setTitle('Link a note…')
+          .setIcon('link')
+          .onClick(() => this.linkNote(key, current))
+      );
+    }
     if (Platform.isMobile) {
       const row = anchorEl.closest('.dr-row');
       const rows = row && row.parentElement ? Array.from(row.parentElement.querySelectorAll(':scope > .dr-row')) : [];

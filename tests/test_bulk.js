@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1160,7 +1160,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const titles = (section) => m.items.filter((i) => i.section === section).map((i) => i.title);
     // Menus that can't open beside one another list a group's entries in place, under longer names.
     // Five entries where menus open beside one another: Type ›, Rename, Find notes ›, Across the vault ›, Remove.
-    assert.deepStrictEqual(titles('edit').filter((t) => !t.startsWith('Type: ')), ['Rename'], 'moving is the grip’s, with a pointer');
+    assert.deepStrictEqual(titles('edit').filter((t) => !t.startsWith('Type: ')), ['Rename', 'Link a note…'], 'moving is the grip’s, with a pointer; a property naming notes links another');
     assert.ok(titles('edit').includes('Type: Text'));
     assert.deepStrictEqual(titles('find'), ['Notes with “Politics”', 'Notes with “Law”', 'Notes with this property']);
     assert.deepStrictEqual(titles('vault'), ['Rename domain everywhere…', 'Merge domain with…', 'Remove domain everywhere…']);
@@ -2112,6 +2112,32 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(modal.contentEl.querySelector('.mod-cta'));
     await settle();
     assert.strictEqual(plugin.settings.propertyRules.length, 1, 'a rule saying nothing isn’t kept');
+  });
+
+  await t('link properties: the notes naming this one in a property, by the property; Link a note… adds a link, or makes the note', async () => {
+    const v = makeVault({ 'Home.md': '', 'A.md': '', 'B.md': '', 'C.md': '', 'Notes/x.md': note({ related: ['[[A]]'], kind: 'idea' }) });
+    const home = v.file('Home.md');
+    const fl = { 'A.md': [{ key: 'parent', link: 'Home' }, { key: 'related.0', link: 'Other' }], 'B.md': [{ key: 'Related.1', link: 'Home#Top' }], 'C.md': [] };
+    const app = {
+      vault: { getAbstractFileByPath: (p) => v.file(p) },
+      metadataCache: { getFileCache: (f) => ({ frontmatterLinks: fl[f.path] }), getFirstLinkpathDest: (l) => (l === 'Home' ? home : null) },
+    };
+    const groups = R.namedBy(app, { incoming: () => ({ 'A.md': 1, 'B.md': 1, 'C.md': 1 }) }, home);
+    assert.deepStrictEqual(Array.from(groups.entries()).map(([k, fs]) => [k, fs.map((f) => f.basename)]), [['parent', ['A']], ['Related', ['B']]], 'by the property, a list item as its key');
+    // Link a note…
+    const { plugin } = makePlugin(v);
+    const x = v.file('Notes/x.md');
+    const host = { file: x, plugin, app: Object.assign({}, v.app, { metadataCache: Object.assign({}, v.app.metadataCache, { fileToLinktext: (f) => f.basename }) }) };
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    R.PropertiesSection.prototype.linkNote.call(host, 'related', 'multitext');
+    await pickers.pop().onChooseItem({ file: v.file('B.md') });
+    assert.deepStrictEqual(fmOf('Notes/x.md').related, ['[[A]]', '[[B]]']);
+    R.PropertiesSection.prototype.linkNote.call(host, 'kind', 'text');
+    const picker = pickers.pop();
+    picker.inputEl = { value: 'Theory' };
+    assert.strictEqual(picker.getItemText(picker.getItems().slice(-1)[0]), 'Create “Theory”');
+    picker.inputEl = { value: 'b' };
+    assert.ok(!picker.getItems().some((i) => i.create), 'a name taken: nothing to make');
   });
 
   console.log(`\n${passed} passed`);

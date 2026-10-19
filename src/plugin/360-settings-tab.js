@@ -49,7 +49,7 @@ export const SETTINGS_TABS = [
       { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
-      { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces'] },
+      { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces'] },
       { title: 'Links', keys: ['quietLinks'] },
       { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
       { title: 'Images', keys: ['routeImages', 'imageFolder'] },
