@@ -12,6 +12,7 @@ import { Component, Keymap, MarkdownRenderer } from 'obsidian';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
+import { dueState, taskOf, taskText } from '../tree/415-tree-tasks.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { estimateSize, nodeParts } from './423-mindmap-scene.js';
 
@@ -23,7 +24,13 @@ export function nodeTier(model, n, depth) {
 
 /** What a node's size is kept under: its text, and how it's set. */
 export function sizeKey(model, n, depth) {
-  return `${nodeTier(model, n, depth)}|${n.text || (n.virtual ? 'Untitled' : '')}`;
+  return `${nodeTier(model, n, depth)}|${n.text || (n.virtual ? 'Untitled' : '')}${chipsKey(n)}`;
+}
+
+/** What chips under a node's text it has — a status, a due date — which make it taller. */
+function chipsKey(n) {
+  const a = n.attrs;
+  return a && (a.status || a.due) ? `|${a.status || ''}|${dueState(n) ? a.due : ''}` : '';
 }
 
 class MindMapCards {
@@ -36,17 +43,20 @@ class MindMapCards {
     // Kept on the node while its text and how it's set stay: thousands of nodes, no key made for each.
     const tier = this.model ? nodeTier(this.model, n, this.depthShown()) : '';
     const text = n.text || (n.virtual ? 'Untitled' : '');
+    const chips = chipsKey(n);
     const memo = this.sizeMemo && this.sizeMemo.get(n);
-    if (memo && memo.text === text && memo.tier === tier) return memo.size;
-    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}`)) || estimateSize(text);
+    if (memo && memo.text === text && memo.tier === tier && memo.chips === chips) return memo.size;
+    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}${chips}`)) || estimateSize(text, !!chips);
     if (!this.sizeMemo) this.sizeMemo = new WeakMap();
-    this.sizeMemo.set(n, { text, tier, size });
+    this.sizeMemo.set(n, { text, tier, chips, size });
     return size;
   }
 
   /** A part of a node's text into an element: markdown where Obsidian renders it, plain text where not. Its promise, if it takes a moment. */
   renderText(el, n, part) {
-    const text = nodeParts(n)[part];
+    const whole = nodeParts(n)[part];
+    // A task's box is drawn, not written.
+    const text = part === 'title' && typeof this.tasksOn === 'function' && this.tasksOn() && taskOf(n) ? taskText(whole) : whole;
     const old = el.drText;
     if (old) {
       old.unload();
@@ -75,6 +85,7 @@ class MindMapCards {
   /** A node's title and details into its element; promises for what's still rendering. */
   fillCard(el, n) {
     const waits = [];
+    if (typeof this.taskBox === 'function') this.taskBox(el, n);
     const title = el.createDiv({ cls: 'dr-mindmap-text' });
     const t = this.renderText(title, n, 'title');
     if (t) waits.push(t);
@@ -83,6 +94,7 @@ class MindMapCards {
       const d = this.renderText(details, n, 'details');
       if (d) waits.push(d);
     }
+    if (typeof this.taskChips === 'function') this.taskChips(el, n);
     return waits;
   }
 

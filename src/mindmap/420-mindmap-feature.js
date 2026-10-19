@@ -18,6 +18,7 @@ import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNo
 import { albumEntry, branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { NODE_ROLES, nodeRole, relationsOf, setRelationMeaning } from '../tree/407-tree-relations.js';
 import { relinkText } from '../tree/408-tree-notes.js';
+import { taskOf } from '../tree/415-tree-tasks.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
@@ -80,6 +81,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, Escape to leave. Nothing is changed.' },
       { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
       { key: 'mindmapConvert', showIf: 'mindmaps', name: 'Convert maps', desc: 'Make a mind map of a canvas — its trees, folds, layouts and relations kept — or a .mindmap file of a note’s map and back, or export a map as a canvas. The original is left as it is.' },
+      { key: 'mindmapTasks', showIf: 'mindmaps', name: 'Tasks', desc: 'A node can be a task, written - [ ] in the note: a box to tick, a due date typed as “tomorrow” or “+2w”, a status. A node with tasks below it shows how many are done; Show open tasks only dims the rest.' },
       { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
@@ -97,6 +99,7 @@ export class MindMaps extends Feature {
 
   actions() {
     const rel = () => this.settings.mindmapRelations !== false;
+    const tasks = () => this.settings.mindmapTasks !== false;
     const mapView = () => {
       const leaf = this.app.workspace.activeLeaf;
       return leaf && leaf.view instanceof MindMapView ? leaf : null;
@@ -128,6 +131,11 @@ export class MindMaps extends Feature {
       { id: 'mindmap-convert-to-mindmap-file', name: 'Mind map: make a .mindmap file of this map', icon: 'file-json', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file && ctx.file.extension === 'md', run: (ctx) => this.convertMapFormat(ctx.view, MINDMAP_EXTENSION) },
       { id: 'mindmap-convert-to-note', name: 'Mind map: make a note of this map', icon: 'file-text', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file && ctx.file.extension === MINDMAP_EXTENSION, run: (ctx) => this.convertMapFormat(ctx.view, 'md') },
       { id: 'mindmap-export-canvas', name: 'Mind map: export as a canvas', icon: 'layout-dashboard', on: 'mindmap', menu: false, when: (ctx) => this.settings.mindmapConvert !== false && !!ctx.file, run: (ctx) => this.exportCanvas(ctx.view) },
+      { id: 'mindmap-toggle-task', name: 'Mind map: make the node a task, or tick it', icon: 'square-check', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !ctx.node.virtual, run: (ctx) => ctx.view.toggleTaskAt(ctx.node.id) },
+      { id: 'mindmap-untask', name: 'Mind map: make the task a plain node', icon: 'square', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !!taskOf(ctx.node), run: (ctx) => ctx.view.untaskAt(ctx.node.id) },
+      { id: 'mindmap-set-due', name: 'Mind map: set the node’s due date…', icon: 'calendar', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !ctx.node.virtual, run: (ctx) => ctx.view.chooseDue(ctx.node.id) },
+      { id: 'mindmap-set-status', name: 'Mind map: set the node’s status…', icon: 'circle-dot', on: 'mindmap', menu: false, when: (ctx) => tasks() && !!ctx.node && !ctx.node.virtual, run: (ctx) => ctx.view.chooseStatus(ctx.node.id) },
+      { id: 'mindmap-open-tasks', name: 'Mind map: show open tasks only, or everything', icon: 'list-checks', on: 'mindmap', menu: false, when: () => tasks(), run: (ctx) => ctx.view.toggleOpenTasks() },
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
@@ -184,6 +192,13 @@ export class MindMaps extends Feature {
 
   enable() {
     if (this.app.workspace.layoutReady !== false) this.takeOver();
+    // Settings saved: open maps drawn as they now say.
+    this.app.workspace.getLeavesOfType(MINDMAP_VIEW).forEach((leaf) => {
+      const view = leaf.view;
+      if (!(view instanceof MindMapView) || !view.model) return;
+      view.relayout(false);
+      view.draw();
+    });
   }
 
   disable() {

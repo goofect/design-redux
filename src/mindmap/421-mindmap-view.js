@@ -95,6 +95,7 @@ export class MindMapView extends TextFileView {
       knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id),
       card: typeof this.fillCard === 'function' ? (el, n) => this.fillCard(el, n) : null,
       drop: typeof this.dropText === 'function' ? (el) => this.dropText(el) : null,
+      cardKey: (n) => (typeof this.taskKey === 'function' ? this.taskKey(n) : ''),
     });
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());
@@ -135,6 +136,7 @@ export class MindMapView extends TextFileView {
       this.scene = null;
       return;
     }
+    if (typeof this.countTasks === 'function') this.countTasks();
     const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));
     this.scene = layoutScene(this.model, sizeOf, this.mode);
     if (typeof this.glideFrom === 'function') this.glideFrom(glide ? before : null);
@@ -148,6 +150,12 @@ export class MindMapView extends TextFileView {
     if (!quiet) this.draw();
   }
 
+  /** What's lit: every light that's on — a focus, open tasks only — met at once; null when none is. */
+  lit() {
+    const sets = [typeof this.focusSet === 'function' ? this.focusSet() : null, typeof this.openTasksLit === 'function' ? this.openTasksLit() : null].filter(Boolean);
+    return sets.length ? sets.reduce((a, b) => new Set([...a].filter((id) => b.has(id)))) : null;
+  }
+
   draw() {
     if (!this.renderer) return;
     this.showFailure();
@@ -156,7 +164,7 @@ export class MindMapView extends TextFileView {
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null, focus: typeof this.focusSet === 'function' ? this.focusSet() : null });
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null, focus: this.lit() });
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (typeof this.drawMinimap === 'function') this.drawMinimap(this.scene);
     if (this.outlineEl) this.drawOutline();

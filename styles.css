@@ -10349,3 +10349,93 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 .dr-mindmap-node.is-drop-after {
   box-shadow: 0 3px 0 0 var(--interactive-accent);
 }
+
+/* Mind map: tasks — a box before the text, chips under it, a ring of what's done below */
+.dr-mindmap-node.is-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 6px;
+}
+
+.dr-mindmap-node.is-task > .dr-mindmap-text { flex: 1 1 0; min-width: 0; }
+.dr-mindmap-node.is-task > .dr-mindmap-details,
+.dr-mindmap-node.is-task > .dr-mindmap-chips { flex-basis: 100%; }
+
+.dr-mindmap-task {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dr-mindmap-node.is-done .dr-mindmap-task {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-mindmap-task .svg-icon { width: 10px; height: 10px; stroke-width: 3; }
+
+.dr-mindmap-node.is-done > .dr-mindmap-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.dr-mindmap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.dr-mindmap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.dr-mindmap-chip-icon .svg-icon { width: 10px; height: 10px; }
+.dr-mindmap-chip.is-overdue { background: rgba(var(--color-red-rgb), 0.15); color: var(--color-red); }
+.dr-mindmap-chip.is-today { background: rgba(var(--color-orange-rgb), 0.15); color: var(--color-orange); }
+.dr-mindmap-chip.is-soon { color: var(--color-orange); }
+
+.dr-mindmap-progress {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(var(--interactive-accent) calc(var(--dr-progress) * 360deg), var(--background-modifier-border) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dr-mindmap-progress span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 8px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.dr-mindmap-progress.is-complete span { color: var(--interactive-accent); }

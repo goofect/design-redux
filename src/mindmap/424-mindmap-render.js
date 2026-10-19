@@ -117,7 +117,7 @@ export class MindMapRenderer {
       this.nodeEls.set(n.id, el);
     }
     const label = nodeLabel(n);
-    const key = `${this.far ? 'far|' : ''}${n.text}|${n.virtual ? 'v' : ''}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}`;
+    const key = `${this.far ? 'far|' : ''}${n.text}|${n.virtual ? 'v' : ''}|${n.children.length}|${n.attrs && n.attrs.fold ? 1 : 0}|${n.attrs && n.attrs.color !== undefined ? n.attrs.color : ''}|${this.hooks.cardKey && !this.far ? this.hooks.cardKey(n) : ''}`;
     if (el.dataset.key !== key || el.dataset.id !== n.id) {
       el.dataset.id = n.id;
       el.dataset.key = key;

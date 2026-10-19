@@ -65,7 +65,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1416,6 +1416,52 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     if (process.env.SHOW_TIMES) console.log(`    opened in ${opened} ms; a pan ${perPan.toFixed(1)} ms`);
     assert.ok(opened < 2000, `opened in ${opened} ms`);
     assert.ok(perPan < 16, `a pan in ${perPan} ms`);
+  });
+
+  await t('tasks on a map: a box to tick, written to the note; due and status as chips; a ring of what’s done below; open tasks only dims the rest', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Launch\n\t- [ ] Book hall\n\t- [x] Send invites\n\t- Food\n\t\t- [ ] Order cake\n');
+    const el = (text) => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node')).find((e) => e.querySelector('.dr-mindmap-text').textContent === text);
+    const [hall, invites, food] = view.model.root.children;
+    assert.ok(el('Book hall').querySelector('.dr-mindmap-task'), 'a box, and the text without it');
+    assert.ok(el('Send invites').hasClass('is-done'));
+    assert.ok(!el('Food').querySelector('.dr-mindmap-task'));
+    const ring = () => el('Launch').querySelector('.dr-mindmap-progress');
+    assert.strictEqual(ring().getAttribute('aria-label'), '1 of 3 done');
+    pointer(el('Book hall').querySelector('.dr-mindmap-task'), 'pointerdown');
+    assert.strictEqual(hall.text, '[x] Book hall');
+    assert.strictEqual(ring().getAttribute('aria-label'), '2 of 3 done', 'the ring follows');
+    view.flushSave();
+    assert.ok(view.text.includes('\t- [x] Book hall\n'), 'ticked in the note');
+    view.undoStep(false);
+    assert.strictEqual(hall.text, '[ ] Book hall', 'one step of Undo');
+    // A due date and a status, as chips.
+    const today = R.dayKey();
+    view.apply(R.setAttr(view.model, hall.id, 'due', today));
+    view.apply(R.setAttr(view.model, hall.id, 'status', 'Doing'));
+    const chips = () => Array.from(el('Book hall').querySelectorAll('.dr-mindmap-chip')).map((c) => c.className.replace('dr-mindmap-chip ', '') + ' ' + c.textContent);
+    assert.deepStrictEqual(chips(), ['is-status Doing', 'is-due is-today Today']);
+    assert.ok(view.sizeOf(hall).height > view.sizeOf(invites).height, 'room made for the chips');
+    view.apply(R.setTaskDone(view.model, hall.id, true));
+    assert.deepStrictEqual(chips(), ['is-status Doing'], 'done: no longer due');
+    // Open tasks only: Order cake and the way down to it.
+    view.toggleOpenTasks();
+    const dim = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node.is-unfocused')).map((e) => e.querySelector('.dr-mindmap-text').textContent).sort();
+    assert.deepStrictEqual(dim, ['Book hall', 'Send invites']);
+    view.toggleOpenTasks();
+    assert.strictEqual(view.contentEl.querySelectorAll('.is-unfocused').length, 0);
+    // The commands, on the selected node.
+    view.select(food.id);
+    view.toggleTaskAt(food.id);
+    assert.strictEqual(food.text, '[ ] Food');
+    view.untaskAt(food.id);
+    assert.strictEqual(food.text, 'Food');
+    // Off: no boxes, no chips, the text as written.
+    plugin.settings.mindmapTasks = false;
+    view.relayout(false);
+    view.draw();
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-task, .dr-mindmap-chip, .dr-mindmap-progress'));
+    assert.ok(el('[x] Send invites'), 'written as it is');
+    plugin.settings.mindmapTasks = true;
   });
 
   console.log(`\n${passed} passed`);

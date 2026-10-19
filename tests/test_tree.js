@@ -441,6 +441,36 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.deepStrictEqual([back.relations.length, back.free.map((n) => n.text)], [1, ['Loose again']]);
   });
 
+  await t('tasks: a box ticked and unticked, written as - [ ] in the note; due dates read and placed; done counted up the branch; open tasks lit', () => {
+    let text = '- Plan\n\t- [ ] Book hall\n\t- [x] Send invites\n\t- Food\n\t\t- [ ] Order cake\n';
+    const m = R.parseOutline(text).model;
+    const [hall, invites, food] = m.root.children;
+    const cake = food.children[0];
+    assert.deepStrictEqual([R.taskOf(hall), R.taskOf(invites), R.taskOf(food)], [{ done: false }, { done: true }, null]);
+    assert.deepStrictEqual(Object.fromEntries(R.taskProgress(m)), { [m.root.id]: { done: 1, total: 3 }, [food.id]: { done: 0, total: 1 } });
+    R.toggleTask(m, food.id);
+    assert.strictEqual(food.text, '[ ] Food', 'a plain node made a task');
+    R.setTaskDone(m, cake.id, true);
+    R.setAttr(m, hall.id, 'due', '2026-10-20');
+    R.setAttr(m, hall.id, 'status', 'Doing');
+    text = R.writeOutline(m, text);
+    assert.ok(text.includes('\t- [ ] Book hall %%{"status":"Doing","due":"2026-10-20"}%%'), text);
+    assert.ok(text.includes('\t\t- [x] Order cake'), text);
+    const back = R.parseOutline(text).model;
+    assert.deepStrictEqual(back.root.children[0].attrs, { status: 'Doing', due: '2026-10-20' });
+    assert.deepStrictEqual(R.statusesOf(back), ['Doing']);
+    // Due: overdue, today, soon, later — none once done.
+    const at = (due, done) => R.dueState({ text: done ? '[x] t' : '[ ] t', attrs: { due } }, '2026-10-20');
+    assert.deepStrictEqual([at('2026-10-19'), at('2026-10-20'), at('2026-10-23'), at('2026-10-24'), at('2026-10-19', true), at('soon')], ['overdue', 'today', 'soon', 'later', null, null]);
+    const day = (input) => R.parseDayInput(input, '2026-10-30');
+    assert.deepStrictEqual([day('today'), day('Tomorrow'), day('+3d'), day('+2w'), day('-1'), day('+1m'), day('2027-01-02'), day(''), day('next tuesday')], ['2026-10-30', '2026-10-31', '2026-11-02', '2026-11-13', '2026-10-29', '2026-11-30', '2027-01-02', '', null]);
+    // Open tasks only: the open ones and the way down to them.
+    const lit = R.openTaskSet(m);
+    assert.deepStrictEqual([lit.has(m.root.id), lit.has(hall.id), lit.has(invites.id), lit.has(food.id), lit.has(cake.id)], [true, true, false, true, false]);
+    R.untask(m, hall.id);
+    assert.deepStrictEqual([hall.text, hall.attrs], ['Book hall', {}], 'a plain node again: its box, date and status off');
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());

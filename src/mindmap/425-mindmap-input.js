@@ -56,6 +56,10 @@ class MindMapInput {
         this.toggleFold(id);
         return;
       }
+      if (id && evt.target.closest && evt.target.closest('.dr-mindmap-task') && typeof this.tickTask === 'function') {
+        this.tickTask(id);
+        return;
+      }
       if (!this.camera) return;
       if (id) this.select(id);
       drag = { x: evt.clientX, y: evt.clientY, cx: this.camera.x, cy: this.camera.y, moved: false, node: id && !nodeById(this.model, id).virtual && nodeById(this.model, id) !== this.model.root ? id : null, onNode: !!id };
