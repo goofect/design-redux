@@ -160,6 +160,7 @@ import './mindmap/438-mindmap-present.js';
 import './mindmap/441-mindmap-focus.js';
 import './mindmap/450-mindmap-tasks.js';
 import './mindmap/451-mindmap-views.js';
+import './mindmap/452-mindmap-linked.js';
 import './mindmap/420-mindmap-feature.js';
 import './mindmap/436-mindmap-vault-map.js';
 import './mindmap/439-mindmap-album.js';

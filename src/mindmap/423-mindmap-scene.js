@@ -43,7 +43,7 @@ export const DETAIL_CHAR = 6.6;
 export const CHIP_LINE = 22;
 const CHIP_WIDTH = 96;
 
-/** A box for a node's text — and its chips, if it has any — estimated from its length until it's been measured: { width, height }. */
+/** A box for a node's text — and its rows of chips, if it has any — estimated from its length until it's been measured: { width, height }. */
 export function estimateSize(text, chips) {
   const [title, ...rest] = String(text || '').split('\n');
   const inner = NODE_MAX_WIDTH - NODE_PAD.x * 2;
@@ -56,7 +56,7 @@ export function estimateSize(text, chips) {
     height += Math.max(1, Math.ceil(w / inner)) * DETAIL_LINE;
   });
   if (chips) {
-    height += CHIP_LINE;
+    height += CHIP_LINE * Number(chips);
     wide = Math.min(inner, Math.max(wide, CHIP_WIDTH));
   }
   return { width: Math.round(wide + NODE_PAD.x * 2), height: height + NODE_PAD.y * 2 };

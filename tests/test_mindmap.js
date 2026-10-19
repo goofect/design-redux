@@ -1529,6 +1529,42 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.ok(view.contentEl.querySelectorAll('.dr-mindmap-node').length >= 4);
   });
 
+  await t('a node linking a note shows what the note says now — its status, due date and opening line — and follows it as it changes', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Project\n\t- [[Brief]]\n\t- Plain\n');
+    const brief = Object.assign(new TFile('Brief.md'), { stat: { mtime: 1 } });
+    let fm = { status: 'Draft', due: R.dayKey() };
+    const handlers = {};
+    view.app = {
+      vault: { cachedRead: async () => '---\nstatus: Draft\n---\n# Brief\n\nWhat the launch is for, in a page.\n' },
+      metadataCache: {
+        getFirstLinkpathDest: (link) => (link === 'Brief' ? brief : null),
+        getFileCache: (f) => (f === brief ? { frontmatter: fm } : null),
+        on: (name, fn) => { handlers[name] = fn; return { name }; },
+      },
+      workspace: {},
+    };
+    view.watchNotes();
+    view.notesChanged();
+    await settle(10);
+    const el = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node')).find((e) => e.querySelector('.dr-mindmap-text').textContent === 'Brief');
+    const facts = () => Array.from(el().querySelectorAll('.dr-mindmap-note-facts .dr-mindmap-chip, .dr-mindmap-note-line')).map((e) => e.textContent);
+    assert.deepStrictEqual(facts(), ['Draft', 'Today', 'What the launch is for, in a page.']);
+    const plain = Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node')).find((e) => e.textContent === 'Plain');
+    assert.ok(plain, 'a node linking nothing shows nothing more');
+    const tall = view.sizeOf(view.model.root.children[0]).height;
+    assert.ok(tall > view.sizeOf(view.model.root.children[1]).height, 'room made for what it says');
+    // The note changes: the node follows, with nothing written to the map.
+    fm = { status: 'Final', description: 'The one-page brief.' };
+    handlers.changed(brief);
+    assert.deepStrictEqual(facts(), ['Final', 'The one-page brief.']);
+    view.flushSave();
+    assert.ok(!view.text.includes('Final'), 'nothing copied into the map');
+    plugin.settings.mindmapLinkedCards = false;
+    view.notesChanged();
+    assert.deepStrictEqual(facts(), []);
+    plugin.settings.mindmapLinkedCards = true;
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

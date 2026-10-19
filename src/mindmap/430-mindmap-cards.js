@@ -38,15 +38,21 @@ class MindMapCards {
     return !this.plugin || this.plugin.settings.mindmapDepth !== false;
   }
 
+  /** What a linked note shows on a node, as its size is kept by. */
+  notesKey(n) {
+    return typeof this.noteKey === 'function' ? this.noteKey(n) : '';
+  }
+
   /** A node's size: measured, or estimated until it is. */
   sizeOf(n) {
     // Kept on the node while its text and how it's set stay: thousands of nodes, no key made for each.
     const tier = this.model ? nodeTier(this.model, n, this.depthShown()) : '';
     const text = n.text || (n.virtual ? 'Untitled' : '');
-    const chips = chipsKey(n);
+    const notes = this.notesKey(n);
+    const chips = chipsKey(n) + notes;
     const memo = this.sizeMemo && this.sizeMemo.get(n);
     if (memo && memo.text === text && memo.tier === tier && memo.chips === chips) return memo.size;
-    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}${chips}`)) || estimateSize(text, !!chips);
+    const size = (this.sizes && this.model && this.sizes.get(`${tier}|${text}${chips}`)) || estimateSize(text, (chipsKey(n) ? 1 : 0) + (notes ? 2 : 0));
     if (!this.sizeMemo) this.sizeMemo = new WeakMap();
     this.sizeMemo.set(n, { text, tier, chips, size });
     return size;
@@ -95,6 +101,7 @@ class MindMapCards {
       if (d) waits.push(d);
     }
     if (typeof this.taskChips === 'function') this.taskChips(el, n);
+    if (typeof this.noteChips === 'function') this.noteChips(el, n);
     return waits;
   }
 
@@ -112,7 +119,7 @@ class MindMapCards {
     this.renderer.nodeEls.forEach((el, id) => {
       const n = nodeById(this.model, id);
       if (!n) return;
-      const key = sizeKey(this.model, n, this.depthShown());
+      const key = sizeKey(this.model, n, this.depthShown()) + this.notesKey(n);
       if (!this.sizes.has(key) && !this.measuring.has(key)) todo.push({ n, key });
     });
     if (!todo.length) return;

@@ -95,7 +95,7 @@ export class MindMapView extends TextFileView {
       knob: (el, id) => typeof this.peekOn === 'function' && this.peekOn(el, id),
       card: typeof this.fillCard === 'function' ? (el, n) => this.fillCard(el, n) : null,
       drop: typeof this.dropText === 'function' ? (el) => this.dropText(el) : null,
-      cardKey: (n) => (typeof this.taskKey === 'function' ? this.taskKey(n) : ''),
+      cardKey: (n) => (typeof this.taskKey === 'function' ? this.taskKey(n) : '') + (typeof this.noteKey === 'function' ? this.noteKey(n) : ''),
     });
     this.bar = this.root.createDiv({ cls: 'dr-mindmap-bar' });
     this.tool('Fit the map', 'maximize', () => this.fit());
@@ -106,6 +106,7 @@ export class MindMapView extends TextFileView {
     if (typeof this.chooseShowAs === 'function') this.showAsTool = this.tool('Show as…', 'layout-list', (evt) => this.chooseShowAs(evt));
     if (typeof this.addAction === 'function') this.addAction('file-text', 'Open as text', () => this.feature && this.feature.openAsText(this.leaf));
     this.listen();
+    if (typeof this.watchNotes === 'function') this.watchNotes();
   }
 
   tool(label, icon, run) {
