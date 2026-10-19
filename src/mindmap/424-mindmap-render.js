@@ -238,9 +238,14 @@ export class MindMapRenderer {
     this.paths.forEach((p, k) => {
       const w = want[k];
       if (!w) {
-        p.style.display = 'none';
+        if (p.drLook !== 'hidden') p.style.display = 'none';
+        p.drLook = 'hidden';
         return;
       }
+      // An edge as it was last time: nothing to write.
+      const look = `${w.d}|${w.cls}|${w.colour || ''}|${w.line || ''}|${w.head || ''}`;
+      if (p.drLook === look) return;
+      p.drLook = look;
       p.setAttribute('d', w.d);
       p.setAttribute('class', w.cls);
       p.style.display = '';

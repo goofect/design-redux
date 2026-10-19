@@ -37,28 +37,38 @@ class MindMapMinimap {
     const all = { minX: Math.min(b.minX, port.minX) - pad, minY: Math.min(b.minY, port.minY) - pad, maxX: Math.max(b.maxX, port.maxX) + pad, maxY: Math.max(b.maxY, port.maxY) + pad };
     this.minimapEl.svg.setAttribute('viewBox', `${all.minX} ${all.minY} ${all.maxX - all.minX} ${all.maxY - all.minY}`);
     this.minimapPlane = all;
-    // The nodes as one path: a map of thousands is one element, redrawn only when the map's laid out again.
-    if (this.minimapScene !== scene) {
-      this.minimapScene = scene;
-      // To half a minimap pixel or finer: an edit that moves nothing the minimap can show leaves its path as it was.
-      const span = Math.max(b.maxX - b.minX, b.maxY - b.minY);
-      const unit = Math.pow(2, Math.floor(Math.log2(Math.max(1, span / (MAP_MINIMAP_SIZE.width * 2)))));
-      const at = (v) => Math.round(v / unit) * unit;
-      const parts = [];
-      scene.boxes.forEach((box) => {
-        const x = at(box.x);
-        const y = at(box.y);
-        const w = Math.max(unit, at(box.x + box.width) - x);
-        parts.push(`M${x} ${y}h${w}v${Math.max(unit, at(box.y + box.height) - y)}h${-w}z`);
+    // The nodes drawn again on the next frame, once a change has been laid out: the map itself comes first.
+    if (this.minimapScene !== scene && !this.minimapFrame) {
+      const win = this.root.ownerDocument.defaultView || window;
+      this.minimapFrame = win.requestAnimationFrame(() => {
+        this.minimapFrame = 0;
+        if (this.minimapEl && this.scene) this.drawMinimapNodes(this.scene);
       });
-      const d = parts.join('');
-      if (d !== this.minimapD) this.minimapEl.nodes.setAttribute('d', (this.minimapD = d));
     }
     const v = this.minimapEl.view;
     v.setAttribute('x', String(port.minX));
     v.setAttribute('y', String(port.minY));
     v.setAttribute('width', String(port.maxX - port.minX));
     v.setAttribute('height', String(port.maxY - port.minY));
+  }
+
+  /** The map's nodes as one path: a map of thousands is one element. */
+  drawMinimapNodes(scene) {
+    this.minimapScene = scene;
+    const b = scene.bounds;
+    // To half a minimap pixel or finer: an edit that moves nothing the minimap can show leaves its path as it was.
+    const span = Math.max(b.maxX - b.minX, b.maxY - b.minY);
+    const unit = Math.pow(2, Math.floor(Math.log2(Math.max(1, span / (MAP_MINIMAP_SIZE.width * 2)))));
+    const at = (v) => Math.round(v / unit) * unit;
+    const parts = [];
+    scene.boxes.forEach((box) => {
+      const x = at(box.x);
+      const y = at(box.y);
+      const w = Math.max(unit, at(box.x + box.width) - x);
+      parts.push(`M${x} ${y}h${w}v${Math.max(unit, at(box.y + box.height) - y)}h${-w}z`);
+    });
+    const d = parts.join('');
+    if (d !== this.minimapD) this.minimapEl.nodes.setAttribute('d', (this.minimapD = d));
   }
 
   makeMinimap() {

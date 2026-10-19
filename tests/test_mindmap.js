@@ -896,6 +896,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.camera = { x: 0, y: 0, zoom: 3 };
     view.draw();
     assert.ok(!el().hasClass('is-hidden'));
+    await settle(40);
     assert.strictEqual((el().querySelector('.dr-minimap-card').getAttribute('d').match(/M/g) || []).length, view.scene.boxes.size, 'a box for each node, in one path');
     const rect = el().querySelector('.dr-minimap-view');
     assert.ok(Number(rect.getAttribute('width')) > 0);
