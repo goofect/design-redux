@@ -9,7 +9,7 @@
 /* ------------------------------------------------------------------ */
 
 import { nodeById, walk } from './400-tree-model.js';
-import { BRANCH_LAYOUTS } from './403-tree-layouts.js';
+import { MAP_LAYOUTS } from './403-tree-layouts.js';
 import { applyPatch } from './404-tree-ops.js';
 
 const copyBlock = (model) => JSON.parse(JSON.stringify(model.layout || { v: 1 }));
@@ -46,7 +46,7 @@ export function nodeNudge(model, id) {
 /** A branch's own layout, or null. */
 export function branchLayoutOf(model, id) {
   const mode = model.layout && model.layout.branch && model.layout.branch[id];
-  return BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
+  return MAP_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
 }
 
 /** A node moved by hand to this far from its spot; 0, 0 puts it back. */
@@ -99,7 +99,7 @@ export function lineUpChildren(model, id) {
 export function setBranchLayout(model, id, mode) {
   const n = nodeById(model, id);
   if (!n) return null;
-  const valid = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
+  const valid = MAP_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
   if (n === model.root) {
     if ((model.mode || null) === valid) return null;
     return applyPatch(model, [{ type: 'mode', mode: valid }], [id]);
@@ -118,7 +118,7 @@ export function setBranchLayout(model, id, mode) {
 
 /** The whole map laid out one way: its own layouts for branches let go. */
 export function setMapLayout(model, mode) {
-  const valid = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
+  const valid = MAP_LAYOUTS.some((b) => b[0] === mode) ? mode : null;
   const block = copyBlock(model);
   delete block.branch;
   const next = tidyBlock(block);

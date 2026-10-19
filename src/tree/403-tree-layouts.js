@@ -2,8 +2,9 @@
 /* Tree: layouts                                                      */
 /*                                                                    */
 /* Where a branch's cards go for each layout — to one side, both,     */
-/* down, round, as an outline, as a concept map — and the order its   */
-/* cards are walked in. Pure: given records and their sizes.          */
+/* down, round, as an outline, as a concept map; on a mind map also   */
+/* as an org chart, a fishbone, a timeline — and the order its cards  */
+/* are walked in. Pure: given records and their sizes.                */
 /* ------------------------------------------------------------------ */
 
 import { arrowLinks, boundsOf, branchOf, canvasGap, indexModel, isGroupRecord, shownChildren, TIDY_DEPTH_GAP, TIDY_SIBLING_GAP, tidyOneWay } from './400-tree-model.js';
@@ -18,6 +19,24 @@ export const BRANCH_LAYOUTS = [
   ['outline', 'As an outline', 'list-tree'],
   ['concept', 'As a concept map', 'waypoints'],
 ];
+
+/* Shapes only a mind map takes: its edges are drawn to suit them. */
+export const SHAPED_LAYOUTS = [
+  ['org', 'As an org chart', 'network'],
+  ['fishbone', 'As a fishbone', 'fish'],
+  ['spine', 'Along a timeline', 'milestone'],
+];
+
+/* Every layout a mind map can take. */
+export const MAP_LAYOUTS = BRANCH_LAYOUTS.concat(SHAPED_LAYOUTS);
+
+/* On a canvas, the nearest layout it has. */
+const CANVAS_NEAREST = { org: 'bottom', fishbone: 'left', spine: 'right' };
+
+/** A mind map's layout as a canvas can take it. */
+export function canvasLayoutOf(mode) {
+  return CANVAS_NEAREST[mode] || mode;
+}
 
 /* What each kind of layout is best for, as the Lay out… command offers them. */
 export const LAYOUT_ENGINES = [
@@ -472,8 +491,128 @@ export function spreadApart(cards, still, gap) {
   return out;
 }
 
+/** A branch's cards under it in reading order, each set in a step a level: [{ r, dx, dy }] from its corner, and the block's size. */
+function outlineBlock(r, kids) {
+  const items = [];
+  let y = r.height + canvasGap(OUTLINE_GAP);
+  let width = r.width;
+  const walk = (id, depth) =>
+    (kids.get(id) || []).forEach((c) => {
+      const dx = depth * canvasGap(OUTLINE_INDENT);
+      items.push({ r: c, dx, dy: y });
+      width = Math.max(width, dx + c.width);
+      y += c.height + canvasGap(OUTLINE_GAP);
+      walk(c.id, depth + 1);
+    });
+  walk(r.id, 1);
+  return { items, width, height: items.length ? y - canvasGap(OUTLINE_GAP) : r.height };
+}
+
+/**
+ * A branch as an org chart: each card over its children, centred on
+ * the row they make; children with none of their own stacked in a
+ * column under it instead, to keep it narrow. id -> { x, y }; `marks`
+ * says which are stacked.
+ */
+function orgPlaces(root, kids) {
+  const out = new Map();
+  out.sides = new Map();
+  out.marks = new Map();
+  const depthGap = canvasGap(TIDY_DEPTH_GAP);
+  const gap = canvasGap(TIDY_SIBLING_GAP);
+  // Each card's block: its size, and where it and those below sit in it.
+  const measure = (r) => {
+    const cs = kids.get(r.id) || [];
+    if (!cs.length) return { w: r.width, h: r.height, at: [[r, 0, 0]] };
+    if (r !== root && cs.every((c) => !(kids.get(c.id) || []).length)) {
+      const b = outlineBlock(r, kids);
+      return { w: b.width, h: b.height, at: [[r, 0, 0]].concat(b.items.map((it) => [it.r, it.dx, it.dy, true])) };
+    }
+    const subs = cs.map(measure);
+    const row = subs.reduce((n, b) => n + b.w, 0) + gap * (subs.length - 1);
+    // The card over the middle of its children's cards, the row moved along if it would stick out.
+    const first = subs[0].at[0];
+    const lastSub = subs[subs.length - 1].at[0];
+    const over = (first[1] + first[0].width / 2 + row - subs[subs.length - 1].w + lastSub[1] + lastSub[0].width / 2) / 2 - r.width / 2;
+    const shift = Math.max(0, -over);
+    const w = Math.max(row + shift, over + shift + r.width);
+    const at = [[r, over + shift, 0]];
+    let x = shift;
+    subs.forEach((b) => {
+      b.at.forEach(([c, dx, dy, stacked]) => at.push([c, x + dx, r.height + depthGap + dy, stacked]));
+      x += b.w + gap;
+    });
+    return { w, h: r.height + depthGap + Math.max(...subs.map((b) => b.h)), at };
+  };
+  const block = measure(root);
+  const [, rx, ry] = block.at[0];
+  block.at.slice(1).forEach(([c, dx, dy, stacked]) => {
+    out.set(c.id, { x: Math.round(root.x + dx - rx), y: Math.round(root.y + dy - ry) });
+    out.sides.set(c.id, stacked ? 'left' : 'bottom');
+    if (stacked) out.marks.set(c.id, { stacked: true });
+  });
+  return out;
+}
+
+/**
+ * A branch as a fishbone, or along a timeline: its children either side
+ * of a line from it — leftward from a fishbone's head, rightward from a
+ * timeline's start — in order, above and below in turn, each with its
+ * own branch as an outline under it. id -> { x, y }; `marks` gives each
+ * child where its bone leaves the line (`bone`) or that it hangs from
+ * the line (`rib`).
+ */
+function linePlaces(root, kids, mode) {
+  const out = new Map();
+  out.sides = new Map();
+  out.marks = new Map();
+  out.both = true;
+  const gap = canvasGap(TIDY_DEPTH_GAP);
+  const step = canvasGap(TIDY_SIBLING_GAP) + 10;
+  const line = root.y + root.height / 2;
+  const left = mode === 'fishbone';
+  // How far along each side is taken; each block a little further along than the one before, whichever side.
+  const reach = [null, null];
+  let last = left ? root.x : root.x + root.width;
+  (kids.get(root.id) || []).forEach((c, i) => {
+    const side = i % 2;
+    const b = outlineBlock(c, kids);
+    const room = left ? gap / 2 : gap / 3;
+    let x;
+    if (left) {
+      const right = Math.min(last - step, reach[side] === null ? root.x - gap : reach[side] - gap);
+      x = right - b.width - room;
+      last = right;
+      reach[side] = x;
+    } else {
+      x = Math.max(last + step, reach[side] === null ? root.x + root.width + gap : reach[side] + gap / 2);
+      last = x;
+      reach[side] = x + b.width;
+    }
+    const y = side === 0 ? line - gap / 2 - b.height : line + gap / 2;
+    out.set(c.id, { x: Math.round(x), y: Math.round(y) });
+    out.sides.set(c.id, left ? 'left' : 'right');
+    out.marks.set(c.id, left ? { bone: Math.round(x + b.width + room / 2) } : { rib: true });
+    b.items.forEach((it) => {
+      out.set(it.r.id, { x: Math.round(x + it.dx), y: Math.round(y + it.dy) });
+      out.sides.set(it.r.id, 'left');
+    });
+  });
+  return out;
+}
+
+/** Where a branch's cards go for a shape only a mind map takes, for a tree already known: `kids` as directedPlaces. */
+export function shapedPlaces(root, mode, kids) {
+  return mode === 'org' ? orgPlaces(root, kids) : linePlaces(root, kids, mode);
+}
+
 /** Where a branch's cards go for a layout: id -> { x, y }. */
 export function layoutPlaces(model, rootId, mode, links) {
+  if (SHAPED_LAYOUTS.some((b) => b[0] === mode)) {
+    const root = model.byId.get(rootId);
+    if (!root) return Object.assign(new Map(), { sides: new Map(), marks: new Map() });
+    return shapedPlaces(root, mode, orderedBranch(model, rootId, links || arrowLinks(model), siblingOrder));
+  }
   if (mode === 'radial') return radialLayout(model, rootId, links);
   if (mode === 'outline') return outlineLayout(model, rootId, links);
   if (mode === 'concept') return conceptLayout(model, rootId, links);
@@ -520,6 +659,7 @@ export function composedLayout(model, root, mode, links, layoutOf, depth) {
   const laid = layoutPlaces(proxy, root.id, mode, links);
   const out = new Map();
   out.sides = new Map(laid.sides || []);
+  out.marks = new Map(laid.marks || []);
   out.both = laid.both;
   out.branches = [];
   laid.forEach((at, id) => {
@@ -530,6 +670,7 @@ export function composedLayout(model, root, mode, links, layoutOf, depth) {
     out.set(id, { x: b.c.x + dx, y: b.c.y + dy });
     b.sub.forEach((p, sid) => out.set(sid, { x: p.x + dx, y: p.y + dy }));
     (b.sub.sides || new Map()).forEach((side, sid) => out.sides.set(sid, side));
+    (b.sub.marks || new Map()).forEach((m, sid) => out.marks.set(sid, m.bone === undefined ? m : { bone: m.bone + dx }));
     out.branches.push({ rec: b.c, mode: layoutOf(b.c), ids: Array.from(b.sub.keys()), sides: b.sub.sides });
     b.sub.branches.forEach((x) => out.branches.push(x));
   });

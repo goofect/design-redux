@@ -10,7 +10,7 @@
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { arrowLinks, modelFromData, nodeById, sideAxes } from '../tree/400-tree-model.js';
-import { BRANCH_LAYOUTS, composedLayout, directedPlaces, layoutPlaces } from '../tree/403-tree-layouts.js';
+import { composedLayout, directedPlaces, layoutPlaces, MAP_LAYOUTS, shapedPlaces, SHAPED_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
 /* A node's box: as wide as its words want, up to a limit. */
@@ -140,7 +140,7 @@ const UNDIRECTED = new Set(['radial', 'outline', 'concept']);
  * and free nodes left out; `opts.levels` shows that many levels down.
  */
 export function layoutScene(model, sizeOf, mode, opts = {}) {
-  const way = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : 'right';
+  const way = MAP_LAYOUTS.some((b) => b[0] === mode) ? mode : 'right';
   const solo = opts.soloId ? nodeById(model, opts.soloId) : null;
   const top = solo || model.root;
   const shown = shownNodes(model, top, opts.levels);
@@ -171,7 +171,7 @@ export function layoutScene(model, sizeOf, mode, opts = {}) {
     // Each node once, under the first to reach it, as the canvas's tree reads it.
     const placed = new Set([top.id]);
     shown.forEach(({ node, parent }) => parent && !placed.has(node.id) && (placed.add(node.id), kids.get(parent.id).push(byId.get(node.id))));
-    places = directedPlaces(byId.get(top.id), way, kids);
+    places = SHAPED_LAYOUTS.some((b) => b[0] === way) ? shapedPlaces(byId.get(top.id), way, kids) : directedPlaces(byId.get(top.id), way, kids);
   } else {
     const cards = modelFromData({ nodes, edges });
     const links = arrowLinks(cards);
@@ -196,7 +196,11 @@ export function layoutScene(model, sizeOf, mode, opts = {}) {
   nodes.forEach((r) => {
     const at = r.id === top.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
     const d = off.get(r.id) || [0, 0];
-    boxes.set(r.id, { x: at.x + d[0], y: at.y + d[1], width: r.width, height: r.height, depth: depthOf.get(r.id) || 0, way: wayOf.get(r.id) || way });
+    const box = { x: at.x + d[0], y: at.y + d[1], width: r.width, height: r.height, depth: depthOf.get(r.id) || 0, way: wayOf.get(r.id) || way };
+    // How a shaped layout's edge reaches it: stacked under its parent, off a fishbone's bone, or hung from a timeline.
+    const mark = places.marks && places.marks.get(r.id);
+    if (mark) Object.assign(box, mark.bone === undefined ? mark : { bone: mark.bone + d[0] });
+    boxes.set(r.id, box);
   });
   let bounds = boundsOfBoxes(boxes.values());
   // Free nodes: in a row under the tree.
@@ -265,8 +269,29 @@ export function edgePath(from, to, mode, shape) {
     const mx = (x1 + x2) / 2;
     return `M ${x1} ${y1} H ${mx} V ${y2} H ${x2}`;
   }
+  if (mode === 'fishbone' && to.bone !== undefined) {
+    // Along the spine from the head, up or down the bone, into the cause.
+    const y1 = from.y + from.height / 2;
+    const y2 = to.y + to.height / 2;
+    return `M ${from.x} ${y1} H ${to.bone + Math.abs(y2 - y1) / 3} L ${to.bone} ${y2} H ${to.x + to.width}`;
+  }
+  if (mode === 'spine' && to.rib) {
+    // Along the line from its start, then up or down beside the node, into its side.
+    const y1 = from.y + from.height / 2;
+    const y2 = to.y + to.height / 2;
+    const x = to.x - 12;
+    return `M ${from.x + from.width} ${y1} H ${x} V ${y2} H ${to.x}`;
+  }
+  if (mode === 'org' && !to.stacked) {
+    // Down from the card, across, down into the child: square, as an org chart's lines are.
+    const x1 = from.x + from.width / 2;
+    const y1 = from.y + from.height;
+    const x2 = to.x + to.width / 2;
+    const my = (y1 + to.y) / 2;
+    return `M ${x1} ${y1} V ${my} H ${x2} V ${to.y}`;
+  }
   const vertical = mode === 'bottom' || mode === 'top' || mode === 'outline';
-  if (mode === 'outline') {
+  if (mode === 'outline' || mode === 'org' || mode === 'fishbone' || mode === 'spine') {
     const x = from.x + 16;
     const y1 = from.y + from.height;
     const y2 = to.y + to.height / 2;

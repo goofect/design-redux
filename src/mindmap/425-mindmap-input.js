@@ -129,7 +129,7 @@ class MindMapInput {
     d.last = { x: evt.clientX, y: evt.clientY };
     d.ghost.style.left = `${point.x + 8}px`;
     d.ghost.style.top = `${point.y + 8}px`;
-    const vertical = this.mode === 'bottom' || this.mode === 'top';
+    const vertical = this.mode === 'bottom' || this.mode === 'top' || this.mode === 'org';
     // With Alt held, a drop onto a node relates the two, and moves nothing.
     d.relate = !!evt.altKey && typeof this.relateFrom === 'function';
     d.target = d.relate ? this.relateTarget(d.node, point) : dropTarget(this.model, this.scene, d.node, point, vertical);
@@ -203,7 +203,7 @@ class MindMapInput {
     }
     if (mod) return;
     const sel = this.selected ? nodeById(this.model, this.selected) : null;
-    const vertical = this.mode === 'bottom' || this.mode === 'top' || this.mode === 'outline';
+    const vertical = this.mode === 'bottom' || this.mode === 'top' || this.mode === 'outline' || this.mode === 'org';
     const leftward = this.mode === 'left';
     const done = () => {
       evt.preventDefault();

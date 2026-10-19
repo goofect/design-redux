@@ -11,7 +11,7 @@
 /* ------------------------------------------------------------------ */
 
 import { arrowLinks, isGroupRecord, modelFromData, newNode, treeModel } from './400-tree-model.js';
-import { BRANCH_LAYOUTS, siblingOrder } from './403-tree-layouts.js';
+import { BRANCH_LAYOUTS, canvasLayoutOf, siblingOrder } from './403-tree-layouts.js';
 
 /* What each key the plugin keeps on a canvas becomes in a mind map. */
 export const CANVAS_KEYS = {
@@ -200,7 +200,7 @@ export function canvasFromMap(model, boxes, fileFor) {
     const out = Object.assign({ id: n.id, x: Math.round(b.x), y: Math.round(b.y), width: Math.round(b.width), height: Math.round(b.height) }, file ? { type: 'file', file } : { type: 'text', text: n.text || '' });
     if (n.attrs.color !== undefined && n.attrs.color !== '') out.color = String(n.attrs.color);
     if (n.attrs.role) out.drRole = n.attrs.role;
-    if (n === model.root && model.mode) out.drLayout = model.mode;
+    if (n === model.root && model.mode) out.drLayout = canvasLayoutOf(model.mode);
     nodes.push(out);
   };
   const side = (a, b) => {

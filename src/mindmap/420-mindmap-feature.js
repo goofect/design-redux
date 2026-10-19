@@ -13,7 +13,7 @@ import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById, treeModel, walk } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
-import { BRANCH_LAYOUTS } from '../tree/403-tree-layouts.js';
+import { MAP_LAYOUTS } from '../tree/403-tree-layouts.js';
 import { addChild, addParent, addSibling, duplicateBranch, indentNode, outdentNode, removeNode, reorderNode } from '../tree/404-tree-ops.js';
 import { albumEntry, branchLayoutOf, clearNudges, lineUpChildren, savedViews, setBranchLayout, setMapLayout } from '../tree/406-tree-layout-block.js';
 import { NODE_ROLES, nodeRole, relationsOf, setRelationMeaning } from '../tree/407-tree-relations.js';
@@ -58,7 +58,7 @@ export class MindMaps extends Feature {
         showIf: 'mindmaps',
         name: 'How a mind map is laid out',
         desc: 'Unless the map says otherwise, in its mindmap-layout property.',
-        options: Object.fromEntries(BRANCH_LAYOUTS.filter(([m]) => m !== 'concept').map(([mode, title]) => [mode, title])),
+        options: Object.fromEntries(MAP_LAYOUTS.filter(([m]) => m !== 'concept').map(([mode, title]) => [mode, title])),
       },
       { key: 'mindmapGlide', showIf: 'mindmaps', name: 'Nodes glide to their places', desc: 'As the map changes. Never when your system asks for less motion.' },
       { key: 'mindmapLegend', showIf: 'mindmaps', name: 'Legend', desc: 'A corner list naming what each colour means on the map. Pick a colour to fade the rest.' },
@@ -357,7 +357,7 @@ export class MindMaps extends Feature {
     if (!model || !model.root) return;
     const node = !whole && view.selected ? nodeById(model, view.selected) : null;
     const branch = node && node !== model.root && !model.free.includes(node) ? node : null;
-    const items = BRANCH_LAYOUTS.map(([mode, label]) => ({ label, mode }));
+    const items = MAP_LAYOUTS.map(([mode, label]) => ({ label, mode }));
     if (branch && branchLayoutOf(model, branch.id)) items.unshift({ label: 'As the branch above', mode: null });
     const ask = branch ? `Lay out “${nodeLabel(branch)}” and what's under it…` : 'Lay out the whole map…';
     new ChoicePicker(this.app, ask, items, (item) => {

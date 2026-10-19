@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1985,6 +1985,56 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     // Switched off: nothing kept.
     view.plugin.settings = Object.assign({}, plugin.settings, { mindmapHistory: 0 });
     assert.strictEqual(view.keepHistory('other'), null);
+  });
+
+  await t('org chart, fishbone and timeline layouts: no two nodes meet; each shape where it belongs, its edges drawn to suit; chosen for a branch too', async () => {
+    const text = '- Root ^r\n\t- A ^a\n\t\t- A1 ^a1\n\t\t\t- A1x ^a1x\n\t\t- A2 ^a2\n\t\t\t- A2x ^a2x\n\t- B ^b\n\t\t- B1 ^b1\n\t\t- B2 ^b2\n\t- C ^c\n\t- D ^d\n\t\t- D1 ^d1\n';
+    const model = R.parseOutline(text).model;
+    const sizeOf = (n) => ({ width: 60 + n.text.length * 8, height: 30 });
+    const meet = (boxes) => {
+      const all = Array.from(boxes.entries());
+      for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) {
+        const [p, a] = all[i];
+        const [q, b] = all[j];
+        if (a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height) return `${p} and ${q}`;
+      }
+      return null;
+    };
+    const mid = (b) => b.x + b.width / 2;
+    // Org chart: each card over its children's row, centred; children with none of their own stacked.
+    let b = R.layoutScene(model, sizeOf, 'org').boxes;
+    assert.strictEqual(meet(b), null);
+    ['a', 'b', 'c', 'd'].forEach((id) => assert.ok(b.get(id).y > b.get('r').y + 30, `${id} below the root`));
+    assert.ok(b.get('a').x < b.get('b').x && b.get('b').x < b.get('c').x, 'in order across');
+    assert.ok(Math.abs(mid(b.get('a')) - (mid(b.get('a1')) + mid(b.get('a2'))) / 2) < 1, 'over the middle of its row');
+    assert.ok(b.get('b1').stacked && b.get('b2').y > b.get('b1').y && b.get('b1').x === b.get('b2').x, 'leaves stacked');
+    assert.ok(/^M [\d.-]+ [\d.-]+ V [\d.-]+ H [\d.-]+ V/.test(R.edgePath(b.get('r'), b.get('a'), 'org')), 'square lines');
+    // Fishbone: the causes to the left of the head, above and below the spine in turn, each bone to the right of its own.
+    b = R.layoutScene(model, sizeOf, 'fishbone').boxes;
+    assert.strictEqual(meet(b), null);
+    const spine = b.get('r').y + 15;
+    assert.deepStrictEqual(['a', 'b', 'c', 'd'].map((id) => b.get(id).y < spine), [true, false, true, false]);
+    assert.ok(['a', 'b', 'c', 'd'].every((id) => b.get(id).x + b.get(id).width < b.get('r').x && b.get(id).bone > b.get(id).x));
+    assert.ok(b.get('a').x > b.get('c').x, 'in order away from the head');
+    assert.ok(R.edgePath(b.get('r'), b.get('a'), 'fishbone').startsWith(`M ${b.get('r').x} ${spine} H`));
+    // Timeline: rightward from the start, in order, above and below in turn.
+    b = R.layoutScene(model, sizeOf, 'spine').boxes;
+    assert.strictEqual(meet(b), null);
+    const xs = ['a', 'b', 'c', 'd'].map((id) => b.get(id).x);
+    assert.deepStrictEqual(xs.slice().sort((p, q) => p - q), xs);
+    assert.ok(xs[0] > b.get('r').x + b.get('r').width && b.get('a').rib && b.get('a').y < spine && b.get('b').y > spine);
+    assert.ok(b.get('a1x').x > b.get('a1').x && b.get('a1x').y > b.get('a1').y, 'its branch an outline under it');
+    // For one branch: B as an org chart, the rest to the right.
+    const m2 = R.parseOutline(text).model;
+    R.setBranchLayout(m2, 'b', 'org');
+    assert.strictEqual(R.branchLayoutOf(m2, 'b'), 'org');
+    b = R.layoutScene(m2, sizeOf, 'right').boxes;
+    assert.strictEqual(meet(b), null);
+    assert.ok(b.get('b1').y > b.get('b').y && b.get('b1').way === 'org' && b.get('a1').way === 'right');
+    // On a canvas, the nearest layout it has.
+    m2.mode = 'fishbone';
+    const cards = R.canvasFromMap(m2, R.layoutScene(m2, sizeOf, 'fishbone').boxes);
+    assert.strictEqual(cards.nodes.find((n) => n.id === 'r').drLayout, 'left');
   });
 
   console.log(`\n${passed} passed`);
