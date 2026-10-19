@@ -101,13 +101,28 @@ class MindMapLinked {
     if (!cache || typeof cache.on !== 'function' || this.watchingNotes) return;
     this.watchingNotes = true;
     this.registerEvent(cache.on('changed', (file) => this.noteChanged(file)));
-    // Links resolved again — a note made, renamed or deleted: which notes nodes link to may have changed.
-    this.registerEvent(
-      cache.on('resolved', () => {
-        this.linkMemo = null;
-        if (this.model && this.linkedOn()) this.notesChanged();
-      })
-    );
+    this.register(() => window.clearTimeout(this.notesTimer));
+    // A note made, renamed or deleted: which notes nodes link to may have changed. Not on every save — the map's own too.
+    const vault = this.app.vault;
+    if (vault && typeof vault.on === 'function') {
+      ['create', 'delete', 'rename'].forEach((type) =>
+        this.registerEvent(
+          vault.on(type, () => {
+            this.linkMemo = null;
+            if (this.model && this.linkedOn()) this.notesLater();
+          })
+        )
+      );
+    }
+  }
+
+  /** Drawn again in a moment: a folder of notes moved is one redraw, not one a note. */
+  notesLater() {
+    if (this.notesTimer) return;
+    this.notesTimer = window.setTimeout(() => {
+      this.notesTimer = null;
+      this.notesChanged();
+    }, 200);
   }
 
   /** A note changed: drawn again, if a node links to it. */
