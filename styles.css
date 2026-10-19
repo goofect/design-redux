@@ -2144,42 +2144,6 @@ body.is-mobile .dr-mention-remove {
   display: block;
 }
 
-/* The workspace mode on, named on the strip: pressed, it's left. */
-.dr-strip-mode {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  height: 26px;
-  padding: 0 var(--dr-space-2);
-  border-radius: var(--dr-radius-pill);
-  background-color: var(--background-modifier-hover);
-  font-size: var(--dr-meta-size);
-  color: var(--text-muted);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: color var(--dr-dur-fast) var(--dr-ease);
-}
-
-.dr-strip-mode-icon {
-  display: flex;
-}
-
-.dr-strip-mode-icon .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.dr-strip-mode:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-@media (any-hover: hover) {
-  .dr-strip-mode:hover {
-    color: var(--text-normal);
-  }
-}
-
 /* Study: the page and little else — no status bar, the strip down to the note. */
 body.dr-mode-study .status-bar {
   display: none;
@@ -7959,29 +7923,28 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   margin-bottom: calc(var(--dr-u) * 3.5);
 }
 
-/* A feature's other rows sit folded under it, there only while its switch is on. */
+/* A feature's options open under its row, from its gear — one at a time. */
 .dr-set-more {
-  margin: 0 0 var(--dr-space-3);
-}
-
-.dr-set-more > summary {
-  padding: var(--dr-space-2) 0;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-
-.dr-set-more.is-off {
   display: none;
+  margin: 0 0 var(--dr-space-3);
+  padding-left: var(--dr-space-4);
+  border-left: 2px solid var(--dr-line);
 }
 
-.dr-settings.is-searching .dr-set-more.is-off {
+.dr-set-more.is-open {
   display: block;
 }
 
-.dr-set-more-body {
-  padding-left: var(--dr-space-4);
-  border-left: 2px solid var(--dr-line);
+.dr-set-feature-icon {
+  display: inline-flex;
+  margin-right: var(--dr-space-2);
+  vertical-align: middle;
+  color: var(--text-muted);
+}
+
+.dr-set-feature-icon .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
 }
 
 .dr-set-look {
@@ -8692,26 +8655,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   text-underline-offset: 3px;
 }
 
-/* Study -------------------------------------------------------------------------
- *
- * What's due to be revisited: a chip in the strip, and a quiet row of grades
- * under a due note's title.
- */
-
-.dr-strip-chip {
-  flex: 0 0 auto;
-  padding: 0 var(--dr-space-2);
-  border-radius: var(--radius-l);
-  background: var(--background-modifier-hover);
-  color: var(--text-accent);
-  font-family: var(--dr-font-ui);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-  line-height: 22px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
 .dr-note-study {
   display: flex;
   flex-wrap: wrap;
@@ -8738,16 +8681,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 .dr-note-study .dr-note-study-grade[data-grade='got'] {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
-}
-
-@media (any-hover: hover) {
-  .dr-strip-chip:hover {
-    background: var(--background-modifier-active-hover);
-  }
-}
-
-.dr-strip-session {
-  color: var(--text-normal);
 }
 
 .dr-study-summary-line {
@@ -10274,5 +10207,50 @@ body.is-mobile.dr-icons-only .dr-detail-action {
 
 /* A table's column heads are an icon, the word its tooltip — unless the words are asked for. */
 body:not(.dr-icons-words) .dr-td .dr-icon-label {
+  display: none;
+}
+
+/* The strip's More button: a count of what is due to be revisited sits on it. */
+.dr-strip-btn[data-action="more"] {
+  position: relative;
+}
+
+.dr-strip-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  line-height: 16px;
+  text-align: center;
+}
+
+/* The strip as a slim rail at the side: 48px wide, the cover, previous, next and More, as icons. */
+body.dr-strip-side .dr-strip {
+  left: auto;
+  right: var(--dr-space-3);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  flex-direction: column;
+  width: 48px;
+  max-width: 48px;
+  padding: var(--dr-space-2) 0;
+  border-radius: var(--dr-radius-lg);
+}
+
+body.dr-strip-side .dr-strip-center,
+body.dr-strip-side .dr-strip-nav,
+body.dr-strip-side .dr-strip-actions {
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+body.dr-strip-side .dr-strip-text,
+body.dr-strip-side .dr-strip-progress {
   display: none;
 }

@@ -1307,17 +1307,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     cmds['next-in-album'].run();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.strictEqual(cmds['next-in-album'].check(), false, 'offered past the last note');
-    // Only what's needed shown until it's pointed at: Properties and More always, the rest waiting.
-    const secondary = Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action);
-    assert.deepStrictEqual(secondary, ['mode', 'pin']);
-    // In a narrow window those go into More instead, first in its menu.
+    // The strip shows previous, next and More; the rest of what it did is inside More, first in its menu.
     app.workspace.trigger = () => {};
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['more']);
+    click(strip.el.querySelector('[data-action="more"]'));
+    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
+    // Narrow or not, the same.
     Object.defineProperty(window, 'innerWidth', { value: 600, configurable: true });
     strip.update();
     assert.ok(strip.el.classList.contains('is-narrow'));
-    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')), []);
-    click(strip.el.querySelector('[data-action="more"]'));
-    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['more']);
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     // An album's strip: the actions written for albums elsewhere, sorting, and More.
     const made = [];

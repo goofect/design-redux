@@ -1,8 +1,8 @@
 /*
- * Where each setting sits: six tabs, by what they're for, of short sections. Features still
- * own their rows — name, control, description; this only decides where
- * each goes. A row shown only while another in its section is on sits
- * indented beneath that one.
+ * Where each setting sits: a tab for each of the four places, a look strip above them, and in
+ * each tab one row a feature — icon, name, a line, a switch and a gear that opens its options.
+ * Features still own their rows (name, control, description); this only decides where each
+ * goes. A row shown only while another is on sits indented beneath that one.
  */
 
 import { AbstractInputSuggest, Notice, Platform, PluginSettingTab, setIcon, Setting, TFolder } from 'obsidian';
@@ -17,52 +17,125 @@ export const SETTINGS_TABS = [
   {
     id: 'library',
     title: 'Library',
-    sections: [
-      { switch: 'library', keys: ['library', 'libraryLayout', 'homePath'], more: ['homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
-      { title: 'Lists', keys: ['defaultSort'], more: ['albumSortMemory', 'typeToJump'] },
-      { title: 'Screens', keys: ['searchNoteText'], more: ['albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty'] },
-      { title: 'Collections', keys: ['smartAlbums'], more: ['albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
-      { title: 'Folder notes', keys: ['hideFolderNotes'], more: ['folderNoteName'] },
-      { title: 'Covers', keys: ['coverDrop'], more: ['coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint'] },
-      { title: 'Advanced', advanced: true, keys: [], more: ['fromReadingDays', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords', 'generatedCoverColor'] },
+    features: [
+      {
+        id: 'library',
+        icon: 'library',
+        name: 'Library',
+        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
+        switch: 'library',
+        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
+      },
+      {
+        id: 'covers',
+        icon: 'image',
+        name: 'Covers',
+        desc: 'Where covers come from, and how the made ones look.',
+        keys: ['coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
+      },
+      {
+        id: 'home',
+        icon: 'home',
+        name: 'Home screen',
+        desc: 'What the library opens with: its shelves, and how far back reading counts.',
+        keys: ['homePath', 'homeShelves', 'fromReadingDays'],
+      },
     ],
   },
   {
     id: 'note',
     title: 'Note',
-    sections: [
-      { title: 'The note page', switch: 'notePage', keys: ['notePage', 'notePageShelves', 'readingHistory'], more: ['notePageTint', 'notePageChips', 'rememberPlace'] },
-      { title: 'Reading outline', keys: ['readingOutline'] },
-      { title: 'Study', switch: 'studyEnabled', keys: ['studyEnabled'], more: ['studyAlbums', 'studyHighlights'] },
-      { title: 'Relationships', switch: 'knowledge', keys: ['knowledge'], more: ['canvasRelationTypes', 'knowledgeCheck'] },
-      { title: 'Lists', keys: [], more: ['letterLists', 'romanLists'] },
-      { title: 'Superscript and subscript', keys: [], more: ['scripts'] },
-      { title: 'Properties', keys: ['propertiesDropdown'], more: ['panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces'] },
-      { title: 'Links', keys: ['quietLinks'] },
-      { title: 'Footnotes', switch: 'footnotes', keys: ['footnotes'], more: ['footnotesAside', 'footnoteOrder'] },
-      { title: 'Images', keys: [], more: ['routeImages'] },
-      { title: 'Advanced', advanced: true, keys: [], more: ['outlineWordCounts', 'studyLadder', 'studyDailyMax', 'studyCardMax', 'knowledgeTreeKinds', 'knowledgeBroader', 'scriptSyntax', 'autoOrdinals', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun', 'imageFolder'] },
+    features: [
+      {
+        id: 'notePage',
+        icon: 'file-text',
+        name: 'Note page',
+        desc: 'Its collection above the title, one grey line under it, properties as chips, shelves at the end, and a reading outline.',
+        switch: 'notePage',
+        keys: ['notePageShelves', 'readingHistory', 'notePageTint', 'notePageChips', 'rememberPlace', 'readingOutline', 'outlineWordCounts'],
+      },
+      {
+        id: 'properties',
+        icon: 'list',
+        name: 'Properties panel',
+        desc: 'Where a note is edited: properties, relationships and places in one panel.',
+        switch: 'propertiesDropdown',
+        keys: ['panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
+      },
+      {
+        id: 'study',
+        icon: 'graduation-cap',
+        name: 'Study',
+        desc: 'Notes come back to be revisited on a ladder, and passages you highlight can be quizzed.',
+        switch: 'studyEnabled',
+        keys: ['studyAlbums', 'studyHighlights', 'studyLadder', 'studyDailyMax', 'studyCardMax'],
+      },
+      {
+        id: 'relationships',
+        icon: 'waypoints',
+        name: 'Relationships',
+        desc: 'What a note relates to, written in the note: kinds, checks and broader concepts.',
+        switch: 'knowledge',
+        keys: ['canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'],
+      },
+      {
+        id: 'writing',
+        icon: 'pen-line',
+        name: 'Writing extras',
+        desc: 'Footnotes in place, superscripts and subscripts, letter and roman lists, and pictures sent to a folder.',
+        keys: ['footnotes', 'footnotesAside', 'footnoteOrder', 'letterLists', 'romanLists', 'scripts', 'routeImages', 'scriptSyntax', 'autoOrdinals', 'imageFolder'],
+      },
+      {
+        id: 'quietLinks',
+        icon: 'link-2-off',
+        name: 'Quiet links',
+        desc: 'Links kept off the graph, and the notes they point at.',
+        switch: 'quietLinks',
+        keys: [],
+      },
     ],
   },
   {
     id: 'maps',
     title: 'Maps',
-    sections: [
-      { title: 'Maps', desc: 'For every map: what a new one is, and how far apart things are put.', keys: ['mindmapDefaultFormat', 'canvasSpacing'], more: ['mindmapLayout'] },
-      { title: 'Mind maps', switch: 'mindmaps', keys: ['mindmaps', 'mindmapTakeover'], more: ['mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapRichNodes', 'mindmapTheme'] },
-      { title: 'Advanced', advanced: true, keys: [], more: ['mindmapTemplateFolder', 'presentDimLevel', 'albumMapAuto', 'albumMapWritesParent', 'mindmapHistory'] },
+    features: [
+      {
+        id: 'mindmaps',
+        icon: 'network',
+        name: 'Mind maps',
+        desc: 'A note or a .mindmap file drawn as a map: layout, legend, views, tasks, presenting, import and export.',
+        switch: 'mindmaps',
+        keys: ['mindmapDefaultFormat', 'canvasSpacing', 'mindmapLayout', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapRichNodes', 'mindmapTheme', 'mindmapTemplateFolder', 'presentDimLevel', 'albumMapAuto', 'albumMapWritesParent', 'mindmapHistory'],
+      },
     ],
   },
   {
     id: 'tools',
     title: 'Tools',
-    sections: [
-      { title: 'Modes', keys: ['workspaceModes'] },
-      { title: 'Page', switch: 'contextStrip', keys: ['contextStrip', 'onePage'], more: ['stripPlace', 'stripDetail', 'stripProgress', 'singleArea'] },
-      { title: 'Sidebar header', keys: [], more: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
-      { title: 'Graph', keys: ['graphProperties'], more: ['graphRoutes'] },
-      { title: 'Links', keys: ['quietLinks'] },
-      { title: 'Advanced', advanced: true, keys: [], more: ['graphRouteProperty', 'compatibility'] },
+    features: [
+      {
+        id: 'strip',
+        icon: 'panel-bottom',
+        name: 'Context strip and modes',
+        desc: 'Where you are and how far, with previous and next; workspace modes; one page; the sidebar header.',
+        switch: 'contextStrip',
+        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'stripProgress', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+      },
+      {
+        id: 'graph',
+        icon: 'share-2',
+        name: 'Graph',
+        desc: 'Filter the graph by a property, and draw links through the notes between.',
+        switch: 'graphProperties',
+        keys: ['graphRoutes', 'graphRouteProperty'],
+      },
+      {
+        id: 'compat',
+        icon: 'shield-check',
+        name: 'Compatibility',
+        desc: 'The parts of Obsidian Design Redux relies on, and what stops working if an update changes one.',
+        keys: ['compatibility'],
+      },
     ],
   },
 ];
@@ -71,11 +144,19 @@ export const SETTINGS_TABS = [
 export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
-/** Every key a section holds: its front rows, then those folded under them. */
-export const sectionKeys = (sec) => (sec.keys || []).concat(sec.more || []);
+/** Every key a feature's row holds: its switch, then what its gear opens. */
+export const featureKeys = (feature) => (feature.switch ? [feature.switch] : []).concat(feature.keys || []);
 
-/** A section's name for remembering whether it's open. */
-const sectionId = (tab, sec) => `${tab.id}:${sec.title || (sec.keys || [])[0] || ''}`;
+/**
+ * What each switch is set to by a preset. Minimal keeps the library and
+ * the note page; Everything turns every switch on; Standard is the
+ * everyday set. A preset only flips switches; each can be changed after.
+ */
+export const SETTING_PRESETS = {
+  minimal: { name: 'Minimal', on: ['library', 'notePage'] },
+  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps', 'contextStrip'] },
+  everything: { name: 'Everything', on: null },
+};
 
 export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize'],
@@ -147,8 +228,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
     this.tab = SETTINGS_TABS[0].id;
-    /** The folded parts a person has opened, by section; kept while the page redraws. */
-    this.opened = new Set();
+    /** The feature whose gear is open — one at a time; kept while the page redraws. */
+    this.gear = null;
   }
 
   get settings() {
@@ -187,30 +268,31 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     containerEl.addClass('dr-settings');
     const rows = this.rows();
     const placed = new Set();
-    const resolve = (sec) => {
-      const front = (sec.keys || []).map((key) => rows.find((row) => row.key === key)).filter(Boolean);
-      const more = (sec.more || []).map((key) => rows.find((row) => row.key === key)).filter(Boolean);
-      front.concat(more).forEach((row) => placed.add(row));
-      return Object.assign({}, sec, { front, more });
+    const resolve = (feature) => {
+      const find = (key) => rows.find((row) => row.key === key);
+      const options = (feature.keys || []).map(find).filter(Boolean);
+      const switchRow = feature.switch ? find(feature.switch) || null : null;
+      options.concat(switchRow || []).forEach((row) => placed.add(row));
+      return Object.assign({}, feature, { options, switchRow });
     };
-    const look = { spec: { id: 'look', title: 'Look' }, sections: [resolve({ title: 'Look', keys: LOOK_KEYS })] };
-    const tabs = SETTINGS_TABS.map((spec) => ({ spec, sections: spec.sections.map(resolve) }));
-    // Anything no tab claims still gets a place, at the end.
+    const look = { spec: { id: 'look', title: 'Look' }, features: [resolve({ id: 'look', title: 'Look', keys: LOOK_KEYS })] };
+    const tabs = SETTINGS_TABS.map((spec) => ({ spec, features: spec.features.map(resolve) }));
+    // Anything no row claims still gets a place, at the end.
     const rest = rows.filter((row) => !placed.has(row));
-    if (rest.length) tabs[tabs.length - 1].sections.push({ title: 'Other', advanced: true, front: [], more: rest });
+    if (rest.length) tabs[tabs.length - 1].features.push({ id: 'other', icon: 'more-horizontal', name: 'Other', desc: '', keys: [], options: rest, switchRow: null });
 
     this.renderTools(containerEl);
     // The look, above the places: it's one setting for the whole window, not one tab's.
     const lookPane = containerEl.createDiv({ cls: 'dr-set-pane dr-set-look' });
     lookPane.dataset.tab = 'look';
     lookPane.dataset.always = 'true';
-    this.renderPane(lookPane, look.spec, look.sections);
+    this.renderPane(lookPane, look.spec, look.features);
     const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
     bar.setAttribute('role', 'tablist');
     roveFocus(bar, '.dr-set-tab');
     const panes = [];
 
-    tabs.forEach(({ spec, sections }) => {
+    tabs.forEach(({ spec, features }) => {
       const on = spec.id === this.tab;
       const button = bar.createEl('button', { cls: 'dr-set-tab' });
       button.setAttribute('role', 'tab');
@@ -227,7 +309,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
       panes.push(pane);
       // Named over its rows while searching, when every tab's are shown at once.
       pane.createDiv({ cls: 'dr-set-pane-title', text: spec.title });
-      this.renderPane(pane, spec, sections);
+      this.renderPane(pane, spec, features);
 
       button.addEventListener('click', () => {
         this.tab = spec.id;
@@ -253,11 +335,11 @@ export class DesignReduxSettingTab extends PluginSettingTab {
 
   /** Opened next at one setting: its tab, and its row scrolled to and marked. */
   reveal(key) {
-    const spec = SETTINGS_TABS.find((tab) => tab.sections.some((sec) => sectionKeys(sec).indexOf(key) !== -1));
+    const spec = SETTINGS_TABS.find((tab) => tab.features.some((feature) => featureKeys(feature).indexOf(key) !== -1));
     if (spec) this.tab = spec.id;
-    // One folded under its switch opens that part.
-    SETTINGS_TABS.forEach((tab) => tab.sections.forEach((sec) => {
-      if ((sec.more || []).indexOf(key) !== -1) this.opened.add(sectionId(tab, sec));
+    // One behind a gear opens that gear.
+    SETTINGS_TABS.forEach((tab) => tab.features.forEach((feature) => {
+      if ((feature.keys || []).indexOf(key) !== -1) this.gear = feature.id;
     }));
     this.query = '';
     this.revealKey = key;
@@ -330,26 +412,25 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     let any = false;
     containerEl.querySelectorAll('.dr-set-pane').forEach((pane) => {
       let paneAny = false;
-      pane.querySelectorAll('.dr-set-block').forEach((section) => {
-        const titled = on && matches(section.dataset.drSearch || '');
-        let sectionAny = false;
-        section.querySelectorAll('[data-dr-search]').forEach((el) => {
-          if (el === section) return;
+      pane.querySelectorAll('.dr-set-block').forEach((block) => {
+        const titled = on && matches(block.dataset.drSearch || '');
+        let optionAny = false;
+        block.querySelectorAll('.dr-set-more [data-dr-search]').forEach((el) => {
           const show = !on || titled || matches(el.dataset.drSearch);
           el.toggleClass('dr-set-unmatched', !show);
-          if (show) sectionAny = true;
+          if (show && on) optionAny = true;
         });
         // A row shown beneath one it depends on shows that one too.
-        section.querySelectorAll('.dr-set-children').forEach((kids) => {
+        block.querySelectorAll('.dr-set-children').forEach((kids) => {
           if (kids.querySelector('[data-dr-search]:not(.dr-set-unmatched)') && kids.previousElementSibling) {
             kids.previousElementSibling.removeClass('dr-set-unmatched');
           }
         });
-        section.querySelectorAll('.dr-set-more').forEach((fold) => {
-          fold.open = on ? !!fold.querySelector('[data-dr-search]:not(.dr-set-unmatched)') : this.opened.has(fold.dataset.drMore);
-        });
-        section.toggleClass('dr-set-unmatched', on && !sectionAny);
-        if (sectionAny) paneAny = true;
+        // A search opens the gear that holds a match; otherwise only the one chosen is open.
+        block.querySelectorAll('.dr-set-more').forEach((more) => more.toggleClass('is-open', on ? optionAny : more.dataset.drMore === this.gear));
+        const shown = !on || titled || optionAny;
+        block.toggleClass('dr-set-unmatched', !shown);
+        if (shown) paneAny = true;
       });
       pane.toggleClass('is-hidden', on ? !paneAny : !pane.dataset.always && pane.dataset.tab !== this.tab);
       if (paneAny) any = true;
@@ -401,7 +482,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     this.display();
   }
 
-  renderPane(pane, spec, sections) {
+  renderPane(pane, spec, features) {
     if (spec.id === 'library' && !this.settings.library) {
       const note = pane.createDiv({ cls: 'dr-set-callout' });
       note.createSpan({ text: 'The library is off, so the settings for its screens are hidden.' });
@@ -413,37 +494,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
       });
     }
 
-    sections.forEach((sec) => {
-      const front = sec.front.filter((row) => this.shown(row));
-      const more = sec.more.filter((row) => this.shown(row));
-      if (!front.length && !more.length) return;
-      // Each section in a block of its own, so a search can hide what has nothing to show.
-      const section = pane.createDiv({ cls: 'dr-set-block' });
-      section.dataset.drSearch = `${sec.title || ''} ${sec.desc || ''}`.toLowerCase();
-      if (front.length) {
-        if (sec.title) {
-          const head = new Setting(section).setName(sec.title).setHeading();
-          if (sec.desc) head.setDesc(sec.desc);
-        }
-        this.drawRows(section, front, spec);
-      }
-      if (!more.length) return;
-      // What else the feature has sits folded under it, there only while its switch is on.
-      const id = sectionId(spec, sec);
-      const fold = section.createEl('details', { cls: 'dr-set-more' });
-      fold.dataset.drMore = id;
-      fold.open = this.opened.has(id);
-      fold.toggleClass('is-off', !!sec.switch && !this.settings[sec.switch]);
-      const label = front.length ? 'More options' : sec.title || 'More options';
-      fold.createEl('summary', { text: label });
-      fold.addEventListener('toggle', () => {
-        // A search opens every fold it has something in, without that counting as a choice.
-        if (this.containerEl.hasClass('is-searching')) return;
-        if (fold.open) this.opened.add(id);
-        else this.opened.delete(id);
-      });
-      this.drawRows(fold.createDiv({ cls: 'dr-set-more-body' }), more, spec);
-    });
+    features.forEach((feature) => this.drawFeature(pane, spec, feature));
 
     if (spec.id === 'tools' && Platform.isMobile) {
       pane.createDiv({
@@ -451,6 +502,78 @@ export class DesignReduxSettingTab extends PluginSettingTab {
         text: 'Settings for the desktop app\'s tab bar and sidebar header aren\'t shown on a phone or tablet.',
       });
     }
+  }
+
+  /**
+   * A feature as one row: its icon, name, a line on what it does, and its
+   * switch. A gear opens its options beneath it, one feature's at a time;
+   * a feature that is off has no gear. The Look strip is plain rows.
+   */
+  drawFeature(pane, spec, feature) {
+    const options = feature.options.filter((row) => this.shown(row));
+    if (spec.id === 'look') {
+      const block = pane.createDiv({ cls: 'dr-set-block' });
+      block.dataset.drSearch = 'look';
+      new Setting(block).setName('Look').setHeading();
+      this.drawRows(block, options, spec);
+      this.drawPresets(block);
+      return;
+    }
+    if (!feature.switchRow && !options.length) return;
+    const on = !feature.switch || !!this.settings[feature.switch];
+    const block = pane.createDiv({ cls: 'dr-set-block dr-set-feature' });
+    block.dataset.drSearch = `${feature.name} ${feature.desc} ${feature.switch || ''}`.toLowerCase();
+    const setting = new Setting(block).setName(feature.name).setDesc(feature.desc);
+    const nameEl = setting.nameEl;
+    if (nameEl && feature.icon) {
+      const icon = nameEl.ownerDocument.createElement('span');
+      icon.className = 'dr-set-feature-icon';
+      setIcon(icon, feature.icon);
+      nameEl.insertBefore(icon, nameEl.firstChild);
+    }
+    if (setting.settingEl) {
+      setting.settingEl.dataset.drKey = feature.switch || feature.id;
+      setting.settingEl.dataset.drSearch = block.dataset.drSearch;
+    }
+    if (feature.switchRow) setting.addToggle((t) => t.setValue(!!this.settings[feature.switch]).onChange((v) => this.set(feature.switch, v, true)));
+    if (on && options.length) {
+      setting.addExtraButton((b) =>
+        b
+          .setIcon('settings')
+          .setTooltip('Options')
+          .onClick(() => {
+            this.gear = this.gear === feature.id ? null : feature.id;
+            this.containerEl.querySelectorAll('.dr-set-more').forEach((more) => more.toggleClass('is-open', more.dataset.drMore === this.gear));
+          })
+      );
+    }
+    if (!options.length) return;
+    const more = block.createDiv({ cls: 'dr-set-more' });
+    more.dataset.drMore = feature.id;
+    more.toggleClass('is-open', on && this.gear === feature.id);
+    more.toggleClass('is-off', !on);
+    this.drawRows(more, options, spec);
+  }
+
+  /** Minimal, Standard or Everything: flips the switches, nothing else, and each can be changed after. */
+  drawPresets(host) {
+    const setting = new Setting(host).setName('Preset').setDesc('Turn the features on or off in one go: Minimal, Standard or Everything. It only flips the switches.');
+    setting.addDropdown((d) => {
+      d.addOption('', 'Choose…');
+      Object.keys(SETTING_PRESETS).forEach((id) => d.addOption(id, SETTING_PRESETS[id].name));
+      d.setValue('').onChange((id) => id && this.applyPreset(id));
+    });
+  }
+
+  async applyPreset(id) {
+    const preset = SETTING_PRESETS[id];
+    if (!preset) return;
+    SETTINGS_TABS.forEach((tab) => tab.features.forEach((feature) => {
+      if (!feature.switch) return;
+      this.settings[feature.switch] = preset.on ? preset.on.indexOf(feature.switch) !== -1 : true;
+    }));
+    await this.plugin.saveSettings();
+    this.display();
   }
 
   /** Rows in a place, each beneath the one it depends on when that's here too. */

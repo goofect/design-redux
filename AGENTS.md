@@ -55,8 +55,9 @@ Coffee N' Christmas.
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
-- `DEFAULTS` holds every setting. Settings rows are placed in the settings tab by
-  `SETTINGS_TABS`; a new row's key must be added there.
+- `DEFAULTS` holds every setting. Settings rows are placed by `SETTINGS_TABS`: a tab for each
+  place, in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
+  row's key must be added to one feature, and to none twice. The look rows are `LOOK_KEYS`.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
 - Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`)

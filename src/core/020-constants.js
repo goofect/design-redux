@@ -61,6 +61,7 @@ export const DEFAULTS = {
   stripDetail: '',
   // A line along the strip's foot for how far down the note you are.
   stripProgress: true,
+  stripSide: 'bottom',
   // Notes lined up to read next, by path; the strip's » goes through them first.
   // A property's menu gives its value to the rest of the note's album.
   propertyForAlbum: true,

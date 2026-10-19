@@ -109,6 +109,14 @@ export class ContextStrip extends Feature {
         suggestExtra: ['modified', 'created', 'folder', 'none'],
       },
       {
+        key: 'stripSide',
+        type: 'dropdown',
+        name: 'Where it sits',
+        desc: 'Along the bottom, or as a slim rail at the side with only the cover, previous, next and more — for narrow windows and split panes.',
+        options: { bottom: 'Along the bottom', side: 'A rail at the side' },
+        showIf: 'contextStrip',
+      },
+      {
         key: 'stripProgress',
         name: 'Reading progress',
         desc: 'A thin line along the bar for how far down the note you are.',
@@ -215,6 +223,7 @@ export class ContextStrip extends Feature {
 
   enable() {
     document.body.addClass('dr-strip-active');
+    document.body.toggleClass('dr-strip-side', this.settings.stripSide === 'side');
     if (!this.el || !this.el.isConnected) {
       this.el = document.body.createDiv({ cls: 'dr-strip' });
     }
@@ -225,6 +234,7 @@ export class ContextStrip extends Feature {
   disable() {
     this.watchScroll(null);
     document.body.removeClass('dr-strip-active');
+    document.body.removeClass('dr-strip-side');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
     if (this.el) this.el.remove();
     this.el = null;
@@ -281,7 +291,6 @@ export class ContextStrip extends Feature {
     if (!view) return;
 
     this.renderNav(this.el);
-    this.renderRevisit(this.el, file);
     const reading = !!file && this.settings.stripProgress !== false;
     if (file) {
       this.renderNow(this.el, file, view);
@@ -427,29 +436,41 @@ export class ContextStrip extends Feature {
     return el;
   }
 
-  /** Notes due to be revisited: a chip with how many, a step to the first. */
-  renderRevisit(strip, file) {
-    // A study session under way: where you are in it, and its own buttons.
+  /**
+   * Study, in the More menu: while a session is under way, its next note, marking and
+   * ending it; otherwise how many notes are due and a step to the first. `count` is
+   * what the More button's badge shows.
+   */
+  revisitEntries(file) {
     const place = sessionPlace(this.plugin, file);
     if (place) {
-      const line = strip.createDiv({ cls: 'dr-strip-chip dr-strip-session', text: place.index === -1 ? `Session · ${place.total}` : `Session · ${place.index + 1} of ${place.total}` });
-      asButton(line, 'Next note in this session');
-      onActivate(line, () => this.runAction('study-session-next'));
+      const entries = [{
+        icon: 'skip-forward',
+        label: place.index === -1 ? `Next note in this session (${place.total})` : `Next note in this session (${place.index + 1} of ${place.total})`,
+        role: 'study-session-next',
+        run: () => this.runAction('study-session-next'),
+      }];
       [['study-mark-revisit', 'Mark to revisit', 'bookmark-plus'], ['study-end-session', 'End the session', 'square']].forEach(([id, label, icon]) => {
         const action = this.findAction(id);
         const ctx = action && actionContext(this.app, action);
-        if (ctx && applies(action, ctx)) this.stripButton(strip, { icon, label, role: id, run: () => this.runAction(id) });
+        if (ctx && applies(action, ctx)) entries.push({ icon, label, role: id, run: () => this.runAction(id) });
       });
-      return;
+      return { entries, count: place.total };
     }
     const due = dueNotes(this.plugin);
-    if (!due.length) return;
-    const chip = strip.createDiv({ cls: 'dr-strip-chip dr-strip-revisit', text: `${due.length} to revisit` });
-    asButton(chip, `Open the first of ${due.length} notes to revisit`);
-    onActivate(chip, () => {
-      const next = dueNotes(this.plugin)[0];
-      if (next) this.app.workspace.getLeaf(false).openFile(next);
-    });
+    if (!due.length) return { entries: [], count: 0 };
+    return {
+      entries: [{
+        icon: 'graduation-cap',
+        label: `${due.length} to revisit: open the first`,
+        role: 'revisit',
+        run: () => {
+          const next = dueNotes(this.plugin)[0];
+          if (next) this.app.workspace.getLeaf(false).openFile(next);
+        },
+      }],
+      count: due.length,
+    };
   }
 
   /** The line under a screen's name: what an album holds and what it is; otherwise the vault. */
@@ -475,38 +496,6 @@ export class ContextStrip extends Feature {
     asButton(toggle);
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
-
-    // The workspace mode: the one on, named; or, quietly, the way into one. Either opens the switcher.
-    const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
-    const mode = modes && modes.enabled ? modes.mode(modes.current()) : null;
-    if (mode) {
-      const chip = nav.createDiv({ cls: 'dr-strip-mode' });
-      asButton(chip, `${mode.label} mode: switch, or leave it`);
-      setIcon(chip.createSpan({ cls: 'dr-strip-mode-icon' }), mode.icon);
-      chip.createSpan({ text: mode.label });
-      onActivate(chip, (evt) => modes.showMenu(evt));
-    } else if (modes && modes.enabled) {
-      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary dr-strip-modes' });
-      asButton(el, 'Workspace mode');
-      setIcon(el, 'layout-template');
-      onActivate(el, (evt) => modes.showMenu(evt));
-    }
-
-    [
-      ['chevron-left', 'Back', 'back'],
-      ['chevron-right', 'Forward', 'forward'],
-    ].forEach(([icon, label, dir]) => {
-      // Back and forward through what was open: there when wanted, quiet otherwise.
-      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary' });
-      el.setAttribute('aria-label', label);
-      setIcon(el, icon);
-      if (!this.canGo(dir)) {
-        el.addClass('is-disabled');
-        return;
-      }
-      asButton(el);
-      onActivate(el, () => this.go(dir));
-    });
   }
 
   /** The note itself: cover, name, and one property beneath it — for a canvas, how many cards. */
@@ -625,29 +614,40 @@ export class ContextStrip extends Feature {
         icon: 'info',
         label: 'Properties',
         role: 'properties',
-        run: (evt) => {
+        run: (evt, anchor) => {
           // The panel answers if it's on: the strip doesn't know it.
-          if (leaf) this.app.workspace.trigger('design-redux:open-panel', leaf, evt.currentTarget);
+          if (leaf) this.app.workspace.trigger('design-redux:open-panel', leaf, anchor || evt.currentTarget);
         },
       });
     }
 
-    const overflow = this.isNarrow() ? specs.filter((spec) => spec.secondary) : [];
-    specs.filter((spec) => overflow.indexOf(spec) === -1).forEach((spec) => this.stripButton(actions, spec));
+    // Everything but previous and next is inside More: what the strip showed as a row of buttons,
+    // back and forward, the workspace mode, and study — the count of what is due on the button.
+    const entries = specs.slice();
+    ['back', 'forward'].forEach((dir) => {
+      if (this.canGo(dir)) entries.push({ icon: dir === 'back' ? 'chevron-left' : 'chevron-right', label: dir === 'back' ? 'Back' : 'Forward', role: dir, run: () => this.go(dir) });
+    });
+    const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
+    if (modes && modes.enabled) {
+      const mode = modes.mode(modes.current());
+      entries.push({ icon: mode ? mode.icon : 'layout-template', label: mode ? `${mode.label} mode: switch, or leave it` : 'Workspace mode', role: 'modes', run: (evt) => modes.showMenu(evt) });
+    }
+    const study = this.revisitEntries(file);
+    entries.push(...study.entries);
 
     // The page menu the note's own header had — Find, Replace, Export
     // to PDF, version history — followed by the file's entries, which
     // Obsidian adds as part of it. Hiding the header had taken all of
-    // that away. In a narrow window, what the strip had no room for first.
-    this.stripButton(actions, {
+    // that away.
+    const more = this.stripButton(actions, {
       icon: 'ellipsis',
-      label: 'More',
+      label: study.count ? `More (${study.count} to revisit)` : 'More',
       role: 'more',
       run: (evt) => {
         const menu = new Menu();
-        overflow.forEach((spec) =>
+        entries.forEach((spec) =>
           menu.addItem((item) => {
-            item.setTitle(spec.label).setIcon(spec.icon).onClick(() => spec.run(evt));
+            item.setTitle(spec.label).setIcon(spec.icon).onClick((e) => spec.run(e || evt, more));
             if (typeof item.setSection === 'function') item.setSection('action');
           })
         );
@@ -660,6 +660,7 @@ export class ContextStrip extends Feature {
         showMenuAt(menu, evt);
       },
     });
+    if (study.count) more.createSpan({ cls: 'dr-strip-badge', text: String(study.count) });
   }
 
   /** What goes beside the note's place in its album: as the setting says, or one property worth showing. */

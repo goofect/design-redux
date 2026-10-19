@@ -678,12 +678,12 @@ describe('Design Redux in Obsidian', function () {
     await obsidianPage.openFile('Politics/Study me.md');
     const grade = await browser.$(ACTIVE + '.dr-note-study-grade[data-grade="got"]');
     await grade.waitForExist({ timeout: 8000 });
-    expect(await browser.execute(() => (document.querySelector('.dr-strip-revisit') || {}).textContent)).toBe('1 to revisit');
+    expect(await browser.execute(() => (document.querySelector('.dr-strip-badge') || {}).textContent)).toBe('1');
     await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-note-study-grade[data-grade="got"]').click());
     const after = await readUntil(
       () => browser.executeObsidian(({ plugins }) => {
         const i = plugins.designRedux.study.item('Politics/Study me.md');
-        return { rung: i.rung, due: i.due > Date.now(), chip: !!document.querySelector('.dr-strip-revisit'), row: !!document.querySelector('.workspace-leaf.mod-active .dr-note-study') };
+        return { rung: i.rung, due: i.due > Date.now(), chip: !!document.querySelector('.dr-strip-badge'), row: !!document.querySelector('.workspace-leaf.mod-active .dr-note-study') };
       }),
       (r) => r.rung === 1 && !r.chip && !r.row
     );
@@ -1106,13 +1106,13 @@ describe('Design Redux in Obsidian', function () {
       const before = { left: app.workspace.leftSplit.collapsed, leaves: leaves() };
       await modes.enter('study');
       await until(() => app.workspace.leftSplit.collapsed);
-      const during = { left: app.workspace.leftSplit.collapsed, cls: document.body.classList.contains('dr-mode-study'), chip: !!document.querySelector('.dr-strip-mode') };
+      const during = { left: app.workspace.leftSplit.collapsed, cls: document.body.classList.contains('dr-mode-study') };
       await modes.leave();
       await until(() => !app.workspace.leftSplit.collapsed);
       const after = { left: app.workspace.leftSplit.collapsed, leaves: leaves(), cls: document.body.classList.contains('dr-mode-study') };
       return { before, during, after };
     });
-    expect(result.during).toEqual({ left: true, cls: true, chip: true });
+    expect(result.during).toEqual({ left: true, cls: true });
     expect(result.after.left).toBe(result.before.left);
     expect(result.after.leaves).toBe(result.before.leaves);
     expect(result.after.cls).toBe(false);
@@ -1783,11 +1783,11 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(page).toEqual({ citesShown: false, textShown: true });
 
-    // The footnote button along the bottom opens the view.
-    const button = await browser.$('.dr-strip-btn[data-action="footnotes"]');
-    await button.waitForExist({ timeout: 5000 });
-    expect(await button.getAttribute('aria-label')).toBe('Footnotes (2)');
-    await button.click();
+    // The strip's More menu has the footnotes, with how many; it opens the view.
+    const more = await browser.$('.dr-strip-btn[data-action="more"]');
+    await more.waitForExist({ timeout: 5000 });
+    await more.click();
+    await clickText('.menu .menu-item-title', 'Footnotes (2)');
     await browser.$('.dr-fn-view .dr-fn-item').waitForExist({ timeout: 5000 });
     const listed = await browser.execute(() =>
       Array.from(document.querySelectorAll('.dr-fn-view .dr-fn-item')).map((i) => [

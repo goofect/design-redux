@@ -286,7 +286,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     settingNames.length = 0;
     tab.display();
     assert.ok(!settingNames.includes('Single content area'));
-    assert.ok(settingNames.includes('Context strip'));
+    assert.ok(settingNames.includes('Context strip and modes'));
     assert.ok(tab.containerEl.querySelector('.dr-settings-note'));
     phone(false);
 
@@ -296,16 +296,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tab.display();
     const row = Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === 'contextStrip');
     assert.ok(row && row.classList.contains('is-revealed'));
-    assert.strictEqual(tab.tab, T.SETTINGS_TABS.find((s) => s.sections.some((sec) => sec.keys.includes('contextStrip'))).id);
+    assert.strictEqual(tab.tab, T.SETTINGS_TABS.find((s) => s.features.some((f) => f.switch === 'contextStrip' || f.keys.includes('contextStrip'))).id);
     assert.strictEqual(tab.query, '', 'a search left in the field would hide it');
   });
 
-  await t('settings: a feature’s other rows sit folded under its switch, there while it is on; a search or a link opens them', async () => {
-    const p = fakePlugin(Object.assign(settings(), { library: false, contextStrip: false }));
+  await t('settings: one row a feature, with a switch and a gear; its options open under it, one at a time; presets flip the switches', async () => {
+    const p = fakePlugin(Object.assign(settings(), { library: false, contextStrip: false, graphProperties: false }));
     p.saveData = async () => {};
+    p.saveSettings = async () => {};
     p.features = [{ settingsSchema: () => [
       { key: 'contextStrip', name: 'Context strip' },
       { key: 'stripDetail', name: 'Strip detail' },
+      { key: 'graphProperties', name: 'Graph properties' },
       { key: 'graphRoutes', name: 'Graph routes' },
     ] }];
     const tab = new T.DesignReduxSettingTab(p.app, p);
@@ -313,23 +315,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
     assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['Library', 'Note', 'Maps', 'Tools']);
-    assert.ok(!row('contextStrip').closest('.dr-set-more'), 'the switch is on the front page');
-    const fold = row('stripDetail').closest('.dr-set-more');
-    assert.ok(fold && fold.classList.contains('is-off') && !fold.open, 'its rows are folded, and out of sight while it is off');
-    assert.ok(row('graphRoutes').closest('.dr-set-more'), 'a feature’s rows are all folded under it');
+    assert.ok(row('contextStrip').closest('.dr-set-feature'), 'the switch is the feature’s own row');
+    const more = row('stripDetail').closest('.dr-set-more');
+    assert.ok(more && more.classList.contains('is-off') && !more.classList.contains('is-open'), 'a feature that is off has its options out of sight');
+    assert.ok(row('graphRoutes').closest('.dr-set-more'), 'options sit under their feature');
 
-    // A search finds a row by its old tab's name, and opens its fold.
+    // Search finds an option by its old tab's name and opens the gear that holds it.
     tab.query = 'workspace';
     tab.display();
-    assert.ok(row('stripDetail').closest('.dr-set-more').open);
+    assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
     tab.query = '';
 
-    // A link to one opens the part it's folded in, and it stays open.
+    // A link to an option opens its gear, and it stays open while the page redraws.
+    p.settings.contextStrip = true;
     tab.reveal('stripDetail');
     tab.display();
-    assert.ok(row('stripDetail').closest('.dr-set-more').open);
+    assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
+    assert.strictEqual(tab.gear, 'strip');
     tab.display();
-    assert.ok(row('stripDetail').closest('.dr-set-more').open, 'kept while the page redraws');
+    assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'), 'kept while the page redraws');
+    // One gear at a time.
+    tab.gear = 'graph';
+    tab.display();
+    assert.ok(!row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
+
+    // A preset only flips the switches.
+    await tab.applyPreset('minimal');
+    assert.strictEqual(p.settings.library, true);
+    assert.strictEqual(p.settings.contextStrip, false);
+    await tab.applyPreset('everything');
+    assert.strictEqual(p.settings.contextStrip, true);
+    assert.strictEqual(p.settings.graphProperties, true);
   });
 
   await t('settings: the main properties as a list to order, take off and add to by name', () => {
@@ -487,13 +503,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     return cs;
   };
 
-  await t('the strip names its buttons, so a phone can keep two', () => {
+  await t('the strip keeps previous, next and More: the rest is inside More', () => {
     document.body.innerHTML = '';
     const cs = stripFor();
     cs.update();
     const roles = Array.from(cs.el.querySelectorAll('.dr-strip-actions .dr-strip-btn'))
       .map((b) => b.dataset.action);
-    assert.deepStrictEqual(roles, ['mode', 'pin', 'properties', 'more']);
+    assert.deepStrictEqual(roles, ['more']);
   });
 
   await t('the strip sits above the bottom bar, at its height and stacking', () => {
