@@ -103,6 +103,8 @@ export class BrowseRows {
         paintValue(cell, this.plugin, key, text);
         markDue(cell, this.plugin, key, text);
       }
+      // A property's value changed where it's shown.
+      if (this.plugin.settings.propertyInlineEdit && file.extension === 'md' && !this.isTimeColumn(key) && key !== 'folder') this.editableCell(cell, file, key);
     });
 
     // Its length, where a track's would be: the last column, lined up.

@@ -183,7 +183,11 @@ export class BrowseView extends ItemView {
     // file a beat before the cache reflects it — so redrawing straight
     // after a write shows the card as it was. This catches up.
     this.registerEvent(
-      this.app.metadataCache.on('changed', () => this.queueRender())
+      this.app.metadataCache.on('changed', (file) => {
+        // A value changed in its row is shown there already: no redraw for it.
+        if (file && this.quietChanges && this.quietChanges.delete(file.path)) return;
+        this.queueRender();
+      })
     );
 
     // Right-clicking the page itself, rather than something on it,

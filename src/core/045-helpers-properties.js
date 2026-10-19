@@ -257,3 +257,14 @@ export function rollupOf(fms, isDone, dateKey) {
   });
   return out;
 }
+
+/** A property's type as Obsidian has it — assigned, else inferred — or text where it can't say. */
+export function typeOfProperty(app, key) {
+  const m = app && app.metadataTypeManager;
+  try {
+    const info = m && typeof m.getTypeInfo === 'function' ? m.getTypeInfo(String(key).toLowerCase()) : null;
+    return (info && info.expected && info.expected.type) || (info && info.inferred && info.inferred.type) || 'text';
+  } catch (err) {
+    return 'text';
+  }
+}

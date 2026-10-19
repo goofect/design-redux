@@ -597,6 +597,52 @@ t('a property’s facts on its page: type, notes with it and without, top values
   }
 });
 
+t('a value changed in its album row: chosen from the menu, written through the notes service, shown in place with no redraw', () => {
+  const tort = files.find((f) => f.basename === 'Tort');
+  const saved = JSON.parse(JSON.stringify(caches.get(tort).frontmatter));
+  const writes = [];
+  plugin.notes = {
+    write: async (file, change, opts) => {
+      const fm = caches.get(file).frontmatter;
+      const before = { status: fm.status };
+      change(fm);
+      writes.push([file.basename, fm.status, opts.undo]);
+      return { file, before, after: { status: fm.status } };
+    },
+  };
+  plugin.settings.albumColumns = 'status';
+  plugin.settings.propertyInlineEdit = true;
+  let view;
+  let cell;
+  let renders = 0;
+  let written;
+  try {
+    view = page({ mode: 'folder', path: 'Law' });
+    const render = view.render;
+    view.render = function () { renders++; return render.apply(this, arguments); };
+    cell = view.contentEl.querySelector('.dr-track[data-path="Law/Tort.md"] .dr-track-sub');
+    assert.ok(cell.classList.contains('is-editable'));
+    menus = [];
+    cell.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 1, clientY: 1 }));
+    const menu = menus.pop();
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['draft', 'Done', 'Other…', 'Clear'], 'the values most used, then another, then none');
+    assert.ok(menu.items.find((i) => i.title === 'Done').checked);
+    written = menu.items.find((i) => i.title === 'draft').click();
+    assert.deepStrictEqual(writes, [['Tort', 'draft', 'Set “status” of Tort.']]);
+  } finally {
+    caches.get(tort).frontmatter = saved;
+    delete plugin.notes;
+    plugin.settings.albumColumns = '';
+    delete plugin.settings.propertyInlineEdit;
+  }
+  // Shown once written: in its cell, the album not drawn again.
+  return written.then(() => {
+    assert.strictEqual(cell.textContent, 'draft');
+    assert.strictEqual(renders, 0, 'the album not drawn again');
+    assert.ok(view.quietChanges.has('Law/Tort.md'), 'its change from Obsidian brings no redraw');
+  });
+});
+
 t("the Properties screen's list and a property's values follow it", () => {
   const view = page({ mode: 'properties', property: 'status' });
   const props = () => titles(view, '.dr-split-name');

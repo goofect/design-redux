@@ -11,6 +11,7 @@ import { Menu, Notice, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { albumNeighbours, blankLook, drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { typeOfProperty } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
@@ -603,14 +604,7 @@ export class PropertiesScreen extends BrowseScreen {
       if (has) last = Math.max(last, file.stat ? file.stat.mtime : 0);
       return has;
     });
-    let type = 'text';
-    try {
-      const info = this.app.metadataTypeManager && typeof this.app.metadataTypeManager.getTypeInfo === 'function' ? this.app.metadataTypeManager.getTypeInfo(want) : null;
-      type = (info && info.expected && info.expected.type) || (info && info.inferred && info.inferred.type) || type;
-    } catch (err) {
-      /* the type as text */
-    }
-    return { type, uses: using.length, without: all.length - using.length, last };
+    return { type: typeOfProperty(this.app, want), uses: using.length, without: all.length - using.length, last };
   }
 
   renderInspector(detail, prop, groups) {

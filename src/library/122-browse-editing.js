@@ -5,14 +5,18 @@
 /* your own order. Methods of BrowseView, put on by mixInto.          */
 /* ------------------------------------------------------------------ */
 
-import { normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
-import { byName, composing, coverGen } from '../core/030-helpers-art.js';
+import { Menu, normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
+import { byName, composing, coverGen, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, edgeScroll, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
+import { noteProps } from '../core/073-notes.js';
 import { mixInto } from '../core/080-feature.js';
+import { schemaFor } from '../core/086-property-schema.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
+import { markDue, paintValue } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 /* A shelf's tiles drawn at once, and then a frame at a time. */
@@ -765,4 +769,102 @@ export class BrowseEditing {
   }
 }
 
+class RowValues {
+  /** A row's value as a button: pick, set or tick it there, the album not drawn again. */
+  editableCell(cell, file, key) {
+    cell.addClass('is-editable');
+    asButton(cell, `Change ${key}`);
+    onActivate(cell, (evt) => {
+      if (evt && evt.stopPropagation) evt.stopPropagation();
+      this.editValueInRow(cell, file, key, evt);
+    });
+  }
+
+  /** The value as its type has it: a checkbox ticked, a date picked, else one of its values chosen or typed. */
+  editValueInRow(cell, file, key, evt) {
+    const type = typeOfProperty(this.app, key);
+    const now = fmGet(noteProps(this.app, file), key);
+    if (type === 'checkbox') return this.writeRowValue(cell, file, key, !(now === true));
+    if (type === 'date' || type === 'datetime') {
+      cell.empty();
+      const input = cell.createEl('input', { type: type === 'date' ? 'date' : 'datetime-local', cls: 'dr-row-value-input' });
+      input.value = typeof now === 'string' ? now.slice(0, type === 'date' ? 10 : 16) : '';
+      let done = false;
+      const finish = (write) => {
+        if (done) return;
+        done = true;
+        if (write && input.value) this.writeRowValue(cell, file, key, input.value);
+        else this.showRowValue(cell, key, now);
+      };
+      input.addEventListener('change', () => finish(true));
+      input.addEventListener('blur', () => finish(false));
+      input.addEventListener('keydown', (e) => e.key === 'Escape' && finish(false));
+      input.addEventListener('click', (e) => e.stopPropagation());
+      input.focus();
+      return null;
+    }
+    const menu = new Menu();
+    this.rowValueChoices(file, key).forEach((v) =>
+      menu.addItem((item) =>
+        item
+          .setTitle(v)
+          .setChecked(String(now) === v)
+          .setSection('action')
+          .onClick(() => this.writeRowValue(cell, file, key, v))
+      )
+    );
+    menu.addItem((item) =>
+      item
+        .setTitle('Other…')
+        .setIcon('pencil')
+        .setSection('view')
+        .onClick(() => new NamePrompt(this.app, `${key} for ${file.basename}`, 'A value', (v) => this.writeRowValue(cell, file, key, v), { value: now === null || now === undefined ? '' : String(now), button: 'Set' }).open())
+    );
+    if (now !== undefined && now !== null && now !== '') menu.addItem((item) => item.setTitle('Clear').setIcon('x').setSection('danger').onClick(() => this.writeRowValue(cell, file, key, null)));
+    showMenuAt(menu, evt || { target: cell });
+    return menu;
+  }
+
+  /** The values to choose from: the folder's schema's, else those with a colour of their own, else the most used. */
+  rowValueChoices(file, key) {
+    const entry = schemaFor(this.plugin.settings.propertySchemas, file).find((e) => e.key.toLowerCase() === String(key).toLowerCase());
+    if (entry && entry.values) return entry.values.slice();
+    const options = this.plugin.settings.propertyOptions || {};
+    const named = Object.keys(options).find((k) => k.toLowerCase() === String(key).toLowerCase());
+    if (named && Object.keys(options[named]).length) return Object.keys(options[named]);
+    return this.groupsByProperty(key)
+      .slice()
+      .sort((a, b) => b.files.length - a.files.length)
+      .slice(0, 12)
+      .map((g) => String(g.value));
+  }
+
+  /** A value written through the notes service — one step of Undo — and shown in its cell, the album as it is. */
+  async writeRowValue(cell, file, key, value) {
+    if (!this.quietChanges) this.quietChanges = new Set();
+    this.quietChanges.add(file.path);
+    const record = await this.plugin.notes.write(
+      file,
+      (fm) => {
+        const name = Object.keys(fm).find((k) => k.toLowerCase() === String(key).toLowerCase()) || key;
+        if (value === null) delete fm[name];
+        else fm[name] = value;
+      },
+      { undo: `Set “${key}” of ${file.basename}.` }
+    );
+    if (!record || !Object.keys(record.before).length) this.quietChanges.delete(file.path);
+    this.showRowValue(cell, key, record ? value : fmGet(noteProps(this.app, file), key));
+    return record;
+  }
+
+  showRowValue(cell, key, value) {
+    cell.empty();
+    const text = value === null || value === undefined ? '' : Array.isArray(value) ? value.map((v) => plainValue(v)).join(', ') : plainValue(value);
+    cell.setText(text);
+    paintValue(cell, this.plugin, key, text);
+    markDue(cell, this.plugin, key, text);
+  }
+}
+
+mixInto(BrowseView, RowValues);
 mixInto(BrowseView, BrowseEditing);

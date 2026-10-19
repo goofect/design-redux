@@ -11088,3 +11088,20 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   color: var(--text-accent);
   cursor: pointer;
 }
+
+/* A value changed in its album row. */
+.dr-track-sub.is-editable {
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+
+@media (any-hover: hover) {
+  .dr-track-sub.is-editable:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.dr-row-value-input {
+  max-width: 100%;
+  font-size: inherit;
+}

@@ -359,6 +359,11 @@ export class PropertySchemas extends Feature {
         desc: 'On the Properties screen, above a property’s values: its type, how many notes have it and don’t, its most used values and when it last changed, each with its fix a click away.',
       },
       {
+        key: 'propertyInlineEdit',
+        name: 'Change values in album rows',
+        desc: 'A property’s value in an album’s row, pressed, is changed there: a checkbox ticked, a date picked, or a value chosen from the folder’s schema, those with a colour, or the most used.',
+      },
+      {
         key: 'propertyValueChips',
         name: 'Colours and icons for values',
         desc: 'A property’s value can take a colour and an icon — from its menu on the property’s page, Colour and icon… — shown wherever it shows: the note panel, the note page, album rows and filters.',
