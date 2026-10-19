@@ -87,6 +87,7 @@ export class MindMaps extends Feature {
       { key: 'mindmapLinkedCards', showIf: 'mindmaps', name: 'What a linked note says', desc: 'A node that’s just a link to a note shows the note’s status, due date and description or opening line, as the note has them now.' },
       { key: 'mindmapNodePanel', showIf: 'mindmaps', name: 'The node in the note panel', desc: 'The map’s bar opens the note panel, with a section for the node picked: its text and attributes, what points to it, and Make a note from this node.' },
       { key: 'mindmapFilters', showIf: 'mindmaps', name: 'Filter, levels, one branch alone', desc: 'Filter in the map’s bar dims all but the nodes with some words, a tag, a status, a colour or down to a depth. Show levels shows so many levels; a branch can be shown alone, the nodes above it at the top to step back.' },
+      { key: 'mindmapEmbeds', showIf: 'mindmaps', name: 'Maps in notes', desc: 'A mindmap code block — a list in it — is drawn as a map. ![[Map]] of a map note draws it in reading view; of a .mindmap file, in either view. Read-only; a click opens the map.' },
       { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
@@ -163,6 +164,7 @@ export class MindMaps extends Feature {
     });
     this.plugin.register(() => setMindMapContext(null));
     registerMindMapHandlers();
+    if (typeof this.registerEmbeds === 'function') this.registerEmbeds();
     // A folder's menu: a mind map of it.
     this.plugin.registerEvent(
       ws.on('file-menu', (menu, target) => {

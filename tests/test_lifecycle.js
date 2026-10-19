@@ -218,6 +218,12 @@ class ItemView extends View {
 class MarkdownView extends ItemView {}
 class FileView extends ItemView {}
 class TextFileView extends FileView {}
+class MarkdownRenderChild extends Component {
+  constructor(el) {
+    super();
+    this.containerEl = el;
+  }
+}
 
 class WorkspaceLeaf extends Events {
   constructor(app, parentEl) {
@@ -361,7 +367,7 @@ class Plugin extends Component {
 
 const iconsSet = [];
 const obsidian = {
-  Plugin, PluginSettingTab, Setting, Menu, MarkdownView, Notice, FuzzySuggestModal, SuggestModal, Modal, Component, ItemView, View, FileView, TextFileView, WorkspaceLeaf,
+  Plugin, PluginSettingTab, Setting, Menu, MarkdownView, Notice, FuzzySuggestModal, SuggestModal, Modal, Component, ItemView, View, FileView, TextFileView, MarkdownRenderChild, WorkspaceLeaf,
   Events, Scope, EditorSuggest, AbstractInputSuggest, MenuItem: class {}, MarkdownRenderer: { render: async () => {}, renderMarkdown: async () => {} },
   TAbstractFile: class {}, Platform: { isMobile: false, isPhone: false, isDesktop: true, isDesktopApp: true, isMacOS: false, isIosApp: false, isAndroidApp: false },
   apiVersion: '1.13.1', normalizePath: (p) => String(p).replace(/\\/g, '/').replace(/\/+/g, '/').replace(/^\/|\/$/g, '') || '/',

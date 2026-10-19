@@ -357,6 +357,7 @@
   "mindmapConvert",
   "mindmapDefaultFormat",
   "mindmapDepth",
+  "mindmapEmbeds",
   "mindmapFilters",
   "mindmapGlide",
   "mindmapKeepCanvasMaps",

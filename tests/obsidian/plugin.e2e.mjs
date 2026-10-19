@@ -1210,6 +1210,37 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('draws maps in a note: a mindmap code block, and an embedded map note in reading view', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      for (const p of ['Embed map.md', 'Embedding.md']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      await app.vault.create('Embed map.md', '---\nmindmap: true\n---\n- Garden\n\t- Beds\n\t- Paths\n');
+      await app.vault.create('Embedding.md', 'Before.\n\n```mindmap\n- Trip\n\t- Book\n\t- Pack\n```\n\n![[Embed map]]\n');
+    });
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(app.vault.getAbstractFileByPath('Embedding.md'), { state: { mode: 'preview' } });
+    });
+    const look = () => browser.execute(() => {
+      const root = document.querySelector('.workspace-leaf.mod-active .markdown-reading-view');
+      return root ? Array.from(root.querySelectorAll('.dr-mindmap-embed')).map((m) => Array.from(m.querySelectorAll('.dr-mindmap-node')).map((n) => n.textContent).sort().join(',')) : [];
+    });
+    const maps = await readUntil(look, (m) => m.length === 2 && m.every(Boolean));
+    expect(maps).toEqual(['Book,Pack,Trip', 'Beds,Garden,Paths']);
+    // Still the map a moment later: Obsidian didn't fill the embed with the note's text.
+    await browser.pause(800);
+    expect(await look()).toEqual(['Book,Pack,Trip', 'Beds,Garden,Paths']);
+    await browser.executeObsidian(async ({ app }) => {
+      app.workspace.activeLeaf.detach();
+      for (const p of ['Embed map.md', 'Embedding.md']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+    });
+  });
+
   it('keeps a .mindmap file’s links to a note as the note is renamed', async function () {
     const text = await browser.executeObsidian(async ({ app }) => {
       for (const p of ['Rename target.md', 'Renamed target.md', 'Links.mindmap']) {

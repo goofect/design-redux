@@ -55,8 +55,11 @@ class TextFileView extends ItemView {
 class TFile {
   constructor(p) { this.path = p; this.name = p.split('/').pop(); this.extension = this.name.split('.').pop(); this.basename = this.name.replace(/\.[^.]+$/, ''); }
 }
+class MarkdownRenderChild extends Component {
+  constructor(el) { super(); this.containerEl = el; }
+}
 const obsidian = new Proxy({
-  Component, ItemView, TextFileView, TFile,
+  Component, ItemView, TextFileView, TFile, MarkdownRenderChild,
   setIcon: (el, name) => { el.dataset.icon = name; },
   Notice: class {},
   Platform: { isMobile: false },
@@ -67,7 +70,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1643,6 +1646,58 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     view.undoStep(false);
     view.flushSave();
     assert.strictEqual(view.text, before, 'only the rename was written, and it’s undone');
+  });
+
+  await t('a map in any note: a mindmap code block drawn as a map; ![[Map]] of a map filled with it, kept up to date; read-only', async () => {
+    const children = [];
+    const ctx = { sourcePath: 'Notes/Day.md', addChild: (c) => { children.push(c); c.onload(); } };
+    const processors = {};
+    let post = null;
+    const files = { 'Plans/Big.mindmap': JSON.stringify({ v: 1, root: { id: 'r', text: 'Big plan', children: [{ id: 'a', text: 'One' }, { id: 'b', text: 'Two' }] } }) };
+    const modified = [];
+    const p = Object.assign({}, plugin, {
+      registerMarkdownCodeBlockProcessor: (lang, fn) => { processors[lang] = fn; },
+      registerMarkdownPostProcessor: (fn) => { post = fn; },
+      register: () => {},
+      app: {
+        vault: { cachedRead: async (f) => files[f.path], on: (name, fn) => { modified.push(fn); return {}; } },
+        metadataCache: { getFirstLinkpathDest: (link) => (link === 'Big' ? new TFile('Plans/Big.mindmap') : link === 'Day' ? new TFile('Notes/Day.md') : null), getFileCache: () => null },
+        workspace: {},
+      },
+    });
+    const maps = new R.MindMaps(p);
+    maps.registerEmbeds();
+    // The code block.
+    const block = document.createElement('div');
+    document.body.appendChild(block);
+    processors.mindmap('- Trip\n\t- Book\n\t- Pack\n', block, ctx);
+    await settle(10);
+    const texts = (el) => Array.from(el.querySelectorAll('.dr-mindmap-node')).map((e) => e.textContent).sort();
+    assert.deepStrictEqual(texts(block), ['Book', 'Pack', 'Trip']);
+    assert.ok(block.querySelector('.dr-mindmap-embed'), 'drawn in the note, its own height');
+    // An embed of a .mindmap file, in reading view; one of a plain note left alone.
+    const page = document.createElement('div');
+    page.innerHTML = '<p><span class="internal-embed" src="Big"></span><span class="internal-embed" src="Day"></span></p>';
+    document.body.appendChild(page);
+    post(page, ctx);
+    await settle(10);
+    const [big, day] = page.querySelectorAll('.internal-embed');
+    assert.deepStrictEqual(texts(big), ['Big plan', 'One', 'Two']);
+    assert.ok(big.hasClass('is-loaded'), 'Obsidian left to think it loaded, so it doesn’t fill it again');
+    assert.strictEqual(day.children.length, 0, 'not a map: untouched');
+    // The map changes: the embed follows.
+    files['Plans/Big.mindmap'] = JSON.stringify({ v: 1, root: { id: 'r', text: 'Big plan', children: [{ id: 'a', text: 'One' }] } });
+    modified.forEach((fn) => fn(children[1].source.file));
+    await settle(10);
+    assert.deepStrictEqual(texts(big), ['Big plan', 'One']);
+    // Off: the block shown as its text.
+    plugin.settings.mindmapEmbeds = false;
+    const off = document.createElement('div');
+    processors.mindmap('- A\n', off, ctx);
+    assert.strictEqual(off.querySelector('code').textContent, '- A\n');
+    plugin.settings.mindmapEmbeds = true;
+    block.remove();
+    page.remove();
   });
 
   console.log(`\n${passed} passed`);

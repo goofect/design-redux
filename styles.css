@@ -10607,3 +10607,22 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 @media (any-hover: hover) {
   .dr-mindmap-crumb:not(.is-current):hover { color: var(--text-normal); text-decoration: underline; }
 }
+
+/* A map drawn in a note: read-only, a click opens it */
+.dr-mindmap-embed-host { display: block; }
+
+.dr-mindmap.dr-mindmap-embed {
+  cursor: default;
+  touch-action: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin: var(--dr-space-2) 0;
+}
+
+.dr-mindmap-embed[tabindex] { cursor: pointer; }
+.dr-mindmap-embed .dr-mindmap-node { pointer-events: none; }
+.dr-mindmap-embed > .dr-empty { padding: var(--dr-space-3, 12px); color: var(--text-muted); }
+
+@media (any-hover: hover) {
+  .dr-mindmap-embed[tabindex]:hover { border-color: var(--interactive-accent); }
+}
