@@ -1128,6 +1128,39 @@ describe('Design Redux in Obsidian', function () {
     expect(result.reading.find((r) => r[0].includes('Beta text'))[1]).toBe(false);
   });
 
+  it('adds a page to a plain note in one step and names it where it stands', async function () {
+    const result = await browser.executeObsidian(async ({ app }) => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const old = app.vault.getFileByPath('Plain note.md');
+      if (old) await app.vault.delete(old);
+      const file = await app.vault.create('Plain note.md', 'Some words\n');
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      await wait(1000);
+      const before = leaf.view.containerEl.querySelectorAll('.dr-pages').length;
+      app.workspace.setActiveLeaf(leaf, { focus: true });
+      app.commands.executeCommandById('design-redux:add-page');
+      await wait(1500);
+      const el = leaf.view.containerEl.querySelector('.markdown-source-view .dr-page-name.is-editing');
+      const editing = !!el;
+      if (el) {
+        el.textContent = 'Sources';
+        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      }
+      await wait(1200);
+      const text = await app.vault.read(file);
+      const names = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-source-view .dr-page-name')).map((n) => n.textContent);
+      leaf.detach();
+      await app.vault.delete(file);
+      return { before, editing, text, names };
+    });
+    expect(result.before).toBe(0);
+    expect(result.editing).toBe(true);
+    expect(result.text).toContain('%%page: Page 1%%\nSome words');
+    expect(result.text).toContain('%%page: Sources%%');
+    expect(result.names).toEqual(['Page 1', 'Sources']);
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');

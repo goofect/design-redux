@@ -10329,3 +10329,9 @@ body.is-mobile .dr-page-add {
 .dr-page-off {
   display: none !important;
 }
+
+.dr-page-name.is-editing {
+  min-width: 3ch;
+  outline: none;
+  border-bottom: 1px solid var(--interactive-accent);
+}

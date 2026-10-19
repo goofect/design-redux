@@ -234,6 +234,11 @@ export class NotePages extends Feature {
       setIcon(tab.createSpan({ cls: 'dr-page-icon' }), look.icon);
       tab.createSpan({ cls: 'dr-page-name', text: p.name });
       onActivate(tab, () => this.open(file, p.name));
+      tab.addEventListener('dblclick', () => this.renameInline(file, p.name, tab.querySelector('.dr-page-name')));
+      if (this.fresh === `${file.path}:${p.name}`) {
+        this.fresh = null;
+        window.setTimeout(() => this.renameInline(file, p.name, tab.querySelector('.dr-page-name')), 50);
+      }
       tab.addEventListener('contextmenu', (evt) => {
         evt.preventDefault();
         this.menu(evt, file, p.name, pages);
@@ -281,33 +286,71 @@ export class NotePages extends Feature {
     this.queue();
   }
 
+  /** A page's name edited where it stands: Enter keeps it, Escape leaves it as it was. */
+  renameInline(file, name, el) {
+    if (!el || el.isContentEditable) return;
+    el.setAttribute('contenteditable', 'plaintext-only');
+    el.addClass('is-editing');
+    el.focus();
+    const range = el.ownerDocument.createRange();
+    range.selectNodeContents(el);
+    const sel = el.ownerDocument.defaultView.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    let done = false;
+    const finish = (keep) => {
+      if (done) return;
+      done = true;
+      el.removeAttribute('contenteditable');
+      el.removeClass('is-editing');
+      const next = el.textContent.trim();
+      if (keep && next && next !== name) this.renameTo(file, name, next);
+      else el.setText(name);
+    };
+    el.addEventListener('keydown', (evt) => {
+      evt.stopPropagation();
+      if (evt.key === 'Enter') {
+        evt.preventDefault();
+        finish(true);
+      } else if (evt.key === 'Escape') {
+        evt.preventDefault();
+        finish(false);
+      }
+    });
+    el.addEventListener('blur', () => finish(true));
+  }
+
   async add(file) {
     const view = this.views().find((v) => v.file === file);
     const pages = parsePages(view ? this.textOf(view) : await this.app.vault.read(file));
     const name = newPageName(pages.length ? pages : [{ name: 'Page 1' }]);
     await this.rewrite(file, (text) => withPageAdded(text, name), 'Page added.');
+    // The new page opens with its name ready to type over, so naming it is the next keystroke.
+    this.fresh = `${file.path}:${name}`;
     await this.open(file, name);
   }
 
   rename(file, name) {
-    new NamePrompt(this.app, 'Rename the page', name, async (to) => {
-      const next = String(to || '').trim();
-      if (!next || next === name) return;
-      const pages = parsePages(await this.app.vault.read(file));
-      if (pages.some((p) => p.name === next)) {
-        new Notice('A page of that name is there already.');
-        return;
+    new NamePrompt(this.app, 'Rename the page', name, (to) => this.renameTo(file, name, String(to || '').trim()), { value: name }).open();
+  }
+
+  async renameTo(file, name, next) {
+    if (!next || next === name) return;
+    const pages = parsePages(await this.app.vault.read(file));
+    if (pages.some((p) => p.name === next)) {
+      new Notice('A page of that name is there already.');
+      this.queue();
+      return;
+    }
+    await this.rewrite(file, (text) => withPageRenamed(text, name, next), 'Page renamed.');
+    // Its look, and its place as the page last open, go with the name.
+    await this.plugin.notes.write(file, (fm) => {
+      if (fm.pages && fm.pages[name]) {
+        fm.pages[next] = fm.pages[name];
+        delete fm.pages[name];
       }
-      await this.rewrite(file, (text) => withPageRenamed(text, name, next), 'Page renamed.');
-      // Its look, and its place as the page last open, go with the name.
-      await this.plugin.notes.write(file, (fm) => {
-        if (fm.pages && fm.pages[name]) {
-          fm.pages[next] = fm.pages[name];
-          delete fm.pages[name];
-        }
-      });
-      if ((this.settings.pagesOpen || {})[file.path] === name) await this.open(file, next);
-    }, { value: name }).open();
+    });
+    if ((this.settings.pagesOpen || {})[file.path] === name) await this.open(file, next);
   }
 
   setLook(file, name, change) {

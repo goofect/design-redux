@@ -64,6 +64,7 @@ export const STRIP_NARROW = 760;
  */
 export const STRIP_ACTIONS = {
   album: [['new-note-here', 'New note', false, 'file-plus']],
+  note: [['add-page', 'Add a page', true, 'plus']],
   canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true], ['present-map', 'Present', true]],
 };
 
@@ -555,6 +556,9 @@ export class ContextStrip extends Feature {
         this.update();
       },
     });
+
+    // A page added to the note, a press away; once it has pages the control under its title has the plus.
+    if (file.extension === 'md') specs.push(...this.contextSpecs('note'));
 
     // On a canvas, what can be done to it as a whole.
     if (file.extension === 'canvas') specs.push(...this.contextSpecs('canvas'));
