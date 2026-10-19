@@ -15,88 +15,76 @@ import { confirmAction } from '../ui/230-pickers.js';
 
 export const SETTINGS_TABS = [
   {
-    id: 'appearance',
-    title: 'Appearance',
-    sections: [
-      { title: 'Look', keys: ['look', 'lookScope', 'glassPanels', 'albumProgressRing'] },
-      { title: 'Density', desc: 'How much room things get across the interface.', keys: ['gridDensity', 'artworkSize'] },
-    ],
-  },
-  {
     id: 'library',
     title: 'Library',
     sections: [
-      { keys: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'fromReadingDays', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
-      {
-        title: 'Layout',
-        desc: 'What the library lists, under your own headings.',
-        keys: ['librarySections'],
-      },
-      { title: 'Lists', keys: ['defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit'] },
-      { title: 'Screens', keys: ['albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText'] },
-      { title: 'Collections', keys: ['albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor'] },
-      { title: 'Folder notes', keys: ['folderNoteName', 'hideFolderNotes'] },
-      { title: 'Covers', keys: ['coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'] },
+      { switch: 'library', keys: ['library', 'libraryLayout', 'homePath'], more: ['homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop'] },
+      { title: 'Lists', keys: ['defaultSort'], more: ['albumSortMemory', 'typeToJump'] },
+      { title: 'Screens', keys: ['searchNoteText'], more: ['albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty'] },
+      { title: 'Collections', keys: ['smartAlbums'], more: ['albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor'] },
+      { title: 'Folder notes', keys: ['hideFolderNotes'], more: ['folderNoteName'] },
+      { title: 'Covers', keys: ['coverDrop'], more: ['coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint'] },
+      { title: 'Advanced', advanced: true, keys: [], more: ['fromReadingDays', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords', 'generatedCoverColor'] },
     ],
   },
   {
-    id: 'notes',
-    title: 'Notes',
+    id: 'note',
+    title: 'Note',
     sections: [
-      { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace'] },
-      { title: 'Reading outline', keys: ['readingOutline', 'outlineWordCounts'] },
-      { title: 'Study', keys: ['studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax'] },
-      { title: 'Relationships', keys: ['knowledge', 'canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
-      { title: 'Lists', keys: ['letterLists', 'romanLists'] },
-      { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
-      { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces'] },
+      { title: 'The note page', switch: 'notePage', keys: ['notePage', 'notePageShelves', 'readingHistory'], more: ['notePageTint', 'notePageChips', 'rememberPlace'] },
+      { title: 'Reading outline', keys: ['readingOutline'] },
+      { title: 'Study', switch: 'studyEnabled', keys: ['studyEnabled'], more: ['studyAlbums', 'studyHighlights'] },
+      { title: 'Relationships', switch: 'knowledge', keys: ['knowledge'], more: ['canvasRelationTypes', 'knowledgeCheck'] },
+      { title: 'Lists', keys: [], more: ['letterLists', 'romanLists'] },
+      { title: 'Superscript and subscript', keys: [], more: ['scripts'] },
+      { title: 'Properties', keys: ['propertiesDropdown'], more: ['panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces'] },
       { title: 'Links', keys: ['quietLinks'] },
-      { title: 'Footnotes', keys: ['footnotes', 'footnotesAside', 'footnoteOrder'] },
-      { title: 'Images', keys: ['routeImages', 'imageFolder'] },
+      { title: 'Footnotes', switch: 'footnotes', keys: ['footnotes'], more: ['footnotesAside', 'footnoteOrder'] },
+      { title: 'Images', keys: [], more: ['routeImages'] },
+      { title: 'Advanced', advanced: true, keys: [], more: ['outlineWordCounts', 'studyLadder', 'studyDailyMax', 'studyCardMax', 'knowledgeTreeKinds', 'knowledgeBroader', 'scriptSyntax', 'autoOrdinals', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun', 'imageFolder'] },
     ],
   },
   {
-    id: 'canvas',
+    id: 'maps',
     title: 'Maps',
     sections: [
-      { title: 'Maps', desc: 'For every map: what a new one is, and how far apart things are put.', keys: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing'] },
-      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'] },
+      { title: 'Maps', desc: 'For every map: what a new one is, and how far apart things are put.', keys: ['mindmapDefaultFormat', 'canvasSpacing'], more: ['mindmapLayout'] },
+      { title: 'Mind maps', switch: 'mindmaps', keys: ['mindmaps', 'mindmapTakeover'], more: ['mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapRichNodes', 'mindmapTheme'] },
+      { title: 'Advanced', advanced: true, keys: [], more: ['mindmapTemplateFolder', 'presentDimLevel', 'albumMapAuto', 'albumMapWritesParent', 'mindmapHistory'] },
     ],
   },
   {
-    id: 'workspace',
-    title: 'Workspace',
+    id: 'tools',
+    title: 'Tools',
     sections: [
       { title: 'Modes', keys: ['workspaceModes'] },
-      { title: 'Page', keys: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea'] },
-      { title: 'Sidebar header', keys: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
-      { title: 'Graph', keys: ['graphProperties', 'graphRoutes', 'graphRouteProperty'] },
-    ],
-  },
-  {
-    id: 'advanced',
-    title: 'Advanced',
-    sections: [
-      {
-        title: 'Compatibility',
-        desc: 'Obsidian internals Design Redux relies on, and what stops working if an update changes one.',
-        keys: ['compatibility'],
-      },
+      { title: 'Page', switch: 'contextStrip', keys: ['contextStrip', 'onePage'], more: ['stripPlace', 'stripDetail', 'stripProgress', 'singleArea'] },
+      { title: 'Sidebar header', keys: [], more: ['navDropdown', 'ribbonInMenu', 'settingsInHeader'] },
+      { title: 'Graph', keys: ['graphProperties'], more: ['graphRoutes'] },
+      { title: 'Links', keys: ['quietLinks'] },
+      { title: 'Advanced', advanced: true, keys: [], more: ['graphRouteProperty', 'compatibility'] },
     ],
   },
 ];
 
-/**
- * The settings shown to begin with: those that change everyday use. The
- * rest are there under Show all settings, and a search or a link to one
- * finds them whichever is set.
- */
-export const BASIC_SETTINGS = new Set([
-  'look', 'gridDensity', 'artworkSize',
-  'library', 'libraryLayout', 'homePath', 'defaultSort', 'searchNoteText', 'smartAlbums',
-  'notePage', 'notePageShelves', 'readingHistory', 'knowledge',
-  'workspaceModes', 'contextStrip', 'onePage', 'mindmaps',
-]);
+/** The rows above every tab: how the plugin looks, wherever you are. */
+export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'iconMode'];
+
+/** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
+/** Every key a section holds: its front rows, then those folded under them. */
+export const sectionKeys = (sec) => (sec.keys || []).concat(sec.more || []);
+
+/** A section's name for remembering whether it's open. */
+const sectionId = (tab, sec) => `${tab.id}:${sec.title || (sec.keys || [])[0] || ''}`;
+
+export const FORMER_TABS = {
+  Appearance: ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize'],
+  Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'fromReadingDays', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'albumRecents', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
+  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace', 'readingOutline', 'outlineWordCounts', 'studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax', 'knowledge', 'canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
+  Maps: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing', 'mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'],
+  Workspace: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
+  Advanced: ['compatibility'],
+};
 
 /**
  * Suggestions under a settings field: notes, folders, or property names
@@ -159,6 +147,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     super(app, plugin);
     this.plugin = plugin;
     this.tab = SETTINGS_TABS[0].id;
+    /** The folded parts a person has opened, by section; kept while the page redraws. */
+    this.opened = new Set();
   }
 
   get settings() {
@@ -195,30 +185,26 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     const tops = [containerEl.scrollTop, scroller ? scroller.scrollTop : 0];
     containerEl.empty();
     containerEl.addClass('dr-settings');
-    const all = this.settings.settingsLevel === 'all' || this.revealAll;
-    containerEl.toggleClass('dr-settings-basic', !all);
-
     const rows = this.rows();
     const placed = new Set();
-    const tabs = SETTINGS_TABS.map((spec) => ({
-      spec,
-      sections: spec.sections.map((sec) => {
-        const members = sec.keys
-          .map((key) => rows.find((row) => row.key === key))
-          .filter(Boolean);
-        members.forEach((row) => placed.add(row));
-        return Object.assign({}, sec, { rows: members });
-      }),
-    }));
+    const resolve = (sec) => {
+      const front = (sec.keys || []).map((key) => rows.find((row) => row.key === key)).filter(Boolean);
+      const more = (sec.more || []).map((key) => rows.find((row) => row.key === key)).filter(Boolean);
+      front.concat(more).forEach((row) => placed.add(row));
+      return Object.assign({}, sec, { front, more });
+    };
+    const look = { spec: { id: 'look', title: 'Look' }, sections: [resolve({ title: 'Look', keys: LOOK_KEYS })] };
+    const tabs = SETTINGS_TABS.map((spec) => ({ spec, sections: spec.sections.map(resolve) }));
     // Anything no tab claims still gets a place, at the end.
     const rest = rows.filter((row) => !placed.has(row));
-    if (rest.length) tabs[tabs.length - 1].sections.push({ title: 'Other', rows: rest });
-
-    // A tab with nothing basic in it isn't shown until all are; one open there moves to the first.
-    const basic = (spec) => spec.sections.some((sec) => sec.rows.some((row) => BASIC_SETTINGS.has(row.key)));
-    if (!all && !tabs.some((t) => t.spec.id === this.tab && basic(t))) this.tab = (tabs.find(basic) || tabs[0]).spec.id;
+    if (rest.length) tabs[tabs.length - 1].sections.push({ title: 'Other', advanced: true, front: [], more: rest });
 
     this.renderTools(containerEl);
+    // The look, above the places: it's one setting for the whole window, not one tab's.
+    const lookPane = containerEl.createDiv({ cls: 'dr-set-pane dr-set-look' });
+    lookPane.dataset.tab = 'look';
+    lookPane.dataset.always = 'true';
+    this.renderPane(lookPane, look.spec, look.sections);
     const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
     bar.setAttribute('role', 'tablist');
     roveFocus(bar, '.dr-set-tab');
@@ -231,7 +217,6 @@ export class DesignReduxSettingTab extends PluginSettingTab {
       button.setAttribute('aria-selected', String(on));
       button.id = `dr-set-tab-${spec.id}`;
       button.toggleClass('is-active', on);
-      button.toggleClass('is-advanced', !basic({ sections }));
       button.setText(spec.title);
 
       const pane = containerEl.createDiv({ cls: 'dr-set-pane' });
@@ -263,16 +248,17 @@ export class DesignReduxSettingTab extends PluginSettingTab {
   }
 
   hide() {
-    this.revealAll = false;
     if (typeof super.hide === 'function') super.hide();
   }
 
   /** Opened next at one setting: its tab, and its row scrolled to and marked. */
   reveal(key) {
-    const spec = SETTINGS_TABS.find((tab) => tab.sections.some((sec) => sec.keys.indexOf(key) !== -1));
+    const spec = SETTINGS_TABS.find((tab) => tab.sections.some((sec) => sectionKeys(sec).indexOf(key) !== -1));
     if (spec) this.tab = spec.id;
-    // One that isn't among the first shown shows the rest too, while the tab is open.
-    if (!BASIC_SETTINGS.has(key)) this.revealAll = true;
+    // One folded under its switch opens that part.
+    SETTINGS_TABS.forEach((tab) => tab.sections.forEach((sec) => {
+      if ((sec.more || []).indexOf(key) !== -1) this.opened.add(sectionId(tab, sec));
+    }));
     this.query = '';
     this.revealKey = key;
   }
@@ -309,16 +295,6 @@ export class DesignReduxSettingTab extends PluginSettingTab {
         this.query = '';
         this.search('');
       }
-    });
-
-    const all = this.settings.settingsLevel === 'all';
-    const level = tools.createEl('button', { cls: 'dr-set-level', text: all ? 'Show fewer settings' : 'Show all settings' });
-    level.setAttribute('aria-pressed', String(all));
-    level.addEventListener('click', async () => {
-      this.settings.settingsLevel = all ? 'basic' : 'all';
-      this.revealAll = false;
-      await this.plugin.saveData(this.settings);
-      this.display();
     });
 
     const exportBtn = tools.createEl('button', { text: 'Export…' });
@@ -369,10 +345,13 @@ export class DesignReduxSettingTab extends PluginSettingTab {
             kids.previousElementSibling.removeClass('dr-set-unmatched');
           }
         });
+        section.querySelectorAll('.dr-set-more').forEach((fold) => {
+          fold.open = on ? !!fold.querySelector('[data-dr-search]:not(.dr-set-unmatched)') : this.opened.has(fold.dataset.drMore);
+        });
         section.toggleClass('dr-set-unmatched', on && !sectionAny);
         if (sectionAny) paneAny = true;
       });
-      pane.toggleClass('is-hidden', on ? !paneAny : pane.dataset.tab !== this.tab);
+      pane.toggleClass('is-hidden', on ? !paneAny : !pane.dataset.always && pane.dataset.tab !== this.tab);
       if (paneAny) any = true;
     });
     containerEl.toggleClass('dr-set-none', on && !any);
@@ -435,46 +414,69 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     }
 
     sections.forEach((sec) => {
-      const visible = sec.rows.filter((row) => this.shown(row));
-      if (!visible.length) return;
+      const front = sec.front.filter((row) => this.shown(row));
+      const more = sec.more.filter((row) => this.shown(row));
+      if (!front.length && !more.length) return;
       // Each section in a block of its own, so a search can hide what has nothing to show.
       const section = pane.createDiv({ cls: 'dr-set-block' });
       section.dataset.drSearch = `${sec.title || ''} ${sec.desc || ''}`.toLowerCase();
-      // Hidden until all are shown, where nothing in it is among the first.
-      section.toggleClass('is-advanced', !visible.some((row) => BASIC_SETTINGS.has(row.key)));
-      if (sec.title) {
-        const head = new Setting(section).setName(sec.title).setHeading();
-        if (sec.desc) head.setDesc(sec.desc);
-      }
-      // A row sits beneath the one it depends on, when that's here too.
-      const blocks = {};
-      visible.forEach((row) => {
-        const parent = row.parent || (typeof row.showIf === 'string' ? row.showIf : null);
-        const host = parent && blocks[parent] ? blocks[parent]() : section;
-        const el = this.row(host, row);
-        if (el) el.dataset.drSearch = `${row.name || ''} ${row.desc || ''} ${row.key || ''}`.toLowerCase();
-        if (el && row.key) el.dataset.drKey = row.key;
-        if (el) el.toggleClass('is-advanced', !BASIC_SETTINGS.has(row.key));
-        if (row.key && el) {
-          let children = null;
-          blocks[row.key] = () => {
-            if (!children) {
-              children = el.ownerDocument.createElement('div');
-              children.className = 'dr-set-children';
-              el.after(children);
-            }
-            return children;
-          };
+      if (front.length) {
+        if (sec.title) {
+          const head = new Setting(section).setName(sec.title).setHeading();
+          if (sec.desc) head.setDesc(sec.desc);
         }
+        this.drawRows(section, front, spec);
+      }
+      if (!more.length) return;
+      // What else the feature has sits folded under it, there only while its switch is on.
+      const id = sectionId(spec, sec);
+      const fold = section.createEl('details', { cls: 'dr-set-more' });
+      fold.dataset.drMore = id;
+      fold.open = this.opened.has(id);
+      fold.toggleClass('is-off', !!sec.switch && !this.settings[sec.switch]);
+      const label = front.length ? 'More options' : sec.title || 'More options';
+      fold.createEl('summary', { text: label });
+      fold.addEventListener('toggle', () => {
+        // A search opens every fold it has something in, without that counting as a choice.
+        if (this.containerEl.hasClass('is-searching')) return;
+        if (fold.open) this.opened.add(id);
+        else this.opened.delete(id);
       });
+      this.drawRows(fold.createDiv({ cls: 'dr-set-more-body' }), more, spec);
     });
 
-    if (spec.id === 'workspace' && Platform.isMobile) {
+    if (spec.id === 'tools' && Platform.isMobile) {
       pane.createDiv({
         cls: 'setting-item-description dr-settings-note',
         text: 'Settings for the desktop app\'s tab bar and sidebar header aren\'t shown on a phone or tablet.',
       });
     }
+  }
+
+  /** Rows in a place, each beneath the one it depends on when that's here too. */
+  drawRows(host, rows, spec) {
+    const blocks = {};
+    rows.forEach((row) => {
+      const parent = row.parent || (typeof row.showIf === 'string' ? row.showIf : null);
+      const into = parent && blocks[parent] ? blocks[parent]() : host;
+      const el = this.row(into, row);
+      if (el) {
+        const former = Object.keys(FORMER_TABS).filter((name) => FORMER_TABS[name].indexOf(row.key) !== -1).join(' ');
+        el.dataset.drSearch = `${row.name || ''} ${row.desc || ''} ${row.key || ''} ${former} ${spec.title}`.toLowerCase();
+        if (row.key) el.dataset.drKey = row.key;
+      }
+      if (row.key && el) {
+        let children = null;
+        blocks[row.key] = () => {
+          if (!children) {
+            children = el.ownerDocument.createElement('div');
+            children.className = 'dr-set-children';
+            el.after(children);
+          }
+          return children;
+        };
+      }
+    });
   }
 
   async set(key, value, redraw) {

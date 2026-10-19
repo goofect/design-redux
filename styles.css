@@ -7957,9 +7957,33 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   margin-bottom: calc(var(--dr-u) * 3.5);
 }
 
-/* The everyday settings first: the rest wait for Show all settings, or a search. */
-.dr-settings-basic:not(.is-searching) .is-advanced {
-  display: none !important;
+/* A feature's other rows sit folded under it, there only while its switch is on. */
+.dr-set-more {
+  margin: 0 0 var(--dr-space-3);
+}
+
+.dr-set-more > summary {
+  padding: var(--dr-space-2) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-set-more.is-off {
+  display: none;
+}
+
+.dr-settings.is-searching .dr-set-more.is-off {
+  display: block;
+}
+
+.dr-set-more-body {
+  padding-left: var(--dr-space-4);
+  border-left: 2px solid var(--dr-line);
+}
+
+.dr-set-look {
+  margin-bottom: var(--dr-space-4);
 }
 
 .dr-set-search {

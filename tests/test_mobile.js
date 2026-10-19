@@ -280,13 +280,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     settingNames.length = 0;
     tab.display();
     assert.ok(settingNames.includes('Single content area'));
-    assert.ok(settingNames.includes('Sidebar header'));
+    assert.ok(settingNames.includes('Ribbon in menu'));
 
     phone(true);
     settingNames.length = 0;
     tab.display();
     assert.ok(!settingNames.includes('Single content area'));
-    assert.ok(!settingNames.includes('Sidebar header'), 'the header section is all desktop');
     assert.ok(settingNames.includes('Context strip'));
     assert.ok(tab.containerEl.querySelector('.dr-settings-note'));
     phone(false);
@@ -301,8 +300,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(tab.query, '', 'a search left in the field would hide it');
   });
 
-  await t('settings show the everyday ones first; Show all settings, a search or a link to one shows the rest', async () => {
-    const p = fakePlugin(Object.assign(settings(), { library: false, settingsLevel: 'basic' }));
+  await t('settings: a feature’s other rows sit folded under its switch, there while it is on; a search or a link opens them', async () => {
+    const p = fakePlugin(Object.assign(settings(), { library: false, contextStrip: false }));
     p.saveData = async () => {};
     p.features = [{ settingsSchema: () => [
       { key: 'contextStrip', name: 'Context strip' },
@@ -310,32 +309,27 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       { key: 'graphRoutes', name: 'Graph routes' },
     ] }];
     const tab = new T.DesignReduxSettingTab(p.app, p);
+    tab.tab = 'tools';
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
-    assert.ok(tab.containerEl.classList.contains('dr-settings-basic'));
-    assert.ok(!row('contextStrip').classList.contains('is-advanced'));
-    assert.ok(row('stripDetail').classList.contains('is-advanced'));
-    assert.ok(row('graphRoutes').closest('.dr-set-block').classList.contains('is-advanced'), 'a section with nothing everyday');
-    const tabs = Array.from(tab.containerEl.querySelectorAll('.dr-set-tab'));
-    assert.ok(tabs.find((b) => b.textContent === 'Advanced').classList.contains('is-advanced'));
-    assert.strictEqual(tab.tab, 'workspace', 'opens where there is something to show');
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['Library', 'Note', 'Maps', 'Tools']);
+    assert.ok(!row('contextStrip').closest('.dr-set-more'), 'the switch is on the front page');
+    const fold = row('stripDetail').closest('.dr-set-more');
+    assert.ok(fold && fold.classList.contains('is-off') && !fold.open, 'its rows are folded, and out of sight while it is off');
+    assert.ok(row('graphRoutes').closest('.dr-set-more'), 'a feature’s rows are all folded under it');
 
-    const level = tab.containerEl.querySelector('.dr-set-level');
-    assert.strictEqual(level.textContent, 'Show all settings');
-    level.click();
-    await new Promise((r) => setTimeout(r, 0));
-    assert.strictEqual(p.settings.settingsLevel, 'all');
-    assert.ok(!tab.containerEl.classList.contains('dr-settings-basic'));
-    assert.strictEqual(tab.containerEl.querySelector('.dr-set-level').textContent, 'Show fewer settings');
+    // A search finds a row by its old tab's name, and opens its fold.
+    tab.query = 'workspace';
+    tab.display();
+    assert.ok(row('stripDetail').closest('.dr-set-more').open);
+    tab.query = '';
 
-    // Back to the few; a link to one of the rest shows them all while the tab is open.
-    p.settings.settingsLevel = 'basic';
-    tab.reveal('graphRoutes');
+    // A link to one opens the part it's folded in, and it stays open.
+    tab.reveal('stripDetail');
     tab.display();
-    assert.ok(!tab.containerEl.classList.contains('dr-settings-basic'));
-    tab.hide();
+    assert.ok(row('stripDetail').closest('.dr-set-more').open);
     tab.display();
-    assert.ok(tab.containerEl.classList.contains('dr-settings-basic'));
+    assert.ok(row('stripDetail').closest('.dr-set-more').open, 'kept while the page redraws');
   });
 
   await t('settings: the main properties as a list to order, take off and add to by name', () => {

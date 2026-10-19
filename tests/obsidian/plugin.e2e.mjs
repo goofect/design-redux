@@ -177,7 +177,7 @@ describe('Design Redux in Obsidian', function () {
     for (const [part, ok] of Object.entries(compat)) expect([part, ok]).toEqual([part, true]);
   });
 
-  it('draws its settings as six tabs, by what they’re for', async function () {
+  it('draws its settings as four places and a look, by what they’re for', async function () {
     await browser.executeObsidian(({ app }) => {
       app.setting.open();
       app.setting.openTabById('design-redux');
@@ -196,7 +196,7 @@ describe('Design Redux in Obsidian', function () {
     });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
-    expect(where.tabs).toBe(6);
+    expect(where.tabs).toBe(4);
 
     // A screenshot from whichever window they're in.
     const main = await browser.getWindowHandle();

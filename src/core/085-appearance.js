@@ -17,6 +17,8 @@ export const LOOKS = { theme: 'The theme’s', editorial: 'Editorial: monochrome
 export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux only' };
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
+export const ICON_MODES = { auto: 'Icons with words, the words dropping where it’s narrow', icons: 'Icons only', words: 'Words only' };
+
 export const CANVAS_SPACINGS = { compact: 'Compact', standard: 'Standard', spacious: 'Spacious' };
 export const CANVAS_SPACING_SCALE = { compact: 0.75, standard: 1, spacious: 1.4 };
 
@@ -51,10 +53,17 @@ export class Appearance extends Feature {
         options: ARTWORK_SIZES,
       },
       {
+        key: 'iconMode',
+        type: 'dropdown',
+        name: 'Icons',
+        desc: 'Buttons and tabs for common actions — Open, Add, Search, Sort, Filter — show an icon with the word in a tooltip. Anything ambiguous or destructive keeps its words.',
+        options: ICON_MODES,
+      },
+      {
         key: 'canvasSpacing',
         type: 'dropdown',
         name: 'Canvas spacing',
-        desc: 'How far apart layouts, tidying and new cards put cards on a canvas — apart from the density of everything else.',
+        desc: 'How far apart layouts, tidying and new nodes put things on a map — apart from the density of everything else.',
         options: CANVAS_SPACINGS,
       },
     ];
@@ -99,6 +108,8 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false && this.settings.look !== 'classic');
     // 1.x's styling, for those not ready for 2.0's: kept for one release.
     body.classList.toggle('dr-look-classic', !off && this.settings.look === 'classic');
+    body.classList.toggle('dr-icons-only', !off && this.settings.iconMode === 'icons');
+    body.classList.toggle('dr-icons-words', !off && this.settings.iconMode === 'words');
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');
     CANVAS_SPACE.scale = (!off && CANVAS_SPACING_SCALE[this.settings.canvasSpacing]) || 1;
   }
