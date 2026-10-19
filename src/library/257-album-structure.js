@@ -23,7 +23,7 @@ import { MarkdownRenderer, Notice, Setting, TFile } from 'obsidian';
 import { ALBUM_TYPES } from '../core/020-constants.js';
 import { byName, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, noteTags, onActivate } from '../core/040-helpers-sorting.js';
-import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { fmGet, plainValue, rollupOf, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
@@ -135,6 +135,18 @@ export class AlbumStructure extends Feature {
         key: 'albumStructure',
         name: 'Collections say what they are',
         desc: 'A folder note’s collection, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, collections beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. A collection’s page shows the way down to it.',
+      },
+      {
+        key: 'albumRollups',
+        name: 'What a collection comes to',
+        desc: 'Under a collection’s title, and beside it where collections are listed as rows: how many of its notes are done, and the span of a date property’s dates.',
+      },
+      {
+        key: 'rollupDateKey',
+        type: 'text',
+        showIf: 'albumRollups',
+        name: 'Date property for the span',
+        desc: 'Its earliest and latest dates among the collection’s notes; left empty, none.',
       },
       {
         key: 'albumRecents',
@@ -351,15 +363,46 @@ export class AlbumStructure extends Feature {
   }
 
   /** How far along a project or reading list is: { done, total, word }, or null. */
+  /** Whether a note's done: ticked done, or a status saying so. */
+  isDone(fm) {
+    if (fmGet(fm, 'done') === true) return true;
+    return valueList(fmGet(fm, 'status')).some((v) => DONE_VALUES.indexOf(v.toLowerCase()) !== -1);
+  }
+
+  /** What a collection's notes come to, as settings ask: { count, done, earliest, latest }, or null when off or empty. */
+  rollup(files) {
+    if (!this.settings.albumRollups) return null;
+    const notes = (files || []).filter((f) => f.extension === 'md');
+    if (!notes.length) return null;
+    return rollupOf(notes.map((f) => noteProps(this.app, f)), (fm) => this.isDone(fm), String(this.settings.rollupDateKey || '').trim());
+  }
+
+  /** A rollup said in a line: 12 of 30 done · due 3 Mar – 12 Apr. `withDone` false leaves the done count to what's shown already. */
+  rollupText(r, withDone = true) {
+    if (!r) return '';
+    const parts = [];
+    if (withDone && r.done) parts.push(`${r.done} of ${r.count} done`);
+    if (r.earliest) {
+      const day = (iso) => new Date(`${iso}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      const key = String(this.settings.rollupDateKey || '').trim();
+      parts.push(r.earliest === r.latest ? `${key} ${day(r.earliest)}` : `${key} ${day(r.earliest)} – ${day(r.latest)}`);
+    }
+    return parts.join('  ·  ');
+  }
+
+  /** A collection's notes at any depth, as its rows' rollup reads them. */
+  notesUnder(folder) {
+    const out = [];
+    const walk = (f) => (f.children || []).forEach((c) => (c instanceof TFile ? c.extension === 'md' && out.push(c) : walk(c)));
+    walk(folder);
+    return out;
+  }
+
   progress(info, files) {
     if (info.type !== 'project' && info.type !== 'reading list') return null;
     const notes = files.filter((f) => f.extension === 'md');
     if (!notes.length) return null;
-    const done = notes.filter((f) => {
-      const fm = noteProps(this.app, f);
-      if (fmGet(fm, 'done') === true) return true;
-      return valueList(fmGet(fm, 'status')).some((v) => DONE_VALUES.indexOf(v.toLowerCase()) !== -1);
-    }).length;
+    const done = notes.filter((f) => this.isDone(noteProps(this.app, f))).length;
     return { done, total: notes.length, word: info.type === 'project' ? 'done' : 'read' };
   }
 

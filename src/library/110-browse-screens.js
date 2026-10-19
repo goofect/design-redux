@@ -199,6 +199,8 @@ export class FolderScreen extends BrowseScreen {
       const kind = structure && structure.enabled ? structure.info(f).label : '';
       if (kind) row.createSpan({ cls: 'dr-card-kind', text: kind });
       row.createSpan({ cls: 'dr-tree-count', text: view.countLabel(f) });
+      const rolled = structure ? structure.rollupText(structure.rollup(structure.notesUnder(f))) : '';
+      if (rolled) row.createSpan({ cls: 'dr-tree-rollup', text: rolled });
       onActivate(row, () => view.openFolder(f));
       onContextMenu(row, (evt) => view.folderMenu(evt, f, view.folderCover(f)));
       if (depth < 4) this.renderTree(list, view.sortFolders(view.visibleFolders(f)), depth + 1);
@@ -444,7 +446,9 @@ export function folderRows(view, root, folders) {
     drawFolderArt(view.plugin, row.createDiv({ cls: 'dr-search-prop-art' }), folder);
     const text = row.createDiv({ cls: 'dr-search-prop-text' });
     text.createDiv({ cls: 'dr-search-prop-title', text: folder.name });
-    text.createDiv({ cls: 'dr-search-prop-sub', text: view.countLabel(folder) });
+    const structure = view.plugin.feature(AlbumStructure);
+    const rolled = structure ? structure.rollupText(structure.rollup(structure.notesUnder(folder))) : '';
+    text.createDiv({ cls: 'dr-search-prop-sub', text: rolled ? `${view.countLabel(folder)}  ·  ${rolled}` : view.countLabel(folder) });
     view.pickOrOpen(row, { folder }, () => view.openFolder(folder), false);
     onContextMenu(row, (evt) => view.folderMenu(evt, folder, view.folderCover(folder)));
   });

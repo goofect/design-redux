@@ -11056,3 +11056,10 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   min-width: 0;
   color: var(--text-muted);
 }
+
+/* What a collection comes to, beside its row. */
+.dr-tree-rollup {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}

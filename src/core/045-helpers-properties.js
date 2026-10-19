@@ -235,3 +235,25 @@ export function dueKeys(settings) {
     .map((s) => s.trim())
     .filter(Boolean);
 }
+
+/**
+ * What an album's notes come to, from their properties: how many, how
+ * many are done by `isDone(fm)`, and the earliest and latest of a date
+ * property — the fixed set, no formulas. { count, done, earliest, latest }.
+ */
+export function rollupOf(fms, isDone, dateKey) {
+  const out = { count: 0, done: 0, earliest: null, latest: null };
+  (fms || []).forEach((fm) => {
+    out.count++;
+    if (isDone && isDone(fm || {})) out.done++;
+    if (!dateKey) return;
+    const raw = fmGet(fm || {}, dateKey);
+    (Array.isArray(raw) ? raw : [raw]).forEach((v) => {
+      const m = /^(\d{4}-\d{2}-\d{2})/.exec(String(v === null || v === undefined ? '' : v));
+      if (!m) return;
+      if (!out.earliest || m[1] < out.earliest) out.earliest = m[1];
+      if (!out.latest || m[1] > out.latest) out.latest = m[1];
+    });
+  });
+  return out;
+}

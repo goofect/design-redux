@@ -1113,6 +1113,9 @@ export class BrowseView extends ItemView {
     if (newest) meta.push(`Updated ${this.relative(newest)}`);
     const progress = about ? structure.progress(about, files) : null;
     if (progress) meta.push(`${progress.done} of ${progress.total} ${progress.word}`);
+    // What its notes come to, as settings ask: the done count unless progress has said it, a date property's span.
+    const rolled = folder && structure ? structure.rollupText(structure.rollup(files), !progress) : '';
+    if (rolled) meta.push(rolled);
     // How far through it you are, once you've read any of it.
     else if (folder && this.plugin.settings.readingHistory) {
       const notes = files.filter((f) => f.extension === 'md');

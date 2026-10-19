@@ -410,6 +410,8 @@ export const DEFAULTS = {
   propertyRules: [],
   propertyRulesOn: false,
   propertyRulesDryRun: true,
+  albumRollups: false,
+  rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 12,
   graphProperties: true,

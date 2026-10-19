@@ -3039,6 +3039,22 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(plugin.settings.smartAlbumList.length, 1);
   });
 
+  await t('what a collection comes to: how many done and a date property’s span, under its title and beside it in a list', () => {
+    const { v, plugin, app, view } = setup();
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const fms = { Anarchy: { status: 'Done', due: '2026-03-03' }, Balance: { done: true, due: '2026-04-12' }, Cooperation: { status: 'Doing', due: '2026-03-20' } };
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: fms[f.basename] || {} });
+    const meta = () => view.contentEl.querySelector('.dr-detail-meta').textContent;
+    view.render();
+    assert.ok(!/done/.test(meta()), 'off by default');
+    Object.assign(plugin.settings, { albumRollups: true, rollupDateKey: 'due' });
+    view.render();
+    const span = `due ${new Date('2026-03-03T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${new Date('2026-04-12T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+    assert.ok(meta().includes(`2 of 6 done  ·  ${span}`), meta());
+    assert.strictEqual(structure.rollupText(structure.rollup(structure.notesUnder(v.vault.getAbstractFileByPath('IR')))), `2 of 6 done  ·  ${span}`);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {
