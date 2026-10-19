@@ -25,6 +25,8 @@ const apply = (el, o) => {
   if (typeof o === 'string') { el.className = o; return el; }
   if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
   if (o.text !== undefined) el.textContent = o.text;
+  if (o.type !== undefined) el.type = o.type;
+  if (o.value !== undefined) el.value = o.value;
   return el;
 };
 P.createEl = function (tag, o) { return apply(this.appendChild(document.createElement(tag)), o); };
@@ -1598,6 +1600,49 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual(R.linkingNotes({}, {}, view.file, research), [], 'a node with no ^id: nothing can link to it');
     section.destroy();
     host.remove();
+  });
+
+  await t('filter, levels, one branch alone: the filter bar dims all but what meets it; levels and a branch alone narrow the view, a trail to step back; nothing written', async () => {
+    const view = await open(NOTE);
+    view.flushSave();
+    const before = view.text;
+    const dimmed = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-node.is-unfocused')).map((e) => e.textContent.replace(/\d+$/, '')).sort();
+    view.toggleFilterBar(false);
+    const bar = view.contentEl.querySelector('.dr-mindmap-filter');
+    const search = bar.querySelector('input');
+    search.value = 'api';
+    search.dispatchEvent(new window.Event('input'));
+    assert.deepStrictEqual(dimmed(), ['Competitor notes', 'Interview script', 'Research', 'Ship', 'UI'], 'API and the way down to it lit');
+    const depth = bar.querySelector('select[data-key="depth"]');
+    depth.value = '1';
+    depth.dispatchEvent(new window.Event('change'));
+    assert.strictEqual(dimmed().length, 8, 'words and a depth no node meets both: all dimmed');
+    search.value = '';
+    search.dispatchEvent(new window.Event('input'));
+    assert.deepStrictEqual(dimmed(), ['API', 'Competitor notes', 'Interview script', 'UI'], 'down to level 1');
+    key(search, 'Escape');
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-filter'), 'Escape: the bar closed and the filter with it');
+    assert.deepStrictEqual(dimmed(), []);
+    // Levels: only so many shown.
+    view.showLevels(1);
+    assert.deepStrictEqual(shown(view).sort(), ['Build', 'Launch plan', 'Research', 'Ship']);
+    view.showLevels(0);
+    assert.strictEqual(shown(view).length, 8);
+    // A branch alone, a trail above it.
+    const build = view.model.root.children[1];
+    view.toggleSolo(build.id);
+    assert.deepStrictEqual(shown(view).sort(), ['API', 'Build', 'UI']);
+    const crumbs = () => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-crumb')).map((e) => e.textContent);
+    assert.deepStrictEqual(crumbs(), ['Launch plan', 'Build']);
+    assert.ok(view.scene.boxes.get(build.id).x === 0, 'it stands where the root would');
+    view.apply(R.setText(view.model, build.id, 'Build it'));
+    assert.deepStrictEqual(crumbs(), ['Launch plan', 'Build it'], 'the trail follows a rename');
+    view.contentEl.querySelector('.dr-mindmap-crumb').click();
+    assert.strictEqual(shown(view).length, 8, 'the root in the trail: the whole map again');
+    assert.ok(!view.contentEl.querySelector('.dr-mindmap-crumbs'));
+    view.undoStep(false);
+    view.flushSave();
+    assert.strictEqual(view.text, before, 'only the rename was written, and it’s undone');
   });
 
   console.log(`\n${passed} passed`);

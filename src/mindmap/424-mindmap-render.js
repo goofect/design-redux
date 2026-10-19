@@ -77,7 +77,9 @@ export class MindMapRenderer {
       if (b && meets(b, view)) nodes.push([n, b]);
       if (b) visibleChildren(n).forEach(visit);
     };
-    if (model.root) visit(model.root);
+    // From the branch shown alone, if one is.
+    const top = state.top || model.root;
+    if (top) visit(top);
     (model.free || []).forEach((n) => {
       const b = scene.boxes.get(n.id);
       if (b && meets(b, view)) nodes.push([n, b]);

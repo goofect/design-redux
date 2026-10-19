@@ -9,7 +9,7 @@
 /* ------------------------------------------------------------------ */
 
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
-import { arrowLinks, modelFromData, sideAxes } from '../tree/400-tree-model.js';
+import { arrowLinks, modelFromData, nodeById, sideAxes } from '../tree/400-tree-model.js';
 import { BRANCH_LAYOUTS, composedLayout, directedPlaces, layoutPlaces } from '../tree/403-tree-layouts.js';
 import { branchLayoutOf, nodeNudge } from '../tree/406-tree-layout-block.js';
 
@@ -109,14 +109,19 @@ export function visibleChildren(n) {
   return out;
 }
 
-/** The nodes shown: the root's tree, but not what's folded away — each with the shown node it hangs from. */
-export function shownNodes(model) {
+/**
+ * The nodes shown: the root's tree — or one branch's, `top` — but not
+ * what's folded away, nor deeper than `levels` below it; each with the
+ * shown node it hangs from.
+ */
+export function shownNodes(model, top, levels) {
   const out = [];
   const go = (n, depth, parent) => {
     out.push({ node: n, depth, parent });
-    visibleChildren(n).forEach((c) => go(c, depth + 1, n));
+    if (!levels || depth < levels) visibleChildren(n).forEach((c) => go(c, depth + 1, n));
   };
-  if (model.root) go(model.root, 0, null);
+  const from = top || model.root;
+  if (from) go(from, 0, null);
   return out;
 }
 
@@ -129,10 +134,14 @@ const UNDIRECTED = new Set(['radial', 'outline', 'concept']);
  * map's layout, one of the tree's. A branch with a layout of its own in
  * the layout block grows its own way, and `way` is the layout that
  * placed each box, for its edge. A node moved by hand takes its branch.
+ * `opts.soloId` lays out one branch alone, as if it were the map, pins
+ * and free nodes left out; `opts.levels` shows that many levels down.
  */
-export function layoutScene(model, sizeOf, mode) {
+export function layoutScene(model, sizeOf, mode, opts = {}) {
   const way = BRANCH_LAYOUTS.some((b) => b[0] === mode) ? mode : 'right';
-  const shown = shownNodes(model);
+  const solo = opts.soloId ? nodeById(model, opts.soloId) : null;
+  const top = solo || model.root;
+  const shown = shownNodes(model, top, opts.levels);
   const boxes = new Map();
   if (!shown.length) return { boxes, bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0 } };
   // Laid out as the canvas's cards are, set out first in the list's order so the layout keeps it.
@@ -158,13 +167,13 @@ export function layoutScene(model, sizeOf, mode) {
     const byId = new Map(nodes.map((r) => [r.id, r]));
     const kids = new Map(nodes.map((r) => [r.id, []]));
     // Each node once, under the first to reach it, as the canvas's tree reads it.
-    const placed = new Set([model.root.id]);
+    const placed = new Set([top.id]);
     shown.forEach(({ node, parent }) => parent && !placed.has(node.id) && (placed.add(node.id), kids.get(parent.id).push(byId.get(node.id))));
-    places = directedPlaces(byId.get(model.root.id), way, kids);
+    places = directedPlaces(byId.get(top.id), way, kids);
   } else {
     const cards = modelFromData({ nodes, edges });
     const links = arrowLinks(cards);
-    places = branchy ? composedLayout(cards, cards.byId.get(model.root.id), way, links, (rec) => branchLayoutOf(model, rec.id)) : layoutPlaces(cards, model.root.id, way, links);
+    places = branchy ? composedLayout(cards, cards.byId.get(top.id), way, links, (rec) => branchLayoutOf(model, rec.id)) : layoutPlaces(cards, top.id, way, links);
   }
   const wayOf = new Map();
   (places.branches || []).forEach((b) => b.ids.forEach((id) => wayOf.set(id, b.mode)));
@@ -172,18 +181,18 @@ export function layoutScene(model, sizeOf, mode) {
   const off = new Map();
   shown.forEach(({ node, parent }) => {
     const above = parent ? off.get(parent.id) || [0, 0] : [0, 0];
-    const pin = node === model.root ? null : pinOf(node);
+    const pin = node === top || solo ? null : pinOf(node);
     if (pin) {
       const spot = places.get(node.id) || { x: 0, y: 0 };
       off.set(node.id, [pin[0] - spot.x, pin[1] - spot.y]);
       return;
     }
-    const own = node === model.root ? null : nodeNudge(model, node.id);
+    const own = node === top ? null : nodeNudge(model, node.id);
     off.set(node.id, own ? [above[0] + own[0], above[1] + own[1]] : above);
   });
   const depthOf = new Map(shown.map((s) => [s.node.id, s.depth]));
   nodes.forEach((r) => {
-    const at = r.id === model.root.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
+    const at = r.id === top.id ? { x: 0, y: 0 } : places.get(r.id) || { x: r.x, y: r.y };
     const d = off.get(r.id) || [0, 0];
     boxes.set(r.id, { x: at.x + d[0], y: at.y + d[1], width: r.width, height: r.height, depth: depthOf.get(r.id) || 0, way: wayOf.get(r.id) || way });
   });
@@ -191,7 +200,7 @@ export function layoutScene(model, sizeOf, mode) {
   // Free nodes: in a row under the tree.
   let x = bounds.minX;
   const y = bounds.maxY + 80;
-  (model.free || []).forEach((n) => {
+  (solo ? [] : model.free || []).forEach((n) => {
     const size = sizeOf(n);
     const pin = pinOf(n);
     const d = nodeNudge(model, n.id) || [0, 0];

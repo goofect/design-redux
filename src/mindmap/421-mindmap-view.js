@@ -103,6 +103,7 @@ export class MindMapView extends TextFileView {
     this.tool('Fold every branch', 'chevrons-down-up', () => this.foldAll(true));
     this.tool('Unfold everything', 'chevrons-up-down', () => this.foldAll(false));
     this.tool('Outline', 'list-tree', () => this.toggleOutline());
+    if (typeof this.toggleFilterBar === 'function') this.filterTool = this.tool('Filter', 'filter', () => this.toggleFilterBar());
     if (typeof this.togglePanel === 'function') this.panelTool = this.tool('Node and note panel', 'info', () => this.togglePanel(this.panelTool));
     if (typeof this.chooseShowAs === 'function') this.showAsTool = this.tool('Show as…', 'layout-list', (evt) => this.chooseShowAs(evt));
     if (typeof this.addAction === 'function') this.addAction('file-text', 'Open as text', () => this.feature && this.feature.openAsText(this.leaf));
@@ -142,7 +143,8 @@ export class MindMapView extends TextFileView {
     if (typeof this.countTasks === 'function') this.countTasks();
     this.panelDirty = true;
     const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));
-    this.scene = layoutScene(this.model, sizeOf, this.mode);
+    this.scene = layoutScene(this.model, sizeOf, this.mode, typeof this.sceneOpts === 'function' ? this.sceneOpts() : {});
+    if (typeof this.drawCrumbs === 'function') this.drawCrumbs();
     if (typeof this.glideFrom === 'function') this.glideFrom(glide ? before : null);
   }
 
@@ -154,9 +156,9 @@ export class MindMapView extends TextFileView {
     if (!quiet) this.draw();
   }
 
-  /** What's lit: every light that's on — a focus, open tasks only — met at once; null when none is. */
+  /** What's lit: every light that's on — a focus, open tasks only, a filter — met at once; null when none is. */
   lit() {
-    const sets = [typeof this.focusSet === 'function' ? this.focusSet() : null, typeof this.openTasksLit === 'function' ? this.openTasksLit() : null].filter(Boolean);
+    const sets = [typeof this.focusSet === 'function' ? this.focusSet() : null, typeof this.openTasksLit === 'function' ? this.openTasksLit() : null, typeof this.filterLit === 'function' ? this.filterLit() : null].filter(Boolean);
     return sets.length ? sets.reduce((a, b) => new Set([...a].filter((id) => b.has(id)))) : null;
   }
 
@@ -176,7 +178,7 @@ export class MindMapView extends TextFileView {
     const settings = this.plugin ? this.plugin.settings : {};
     this.root.toggleClass('is-depth', settings.mindmapDepth !== false);
     const tints = nodeTints(this.model, settings.mindmapColourBy);
-    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null, focus: this.lit() });
+    this.renderer.draw({ model: this.model, scene, camera: this.camera, selected: this.selected, mode: this.mode, tints, fade: this.fade || null, roles: settings.mindmapArguments !== false, marks: this.marks || null, present: typeof this.presentMarks === 'function' ? this.presentMarks() : null, focus: this.lit(), top: typeof this.topNode === 'function' ? this.topNode() : null });
     if (typeof this.drawLegend === 'function') this.drawLegend();
     if (typeof this.drawMinimap === 'function') this.drawMinimap(this.scene);
     if (this.outlineEl) this.drawOutline();

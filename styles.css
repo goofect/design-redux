@@ -10576,3 +10576,34 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 .dr-node-attr-off { flex: none; }
 .dr-node-make { margin-top: 8px; }
 .dr-mention-note { color: var(--text-faint); font-size: var(--font-ui-smaller); margin-left: auto; }
+
+/* Mind map: the filter bar, and the way down to a branch shown alone */
+.dr-mindmap-filter,
+.dr-mindmap-crumbs {
+  position: absolute;
+  left: var(--dr-space-2);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  max-width: calc(100% - 320px);
+  flex-wrap: wrap;
+}
+
+.dr-mindmap-filter { top: var(--dr-space-2); }
+.dr-mindmap-crumbs { top: calc(var(--dr-space-2) + 44px); font-size: var(--font-ui-small); }
+.dr-mindmap:not(:has(.dr-mindmap-filter)) .dr-mindmap-crumbs { top: var(--dr-space-2); }
+.dr-mindmap-filter-text { width: 160px; }
+.dr-mindmap-filter-pick { max-width: 140px; font-size: var(--font-ui-small); }
+.dr-mindmap-crumb { cursor: pointer; color: var(--text-muted); }
+.dr-mindmap-crumb.is-current { cursor: default; color: var(--text-normal); font-weight: var(--font-semibold); }
+.dr-mindmap.is-alt .dr-mindmap-filter,
+.dr-mindmap.is-alt .dr-mindmap-crumbs { display: none; }
+
+@media (any-hover: hover) {
+  .dr-mindmap-crumb:not(.is-current):hover { color: var(--text-normal); text-decoration: underline; }
+}

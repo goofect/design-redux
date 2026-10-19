@@ -47,7 +47,7 @@ class MindMapInput {
     const root = this.root;
     let drag = null;
     this.registerDomEvent(root, 'pointerdown', (evt) => {
-      if (evt.button !== 0 || (evt.target.closest && evt.target.closest('.dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-failure, .dr-mindmap-editor, .dr-mindmap-alt'))) return;
+      if (evt.button !== 0 || (evt.target.closest && evt.target.closest('.dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-failure, .dr-mindmap-editor, .dr-mindmap-alt, .dr-mindmap-filter, .dr-mindmap-crumbs'))) return;
       if (typeof root.focus === 'function') root.focus();
       if (this.editing) this.closeEditor(false);
       const knob = evt.target.closest && evt.target.closest('.dr-mindmap-knob');
@@ -187,7 +187,7 @@ class MindMapInput {
   key(evt) {
     if (!this.model || this.editing || this.failure) return;
     // A key the card editor took — Escape closing it, say — isn't the map's too; nor one on the bar, the outline or the legend.
-    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor, .dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-legend, .dr-mindmap-alt'))) return;
+    if (evt.defaultPrevented || (evt.target && evt.target.closest && evt.target.closest('.dr-mindmap-editor, .dr-mindmap-bar, .dr-mindmap-outline, .dr-mindmap-legend, .dr-mindmap-alt, .dr-mindmap-filter, .dr-mindmap-crumbs'))) return;
     if (typeof this.focusKey === 'function' && this.focusKey(evt)) return;
     const mod = evt.ctrlKey || evt.metaKey;
     if (mod && !evt.altKey && (evt.key === 'z' || evt.key === 'Z' || evt.key === 'y')) {

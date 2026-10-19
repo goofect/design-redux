@@ -495,6 +495,21 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.ok(notes);
   });
 
+  await t('a filter lights what meets every part of it and the way down to it; nothing set lights nothing', () => {
+    const m = R.parseOutline('- Launch\n\t- Research #market %%{"color":"1","status":"Doing"}%%\n\t\t- Interviews #market\n\t- Build %%{"status":"Done"}%%\n\t\t- API\n').model;
+    const [research, build] = m.root.children;
+    const [interviews] = research.children;
+    const lit = (f) => { const set = R.filterSet(m, f); return set ? m.root.children.concat([interviews, build.children[0]]).filter((n) => set.has(n.id)).map((n) => n.text.split(' ')[0]) : null; };
+    assert.strictEqual(lit({}), null);
+    assert.deepStrictEqual(lit({ text: 'interv' }), ['Research', 'Interviews'], 'its branch kept lit above it');
+    assert.deepStrictEqual(lit({ tag: 'market', status: 'Doing' }), ['Research']);
+    assert.deepStrictEqual(lit({ status: 'none' }), ['Research', 'Build', 'Interviews', 'API'], 'those with no status, and those above them');
+    assert.deepStrictEqual(lit({ colour: '1' }), ['Research']);
+    assert.deepStrictEqual(lit({ depth: 1 }), ['Research', 'Build']);
+    assert.deepStrictEqual(R.mapTags(m), ['market']);
+    assert.deepStrictEqual(R.pathTo(m, interviews.id).map((n) => n.text.split(' ')[0]), ['Launch', 'Research', 'Interviews']);
+  });
+
   await t('ids never repeat, however many are made in a moment', () => {
     const ids = new Set();
     for (let k = 0; k < 5000; k++) ids.add(R.newId());
