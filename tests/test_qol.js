@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, listKeys, ListKeys, coverTint, coverGen, DesignRedux, CanvasAlign, CanvasFold, foldOf, blankLook, SETTINGS_MIGRATIONS };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 12);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 13);
   });
 
   /* -- pins in your own order ------------------------------------------------ */
@@ -494,8 +494,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const fake = {
       settings: {
         coverColors: { A: '#123456', Gone: '#000000' },
-        canvasLegends: { 'Map.canvas': {}, 'Old.canvas': {} },
-        canvasAlignments: { 'Old.canvas': { x: 'center' } },
+        coverDesigns: { 'Map.canvas': {}, 'Old.canvas': {} },
+        readingLog: { 'Old.canvas': { opened: 1 } },
         albumOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
         folderDefaults: { Gone: [] },
       },
@@ -505,8 +505,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     };
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), true);
     assert.deepStrictEqual(Object.keys(fake.settings.coverColors), ['A']);
-    assert.deepStrictEqual(Object.keys(fake.settings.canvasLegends), ['Map.canvas']);
-    assert.deepStrictEqual(fake.settings.canvasAlignments, {});
+    assert.deepStrictEqual(Object.keys(fake.settings.coverDesigns), ['Map.canvas']);
+    assert.deepStrictEqual(fake.settings.readingLog, {});
     assert.deepStrictEqual(Object.keys(fake.settings.albumOrders), ['/', 'A']);
     assert.deepStrictEqual(fake.settings.folderDefaults, {});
     assert.strictEqual(fake.saved, 1);
@@ -514,45 +514,6 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     fake.settings.coverColors.Gone = '#000000';
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), undefined);
     assert.ok('Gone' in fake.settings.coverColors, 'pruned while the vault looked empty');
-  });
-
-  await t('a canvas with no file — one closing, or not loaded — is passed over, not an error', () => {
-    const align = new R.CanvasAlign({ settings: { canvasAlignments: { 'Map.canvas': { a: 'center' } } } });
-    assert.deepStrictEqual(align.alignments(null), {});
-    assert.deepStrictEqual(align.alignments({ path: 'Map.canvas' }), { a: 'center' });
-    assert.doesNotThrow(() => align.apply({ file: null, canvas: { nodes: new Map() } }));
-  });
-
-  await t('canvas cards folded by an earlier version open to the size they were; nothing else folds a card', () => {
-    const containerEl = document.createElement('div');
-    containerEl.createDiv({ cls: 'canvas-controls' });
-    const contentEl = containerEl.createDiv();
-    let saves = 0;
-    const card = (id, data, x, height, fold) => {
-      const node = {
-        id, x, y: 0, width: 200, height, unknownData: fold ? { drFold: fold } : {}, isEditing: false,
-        nodeEl: contentEl.createDiv({ cls: 'canvas-node' }),
-        getData: () => data,
-        moveAndResize(r) { Object.assign(this, r); },
-      };
-      node.nodeEl.createDiv({ cls: 'canvas-node-content' });
-      return node;
-    };
-    const text = card('t', { type: 'text' }, 0, 52, { height: 120, folded: 52, measured: true });
-    const note = card('n', { type: 'file', file: 'A.md' }, 300, 52, { height: 200, folded: 52, measured: true });
-    const pic = card('p', { type: 'file', file: 'a.png' }, 600, 200);
-    const view = { containerEl, contentEl, canvas: { nodes: new Map([['t', text], ['n', note], ['p', pic]]), edges: new Map(), selection: new Set(), requestSave: () => saves++ } };
-    const fold = new R.CanvasFold({ settings: { canvasBranches: true, canvasCloseGaps: true } });
-    fold.pass(view);
-    assert.deepStrictEqual([text.height, note.height, pic.height], [120, 200, 200]);
-    assert.strictEqual(R.foldOf(text), null);
-    assert.ok(!('drFold' in note.unknownData));
-    assert.strictEqual(saves, 0, 'saved with the canvas’s next change');
-    // No arrows, no branches: nothing to fold, so no folding button.
-    assert.ok(!containerEl.querySelector('.dr-fold-control'));
-    assert.deepStrictEqual(fold.commands().map((c) => c.id), ['fold-canvas-branch', 'fold-every-canvas-branch', 'toggle-canvas-master-card', 'unfold-canvas-everything']);
-    fold.cleanup(view);
-    assert.ok(!containerEl.querySelector('.dr-fold-control, .dr-stack, .dr-branch-knob'));
   });
 
   /* -- type to jump, Space to preview ---------------------------------- */

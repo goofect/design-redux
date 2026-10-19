@@ -26,14 +26,7 @@
   "bulkNotice",
   "bulkTail"
  ],
- "257-album-structure": [
-  "CanvasVaultMap"
- ],
- "326-canvas-relations": [
-  "Knowledge"
- ],
  "348-workspace-modes": [
-  "CanvasOutline",
   "Knowledge",
   "Library"
  ],

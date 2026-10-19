@@ -19,7 +19,6 @@ import { ContextStrip } from './190-strip.js';
 import { ReadingOutline } from './195-reading-outline.js';
 import { ComparePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
-import { CanvasOutline } from '../canvas/339-canvas-outline.js';
 
 /*
  * How you're working, not where you are: the library is a place, gone to
@@ -30,7 +29,7 @@ import { CanvasOutline } from '../canvas/339-canvas-outline.js';
 export const WORKSPACE_MODES = [
   { id: 'study', label: 'Study', icon: 'book-open', desc: 'The note to read, and nothing else in the way' },
   { id: 'research', label: 'Research', icon: 'microscope', desc: 'A note with its relationships and properties beside it' },
-  { id: 'mapping', label: 'Canvas', icon: 'layout-dashboard', desc: 'A canvas to arrange, its outline beside it' },
+  { id: 'mapping', label: 'Maps', icon: 'network', desc: 'The mind map you were last in, the sidebars closed' },
 ];
 
 /* What were modes before, kept as commands to the places they opened — their hotkeys still work. */
@@ -202,14 +201,22 @@ export class WorkspaceModes extends Feature {
 
   /** The most recent note, or canvas, that's still there. */
   recent(ext) {
+    const fits = typeof ext === 'function' ? ext : (f) => f.extension === ext;
     const active = this.app.workspace.getActiveFile();
-    if (active && active.extension === ext) return active;
+    if (active && fits(active)) return active;
     const paths = typeof this.app.workspace.getLastOpenFiles === 'function' ? this.app.workspace.getLastOpenFiles() : [];
     for (const p of paths) {
       const f = this.app.vault.getFileByPath(p);
-      if (f && f.extension === ext) return f;
+      if (f && fits(f)) return f;
     }
     return null;
+  }
+
+  /** Whether a file is a mind map: a .mindmap file, or a note that says it is one. */
+  isMap(f) {
+    if (f.extension === 'mindmap') return true;
+    const cache = f.extension === 'md' ? this.app.metadataCache.getFileCache(f) : null;
+    return !!(cache && cache.frontmatter && cache.frontmatter.mindmap === true);
   }
 
   /** Each mode's layout. */
@@ -227,11 +234,9 @@ export class WorkspaceModes extends Feature {
       }
       if (withOutline) await outline.show();
     } else if (id === 'mapping') {
-      this.sidebars(false, true);
-      const canvas = this.recent('canvas');
-      if (canvas) await ws.getLeaf(false).openFile(canvas);
-      const outline = typeof CanvasOutline === 'function' ? this.plugin.feature(CanvasOutline) : null;
-      if (outline && outline.enabled) await outline.show();
+      this.sidebars(false, false);
+      const map = this.recent((f) => this.isMap(f));
+      if (map) await ws.getLeaf(false).openFile(map);
     } else if (id === 'research') {
       this.sidebars(true, true);
       const note = this.recent('md');

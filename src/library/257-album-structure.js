@@ -15,7 +15,7 @@
 /*   related: albums beside it, not above or below;                    */
 /*   featured: notes to start with, at the top of the album;           */
 /*   layout: how it opens — its notes as a list or as covers, the      */
-/*     folder note's text first as an overview, or its canvas map.     */
+/*     folder note's text first as an overview, or its map.            */
 /* And an album's page shows the way down to it from the top.          */
 /* ------------------------------------------------------------------ */
 
@@ -32,7 +32,6 @@ import { ALBUM_RECENTS_FROM } from './110-browse-screens.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ComparePicker, FolderPicker } from '../ui/230-pickers.js';
-import { CanvasVaultMap } from '../canvas/328-canvas-vault-map.js';
 
 /* The folder note properties an album is read from; each can be given another name in settings, so none has to clash with your own. */
 export const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
@@ -407,8 +406,10 @@ export class AlbumStructure extends Feature {
   }
 
   /** A concept map's canvas: one named for the album, or the first in it; made from the album if none. */
-  /** An album's canvas: the one named for it, or the first in it. */
+  /** An album's map: its mind map, named for it; else a canvas named for it, or the first in it. */
   mapOf(folder) {
+    const own = (folder.children || []).find((c) => c instanceof TFile && c.extension === 'md' && c.basename.toLowerCase() === `${folder.name} map`.toLowerCase());
+    if (own) return own;
     const canvases = (folder.children || []).filter((c) => c instanceof TFile && c.extension === 'canvas');
     return canvases.find((c) => c.basename.toLowerCase() === `${folder.name} map`.toLowerCase()) || canvases[0] || null;
   }
@@ -419,9 +420,11 @@ export class AlbumStructure extends Feature {
       await this.app.workspace.getLeaf(false).openFile(existing);
       return existing;
     }
-    const mapper = typeof CanvasVaultMap === 'function' ? this.plugin.feature(CanvasVaultMap) : null;
-    if (mapper && mapper.enabled) return mapper.mapFolder(folder);
-    return this.plugin.newCanvas(folder);
+    // The mind maps make it, where they're on.
+    const maps = (this.plugin.features || []).find((f) => typeof f.mapAlbumAsMindMap === 'function');
+    if (maps && maps.enabled) return maps.mapAlbumAsMindMap(folder);
+    new Notice('Switch mind maps on in settings to map a collection.');
+    return null;
   }
 
   /** One of the folder note's properties set — the note made if there's none — or, given '', removed. */

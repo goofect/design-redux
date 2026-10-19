@@ -2,13 +2,13 @@
 
 An Obsidian plugin that makes the vault feel like Apple Music: folders open as
 albums, notes as tracks, with covers, a library sidebar, a context strip along
-the bottom, property tools, and canvas extras. Goes with the author's theme,
+the bottom, property tools, and mind maps. Goes with the author's theme,
 Coffee N' Christmas.
 
 ## Files
 
 - `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
-  (core, ui, tree, library, chrome, links, editor, bulk, canvas, mindmap,
+  (core, ui, tree, library, chrome, links, editor, bulk, mindmap,
   plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
   them all and exports the plugin. After using a name from another module,
@@ -39,7 +39,7 @@ Coffee N' Christmas.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
   and the latest.
-- `.claude/rules/` — notes for one area each (canvas internals, albums and
+- `.claude/rules/` — notes for one area each (the canvas adapter, albums and
   the browse view, quiet links, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
   that area. `.claude/skills/diagnose-tests` says how to read a failure.
@@ -51,7 +51,7 @@ Coffee N' Christmas.
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
 - What a feature does is written once in `actions()` (`078-actions.js`): each
-  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
+  says what it acts on (`on`: app, note, file, editor, canvas, mindmap, album, browse);
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
@@ -61,7 +61,7 @@ Coffee N' Christmas.
   deletes (see `Orders.followRename`).
 - Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`)
   and the pure map tree (`tree`, which imports only core), then the features by area (library and albums, chrome, links, editor, bulk,
-  canvas), then the plugin. A module imports from its own area and those below;
+  mindmap), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
@@ -74,11 +74,10 @@ Coffee N' Christmas.
   and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts: a later piece writes `class Part {…}`
   and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–124, Knowledge's canvas side in 326). No `super` in a part.
+  120–124, MindMapView in the mindmap area). No `super` in a part.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
-  `design-redux:canvas-changed`). On a canvas, after a change by hand:
-  `afterCanvasChange` or `glideAndSettle`; save with `saveCanvas`.
+  `design-redux:panel-changed`).
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
@@ -90,8 +89,8 @@ Coffee N' Christmas.
   a double click or Enter opens. It doesn't repeat the panel.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
-  checks, with a fallback. A canvas's go through the adapter (`core/079`:
-  `liveCards`, `pickedOnCanvas`, `cardData`, `liveArrowEnds`,
+  checks, with a fallback. A plain canvas's go through the adapter (`core/079`:
+  `liveCards`, `cardCount`, `pickedOnCanvas`, `addTextCard`,
   `requestCanvasSave`, …); `tests/test_layers.js` refuses a new direct use
   outside it, and after moving some onto it, `node tests/map.js --internals
   --update`.
@@ -108,7 +107,7 @@ Coffee N' Christmas.
   them after its own.
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
-- Canvas internals and quiet links have notes of their own in `.claude/rules/`.
+- The canvas adapter and quiet links have notes of their own in `.claude/rules/`.
 
 ## Working here
 

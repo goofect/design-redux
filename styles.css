@@ -2119,17 +2119,6 @@ body.is-mobile .dr-mention-remove {
   padding-bottom: var(--dr-space-3);
 }
 
-/* One card selected, the rest quietened: lighter than a focus asked for. */
-.dr-branch-focus.is-soft .canvas-node:not(.dr-focus-lit) {
-  opacity: var(--dr-dim-card-soft);
-}
-
-.dr-branch-focus.is-soft .canvas-edges > g:not(.dr-focus-lit),
-.dr-branch-focus.is-soft .canvas-edges > svg > g:not(.dr-focus-lit),
-.dr-branch-focus.is-soft .canvas-path-label-wrapper:not(.dr-focus-lit) {
-  opacity: var(--dr-dim-edge-soft);
-}
-
 /* A note's relationships: its cover and name, the way up above it. */
 .dr-concept-head {
   display: flex;
@@ -6527,219 +6516,6 @@ body.is-phone .dr-track.is-editing .dr-track-num {
   display: none;
 }
 
-/* Canvas legend -------------------------------------------------------------------
- *
- * A glass card in the canvas's top-left corner: each colour the cards
- * use, a name typed beside it, and how many cards have it. Picking one
- * fades the rest of the canvas back.
- */
-
-.dr-canvas-host {
-  position: relative;
-}
-
-.dr-legend {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 20;
-  width: 224px;
-  max-width: calc(100% - 24px);
-  max-height: calc(100% - 24px);
-  overflow-y: auto;
-  padding: calc(var(--dr-u) * 1.5);
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-radius-md);
-  background-color: var(--dr-float-bg);
-  backdrop-filter: blur(var(--dr-glass-blur));
-  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
-  box-shadow: var(--dr-float-shadow);
-  font-size: var(--font-ui-small);
-}
-
-.dr-legend.is-hidden {
-  display: none;
-}
-
-.dr-legend.is-collapsed {
-  width: auto;
-}
-
-.dr-legend-head {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-2);
-  padding: var(--dr-space-1) calc(var(--dr-u) * 1.5) var(--dr-space-1) var(--dr-space-2);
-  border-radius: var(--dr-r);
-  color: var(--text-normal);
-  font-weight: var(--font-medium, 500);
-  cursor: pointer;
-}
-
-.dr-legend-head:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-.dr-legend-title {
-  flex: 1 1 auto;
-}
-
-.dr-legend-dots {
-  display: flex;
-  gap: var(--dr-space-1);
-}
-
-.dr-legend-dots .dr-legend-dot {
-  width: 9px;
-  height: 9px;
-}
-
-.dr-legend-chevron {
-  display: flex;
-  color: var(--text-faint);
-}
-
-.dr-legend-chevron .svg-icon {
-  width: 14px;
-  height: 14px;
-}
-
-.dr-legend-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-top: 2px;
-}
-
-.dr-legend-row {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-2);
-  padding: 3px var(--dr-space-2);
-  border-radius: var(--dr-radius-md);
-  cursor: pointer;
-}
-
-.dr-legend-row.is-focused {
-  background-color: var(--background-modifier-hover);
-}
-
-.dr-legend-dot {
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  border-radius: var(--dr-radius-pill);
-  box-shadow: var(--dr-cover-edge);
-}
-
-.dr-legend-dot.is-none {
-  background: none;
-  box-shadow: inset 0 0 0 1.5px var(--text-faint);
-}
-
-.dr-legend-row .dr-legend-dot:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-.dr-legend-row.is-focused .dr-legend-dot {
-  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 3.5px var(--text-normal);
-}
-
-/* A name reads as plain text until it's clicked into. */
-.dr-legend .dr-legend-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  height: 26px;
-  padding: 2px calc(var(--dr-u) * 1.5);
-  border: 1px solid transparent;
-  border-radius: var(--dr-radius-sm);
-  background: none;
-  box-shadow: none;
-  color: var(--text-normal);
-  font-size: var(--font-ui-small);
-}
-
-.dr-legend .dr-legend-name:focus {
-  border-color: var(--background-modifier-border-focus);
-  background-color: var(--background-modifier-form-field);
-}
-
-.dr-legend .dr-legend-name::placeholder {
-  color: var(--text-faint);
-}
-
-.dr-legend-count {
-  flex: 0 0 auto;
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  font-variant-numeric: tabular-nums;
-}
-
-.dr-legend-empty,
-.dr-legend-all {
-  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) var(--dr-space-1);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-legend-all {
-  color: var(--text-accent);
-  cursor: pointer;
-}
-
-@media (any-hover: hover) {
-  .dr-legend-row:hover,
-  .dr-legend-head:hover {
-    background-color: var(--background-modifier-hover);
-  }
-
-  .dr-legend-all:hover {
-    text-decoration: underline;
-  }
-}
-
-/* A colour picked: every other card, and the arrows, fade back. */
-.dr-canvas-focus .canvas-node {
-  transition: opacity var(--dr-dur-normal) var(--dr-ease);
-}
-
-.dr-canvas-focus .canvas-node:not(.dr-legend-match) {
-  opacity: var(--dr-dim-card);
-}
-
-.dr-canvas-focus .canvas-edges {
-  opacity: var(--dr-dim-edge);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dr-canvas-focus .canvas-node {
-    transition: none;
-  }
-}
-
-.dr-legend-control .canvas-control-item.is-active {
-  color: var(--text-accent);
-}
-
-/* Centred text in a canvas card: read, and while it's being written. */
-.canvas-node.dr-text-center .markdown-rendered,
-.canvas-node.dr-text-center .markdown-preview-view,
-.canvas-node.dr-text-center .cm-content,
-.canvas-node.dr-text-center .cm-line {
-  text-align: center;
-}
-
-.canvas-node.dr-text-center .markdown-rendered img {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.dr-align-button.is-active {
-  color: var(--text-accent);
-}
-
 /* The Undo in a notice after a move or rename. */
 .notice .dr-undo {
   margin-left: var(--dr-space-1);
@@ -7205,7 +6981,6 @@ body.is-phone .dr-td-length {
 .dr-bar-edit + .dr-browse-search {
   margin-left: var(--dr-space-2);
 }
-
 
 /* -- a property: its facts, its values, one value's notes --------------------- */
 
@@ -8028,90 +7803,6 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   font-style: italic;
 }
 
-/* Arranging cards: newer Obsidian's own Align button stands aside for
-   Arrange, which does what it does and more. */
-.canvas-menu.dr-arranging > button:not(.dr-arrange-button):has(> svg.lucide-align-start-vertical) {
-  display: none;
-}
-
-/* Arrow styles ------------------------------------------------------------------
- *
- * Dashes and dots that keep their size on screen at any zoom, as the
- * canvas's own line width does. The shape and heads are drawn in the
- * arrow itself. */
-
-.canvas-edges g.dr-line-dashed path.canvas-display-path {
-  stroke-dasharray: calc(10px * var(--zoom-multiplier)) calc(7px * var(--zoom-multiplier));
-}
-
-/* A related arrow: two cards that go together, neither hanging from the other. */
-.canvas-edges g.dr-related-edge path.canvas-display-path {
-  stroke-dasharray: calc(3px * var(--zoom-multiplier)) calc(6px * var(--zoom-multiplier));
-  stroke-linecap: round;
-}
-
-.canvas-edges g.dr-line-dotted path.canvas-display-path {
-  stroke-dasharray: 0 calc(7px * var(--zoom-multiplier));
-  stroke-linecap: round;
-  stroke-width: calc(3px * var(--zoom-multiplier));
-}
-
-/* Folding canvas branches ------------------------------------------------------ */
-
-/* A group lets presses through to the canvas behind it; what's ours on it takes its own. */
-
-/* Holding a folded branch, a card sits on a little stack of them. */
-.canvas-node > .dr-stack {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
-  border-radius: var(--dr-radius-md);
-  background-color: var(--background-primary);
-  pointer-events: none;
-}
-
-.canvas-node > .dr-stack.is-near {
-  transform: translate(5px, 5px);
-}
-
-.canvas-node > .dr-stack.is-far {
-  transform: translate(10px, 10px);
-  opacity: 0.6;
-}
-
-/* A master card: a crown on its top edge, near its right corner,
-   keeping its size on screen as the knobs do. */
-.canvas-node > .dr-master-mark {
-  position: absolute;
-  top: 0;
-  right: 16px;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  box-sizing: border-box;
-  border: 1px solid var(--background-modifier-border-hover, var(--background-modifier-border));
-  border-radius: 50%;
-  background-color: var(--background-primary);
-  color: var(--color-yellow, var(--text-accent));
-  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
-  pointer-events: auto;
-}
-
-.canvas-node > .dr-master-mark .svg-icon {
-  width: 13px;
-  height: 13px;
-  stroke-width: 2.25;
-}
-
-/* The crown in the bar above a selected card, lit while it's a master card. */
-.canvas-menu .dr-master-button.is-active {
-  color: var(--color-yellow, var(--text-accent));
-}
-
 /* A text card's properties, in the properties panel. */
 .dr-card-props {
   display: flex;
@@ -8153,211 +7844,6 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-card-props-note {
   color: var(--text-faint);
   font-size: var(--font-ui-small);
-}
-
-/* A card dragged over another it would hang from, dropped there. */
-.canvas-node[data-dr-drop-target] > .canvas-node-container {
-  box-shadow: 0 0 0 3px var(--interactive-accent);
-}
-
-/* What a card holds, on it: its checklist's progress, a note's cover and title, chosen properties. */
-.canvas-node > .dr-card-progress {
-  position: absolute;
-  top: -10px;
-  right: 10px;
-  z-index: 2;
-  padding: 0 var(--size-4-2);
-  border-radius: var(--radius-l);
-  background: var(--background-primary);
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-muted);
-  font-family: var(--dr-font-ui);
-  font-size: var(--font-ui-smaller);
-  font-variant-numeric: tabular-nums;
-  line-height: 18px;
-  pointer-events: none;
-}
-
-.canvas-node > .dr-card-progress.is-done {
-  color: var(--text-on-accent);
-  background: var(--interactive-accent);
-  border-color: transparent;
-}
-
-.canvas-node > .dr-card-cover {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: min(45%, 140px);
-  overflow: hidden;
-  border-radius: var(--radius-m) var(--radius-m) 0 0;
-  pointer-events: none;
-}
-
-.canvas-node > .dr-card-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.canvas-node > .dr-card-cover .dr-card-cover-title {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: var(--size-4-4) var(--size-4-2) var(--size-4-1);
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
-  color: white;
-  font-family: var(--dr-font-ui);
-  font-weight: var(--font-semibold);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.canvas-node.dr-has-cover > .canvas-node-container > .canvas-node-content {
-  padding-top: min(45%, 140px);
-}
-
-.canvas-node > .dr-card-chips {
-  position: absolute;
-  left: var(--size-4-2);
-  right: var(--size-4-2);
-  bottom: calc(-1 * var(--size-4-3));
-  z-index: 2;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: var(--size-2-2);
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.canvas-node > .dr-card-chips .dr-card-chip {
-  flex: none;
-  padding: 0 var(--size-4-2);
-  border-radius: var(--radius-l);
-  background: var(--background-secondary);
-  border: 1px solid var(--background-modifier-border);
-  color: var(--text-muted);
-  font-family: var(--dr-font-ui);
-  font-size: var(--font-ui-smaller);
-  line-height: 18px;
-  max-width: 50%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Cards coloured by their branch or depth: a tint, not the card's own colour. */
-.canvas-node[data-dr-tint="1"] { --dr-tint: var(--color-red); }
-.canvas-node[data-dr-tint="2"] { --dr-tint: var(--color-orange); }
-.canvas-node[data-dr-tint="3"] { --dr-tint: var(--color-yellow); }
-.canvas-node[data-dr-tint="4"] { --dr-tint: var(--color-green); }
-.canvas-node[data-dr-tint="5"] { --dr-tint: var(--color-cyan); }
-.canvas-node[data-dr-tint="6"] { --dr-tint: var(--color-purple); }
-
-.canvas-node[data-dr-tint] > .canvas-node-container {
-  border-color: color-mix(in srgb, var(--dr-tint) 65%, transparent);
-  background-color: color-mix(in srgb, var(--dr-tint) 8%, var(--background-primary));
-}
-
-/* The map toolbar: its own group in the bar above the selection. */
-.canvas-menu .dr-map-tools {
-  display: flex;
-  align-items: center;
-  gap: var(--size-2-1);
-  margin-left: var(--size-2-2);
-  padding-left: var(--size-2-2);
-  border-left: 1px solid var(--background-modifier-border);
-}
-
-/* In a mind map, where a dragged card would land, let go now. */
-.dr-map-ghost {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  border: 2px dashed var(--interactive-accent);
-  border-radius: var(--radius-m);
-  background: color-mix(in srgb, var(--interactive-accent) 10%, transparent);
-  transition: transform var(--dr-dur-fast) var(--dr-ease-out);
-}
-
-/* Title and details: a text card's first line as its title, the rest
-   smaller beneath it. Headings keep their own size. */
-body.dr-card-titles .canvas-node.dr-text-card .markdown-preview-pusher ~ div:not(.el-h1):not(.el-h2):not(.el-h3):not(.el-h4):not(.el-h5):not(.el-h6) {
-  font-size: 0.88em;
-  color: var(--text-muted);
-}
-
-body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
-  font-size: var(--dr-heading-size);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-normal);
-}
-
-/* Tucked into a fold: not drawn, nor the arrows inside the fold. */
-.canvas-node.dr-tucked {
-  display: none !important;
-}
-
-.dr-tucked-edge {
-  display: none !important;
-}
-
-/* A folded branch's count, where its arrows left the card, just past the
-   edge so the canvas's own handle for drawing an arrow stays free. */
-.canvas-node .dr-branch-knob {
-  position: absolute;
-  z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 var(--dr-space-1);
-  box-sizing: border-box;
-  border-radius: var(--dr-radius-md);
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.canvas-node .dr-branch-knob.is-bottom {
-  top: calc(100% + 12px * var(--zoom-multiplier, 1));
-  left: 50%;
-  transform: translateX(-50%) scale(var(--zoom-multiplier, 1));
-  transform-origin: top center;
-}
-
-.canvas-node .dr-branch-knob.is-top {
-  bottom: calc(100% + 12px * var(--zoom-multiplier, 1));
-  left: 50%;
-  transform: translateX(-50%) scale(var(--zoom-multiplier, 1));
-  transform-origin: bottom center;
-}
-
-.canvas-node .dr-branch-knob.is-right {
-  left: calc(100% + 12px * var(--zoom-multiplier, 1));
-  top: 50%;
-  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
-  transform-origin: left center;
-}
-
-.canvas-node .dr-branch-knob.is-left {
-  right: calc(100% + 12px * var(--zoom-multiplier, 1));
-  top: 50%;
-  transform: translateY(-50%) scale(var(--zoom-multiplier, 1));
-  transform-origin: right center;
-}
-
-@media (any-hover: hover) {
-  .canvas-node .dr-branch-knob:hover {
-    background-color: var(--interactive-accent-hover);
-  }
 }
 
 /* What a folded branch holds, pointed at: the cards tucked into it, by name. */
@@ -8417,92 +7903,11 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   padding: var(--dr-space-1) var(--dr-space-2) 2px;
 }
 
-.dr-fold-pop-mark {
-  flex: 0 0 8px;
-  width: 8px;
-  height: 8px;
-  border: 1px solid var(--text-faint);
-  border-radius: 50%;
-  box-sizing: border-box;
-}
-
-.dr-fold-pop-mark.is-colour {
-  border-color: transparent;
-  background-color: var(--dr-mark-colour);
-}
-
-/* Canvas outline -------------------------------------------------------------
- *
- * The canvas as a tree in the right sidebar, in Obsidian's own tree rows.
- */
-
-.dr-canvas-outline .view-content {
-  padding: var(--dr-space-2) calc(var(--dr-u) * 1.5) var(--dr-space-5);
-}
-
 .dr-outline-title {
   padding: var(--dr-space-1) var(--dr-space-2) var(--dr-space-2);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   font-weight: var(--font-semibold, 600);
-}
-
-.dr-outline-inner {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--dr-u) * 1.5);
-  min-width: 0;
-}
-
-.dr-outline-mark {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  color: var(--text-faint);
-}
-
-.dr-outline-mark .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-.dr-outline-mark.is-colour::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background-color: var(--dr-outline-colour);
-}
-
-.dr-outline-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-outline-count {
-  flex: 0 0 auto;
-  padding: 0 calc(var(--dr-u) * 1.5);
-  border-radius: var(--dr-radius-md);
-  background-color: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
-  color: var(--text-accent);
-  font-size: var(--font-ui-smaller);
-  font-variant-numeric: tabular-nums;
-}
-
-/* How folding works. */
-.dr-fold-help ul {
-  margin: 0;
-  padding-left: 1.2em;
-}
-
-.dr-fold-help li + li {
-  margin-top: var(--dr-space-2);
 }
 
 /* Covers by dropping ------------------------------------------------------------
@@ -8535,28 +7940,6 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 
 .dr-strip-place:not(:last-child)::after {
   content: " · ";
-}
-
-/* Canvas: focus on a branch -------------------------------------------------------
- *
- * Everything but the branch dimmed, as the legend dims every other colour.
- */
-
-.dr-branch-focus .canvas-node:not(.dr-focus-lit) {
-  opacity: var(--dr-dim-card);
-  transition: opacity var(--dr-dur-normal) var(--dr-ease);
-}
-
-.dr-branch-focus .canvas-edges > g:not(.dr-focus-lit),
-.dr-branch-focus .canvas-edges > svg > g:not(.dr-focus-lit),
-.dr-branch-focus .canvas-path-label-wrapper:not(.dr-focus-lit) {
-  opacity: var(--dr-dim-edge);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dr-branch-focus .canvas-node:not(.dr-focus-lit) {
-    transition: none;
-  }
 }
 
 /* Find a card: where a card is folded away, under its words. */
@@ -8686,7 +8069,7 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   }
 }
 
-/* -- the canvas minimap -------------------------------------------------- */
+/* -- the map minimap ---------------------------------------------------- */
 
 .dr-minimap {
   position: absolute;
@@ -8727,188 +8110,11 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   opacity: 1;
 }
 
-.dr-minimap-group {
-  fill: none;
-  stroke: var(--text-faint);
-  stroke-width: 1;
-  opacity: 0.6;
-}
-
 .dr-minimap-view {
   fill: var(--interactive-accent);
   fill-opacity: 0.08;
   stroke: var(--interactive-accent);
   stroke-width: 1.5;
-}
-
-/* -- comparing canvases and branches ------------------------------------ */
-
-.canvas-node.dr-diff-added,
-.canvas-node.dr-diff-onlyA {
-  outline: 3px solid rgba(var(--color-green-rgb), 0.8);
-  outline-offset: 4px;
-}
-
-.canvas-node.dr-diff-reworded {
-  outline: 3px solid rgba(var(--color-yellow-rgb), 0.9);
-  outline-offset: 4px;
-}
-
-.canvas-node.dr-diff-moved {
-  outline: 3px dashed rgba(var(--color-blue-rgb), 0.85);
-  outline-offset: 4px;
-}
-
-.canvas-node.dr-diff-onlyB {
-  outline: 3px solid rgba(var(--color-purple-rgb), 0.8);
-  outline-offset: 4px;
-}
-
-.dr-compare-bar {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 21;
-  display: flex;
-  align-items: center;
-  gap: calc(var(--dr-u) * 2.5);
-  max-width: calc(100% - 24px);
-  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) calc(var(--dr-u) * 1.5) var(--dr-space-3);
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-radius-md);
-  background-color: var(--dr-float-bg);
-  backdrop-filter: blur(var(--dr-glass-blur));
-  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
-  box-shadow: var(--dr-float-shadow);
-  font-size: var(--font-ui-small);
-}
-
-.dr-compare-title {
-  font-weight: var(--font-semibold);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dr-compare-counts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-1) calc(var(--dr-u) * 2.5);
-  color: var(--text-muted);
-}
-
-.dr-compare-count {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  white-space: nowrap;
-}
-
-.dr-diff-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.dr-diff-dot.dr-diff-added,
-.dr-diff-dot.dr-diff-onlyA {
-  background-color: rgb(var(--color-green-rgb));
-}
-
-.dr-diff-dot.dr-diff-reworded {
-  background-color: rgb(var(--color-yellow-rgb));
-}
-
-.dr-diff-dot.dr-diff-moved {
-  background-color: rgb(var(--color-blue-rgb));
-}
-
-.dr-diff-dot.dr-diff-onlyB {
-  background-color: rgb(var(--color-purple-rgb));
-}
-
-.dr-compare-bar button {
-  flex: none;
-}
-
-/* -- arguments on a canvas ---------------------------------------------- */
-
-.canvas-node[data-dr-role] {
-  --dr-role-rgb: var(--color-blue-rgb);
-}
-
-.canvas-node[data-dr-role="reason"] {
-  --dr-role-rgb: var(--color-green-rgb);
-}
-
-.canvas-node[data-dr-role="evidence"] {
-  --dr-role-rgb: var(--color-cyan-rgb);
-}
-
-.canvas-node[data-dr-role="objection"] {
-  --dr-role-rgb: var(--color-red-rgb);
-}
-
-.canvas-node[data-dr-role="rebuttal"] {
-  --dr-role-rgb: var(--color-orange-rgb);
-}
-
-.canvas-node[data-dr-role] > .canvas-node-container {
-  box-shadow: inset 4px 0 0 rgba(var(--dr-role-rgb), 0.9);
-}
-
-/* Its part, above its right-hand corner: Obsidian's own label takes the left. */
-.canvas-node[data-dr-role]::after {
-  content: attr(data-dr-role-label);
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  margin-bottom: var(--dr-space-1);
-  padding: 1px calc(var(--dr-u) * 1.5);
-  border-radius: var(--dr-radius-sm);
-  background-color: rgba(var(--dr-role-rgb), 0.12);
-  color: rgb(var(--dr-role-rgb));
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold);
-  white-space: nowrap;
-  pointer-events: none;
-}
-
-/* -- a card kept in place ------------------------------------------------ */
-
-.canvas-node[data-dr-pinned] > .canvas-node-container {
-  outline: 1.5px dashed var(--text-faint);
-  outline-offset: 3px;
-}
-
-/* -- propositions: a claim in your own words ----------------------------- */
-
-.canvas-path-label-wrapper.dr-proposition-edge .canvas-path-label {
-  font-style: italic;
-}
-
-.dr-proposition-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--size-4-2);
-  margin-bottom: var(--size-4-3);
-}
-
-.dr-proposition-card {
-  padding: var(--size-2-2) var(--size-4-2);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-s);
-  background: var(--background-secondary);
-  font-weight: var(--font-semibold);
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-.dr-proposition-predicate {
-  flex: 1 1 10em;
-  min-width: 8em;
 }
 
 /* The kinds in settings: several controls a row, wrapping where narrow. */
@@ -8921,59 +8127,6 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
   width: 9em;
 }
 
-/* -- one kind of relationship shown alone ------------------------------- */
-
-.dr-relation-only .canvas-node:not(.dr-relation-lit) {
-  opacity: var(--dr-dim-card);
-  transition: opacity var(--dr-dur-normal) var(--dr-ease);
-}
-
-.dr-relation-only .canvas-edges > g:not(.dr-relation-lit),
-.dr-relation-only .canvas-edges > svg > g:not(.dr-relation-lit),
-.dr-relation-only .canvas-path-label-wrapper:not(.dr-relation-lit) {
-  opacity: var(--dr-dim-edge);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dr-relation-only .canvas-node:not(.dr-relation-lit) {
-    transition: none;
-  }
-}
-
-/* -- how deep a card is: weight, not colour ----------------------------- */
-
-.canvas-node[data-dr-depth="0"] > .canvas-node-container {
-  border-width: 3px;
-}
-
-.canvas-node[data-dr-depth="0"] .canvas-node-content {
-  font-size: 1.12em;
-  font-weight: var(--font-bold, 700);
-}
-
-.canvas-node[data-dr-depth="1"] .canvas-node-content {
-  font-size: 1.04em;
-  font-weight: var(--font-semibold);
-}
-
-/* Deeper: lighter, not fainter — still easy to read. */
-.canvas-node[data-dr-role="secondary"] .canvas-node-content {
-  font-size: 0.96em;
-}
-
-/* A reference — a note, a file, a link brought in — quieter than the
- * ideas round it: a lighter, broken border where no colour's been given. */
-.canvas-node[data-dr-role="reference"]:not(.is-themed) > .canvas-node-container {
-  border-style: dashed;
-  border-color: var(--background-modifier-border);
-}
-
-/* Arrows: a tree's solid as they are; an association softer, its head too. */
-.canvas-edges g.dr-edge-assoc path.canvas-display-path,
-.canvas-edges g.dr-edge-assoc .canvas-path-end {
-  opacity: var(--dr-edge-assoc-opacity);
-}
-
 /* What's picked, wherever it's listed. */
 .dr-track.is-selected,
 .dr-tr.is-selected {
@@ -8983,7 +8136,6 @@ body.dr-card-titles .canvas-node.dr-text-card .dr-card-title {
 .dr-card.is-selected .dr-card-art {
   box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
 }
-
 
 /* A setting opened to from where it shows: marked a moment. */
 .dr-settings .is-revealed {
@@ -9658,7 +8810,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
  * reached — and a trail along the foot.
  */
 
-.dr-presenting .canvas-node,
 .dr-presenting .dr-mindmap-node {
   transition: opacity 240ms ease;
 }
@@ -9684,28 +8835,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   display: none;
 }
 
-.dr-presenting .canvas-node.dr-present-dim {
-  opacity: var(--dr-present-dim, 0.15);
-}
-
-.dr-presenting .canvas-node.dr-present-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-.dr-presenting .canvas-node.dr-present-now .canvas-node-container {
-  box-shadow: 0 0 0 3px var(--interactive-accent), var(--shadow-l);
-}
-
-.dr-presenting .canvas-edges {
-  opacity: 0.5;
-}
-
-.dr-presenting .canvas-card-menu,
-.dr-presenting .canvas-menu-container {
-  display: none;
-}
-
 .dr-present-bar {
   position: absolute;
   left: 50%;
@@ -9719,19 +8848,6 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   transform: translateX(-50%);
   font-family: var(--dr-font-ui);
   font-size: var(--font-ui-small);
-}
-
-.dr-present-caption {
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-
-.dr-present-caption:empty {
-  display: none;
-}
-
-.dr-present-caption:not(:empty) {
-  margin-bottom: var(--dr-space-1);
 }
 
 .dr-present-trail {
@@ -9798,25 +8914,9 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-presenting .canvas-node,
-  .dr-presenting .dr-mindmap-node {
+    .dr-presenting .dr-mindmap-node {
     transition: none;
   }
-}
-
-/* On a collection's map, a parent from outside the collection: faint, with its folder's name. */
-.canvas-node.dr-album-outside {
-  opacity: 0.55;
-}
-
-.canvas-node.dr-album-outside::after {
-  content: attr(data-dr-folder);
-  position: absolute;
-  top: -20px;
-  left: 0;
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  white-space: nowrap;
 }
 
 /* Mind maps --------------------------------------------------------------------

@@ -118,16 +118,10 @@ export const DEFAULTS = {
   mindmapPresentNotes: true,
   mindmapRichNodes: true,
   mindmapTheme: 'cards',
-  // New maps of a folder, tag, collection or note's relationships are mind maps; on, canvas maps are offered beside them.
-  mindmapKeepCanvasMaps: false,
   // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
   albumMapAuto: true,
   albumMapWritesParent: 'ask',
-  albumMapLayout: 'right',
-  // A tree of cards stepped through like a talk, the rest faded to this.
-  canvasPresent: true,
   presentDimLevel: 0.15,
-  presentCaption: true,
   // Notes in studied collections come back to be revisited, on a ladder of days.
   studyEnabled: false,
   studyLadder: '1, 3, 7, 21, 60',
@@ -218,8 +212,6 @@ export const DEFAULTS = {
   propertyValueView: 'auto',
   // Settings shown: 'basic', the everyday ones, or 'all'.
   settingsLevel: 'basic',
-  // Canvas tools: 'tasks', a button for each, or 'one' with them all in its menu.
-  canvasToolButtons: 'tasks',
   // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
   libraryLayout: 'auto',
   recentSearches: [],
@@ -229,7 +221,6 @@ export const DEFAULTS = {
   inspector: true,
   lookScope: 'window',
   artworkSize: '',
-  canvasTools: true,
   inspectorClick: 'shown',
   libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
@@ -296,106 +287,13 @@ export const DEFAULTS = {
   coverColors: {},
   // { path: designId } — a drawn cover's design, picked for one album or note.
   coverDesigns: {},
-  // A legend in the corner of each canvas, naming what its colours mean.
-  canvasLegend: true,
-  // { canvasPath: { labels: { colour: name }, collapsed, hidden } }
-  canvasLegends: {},
-  // Centred text in canvas cards, and which cards have it.
-  canvasTextAlign: true,
-  // Cards folded to their first line, and groups to their label, from an arrow in their corner.
-  // A card's branch — what its arrows lead to — tucked into it, from a knob where they leave.
-  canvasBranches: true,
-  // What's beyond a fold moves in to close up the room it left, and back out when it unfolds.
-  canvasCloseGaps: true,
-  // A card's branch laid out as a tidy tree.
-  canvasTidy: true,
-  // A card selected with everything its arrows lead to.
-  canvasSelectBranch: true,
-  // The canvas as a tree, in the right sidebar.
-  canvasOutline: true,
-  // A command to go to a card by its words, opening the folds it's in.
-  canvasFind: true,
-  // Dim everything but a card's branch.
-  canvasFocus: true,
-  // One card selected: what's not joined to it faded a little.
-  canvasFocusSelect: false,
-  // Copy a card with everything its arrows lead to.
-  canvasDuplicate: true,
-  // { canvasPath: { cardId: 'center' } }
-  canvasAlignments: {},
-  // Selected cards lined up, spaced, sized alike, or laid out in a grid.
-  canvasArrange: true,
-  // A canvas made a mind map lays itself out from its arrows as it changes.
-  canvasMaps: true,
-  // { canvasPath: true } — the canvases made mind maps.
-  canvasMapFiles: {},
-  // What a card holds, on it: checklist progress, a note's cover and title, chosen properties.
-  canvasCardFacts: true,
-  // Property names a note card shows as chips, separated by commas.
-  canvasCardChips: '',
-  // A tint for each card by its branch ('branch') or depth ('depth'), or none ('none').
-  canvasColourBy: 'none',
-  // Buttons for what you do to a map, in the bar above the selected cards.
-  canvasMapToolbar: true,
-  // [{ id, on }] — the map toolbar's buttons, in order; empty for the first choice.
-  canvasToolbarItems: [],
-  // Tab and Enter on a selected card add one after it or beside it.
-  canvasMindMap: true,
-  // Where Tab and Enter put a new card: 'free' for the nearest free space, 'line' in line with room made.
-  canvasMindMapPlace: 'free',
-  // A card dropped onto another hangs from it.
-  canvasRelink: true,
-  // Shift+Enter puts a card before the selected one; Shift+Tab moves it up a level.
-  canvasRestructure: true,
-  // A branch written out as a note, and a note's headings or a card's list made into cards.
-  canvasBranchNote: true,
-  canvasOutlineBranch: true,
-  // A branch kept as an outline note, the two kept in step.
-  canvasOutlineSync: true,
-  canvasOutlineNumbers: false,
-  // A branch laid out to one side, both sides, or all round its card.
-  canvasLayouts: true,
-  // Arrows named for how their cards relate, or marked related: out of branches.
-  canvasRelations: true,
-  // Empty: the names the plugin starts with.
-  canvasRelationNames: '',
-  // Kinds of relationship, each { name, line, color }; empty: the kinds it starts with.
-  canvasRelationTypes: [],
-  // A command listing what on a canvas wants a look: loose, empty, twice-named cards.
-  canvasCheck: true,
-  // A folder or tag made into a canvas of its notes.
-  canvasVaultMap: true,
-  // The whole canvas small in its corner, while the cards don't all fit.
-  canvasMinimap: true,
-  // A canvas compared with a snapshot or another canvas; two branches compared.
-  canvasCompare: true,
-  // Cards given a part in an argument: claim, reason, objection, rebuttal, evidence.
-  canvasArguments: true,
-  // One box to add a note's card, a new note or a new card, or join to a card already there.
-  canvasQuickAdd: true,
-  // Several lines pasted onto a selected card: a card of each below it.
-  canvasPasteLines: true,
-  // Dragging a card brings the cards below it along.
-  canvasBranchDrag: true,
-  // A card kept where it is: layouts and tidying leave it, and its branch.
-  canvasPins: true,
-  // Zoom to a branch; back to where the canvas was looking before each jump.
-  canvasViews: true,
-  // A tree's root card, and the cards a step from it, given more weight.
-  canvasDepth: true,
-  // A text card grows to fit what's typed in it.
-  canvasCardFit: true,
-  // A text card's first line reads as its title, the rest as details.
-  canvasCardTitles: true,
-  // Arrows in a style of their own, from their menu or the bar above them.
-  canvasArrows: true,
-  // How arrows without a style of their own are drawn: 'curve', 'straight' or 'elbow'.
-  canvasArrowShape: 'curve',
-  // Arrows without a style of their own join cards at the sides facing each other.
-  canvasArrowSides: false,
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // { folderPath: [{ key, type, required, values, default }] } — what notes there should have; '/' for the vault.
+  // Empty: the names the plugin starts with (kept from before kinds had styles).
+  canvasRelationNames: '',
+  // Kinds of relationship, each { name, inverse, category, line, color }; empty: the kinds it starts with.
+  canvasRelationTypes: [],
   propertySchemas: {},
   // { key: { value: { color, icon } } } — how a value shows wherever it's shown.
   propertyOptions: {},
@@ -418,7 +316,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 12,
+  settingsVersion: 13,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

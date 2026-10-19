@@ -913,12 +913,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await R.DesignRedux.prototype.loadSettings.call(ctx);
     const s = ctx.settings;
     assert.strictEqual(s.albumColumns, 'status, modified');
-    assert.deepStrictEqual(s.canvasLegends, saved.canvasLegends);
+    assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 12);
+    assert.strictEqual(s.settingsVersion, 13);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -2647,7 +2647,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([linky.path, tagged.path], ['Linky.md', 'Tagged.md']);
   });
 
-  await t('relationships kept in notes: read both ways, explored, added and removed with Undo, looked over, mapped', async () => {
+  await t('relationships kept in notes: read both ways, explored, added and removed with Undo, looked over', async () => {
     const { v, plugin, app, view } = setup();
     v.folder('Ideas');
     const f = (n) => v.vault.getFileByPath(`Ideas/${n}.md`) || v.file(`Ideas/${n}.md`);
@@ -2696,16 +2696,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const found = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
     ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
     assert.ok(!found.includes('Fusion of powers: relation-roles'), found.join(', '));
-    // Mapped: it at the centre, each arrow labelled and given its kind.
-    let made = null;
-    app.vault.create = async (path, data) => { made = { path, data: JSON.parse(data) }; return { path }; };
-    plugin.freeChildPath = (folder, base, ext) => `${folder.path}/${base}.${ext}`;
-    await k.map(parl);
-    assert.strictEqual(made.path, 'Ideas/Parliamentarism relationships.canvas');
-    assert.strictEqual(made.data.nodes[0].file, parl.path);
-    const labels = made.data.edges.map((e) => e.label).sort();
-    assert.deepStrictEqual(labels, ['contrasts with', 'has part', 'has type', 'holds']);
-    assert.ok(made.data.edges.every((e) => e.drRelation && e.drRelation.kind));
+    // Mapped: a mind map's work now (test_mindmap); without mind maps, said so and nothing made.
+    assert.strictEqual(await k.map(parl), null);
   });
 
   await t('the knowledge structure checked: errors, what’s worth a look and modelling choices told apart; fixed, or marked as meant', async () => {
@@ -2867,7 +2859,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const k = new R.Knowledge(plugin);
     plugin.feature = (C) => (C === R.Knowledge ? k : null);
     const ids = k.actions().map((a) => a.id);
-    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-canvas', 'knowledge-in-album', 'knowledge-map'].every((id) => ids.includes(id)));
+    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-album', 'knowledge-map'].every((id) => ids.includes(id)));
     // As commands: offered with a note open, not without.
     let active = gov;
     app.workspace.getActiveFile = () => active;
@@ -2876,15 +2868,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(cmds['knowledge-broader'].check(), false, 'nothing above it yet');
     active = null;
     assert.strictEqual(cmds['knowledge-explore'].check(), false);
-    // On a menu: one group, each by its short name; on a canvas, not "Open in canvas".
+    // On a menu: one group, each by its short name.
     const titles = (from) => {
       const items = [];
       R.addActionItems({ addItem: (fn) => { const it = {}; ['setSection', 'setIcon', 'setChecked'].forEach((m) => (it[m] = () => it)); it.setTitle = (x) => { it.title = x; return it; }; it.onClick = () => it; fn(it); items.push(it.title); } }, k.actions(), { file: gov, from }, 'Concept', 'waypoints');
       return items;
     };
     assert.ok(titles('menu').includes('Concept: Show related concepts'));
-    assert.ok(titles('menu').includes('Concept: Open in canvas'));
-    assert.ok(!titles('canvas').includes('Concept: Open in canvas'));
+    assert.ok(titles('menu').includes('Concept: Map its relationships'));
     // A child concept: a note beside it, saying it sits under it; Undo takes it away.
     const child = await k.makeConcept('Parliament', gov);
     assert.deepStrictEqual(created, ['Ideas/Parliament.md', '---\nparent: "[[Government]]"\n---\n']);
@@ -2927,8 +2918,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.openSettingsAt = (key) => calls.push(['settings', key]);
     modes.showMenu({ clientX: 1, clientY: 1 });
     const menu = menus[menus.length - 1];
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Standard', 'Study', 'Research', 'Canvas', 'Mode settings…']);
-    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Canvas');
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Standard', 'Study', 'Research', 'Maps', 'Mode settings…']);
+    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Maps');
     menu.items[4].click();
     assert.deepStrictEqual(calls[calls.length - 1], ['settings', 'workspaceModes']);
     // Standard: as it was.

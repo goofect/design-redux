@@ -71,8 +71,40 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, MINDMAP_HANDLERS, registerMindMapHandlers, actionCommands, setMindMapContext, mapLayout, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, CanvasVaultMap, AlbumMap, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath, setMapTheme, nodeShape };\n');
+  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, mapHandlers, mapCommands, actionCommands, setMindMapContext, composedLayout, orderedBranch, siblingOrder, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath, setMapTheme, nodeShape };\n');
 const R = require(tmp).__test;
+// The commands kept from canvas maps, by id, as the mind map runs them.
+R.MINDMAP_HANDLERS = new Map(Object.entries(R.mapHandlers()));
+R.registerMindMapHandlers = () => {};
+/*
+ * Where the tree's own layouts put a set of cards — as the canvas's map
+ * engine did, before it went — from its root: each card's spot, moved by
+ * its nudge and those above it. `layoutOf(rec)` a card's own layout.
+ */
+R.treePlaces = (cards, rootId, mode, layoutOf, nudgeOf) => {
+  const links = R.arrowLinks(cards);
+  const root = cards.byId.get(rootId);
+  const laid = R.composedLayout(cards, root, mode, links, layoutOf);
+  const kids = R.orderedBranch(cards, rootId, links, R.siblingOrder);
+  const places = new Map([[rootId, { x: root.x, y: root.y }]]);
+  const off = new Map([[rootId, { dx: 0, dy: 0 }]]);
+  const queue = [rootId];
+  while (queue.length) {
+    const id = queue.shift();
+    (kids.get(id) || []).forEach((c) => {
+      if (places.has(c.id) || !laid.has(c.id)) return;
+      const at = laid.get(c.id);
+      const above = off.get(id);
+      // A pinned card stays where it is, its branch coming with it.
+      const n = c.pinned ? [c.x - Math.round(at.x) - above.dx, c.y - Math.round(at.y) - above.dy] : nudgeOf(c) || [0, 0];
+      const o = { dx: above.dx + n[0], dy: above.dy + n[1] };
+      off.set(c.id, o);
+      places.set(c.id, { x: Math.round(at.x) + o.dx, y: Math.round(at.y) + o.dy });
+      queue.push(c.id);
+    });
+  }
+  return places;
+};
 fs.unlinkSync(tmp);
 
 let passed = 0;
@@ -283,10 +315,10 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual(build.children.map((c) => c.text), ['API', 'UI', 'Ship']);
   });
 
-  await t('every layout puts the nodes where the canvas’s mind map puts the same cards, within a pixel — a branch with its own layout and a nudge too', async () => {
+  await t('every layout puts the nodes where the tree’s own layout puts the same cards, within a pixel — a branch with its own layout and a nudge too', async () => {
     const view = await open(NOTE);
     const byText = (text) => { let f = null; (function w(n) { if (n.text === text) f = n; n.children.forEach(w); })(view.model.root); return f; };
-    // The same cards on a canvas, set out in the list's order, laid out by the canvas's own map engine.
+    // The same cards, set out in the list's order, laid out by the tree's own layouts.
     const onCanvas = (mode, own, nudges) => {
       const nodes = [];
       const edges = [];
@@ -301,14 +333,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
         n.children.forEach((c) => w(c, depth + 1));
       })(view.model.root, 0);
       const cards = R.modelFromData({ nodes, edges });
-      cards.nodes.forEach((r) => {
-        const kept = {};
-        if (r.id === view.model.root.id) kept.drLayout = mode;
-        if (own[r.id]) kept.drLayout = own[r.id];
-        if (nudges[r.id]) kept.drNudge = { dx: nudges[r.id][0], dy: nudges[r.id][1] };
-        r.node = { unknownData: kept };
-      });
-      return R.mapLayout(cards, R.arrowLinks(cards)).places;
+      return R.treePlaces(cards, view.model.root.id, mode, (rec) => own[rec.id] || null, (rec) => nudges[rec.id] || null);
     };
     const same = (mode, own, nudges) => {
       const places = onCanvas(mode, own, nudges);
@@ -612,7 +637,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       [saved.mindmapLegend, saved.mindmapDepth, saved.mindmapColourBy, saved.mindmapPins, saved.mindmapViews, saved.settingsVersion],
       [false, false, 'branch', false, true, R.DEFAULTS.settingsVersion]
     );
-    assert.strictEqual(saved.canvasLegend, false, 'the canvas keeps its own');
+    assert.ok(!('canvasLegend' in saved) && !('canvasTidy' in saved), 'and at 3.0 the canvas maps’ own let go');
     // And the knowledge tools, saved by 2.0.34 or so.
     const later = { settingsVersion: 10, canvasPresent: false, canvasMinimap: false, canvasBranchNote: false, mindmapPresent: true };
     R.SETTINGS_MIGRATIONS.filter((m) => m.to > 10).forEach((m) => m.run(later));
@@ -867,13 +892,6 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(created[1][0], 'law map.md');
     assert.deepStrictEqual(shape(tagMap.root), ['#law', [['[[Statute]]', []], ['#court', [['[[Appeal]]', []], ['[[Trial]]', []]]]]], 'each note once, under its narrowest tag');
     assert.strictEqual(tagMap.relations.length, 1);
-    // New maps are mind maps: the canvas ones are offered only when canvases are kept.
-    const ids = (Ctor, settings) => {
-      const f = new Ctor(Object.assign({}, p, { settings: Object.assign({}, p.settings, settings) }));
-      return f.actions().filter((a) => a.when({ folder: law, from: 'menu' })).map((a) => a.id);
-    };
-    assert.deepStrictEqual([ids(R.CanvasVaultMap, {}), ids(R.AlbumMap, {})], [[], []], 'no canvas map by default');
-    assert.deepStrictEqual([ids(R.CanvasVaultMap, { mindmapKeepCanvasMaps: true }), ids(R.AlbumMap, { mindmapKeepCanvasMaps: true })], [['canvas-map-folder', 'canvas-map-tag'], ['map-album']]);
     // A note's relationships: a mind map, a branch for each kind.
     const statute = files[1];
     const knowledge = { plugin: { feature: () => maps }, groups: () => [{ label: 'Sits under', items: [{ file: files[0] }] }, { label: 'Cites', items: [{ file: files[3] }, { file: files[4] }] }] };
@@ -1146,7 +1164,7 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     return [go(m.root), m.free.map(go), m.relations.map((r) => [text(r.from), text(r.to), r.label, r.attrs]), m.layout, m.mode || null];
   };
 
-  await t('every canvas fixture converts to a map, written either way and read back the same, laid out where the canvas’s own map engine puts it', async () => {
+  await t('every canvas fixture converts to a map, written either way and read back the same, laid out where the tree’s own layouts put it', async () => {
     assert.ok(fixtures.length >= 6, fixtures.join());
     fixtures.forEach((name) => {
       const data = JSON.parse(fixture(name));
@@ -1156,10 +1174,12 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
       assert.deepStrictEqual(shapeOfModel(md), shapeOfModel(model), `${name}: as a note and back`);
       assert.deepStrictEqual(shapeOfModel(R.parseMindmapJson(R.writeMindmapJson(model))), shapeOfModel(model), `${name}: as a .mindmap file and back`);
       if (model.root.virtual) return;
-      // The same cards laid out by the canvas's map engine, and by the map: within a pixel, the root where it is.
+      // The same cards laid out by the tree's own layouts, as the canvas's map engine did, and by the map: within a pixel, the root where it is.
       const cards = R.modelFromData(data);
-      cards.nodes.forEach((r) => { r.node = { unknownData: data.nodes.find((n) => n.id === r.id) }; });
-      const places = R.mapLayout(cards, R.arrowLinks(cards)).places;
+      const kept = (rec) => data.nodes.find((n) => n.id === rec.id) || {};
+      const layoutOf = (rec) => (rec.id !== model.root.id && R.BRANCH_LAYOUTS.some((b) => b[0] === kept(rec).drLayout) ? kept(rec).drLayout : null);
+      const nudgeOf = (rec) => (kept(rec).drNudge ? [kept(rec).drNudge.dx, kept(rec).drNudge.dy] : null);
+      const places = R.treePlaces(cards, model.root.id, model.mode || 'right', layoutOf, nudgeOf);
       const size = new Map(data.nodes.map((n) => [n.id, { width: n.width, height: n.height }]));
       const scene = R.layoutScene(model, (n) => size.get(n.id), model.mode || 'right');
       const root = places.get(model.root.id);
@@ -1302,22 +1322,6 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.deepStrictEqual([drawn.from, drawn.to, drawn.label, drawn.attrs.kind], ['c', 'p', 'supports', 'supports']);
   });
 
-  await t('the parity matrix: every canvas module and scenario has its place on a map, and each proving test is there', async () => {
-    const parity = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', 'parity.json'), 'utf8'));
-    const modules = fs.readdirSync(path.join(__dirname, '..', 'src', 'canvas')).map((f) => f.replace(/\.js$/, '')).sort();
-    const titles = (file) => Array.from(fs.readFileSync(path.join(__dirname, file), 'utf8').matchAll(/await t\('((?:[^'\\]|\\.)*)'/g)).map((m) => m[1]);
-    const scenarios = titles('test_canvas.js');
-    const proofs = titles('test_mindmap.js').concat(titles('test_tree.js'));
-    assert.deepStrictEqual(Object.keys(parity.modules).sort(), modules, 'one entry for each canvas module');
-    assert.deepStrictEqual(Object.keys(parity.scenarios).sort(), scenarios.slice().sort(), 'one entry for each canvas scenario');
-    const statuses = ['ported', 'automatic', 'replaced', 'not needed'];
-    Object.entries(Object.assign({}, parity.modules, parity.scenarios)).forEach(([name, entry]) => {
-      assert.ok(statuses.includes(entry.status), `${name}: ${entry.status}`);
-      if (entry.status === 'not needed') assert.ok(entry.reason && entry.reason.length > 10, `${name}: why it isn’t needed`);
-      else assert.ok(entry.test && proofs.some((t) => t.includes(entry.test)), `${name}: no test proves it (${entry.test})`);
-    });
-  });
-
   await t('the budgets on a 2,000-node map: parse and write, open, layout after an edit, fold of 500 nodes, a pan — each under 1.5 times its target', async () => {
     const { mapText } = require('./mapgen');
     const BUDGET = { parse: 20, write: 20, open: 300, edit: 50, fold: 50, pan: 1000 / 60 };
@@ -1402,17 +1406,20 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.ok(!view.editing, 'and its editor with it');
   });
 
-  await t('the canvas’s commands act on a mind map under the same ids', async () => {
+  await t('the canvas maps’ commands, kept under their ids so their hotkeys work, act on the mind map in use', async () => {
     const view = await open(NOTE);
-    R.registerMindMapHandlers();
-    R.setMindMapContext(() => ({ view, model: view.model, node: view.selected ? view.model.root.children.find((c) => c.id === view.selected) : null }));
-    const commands = R.actionCommands([{ id: 'fold-canvas-branch', name: 'Fold', on: 'canvas', run: () => assert.fail('the canvas’s own') }], () => null);
+    let mapOpen = true;
+    const now = () => (mapOpen ? { view, model: view.model, node: view.selected ? view.model.root.children.find((c) => c.id === view.selected) : null } : null);
+    const kept = R.mapCommands();
+    const commands = R.actionCommands(kept.filter((a) => a.id === 'fold-canvas-branch'), () => now());
     view.select(view.model.root.children[0].id);
     assert.ok(commands[0].check());
     commands[0].run();
     assert.strictEqual(view.model.root.children[0].attrs.fold, 1, 'Fold branch folded the node');
-    R.setMindMapContext(null);
-    assert.ok(!commands[0].check(), 'with no map, the canvas’s again');
+    mapOpen = false;
+    assert.ok(!commands[0].check(), 'with no map, nothing to do');
+    assert.ok(kept.every((a) => a.on === 'mindmap' && a.name && a.name !== a.id), 'each named for what it does on a map');
+    assert.deepStrictEqual(kept.filter((a) => a.palette === false).map((a) => a.id).sort().slice(0, 2), ['canvas-clear-part', 'canvas-make-claim'], 'menu-only ones stay off the palette');
     // Every canvas command a map answers, there; a few run.
     ['canvas-quick-add', 'canvas-add-child-card', 'canvas-add-sibling-card', 'canvas-add-parent-card', 'fold-canvas-branch', 'fold-every-canvas-branch', 'unfold-canvas-everything', 'duplicate-canvas-branch', 'canvas-zoom-to-branch', 'fit-canvas-cards', 'canvas-layout-choose', 'canvas-layout-everything', 'canvas-map-tidy', 'tidy-canvas-branch', 'toggle-canvas-legend', 'canvas-toggle-keep-in-place', 'canvas-view-back', 'find-canvas-card', 'focus-canvas-branch', 'focus-canvas-near', 'present-map', 'check-canvas', 'canvas-compare', 'canvas-branch-to-note', 'canvas-outline-to-branch', 'canvas-name-relationship', 'canvas-make-claim', 'canvas-add-reason', 'canvas-promote-card', 'canvas-demote-card', 'canvas-card-earlier', 'canvas-card-later', 'arrange-canvas-row', 'arrange-canvas-left', 'knowledge-canvas-write', 'knowledge-canvas-draw', 'refresh-album-map'].forEach((id) => assert.ok(R.MINDMAP_HANDLERS.has(id), `${id} acts on a map`));
     const ctx = { view, model: view.model, node: view.model.root.children[1] };

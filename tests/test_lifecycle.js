@@ -557,7 +557,7 @@ const update = process.argv.includes('--update');
     await plugin.onUserEnable();
     await settle(120);
     assert.deepStrictEqual(quietErrors(), [], 'errors while loading');
-    assert.ok(plugin.features.length > 50, `${plugin.features.length} features`);
+    assert.ok(plugin.features.length > 35, `${plugin.features.length} features`);
   });
 
   let first;

@@ -54,38 +54,8 @@ import { PropertySchemas } from '../bulk/305-bulk-schema.js';
 import { PropertyHistory } from '../bulk/306-bulk-history.js';
 import { PropertyRules } from '../bulk/307-bulk-rules.js';
 import { BulkEditing } from '../bulk/310-bulk-feature.js';
-import { CanvasArguments } from '../canvas/319-canvas-arguments.js';
-import { CanvasLegend } from '../canvas/320-canvas-legend.js';
-import { CanvasDuplicate, CanvasFind, CanvasFocus, CanvasTools } from '../canvas/321-canvas-extras.js';
-import { CanvasCardFacts, CanvasCards } from '../canvas/322-canvas-cards.js';
-import { CanvasRestructure } from '../canvas/323-canvas-restructure.js';
-import { CanvasBranchNote, CanvasOutlineBranch } from '../canvas/324-canvas-outlines.js';
-import { CanvasLayouts } from '../canvas/325-canvas-layouts.js';
-import { CanvasRelations } from '../canvas/326-canvas-relations.js';
-import { CanvasCheck } from '../canvas/327-canvas-check.js';
-import { CanvasVaultMap } from '../canvas/328-canvas-vault-map.js';
-import { CanvasMinimap } from '../canvas/329-canvas-minimap.js';
-import { CanvasAlign } from '../canvas/330-canvas-align.js';
-import { CanvasCompare } from '../canvas/331-canvas-compare.js';
-import { CanvasArrows } from '../canvas/332-canvas-arrows.js';
-import { CanvasArrange } from '../canvas/333-canvas-arrange.js';
-import { CanvasMindMap } from '../canvas/334-canvas-mindmap.js';
-import { CanvasFold } from '../canvas/335-canvas-fold.js';
-import { CanvasBranches } from '../canvas/338-canvas-branches.js';
-import { CanvasOutline } from '../canvas/339-canvas-outline.js';
-import { Diagnostics } from '../canvas/340-diagnostics.js';
-import { CanvasQuickAdd } from '../canvas/341-canvas-quick-add.js';
-import { CanvasPasteLines } from '../canvas/342-canvas-paste.js';
-import { CanvasBranchDrag } from '../canvas/343-canvas-branch-drag.js';
-import { CanvasPins } from '../canvas/344-canvas-pins.js';
-import { CanvasOutlineSync } from '../canvas/345-canvas-outline-sync.js';
-import { CanvasViews } from '../canvas/346-canvas-views.js';
-import { CanvasDepth } from '../canvas/347-canvas-depth.js';
-import { CanvasMap } from '../canvas/348-canvas-map.js';
 import { WorkspaceModes } from '../chrome/348-workspace-modes.js';
-import { AlbumMap } from '../canvas/349-canvas-album-map.js';
-import { CanvasMapToolbar } from '../canvas/349-canvas-map-toolbar.js';
-import { CanvasPresent } from '../canvas/349-canvas-present.js';
+import { Diagnostics } from './355-diagnostics.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
 import { MindMaps } from '../mindmap/420-mindmap-feature.js';
 
@@ -138,42 +108,7 @@ export class DesignRedux extends Plugin {
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
       new QuietLinks(this),
-      new CanvasTools(this),
-      new CanvasLegend(this),
-      new CanvasAlign(this),
-      new CanvasArrows(this),
-      new CanvasArrange(this),
-      new CanvasMindMap(this),
-      new CanvasRestructure(this),
-      new CanvasBranchNote(this),
-      new CanvasOutlineBranch(this),
-      new CanvasOutlineSync(this),
-      new CanvasLayouts(this),
-      new CanvasRelations(this),
-      new CanvasCheck(this),
-      new CanvasVaultMap(this),
-      new CanvasMinimap(this),
-      new CanvasCompare(this),
-      new CanvasArguments(this),
-      new CanvasQuickAdd(this),
-      new CanvasPasteLines(this),
-      new CanvasBranchDrag(this),
-      new CanvasPins(this),
-      new CanvasViews(this),
-      new CanvasDepth(this),
-      new CanvasMap(this),
-      new CanvasMapToolbar(this),
-      new CanvasCards(this),
-      new CanvasCardFacts(this),
-      new CanvasFold(this),
-      new CanvasBranches(this),
-      new CanvasOutline(this),
-      new CanvasPresent(this),
-      new AlbumMap(this),
       new MindMaps(this),
-      new CanvasFind(this),
-      new CanvasFocus(this),
-      new CanvasDuplicate(this),
       new Diagnostics(this),
       new BulkEditing(this),
       new PropertySchemas(this),

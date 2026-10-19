@@ -23,7 +23,6 @@ export function compatibility(app) {
       return false;
     }
   };
-  const open = app.workspace.getLeavesOfType('canvas').map((leaf) => leaf.view).find((v) => v && v.canvas);
   const graph = GRAPH_TYPES.map((type) => app.workspace.getLeavesOfType(type))
     .reduce((all, leaves) => all.concat(leaves), [])
     .map((leaf) => leaf.view)
@@ -55,24 +54,6 @@ export function compatibility(app) {
       without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
     },
     {
-      what: 'Where a canvas is looking, for its minimap',
-      ok: has(() => {
-        const leaf = app.workspace.getLeavesOfType('canvas')[0];
-        const canvas = leaf && leaf.view && leaf.view.canvas;
-        return !canvas || typeof canvas.getViewportBBox === 'function' || typeof canvas.zoom === 'number';
-      }),
-      without: 'the minimap shows the cards but not the part on screen',
-    },
-    {
-      what: 'Moving a canvas’s view, for its minimap',
-      ok: has(() => {
-        const leaf = app.workspace.getLeavesOfType('canvas')[0];
-        const canvas = leaf && leaf.view && leaf.view.canvas;
-        return !canvas || typeof canvas.setViewport === 'function' || typeof canvas.zoomToBbox === 'function';
-      }),
-      without: 'pressing on the minimap doesn’t go there',
-    },
-    {
       what: 'Listing tags, for a map of a tag',
       ok: has(() => typeof app.metadataCache.getTags === 'function'),
       without: 'tags are gathered from each note instead, a little slower',
@@ -81,50 +62,6 @@ export function compatibility(app) {
       what: 'Knowing whether Canvas is switched on',
       ok: has(() => typeof app.internalPlugins.getEnabledPluginById === 'function'),
       without: 'New canvas is always offered',
-    },
-    {
-      what: 'Canvas legend counts, and centred text',
-      ok: open ? has(() => open.canvas.nodes instanceof Map && typeof open.canvas.getData === 'function') : null,
-      without: 'the legend reads the saved file, and text can’t be centred',
-      pending: 'Checked while a canvas is open.',
-    },
-    {
-      what: 'Folding branches on a canvas, and its outline',
-      ok: open
-        ? has(() => {
-            const c = open.canvas;
-            const node = c.nodes.values().next().value;
-            return (
-              c.edges instanceof Map &&
-              typeof c.select === 'function' &&
-              typeof c.deselect === 'function' &&
-              typeof c.zoomToSelection === 'function' &&
-              (!node || (typeof node.getBBox === 'function' && typeof node.moveAndResize === 'function')) &&
-              Array.from(c.edges.values()).every((e) => typeof e.render === 'function' && e.from && e.to)
-            );
-          })
-        : null,
-      without: 'arrows to tucked cards aren’t drawn to their fold, and a box dragged round a fold can take its cards',
-      pending: 'Checked while a canvas is open.',
-    },
-    {
-      what: 'Arrow styles on a canvas',
-      ok: open
-        ? has(() => {
-            const edge = open.canvas.edges.values().next().value;
-            if (!edge) return true;
-            const proto = Object.getPrototypeOf(edge);
-            return (
-              typeof proto.updatePath === 'function' &&
-              typeof proto.getCenter === 'function' &&
-              typeof proto.getBBox === 'function' &&
-              !!edge.path &&
-              !!edge.path.display
-            );
-          })
-        : null,
-      without: 'arrows are drawn as the canvas draws them',
-      pending: 'Checked while a canvas is open.',
     },
     {
       what: 'Graph links through the notes between',

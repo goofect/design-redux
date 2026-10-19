@@ -7,7 +7,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile, TFolder } from 'obsidian';
-import { actionsOn, addActionEntries, MINDMAP_HANDLERS, setMindMapContext } from '../core/078-actions.js';
+import { actionsOn, addActionEntries, setMindMapContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById, treeModel, walk } from '../tree/400-tree-model.js';
@@ -80,9 +80,12 @@ export class MindMaps extends Feature {
       { key: 'mindmapVaultMap', showIf: 'mindmaps', name: 'Map a folder or tag', desc: 'A folder’s menu, or a command, makes a mind map of its notes: folders or narrower tags as branches, links between notes as relations.' },
       { key: 'mindmapMinimap', showIf: 'mindmaps', name: 'Minimap', desc: 'The whole map small in the corner while it doesn’t all fit, the part on screen outlined. Press it to go there.' },
       { key: 'mindmapPresent', showIf: 'mindmaps', name: 'Present a map', desc: 'Step through a map like a talk: one node at a time, the rest faded back, a trail at the foot. Arrow keys or Space to move, R to reveal nodes as you reach them, O for the whole map, S for a spotlight, N for the speaker’s notes, Escape to leave. Nothing is changed.' },
+      { key: 'presentDimLevel', type: 'number', showIf: 'mindmapPresent', name: 'How faint the other nodes are', desc: 'From 0 (gone) to 1 (as they are).' },
       { key: 'mindmapPresentSpotlight', showIf: 'mindmapPresent', name: 'Start with the spotlight on', desc: 'All but the node in hand darkened. S switches it while presenting.' },
       { key: 'mindmapPresentNotes', showIf: 'mindmapPresent', name: 'Speaker’s notes', desc: 'A node’s details — the lines after its first — shown under the trail as its notes, and kept off its card while presenting. N switches them.' },
       { key: 'mindmapAlbumMap', showIf: 'mindmaps', name: 'A collection’s map by parent', desc: 'A collection’s menu makes a mind map laid out by its notes’ parent property; while it’s open it follows the notes, and moving a note’s node can set its parent.' },
+      { key: 'albumMapAuto', showIf: 'mindmapAlbumMap', name: 'Collection maps follow their notes', desc: 'A collection’s map keeps current while it’s open: new notes get nodes under their parents, a changed parent moves a node, a note gone takes its node.' },
+      { key: 'albumMapWritesParent', type: 'dropdown', showIf: 'mindmapAlbumMap', name: 'Moving a node on a collection’s map', desc: 'Whether hanging a node from another sets its note’s parent property.', options: { ask: 'Ask each time', always: 'Always set the parent', never: 'Only change the map' } },
       { key: 'mindmapConvert', showIf: 'mindmaps', name: 'Convert maps', desc: 'Make a mind map of a canvas — its trees, folds, layouts and relations kept — of an OPML outline, a FreeMind map or a note’s headings; make a .mindmap file of a note’s map and back; export a map as a canvas, OPML, SVG, PNG or PDF.' },
       { key: 'mindmapTasks', showIf: 'mindmaps', name: 'Tasks', desc: 'A node can be a task, written - [ ] in the note: a box to tick, a due date typed as “tomorrow” or “+2w”, a status. A node with tasks below it shows how many are done; Show open tasks only dims the rest.' },
       { key: 'mindmapOtherViews', showIf: 'mindmaps', name: 'Show a map another way', desc: 'Show as… in the map’s bar: an outline to type into, a board by status or by tag with cards to drag between columns, a timeline of what’s due, or a table of the nodes and their attributes. Each changes the map itself.' },
@@ -95,7 +98,6 @@ export class MindMaps extends Feature {
       { key: 'mindmapRichNodes', showIf: 'mindmaps', name: 'Shapes, icons and images', desc: 'A node can take a shape — a box, a pill, a line under it, none — an icon before its title and an image over it; a map, a theme giving a shape to each level.' },
       { key: 'mindmapTheme', type: 'dropdown', showIf: 'mindmapRichNodes', name: 'Theme', desc: 'For a map without a theme of its own: Cards, boxes all through; Soft, pills; Lines, a box for the root and lines under the rest; Quiet, a pill, then lines, then text alone.', options: { cards: 'Cards', soft: 'Soft', lines: 'Lines', quiet: 'Quiet' } },
       { key: 'mindmapHistory', type: 'dropdown', showIf: 'mindmaps', name: 'Keep a map’s history', desc: 'Before a save a couple of minutes after the last, the map as it was is kept, to compare with or put back from Map history. How many to keep for each map.', options: { 0: 'None', 10: 'The last 10', 20: 'The last 20', 50: 'The last 50' } },
-      { key: 'mindmapKeepCanvasMaps', name: 'Keep making canvas maps', desc: 'Offer a canvas map beside the mind map when making a map of a folder, a tag, a collection by parent, or a note’s relationships. Off, new maps are mind maps; the canvases you have open and work as before, and Make a mind map of this canvas converts one.' },
       { key: 'mindmapPeek', showIf: 'mindmaps', name: 'Peek into a folded branch', desc: 'Pointing at its count, or Shift-Space, lists what it holds; picking one opens the way to it.' },
     ];
   }
@@ -175,12 +177,12 @@ export class MindMaps extends Feature {
       { id: 'mindmap-undo', name: 'Mind map: undo', icon: 'undo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canUndo, run: (ctx) => ctx.view.undoStep(false) },
       { id: 'mindmap-redo', name: 'Mind map: redo', icon: 'redo-2', on: 'mindmap', menu: false, when: (ctx) => ctx.view.undo.canRedo, run: (ctx) => ctx.view.undoStep(true) },
       { id: 'open-note-as-mind-map', name: 'Open as mind map', icon: 'network', on: 'note', menu: false, when: (ctx) => this.enabled && isMindMapNote(this.app, ctx.file), run: () => this.openAsMap(this.app.workspace.activeLeaf) },
-    ];
+    ].concat(mapCommands());
   }
 
   register() {
     const ws = this.app.workspace;
-    // The mind map in use, for its own actions and for canvas actions that act on it too.
+    // The mind map in use, for its actions.
     setMindMapContext(() => {
       const leaf = this.enabled ? this.app.workspace.activeLeaf : null;
       const view = leaf && leaf.view instanceof MindMapView ? leaf.view : null;
@@ -188,7 +190,6 @@ export class MindMaps extends Feature {
       return { view, file: view.file, model: view.model, node: view.selected ? nodeById(view.model, view.selected) : null, from: 'palette' };
     });
     this.plugin.register(() => setMindMapContext(null));
-    registerMindMapHandlers();
     if (typeof this.registerEmbeds === 'function') this.registerEmbeds();
     if (typeof this.patchOpenFile === 'function') this.patchOpenFile();
     // A folder's menu: a mind map of it.
@@ -394,8 +395,86 @@ export class MindMaps extends Feature {
 
 MindMaps.settingKey = 'mindmaps';
 
-/** What the canvas's commands do on a mind map: the same ids, so their hotkeys work on either. */
-export function registerMindMapHandlers() {
+/*
+ * Commands kept from canvas maps, under their ids so the hotkeys on
+ * them still work: each now acts on the mind map in use.
+ */
+const MAP_COMMAND_NAMES = {
+  'canvas-quick-add': 'Mind map: add a node under the selected one',
+  'canvas-add-child-card': 'Mind map: add a child node',
+  'canvas-add-sibling-card': 'Mind map: add a node beside the selected one',
+  'canvas-add-parent-card': 'Mind map: add a node above the selected one',
+  'fold-canvas-branch': 'Mind map: fold or unfold the selected branch',
+  'fold-every-canvas-branch': 'Mind map: fold every branch',
+  'unfold-canvas-everything': 'Mind map: unfold everything',
+  'duplicate-canvas-branch': 'Mind map: duplicate the selected branch',
+  'canvas-zoom-to-branch': 'Mind map: zoom to the selected branch',
+  'fit-canvas-cards': 'Mind map: fit the map to the view',
+  'canvas-layout-choose': 'Mind map: lay out the selected branch…',
+  'canvas-layout-everything': 'Mind map: lay out the whole map…',
+  'toggle-canvas-legend': 'Mind map: show or hide the legend',
+  'canvas-toggle-keep-in-place': 'Mind map: pin the selected node where it is, or not',
+  'canvas-view-back': 'Mind map: back to where the map was looking',
+  'canvas-map-tidy': 'Mind map: put every node back in its place',
+  'tidy-canvas-branch': 'Mind map: put the selected branch back in its place',
+  'arrange-canvas-row': 'Mind map: lay the selected node’s children out in a row',
+  'arrange-canvas-column': 'Mind map: lay the selected node’s children out in a column',
+  'arrange-canvas-left': 'Mind map: line up the selected node’s children (left)',
+  'arrange-canvas-center': 'Mind map: line up the selected node’s children (centre)',
+  'arrange-canvas-right': 'Mind map: line up the selected node’s children (right)',
+  'arrange-canvas-top': 'Mind map: line up the selected node’s children (top)',
+  'arrange-canvas-middle': 'Mind map: line up the selected node’s children (middle)',
+  'arrange-canvas-bottom': 'Mind map: line up the selected node’s children (bottom)',
+  'arrange-canvas-space-across': 'Mind map: space the selected node’s children across',
+  'arrange-canvas-space-down': 'Mind map: space the selected node’s children down',
+  'canvas-spread-overlaps': 'Mind map: spread out nodes moved by hand',
+  'canvas-name-relationship': 'Mind map: name a relation of the selected node…',
+  'canvas-state-proposition': 'Mind map: state a relation of the selected node as a proposition…',
+  'canvas-reverse-relationship': 'Mind map: reverse a relation of the selected node…',
+  'canvas-relation-none': 'Mind map: take the meaning off a relation of the selected node…',
+  'canvas-clear-part': 'Mind map: take the selected node’s part in the argument off',
+  'canvas-branch-to-note': 'Mind map: make a note of the selected branch',
+  'canvas-outline-to-branch': 'Mind map: make nodes from the selected node’s note',
+  'check-canvas': 'Mind map: look the map over',
+  'canvas-keep-snapshot': 'Mind map: keep a snapshot to compare with later',
+  'canvas-compare': 'Mind map: compare with…',
+  'canvas-compare-branches': 'Mind map: compare the selected branch with…',
+  'canvas-compare-done': 'Mind map: stop comparing',
+  'refresh-album-map': 'Mind map: bring this collection’s map up to date',
+  'add-left-out-note': 'Mind map: put a left-out note back on the map',
+  'find-canvas-card': 'Mind map: find a node',
+  'focus-canvas-branch': 'Mind map: focus on the selected branch',
+  'focus-canvas-near': 'Mind map: focus on the selected node’s neighbourhood',
+  'knowledge-canvas-write': 'Mind map: write its relations into its notes',
+  'knowledge-canvas-draw': 'Mind map: draw its notes’ relationships',
+  'present-map': 'Present this map',
+  'present-next': 'Presentation: next node',
+  'present-back': 'Presentation: node before',
+  'present-exit': 'Presentation: leave',
+  'canvas-promote-card': 'Mind map: move the selected node out a level',
+  'canvas-demote-card': 'Mind map: move the selected node under the one before it',
+  'canvas-card-earlier': 'Mind map: move the selected node earlier',
+  'canvas-card-later': 'Mind map: move the selected node later',
+};
+
+/* Kept for their ids' sake, never in the palette. */
+const MENU_ONLY = /^(canvas-make-|canvas-clear-part$|canvas-relation-none$|focus-canvas-near$)/;
+
+/** The commands kept from canvas maps, as the mind map's own actions. */
+export function mapCommands() {
+  const handlers = mapHandlers();
+  return Object.keys(handlers).map((id) => {
+    const h = handlers[id];
+    const role = /^canvas-(make|add)-([a-z-]+)$/.exec(id);
+    const name = MAP_COMMAND_NAMES[id] || (role && NODE_ROLES[role[2]] ? `Mind map: ${role[1] === 'make' ? 'make the selected node a' : 'answer the selected node with a'} ${NODE_ROLES[role[2]].name.toLowerCase()}` : id);
+    // Those that were menu entries only on a canvas stay off the palette here too.
+    const palette = !MENU_ONLY.test(id);
+    return { id, name, on: 'mindmap', menu: false, palette, when: (ctx) => !h.when || h.when(ctx), run: (ctx) => h.run(ctx) };
+  });
+}
+
+/** What each kept command does on the mind map in use: id -> { when(ctx), run(ctx) }. */
+export function mapHandlers() {
   const node = (ctx) => ctx.node || ctx.model.root;
   const addThen = (make) => (ctx) => {
     const p = ctx.view.apply(make(ctx));
@@ -473,5 +552,5 @@ export function registerMindMapHandlers() {
   handlers['canvas-demote-card'] = { when: notRoot, run: (ctx) => ctx.view.apply(indentNode(ctx.model, ctx.node.id)) };
   handlers['canvas-card-earlier'] = { when: notRoot, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, -1)) };
   handlers['canvas-card-later'] = { when: notRoot, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) };
-  Object.keys(handlers).forEach((id) => MINDMAP_HANDLERS.set(id, handlers[id]));
+  return handlers;
 }

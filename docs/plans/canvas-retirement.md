@@ -1,5 +1,15 @@
 # What a later major release could delete
 
+**Done in 3.0.** `src/canvas/` and its tests are gone; diagnostics moved to
+`plugin/355-diagnostics.js`; the canvas command ids a mind map answers to
+are its own commands now (`mapCommands()`, `mindmap/420`); retired setting
+keys go in migration step 13 (`RETIRED_CANVAS_KEYS`). Unlike the plan:
+`core/079` stays, slimmed to the few asks of a plain canvas (the strip's
+count, the panel's picked card, a study highlight as a card);
+`canvasRelationTypes` and `canvasRelationNames` stay, since mind maps and
+Knowledge share them, and their editor moved to Knowledge's settings; the
+Mapping workspace mode is "Maps" and opens the latest mind map.
+
 Written at M7 of the mind-map plan (`docs/plans/mindmap.md`), when new maps
 became mind maps. Canvas maps stay through 2.x; this is what the release that
 stops offering them (step 5, "Retire") could take out, and how big it is.
@@ -31,7 +41,7 @@ with them; `tests/snapshots/internals*` shrinks to what's left.
   Copy diagnostics command and the error capture for bug reports. The M7
   plan said to remove the module as canvas-internals diagnostics; it's more
   than that, so it stays.
-- `MINDMAP_HANDLERS` (`mindmap/420`): the canvas command ids a mind map
+- `mapHandlers()` (`mindmap/420`, was `MINDMAP_HANDLERS`): the canvas command ids a mind map
   answers to, so their hotkeys keep working.
 
 ## To do in that release

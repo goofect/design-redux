@@ -11,7 +11,7 @@
 /* them, the library's check. The notes stay plain Obsidian notes.     */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Menu, Notice, setIcon, TFolder } from 'obsidian';
+import { FuzzySuggestModal, Menu, Notice, setIcon, Setting, TFolder } from 'obsidian';
 import { relationTypes } from '../core/020-constants.js';
 import { drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
@@ -212,13 +212,24 @@ export class RelationsSection extends PanelSection {
   }
 }
 
+/* A kind of relationship's colours and categories, as its settings offer them. */
+export const RELATION_COLORS = { '': 'No colour', 1: 'Red', 2: 'Orange', 3: 'Yellow', 4: 'Green', 5: 'Cyan', 6: 'Purple' };
+export const RELATION_CATEGORIES = { hierarchy: 'Hierarchy', association: 'Association' };
+
 export class Knowledge extends Feature {
   settingsSchema() {
     return [
       {
         key: 'knowledge',
         name: 'Relationships between notes',
-        desc: 'A note’s relationships kept as its own properties, one for each kind of relationship set for canvas arrows (and the graph’s parent, as what it sits under). An explorer shows any note’s, both ways; a canvas can be drawn from them, or write its arrows into them; the library’s check looks them over.',
+        desc: 'A note’s relationships kept as its own properties, one for each kind of relationship (and the graph’s parent, as what it sits under). An explorer shows any note’s, both ways; a mind map can be drawn from them, or write its relations into them; the library’s check looks them over.',
+      },
+      {
+        key: 'canvasRelationTypes',
+        type: 'custom',
+        showIf: 'knowledge',
+        name: 'Kinds of relationship',
+        render: (containerEl) => this.renderTypes(containerEl),
       },
       {
         key: 'panelRelationships',
@@ -246,12 +257,9 @@ export class Knowledge extends Feature {
       { id: 'knowledge-child', name: 'Create a concept under this one…', menu: 'Create a child concept…', icon: 'corner-down-right', on: 'note', when: on, run: (ctx) => this.createConcept(ctx.file) },
       { id: 'knowledge-move', name: 'Move this concept under another…', menu: 'Move under another concept…', icon: 'move-up-right', on: 'note', when: on, run: (ctx) => this.askMove(ctx.file) },
       { id: 'knowledge-broader', name: 'Find what this concept comes under…', menu: 'Find broader concepts…', icon: 'arrow-up-to-line', on: 'note', when: (ctx) => on(ctx) && up(ctx), run: (ctx) => this.chooseBroader(ctx.file) },
-      { id: 'knowledge-in-canvas', name: 'Open this note in a canvas', menu: 'Open in canvas', icon: 'layout-dashboard', on: 'note', when: (ctx) => on(ctx) && ctx.from !== 'canvas', run: (ctx) => this.openInCanvas(ctx.file) },
       { id: 'knowledge-in-album', name: 'Open this note’s collection', menu: 'Open in collection', icon: 'disc', on: 'note', when: on, run: (ctx) => this.openInAlbum(ctx.file) },
       { id: 'knowledge-map', name: 'Map this note’s relationships', menu: 'Map its relationships', icon: 'network', on: 'note', when: on, run: (ctx) => this.map(ctx.file) },
       { id: 'knowledge-create', name: 'Create a concept…', menu: false, icon: 'file-plus', on: 'app', when: () => this.enabled, run: () => this.createConcept(null) },
-      { id: 'knowledge-canvas-write', name: 'Write this canvas’s relationships into its notes', menu: false, icon: 'file-input', on: 'canvas', when: () => this.enabled, run: (ctx) => this.writeFromCanvas(ctx.view) },
-      { id: 'knowledge-canvas-draw', name: 'Draw its notes’ relationships on this canvas', menu: false, icon: 'git-branch-plus', on: 'canvas', when: () => this.enabled, run: (ctx) => this.drawOnCanvas(ctx.view) },
     ];
   }
 
@@ -524,7 +532,69 @@ export class Knowledge extends Feature {
     return out;
   }
 
-  /* -- canvas, both ways: in 326-canvas-relations (KnowledgeCanvas) -- */
+  /** The settings' list of kinds: a name, its reading the other way, hierarchy or association, a line and a colour each, and one to add. */
+  renderTypes(containerEl) {
+    const doc = containerEl.ownerDocument;
+    const block = containerEl.appendChild(doc.createElement('div'));
+    block.className = 'dr-relation-types';
+    const save = (list) => {
+      this.settings.canvasRelationTypes = list;
+      this.plugin.saveSettings();
+    };
+    const draw = () => {
+      block.empty();
+      const list = relationTypes(this.settings).map((t) => Object.assign({}, t));
+      new Setting(block)
+        .setName('Kinds of relationship')
+        .setDesc('Each kept as a property of the notes it relates, and offered on a mind map’s relations. Hierarchy is what a note sits under; association, alongside. Each draws its line its own way.')
+        .setHeading();
+      list.forEach((type, i) => {
+        const row = new Setting(block).setClass('dr-relation-type');
+        row.addText((t) => t.setValue(type.name).setPlaceholder('Name').onChange((v) => {
+          list[i].name = v.trim();
+          save(list);
+        }));
+        row.addText((t) => t.setValue(type.inverse || '').setPlaceholder('The other way').onChange((v) => {
+          list[i].inverse = v.trim();
+          save(list);
+        }));
+        row.addDropdown((d) => d.addOptions(RELATION_CATEGORIES).setValue(type.category === 'hierarchy' ? 'hierarchy' : 'association').onChange((v) => {
+          list[i].category = v;
+          save(list);
+        }));
+        row.addDropdown((d) => d.addOptions({ solid: 'Solid', dashed: 'Dashed', dotted: 'Dotted' }).setValue(type.line || 'solid').onChange((v) => {
+          list[i].line = v;
+          save(list);
+        }));
+        row.addDropdown((d) => d.addOptions(RELATION_COLORS).setValue(String(type.color || '')).onChange((v) => {
+          list[i].color = v;
+          save(list);
+        }));
+        row.addExtraButton((b) => b.setIcon('trash-2').setTooltip('Remove').onClick(() => {
+          list.splice(i, 1);
+          save(list.length ? list : [{ name: 'relates to', inverse: 'relates to', category: 'association', line: 'solid', color: '' }]);
+          draw();
+        }));
+      });
+      new Setting(block).addButton((b) => b.setButtonText('Add a kind').onClick(() => {
+        list.push({ name: 'new relationship', inverse: '', category: 'association', line: 'solid', color: '' });
+        save(list);
+        draw();
+      })).addExtraButton((b) => b.setIcon('rotate-ccw').setTooltip('Back to the kinds it starts with').onClick(() => {
+        save([]);
+        draw();
+      }));
+    };
+    draw();
+    return block;
+  }
+
+  /** A note's relationships as a mind map of their own, opened (the mind maps' part, 441). */
+  async map(file) {
+    const made = file && typeof this.mapAsMindMap === 'function' ? await this.mapAsMindMap(file) : undefined;
+    if (made === undefined) new Notice('Switch mind maps on in settings to map a note’s relationships.');
+    return made || null;
+  }
 
   /** On a note's menu: its relationships. */
   addFileItems(menu, file, sectioned) {

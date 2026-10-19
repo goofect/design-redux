@@ -36,7 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'canvasLegends', 'canvasAlignments', 'canvasMapFiles', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews'];
 
 /* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
 export const MINDMAP_TWINS = [
@@ -186,6 +186,72 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.folderDefaults && typeof saved.folderDefaults === 'object') saved.propertySchemas = schemasFromDefaults(saved.folderDefaults, saved.propertySchemas);
     },
   },
+  {
+    // 3.0: canvas maps are gone. Their settings go with them; mind maps
+    // took their place in 2.x, with settings of their own carried over
+    // at step 11. Canvases themselves are untouched.
+    to: 13,
+    run(saved) {
+      RETIRED_CANVAS_KEYS.forEach((k) => delete saved[k]);
+    },
+  },
+];
+
+/* The settings canvas maps had, dropped at step 13. */
+export const RETIRED_CANVAS_KEYS = [
+        'mindmapKeepCanvasMaps',
+        'albumMapLayout',
+        'canvasPresent',
+        'presentCaption',
+        'canvasToolButtons',
+        'canvasTools',
+        'canvasLegend',
+        'canvasLegends',
+        'canvasTextAlign',
+        'canvasBranches',
+        'canvasCloseGaps',
+        'canvasTidy',
+        'canvasSelectBranch',
+        'canvasOutline',
+        'canvasFind',
+        'canvasFocus',
+        'canvasFocusSelect',
+        'canvasDuplicate',
+        'canvasAlignments',
+        'canvasArrange',
+        'canvasMaps',
+        'canvasMapFiles',
+        'canvasCardFacts',
+        'canvasCardChips',
+        'canvasColourBy',
+        'canvasMapToolbar',
+        'canvasToolbarItems',
+        'canvasMindMap',
+        'canvasMindMapPlace',
+        'canvasRelink',
+        'canvasRestructure',
+        'canvasBranchNote',
+        'canvasOutlineBranch',
+        'canvasOutlineSync',
+        'canvasOutlineNumbers',
+        'canvasLayouts',
+        'canvasRelations',
+        'canvasCheck',
+        'canvasVaultMap',
+        'canvasMinimap',
+        'canvasCompare',
+        'canvasArguments',
+        'canvasQuickAdd',
+        'canvasPasteLines',
+        'canvasBranchDrag',
+        'canvasPins',
+        'canvasViews',
+        'canvasDepth',
+        'canvasCardFit',
+        'canvasCardTitles',
+        'canvasArrows',
+        'canvasArrowShape',
+        'canvasArrowSides',
 ];
 
 export function movedPath(p, oldPath, newPath) {

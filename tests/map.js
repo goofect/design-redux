@@ -3,9 +3,9 @@
  * Where things are, worked out from src/ so it never goes stale.
  *
  *   node tests/map.js              a line per piece: heading, features (setting), suites that test it
- *   node tests/map.js canvas fold  only the pieces whose line has every word
+ *   node tests/map.js mindmap fold only the pieces whose line has every word
  *   node tests/map.js --who NAME   where NAME is declared, and the lines in each piece that use it
- *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 335 or 335-canvas-fold)
+ *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 420 or 420-mindmap-feature)
  *   node tests/map.js --areas      the areas (number ranges) and what each uses from the others, pieces
  *                                  that use each other, and uses that cross the layers
  *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
@@ -274,7 +274,7 @@ if (args[0] === '--deps') {
   const want = args[1] || '';
   const piece = pieces.find((p) => p.name === want || p.name.startsWith(`${want}-`));
   if (!piece) {
-    console.log('usage: node tests/map.js --deps PIECE   (e.g. 335 or 335-canvas-fold)');
+    console.log('usage: node tests/map.js --deps PIECE   (e.g. 420 or 420-mindmap-feature)');
     process.exit(1);
   }
   const from = new Map();
@@ -322,7 +322,6 @@ const AREAS = [
   { name: 'links', level: 2 },
   { name: 'editor', level: 2 },
   { name: 'bulk', level: 2 },
-  { name: 'canvas', level: 2 },
   { name: 'mindmap', level: 2 },
   { name: 'plugin', level: 3 },
 ];

@@ -46,7 +46,7 @@ export const SETTINGS_TABS = [
       { title: 'The note page', keys: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace'] },
       { title: 'Reading outline', keys: ['readingOutline', 'outlineWordCounts'] },
       { title: 'Study', keys: ['studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax'] },
-      { title: 'Relationships', keys: ['knowledge', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
+      { title: 'Relationships', keys: ['knowledge', 'canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'] },
       { title: 'Lists', keys: ['letterLists', 'romanLists'] },
       { title: 'Superscript and subscript', keys: ['scripts', 'scriptSyntax', 'autoOrdinals'] },
       { title: 'Properties', keys: ['propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces'] },
@@ -59,20 +59,8 @@ export const SETTINGS_TABS = [
     id: 'canvas',
     title: 'Maps',
     sections: [
-      { title: 'Maps', desc: 'For every map, mind map or canvas: what a new one is, and how far apart things are put.', keys: ['mindmapKeepCanvasMaps', 'mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing'] },
-      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'] },
-      {
-        title: 'Canvas maps',
-        keys: [
-          'canvasMaps', 'canvasMapToolbar', 'canvasToolbarItems', 'canvasMindMap', 'canvasMindMapPlace', 'canvasQuickAdd', 'canvasPasteLines', 'canvasRelink', 'canvasBranchDrag', 'canvasRestructure', 'canvasDuplicate',
-          'canvasBranches', 'canvasCloseGaps', 'canvasOutline', 'canvasOutlineSync', 'canvasOutlineNumbers', 'canvasBranchNote', 'canvasOutlineBranch', 'canvasVaultMap', 'albumMapAuto', 'albumMapWritesParent', 'albumMapLayout', 'canvasPresent', 'presentDimLevel', 'presentCaption',
-        ],
-      },
-      { title: 'Cards', keys: ['canvasTools', 'canvasToolButtons', 'canvasDepth', 'canvasColourBy', 'canvasCardFacts', 'canvasCardChips', 'canvasLegend', 'canvasCardTitles', 'canvasCardFit', 'canvasTextAlign'] },
-      { title: 'Arrows', keys: ['canvasArrows', 'canvasArrowShape', 'canvasArrowSides', 'canvasRelations', 'canvasRelationTypes', 'canvasArguments'] },
-      { title: 'Arrange', keys: ['canvasTidy', 'canvasLayouts', 'canvasPins', 'canvasArrange', 'canvasSelectBranch'] },
-      { title: 'Find and focus', keys: ['canvasFind', 'canvasViews', 'canvasMinimap', 'canvasFocus', 'canvasFocusSelect'] },
-      { title: 'Check', keys: ['canvasCheck', 'canvasCompare'] },
+      { title: 'Maps', desc: 'For every map: what a new one is, and how far apart things are put.', keys: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing'] },
+      { title: 'Mind maps', keys: ['mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'] },
     ],
   },
   {
@@ -107,8 +95,7 @@ export const BASIC_SETTINGS = new Set([
   'look', 'gridDensity', 'artworkSize',
   'library', 'libraryLayout', 'homePath', 'defaultSort', 'searchNoteText', 'smartAlbums',
   'notePage', 'notePageShelves', 'readingHistory', 'knowledge',
-  'canvasMaps', 'canvasMapToolbar', 'canvasTools',
-  'workspaceModes', 'contextStrip', 'onePage',
+  'workspaceModes', 'contextStrip', 'onePage', 'mindmaps',
 ]);
 
 /**

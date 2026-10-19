@@ -7,6 +7,10 @@ each milestone did.
 
 ## 0. Where it stands
 
+Canvas maps were retired in 3.0 (`docs/plans/canvas-retirement.md`): the canvas area is
+gone, maps are mind maps, and `core/079` keeps only the asks of a plain canvas. What
+follows about canvas pieces is the record from before.
+
 ```text
 esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.0, phase 1)
 
