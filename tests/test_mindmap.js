@@ -954,6 +954,38 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(view.text, text, 'nothing written');
   });
 
+  await t('present with a spotlight and speaker’s notes: the details under the trail, off the card; S and N switch them; nothing left after', async () => {
+    const view = await open('- r ^r\n\t- a ^a\n\t  Say the numbers first.\n\t- b ^b\n');
+    view.app = { workspace: { activeLeaf: view.leaf } };
+    const press = (key) => window.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+    const q = (sel) => view.contentEl.querySelector(sel);
+    view.present(null);
+    assert.ok(!q('.dr-present-spot') && !q('.dr-present-notes'), 'the spotlight off by default; the root has no details');
+    assert.ok(view.root.hasClass('dr-present-noted'));
+    press('ArrowRight');
+    assert.strictEqual(q('.dr-present-notes').textContent, 'Say the numbers first.');
+    press('s');
+    const spot = q('.dr-present-spot');
+    assert.ok(spot && /px$/.test(spot.style.getPropertyValue('--dr-spot-r')));
+    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-present-mode')).some((e) => e.textContent === 'Spotlight'));
+    press('o');
+    assert.ok(!q('.dr-present-spot'), 'none over the whole map');
+    press('o');
+    assert.ok(q('.dr-present-spot'));
+    press('n');
+    assert.ok(!q('.dr-present-notes') && !view.root.hasClass('dr-present-noted'));
+    view.presentNotes();
+    assert.ok(q('.dr-present-notes'), 'the command switches them too');
+    press('Escape');
+    assert.ok(!q('.dr-present-spot, .dr-present-notes') && !view.root.hasClass('dr-present-noted'));
+    // Started with the spotlight on.
+    plugin.settings.mindmapPresentSpotlight = true;
+    view.present(null);
+    assert.ok(q('.dr-present-spot'));
+    view.endPresent();
+    plugin.settings.mindmapPresentSpotlight = false;
+  });
+
   // A collection in a vault of its own: notes with properties, Obsidian's metadata, and a notes service writing them.
   const albumVault = (count, parentOf, extra) => {
     const TFolder = obsidian.TFolder;

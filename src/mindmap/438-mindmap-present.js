@@ -6,7 +6,9 @@
 /* the rest faded back — or hidden till reached — and a trail at the   */
 /* foot says where you are. Nothing can be changed while it runs, and  */
 /* leaving puts back the view and the selection: a presentation never  */
-/* changes the map.                                                    */
+/* changes the map. A spotlight can darken all but the node in hand,  */
+/* and a node's details, kept off its card, are the speaker's notes   */
+/* under the trail.                                                    */
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
@@ -15,7 +17,7 @@ import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { mapPresentation } from '../tree/412-tree-present.js';
 import { MindMapView } from './421-mindmap-view.js';
-import { boundsOfBoxes, fitCamera, nodeLabel } from './423-mindmap-scene.js';
+import { boundsOfBoxes, fitCamera, nodeLabel, nodeParts } from './423-mindmap-scene.js';
 
 class MindMapPresent {
   /** From the root, or from a node's branch. */
@@ -27,10 +29,10 @@ class MindMapPresent {
       new Notice('Nothing to present: this map is empty.');
       return null;
     }
-    const p = { order, at: 0, reveal: false, overview: false, camera: this.camera, selected: this.selected };
+    const settings = this.plugin ? this.plugin.settings : {};
+    const p = { order, at: 0, reveal: false, overview: false, camera: this.camera, selected: this.selected, spot: settings.mindmapPresentSpotlight === true, notes: settings.mindmapPresentNotes !== false };
     this.presenting = p;
     this.selected = null;
-    const settings = this.plugin ? this.plugin.settings : {};
     const dim = Number(settings.presentDimLevel);
     this.root.addClass('dr-presenting');
     this.root.style.setProperty('--dr-present-dim', String(dim >= 0 && dim <= 1 ? dim : 0.15));
@@ -68,6 +70,10 @@ class MindMapPresent {
       R: () => this.presentReveal(),
       o: () => this.presentOverview(),
       O: () => this.presentOverview(),
+      s: () => this.presentSpotlight(),
+      S: () => this.presentSpotlight(),
+      n: () => this.presentNotes(),
+      N: () => this.presentNotes(),
       Escape: () => this.endPresent(),
     };
     evt.preventDefault();
@@ -90,6 +96,22 @@ class MindMapPresent {
     this.showStep(false);
   }
 
+  /** All but the node in hand darkened, or not. */
+  presentSpotlight() {
+    const p = this.presenting;
+    if (!p) return;
+    p.spot = !p.spot;
+    this.showStep(false);
+  }
+
+  /** The speaker's notes under the trail, or not. */
+  presentNotes() {
+    const p = this.presenting;
+    if (!p) return;
+    p.notes = !p.notes;
+    this.showStep(false);
+  }
+
   /** The whole map, and back to the node. */
   presentOverview() {
     const p = this.presenting;
@@ -98,6 +120,7 @@ class MindMapPresent {
     if (!p.overview) return this.showStep(true);
     this.fit(true);
     this.draw();
+    this.drawSpot(p);
   }
 
   /** What a presentation marks on the nodes now: { now, lit, seen, reveal }, or null. */
@@ -122,6 +145,26 @@ class MindMapPresent {
     }
     this.draw();
     this.drawTrail(p);
+    this.drawSpot(p);
+  }
+
+  /** The spotlight round the node in hand, where the camera has it: none in the overview. */
+  drawSpot(p) {
+    const box = !p.overview && this.scene && this.scene.boxes.get(p.order[p.at].id);
+    if (!p.spot || !box || !this.renderer) {
+      if (p.spotEl) p.spotEl.remove();
+      p.spotEl = null;
+      return;
+    }
+    if (!p.spotEl) p.spotEl = this.root.createDiv({ cls: 'dr-present-spot' });
+    const { width, height } = this.renderer.size();
+    const zoom = this.camera.zoom;
+    const x = width / 2 + (box.x + box.width / 2 - this.camera.x) * zoom;
+    const y = height / 2 + (box.y + box.height / 2 - this.camera.y) * zoom;
+    const r = (Math.hypot(box.width, box.height) / 2) * zoom + 24;
+    p.spotEl.style.setProperty('--dr-spot-x', `${Math.round(x)}px`);
+    p.spotEl.style.setProperty('--dr-spot-y', `${Math.round(y)}px`);
+    p.spotEl.style.setProperty('--dr-spot-r', `${Math.round(r)}px`);
   }
 
   /** Root › Branch › Node · 7 of 23, each name a step back to it. */
@@ -142,9 +185,15 @@ class MindMapPresent {
     });
     trail.createSpan({ cls: 'dr-present-count', text: `${p.at + 1} of ${p.order.length}` });
     if (p.reveal) trail.createSpan({ cls: 'dr-present-mode', text: 'Reveal' });
+    if (p.spot) trail.createSpan({ cls: 'dr-present-mode', text: 'Spotlight' });
     const exit = trail.createSpan({ cls: 'clickable-icon dr-present-exit', text: '×' });
     asButton(exit, 'Leave the presentation');
     onActivate(exit, () => this.endPresent());
+    // The node's details are the speaker's: under the trail, and off the cards while notes show.
+    const n = nodeById(this.model, step.id);
+    const said = n ? nodeParts(n).details : '';
+    this.root.toggleClass('dr-present-noted', !!p.notes);
+    if (p.notes && said) bar.createDiv({ cls: 'dr-present-notes', text: said });
   }
 
   /** Back to the map as it was: the view and the selection. */
@@ -154,7 +203,9 @@ class MindMapPresent {
     this.presenting = null;
     if (p.win) p.win.removeEventListener('keydown', p.keys, true);
     if (p.bar) p.bar.remove();
+    if (p.spotEl) p.spotEl.remove();
     this.root.removeClass('dr-presenting');
+    this.root.removeClass('dr-present-noted');
     this.root.style.removeProperty('--dr-present-dim');
     this.camera = p.camera;
     this.selected = p.selected && nodeById(this.model, p.selected) ? p.selected : null;

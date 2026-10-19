@@ -9766,6 +9766,31 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   margin-inline-start: auto;
 }
 
+/* The speaker's notes: the node's details, under the trail and off its card. */
+.dr-present-notes {
+  max-height: 30vh;
+  margin-top: var(--dr-space-2);
+  padding-top: var(--dr-space-2);
+  overflow-y: auto;
+  border-top: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.dr-mindmap.dr-present-noted .dr-mindmap-details {
+  visibility: hidden;
+}
+
+/* All but the node in hand darkened. */
+.dr-present-spot {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  background: radial-gradient(circle at var(--dr-spot-x, 50%) var(--dr-spot-y, 50%), transparent var(--dr-spot-r, 120px), rgba(0, 0, 0, 0.62) calc(var(--dr-spot-r, 120px) + 48px));
+}
+
 @media (any-hover: hover) {
   .dr-present-crumb:not(.is-now):hover {
     color: var(--text-accent);
