@@ -401,6 +401,9 @@ export const DEFAULTS = {
   propertyOptions: {},
   propertySchemaMarks: true,
   propertyValueChips: true,
+  // { notePath: [{ at, changes: { key: [before, after, how] } }] } — the last changes written to each note.
+  propertyHistory: {},
+  propertyHistoryLimit: 20,
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
   settingsVersion: 12,
   graphProperties: true,

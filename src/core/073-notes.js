@@ -40,6 +40,14 @@ export function noteProps(app, file) {
 export class Notes {
   constructor(plugin) {
     this.plugin = plugin;
+    // Told of each write that changed something: (record).
+    this.watchers = new Set();
+  }
+
+  /** `fn(record)` after each write that changes a note's properties; returns what stops it. */
+  watch(fn) {
+    this.watchers.add(fn);
+    return () => this.watchers.delete(fn);
   }
 
   get app() {
@@ -88,6 +96,7 @@ export class Notes {
     // Written, though nothing was asked of the change (as a stand-in for Obsidian may do): nothing changed.
     if (!record) record = { file, before: {}, after: {}, order: [] };
     if (opts.undo && Object.keys(record.before).length) this.offerUndo(opts.undo, [record], opts.onUndo);
+    if (Object.keys(record.before).length) this.watchers.forEach((fn) => fn(record));
     return record;
   }
 

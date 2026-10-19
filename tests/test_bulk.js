@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1994,6 +1994,43 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.deepStrictEqual(['x', 'y', 'z', 'w', 'q'].map((n) => fmOf(`Notes/${n}.md`).state), ['Done', 'Done', 'Done', ['Done', 'In progress'], 'In progres']);
     await bulk.undo();
     assert.deepStrictEqual(['y', 'z'].map((n) => fmOf(`Notes/${n}.md`).state), ['done ', 'done.']);
+  });
+
+  await t('property history: each write’s changes kept, the last so many a note; Put back restores one value, the others left as they are', async () => {
+    assert.deepStrictEqual(R.diffProps({ a: 1, b: [1], c: 'x' }, { a: 1, b: [1, 2], d: true }), { b: [[1], [1, 2], 'changed'], c: ['x', null, 'removed'], d: [null, true, 'added'] });
+    let h = {};
+    for (let k = 0; k < 5; k++) h = R.withEntry(h, 'n.md', { at: k, changes: { s: [k, k + 1, 'changed'] } }, 3);
+    assert.deepStrictEqual(h['n.md'].map((e) => e.at), [2, 3, 4]);
+    assert.strictEqual(R.withEntry(h, 'n.md', { at: 9, changes: {} }, 3), h, 'nothing changed, nothing kept');
+    const v = makeVault({ 'IR/a.md': note({ status: 'draft', year: 2001 }, 'Body\n') });
+    const { plugin } = makePlugin(v);
+    plugin.settings.propertyHistoryLimit = 2;
+    const history = new R.PropertyHistory(plugin);
+    plugin.features.push(history);
+    history.register();
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    const file = v.file('IR/a.md');
+    await plugin.notes.write(file, (fm) => { fm.status = 'review'; });
+    await plugin.notes.write(file, (fm) => { fm.status = 'done'; fm.year = 2002; });
+    await plugin.notes.write(file, (fm) => { fm.court = 'High'; });
+    await plugin.notes.write(file, (fm) => { fm.court = 'High'; }, {});
+    assert.deepStrictEqual(R.historyOf(plugin.settings.propertyHistory, 'IR/a.md').map((l) => `${l.key} ${l.how}`), ['court added', 'status changed', 'year changed'], 'the last 2 writes; one that changed nothing kept nothing');
+    // In the panel: newest first; Put back one value.
+    const [sec] = history.panelSections({ plugin });
+    sec.mount(document.body, file);
+    const lines = () => Array.from(sec.containerEl.querySelectorAll('.dr-history-line')).map((r) => `${r.querySelector('.dr-history-key').textContent}: ${r.querySelector('.dr-history-change').textContent}`);
+    assert.deepStrictEqual(lines(), ['court: added: High', 'status: review → done', 'year: 2001 → 2002']);
+    const record = await sec.putBack(R.historyOf(plugin.settings.propertyHistory, 'IR/a.md')[1]);
+    assert.deepStrictEqual(fmOf('IR/a.md'), { status: 'review', year: 2002, court: 'High' }, 'status back; year and court as they are');
+    await sec.putBack(R.historyOf(plugin.settings.propertyHistory, 'IR/a.md').find((l) => l.how === 'added'));
+    assert.ok(!('court' in fmOf('IR/a.md')), 'an added property put back: taken off');
+    await plugin.notes.undo([record]);
+    assert.strictEqual(fmOf('IR/a.md').status, 'done');
+    // Switched off: nothing more kept.
+    plugin.settings.propertyHistoryLimit = 0;
+    const before = JSON.stringify(plugin.settings.propertyHistory);
+    await plugin.notes.write(file, (fm) => { fm.status = 'x'; });
+    assert.strictEqual(JSON.stringify(plugin.settings.propertyHistory), before);
   });
 
   console.log(`\n${passed} passed`);

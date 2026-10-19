@@ -10921,3 +10921,49 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
+
+/* Property history in the note panel: a line for each change. */
+.dr-history-section.is-empty {
+  display: none;
+}
+
+.dr-history-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-history-what {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: var(--dr-space-2);
+}
+
+.dr-history-key {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-history-change {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-history-when {
+  flex: none;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-history-back {
+  flex: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
