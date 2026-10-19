@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal };\n');
+  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1336,7 +1336,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const { bulk, editing } = makePlugin(v);
     const cmds = Object.fromEntries(editing.commands().map((c) => [c.id, c]));
     assert.deepStrictEqual(Object.keys(cmds), ['add-properties-to-folders', 'rename-property-everywhere', 'merge-properties', 'rename-tag-everywhere',
-      'remove-properties-from-folders', 'rename-value-everywhere', 'change-property-type', 'find-missing-properties',
+      'remove-properties-from-folders', 'rename-value-everywhere', 'clean-up-property-values', 'change-property-type', 'find-missing-properties',
       'folder-default-properties', 'undo-bulk-change']);
     assert.strictEqual(cmds['undo-bulk-change'].check(), false);
     await bulk.addProperties([v.file('F/a.md')], [{ key: 'x', value: 1 }], false);
@@ -1951,6 +1951,49 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     Array.from(again.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Clear').click();
     await settle();
     assert.deepStrictEqual([plugin.settings.propertyOptions, then], [{}, 2]);
+  });
+
+  await t('Check against schemas: what falls short, by property, and Fix for the plain fixes — one step of Undo; Clean up values makes “Done”, “done ” and “done.” one', async () => {
+    const v = makeVault({
+      'Law/a.md': note({ status: 'closed.', year: '1999' }),
+      'Law/b.md': note({ status: 'Pending' }),
+      'Law/c.md': note({ status: 'Open', year: 2001 }),
+      'Law/d.md': '',
+      'Notes/x.md': note({ state: 'Done' }), 'Notes/y.md': note({ state: 'done ' }), 'Notes/z.md': note({ state: 'done.' }),
+      'Notes/w.md': note({ state: ['Done', 'In progress'] }), 'Notes/q.md': note({ state: 'In progres' }), 'Notes/r.md': note({ state: 'Later' }), 'Notes/s.md': note({ state: 'In progress' }),
+    });
+    const { plugin, bulk } = makePlugin(v);
+    plugin.settings.propertySchemas = { Law: [{ key: 'status', required: true, values: ['Open', 'Closed'], default: 'Open' }, { key: 'year', type: 'number' }] };
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    const check = new R.SchemaCheckModal(plugin, [v.folders.Law]);
+    check.open();
+    const lines = () => Array.from(check.summaryEl.querySelectorAll('.dr-bulk-line-text > span:first-child')).map((e) => e.textContent);
+    assert.deepStrictEqual(lines(), [
+      '“status” not among the values allowed in 2 notes; 1 can be put right.',
+      '“year” of another type in 1 note.',
+      '“status” missing in 1 note.',
+    ]);
+    assert.strictEqual(check.goButton.textContent, 'Fix 2 notes');
+    click(check.goButton);
+    await settle(150);
+    assert.deepStrictEqual([fmOf('Law/a.md'), fmOf('Law/b.md'), fmOf('Law/d.md')], [{ status: 'Closed', year: 1999 }, { status: 'Pending' }, { status: 'Open' }]);
+    await bulk.undo();
+    assert.deepStrictEqual([fmOf('Law/a.md'), fmOf('Law/d.md')], [{ status: 'closed.', year: '1999' }, {}], 'one step of Undo');
+    // Clean up values.
+    const clean = new R.CleanUpValuesModal(plugin, 'state');
+    clean.open();
+    const groups = () => Array.from(clean.listEl.querySelectorAll('.dr-cleanup-group')).map((g) => `${g.querySelector('select').value} ${g.querySelector('.dr-cleanup-others').textContent}`);
+    assert.deepStrictEqual(groups(), ['Done in place of “done ”, “done.”', 'In progress in place of “In progres”']);
+    // The second left as it is; the first merged.
+    const boxes = clean.listEl.querySelectorAll('input[type=checkbox]');
+    boxes[1].checked = false;
+    boxes[1].dispatchEvent(new window.Event('change'));
+    assert.strictEqual(clean.goButton.textContent, 'Merge 1 group');
+    click(clean.goButton);
+    await settle(150);
+    assert.deepStrictEqual(['x', 'y', 'z', 'w', 'q'].map((n) => fmOf(`Notes/${n}.md`).state), ['Done', 'Done', 'Done', ['Done', 'In progress'], 'In progres']);
+    await bulk.undo();
+    assert.deepStrictEqual(['y', 'z'].map((n) => fmOf(`Notes/${n}.md`).state), ['done ', 'done.']);
   });
 
   console.log(`\n${passed} passed`);

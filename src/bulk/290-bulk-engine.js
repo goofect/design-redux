@@ -14,6 +14,7 @@ import { byName } from '../core/030-helpers-art.js';
 import { noteTags } from '../core/040-helpers-sorting.js';
 import { bulkCount, renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { noteProps, sameValue } from '../core/073-notes.js';
+import { checkNote, fixFor, schemaFor } from '../core/086-property-schema.js';
 
 /* Property types whose value is a list. */
 export const LIST_TYPES = ['multitext', 'tags', 'aliases'];
@@ -1139,6 +1140,60 @@ export class BulkEdits {
     if (!record) return null;
     froms.forEach((from) => this.followRename({ value: [key, from, to] }));
     return record;
+  }
+
+  /** Groups of values that are one value written differently, each made the value it keeps, in every note and base: one step of Undo. */
+  async cleanUpValues(key, groups) {
+    const app = this.app;
+    const merges = groups.map((g) => ({ to: g.keep, froms: g.values.filter((v) => v !== g.keep) })).filter((m) => m.froms.length);
+    if (!merges.length) return null;
+    const record = await this.run(`Cleaning up “${key}”`, async (touch, step, rec) => {
+      const files = [];
+      merges.forEach((m) => m.froms.forEach((from) => this.planValueRename(key, from, m.to).files.forEach((f) => files.indexOf(f) === -1 && files.push(f))));
+      let done = 0;
+      for (const file of files) {
+        await touch(file, () => app.fileManager.processFrontMatter(file, (fm) => merges.forEach((m) => m.froms.forEach((from) => renameValueIn(fm, key, from, m.to)))));
+        step(++done, files.length);
+      }
+      rec.bases = [];
+      for (const m of merges) for (const from of m.froms) rec.bases = rec.bases.concat(await this.rewriteBases({ value: [key, from, m.to] }, touch));
+    });
+    if (!record) return null;
+    merges.forEach((m) => m.froms.forEach((from) => this.followRename({ value: [key, from, m.to] })));
+    return record;
+  }
+
+  /** What notes fall short of in their folders' schemas, put right where the fix is plain, in each note: one step of Undo. */
+  async fixSchemas(files) {
+    const fm = this.app.fileManager;
+    const schemas = this.plugin.settings.propertySchemas || {};
+    return this.run('Fixing properties', async (touch, step) => {
+      let done = 0;
+      for (const file of files) {
+        await touch(file, () =>
+          fm.processFrontMatter(file, (data) =>
+            checkNote(schemaFor(schemas, file), data).forEach((issue) => {
+              const fix = fixFor(issue);
+              if (fix) fix(data);
+            })
+          )
+        );
+        step(++done, files.length);
+      }
+    });
+  }
+
+  /** Each value a property takes across the vault, as notes write it, and how many notes: [[value, count]], most used first. */
+  valueCounts(key) {
+    const counts = new Map();
+    this.notesWithProperty(key).forEach((file) => {
+      const fm = this.frontmatterOf(file);
+      const have = keyLike(fm, key);
+      if (have === undefined) return;
+      const raw = fm[have];
+      new Set((Array.isArray(raw) ? raw : [raw]).filter((v) => v !== null && v !== undefined && v !== '').map(valueKey)).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1));
+    });
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }
 
   /** Take properties out of the notes. */

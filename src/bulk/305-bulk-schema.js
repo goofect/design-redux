@@ -15,11 +15,15 @@ import { Modal, Notice, setIcon } from 'obsidian';
 import { TYPE_LABELS } from '../core/020-constants.js';
 import { pageFolder } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { knownPropertyNames } from '../core/045-helpers-properties.js';
+import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { checkNote, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
-import { parseTypedValue, propertyType } from './290-bulk-engine.js';
+import { nearDuplicates } from '../core/088-property-options.js';
+import { bulkNotice, bulkTail, notesChanged, parseTypedValue, propertyType } from './290-bulk-engine.js';
+import { BulkModal } from './300-bulk-dialogs.js';
 
 /** A folder's key in the schemas: its path, or '/' for the vault. */
 export function schemaPath(folder) {
@@ -199,6 +203,148 @@ export class SchemaSection extends PanelSection {
   }
 }
 
+/* What each kind of issue says of the notes it's found in. */
+const KIND_TEXT = { missing: 'missing', empty: 'empty', type: 'of another type', value: 'not among the values allowed' };
+
+/** The notes in some folders checked against their schemas: what each falls short of, and Fix for every plain fix, one step of Undo. */
+export class SchemaCheckModal extends BulkModal {
+  constructor(plugin, targets) {
+    super(plugin);
+    (targets || []).forEach((t) => this.addTarget(t));
+    if (!this.targets.length) this.addTarget(plugin.app.vault.getRoot());
+    this.idleLabel = 'Fix';
+  }
+
+  onOpen() {
+    this.frame('Check against schemas');
+    this.targetsSection('Look in');
+    this.update();
+  }
+
+  /** Each note that falls short, with how: [{ file, issues }]. */
+  findings() {
+    const schemas = this.plugin.settings.propertySchemas || {};
+    return this.notes()
+      .map((file) => ({ file, issues: checkNote(schemaFor(schemas, file), noteProps(this.app, file)) }))
+      .filter((f) => f.issues.length);
+  }
+
+  update() {
+    if (!Object.keys(this.plugin.settings.propertySchemas || {}).length) {
+      return this.showSummary([{ icon: 'info', cls: 'is-muted', text: 'No folder has a schema yet: set one with Property schema for this folder….' }], null);
+    }
+    const found = this.findings();
+    if (!found.length) return this.showSummary([{ icon: 'check', text: 'Every note here is as its folder asks.' }], null);
+    // A line for each property and how it falls short, with its notes.
+    const lines = new Map();
+    found.forEach(({ file, issues }) =>
+      issues.forEach((i) => {
+        const id = `${i.key.toLowerCase()}|${i.kind}`;
+        if (!lines.has(id)) lines.set(id, { key: i.key, kind: i.kind, files: [], fixable: 0 });
+        const line = lines.get(id);
+        line.files.push(file);
+        if (i.fix) line.fixable++;
+      })
+    );
+    const out = Array.from(lines.values()).map((l) => ({
+      icon: l.fixable ? 'wrench' : 'alert-circle',
+      cls: l.fixable ? '' : 'is-muted',
+      text: `“${l.key}” ${KIND_TEXT[l.kind]} in ${bulkCount(l.files.length, 'note')}${l.fixable === l.files.length ? '' : l.fixable ? `; ${l.fixable} can be put right` : '; to be put right by hand'}.`,
+      notes: l.files,
+    }));
+    const fixable = found.filter((f) => f.issues.some((i) => i.fix)).map((f) => f.file);
+    this.showSummary(
+      out,
+      fixable.length
+        ? {
+            label: `Fix ${bulkCount(fixable.length, 'note')}`,
+            run: async () => {
+              const record = await this.bulk.fixSchemas(fixable);
+              if (record) bulkNotice(this.bulk, `Put right ${bulkCount(notesChanged(record), 'note')}.` + bulkTail(record), record);
+            },
+          }
+        : null
+    );
+  }
+}
+
+/** A property's values that are one value written differently, found, and each group made the value it keeps: one step of Undo. */
+export class CleanUpValuesModal extends BulkModal {
+  constructor(plugin, key) {
+    super(plugin);
+    this.key = key || '';
+    this.idleLabel = 'Merge';
+    this.skipped = new Set();
+    this.keeps = new Map();
+  }
+
+  onOpen() {
+    this.frame('Clean up values');
+    const section = this.section();
+    const key = this.field(section, 'Property', 'The property whose values to look through');
+    this.keyInput = key.input;
+    this.keyInput.value = this.key;
+    this.suggest(key.box, key.input, {
+      icon: 'tag',
+      source: () => knownPropertyNames(this.app),
+      onSelect: (v) => {
+        this.keyInput.value = v;
+        this.update();
+      },
+    });
+    this.keyInput.addEventListener('input', () => this.queueUpdate());
+    this.listEl = this.section('One value, written differently').createDiv({ cls: 'dr-cleanup-groups' });
+    this.update();
+  }
+
+  update() {
+    const key = this.keyInput.value.trim();
+    this.listEl.empty();
+    if (!key) return this.showSummary([{ icon: 'info', cls: 'is-muted', text: 'Name a property to look through its values.' }], null);
+    const groups = nearDuplicates(this.bulk.valueCounts(key));
+    if (!groups.length) return this.showSummary([{ icon: 'check', text: `No two of “${key}”’s values look like one value written differently.` }], null);
+    const chosen = [];
+    let notes = 0;
+    groups.forEach((g) => {
+      const id = g.values.map((v) => v.value).join('\u0000');
+      const keep = this.keeps.get(id) || g.keep;
+      const row = this.listEl.createDiv({ cls: 'dr-cleanup-group' });
+      const box = row.createEl('input', { type: 'checkbox' });
+      box.checked = !this.skipped.has(id);
+      box.setAttribute('aria-label', `Merge into “${keep}”`);
+      box.addEventListener('change', () => {
+        if (box.checked) this.skipped.delete(id);
+        else this.skipped.add(id);
+        this.update();
+      });
+      const pick = row.createEl('select', { cls: 'dropdown' });
+      pick.setAttribute('aria-label', 'The value to keep');
+      g.values.forEach((v) => (pick.createEl('option', { text: `${v.value} (${v.count})` }).value = v.value));
+      pick.value = keep;
+      pick.addEventListener('change', () => {
+        this.keeps.set(id, pick.value);
+        this.update();
+      });
+      row.createSpan({ cls: 'dr-cleanup-others', text: `in place of ${g.values.filter((v) => v.value !== keep).map((v) => `“${v.value}”`).join(', ')}` });
+      if (!box.checked) return;
+      chosen.push({ keep, values: g.values.map((v) => v.value) });
+      notes += g.values.filter((v) => v.value !== keep).reduce((n, v) => n + v.count, 0);
+    });
+    this.showSummary(
+      chosen.length ? [{ icon: 'git-merge', text: `${chosen.length === 1 ? 'One value' : `${chosen.length} values`} made one, in ${bulkCount(notes, 'note')}.` }] : [],
+      chosen.length
+        ? {
+            label: `Merge ${chosen.length === 1 ? '1 group' : `${chosen.length} groups`}`,
+            run: async () => {
+              const record = await this.bulk.cleanUpValues(key, chosen);
+              if (record) bulkNotice(this.bulk, `Cleaned up “${key}” in ${bulkCount(notesChanged(record), 'note')}.` + bulkTail(record), record);
+            },
+          }
+        : null
+    );
+  }
+}
+
 export class PropertySchemas extends Feature {
   settingsSchema() {
     return [
@@ -222,6 +368,13 @@ export class PropertySchemas extends Feature {
         name: 'Property schema for this folder…',
         icon: 'clipboard-check',
         run: () => this.openSchema(pageFolder(this.app)),
+      },
+      {
+        id: 'check-property-schemas',
+        name: 'Check notes against their schemas…',
+        icon: 'list-checks',
+        when: () => Object.keys(this.settings.propertySchemas || {}).length > 0,
+        run: () => new SchemaCheckModal(this.plugin, [pageFolder(this.app) || this.app.vault.getRoot()]).open(),
       },
     ];
   }

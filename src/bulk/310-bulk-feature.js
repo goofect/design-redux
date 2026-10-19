@@ -8,6 +8,7 @@ import { DEFAULTS_DELAY, MergePropertiesModal, RenamePropertyModal } from './301
 import { MergeValuesModal, RenameTagModal, RenameValueModal } from './302-bulk-tags-values.js';
 import { ChangeTypeModal } from './303-bulk-types.js';
 import { PropertyToolsModal } from './304-bulk-list.js';
+import { CleanUpValuesModal } from './305-bulk-schema.js';
 
 export class BulkEditing extends Feature {
   actions() {
@@ -44,6 +45,11 @@ export class BulkEditing extends Feature {
         id: 'rename-value-everywhere',
         name: 'Rename a property value everywhere…',
         run: () => this.openRenameValue(),
+      },
+      {
+        id: 'clean-up-property-values',
+        name: 'Clean up a property’s values…',
+        run: () => new CleanUpValuesModal(this.plugin).open(),
       },
       {
         id: 'change-property-type',

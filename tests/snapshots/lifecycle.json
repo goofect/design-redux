@@ -77,6 +77,8 @@
   "center-canvas-text",
   "change-property-type",
   "check-canvas",
+  "check-property-schemas",
+  "clean-up-property-values",
   "copy-diagnostics",
   "copy-properties",
   "copy-some-properties",

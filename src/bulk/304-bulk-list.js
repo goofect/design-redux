@@ -15,6 +15,7 @@ import { propertyType, renamePropertyInPlace } from './290-bulk-engine.js';
 import { BulkModal, whereHolds, whereReady } from './300-bulk-dialogs.js';
 import { AddPropertiesModal, FolderDefaultsModal, MergePropertiesModal, RemovePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
 import { ChangeTypeModal, MissingPropertyModal } from './303-bulk-types.js';
+import { CleanUpValuesModal, SchemaCheckModal } from './305-bulk-schema.js';
 
 /**
  * Each property in some notes, as a note's properties would be listed:
@@ -199,6 +200,12 @@ export class PropertyListTool extends BulkModal {
       defaults.createSpan({ text: 'Defaults for new notes' });
       defaults.addEventListener('click', () => this.host.openSheet('defaults'));
     }
+    if (Object.keys(this.plugin.settings.propertySchemas || {}).length) {
+      const check = foot.createEl('button', { cls: 'dr-plist-schema' });
+      setIcon(check.createSpan({ cls: 'dr-plist-btn-icon' }), 'list-checks');
+      check.createSpan({ text: 'Check against schemas' });
+      check.addEventListener('click', () => this.host.openSheet('schema'));
+    }
   }
 
   propertyMenu(evt, row, name, prop, missing) {
@@ -216,6 +223,7 @@ export class PropertyListTool extends BulkModal {
       item(`Fill in the ${missing} without it…`, 'list-checks', () => this.host.openSheet('missing', { key: prop.name }));
     }
     item('Change type…', 'shapes', () => this.host.openSheet('type', { key: prop.name }));
+    item('Clean up values…', 'sparkles', () => this.host.openSheet('cleanup', { key: prop.name }));
     menu.addSeparator();
     item('Remove from these notes…', 'trash-2', () => this.host.openSheet('remove', { keys: [prop.name] }), true);
     showMenuAt(menu, evt);
@@ -307,6 +315,8 @@ export class PropertyToolsModal extends Modal {
     if (id === 'rename') return new RenamePropertyModal(this.plugin, args.key, args.to);
     if (id === 'merge') return new MergePropertiesModal(this.plugin, args.keys || (args.key ? [args.key] : []));
     if (id === 'type') return new ChangeTypeModal(this.plugin, args.key);
+    if (id === 'schema') return new SchemaCheckModal(this.plugin, targets);
+    if (id === 'cleanup') return new CleanUpValuesModal(this.plugin, args.key);
     return null;
   }
 

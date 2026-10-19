@@ -10902,3 +10902,22 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
 .dr-value-option-icon {
   width: 100%;
 }
+
+/* Clean up values: a row for each value written differently. */
+.dr-cleanup-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+.dr-cleanup-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-cleanup-others {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
