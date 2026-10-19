@@ -3109,6 +3109,37 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
+  it('sets a property by a rule when a note is moved into a folder, once, with Undo', async function () {
+    const out = await browser.executeObsidian(async ({ app }) => {
+      const plugin = app.plugins.plugins['design-redux'];
+      const saved = { on: plugin.settings.propertyRulesOn, dry: plugin.settings.propertyRulesDryRun, rules: plugin.settings.propertyRules };
+      for (const p of ['Rule inbox/Incoming.md', 'Rule law/Incoming.md']) {
+        const f = app.vault.getAbstractFileByPath(p);
+        if (f) await app.vault.delete(f);
+      }
+      for (const p of ['Rule inbox', 'Rule law']) if (!app.vault.getAbstractFileByPath(p)) await app.vault.createFolder(p);
+      Object.assign(plugin.settings, { propertyRulesOn: true, propertyRulesDryRun: false, propertyRules: [{ id: 'e2e', on: true, when: { kind: 'folder', folder: 'Rule law' }, set: [{ key: 'status', value: 'Open' }] }] });
+      await plugin.saveSettings();
+      const file = await app.vault.create('Rule inbox/Incoming.md', '---\ntitle: In\n---\nBody\n');
+      const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      await until(() => !!app.metadataCache.getFileCache(file)?.frontmatter);
+      await new Promise((r) => setTimeout(r, 600));
+      const before = Object.assign({}, app.metadataCache.getFileCache(file).frontmatter);
+      await app.fileManager.renameFile(file, 'Rule law/Incoming.md');
+      await until(() => app.metadataCache.getFileCache(file)?.frontmatter?.status === 'Open');
+      const set = app.metadataCache.getFileCache(file).frontmatter.status;
+      // Changed by hand: not set again.
+      await app.fileManager.processFrontMatter(file, (fm) => { fm.status = 'Closed'; });
+      await new Promise((r) => setTimeout(r, 800));
+      const after = app.metadataCache.getFileCache(file).frontmatter.status;
+      Object.assign(plugin.settings, { propertyRulesOn: saved.on, propertyRulesDryRun: saved.dry, propertyRules: saved.rules });
+      await plugin.saveSettings();
+      await app.vault.delete(file);
+      return { before: before.status || null, set, after };
+    });
+    expect(out).toEqual({ before: null, set: 'Open', after: 'Closed' });
+  });
+
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));
