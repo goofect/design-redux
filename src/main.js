@@ -90,6 +90,7 @@ import './note/195-reading-outline.js';
 import './tools/200-one-page.js';
 import './tools/210-menu-filter.js';
 import './tools/220-settings-button.js';
+import './ui/229-components.js';
 import './ui/230-pickers.js';
 import './ui/235-covers.js';
 import './ui/237-cover-drop.js';

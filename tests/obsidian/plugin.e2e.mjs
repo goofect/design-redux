@@ -1170,6 +1170,63 @@ describe('Design Redux in Obsidian', function () {
     expect(ok).toEqual({ count: 3, equal: true });
   });
 
+  it('draws the nine components to their measures, in light and dark', async function () {
+    const measure = () =>
+      browser.executeObsidian(async ({ app }) => {
+        await new Promise((r) => setTimeout(r, 400));
+        const box = document.body.createDiv({ cls: 'dr-settings dr-component-probe' });
+        const icon = box.createDiv({ cls: 'dr-icon-button' });
+        const main = box.createDiv({ cls: 'dr-text-button is-primary', text: 'Open' });
+        const plain = box.createDiv({ cls: 'dr-text-button', text: 'Edit' });
+        const seg = box.createDiv({ cls: 'dr-segmented' });
+        seg.createDiv({ cls: 'dr-segment is-active', text: 'One' });
+        seg.createDiv({ cls: 'dr-segment', text: 'Two' });
+        const list = box.createDiv();
+        const row = list.createDiv({ cls: 'dr-row' });
+        row.createDiv({ cls: 'dr-row-cover' });
+        row.createDiv({ cls: 'dr-row-text', text: 'A note' });
+        const art = box.createDiv({ cls: 'dr-tile' }).createDiv({ cls: 'dr-tile-art' });
+        const chip = box.createSpan({ cls: 'dr-chip', text: 'tag' });
+        const sheet = box.createDiv({ cls: 'dr-sheet', text: 'Sheet' });
+        const toggle = box.createDiv({ cls: 'checkbox-container' });
+        const field = box.createEl('input', { type: 'text' });
+        const cs = (el) => getComputedStyle(el);
+        const out = {
+          icon: [icon.offsetWidth, icon.offsetHeight, cs(icon).borderRadius],
+          main: cs(main).backgroundColor !== 'rgba(0, 0, 0, 0)' && main.offsetHeight,
+          plain: [cs(plain).backgroundColor, cs(plain).color === cs(document.body).getPropertyValue('--text-accent') || cs(plain).color !== cs(document.body).color],
+          segmented: seg.offsetHeight,
+          row: [row.offsetHeight >= 44, row.querySelector('.dr-row-cover').offsetWidth],
+          tile: [cs(art).boxShadow, cs(art).borderTopWidth],
+          chip: [chip.offsetHeight, cs(chip).borderTopWidth, cs(chip).fontSize],
+          sheet: [cs(sheet).borderTopLeftRadius, cs(sheet).boxShadow !== 'none'],
+          toggle: [toggle.offsetWidth, toggle.offsetHeight],
+          // A hairline: Chromium snaps 0.5px to one device pixel.
+          field: [field.offsetHeight, parseFloat(cs(field).borderTopWidth) > 0 && parseFloat(cs(field).borderTopWidth) * devicePixelRatio <= 1, cs(field).boxShadow],
+        };
+        box.remove();
+        return out;
+      });
+    const expected = {
+      icon: [32, 32, '50%'],
+      main: 32,
+      plain: ['rgba(0, 0, 0, 0)', true],
+      segmented: 32,
+      row: [true, 36],
+      tile: ['none', '0px'],
+      chip: [24, '0px', '13px'],
+      sheet: ['12px', true],
+      toggle: [51, 31],
+      field: [32, true, 'none'],
+    };
+    await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('moonstone'));
+    expect(await measure()).toEqual(expected);
+    await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('obsidian'));
+    const dark = await measure();
+    await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('moonstone'));
+    expect(dark).toEqual(expected);
+  });
+
   it('adds a page to a plain note in one step and names it where it stands', async function () {
     const result = await browser.executeObsidian(async ({ app }) => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));

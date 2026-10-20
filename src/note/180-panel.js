@@ -18,6 +18,7 @@ import { cardElement, pickedOnCanvas, requestCanvasSave } from '../core/079-canv
 import { Feature } from '../core/080-feature.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
+import { drSheetIn } from '../ui/229-components.js';
 
 /** A text card's properties — written at its top between --- lines — and the rest: { data, body }; data null where they can't be read. */
 export function cardFrontmatter(text) {
@@ -469,6 +470,7 @@ export class PropertiesPanel extends Feature {
     // unrendered element measures zero, defeating the edge clamp.
     this.popupEl.addClass('is-open');
     this.place(trigger);
+    drSheetIn(this.popupEl, trigger);
     this.setTrigger(trigger);
   }
 
