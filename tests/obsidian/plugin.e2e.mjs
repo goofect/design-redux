@@ -1180,6 +1180,68 @@ describe('Design Redux in Obsidian', function () {
     expect(result.names).toEqual(['Untitled', 'Sources']);
   });
 
+  it('leaves the note to the theme, keeps room under it for the strip, and keeps its header as it is', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      const old = app.vault.getFileByPath('Look note.md');
+      if (old) await app.vault.delete(old);
+      const file = await app.vault.create('Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n- an item\n\n%%page: Two%%\nOther\n');
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'preview' } });
+      await wait(1800);
+      const css = (el, props) => {
+        const c = getComputedStyle(el);
+        return props.map((p) => c[p]).join('|');
+      };
+      const text = () => {
+        const root = leaf.view.containerEl.querySelector('.markdown-preview-view');
+        return ['h1', 'p', 'li'].map((t) => {
+          const el = root.querySelector(t);
+          return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'color', 'lineHeight', 'marginTop', 'marginBottom']) : '';
+        });
+      };
+      const strip = document.querySelector('.dr-strip');
+      const room = {
+        strip: strip ? strip.offsetHeight : 0,
+        reading: parseFloat(getComputedStyle(leaf.view.containerEl.querySelector('.markdown-preview-view')).paddingBottom),
+      };
+      const withPlugin = text();
+      // The header, with the pages feature on and off.
+      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
+      await wait(1800);
+      const parts = ['.dr-note-album', '.inline-title', '.dr-note-meta', '.dr-note-chips'];
+      const header = () => parts.map((p) => {
+        const el = leaf.view.containerEl.querySelector('.markdown-source-view ' + p);
+        if (!el) return p + ':none';
+        const r = el.getBoundingClientRect();
+        return [p, Math.round(r.left), Math.round(r.top), Math.round(r.height), css(el, ['fontFamily', 'fontSize', 'color'])].join('|');
+      });
+      room.editing = parseFloat(getComputedStyle(leaf.view.containerEl.querySelector('.cm-scroller')).paddingBottom);
+      const headerOn = header();
+      const mine = plugins.designRedux;
+      mine.settings.notePages = false;
+      await mine.saveSettings();
+      await wait(800);
+      const headerOff = header();
+      mine.settings.notePages = true;
+      await mine.saveSettings();
+      // The note's text with the whole plugin off.
+      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'preview' }, active: true });
+      await app.plugins.disablePlugin('design-redux');
+      await wait(1500);
+      const without = text();
+      await app.plugins.enablePlugin('design-redux');
+      await wait(1500);
+      leaf.detach();
+      await app.vault.delete(file);
+      return { room, withPlugin, without, headerOn, headerOff };
+    });
+    expect(result.withPlugin).toEqual(result.without);
+    expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
+    expect(result.room.editing).toBeGreaterThanOrEqual(result.room.strip + 24);
+    expect(result.headerOn).toEqual(result.headerOff);
+  });
+
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const modes = plugins.designRedux.features.find((f) => f.constructor.name === 'WorkspaceModes');
@@ -1867,7 +1929,9 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(page).toEqual({ citesShown: false, textShown: true });
 
-    // The footnote button along the bottom opens the view.
+    // The footnote button along the bottom opens the view — the strip has slid away while typing, and comes back at the pointer.
+    await browser.execute(() => document.dispatchEvent(new MouseEvent('mousemove', { clientX: 300, clientY: window.innerHeight - 10, bubbles: true })));
+    await browser.pause(400);
     const button = await browser.$('.dr-strip-btn[data-action="footnotes"]');
     await button.waitForExist({ timeout: 5000 });
     expect(await button.getAttribute('aria-label')).toBe('Footnotes (2)');

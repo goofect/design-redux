@@ -198,7 +198,11 @@ export class NotePage extends Feature {
       if (el) el.remove();
       return null;
     }
-    if (el && el.dataset.key === key) return el;
+    if (el && el.dataset.key === key) {
+      // Kept as it is, but put back where it belongs if the view has laid out around it since.
+      if (before && before !== el && before.parentElement === parent && el.nextSibling !== before) parent.insertBefore(el, before);
+      return el;
+    }
     if (el) el.remove();
     el = parent.ownerDocument.createElement('div');
     el.className = cls;

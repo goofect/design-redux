@@ -160,6 +160,55 @@ export class ContextStrip extends Feature {
     });
 
     if (Platform.isPhone) this.registerPhone();
+    else this.registerAway();
+  }
+
+  /**
+   * The strip never covers text: it slides down out of view when you scroll down or type, and
+   * comes back when you scroll up or the pointer goes to the bottom 80px of the window.
+   */
+  registerAway() {
+    const tops = new WeakMap();
+    const away = (on) => {
+      if (!this.el) return;
+      const held = this.el.matches(':hover') || this.el.matches(':focus-within');
+      this.el.toggleClass('is-away', on && !held);
+    };
+    this.plugin.registerDomEvent(
+      document,
+      'scroll',
+      (evt) => {
+        const el = evt.target;
+        if (!el || typeof el.matches !== 'function' || !el.matches('.cm-scroller, .markdown-preview-view')) return;
+        const last = tops.has(el) ? tops.get(el) : el.scrollTop;
+        const moved = el.scrollTop - last;
+        tops.set(el, el.scrollTop);
+        if (moved > 4) away(true);
+        else if (moved < -4) away(false);
+      },
+      true
+    );
+    this.plugin.registerDomEvent(document, 'keydown', (evt) => {
+      const typed = evt.key.length === 1 || evt.key === 'Backspace' || evt.key === 'Enter';
+      if (typed && !evt.metaKey && !evt.ctrlKey && evt.target && typeof evt.target.closest === 'function' && evt.target.closest('.cm-content')) away(true);
+    });
+    this.plugin.registerDomEvent(document, 'mousemove', (evt) => {
+      if (this.el && this.el.hasClass('is-away') && window.innerHeight - evt.clientY <= 80) away(false);
+    });
+    this.plugin.registerDomEvent(window, 'resize', () => this.fitPadding());
+    this.plugin.registerEvent(this.app.workspace.on('layout-change', () => this.fitPadding()));
+  }
+
+  /** What the strip covers at the foot of the window, for the note to leave clear: its height, and where it sits. */
+  fitPadding() {
+    const body = document.body;
+    const el = this.el;
+    if (!el || !this.enabled || el.hasClass('is-empty') || body.hasClass('dr-strip-side') || !el.offsetHeight) {
+      body.style.removeProperty('--dr-strip-h');
+      return;
+    }
+    const bottom = parseFloat(window.getComputedStyle(el).bottom) || 0;
+    body.style.setProperty('--dr-strip-h', `${Math.ceil(el.offsetHeight + bottom)}px`);
   }
 
   /**
@@ -220,6 +269,7 @@ export class ContextStrip extends Feature {
   disable() {
     document.body.removeClass('dr-strip-active');
     document.body.removeClass('dr-strip-side');
+    document.body.style.removeProperty('--dr-strip-h');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
     if (this.el) this.el.remove();
     this.el = null;
@@ -273,7 +323,10 @@ export class ContextStrip extends Feature {
     // Up whenever there's a page at all — including an empty one, since
     // the strip is also where a closed sidebar comes back from.
     this.el.toggleClass('is-empty', !view);
-    if (!view) return;
+    if (!view) {
+      this.fitPadding();
+      return;
+    }
 
     this.renderNav(this.el);
     if (file) {
@@ -282,6 +335,7 @@ export class ContextStrip extends Feature {
     } else {
       this.renderScreen(this.el, view);
     }
+    this.fitPadding();
   }
 
   /**

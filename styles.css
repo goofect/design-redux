@@ -3314,6 +3314,7 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%);
+  transition: transform 200ms var(--dr-ease, ease);
   z-index: calc(var(--layer-menu, 65) - 20);
   display: flex;
   align-items: center;
@@ -10405,4 +10406,25 @@ body.is-mobile .dr-page-add::before {
   min-width: 3ch;
   outline: none;
   border-bottom: 1px solid var(--interactive-accent);
+}
+
+/* The strip never covers text: the note keeps room at its foot for the strip and 24px more, and
+   the strip slides out of view over 200ms while you scroll down or type. */
+body.dr-strip-active .markdown-source-view.mod-cm6 .cm-scroller,
+body.dr-strip-active .markdown-preview-view {
+  padding-bottom: calc(var(--dr-strip-h, 0px) + 24px) !important;
+}
+
+.dr-strip.is-away {
+  transform: translate(-50%, calc(100% + 48px));
+}
+
+body.dr-strip-side .dr-strip.is-away {
+  transform: translate(calc(100% + 24px), -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-strip {
+    transition: none;
+  }
 }
