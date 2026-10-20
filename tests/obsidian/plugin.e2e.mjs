@@ -758,6 +758,15 @@ describe('Design Redux in Obsidian', function () {
       (m) => !!m
     );
     expect(measured && measured.width).toBe(measured && measured.box);
+    // The Apple look: nodes with 12px corners and no shadow at rest, a bar of 32px icon buttons on the material.
+    const look = await browser.execute(() => {
+      const map = document.querySelector('.workspace-leaf.mod-active .dr-mindmap');
+      const node = Array.from(map.querySelectorAll('.dr-mindmap-node')).find((n) => !n.classList.contains('is-selected'));
+      const bar = map.querySelector('.dr-mindmap-bar');
+      const tool = bar.querySelector('.dr-mindmap-tool');
+      return [getComputedStyle(node).borderTopLeftRadius, getComputedStyle(node).boxShadow, getComputedStyle(bar).borderTopLeftRadius, tool.offsetWidth];
+    });
+    expect(look).toEqual(['12px', 'none', '12px', 32]);
     // As text: the list, as it was written.
     await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:open-mind-map-as-text'));
     const text = await readUntil(
