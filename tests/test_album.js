@@ -919,7 +919,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 13);
+    assert.strictEqual(s.settingsVersion, 14);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -2798,7 +2798,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.feature = (C) => (C === R.Appearance ? look : null);
     const has = (c) => document.body.classList.contains(c);
     look.enable();
-    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard, and the theme’s look');
+    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard');
+    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'Apple by default, notes too');
+    plugin.settings.lookScope = 'plugin';
+    look.enable();
+    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'only what the plugin draws');
+    plugin.settings.lookScope = 'window';
     plugin.settings.gridDensity = 'large';
     plugin.settings.canvasSpacing = 'compact';
     look.enable();
@@ -2807,7 +2812,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const cmds = Object.fromEntries(look.commands().map((c) => [c.id, c]));
     cmds['switch-look'].run();
     await new Promise((r) => setTimeout(r, 0));
-    assert.strictEqual(plugin.settings.look, 'editorial');
+    assert.strictEqual(plugin.settings.look, 'theme');
+    assert.ok(!has('dr-look-apple') && !has('dr-note-apple'), 'the theme’s look: none of it');
+    plugin.settings.look = 'editorial';
+    look.enable();
     assert.ok(has('dr-look-editorial'));
     cmds['next-canvas-spacing'].run();
     await new Promise((r) => setTimeout(r, 0));
@@ -2819,7 +2827,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     look.enable();
     assert.ok(has('dr-look-editorial') && has('dr-look-scoped'));
     look.disable();
-    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial') && !has('dr-look-scoped'), 'nothing left behind');
+    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial') && !has('dr-look-scoped') && !has('dr-look-apple'), 'nothing left behind');
   });
 
   await t('covers sized on their own, apart from the density', () => {

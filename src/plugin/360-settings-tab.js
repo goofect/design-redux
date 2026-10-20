@@ -149,7 +149,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'noteThemeLook', 'iconMode'];
+export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */
@@ -274,6 +274,9 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     const tops = [containerEl.scrollTop, scroller ? scroller.scrollTop : 0];
     containerEl.empty();
     containerEl.addClass('dr-settings');
+    // Settings can open in a window of their own, whose page doesn't carry the look: told here.
+    const page = containerEl.ownerDocument.body;
+    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-apple', this.settings.look === 'apple');
     const rows = this.rows();
     const placed = new Set();
     const resolve = (feature) => {

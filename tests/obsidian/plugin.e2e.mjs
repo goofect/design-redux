@@ -380,7 +380,7 @@ describe('Design Redux in Obsidian', function () {
     check(dark, 'dark');
     expect(dark.dark).toBe(true);
     expect(dark.rows.length).toBeGreaterThan(0);
-    expect(dark.rows[0][0]).toBe(28);
+    expect(dark.rows[0][0]).toBe(32);
     const editorial = await measure('obsidian', 'editorial', 'standard');
     check(editorial, 'editorial, dark');
     await shot('album-editorial');
@@ -392,11 +392,11 @@ describe('Design Redux in Obsidian', function () {
     // Density: rows a unit tighter or looser.
     const compact = await measure('obsidian', 'theme', 'compact');
     const spacious = await measure('obsidian', 'theme', 'large');
-    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([24, 32]);
+    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
     check(compact, 'compact');
     check(spacious, 'spacious');
     // Back as it was, for the tests after.
-    await measure(started, 'theme', 'standard');
+    await measure(started, 'apple', 'standard');
   });
 
   it('keeps the ribbon’s buttons out of sight while they’re in the menu', async function () {
@@ -1215,7 +1215,7 @@ describe('Design Redux in Obsidian', function () {
       if (old) await app.vault.delete(old);
       const file = await app.vault.create('Look/Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n---\n\n- an item\n\n%%page: Two%%\nOther\n');
       mine.settings.notePageChips = true;
-      mine.settings.noteThemeLook = false;
+      mine.settings.look = 'apple';
       await mine.saveSettings();
       const leaf = app.workspace.getLeaf(true);
       await leaf.openFile(file, { state: { mode: 'preview' } });
@@ -1249,7 +1249,7 @@ describe('Design Redux in Obsidian', function () {
       const strip = document.querySelector('.dr-strip');
       const room = { strip: strip ? strip.offsetHeight : 0, reading: parseFloat(getComputedStyle(root()).paddingBottom) };
       // The theme's look: none of it applies, and it is as with the plugin off.
-      mine.settings.noteThemeLook = true;
+      mine.settings.look = 'theme';
       await mine.saveSettings();
       await wait(600);
       const theme = { colours: colours(), type: typeOf() };
@@ -1259,7 +1259,7 @@ describe('Design Redux in Obsidian', function () {
       await app.plugins.enablePlugin('design-redux');
       await wait(1500);
       const again = app.plugins.plugins['design-redux'];
-      again.settings.noteThemeLook = false;
+      again.settings.look = 'apple';
       again.settings.notePageChips = false;
       await again.saveSettings();
       leaf.detach();

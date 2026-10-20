@@ -195,6 +195,17 @@ export const SETTINGS_MIGRATIONS = [
       RETIRED_CANVAS_KEYS.forEach((k) => delete saved[k]);
     },
   },
+  {
+    // The Apple redesign is a Look of its own. Whoever had the theme's look
+    // with notes in the Apple style — the 3.0 default — is on Apple now;
+    // whoever had asked for the theme's look for notes stays on the theme's.
+    // "Use the theme's look for notes" is that same choice, so it goes.
+    to: 14,
+    run(saved) {
+      if ((saved.look === undefined || saved.look === 'theme') && saved.noteThemeLook !== true) saved.look = 'apple';
+      delete saved.noteThemeLook;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

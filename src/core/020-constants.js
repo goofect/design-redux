@@ -187,7 +187,7 @@ export const DEFAULTS = {
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
   // The theme's look, or the editorial one; how far apart canvas layouts put cards.
-  look: 'theme',
+  look: 'apple',
   canvasSpacing: 'standard',
   // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
@@ -225,7 +225,6 @@ export const DEFAULTS = {
   lookScope: 'window',
   artworkSize: '',
   iconMode: 'auto',
-  noteThemeLook: false,
   inspectorClick: 'shown',
   libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
@@ -321,7 +320,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 13,
+  settingsVersion: 14,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

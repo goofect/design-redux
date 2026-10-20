@@ -13,7 +13,7 @@ import { Notice } from 'obsidian';
 import { CANVAS_SPACE } from './020-constants.js';
 import { Feature } from './080-feature.js';
 
-export const LOOKS = { theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines', classic: 'Classic: as before 2.0' };
+export const LOOKS = { apple: 'Apple: the system font, grouped lists, quiet controls', theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines', classic: 'Classic: as before 2.0' };
 export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux only' };
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
@@ -29,16 +29,16 @@ export class Appearance extends Feature {
         key: 'look',
         type: 'dropdown',
         name: 'Look',
-        desc: 'The theme’s own colours and depth, or an editorial look: monochrome surfaces a step apart, fine lines instead of shadows, small corners, and covers without colour unless they have art. Classic keeps the look from before 2.0 — no note header or shelves, no lines under notes, no glass — for one release.',
+        desc: 'Apple: the system font and Apple’s type scale, grouped lists, segmented controls, quiet icon buttons and soft materials, with the theme’s colours. The theme’s own look as it draws it; an editorial look — monochrome surfaces, fine lines, small corners; or Classic, the look from before 2.0, for one release.',
         options: LOOKS,
       },
       {
         key: 'lookScope',
         type: 'dropdown',
-        name: 'Editorial look on',
-        desc: 'The whole window — its notes, sidebars and menus too — or only what Design Redux draws: the library, collection pages, the inspector, the strip and the note panel.',
+        name: 'Look on',
+        desc: 'The whole window — notes too — or only what Design Redux draws: the library, collection pages, the strip, the panel and settings.',
         options: LOOK_SCOPES,
-        showIf: (s) => s.look === 'editorial',
+        showIf: (s) => s.look === 'editorial' || s.look === 'apple',
       },
       {
         key: 'glassPanels',
@@ -51,11 +51,6 @@ export class Appearance extends Feature {
         name: 'Cover size',
         desc: 'How large covers are on screens of collections and notes, apart from the density of everything else.',
         options: ARTWORK_SIZES,
-      },
-      {
-        key: 'noteThemeLook',
-        name: 'Use the theme’s look for notes',
-        desc: 'Off, notes take an Apple-style look: the system font, a 34px title, 17px text at a 1.5 line height, a 680px column, quiet headings and fine rules. Colours always stay the theme’s. On, notes are left entirely as the theme draws them.',
       },
       {
         key: 'iconMode',
@@ -78,9 +73,9 @@ export class Appearance extends Feature {
     return [
       {
         id: 'switch-look',
-        name: 'Switch look: the theme’s or editorial',
+        name: 'Switch look: Apple or the theme’s',
         icon: 'contrast',
-        run: () => this.change('look', this.settings.look === 'editorial' ? 'theme' : 'editorial', `Look: ${this.settings.look === 'editorial' ? 'the theme’s' : 'editorial'}`),
+        run: () => this.change('look', this.settings.look === 'apple' ? 'theme' : 'apple', `Look: ${this.settings.look === 'apple' ? 'the theme’s' : 'Apple'}`),
       },
       {
         id: 'next-canvas-spacing',
@@ -113,7 +108,10 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false && this.settings.look !== 'classic');
     // 1.x's styling, for those not ready for 2.0's: kept for one release.
     body.classList.toggle('dr-look-classic', !off && this.settings.look === 'classic');
-    body.classList.toggle('dr-note-apple', !off && !this.settings.noteThemeLook && this.settings.look !== 'classic');
+    const apple = !off && this.settings.look === 'apple';
+    body.classList.toggle('dr-look-apple', apple);
+    // Inside notes only where the look covers the whole window.
+    body.classList.toggle('dr-note-apple', apple && this.settings.lookScope !== 'plugin');
     body.classList.toggle('dr-icons-only', !off && this.settings.iconMode === 'icons');
     body.classList.toggle('dr-icons-words', !off && this.settings.iconMode === 'words');
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');

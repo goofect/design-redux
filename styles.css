@@ -127,10 +127,10 @@ body {
      ease for colours), so nothing feels made by a different hand. Press: a button pressed.
      Fast: colours, a cross-fade. Base: something sliding or widening. Slow: a sheet or panel. */
   --dr-dur-press: 100ms;
-  --dr-dur-fast: 150ms;
-  --dr-dur-base: 220ms;
-  --dr-dur-slow: 320ms;
-  --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
+  --dr-dur-fast: 120ms;
+  --dr-dur-base: 180ms;
+  --dr-dur-slow: 280ms;
+  --dr-ease-move: cubic-bezier(0.2, 0, 0, 1);
   --dr-ease: ease;
 
   /* Glass, for what floats over the page — the strip, menus, popups — so
@@ -10690,90 +10690,128 @@ body.dr-note-apple .dr-note-rule ~ .dr-pages {
    titles (34px), titles (22px) and headlines (17px semibold); controls 28px with 16px symbols
    (44px to hit on touch); sidebar rows 28px; the strip a mini player 48px high around a 36px cover.
    Every gap stays a multiple of 4px. Colours stay the theme's. */
-body {
+body.dr-look-apple {
+  /* Motion, Apple's: press 100, fast 150, base 220, slow 320ms; one curve, no overshoot. */
+  --dr-dur-press: 100ms;
+  --dr-dur-fast: 150ms;
+  --dr-dur-base: 220ms;
+  --dr-dur-slow: 320ms;
+  --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Type: the system font, and Apple's scale. */
   --dr-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
-  --dr-display-size: 34px;
+  --dr-type-large: 34px;
+  --dr-type-title: 28px;
+  --dr-type-headline: 17px;
+  --dr-type-body: 17px;
+  --dr-type-callout: 16px;
+  --dr-type-subhead: 15px;
+  --dr-type-footnote: 13px;
+  --dr-type-caption: 12px;
+  --dr-display-size: var(--dr-type-large);
   --dr-display-weight: 700;
-  --dr-title-size: 22px;
-  --dr-heading-size: 17px;
-  --dr-ui-size: 13px;
+  --dr-title-size: var(--dr-type-title);
+  --dr-heading-size: var(--dr-type-headline);
+  --dr-ui-size: var(--dr-type-footnote);
   --dr-ui-weight: 500;
-  --dr-meta-size: 12px;
+  --dr-meta-size: var(--dr-type-caption);
   --dr-line-display: 1.15;
   --dr-line-heading: 1.25;
-  --dr-control-size: 28px;
+  /* Controls 32px with 16px symbols; rows 36px; 44px to hit on touch. */
+  --dr-control-size: 32px;
   --dr-control-icon: 16px;
-  --dr-row-height: 28px;
+  --dr-row-height: 36px;
+  /* Two shadows over a hairline: resting and floating. */
+  --dr-shadow-sm: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --dr-shadow-md: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --dr-shadow-lg: var(--dr-shadow-md);
+  /* Material: 20px blur, saturation 1.8, 72% opacity. */
+  --dr-glass-blur: 20px;
+  --dr-material: color-mix(in srgb, var(--background-primary) 72%, transparent);
+  --dr-material-filter: blur(20px) saturate(1.8);
 }
 
-body.dr-density-compact {
-  --dr-row-height: 24px;
-  --dr-control-size: 24px;
+/* Dark: a hairline does what a shadow does in light. */
+body.dr-look-apple.theme-dark {
+  --dr-shadow-sm: 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  --dr-shadow-md: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* With reduced transparency, materials are solid. */
+@media (prefers-reduced-transparency: reduce) {
+  body.dr-look-apple {
+    --dr-material: var(--background-primary);
+    --dr-material-filter: none;
+  }
+}
+
+body.dr-look-apple.dr-density-compact {
+  --dr-row-height: 32px;
+  --dr-control-size: 28px;
   --dr-control-icon: 14px;
 }
 
-body.dr-density-spacious {
-  --dr-row-height: 32px;
-  --dr-control-size: 32px;
+body.dr-look-apple.dr-density-spacious {
+  --dr-row-height: 40px;
+  --dr-control-size: 36px;
   --dr-control-icon: 18px;
 }
 
-body.is-mobile {
+body.dr-look-apple.is-mobile {
   --dr-control-size: 44px;
   --dr-control-icon: 20px;
   --dr-row-height: 44px;
 }
 
 /* The plugin's own surfaces speak in the system font at Apple's interface sizes. */
-[class^="dr-"],
-[class*=" dr-"] {
+body.dr-look-apple [class^="dr-"],
+body.dr-look-apple [class*=" dr-"] {
   --font-ui-smaller: 12px;
   --font-ui-small: 13px;
   --font-ui-medium: 15px;
   --font-ui-large: 17px;
 }
 
-.dr-strip,
-.dr-browse,
-.dr-library,
-.dr-settings,
-.dr-pages,
-.dr-note-album,
-.dr-note-meta,
-.dr-note-chips {
+body.dr-look-apple .dr-strip,
+body.dr-look-apple .dr-browse,
+body.dr-look-apple .dr-library,
+body.dr-look-apple .dr-settings,
+body.dr-look-apple .dr-pages,
+body.dr-look-apple .dr-note-album,
+body.dr-look-apple .dr-note-meta,
+body.dr-look-apple .dr-note-chips {
   font-family: var(--dr-font-ui);
 }
 
 /* The strip, as a mini player: 48px high, a 36px cover with 6px corners, the title at 13px semibold
    and the line under it at 12px, buttons 28px. */
-.dr-strip {
+body.dr-look-apple .dr-strip {
   gap: 8px;
   padding: 6px 8px;
 }
 
-.dr-strip-art {
+body.dr-look-apple .dr-strip-art {
   flex-basis: 36px;
   width: 36px;
   height: 36px;
   border-radius: 6px;
 }
 
-.dr-strip-now {
+body.dr-look-apple .dr-strip-now {
   gap: 12px;
   padding: 0 8px 0 0;
 }
 
-.dr-strip-title {
+body.dr-look-apple .dr-strip-title {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
 
-.dr-strip-sub {
+body.dr-look-apple .dr-strip-sub {
   font-size: 12px;
 }
 
-.dr-strip-skip .svg-icon {
+body.dr-look-apple .dr-strip-skip .svg-icon {
   width: 18px;
   height: 18px;
 }
@@ -10785,7 +10823,7 @@ body.dr-note-apple .dr-note-meta {
 }
 
 /* An album's buttons, as Apple Music's: 32px high, 13px semibold, 8px corners. */
-.dr-detail-action {
+body.dr-look-apple .dr-detail-action {
   min-width: 112px;
   min-height: 32px;
   padding: 0 16px;
@@ -10803,7 +10841,7 @@ body.dr-note-apple .dr-note-meta {
  * separators are Apple's, one pair for light themes and one for dark;
  * text and accent colours stay the theme's.
  * ==================================================================== */
-body {
+body.dr-look-apple {
   --dr-fill: rgba(118, 118, 128, 0.12);
   --dr-fill-strong: rgba(118, 118, 128, 0.2);
   --dr-separator: rgba(60, 60, 67, 0.18);
@@ -10814,7 +10852,7 @@ body {
   --dr-focus-ring: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 45%, transparent);
 }
 
-body.theme-dark {
+body.dr-look-apple.theme-dark {
   --dr-fill: rgba(118, 118, 128, 0.24);
   --dr-fill-strong: rgba(118, 118, 128, 0.36);
   --dr-separator: rgba(84, 84, 88, 0.65);
@@ -10827,7 +10865,7 @@ body.theme-dark {
 /* -- Settings, as System Settings draws them -------------------------- */
 
 /* The places as a segmented control. */
-.dr-settings .dr-set-tabs {
+body.dr-look-apple .dr-settings .dr-set-tabs {
   display: inline-grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -10840,7 +10878,7 @@ body.theme-dark {
   background-color: var(--dr-fill);
 }
 
-.dr-settings .dr-set-tabs .dr-set-tab {
+body.dr-look-apple .dr-settings .dr-set-tabs .dr-set-tab {
   justify-content: center;
   min-width: 88px;
   height: 28px;
@@ -10855,19 +10893,19 @@ body.theme-dark {
   transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
-.dr-settings .dr-set-tabs .dr-set-tab.is-active {
+body.dr-look-apple .dr-settings .dr-set-tabs .dr-set-tab.is-active {
   border: none;
   background-color: var(--dr-thumb);
   box-shadow: var(--dr-thumb-shadow);
   font-weight: 600;
 }
 
-.dr-settings .dr-set-tabs .dr-set-tab:focus-visible {
+body.dr-look-apple .dr-settings .dr-set-tabs .dr-set-tab:focus-visible {
   box-shadow: var(--dr-focus-ring);
 }
 
 /* Search: a filled field with rounded corners, no outline. */
-.dr-settings .dr-set-search {
+body.dr-look-apple .dr-settings .dr-set-search {
   height: 32px;
   padding: 0 8px;
   border: none;
@@ -10875,11 +10913,11 @@ body.theme-dark {
   background-color: var(--dr-fill);
 }
 
-.dr-settings .dr-set-search:focus-within {
+body.dr-look-apple .dr-settings .dr-set-search:focus-within {
   box-shadow: var(--dr-focus-ring);
 }
 
-.dr-settings .dr-set-tools button {
+body.dr-look-apple .dr-settings .dr-set-tools button {
   height: 28px;
   padding: 0 12px;
   border: none;
@@ -10891,7 +10929,7 @@ body.theme-dark {
 }
 
 /* Each feature, and the look, a grouped inset list: one rounded group, rows divided by inset hairlines. */
-.dr-settings .dr-set-block {
+body.dr-look-apple .dr-settings .dr-set-block {
   margin: 0 0 16px;
   overflow: hidden;
   border: 0.5px solid var(--dr-separator);
@@ -10899,7 +10937,7 @@ body.theme-dark {
   background-color: var(--dr-group-bg);
 }
 
-.dr-settings .dr-set-block .setting-item {
+body.dr-look-apple .dr-settings .dr-set-block .setting-item {
   min-height: 44px;
   margin: 0;
   padding: 8px 16px;
@@ -10909,58 +10947,58 @@ body.theme-dark {
   box-shadow: none;
 }
 
-.dr-settings .dr-set-block .setting-item + .setting-item,
-.dr-settings .dr-set-block .dr-set-more > .setting-item:first-child,
-.dr-settings .dr-set-block .dr-set-more .dr-set-children > .setting-item,
-.dr-settings .dr-set-block .dr-set-children + .setting-item {
+body.dr-look-apple .dr-settings .dr-set-block .setting-item + .setting-item,
+body.dr-look-apple .dr-settings .dr-set-block .dr-set-more > .setting-item:first-child,
+body.dr-look-apple .dr-settings .dr-set-block .dr-set-more .dr-set-children > .setting-item,
+body.dr-look-apple .dr-settings .dr-set-block .dr-set-children + .setting-item {
   background: linear-gradient(var(--dr-separator), var(--dr-separator)) no-repeat 16px 0 / calc(100% - 16px) 0.5px;
 }
 
-.dr-settings .dr-set-block.dr-set-feature > .setting-item:first-child .setting-item-name {
+body.dr-look-apple .dr-settings .dr-set-block.dr-set-feature > .setting-item:first-child .setting-item-name {
   display: flex;
   align-items: center;
   font-size: 13px;
   font-weight: 500;
 }
 
-.dr-settings .dr-set-block .setting-item-name {
+body.dr-look-apple .dr-settings .dr-set-block .setting-item-name {
   font-size: 13px;
 }
 
-.dr-settings .dr-set-block .setting-item-description {
+body.dr-look-apple .dr-settings .dr-set-block .setting-item-description {
   padding-top: 2px;
   font-size: 11px;
   line-height: 1.35;
 }
 
 /* A feature's options open inside its group, a step in, as a disclosure does. */
-.dr-settings .dr-set-block .dr-set-more {
+body.dr-look-apple .dr-settings .dr-set-block .dr-set-more {
   margin: 0;
   padding: 0 0 0 36px;
   border: none;
 }
 
-.dr-settings .dr-set-block .dr-set-children {
+body.dr-look-apple .dr-settings .dr-set-block .dr-set-children {
   margin: 0;
   padding-left: 16px;
   border: none;
 }
 
 /* The group's name, above it in small secondary text. */
-.dr-settings .setting-item-heading {
+body.dr-look-apple .dr-settings .setting-item-heading {
   margin: 24px 0 8px;
   padding: 0 16px;
   border: none;
 }
 
-.dr-settings .setting-item-heading .setting-item-name {
+body.dr-look-apple .dr-settings .setting-item-heading .setting-item-name {
   color: var(--text-muted);
   font-size: 13px;
   font-weight: 600;
 }
 
 /* Icon tiles: a white symbol on a rounded square of colour, as in System Settings. */
-.dr-settings .dr-set-feature-icon {
+body.dr-look-apple .dr-settings .dr-set-feature-icon {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -10973,41 +11011,41 @@ body.theme-dark {
   color: #ffffff;
 }
 
-.dr-settings .dr-set-feature-icon .svg-icon {
+body.dr-look-apple .dr-settings .dr-set-feature-icon .svg-icon {
   width: 14px;
   height: 14px;
   color: #ffffff;
   stroke-width: 2px;
 }
 
-.dr-set-feature[data-feature='library'] { --dr-tile: var(--color-red); }
-.dr-set-feature[data-feature='covers'] { --dr-tile: var(--color-orange); }
-.dr-set-feature[data-feature='home'] { --dr-tile: var(--color-blue); }
-.dr-set-feature[data-feature='notePage'] { --dr-tile: var(--color-blue); }
-.dr-set-feature[data-feature='properties'] { --dr-tile: #8e8e93; }
-.dr-set-feature[data-feature='study'] { --dr-tile: var(--color-green); }
-.dr-set-feature[data-feature='relationships'] { --dr-tile: var(--color-purple); }
-.dr-set-feature[data-feature='writing'] { --dr-tile: var(--color-orange); }
-.dr-set-feature[data-feature='pages'] { --dr-tile: var(--color-cyan); }
-.dr-set-feature[data-feature='quietLinks'] { --dr-tile: #8e8e93; }
-.dr-set-feature[data-feature='mindmaps'] { --dr-tile: var(--color-purple); }
-.dr-set-feature[data-feature='strip'] { --dr-tile: var(--color-pink); }
-.dr-set-feature[data-feature='graph'] { --dr-tile: var(--color-green); }
-.dr-set-feature[data-feature='compat'] { --dr-tile: #8e8e93; }
+body.dr-look-apple .dr-set-feature[data-feature='library']{ --dr-tile: var(--color-red); }
+body.dr-look-apple .dr-set-feature[data-feature='covers']{ --dr-tile: var(--color-orange); }
+body.dr-look-apple .dr-set-feature[data-feature='home']{ --dr-tile: var(--color-blue); }
+body.dr-look-apple .dr-set-feature[data-feature='notePage']{ --dr-tile: var(--color-blue); }
+body.dr-look-apple .dr-set-feature[data-feature='properties']{ --dr-tile: #8e8e93; }
+body.dr-look-apple .dr-set-feature[data-feature='study']{ --dr-tile: var(--color-green); }
+body.dr-look-apple .dr-set-feature[data-feature='relationships']{ --dr-tile: var(--color-purple); }
+body.dr-look-apple .dr-set-feature[data-feature='writing']{ --dr-tile: var(--color-orange); }
+body.dr-look-apple .dr-set-feature[data-feature='pages']{ --dr-tile: var(--color-cyan); }
+body.dr-look-apple .dr-set-feature[data-feature='quietLinks']{ --dr-tile: #8e8e93; }
+body.dr-look-apple .dr-set-feature[data-feature='mindmaps']{ --dr-tile: var(--color-purple); }
+body.dr-look-apple .dr-set-feature[data-feature='strip']{ --dr-tile: var(--color-pink); }
+body.dr-look-apple .dr-set-feature[data-feature='graph']{ --dr-tile: var(--color-green); }
+body.dr-look-apple .dr-set-feature[data-feature='compat']{ --dr-tile: #8e8e93; }
 
 /* -- Popovers and panels ------------------------------------------------ */
 
-.dr-props-popup,
-.dr-panel-popover,
-.dr-preview,
-.popover.dr-fold-pop {
+body.dr-look-apple .dr-props-popup,
+body.dr-look-apple .dr-panel-popover,
+body.dr-look-apple .dr-preview,
+body.dr-look-apple .popover.dr-fold-pop {
   border: none;
   border-radius: 12px;
   box-shadow: var(--dr-popover-shadow);
 }
 
 /* -- Fields, everywhere the plugin draws one: filled, rounded, no outline. */
-.dr-browse-search {
+body.dr-look-apple .dr-browse-search {
   height: 28px;
   border: none;
   border-radius: 8px;
@@ -11015,19 +11053,19 @@ body.theme-dark {
   box-shadow: none;
 }
 
-.dr-browse-search:focus-within {
+body.dr-look-apple .dr-browse-search:focus-within {
   box-shadow: var(--dr-focus-ring);
 }
 
-.dr-browse-search input,
-.dr-browse-search input:focus {
+body.dr-look-apple .dr-browse-search input,
+body.dr-look-apple .dr-browse-search input:focus {
   border: none;
   background: transparent;
   box-shadow: none;
 }
 
 /* -- An album's panels (Notes, Sub-collections …): a segmented control, not underlined tabs. */
-.dr-album-panels {
+body.dr-look-apple .dr-album-panels {
   display: inline-grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -11040,7 +11078,7 @@ body.theme-dark {
   background-color: var(--dr-fill);
 }
 
-.dr-album-panels .dr-panel-tab {
+body.dr-look-apple .dr-album-panels .dr-panel-tab {
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -11055,29 +11093,29 @@ body.theme-dark {
   transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
-.dr-album-panels .dr-panel-tab.is-active {
+body.dr-look-apple .dr-album-panels .dr-panel-tab.is-active {
   border: none;
   background-color: var(--dr-thumb);
   box-shadow: var(--dr-thumb-shadow);
   font-weight: 600;
 }
 
-.dr-album-panels .dr-panel-count {
+body.dr-look-apple .dr-album-panels .dr-panel-count {
   color: var(--text-muted);
   font-size: 12px;
 }
 
 /* -- One focus ring for everything the plugin draws. */
-[class^='dr-']:focus-visible,
-[class*=' dr-']:focus-visible {
+body.dr-look-apple [class^='dr-']:focus-visible,
+body.dr-look-apple [class*=' dr-']:focus-visible {
   outline: none;
   box-shadow: var(--dr-focus-ring);
 }
 
 /* -- Toolbar buttons: borderless symbols that take a soft fill when pointed at or pressed. */
-.dr-browse-up,
-.dr-filter-btn,
-.dr-preview-btn {
+body.dr-look-apple .dr-browse-up,
+body.dr-look-apple .dr-filter-btn,
+body.dr-look-apple .dr-preview-btn {
   border: none;
   border-radius: 6px;
   background-color: transparent;
@@ -11086,17 +11124,17 @@ body.theme-dark {
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), transform var(--dr-dur-press) var(--dr-ease-move);
 }
 
-.dr-browse-up:active,
-.dr-filter-btn:active,
-.dr-preview-btn:active {
+body.dr-look-apple .dr-browse-up:active,
+body.dr-look-apple .dr-filter-btn:active,
+body.dr-look-apple .dr-preview-btn:active {
   transform: scale(0.97);
   background-color: var(--dr-fill-strong);
 }
 
 @media (any-hover: hover) {
-  .dr-browse-up:not(.is-disabled):hover,
-  .dr-filter-btn:hover,
-  .dr-preview-btn:hover {
+  body.dr-look-apple .dr-browse-up:not(.is-disabled):hover,
+  body.dr-look-apple .dr-filter-btn:hover,
+  body.dr-look-apple .dr-preview-btn:hover {
     border: none;
     background-color: var(--dr-fill);
     color: var(--text-normal);

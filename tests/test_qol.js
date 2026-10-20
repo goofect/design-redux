@@ -226,7 +226,16 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 13);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 14);
+    // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
+    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
+    const a = { look: 'theme' }; step.run(a);
+    assert.strictEqual(a.look, 'apple');
+    const b = { look: 'theme', noteThemeLook: true }; step.run(b);
+    assert.deepStrictEqual(b, { look: 'theme' }, 'whoever asked for the theme’s look keeps it');
+    const c = { look: 'editorial', noteThemeLook: false }; step.run(c);
+    assert.deepStrictEqual(c, { look: 'editorial' });
+    assert.strictEqual(R.DEFAULTS.look, 'apple');
   });
 
   /* -- pins in your own order ------------------------------------------------ */
