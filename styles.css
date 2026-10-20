@@ -140,6 +140,10 @@ body {
 
   /* The interface's face; the theme's unless a setting asks for the system's. */
   --dr-font-ui: var(--font-interface);
+  /* The system's own faces, wherever it runs: San Francisco on Apple's, Segoe on Windows, then
+     the platform's sans serif. Never the theme's: Apple's controls are drawn in the system font. */
+  --dr-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --dr-radius-cover: var(--dr-cover-radius, var(--radius-m, 8px));
 
   --dr-display-size: 2.5em;
@@ -10234,9 +10238,12 @@ body.dr-strip-side .dr-strip-text {
   --dr-seg-track-hover: rgba(118, 118, 128, 0.2);
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
   margin: 16px 0 20px;
+  font-family: var(--dr-font-system);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   container-type: inline-size;
 }
 
@@ -10309,7 +10316,7 @@ body.dr-strip-side .dr-strip-text {
   padding: 0 14px;
   border-radius: 7px;
   color: var(--text-normal);
-  font-family: var(--dr-font-ui);
+  font-family: var(--dr-font-system);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -10321,6 +10328,13 @@ body.dr-strip-side .dr-strip-text {
 
 .dr-page-tab.is-open {
   font-weight: 600;
+}
+
+/* Until the thumb has been measured — a note opened in a tab not yet shown — the open page wears
+   it itself, so one page is always plainly the open one. */
+.dr-pages-capsule:not(.has-pill) .dr-page-tab.is-open {
+  background-color: var(--dr-seg-thumb);
+  box-shadow: var(--dr-seg-thumb-shadow);
 }
 
 .dr-page-tab:not(.is-open):active {
@@ -10396,25 +10410,25 @@ body.dr-strip-side .dr-strip-text {
   color: var(--dr-page-color);
 }
 
-/* The + beside it: a small round button in the track's fill. */
+/* The + beside it: a plain symbol in the accent, as a toolbar's is; a soft circle under the pointer. */
 .dr-page-add {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background-color: var(--dr-seg-track);
-  color: var(--text-muted);
+  background-color: transparent;
+  color: var(--text-accent);
   cursor: default;
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), transform var(--dr-dur-press) var(--dr-ease-move);
 }
 
 .dr-page-add .svg-icon {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.25px;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2px;
 }
 
 .dr-page-add:active {
@@ -10432,8 +10446,7 @@ body.dr-strip-side .dr-strip-text {
   }
 
   .dr-page-add:hover {
-    color: var(--text-normal);
-    background-color: var(--dr-seg-track-hover);
+    background-color: var(--dr-seg-track);
   }
 }
 
@@ -10518,7 +10531,7 @@ body.dr-note-apple .markdown-rendered {
   --line-height-normal: 1.5;
   --file-line-width: 680px;
   /* One face for the title, the headings and the text — the same as the rest of the interface. */
-  --inline-title-font: var(--dr-font-ui);
+  --inline-title-font: var(--dr-font-display);
   --h1-font: var(--dr-font-ui);
   --h2-font: var(--dr-font-ui);
   --h3-font: var(--dr-font-ui);
@@ -10584,12 +10597,13 @@ body.dr-note-apple .markdown-preview-view .markdown-preview-sizer {
   margin-right: auto;
 }
 
+/* A large title, as Apple's: the theme's own title rules give way. */
 body.dr-note-apple .inline-title {
-  font-family: var(--inline-title-font);
-  font-size: 34px;
-  line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: var(--dr-font-display) !important;
+  font-size: 34px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
 }
 
 body.dr-note-apple .markdown-rendered h1 { font-size: 28px; font-weight: 700; }
@@ -10698,7 +10712,7 @@ body.dr-look-apple {
   --dr-dur-slow: 320ms;
   --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
   /* Type: the system font, and Apple's scale. */
-  --dr-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
+  --dr-font-ui: var(--dr-font-system);
   --dr-type-large: 34px;
   --dr-type-title: 28px;
   --dr-type-headline: 17px;

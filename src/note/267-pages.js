@@ -279,6 +279,14 @@ export class NotePages extends Feature {
     });
     const pill = bar.querySelector('.dr-pages-pill');
     if (!pill || !target) return;
+    // Not laid out yet (a tab not shown): the open page wears the thumb itself until it is.
+    const capsule = pill.parentElement;
+    if (!target.offsetWidth) {
+      capsule.removeClass('has-pill');
+      pill.toggleClass('is-set', false);
+      return;
+    }
+    capsule.addClass('has-pill');
     pill.toggleClass('is-set', true);
     pill.toggleClass('is-sliding', !!slide);
     pill.style.setProperty('--dr-pill-x', `${target.offsetLeft}px`);
@@ -336,8 +344,16 @@ export class NotePages extends Feature {
     asButton(add, 'Add a page');
     setIcon(add, 'plus');
     onActivate(add, () => this.add(file));
-    // Laid out first, so the pill has somewhere to start from.
+    // Laid out first, so the pill has somewhere to start from; measured again when its size
+    // changes — shown at last, or its pages' words in a font that arrived late.
     window.requestAnimationFrame(() => this.select(bar, open, false));
+    if (typeof ResizeObserver === 'function') {
+      const watch = new ResizeObserver(() => {
+        if (!capsule.isConnected) return watch.disconnect();
+        this.select(bar, bar.dataset.open, false);
+      });
+      watch.observe(capsule);
+    }
   }
 
   /** A page opened, and remembered for the note. */

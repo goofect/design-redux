@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 14);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 15);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -236,6 +236,12 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const c = { look: 'editorial', noteThemeLook: false }; step.run(c);
     assert.deepStrictEqual(c, { look: 'editorial' });
     assert.strictEqual(R.DEFAULTS.look, 'apple');
+    // Step 15: Apple's look covers notes too, whatever scope the editorial look was given.
+    const scope = R.SETTINGS_MIGRATIONS.find((m) => m.to === 15);
+    const d = { look: 'apple', lookScope: 'plugin' }; scope.run(d);
+    assert.strictEqual(d.lookScope, 'window');
+    const e = { look: 'editorial', lookScope: 'plugin' }; scope.run(e);
+    assert.strictEqual(e.lookScope, 'plugin', 'the editorial look keeps its scope');
   });
 
   /* -- pins in your own order ------------------------------------------------ */

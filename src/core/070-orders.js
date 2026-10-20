@@ -206,6 +206,14 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.noteThemeLook;
     },
   },
+  {
+    // "Only what Design Redux draws" was a choice made for the editorial look; carried over to
+    // Apple's it kept notes in the theme's type beside the plugin's own. Apple's covers the window.
+    to: 15,
+    run(saved) {
+      if (saved.look === 'apple' && saved.lookScope === 'plugin') saved.lookScope = 'window';
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

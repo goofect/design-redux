@@ -1187,11 +1187,25 @@ describe('Design Redux in Obsidian', function () {
       const root = app.workspace.activeLeaf.view.containerEl;
       const tabs = Array.from(root.querySelectorAll('.markdown-source-view .dr-page-tab'));
       const widths = tabs.map((t) => t.offsetWidth);
+      // A theme with a serif face: the control and the title stay in the system's.
+      document.body.style.setProperty('--font-interface', 'Georgia, serif');
+      document.body.style.setProperty('--inline-title-font', 'Georgia, serif');
+      const title = root.querySelector('.markdown-source-view .inline-title');
+      const faces = [getComputedStyle(tabs[0]).fontFamily, title ? getComputedStyle(title).fontFamily : '-apple-system'].map((f) => f.startsWith('-apple-system'));
+      document.body.style.removeProperty('--font-interface');
+      document.body.style.removeProperty('--inline-title-font');
+      // The open page always shows its thumb: the measured pill, or worn by the page itself.
+      const open = root.querySelector('.markdown-source-view .dr-page-tab.is-open');
+      const pill = root.querySelector('.markdown-source-view .dr-pages-pill.is-set');
+      const thumb = (!!pill && pill.offsetWidth === open.offsetWidth) || getComputedStyle(open).backgroundColor !== 'rgba(0, 0, 0, 0)';
+      // Lined up with the title, not floating in the middle of the column.
+      const bar = root.querySelector('.markdown-source-view .dr-pages-capsule');
+      const aligned = !title || Math.abs(bar.getBoundingClientRect().left - title.getBoundingClientRect().left) <= 2;
       app.workspace.activeLeaf.detach();
       await app.vault.delete(app.vault.getFileByPath('Look/Parliamentary sovereignty.md'));
-      return { count: tabs.length, equal: widths.every((w) => w === widths[0]) };
+      return { count: tabs.length, equal: widths.every((w) => w === widths[0]), faces, thumb, aligned };
     });
-    expect(ok).toEqual({ count: 3, equal: true });
+    expect(ok).toEqual({ count: 3, equal: true, faces: [true, true], thumb: true, aligned: true });
   });
 
   it('draws the nine components to their measures, in light and dark', async function () {
