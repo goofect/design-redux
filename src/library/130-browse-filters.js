@@ -63,6 +63,16 @@ export class LibraryItemPicker extends FuzzySuggestModal {
   }
 }
 
+/**
+ * The folder a tab's path names at `index`, of `count` shown: one name a folder, outermost first.
+ * Null where they don't line up one to one — a path shortened, or drawn some other way.
+ */
+export function crumbFolderPath(filePath, index, count) {
+  const folders = String(filePath || '').split('/').slice(0, -1);
+  if (index < 0 || count !== folders.length || index >= folders.length) return null;
+  return folders.slice(0, index + 1).join('/');
+}
+
 export class Library extends Feature {
   settingsSchema() {
     return [
@@ -436,7 +446,32 @@ export class Library extends Feature {
     );
   }
 
+  /** A press on a folder in a tab's path: that folder's collection, in the library. */
+  openCrumb(evt) {
+    if (!this.enabled || evt.button !== 0 || evt.metaKey || evt.ctrlKey || evt.shiftKey || evt.altKey) return;
+    const crumb = evt.target && typeof evt.target.closest === 'function' ? evt.target.closest('.view-header-breadcrumb') : null;
+    const leafEl = crumb ? crumb.closest('.workspace-leaf') : null;
+    if (!leafEl) return;
+    let file = null;
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.containerEl === leafEl && leaf.view && leaf.view.file) file = leaf.view.file;
+    });
+    if (!file) return;
+    const crumbs = Array.from(crumb.parentElement.querySelectorAll(':scope > .view-header-breadcrumb'));
+    const path = crumbFolderPath(file.path, crumbs.indexOf(crumb), crumbs.length);
+    const folder = path ? this.app.vault.getAbstractFileByPath(path) : null;
+    if (!(folder instanceof TFolder)) return;
+    evt.preventDefault();
+    evt.stopPropagation();
+    this.browseMode({ mode: 'folder', path: folder.path });
+  }
+
   register() {
+    // A folder named in a note's path at the top of its tab opens as its collection here, rather
+    // than in the file explorer. Obsidian's own path, read by its place: where it can't be read,
+    // the click is left to Obsidian.
+    this.plugin.registerDomEvent(document, 'click', (evt) => this.openCrumb(evt), true);
+
     // A property, tag or value renamed by the bulk tools: open screens follow, and the sidebar.
     this.plugin.registerEvent(this.app.workspace.on('design-redux:renamed', (what) => liveViews(this.app, BROWSE_VIEW, BrowseView).forEach((view) => view.followRenamed(what))));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:property-renamed', () => this.refreshViews()));

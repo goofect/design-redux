@@ -1474,6 +1474,21 @@ describe('Design Redux in Obsidian', function () {
     }, made);
   });
 
+  it('opens a folder in a note’s path at the top as its collection in the library', async function () {
+    await obsidianPage.openFile('Politics/Deterrence.md');
+    const crumb = await browser.$(ACTIVE + '.view-header-title-parent .view-header-breadcrumb');
+    await crumb.waitForExist({ timeout: 5000 });
+    await crumb.click();
+    const shown = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const v = app.workspace.activeLeaf && app.workspace.activeLeaf.view;
+        return v && v.getViewType() === 'design-redux-browse' ? `${v.mode}:${v.path}` : null;
+      }),
+      (s) => s === 'folder:Politics'
+    );
+    expect(shown).toBe('folder:Politics');
+  });
+
   it('opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading', async function () {
     await browser.executeObsidian(async ({ app }) => {
       if (!app.vault.getFolderByPath('Page album')) await app.vault.createFolder('Page album');
@@ -1524,6 +1539,33 @@ describe('Design Redux in Obsidian', function () {
       const folder = app.vault.getFolderByPath('Page album');
       if (folder) await app.vault.delete(folder, true);
     });
+  });
+
+  it('opens a folder named in the path above a note in the file list, the note showing inside it', async function () {
+    await obsidianPage.openFile('Politics/Theories/Realism.md');
+    // The file list shut, every folder in it.
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.getLeavesOfType('file-explorer')[0];
+      if (leaf && leaf.view && typeof leaf.view.setCollapsed === 'function') {
+        Object.values(leaf.view.fileItems || {}).forEach((item) => item.setCollapsed && item.setCollapsed(true));
+      }
+      app.workspace.revealLeaf && leaf && app.workspace.revealLeaf(leaf);
+    });
+    await browser.$(ACTIVE + '.view-header-breadcrumb').waitForExist({ timeout: 5000 });
+    let crumb = null;
+    for (const el of await browser.$$(ACTIVE + '.view-header-breadcrumb')) {
+      if ((await el.getText()).trim() === 'Theories') crumb = el;
+    }
+    expect(crumb).not.toBeNull();
+    await crumb.click();
+    const shown = await readUntil(
+      () => browser.execute(() => {
+        const title = document.querySelector('.nav-file-title[data-path="Politics/Theories/Realism.md"]');
+        return !!title && title.offsetParent !== null;
+      }),
+      (v) => v
+    );
+    expect(shown).toBe(true);
   });
 
   it('remembers a note read to its end, in its own data, and shows the album how far through it is', async function () {

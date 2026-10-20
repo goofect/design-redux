@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1487,6 +1487,29 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     } finally {
       document.body.removeClass('dr-look-apple');
     }
+  });
+
+  await t("a folder in a tab's path opens its collection in the library, not the file explorer", async () => {
+    assert.strictEqual(R.crumbFolderPath('Concepts Folder/Philosophy Concepts/Philosophical position.md', 1, 2), 'Concepts Folder/Philosophy Concepts');
+    assert.strictEqual(R.crumbFolderPath('Concepts Folder/Philosophy Concepts/Philosophical position.md', 0, 2), 'Concepts Folder');
+    assert.strictEqual(R.crumbFolderPath('A/B/C/Note.md', 0, 2), null, 'a shortened path is left to Obsidian');
+    assert.strictEqual(R.crumbFolderPath('Note.md', 0, 0), null);
+    const { app } = setup();
+    const leafEl = document.body.createDiv({ cls: 'workspace-leaf' });
+    const parent = leafEl.createDiv({ cls: 'view-header-title-parent' });
+    parent.createSpan({ cls: 'view-header-breadcrumb', text: 'IR' });
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    app.workspace.iterateAllLeaves = (fn) => fn({ containerEl: leafEl, view: { file } });
+    const went = [];
+    const lib = Object.create(R.Library.prototype, { app: { value: app }, enabled: { value: true }, browseMode: { value: (st) => went.push(st) } });
+    let stopped = false;
+    const evt = { button: 0, target: parent.firstChild, preventDefault() {}, stopPropagation() { stopped = true; } };
+    lib.openCrumb(evt);
+    assert.deepStrictEqual(went, [{ mode: 'folder', path: 'IR' }]);
+    assert.ok(stopped, 'Obsidian does not also reveal it in the file explorer');
+    lib.openCrumb(Object.assign({}, evt, { metaKey: true }));
+    assert.strictEqual(went.length, 1, 'a modified click is still Obsidian’s');
+    leafEl.remove();
   });
 
   /* -- lengths, Home ------------------------------------------------------- */
