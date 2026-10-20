@@ -520,9 +520,10 @@ export class DesignReduxSettingTab extends PluginSettingTab {
   drawFeature(pane, spec, feature) {
     const options = feature.options.filter((row) => this.shown(row));
     if (spec.id === 'look') {
+      // The group's name above it, as a grouped list has.
+      new Setting(pane).setName('Look').setHeading();
       const block = pane.createDiv({ cls: 'dr-set-block' });
       block.dataset.drSearch = 'look';
-      new Setting(block).setName('Look').setHeading();
       this.drawRows(block, options, spec);
       this.drawPresets(block);
       return;
@@ -530,6 +531,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     if (!feature.switchRow && !options.length) return;
     const on = !feature.switch || !!this.settings[feature.switch];
     const block = pane.createDiv({ cls: 'dr-set-block dr-set-feature' });
+    block.dataset.feature = feature.id;
     block.dataset.drSearch = `${feature.name} ${feature.desc} ${feature.switch || ''}`.toLowerCase();
     const setting = new Setting(block).setName(feature.name).setDesc(feature.desc);
     const nameEl = setting.nameEl;

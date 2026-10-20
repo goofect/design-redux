@@ -18,7 +18,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview'];
+const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
