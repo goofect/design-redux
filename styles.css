@@ -10545,7 +10545,35 @@ body.dr-note-apple .markdown-source-view .cm-content,
 body.dr-note-apple .markdown-preview-view {
   font-family: var(--font-text);
   font-size: 17px;
+  font-weight: 400;
   line-height: 1.5;
+  /* Text drawn as Apple draws it: regular, smoothed in greyscale so it isn't heavier than it should
+     be, and never with a faux bold or italic. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Regular text at 400 and bold at 600 (semibold), as Apple sets body copy — not the theme's heavier bold. */
+body.dr-note-apple .markdown-source-view,
+body.dr-note-apple .markdown-preview-view,
+body.dr-note-apple .markdown-rendered {
+  --font-weight: 400;
+  --bold-weight: 600;
+}
+
+body.dr-note-apple .markdown-rendered :is(strong, b),
+body.dr-note-apple .markdown-source-view .cm-strong {
+  font-weight: 600;
+}
+
+body.dr-note-apple .inline-title,
+body.dr-note-apple .dr-note-album,
+body.dr-note-apple .dr-note-meta,
+body.dr-note-apple .dr-pages {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* The text column: 680px at most, centred. */

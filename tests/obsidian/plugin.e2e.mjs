@@ -1238,6 +1238,10 @@ describe('Design Redux in Obsidian', function () {
         body: css(root().querySelector('p'), ['fontSize', 'lineHeight']),
         column: root().querySelector('.markdown-preview-sizer').getBoundingClientRect().width,
         rule: getComputedStyle(root().querySelector('hr')).borderTopWidth,
+        weights: ['p', 'li', '.inline-title', 'h1'].map((t) => {
+          const el = leaf.view.containerEl.querySelector('.markdown-preview-view ' + t);
+          return el ? t + ':' + getComputedStyle(el).fontWeight + ':' + getComputedStyle(el).webkitFontSmoothing : t + ':none';
+        }),
         order: Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-album, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips, .markdown-preview-view .dr-note-rule')).map((el) => el.className.split(' ')[0]),
         colours: colours(),
         type: typeOf(),
@@ -1262,6 +1266,7 @@ describe('Design Redux in Obsidian', function () {
       await app.vault.delete(file);
       return { apple, theme, without, room };
     });
+    expect(result.apple.weights).toEqual(['p:400:antialiased', 'li:400:antialiased', '.inline-title:700:antialiased', 'h1:700:antialiased']);
     expect(result.apple.title).toBe('34px|700');
     expect(result.apple.body).toBe('17px|25.5px');
     expect(result.apple.column).toBeLessThanOrEqual(680);
