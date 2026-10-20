@@ -719,6 +719,15 @@ describe('Design Redux in Obsidian', function () {
       (f) => f
     );
     expect(focused).toBe(true);
+    // Where the keys go, kept for a miss: what got them, and whether something stopped them.
+    await browser.execute(() => {
+      const log = (window.__drKeys = []);
+      const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
+      window.__drField = field;
+      document.addEventListener('keydown', (e) => log.push(['down', e.key, e.target.className || e.target.tagName]), { capture: true });
+      window.addEventListener('keydown', (e) => e.defaultPrevented && log.push(['stopped', e.key]), false);
+      if (field) field.addEventListener('input', () => log.push(['input', field.value]));
+    });
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
     // With what the field holds, so a miss says whether the keys arrived.
@@ -730,6 +739,17 @@ describe('Design Redux in Obsidian', function () {
       }),
       (w) => w.found
     );
+    if (!passage.found) {
+      const seen = await browser.execute(() => ({
+        keys: (window.__drKeys || []).slice(0, 8),
+        same: window.__drField === document.querySelector('.workspace-leaf.mod-active .dr-browse-search input'),
+        connected: !!(window.__drField && window.__drField.isConnected),
+        active: document.activeElement ? `${document.activeElement.tagName}.${document.activeElement.className}` : null,
+        focus: document.hasFocus(),
+        modal: document.querySelectorAll('.modal-container').length,
+      }));
+      expect(seen).toEqual({});
+    }
     expect(passage).toEqual({ found: true, field: 'lettered item' });
     await browser.execute(() => {
       const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
