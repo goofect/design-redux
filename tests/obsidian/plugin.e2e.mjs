@@ -709,6 +709,8 @@ describe('Design Redux in Obsidian', function () {
     // A notice left by an earlier test can sit over the field.
     await browser.execute(() => document.querySelectorAll('.notice').forEach((n) => n.remove()));
     await input.click();
+    // Focused as the second query is: on the oldest version a click can leave the keys elsewhere.
+    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-browse-search input').focus());
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
     const passage = await readUntil(

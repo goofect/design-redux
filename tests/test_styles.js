@@ -46,4 +46,33 @@ t('no colour value that isn’t on the list', () => {
   assert.deepStrictEqual(added, [], 'new colour values (colour is the theme’s; record a deliberate one with --update): ' + added.join(', '));
 });
 
+t('with reduced motion, every rule that sets the durations sets them to nothing', () => {
+  // The rules that give --dr-dur-slow a time, outside a reduced-motion block, each need a zero inside one.
+  const rules = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  const reduced = [];
+  const blocks = css.split('@media (prefers-reduced-motion: reduce)');
+  blocks.slice(1).forEach((b) => {
+    let depth = 0;
+    let end = 0;
+    for (let i = 0; i < b.length; i++) {
+      if (b[i] === '{') depth++;
+      else if (b[i] === '}' && --depth === 0) { end = i; break; }
+    }
+    reduced.push(b.slice(0, end));
+  });
+  const inside = reduced.join('\n');
+  while ((m = re.exec(css))) {
+    const sel = m[1].trim().split('\n').pop().trim();
+    if (/--dr-dur-slow:\s*[1-9]/.test(m[2])) rules.push(sel);
+  }
+  const zeroed = new Set();
+  while ((m = re.exec(inside))) {
+    if (/--dr-dur-slow:\s*0/.test(m[2])) zeroed.add(m[1].trim().split('\n').pop().trim());
+  }
+  const open = rules.filter((sel) => !zeroed.has(sel) && !(sel === ':root' && zeroed.has('body')));
+  assert.deepStrictEqual(open, [], 'durations reduced motion leaves running: ' + open.join(', '));
+});
+
 console.log(`\n${passed} passed`);

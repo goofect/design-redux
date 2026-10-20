@@ -10736,6 +10736,16 @@ body.dr-look-apple.theme-dark {
   --dr-shadow-md: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
+/* With reduced motion, every duration is nothing — the Apple look's too. */
+@media (prefers-reduced-motion: reduce) {
+  body.dr-look-apple {
+    --dr-dur-press: 0ms;
+    --dr-dur-fast: 0ms;
+    --dr-dur-base: 0ms;
+    --dr-dur-slow: 0ms;
+  }
+}
+
 /* With reduced transparency, materials are solid. */
 @media (prefers-reduced-transparency: reduce) {
   body.dr-look-apple {
@@ -11382,7 +11392,7 @@ body.dr-look-apple .dr-sheet-open {
 }
 
 /* 8. Toggle and field — a 51 × 31 switch; a field 32px high with a hairline and no inner shadow. */
-body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse, .dr-panel) {
+body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse) {
   --toggle-width: 51px;
   --toggle-thumb-width: 27px;
   --toggle-thumb-height: 27px;
@@ -11396,7 +11406,7 @@ body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse, .dr-panel) {
   --input-shadow-hover: none;
 }
 
-body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse, .dr-panel) .checkbox-container {
+body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse) .checkbox-container {
   width: 51px;
   height: 31px;
   border-radius: 15.5px;
