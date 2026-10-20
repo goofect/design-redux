@@ -1182,9 +1182,9 @@ describe('Design Redux in Obsidian', function () {
         seg.createDiv({ cls: 'dr-segment is-active', text: 'One' });
         seg.createDiv({ cls: 'dr-segment', text: 'Two' });
         const list = box.createDiv();
-        const row = list.createDiv({ cls: 'dr-row' });
-        row.createDiv({ cls: 'dr-row-cover' });
-        row.createDiv({ cls: 'dr-row-text', text: 'A note' });
+        const row = list.createDiv({ cls: 'dr-list-row' });
+        row.createDiv({ cls: 'dr-list-row-cover' });
+        row.createDiv({ cls: 'dr-list-row-text', text: 'A note' });
         const art = box.createDiv({ cls: 'dr-tile' }).createDiv({ cls: 'dr-tile-art' });
         const chip = box.createSpan({ cls: 'dr-chip', text: 'tag' });
         const sheet = box.createDiv({ cls: 'dr-sheet', text: 'Sheet' });
@@ -1196,7 +1196,7 @@ describe('Design Redux in Obsidian', function () {
           main: cs(main).backgroundColor !== 'rgba(0, 0, 0, 0)' && main.offsetHeight,
           plain: [cs(plain).backgroundColor, cs(plain).color === cs(document.body).getPropertyValue('--text-accent') || cs(plain).color !== cs(document.body).color],
           segmented: seg.offsetHeight,
-          row: [row.offsetHeight >= 44, row.querySelector('.dr-row-cover').offsetWidth],
+          row: [row.offsetHeight >= 44, row.querySelector('.dr-list-row-cover').offsetWidth],
           tile: [cs(art).boxShadow, cs(art).borderTopWidth],
           chip: [chip.offsetHeight, cs(chip).borderTopWidth, cs(chip).fontSize],
           sheet: [cs(sheet).borderTopLeftRadius, cs(sheet).boxShadow !== 'none'],

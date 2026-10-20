@@ -11268,7 +11268,7 @@ body.dr-look-apple .dr-segment .svg-icon {
 
 /* 4. Row — a list row: 44px, a 36px cover at the left if any, a title and one muted line, a
    hairline under it inset from the left, a chevron or value at the right. */
-body.dr-look-apple .dr-row {
+body.dr-look-apple .dr-list-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -11277,7 +11277,7 @@ body.dr-look-apple .dr-row {
   padding: 4px 16px;
 }
 
-body.dr-look-apple .dr-row::after {
+body.dr-look-apple .dr-list-row::after {
   content: '';
   position: absolute;
   right: 0;
@@ -11287,11 +11287,11 @@ body.dr-look-apple .dr-row::after {
   background-color: var(--dr-separator);
 }
 
-body.dr-look-apple .dr-row:last-child::after {
+body.dr-look-apple .dr-list-row:last-child::after {
   display: none;
 }
 
-body.dr-look-apple .dr-row-cover {
+body.dr-look-apple .dr-list-row-cover {
   flex: 0 0 36px;
   width: 36px;
   height: 36px;
@@ -11299,12 +11299,12 @@ body.dr-look-apple .dr-row-cover {
   border-radius: 6px;
 }
 
-body.dr-look-apple .dr-row-text {
+body.dr-look-apple .dr-list-row-text {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-body.dr-look-apple .dr-row-title {
+body.dr-look-apple .dr-list-row-title {
   overflow: hidden;
   color: var(--text-normal);
   font-size: var(--dr-type-subhead);
@@ -11312,7 +11312,7 @@ body.dr-look-apple .dr-row-title {
   white-space: nowrap;
 }
 
-body.dr-look-apple .dr-row-line {
+body.dr-look-apple .dr-list-row-line {
   overflow: hidden;
   color: var(--text-muted);
   font-size: var(--dr-type-footnote);
@@ -11320,7 +11320,7 @@ body.dr-look-apple .dr-row-line {
   white-space: nowrap;
 }
 
-body.dr-look-apple .dr-row-end {
+body.dr-look-apple .dr-list-row-end {
   flex: 0 0 auto;
   color: var(--text-muted);
   font-size: var(--dr-type-footnote);

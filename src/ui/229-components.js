@@ -12,6 +12,11 @@ import { Menu, setIcon } from 'obsidian';
 import { showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 
+/** Whether the Apple look is on: what a screen draws differently under it, beyond its styles. */
+export function isAppleLook() {
+  return typeof document !== 'undefined' && !!document.body && document.body.classList.contains('dr-look-apple');
+}
+
 /** A toolbar button: a symbol alone, its name the tooltip. */
 export function drIconButton(parent, icon, label, run) {
   const el = parent.createDiv({ cls: 'dr-icon-button clickable-icon' });
@@ -73,13 +78,13 @@ export function drSegmented(parent, items, value, onChange) {
 
 /** A list row: an optional cover, a title and one muted line, a value or chevron at the end. */
 export function drRow(parent, opts) {
-  const el = parent.createDiv({ cls: 'dr-row' });
-  if (opts.cover) opts.cover(el.createDiv({ cls: 'dr-row-cover' }));
-  const text = el.createDiv({ cls: 'dr-row-text' });
-  text.createDiv({ cls: 'dr-row-title', text: opts.title });
-  if (opts.line) text.createDiv({ cls: 'dr-row-line', text: opts.line });
-  if (opts.end) el.createDiv({ cls: 'dr-row-end', text: opts.end });
-  else if (opts.run) setIcon(el.createDiv({ cls: 'dr-row-end' }), 'chevron-right');
+  const el = parent.createDiv({ cls: 'dr-list-row' });
+  if (opts.cover) opts.cover(el.createDiv({ cls: 'dr-list-row-cover' }));
+  const text = el.createDiv({ cls: 'dr-list-row-text' });
+  text.createDiv({ cls: 'dr-list-row-title', text: opts.title });
+  if (opts.line) text.createDiv({ cls: 'dr-list-row-line', text: opts.line });
+  if (opts.end) el.createDiv({ cls: 'dr-list-row-end', text: opts.end });
+  else if (opts.run) setIcon(el.createDiv({ cls: 'dr-list-row-end' }), 'chevron-right');
   if (opts.run) {
     asButton(el, opts.title);
     onActivate(el, opts.run);
