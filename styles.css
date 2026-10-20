@@ -10606,11 +10606,15 @@ body.dr-note-apple .dr-note-chip {
 body.dr-note-apple .dr-note-rule {
   display: block;
   height: 1px;
-  margin: 16px 0 0;
+  margin: 16px 0 20px;
   background-color: var(--background-modifier-border);
 }
 
-body.dr-note-apple .dr-note-rule + .dr-pages,
+/* With pages, the control sits 16px under the grey line and 20px above the text. */
+body.dr-note-apple .dr-note-rule:has(~ .dr-pages) {
+  margin-bottom: 0;
+}
+
 body.dr-note-apple .dr-note-rule ~ .dr-pages {
   margin-top: 16px;
 }
@@ -10638,4 +10642,113 @@ body.dr-note-apple .dr-note-rule ~ .dr-pages {
   order: -1;
   flex-basis: 100%;
   justify-content: center;
+}
+
+/* Sizes, Apple's: one scale for everything the plugin draws, in step with the page control.
+   Interface text in the system font at 13px (12px secondary, 11px captions), headings as large
+   titles (34px), titles (22px) and headlines (17px semibold); controls 28px with 16px symbols
+   (44px to hit on touch); sidebar rows 28px; the strip a mini player 48px high around a 36px cover.
+   Every gap stays a multiple of 4px. Colours stay the theme's. */
+body {
+  --dr-font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
+  --dr-display-size: 34px;
+  --dr-display-weight: 700;
+  --dr-title-size: 22px;
+  --dr-heading-size: 17px;
+  --dr-ui-size: 13px;
+  --dr-ui-weight: 500;
+  --dr-meta-size: 12px;
+  --dr-line-display: 1.15;
+  --dr-line-heading: 1.25;
+  --dr-control-size: 28px;
+  --dr-control-icon: 16px;
+  --dr-row-height: 28px;
+}
+
+body.dr-density-compact {
+  --dr-row-height: 24px;
+  --dr-control-size: 24px;
+  --dr-control-icon: 14px;
+}
+
+body.dr-density-spacious {
+  --dr-row-height: 32px;
+  --dr-control-size: 32px;
+  --dr-control-icon: 18px;
+}
+
+body.is-mobile {
+  --dr-control-size: 44px;
+  --dr-control-icon: 20px;
+  --dr-row-height: 44px;
+}
+
+/* The plugin's own surfaces speak in the system font at Apple's interface sizes. */
+[class^="dr-"],
+[class*=" dr-"] {
+  --font-ui-smaller: 12px;
+  --font-ui-small: 13px;
+  --font-ui-medium: 15px;
+  --font-ui-large: 17px;
+}
+
+.dr-strip,
+.dr-browse,
+.dr-library,
+.dr-settings,
+.dr-pages,
+.dr-note-album,
+.dr-note-meta,
+.dr-note-chips {
+  font-family: var(--dr-font-ui);
+}
+
+/* The strip, as a mini player: 48px high, a 36px cover with 6px corners, the title at 13px semibold
+   and the line under it at 12px, buttons 28px. */
+.dr-strip {
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+.dr-strip-art {
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+
+.dr-strip-now {
+  gap: 12px;
+  padding: 0 8px 0 0;
+}
+
+.dr-strip-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.dr-strip-sub {
+  font-size: 12px;
+}
+
+.dr-strip-skip .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* The note's grey line: 13px secondary text, 4px under the title. */
+body.dr-note-apple .dr-note-meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+/* An album's buttons, as Apple Music's: 32px high, 13px semibold, 8px corners. */
+.dr-detail-action {
+  min-width: 112px;
+  min-height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }

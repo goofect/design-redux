@@ -380,7 +380,7 @@ describe('Design Redux in Obsidian', function () {
     check(dark, 'dark');
     expect(dark.dark).toBe(true);
     expect(dark.rows.length).toBeGreaterThan(0);
-    expect(dark.rows[0][0]).toBe(32);
+    expect(dark.rows[0][0]).toBe(28);
     const editorial = await measure('obsidian', 'editorial', 'standard');
     check(editorial, 'editorial, dark');
     await shot('album-editorial');
@@ -392,7 +392,7 @@ describe('Design Redux in Obsidian', function () {
     // Density: rows a unit tighter or looser.
     const compact = await measure('obsidian', 'theme', 'compact');
     const spacious = await measure('obsidian', 'theme', 'large');
-    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
+    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([24, 32]);
     check(compact, 'compact');
     check(spacious, 'spacious');
     // Back as it was, for the tests after.
