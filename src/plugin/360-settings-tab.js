@@ -11,6 +11,7 @@ import { byName } from '../core/030-helpers-art.js';
 import { normalHex } from '../core/031-colours.js';
 import { roveFocus } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
+import { drSegmented, isAppleLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
 
 export const SETTINGS_TABS = [
@@ -672,6 +673,11 @@ export class DesignReduxSettingTab extends PluginSettingTab {
             if (Number.isFinite(n) && n >= (row.min || 1)) this.set(row.key, n);
           });
       });
+    } else if (row.type === 'dropdown' && row.segmented && isAppleLook()) {
+      // A few short choices, side by side as the Apple look draws them.
+      this.addReset(setting, row);
+      const items = Object.keys(row.options).map((v) => ({ id: v, label: row.options[v] }));
+      drSegmented(setting.controlEl, items, value, (v) => this.set(row.key, v, true));
     } else if (row.type === 'dropdown') {
       this.addReset(setting, row);
       setting.addDropdown((d) => {

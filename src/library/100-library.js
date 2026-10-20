@@ -12,8 +12,10 @@ import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-con
 import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, progressRing, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { readingOf } from '../core/075-reading.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
+import { isAppleLook } from '../ui/229-components.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
 export class LibraryView extends ItemView {
@@ -263,10 +265,16 @@ export class LibraryView extends ItemView {
       });
       // Partway through it: a small ring at the end of its row.
       const s = this.plugin.settings;
+      let ring = null;
       if (s.albumProgressRing && s.readingHistory) {
         const { read, total } = readingOf(this.plugin).albumProgress(target);
-        const ring = read < total ? progressRing(row.ownerDocument, read, total) : null;
+        ring = read < total ? progressRing(row.ownerDocument, read, total) : null;
         if (ring) row.appendChild(ring);
+      }
+      // The Apple look: how many notes it holds, muted at the end, where no ring is.
+      if (!ring && isAppleLook()) {
+        const n = libraryIndex(this.plugin).count(target);
+        if (n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       }
       return;
     }

@@ -83,7 +83,7 @@ class Menu {
 }
 const settingNames = [];
 class Setting {
-  constructor(el) { this.el = el; this.settingEl = el && el.createDiv ? el.createDiv({ cls: "setting-item" }) : null; }
+  constructor(el) { this.el = el; this.settingEl = el && el.createDiv ? el.createDiv({ cls: "setting-item" }) : null; this.controlEl = this.settingEl ? this.settingEl.createDiv({ cls: "setting-item-control" }) : null; }
   setName(n) { settingNames.push(n); return this; }
   setDesc() { return this; }
   setHeading() { return this; }
@@ -346,6 +346,31 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await tab.applyPreset('everything');
     assert.strictEqual(p.settings.contextStrip, true);
     assert.strictEqual(p.settings.graphProperties, true);
+  });
+
+  await t('settings: under the Apple look, a choice marked segmented is a segmented control', async () => {
+    const p = fakePlugin(Object.assign(settings(), { library: true, libraryLayout: 'auto' }));
+    p.saveData = async () => {};
+    p.saveSettings = async () => {};
+    p.features = [{ settingsSchema: () => [
+      { key: 'library', name: 'Library' },
+      { key: 'libraryLayout', type: 'dropdown', segmented: true, name: 'Layout', options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' } },
+    ] }];
+    document.body.classList.add('dr-look-apple');
+    try {
+      const tab = new T.DesignReduxSettingTab(p.app, p);
+      tab.tab = 'library';
+      tab.gear = 'library';
+      tab.display();
+      const seg = tab.containerEl.querySelector('.dr-segmented');
+      assert.ok(seg, 'drawn as a segmented control');
+      assert.deepStrictEqual(Array.from(seg.querySelectorAll('.dr-segment')).map((s) => s.textContent), ['Automatic', 'Covers', 'Lists']);
+      assert.strictEqual(seg.querySelector('.is-active').textContent, 'Automatic');
+      seg.querySelectorAll('.dr-segment')[1].click();
+      assert.strictEqual(p.settings.libraryLayout, 'covers');
+    } finally {
+      document.body.classList.remove('dr-look-apple');
+    }
   });
 
   await t('settings: the main properties as a list to order, take off and add to by name', () => {

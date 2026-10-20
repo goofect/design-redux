@@ -254,6 +254,21 @@ t('a folder screen highlights its folder', () => {
   assert.deepStrictEqual(active(view), ['Books Folder']);
 });
 
+t('the Apple look: a folder row ends with how many notes it holds, muted', () => {
+  document.body.classList.add('dr-look-apple');
+  folders['Concepts Folder'].children = [files['Concepts Folder/Logic.md']];
+  try {
+    const { view } = setup({ page: browsePage('folder', { path: 'Books Folder' }) });
+    const row = view.contentEl.querySelector('.dr-lib-row[data-path="Concepts Folder"]');
+    assert.strictEqual(row.querySelector('.dr-lib-count').textContent, '1');
+  } finally {
+    document.body.classList.remove('dr-look-apple');
+    folders['Concepts Folder'].children = [];
+  }
+  const { view } = setup({ page: browsePage('folder', { path: 'Books Folder' }) });
+  assert.ok(!view.contentEl.querySelector('.dr-lib-count'), 'not under the theme’s look');
+});
+
 t('a note highlights the folder it sits in', () => {
   const { view } = setup({ page: notePage('Concepts Folder/Logic.md') });
   assert.deepStrictEqual(active(view), ['Concepts Folder']);

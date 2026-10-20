@@ -15,6 +15,7 @@ import { mixInto } from '../core/080-feature.js';
 import { studyReady } from '../core/081-study.js';
 import { ROOT_MODES } from './119-browse-registry.js';
 import { BrowseView } from './120-browse-view.js';
+import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseAlbum {
@@ -464,12 +465,22 @@ export class BrowseAlbum {
       const target = resume || files[0];
       if (target) this.app.workspace.getLeaf(false).openFile(target);
     }).addClass('is-primary');
-    this.action(actions, 'shuffle', 'Random', () => {
+    const random = () => {
       if (!files.length) return;
       const pick = files[Math.floor(Math.random() * files.length)];
       this.app.workspace.getLeaf(false).openFile(pick);
-    });
-    if (about && about.type === 'concept map') this.action(actions, 'waypoints', 'Map', () => structure.openMap(folder));
+    };
+    const map = about && about.type === 'concept map' ? () => structure.openMap(folder) : null;
+    // The Apple look: one filled button, Edit in plain text, the rest under an icon-only More.
+    if (isAppleLook()) {
+      if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
+      const more = [{ title: 'Random', icon: 'shuffle', run: random }];
+      if (map) more.push({ title: 'Map', icon: 'waypoints', run: map });
+      drIconButton(actions, 'more-horizontal', 'More', (evt) => drMenu(evt, more)).addClass('dr-detail-more');
+      return;
+    }
+    this.action(actions, 'shuffle', 'Random', random);
+    if (map) this.action(actions, 'waypoints', 'Map', map);
     if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
   }
 

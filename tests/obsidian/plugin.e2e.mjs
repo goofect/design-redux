@@ -1593,6 +1593,44 @@ describe('Design Redux in Obsidian', function () {
     await shot('home');
   });
 
+  it('lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays', async function () {
+    const browse = (state) =>
+      browser.executeObsidian(async ({ plugins }, state) => {
+        const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+        await library.browseMode(state);
+      }, state);
+    const read = (fn) => browser.execute(fn);
+    await browse({ mode: 'home' });
+    await browser.$(ACTIVE + '.dr-shelf-row .dr-card').waitForExist({ timeout: 10000 });
+    const home = await read(() => {
+      const page = document.querySelector('.workspace-leaf.mod-active .dr-browse');
+      const row = page.querySelector('.dr-shelf-row');
+      return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
+    });
+    expect(home).toEqual({ shelf: '22px', gap: '16px', scrolls: 'auto' });
+    await browse({ mode: 'folder', path: 'Politics' });
+    await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
+    const album = await read(() => {
+      const page = document.querySelector('.workspace-leaf.mod-active .dr-browse');
+      const more = page.querySelector('.dr-detail-more');
+      return {
+        art: page.querySelector('.dr-detail-art').offsetWidth <= 240,
+        filled: page.querySelectorAll('.dr-detail-actions .is-primary').length,
+        more: more ? [more.getAttribute('aria-label'), more.offsetWidth, more.textContent] : null,
+      };
+    });
+    expect(album).toEqual({ art: true, filled: 1, more: ['More', 32, ''] });
+    await browse({ mode: 'notes' });
+    const head = await readUntil(
+      () => read(() => {
+        const th = document.querySelector('.workspace-leaf.mod-active .dr-th');
+        return th ? getComputedStyle(th).position : null;
+      }),
+      (p) => p !== null
+    );
+    expect(head).toBe('sticky');
+  });
+
   it('draws quiet links, keeps them off the graph and backlinks, and follows renames', async function () {
     this.timeout(180000);
     const backlinked = await browser.executeObsidian(async ({ app, plugins }) => {

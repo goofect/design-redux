@@ -167,6 +167,7 @@ export class Library extends Feature {
       {
         key: 'gridDensity',
         type: 'dropdown',
+        segmented: true,
         name: 'Density',
         desc: 'How much room everything gets — covers, rows, the library, the strip, panels and windows: compact, standard or spacious.',
         options: GRID_DENSITIES,
@@ -174,6 +175,7 @@ export class Library extends Feature {
       {
         key: 'libraryLayout',
         type: 'dropdown',
+        segmented: true,
         showIf: 'library',
         name: 'Layout',
         desc: 'Covers or lists. Automatic shows collections, pins and a few values as covers, and notes — recently opened, added and read — as lists.',

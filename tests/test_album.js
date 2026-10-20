@@ -1474,6 +1474,21 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.el.remove();
   });
 
+  await t('the Apple look: an album page has one filled Open, Edit in plain text, Random under an icon-only More', async () => {
+    const { view } = setup();
+    document.body.addClass('dr-look-apple');
+    try {
+      view.render();
+      const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-actions > *'));
+      assert.deepStrictEqual(actions.map((b) => b.textContent), ['Open', 'Edit', '']);
+      assert.strictEqual(view.contentEl.querySelectorAll('.dr-detail-actions .is-primary').length, 1);
+      const more = view.contentEl.querySelector('.dr-detail-more');
+      assert.strictEqual(more.getAttribute('aria-label'), 'More');
+    } finally {
+      document.body.removeClass('dr-look-apple');
+    }
+  });
+
   /* -- lengths, Home ------------------------------------------------------- */
 
   const f = (app, p) => app.vault.getFileByPath(p);
