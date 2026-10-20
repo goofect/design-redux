@@ -11402,14 +11402,14 @@ body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse, .dr-panel) .ch
   border-radius: 15.5px;
 }
 
-body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-panel) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown) {
+body.dr-look-apple :is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *) {
   height: 32px;
   border: 0.5px solid var(--dr-separator);
   border-radius: 8px;
   box-shadow: none;
 }
 
-body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-panel) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):focus {
+body.dr-look-apple :is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *):focus {
   box-shadow: var(--dr-focus-ring);
 }
 
@@ -11578,4 +11578,63 @@ body.dr-look-apple .dr-preview-lead {
 
 body.dr-look-apple :is(.dr-preview-about, .dr-preview-facts) {
   display: none;
+}
+
+/* ====================================================================
+ * Apple look: the properties panel as a grouped list
+ * A rounded group, the label at the left and the value at the right,
+ * hairlines between, edited where it stands.
+ * ==================================================================== */
+body.dr-look-apple .dr-props-popup .dr-rows {
+  gap: 0;
+  padding: 0 12px;
+  border-radius: 10px;
+  background-color: var(--dr-group-bg);
+}
+
+body.dr-look-apple .dr-props-popup .dr-row {
+  align-items: center;
+  min-height: 40px;
+  padding: 4px 0;
+  border-radius: 0;
+}
+
+body.dr-look-apple .dr-props-popup .dr-row + .dr-row {
+  border-top: 0.5px solid var(--dr-separator);
+}
+
+body.dr-look-apple .dr-props-popup .dr-row:focus-within {
+  background-color: transparent;
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple .dr-props-popup .dr-row:hover {
+    background-color: transparent;
+  }
+}
+
+body.dr-look-apple .dr-props-popup .dr-key {
+  justify-content: flex-start;
+  padding-top: 0;
+  color: var(--text-normal);
+  font-size: var(--dr-type-subhead);
+  text-align: left;
+}
+
+body.dr-look-apple .dr-props-popup .dr-key .dr-key-name {
+  text-align: left;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value {
+  color: var(--text-muted);
+  font-size: var(--dr-type-subhead);
+  text-align: right;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value :is(input, [contenteditable]) {
+  text-align: right;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-container {
+  justify-content: flex-end;
 }

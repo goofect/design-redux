@@ -2315,6 +2315,19 @@ describe('Design Redux in Obsidian', function () {
     expect(look.rowHeight).toBeGreaterThanOrEqual(32);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);
+    // The Apple look: one rounded group, hairlines between rows, the value at the right.
+    const group = await browser.execute(() => {
+      const pop = document.querySelector('.dr-props-popup.is-open');
+      const rows = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
+      const field = rows[0].querySelector('.dr-value input, .dr-value [contenteditable]');
+      return {
+        radius: getComputedStyle(pop.querySelector('.dr-rows')).borderTopLeftRadius,
+        hairline: parseFloat(getComputedStyle(rows[1]).borderTopWidth) > 0,
+        boxed: field ? parseFloat(getComputedStyle(field).borderTopWidth) > 0 : false,
+        right: field ? getComputedStyle(field).textAlign : 'right',
+      };
+    });
+    expect(group).toEqual({ radius: '10px', hairline: true, boxed: false, right: 'right' });
     await shot('properties-inspector');
 
     // + : the search, with the cursor in it.
