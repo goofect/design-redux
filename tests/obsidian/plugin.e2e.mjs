@@ -709,15 +709,28 @@ describe('Design Redux in Obsidian', function () {
     // A notice left by an earlier test can sit over the field.
     await browser.execute(() => document.querySelectorAll('.notice').forEach((n) => n.remove()));
     await input.click();
-    // Focused as the second query is: on the oldest version a click can leave the keys elsewhere.
-    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-browse-search input').focus());
+    // Typed only once the field holds the focus: the page can still be settling as it opens.
+    const focused = await readUntil(
+      () => browser.execute(() => {
+        const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
+        if (field && document.activeElement !== field) field.focus();
+        return !!field && document.activeElement === field;
+      }),
+      (f) => f
+    );
+    expect(focused).toBe(true);
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
+    // With what the field holds, so a miss says whether the keys arrived.
     const passage = await readUntil(
-      () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active [data-excerpt]')).map((e) => e.dataset.excerpt)),
-      (w) => w.some((x) => /lettered item/i.test(x))
+      () => browser.execute(() => {
+        const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
+        const found = Array.from(document.querySelectorAll('.workspace-leaf.mod-active [data-excerpt]')).some((e) => /lettered item/i.test(e.dataset.excerpt));
+        return { found, field: field ? field.value : null };
+      }),
+      (w) => w.found
     );
-    expect(passage.some((x) => /lettered item/i.test(x))).toBe(true);
+    expect(passage).toEqual({ found: true, field: 'lettered item' });
     await browser.execute(() => {
       const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
       field.value = '';
