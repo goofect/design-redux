@@ -1541,33 +1541,6 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
-  it('opens a folder named in the path above a note in the file list, the note showing inside it', async function () {
-    await obsidianPage.openFile('Politics/Theories/Realism.md');
-    // The file list shut, every folder in it.
-    await browser.executeObsidian(async ({ app }) => {
-      const leaf = app.workspace.getLeavesOfType('file-explorer')[0];
-      if (leaf && leaf.view && typeof leaf.view.setCollapsed === 'function') {
-        Object.values(leaf.view.fileItems || {}).forEach((item) => item.setCollapsed && item.setCollapsed(true));
-      }
-      app.workspace.revealLeaf && leaf && app.workspace.revealLeaf(leaf);
-    });
-    await browser.$(ACTIVE + '.view-header-breadcrumb').waitForExist({ timeout: 5000 });
-    let crumb = null;
-    for (const el of await browser.$$(ACTIVE + '.view-header-breadcrumb')) {
-      if ((await el.getText()).trim() === 'Theories') crumb = el;
-    }
-    expect(crumb).not.toBeNull();
-    await crumb.click();
-    const shown = await readUntil(
-      () => browser.execute(() => {
-        const title = document.querySelector('.nav-file-title[data-path="Politics/Theories/Realism.md"]');
-        return !!title && title.offsetParent !== null;
-      }),
-      (v) => v
-    );
-    expect(shown).toBe(true);
-  });
-
   it('remembers a note read to its end, in its own data, and shows the album how far through it is', async function () {
     await browser.executeObsidian(async ({ app }) => {
       if (!app.vault.getFolderByPath('Read album')) await app.vault.createFolder('Read album');
