@@ -18,7 +18,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview'];
+const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -1142,6 +1142,32 @@ describe('Design Redux in Obsidian', function () {
     expect(result.reading.find((r) => r[0].includes('Alpha text'))[1]).toBe(true);
     expect(result.reading.find((r) => r[0].includes('Alpha text'))[2]).toBe(0);
     expect(result.reading.find((r) => r[0].includes('Beta text'))[1]).toBe(false);
+  });
+
+  it('draws the page control as a segmented control, in light and dark', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      if (!app.vault.getFolderByPath('Look')) await app.vault.createFolder('Look');
+      const old = app.vault.getFileByPath('Look/Parliamentary sovereignty.md');
+      if (old) await app.vault.delete(old);
+      const file = await app.vault.create('Look/Parliamentary sovereignty.md', '---\npages:\n  Argument: { icon: network }\n---\n%%page: Overview%%\nProse, read as it is. Parliament can make or unmake any law.\n\n%%page: Sources%%\n| Title | Year |\n| --- | --- |\n| Law of the Constitution | 1885 |\n\n%%page: Argument%%\n- Parliament is sovereign\n');
+      const leaf = app.workspace.getLeaf(true);
+      await leaf.openFile(file, { state: { mode: 'source', source: false } });
+      await new Promise((r) => setTimeout(r, 1500));
+    });
+    await shot('page-control-light');
+    await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('obsidian'));
+    await browser.pause(800);
+    await shot('page-control-dark');
+    const ok = await browser.executeObsidian(async ({ app }) => {
+      if (app.changeTheme) app.changeTheme('moonstone');
+      const root = app.workspace.activeLeaf.view.containerEl;
+      const tabs = Array.from(root.querySelectorAll('.markdown-source-view .dr-page-tab'));
+      const widths = tabs.map((t) => t.offsetWidth);
+      app.workspace.activeLeaf.detach();
+      await app.vault.delete(app.vault.getFileByPath('Look/Parliamentary sovereignty.md'));
+      return { count: tabs.length, equal: widths.every((w) => w === widths[0]) };
+    });
+    expect(ok).toEqual({ count: 3, equal: true });
   });
 
   it('adds a page to a plain note in one step and names it where it stands', async function () {

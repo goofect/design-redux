@@ -10222,42 +10222,66 @@ body.dr-strip-side .dr-strip-text {
   display: none;
 }
 
-/* Pages: one note, several pages. A segmented control under the title: a 32px capsule, no border,
-   a soft pill that slides behind the open page. Every value is a number or a theme variable. */
+/* Pages: one note, several pages — a segmented control as Apple draws one. A soft rounded track,
+   segments of equal width, a raised thumb that glides under the open page, hairline separators
+   between the others, and a small round + beside it. Track and thumb use Apple's system fills,
+   one pair for light themes and one for dark; text uses the theme's colours. */
 .dr-pages {
+  --dr-seg-track: rgba(118, 118, 128, 0.12);
+  --dr-seg-thumb: #ffffff;
+  --dr-seg-thumb-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+  --dr-seg-separator: rgba(60, 60, 67, 0.18);
+  --dr-seg-track-hover: rgba(118, 118, 128, 0.2);
   display: flex;
+  align-items: center;
   justify-content: center;
+  gap: 8px;
   margin: 16px 0 20px;
+  container-type: inline-size;
+}
+
+.theme-dark .dr-pages {
+  --dr-seg-track: rgba(118, 118, 128, 0.24);
+  --dr-seg-thumb: #636366;
+  --dr-seg-thumb-shadow: 0 3px 8px rgba(0, 0, 0, 0.24), 0 3px 1px rgba(0, 0, 0, 0.08);
+  --dr-seg-separator: rgba(84, 84, 88, 0.65);
+  --dr-seg-track-hover: rgba(118, 118, 128, 0.32);
 }
 
 .dr-pages-capsule {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: stretch;
   height: 32px;
-  max-width: 100%;
+  max-width: calc(100% - 40px);
+  padding: 2px;
+  box-sizing: border-box;
   overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: none;
-  border-radius: 9999px;
-  background-color: color-mix(in srgb, var(--text-normal) 8%, var(--background-primary));
+  border-radius: 9px;
+  background-color: var(--dr-seg-track);
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .dr-pages-capsule::-webkit-scrollbar {
   display: none;
 }
 
+/* The thumb: raised, white in light themes, grey in dark. */
 .dr-pages-pill {
   position: absolute;
   top: 2px;
+  bottom: 2px;
   left: 0;
-  height: 28px;
   width: var(--dr-pill-w, 0);
   transform: translateX(var(--dr-pill-x, 0));
-  border-radius: 9999px;
-  background-color: color-mix(in srgb, var(--text-normal) 14%, transparent);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  border-radius: 7px;
+  background-color: var(--dr-seg-thumb);
+  box-shadow: var(--dr-seg-thumb-shadow);
   opacity: 0;
   pointer-events: none;
 }
@@ -10267,48 +10291,97 @@ body.dr-strip-side .dr-strip-text {
 }
 
 .dr-pages-pill.is-sliding {
-  transition: transform var(--dr-dur-base) var(--dr-ease-move), width var(--dr-dur-base) var(--dr-ease-move);
+  transition: transform var(--dr-dur-base) var(--dr-ease-move), width var(--dr-dur-base) var(--dr-ease-move), scale var(--dr-dur-press) var(--dr-ease-move);
+}
+
+/* Pressing the open page sinks the thumb a little, as on iOS. */
+.dr-pages-capsule:has(.dr-page-tab.is-open:active) .dr-pages-pill {
+  scale: 0.95;
 }
 
 .dr-page-tab {
   position: relative;
-  display: inline-flex;
-  flex: 0 0 auto;
+  z-index: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
   min-width: 72px;
-  height: 32px;
   padding: 0 14px;
-  border-radius: 9999px;
-  color: var(--text-muted);
-  font-family: var(--font-interface);
+  border-radius: 7px;
+  color: var(--text-normal);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
   font-size: 13px;
   font-weight: 500;
+  letter-spacing: -0.01em;
   white-space: nowrap;
-  cursor: pointer;
-  transition: color var(--dr-dur-fast) var(--dr-ease);
+  cursor: default;
+  outline: none;
+  transition: opacity var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-page-tab.is-open {
-  color: var(--text-normal);
+  font-weight: 600;
 }
 
-.dr-page-tab:focus-visible,
-.dr-page-add:focus-visible {
-  outline: 2px solid var(--interactive-accent);
+.dr-page-tab:not(.is-open):active {
+  opacity: 0.55;
+}
+
+/* Hairlines between the pages that aren't open; none beside the thumb. */
+.dr-page-tab + .dr-page-tab::before {
+  content: '';
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background-color: var(--dr-seg-separator);
+  transition: opacity var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-page-tab.is-open::before,
+.dr-page-tab.is-open + .dr-page-tab::before {
+  opacity: 0;
+}
+
+.dr-page-tab:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+/* The label holds its selected width whichever page is open: the bold words sit beneath, unseen. */
+.dr-page-name {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.dr-page-name::after {
+  content: attr(data-label);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .dr-page-icon {
   display: inline-flex;
   margin-right: 6px;
+  color: var(--text-muted);
+}
+
+.dr-page-tab.is-open .dr-page-icon {
+  color: var(--text-normal);
 }
 
 .dr-page-icon .svg-icon {
   width: 14px;
   height: 14px;
+  stroke-width: 2px;
 }
 
-/* A chosen colour tints that page's selected label and nothing else. */
+/* A chosen colour tints that page's label while it's open, and nothing else. */
 [data-dr-color='red'] { --dr-page-color: var(--color-red); }
 [data-dr-color='orange'] { --dr-page-color: var(--color-orange); }
 [data-dr-color='yellow'] { --dr-page-color: var(--color-yellow); }
@@ -10318,36 +10391,49 @@ body.dr-strip-side .dr-strip-text {
 [data-dr-color='purple'] { --dr-page-color: var(--color-purple); }
 [data-dr-color='pink'] { --dr-page-color: var(--color-pink); }
 
-.dr-page-tab.is-open[data-dr-color] {
+.dr-page-tab.is-open[data-dr-color],
+.dr-page-tab.is-open[data-dr-color] .dr-page-icon {
   color: var(--dr-page-color);
 }
 
+/* The + beside it: a small round button in the track's fill. */
 .dr-page-add {
-  position: relative;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--dr-seg-track);
   color: var(--text-muted);
-  cursor: pointer;
-  transition: background-color var(--dr-dur-fast) var(--dr-ease);
+  cursor: default;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), transform var(--dr-dur-press) var(--dr-ease-move);
 }
 
 .dr-page-add .svg-icon {
   width: 14px;
   height: 14px;
+  stroke-width: 2.25px;
+}
+
+.dr-page-add:active {
+  transform: scale(0.92);
+}
+
+.dr-page-add:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
 @media (any-hover: hover) {
   .dr-page-tab:not(.is-open):hover {
-    color: var(--text-normal);
+    opacity: 0.75;
   }
 
   .dr-page-add:hover {
-    background-color: color-mix(in srgb, var(--text-normal) 8%, transparent);
+    color: var(--text-normal);
+    background-color: var(--dr-seg-track-hover);
   }
 }
 
@@ -10356,15 +10442,15 @@ body.dr-strip-side .dr-strip-text {
   .dr-page-tab.has-icon:not(.is-open) .dr-page-name {
     display: none;
   }
-}
 
-.dr-pages {
-  container-type: inline-size;
+  .dr-page-tab.has-icon:not(.is-open) .dr-page-icon {
+    margin-right: 0;
+  }
 }
 
 /* 44px to hit on touch, though the control stays 32px. */
-body.is-mobile .dr-page-tab::before,
-body.is-mobile .dr-page-add::before {
+body.is-mobile .dr-page-tab::after,
+body.is-mobile .dr-page-add::after {
   content: '';
   position: absolute;
   inset: -6px 0;
@@ -10389,19 +10475,6 @@ body.is-mobile .dr-page-add::before {
 .dr-page-fade .cm-content,
 .dr-page-fade .markdown-preview-sizer > div:not(.dr-pages):not(.mod-header) {
   animation: dr-page-in var(--dr-dur-fast) var(--dr-ease) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dr-pages-pill.is-sliding,
-  .dr-page-tab,
-  .dr-page-add {
-    transition: none;
-  }
-
-  .dr-page-fade .cm-content,
-  .dr-page-fade .markdown-preview-sizer > div {
-    animation: none;
-  }
 }
 
 .dr-page-name.is-editing {

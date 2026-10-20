@@ -274,14 +274,15 @@ export class NotePages extends Feature {
       const on = tab.dataset.page === open;
       tab.toggleClass('is-open', on);
       tab.setAttribute('aria-selected', String(on));
+      tab.setAttribute('tabindex', on ? '0' : '-1');
       if (on) target = tab;
     });
     const pill = bar.querySelector('.dr-pages-pill');
     if (!pill || !target) return;
     pill.toggleClass('is-set', true);
     pill.toggleClass('is-sliding', !!slide);
-    pill.style.setProperty('--dr-pill-x', `${target.offsetLeft + 2}px`);
-    pill.style.setProperty('--dr-pill-w', `${Math.max(0, target.offsetWidth - 4)}px`);
+    pill.style.setProperty('--dr-pill-x', `${target.offsetLeft}px`);
+    pill.style.setProperty('--dr-pill-w', `${target.offsetWidth}px`);
     if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
@@ -302,7 +303,10 @@ export class NotePages extends Feature {
         tab.addClass('has-icon');
         setIcon(tab.createSpan({ cls: 'dr-page-icon' }), look.icon);
       }
-      tab.createSpan({ cls: 'dr-page-name', text: p.name });
+      // The label, and beneath it the same words in the selected weight, unseen: they hold the
+      // segment at its widest, so nothing shifts as the selection moves.
+      const label = tab.createSpan({ cls: 'dr-page-name', text: p.name });
+      label.dataset.label = p.name;
       onActivate(tab, () => this.open(file, p.name));
       tab.addEventListener('dblclick', () => this.renameInline(file, p.name, tab.querySelector('.dr-page-name')));
       if (this.fresh === `${file.path}:${p.name}`) {
@@ -314,7 +318,21 @@ export class NotePages extends Feature {
         this.menu(evt, file, p.name, pages);
       });
     });
-    const add = capsule.createDiv({ cls: 'dr-page-add' });
+    // Arrow keys move between pages, as in any segmented control.
+    capsule.addEventListener('keydown', (evt) => {
+      const keys = { ArrowLeft: -1, ArrowRight: 1, Home: -Infinity, End: Infinity };
+      if (!(evt.key in keys)) return;
+      evt.preventDefault();
+      const at = pages.findIndex((p) => p.name === bar.dataset.open);
+      const by = keys[evt.key];
+      const next = by === -Infinity ? 0 : by === Infinity ? pages.length - 1 : Math.max(0, Math.min(pages.length - 1, at + by));
+      if (next === at) return;
+      this.open(file, pages[next].name);
+      const tab = capsule.querySelectorAll('.dr-page-tab')[next];
+      if (tab) tab.focus();
+    });
+    // Adding sits beside the control, not in it: a small round button of its own.
+    const add = bar.createDiv({ cls: 'dr-page-add' });
     asButton(add, 'Add a page');
     setIcon(add, 'plus');
     onActivate(add, () => this.add(file));
