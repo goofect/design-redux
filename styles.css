@@ -10309,7 +10309,7 @@ body.dr-strip-side .dr-strip-text {
   padding: 0 14px;
   border-radius: 7px;
   color: var(--text-normal);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--font-interface);
+  font-family: var(--dr-font-ui);
   font-size: 13px;
   font-weight: 500;
   letter-spacing: -0.01em;
@@ -10513,11 +10513,18 @@ body.dr-strip-side .dr-strip.is-away {
 body.dr-note-apple .markdown-source-view,
 body.dr-note-apple .markdown-preview-view,
 body.dr-note-apple .markdown-rendered {
-  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-text: var(--dr-font-ui);
   --font-text-size: 17px;
   --line-height-normal: 1.5;
   --file-line-width: 680px;
-  --inline-title-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  /* One face for the title, the headings and the text — the same as the rest of the interface. */
+  --inline-title-font: var(--dr-font-ui);
+  --h1-font: var(--dr-font-ui);
+  --h2-font: var(--dr-font-ui);
+  --h3-font: var(--dr-font-ui);
+  --h4-font: var(--dr-font-ui);
+  --h5-font: var(--dr-font-ui);
+  --h6-font: var(--dr-font-ui);
   --inline-title-size: 34px;
   --inline-title-line-height: 1.15;
   --inline-title-weight: 700;
@@ -10561,6 +10568,12 @@ body.dr-note-apple .markdown-rendered h1 { font-size: 28px; font-weight: 700; }
 body.dr-note-apple .markdown-rendered h2 { font-size: 22px; font-weight: 600; }
 body.dr-note-apple .markdown-rendered h3 { font-size: 19px; font-weight: 600; }
 body.dr-note-apple .markdown-rendered h4 { font-size: 17px; font-weight: 600; }
+
+body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4, h5, h6),
+body.dr-note-apple .markdown-source-view .cm-header,
+body.dr-note-apple .markdown-source-view .HyperMD-header {
+  font-family: var(--dr-font-ui);
+}
 
 body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4) {
   margin-top: 24px;
