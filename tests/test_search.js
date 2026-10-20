@@ -180,6 +180,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(view.query, '');
   });
 
+  await t('the same screen asked for again, as Obsidian does while a tab opens, keeps what is typed and the field', async () => {
+    const { view, saves } = makeView();
+    const input = field(view);
+    input.focus();
+    typeInto(input, 'realism');
+    await view.setState({ mode: view.mode, path: view.path, property: view.property }, {});
+    assert.strictEqual(view.query, 'realism');
+    assert.strictEqual(field(view), input, 'the field is not drawn again');
+    assert.strictEqual(document.activeElement, input);
+    assert.deepStrictEqual(saves, [], 'not counted as leaving');
+  });
+
   await t('opening a result saves the search that found it', async () => {
     const { view, saves } = makeView();
     typeInto(field(view), 'realism');

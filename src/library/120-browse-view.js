@@ -75,36 +75,56 @@ export class BrowseView extends ItemView {
 
   async setState(state, result) {
     const before = JSON.stringify(this.getState());
+    let moved = true;
     if (state) {
+      const was = this.screenKey();
+      const to = JSON.stringify([state.mode || this.mode, state.path || this.path, state.property !== undefined ? state.property : this.property, state.value || null]);
       // Leaving the search screen with something typed counts as having
       // searched for it; the query is about to be cleared.
-      this.rememberSearch();
+      if (to !== was) this.rememberSearch();
       if (state.mode) this.mode = state.mode;
       if (state.path) this.path = state.path;
       if (state.property !== undefined) this.property = state.property;
       this.value = state.value || null;
       if (state.trail !== undefined) this.trail = state.trail || null;
-      // A move to another screen starts clean; refinements within one
-      // screen keep their own state because they don't come through
-      // here at all.
-      this.selected = null;
-      // Find starts empty, unless the move is a search carried over.
-      this.query = typeof state.query === 'string' ? state.query : '';
-      // Unless asked to keep them: narrowing step by step across properties.
-      if (!state.keepFilters) this.clearFilters();
-      this.smartLoaded = null;
-      this.editing = false;
+      // The same screen asked for again — Obsidian restoring the tab, or a
+      // second ask as it opens — keeps what's typed, filtered and picked.
+      moved = this.screenKey() !== was;
+      if (moved || typeof state.query === 'string') this.startClean(state);
     }
     // A move to another screen is a step Obsidian's back and forward
     // should know about; it records one only when told.
     if (state && result && JSON.stringify(this.getState()) !== before) result.history = true;
-    this.render();
-    if (this.contentEl) this.contentEl.scrollTop = 0;
+    // Typing in Find on this same screen: the field stays as it is, and what's under it is redrawn.
+    const doc = this.contentEl ? this.contentEl.ownerDocument : null;
+    const active = doc ? doc.activeElement : null;
+    if (!moved && active && this.contentEl.contains(active) && active.matches('.dr-browse-search input')) {
+      this.renderBelowBar();
+    } else {
+      this.render();
+      if (this.contentEl) this.contentEl.scrollTop = 0;
+    }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
     const strip = typeof this.plugin.feature === 'function' ? this.plugin.feature(ContextStrip) : null;
     if (strip && strip.enabled) strip.update();
     return super.setState(state, result);
+  }
+
+  /** Which screen this is: what it shows, not how it's refined. */
+  screenKey() {
+    return JSON.stringify([this.mode, this.path, this.property, this.value]);
+  }
+
+  /** A move to another screen starts clean; refinements within one screen keep their own state. */
+  startClean(state) {
+    this.selected = null;
+    // Find starts empty, unless the move is a search carried over.
+    this.query = typeof state.query === 'string' ? state.query : '';
+    // Unless asked to keep them: narrowing step by step across properties.
+    if (!state.keepFilters) this.clearFilters();
+    this.smartLoaded = null;
+    this.editing = false;
   }
 
   async onOpen() {
