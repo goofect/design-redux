@@ -225,6 +225,7 @@ export const DEFAULTS = {
   lookScope: 'window',
   artworkSize: '',
   iconMode: 'auto',
+  noteThemeLook: false,
   inspectorClick: 'shown',
   libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a

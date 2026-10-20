@@ -1180,12 +1180,17 @@ describe('Design Redux in Obsidian', function () {
     expect(result.names).toEqual(['Untitled', 'Sources']);
   });
 
-  it('leaves the note to the theme, keeps room under it for the strip, and keeps its header as it is', async function () {
+  it('gives notes an Apple-style look in type and spacing only, keeps room under them for the strip, and keeps the header in order', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-      const old = app.vault.getFileByPath('Look note.md');
+      const mine = plugins.designRedux;
+      if (!app.vault.getFolderByPath('Look')) await app.vault.createFolder('Look');
+      const old = app.vault.getFileByPath('Look/Look note.md');
       if (old) await app.vault.delete(old);
-      const file = await app.vault.create('Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n- an item\n\n%%page: Two%%\nOther\n');
+      const file = await app.vault.create('Look/Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n---\n\n- an item\n\n%%page: Two%%\nOther\n');
+      mine.settings.notePageChips = true;
+      mine.settings.noteThemeLook = false;
+      await mine.saveSettings();
       const leaf = app.workspace.getLeaf(true);
       await leaf.openFile(file, { state: { mode: 'preview' } });
       await wait(1800);
@@ -1193,53 +1198,53 @@ describe('Design Redux in Obsidian', function () {
         const c = getComputedStyle(el);
         return props.map((p) => c[p]).join('|');
       };
-      const text = () => {
-        const root = leaf.view.containerEl.querySelector('.markdown-preview-view');
-        return ['h1', 'p', 'li'].map((t) => {
-          const el = root.querySelector(t);
-          return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'color', 'lineHeight', 'marginTop', 'marginBottom']) : '';
-        });
+      const root = () => leaf.view.containerEl.querySelector('.markdown-preview-view');
+      const typeOf = () => ['h1', 'p', 'li'].map((t) => {
+        const el = root().querySelector(t);
+        return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'marginTop', 'marginBottom']) : '';
+      });
+      const colours = () => ['h1', 'p', 'li', '.inline-title', '.dr-note-meta'].map((t) => {
+        const el = leaf.view.containerEl.querySelector('.markdown-preview-view ' + t);
+        return el ? css(el, ['color', 'backgroundColor', 'borderTopColor']) : '';
+      });
+      const apple = {
+        title: css(leaf.view.containerEl.querySelector('.markdown-preview-view .inline-title'), ['fontSize', 'fontWeight']),
+        body: css(root().querySelector('p'), ['fontSize', 'lineHeight']),
+        column: root().querySelector('.markdown-preview-sizer').getBoundingClientRect().width,
+        rule: getComputedStyle(root().querySelector('hr')).borderTopWidth,
+        order: Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-album, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips, .markdown-preview-view .dr-note-rule')).map((el) => el.className.split(' ')[0]),
+        colours: colours(),
+        type: typeOf(),
       };
       const strip = document.querySelector('.dr-strip');
-      const room = {
-        strip: strip ? strip.offsetHeight : 0,
-        reading: parseFloat(getComputedStyle(leaf.view.containerEl.querySelector('.markdown-preview-view')).paddingBottom),
-      };
-      const withPlugin = text();
-      // The header, with the pages feature on and off.
-      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'source', source: false }, active: true });
-      await wait(1800);
-      const parts = ['.dr-note-album', '.inline-title', '.dr-note-meta', '.dr-note-chips'];
-      const header = () => parts.map((p) => {
-        const el = leaf.view.containerEl.querySelector('.markdown-source-view ' + p);
-        if (!el) return p + ':none';
-        const r = el.getBoundingClientRect();
-        return [p, Math.round(r.left), Math.round(r.top), Math.round(r.height), css(el, ['fontFamily', 'fontSize', 'color'])].join('|');
-      });
-      room.editing = parseFloat(getComputedStyle(leaf.view.containerEl.querySelector('.cm-scroller')).paddingBottom);
-      const headerOn = header();
-      const mine = plugins.designRedux;
-      mine.settings.notePages = false;
+      const room = { strip: strip ? strip.offsetHeight : 0, reading: parseFloat(getComputedStyle(root()).paddingBottom) };
+      // The theme's look: none of it applies, and it is as with the plugin off.
+      mine.settings.noteThemeLook = true;
       await mine.saveSettings();
-      await wait(800);
-      const headerOff = header();
-      mine.settings.notePages = true;
-      await mine.saveSettings();
-      // The note's text with the whole plugin off.
-      await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'preview' }, active: true });
+      await wait(600);
+      const theme = { colours: colours(), type: typeOf() };
       await app.plugins.disablePlugin('design-redux');
       await wait(1500);
-      const without = text();
+      const without = typeOf();
       await app.plugins.enablePlugin('design-redux');
       await wait(1500);
+      const again = app.plugins.plugins['design-redux'];
+      again.settings.noteThemeLook = false;
+      again.settings.notePageChips = false;
+      await again.saveSettings();
       leaf.detach();
       await app.vault.delete(file);
-      return { room, withPlugin, without, headerOn, headerOff };
+      return { apple, theme, without, room };
     });
-    expect(result.withPlugin).toEqual(result.without);
+    expect(result.apple.title).toBe('34px|700');
+    expect(result.apple.body).toBe('17px|25.5px');
+    expect(result.apple.column).toBeLessThanOrEqual(680);
+    expect(result.apple.rule).toBe('1px');
+    expect(result.apple.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips', 'dr-note-rule']);
+    expect(result.apple.colours).toEqual(result.theme.colours);
+    expect(result.apple.type).not.toEqual(result.theme.type);
+    expect(result.theme.type).toEqual(result.without);
     expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
-    expect(result.room.editing).toBeGreaterThanOrEqual(result.room.strip + 24);
-    expect(result.headerOn).toEqual(result.headerOff);
   });
 
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {

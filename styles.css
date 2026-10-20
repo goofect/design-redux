@@ -123,14 +123,15 @@ body {
   --dr-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.12), 0 14px 34px rgba(0, 0, 0, 0.24);
   --dr-cover-edge: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
 
-  --dr-dur-fast: 120ms;
-  --dr-dur-normal: 180ms;
-  --dr-dur-slow: 280ms;
+  /* Motion, one set of numbers: four durations and one curve for everything that moves (plain
+     ease for colours), so nothing feels made by a different hand. Press: a button pressed.
+     Fast: colours, a cross-fade. Base: something sliding or widening. Slow: a sheet or panel. */
+  --dr-dur-press: 100ms;
+  --dr-dur-fast: 150ms;
+  --dr-dur-base: 220ms;
+  --dr-dur-slow: 320ms;
+  --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
   --dr-ease: ease;
-  /* For what moves across the page: settling quickly, or with a spring
-     that goes just past where it's headed and comes back. */
-  --dr-ease-out: cubic-bezier(0.2, 0, 0, 1);
-  --dr-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* Glass, for what floats over the page — the strip, menus, popups — so
      what's beneath stays the brightest thing on screen: how much it blurs. */
@@ -179,8 +180,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   body {
+    --dr-dur-press: 0ms;
     --dr-dur-fast: 0ms;
-    --dr-dur-normal: 0ms;
+    --dr-dur-base: 0ms;
     --dr-dur-slow: 0ms;
   }
 }
@@ -464,7 +466,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 
 .dr-props-popup.is-open {
   display: block;
-  animation: dr-appear var(--dr-dur-fast) ease-out;
+  animation: dr-appear var(--dr-dur-fast) var(--dr-ease);
 }
 
 @keyframes dr-appear {
@@ -541,7 +543,7 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   padding: calc(var(--dr-u) * 1.5) var(--dr-space-1);
   border-radius: var(--dr-radius-sm, 4px);
   position: relative;
-  transition: background-color 120ms var(--dr-ease, ease);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-props-popup .dr-row:focus-within {
@@ -2105,7 +2107,7 @@ body.is-mobile .dr-mention-remove {
 .dr-lib-icon img {
   object-fit: cover;
   object-position: center;
-  transition: opacity var(--dr-dur-normal) var(--dr-ease);
+  transition: opacity var(--dr-dur-base) var(--dr-ease);
 }
 
 /* Density: rows follow the cover size, from a compact catalogue to comfortable. */
@@ -3314,7 +3316,7 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%);
-  transition: transform 200ms var(--dr-ease, ease);
+  transition: transform var(--dr-dur-base) var(--dr-ease-move);
   z-index: calc(var(--layer-menu, 65) - 20);
   display: flex;
   align-items: center;
@@ -3354,7 +3356,7 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   padding: 0;
   border-radius: var(--dr-radius-pill);
   color: var(--text-muted);
-  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-normal) var(--dr-ease), width var(--dr-dur-normal) var(--dr-ease);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-base) var(--dr-ease), width var(--dr-dur-base) var(--dr-ease-move), transform var(--dr-dur-press) var(--dr-ease-move);
 }
 
 @media (any-hover: hover) {
@@ -8096,7 +8098,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-settings .is-revealed {
   border-radius: var(--dr-r, 6px);
   background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
-  transition: background-color 600ms ease-out;
+  transition: background-color var(--dr-dur-slow) var(--dr-ease);
 }
 
 /* Find's way out to the whole library: a chip like the filters', without a ×. */
@@ -8484,7 +8486,7 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
   color: var(--text-normal);
   font-size: var(--font-ui-small);
   cursor: pointer;
-  transition: color 160ms ease, opacity 160ms ease;
+  transition: color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-reading-name {
@@ -8736,7 +8738,7 @@ body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
  */
 
 .dr-presenting .dr-mindmap-node {
-  transition: opacity 240ms ease;
+  transition: opacity var(--dr-dur-base) var(--dr-ease);
 }
 
 .dr-presenting .dr-mindmap-node.dr-present-dim {
@@ -10265,7 +10267,7 @@ body.dr-strip-side .dr-strip-text {
 }
 
 .dr-pages-pill.is-sliding {
-  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1), width 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: transform var(--dr-dur-base) var(--dr-ease-move), width var(--dr-dur-base) var(--dr-ease-move);
 }
 
 .dr-page-tab {
@@ -10284,7 +10286,7 @@ body.dr-strip-side .dr-strip-text {
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
-  transition: color 150ms ease;
+  transition: color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-page-tab.is-open {
@@ -10331,7 +10333,7 @@ body.dr-strip-side .dr-strip-text {
   border-radius: 9999px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: background-color 150ms ease;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-page-add .svg-icon {
@@ -10386,7 +10388,7 @@ body.is-mobile .dr-page-add::before {
 
 .dr-page-fade .cm-content,
 .dr-page-fade .markdown-preview-sizer > div:not(.dr-pages):not(.mod-header) {
-  animation: dr-page-in 150ms ease both;
+  animation: dr-page-in var(--dr-dur-fast) var(--dr-ease) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -10409,7 +10411,7 @@ body.is-mobile .dr-page-add::before {
 }
 
 /* The strip never covers text: the note keeps room at its foot for the strip and 24px more, and
-   the strip slides out of view over 200ms while you scroll down or type. */
+   the strip slides out of view (the base duration) while you scroll down or type. */
 body.dr-strip-active .markdown-source-view.mod-cm6 .cm-scroller,
 body.dr-strip-active .markdown-preview-view {
   padding-bottom: calc(var(--dr-strip-h, 0px) + 24px) !important;
@@ -10427,4 +10429,140 @@ body.dr-strip-side .dr-strip.is-away {
   .dr-strip {
     transition: none;
   }
+}
+
+/* The note's look, Apple-style — unless "Use the theme's look" is on. Type and spacing only:
+   every colour stays the theme's, so light and dark themes keep working. Every gap is a multiple of 4px. */
+.dr-note-rule {
+  display: none;
+}
+
+body.dr-note-apple .markdown-source-view,
+body.dr-note-apple .markdown-preview-view,
+body.dr-note-apple .markdown-rendered {
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  --font-text-size: 17px;
+  --line-height-normal: 1.5;
+  --file-line-width: 680px;
+  --inline-title-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  --inline-title-size: 34px;
+  --inline-title-line-height: 1.15;
+  --inline-title-weight: 700;
+  --h1-size: 28px;
+  --h1-weight: 700;
+  --h2-size: 22px;
+  --h2-weight: 600;
+  --h3-size: 19px;
+  --h3-weight: 600;
+  --h4-size: 17px;
+  --h4-weight: 600;
+  --heading-spacing: 24px;
+  --p-spacing: 12px;
+  --hr-thickness: 1px;
+}
+
+body.dr-note-apple .markdown-source-view .cm-content,
+body.dr-note-apple .markdown-preview-view {
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+/* The text column: 680px at most, centred. */
+body.dr-note-apple .markdown-source-view.mod-cm6 .cm-sizer,
+body.dr-note-apple .markdown-preview-view .markdown-preview-sizer {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+body.dr-note-apple .inline-title {
+  font-family: var(--inline-title-font);
+  font-size: 34px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+body.dr-note-apple .markdown-rendered h1 { font-size: 28px; font-weight: 700; }
+body.dr-note-apple .markdown-rendered h2 { font-size: 22px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h3 { font-size: 19px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h4 { font-size: 17px; font-weight: 600; }
+
+body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4) {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+body.dr-note-apple .markdown-rendered p {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+/* Rules between sections: 1px, 32px above and below, never thicker. */
+body.dr-note-apple .markdown-rendered hr {
+  height: 0;
+  margin: 32px 0;
+  border: none;
+  border-top: 1px solid var(--hr-color, var(--background-modifier-border));
+}
+
+/* The header: folder label, title, chips, the grey line. */
+body.dr-note-apple .dr-note-album {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.dr-note-apple .dr-note-chips {
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+body.dr-note-apple .dr-note-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+body.dr-note-apple .dr-note-rule {
+  display: block;
+  height: 1px;
+  margin: 16px 0 0;
+  background-color: var(--background-modifier-border);
+}
+
+body.dr-note-apple .dr-note-rule + .dr-pages,
+body.dr-note-apple .dr-note-rule ~ .dr-pages {
+  margin-top: 16px;
+}
+
+/* The strip answers a press: a button scales to 0.97. */
+.dr-strip-btn:active {
+  transform: scale(0.97);
+}
+
+/* In a narrow pane the strip can't widen sideways: pointed at, it grows upward as a small sheet. */
+.dr-strip.is-sheet {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (any-hover: hover) {
+  .dr-strip.is-sheet:hover .dr-strip-actions {
+    order: -1;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
+.dr-strip.is-sheet:focus-within .dr-strip-actions {
+  order: -1;
+  flex-basis: 100%;
+  justify-content: center;
 }

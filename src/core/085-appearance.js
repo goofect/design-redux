@@ -53,6 +53,11 @@ export class Appearance extends Feature {
         options: ARTWORK_SIZES,
       },
       {
+        key: 'noteThemeLook',
+        name: 'Use the theme’s look for notes',
+        desc: 'Off, notes take an Apple-style look: the system font, a 34px title, 17px text at a 1.5 line height, a 680px column, quiet headings and fine rules. Colours always stay the theme’s. On, notes are left entirely as the theme draws them.',
+      },
+      {
         key: 'iconMode',
         type: 'dropdown',
         name: 'Icons',
@@ -108,6 +113,7 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false && this.settings.look !== 'classic');
     // 1.x's styling, for those not ready for 2.0's: kept for one release.
     body.classList.toggle('dr-look-classic', !off && this.settings.look === 'classic');
+    body.classList.toggle('dr-note-apple', !off && !this.settings.noteThemeLook && this.settings.look !== 'classic');
     body.classList.toggle('dr-icons-only', !off && this.settings.iconMode === 'icons');
     body.classList.toggle('dr-icons-words', !off && this.settings.iconMode === 'words');
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');

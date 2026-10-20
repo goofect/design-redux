@@ -102,7 +102,7 @@ export class NotePage extends Feature {
 
   /** What this adds to a view, taken away. */
   clear(view) {
-    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-study, .dr-note-shelves').forEach((el) => el.remove());
+    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-study, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.querySelectorAll('.dr-has-glow').forEach((el) => el.removeClass('dr-has-glow'));
     view.containerEl.removeClass('dr-props-as-chips');
   }
@@ -264,6 +264,9 @@ export class NotePage extends Feature {
       const chipsEl = place.head.querySelector(':scope > .dr-note-chips');
       const studyAfter = chipsEl ? chipsEl.nextSibling : line ? line.nextSibling : after;
       this.put(place.head, 'dr-note-study', due ? `${file.path}:${due.due}` : '', studyAfter, (el) => this.gradeRow(el, file));
+      // The grey line: a hairline closing the header, under the chips; the page control sits right under it.
+      const last = ['dr-note-study', 'dr-note-chips', 'dr-note-meta'].map((c) => place.head.querySelector(`:scope > .${c}`)).find(Boolean) || title;
+      this.put(place.head, 'dr-note-rule', last ? 'rule' : '', last ? last.nextSibling : null, () => {});
       // At the end, the shelves.
       const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => f.path).join(',')}`).join('|');
       const before = place.after ? place.after.nextSibling : place.first ? place.end.firstChild : null;

@@ -53,7 +53,8 @@ export function headerDuplicates(leaf) {
 
 /* The sign a screen shows where a note shows its cover. */
 /* Narrower than this, the strip keeps what's open and its main buttons; the rest go into More. */
-export const STRIP_NARROW = 760;
+/* Under this, the pane is too narrow for the strip to widen sideways: it grows upward as a small sheet. */
+export const STRIP_NARROW = 480;
 
 /*
  * What the strip offers for what's open, besides a note's own buttons:
@@ -320,6 +321,7 @@ export class ContextStrip extends Feature {
     this.el.empty();
     this.narrow = this.isNarrow();
     this.el.toggleClass('is-narrow', this.narrow);
+    this.el.toggleClass('is-sheet', this.narrow);
     // Up whenever there's a page at all — including an empty one, since
     // the strip is also where a closed sidebar comes back from.
     this.el.toggleClass('is-empty', !view);
@@ -383,7 +385,11 @@ export class ContextStrip extends Feature {
 
   /** Narrow enough that the strip's secondary buttons go into More. Not on a phone, whose strip is its own. */
   isNarrow() {
-    return !Platform.isMobile && typeof window !== 'undefined' && window.innerWidth <= STRIP_NARROW;
+    if (Platform.isMobile || typeof document === 'undefined') return false;
+    // The room the strip has: the main pane's width, not the window's.
+    const root = document.querySelector('.workspace-split.mod-root');
+    const width = root && root.clientWidth ? root.clientWidth : typeof window !== 'undefined' ? window.innerWidth : 1024;
+    return width < STRIP_NARROW;
   }
 
   /** The actions written elsewhere that the strip offers for this kind of page, as buttons — those that apply now. */
@@ -642,45 +648,77 @@ export class ContextStrip extends Feature {
       });
     }
 
-    // The buttons that matter show; the quieter ones fold away until the strip is pointed at (it
-    // widens to show them), or, in a narrow window, wait in More with study and the workspace mode.
-    const overflow = this.isNarrow() ? specs.filter((spec) => spec.secondary) : [];
-    specs.filter((spec) => overflow.indexOf(spec) === -1).forEach((spec) => this.stripButton(actions, spec));
-    const entries = overflow.slice();
+    // The workspace mode, with the quieter ones.
     const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
     if (modes && modes.enabled) {
       const mode = modes.mode(modes.current());
-      entries.push({ icon: mode ? mode.icon : 'layout-template', label: mode ? `${mode.label} mode: switch, or leave it` : 'Workspace mode', role: 'modes', run: (evt) => modes.showMenu(evt) });
+      specs.push({ icon: mode ? mode.icon : 'layout-template', label: mode ? `${mode.label} mode: switch, or leave it` : 'Workspace mode', role: 'modes', secondary: true, active: !!mode, run: (evt) => modes.showMenu(evt) });
     }
-    const study = this.revisitEntries(file);
-    entries.push(...study.entries);
 
-    // The page menu the note's own header had — Find, Replace, Export
-    // to PDF, version history — followed by the file's entries, which
-    // Obsidian adds as part of it. Hiding the header had taken all of
-    // that away.
+    // The buttons that matter show; the quieter ones fold away until the strip is pointed at or
+    // tabbed into, and it widens to show them — at every width; in a narrow pane, upward as a sheet.
+    specs.forEach((spec) => this.stripButton(actions, spec));
+    const study = this.revisitEntries(file);
     const more = this.stripButton(actions, {
       icon: 'ellipsis',
       label: study.count ? `More (${study.count} to revisit)` : 'More',
       role: 'more',
-      run: (evt) => {
-        const menu = new Menu();
-        entries.forEach((spec) =>
-          menu.addItem((item) => {
-            item.setTitle(spec.label).setIcon(spec.icon).onClick((e) => spec.run(e || evt, more));
-            if (typeof item.setSection === 'function') item.setSection('action');
-          })
-        );
-        const view = leaf && !leaf.isDeferred ? leaf.view : null;
-        if (view && typeof view.onPaneMenu === 'function') {
-          view.onPaneMenu(menu, 'more-options');
-        } else {
-          this.app.workspace.trigger('file-menu', menu, file, 'design-redux-strip', leaf);
-        }
-        showMenuAt(menu, evt);
-      },
+      run: (evt) => this.moreMenu(evt, file, leaf, specs, study.entries, more),
     });
     if (study.count) more.createSpan({ cls: 'dr-strip-badge', text: String(study.count) });
+  }
+
+  /**
+   * The ··· menu, short: Read, Properties, Pin, Bookmark, Rename and Delete on top with icons; then
+   * study; and Obsidian's other page entries under one More item that opens a submenu.
+   */
+  moreMenu(evt, file, leaf, specs, study, anchor) {
+    const menu = new Menu();
+    const add = (title, icon, run, section) =>
+      menu.addItem((item) => {
+        item.setTitle(title).setIcon(icon).onClick((e) => run(e || evt));
+        if (typeof item.setSection === 'function') item.setSection(section || 'action');
+      });
+    const spec = (role) => specs.find((s) => s.role === role);
+    ['mode', 'properties', 'pin'].forEach((role) => {
+      const s = spec(role);
+      if (s) add(s.label, s.icon, (e) => s.run(e, anchor));
+    });
+    const commands = this.app.commands;
+    if (commands && typeof commands.executeCommandById === 'function' && file.extension === 'md') {
+      add('Bookmark', 'bookmark', () => {
+        if (leaf) this.app.workspace.setActiveLeaf(leaf, { focus: true });
+        commands.executeCommandById('bookmarks:bookmark-current-view');
+      });
+    }
+    const fm = this.app.fileManager;
+    if (fm && typeof fm.promptForFileRename === 'function') add('Rename', 'pencil', () => fm.promptForFileRename(file));
+    if (fm && typeof fm.promptForDeletion === 'function') add('Delete', 'trash-2', () => fm.promptForDeletion(file));
+    else add('Delete', 'trash-2', () => this.app.vault.trash(file, true));
+    study.forEach((s) => add(s.label, s.icon, (e) => s.run(e, anchor), 'study'));
+
+    // Obsidian's own page entries — find, export, version history and the file's — behind one item.
+    const view = leaf && !leaf.isDeferred ? leaf.view : null;
+    const fill = (target) => {
+      if (view && typeof view.onPaneMenu === 'function') view.onPaneMenu(target, 'more-options');
+      else this.app.workspace.trigger('file-menu', target, file, 'design-redux-strip', leaf);
+    };
+    let nested = false;
+    menu.addItem((item) => {
+      item.setTitle('More').setIcon('more-horizontal');
+      if (typeof item.setSection === 'function') item.setSection('more');
+      const sub = typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
+      if (sub) {
+        fill(sub);
+        nested = true;
+      }
+    });
+    // Without submenus (an older Obsidian), as they always were: after ours.
+    if (!nested) {
+      if (typeof menu.items === 'object' && Array.isArray(menu.items)) menu.items.pop();
+      fill(menu);
+    }
+    showMenuAt(menu, evt);
   }
 
   /** What goes beside the note's place in its album: as the setting says, or one property worth showing. */

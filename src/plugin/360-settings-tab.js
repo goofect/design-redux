@@ -149,7 +149,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'iconMode'];
+export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'albumProgressRing', 'gridDensity', 'artworkSize', 'noteThemeLook', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */

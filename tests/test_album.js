@@ -1310,14 +1310,21 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     // Only what's needed shown until it's pointed at: Properties and More always, the rest waiting.
     const secondary = Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action);
     assert.deepStrictEqual(secondary, ['mode', 'pin']);
-    // In a narrow window those go into More instead, first in its menu.
+    // A narrow window doesn't move them into More: what counts is the pane's own width, and a narrow
+    // pane only turns the strip into a sheet.
     app.workspace.trigger = () => {};
     Object.defineProperty(window, 'innerWidth', { value: 600, configurable: true });
     strip.update();
-    assert.ok(strip.el.classList.contains('is-narrow'));
-    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')), []);
+    assert.ok(!strip.el.classList.contains('is-sheet'));
+    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .is-secondary')).map((b) => b.dataset.action), ['mode', 'pin']);
+    Object.defineProperty(window, 'innerWidth', { value: 400, configurable: true });
+    strip.update();
+    assert.ok(strip.el.classList.contains('is-sheet'), 'under 480px, a sheet');
+    // The ··· menu, short: Read, Properties, Pin, … on top; Obsidian's own under More.
     click(strip.el.querySelector('[data-action="more"]'));
-    assert.deepStrictEqual(menus[menus.length - 1].items.slice(0, 2).map((i) => i.title), ['Read', 'Pin']);
+    const titles = menus[menus.length - 1].items.map((i) => i.title);
+    assert.deepStrictEqual(titles.slice(0, 3), ['Read', 'Properties', 'Pin']);
+    assert.ok(titles.includes('Delete') && titles[titles.length - 1] !== 'Read');
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
     // An album's strip: the actions written for albums elsewhere, sorting, and More.
     const made = [];
