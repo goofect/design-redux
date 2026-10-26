@@ -13,6 +13,15 @@ body {
   --dr-float-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
 }
 
+/* With reduced transparency, what floats is solid and nothing behind it blurs. */
+@media (prefers-reduced-transparency: reduce) {
+  body {
+    --dr-float-bg: var(--background-primary);
+    --dr-glass-blur: 0px;
+    --dr-glass-blur-soft: 0px;
+  }
+}
+
 .dr-trigger.is-active, .dr-props-trigger.is-active {
   background-color: var(--background-modifier-hover);
 }

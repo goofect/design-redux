@@ -1706,6 +1706,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
     assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
 
+    // Space on a note's row: a look at it, Obsidian's page preview; on an album, nothing.
+    const looked = [];
+    const trigger = app.workspace.trigger;
+    app.workspace.trigger = (name, info) => (name === 'hover-link' ? looked.push(info) : trigger && trigger.call(app.workspace, name, info));
+    const noteRow = document.createElement('div');
+    noteRow.dataset.path = 'IR/Balance.md';
+    let stopped = 0;
+    view.onKey({ key: ' ', target: noteRow, preventDefault: () => stopped++ });
+    view.onKey({ key: ' ', target: view.contentEl.querySelector('.dr-card[data-path="IR"]'), preventDefault: () => stopped++ });
+    app.workspace.trigger = trigger;
+    assert.deepStrictEqual([looked.length, looked[0].linktext, looked[0].source, stopped], [1, 'IR/Balance.md', 'design-redux-library', 1]);
+
     view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
     assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR') });

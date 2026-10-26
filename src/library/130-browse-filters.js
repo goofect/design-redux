@@ -2,8 +2,8 @@
 /* Choosing what goes in the list                                      */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Notice, Setting, TFolder } from 'obsidian';
-import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_BUILTINS, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
+import { FuzzySuggestModal, Notice, Platform, Setting, TFolder } from 'obsidian';
+import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/030-helpers-art.js';
 import { SORTS } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
@@ -374,6 +374,13 @@ export class Library extends Feature {
         run: () => this.reveal(),
       },
       {
+        id: 'reset-layout',
+        name: 'Put the library and inspector back in place',
+        icon: 'layout',
+        when: () => this.enabled,
+        run: () => this.resetLayout(),
+      },
+      {
         id: 'cycle-cover-size',
         name: 'Next density: compact, standard, spacious',
         icon: 'grid-2x2',
@@ -447,6 +454,9 @@ export class Library extends Feature {
       BROWSE_VIEW,
       (leaf) => new BrowseView(leaf, this.plugin)
     );
+    if (typeof this.plugin.registerHoverLinkSource === 'function') {
+      this.plugin.registerHoverLinkSource(LIBRARY_HOVER_SOURCE, { display: 'Design Redux library', defaultMod: false });
+    }
   }
 
   /** A press on a folder in a tab's path: that folder's collection, in the library. */
@@ -600,6 +610,15 @@ export class Library extends Feature {
     }
     this.wasCollapsed = collapsed;
     liveViews(this.app, LIBRARY_VIEW, LibraryView).forEach((v) => v.syncChrome());
+  }
+
+  /** The library back on the left and the inspector on the right, however they were moved or lost. */
+  async resetLayout() {
+    const ws = this.app.workspace;
+    [LIBRARY_VIEW, INSPECTOR_VIEW].forEach((type) => ws.getLeavesOfType(type).forEach((leaf) => leaf.detach()));
+    await this.mount();
+    if (!Platform.isPhone && this.settings.inspector !== false) await openInspector(this.app);
+    this.showLibraryTab();
   }
 
   showLibraryTab() {

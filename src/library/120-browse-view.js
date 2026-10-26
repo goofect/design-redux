@@ -7,7 +7,7 @@
 /* ------------------------------------------------------------------ */
 
 import { ItemView, Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
-import { BROWSE_VIEW, GRID_DENSITIES, TAG_KEYS } from '../core/020-constants.js';
+import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_HOVER_SOURCE, TAG_KEYS } from '../core/020-constants.js';
 import { blankLook, byName, canStep, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
@@ -795,12 +795,34 @@ export class BrowseView extends ItemView {
       this.setEditing(false);
       return;
     }
+    // Space on a note's row or tile: a look at it, without opening it.
+    if (evt.key === ' ' && !typing && !evt.metaKey && !evt.ctrlKey && !evt.altKey && this.quickLook(evt)) {
+      evt.preventDefault();
+      return;
+    }
     // Escape lets go of what's picked here.
     const selection = this.plugin.selection;
     if (evt.key === 'Escape' && !typing && selection && selection.get() && this.contentEl.querySelector('.is-selected')) {
       evt.preventDefault();
       selection.clear();
     }
+  }
+
+  /** Obsidian's page preview of the note a row or tile stands for: read only, no history. */
+  quickLook(evt) {
+    const target = evt.target;
+    const el = target && typeof target.closest === 'function' ? target.closest('[data-path]') : null;
+    const file = el && this.app.vault.getAbstractFileByPath(el.dataset.path);
+    if (!(file instanceof TFile) || file.extension !== 'md') return false;
+    this.app.workspace.trigger('hover-link', {
+      event: evt,
+      source: LIBRARY_HOVER_SOURCE,
+      hoverParent: this,
+      targetEl: el,
+      linktext: file.path,
+      sourcePath: '',
+    });
+    return true;
   }
 
   focusFind() {
