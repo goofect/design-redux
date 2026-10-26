@@ -628,7 +628,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const panel = Object.create(T.PropertiesPanel.prototype);
     Object.assign(panel, { sections: [], dockView: null, fitted: new WeakMap() });
     panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
-    panel.mount = function () { this.popupEl.empty(); this.popupEl.createDiv({ text: this.file.path }); };
+    // A note drawn as its path; an album, as the panel draws it.
+    panel.mount = function () {
+      if (this.shown.kind !== 'note') return T.PropertiesPanel.prototype.mount.call(this);
+      this.popupEl.empty();
+      this.popupEl.createDiv({ text: this.file.path });
+    };
     // Pressed on a computer, the Properties button docks it in the right sidebar.
     const tabs = [];
     const sidebarLeaf = {

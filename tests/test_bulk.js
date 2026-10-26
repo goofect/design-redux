@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_bulk_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyToolsModal, BulkEdits, BulkEditing, AddPropertiesModal, RenamePropertyModal, RenameTagModal, renamedText, ' +
+  '\nmodule.exports.__test = { inspectableOf, cardFrontmatter, PropertyToolsModal, BulkEdits, BulkEditing, AddPropertiesModal, RenamePropertyModal, RenameTagModal, renamedText, ' +
   'addPropertiesTo, renamePropertyIn, mergeValues, renameTagText, renameTagsValue, renameTagIn, tagNameProblem, ' +
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
@@ -2178,6 +2178,43 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     section.mount(popupEl, v.file('Other/b.md'));
     assert.deepStrictEqual(main(), ['status']);
     section.destroy();
+  });
+
+  await t('the inspector’s targets: a text card’s properties changed and taken away at its top, a note picked not the note open, an album’s folder note', () => {
+    let text = '---\nstatus: draft\ntags:\n  - a\n---\nThe **plan**\n';
+    const card = { getData: () => ({ type: 'text', text }), setText: (t) => (text = t) };
+    let redraws = 0;
+    const el = document.body.appendChild(document.createElement('div'));
+    const shown = R.inspectableOf({ app: {} }, { card });
+    const panel = { redraw: () => { redraws++; el.textContent = ''; shown.draw(panel, el); } };
+    assert.strictEqual(shown.kind, 'card');
+    assert.strictEqual(shown.file, null);
+    assert.deepStrictEqual(shown.draw(panel, el), [], 'a card has no sections');
+    assert.strictEqual(el.querySelector('.dr-props-title').textContent, 'The plan');
+    const input = el.querySelector('.dr-card-props-row .dr-card-props-value');
+    input.value = 'done';
+    input.dispatchEvent(new window.Event('change'));
+    assert.deepStrictEqual(R.cardFrontmatter(text).data, { status: 'done', tags: ['a'] });
+    assert.ok(R.cardFrontmatter(text).body === 'The **plan**\n' && redraws === 1, 'the body kept, drawn again');
+    // A list stays a list.
+    el.querySelectorAll('.dr-card-props-row .dr-card-props-value')[1].value = 'a, b';
+    el.querySelectorAll('.dr-card-props-row .dr-card-props-value')[1].dispatchEvent(new window.Event('change'));
+    assert.deepStrictEqual(R.cardFrontmatter(text).data.tags, ['a', 'b']);
+    el.querySelectorAll('.dr-card-props-remove').forEach((x) => x.click());
+    assert.strictEqual(text, 'The **plan**\n', 'every property taken away: no --- lines left');
+    text = '---\n: [\n---\nBroken';
+    el.textContent = '';
+    shown.draw(panel, el);
+    assert.ok(el.querySelector('.dr-card-props-note') && !el.querySelector('.dr-card-props-add'), 'unreadable: said so, nothing to add to');
+    assert.ok(shown.is({ card }) && !shown.is({ card: {} }));
+    const v = makeVault({ 'Law/a.md': note({ x: 1 }), 'Law/Law.md': note({}) });
+    const file = v.file('Law/a.md');
+    const open = R.inspectableOf({ app: {} }, { file });
+    assert.ok(open.kind === 'note' && open.file === file && open.is({ file }) && !open.is({ file, picked: true }), 'a pick is drawn otherwise than the note open');
+    const folder = file.parent;
+    const album = R.inspectableOf({ app: {}, folderNote: () => v.file('Law/Law.md') }, { folder });
+    assert.ok(album.kind === 'folder' && album.file === v.file('Law/Law.md') && album.is({ folder }));
+    el.remove();
   });
 
   console.log(`\n${passed} passed`);

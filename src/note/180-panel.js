@@ -9,98 +9,19 @@
 /* lines, which the card itself doesn't show.                          */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownView, Notice, parseYaml, Platform, setIcon, Setting, stringifyYaml } from 'obsidian';
-import { BROWSE_VIEW, INSPECTOR_VIEW } from '../core/020-constants.js';
-import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
-import { makeTrigger, relativeDay } from '../core/040-helpers-sorting.js';
+import { MarkdownView, Notice, Platform, Setting } from 'obsidian';
+import { INSPECTOR_VIEW } from '../core/020-constants.js';
+import { makeTrigger } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
-import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { openInspector } from '../core/076-selection.js';
-import { requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { hostsPanel, originLabel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
+import { inspectableOf } from './178-inspectables.js';
 import { PanelDockView } from './179-panel-dock.js';
 import { drSheetIn } from '../ui/229-components.js';
 
-/** A text card's properties — written at its top between --- lines — and the rest: { data, body }; data null where they can't be read. */
-export function cardFrontmatter(text) {
-  const m = /^---\r?\n([\s\S]*?)\r?\n?---[ \t]*(?:\r?\n|$)/.exec(text || '');
-  if (!m) return { data: {}, body: text || '' };
-  let data = null;
-  try {
-    data = m[1].trim() ? parseYaml(m[1]) : {};
-  } catch (err) {
-    data = null;
-  }
-  if (data !== null && (typeof data !== 'object' || Array.isArray(data))) data = null;
-  return { data, body: (text || '').slice(m[0].length) };
-}
-
-/** A text card's text with these properties at its top, or none. */
-export function withCardFrontmatter(data, body) {
-  if (!Object.keys(data).length) return body;
-  return `---\n${stringifyYaml(data)}---\n${body}`;
-}
-
-/** A value typed for a card's property, made the kind it was: a list, a number, true or false, or text. */
-export function cardValue(typed, was) {
-  const text = String(typed).trim();
-  if (Array.isArray(was)) return text ? text.split(',').map((t) => t.trim()).filter(Boolean) : [];
-  if (typeof was === 'number' && text !== '' && !isNaN(Number(text))) return Number(text);
-  if (typeof was === 'boolean' && /^(true|false)$/i.test(text)) return text.toLowerCase() === 'true';
-  return text;
-}
-
-/**
- * A note as an info sheet opens: its cover beside its name, one property
- * raised beneath in the accent — the title-and-artist shape an album
- * page opens with — and a line on where it lives, how long it is and
- * when it last changed. It says what you're looking at before the
- * details, which a bare list of fields never does. The note panel and
- * the inspector both open with it.
- */
-export function drawNoteHead(plugin, parentEl, file) {
-  const head = parentEl.createDiv({ cls: 'dr-props-head' });
-  const art = head.createDiv({ cls: 'dr-props-art' });
-  drawNoteArt(plugin, art, file);
-  // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
-  if (file.extension === 'md') {
-    art.dataset.coverNote = file.path;
-    art.setAttribute('tabindex', '-1');
-  }
-
-  const info = head.createDiv({ cls: 'dr-props-info' });
-  info.createDiv({ cls: 'dr-props-title', text: file.basename });
-  const lead = leadProperty(plugin.app, file, false);
-  if (lead) info.createDiv({ cls: 'dr-props-lead', text: lead });
-  fillNoteMeta(plugin, info.createDiv({ cls: 'dr-props-meta' }), file);
-  return head;
-}
-
-/** "Folder · 4 min read · Edited Yesterday". The length arrives once it's counted. */
-export function fillNoteMeta(plugin, meta, file) {
-  const parts = [];
-  const folder = file.parent;
-  if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
-  const style = plugin.settings.trackLength;
-  const lengths = plugin.lengths;
-  const counts = !!lengths && style !== 'none';
-  const length = counts ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
-  if (length) parts.push(style === 'words' ? length : `${length} read`);
-  if (file.stat) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
-  meta.setText(parts.join('  ·  '));
-  if (!counts || lengths.words(file) !== null) return;
-  lengths.measure([file]).then(
-    (changed) => {
-      if (changed && meta.isConnected) fillNoteMeta(plugin, meta, file);
-    },
-    () => {}
-  );
-}
-
-/** Whether a view says what the panel is about itself: a mind map does. */
 const EMPTY_TEXT = 'Open or pick a note to see its properties.';
 const OFF_TEXT = 'Turn on “Properties button” in settings to see properties here.';
 
@@ -112,6 +33,7 @@ export class PropertiesPanel extends Feature {
     this.leaf = null;
     this.trigger = null;
     this.sections = [];
+    this.shown = null;
     // The sidebar view the panel is in, when it's docked there.
     this.dockView = null;
     // leaf -> its trigger element, so a fitted leaf costs a lookup
@@ -465,22 +387,8 @@ export class PropertiesPanel extends Feature {
     if (!target || target.none) return;
 
     this.leaf = leaf;
-    this.picked = !!target.picked;
-    if (target.card) {
-      this.card = target.card;
-      this.folder = null;
-      this.file = null;
-      this.mountCard();
-    } else if (target.folder) {
-      this.card = null;
-      this.folder = target.folder;
-      this.mountFolder();
-    } else {
-      this.card = null;
-      this.folder = null;
-      this.file = target.file;
-      this.mount();
-    }
+    this.point(target);
+    this.mount();
     if (this.dockView) {
       this.popupEl.addClass('is-open');
       this.dockView.showEmpty('');
@@ -496,117 +404,27 @@ export class PropertiesPanel extends Feature {
     this.setTrigger(trigger);
   }
 
+  /** Pointed at `target`: what it is, drawn by mount. */
+  point(target) {
+    this.shown = inspectableOf(this.plugin, target);
+    this.picked = !!target.picked;
+    this.card = target.card || null;
+    this.folder = target.folder || null;
+    this.file = this.shown.file;
+  }
+
+  /** What it's pointed at, drawn afresh. */
   mount() {
+    this.sections.forEach((sec) => sec.destroy());
     this.popupEl.empty();
-    this.renderHead();
-    // Picked in the library rather than open: what can be done with it, there.
-    const view = this.picked ? this.browseView() : null;
-    if (view && typeof view.inspectNoteActions === 'function') view.inspectNoteActions(this.popupEl, this.file);
-    this.sections = this.build();
-    this.sections.forEach((sec) => sec.mount(this.popupEl, this.file));
+    this.sections = this.shown.draw(this, this.popupEl);
   }
 
-  /** An album picked in the library: what it is, as the library tells it, then its folder note's properties. */
-  mountFolder() {
-    const folder = this.folder;
-    this.popupEl.empty();
-    const brief = this.popupEl.createDiv({ cls: 'dr-inspector-brief' });
-    const view = this.browseView();
-    if (view) view.previewAlbum(brief, folder);
-    else brief.createDiv({ cls: 'dr-preview-title', text: folder.name });
-    const note = typeof this.plugin.folderNote === 'function' ? this.plugin.folderNote(folder) : null;
-    this.file = note || null;
-    this.sections = note ? this.build() : [];
-    this.sections.forEach((sec) => sec.mount(this.popupEl, note));
-  }
-
-  /** A page of the library — the one last worked in — to draw what it picked. */
-  browseView() {
-    const ws = this.app.workspace;
-    const leaves = ws.getLeavesOfType(BROWSE_VIEW);
-    const recent = typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : null;
-    const leaf = recent && leaves.includes(recent) ? recent : leaves[0];
-    return leaf && leaf.view && typeof leaf.view.previewAlbum === 'function' ? leaf.view : null;
-  }
-
-  /** The note as an info sheet opens: see drawNoteHead. */
-  renderHead() {
-    drawNoteHead(this.plugin, this.popupEl, this.file);
-  }
-
-  /**
-   * A text card's properties: each as a row to change or take away, and
-   * a row to add one. They're kept at the top of its text, which the card
-   * itself doesn't show.
-   */
-  mountCard() {
-    const node = this.card;
-    this.popupEl.empty();
-    this.sections = [];
-    const text = (node.getData() || {}).text || '';
-    const parsed = cardFrontmatter(text);
-    const head = this.popupEl.createDiv({ cls: 'dr-props-head' });
-    const info = head.createDiv({ cls: 'dr-props-info' });
-    const first = parsed.body.split('\n').map((l) => plainMarkdownLine(l)).find(Boolean);
-    info.createDiv({ cls: 'dr-props-title', text: first || 'Card' });
-    info.createDiv({ cls: 'dr-props-meta', text: 'A card on this canvas' });
-    const list = this.popupEl.createDiv({ cls: 'dr-card-props' });
-    if (!parsed.data) {
-      list.createDiv({ cls: 'dr-card-props-note', text: 'Its properties can’t be read: look at the lines between --- at its top.' });
-      return;
-    }
-    const keys = Object.keys(parsed.data);
-    keys.forEach((key) => this.cardRow(list, key, parsed.data[key]));
-    if (!keys.length) list.createDiv({ cls: 'dr-card-props-note', text: 'No properties yet.' });
-    const add = this.popupEl.createDiv({ cls: 'dr-card-props-add' });
-    const keyIn = add.createEl('input', { type: 'text', cls: 'dr-card-props-key-in' });
-    keyIn.placeholder = 'Property';
-    const valIn = add.createEl('input', { type: 'text', cls: 'dr-card-props-value' });
-    valIn.placeholder = 'Value';
-    const button = add.createEl('button', { text: 'Add' });
-    const commit = () => {
-      const key = keyIn.value.trim();
-      if (key) this.setCardProperty(key, cardValue(valIn.value, parsed.data[key]));
-    };
-    button.addEventListener('click', commit);
-    [keyIn, valIn].forEach((input) =>
-      input.addEventListener('keydown', (evt) => {
-        if (evt.key !== 'Enter') return;
-        evt.preventDefault();
-        commit();
-      })
-    );
-  }
-
-  cardRow(list, key, value) {
-    const row = list.createDiv({ cls: 'dr-card-props-row' });
-    row.createDiv({ cls: 'dr-card-props-key', text: key });
-    const input = row.createEl('input', { type: 'text', cls: 'dr-card-props-value' });
-    input.value = Array.isArray(value) ? value.join(', ') : value === null || value === undefined ? '' : String(value);
-    input.addEventListener('change', () => this.setCardProperty(key, cardValue(input.value, value)));
-    const remove = row.createDiv({ cls: 'clickable-icon dr-card-props-remove' });
-    remove.setAttribute('aria-label', 'Remove');
-    setIcon(remove, 'x');
-    remove.addEventListener('click', () => this.setCardProperty(key, undefined));
-  }
-
-  /** A text card's property set, or taken away (undefined), at the top of its text. Saved, a step of Undo. */
-  setCardProperty(key, value) {
-    const node = this.card;
-    if (!node) return;
-    const text = (node.getData() || {}).text || '';
-    const parsed = cardFrontmatter(text);
-    if (!parsed.data) return;
-    const data = Object.assign({}, parsed.data);
-    if (value === undefined) delete data[key];
-    else data[key] = value;
-    const next = withCardFrontmatter(data, parsed.body);
-    if (next !== text) {
-      node.setText(next);
-      if (node.canvas) requestCanvasSave(node.canvas);
-    }
-    this.mountCard();
-    if (this.trigger && this.trigger.isConnected) this.place(this.trigger);
+  /** Changed from inside — a card's property — so drawn again where it is. */
+  redraw() {
+    if (!this.shown || !this.isOpen()) return;
+    this.mount();
+    this.reposition();
   }
 
   /** Switching notes moves the panel rather than closing it. */
@@ -620,7 +438,7 @@ export class PropertiesPanel extends Feature {
       return;
     }
 
-    this.file = target && target.file ? target.file : leaf.view.file;
+    this.point({ file: target && target.file ? target.file : leaf.view.file });
     this.leaf = leaf;
     this.mount();
 
@@ -679,6 +497,7 @@ export class PropertiesPanel extends Feature {
 
     this.sections.forEach((sec) => sec.destroy());
     this.sections = [];
+    this.shown = null;
     this.file = null;
     this.card = null;
     this.folder = null;
@@ -774,8 +593,7 @@ export class PropertiesPanel extends Feature {
   /** Docked, show `target` — unless it already is, so what's being typed in it stays. */
   showDocked(leaf, target) {
     // A note picked is drawn with what the library can do with it, so it's not the same as that note open.
-    const same = target.folder ? target.folder === this.folder : !this.folder && !!target.picked === !!this.picked && ((target.file && target.file === this.file) || (target.card && target.card === this.card));
-    if (this.isOpen() && same) {
+    if (this.isOpen() && this.shown && this.shown.is(target)) {
       if (leaf) this.leaf = leaf;
       return;
     }

@@ -24,7 +24,8 @@ export function originLabel(origin) {
   return { picked: 'Picked in the library', card: 'A card on the canvas', map: 'The open map', note: 'The open note' }[origin] || '';
 }
 
-const sameTarget = (a, b) =>
+/** Whether two targets are about the same thing, drawn the same way. */
+export const sameTarget = (a, b) =>
   a === b || (!!a && !!b && a.file === b.file && a.folder === b.folder && a.card === b.card && !!a.picked === !!b.picked);
 
 export class WorkspaceCoordinator {
