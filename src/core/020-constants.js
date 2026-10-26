@@ -37,6 +37,8 @@ export const LIBRARY_BUILTINS = {
   folders: { label: 'Collections', icon: 'folder' },
   notes: { label: 'All Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
+  // The plugin's own settings, from the library rather than a gear moved into Obsidian's header.
+  settings: { label: 'Settings', icon: 'settings' },
   smart: { label: 'Saved views', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
@@ -45,7 +47,7 @@ export const LIBRARY_BUILTINS = {
 };
 
 /* The library's places that wait under More, so the first few stand out. */
-export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights'];
+export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights', 'settings'];
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -258,7 +260,8 @@ export const DEFAULTS = {
   // The note panel's sections from relationships and albums.
   panelRelationships: false,
   panelPlaces: false,
-  settingsInHeader: true,
+  // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
+  settingsInHeader: false,
   coverProperty: 'cover',
   // {{folder}} stands for the folder's own name, which is the common
   // convention; a literal like "index" works too.

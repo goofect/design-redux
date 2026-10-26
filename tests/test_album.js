@@ -2053,7 +2053,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(sections[2].folded, true);
     plugin.settings.libraryCheck = true;
     plugin.settings.knowledgeCheck = false;
-    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-2), ['library-check', 'inbox'], 'the tools last, those switched on');
+    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-3), ['library-check', 'inbox', 'settings'], 'the tools last, those switched on, then Settings');
     assert.ok(sections[2].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 

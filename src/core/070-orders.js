@@ -215,10 +215,12 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // The strip is off to begin with now. Whoever already had the plugin keeps it as it was.
+    // The strip and the moved gear are off to begin with now. Whoever already had the plugin keeps them as they were.
     to: 16,
     run(saved, was) {
-      if (was && was.existing && saved.contextStrip === undefined) saved.contextStrip = true;
+      if (!was || !was.existing) return;
+      if (saved.contextStrip === undefined) saved.contextStrip = true;
+      if (saved.settingsInHeader === undefined) saved.settingsInHeader = true;
     },
   },
 ];

@@ -887,3 +887,9 @@ inspector, one selection.
   Properties is the header's button and the inspector.
 - The real-Obsidian suite puts the strip on in its `before`, to keep
   testing it.
+- Obsidian's gear is left where it is to begin with (`settingsInHeader` off,
+  step 16 keeps it for an existing install); Settings is a place in the
+  library, under More.
+- Kept, for now: the menu filter (210) hides Obsidian's own Rename property,
+  which bypasses `design-redux:property-renamed`, and there's no event for
+  it to follow instead; one page (200) is already opt-in.

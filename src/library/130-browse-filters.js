@@ -326,6 +326,7 @@ export class Library extends Feature {
     ['library-check', 'knowledge-check', 'inbox']
       .filter((id) => this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'])
       .forEach((id) => more.push({ kind: 'builtin', id }));
+    more.push({ kind: 'builtin', id: 'settings' });
 
     const sections = [
       {

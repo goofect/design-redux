@@ -341,6 +341,7 @@ export class LibraryView extends ItemView {
     }
     if (id === 'graph') this.app.commands.executeCommandById('graph:open');
     if (id === 'random') this.app.commands.executeCommandById('random-note:open');
+    if (id === 'settings') this.plugin.openSettingsAt();
   }
 
   browseMode(state) {
