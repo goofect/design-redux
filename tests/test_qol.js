@@ -248,6 +248,9 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok(f.contextStrip === true && f.settingsInHeader === true && f.lookScope === 'window');
     const g = { contextStrip: false }; strip.run(g, { existing: true });
     assert.strictEqual(g.contextStrip, false);
+    // Step 9 leaves a first install's Relationships on.
+    const rel = {}; R.SETTINGS_MIGRATIONS.find((m) => m.to === 9).run(rel, { existing: false });
+    assert.ok(!('panelRelationships' in rel) && R.DEFAULTS.panelRelationships === true);
     const h = {}; strip.run(h, { existing: false });
     assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
   });

@@ -963,3 +963,10 @@ listeners go on each window's document as it opens (`window-open`), and come
 off on unloading (the lifecycle test opens one). The header's « » are taken
 off every tab's header, a pop-out's too, rather than the main document's.
 
+## 39. Relationships in the inspector, to begin with
+
+A first install's note panel shows Relationships (broader, narrower,
+related) again: docked, it has room. Step 9, which took it out on 14 Oct,
+now applies only to an install that had settings then, so whoever has it off
+keeps it off.
+

@@ -259,7 +259,8 @@ export const DEFAULTS = {
   panelFoldedGroups: [],
   showMentions: true,
   // The note panel's sections from relationships and albums.
-  panelRelationships: false,
+  // A note's broader, narrower and related notes in the panel, as the inspector has room for them.
+  panelRelationships: true,
   panelPlaces: false,
   // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
   settingsInHeader: false,

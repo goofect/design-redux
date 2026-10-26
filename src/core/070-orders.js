@@ -151,9 +151,12 @@ export const SETTINGS_MIGRATIONS = [
   },
   {
     // The note panel without Relationships and Kept in: properties and
-    // mentions only. Both are a switch away in Notes → Properties.
+    // mentions only. Both are a switch away in Notes → Properties. Only for
+    // whoever had the plugin then: docked, the panel has room, and a first
+    // install starts with Relationships.
     to: 9,
-    run(saved) {
+    run(saved, was) {
+      if (was && !was.existing) return;
       saved.panelRelationships = false;
       saved.panelPlaces = false;
     },
