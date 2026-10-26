@@ -928,3 +928,15 @@ That wants screenshots across the looks before and after, part by part.
   plugin's imports; tests/map.js refuses one nothing imports.
 - The bundle is the same modules and lines as before.
 
+## 35. The shared controls, to the keys
+
+- `drSegmented` (229) is a tab list as a screen reader hears it: its
+  segments are tabs (they were buttons, asButton's role written over the
+  tab's), the arrows go round from either end, Home and End go to the ends,
+  and only the chosen one is reached with Tab.
+- `drOpenSheet` closes once however often it's asked, and gives focus back
+  to what opened it only if focus was in the sheet; a press outside leaves
+  it where it went.
+- Docked, the inspector keeps a map as its page while it's worked in, so its
+  node section follows the node picked on the map.
+

@@ -40,7 +40,8 @@ export function drTextButton(parent, label, run, opts = {}) {
 /**
  * A segmented control: one track, the chosen segment raised. `items` are
  * { id, label, icon? }; `onChange(id)` runs when another is chosen, by
- * click or by the arrow keys.
+ * click or by the keys a tab list has: the arrows, round from either end,
+ * and Home and End. Only the chosen segment is reached with Tab.
  */
 export function drSegmented(parent, items, value, onChange) {
   const el = parent.createDiv({ cls: 'dr-segmented' });
@@ -48,8 +49,9 @@ export function drSegmented(parent, items, value, onChange) {
   const segments = items.map((item) => {
     const seg = el.createDiv({ cls: 'dr-segment' });
     seg.dataset.id = item.id;
-    seg.setAttribute('role', 'tab');
+    // A tab, not a button: asButton first, so the role it sets is the one replaced.
     asButton(seg, item.label);
+    seg.setAttribute('role', 'tab');
     if (item.icon) setIcon(seg.createSpan(), item.icon);
     seg.createSpan({ text: item.label });
     return seg;
@@ -65,10 +67,13 @@ export function drSegmented(parent, items, value, onChange) {
   };
   segments.forEach((seg) => onActivate(seg, () => choose(seg.dataset.id, true)));
   el.addEventListener('keydown', (evt) => {
-    if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
+    const steps = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 };
+    if (!(evt.key in steps) && evt.key !== 'Home' && evt.key !== 'End') return;
     evt.preventDefault();
     const at = segments.findIndex((s) => s.hasClass('is-active'));
-    const next = segments[Math.max(0, Math.min(segments.length - 1, at + (evt.key === 'ArrowRight' ? 1 : -1)))];
+    const n = segments.length;
+    const to = evt.key === 'Home' ? 0 : evt.key === 'End' ? n - 1 : (at + steps[evt.key] + n) % n;
+    const next = segments[to];
     choose(next.dataset.id, true);
     next.focus();
   });
@@ -167,16 +172,22 @@ export function drSheetIn(el, anchor) {
 
 /**
  * A sheet or popover shown: it opens from where it was pressed, and goes
- * on a press outside it or on Escape, giving focus back to what opened it.
+ * on a press outside it or on Escape. Focus goes back to what opened it if
+ * it was in the sheet — not when the press outside put it somewhere else.
+ * Closing twice closes once.
  */
 export function drOpenSheet(el, anchor, onClose) {
   drSheetIn(el, anchor);
   const doc = el.ownerDocument;
+  let open = true;
   const close = () => {
+    if (!open) return;
+    open = false;
+    const inside = el.contains(doc.activeElement);
     doc.removeEventListener('keydown', onKey, true);
     doc.removeEventListener('pointerdown', onDown, true);
     if (onClose) onClose();
-    if (anchor && typeof anchor.focus === 'function') anchor.focus();
+    if (inside && anchor && typeof anchor.focus === 'function') anchor.focus();
   };
   const onKey = (evt) => {
     if (evt.key === 'Escape') {
