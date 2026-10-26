@@ -472,6 +472,8 @@ export class DesignRedux extends Plugin {
     // Whether these were saved before, or it's a first install: some steps keep an old default for the first.
     const was = { existing: Object.keys(saved).length > 0 };
     const steps = SETTINGS_MIGRATIONS.filter((m) => m.to > from).sort((a, b) => a.to - b.to);
+    // What this load brought up to date, for the diagnostics.
+    this.migrated = { from, ran: [], failed: [] };
     if (steps.length) {
       try {
         const dir = this.manifest && this.manifest.dir;
@@ -483,7 +485,9 @@ export class DesignRedux extends Plugin {
         try {
           m.run(saved, was);
           saved.settingsVersion = m.to;
+          this.migrated.ran.push(m.to);
         } catch (err) {
+          this.migrated.failed.push(m.to);
           console.error(`Design Redux: settings step ${m.to} failed`, err);
         }
       });

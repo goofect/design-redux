@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -919,6 +919,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
     assert.strictEqual(s.settingsVersion, 17);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
+    // The diagnostics say what loading did.
+    assert.match(R.settingsLine(ctx), /^Settings: version 17, brought up from \d+; steps [\d, ]+17$/);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
