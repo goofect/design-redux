@@ -330,13 +330,15 @@ function findSymbol(mods, name) {
 function componentAnswer(styles, name, opts) {
   const mods = sources();
   const allClasses = [...new Set(styles.rules.flatMap((r) => r.selectors.flatMap((s) => s.text.match(/\.dr-[\w-]+/g) || [])).map((c) => c.slice(1)))].sort();
-  let classes;
+  let classes = null;
   let how;
   const symbol = /^[A-Za-z_$][\w$]*$/.test(name) && !name.includes('-') ? findSymbol(mods, name) : null;
   if (symbol) {
     classes = allClasses.filter((c) => new RegExp(`(?<![\\w-])${c}(?![\\w-])`).test(symbol.text));
     how = `the classes ${symbol.where} writes and styles/ dresses`;
-  } else {
+  }
+  // A source name that writes no class (a method like bulk()) gives way to the words.
+  if (!classes || !classes.length) {
     const words = name.toLowerCase().replace(/^\.?dr-/, '').split(/[-\s]+/).filter(Boolean);
     classes = allClasses.filter((c) => words.every((w) => c.split('-').includes(w)));
     how = `dr- classes holding ${words.map((w) => `"${w}"`).join(' and ')}`;
