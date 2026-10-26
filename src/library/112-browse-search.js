@@ -13,7 +13,8 @@ import { bulkCount } from '../core/047-helpers-text.js';
 import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { BrowseScreen, collectionTiles, TEXT_MOST, TEXT_PAUSE, tileGrid, valueArt } from './110-browse-screens.js';
+import { BrowseScreen } from './108-browse-screen.js';
+import { collectionTiles, TEXT_MOST, TEXT_PAUSE, tileGrid, valueArt } from './110-browse-screens.js';
 
 export class SearchScreen extends BrowseScreen {
   title() {

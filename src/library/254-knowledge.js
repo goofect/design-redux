@@ -21,8 +21,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { actionsOn, addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
-import { BrowseScreen } from './110-browse-screens.js';
-import { BROWSE_SCREENS } from './119-browse-registry.js';
+import { BrowseScreen } from './108-browse-screen.js';
 import { Library } from './130-browse-filters.js';
 import { ComparePicker, NamePrompt } from '../ui/230-pickers.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -135,8 +134,6 @@ export class ConceptScreen extends BrowseScreen {
     });
   }
 }
-
-BROWSE_SCREENS.concept = ConceptScreen;
 
 /* -- the model ------------------------------------------------------- */
 

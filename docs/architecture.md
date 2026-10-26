@@ -986,7 +986,7 @@ From the development specification (26 Oct 2026), after the first plan:
   Maps, Advanced. Rows moved whole; a link to a look setting opens
   Appearance. §32's four tabs were never released.
 
-## 41. No more mixInto
+## 41. No more mixInto, nothing registered as it loads
 
 - A class in parts is now a chain of `extends`: `BrowseSorting` (121) extends `ItemView`,
   each later part the one before, and `BrowseView` the last (125). `MindMaps` and
@@ -996,3 +996,9 @@ From the development specification (26 Oct 2026), after the first plan:
   written in two links, the check `mixInto` made as it ran.
 - `KnowledgeMindMap` is gone: `Knowledge.map` asks `plugin.mapNoteRelationships`, which
   passes to `MindMaps`, so the library area still never imports the maps.
+- **No registry filled as modules load.** `BROWSE_SCREENS` (119) names every screen,
+  features' too (smart, concept, highlights, library-check, inbox, knowledge-check); no
+  module adds itself any more. `BrowseScreen`, the class every screen extends, has a
+  module of its own that imports nothing (108), so whichever screen loads first can
+  extend it. `src/main.js` imports the plugin and nothing else: no module has to be
+  loaded first.
