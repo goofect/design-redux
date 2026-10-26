@@ -9,17 +9,15 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { cloneModel, walk } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { noteLinkOf } from '../tree/408-tree-notes.js';
 import { canvasFromMap, mapFromCanvas } from '../tree/414-tree-convert.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { MINDMAP_EXTENSION } from './421-mindmap-view.js';
 import { layoutScene } from './423-mindmap-scene.js';
 
-class MindMapConvert {
+export class MindMapConvert {
   /** A new file beside another, written and opened. */
   async writeBeside(near, base, ext, text) {
     const folder = near && near.parent ? near.parent : this.app.vault.getRoot();
@@ -91,5 +89,3 @@ class MindMapConvert {
     return this.writeBeside(view.file, view.file.basename, 'canvas', JSON.stringify(data, null, '\t'));
   }
 }
-
-mixInto(MindMaps, MindMapConvert);

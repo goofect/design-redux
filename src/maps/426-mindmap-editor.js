@@ -11,10 +11,8 @@
 import { autocompletion, completionStatus } from '@codemirror/autocomplete';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { addChild, addSibling, outdentNode, setText } from '../tree/404-tree-ops.js';
-import { MindMapView } from './421-mindmap-view.js';
 
 /** Notes named like what follows an unclosed [[, as completions. */
 export function linkCompletions(app) {
@@ -31,7 +29,7 @@ export function linkCompletions(app) {
   };
 }
 
-class MindMapEditing {
+export class MindMapEditing {
   /** A node edited: its text in an editor over its box. `replace` starts it over with those characters. */
   edit(id, replace) {
     if (!this.model || this.failure || this.presenting) return;
@@ -135,5 +133,3 @@ class MindMapEditing {
     if (keepFocus && this.root && typeof this.root.focus === 'function') this.root.focus();
   }
 }
-
-mixInto(MindMapView, MindMapEditing);

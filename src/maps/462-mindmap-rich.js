@@ -9,17 +9,15 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, ImagePicker, NamePrompt } from '../ui/230-pickers.js';
 import { putIcon } from '../ui/248-value-options.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { MAP_THEMES, mapThemeOf, NODE_SHAPES, nodeShape, setMapTheme } from '../tree/406-tree-layout-block.js';
-import { MindMapView } from './421-mindmap-view.js';
 
 const SHAPE_NAMES = { box: 'A box', pill: 'A pill', underline: 'A line under it', plain: 'No outline' };
 
-class MindMapRich {
+export class MindMapRich {
   richOn() {
     return !this.plugin || this.plugin.settings.mindmapRichNodes !== false;
   }
@@ -108,5 +106,3 @@ class MindMapRich {
     new ChoicePicker(this.app, 'The map’s theme…', items, (item) => this.apply(setMapTheme(this.model, item.theme))).open();
   }
 }
-
-mixInto(MindMapView, MindMapRich);

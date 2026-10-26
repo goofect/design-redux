@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -398,13 +398,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.glassPanels = true;
     look.apply(true);
     assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
-    // Classic: 1.x's look, no glass.
-    plugin.settings.look = 'classic';
-    look.apply();
-    assert.ok(document.body.classList.contains('dr-look-classic') && !document.body.classList.contains('dr-glass'));
-    plugin.settings.look = 'theme';
-    look.apply();
-    assert.ok(!document.body.classList.contains('dr-look-classic'));
+    // Classic is gone: whoever had it has the theme's look, without what it hid.
+    const classic = { look: 'classic', notePage: true };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 17).run(classic);
+    assert.deepStrictEqual(classic, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
+    assert.ok(!('classic' in R.LOOKS));
   });
 
   await t('reading history: what you opened and read, in the plugin’s data; changed since read is news; the latest kept', () => {
@@ -919,7 +917,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 15);
+    assert.strictEqual(s.settingsVersion, 17);
+    assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -1283,6 +1282,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
   });
 
+  await t('without the strip, « » sit in the note’s header, name where they go and open it there', () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const containerEl = document.body.createDiv();
+    containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' });
+    const leaf = { isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file }), openFile(f) { this.view.file = f; } };
+    app.workspace.iterateAllLeaves = (fn) => fn(leaf);
+    // Obsidian's own, which the buttons are made with.
+    if (typeof global.createDiv !== 'function') global.createDiv = (o) => { const el = document.createElement('div').createDiv(o); el.remove(); return el; };
+    const skip = new R.HeaderSkip(plugin);
+    const labels = () => Array.from(containerEl.querySelectorAll('.dr-header-skip-btn')).map((b) => b.getAttribute('aria-label'));
+    plugin.settings.contextStrip = true;
+    skip.sync();
+    assert.deepStrictEqual(labels(), [], 'the strip has them');
+    plugin.settings.contextStrip = false;
+    skip.sync();
+    assert.deepStrictEqual(labels(), ['Previous in collection: Anarchy', 'Next in collection: Cooperation']);
+    containerEl.querySelectorAll('.dr-header-skip-btn')[1].click();
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation');
+    skip.sync();
+    assert.strictEqual(containerEl.querySelectorAll('.dr-header-skip').length, 1, 'one pair a tab');
+    skip.disable();
+    assert.ok(!containerEl.querySelector('.dr-header-skip'));
+    containerEl.remove();
+  });
+
   await t("the strip's skip buttons name where they go and open it in the page", () => {
     const { plugin, app } = setup();
     const file = app.vault.getFileByPath('IR/Balance.md');
@@ -1619,55 +1644,65 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
   });
 
-  await t('the preview: a note or album picked in the library, in brief, without opening it; a double click or Enter opens it', async () => {
+  await t('the inspector: while it shows, a click in the library picks and a double click or Enter opens; the library tells it what a pick is', async () => {
     const { view, plugin, app, opened } = setup();
     plugin.selection = new R.Selection(plugin);
-    view.unpick = plugin.selection.onChange(() => {
-      view.markPicked();
-      view.renderPreview();
+    view.unpick = plugin.selection.onChange(() => view.markPicked());
+    // The inspector's tab, in the right sidebar.
+    const tabs = [];
+    const tab = { view: { containerEl: document.body.createDiv() }, detach: () => tabs.splice(0) };
+    tab.setViewState = async () => tabs.push(tab);
+    Object.assign(app.workspace, {
+      getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
+      getRightLeaf: () => tab,
+      revealLeaf() {},
     });
     const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
     view.render();
-    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'hidden until asked for');
     click(row('Anarchy'));
     assert.strictEqual(opened.length, 1, 'without it, a click opens as it always has');
 
-    // Shown with the button by Sort and filter, for every page of the library.
+    // Shown with the button by Sort and filter.
     plugin.refreshBrowse = () => view.render();
     click(view.contentEl.querySelector('.dr-preview-btn'));
-    assert.strictEqual(plugin.settings.libraryPreview, true);
-    const pane = () => view.containerEl.querySelector('.dr-preview');
-    assert.ok(pane().querySelector('.dr-preview-empty'));
+    await new Promise((r) => setTimeout(r));
+    assert.strictEqual(tabs.length, 1, 'the inspector opened');
+    assert.ok(view.contentEl.querySelector('.dr-preview-btn').classList.contains('is-active'));
+    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'no pane of its own: the inspector shows it');
     click(row('Balance'));
     assert.strictEqual(opened.length, 1, 'while it shows, a click picks');
     assert.ok(row('Balance').classList.contains('is-selected'));
-    const facts = () => Array.from(pane().querySelectorAll('.dr-preview-label')).map((e) => e.textContent);
-    assert.strictEqual(pane().querySelector('.dr-preview-title').textContent, 'Balance');
-    assert.deepStrictEqual(facts(), ['In', 'Created', 'Modified']);
-    const buttons = () => Array.from(pane().querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
-    assert.deepStrictEqual(buttons(), ['Open', 'More'], 'already in its collection: nothing to reveal');
-    assert.ok(!pane().querySelector('.dr-props-popup, .dr-row'), 'no properties to edit: that’s the note panel’s');
+    assert.strictEqual(plugin.selection.get().file.basename, 'Balance');
 
     row('Balance').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
     assert.strictEqual(opened[1].basename, 'Balance', 'a double click opens');
     row('Cooperation').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert.strictEqual(opened[2].basename, 'Cooperation', 'Enter opens');
 
+    // What a note picked here can do, in the inspector.
+    const buttons = (el) => Array.from(el.querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
+    let el = document.createElement('div');
+    view.inspectNoteActions(el, app.vault.getFileByPath('IR/Balance.md'));
+    assert.deepStrictEqual(buttons(el), ['Open', 'More'], 'already in its collection: nothing to reveal');
     // Elsewhere, it can take you to the note's album, still picked there.
     const went = [];
     view.leaf.setViewState = async (st) => went.push(st.state);
     await view.setState({ mode: 'recents' }, {});
-    plugin.selection.set({ file: app.vault.getFileByPath('IR/Theories/Realism.md') });
-    assert.deepStrictEqual(buttons(), ['Open', 'Reveal in collection', 'More']);
-    click(Array.from(pane().querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Reveal in collection'));
+    el = document.createElement('div');
+    view.inspectNoteActions(el, app.vault.getFileByPath('IR/Theories/Realism.md'));
+    assert.deepStrictEqual(buttons(el), ['Open', 'Reveal in collection', 'More']);
+    click(Array.from(el.querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Reveal in collection'));
     assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR/Theories']);
+    assert.strictEqual(plugin.selection.get().file.basename, 'Realism');
 
     // An album: what kind, what it holds, where it is.
     await view.setState({ mode: 'folders' }, {});
     click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
-    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => pane().querySelector(sel).textContent), ['IR', 'Collection']);
-    assert.deepStrictEqual(facts(), ['Holds', 'In']);
+    el = document.createElement('div');
+    view.previewAlbum(el, app.vault.getFolderByPath('IR'));
+    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
 
     view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
     assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');
@@ -1675,14 +1710,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
     assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
 
-    // Set always to open; and hidden again, nothing stays picked.
+    // Set always to open; and closed again, what's picked stays picked.
     plugin.settings.inspectorClick = 'never';
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     click(row('Deterrence'));
     assert.strictEqual(opened[3].basename, 'Deterrence', 'set always to open');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR/Theories') });
-    view.togglePreview();
-    assert.ok(!pane() && plugin.selection.get() === null);
+    await view.togglePreview();
+    assert.ok(tabs.length === 0 && plugin.selection.get().folder.path === 'IR/Theories');
   });
 
   await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {
@@ -2016,7 +2051,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(sections[2].folded, true);
     plugin.settings.libraryCheck = true;
     plugin.settings.knowledgeCheck = false;
-    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-2), ['library-check', 'inbox'], 'the tools last, those switched on');
+    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-3), ['library-check', 'inbox', 'settings'], 'the tools last, those switched on, then Settings');
     assert.ok(sections[2].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 
@@ -2837,10 +2872,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const has = (c) => document.body.classList.contains(c);
     look.enable();
     assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard');
-    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'Apple by default, notes too');
-    plugin.settings.lookScope = 'plugin';
+    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'Apple by default, on what the plugin draws; notes as the theme draws them');
+    plugin.settings.lookScope = 'window';
     look.enable();
-    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'only what the plugin draws');
+    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'the whole window, when asked');
     plugin.settings.lookScope = 'window';
     plugin.settings.gridDensity = 'large';
     plugin.settings.canvasSpacing = 'compact';

@@ -1,0 +1,21 @@
+/* The strip never covers text: the note keeps room at its foot for the strip and 24px more, and
+   the strip slides out of view (the base duration) while you scroll down or type. */
+body.dr-strip-active .markdown-source-view.mod-cm6 .cm-scroller,
+body.dr-strip-active .markdown-preview-view {
+  padding-bottom: calc(var(--dr-strip-h, 0px) + 24px) !important;
+}
+
+.dr-strip.is-away {
+  transform: translate(-50%, calc(100% + 48px));
+}
+
+body.dr-strip-side .dr-strip.is-away {
+  transform: translate(calc(100% + 24px), -50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-strip {
+    transition: none;
+  }
+}
+

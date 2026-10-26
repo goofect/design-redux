@@ -11,7 +11,8 @@ Coffee N' Christmas.
   (core, ui, tree, then the four places — library, note, maps, tools —
   and plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
-  them all and exports the plugin. After using a name from another module,
+  the plugin, whose imports reach every module (the build refuses one
+  nothing imports), and exports it. After using a name from another module,
   `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
   between its neighbours'. `obsidian` and `@codemirror/*` are imported as
   usual and provided by Obsidian at runtime.
@@ -21,7 +22,10 @@ Coffee N' Christmas.
   use across the layers that isn't on the known list, a module that needs a
   name as it loads from one that runs after it (a cycle runs from the module
   `src/main.js` imports first), and a `main.js` that fails as it loads.
-- `styles.css` — all styles.
+- `styles/NN-name.css` — all styles, in parts the build joins, in order, into
+  `styles.css` (built, not committed; never edit it: edit `styles/`). The
+  order is the cascade: a new rule goes in the part it dresses, after what it
+  overrides. The map at the top of `04-foundation.css` says what each part is.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
   line releases that version instead (only when the author asks).
@@ -30,7 +34,7 @@ Coffee N' Christmas.
   (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
   in for). `npm test`, or `node tests/run.js qol album` for just some.
-- `tests/test_lifecycle.js` checks command ids and setting keys against
+- `tests/test_lifecycle.js` checks command ids, setting keys and view types against
   `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
   shows them). After a deliberate change: `node tests/test_lifecycle.js
@@ -56,7 +60,7 @@ Coffee N' Christmas.
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
 - `DEFAULTS` holds every setting. Settings rows are placed by `SETTINGS_TABS`: a tab for each
-  place, in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
+  task (General, Navigation, Notes, Advanced), in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
   row's key must be added to one feature, and to none twice. The look rows are `LOOK_KEYS`.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
@@ -74,21 +78,27 @@ Coffee N' Christmas.
   `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
   `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
   and links stay as they are; read it rather than walking the vault.
-- A large class can be written in parts: a later piece writes `class Part {…}`
-  and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–125, MindMapView in the maps area). No `super` in a part.
+- A large class can be written in parts: a later piece exports `class Part {…}`,
+  and the class's own module imports it and, at its end, calls
+  `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
+  120, its parts 121–125; MindMapView in 421 and MindMaps in 420, their parts
+  the rest of maps). No `super` in a part. A part for a class of a lower
+  area, which mustn't import it, puts itself on (KnowledgeMindMap, 441).
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited.
+  is where a note is edited: on a computer, docked in the right sidebar as
+  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. Docked, it
+  follows the open note and what's picked.
 - What's picked is `plugin.selection` (076), apart from what's open. In the
-  browse view, rows and tiles go through `pickOrOpen`. The browse view's
-  preview (124) shows what's picked, in brief: what it is, where it is,
-  Open / Reveal in album / More. While the preview shows, a click picks and
-  a double click or Enter opens. It doesn't repeat the panel.
+  browse view, rows and tiles go through `pickOrOpen`. While the inspector
+  shows (`inspectorShowing`), a click picks and a double click or Enter
+  opens. The browse view (124) draws what the library knows of a pick into
+  the inspector: an album in brief, and a picked note's Open / Reveal in
+  collection / More.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback. A plain canvas's go through the adapter (`core/079`:

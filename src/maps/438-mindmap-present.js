@@ -13,13 +13,11 @@
 
 import { Notice } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { mapPresentation } from '../tree/412-tree-present.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { boundsOfBoxes, fitCamera, nodeLabel, nodeParts } from './423-mindmap-scene.js';
 
-class MindMapPresent {
+export class MindMapPresent {
   /** From the root, or from a node's branch. */
   present(fromId) {
     if (this.presenting || !this.model) return null;
@@ -212,5 +210,3 @@ class MindMapPresent {
     this.draw();
   }
 }
-
-mixInto(MindMapView, MindMapPresent);

@@ -1,0 +1,36 @@
+/* Lettered and roman numeral lists --------------------------------------------
+ *
+ * In reading view the letter or numeral is shown as written,
+ * right-aligned in the list's gutter and in the list marker colour, the
+ * way a numbered list's are; the gutter is sized to the longest one.
+ * In the editor the marker takes the same colour, and the line a
+ * hanging indent so a long item wraps under its text — both as Obsidian
+ * does for its own numbered lists.
+ */
+
+.markdown-rendered ol.dr-marked-list {
+  list-style: none;
+  padding-inline-start: var(--dr-list-gutter, var(--list-indent, 2.25em));
+}
+
+.markdown-rendered ol.dr-marked-list > li.dr-marked-item {
+  position: relative;
+}
+
+.markdown-rendered .dr-marked-item > .dr-list-marker {
+  position: absolute;
+  inset-inline-end: 100%;
+  margin-inline-end: 0.45em;
+  color: var(--list-marker-color, var(--text-muted));
+  white-space: nowrap;
+}
+
+.markdown-source-view.mod-cm6 .cm-line.dr-marked-line {
+  text-indent: calc(var(--dr-list-hang, 0px) * -1);
+  padding-inline-start: var(--dr-list-hang, 0px);
+}
+
+.markdown-source-view.mod-cm6 .dr-list-marker {
+  color: var(--list-marker-color, var(--text-muted));
+}
+

@@ -1,0 +1,204 @@
+/* Settings: search, and the settings to a file and back ------------------------- */
+
+.dr-set-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin-bottom: calc(var(--dr-u) * 3.5);
+}
+
+/* A feature's options open under its row, from its gear — one at a time. */
+.dr-set-more {
+  display: none;
+  margin: 0 0 var(--dr-space-3);
+  padding-left: var(--dr-space-4);
+  border-left: 2px solid var(--dr-line);
+}
+
+.dr-set-more.is-open {
+  display: block;
+}
+
+.dr-set-feature-icon {
+  display: inline-flex;
+  margin-right: var(--dr-space-2);
+  vertical-align: middle;
+  color: var(--text-muted);
+}
+
+.dr-set-feature-icon .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+.dr-set-look {
+  margin-bottom: var(--dr-space-4);
+}
+
+.dr-set-search {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+  min-width: 0;
+  padding: 0 calc(var(--dr-u) * 2.5);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-md);
+  background-color: var(--background-modifier-form-field);
+}
+
+.dr-set-search-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-set-search-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-set-search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: calc(var(--dr-u) * 1.5) 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.dr-set-search input[type="search"]:focus {
+  box-shadow: none;
+}
+
+.dr-set-tools .dr-set-file {
+  display: none;
+}
+
+/* While searching: every tab's matches at once, each under its tab's name. */
+.dr-set-pane-title,
+.dr-set-nothing {
+  display: none;
+}
+
+.dr-settings.is-searching .dr-set-tabs {
+  display: none;
+}
+
+.dr-settings.is-searching .dr-set-pane-title {
+  display: block;
+  margin: calc(var(--dr-u) * 4.5) 0 var(--dr-space-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-settings.is-searching .dr-set-pane:first-of-type .dr-set-pane-title {
+  margin-top: 0;
+}
+
+.dr-settings .dr-set-unmatched {
+  display: none !important;
+}
+
+.dr-settings.dr-set-none .dr-set-nothing {
+  display: block;
+  padding: var(--dr-space-5) 0;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* -- the map minimap ---------------------------------------------------- */
+
+.dr-minimap {
+  position: absolute;
+  right: 12px;
+  /* Clear of the status bar, which floats over the corner. */
+  bottom: 40px;
+  z-index: 20;
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-md);
+  background-color: var(--dr-float-bg);
+  backdrop-filter: blur(var(--dr-glass-blur));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
+  box-shadow: var(--dr-float-shadow);
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.dr-mindmap-minimap .dr-minimap-view {
+  vector-effect: non-scaling-stroke;
+}
+
+.dr-minimap.is-hidden {
+  display: none;
+}
+
+.dr-minimap svg {
+  display: block;
+}
+
+.dr-minimap-card {
+  fill: var(--text-faint);
+  opacity: 0.55;
+}
+
+.dr-minimap-card.is-selected {
+  fill: var(--interactive-accent);
+  opacity: 1;
+}
+
+.dr-minimap-view {
+  fill: var(--interactive-accent);
+  fill-opacity: 0.08;
+  stroke: var(--interactive-accent);
+  stroke-width: 1.5;
+}
+
+/* The kinds in settings: several controls a row, wrapping where narrow. */
+.dr-relation-type .setting-item-control {
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+}
+
+.dr-relation-type .setting-item-control input[type="text"] {
+  width: 9em;
+}
+
+/* What's picked, wherever it's listed. */
+.dr-track.is-selected,
+.dr-tr.is-selected {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+}
+
+.dr-card.is-selected .dr-card-art {
+  box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
+}
+
+/* A setting opened to from where it shows: marked a moment. */
+.dr-settings .is-revealed {
+  border-radius: var(--dr-r, 6px);
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  transition: background-color var(--dr-dur-slow) var(--dr-ease);
+}
+
+/* Find's way out to the whole library: a chip like the filters', without a ×. */
+.dr-chip-wide {
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-chip-wide .dr-chip-icon {
+  display: inline-flex;
+  padding-left: var(--dr-space-3);
+}
+
+.dr-chip-wide .dr-chip-label {
+  padding: 3px var(--dr-space-3) 3px 0;
+  border-radius: 0 var(--dr-radius-pill) var(--dr-radius-pill) 0;
+}
+
+.dr-chip-wide .dr-chip-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+

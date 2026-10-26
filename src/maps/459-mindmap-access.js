@@ -10,11 +10,9 @@
 
 import { Notice, TFile, WorkspaceLeaf } from 'obsidian';
 import { around } from '../core/030-helpers-art.js';
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
-import { MindMaps } from './420-mindmap-feature.js';
-import { MINDMAP_VIEW, MindMapView } from './421-mindmap-view.js';
+import { MINDMAP_VIEW } from './421-mindmap-view.js';
 import { isMindMapNote, keptAsText } from './422-mindmap-takeover.js';
 import { nodeLabel, visibleChildren } from './423-mindmap-scene.js';
 
@@ -30,7 +28,7 @@ export function nodeSaying(model, n) {
   return parts.join(', ');
 }
 
-class MindMapAccess {
+export class MindMapAccess {
   /** The picked node told to a screen reader: the tree's active item, and the live line. */
   announce() {
     if (!this.root) return;
@@ -92,9 +90,7 @@ class MindMapAccess {
   }
 }
 
-mixInto(MindMapView, MindMapAccess);
-
-class MindMapsLinks {
+export class MindMapsLinks {
   /**
    * A map note opened from a link goes straight to the map, with where the
    * link points — [[Map#^id]] — handed over; opened as text first, the
@@ -116,5 +112,3 @@ class MindMapsLinks {
     );
   }
 }
-
-mixInto(MindMaps, MindMapsLinks);

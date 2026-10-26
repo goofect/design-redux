@@ -205,7 +205,7 @@ function loadIndex() {
     cache = {};
   }
   let changed = false;
-  // Modules are src/<area>/NNN-name.js; src/main.js only imports them.
+  // Modules are src/<area>/NNN-name.js; src/main.js imports the plugin, which reaches them.
   const files = [];
   fs.readdirSync(src).forEach((d) => {
     if (fs.statSync(path.join(src, d)).isDirectory()) fs.readdirSync(path.join(src, d)).filter((f) => f.endsWith('.js')).forEach((f) => files.push([d, f]));
@@ -457,7 +457,7 @@ if (args[0] === '--verify') {
     order.push(file);
   };
   [...entry.matchAll(/^import (?:[^'\n]* from )?'\.\/([^']+)';$/gm)].forEach((m) => visitModule(m[1]));
-  pieces.filter((p) => !seen.has(p.file)).forEach((p) => problems.push(`${p.file} isn't imported by src/main.js`));
+  pieces.filter((p) => !seen.has(p.file)).forEach((p) => problems.push(`${p.file} isn't reached from src/main.js: nothing imports it`));
   const at = new Map(order.map((f, i) => [f, i]));
   pieces.forEach((p) => p.load.forEach((n) => {
     const home = homeOf.get(n);

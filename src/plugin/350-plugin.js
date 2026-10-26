@@ -26,6 +26,7 @@ import { Study } from '../library/147-study.js';
 import { PropertyLinks } from '../note/165-panel-references.js';
 import { PropertiesPanel } from '../note/180-panel.js';
 import { ContextStrip } from '../tools/190-strip.js';
+import { HeaderSkip } from '../tools/191-header-skip.js';
 import { ReadingOutline } from '../note/195-reading-outline.js';
 import { OnePage } from '../tools/200-one-page.js';
 import { MenuFilter } from '../tools/210-menu-filter.js';
@@ -88,6 +89,7 @@ export class DesignRedux extends Plugin {
       new ActionsMenu(this),
       new PropertiesPanel(this),
       new ContextStrip(this),
+      new HeaderSkip(this),
       new OnePage(this),
       new MenuFilter(this),
       new SettingsButton(this),
@@ -467,6 +469,8 @@ export class DesignRedux extends Plugin {
     // Older saved settings are brought up to date first, keeping a copy
     // of them as they were in case a step goes wrong.
     const from = saved.settingsVersion || 1;
+    // Whether these were saved before, or it's a first install: some steps keep an old default for the first.
+    const was = { existing: Object.keys(saved).length > 0 };
     const steps = SETTINGS_MIGRATIONS.filter((m) => m.to > from).sort((a, b) => a.to - b.to);
     if (steps.length) {
       try {
@@ -477,7 +481,7 @@ export class DesignRedux extends Plugin {
       }
       steps.forEach((m) => {
         try {
-          m.run(saved);
+          m.run(saved, was);
           saved.settingsVersion = m.to;
         } catch (err) {
           console.error(`Design Redux: settings step ${m.to} failed`, err);

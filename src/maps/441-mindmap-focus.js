@@ -16,10 +16,9 @@ import { Knowledge } from '../library/254-knowledge.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
 import { MindMaps } from './420-mindmap-feature.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 
-class MindMapFocus {
+export class MindMapFocus {
   /** A node found by name, and gone to. */
   findNode() {
     if (!this.model) return;
@@ -162,8 +161,6 @@ class MindMapFocus {
     return ops.filter((o) => o.type === 'relation-add').length;
   }
 }
-
-mixInto(MindMapView, MindMapFocus);
 
 /* Knowledge's map of a note's relationships, made as a mind map where mind maps are on. */
 class KnowledgeMindMap {

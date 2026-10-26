@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 15);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 17);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -242,6 +242,17 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(d.lookScope, 'window');
     const e = { look: 'editorial', lookScope: 'plugin' }; scope.run(e);
     assert.strictEqual(e.lookScope, 'plugin', 'the editorial look keeps its scope');
+    // Step 16: the strip is off to begin with; whoever had the plugin keeps it on unless they'd said.
+    const strip = R.SETTINGS_MIGRATIONS.find((m) => m.to === 16);
+    const f = { look: 'apple' }; strip.run(f, { existing: true });
+    assert.ok(f.contextStrip === true && f.settingsInHeader === true && f.lookScope === 'window');
+    const g = { contextStrip: false }; strip.run(g, { existing: true });
+    assert.strictEqual(g.contextStrip, false);
+    // Step 9 leaves a first install's Relationships on.
+    const rel = {}; R.SETTINGS_MIGRATIONS.find((m) => m.to === 9).run(rel, { existing: false });
+    assert.ok(!('panelRelationships' in rel) && R.DEFAULTS.panelRelationships === true);
+    const h = {}; strip.run(h, { existing: false });
+    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
   });
 
   /* -- pins in your own order ------------------------------------------------ */

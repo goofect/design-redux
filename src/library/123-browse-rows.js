@@ -14,8 +14,6 @@ import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { mixInto } from '../core/080-feature.js';
-import { BrowseView } from './120-browse-view.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 
@@ -561,5 +559,3 @@ export class BrowseRows {
     return noteCoverSrc(this.plugin, file);
   }
 }
-
-mixInto(BrowseView, BrowseRows);

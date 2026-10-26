@@ -11,12 +11,10 @@
 import { setIcon, TFile } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { mixInto } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr, setText } from '../tree/404-tree-ops.js';
 import { noteLinkOf } from '../tree/408-tree-notes.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 
@@ -115,7 +113,7 @@ export function linkingNotes(app, plugin, mapFile, n) {
   });
 }
 
-class MindMapNodePanel {
+export class MindMapNodePanel {
   /** What the note panel is about on a map: its note. */
   panelTarget() {
     return this.file ? { file: this.file } : { none: 'This map has no file yet.' };
@@ -132,12 +130,8 @@ class MindMapNodePanel {
   }
 }
 
-mixInto(MindMapView, MindMapNodePanel);
-
-class MindMapsPanel {
+export class MindMapsPanel {
   panelSections(panel) {
     return this.enabled && this.settings.mindmapNodePanel !== false ? [new NodeSection(panel)] : [];
   }
 }
-
-mixInto(MindMaps, MindMapsPanel);

@@ -1,0 +1,451 @@
+/* Touch -----------------------------------------------------------------------
+ *
+ * The mobile app, phone or tablet (Obsidian's is-mobile). There's no
+ * pointer, so controls that waited to be pointed at are shown outright
+ * and a press shows where the finger is instead of a hover. Rows are
+ * sized for a thumb, and holding one — which opens its menu — doesn't
+ * also select its text or raise iOS's callout.
+ */
+
+body.is-mobile .dr-track-more,
+body.is-mobile .dr-td-more {
+  opacity: 0.6;
+}
+
+body.is-mobile .dr-props-popup .dr-key-icon {
+  opacity: 1;
+}
+
+body.is-mobile .dr-props-popup .dr-value .multi-select-pill-remove-button {
+  opacity: 0.6;
+}
+
+body.is-mobile .dr-browse .view-content,
+body.is-mobile .dr-library .view-content,
+body.is-mobile .dr-strip {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS won't type into a field whose ancestor turns selection off. */
+body.is-mobile .dr-browse .view-content input {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+body.is-mobile .dr-lib-row:active,
+body.is-mobile .dr-track:active,
+body.is-mobile .dr-tr:not(.dr-th):active,
+body.is-mobile .dr-split-row:not(.is-selected):active,
+body.is-mobile .dr-recent:active,
+body.is-mobile .dr-shelf-label.is-linked:active,
+body.is-mobile .dr-detail-action:active,
+body.is-mobile .dr-strip-now:not(.is-screen):active {
+  background-color: var(--background-modifier-hover);
+}
+
+body.is-mobile .dr-card:active .dr-card-art,
+body.is-mobile .dr-cat:active {
+  transform: scale(0.97);
+}
+
+body.is-mobile .dr-cat {
+  transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+body.is-mobile .dr-browse-up,
+body.is-mobile .dr-filter-btn {
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+}
+
+/* The library, as the Library tab's list: full-size rows and icons. */
+body.is-mobile .dr-lib-row {
+  gap: calc(var(--dr-u) * 2.5);
+  min-height: 44px;
+  font-size: var(--font-ui-medium);
+}
+
+body.is-mobile .dr-lib-disclosure {
+  flex-basis: 24px;
+  height: 36px;
+}
+
+body.is-mobile .dr-lib-disclosure .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+body.is-mobile .dr-lib-icon {
+  flex-basis: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+body.is-mobile .dr-lib-icon .svg-icon,
+body.is-mobile .dr-lib-icon .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+body.is-mobile .dr-lib-row.is-nested {
+  padding-left: calc(var(--dr-u) * 7.5);
+}
+
+body.is-mobile .dr-lib-group {
+  margin-top: calc(var(--dr-u) * 5.5);
+  font-size: var(--font-ui-small);
+}
+
+body.is-mobile .dr-lib-empty {
+  padding-left: calc(var(--dr-u) * 17);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-mobile .dr-card:active .dr-card-art,
+  body.is-mobile .dr-cat:active {
+    transform: none;
+  }
+}
+
+/* Phone -------------------------------------------------------------------------
+ *
+ * One column, as the iPhone app is laid out: a large title, the search
+ * field on a line of its own, album art centred above its title, lists
+ * that show the name and nothing that would crowd it, and the
+ * properties screen showing its list or one property's values in turn.
+ * Back and forward are on Obsidian's bottom bar, so a page carries only
+ * back, the way an iOS page does.
+ */
+
+body.is-phone .dr-browse .view-content {
+  padding-top: var(--dr-space-3);
+  padding-left: var(--dr-space-4);
+  padding-right: var(--dr-space-4);
+}
+
+/* History's forward is on the bottom bar; a folder's step further in
+   isn't, so that one stays. */
+body.is-phone .dr-browse-forward:not(.is-folder-step) {
+  display: none;
+}
+
+body.is-phone .dr-detail-bar {
+  flex-wrap: wrap;
+  row-gap: var(--dr-space-3);
+  margin-bottom: var(--dr-space-4);
+}
+
+body.is-phone .dr-browse-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--dr-title-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--dr-title-size);
+  font-weight: var(--font-semibold, 600);
+}
+
+body.is-phone .dr-browse-search,
+body.is-phone .dr-filter-btn + .dr-browse-search {
+  order: 1;
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-left: 0;
+  padding: var(--dr-space-2) var(--dr-space-3);
+}
+
+/* 16px, below which iOS zooms the page into a field being typed in. */
+body.is-phone .dr-browse-search input {
+  font-size: 16px;
+}
+
+/* -- the album page ------------------------------------------------------- */
+
+body.is-phone .dr-detail {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dr-space-4);
+  margin-bottom: calc(var(--dr-u) * 4.5);
+  text-align: center;
+}
+
+body.is-phone .dr-detail-art {
+  width: min(250px, 66vw);
+  height: min(250px, 66vw);
+}
+
+body.is-phone .dr-detail-sub.is-link {
+  align-self: center;
+}
+
+body.is-phone .dr-detail-info {
+  align-items: center;
+  width: 100%;
+}
+
+body.is-phone .dr-detail-title {
+  font-size: var(--dr-title-size);
+}
+
+body.is-phone .dr-detail-sub {
+  font-size: 1.1em;
+}
+
+body.is-phone .dr-detail-meta {
+  margin-top: calc(var(--dr-u) * 1.5);
+}
+
+body.is-phone .dr-detail-actions {
+  width: 100%;
+  gap: var(--dr-space-3);
+  margin-top: calc(var(--dr-u) * 4.5);
+}
+
+body.is-phone .dr-detail-action {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--dr-space-3);
+}
+
+body.is-phone .dr-track {
+  gap: var(--dr-space-3);
+  padding: var(--dr-space-3) calc(var(--dr-u) * 1.5);
+}
+
+body.is-phone .dr-track-sub,
+body.is-phone .dr-track-time {
+  display: none;
+}
+
+body.is-phone .dr-track-more {
+  margin: calc(var(--dr-u) * -1.5) calc(var(--dr-u) * -1) calc(var(--dr-u) * -1.5) 0;
+  padding: var(--dr-space-2);
+}
+
+body.is-phone .dr-album-body {
+  flex-direction: column;
+  gap: var(--dr-space-3);
+}
+
+body.is-phone .dr-album-art {
+  width: 120px;
+  height: 120px;
+}
+
+body.is-phone .dr-album-body .dr-tracks {
+  width: 100%;
+}
+
+/* -- tiles ------------------------------------------------------------------ */
+
+body.is-phone .dr-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: calc(var(--dr-u) * 4.5) calc(var(--dr-u) * 3.5);
+}
+
+/* Home's shelves run to the screen's edges, a little of the next tile
+   showing so it's plain there's more. */
+body.is-phone .dr-shelf-row {
+  grid-auto-columns: calc((100% - 14px) / 2.3);
+  gap: calc(var(--dr-u) * 3.5);
+  margin-inline: calc(var(--dr-u) * -4);
+  padding: var(--dr-space-1) var(--dr-space-4) var(--dr-space-2);
+  scroll-padding-inline: 16px;
+}
+
+body.is-phone .dr-picks {
+  grid-auto-columns: calc((100% - 32px) / 1.6);
+  gap: calc(var(--dr-u) * 3.5);
+  margin-inline: calc(var(--dr-u) * -4);
+  padding: var(--dr-space-1) var(--dr-space-4) calc(var(--dr-u) * 2.5);
+  scroll-padding-inline: 16px;
+}
+
+body.is-mobile .dr-pick:active .dr-pick-body {
+  transform: scale(0.98);
+}
+
+body.is-phone .dr-cat-grid {
+  grid-template-columns: repeat(auto-fill, minmax(136px, 1fr));
+  gap: var(--dr-space-3);
+}
+
+/* -- the notes table: name and date ------------------------------------------ */
+
+body.is-phone .dr-tr {
+  gap: calc(var(--dr-u) * 2.5);
+  padding: var(--dr-space-3) calc(var(--dr-u) * 1.5);
+  font-size: var(--font-ui-medium);
+}
+
+body.is-phone .dr-tr.dr-th {
+  padding: calc(var(--dr-u) * 1.5);
+  font-size: var(--font-ui-smaller);
+}
+
+body.is-phone .dr-tr > .dr-td:not(.dr-td-title):not(.dr-td-time) {
+  display: none;
+}
+
+body.is-phone .dr-td-time {
+  flex-basis: 96px;
+}
+
+body.is-phone .dr-td-more {
+  padding: calc(var(--dr-u) * 1.5);
+}
+
+/* -- properties: the list, or one property ------------------------------------ */
+
+.dr-split-heading {
+  display: none;
+}
+
+body.is-phone .dr-split {
+  display: block;
+}
+
+body.is-phone .dr-split-list,
+body.is-phone .dr-split-detail {
+  max-height: none;
+  overflow: visible;
+  padding: 0;
+  border: none;
+}
+
+body.is-phone .dr-split.has-selection .dr-split-list,
+body.is-phone .dr-split:not(.has-selection) .dr-split-detail {
+  display: none;
+}
+
+body.is-phone .dr-split-heading {
+  display: block;
+  margin: 0 0 calc(var(--dr-u) * 3.5);
+  font-size: var(--dr-title-size);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-normal);
+}
+
+body.is-phone .dr-split-row {
+  padding: var(--dr-space-2) calc(var(--dr-u) * 1.5);
+}
+
+/* -- the strip as a mini player -----------------------------------------------
+ *
+ * Full width above Obsidian's bottom bar — measured, since its height
+ * depends on the phone — holding the note and the two things a mini
+ * player holds: its main control (Read or Edit) and More. Pin is in
+ * More, and the properties button stays in the note's header. It steps
+ * aside while the keyboard is up.
+ */
+
+body.is-phone .dr-strip {
+  left: 8px;
+  right: 8px;
+  bottom: var(--dr-strip-bottom, calc(env(safe-area-inset-bottom, 0px) + 64px));
+  z-index: var(--dr-strip-z, var(--layer-status-bar, 15));
+  max-width: none;
+  gap: calc(var(--dr-u) * 1.5);
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 1.5);
+  transform: none;
+}
+
+body.is-phone .dr-strip-nav,
+body.is-phone .dr-strip-btn[data-action="pin"],
+body.is-phone .dr-strip-btn[data-action="properties"],
+body.is-phone .dr-strip-btn[data-action="sort"] {
+  display: none;
+}
+
+body.is-phone.dr-typing .dr-strip {
+  display: none;
+}
+
+body.is-phone .dr-strip-now {
+  padding: 0 var(--dr-space-1) 0 0;
+  order: 1;
+}
+
+/* A mini player keeps its art at the edge: « » sit together after it. */
+
+body.is-phone .dr-strip-skip[data-action="previous"] {
+  order: 2;
+}
+
+body.is-phone .dr-strip-skip[data-action="next"] {
+  order: 3;
+}
+
+body.is-phone .dr-strip-art {
+  flex-basis: 40px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--dr-radius-sm);
+}
+
+body.is-phone .dr-strip-btn {
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+}
+
+body.is-phone .dr-strip-btn .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+/* -- the properties panel, across the screen ---------------------------------- */
+
+body.is-phone .dr-props-popup {
+  right: 8px;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  max-height: 60vh;
+  border-radius: 14px;
+}
+
+.dr-settings-note {
+  padding-bottom: var(--dr-space-3);
+}
+
+/* -- phone refinements ---------------------------------------------------------
+ *
+ * Recent searches as the iPhone lists them — rows on hairlines rather
+ * than cards; a property's values without an empty frame where a cover
+ * would go, since on one column that's a screenful of nothing; and the
+ * notes table's menu at the row's end.
+ */
+
+body.is-phone .dr-recent {
+  padding: var(--dr-space-2) var(--dr-space-1);
+}
+
+body.is-phone .dr-album-art.is-blank {
+  display: none;
+}
+
+body.is-phone .dr-album-name {
+  font-size: 1.15em;
+}
+
+body.is-phone .dr-album-name.is-primary {
+  font-size: 1.3em;
+}
+
+body.is-phone .dr-album + .dr-album {
+  margin-top: calc(var(--dr-u) * 5.5);
+  padding-top: calc(var(--dr-u) * 4.5);
+}
+
+body.is-phone .dr-th .dr-td {
+  border-left: none;
+}
+
+body.is-phone .dr-td-title .dr-td-more {
+  margin-left: auto;
+}
+

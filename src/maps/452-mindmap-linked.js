@@ -10,10 +10,8 @@
 import { TFile } from 'obsidian';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
-import { mixInto } from '../core/080-feature.js';
 import { walk } from '../tree/400-tree-model.js';
 import { dueState, isDayKey } from '../tree/415-tree-tasks.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { dueLabel } from './450-mindmap-tasks.js';
 
 /** A property's value as a chip says it: a list joined, a link without its brackets. */
@@ -23,7 +21,7 @@ function factValue(v) {
   return plainMarkdownLine(one).slice(0, 40);
 }
 
-class MindMapLinked {
+export class MindMapLinked {
   linkedOn() {
     return !this.plugin || this.plugin.settings.mindmapLinkedCards !== false;
   }
@@ -142,5 +140,3 @@ class MindMapLinked {
     this.draw();
   }
 }
-
-mixInto(MindMapView, MindMapLinked);

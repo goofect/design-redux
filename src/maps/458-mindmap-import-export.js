@@ -9,12 +9,10 @@
 
 import { Notice, TFile } from 'obsidian';
 import { noteNameFrom } from '../core/047-helpers-text.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { mapFromFreeMind, mapFromHeadings, mapFromOpml } from '../tree/418-tree-import.js';
 import { opmlFromMap, xmlAttr } from '../tree/419-tree-export.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { MINDMAP_VIEW } from './421-mindmap-view.js';
 import { showFileAs } from './422-mindmap-takeover.js';
 import { CHAR_WIDTH, colourKey, edgePath, estimateSize, layoutScene, NODE_LINE, NODE_PAD, nodeLabel } from './423-mindmap-scene.js';
@@ -125,7 +123,7 @@ export function pdfFromJpeg(jpeg, width, height) {
   return out;
 }
 
-class MindMapsImportExport {
+export class MindMapsImportExport {
   /** A map made beside a file, from a model, and opened. */
   async writeImported(model, from, name) {
     const folder = from && from.parent ? from.parent : this.app.vault.getRoot();
@@ -228,5 +226,3 @@ class MindMapsImportExport {
     });
   }
 }
-
-mixInto(MindMaps, MindMapsImportExport);

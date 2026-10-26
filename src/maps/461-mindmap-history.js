@@ -9,12 +9,9 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { adoptIds } from '../tree/400-tree-model.js';
 import { replaceMap } from '../tree/404-tree-ops.js';
-import { MindMaps } from './420-mindmap-feature.js';
-import { MindMapView } from './421-mindmap-view.js';
 
 export const MAP_HISTORY = 'mindmap-history.json';
 /* A save this long after the last one kept starts a new one. */
@@ -87,7 +84,7 @@ function changeAll(app, plugin, change) {
   return writing;
 }
 
-class MindMapHistory {
+export class MindMapHistory {
   historyOn() {
     return !!this.plugin && (this.plugin.settings.mindmapHistory === undefined ? 20 : Number(this.plugin.settings.mindmapHistory)) > 0;
   }
@@ -131,9 +128,7 @@ class MindMapHistory {
   }
 }
 
-mixInto(MindMapView, MindMapHistory);
-
-class MindMapsHistory {
+export class MindMapsHistory {
   /** A map's history, moved with it to its new path. */
   moveHistory(from, to) {
     return changeAll(this.app, this.plugin, (all) => {
@@ -145,5 +140,3 @@ class MindMapsHistory {
     });
   }
 }
-
-mixInto(MindMaps, MindMapsHistory);

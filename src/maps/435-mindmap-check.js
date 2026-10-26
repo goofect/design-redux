@@ -10,19 +10,18 @@
 
 import { Notice, TFile } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { mapProblems } from '../tree/409-tree-check.js';
 import { compareMapBranches, compareMaps } from '../tree/410-tree-compare.js';
-import { FILE_FORMATS, MINDMAP_EXTENSION, MindMapView } from './421-mindmap-view.js';
+import { FILE_FORMATS, MINDMAP_EXTENSION } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 
 export const MAP_SNAPSHOTS = 'mindmap-snapshots.json';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-class MindMapCheck {
+export class MindMapCheck {
   /** What may be wrong with the map, listed. */
   checkMap() {
     if (!this.model) return;
@@ -182,5 +181,3 @@ class MindMapCheck {
     return found;
   }
 }
-
-mixInto(MindMapView, MindMapCheck);

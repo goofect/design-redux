@@ -13,9 +13,15 @@ import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
+import { mixInto } from '../core/080-feature.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
+import { BrowseSorting } from './121-browse-sorting.js';
+import { BrowseEditing, RowValues } from './122-browse-editing.js';
+import { BrowseRows } from './123-browse-rows.js';
+import { BrowsePreview } from './124-browse-preview.js';
+import { BrowseAlbum } from './125-browse-album.js';
 import { ContextStrip } from '../tools/190-strip.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
@@ -132,11 +138,9 @@ export class BrowseView extends ItemView {
     this.render();
     // What's picked is marked wherever it's listed.
     if (this.plugin.selection) {
-      this.unpick = this.plugin.selection.onChange(() => {
-        this.markPicked();
-        this.renderPreview();
-      });
+      this.unpick = this.plugin.selection.onChange(() => this.markPicked());
     }
+    this.registerEvent(this.app.workspace.on('layout-change', () => this.markPreviewToggle()));
     fullNameOnHover(this, this.containerEl);
 
     // "/" goes to Find from anywhere on the page. The keydown covers
@@ -459,7 +463,6 @@ export class BrowseView extends ItemView {
       });
     }
     this.measureLater();
-    this.renderPreview();
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();
@@ -834,3 +837,11 @@ ACTION_CONTEXTS.browse = (app) => {
   return folder ? { folder, view, from: 'palette' } : null;
 };
 
+// Its parts, each written in a module of its own, put on here where the class is:
+// what it is made of, read in one place.
+mixInto(BrowseView, BrowseSorting);
+mixInto(BrowseView, BrowseEditing);
+mixInto(BrowseView, RowValues);
+mixInto(BrowseView, BrowseRows);
+mixInto(BrowseView, BrowsePreview);
+mixInto(BrowseView, BrowseAlbum);

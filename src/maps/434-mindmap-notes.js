@@ -11,17 +11,15 @@
 
 import { Notice } from 'obsidian';
 import { noteNameFrom } from '../core/047-helpers-text.js';
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
 import { branchNoteText, nodesFromOutline, noteLinkOf, outlineFromMarkdown, outlineSize } from '../tree/408-tree-notes.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 
 /* Nodes a note makes never pass this many: it was likely the wrong note. */
 export const NOTE_BRANCH_LIMIT = 200;
 
-class MindMapNotes {
+export class MindMapNotes {
   /** The note a node links to, or null. */
   linkedNote(n) {
     const link = n && noteLinkOf(n.text);
@@ -99,5 +97,3 @@ class MindMapNotes {
     return this.apply(applyPatch(this.model, ops, [id]));
   }
 }
-
-mixInto(MindMapView, MindMapNotes);

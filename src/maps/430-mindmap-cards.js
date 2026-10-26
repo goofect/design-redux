@@ -10,10 +10,8 @@
 
 import { Component, Keymap, MarkdownRenderer } from 'obsidian';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { dueState, taskOf, taskText } from '../tree/415-tree-tasks.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { estimateSize, nodeParts } from './423-mindmap-scene.js';
 
 /** How a node's text is set: the root larger, and — with depth shown — the root's own children heavier. */
@@ -53,7 +51,7 @@ function imagesIn(els) {
   );
 }
 
-class MindMapCards {
+export class MindMapCards {
   depthShown() {
     return !this.plugin || this.plugin.settings.mindmapDepth !== false;
   }
@@ -212,5 +210,3 @@ class MindMapCards {
     this.textParts = new Set();
   }
 }
-
-mixInto(MindMapView, MindMapCards);

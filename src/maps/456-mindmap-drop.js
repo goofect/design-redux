@@ -11,13 +11,11 @@
 
 import { Notice, TFile } from 'obsidian';
 import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
-import { mixInto } from '../core/080-feature.js';
 import { newId, nodeById } from '../tree/400-tree-model.js';
 import { branchLines } from '../tree/401-tree-outline.js';
 import { applyPatch, pasteLines, removeNode } from '../tree/404-tree-ops.js';
-import { MindMapView } from './421-mindmap-view.js';
 
-class MindMapDrop {
+export class MindMapDrop {
   /** Listening for copy, cut and drops, once a view. */
   listenForDrops() {
     const root = this.root;
@@ -126,5 +124,3 @@ class MindMapDrop {
     }
   }
 }
-
-mixInto(MindMapView, MindMapDrop);

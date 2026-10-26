@@ -1,0 +1,372 @@
+/* Property schemas: a note that falls short of its folder's, in the panel. */
+.dr-schema-section.is-empty {
+  display: none;
+}
+
+.dr-schema-mark {
+  display: inline-flex;
+  color: var(--text-warning);
+}
+
+.dr-schema-mark svg {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-schema-fix-all,
+.dr-schema-fix {
+  margin-inline-start: auto;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-schema-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+}
+
+.dr-schema-issue {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-small);
+}
+
+.dr-schema-key {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-schema-reason {
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* The schema dialog: a row a property. */
+.dr-schema-modal {
+  width: min(760px, calc(100vw - 32px));
+}
+
+.dr-schema-intro {
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-schema-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+.dr-schema-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) auto auto minmax(0, 1.6fr) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-schema-row-required {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-ui-small);
+  white-space: nowrap;
+}
+
+.dr-schema-add {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  margin-top: var(--dr-space-2);
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .dr-schema-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* A value's colour and icon, wherever it shows. */
+[data-dr-color='red'] { --dr-value-colour: var(--color-red); }
+[data-dr-color='orange'] { --dr-value-colour: var(--color-orange); }
+[data-dr-color='yellow'] { --dr-value-colour: var(--color-yellow); }
+[data-dr-color='green'] { --dr-value-colour: var(--color-green); }
+[data-dr-color='cyan'] { --dr-value-colour: var(--color-cyan); }
+[data-dr-color='blue'] { --dr-value-colour: var(--color-blue); }
+[data-dr-color='purple'] { --dr-value-colour: var(--color-purple); }
+[data-dr-color='pink'] { --dr-value-colour: var(--color-pink); }
+
+.dr-value-painted {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+}
+
+.dr-value-painted[data-dr-color] {
+  padding: 0 6px;
+  border-radius: var(--radius-s);
+  background: color-mix(in srgb, var(--dr-value-colour) 18%, transparent);
+}
+
+.dr-value-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+}
+
+.dr-value-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-value[data-dr-color] {
+  box-shadow: inset 3px 0 0 var(--dr-value-colour);
+  padding-inline-start: 6px;
+}
+
+.dr-value-option-sample {
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-value-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-2);
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-value-swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 50%;
+  background: var(--dr-value-colour, transparent);
+  cursor: pointer;
+}
+
+.dr-value-swatch.is-none {
+  background: linear-gradient(135deg, transparent 45%, var(--text-faint) 45%, var(--text-faint) 55%, transparent 55%);
+}
+
+.dr-value-swatch.is-active {
+  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--interactive-accent);
+}
+
+.dr-value-option-icon {
+  width: 100%;
+}
+
+/* Clean up values: a row for each value written differently. */
+.dr-cleanup-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+.dr-cleanup-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-cleanup-others {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Property history in the note panel: a line for each change. */
+.dr-history-section.is-empty {
+  display: none;
+}
+
+.dr-history-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-history-what {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: var(--dr-space-2);
+}
+
+.dr-history-key {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-history-change {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-history-when {
+  flex: none;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-history-back {
+  flex: none;
+  color: var(--text-accent);
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+/* A due date: overdue, today, soon. */
+.dr-due.is-overdue {
+  color: var(--text-error);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-due.is-today {
+  color: var(--text-warning);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-due.is-soon {
+  color: var(--text-accent);
+}
+
+.dr-bulk-chip.is-more {
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* Property rules: a card for each rule. */
+.dr-rules-modal {
+  width: min(720px, calc(100vw - 32px));
+}
+
+.dr-rules-state {
+  margin-bottom: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-rules-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-3);
+}
+
+.dr-rule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+  padding: var(--dr-space-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+}
+
+.dr-rule-when,
+.dr-rule-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-small);
+}
+
+.dr-rule-set {
+  width: 100%;
+  min-height: 3em;
+  resize: vertical;
+}
+
+.dr-rule-try {
+  margin-inline-start: auto;
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-rule-preview {
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.dr-rule-preview-row {
+  display: flex;
+  gap: var(--dr-space-2);
+  padding: 2px 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-rule-preview-name {
+  flex: none;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-rule-preview-set {
+  min-width: 0;
+  color: var(--text-muted);
+}
+
+/* What a collection comes to, beside its row. */
+.dr-tree-rollup {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+}
+
+/* A property's facts on its page. */
+.dr-prop-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--dr-space-2) var(--dr-space-4);
+  margin: var(--dr-space-3) 0 var(--dr-space-4);
+}
+
+.dr-prop-fact-label {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dr-prop-fact-value {
+  font-size: var(--font-ui-small);
+}
+
+.dr-prop-fact-fix {
+  margin-inline-start: var(--dr-space-2);
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+/* A value changed in its album row. */
+.dr-track-sub.is-editable {
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+
+@media (any-hover: hover) {
+  .dr-track-sub.is-editable:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.dr-row-value-input {
+  max-width: 100%;
+  font-size: inherit;
+}
+
+.dr-references-section.is-empty {
+  display: none;
+}
+

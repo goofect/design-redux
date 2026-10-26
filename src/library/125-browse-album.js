@@ -11,10 +11,8 @@ import { blankLook, byName, drawFolderArt, onContextMenu } from '../core/030-hel
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { nestByProperty } from '../core/045-helpers-properties.js';
 import { readingOf } from '../core/075-reading.js';
-import { mixInto } from '../core/080-feature.js';
 import { studyReady } from '../core/081-study.js';
 import { ROOT_MODES } from './119-browse-registry.js';
-import { BrowseView } from './120-browse-view.js';
 import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
 import { AlbumStructure } from './257-album-structure.js';
 
@@ -508,5 +506,3 @@ export class BrowseAlbum {
     });
   }
 }
-
-mixInto(BrowseView, BrowseAlbum);

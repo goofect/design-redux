@@ -1,0 +1,25 @@
+/* Superscript and subscript --------------------------------------------------
+ *
+ * In the editor, raised and lowered as reading view draws <sup> and
+ * <sub>, without opening up the line. Their markers, where shown, are
+ * as faint as bold's asterisks.
+ */
+
+.dr-sup,
+.dr-sub {
+  font-size: 0.75em;
+  line-height: 0;
+}
+
+.dr-sup {
+  vertical-align: super;
+}
+
+.dr-sub {
+  vertical-align: sub;
+}
+
+.dr-script-mark {
+  color: var(--text-faint);
+}
+

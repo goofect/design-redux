@@ -1,0 +1,122 @@
+/* Shared --------------------------------------------------------------- */
+
+body {
+  /* Rows and buttons in lists and windows. */
+  --dr-r: var(--dr-radius-sm);
+  /* The hairline that divides lists and edges windows. */
+  --dr-line: var(--background-modifier-border);
+  /* A row under the pointer — the theme's own, everywhere — and one that's chosen or pressed. */
+  --dr-hover: var(--background-modifier-hover);
+  --dr-press: color-mix(in srgb, var(--text-normal) 9%, transparent);
+  /* Floating things — popups, suggestions — over the page. */
+  --dr-float-bg: color-mix(in srgb, var(--background-primary) 90%, transparent);
+  --dr-float-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.dr-trigger.is-active, .dr-props-trigger.is-active {
+  background-color: var(--background-modifier-hover);
+}
+
+/* These are divs acting as buttons, so they get no focus ring of their
+   own. Keyboard users need to see where they are. */
+
+.dr-trigger:focus-visible, .dr-props-trigger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  border-radius: var(--dr-radius-sm);
+}
+
+/* « » beside back and forward, without the strip. */
+.dr-header-skip {
+  display: flex;
+  align-items: center;
+}
+
+.dr-header-skip.is-hidden {
+  display: none;
+}
+
+/* And any other control the plugin draws, reached by the keyboard: a
+   ring, unless it draws its own. Zero specificity, so its own wins. */
+:where([class^="dr-"], [class*=" dr-"]) :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+:where([class^="dr-"][role="button"], [class*=" dr-"][role="button"]):focus-visible {
+  outline: 2px solid var(--background-modifier-border-focus);
+  outline-offset: 1px;
+}
+
+/* Obsidian's own header icons sit inside wrapper divs that size them;
+   these are direct children of the flex row, so without this they
+   stretch to its full height and their hover backdrop looks oversized. */
+
+/* Obsidian's gear drawn again where the moved one was: one is enough. */
+.dr-settings-spare {
+  display: none !important;
+}
+
+.workspace-tab-header-container .dr-trigger, .workspace-tab-header-container .dr-settings-moved {
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: var(--dr-space-1) calc(var(--dr-u) * 1.5);
+  cursor: grab;
+}
+
+.workspace-tab-header-container .dr-trigger .svg-icon, .workspace-tab-header-container .dr-settings-moved .svg-icon {
+  width: var(--icon-s, 16px);
+  height: var(--icon-s, 16px);
+}
+
+/* Parked button rows ---------------------------------------------------
+ *
+ * The real buttons stay where Obsidian put them so their click handlers
+ * keep working, but they're moved under the trigger and made invisible.
+ * Not display:none: a button that opens its own submenu anchors to its
+ * bounding box, and an unrenderable element measures as 0,0.
+ */
+
+body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-buttons-container, body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) .side-dock-actions {
+  position: fixed;
+  left: var(--dr-park-x, -9999px);
+  top: var(--dr-park-y, -9999px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body.dr-nav-active .workspace-leaf-content[data-type="file-explorer"] .nav-header {
+  padding: 0;
+  min-height: 0;
+}
+
+/* Collapsed ribbon ------------------------------------------------------
+ *
+ * The left ribbon is .mod-left until Obsidian 1.14 and .mod-primary since.
+ */
+
+body.dr-ribbon-active {
+  --ribbon-width: 0px;
+}
+
+body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) {
+  flex: 0 0 0;
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+/* Everything except the parked actions, which stay measurable. */
+
+body.dr-ribbon-active .workspace-ribbon:is(.mod-left, .mod-primary) > *:not(.side-dock-actions) {
+  display: none;
+}
+

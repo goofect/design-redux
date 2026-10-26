@@ -1,0 +1,267 @@
+/* Footnotes in their own view ------------------------------------------------- */
+
+/* Off the page in reading view: the list at the end, and the rule above it. */
+body.dr-footnotes-aside .markdown-reading-view .footnotes,
+body.dr-footnotes-aside .markdown-reading-view hr.footnotes-sep,
+body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
+  display: none;
+}
+
+.dr-fn-view .view-content {
+  padding: calc(var(--dr-u) * 2.5) var(--dr-space-3) var(--dr-space-5);
+}
+
+.dr-fn-view-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin: 2px 2px var(--dr-space-3);
+}
+
+.dr-fn-view-note {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-fn-view-tools {
+  display: flex;
+  gap: 2px;
+}
+
+.dr-fn-view-empty {
+  padding: var(--dr-space-5) var(--dr-space-2);
+  text-align: center;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.dr-fn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* One footnote: its number, what it cites, and the words it follows. */
+.dr-fn-item {
+  padding: var(--dr-space-2) var(--dr-space-2) var(--dr-space-2);
+  border-radius: var(--dr-r);
+  cursor: pointer;
+}
+
+.dr-fn-item.is-unused,
+.dr-fn-item.is-editing {
+  cursor: default;
+}
+
+.dr-fn-item:focus-visible {
+  outline: none;
+  background-color: var(--dr-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-fn-item:hover {
+    background-color: var(--dr-hover);
+  }
+}
+
+.dr-fn-item.is-highlighted {
+  background-color: hsla(var(--interactive-accent-hsl), 0.12);
+}
+
+.dr-fn-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dr-space-2);
+}
+
+.dr-fn-item .dr-fn-num {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.dr-fn-item.is-unused .dr-fn-num {
+  background-color: var(--background-modifier-border);
+  color: var(--text-muted);
+}
+
+.dr-fn-item-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.dr-fn-item-body p {
+  margin: 0;
+}
+
+.dr-fn-item-body p + p {
+  margin-top: var(--dr-space-1);
+}
+
+.dr-fn-missing {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.dr-fn-item-body .dr-fn-input {
+  min-height: 3.2em;
+  font-size: var(--font-ui-small);
+}
+
+.dr-fn-item-actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0;
+  margin: -3px calc(var(--dr-u) * -1) 0 0;
+}
+
+.dr-fn-item-actions .clickable-icon {
+  padding: 3px;
+}
+
+.dr-fn-item-actions .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* The actions show on the footnote under the pointer; always, without one. */
+@media (any-hover: hover) {
+  .dr-fn-item-actions {
+    opacity: 0;
+  }
+
+  .dr-fn-item:hover .dr-fn-item-actions,
+  .dr-fn-item:focus-within .dr-fn-item-actions {
+    opacity: 1;
+  }
+}
+
+.dr-fn-where {
+  margin: var(--dr-space-1) 0 0 calc(var(--dr-u) * 7);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-fn-item.is-unused .dr-fn-where {
+  font-style: italic;
+}
+
+/* A text card's properties, in the properties panel. */
+.dr-card-props {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) var(--dr-space-3) var(--dr-space-2);
+}
+
+.dr-card-props-row,
+.dr-card-props-add {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-card-props-key {
+  flex: 0 0 34%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-card-props-row .dr-card-props-value {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-card-props-add {
+  padding: var(--dr-space-1) var(--dr-space-3) var(--dr-space-3);
+}
+
+.dr-card-props-add input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dr-card-props-note {
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+/* What a folded branch holds, pointed at: the cards tucked into it, by name. */
+.popover.dr-fold-pop {
+  position: fixed;
+  flex-direction: column;
+}
+
+.popover.dr-fold-list {
+  --popover-width: 252px;
+  padding: calc(var(--dr-u) * 1.5);
+}
+
+.dr-fold-list-head {
+  padding: var(--dr-space-1) var(--dr-space-2) calc(var(--dr-u) * 1.5);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-fold-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  padding-inline-start: calc(var(--dr-space-2) + var(--dr-depth, 0) * 14px);
+  border-radius: var(--dr-radius-sm);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-fold-list-row:focus-visible {
+  outline: none;
+  background-color: var(--background-modifier-hover);
+}
+
+@media (any-hover: hover) {
+  .dr-fold-list-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-fold-list-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-fold-list-count,
+.dr-fold-list-more {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-fold-list-more {
+  padding: var(--dr-space-1) var(--dr-space-2) 2px;
+}
+
+.dr-outline-title {
+  padding: var(--dr-space-1) var(--dr-space-2) var(--dr-space-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+}
+

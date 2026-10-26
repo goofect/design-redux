@@ -11,12 +11,10 @@
 /* redo. Paste puts lines in as nodes.                                  */
 /* ------------------------------------------------------------------ */
 
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode, setAttr } from '../tree/404-tree-ops.js';
 import { nodeNudge, setNudge } from '../tree/406-tree-layout-block.js';
 import { addRelation } from '../tree/407-tree-relations.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { pinOf, screenToPlane } from './423-mindmap-scene.js';
 
 /* How far a node is dragged before it's a drag and not a click. */
@@ -42,7 +40,7 @@ export function dropTarget(model, scene, draggedId, point, vertical) {
   return { parentId: target.id, index: target.children.length, target: target.id, zone: 'child' };
 }
 
-class MindMapInput {
+export class MindMapInput {
   listen() {
     const root = this.root;
     let drag = null;
@@ -277,5 +275,3 @@ class MindMapInput {
     this.apply(pasteLines(this.model, this.selected || this.model.root.id, text));
   }
 }
-
-mixInto(MindMapView, MindMapInput);

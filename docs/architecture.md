@@ -851,3 +851,122 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   and down join it only on touch; with a pointer, the grip and Alt+arrows.
   The heading's ··· holds Show all properties, Group properties and
   Property settings.
+
+## 30. The inspector: the note panel, docked
+
+From the Apple-inspired redesign proposal (26 Oct 2026), milestone 1: one
+inspector, one selection.
+
+- **The panel docks** (179 `PanelDockView`, `INSPECTOR_VIEW`
+  `design-redux-properties`). On a computer the Properties button opens it in
+  the right sidebar; on a phone it stays a sheet. It's the same panel moved
+  in, not a second one: its element is laid in the view, and while there it
+  isn't placed, nor closed by Escape or a click elsewhere.
+- **It follows** the note being worked in (not the sidebar itself, nor a pane
+  with no note) and `plugin.selection`: a note picked in the library, with
+  Open / Reveal in collection / More; an album, in brief, then its folder
+  note's properties. The library draws those (124 `inspectNoteActions`,
+  `previewAlbum`); the panel finds a page of the library by its view type.
+- **The library's preview pane is gone.** Its button and `open-inspector`
+  show or close the inspector; `inspectorShowing` (076) is what makes a click
+  pick. `libraryPreview` is kept, unused.
+- Docked, it follows a card picked on a canvas: there's no event for that,
+  so a click or key in the canvas is looked at once it's done.
+- **Hiding it keeps what's picked** (the proposal: give the width back
+  without losing the selection); Escape in the library lets go.
+- **Space is Quick Look**: on a note's row or tile, Obsidian's page preview
+  (105, with type to jump on, as before); Enter opens.
+
+## 31. No strip to begin with
+
+- `contextStrip` is off by default (step 16 keeps it on for an existing
+  install that never said: `run(saved, was)` is told whether settings were
+  saved before). The strip stays, as a choice.
+- What only the strip had, « » through the collection, sits in the note's
+  header beside back and forward while it's off (191 `HeaderSkip`).
+  Properties is the header's button and the inspector.
+- The real-Obsidian suite puts the strip on in its `before`, to keep
+  testing it.
+- Obsidian's gear is left where it is to begin with (`settingsInHeader` off,
+  step 16 keeps it for an existing install); Settings is a place in the
+  library, under More.
+- Kept, for now: the menu filter (210) hides Obsidian's own Rename property,
+  which bypasses `design-redux:property-renamed`, and there's no event for
+  it to follow instead; one page (200) is already opt-in.
+
+## 32. Settings by task
+
+The settings tabs are General (covers, Home), Navigation (the library, the
+strip and modes), Notes (the note page, properties, relationships, study,
+writing, pages, quiet links, mind maps) and Advanced (graph, compatibility),
+in place of one a part of the code. Whole rows moved; keys, gears and links
+to a setting are as they were. The palette still names a command by its
+place (`FEATURE_PLACES`).
+
+## 33. The stylesheet in parts
+
+`styles.css` is built: `styles/NN-name.css`, 42 parts cut along the map's
+headings, joined in order by `build.mjs`. The join is the old file byte for
+byte (but for the map's note on it), so nothing changes on screen. It isn't
+committed, as `main.js` isn't; releases carry it.
+
+Not yet done, and why: the proposal splits by tokens, components and
+surfaces, but the parts interleave — the Apple look's overrides sit at the
+end, after what they override — so moving a rule can change the cascade.
+That wants screenshots across the looks before and after, part by part.
+
+## 34. Parts put on where the class is; a small entry
+
+- A class written in parts — BrowseView (120), MindMapView (421), MindMaps
+  (420) — imports its parts and puts them on at its own end. The parts no
+  longer import their class to put themselves on it, so nothing is loaded for
+  that alone. KnowledgeMindMap still puts itself on Knowledge: the library
+  mustn't import from maps.
+- `src/main.js` imports the plugin and exports it, with one line before: smart
+  albums first, for the one cycle the order decides (SmartScreen extends
+  BrowseScreen as it loads). Every other module is reached through the
+  plugin's imports; tests/map.js refuses one nothing imports.
+- The bundle is the same modules and lines as before.
+
+## 35. The shared controls, to the keys
+
+- `drSegmented` (229) is a tab list as a screen reader hears it: its
+  segments are tabs (they were buttons, asButton's role written over the
+  tab's), the arrows go round from either end, Home and End go to the ends,
+  and only the chosen one is reached with Tab.
+- `drOpenSheet` closes once however often it's asked, and gives focus back
+  to what opened it only if focus was in the sheet; a press outside leaves
+  it where it went.
+- Docked, the inspector keeps a map as its page while it's worked in, so its
+  node section follows the node picked on the map.
+
+## 36. Classic goes
+
+Classic, 1.x's look kept for one release after 2.0, is retired. Step 17 gives
+whoever had it the theme's look with what Classic hid switched off: the note
+page's additions (`notePage`), row excerpts (`albumExcerpts`) and glass. The
+unread dot, which Classic also hid, stays: it comes with reading history.
+
+## 37. The look on what the plugin draws, to begin with
+
+A first install has the Apple look on what Design Redux draws — the library,
+collection pages, the panel, settings — and notes as the theme draws them
+(`lookScope: 'plugin'`); the whole window is a choice. Step 16 keeps an
+existing install's scope. The Apple look's own rules only reach the plugin's
+elements; notes were the one thing the scope decides. The Standard preset no
+longer turns the strip on, and settings search knows 3.0's Tools tab.
+
+## 38. Windows of their own
+
+The docked inspector follows a card picked on a canvas in any window: its
+listeners go on each window's document as it opens (`window-open`), and come
+off on unloading (the lifecycle test opens one). The header's « » are taken
+off every tab's header, a pop-out's too, rather than the main document's.
+
+## 39. Relationships in the inspector, to begin with
+
+A first install's note panel shows Relationships (broader, narrower,
+related) again: docked, it has room. Step 9, which took it out on 14 Oct,
+now applies only to an install that had settings then, so whoever has it off
+keeps it off.
+

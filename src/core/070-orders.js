@@ -151,9 +151,12 @@ export const SETTINGS_MIGRATIONS = [
   },
   {
     // The note panel without Relationships and Kept in: properties and
-    // mentions only. Both are a switch away in Notes → Properties.
+    // mentions only. Both are a switch away in Notes → Properties. Only for
+    // whoever had the plugin then: docked, the panel has room, and a first
+    // install starts with Relationships.
     to: 9,
-    run(saved) {
+    run(saved, was) {
+      if (was && !was.existing) return;
       saved.panelRelationships = false;
       saved.panelPlaces = false;
     },
@@ -212,6 +215,26 @@ export const SETTINGS_MIGRATIONS = [
     to: 15,
     run(saved) {
       if (saved.look === 'apple' && saved.lookScope === 'plugin') saved.lookScope = 'window';
+    },
+  },
+  {
+    // The strip and the moved gear are off to begin with now, and the look stays on what the plugin draws.
+    // Whoever already had the plugin keeps them as they were.
+    to: 16,
+    run(saved, was) {
+      if (!was || !was.existing) return;
+      if (saved.contextStrip === undefined) saved.contextStrip = true;
+      if (saved.settingsInHeader === undefined) saved.settingsInHeader = true;
+      if (saved.lookScope === undefined) saved.lookScope = 'window';
+    },
+  },
+  {
+    // Classic, kept for one release after 2.0, goes: the theme's look with
+    // what it hid switched off — the note page's additions, row excerpts, glass.
+    to: 17,
+    run(saved) {
+      if (saved.look !== 'classic') return;
+      Object.assign(saved, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
     },
   },
 ];

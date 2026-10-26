@@ -1,5 +1,5 @@
 /*
- * Where each setting sits: a tab for each of the four places, a look strip above them, and in
+ * Where each setting sits: a tab for each task — General, Navigation, Notes, Advanced — a look strip above them, and in
  * each tab one row a feature — icon, name, a line, a switch and a gear that opens its options.
  * Features still own their rows (name, control, description); this only decides where each
  * goes. A row shown only while another is on sits indented beneath that one.
@@ -16,17 +16,9 @@ import { confirmAction } from '../ui/230-pickers.js';
 
 export const SETTINGS_TABS = [
   {
-    id: 'library',
-    title: 'Library',
+    id: 'general',
+    title: 'General',
     features: [
-      {
-        id: 'library',
-        icon: 'library',
-        name: 'Library',
-        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
-        switch: 'library',
-        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
-      },
       {
         id: 'covers',
         icon: 'image',
@@ -44,8 +36,30 @@ export const SETTINGS_TABS = [
     ],
   },
   {
-    id: 'note',
-    title: 'Note',
+    id: 'navigation',
+    title: 'Navigation',
+    features: [
+      {
+        id: 'library',
+        icon: 'library',
+        name: 'Library',
+        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
+        switch: 'library',
+        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
+      },
+      {
+        id: 'strip',
+        icon: 'panel-bottom',
+        name: 'Context strip and modes',
+        desc: 'Where you are and how far, with previous and next; workspace modes; one page; the sidebar header.',
+        switch: 'contextStrip',
+        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+      },
+    ],
+  },
+  {
+    id: 'notes',
+    title: 'Notes',
     features: [
       {
         id: 'notePage',
@@ -64,20 +78,20 @@ export const SETTINGS_TABS = [
         keys: ['panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },
       {
-        id: 'study',
-        icon: 'graduation-cap',
-        name: 'Study',
-        desc: 'Notes come back to be revisited on a ladder, and passages you highlight can be quizzed.',
-        switch: 'studyEnabled',
-        keys: ['studyAlbums', 'studyHighlights', 'studyLadder', 'studyDailyMax', 'studyCardMax'],
-      },
-      {
         id: 'relationships',
         icon: 'waypoints',
         name: 'Relationships',
         desc: 'What a note relates to, written in the note: kinds, checks and broader concepts.',
         switch: 'knowledge',
         keys: ['canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'],
+      },
+      {
+        id: 'study',
+        icon: 'graduation-cap',
+        name: 'Study',
+        desc: 'Notes come back to be revisited on a ladder, and passages you highlight can be quizzed.',
+        switch: 'studyEnabled',
+        keys: ['studyAlbums', 'studyHighlights', 'studyLadder', 'studyDailyMax', 'studyCardMax'],
       },
       {
         id: 'writing',
@@ -102,12 +116,6 @@ export const SETTINGS_TABS = [
         switch: 'quietLinks',
         keys: [],
       },
-    ],
-  },
-  {
-    id: 'maps',
-    title: 'Maps',
-    features: [
       {
         id: 'mindmaps',
         icon: 'network',
@@ -119,17 +127,9 @@ export const SETTINGS_TABS = [
     ],
   },
   {
-    id: 'tools',
-    title: 'Tools',
+    id: 'advanced',
+    title: 'Advanced',
     features: [
-      {
-        id: 'strip',
-        icon: 'panel-bottom',
-        name: 'Context strip and modes',
-        desc: 'Where you are and how far, with previous and next; workspace modes; one page; the sidebar header.',
-        switch: 'contextStrip',
-        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
-      },
       {
         id: 'graph',
         icon: 'share-2',
@@ -163,7 +163,8 @@ export const featureKeys = (feature) => (feature.switch ? [feature.switch] : [])
  */
 export const SETTING_PRESETS = {
   minimal: { name: 'Minimal', on: ['library', 'notePage'] },
-  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps', 'contextStrip'] },
+  // Without the strip, as a first install has it: « » sit in the note's header, Properties in the inspector.
+  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps'] },
   everything: { name: 'Everything', on: null },
 };
 
@@ -174,6 +175,8 @@ export const FORMER_TABS = {
   Maps: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing', 'mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'],
   Workspace: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
+  // 3.0's last tab, before the tabs went by task.
+  Tools: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
 };
 
 /**
@@ -495,7 +498,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
   }
 
   renderPane(pane, spec, features) {
-    if (spec.id === 'library' && !this.settings.library) {
+    if (features.some((f) => f.switch === 'library') && !this.settings.library) {
       const note = pane.createDiv({ cls: 'dr-set-callout' });
       note.createSpan({ text: 'The library is off, so the settings for its screens are hidden.' });
       const on = note.createEl('button', { text: 'Turn it on' });
@@ -508,7 +511,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
 
     features.forEach((feature) => this.drawFeature(pane, spec, feature));
 
-    if (spec.id === 'tools' && Platform.isMobile) {
+    if (features.some((f) => f.id === 'compat') && Platform.isMobile) {
       pane.createDiv({
         cls: 'setting-item-description dr-settings-note',
         text: 'Settings for the desktop app\'s tab bar and sidebar header aren\'t shown on a phone or tablet.',

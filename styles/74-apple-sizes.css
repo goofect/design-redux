@@ -1,0 +1,157 @@
+/* Sizes, Apple's: one scale for everything the plugin draws, in step with the page control.
+   Interface text in the system font at 13px (12px secondary, 11px captions), headings as large
+   titles (34px), titles (22px) and headlines (17px semibold); controls 28px with 16px symbols
+   (44px to hit on touch); sidebar rows 28px; the strip a mini player 48px high around a 36px cover.
+   Every gap stays a multiple of 4px. Colours stay the theme's. */
+body.dr-look-apple {
+  /* Motion, Apple's: press 100, fast 150, base 220, slow 320ms; one curve, no overshoot. */
+  --dr-dur-press: 100ms;
+  --dr-dur-fast: 150ms;
+  --dr-dur-base: 220ms;
+  --dr-dur-slow: 320ms;
+  --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
+  /* Type: the system font, and Apple's scale. */
+  --dr-font-ui: var(--dr-font-system);
+  --dr-type-large: 34px;
+  --dr-type-title: 28px;
+  --dr-type-headline: 17px;
+  --dr-type-body: 17px;
+  --dr-type-callout: 16px;
+  --dr-type-subhead: 15px;
+  --dr-type-footnote: 13px;
+  --dr-type-caption: 12px;
+  --dr-display-size: var(--dr-type-large);
+  --dr-display-weight: 700;
+  --dr-title-size: var(--dr-type-title);
+  --dr-heading-size: var(--dr-type-headline);
+  --dr-ui-size: var(--dr-type-footnote);
+  --dr-ui-weight: 500;
+  --dr-meta-size: var(--dr-type-caption);
+  --dr-line-display: 1.15;
+  --dr-line-heading: 1.25;
+  /* Controls 32px with 16px symbols; rows 36px; 44px to hit on touch. */
+  --dr-control-size: 32px;
+  --dr-control-icon: 16px;
+  --dr-row-height: 36px;
+  /* Two shadows over a hairline: resting and floating. */
+  --dr-shadow-sm: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
+  --dr-shadow-md: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --dr-shadow-lg: var(--dr-shadow-md);
+  /* Material: 20px blur, saturation 1.8, 72% opacity. */
+  --dr-glass-blur: 20px;
+  --dr-material: color-mix(in srgb, var(--background-primary) 72%, transparent);
+  --dr-material-filter: blur(20px) saturate(1.8);
+}
+
+/* Dark: a hairline does what a shadow does in light. */
+body.dr-look-apple.theme-dark {
+  --dr-shadow-sm: 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  --dr-shadow-md: 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* With reduced motion, every duration is nothing — the Apple look's too. */
+@media (prefers-reduced-motion: reduce) {
+  body.dr-look-apple {
+    --dr-dur-press: 0ms;
+    --dr-dur-fast: 0ms;
+    --dr-dur-base: 0ms;
+    --dr-dur-slow: 0ms;
+  }
+}
+
+/* With reduced transparency, materials are solid. */
+@media (prefers-reduced-transparency: reduce) {
+  body.dr-look-apple {
+    --dr-material: var(--background-primary);
+    --dr-material-filter: none;
+  }
+}
+
+body.dr-look-apple.dr-density-compact {
+  --dr-row-height: 32px;
+  --dr-control-size: 28px;
+  --dr-control-icon: 14px;
+}
+
+body.dr-look-apple.dr-density-spacious {
+  --dr-row-height: 40px;
+  --dr-control-size: 36px;
+  --dr-control-icon: 18px;
+}
+
+body.dr-look-apple.is-mobile {
+  --dr-control-size: 44px;
+  --dr-control-icon: 20px;
+  --dr-row-height: 44px;
+}
+
+/* The plugin's own surfaces speak in the system font at Apple's interface sizes. */
+body.dr-look-apple [class^="dr-"],
+body.dr-look-apple [class*=" dr-"] {
+  --font-ui-smaller: 12px;
+  --font-ui-small: 13px;
+  --font-ui-medium: 15px;
+  --font-ui-large: 17px;
+}
+
+body.dr-look-apple .dr-strip,
+body.dr-look-apple .dr-browse,
+body.dr-look-apple .dr-library,
+body.dr-look-apple .dr-settings,
+body.dr-look-apple .dr-pages,
+body.dr-look-apple .dr-note-album,
+body.dr-look-apple .dr-note-meta,
+body.dr-look-apple .dr-note-chips {
+  font-family: var(--dr-font-ui);
+}
+
+/* The strip, as a mini player: 48px high, a 36px cover with 6px corners, the title at 13px semibold
+   and the line under it at 12px, buttons 28px. */
+body.dr-look-apple .dr-strip {
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+body.dr-look-apple .dr-strip-art {
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+}
+
+body.dr-look-apple .dr-strip-now {
+  gap: 12px;
+  padding: 0 8px 0 0;
+}
+
+body.dr-look-apple .dr-strip-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+body.dr-look-apple .dr-strip-sub {
+  font-size: 12px;
+}
+
+body.dr-look-apple .dr-strip-skip .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* The note's grey line: 13px secondary text, 4px under the title. */
+body.dr-note-apple .dr-note-meta {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+/* An album's buttons, as Apple Music's: 32px high, 13px semibold, 8px corners. */
+body.dr-look-apple .dr-detail-action {
+  min-width: 112px;
+  min-height: 32px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+

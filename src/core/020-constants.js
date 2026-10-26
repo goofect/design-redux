@@ -1,5 +1,7 @@
 export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
+// The note panel docked in the right sidebar. The old inspector's type (design-redux-inspector) is still closed on load.
+export const INSPECTOR_VIEW = 'design-redux-properties';
 
 /* Destinations that aren't a file or folder. */
 /* The browse screen each built-in entry opens, which is also how the
@@ -35,6 +37,8 @@ export const LIBRARY_BUILTINS = {
   folders: { label: 'Collections', icon: 'folder' },
   notes: { label: 'All Notes', icon: 'file-text' },
   random: { label: 'Random note', icon: 'dice' },
+  // The plugin's own settings, from the library rather than a gear moved into Obsidian's header.
+  settings: { label: 'Settings', icon: 'settings' },
   smart: { label: 'Saved views', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
@@ -43,7 +47,7 @@ export const LIBRARY_BUILTINS = {
 };
 
 /* The library's places that wait under More, so the first few stand out. */
-export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights'];
+export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights', 'settings'];
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -54,7 +58,8 @@ export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collecti
 export const DEFAULTS = {
   library: true,
   singleArea: false,
-  contextStrip: true,
+  // Off to begin with since 3.1: « » sit in the note's header, Properties in the inspector.
+  contextStrip: false,
   // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,
   // What the strip shows beside that: properties and the like, by name; empty for its pick.
@@ -222,7 +227,8 @@ export const DEFAULTS = {
   homePath: 'Home.md',
   homeShelves: [],
   inspector: true,
-  lookScope: 'window',
+  // Only what Design Redux draws, to begin with since 3.1: notes stay as the theme draws them unless asked.
+  lookScope: 'plugin',
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
@@ -253,9 +259,11 @@ export const DEFAULTS = {
   panelFoldedGroups: [],
   showMentions: true,
   // The note panel's sections from relationships and albums.
-  panelRelationships: false,
+  // A note's broader, narrower and related notes in the panel, as the inspector has room for them.
+  panelRelationships: true,
   panelPlaces: false,
-  settingsInHeader: true,
+  // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
+  settingsInHeader: false,
   coverProperty: 'cover',
   // {{folder}} stands for the folder's own name, which is the common
   // convention; a literal like "index" works too.
@@ -320,7 +328,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 15,
+  settingsVersion: 17,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

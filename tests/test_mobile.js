@@ -114,7 +114,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView, drSegmented, drOpenSheet };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -311,10 +311,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       { key: 'graphRoutes', name: 'Graph routes' },
     ] }];
     const tab = new T.DesignReduxSettingTab(p.app, p);
-    tab.tab = 'tools';
+    tab.tab = 'navigation';
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
-    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['Library', 'Note', 'Maps', 'Tools']);
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Navigation', 'Notes', 'Advanced'], 'by task, not by part of the code');
     assert.ok(row('contextStrip').closest('.dr-set-feature'), 'the switch is the feature’s own row');
     const more = row('stripDetail').closest('.dr-set-more');
     assert.ok(more && more.classList.contains('is-off') && !more.classList.contains('is-open'), 'a feature that is off has its options out of sight');
@@ -322,6 +322,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Search finds an option by its old tab's name and opens the gear that holds it.
     tab.query = 'workspace';
+    tab.display();
+    assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
+    tab.query = '';
+    // And by the tab it had last, before the tabs went by task.
+    tab.query = 'tools';
     tab.display();
     assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
     tab.query = '';
@@ -371,6 +376,38 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     } finally {
       document.body.classList.remove('dr-look-apple');
     }
+  });
+
+  await t('the shared controls: a segmented control is a tab list to the keys; a sheet gives focus back only when it had it', () => {
+    document.body.innerHTML = '';
+    const chosen = [];
+    const seg = T.drSegmented(document.body, [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }], 'a', (id) => chosen.push(id));
+    const segs = Array.from(seg.querySelectorAll('.dr-segment'));
+    assert.deepStrictEqual(segs.map((s) => s.getAttribute('role')), ['tab', 'tab', 'tab'], 'tabs, as a screen reader hears them');
+    assert.deepStrictEqual(segs.map((s) => s.getAttribute('tabindex')), ['0', '-1', '-1'], 'Tab reaches the chosen one only');
+    const key = (k) => seg.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    key('ArrowLeft');
+    key('Home');
+    key('End');
+    key('ArrowRight');
+    assert.deepStrictEqual(chosen, ['c', 'a', 'c', 'a'], 'round from either end; Home and End');
+    assert.strictEqual(document.activeElement, segs[0]);
+
+    const opener = document.body.createEl('button');
+    const other = document.body.createEl('input');
+    const sheet = document.body.createDiv();
+    const field = sheet.createEl('input');
+    let closed = 0;
+    let close = T.drOpenSheet(sheet, opener, () => closed++);
+    field.focus();
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    assert.strictEqual(document.activeElement, opener, 'Escape from inside: back to what opened it');
+    close();
+    assert.strictEqual(closed, 1, 'closing twice closes once');
+    close = T.drOpenSheet(sheet, opener, () => closed++);
+    other.focus();
+    other.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }));
+    assert.ok(closed === 2 && document.activeElement === other, 'a press outside leaves focus where it went');
   });
 
   await t('settings: the main properties as a list to order, take off and add to by name', () => {
@@ -580,6 +617,66 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     panel.place(hidden);
     assert.strictEqual(panel.popupEl.style.left, '8px', 'not across the phone');
     phone(false);
+  });
+
+  await t('docked in the sidebar, the panel stays open and follows the note and what the library picks', async () => {
+    document.body.innerHTML = '';
+    const a = new TFile('Theories/Realism.md');
+    const b = new TFile('Theories/Liberalism.md');
+    const c = new TFile('Theories/Deterrence.md');
+    const noteLeaf = { view: new MarkdownView(a) };
+    const panel = Object.create(T.PropertiesPanel.prototype);
+    Object.assign(panel, { sections: [], dockView: null, fitted: new WeakMap() });
+    panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
+    panel.mount = function () { this.popupEl.empty(); this.popupEl.createDiv({ text: this.file.path }); };
+    // Pressed on a computer, the Properties button docks it in the right sidebar.
+    const tabs = [];
+    const sidebarLeaf = {
+      setViewState: async () => {
+        sidebarLeaf.view = new T.PanelDockView(sidebarLeaf, panel);
+        tabs.push(sidebarLeaf);
+        await sidebarLeaf.view.onOpen();
+      },
+    };
+    panel.plugin = {
+      app: {
+        workspace: {
+          getMostRecentLeaf: () => noteLeaf,
+          revealLeaf() {},
+          getRightLeaf: () => sidebarLeaf,
+          getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
+        },
+      },
+      folderNote: () => null,
+    };
+    panel.toggle(noteLeaf, null);
+    await new Promise((r) => setTimeout(r));
+    const view = sidebarLeaf.view;
+    assert.ok(view.contentEl.contains(panel.popupEl), 'in the sidebar');
+    assert.ok(panel.isOpen() && panel.popupEl.textContent === a.path, 'the note last worked in');
+    // Another note opens: it follows; the sidebar's own leaf and an empty pane leave it be.
+    panel.follow({ view: new MarkdownView(b) });
+    assert.strictEqual(panel.popupEl.textContent, b.path);
+    panel.follow(view.leaf);
+    panel.follow({ view: {} });
+    assert.strictEqual(panel.popupEl.textContent, b.path);
+    // A map says what it's about — its file — and stays the page the node section reads its selection from.
+    const map = new TFile('Theories/Map.mindmap');
+    const mapLeaf = { view: { panelTarget: () => ({ file: map }) } };
+    panel.follow(mapLeaf);
+    assert.ok(panel.popupEl.textContent === map.path && panel.leaf === mapLeaf);
+    panel.follow(view.leaf);
+    assert.strictEqual(panel.leaf, mapLeaf, 'working in the inspector keeps the map as its page');
+    // Picked in the library, without opening.
+    panel.showDocked(null, { file: c });
+    assert.strictEqual(panel.popupEl.textContent, c.path);
+    // An album picked: its name, at least, with no page of the library to tell more.
+    const album = new TFolder('Theories');
+    panel.showDocked(null, { folder: album });
+    assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
+    // Closed, it's a popup again.
+    panel.undock(view);
+    assert.ok(panel.popupEl.parentElement === document.body && !panel.isOpen() && !panel.popupEl.hasClass('is-docked'));
   });
 
   fs.unlinkSync(tmp);

@@ -1,0 +1,1613 @@
+/* Browse ----------------------------------------------------------------
+ *
+ * A folder as an album page: large art, a title block, two actions,
+ * then the notes as a numbered list. Subfolders keep the grid, since
+ * a collection of collections reads better as tiles.
+ */
+
+.dr-browse .view-content {
+  padding: var(--dr-space-4) calc(var(--dr-u) * 5) calc(var(--dr-u) * 10);
+  overflow-y: auto;
+}
+
+.dr-detail-bar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  margin-bottom: calc(var(--dr-u) * 4.5);
+}
+
+.dr-browse-up {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-browse-up:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+.dr-browse-up .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+.dr-browse-search {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+  margin-left: auto;
+  padding: var(--dr-space-1) var(--dr-space-3);
+  min-width: 220px;
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-pill);
+}
+
+.dr-browse-search-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-browse-search-icon .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.dr-browse-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-browse-search input:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+/* -- the title block ---------------------------------------------------- */
+
+.dr-detail {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  gap: calc(var(--dr-u) * 7.5);
+  margin-bottom: calc(var(--dr-u) * 7.5);
+}
+
+/* The artwork again, blurred to its colours and faded out downwards,
+   behind the header and the bar above it: the page takes on the album's
+   colour, as the reference's does. */
+.dr-detail-glow {
+  position: absolute;
+  z-index: -1;
+  top: -90px;
+  left: -40px;
+  right: -40px;
+  bottom: -40px;
+  overflow: hidden;
+  opacity: 0.45;
+  filter: blur(60px) saturate(1.5);
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+  pointer-events: none;
+}
+
+.dr-detail-glow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-detail-glow .dr-card-glyph,
+.dr-detail-glow .dr-gen-initials {
+  display: none;
+}
+
+/* A plain grey stand-in gives the page no colour to take on. */
+.dr-detail-glow.is-blank:not(.is-hued) {
+  display: none;
+}
+
+.theme-dark .dr-detail-glow {
+  opacity: 0.55;
+}
+
+.dr-detail-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--dr-album-art-size, 260px);
+  height: var(--dr-album-art-size, 260px);
+  overflow: hidden;
+  border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
+  background-color: var(--background-secondary);
+  box-shadow: var(--dr-shadow-lg);
+}
+
+.dr-detail-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-detail-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-detail-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding-bottom: var(--dr-space-1);
+}
+
+.dr-detail-title {
+  font-size: var(--dr-display-size);
+  font-weight: var(--dr-display-weight);
+  letter-spacing: -0.02em;
+  line-height: var(--dr-line-display);
+  color: var(--text-normal);
+}
+
+/* The one accented line, as the artist name is in the reference — and,
+   where it names the folder this one is in, a way there. */
+
+.dr-detail-sub {
+  margin-top: var(--dr-space-1);
+  font-size: var(--dr-heading-size);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-accent);
+}
+
+.dr-detail-sub.is-link {
+  align-self: flex-start;
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-detail-sub.is-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-detail-sub.is-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Quiet and small, as the genre and year are under an album's title. */
+.dr-detail-meta {
+  margin-top: var(--dr-space-2);
+  font-size: var(--dr-ui-size);
+  font-weight: var(--dr-ui-weight);
+  line-height: var(--dr-line-meta);
+  color: var(--dr-meta-color);
+}
+
+/* Above the title, small and quiet: what kind of album, and the way down
+   to it — a classification line, the same place on every album. */
+.dr-detail-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px calc(var(--dr-u) * 2.5);
+  margin-bottom: calc(var(--dr-u) * 1.5);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-detail-kind,
+.dr-card-kind {
+}
+
+.dr-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--dr-space-1);
+  min-width: 0;
+}
+
+.dr-crumb {
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-crumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-crumb-sep {
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-crumb:hover {
+    color: var(--text-normal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* What the album is for, in a few lines at most. */
+.dr-detail-desc {
+  margin-top: var(--dr-space-2);
+  max-width: 60ch;
+  font-size: var(--font-ui-small);
+  line-height: var(--dr-line-body);
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dr-card-kind {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What an album opens with, under its header: its folder note's text, or its map. */
+.dr-album-lead {
+  margin: 0 0 calc(var(--dr-u) * 7);
+}
+
+.dr-album-lead.is-overview {
+  max-width: 70ch;
+  font-size: var(--font-text-size);
+  color: var(--text-normal);
+}
+
+.dr-album-lead.is-map {
+  height: min(420px, 55vh);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-lg);
+  overflow: hidden;
+}
+
+.dr-album-lead.is-map > .internal-embed,
+.dr-album-lead.is-map > p,
+.dr-album-lead.is-map .internal-embed {
+  height: 100%;
+  margin: 0;
+}
+
+.dr-album-lead.is-map.is-linked {
+  cursor: pointer;
+}
+
+.dr-album-lead-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-album-lead-empty:focus-visible,
+.dr-album-notice:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Something an album's properties name that isn't there: quiet, but said. */
+.dr-album-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin: 0 0 calc(var(--dr-u) * 5);
+  padding: var(--dr-space-2) var(--dr-space-3);
+  border: 1px dashed var(--background-modifier-border);
+  border-radius: var(--dr-radius-md);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-album-notice-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-album-lead-empty:hover,
+  .dr-album-notice:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* An album as covers: each disc's heading over its tiles. */
+.dr-covers-head {
+  margin-top: var(--dr-space-2);
+}
+
+.dr-covers-head + .dr-grid {
+  margin-bottom: var(--dr-space-5);
+}
+
+/* A heading over a group of covers, as a shelf's is. */
+.dr-tile-group-head {
+  margin: calc(var(--dr-u) * 5) 0 calc(var(--dr-u) * 2.5);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-tile-group-head:first-of-type {
+  margin-top: 0;
+}
+
+/* An album's panels: tabs in a quiet row, the chosen one underlined. */
+.dr-album-panels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-1) calc(var(--dr-u) * 5);
+  margin: var(--dr-space-1) 0 calc(var(--dr-u) * 4.5);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-panel-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: calc(var(--dr-u) * 1.5);
+  padding: calc(var(--dr-u) * 1.5) 0 var(--dr-space-2);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-panel-tab.is-active {
+  color: var(--text-normal);
+  border-bottom-color: var(--text-accent);
+}
+
+.dr-panel-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-panel-count {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-panel-tab:hover {
+    color: var(--text-normal);
+  }
+}
+
+/* Notes linked to but not written: a name, and where it's linked from. */
+.dr-gap-row {
+  display: flex;
+  align-items: baseline;
+  gap: calc(var(--dr-u) * 2.5);
+  padding: var(--dr-space-2) var(--dr-space-3);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-gap-name {
+  color: var(--text-normal);
+}
+
+.dr-gap-from {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.dr-gap-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-gap-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* The library report, and the inbox: quiet rows to go through. */
+.dr-report-lead {
+  margin: 0 0 calc(var(--dr-u) * 4.5);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-report-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  margin: calc(var(--dr-u) * 5.5) 0 calc(var(--dr-u) * 1.5);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-report-count {
+  font-weight: var(--font-normal, 400);
+  color: var(--text-faint);
+}
+
+.dr-report-row,
+.dr-inbox-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  padding: var(--dr-space-2) calc(var(--dr-u) * 2.5);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-report-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.dr-report-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-report-name,
+.dr-inbox-name {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-report-problem {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+.dr-report-where,
+.dr-inbox-when {
+  flex: 0 1 auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-inbox-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-inbox-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  margin: 0 0 calc(var(--dr-u) * 3.5);
+}
+
+.dr-inbox-bar .dr-detail-action.is-disabled {
+  opacity: var(--dr-disabled-opacity);
+  pointer-events: none;
+}
+
+.dr-inbox-count {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-report-row:focus-visible,
+.dr-inbox-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-report-row:hover,
+  .dr-inbox-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* The knowledge check: errors, what's worth a look, modelling choices — told apart by colour, quietly. */
+.dr-integrity-for {
+  margin-bottom: var(--dr-space-1, 4px);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-integrity-desc {
+  margin: -2px 0 calc(var(--dr-u) * 1.5);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.dr-report-head[data-level='error'] {
+  color: var(--text-error);
+}
+
+.dr-report-head[data-level='warning'] {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-integrity-row[data-level='error'] .dr-report-icon {
+  color: var(--text-error);
+}
+
+.dr-integrity-row[data-level='warning'] .dr-report-icon {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-integrity-row[data-level='choice'] .dr-report-problem {
+  color: var(--text-faint);
+}
+
+.dr-integrity-fix {
+  flex: 0 0 auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-smaller);
+}
+
+/* Reorganising an album: what will happen, before it does. */
+.dr-refactor-effects {
+  margin: 0 0 var(--dr-space-3);
+  padding-left: 1.2em;
+  color: var(--text-normal);
+}
+
+.dr-refactor-effects li {
+  margin: var(--dr-space-1) 0;
+}
+
+.dr-refactor-effects li.is-warning {
+  color: var(--text-warning, var(--text-muted));
+}
+
+.dr-refactor-blocked {
+  margin: 0 0 var(--dr-space-2);
+  color: var(--text-error, var(--text-muted));
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-refactor-pick {
+  max-height: 40vh;
+  overflow-y: auto;
+  margin: var(--dr-space-1) 0 var(--dr-space-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-md);
+}
+
+.dr-refactor-pick-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  padding: calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 2.5);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-refactor-pick-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+/* A collection's header, under its title: that it is one, what it's for. */
+.dr-collection-head {
+  margin: calc(var(--dr-u) * -1) 0 calc(var(--dr-u) * 5.5);
+}
+
+/* A collection as a tree of its albums. */
+.dr-tree-row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  padding: var(--dr-space-2) calc(var(--dr-u) * 2.5) var(--dr-space-2) calc(calc(var(--dr-u) * 2.5) + var(--dr-tree-depth, 0) * calc(var(--dr-u) * 5.5));
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-tree-icon {
+  display: flex;
+  color: var(--text-faint);
+}
+
+.dr-tree-name {
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-tree-count {
+  margin-left: auto;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.dr-tree-row:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* A note linked from elsewhere, and where an inbox note seems to belong: a small, quiet button. */
+.dr-linked-take,
+.dr-inbox-suggest {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 2px calc(var(--dr-u) * 2.5);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-sm);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dr-linked-take:focus-visible,
+.dr-inbox-suggest:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-tree-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-linked-take:hover,
+  .dr-inbox-suggest:hover {
+    color: var(--text-normal);
+    border-color: var(--text-faint);
+  }
+}
+
+/* States, the same on every row the plugin draws: hover shows quickly,
+ * selection at once; what's off is quieter but still readable. */
+.dr-track,
+.dr-lib-row,
+.dr-report-row,
+.dr-inbox-row,
+.dr-gap-row,
+.dr-tree-row,
+.dr-panel-tab {
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-detail-action.is-disabled,
+.dr-browse-up.is-disabled {
+  opacity: var(--dr-disabled-opacity);
+}
+
+/* A cover's picture eases in as it arrives, over the colour behind it. */
+.dr-card-art img.is-arriving,
+.dr-detail-art img.is-arriving,
+.dr-lib-icon img.is-arriving {
+  opacity: 0;
+}
+
+.dr-card-art img,
+.dr-detail-art img,
+.dr-lib-icon img {
+  object-fit: cover;
+  object-position: center;
+  transition: opacity var(--dr-dur-base) var(--dr-ease);
+}
+
+/* Density: rows follow the cover size, from a compact catalogue to comfortable. */
+.dr-browse[data-dr-density="compact"] .dr-track {
+  padding-top: var(--dr-space-1);
+  padding-bottom: var(--dr-space-1);
+}
+
+.dr-browse[data-dr-density="large"] .dr-track {
+  padding-top: var(--dr-space-3);
+  padding-bottom: var(--dr-space-3);
+}
+
+/* A note's relationships: its cover and name, the way up above it. */
+.dr-concept-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--dr-space-5);
+  margin: var(--dr-space-2) 0 var(--dr-space-5);
+}
+
+.dr-concept-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 120px;
+  height: 120px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-md);
+  background-color: var(--background-secondary);
+}
+
+.dr-concept-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Study: the page and little else — no status bar, the strip down to the note. */
+body.dr-mode-study .status-bar {
+  display: none;
+}
+
+body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
+  display: none;
+}
+
+/* Albums an album takes in, before its notes. */
+.dr-album-includes {
+  margin-bottom: var(--dr-space-5);
+}
+
+.dr-detail-actions {
+  display: flex;
+  gap: var(--dr-space-3);
+  margin-top: calc(var(--dr-u) * 5.5);
+}
+
+.dr-detail-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-space-2);
+  min-width: 128px;
+  padding: calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 4.5);
+  border-radius: var(--dr-radius-md);
+  background-color: color-mix(in srgb, var(--text-normal) 7%, transparent);
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold, 600);
+  cursor: pointer;
+  transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-detail-action:active {
+  transform: scale(0.97);
+}
+
+.dr-detail-action:focus-visible {
+  background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-detail-action:hover {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    outline: none;
+  }
+}
+
+.dr-detail-action-icon,
+.dr-icon-glyph {
+  display: inline-flex;
+}
+
+.dr-detail-action-icon .svg-icon,
+.dr-icon-glyph .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+/* -- the list -----------------------------------------------------------
+ *
+ * A plain list: no rule between rows, a soft band under the pointer, the
+ * columns after the name quiet, and ••• only on the row pointed at.
+ */
+
+.dr-tracks {
+  margin-top: calc(var(--dr-u) * 1.5);
+}
+
+.dr-track,
+.dr-end-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 3.5);
+  padding: var(--dr-space-2);
+  border-radius: var(--dr-r);
+  cursor: pointer;
+}
+
+.dr-track:focus-visible,
+.dr-end-row:focus-visible {
+  background-color: var(--dr-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-track:hover,
+  .dr-end-row:hover {
+    background-color: var(--dr-hover);
+    outline: none;
+  }
+}
+
+.dr-track-num {
+  flex: 0 0 20px;
+  text-align: right;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-track-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
+}
+
+/* New to you: a dot beside its number. */
+.dr-track.is-unread .dr-track-num {
+  position: relative;
+}
+
+.dr-track.is-unread .dr-track-num::before {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+}
+
+/* An album's end: notes still to write, greyed, and a row for a new note. */
+.dr-end-row.is-unwritten .dr-track-name,
+.dr-new-note-row .dr-track-name,
+.dr-new-note-row .dr-track-num {
+  color: var(--text-faint);
+  font-style: normal;
+}
+
+/* A folder's PDFs, after its notes: a list of their own, without numbers. */
+.dr-pdf-list {
+  margin-top: var(--dr-space-5);
+}
+
+.dr-track.is-unnumbered .dr-track-num {
+  visibility: hidden;
+}
+
+/* A note's description, or its first sentence, in grey under its title. */
+.dr-track-name.has-excerpt::after {
+  content: attr(data-excerpt);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+}
+
+/* Notes nested under their parent: a step in for each level, a fold on the parent. */
+.dr-track.is-nested .dr-track-name {
+  padding-left: calc(var(--dr-nest, 1) * var(--size-4-6));
+}
+
+.dr-track-fold {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 var(--size-2-2) 0 calc(-1 * var(--size-4-1));
+  padding: 0;
+  color: var(--text-faint);
+}
+
+.dr-track-fold .svg-icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.dr-track-sub {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+.dr-track-time {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+}
+
+/* How long the note is: the row's last column, a fixed width so the
+   lengths line up down the list. */
+
+.dr-track-length {
+  flex: 0 0 4.6em;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: var(--font-ui-small);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-track-length.is-words {
+  flex-basis: 7em;
+}
+
+/* Pinned, beside the title. */
+
+.dr-track-name.has-mark {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-track-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dr-track-pin {
+  flex: 0 0 auto;
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-track-pin .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+/* On every row, so a row never changes width; seen on the row pointed
+   at, or always where nothing points. */
+
+.dr-track-more {
+  flex: 0 0 auto;
+  padding: 2px;
+  opacity: 0.7;
+}
+
+@media (any-hover: hover) {
+  .dr-track-more {
+    opacity: 0;
+  }
+
+  .dr-track:hover .dr-track-more,
+  .dr-track-more:focus-visible {
+    opacity: 0.7;
+  }
+
+  .dr-track-more:hover {
+    opacity: 1;
+  }
+}
+
+/* -- two panes -----------------------------------------------------------
+ *
+ * Subfolders listed on the left, the selected one opened out on the
+ * right as stacked blocks. The panes scroll independently so a long
+ * list doesn't drag the detail with it.
+ */
+
+.dr-split {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.dr-split-list {
+  flex: 0 0 330px;
+  min-width: 0;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-right: calc(var(--dr-u) * 4.5);
+  border-right: 1px solid var(--background-modifier-border);
+}
+
+.dr-split-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  padding: var(--dr-space-2) calc(var(--dr-u) * 2.5);
+  border-radius: var(--dr-radius-md);
+  cursor: pointer;
+}
+
+/* Indented past the thumbnail, as the artist list's dividers are. */
+
+.dr-split-row + .dr-split-row::before {
+  content: "";
+  position: absolute;
+  left: 69px;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background-color: var(--background-modifier-border);
+}
+
+.dr-split-row.is-selected::before,
+.dr-split-row.is-selected + .dr-split-row::before {
+  opacity: 0;
+}
+
+@media (any-hover: hover) {
+  .dr-split-row:hover::before,
+  .dr-split-row:hover + .dr-split-row::before {
+    opacity: 0;
+  }
+}
+
+.dr-split-row:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-split-row:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+/* The selection is the one filled row, as in the reference. */
+
+.dr-split-row.is-selected {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-split-thumb {
+  position: relative;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--background-secondary);
+}
+
+.dr-split-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-split-thumb.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-split-thumb .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.dr-split-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-ui-medium);
+}
+
+.dr-split-detail {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+  padding-left: calc(var(--dr-u) * 5.5);
+}
+
+/* -- an album block ------------------------------------------------------ */
+
+.dr-album + .dr-album {
+  margin-top: calc(var(--dr-u) * 8.5);
+  padding-top: calc(var(--dr-u) * 6.5);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-album-head {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--dr-u) * 2.5);
+  margin-bottom: calc(var(--dr-u) * 3.5);
+}
+
+.dr-album-titles {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-album-name {
+  font-size: var(--dr-heading-size);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-normal);
+}
+
+.dr-album-name.is-primary {
+  font-size: var(--dr-title-size);
+}
+
+.dr-album-meta {
+  margin-top: 2px;
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-album-body {
+  display: flex;
+  gap: calc(var(--dr-u) * 5);
+  align-items: flex-start;
+}
+
+.dr-album-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 168px;
+  height: 168px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-cover);
+  background-color: var(--background-secondary);
+  box-shadow: var(--dr-shadow-md);
+}
+
+.dr-album-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-album-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
+}
+
+.dr-album-art .dr-card-glyph .svg-icon {
+  width: 44px;
+  height: 44px;
+}
+
+.dr-album-body .dr-tracks {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-top: 0;
+}
+
+/* -- subfolder tiles ---------------------------------------------------- */
+
+/* Cover size: a compact catalogue, standard, or large covers. */
+.dr-browse[data-dr-density="compact"] {
+  --dr-tile-size: 120px;
+}
+
+.dr-browse[data-dr-density="large"] {
+  --dr-tile-size: 230px;
+}
+
+/* Or sized on their own, whatever the density. */
+.dr-browse[data-dr-art="small"] {
+  --dr-tile-size: 120px;
+}
+
+.dr-browse[data-dr-art="medium"] {
+  --dr-tile-size: 170px;
+}
+
+.dr-browse[data-dr-art="large"] {
+  --dr-tile-size: 230px;
+}
+
+.dr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
+  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
+  margin-bottom: var(--dr-space-2);
+}
+
+.dr-card {
+  cursor: pointer;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-card-art {
+  position: relative;
+  aspect-ratio: 1;
+  margin-bottom: var(--dr-cover-gap);
+  overflow: hidden;
+  border-radius: var(--dr-radius-cover);
+  background-color: var(--background-secondary);
+  box-shadow: var(--dr-shadow-sm);
+  transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-card:focus-visible {
+  outline: none;
+}
+
+.dr-card:focus-visible .dr-card-art {
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-card-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-card-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+  box-shadow: none;
+}
+
+.dr-card-glyph {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-card-glyph .svg-icon {
+  width: 34px;
+  height: 34px;
+}
+
+.dr-detail-art .dr-card-glyph .svg-icon {
+  width: 58px;
+  height: 58px;
+}
+
+.dr-card-title {
+  font-size: var(--font-ui-small);
+  color: var(--text-normal);
+  line-height: var(--dr-line-label);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dr-card-sub {
+  margin-top: var(--dr-title-gap);
+  font-size: var(--dr-meta-size);
+  line-height: var(--dr-line-meta);
+  color: var(--dr-meta-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A screen's name, large and heavy, as the reference names its pages. */
+.dr-browse-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.9em;
+  font-weight: var(--dr-display-weight);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-card-art {
+    transition: none;
+  }
+}
+
+.workspace-tab-header-container .dr-trigger.is-dragging, .workspace-tab-header-container .dr-settings-moved.is-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* A line where the icon would land, drawn on the element it precedes. */
+
+.dr-header-dropping .dr-drop-before {
+  position: relative;
+}
+
+.dr-header-dropping .dr-drop-before::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -3px;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background-color: var(--interactive-accent);
+}
+
+/* Show more --------------------------------------------------------------- */
+
+.dr-track-more-row {
+  cursor: pointer;
+}
+
+.dr-more-label {
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+}
+
+/* Note table ------------------------------------------------------------
+ *
+ * Dense rows, quiet hairlines, columns from settings. Closer to a
+ * spreadsheet than the album lists, because that's what it's for.
+ */
+
+.dr-table {
+  margin-top: var(--dr-space-1);
+}
+
+.dr-tr {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-4);
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2);
+  border-radius: var(--dr-r);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+/* No rule between rows — a song list separates its columns, not its
+   rows, and relies on a plain hover band instead. */
+
+.dr-tr:focus-visible {
+  background-color: var(--dr-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-tr:hover {
+    background-color: var(--dr-hover);
+    outline: none;
+  }
+}
+
+/* The header sorts, so its cells are controls, with the arrow on
+   whichever column is ordering the table. */
+
+.dr-th {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  border-radius: 0;
+  border-bottom: 1px solid var(--dr-line);
+  cursor: default;
+}
+
+@media (any-hover: hover) {
+  .dr-th:hover {
+    background: transparent;
+  }
+}
+
+.dr-th .dr-td {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px calc(var(--dr-u) * 1.5);
+  margin: 0 calc(var(--dr-u) * -1.5);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+@media (any-hover: hover) {
+  .dr-th .dr-td:hover {
+    background-color: var(--dr-hover);
+    color: var(--text-normal);
+  }
+}
+
+.dr-th .dr-td.is-sorted {
+  color: var(--text-normal);
+}
+
+.dr-th-arrow {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.dr-th-arrow .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-td {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+}
+
+.dr-td-title {
+  flex: 2 1 0;
+  color: var(--text-normal);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-td-time {
+  flex: 0 0 110px;
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.dr-td-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-td-more {
+  flex: 0 0 auto;
+  padding: 1px;
+  opacity: 0.7;
+}
+
+.dr-td-more .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+@media (any-hover: hover) {
+  .dr-td-more {
+    opacity: 0;
+  }
+
+  .dr-tr:hover .dr-td-more,
+  .dr-td-more:focus-visible {
+    opacity: 0.7;
+  }
+
+  .dr-td-more:hover {
+    opacity: 1;
+  }
+}
+
+/* Property values -------------------------------------------------------- */
+
+.dr-split-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-split-row.is-selected .dr-split-count {
+  color: var(--text-on-accent);
+  opacity: 0.8;
+}
+
+/* Filter button -----------------------------------------------------------
+ *
+ * Round, beside the search field, as in the reference. It takes the
+ * accent when a sort or folder filter is in effect, so a filtered screen
+ * never looks like the whole of something.
+ */
+
+.dr-filter-btn {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+  margin-left: auto;
+  padding: 0;
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--background-modifier-form-field);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.dr-filter-btn + .dr-browse-search {
+  margin-left: var(--dr-space-2);
+}
+
+.dr-filter-btn.is-active {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.dr-filter-btn .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Discs -------------------------------------------------------------------- */
+
+.dr-disc {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin-top: calc(var(--dr-u) * 6.5);
+  padding: 0 var(--dr-space-2) var(--dr-space-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  border-bottom: 1px solid var(--dr-line);
+}
+
+.dr-tracks > .dr-disc:first-child {
+  margin-top: var(--dr-space-1);
+}
+
+.dr-disc-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-disc-count {
+  flex: 0 0 auto;
+  color: var(--text-faint);
+  font-weight: var(--font-normal, 400);
+}
+
