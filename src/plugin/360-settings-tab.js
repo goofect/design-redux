@@ -1,5 +1,5 @@
 /*
- * Where each setting sits: a tab for each task — General, Navigation, Notes, Advanced — a look strip above them, and in
+ * Where each setting sits: a tab for each category — General, Appearance, Library, Notes, Inspector, Maps, Advanced — and in
  * each tab one row a feature — icon, name, a line, a switch and a gear that opens its options.
  * Features still own their rows (name, control, description); this only decides where each
  * goes. A row shown only while another is on sits indented beneath that one.
@@ -20,32 +20,11 @@ export const SETTINGS_TABS = [
     title: 'General',
     features: [
       {
-        id: 'covers',
-        icon: 'image',
-        name: 'Covers',
-        desc: 'Where covers come from, and how the made ones look.',
-        keys: ['coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
-      },
-      {
         id: 'home',
         icon: 'home',
         name: 'Home screen',
         desc: 'What the library opens with: its shelves, and how far back reading counts.',
         keys: ['homePath', 'homeShelves', 'fromReadingDays'],
-      },
-    ],
-  },
-  {
-    id: 'navigation',
-    title: 'Navigation',
-    features: [
-      {
-        id: 'library',
-        icon: 'library',
-        name: 'Library',
-        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
-        switch: 'library',
-        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
       },
       {
         id: 'strip',
@@ -54,6 +33,33 @@ export const SETTINGS_TABS = [
         desc: 'Where you are and how far, with previous and next; workspace modes; one page; the sidebar header.',
         switch: 'contextStrip',
         keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+      },
+    ],
+  },
+  {
+    id: 'appearance',
+    title: 'Appearance',
+    features: [
+      {
+        id: 'covers',
+        icon: 'image',
+        name: 'Covers',
+        desc: 'Where covers come from, and how the made ones look.',
+        keys: ['coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
+      },
+    ],
+  },
+  {
+    id: 'library',
+    title: 'Library',
+    features: [
+      {
+        id: 'library',
+        icon: 'library',
+        name: 'Library',
+        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
+        switch: 'library',
+        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
       },
     ],
   },
@@ -68,14 +74,6 @@ export const SETTINGS_TABS = [
         desc: 'Its collection above the title, one grey line under it, properties as chips, shelves at the end, and a reading outline.',
         switch: 'notePage',
         keys: ['notePageShelves', 'readingHistory', 'notePageTint', 'notePageChips', 'rememberPlace', 'readingOutline', 'outlineWordCounts'],
-      },
-      {
-        id: 'properties',
-        icon: 'list',
-        name: 'Properties panel',
-        desc: 'Where a note is edited: properties, relationships and places in one panel.',
-        switch: 'propertiesDropdown',
-        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },
       {
         id: 'relationships',
@@ -116,6 +114,26 @@ export const SETTINGS_TABS = [
         switch: 'quietLinks',
         keys: [],
       },
+    ],
+  },
+  {
+    id: 'inspector',
+    title: 'Inspector',
+    features: [
+      {
+        id: 'properties',
+        icon: 'list',
+        name: 'Properties panel',
+        desc: 'Where a note is edited: properties, relationships and places in one panel.',
+        switch: 'propertiesDropdown',
+        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
+      },
+    ],
+  },
+  {
+    id: 'maps',
+    title: 'Maps',
+    features: [
       {
         id: 'mindmaps',
         icon: 'network',
@@ -297,11 +315,9 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     if (rest.length) tabs[tabs.length - 1].features.push({ id: 'other', icon: 'more-horizontal', name: 'Other', desc: '', keys: [], options: rest, switchRow: null });
 
     this.renderTools(containerEl);
-    // The look, above the places: it's one setting for the whole window, not one tab's.
-    const lookPane = containerEl.createDiv({ cls: 'dr-set-pane dr-set-look' });
-    lookPane.dataset.tab = 'look';
-    lookPane.dataset.always = 'true';
-    this.renderPane(lookPane, look.spec, look.features);
+    // The look leads Appearance, as plain rows above its features.
+    const appearance = tabs.find((t) => t.spec.id === 'appearance');
+    if (appearance) appearance.features.unshift(look.features[0]);
     const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
     bar.setAttribute('role', 'tablist');
     roveFocus(bar, '.dr-set-tab');
@@ -352,6 +368,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
   reveal(key) {
     const spec = SETTINGS_TABS.find((tab) => tab.features.some((feature) => featureKeys(feature).indexOf(key) !== -1));
     if (spec) this.tab = spec.id;
+    // The look's rows lead Appearance.
+    else if (LOOK_KEYS.indexOf(key) !== -1) this.tab = 'appearance';
     // One behind a gear opens that gear.
     SETTINGS_TABS.forEach((tab) => tab.features.forEach((feature) => {
       if ((feature.keys || []).indexOf(key) !== -1) this.gear = feature.id;
@@ -526,7 +544,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
    */
   drawFeature(pane, spec, feature) {
     const options = feature.options.filter((row) => this.shown(row));
-    if (spec.id === 'look') {
+    if (feature.id === 'look') {
       // The group's name above it, as a grouped list has.
       new Setting(pane).setName('Look').setHeading();
       const block = pane.createDiv({ cls: 'dr-set-block' });

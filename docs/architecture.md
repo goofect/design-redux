@@ -970,3 +970,19 @@ related) again: docked, it has room. Step 9, which took it out on 14 Oct,
 now applies only to an install that had settings then, so whoever has it off
 keeps it off.
 
+## 40. The development spec: inspector pin, native properties, categories
+
+From the development specification (26 Oct 2026), after the first plan:
+
+- The inspector can be pinned (a pin in its header): it keeps what it shows
+  while notes open and picks change. A line above says why it shows it —
+  the open note, picked in the library, the open map, a card on the canvas.
+  What it shows, deleted, it lets go of (`forget`).
+- Obsidian's own properties block stays in sight unless "Hide the note's own
+  properties" (`hideNativeProperties`) is on; step 16 keeps an existing
+  install's hidden if its panel was on.
+- Settings in the spec's categories: General (Home, strip and modes),
+  Appearance (the look's rows, then covers), Library, Notes, Inspector,
+  Maps, Advanced. Rows moved whole; a link to a look setting opens
+  Appearance. §32's four tabs were never released.
+

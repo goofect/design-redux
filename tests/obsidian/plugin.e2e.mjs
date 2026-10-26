@@ -203,7 +203,7 @@ describe('Design Redux in Obsidian', function () {
     });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
-    expect(where.tabs).toBe(4);
+    expect(where.tabs).toBe(7);
 
     // A screenshot from whichever window they're in.
     const main = await browser.getWindowHandle();
@@ -215,8 +215,8 @@ describe('Design Redux in Obsidian', function () {
       }
     }
     await shot('settings-appearance');
-    await clickText('.dr-settings .dr-set-tab', 'Navigation');
-    await shot('settings-navigation');
+    await clickText('.dr-settings .dr-set-tab', 'Library');
+    await shot('settings-library');
 
     // Searching shows the matching rows from every tab, named as ever, and nothing else.
     const found = await browser.execute(() => {
@@ -234,7 +234,7 @@ describe('Design Redux in Obsidian', function () {
     expect(found.names).toContain('Drop to set a cover');
     expect(found.names.length).toBe(found.seen);
     expect(found.seen).toBeLessThan(found.all);
-    expect(found.panes).toContain('general');
+    expect(found.panes).toContain('appearance');
     await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
     await browser.pause(500);
