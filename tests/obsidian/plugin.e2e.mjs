@@ -18,7 +18,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit'];
+const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'album-tray'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -254,6 +254,33 @@ describe('Design Redux in Obsidian', function () {
     await clickText('.dr-detail-action', 'Edit');
     await browser.$('.dr-edit-grip').waitForExist({ timeout: 5000 });
     await shot('album-edit');
+
+    // Two ticked: the tray floats at the foot of the page, and at the end sits below the last note, not over it.
+    const boxes = await browser.$$(`${ACTIVE}.dr-edit-tick`);
+    await boxes[0].click();
+    await boxes[1].click();
+    await browser.$(`${ACTIVE}.dr-bulk-bar:not(.is-empty)`).waitForExist({ timeout: 5000 });
+    const tray = await browser.execute((sel) => {
+      const bar = document.querySelector(sel);
+      let scroller = bar.parentElement;
+      while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+      const inView = () => {
+        const b = bar.getBoundingClientRect();
+        const s = scroller.getBoundingClientRect();
+        return b.height > 0 && b.top >= s.top && b.bottom <= s.bottom + 1;
+      };
+      const floating = inView();
+      scroller.scrollTop = scroller.scrollHeight;
+      const rows = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-track.is-editing'));
+      const last = rows[rows.length - 1].getBoundingClientRect();
+      return { floating, atEnd: inView(), clear: last.bottom <= bar.getBoundingClientRect().top + 1, count: bar.querySelector('.dr-bulk-count').textContent };
+    }, `${ACTIVE}.dr-bulk-bar`);
+    expect(tray).toEqual({ floating: true, atEnd: true, clear: true, count: '2 notes selected' });
+    await shot('album-tray');
+    // Escape lets go of the ticks and stays in Edit.
+    await browser.keys('Escape');
+    await browser.$(`${ACTIVE}.dr-bulk-bar.is-empty`).waitForExist({ timeout: 5000 });
+    expect(await browser.$$(`${ACTIVE}.dr-track.is-ticked`)).toHaveLength(0);
     await clickText('.dr-detail-action', 'Done');
   });
 

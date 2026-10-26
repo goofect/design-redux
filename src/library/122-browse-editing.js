@@ -6,7 +6,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
-import { byName, composing, coverGen, showMenuAt } from '../core/030-helpers-art.js';
+import { byName, composing, coverGen, drawNoteArt, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, edgeScroll, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
@@ -196,44 +196,96 @@ export class BrowseEditing extends BrowseSorting {
     row.toggleClass('is-ticked', box.checked);
     box.addEventListener('click', (evt) => {
       evt.stopPropagation();
-      const rows = Array.from(list.querySelectorAll('.dr-track.is-editing'));
-      this.bulk().set(file.path, box.checked, { range: evt.shiftKey ? rows.map((r) => r.dataset.path) : null });
-      rows.forEach((r) => {
-        const on = this.bulk().has(r.dataset.path);
-        r.toggleClass('is-ticked', on);
-        const b = r.querySelector('.dr-edit-tick');
-        if (b) b.checked = on;
-      });
-      this.renderBulkBar();
+      this.bulk().set(file.path, box.checked, { range: evt.shiftKey ? this.shownPaths() : null });
+      this.showTicks();
     });
   }
 
-  /** Above the notes while editing: how many are ticked, and what can be done to them all. */
+  /** The notes' rows while editing, in the order they're shown, by path. */
+  shownPaths() {
+    return Array.from(this.contentEl.querySelectorAll('.dr-track.is-editing')).map((r) => r.dataset.path);
+  }
+
+  /** The rows' boxes and the tray brought in line with what's ticked. */
+  showTicks() {
+    this.contentEl.querySelectorAll('.dr-track.is-editing').forEach((r) => {
+      const on = this.bulk().has(r.dataset.path);
+      r.toggleClass('is-ticked', on);
+      const b = r.querySelector('.dr-edit-tick');
+      if (b) b.checked = on;
+    });
+    this.renderBulkBar();
+  }
+
+  /** Every note shown ticked: Select all, or Mod+A while editing. */
+  tickAllShown() {
+    this.shownPaths().forEach((p) => this.bulk().set(p, true));
+    this.showTicks();
+  }
+
+  /**
+   * At the foot of the notes while editing, floating while they scroll:
+   * the covers and count of what's ticked, Move and Properties, the rest
+   * under More (Delete last, apart), and ✕ to let go of it all. Nothing
+   * ticked, nothing shown. It slides in once, when the first is ticked.
+   */
   renderBulkBar(root) {
-    if (root) this.bulkBar = root.createDiv({ cls: 'dr-bulk-bar' });
+    if (root) {
+      this.bulkBar = root.createDiv({ cls: 'dr-bulk-bar', attr: { role: 'toolbar', 'aria-label': 'Selected notes' } });
+      if (this.bulkShown) this.bulkBar.addClass('is-shown');
+    }
     const bar = this.bulkBar;
     if (!bar) return;
     bar.empty();
     const files = this.tickedFiles();
     bar.toggleClass('is-empty', !files.length);
-    if (!files.length) return;
-    bar.createSpan({ cls: 'dr-bulk-count', text: files.length === 1 ? '1 note selected' : `${files.length} notes selected` });
-    const button = (icon, label, run, cls) => {
+    bar.toggleClass('is-busy', !!this.bulkBusy);
+    if (!files.length) {
+      this.bulkShown = false;
+      bar.removeClass('is-shown');
+      return;
+    }
+    if (!this.bulkShown) bar.addClass('is-arriving');
+    this.bulkShown = true;
+    bar.addClass('is-shown');
+
+    const art = bar.createDiv({ cls: 'dr-bulk-art', attr: { 'aria-hidden': 'true' } });
+    files.slice(0, 3).forEach((f) => drawNoteArt(this.plugin, art.createDiv({ cls: 'dr-bulk-cover' }), f));
+    const shown = new Set(this.shownPaths());
+    const hidden = files.filter((f) => !shown.has(f.path)).length;
+    const count = bar.createDiv({ cls: 'dr-bulk-count', attr: { 'aria-live': 'polite' } });
+    count.createSpan({ text: files.length === 1 ? '1 note selected' : `${files.length} notes selected` });
+    if (hidden) count.createSpan({ cls: 'dr-bulk-hidden', text: ` · ${hidden} not shown` });
+
+    const button = (icon, label, run, cls, word = true) => {
       const el = bar.createDiv({ cls: `dr-bulk-action ${cls || ''}`.trim() });
       asButton(el, label);
+      if (this.bulkBusy) el.setAttribute('aria-disabled', 'true');
       setIcon(el.createSpan(), icon);
-      el.createSpan({ text: label });
-      onActivate(el, run);
+      if (word) el.createSpan({ text: label });
+      onActivate(el, (evt) => !this.bulkBusy && run(evt));
+      return el;
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
     button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
-    const clip = this.plugin.feature(PropertyClipboard);
-    if (clip) button('table', 'Copy as table', () => clip.copyTable(this.tickedFiles()));
-    button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
-    button('x', 'Clear', () => {
+    button('more-horizontal', 'More', (evt) => this.bulkMenu(evt), 'dr-bulk-more', false);
+    button('x', 'Clear selection', () => {
       this.bulk().clear();
-      this.render();
-    });
+      this.showTicks();
+    }, 'dr-bulk-clear', false);
+  }
+
+  /** What's less often done to what's ticked: Copy as table, Select all, and, apart, Delete. */
+  bulkMenu(evt) {
+    const menu = new Menu();
+    const clip = this.plugin.feature(PropertyClipboard);
+    if (clip)
+      menu.addItem((i) => i.setSection('action').setTitle('Copy as table').setIcon('table').onClick(() => clip.copyTable(this.tickedFiles())));
+    const shown = this.shownPaths();
+    if (shown.some((p) => !this.bulk().has(p)))
+      menu.addItem((i) => i.setSection('action').setTitle(`Select all ${shown.length}`).setIcon('check-check').onClick(() => this.tickAllShown()));
+    menu.addItem((i) => i.setSection('danger').setTitle('Delete…').setIcon('trash-2').setWarning(true).onClick(() => this.deleteTicked()));
+    showMenuAt(menu, evt);
   }
 
   /** The ticked notes still there. */
@@ -243,41 +295,70 @@ export class BrowseEditing extends BrowseSorting {
       .filter((f) => f instanceof TFile);
   }
 
-  /** Every ticked note moved to a folder; one Undo puts them all back. */
-  async moveTicked(folder) {
-    const moved = [];
-    for (const file of this.tickedFiles()) {
-      const from = file.path;
-      const current = file.parent ? file.parent.path : '/';
-      const order = (this.plugin.settings.albumOrders || {})[current];
-      const kept = order ? JSON.parse(JSON.stringify(order)) : null;
-      if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
+  /** While a move or a delete runs, the tray waits: nothing done twice. */
+  async bulkWhile(run) {
+    if (this.bulkBusy) return;
+    this.bulkBusy = true;
+    this.renderBulkBar();
+    try {
+      await run();
+    } finally {
+      this.bulkBusy = false;
+      this.render();
     }
-    this.bulk().clear();
-    this.render();
-    if (!moved.length) return;
-    const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
-    this.plugin.offerUndo(`Moved ${moved.length === 1 ? '1 note' : `${moved.length} notes`} to ${where}.`, async () => {
-      for (const m of moved.slice().reverse()) await this.plugin.putBack(m.file, m.from, m.current, m.kept);
+  }
+
+  /**
+   * Every ticked note moved to a folder; one Undo puts them all back.
+   * Any that couldn't be moved stay ticked, and the message says how many.
+   */
+  async moveTicked(folder) {
+    await this.bulkWhile(async () => {
+      const moved = [];
+      const stuck = [];
+      for (const file of this.tickedFiles()) {
+        const from = file.path;
+        const current = file.parent ? file.parent.path : '/';
+        const order = (this.plugin.settings.albumOrders || {})[current];
+        const kept = order ? JSON.parse(JSON.stringify(order)) : null;
+        if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
+        else stuck.push(from);
+      }
+      this.bulk().clear();
+      stuck.forEach((p) => this.bulk().set(p, true));
+      const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
+      const notes = (n) => (n === 1 ? '1 note' : `${n} notes`);
+      const left = stuck.length ? ` ${notes(stuck.length)} couldn't be moved, and ${stuck.length === 1 ? 'is' : 'are'} still selected.` : '';
+      if (!moved.length) {
+        if (stuck.length) new Notice(`Nothing moved to ${where}.${left}`);
+        return;
+      }
+      this.plugin.offerUndo(`Moved ${notes(moved.length)} to ${where}.${left}`, async () => {
+        for (const m of moved.slice().reverse()) await this.plugin.putBack(m.file, m.from, m.current, m.kept);
+      });
     });
   }
 
-  /** Every ticked note to the trash, once asked. */
+  /** Every ticked note to the trash, once asked; any that couldn't go stay ticked. */
   deleteTicked() {
     const files = this.tickedFiles();
-    if (!files.length) return;
+    if (!files.length || this.bulkBusy) return;
     const what = files.length === 1 ? `“${files[0].basename}”` : `${files.length} notes`;
-    new ConfirmModal(this.app, `Delete ${what}?`, 'They go to the trash, where they can be got back.', 'Delete', async () => {
-      for (const file of files) {
-        try {
-          await this.app.fileManager.trashFile(file);
-        } catch (err) {
-          console.error('Design Redux: could not delete', err);
+    new ConfirmModal(this.app, `Delete ${what}?`, 'They go to the trash, where they can be got back.', 'Delete', () =>
+      this.bulkWhile(async () => {
+        const stuck = [];
+        for (const file of files) {
+          try {
+            await this.app.fileManager.trashFile(file);
+          } catch (err) {
+            console.error('Design Redux: could not delete', err);
+            stuck.push(file.path);
+          }
         }
-      }
-      this.bulk().clear();
-      this.render();
-    }, { warning: true }).open();
+        this.bulk().clear();
+        stuck.forEach((p) => this.bulk().set(p, true));
+        if (stuck.length) new Notice(`${stuck.length === 1 ? '1 note' : `${stuck.length} notes`} couldn't be deleted, and ${stuck.length === 1 ? 'is' : 'are'} still selected.`);
+      }), { warning: true }).open();
   }
 
   /** A subfolder's heading while editing: its name, and a way to delete it. */

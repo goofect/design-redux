@@ -789,17 +789,26 @@ export class BrowseView extends BrowseAlbum {
 
   /* -- keys and scroll ----------------------------------------------- */
 
-  /** "/" jumps to Find, as on the web; Escape leaves editing. */
+  /** "/" jumps to Find, as on the web; Escape lets go of what's ticked, then leaves editing; Mod+A ticks every note shown. */
   onKey(evt) {
     const target = evt.target;
-    const typing = target && typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]');
+    // A row's tick box is an input, but no one types in it.
+    const typing = target && typeof target.closest === 'function' && target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable="true"]');
     if (evt.key === '/' && !evt.metaKey && !evt.ctrlKey && !evt.altKey && !typing) {
       if (this.focusFind()) evt.preventDefault();
       return;
     }
     if (evt.key === 'Escape' && this.editing && !typing) {
       evt.preventDefault();
-      this.setEditing(false);
+      if (this.bulkSelection && this.bulkSelection.size) {
+        this.bulkSelection.clear();
+        this.showTicks();
+      } else this.setEditing(false);
+      return;
+    }
+    if (evt.key === 'a' && (evt.metaKey || evt.ctrlKey) && !evt.altKey && !evt.shiftKey && this.editing && !typing && this.shownPaths().length) {
+      evt.preventDefault();
+      this.tickAllShown();
       return;
     }
     // Space on a note's row or tile: a look at it, without opening it.

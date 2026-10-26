@@ -27,6 +27,7 @@ const apply = (el, o) => {
   if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
   if (o.text !== undefined) el.textContent = o.text;
   if (o.type) el.setAttribute('type', o.type);
+  if (o.attr) Object.entries(o.attr).forEach(([k, v]) => el.setAttribute(k, v));
   return el;
 };
 P.createEl = function (tag, o) { return apply(this.appendChild(document.createElement(tag)), o); };
@@ -1013,6 +1014,84 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Anarchy, again.md']);
     view.render();
     assert.strictEqual(view.contentEl.querySelector('.dr-bulk-count').textContent, '1 note selected');
+  });
+
+  await t('the tray: at the foot of the notes, covers and count, More holding Delete apart, Escape and Mod+A', async () => {
+    const { v, plugin, view } = setup();
+    view.setEditing(true);
+    const tick = (n, shift) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
+    const bar = () => view.contentEl.querySelector('.dr-bulk-bar');
+    const key = (k, mods = {}) => {
+      let stopped = 0;
+      view.onKey(Object.assign({ key: k, target: view.contentEl, preventDefault: () => stopped++ }, mods));
+      return stopped;
+    };
+    const lists = Array.from(view.contentEl.querySelectorAll('.dr-tracks'));
+    assert.ok(lists.every((l) => l.compareDocumentPosition(bar()) & window.Node.DOCUMENT_POSITION_FOLLOWING), 'after the notes, so the last row is never under it');
+    assert.ok(bar().classList.contains('is-empty') && bar().getAttribute('role') === 'toolbar');
+    tick('Anarchy');
+    assert.ok(bar().classList.contains('is-arriving'), 'it rises in with the first tick');
+    tick('Cooperation', true);
+    assert.strictEqual(bar().querySelectorAll('.dr-bulk-cover').length, 3, 'a cover for each, up to three');
+    assert.strictEqual(bar().querySelector('.dr-bulk-count').textContent, '3 notes selected');
+    view.render();
+    assert.ok(!bar().classList.contains('is-arriving') && bar().classList.contains('is-shown'), 'redrawn, it stays put rather than rising again');
+    const labels = Array.from(bar().querySelectorAll('.dr-bulk-action')).map((b) => b.getAttribute('aria-label'));
+    assert.deepStrictEqual(labels, ['Move to…', 'Properties…', 'More', 'Clear selection']);
+
+    // More: Copy as table, Select all, and Delete last, in a section of its own, as a warning.
+    menus.length = 0;
+    plugin.feature = ((feature) => (C) => (C && C.name === 'PropertyClipboard' ? { copyTable() {} } : feature.call(plugin, C)))(plugin.feature);
+    bar().querySelector('.dr-bulk-more').click();
+    const items = menus[0].items.map((i) => i.title);
+    assert.strictEqual(items[items.length - 1], 'Delete…');
+    assert.ok(items.includes('Copy as table') && items.some((i) => /^Select all \d+$/.test(i)), items.join(' | '));
+    const shown = view.contentEl.querySelectorAll('.dr-track.is-editing').length;
+    menus[0].items.find((i) => i.title.startsWith('Select all')).click();
+    assert.strictEqual(view.ticked().size, shown, 'Select all ticks every note shown');
+
+    // Escape lets go of what's ticked first, and only then leaves editing.
+    assert.strictEqual(key('Escape'), 1);
+    assert.ok(view.editing && view.ticked().size === 0 && bar().classList.contains('is-empty'));
+    assert.ok(!view.contentEl.querySelector('.dr-track.is-ticked'), 'the rows let go too');
+    // Mod+A ticks them all; not while typing in a field.
+    const field = view.contentEl.createEl('input');
+    assert.strictEqual(key('a', { ctrlKey: true, target: field }), 0, 'a field keeps Mod+A');
+    assert.strictEqual(key('a', { ctrlKey: true }), 1);
+    assert.strictEqual(view.ticked().size, shown);
+    // A tick box focused is no field: Escape still lets go.
+    key('Escape', { target: view.contentEl.querySelector('.dr-edit-tick') });
+    assert.strictEqual(view.ticked().size, 0);
+    key('Escape');
+    assert.ok(!view.editing, 'nothing ticked: Escape leaves editing');
+  });
+
+  await t('the tray: a move that half works keeps what stayed ticked and says so; a second Move waits for the first', async () => {
+    const { v, plugin, view } = setup();
+    let undo = null;
+    plugin.offerUndo = (message, fn) => { undo = [message, fn]; };
+    let calls = 0;
+    const real = plugin.moveFile;
+    let release;
+    const gate = new Promise((r) => (release = r));
+    plugin.moveFile = async (file, to) => {
+      calls++;
+      await gate;
+      return file.basename === 'Balance' ? false : real.call(plugin, file, to);
+    };
+    view.setEditing(true);
+    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    ['Anarchy', 'Balance', 'Cooperation'].forEach(tick);
+    const target = v.vault.getAbstractFileByPath('IR/Theories');
+    const first = view.moveTicked(target);
+    assert.ok(view.contentEl.querySelector('.dr-bulk-bar').classList.contains('is-busy'), 'busy while it runs');
+    await view.moveTicked(target);
+    release();
+    await first;
+    assert.strictEqual(calls, 3, 'the second Move did nothing');
+    assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Balance.md'], 'the note that stayed is still ticked');
+    assert.strictEqual(undo[0], "Moved 2 notes to Theories. 1 note couldn't be moved, and is still selected.");
+    assert.ok(!view.contentEl.querySelector('.dr-bulk-bar').classList.contains('is-busy'));
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
