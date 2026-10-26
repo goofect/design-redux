@@ -223,6 +223,15 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.settingsInHeader === undefined) saved.settingsInHeader = true;
     },
   },
+  {
+    // Classic, kept for one release after 2.0, goes: the theme's look with
+    // what it hid switched off — the note page's additions, row excerpts, glass.
+    to: 17,
+    run(saved) {
+      if (saved.look !== 'classic') return;
+      Object.assign(saved, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

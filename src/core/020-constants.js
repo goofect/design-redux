@@ -326,7 +326,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 16,
+  settingsVersion: 17,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

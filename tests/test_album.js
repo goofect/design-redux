@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -398,13 +398,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.glassPanels = true;
     look.apply(true);
     assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
-    // Classic: 1.x's look, no glass.
-    plugin.settings.look = 'classic';
-    look.apply();
-    assert.ok(document.body.classList.contains('dr-look-classic') && !document.body.classList.contains('dr-glass'));
-    plugin.settings.look = 'theme';
-    look.apply();
-    assert.ok(!document.body.classList.contains('dr-look-classic'));
+    // Classic is gone: whoever had it has the theme's look, without what it hid.
+    const classic = { look: 'classic', notePage: true };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 17).run(classic);
+    assert.deepStrictEqual(classic, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
+    assert.ok(!('classic' in R.LOOKS));
   });
 
   await t('reading history: what you opened and read, in the plugin’s data; changed since read is news; the latest kept', () => {
@@ -919,7 +917,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 16);
+    assert.strictEqual(s.settingsVersion, 17);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');

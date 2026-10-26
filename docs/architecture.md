@@ -940,3 +940,10 @@ That wants screenshots across the looks before and after, part by part.
 - Docked, the inspector keeps a map as its page while it's worked in, so its
   node section follows the node picked on the map.
 
+## 36. Classic goes
+
+Classic, 1.x's look kept for one release after 2.0, is retired. Step 17 gives
+whoever had it the theme's look with what Classic hid switched off: the note
+page's additions (`notePage`), row excerpts (`albumExcerpts`) and glass. The
+unread dot, which Classic also hid, stays: it comes with reading history.
+

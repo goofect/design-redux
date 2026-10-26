@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 16);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 17);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);

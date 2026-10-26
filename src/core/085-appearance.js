@@ -13,7 +13,7 @@ import { Notice } from 'obsidian';
 import { CANVAS_SPACE } from './020-constants.js';
 import { Feature } from './080-feature.js';
 
-export const LOOKS = { apple: 'Apple: the system font, grouped lists, quiet controls', theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines', classic: 'Classic: as before 2.0' };
+export const LOOKS = { apple: 'Apple: the system font, grouped lists, quiet controls', theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines' };
 export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux only' };
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
@@ -29,7 +29,7 @@ export class Appearance extends Feature {
         key: 'look',
         type: 'dropdown',
         name: 'Look',
-        desc: 'Apple: the system font and Apple’s type scale, grouped lists, segmented controls, quiet icon buttons and soft materials, with the theme’s colours. The theme’s own look as it draws it; an editorial look — monochrome surfaces, fine lines, small corners; or Classic, the look from before 2.0, for one release.',
+        desc: 'Apple: the system font and Apple’s type scale, grouped lists, segmented controls, quiet icon buttons and soft materials, with the theme’s colours. The theme’s own look as it draws it; or an editorial look — monochrome surfaces, fine lines, small corners.',
         options: LOOKS,
       },
       {
@@ -105,9 +105,7 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
     body.classList.toggle('dr-look-editorial', !off && this.settings.look === 'editorial');
-    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false && this.settings.look !== 'classic');
-    // 1.x's styling, for those not ready for 2.0's: kept for one release.
-    body.classList.toggle('dr-look-classic', !off && this.settings.look === 'classic');
+    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
     const apple = !off && this.settings.look === 'apple';
     body.classList.toggle('dr-look-apple', apple);
     // Inside notes only where the look covers the whole window.

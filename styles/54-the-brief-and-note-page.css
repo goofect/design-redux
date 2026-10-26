@@ -246,20 +246,6 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
   }
 }
 
-/* Classic: the look from before 2.0, kept for one release — 2.0's additions to the page out of sight. */
-body.dr-look-classic :is(.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves, .dr-note-glow) {
-  display: none !important;
-}
-
-body.dr-look-classic .dr-props-as-chips .metadata-container {
-  display: block !important;
-}
-
-body.dr-look-classic .dr-track-name.has-excerpt::after,
-body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
-  display: none;
-}
-
 /* Editing an album: a box to tick on each note, and a bar for what's ticked. */
 .dr-edit-tick {
   flex: none;
