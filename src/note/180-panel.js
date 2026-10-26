@@ -9,15 +9,16 @@
 /* lines, which the card itself doesn't show.                          */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownView, Notice, parseYaml, Platform, setIcon, Setting, stringifyYaml, TFile } from 'obsidian';
+import { MarkdownView, Notice, parseYaml, Platform, setIcon, Setting, stringifyYaml } from 'obsidian';
 import { BROWSE_VIEW, INSPECTOR_VIEW } from '../core/020-constants.js';
 import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
 import { makeTrigger, relativeDay } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { openInspector } from '../core/076-selection.js';
-import { cardElement, pickedOnCanvas, requestCanvasSave } from '../core/079-canvas-adapter.js';
+import { requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
+import { hostsPanel, originLabel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
 import { PanelDockView } from './179-panel-dock.js';
@@ -103,10 +104,6 @@ export function fillNoteMeta(plugin, meta, file) {
 const EMPTY_TEXT = 'Open or pick a note to see its properties.';
 const OFF_TEXT = 'Turn on “Properties button” in settings to see properties here.';
 
-function hostsPanel(view) {
-  return !!view && typeof view.panelTarget === 'function';
-}
-
 export class PropertiesPanel extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -115,9 +112,8 @@ export class PropertiesPanel extends Feature {
     this.leaf = null;
     this.trigger = null;
     this.sections = [];
-    // The sidebar view the panel is in, when it's docked there; pinned, it keeps what it shows.
+    // The sidebar view the panel is in, when it's docked there.
     this.dockView = null;
-    this.pinned = false;
     // leaf -> its trigger element, so a fitted leaf costs a lookup
     // rather than a querySelector. Weak, so closing a tab drops it.
     this.fitted = new WeakMap();
@@ -286,51 +282,21 @@ export class PropertiesPanel extends Feature {
   register() {
     this.plugin.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {
-        if (this.enabled) this.follow(leaf);
+        if (this.enabled && !this.dockView) this.follow(leaf);
       })
     );
     this.plugin.registerEvent(
       this.app.workspace.on('file-open', (file) => {
         // Fires when a leaf loads a different file, which
-        // active-leaf-change does not cover.
-        if ((!this.isOpen() && !this.dockView) || !file || file === this.file) return;
+        // active-leaf-change does not cover. Docked, the coordinator follows.
+        if (!this.isOpen() || this.dockView || !file || file === this.file) return;
         const leaf = this.app.workspace.activeLeaf;
         if (leaf && (leaf.view instanceof MarkdownView || hostsPanel(leaf.view))) this.follow(leaf, true);
-        else if (!this.dockView) this.close();
+        else this.close();
       })
     );
-    // A view hosting the panel asks for it, against its own button; and says when what it shows changed.
-    // Docked, it shows what's picked in the library too.
-    this.plugin.register(
-      this.plugin.selection.onChange((item) => {
-        if (!this.dockView || !this.popupEl || !item || this.pinned) return;
-        if (item.file instanceof TFile && item.file.extension === 'md') this.showDocked(null, { file: item.file, picked: true });
-        else if (item.folder) this.showDocked(null, { folder: item.folder });
-      })
-    );
-    // A card picked on a canvas says nothing, so a click or a key there is looked at once it's done.
-    const onCanvas = (evt) => {
-      if (!this.dockView || !this.popupEl) return;
-      const leaf = this.app.workspace.activeLeaf;
-      const view = leaf && !leaf.isDeferred ? leaf.view : null;
-      const el = evt.target;
-      if (!view || !view.canvas || !el || el.nodeType !== 1 || !view.containerEl.contains(el)) return;
-      window.setTimeout(() => {
-        if (this.dockView) this.follow(leaf, true);
-      }, 0);
-    };
-    const listen = (doc) => {
-      this.plugin.registerDomEvent(doc, 'pointerup', onCanvas);
-      this.plugin.registerDomEvent(doc, 'keyup', onCanvas);
-    };
-    listen(document);
-    // A canvas in a window of its own is listened to there.
-    this.plugin.registerEvent(
-      this.app.workspace.on('window-open', (workspaceWindow, win) => {
-        const doc = (win && win.document) || (workspaceWindow && workspaceWindow.doc);
-        if (doc && doc !== document) listen(doc);
-      })
-    );
+    // Docked, it draws what the coordinator says the inspector is about: the note worked in, a pick, a card, a map.
+    this.plugin.register(this.plugin.coordinator.onChange((snap) => this.showSnapshot(snap)));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
     this.plugin.registerEvent(
       this.app.workspace.on('design-redux:panel-changed', (file) => {
@@ -452,34 +418,9 @@ export class PropertiesPanel extends Feature {
     this.toggle(leaf, trigger && trigger.isConnected ? trigger : anchor);
   }
 
-  /**
-   * What the panel is about from a page: its note; or on a canvas, the
-   * one card selected — a note's card the note, a text card itself.
-   * { file } or { card }, { none: why not } or null.
-   */
+  /** What the panel is about from a page: the coordinator's answer. */
   targetOf(leaf) {
-    const view = leaf && !leaf.isDeferred ? leaf.view : null;
-    if (view instanceof MarkdownView) return view.file ? { file: view.file } : null;
-    // A view of a note's own kind — a mind map — says what the panel is about.
-    if (hostsPanel(view)) return view.panelTarget();
-    const canvas = view && view.canvas;
-    if (!canvas) return null;
-    const picked = pickedOnCanvas(canvas).filter((n) => n && cardElement(n) && typeof n.getData === 'function');
-    if (picked.length !== 1) return { none: 'Select a card to see its properties.' };
-    const node = picked[0];
-    let data = {};
-    try {
-      data = node.getData() || {};
-    } catch (err) {
-      data = {};
-    }
-    if (data.type === 'file') {
-      const file = typeof data.file === 'string' ? this.app.vault.getAbstractFileByPath(data.file) : null;
-      if (file instanceof TFile && file.extension === 'md') return { file };
-      return { none: 'Only notes and text cards have properties.' };
-    }
-    if ((data.type || 'text') === 'text' && typeof node.setText === 'function') return { card: node };
-    return { none: 'Only notes and text cards have properties.' };
+    return this.plugin.coordinator.targetOf(leaf);
   }
 
   toggle(leaf, trigger) {
@@ -491,14 +432,12 @@ export class PropertiesPanel extends Feature {
     if (!target) return;
     // On a computer it docks, as an inspector; on a phone it's a sheet.
     if (!this.dockView && !Platform.isPhone) {
-      openInspector(this.app).then(() => {
-        if (this.dockView) this.showDocked(leaf, target);
-      });
+      openInspector(this.app).then(() => this.showAsked(leaf, target));
       return;
     }
     if (this.dockView) {
       this.app.workspace.revealLeaf(this.dockView.leaf);
-      this.showDocked(leaf, target);
+      this.showAsked(leaf, target);
       return;
     }
     if (this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
@@ -545,7 +484,7 @@ export class PropertiesPanel extends Feature {
     if (this.dockView) {
       this.popupEl.addClass('is-open');
       this.dockView.showEmpty('');
-      this.dockView.showOrigin(this.originOf(leaf, target), this.pinned);
+      this.dockView.showOrigin(originLabel(this.plugin.coordinator.originOf(leaf, target)), this.pinned);
       return;
     }
 
@@ -672,14 +611,7 @@ export class PropertiesPanel extends Feature {
 
   /** Switching notes moves the panel rather than closing it. */
   follow(leaf, force) {
-    if (this.dockView) {
-      if (this.pinned) return;
-      // Docked, it keeps what it shows until there's something else: the sidebar itself, a pane with no note, leave it.
-      const target = leaf && leaf !== this.dockView.leaf && this.popupEl ? this.targetOf(leaf) : null;
-      if (target && !target.none) this.showDocked(leaf, target);
-      return;
-    }
-    if (!this.isOpen()) return;
+    if (this.dockView || !this.isOpen()) return;
     if (!force && this.leaf === leaf) return;
 
     const target = leaf && hostsPanel(leaf.view) ? leaf.view.panelTarget() : null;
@@ -778,29 +710,38 @@ export class PropertiesPanel extends Feature {
     }
   }
 
-  /** A file or folder deleted: if it's what's shown, it's let go of, pinned or not. */
+  /** A file or folder deleted: if it's what's shown, it's let go of. (Docked, the coordinator lets go, pinned or not.) */
   forget(file) {
     if (!this.isOpen() || !file || (file !== this.file && file !== this.folder)) return;
-    this.pinned = false;
     this.close();
   }
 
-  /** Why the inspector shows `target`, in a few words. */
-  originOf(leaf, target) {
-    if (target.picked || target.folder) return 'Picked in the library';
-    if (target.card) return 'A card on the canvas';
-    if (leaf && hostsPanel(leaf.view)) return 'The open map';
-    return 'The open note';
+  /** Pinned, the coordinator keeps what it shows while notes open and picks change. */
+  get pinned() {
+    return !!(this.plugin.coordinator && this.plugin.coordinator.state.pinned);
   }
 
-  /** Pinned, it keeps what it shows while notes open and picks change; unpinned, it catches up. */
   togglePin() {
-    this.pinned = !this.pinned && this.isOpen();
+    this.plugin.coordinator.pin(!this.pinned);
+  }
+
+  /** Docked, it draws the coordinator's snapshot: nothing to show, it shows that. */
+  showSnapshot(snap) {
+    if (!this.dockView || !this.popupEl) return;
+    if (!snap.target) {
+      if (this.isOpen()) this.close();
+      else this.dockView.showOrigin('', false);
+      return;
+    }
+    this.showDocked(snap.leaf, snap.target);
+    this.dockView.showOrigin(originLabel(snap.origin), snap.pinned);
+  }
+
+  /** Asked for outright, from the Properties button: shown, and the coordinator told. */
+  showAsked(leaf, target) {
     if (!this.dockView) return;
-    this.dockView.showOrigin(this.isOpen() ? this.originOf(this.leaf, { file: this.file, folder: this.folder, card: this.card, picked: this.picked }) : '', this.pinned);
-    if (this.pinned) return;
-    const ws = this.app.workspace;
-    this.follow(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf);
+    this.plugin.coordinator.show(leaf, target);
+    this.showSnapshot(this.plugin.coordinator.snapshot());
   }
 
   /** Into the sidebar view: shown there from now on, starting with the note last worked in. */
@@ -815,15 +756,15 @@ export class PropertiesPanel extends Feature {
     this.popupEl.addClass('is-docked');
     view.contentEl.appendChild(this.popupEl);
     const ws = this.app.workspace;
-    this.follow(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf);
+    this.showSnapshot(this.plugin.coordinator.look(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf));
   }
 
   /** The sidebar view closed: a popup again. */
   undock(view) {
     if (this.dockView !== view) return;
-    this.pinned = false;
     this.close();
     this.dockView = null;
+    this.plugin.coordinator.pin(false);
     if (this.popupEl) {
       this.popupEl.removeClass('is-docked');
       document.body.appendChild(this.popupEl);

@@ -14,6 +14,7 @@ import { Files } from '../core/074-files.js';
 import { Reading } from '../core/075-reading.js';
 import { Selection } from '../core/076-selection.js';
 import { LibraryIndex } from '../core/077-library-index.js';
+import { WorkspaceCoordinator } from '../core/084-workspace-coordinator.js';
 import { Appearance } from '../core/085-appearance.js';
 import { ListKeys } from '../note/105-list-keys.js';
 import { SidebarDrop } from '../library/107-sidebar-drop.js';
@@ -71,6 +72,9 @@ export class DesignRedux extends Plugin {
     this.files = new Files(this);
     this.notes = new Notes(this);
     this.selection = new Selection(this);
+    // What the inspector is about: the tab worked in, a pick, a card, a map node; and the pin.
+    this.coordinator = new WorkspaceCoordinator(this);
+    this.coordinator.listen();
     // What every screen reads of the vault, kept while files and links stay as they are.
     this.libraryIndex = new LibraryIndex(this);
     this.reading = new Reading(this);

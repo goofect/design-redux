@@ -92,8 +92,10 @@ Coffee N' Christmas.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
   is where a note is edited: on a computer, docked in the right sidebar as
-  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. Docked, it
-  follows the open note and what's picked.
+  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. What the
+  inspector is about is `plugin.coordinator`'s to say (084): the tab worked
+  in, a pick, a canvas card, a map node, and the pin, kept as a snapshot
+  `{ target, leaf, origin, pinned }` the docked panel draws.
 - What's picked is `plugin.selection` (076), apart from what's open. In the
   browse view, rows and tiles go through `pickOrOpen`. While the inspector
   shows (`inspectorShowing`), a click picks and a double click or Enter

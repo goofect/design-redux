@@ -1002,3 +1002,18 @@ From the development specification (26 Oct 2026), after the first plan:
   module of its own that imports nothing (108), so whichever screen loads first can
   extend it. `src/main.js` imports the plugin and nothing else: no module has to be
   loaded first.
+
+## 42. The workspace coordinator
+
+- `WorkspaceCoordinator` (core 084, `plugin.coordinator`) decides what the inspector is
+  about. It follows tab changes, notes opening, picks (`plugin.selection`), a click or
+  key on a canvas (in every window) and deletes, and keeps the answer as a snapshot:
+  `{ target, leaf, origin, pinned }`, origin one of note, map, card, picked.
+- The pin is its: pinned, nothing but the Properties button or a delete changes the
+  target; unpinned, it looks again at the tab last worked in. The inspector's own tab,
+  and a tab with nothing to show, leave the target as it was.
+- The docked panel subscribes and draws (`showSnapshot`); it no longer listens to tabs,
+  picks or canvases itself. The floating panel on a phone keeps its own simple follow
+  of the open note. `targetOf` and `hostsPanel` moved to the coordinator.
+- Selection stays apart from what's open: a pick has no leaf; a tab's target has the
+  leaf it came from, which a map's node section reads.
