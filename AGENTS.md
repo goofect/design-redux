@@ -144,6 +144,9 @@ Coffee N' Christmas.
   - No throwaway probe scripts in real Obsidian when a simulation or an
     existing test can show it.
   - Don't read a large `src/` file whole: grep, then read the lines needed.
+  - For a task's whole context at once — owners, definitions, callers,
+    styles, rules to keep, suites — `node tools/context-pack.mjs --feature
+    WORDS` or `--files PATHS` (`--budget N` tokens, default 3000).
   - Look before reading, narrowest first: file names → `node tests/map.js
     [words]` (pieces, their features and suites) → `--who NAME` or `--deps
     PIECE` (where a name is declared and who uses it; `--who` gives the

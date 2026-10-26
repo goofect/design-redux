@@ -11,6 +11,7 @@
  *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
  *                                  no new use across the layers
  *   node tests/map.js --fix-imports  each module's import lines rewritten to what it uses
+ *   node tests/map.js --json       the index as JSON (pieces, what each declares and uses), for tools/
  *   node tests/map.js --internals  fails on more lines reaching into Obsidian's canvas than
  *                                  tests/snapshots/canvas-internals.json allows a module (--update rewrites it);
  *                                  the canvas adapter (core/079) is where they belong
@@ -535,8 +536,26 @@ if (args[0] === '--check') {
   process.exit(fresh.length || gone.length ? 1 : 0);
 }
 
-const words = args.map((a) => a.toLowerCase());
-pieces.forEach((p) => {
+if (args[0] === '--json') {
+  // The index as data, for tools that build on it (tools/context-pack.mjs) rather than parse src/ again.
+  const out = pieces.map((p) => ({
+    name: p.name,
+    area: p.area,
+    level: areaOf(p).level,
+    file: `src/${p.file}`,
+    heading: p.heading,
+    features: p.features,
+    suites: p.suites,
+    declared: p.declared,
+    functions: p.functions,
+    uses: Object.fromEntries(Object.keys(p.uses).sort().map((n) => [n, { from: homeOf.has(n) ? homeOf.get(n).name : null, lines: p.uses[n] }])),
+  }));
+  // Written without process.exit, which would cut a long write to a pipe short.
+  process.stdout.write(`${JSON.stringify({ areas: AREAS, pieces: out })}\n`);
+}
+
+const words = args[0] === '--json' ? null : args.map((a) => a.toLowerCase());
+if (words) pieces.forEach((p) => {
   const line = [p.name, p.heading, p.features.join(', '), p.suites.length ? `tests: ${p.suites.join(' ')}` : ''].filter(Boolean).join(' — ');
   if (words.every((w) => line.toLowerCase().includes(w))) console.log(line);
 });
