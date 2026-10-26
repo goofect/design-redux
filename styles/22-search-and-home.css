@@ -571,10 +571,6 @@ body.dr-single-area .status-bar {
   }
 }
 
-.dr-search-added {
-  margin-bottom: calc(var(--dr-u) * 6);
-}
-
 /* What notes say: found a moment after typing stops. */
 .dr-search-text {
   margin-top: calc(var(--dr-u) * 5);

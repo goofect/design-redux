@@ -709,10 +709,6 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 /* Suggestions ------------------------------------------------------------ */
 
-.dr-field {
-  position: relative;
-}
-
 .dr-suggest {
   position: fixed;
   z-index: var(--layer-menu);

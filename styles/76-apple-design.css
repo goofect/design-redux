@@ -202,7 +202,6 @@ body.dr-look-apple .dr-set-feature[data-feature='compat']{ --dr-tile: #8e8e93; }
 /* -- Popovers and panels ------------------------------------------------ */
 
 body.dr-look-apple .dr-props-popup,
-body.dr-look-apple .dr-panel-popover,
 body.dr-look-apple .popover.dr-fold-pop {
   border: none;
   border-radius: 12px;
