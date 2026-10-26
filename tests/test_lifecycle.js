@@ -550,6 +550,8 @@ const update = process.argv.includes('--update');
   const plugin = new DesignRedux(app, { id: 'design-redux', dir: '.obsidian/plugins/design-redux', version: '0.0.0' });
   const quietErrors = () => errors.splice(0).filter((e) => !/^Design Redux: could not back up/.test(e));
 
+  // The view types it registers, read while loaded: saved workspaces open tabs by them.
+  let viewTypes = [];
   await t('the whole plugin loads with no feature failing', async () => {
     plugin.noteError = (m) => errors.push(`noteError: ${m}`);
     await plugin.load();
@@ -558,6 +560,7 @@ const update = process.argv.includes('--update');
     await settle(120);
     assert.deepStrictEqual(quietErrors(), [], 'errors while loading');
     assert.ok(plugin.features.length > 35, `${plugin.features.length} features`);
+    viewTypes = Object.keys(app.views).sort();
   });
 
   let first;
@@ -613,11 +616,11 @@ const update = process.argv.includes('--update');
     });
   });
 
-  await t('command ids and setting keys are kept: hotkeys and saved settings hang on them', () => {
+  await t('command ids, setting keys and view types are kept: hotkeys, saved settings and saved tabs hang on them', () => {
     // The ids a load adds, from the features themselves.
     const ids = [];
     plugin.features.forEach((f) => f.commands().forEach((c) => ids.push(c.id)));
-    const now = { commands: ids.sort(), settings: Object.keys(plugin.settings).sort() };
+    const now = { commands: ids.sort(), settings: Object.keys(plugin.settings).sort(), views: viewTypes };
     if (update || !fs.existsSync(snapshotFile)) {
       fs.mkdirSync(path.dirname(snapshotFile), { recursive: true });
       fs.writeFileSync(snapshotFile, JSON.stringify(now, null, 1) + '\n');
@@ -627,7 +630,8 @@ const update = process.argv.includes('--update');
     const gone = (a, b) => a.filter((x) => !b.includes(x));
     assert.deepStrictEqual(gone(kept.commands, now.commands), [], 'command ids gone or renamed: hotkeys hang on them');
     assert.deepStrictEqual(gone(kept.settings, now.settings), [], 'setting keys gone: saved settings hang on them (migrate, then --update)');
-    const fresher = gone(now.commands, kept.commands).concat(gone(now.settings, kept.settings));
+    assert.deepStrictEqual(gone(kept.views || [], now.views), [], 'view types gone: tabs saved in a workspace open by them');
+    const fresher = gone(now.commands, kept.commands).concat(gone(now.settings, kept.settings), gone(now.views, kept.views || []));
     assert.deepStrictEqual(fresher, [], 'new ids or keys: record them with node tests/test_lifecycle.js --update');
   });
 

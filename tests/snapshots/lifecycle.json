@@ -411,5 +411,13 @@
   "workspaceMode",
   "workspaceModeLayout",
   "workspaceModes"
+ ],
+ "views": [
+  "design-redux-browse",
+  "design-redux-footnotes",
+  "design-redux-library",
+  "design-redux-mindmap",
+  "design-redux-outline",
+  "design-redux-properties"
  ]
 }

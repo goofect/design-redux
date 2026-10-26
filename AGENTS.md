@@ -33,7 +33,7 @@ Coffee N' Christmas.
   (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
   in for). `npm test`, or `node tests/run.js qol album` for just some.
-- `tests/test_lifecycle.js` checks command ids and setting keys against
+- `tests/test_lifecycle.js` checks command ids, setting keys and view types against
   `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
   shows them). After a deliberate change: `node tests/test_lifecycle.js
