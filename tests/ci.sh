@@ -16,6 +16,21 @@ echo "CI: ${state:-not started}"
 case "$state" in completed*) ;; *) echo "(still running; run this again)"; exit 2 ;; esac
 
 git fetch -q origin +ci-results:refs/remotes/origin/ci-results 'refs/tags/*:refs/tags/*'
+# The results branch holds one run's: if it isn't this commit's, say so, with
+# why the run gave none (a job that never started says why in its annotations).
+id=$(gh api "$runs" --jq '.workflow_runs[0].id')
+for_sha=$(git log -1 --format=%s origin/ci-results | sed -n 's/^Results for //p')
+case "$sha" in
+  "$for_sha"*) ;;
+  *)
+    echo "no results for this commit (the results branch has ${for_sha:-none}'s)"
+    for job in $(gh api "repos/goofect/design-redux/actions/runs/$id/jobs" --jq '.jobs[] | select(.conclusion != "success" and .conclusion != "skipped") | .id'); do
+      gh api "repos/goofect/design-redux/check-runs/$job/annotations" --jq '.[] | select(.annotation_level == "failure") | "  " + .message' 2>/dev/null | head -n 3
+    done
+    [ "$state" = "completed success" ] && exit 0
+    exit 1
+    ;;
+esac
 git show origin/ci-results:summary.txt | grep -E 'tests:'
 # The timings that matter, each Obsidian version, against the last run this
 # script saw (kept in logs/; the results branch holds only the latest run).
@@ -49,7 +64,6 @@ if [ -n "$tag" ]; then echo "released: $tag"; else echo "not released"; fi
 [ "$state" = "completed success" ] && exit 0
 # Which job failed: a release that failed after the tests passed usually lost
 # a race with a newer push, whose own run then releases this commit too.
-id=$(gh api "$runs" --jq '.workflow_runs[0].id')
 gh api "repos/goofect/design-redux/actions/runs/$id/jobs" --jq '[.jobs[] | "\(.name): \(.conclusion)"] | join(", ")'
 for f in simulation-tests.txt obsidian-tests.txt; do
   git show "origin/ci-results:$f" 2>/dev/null | grep -iE 'fail|error|✖|not ok' | head -n 25
