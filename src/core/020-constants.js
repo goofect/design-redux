@@ -242,6 +242,8 @@ export const DEFAULTS = {
   headerOrder: {},
   ribbonInMenu: true,
   propertiesDropdown: true,
+  // The note's own properties block hidden while the panel shows them: asked for, not by default, since 3.1.
+  hideNativeProperties: false,
   // The note panel's properties: 'compact', the main ones first and alone, or 'all'.
   panelPropertiesView: 'compact',
   // The main ones, by name.

@@ -276,6 +276,7 @@
   "headerOrder",
   "hideEmptyFolders",
   "hideFolderNotes",
+  "hideNativeProperties",
   "homePath",
   "homeShelves",
   "iconMode",

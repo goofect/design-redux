@@ -128,7 +128,13 @@ export class PropertiesPanel extends Feature {
       {
         key: 'propertiesDropdown',
         name: 'Properties button',
-        desc: 'Hide properties in the note and open them from a button in its header.',
+        desc: 'A button in each note’s header that shows its properties in the inspector, or as a sheet on a phone.',
+      },
+      {
+        key: 'hideNativeProperties',
+        name: 'Hide the note’s own properties',
+        desc: 'Obsidian’s properties block at the top of a note, hidden while the panel shows them.',
+        showIf: 'propertiesDropdown',
       },
       {
         key: 'panelPropertiesView',
@@ -382,6 +388,7 @@ export class PropertiesPanel extends Feature {
 
   enable() {
     document.body.addClass('dr-props-active');
+    document.body.toggleClass('dr-props-hide-native', !!this.settings.hideNativeProperties);
     // Only while the panel is actually listing them.
     document.body.toggleClass('dr-mentions-active', !!this.settings.showMentions);
     if (!this.popupEl || !this.popupEl.isConnected) {
@@ -393,6 +400,7 @@ export class PropertiesPanel extends Feature {
 
   disable() {
     document.body.removeClass('dr-props-active');
+    document.body.removeClass('dr-props-hide-native');
     document.body.removeClass('dr-mentions-active');
     this.close();
     if (this.popupEl) {

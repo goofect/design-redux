@@ -97,6 +97,7 @@ describe('Design Redux in Obsidian', function () {
       const plugin = app.plugins.plugins['design-redux'];
       plugin.settings.contextStrip = true;
       plugin.settings.lookScope = 'window';
+      plugin.settings.hideNativeProperties = true;
       await plugin.saveSettings();
     });
     await browser.pause(1500);
@@ -1658,7 +1659,7 @@ describe('Design Redux in Obsidian', function () {
       };
     });
     fs.writeFileSync(path.join(OUT, `${version}-properties-facts.json`), JSON.stringify(facts, null, 2));
-    // With the Properties panel on (the default), the note's own block is hidden.
+    // With the note's own properties hidden while the panel shows them (put on in before), the block is hidden.
     expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
   });
 
