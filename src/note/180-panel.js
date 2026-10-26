@@ -773,7 +773,8 @@ export class PropertiesPanel extends Feature {
 
   /** Docked, show `target` — unless it already is, so what's being typed in it stays. */
   showDocked(leaf, target) {
-    const same = target.folder ? target.folder === this.folder : !this.folder && ((target.file && target.file === this.file) || (target.card && target.card === this.card));
+    // A note picked is drawn with what the library can do with it, so it's not the same as that note open.
+    const same = target.folder ? target.folder === this.folder : !this.folder && !!target.picked === !!this.picked && ((target.file && target.file === this.file) || (target.card && target.card === this.card));
     if (this.isOpen() && same) {
       if (leaf) this.leaf = leaf;
       return;

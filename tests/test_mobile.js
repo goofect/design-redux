@@ -682,7 +682,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
     // Why it shows it, above it; pinned, it stays while notes open and picks change; unpinned, it catches up.
     const origin = () => view.contentEl.querySelector('.dr-panel-dock-origin').textContent;
+    // The note open, then picked: drawn again, as a pick.
+    coordinator.look({ view: new MarkdownView(b) });
+    let mounts = 0;
+    const mount = panel.mount;
+    panel.mount = function () { mounts++; mount.call(this); };
     panel.plugin.selection.set({ file: b });
+    assert.ok(mounts === 1 && panel.picked, 'redrawn as picked');
+    panel.mount = mount;
     assert.strictEqual(origin(), 'Picked in the library');
     panel.togglePin();
     assert.strictEqual(origin(), 'Pinned · Picked in the library');
