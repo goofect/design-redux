@@ -893,3 +893,13 @@ inspector, one selection.
 - Kept, for now: the menu filter (210) hides Obsidian's own Rename property,
   which bypasses `design-redux:property-renamed`, and there's no event for
   it to follow instead; one page (200) is already opt-in.
+
+## 32. Settings by task
+
+The settings tabs are General (covers, Home), Navigation (the library, the
+strip and modes), Notes (the note page, properties, relationships, study,
+writing, pages, quiet links, mind maps) and Advanced (graph, compatibility),
+in place of one a part of the code. Whole rows moved; keys, gears and links
+to a setting are as they were. The palette still names a command by its
+place (`FEATURE_PLACES`).
+

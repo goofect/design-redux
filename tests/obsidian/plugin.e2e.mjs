@@ -212,8 +212,8 @@ describe('Design Redux in Obsidian', function () {
       }
     }
     await shot('settings-appearance');
-    await clickText('.dr-settings .dr-set-tab', 'Library');
-    await shot('settings-library');
+    await clickText('.dr-settings .dr-set-tab', 'Navigation');
+    await shot('settings-navigation');
 
     // Searching shows the matching rows from every tab, named as ever, and nothing else.
     const found = await browser.execute(() => {
@@ -231,7 +231,7 @@ describe('Design Redux in Obsidian', function () {
     expect(found.names).toContain('Drop to set a cover');
     expect(found.names.length).toBe(found.seen);
     expect(found.seen).toBeLessThan(found.all);
-    expect(found.panes).toContain('library');
+    expect(found.panes).toContain('general');
     await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
     await browser.pause(500);
