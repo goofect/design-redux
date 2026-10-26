@@ -13,6 +13,7 @@ import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
 import { walk } from '../tree/400-tree-model.js';
 import { dueState, isDayKey } from '../tree/415-tree-tasks.js';
 import { dueLabel } from './450-mindmap-tasks.js';
+import { MindMapShowAs } from './451-mindmap-views.js';
 
 /** A property's value as a chip says it: a list joined, a link without its brackets. */
 function factValue(v) {
@@ -21,7 +22,7 @@ function factValue(v) {
   return plainMarkdownLine(one).slice(0, 40);
 }
 
-export class MindMapLinked {
+export class MindMapLinked extends MindMapShowAs {
   linkedOn() {
     return !this.plugin || this.plugin.settings.mindmapLinkedCards !== false;
   }

@@ -590,9 +590,9 @@ export class Knowledge extends Feature {
     return block;
   }
 
-  /** A note's relationships as a mind map of their own, opened (the mind maps' part, 441). */
+  /** A note's relationships as a mind map of their own, opened: the plugin asks the mind maps. */
   async map(file) {
-    const made = file && typeof this.mapAsMindMap === 'function' ? await this.mapAsMindMap(file) : undefined;
+    const made = file && typeof this.plugin.mapNoteRelationships === 'function' ? await this.plugin.mapNoteRelationships(file, this) : undefined;
     if (made === undefined) new Notice('Switch mind maps on in settings to map a note’s relationships.');
     return made || null;
   }

@@ -15,11 +15,12 @@ import { nodeById } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
 import { branchNoteText, nodesFromOutline, noteLinkOf, outlineFromMarkdown, outlineSize } from '../tree/408-tree-notes.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MindMapRelations } from './433-mindmap-relations.js';
 
 /* Nodes a note makes never pass this many: it was likely the wrong note. */
 export const NOTE_BRANCH_LIMIT = 200;
 
-export class MindMapNotes {
+export class MindMapNotes extends MindMapRelations {
   /** The note a node links to, or null. */
   linkedNote(n) {
     const link = n && noteLinkOf(n.text);

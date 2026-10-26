@@ -267,6 +267,18 @@ let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
 (async () => {
+  await t('the browse view’s parts each write a method once: a later one never quietly replaces an earlier', () => {
+    const seen = new Map();
+    for (let proto = R.BrowseView.prototype; proto && proto.constructor !== ItemView; proto = Object.getPrototypeOf(proto)) {
+      Object.getOwnPropertyNames(proto).forEach((name) => {
+        if (name === 'constructor') return;
+        assert.ok(!seen.has(name), `${name} is written in ${seen.get(name)} and ${proto.constructor.name}`);
+        seen.set(name, proto.constructor.name);
+      });
+    }
+    assert.ok(seen.size > 100);
+  });
+
   await t('an arrangement lists what it names in its order, and anything new after', () => {
     const items = ['a', 'b', 'c', 'd'].map((n) => ({ n }));
     const out = R.arrange(items, (x) => x.n, ['c', 'a', 'gone'], (rest) => rest.slice().reverse());

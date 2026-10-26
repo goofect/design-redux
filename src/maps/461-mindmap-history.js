@@ -12,6 +12,8 @@ import { Notice } from 'obsidian';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { adoptIds } from '../tree/400-tree-model.js';
 import { replaceMap } from '../tree/404-tree-ops.js';
+import { MindMapsLinks } from './459-mindmap-access.js';
+import { MindMapQuery } from './460-mindmap-query.js';
 
 export const MAP_HISTORY = 'mindmap-history.json';
 /* A save this long after the last one kept starts a new one. */
@@ -84,7 +86,7 @@ function changeAll(app, plugin, change) {
   return writing;
 }
 
-export class MindMapHistory {
+export class MindMapHistory extends MindMapQuery {
   historyOn() {
     return !!this.plugin && (this.plugin.settings.mindmapHistory === undefined ? 20 : Number(this.plugin.settings.mindmapHistory)) > 0;
   }
@@ -128,7 +130,7 @@ export class MindMapHistory {
   }
 }
 
-export class MindMapsHistory {
+export class MindMapsHistory extends MindMapsLinks {
   /** A map's history, moved with it to its new path. */
   moveHistory(from, to) {
     return changeAll(this.app, this.plugin, (all) => {

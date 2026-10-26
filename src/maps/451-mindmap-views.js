@@ -17,7 +17,7 @@ import { MAP_VIEWS, mapViewOf, setMapView } from '../tree/406-tree-layout-block.
 import { dayKey, dueState, parseDayInput, taskOf, taskText } from '../tree/415-tree-tasks.js';
 import { kanbanColumns, moveCard, outlineRows, tableColumns, timelineDays } from '../tree/416-tree-views.js';
 import { nodeLabel, nodeParts } from './423-mindmap-scene.js';
-import { dueLabel, TASK_STATUSES } from './450-mindmap-tasks.js';
+import { dueLabel, MindMapTasks, TASK_STATUSES } from './450-mindmap-tasks.js';
 
 /* The ways a map can be shown, as "Show as" lists them. */
 export const VIEW_CHOICES = [
@@ -29,7 +29,7 @@ export const VIEW_CHOICES = [
   ['table', 'Table', 'table'],
 ];
 
-export class MindMapShowAs {
+export class MindMapShowAs extends MindMapTasks {
   viewsOn() {
     return !this.plugin || this.plugin.settings.mindmapOtherViews !== false;
   }

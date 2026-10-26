@@ -16,12 +16,13 @@ import { mapProblems } from '../tree/409-tree-check.js';
 import { compareMapBranches, compareMaps } from '../tree/410-tree-compare.js';
 import { FILE_FORMATS, MINDMAP_EXTENSION } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MindMapNotes } from './434-mindmap-notes.js';
 
 export const MAP_SNAPSHOTS = 'mindmap-snapshots.json';
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-export class MindMapCheck {
+export class MindMapCheck extends MindMapNotes {
   /** What may be wrong with the map, listed. */
   checkMap() {
     if (!this.model) return;

@@ -17,7 +17,7 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 
  src/core/     constants; helpers (art, colours 031, properties 045, text 047,      19 modules  4,622 lines
                sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
-               Selection 076; actions 078; Feature and mixInto 080; appearance
+               Selection 076; actions 078; Feature 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
  src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
                album features, note page, study, knowledge, library checks
@@ -431,8 +431,8 @@ and the pairs of pieces that use each other from 14 to 12.
   - `121-browse-sorting`.
   - `122-browse-editing`, which includes pins in your own order.
   - `123-browse-rows`: the list, shelves and cards.
-  - These are methods of `BrowseView`, put on it by `mixInto` (in `080`). It refuses a name
-    written twice. The methods that call `super` stay in the class.
+  - These are parts of `BrowseView`, which extends them (since §41, by `extends`; before,
+    `mixInto` put them on).
 - **The bulk dialogs are in pieces by family:** `300` keeps `BulkModal` and the "where"
   conditions; then `301` properties, `302` tags and values, `303` types and missing values,
   and `304` the property list and the tools window.
@@ -986,3 +986,13 @@ From the development specification (26 Oct 2026), after the first plan:
   Maps, Advanced. Rows moved whole; a link to a look setting opens
   Appearance. §32's four tabs were never released.
 
+## 41. No more mixInto
+
+- A class in parts is now a chain of `extends`: `BrowseSorting` (121) extends `ItemView`,
+  each later part the one before, and `BrowseView` the last (125). `MindMaps` and
+  `MindMapView` likewise over the maps' parts, `Feature` and `TextFileView` at the bottom;
+  the modules that hold a part of each (439, 453, 459, 461) sit in both chains.
+- Nothing patches a prototype any more. A test walks each chain and refuses a method
+  written in two links, the check `mixInto` made as it ran.
+- `KnowledgeMindMap` is gone: `Knowledge.map` asks `plugin.mapNoteRelationships`, which
+  passes to `MindMaps`, so the library area still never imports the maps.

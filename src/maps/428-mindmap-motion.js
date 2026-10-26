@@ -10,6 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { nodeById } from '../tree/400-tree-model.js';
+import { MindMapSaving } from './427-mindmap-save.js';
 
 export const MAP_GLIDE_MS = 240;
 
@@ -47,7 +48,7 @@ export function glideBoxes(from, to, t) {
   return { boxes, bounds: to.bounds };
 }
 
-export class MindMapMotion {
+export class MindMapMotion extends MindMapSaving {
   /** Nodes glide from `before` to the map's new scene — or, with no `before`, are simply put there. */
   glideFrom(before) {
     this.stopGlide();

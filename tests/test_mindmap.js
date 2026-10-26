@@ -71,7 +71,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_mindmap_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, mapHandlers, mapCommands, actionCommands, setMindMapContext, composedLayout, orderedBranch, siblingOrder, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath, setMapTheme, nodeShape };\n');
+  '\nmodule.exports.__test = { DesignRedux, MindMapView, MindMaps, MINDMAP_VIEW, isMindMapNote, keepAsText, keptAsText, takeOverLeaves, layoutScene, estimateSize, nodeLabel, DEFAULTS, dropTarget, mapHandlers, mapCommands, actionCommands, setMindMapContext, composedLayout, orderedBranch, siblingOrder, modelFromData, arrowLinks, BRANCH_LAYOUTS, setBranchLayout, setNudge, nodeNudge, setAttr, setText, addChild, setLegendName, setSavedView, setMapLayout, SETTINGS_MIGRATIONS, branchLayoutOf, setRelationMeaning, relationTypes, statementsMarkdown, nodeParts, branchNoteText, relinkText, mapProblems, compareMaps, compareMapBranches, parseOutline, nodeById, mapPresentation, Notes, albumEntry, moveNode, removeNode, mapFromCanvas, canvasFromMap, writeOutline, writeMindmapJson, parseMindmapJson, layoutScene, Knowledge, dayKey, setTaskDone, NodeSection, linkingNotes, MapEmbed, BUILT_IN_TEMPLATES, fillTemplate, svgOfMap, pdfFromJpeg, opmlFromMap, nodeSaying, parseQuery, withHistory, edgePath, setMapTheme, nodeShape };\n');
 const R = require(tmp).__test;
 // The commands kept from canvas maps, by id, as the mind map runs them.
 R.MINDMAP_HANDLERS = new Map(Object.entries(R.mapHandlers()));
@@ -109,6 +109,19 @@ fs.unlinkSync(tmp);
 
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
+
+// Every method name along a class's chain of parts, up to (not into) the named base: each written once.
+const chainNames = (Cls, base) => {
+  const seen = new Map();
+  for (let proto = Cls.prototype; proto && proto.constructor.name !== base; proto = Object.getPrototypeOf(proto)) {
+    Object.getOwnPropertyNames(proto).forEach((name) => {
+      if (name === 'constructor') return;
+      assert.ok(!seen.has(name), `${name} is written in ${seen.get(name)} and ${proto.constructor.name}`);
+      seen.set(name, proto.constructor.name);
+    });
+  }
+  return Array.from(seen.keys());
+};
 const settle = (ms = 5) => new Promise((r) => setTimeout(r, ms));
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 const pointer = (el, type, x, y) => {
@@ -136,12 +149,17 @@ const shown = (view) => Array.from(view.contentEl.querySelectorAll('.dr-mindmap-
 const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- [[Competitor notes]]\n\t\t- Interview script\n\t- Build\n\t\t- API\n\t\t- UI\n\t- Ship\n';
 
 (async () => {
+  await t('the mind maps’ parts each write a method once, the view’s and the feature’s', () => {
+    assert.ok(chainNames(R.MindMapView, 'TextFileView').length > 200);
+    assert.ok(chainNames(R.MindMaps, 'Feature').length > 40);
+  });
+
   await t('the view’s parts write none of the names Obsidian calls on a view itself', async () => {
     // Obsidian calls these on every view; one written over (load, as it was once) leaves the tab empty.
     const OBSIDIAN = ['load', 'onload', 'unload', 'onunload', 'addChild', 'removeChild', 'register', 'registerEvent', 'registerDomEvent', 'registerInterval',
       'getState', 'setState', 'getEphemeralState', 'setEphemeralState', 'onResize', 'onPaneMenu', 'onHeaderMenu', 'close', 'open', 'handleDrop', 'onFileOpen',
       'loadFile', 'onLoadFile', 'onUnloadFile', 'onRename', 'save', 'requestSave', 'canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose'];
-    const own = Object.getOwnPropertyNames(R.MindMapView.prototype);
+    const own = chainNames(R.MindMapView, 'TextFileView');
     const meant = ['canAcceptExtension', 'getViewType', 'getDisplayText', 'getIcon', 'getViewData', 'setViewData', 'clear', 'onOpen', 'onClose', 'onResize', 'setEphemeralState'];
     assert.deepStrictEqual(own.filter((n) => OBSIDIAN.includes(n) && !meant.includes(n)), []);
   });
@@ -894,15 +912,16 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.strictEqual(tagMap.relations.length, 1);
     // A note's relationships: a mind map, a branch for each kind.
     const statute = files[1];
-    const knowledge = { plugin: { feature: () => maps }, groups: () => [{ label: 'Sits under', items: [{ file: files[0] }] }, { label: 'Cites', items: [{ file: files[3] }, { file: files[4] }] }] };
+    const host = Object.assign(Object.create(R.DesignRedux.prototype), { features: [maps] });
+    const knowledge = { plugin: host, groups: () => [{ label: 'Sits under', items: [{ file: files[0] }] }, { label: 'Cites', items: [{ file: files[3] }, { file: files[4] }] }] };
     Object.setPrototypeOf(knowledge, R.Knowledge.prototype);
-    await knowledge.mapAsMindMap(statute);
+    await knowledge.map(statute);
     const [relPath, relText] = created[2];
     assert.strictEqual(relPath, 'Law/Statute relationships.md');
     assert.ok(relText.startsWith('---\nmindmap: true\n---\n'));
     assert.deepStrictEqual(shape(R.parseOutline(relText).model.root), ['[[Statute]]', [['Sits under', [['[[Law]]', []]]], ['Cites', [['[[Appeal]]', []], ['[[Trial]]', []]]]]]);
     p.settings.mindmaps = false;
-    assert.strictEqual(knowledge.mapAsMindMap(statute), undefined, 'mind maps off: the canvas is made instead');
+    assert.strictEqual(host.mapNoteRelationships(statute, knowledge), undefined, 'mind maps off: the canvas is made instead');
     p.settings.mindmaps = true;
     delete obsidian.getAllTags;
   });

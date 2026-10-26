@@ -13,12 +13,13 @@ import { getAllTags, Notice, TFile, TFolder } from 'obsidian';
 import { byName, sortByOrder } from '../core/030-helpers-art.js';
 import { noteNameFrom } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { Feature } from '../core/080-feature.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { writeMindmapJson } from '../tree/402-tree-json.js';
 import { VAULT_MAP_LIMIT, vaultItemCount, vaultMapModel } from '../tree/411-tree-vault-map.js';
 import { MINDMAP_EXTENSION } from './421-mindmap-view.js';
 
-export class MindMapVaultMap {
+export class MindMapVaultMap extends Feature {
   /** A note as a node: a link to it, as written from the map. */
   noteItem(file, from) {
     const cache = this.app.metadataCache;

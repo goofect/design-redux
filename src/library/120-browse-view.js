@@ -6,26 +6,21 @@
 /* note as a table.                                                    */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
+import { Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_HOVER_SOURCE, TAG_KEYS } from '../core/020-constants.js';
 import { blankLook, byName, canStep, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
-import { mixInto } from '../core/080-feature.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
-import { BrowseSorting } from './121-browse-sorting.js';
-import { BrowseEditing, RowValues } from './122-browse-editing.js';
-import { BrowseRows } from './123-browse-rows.js';
-import { BrowsePreview } from './124-browse-preview.js';
 import { BrowseAlbum } from './125-browse-album.js';
 import { ContextStrip } from '../tools/190-strip.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
-export class BrowseView extends ItemView {
+export class BrowseView extends BrowseAlbum {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -858,12 +853,3 @@ ACTION_CONTEXTS.browse = (app) => {
   const folder = view && view.mode === 'folder' ? view.folder() : null;
   return folder ? { folder, view, from: 'palette' } : null;
 };
-
-// Its parts, each written in a module of its own, put on here where the class is:
-// what it is made of, read in one place.
-mixInto(BrowseView, BrowseSorting);
-mixInto(BrowseView, BrowseEditing);
-mixInto(BrowseView, RowValues);
-mixInto(BrowseView, BrowseRows);
-mixInto(BrowseView, BrowsePreview);
-mixInto(BrowseView, BrowseAlbum);

@@ -267,6 +267,13 @@ export class DesignRedux extends Plugin {
     return this.files.newCanvas(folder);
   }
 
+  /** A note's relationships, from Knowledge, as a mind map: undefined where mind maps are off, so a canvas is made instead. */
+  mapNoteRelationships(file, knowledge) {
+    const maps = this.feature(MindMaps);
+    if (!maps || maps.enabled === false) return undefined;
+    return maps.mapNoteRelationships(file, knowledge);
+  }
+
   /** A new mind map in the folder, where mind maps are on. */
   newMindMap(folder) {
     const maps = this.feature(MindMaps);

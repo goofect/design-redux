@@ -16,6 +16,7 @@ import { opmlFromMap, xmlAttr } from '../tree/419-tree-export.js';
 import { MINDMAP_VIEW } from './421-mindmap-view.js';
 import { showFileAs } from './422-mindmap-takeover.js';
 import { CHAR_WIDTH, colourKey, edgePath, estimateSize, layoutScene, NODE_LINE, NODE_PAD, nodeLabel } from './423-mindmap-scene.js';
+import { MindMapsTemplates } from './457-mindmap-templates.js';
 
 /* The six colours as a picture shows them, away from the theme. */
 const PICTURE_COLOURS = { 1: '#e93147', 2: '#ec7500', 3: '#e0ac00', 4: '#08b94e', 5: '#00bfbc', 6: '#7852ee' };
@@ -123,7 +124,7 @@ export function pdfFromJpeg(jpeg, width, height) {
   return out;
 }
 
-export class MindMapsImportExport {
+export class MindMapsImportExport extends MindMapsTemplates {
   /** A map made beside a file, from a model, and opened. */
   async writeImported(model, from, name) {
     const folder = from && from.parent ? from.parent : this.app.vault.getRoot();

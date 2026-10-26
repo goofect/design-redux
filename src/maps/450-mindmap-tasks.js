@@ -15,6 +15,7 @@ import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { dayKey, dueState, openTaskSet, parseDayInput, setTaskDone, statusesOf, taskOf, taskProgress, toggleTask, untask } from '../tree/415-tree-tasks.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MindMapFocus } from './441-mindmap-focus.js';
 
 /* Statuses offered before a map has any of its own. */
 export const TASK_STATUSES = ['To do', 'Doing', 'Waiting', 'Done'];
@@ -31,7 +32,7 @@ export function dueLabel(due, today) {
   return d.toLocaleDateString(undefined, opts);
 }
 
-export class MindMapTasks {
+export class MindMapTasks extends MindMapFocus {
   tasksOn() {
     return !this.plugin || this.plugin.settings.mindmapTasks !== false;
   }

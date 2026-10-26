@@ -5,17 +5,18 @@
 /* what's picked here. While it shows, a click picks and a double     */
 /* click or Enter opens. What the library knows of a pick, it draws:  */
 /* an album in brief (what it is, where it is) and, for a note, Open, */
-/* Reveal in collection and More. Methods of BrowseView, put on by    */
-/* mixInto.                                                           */
+/* Reveal in collection and More. A part of BrowseView, which extends */
+/* it through 125.                                                    */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon } from 'obsidian';
 import { albumKindOf, drawFolderArt } from '../core/030-helpers-art.js';
 import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
+import { BrowseRows } from './123-browse-rows.js';
 import { AlbumStructure } from './257-album-structure.js';
 
-export class BrowsePreview {
+export class BrowsePreview extends BrowseRows {
   /** The inspector's offered and in sight, and there's room: not on a phone. */
   previewOn() {
     return this.plugin.settings.inspector !== false && !Platform.isPhone && inspectorShowing(this.app);

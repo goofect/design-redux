@@ -14,8 +14,9 @@ import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
 import { newId, nodeById } from '../tree/400-tree-model.js';
 import { branchLines } from '../tree/401-tree-outline.js';
 import { applyPatch, pasteLines, removeNode } from '../tree/404-tree-ops.js';
+import { MindMapFilter } from './454-mindmap-filter.js';
 
-export class MindMapDrop {
+export class MindMapDrop extends MindMapFilter {
   /** Listening for copy, cut and drops, once a view. */
   listenForDrops() {
     const root = this.root;

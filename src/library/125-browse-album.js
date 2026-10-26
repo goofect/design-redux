@@ -3,7 +3,7 @@
 /*                                                                     */
 /* How an album is laid out: its head, discs of notes, the limits and  */
 /* "more" rows, PDFs, and where things can be dropped. A part of the   */
-/* view, put on it by mixInto.                                         */
+/* view: BrowseView extends it.                                        */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFile, TFolder } from 'obsidian';
@@ -13,10 +13,11 @@ import { nestByProperty } from '../core/045-helpers-properties.js';
 import { readingOf } from '../core/075-reading.js';
 import { studyReady } from '../core/081-study.js';
 import { ROOT_MODES } from './119-browse-registry.js';
+import { BrowsePreview } from './124-browse-preview.js';
 import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
 import { AlbumStructure } from './257-album-structure.js';
 
-export class BrowseAlbum {
+export class BrowseAlbum extends BrowsePreview {
   /** Title and search, for the screens with no folder behind them. */
   renderTitleBar(root, title) {
     const bar = root.createDiv({ cls: 'dr-detail-bar' });

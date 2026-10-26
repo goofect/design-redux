@@ -16,8 +16,9 @@ import { statusesOf } from '../tree/415-tree-tasks.js';
 import { filtering, filterSet, mapTags, pathTo } from '../tree/417-tree-filter.js';
 import { colourKey, nodeLabel } from './423-mindmap-scene.js';
 import { colourName } from './431-mindmap-legend.js';
+import { MindMapNodePanel } from './453-mindmap-node-panel.js';
 
-export class MindMapFilter {
+export class MindMapFilter extends MindMapNodePanel {
   filtersOn() {
     return !this.plugin || this.plugin.settings.mindmapFilters !== false;
   }

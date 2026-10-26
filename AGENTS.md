@@ -78,12 +78,13 @@ Coffee N' Christmas.
   `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
   `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
   and links stay as they are; read it rather than walking the vault.
-- A large class can be written in parts: a later piece exports `class Part {…}`,
-  and the class's own module imports it and, at its end, calls
-  `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120, its parts 121–125; MindMapView in 421 and MindMaps in 420, their parts
-  the rest of maps). No `super` in a part. A part for a class of a lower
-  area, which mustn't import it, puts itself on (KnowledgeMindMap, 441).
+- A large class can be written in parts, chained by `extends`: each part
+  extends the one before it, and the class extends the last (BrowseView in
+  120 over 121–125; MindMaps in 420 and MindMapView in 421 over the rest of
+  maps, in the order their `extends` name). A part's methods are the class's;
+  a test refuses a name written in two parts, so none quietly replaces
+  another. A lower area that needs a higher one's work asks the plugin
+  (`plugin.mapNoteRelationships`), never patches a class.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).

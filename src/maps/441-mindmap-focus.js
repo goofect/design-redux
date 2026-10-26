@@ -10,15 +10,14 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MindMapAlbumView } from './439-mindmap-album.js';
 
-export class MindMapFocus {
+export class MindMapFocus extends MindMapAlbumView {
   /** A node found by name, and gone to. */
   findNode() {
     if (!this.model) return;
@@ -161,15 +160,3 @@ export class MindMapFocus {
     return ops.filter((o) => o.type === 'relation-add').length;
   }
 }
-
-/* Knowledge's map of a note's relationships, made as a mind map where mind maps are on. */
-class KnowledgeMindMap {
-  /** The map made (or null), or undefined where mind maps are off and a canvas should be made instead. */
-  mapAsMindMap(file) {
-    const maps = this.plugin && typeof this.plugin.feature === 'function' ? this.plugin.feature(MindMaps) : null;
-    if (!maps || maps.enabled === false || typeof maps.mapNoteRelationships !== 'function') return undefined;
-    return maps.mapNoteRelationships(file, this);
-  }
-}
-
-mixInto(Knowledge, KnowledgeMindMap);

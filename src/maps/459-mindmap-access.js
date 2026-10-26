@@ -15,6 +15,8 @@ import { applyPatch } from '../tree/404-tree-ops.js';
 import { MINDMAP_VIEW } from './421-mindmap-view.js';
 import { isMindMapNote, keptAsText } from './422-mindmap-takeover.js';
 import { nodeLabel, visibleChildren } from './423-mindmap-scene.js';
+import { MindMapDrop } from './456-mindmap-drop.js';
+import { MindMapsImportExport } from './458-mindmap-import-export.js';
 
 /** What a screen reader says of a node: its words, its level, its place among its siblings, folded or open. */
 export function nodeSaying(model, n) {
@@ -28,7 +30,7 @@ export function nodeSaying(model, n) {
   return parts.join(', ');
 }
 
-export class MindMapAccess {
+export class MindMapAccess extends MindMapDrop {
   /** The picked node told to a screen reader: the tree's active item, and the live line. */
   announce() {
     if (!this.root) return;
@@ -90,7 +92,7 @@ export class MindMapAccess {
   }
 }
 
-export class MindMapsLinks {
+export class MindMapsLinks extends MindMapsImportExport {
   /**
    * A map note opened from a link goes straight to the map, with where the
    * link points — [[Map#^id]] — handed over; opened as text first, the
