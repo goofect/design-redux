@@ -1095,6 +1095,8 @@ describe('Design Redux in Obsidian', function () {
       const view = () => app.workspace.getLeavesOfType('design-redux-mindmap').map((l) => l.view).find((v) => v.file && v.file.path === 'Sync album/Sync album map.md');
       const parentOf = (name) => {
         const v = view();
+        // On a slow start the view is there a moment before its map: not ready yet, rather than a throw.
+        if (!v || !v.model || !v.model.root) return undefined;
         let out = null;
         (function w(n, up) { if (n.text === `[[${name}]]`) out = up; n.children.forEach((c) => w(c, n.text)); })(v.model.root, null);
         return out;
