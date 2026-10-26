@@ -22,6 +22,7 @@ import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { loadStyles, rulesFor } from './css-owners.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
@@ -179,17 +180,6 @@ function callMap(index, pieces) {
   return { title: 'Caller/callee map', lines, trim: true };
 }
 
-let stylesCache = null;
-function styles() {
-  if (!stylesCache)
-    stylesCache = fs
-      .readdirSync(path.join(root, 'styles'))
-      .filter((f) => f.endsWith('.css'))
-      .sort()
-      .map((f) => ({ file: `styles/${f}`, lines: read(`styles/${f}`).split('\n') }));
-  return stylesCache;
-}
-
 function classesOf(text) {
   const found = new Set();
   // Class names the plugin writes: dr-…, in cls/addClass/toggleClass strings and selectors.
@@ -197,21 +187,23 @@ function classesOf(text) {
   return [...found].sort();
 }
 
+/** Each class with the parts that style it (tools/css-owners.mjs's index): file and lines, and how often it's only context. */
 function cssMap(pieces) {
+  const styles = loadStyles();
   const lines = [];
   const unstyled = [];
   const dynamic = pieces.some((p) => /dr-[a-z-]*\$\{/.test(p.text));
   const classes = [...new Set(pieces.flatMap((p) => classesOf(p.text)))].sort();
   classes.forEach((c) => {
-    const re = new RegExp(`\\.${c}(?![\\w-])`);
-    const where = [];
-    styles().forEach((s) => {
-      const hits = s.lines.map((l, i) => (re.test(l) ? i + 1 : 0)).filter(Boolean);
-      if (hits.length) where.push(`${s.file}:${hits.slice(0, 3).join(',')}${hits.length > 3 ? ` +${hits.length - 3}` : ''}`);
-    });
-    if (where.length) lines.push(`.${c} → ${where.join('; ')}`);
+    const { styling, context } = rulesFor(styles, c);
+    const byFile = new Map();
+    styling.forEach(({ rule, selector }) => byFile.set(rule.file, [...new Set((byFile.get(rule.file) || []).concat(selector.line))]));
+    const where = [...byFile.entries()].map(([f, ls]) => `${f}:${ls.slice(0, 3).join(',')}${ls.length > 3 ? ` +${ls.length - 3}` : ''}`);
+    if (where.length) lines.push(`.${c} → ${where.join('; ')}${context.length ? ` (context in ${context.length})` : ''}`);
+    else if (context.length) lines.push(`.${c} → only as context, in ${context.length} selectors`);
     else unstyled.push(c);
   });
+  lines.push('(node tools/css-owners.mjs --selector .CLASS --explain says which rule wins each property)');
   return { section: { title: 'CSS map', lines, trim: true }, unstyled, dynamic };
 }
 

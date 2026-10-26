@@ -26,6 +26,10 @@ Coffee N' Christmas.
   `styles.css` (built, not committed; never edit it: edit `styles/`). The
   order is the cascade: a new rule goes in the part it dresses, after what it
   overrides. The map at the top of `04-foundation.css` says what each part is.
+  Who styles a class, and which rule wins each property: `node tools/css-owners.mjs
+  --selector .dr-lib-row --explain`; a component's classes and the code that
+  makes them: `--component bulk-bar` (or a source name, `renderBulkBar`);
+  `--report repeated-overrides|brittle|effects|tokens|hardcoded [--since REF]`.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
   line releases that version instead (only when the author asks).
