@@ -1415,7 +1415,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result.after.cls).toBe(false);
   });
 
-  it('previews a note picked in an album beside it, and opens it on a double click', async function () {
+  it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const find = (name) => plugin.features.find((f) => f.constructor.name === name);
@@ -1426,16 +1426,16 @@ describe('Design Redux in Obsidian', function () {
       const row = () => el().querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
       await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
       el().querySelector('.dr-preview-btn').click();
-      await until(() => !!el().querySelector('.dr-preview') && !!row());
-      const pane = el().querySelector('.dr-preview').getBoundingClientRect();
-      const list = el().querySelector('.view-content').getBoundingClientRect();
+      const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
+      await until(() => !!dock() && !!row());
       row().click();
-      const title = () => { const t = el().querySelector('.dr-preview-title'); return t ? t.textContent : ''; };
+      const title = () => { const t = dock() && dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Anarchy');
-      return { title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected'), beside: pane.left >= list.right - 1 && pane.width > 100 };
+      const actions = Array.from(dock().view.containerEl.querySelectorAll('.dr-detail-action')).map((b) => b.textContent.trim());
+      return { title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected'), right: dock().getRoot() === app.workspace.rightSplit, open: actions.includes('Open') };
     });
-    expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, beside: true });
-    await shot('preview');
+    expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true });
+    await shot('inspector-picked');
     const opened = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
@@ -1443,9 +1443,8 @@ describe('Design Redux in Obsidian', function () {
       row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
       const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
       await until(() => active() === 'Anarchy');
-      // Hidden again, for the tests after.
-      plugin.settings.libraryPreview = false;
-      await plugin.saveData(plugin.settings);
+      // Closed again, for the tests after.
+      app.workspace.detachLeavesOfType('design-redux-properties');
       plugin.selection.clear();
       return active();
     });
@@ -1624,7 +1623,7 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidianCommand('design-redux:open-properties');
     await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
     await shot('note-and-strip');
-    await browser.keys('Escape');
+    await browser.executeObsidian(({ app }) => app.workspace.detachLeavesOfType('design-redux-properties'));
 
     // What this version draws for the note's own properties, which the
     // Properties panel setting hides.
@@ -2365,6 +2364,21 @@ describe('Design Redux in Obsidian', function () {
     await obsidianPage.openFile('Inspector note.md');
     await browser.executeObsidianCommand('design-redux:open-properties');
     await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
+    // Docked in the right sidebar, it stays while another note opens, and follows it.
+    await obsidianPage.openFile('Politics/Balance of power.md');
+    const followed = await browser.executeObsidian(async ({ app }) => {
+      const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      const leaf = app.workspace.getLeavesOfType('design-redux-properties')[0];
+      const title = () => { const t = leaf && leaf.view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
+      await until(() => title() === 'Balance of power');
+      return { right: !!leaf && leaf.getRoot() === app.workspace.rightSplit, title: title() };
+    });
+    expect(followed).toEqual({ right: true, title: 'Balance of power' });
+    await obsidianPage.openFile('Inspector note.md');
+    await browser.waitUntil(() => browser.execute(() => {
+      const t = document.querySelector('.dr-panel-dock .dr-props-popup.is-open .dr-props-title');
+      return !!t && t.textContent === 'Inspector note';
+    }), { timeout: 5000 });
     await browser.waitUntil(() => browser.execute(() => document.querySelectorAll('.dr-props-popup.is-open .dr-row').length === 6), { timeout: 5000 });
     const look = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
@@ -2423,6 +2437,7 @@ describe('Design Redux in Obsidian', function () {
     await browser.keys('Escape');
     await browser.keys('Escape');
     await browser.executeObsidian(async ({ app }) => {
+      app.workspace.detachLeavesOfType('design-redux-properties');
       const f = app.vault.getFileByPath('Inspector note.md');
       if (f) await app.vault.delete(f);
     });

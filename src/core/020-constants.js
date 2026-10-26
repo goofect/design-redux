@@ -1,5 +1,7 @@
 export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
+// The note panel docked in the right sidebar. The old inspector's type (design-redux-inspector) is still closed on load.
+export const INSPECTOR_VIEW = 'design-redux-properties';
 
 /* Destinations that aren't a file or folder. */
 /* The browse screen each built-in entry opens, which is also how the

@@ -851,3 +851,24 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   and down join it only on touch; with a pointer, the grip and Alt+arrows.
   The heading's ··· holds Show all properties, Group properties and
   Property settings.
+
+## 30. The inspector: the note panel, docked
+
+From the Apple-inspired redesign proposal (26 Oct 2026), milestone 1: one
+inspector, one selection.
+
+- **The panel docks** (179 `PanelDockView`, `INSPECTOR_VIEW`
+  `design-redux-properties`). On a computer the Properties button opens it in
+  the right sidebar; on a phone it stays a sheet. It's the same panel moved
+  in, not a second one: its element is laid in the view, and while there it
+  isn't placed, nor closed by Escape or a click elsewhere.
+- **It follows** the note being worked in (not the sidebar itself, nor a pane
+  with no note) and `plugin.selection`: a note picked in the library, with
+  Open / Reveal in collection / More; an album, in brief, then its folder
+  note's properties. The library draws those (124 `inspectNoteActions`,
+  `previewAlbum`); the panel finds a page of the library by its view type.
+- **The library's preview pane is gone.** Its button and `open-inspector`
+  show or close the inspector; `inspectorShowing` (076) is what makes a click
+  pick. `libraryPreview` is kept, unused.
+- Next, per the proposal: canvas cards followed live, the popup's floating
+  code left to the phone, then the library's navigation.

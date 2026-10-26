@@ -83,12 +83,15 @@ Coffee N' Christmas.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited.
+  is where a note is edited: on a computer, docked in the right sidebar as
+  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. Docked, it
+  follows the open note and what's picked.
 - What's picked is `plugin.selection` (076), apart from what's open. In the
-  browse view, rows and tiles go through `pickOrOpen`. The browse view's
-  preview (124) shows what's picked, in brief: what it is, where it is,
-  Open / Reveal in album / More. While the preview shows, a click picks and
-  a double click or Enter opens. It doesn't repeat the panel.
+  browse view, rows and tiles go through `pickOrOpen`. While the inspector
+  shows (`inspectorShowing`), a click picks and a double click or Enter
+  opens. The browse view (124) draws what the library knows of a pick into
+  the inspector: an album in brief, and a picked note's Open / Reveal in
+  collection / More.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback. A plain canvas's go through the adapter (`core/079`:

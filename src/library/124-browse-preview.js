@@ -1,43 +1,45 @@
 /* ------------------------------------------------------------------ */
-/* Browse view: the preview                                           */
+/* Browse view: what it gives the inspector                           */
 /*                                                                    */
-/* Beside a list or a shelf of albums, when asked for: what's picked, */
-/* in brief — what it is, where it is, what can be done with it —     */
-/* without opening it. Editing stays the note panel's; this is for    */
-/* knowing a note or an album before going in. While it shows, a      */
-/* click picks and a double click or Enter opens. Methods of          */
-/* BrowseView, put on by mixInto.                                     */
+/* The inspector — the note panel docked in the right sidebar — shows */
+/* what's picked here. While it shows, a click picks and a double     */
+/* click or Enter opens. What the library knows of a pick, it draws:  */
+/* an album in brief (what it is, where it is) and, for a note, Open, */
+/* Reveal in collection and More. Methods of BrowseView, put on by    */
+/* mixInto.                                                           */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon } from 'obsidian';
-import { albumKindOf, drawFolderArt, drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
+import { albumKindOf, drawFolderArt } from '../core/030-helpers-art.js';
 import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
+import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowsePreview {
-  /** The preview's offered and shown — one choice for every page of the library — and there's room: not on a phone. */
+  /** The inspector's offered and in sight, and there's room: not on a phone. */
   previewOn() {
-    const settings = this.plugin.settings;
-    return settings.inspector !== false && !!settings.libraryPreview && !Platform.isPhone;
+    return this.plugin.settings.inspector !== false && !Platform.isPhone && inspectorShowing(this.app);
   }
 
   previewShowing() {
-    return this.previewOn() && !!this.previewEl && this.previewEl.isConnected;
+    return this.previewOn();
   }
 
-  /** A click picks while the preview shows — unless set always to open. */
+  /** A click picks while the inspector shows — unless set always to open. */
   clickPicks() {
     return this.plugin.settings.inspectorClick !== 'never' && this.previewShowing();
   }
 
-  /** The preview on or off, for every page of the library. Off, nothing stays picked. */
-  togglePreview() {
-    const settings = this.plugin.settings;
-    settings.libraryPreview = !settings.libraryPreview;
-    this.plugin.saveData(settings);
-    if (!settings.libraryPreview && this.plugin.selection) this.plugin.selection.clear();
+  /** The inspector shown or closed. Closed, nothing stays picked. */
+  async togglePreview() {
+    if (this.previewOn()) {
+      closeInspector(this.app);
+      if (this.plugin.selection) this.plugin.selection.clear();
+    } else {
+      await openInspector(this.app);
+    }
     if (typeof this.plugin.refreshBrowse === 'function') this.plugin.refreshBrowse();
     else this.render();
   }
@@ -46,30 +48,19 @@ export class BrowsePreview {
   renderPreviewToggle(bar) {
     if (Platform.isPhone || this.plugin.settings.inspector === false) return;
     const btn = bar.createDiv({ cls: 'clickable-icon dr-preview-btn' });
-    asButton(btn, this.previewOn() ? 'Hide the preview' : 'Preview what’s picked');
+    asButton(btn, this.previewOn() ? 'Hide the inspector' : 'Show what’s picked in the inspector');
     setIcon(btn, 'panel-right');
     btn.toggleClass('is-active', this.previewOn());
     onActivate(btn, () => this.togglePreview());
   }
 
-  /** The pane: drawn after each redraw of the page, and each change in what's picked. */
-  renderPreview() {
+  /** The button kept in step when the inspector opens or closes from elsewhere. */
+  markPreviewToggle() {
+    const btn = this.containerEl.querySelector('.dr-preview-btn');
+    if (!btn) return;
     const on = this.previewOn();
-    this.containerEl.toggleClass('has-preview', on);
-    if (!on) {
-      if (this.previewEl) this.previewEl.remove();
-      this.previewEl = null;
-      return;
-    }
-    if (!this.previewEl || !this.previewEl.isConnected) this.previewEl = this.containerEl.createDiv({ cls: 'dr-preview' });
-    const el = this.previewEl;
-    el.empty();
-    // Level with the page, below the tab's own header where there is one.
-    el.style.top = `${this.contentEl.offsetTop || 0}px`;
-    const item = this.plugin.selection ? this.plugin.selection.get() : null;
-    if (item && item.file) this.previewNote(el, item.file);
-    else if (item && item.folder) this.previewAlbum(el, item.folder);
-    else el.createDiv({ cls: 'dr-preview-empty', text: 'Click a note or a collection to see what it is here.' });
+    btn.toggleClass('is-active', on);
+    btn.setAttribute('aria-label', on ? 'Hide the inspector' : 'Show what’s picked in the inspector');
   }
 
   /** Name, kind, then a few facts, each label beside its value; one can lead somewhere. */
@@ -97,22 +88,10 @@ export class BrowsePreview {
     });
   }
 
-  previewNote(el, file) {
-    drawNoteArt(this.plugin, el.createDiv({ cls: 'dr-preview-art' }), file);
-    el.createDiv({ cls: 'dr-preview-title', text: file.basename });
-    const lead = file.extension === 'md' ? leadProperty(this.app, file, false) : file.extension.toUpperCase();
-    if (lead) el.createDiv({ cls: 'dr-preview-lead', text: lead });
+  /** A note picked here, in the inspector: Open, Reveal in collection, More. */
+  inspectNoteActions(el, file) {
     const album = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
     const here = !!album && this.mode === 'folder' && this.path === album.path;
-    const style = this.lengthStyle();
-    const lengths = this.plugin.lengths;
-    const length = style && lengths && lengths.words(file) !== null ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
-    this.previewFacts(el, [
-      ['In', album ? album.name : 'The vault', album && !here ? () => this.revealInAlbum(file) : null],
-      ['Created', this.relative(file.stat.ctime)],
-      ['Modified', this.relative(file.stat.mtime)],
-      ['Length', length],
-    ]);
     this.previewButtons(el, [
       ['book-open', 'Open', (evt) => this.openFile(file, evt)],
       album && !here ? ['folder-open', 'Reveal in collection', () => this.revealInAlbum(file)] : null,

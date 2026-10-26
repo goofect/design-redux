@@ -8,6 +8,7 @@ import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } 
 import { SORTS } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
+import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { Appearance } from '../core/085-appearance.js';
@@ -225,16 +226,16 @@ export class Library extends Feature {
       },
       {
         key: 'inspector',
-        name: 'Preview',
-        desc: 'A pane beside the library’s lists and covers, shown with the button by Sort and filter: what a picked note or collection is, where it is, and Open, Reveal in collection or More — without opening it. Editing stays in the note panel.',
+        name: 'Inspector',
+        desc: 'The button by Sort and filter shows the inspector in the right sidebar: the picked note’s or collection’s properties, to read and change, with Open, Reveal in collection and More — without opening it.',
         showIf: 'library',
       },
       {
         key: 'inspectorClick',
         type: 'dropdown',
         name: 'A single click in the library',
-        desc: 'While the preview shows, a click can pick what’s clicked, a double click or Enter opening it; or every click can open, as without it.',
-        options: { shown: 'Picks while the preview shows', never: 'Always opens' },
+        desc: 'While the inspector shows, a click can pick what’s clicked, a double click or Enter opening it; or every click can open, as without it.',
+        options: { shown: 'Picks while the inspector shows', never: 'Always opens' },
         showIf: 'inspector',
       },
       {
@@ -353,13 +354,16 @@ export class Library extends Feature {
     return [
       {
         id: 'open-inspector',
-        name: 'Show or hide the preview in the library',
+        name: 'Show or hide the inspector',
         icon: 'panel-right',
         when: () => this.enabled && this.settings.inspector !== false,
-        run: () => {
-          this.settings.libraryPreview = !this.settings.libraryPreview;
-          this.plugin.saveData(this.settings);
-          if (!this.settings.libraryPreview && this.plugin.selection) this.plugin.selection.clear();
+        run: async () => {
+          if (inspectorShowing(this.app)) {
+            closeInspector(this.app);
+            if (this.plugin.selection) this.plugin.selection.clear();
+          } else {
+            await openInspector(this.app);
+          }
           this.plugin.refreshBrowse();
         },
       },

@@ -132,11 +132,9 @@ export class BrowseView extends ItemView {
     this.render();
     // What's picked is marked wherever it's listed.
     if (this.plugin.selection) {
-      this.unpick = this.plugin.selection.onChange(() => {
-        this.markPicked();
-        this.renderPreview();
-      });
+      this.unpick = this.plugin.selection.onChange(() => this.markPicked());
     }
+    this.registerEvent(this.app.workspace.on('layout-change', () => this.markPreviewToggle()));
     fullNameOnHover(this, this.containerEl);
 
     // "/" goes to Find from anywhere on the page. The keydown covers
@@ -459,7 +457,6 @@ export class BrowseView extends ItemView {
       });
     }
     this.measureLater();
-    this.renderPreview();
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();

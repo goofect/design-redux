@@ -114,7 +114,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -580,6 +580,59 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     panel.place(hidden);
     assert.strictEqual(panel.popupEl.style.left, '8px', 'not across the phone');
     phone(false);
+  });
+
+  await t('docked in the sidebar, the panel stays open and follows the note and what the library picks', async () => {
+    document.body.innerHTML = '';
+    const a = new TFile('Theories/Realism.md');
+    const b = new TFile('Theories/Liberalism.md');
+    const c = new TFile('Theories/Deterrence.md');
+    const noteLeaf = { view: new MarkdownView(a) };
+    const panel = Object.create(T.PropertiesPanel.prototype);
+    Object.assign(panel, { sections: [], dockView: null, fitted: new WeakMap() });
+    panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
+    panel.mount = function () { this.popupEl.empty(); this.popupEl.createDiv({ text: this.file.path }); };
+    // Pressed on a computer, the Properties button docks it in the right sidebar.
+    const tabs = [];
+    const sidebarLeaf = {
+      setViewState: async () => {
+        sidebarLeaf.view = new T.PanelDockView(sidebarLeaf, panel);
+        tabs.push(sidebarLeaf);
+        await sidebarLeaf.view.onOpen();
+      },
+    };
+    panel.plugin = {
+      app: {
+        workspace: {
+          getMostRecentLeaf: () => noteLeaf,
+          revealLeaf() {},
+          getRightLeaf: () => sidebarLeaf,
+          getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
+        },
+      },
+      folderNote: () => null,
+    };
+    panel.toggle(noteLeaf, null);
+    await new Promise((r) => setTimeout(r));
+    const view = sidebarLeaf.view;
+    assert.ok(view.contentEl.contains(panel.popupEl), 'in the sidebar');
+    assert.ok(panel.isOpen() && panel.popupEl.textContent === a.path, 'the note last worked in');
+    // Another note opens: it follows; the sidebar's own leaf and an empty pane leave it be.
+    panel.follow({ view: new MarkdownView(b) });
+    assert.strictEqual(panel.popupEl.textContent, b.path);
+    panel.follow(view.leaf);
+    panel.follow({ view: {} });
+    assert.strictEqual(panel.popupEl.textContent, b.path);
+    // Picked in the library, without opening.
+    panel.showDocked(null, { file: c });
+    assert.strictEqual(panel.popupEl.textContent, c.path);
+    // An album picked: its name, at least, with no page of the library to tell more.
+    const album = new TFolder('Theories');
+    panel.showDocked(null, { folder: album });
+    assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
+    // Closed, it's a popup again.
+    panel.undock(view);
+    assert.ok(panel.popupEl.parentElement === document.body && !panel.isOpen() && !panel.popupEl.hasClass('is-docked'));
   });
 
   fs.unlinkSync(tmp);

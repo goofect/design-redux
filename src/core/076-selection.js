@@ -7,6 +7,8 @@
 /* the whole plugin, on `plugin.selection`.                           */
 /* ------------------------------------------------------------------ */
 
+import { INSPECTOR_VIEW } from './020-constants.js';
+
 export class Selection {
   constructor(plugin) {
     this.plugin = plugin;
@@ -53,4 +55,37 @@ export class Selection {
   followDelete(file) {
     if (this.holds(file)) this.clear();
   }
+}
+
+/**
+ * Whether the inspector — the note panel docked in the right sidebar —
+ * is in sight: open, its tab the one shown, the sidebar not folded.
+ */
+export function inspectorShowing(app) {
+  const ws = app && app.workspace;
+  if (!ws || typeof ws.getLeavesOfType !== 'function') return false;
+  const leaf = ws.getLeavesOfType(INSPECTOR_VIEW)[0];
+  const el = leaf && leaf.view ? leaf.view.containerEl : null;
+  if (!el || !el.isConnected) return false;
+  const split = ws.rightSplit;
+  if (split && split.collapsed && typeof leaf.getRoot === 'function' && leaf.getRoot() === split) return false;
+  return typeof el.isShown !== 'function' || el.isShown();
+}
+
+/** The inspector in the right sidebar, opened there if it isn't, and shown. */
+export async function openInspector(app) {
+  const ws = app.workspace;
+  let leaf = ws.getLeavesOfType(INSPECTOR_VIEW)[0];
+  if (!leaf) {
+    leaf = ws.getRightLeaf(false);
+    if (!leaf) return null;
+    await leaf.setViewState({ type: INSPECTOR_VIEW, active: false });
+  }
+  ws.revealLeaf(leaf);
+  return leaf;
+}
+
+/** The inspector's tab closed: the note panel floats again. */
+export function closeInspector(app) {
+  app.workspace.getLeavesOfType(INSPECTOR_VIEW).forEach((leaf) => leaf.detach());
 }

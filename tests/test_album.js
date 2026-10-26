@@ -1619,55 +1619,65 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-pick'), 'the large cards were turned off');
   });
 
-  await t('the preview: a note or album picked in the library, in brief, without opening it; a double click or Enter opens it', async () => {
+  await t('the inspector: while it shows, a click in the library picks and a double click or Enter opens; the library tells it what a pick is', async () => {
     const { view, plugin, app, opened } = setup();
     plugin.selection = new R.Selection(plugin);
-    view.unpick = plugin.selection.onChange(() => {
-      view.markPicked();
-      view.renderPreview();
+    view.unpick = plugin.selection.onChange(() => view.markPicked());
+    // The inspector's tab, in the right sidebar.
+    const tabs = [];
+    const tab = { view: { containerEl: document.body.createDiv() }, detach: () => tabs.splice(0) };
+    tab.setViewState = async () => tabs.push(tab);
+    Object.assign(app.workspace, {
+      getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
+      getRightLeaf: () => tab,
+      revealLeaf() {},
     });
     const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
     view.render();
-    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'hidden until asked for');
     click(row('Anarchy'));
     assert.strictEqual(opened.length, 1, 'without it, a click opens as it always has');
 
-    // Shown with the button by Sort and filter, for every page of the library.
+    // Shown with the button by Sort and filter.
     plugin.refreshBrowse = () => view.render();
     click(view.contentEl.querySelector('.dr-preview-btn'));
-    assert.strictEqual(plugin.settings.libraryPreview, true);
-    const pane = () => view.containerEl.querySelector('.dr-preview');
-    assert.ok(pane().querySelector('.dr-preview-empty'));
+    await new Promise((r) => setTimeout(r));
+    assert.strictEqual(tabs.length, 1, 'the inspector opened');
+    assert.ok(view.contentEl.querySelector('.dr-preview-btn').classList.contains('is-active'));
+    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'no pane of its own: the inspector shows it');
     click(row('Balance'));
     assert.strictEqual(opened.length, 1, 'while it shows, a click picks');
     assert.ok(row('Balance').classList.contains('is-selected'));
-    const facts = () => Array.from(pane().querySelectorAll('.dr-preview-label')).map((e) => e.textContent);
-    assert.strictEqual(pane().querySelector('.dr-preview-title').textContent, 'Balance');
-    assert.deepStrictEqual(facts(), ['In', 'Created', 'Modified']);
-    const buttons = () => Array.from(pane().querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
-    assert.deepStrictEqual(buttons(), ['Open', 'More'], 'already in its collection: nothing to reveal');
-    assert.ok(!pane().querySelector('.dr-props-popup, .dr-row'), 'no properties to edit: that’s the note panel’s');
+    assert.strictEqual(plugin.selection.get().file.basename, 'Balance');
 
     row('Balance').dispatchEvent(new window.MouseEvent('dblclick', { bubbles: true }));
     assert.strictEqual(opened[1].basename, 'Balance', 'a double click opens');
     row('Cooperation').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     assert.strictEqual(opened[2].basename, 'Cooperation', 'Enter opens');
 
+    // What a note picked here can do, in the inspector.
+    const buttons = (el) => Array.from(el.querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
+    let el = document.createElement('div');
+    view.inspectNoteActions(el, app.vault.getFileByPath('IR/Balance.md'));
+    assert.deepStrictEqual(buttons(el), ['Open', 'More'], 'already in its collection: nothing to reveal');
     // Elsewhere, it can take you to the note's album, still picked there.
     const went = [];
     view.leaf.setViewState = async (st) => went.push(st.state);
     await view.setState({ mode: 'recents' }, {});
-    plugin.selection.set({ file: app.vault.getFileByPath('IR/Theories/Realism.md') });
-    assert.deepStrictEqual(buttons(), ['Open', 'Reveal in collection', 'More']);
-    click(Array.from(pane().querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Reveal in collection'));
+    el = document.createElement('div');
+    view.inspectNoteActions(el, app.vault.getFileByPath('IR/Theories/Realism.md'));
+    assert.deepStrictEqual(buttons(el), ['Open', 'Reveal in collection', 'More']);
+    click(Array.from(el.querySelectorAll('.dr-detail-action')).find((b) => b.textContent === 'Reveal in collection'));
     assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR/Theories']);
+    assert.strictEqual(plugin.selection.get().file.basename, 'Realism');
 
     // An album: what kind, what it holds, where it is.
     await view.setState({ mode: 'folders' }, {});
     click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
-    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => pane().querySelector(sel).textContent), ['IR', 'Collection']);
-    assert.deepStrictEqual(facts(), ['Holds', 'In']);
+    el = document.createElement('div');
+    view.previewAlbum(el, app.vault.getFolderByPath('IR'));
+    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
+    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
 
     view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
     assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');
@@ -1675,14 +1685,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
     assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
 
-    // Set always to open; and hidden again, nothing stays picked.
+    // Set always to open; and closed again, nothing stays picked.
     plugin.settings.inspectorClick = 'never';
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     click(row('Deterrence'));
     assert.strictEqual(opened[3].basename, 'Deterrence', 'set always to open');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR/Theories') });
-    view.togglePreview();
-    assert.ok(!pane() && plugin.selection.get() === null);
+    await view.togglePreview();
+    assert.ok(tabs.length === 0 && plugin.selection.get() === null);
   });
 
   await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {
