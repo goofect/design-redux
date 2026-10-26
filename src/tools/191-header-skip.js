@@ -32,8 +32,11 @@ export class HeaderSkip extends Feature {
     this.clear();
   }
 
+  /** Every tab's, a window of its own's too. */
   clear() {
-    document.querySelectorAll('.dr-header-skip').forEach((el) => el.remove());
+    this.app.workspace.iterateAllLeaves((leaf) => {
+      if (leaf.containerEl) leaf.containerEl.querySelectorAll('.dr-header-skip').forEach((el) => el.remove());
+    });
     this.fitted = new WeakMap();
   }
 

@@ -561,6 +561,11 @@ const update = process.argv.includes('--update');
     assert.deepStrictEqual(quietErrors(), [], 'errors while loading');
     assert.ok(plugin.features.length > 35, `${plugin.features.length} features`);
     viewTypes = Object.keys(app.views).sort();
+    // A window of its own opened: what the plugin listens to there, it takes away on unloading too.
+    const popout = win.document.implementation.createHTMLDocument('popout');
+    lasting.add(popout);
+    app.workspace.trigger('window-open', { doc: popout }, { document: popout });
+    assert.ok((live.listeners.get(popout) || []).length > 0, 'a canvas in another window is listened to');
   });
 
   let first;

@@ -312,8 +312,18 @@ export class PropertiesPanel extends Feature {
         if (this.dockView) this.follow(leaf, true);
       }, 0);
     };
-    this.plugin.registerDomEvent(document, 'pointerup', onCanvas);
-    this.plugin.registerDomEvent(document, 'keyup', onCanvas);
+    const listen = (doc) => {
+      this.plugin.registerDomEvent(doc, 'pointerup', onCanvas);
+      this.plugin.registerDomEvent(doc, 'keyup', onCanvas);
+    };
+    listen(document);
+    // A canvas in a window of its own is listened to there.
+    this.plugin.registerEvent(
+      this.app.workspace.on('window-open', (workspaceWindow, win) => {
+        const doc = (win && win.document) || (workspaceWindow && workspaceWindow.doc);
+        if (doc && doc !== document) listen(doc);
+      })
+    );
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
     this.plugin.registerEvent(
       this.app.workspace.on('design-redux:panel-changed', (file) => {

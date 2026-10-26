@@ -956,3 +956,10 @@ existing install's scope. The Apple look's own rules only reach the plugin's
 elements; notes were the one thing the scope decides. The Standard preset no
 longer turns the strip on, and settings search knows 3.0's Tools tab.
 
+## 38. Windows of their own
+
+The docked inspector follows a card picked on a canvas in any window: its
+listeners go on each window's document as it opens (`window-open`), and come
+off on unloading (the lifecycle test opens one). The header's « » are taken
+off every tab's header, a pop-out's too, rather than the main document's.
+
