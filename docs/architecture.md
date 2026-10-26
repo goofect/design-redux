@@ -903,3 +903,15 @@ in place of one a part of the code. Whole rows moved; keys, gears and links
 to a setting are as they were. The palette still names a command by its
 place (`FEATURE_PLACES`).
 
+## 33. The stylesheet in parts
+
+`styles.css` is built: `styles/NN-name.css`, 42 parts cut along the map's
+headings, joined in order by `build.mjs`. The join is the old file byte for
+byte (but for the map's note on it), so nothing changes on screen. It isn't
+committed, as `main.js` isn't; releases carry it.
+
+Not yet done, and why: the proposal splits by tokens, components and
+surfaces, but the parts interleave — the Apple look's overrides sit at the
+end, after what they override — so moving a rule can change the cascade.
+That wants screenshots across the looks before and after, part by part.
+

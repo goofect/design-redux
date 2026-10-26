@@ -2,7 +2,7 @@
 # (oldest supported version and latest). Results, screenshots and a
 # compatibility report go to the ci-results branch, where they can be read
 # without opening Actions. On the default branch, if the simulation tests pass
-# and src/ or styles.css changed since the last release, main.js is built and
+# and src/ or styles/ changed since the last release, main.js and styles.css are built and
 # a new release is published for BRAT: the patch version goes up by one.
 # A commit on the default branch with a "Release-As: X.Y.Z" line releases
 # that version instead (for a minor or major step), even with no change to src/.
@@ -151,7 +151,7 @@ jobs:
           if [ -n "$want" ] && ! git rev-parse -q --verify "refs/tags/$want" >/dev/null; then
             echo "want=$want" >> "$GITHUB_OUTPUT"
             echo "release=yes" >> "$GITHUB_OUTPUT"
-          elif [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- src styles.css; then
+          elif [ -z "$last" ] || ! git diff --quiet "$last" HEAD -- src styles styles.css; then
             echo "release=yes" >> "$GITHUB_OUTPUT"
           fi
 
@@ -193,7 +193,7 @@ jobs:
         if: steps.changed.outputs.release == 'yes'
         run: npm ci
 
-      - name: Build main.js
+      - name: Build main.js and styles.css
         if: steps.changed.outputs.release == 'yes'
         run: node build.mjs
 

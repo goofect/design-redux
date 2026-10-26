@@ -1,0 +1,174 @@
+/* Arranging by drag ------------------------------------------------------------
+ *
+ * A line shows where a dragged note or pin will land, before or after
+ * the one it's over.
+ */
+
+.dr-track.is-drop-before {
+  box-shadow: inset 0 2px 0 var(--interactive-accent);
+}
+
+.dr-track.is-drop-after {
+  box-shadow: inset 0 -2px 0 var(--interactive-accent);
+}
+
+.dr-card.is-drop-before {
+  box-shadow: -3px 0 0 var(--interactive-accent);
+}
+
+.dr-card.is-drop-after {
+  box-shadow: 3px 0 0 var(--interactive-accent);
+}
+
+.dr-card.is-dragging {
+  opacity: 0.4;
+}
+
+/* Editing an album ---------------------------------------------------------------
+ *
+ * The page stays itself, with its names turned into fields: the title,
+ * each note, each subfolder's heading. A handle to drag by leads each
+ * row, and moving and deleting sit at its end.
+ */
+
+.dr-detail.is-editing .dr-detail-title.dr-edit-name {
+  width: 100%;
+  height: auto;
+  margin: calc(var(--dr-u) * -1) 0 0 calc(var(--dr-u) * -2);
+  padding: 2px var(--dr-space-2);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-md);
+  background-color: var(--background-modifier-form-field, transparent);
+  font-family: inherit;
+}
+
+.dr-art-tools {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: var(--dr-space-2);
+}
+
+.dr-art-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--dr-radius-pill);
+  background-color: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(var(--dr-glass-blur-soft));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur-soft));
+}
+
+.dr-art-edit .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.dr-detail-action.is-primary {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent, #fff);
+}
+
+.dr-track.is-editing {
+  gap: calc(var(--dr-u) * 2.5);
+  padding-top: var(--dr-space-2);
+  padding-bottom: var(--dr-space-2);
+  cursor: default;
+}
+
+.dr-track.is-editing .dr-edit-name,
+.dr-disc.is-editing .dr-edit-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 32px;
+  padding: 3px var(--dr-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--dr-radius-sm);
+  background-color: transparent;
+  font-family: inherit;
+}
+
+.dr-track.is-editing .dr-edit-name:focus,
+.dr-disc.is-editing .dr-edit-name:focus {
+  border-color: var(--background-modifier-border-focus);
+  background-color: var(--background-modifier-form-field, transparent);
+}
+
+.dr-disc.is-editing .dr-edit-name {
+  height: 28px;
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-edit-grip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  height: 32px;
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-faint);
+  cursor: grab;
+  touch-action: none;
+}
+
+.dr-edit-grip .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-tracks.is-sorting,
+.dr-tracks.is-sorting * {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.dr-edit-tools {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+}
+
+.dr-edit-tool {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
+.dr-edit-tool.mod-warning {
+  color: var(--text-error, var(--color-red));
+}
+
+.dr-track.is-editing + .dr-track::before {
+  left: 80px;
+}
+
+@media (any-hover: hover) {
+  .dr-track.is-editing:hover {
+    background-color: transparent;
+  }
+
+  .dr-edit-grip:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  .dr-art-edit:hover {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+}
+
+.dr-edit-grip:focus-visible,
+.dr-art-edit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+

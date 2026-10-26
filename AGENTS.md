@@ -21,7 +21,10 @@ Coffee N' Christmas.
   use across the layers that isn't on the known list, a module that needs a
   name as it loads from one that runs after it (a cycle runs from the module
   `src/main.js` imports first), and a `main.js` that fails as it loads.
-- `styles.css` — all styles.
+- `styles/NN-name.css` — all styles, in parts the build joins, in order, into
+  `styles.css` (built, not committed; never edit it: edit `styles/`). The
+  order is the cascade: a new rule goes in the part it dresses, after what it
+  overrides. The map at the top of `04-foundation.css` says what each part is.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
   line releases that version instead (only when the author asks).

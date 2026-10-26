@@ -1,0 +1,430 @@
+/* Bulk edits -----------------------------------------------------------------
+ *
+ * Add properties, Rename property and Rename tag. One column of
+ * labelled fields, then a summary of what will happen that follows the
+ * typing, then the button — which names how many notes it changes.
+ */
+
+.dr-bulk-modal {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.dr-bulk-body {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--dr-u) * 4.5);
+}
+
+.dr-bulk-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+.dr-bulk-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.02em;
+}
+
+.dr-bulk-field {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-bulk-field + .dr-bulk-field {
+  margin-top: calc(var(--dr-u) * 1.5);
+}
+
+.dr-bulk-input {
+  position: relative;
+}
+
+.dr-bulk-input input,
+.dr-bulk-name input,
+.dr-bulk-value input[type="text"],
+.dr-bulk-value input[type="date"],
+.dr-bulk-value input[type="datetime-local"] {
+  width: 100%;
+}
+
+/* A tag's # is shown, not typed. */
+.dr-bulk-input.has-hash::before {
+  content: '#';
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.dr-bulk-input.has-hash input {
+  padding-left: calc(var(--dr-u) * 5.5);
+}
+
+.dr-bulk-hint {
+  min-height: 1em;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-bulk-hint:empty {
+  display: none;
+}
+
+/* Where: the folders and notes, as chips. */
+.dr-bulk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-bulk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  max-width: 100%;
+  padding: 3px calc(var(--dr-u) * 1.5) 3px var(--dr-space-2);
+  border-radius: var(--dr-r);
+  background-color: var(--dr-press);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-chip-icon,
+.dr-bulk-chip-remove {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.dr-bulk-chip-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.dr-bulk-chip-remove {
+  padding: 2px;
+  border-radius: 4px;
+  opacity: 0.7;
+  cursor: pointer;
+}
+
+.dr-bulk-chip-remove .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-bulk-chip.is-add {
+  padding-right: calc(var(--dr-u) * 2.5);
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--dr-line);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-bulk-option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 2.5);
+}
+
+.dr-bulk-option.is-hidden {
+  display: none;
+}
+
+.dr-bulk-option-label {
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-option select {
+  max-width: 100%;
+}
+
+/* What: one row per property — type, name, value, remove. */
+.dr-bulk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-bulk-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.4fr) 26px;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+}
+
+.dr-bulk-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.dr-bulk-type .svg-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.dr-bulk-type.is-locked {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.dr-bulk-remove {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  justify-content: center;
+}
+
+.dr-bulk-check {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-add {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5);
+  align-self: flex-start;
+  padding: var(--dr-space-1) calc(var(--dr-u) * 1.5);
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-bulk-add-icon {
+  display: inline-flex;
+}
+
+.dr-bulk-add-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* What will happen. */
+.dr-bulk-summary {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--dr-u) * 1.5);
+  margin-top: calc(var(--dr-u) * 4.5);
+  padding-top: calc(var(--dr-u) * 3.5);
+  border-top: 1px solid var(--background-modifier-border);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+}
+
+.dr-bulk-summary.is-empty {
+  display: none;
+}
+
+.dr-bulk-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dr-space-2);
+  color: var(--text-normal);
+}
+
+.dr-bulk-line-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--text-accent);
+}
+
+.dr-bulk-line-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-bulk-line-text {
+  min-width: 0;
+}
+
+.dr-bulk-line.is-muted,
+.dr-bulk-line.is-muted .dr-bulk-line-icon {
+  color: var(--text-muted);
+}
+
+/* A hint reads as a quiet line of text, not a notice. */
+.dr-bulk-line.is-muted .dr-bulk-line-icon {
+  display: none;
+}
+
+.dr-bulk-line.is-warning .dr-bulk-line-icon {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-bulk-notes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-1) calc(var(--dr-u) * 2.5);
+  margin-top: var(--dr-space-1);
+}
+
+.dr-bulk-note {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-bulk-more {
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+/* A note in the summary, with an × to leave it out. */
+.dr-bulk-note-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.dr-bulk-leave {
+  opacity: 0.45;
+}
+
+/* Only notes where — a row per condition: property, how, value. */
+.dr-bulk-where {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  margin-top: var(--dr-space-2);
+}
+
+.dr-bulk-where-row {
+  display: grid;
+  grid-template-columns: 3em minmax(0, 1fr) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dr-space-1);
+}
+
+.dr-bulk-where-word {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-bulk-where-value.is-hidden {
+  visibility: hidden;
+}
+
+.dr-bulk-where-add {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: var(--dr-space-1);
+  padding: 2px var(--dr-space-1);
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-bulk-modal .modal-button-container button.is-disabled,
+.dr-bulk-modal .modal-button-container button:disabled {
+  opacity: var(--dr-disabled-opacity);
+  cursor: default;
+}
+
+/* Undo, in the notice that says what was done. */
+.dr-bulk-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--dr-space-2);
+}
+
+.dr-bulk-undo {
+  font-size: var(--font-ui-small);
+}
+
+/* Above the dialog, which sits above everything else. */
+.dr-suggest.dr-bulk-suggest {
+  z-index: calc(var(--layer-modal, 50) + 20);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-chip-remove:hover {
+    opacity: 1;
+    background-color: color-mix(in srgb, var(--interactive-accent) 20%, transparent);
+  }
+
+  .dr-bulk-chip.is-add:hover,
+  .dr-bulk-add:hover,
+  .dr-bulk-type:not(.is-locked):hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+
+  .dr-bulk-note:hover,
+  .dr-bulk-more:hover {
+    text-decoration: underline;
+  }
+
+  .dr-bulk-where-add:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+
+.dr-bulk-chip.is-add:focus-visible,
+.dr-bulk-chip-remove:focus-visible,
+.dr-bulk-add:focus-visible,
+.dr-bulk-type:focus-visible,
+.dr-bulk-note:focus-visible,
+.dr-bulk-more:focus-visible,
+.dr-bulk-where-add:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* On a phone a condition's value goes under its property. */
+body.is-phone .dr-bulk-where-row {
+  grid-template-columns: 3em minmax(0, 1fr) auto;
+}
+
+body.is-phone .dr-bulk-where-value {
+  grid-column: 2;
+}
+
+/* On a phone the value goes under its name, full width. */
+body.is-phone .dr-bulk-row {
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  row-gap: var(--dr-space-1);
+}
+
+body.is-phone .dr-bulk-value {
+  grid-column: 2 / 3;
+  grid-row: 2;
+}
+
+body.is-phone .dr-bulk-remove {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+body.is-mobile .dr-bulk-chip {
+  padding-top: calc(var(--dr-u) * 1.5);
+  padding-bottom: calc(var(--dr-u) * 1.5);
+}
+

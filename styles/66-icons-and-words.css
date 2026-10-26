@@ -1,0 +1,85 @@
+/* Icons and words: an icon with its word beside it (iconWord), the word dropped where the
+   Icons setting says, or where it's narrow — it stays as the tooltip. Targets stay big enough to hit. */
+.dr-preview-actions {
+  container-type: inline-size;
+}
+
+body.dr-icons-only .dr-icon-label {
+  display: none;
+}
+
+body.dr-icons-words .dr-icon-glyph {
+  display: none;
+}
+
+@container (max-width: 240px) {
+  body:not(.dr-icons-words) .dr-preview-actions .dr-icon-label {
+    display: none;
+  }
+
+  body:not(.dr-icons-words) .dr-preview-actions .dr-detail-action {
+    min-width: 28px;
+    padding: var(--dr-space-2) var(--dr-space-3);
+  }
+}
+
+body.dr-icons-only .dr-detail-action {
+  min-width: 28px;
+  min-height: 28px;
+  padding: var(--dr-space-2) var(--dr-space-3);
+}
+
+body.is-mobile.dr-icons-only .dr-detail-action {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* A table's column heads are an icon, the word its tooltip — unless the words are asked for. */
+body:not(.dr-icons-words) .dr-td .dr-icon-label {
+  display: none;
+}
+
+/* The strip's More button: a count of what is due to be revisited sits on it. */
+.dr-strip-btn[data-action="more"] {
+  position: relative;
+}
+
+.dr-strip-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  line-height: 16px;
+  text-align: center;
+}
+
+/* The strip as a slim rail at the side: 48px wide, the cover, previous, next and More, as icons. */
+body.dr-strip-side .dr-strip {
+  left: auto;
+  right: var(--dr-space-3);
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  flex-direction: column;
+  width: 48px;
+  max-width: 48px;
+  padding: var(--dr-space-2) 0;
+  border-radius: var(--dr-radius-lg);
+}
+
+body.dr-strip-side .dr-strip-center,
+body.dr-strip-side .dr-strip-nav,
+body.dr-strip-side .dr-strip-actions {
+  flex-direction: column;
+  gap: var(--dr-space-2);
+}
+
+body.dr-strip-side .dr-strip-text {
+  display: none;
+}
+

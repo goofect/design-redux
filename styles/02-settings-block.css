@@ -1,0 +1,70 @@
+/* @settings
+
+name: Design Redux
+id: design-redux
+settings:
+    -
+        id: dr-covers-heading
+        title: Covers and tiles
+        type: heading
+        level: 2
+        collapsed: false
+    -
+        id: dr-cover-radius
+        title: Cover corners
+        description: How rounded album and note covers are. Unset follows your theme.
+        type: variable-number-slider
+        default: 8
+        min: 0
+        max: 40
+        step: 1
+        format: px
+    -
+        id: dr-tile-size
+        title: Tile size
+        description: The narrowest a folder or note tile gets in a grid.
+        type: variable-number-slider
+        default: 170
+        min: 110
+        max: 280
+        step: 10
+        format: px
+    -
+        id: dr-album-art-size
+        title: Album cover size
+        description: The large cover at the top of an album.
+        type: variable-number-slider
+        default: 300
+        min: 160
+        max: 440
+        step: 10
+        format: px
+    -
+        id: dr-flat-covers
+        title: Flat covers
+        description: No shadow under covers.
+        type: class-toggle
+    -
+        id: dr-strip-heading
+        title: Context strip
+        type: heading
+        level: 2
+        collapsed: false
+    -
+        id: dr-strip-blur
+        title: Glass blur
+        description: How much the strip blurs what's behind it.
+        type: variable-number-slider
+        default: 14
+        min: 0
+        max: 40
+        step: 1
+        format: px
+    -
+        id: dr-strip-flat
+        title: Flat strip
+        description: No shadow under the strip.
+        type: class-toggle
+
+*/
+

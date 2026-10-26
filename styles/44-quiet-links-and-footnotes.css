@@ -1,0 +1,94 @@
+/* Quiet links ------------------------------------------------------------------
+ *
+ * A link kept off the graph and out of backlinks: drawn as any link is,
+ * but with a dotted underline, so it's plain which kind it is.
+ */
+
+.markdown-rendered .internal-link.dr-quiet-link,
+.cm-s-obsidian span.cm-hmd-internal-link.dr-quiet-link,
+.dr-quiet-link {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* Footnotes in place --------------------------------------------------------- */
+
+/* The box at the cursor: a number, the citation, and a way out. */
+.dr-fn-box {
+  position: fixed;
+  z-index: var(--layer-popover);
+  width: min(440px, calc(100vw - 24px));
+  padding: calc(var(--dr-u) * 2.5) var(--dr-space-3) calc(var(--dr-u) * 2.5);
+  background: var(--background-primary);
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-md);
+  box-shadow: var(--dr-float-shadow);
+}
+
+.dr-fn-box.is-mobile {
+  top: calc(var(--safe-area-inset-top, 0px) + 56px);
+  left: 12px;
+  right: 12px;
+  width: auto;
+}
+
+.dr-fn-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  margin-bottom: var(--dr-space-2);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+  color: var(--text-muted);
+}
+
+.dr-fn-num {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 calc(var(--dr-u) * 1.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dr-radius-md);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-fn-num:empty {
+  display: none;
+}
+
+.dr-fn-input {
+  display: block;
+  width: 100%;
+  min-height: 2.4em;
+  max-height: 40vh;
+  resize: none;
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2);
+  font-size: var(--font-ui-medium);
+  line-height: 1.4;
+}
+
+.dr-fn-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--dr-u) * 2.5);
+  margin-top: var(--dr-space-2);
+}
+
+.dr-fn-hint {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-faint);
+}
+
+.dr-fn-buttons {
+  display: flex;
+  gap: calc(var(--dr-u) * 1.5);
+  flex-shrink: 0;
+}
+

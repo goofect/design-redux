@@ -1,0 +1,452 @@
+/* Property tools ------------------------------------------------------------------ */
+
+.dr-bulk-section.is-hidden {
+  display: none;
+}
+
+.dr-bulk-intro {
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-bulk-checks {
+  display: flex;
+  flex-direction: column;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--dr-radius-md);
+}
+
+.dr-bulk-check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  padding: var(--dr-space-2) calc(var(--dr-u) * 2.5);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+}
+
+.dr-bulk-check-row + .dr-bulk-check-row {
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-bulk-check-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-bulk-check-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-bulk-check-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-check-count {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-bulk-missing {
+  display: flex;
+  flex-direction: column;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dr-bulk-missing-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  padding: var(--dr-space-1) 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-missing-row .dr-bulk-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-bulk-missing-row input {
+  width: 100%;
+}
+
+.dr-bulk-missing-row.is-done input {
+  opacity: 0.5;
+}
+
+.dr-bulk-missing-row.is-done .dr-bulk-note::after {
+  content: "  \2713";
+  color: var(--text-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-check-row:hover {
+    background-color: var(--background-modifier-hover);
+  }
+}
+
+body.is-phone .dr-bulk-missing-row {
+  grid-template-columns: 1fr;
+  gap: var(--dr-space-1);
+}
+
+/* Editing on a phone: the tools stay, the album columns go. */
+body.is-phone .dr-track.is-editing .dr-track-num {
+  display: none;
+}
+
+/* The Undo in a notice after a move or rename. */
+.notice .dr-undo {
+  margin-left: var(--dr-space-1);
+  color: var(--text-accent);
+  font-weight: var(--font-semibold, 600);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Compatibility, in settings: a tick or a cross for each unofficial part. */
+.dr-compat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--dr-space-1) 0 var(--dr-space-2);
+}
+
+.dr-compat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: calc(var(--dr-u) * 2.5);
+  padding: calc(var(--dr-u) * 1.5) 0;
+}
+
+.dr-compat-mark {
+  display: flex;
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: var(--color-green, var(--text-success, #3fb950));
+}
+
+.dr-compat-mark .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-compat-row.is-missing .dr-compat-mark {
+  color: var(--text-error, #e5484d);
+}
+
+.dr-compat-row.is-pending .dr-compat-mark {
+  color: var(--text-faint);
+}
+
+.dr-compat-what {
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+}
+
+.dr-compat-note {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+/* Style Settings switches: covers and the strip without their shadows. */
+body.dr-flat-covers .dr-card-art,
+body.dr-flat-covers .dr-album-art,
+body.dr-flat-covers .dr-detail-art,
+body.dr-flat-covers .dr-detail-art.is-generated {
+  box-shadow: none;
+}
+
+body.dr-strip-flat .dr-strip {
+  box-shadow: none;
+}
+
+/* The Properties window, tidied ------------------------------------------------
+ *
+ * One width for every tab, so switching doesn't make it jump; the tabs as
+ * words; and where a tool works — the folders, and which of their notes —
+ * on one line under them rather than three.
+ */
+
+.dr-bulk-section.is-where {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: calc(var(--dr-u) * 1.5) var(--dr-space-2);
+}
+
+.dr-bulk-section.is-where > .dr-bulk-label {
+  margin-right: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-normal, 400);
+  letter-spacing: 0;
+}
+
+.dr-bulk-section.is-where .dr-bulk-option select.dropdown {
+  height: 28px;
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-chip.is-add.is-icon {
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+}
+
+.dr-bulk-chip.is-add.is-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Artwork where there's none, and the finishing touches ----------------------
+ *
+ * 'Its name, set as a title': on a cover big enough to read, the note or
+ * folder's name set at the top like a title page, with a short rule at
+ * the foot; smaller ones keep the icon. 'The icon on a soft colour': a
+ * glyph on a gentle gradient in a colour picked from the name. The rest
+ * follows the reference: round buttons over a cover when it's pointed at,
+ * and an album's small print under its last track.
+ */
+
+.dr-type-cover {
+  display: none;
+}
+
+:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-type-cover {
+  display: block;
+  position: absolute;
+  inset: 0;
+  padding: var(--dr-space-3) var(--dr-space-3);
+}
+
+:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-card-glyph {
+  display: none;
+}
+
+.dr-type-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  overflow-wrap: anywhere;
+}
+
+.dr-type-cover::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  bottom: 13px;
+  width: 18px;
+  height: 1px;
+  background-color: var(--text-faint);
+  opacity: 0.6;
+}
+
+.dr-detail-art .dr-type-cover {
+  padding: calc(var(--dr-u) * 5) calc(var(--dr-u) * 5.5);
+}
+
+.dr-detail-art .dr-type-title {
+  font-size: 24px;
+}
+
+.dr-detail-art .dr-type-cover::after {
+  left: 22px;
+  bottom: 20px;
+  width: 26px;
+}
+
+.dr-album-art .dr-type-title {
+  font-size: 18px;
+}
+
+.dr-pick-art .dr-type-cover {
+  padding: var(--dr-space-4) calc(var(--dr-u) * 4.5);
+}
+
+.dr-pick-art .dr-type-title {
+  font-size: 20px;
+}
+
+.dr-pick-art .dr-type-cover::after {
+  left: 18px;
+  bottom: 16px;
+}
+
+.dr-color-preview .dr-type-cover {
+  padding: var(--dr-space-2) var(--dr-space-2);
+}
+
+.dr-color-preview .dr-type-title {
+  font-size: 11px;
+}
+
+.dr-color-preview .dr-type-cover::after {
+  display: none;
+}
+
+:where([class*="dr-"])[class].is-blank.is-hued {
+  background-color: hsl(var(--dr-gen-h, 210) 30% 84%);
+  background-image: linear-gradient(
+    145deg,
+    hsl(var(--dr-gen-h, 210) 42% 88%),
+    hsl(calc(var(--dr-gen-h, 210) + 28) 32% 74%)
+  );
+}
+
+[class].is-blank.is-hued .dr-card-glyph {
+  color: hsl(var(--dr-gen-h, 210) 32% 38%);
+  opacity: 0.7;
+}
+
+.theme-dark :where([class*="dr-"])[class].is-blank.is-hued {
+  background-color: hsl(var(--dr-gen-h, 210) 18% 24%);
+  background-image: linear-gradient(
+    145deg,
+    hsl(var(--dr-gen-h, 210) 24% 32%),
+    hsl(calc(var(--dr-gen-h, 210) + 28) 20% 19%)
+  );
+}
+
+.theme-dark [class].is-blank.is-hued .dr-card-glyph {
+  color: hsl(var(--dr-gen-h, 210) 40% 78%);
+  opacity: 0.75;
+}
+
+/* -- round buttons on a tile's cover -- */
+
+/* How far along its album a note to continue is: a bar along the cover's foot. */
+.dr-card-progress {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background-color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
+.dr-card-progress::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--dr-progress, 0) * 100%);
+  border-radius: 3px;
+  background-color: #fff;
+}
+
+.dr-card-buttons {
+  position: absolute;
+  inset: auto 8px 8px 8px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-card-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+  border-radius: var(--dr-radius-pill);
+  background-color: rgba(20, 20, 20, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.dr-card-button.is-more {
+  margin-left: auto;
+}
+
+.dr-card-button .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+@media (any-hover: hover) {
+  .dr-card:hover .dr-card-buttons,
+  .dr-card:focus-within .dr-card-buttons {
+    opacity: 1;
+  }
+
+  .dr-card-button:hover {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent, #fff);
+  }
+
+  .dr-card:hover .dr-card-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent 55%);
+    pointer-events: none;
+  }
+}
+
+/* Not on touch: there, the tile itself is the button and a long press its menu. */
+@media (any-hover: none) {
+  .dr-card-buttons {
+    display: none;
+  }
+}
+
+/* -- an album's small print -- */
+
+.dr-album-foot {
+  margin: calc(var(--dr-u) * 4.5) 0 var(--dr-space-2) calc(var(--dr-u) * 11.5);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.6;
+}
+
+body.is-phone .dr-album-foot {
+  margin-left: calc(var(--dr-u) * 10);
+}
+
+/* -- the Notes table's lengths -- */
+
+.dr-td-length {
+  flex: 0 0 90px;
+  justify-content: flex-end;
+  text-align: right;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+body.is-phone .dr-td-length {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-card-buttons,
+  .dr-detail-action {
+    transition: none;
+  }
+}
+

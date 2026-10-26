@@ -12,6 +12,8 @@
 //     it loads from one that runs after it, or a use across the layers that
 //     isn't on the known list (tests/map.js --verify);
 //   - a main.js that fails as it loads.
+// Then it joins the stylesheet's parts, styles/NN-name.css, in their order,
+// into styles.css, the one Obsidian loads.
 import fs from 'fs';
 import path from 'path';
 import vm from 'vm';
@@ -99,3 +101,13 @@ try {
 const out = path.join(root, 'main.js');
 if (!fs.existsSync(out) || fs.readFileSync(out, 'utf8') !== code) fs.writeFileSync(out, code);
 console.log(`build: main.js from ${modules.length} modules, ${code.split('\n').length - 1} lines`);
+
+// The stylesheet: its parts joined as they are, in order, so the cascade is the one they were written in.
+const styleDir = path.join(root, 'styles');
+const parts = fs.readdirSync(styleDir).filter((f) => f.endsWith('.css')).sort();
+const misnamed = parts.filter((f) => !/^\d{2}-[a-z0-9-]+\.css$/.test(f));
+if (misnamed.length) fail(`styles/ holds a part not named NN-name.css: ${misnamed.join(', ')}`);
+const css = parts.map((f) => fs.readFileSync(path.join(styleDir, f), 'utf8')).join('');
+const cssOut = path.join(root, 'styles.css');
+if (!fs.existsSync(cssOut) || fs.readFileSync(cssOut, 'utf8') !== css) fs.writeFileSync(cssOut, css);
+console.log(`build: styles.css from ${parts.length} parts, ${css.split('\n').length - 1} lines`);

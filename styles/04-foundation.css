@@ -1,0 +1,250 @@
+/* Map -------------------------------------------------------------------------
+ *
+ * In this order — a file of styles/ a part or a few, joined into styles.css
+ * by the build; search for a heading to go to it. The numbers are the
+ * src/ pieces each part dresses.
+ *   Foundation, Shared — the measures, the looks and density; what every part shares (020–085)
+ *   Properties panel … Collapsible section headings — the properties popup (150–180)
+ *   Library editor, in settings; Settings; Settings: search… — the settings tab (090, 360)
+ *   Browse … Nothing chosen yet; Home; Search; Browse categories — the browse view (110–123, 254–261)
+ *   Navigation; One content area; The panel's title block — the single-area workspace (130, 200)
+ *   Context strip; The strip while browsing — the strip (190, 195)
+ *   Library sidebar; The panel; Getting the sidebar back — the left panel (100, 105, 107)
+ *   Touch; Phone — larger targets, and the phone's own layout
+ *   Lettered and roman numeral lists; Superscript and subscript; Quiet links;
+ *     Footnotes — in notes (270–285, 263–266)
+ *   Property filters in the graph; Filters in effect — the graph (260, 262)
+ *   Bulk edits; Property tools; Editing properties; The Properties window (250, 300–310)
+ *   Generated covers; Drawn covers; Choosing a cover colour; Artwork where
+ *     there's none; Covers by dropping — covers (030–032, 230–240)
+ *   Arranging by drag; Editing an album (122)
+ *   Canvas legend; Arrow styles; Folding canvas branches; Canvas outline;
+ *     Canvas: focus on a branch, and the canvas features after it (315–347)
+ * Each part uses the foundation's tokens; a value written out by hand is
+ * a measure of that part's own (a cover's artwork, a canvas glyph).
+ */
+
+/* Foundation --------------------------------------------------------------------
+ *
+ * The plugin's own measures, so everything it draws keeps to one system:
+ * spacing in steps of one unit (4px, or 3px and 5px for the compact and
+ * spacious densities — every padding, margin and gap is a multiple of
+ * it), three corners and a pill, three depths of shadow, two speeds of
+ * motion, and type in three levels — display and title for what a screen
+ * is, interface for rows and buttons, metadata for counts and dates.
+ * Colours stay the theme's unless the editorial look is chosen. Motion
+ * stops where the system asks for less of it, here, once.
+ */
+body {
+  --dr-u: 4px;
+  --dr-space-1: var(--dr-u);
+  --dr-space-2: calc(var(--dr-u) * 2);
+  --dr-space-3: calc(var(--dr-u) * 3);
+  --dr-space-4: calc(var(--dr-u) * 4);
+  --dr-space-5: calc(var(--dr-u) * 6);
+  --dr-space-6: calc(var(--dr-u) * 8);
+
+  --dr-radius-sm: var(--radius-s, 4px);
+  --dr-radius-md: var(--radius-m, 8px);
+  --dr-radius-lg: var(--radius-l, 12px);
+  --dr-radius-pill: 100px;
+
+  --dr-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --dr-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.25);
+  --dr-shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.12), 0 14px 34px rgba(0, 0, 0, 0.24);
+  --dr-cover-edge: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+
+  /* Motion, one set of numbers: four durations and one curve for everything that moves (plain
+     ease for colours), so nothing feels made by a different hand. Press: a button pressed.
+     Fast: colours, a cross-fade. Base: something sliding or widening. Slow: a sheet or panel. */
+  --dr-dur-press: 100ms;
+  --dr-dur-fast: 120ms;
+  --dr-dur-base: 180ms;
+  --dr-dur-slow: 280ms;
+  --dr-ease-move: cubic-bezier(0.2, 0, 0, 1);
+  --dr-ease: ease;
+
+  /* Glass, for what floats over the page — the strip, menus, popups — so
+     what's beneath stays the brightest thing on screen: how much it blurs. */
+  --dr-glass-blur: var(--glass-blur, 14px);
+  --dr-glass-blur-soft: 8px;
+
+  /* The interface's face; the theme's unless a setting asks for the system's. */
+  --dr-font-ui: var(--font-interface);
+  /* The system's own faces, wherever it runs: San Francisco on Apple's, Segoe on Windows, then
+     the platform's sans serif. Never the theme's: Apple's controls are drawn in the system font. */
+  --dr-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-radius-cover: var(--dr-cover-radius, var(--radius-m, 8px));
+
+  --dr-display-size: 2.5em;
+  --dr-display-weight: var(--font-semibold, 600);
+  --dr-title-size: 1.5em;
+  --dr-heading-size: 1.25em;
+  --dr-disabled-opacity: 0.45;
+  --dr-ui-size: var(--font-ui-small);
+  --dr-ui-weight: var(--font-medium, 500);
+  --dr-meta-size: var(--font-ui-smaller);
+  --dr-meta-color: var(--text-muted);
+
+  /* Each role's line height: tight for titles and labels, open for reading. */
+  --dr-line-display: 1.1;
+  --dr-line-heading: 1.3;
+  --dr-line-label: 1.3;
+  --dr-line-meta: 1.35;
+  --dr-line-body: 1.5;
+
+  /* Components' own measures, from the unit: a sidebar row (28, 32 or 36px
+     by density), the gap under a cover, and the gap under a card's title. */
+  --dr-row-height: calc(var(--dr-u) * 4 + 16px);
+  --dr-control-size: 30px;
+  --dr-control-icon: 16px;
+
+  /* On a canvas: how far the rest steps back while something is singled
+     out — a branch, a colour, one kind of relationship — or, more softly,
+     while a card is selected; and how much softer an association's arrow
+     is than a tree's. */
+  --dr-dim-card: 0.15;
+  --dr-dim-edge: 0.12;
+  --dr-dim-card-soft: 0.45;
+  --dr-dim-edge-soft: 0.35;
+  --dr-edge-assoc-opacity: 0.7;
+  --dr-cover-gap: calc(var(--dr-u) * 2.5);
+  --dr-title-gap: var(--dr-space-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    --dr-dur-press: 0ms;
+    --dr-dur-fast: 0ms;
+    --dr-dur-base: 0ms;
+    --dr-dur-slow: 0ms;
+  }
+}
+
+/* The editorial look, chosen in settings: monochrome surfaces a step
+ * apart, fine low-contrast lines instead of shadows, small corners,
+ * titles in a medium weight, and covers without colour of their own
+ * unless they have art. The accent stays the theme's, for what it means.
+ * Its colours go on the whole window, or — set to Design Redux only
+ * (dr-look-scoped) — on just what the plugin draws. */
+body.dr-look-editorial.theme-dark:not(.dr-look-scoped),
+body.dr-look-editorial.dr-look-scoped.theme-dark :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup) {
+  --color-base-00: #090909;
+  --color-base-05: #0d0d0d;
+  --color-base-10: #111111;
+  --color-base-20: #181818;
+  --color-base-25: #1e1e1e;
+  --color-base-30: #252525;
+  --color-base-35: #2e2e2e;
+  --color-base-40: #3a3a3a;
+  --color-base-50: #575757;
+  --color-base-60: #7d7d7d;
+  --color-base-70: #a0a0a0;
+  --color-base-100: #e8e8e8;
+  --background-primary: #090909;
+  --background-primary-alt: #111111;
+  --background-secondary: #111111;
+  --background-secondary-alt: #181818;
+  --background-modifier-border: #252525;
+  --background-modifier-border-hover: #333333;
+  --background-modifier-border-focus: #4a4a4a;
+  --background-modifier-hover: rgba(255, 255, 255, 0.05);
+  --background-modifier-active-hover: rgba(255, 255, 255, 0.08);
+  --divider-color: #252525;
+  --text-normal: #e8e8e8;
+  --text-muted: #a0a0a0;
+  --text-faint: #7d7d7d;
+}
+
+body.dr-look-editorial.theme-light:not(.dr-look-scoped),
+body.dr-look-editorial.dr-look-scoped.theme-light :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup) {
+  --color-base-00: #fbfbfa;
+  --color-base-05: #f7f7f6;
+  --color-base-10: #f2f2f1;
+  --color-base-20: #ececeb;
+  --color-base-25: #e6e6e5;
+  --color-base-30: #e1e1df;
+  --color-base-35: #d6d6d4;
+  --color-base-40: #c4c4c2;
+  --color-base-50: #9a9a98;
+  --color-base-60: #737373;
+  --color-base-70: #5c5c5c;
+  --color-base-100: #161616;
+  --background-primary: #fbfbfa;
+  --background-primary-alt: #f4f4f3;
+  --background-secondary: #f4f4f3;
+  --background-secondary-alt: #ececeb;
+  --background-modifier-border: #e1e1df;
+  --background-modifier-border-hover: #d0d0ce;
+  --background-modifier-border-focus: #b5b5b3;
+  --background-modifier-hover: rgba(0, 0, 0, 0.04);
+  --background-modifier-active-hover: rgba(0, 0, 0, 0.07);
+  --divider-color: #e1e1df;
+  --text-normal: #161616;
+  --text-muted: #5c5c5c;
+  --text-faint: #737373;
+}
+
+body.dr-look-editorial {
+  --dr-shadow-sm: 0 0 0 1px var(--background-modifier-border);
+  --dr-shadow-md: 0 0 0 1px var(--background-modifier-border);
+  --dr-shadow-lg: 0 0 0 1px var(--background-modifier-border);
+  --dr-float-shadow: 0 0 0 1px var(--background-modifier-border);
+  --dr-cover-edge: inset 0 0 0 1px var(--background-modifier-border);
+  --dr-radius-pill: var(--dr-radius-sm);
+  --dr-display-weight: var(--font-medium, 500);
+  --dr-ui-weight: var(--font-normal, 400);
+}
+
+/* Scoped, the plugin's own views take their surfaces from those colours. */
+body.dr-look-editorial.dr-look-scoped .dr-browse {
+  background-color: var(--background-primary);
+}
+
+body.dr-look-editorial.dr-look-scoped .dr-library {
+  background-color: var(--background-secondary);
+}
+
+body.dr-look-editorial .dr-detail-glow {
+  display: none;
+}
+
+body.dr-look-editorial .is-generated,
+body.dr-look-editorial [class].is-blank.is-hued,
+body.dr-look-editorial .dr-cat {
+  filter: grayscale(1);
+}
+
+/* Icon buttons a finger can find. */
+body.is-mobile {
+  --dr-control-size: 36px;
+}
+
+body.is-phone {
+  --dr-control-size: 38px;
+  --dr-control-icon: 19px;
+}
+
+/* Density: the unit every space is a multiple of — lists, grids, the strip, panels, windows. */
+body.dr-density-compact {
+  --dr-u: 3px;
+}
+
+body.dr-density-spacious {
+  --dr-u: 5px;
+}
+
+/* Design Redux
+ *
+ * Only the chrome this plugin adds is styled here. Property rows are
+ * Obsidian's own editor, hosted as-is, so app.css and the active theme
+ * render them exactly as they render the native block.
+ *
+ * The browsing screens take after a music library: covers with depth,
+ * the album's colours behind its page, the accent on icons and actions,
+ * bold titles. Lists, windows and settings stay quiet — hairlines, a
+ * soft band under the pointer, controls shown where they're wanted. The
+ * tokens below are what the quiet parts share.
+ */
+

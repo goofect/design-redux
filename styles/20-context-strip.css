@@ -1,0 +1,248 @@
+/* Context strip ------------------------------------------------------------
+ *
+ * A floating bar centred over the content, clear of the status bar. It
+ * is the one thing on screen that doesn't change as you move, so it
+ * stays quiet: one line of text, one accent, everything else muted
+ * until pointed at.
+ */
+
+.dr-strip {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  transition: transform var(--dr-dur-base) var(--dr-ease-move);
+  z-index: calc(var(--layer-menu, 65) - 20);
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 3.5);
+  max-width: min(680px, 72vw);
+  padding: var(--dr-space-2) calc(var(--dr-u) * 3.5);
+  border-radius: var(--dr-radius-pill);
+  background-color: var(--glass-solid, var(--background-secondary));
+  backdrop-filter: blur(var(--dr-strip-blur, var(--dr-glass-blur)));
+  -webkit-backdrop-filter: blur(var(--dr-strip-blur, var(--dr-glass-blur)));
+  border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--dr-shadow-lg);
+}
+
+.dr-strip.is-narrow {
+  max-width: calc(100vw - var(--dr-space-6));
+}
+
+.dr-strip.is-empty {
+  display: none;
+}
+
+.dr-strip-nav,
+.dr-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.dr-strip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-control-size);
+  height: var(--dr-control-size);
+  padding: 0;
+  border-radius: var(--dr-radius-pill);
+  color: var(--text-muted);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-base) var(--dr-ease), width var(--dr-dur-base) var(--dr-ease-move), transform var(--dr-dur-press) var(--dr-ease-move);
+}
+
+@media (any-hover: hover) {
+  .dr-strip-btn:hover {
+    color: var(--text-normal);
+    background-color: var(--background-modifier-hover);
+  }
+
+  /* Only what's needed until the strip is pointed at or tabbed into: the
+   * rest folds away, and the strip widens smoothly to show it. */
+  .dr-strip:not(:hover):not(:focus-within) .dr-strip-btn.is-secondary:not(.is-active) {
+    width: 0;
+    opacity: 0;
+    overflow: hidden;
+  }
+}
+
+.dr-strip-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* What's on — a pin — in the one accent; what can't be pressed, quieter but there. */
+.dr-strip-btn.is-active {
+  color: var(--text-accent);
+}
+
+.dr-strip-btn.is-disabled {
+  opacity: var(--dr-disabled-opacity);
+  pointer-events: none;
+}
+
+/* A hairline between the note and what can be done to it, rather than boxes round the buttons. */
+.dr-strip-center + .dr-strip-actions,
+.dr-strip-now.is-screen + .dr-strip-actions {
+  padding-left: var(--dr-space-2);
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+.dr-strip-btn .svg-icon {
+  width: var(--dr-control-icon);
+  height: var(--dr-control-icon);
+}
+
+/* The middle: « the note » — back and on through its album either side,
+ * as a player's skip buttons sit around what's playing. */
+.dr-strip-center {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-strip-skip {
+  flex: 0 0 auto;
+  color: var(--text-normal);
+}
+
+.dr-strip-skip .svg-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2.25;
+}
+
+/* The note itself, as the now-playing block. */
+.dr-strip-now {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px var(--dr-space-2);
+  border-radius: var(--dr-radius-pill);
+  cursor: pointer;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-strip-now:focus-visible {
+  background-color: var(--background-modifier-hover);
+  outline: none;
+}
+
+@media (any-hover: hover) {
+  .dr-strip-now:hover {
+    background-color: var(--background-modifier-hover);
+    outline: none;
+  }
+}
+
+.dr-strip-art {
+  position: relative;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: var(--dr-radius-sm);
+  background-color: var(--background-secondary);
+}
+
+.dr-strip-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dr-strip-art.is-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-strip-art .dr-card-glyph .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-strip-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-strip-title,
+.dr-strip-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-strip-title {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+}
+
+.dr-strip-sub {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* Room for it, so the last line of a note isn't underneath. */
+body.dr-strip-active .workspace-split.mod-root .markdown-source-view .cm-sizer,
+body.dr-strip-active .workspace-split.mod-root .markdown-preview-sizer,
+body.dr-strip-active .dr-browse .view-content {
+  padding-bottom: calc(var(--dr-u) * 20);
+}
+
+/* One content area, continued ---------------------------------------------
+ *
+ * The browse view draws its own title and navigation, so Obsidian's
+ * header above it is a second copy of both.
+ */
+
+body.dr-single-area
+  .workspace-leaf-content[data-type="design-redux-browse"]
+  .view-header {
+  display: none;
+}
+
+/* Doubled controls ---------------------------------------------------------
+ *
+ * With the strip up, a note's header repeats its buttons — back and
+ * forward, properties, the reading toggle and More — so they're
+ * hidden. The reading toggle and More are marked by the strip, which
+ * finds them by the view's own references rather than guessing from
+ * icons. The properties panel keeps its header trigger as its anchor
+ * and switch; opened from the strip, it places itself against the
+ * strip's button, since a hidden trigger has no position.
+ *
+ * On a phone the strip steps aside while the keyboard is up, and these
+ * come back for as long as it's away.
+ */
+
+body.dr-strip-active:not(.is-phone) .view-header-nav-buttons,
+body.dr-strip-active:not(.is-phone) .view-header .dr-props-trigger,
+body.dr-strip-active:not(.dr-typing) .dr-strip-dupe {
+  display: none;
+}
+
+/* The note's own mentions --------------------------------------------------
+ *
+ * The panel lists them, so the block at the foot of the note is a
+ * second copy. Scoped to markdown leaves, leaving Obsidian's own
+ * Backlinks pane in the sidebar alone.
+ */
+
+body.dr-mentions-active
+  .workspace-leaf-content[data-type="markdown"]
+  .embedded-backlinks {
+  display: none;
+}
+

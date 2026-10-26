@@ -1,0 +1,66 @@
+/* Library editor, in settings -------------------------------------------
+ *
+ * Items are indented under their section so the shape of the list is
+ * legible at a glance; each row is a compact line of a plain list, its
+ * buttons shown on the row under the pointer.
+ */
+
+.dr-set-section {
+  border-top: 1px solid var(--dr-line);
+  padding-top: var(--dr-space-3);
+}
+
+.dr-set-section .setting-item-info {
+  display: none;
+}
+
+.dr-set-item {
+  padding: 3px var(--dr-space-1) 3px calc(var(--dr-u) * 5);
+  border: none;
+  border-bottom: 1px solid var(--dr-line);
+}
+
+.dr-set-item .setting-item-name {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-set-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-set-icon .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dr-set-add {
+  padding: var(--dr-space-1) 0 var(--dr-space-3) calc(var(--dr-u) * 5);
+  border: none;
+}
+
+.dr-set-add .setting-item-info {
+  display: none;
+}
+
+/* Newer Obsidian boxes each setting; these are lines of one list. */
+.dr-settings :is(.dr-set-section, .dr-set-item, .dr-set-add) {
+  background-color: transparent;
+  border-radius: 0;
+}
+
+@media (any-hover: hover) {
+  .dr-settings .dr-set-item .setting-item-control {
+    opacity: 0;
+  }
+
+  .dr-settings .dr-set-item:hover .setting-item-control,
+  .dr-settings .dr-set-item:focus-within .setting-item-control {
+    opacity: 1;
+  }
+}
+

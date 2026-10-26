@@ -1,0 +1,919 @@
+/* Mind maps --------------------------------------------------------------------
+ *
+ * The map on one plane that a pan or zoom moves with a single transform:
+ * nodes as boxes, edges as one SVG layer under them.
+ */
+
+.dr-mindmap-view.view-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.dr-mindmap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+  cursor: grab;
+  touch-action: none;
+  background: var(--background-primary);
+}
+
+.dr-mindmap-plane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.dr-mindmap-edges {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.dr-mindmap-edge,
+.dr-mindmap-relation {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+}
+
+.dr-mindmap-relation {
+  stroke-dasharray: 5 4;
+  stroke: var(--text-accent);
+  opacity: 0.6;
+}
+
+.dr-mindmap-relation[data-line='solid'] { stroke-dasharray: none; }
+.dr-mindmap-relation[data-line='dotted'] { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+
+.dr-mindmap-head > path:not([fill='none']),
+.dr-mindmap-head > circle {
+  fill: var(--text-accent);
+}
+
+.dr-mindmap-head > path[fill='none'] {
+  stroke: var(--text-accent);
+}
+
+/* A branch's colour runs along its edges. */
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='1'] { stroke: var(--color-red); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='2'] { stroke: var(--color-orange); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='3'] { stroke: var(--color-yellow); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='4'] { stroke: var(--color-green); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='5'] { stroke: var(--color-cyan); }
+:is(.dr-mindmap-edge, .dr-mindmap-relation)[data-color='6'] { stroke: var(--color-purple); }
+
+.dr-mindmap-groups {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.dr-mindmap-group {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 2px 10px;
+  border: 1px dashed var(--background-modifier-border-hover);
+  border-radius: var(--radius-l);
+  background: color-mix(in srgb, var(--background-modifier-hover) 50%, transparent);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  pointer-events: none;
+}
+
+.dr-mindmap-node.is-unfocused {
+  opacity: 0.2;
+}
+
+.dr-mindmap-label {
+  fill: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  paint-order: stroke;
+  stroke: var(--background-primary);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.dr-mindmap-label.is-relation {
+  fill: var(--text-accent);
+}
+
+/* A node's part in an argument, above it, and a stripe down its side. */
+.dr-mindmap-node[data-role-label]::before {
+  content: attr(data-role-label);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 2px);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.dr-mindmap-node[data-role] { border-left-width: 3px; }
+.dr-mindmap-node[data-role='claim'] { border-left-color: var(--interactive-accent); }
+.dr-mindmap-node[data-role='reason'],
+.dr-mindmap-node[data-role='evidence'] { border-left-color: var(--color-green); }
+.dr-mindmap-node[data-role='objection'] { border-left-color: var(--color-red); }
+.dr-mindmap-node[data-role='rebuttal'] { border-left-color: var(--color-orange); }
+
+.dr-mindmap-node.is-drop-relate {
+  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--text-accent);
+}
+
+.dr-mindmap-node {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  line-height: 20px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dr-mindmap-text,
+.dr-mindmap-details {
+  overflow-wrap: anywhere;
+}
+
+.dr-mindmap-details {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 18px;
+  white-space: pre-line;
+}
+
+.dr-mindmap-node.is-root .dr-mindmap-details {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/* Rendered markdown keeps to the card's own spacing. */
+.dr-mindmap-text > :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote),
+.dr-mindmap-details > :is(p, ul, ol, h1, h2, h3, h4, h5, h6, blockquote) {
+  margin: 0;
+}
+
+.dr-mindmap-text :is(h1, h2, h3, h4, h5, h6) {
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.dr-mindmap-details > :is(ul, ol) {
+  padding-inline-start: 1.2em;
+  white-space: normal;
+}
+
+.dr-mindmap-node .internal-link {
+  cursor: pointer;
+}
+
+/* Where nodes are measured: off screen, sized by their text. */
+.dr-mindmap-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.dr-mindmap-measure .dr-mindmap-node {
+  width: max-content;
+  min-width: 72px;
+  max-width: 280px;
+}
+
+.dr-mindmap-node.is-root {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-mindmap-node.is-virtual {
+  background: none;
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.dr-mindmap-node.is-free {
+  border-style: dashed;
+}
+
+.dr-mindmap-node.is-selected {
+  box-shadow: 0 0 0 2px var(--background-primary), 0 0 0 4px var(--interactive-accent);
+}
+
+/* A node's shape: its own, or its map's theme's for its level. A box is the card as it is. */
+.dr-mindmap .dr-mindmap-node.is-shape-pill {
+  border-radius: 999px;
+}
+
+.dr-mindmap .dr-mindmap-node.is-shape-underline,
+.dr-mindmap .dr-mindmap-node.is-shape-plain {
+  border-width: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--text-normal);
+}
+
+.dr-mindmap .dr-mindmap-node.is-shape-underline {
+  border-bottom-width: 2px;
+}
+
+.dr-mindmap .dr-mindmap-node.is-root.is-shape-underline {
+  border-bottom-color: var(--interactive-accent);
+}
+
+/* An icon before the title, an image over the node, and images in its text kept to its size. */
+.dr-mindmap-node.has-icon {
+  padding-inline-start: 36px;
+}
+
+.dr-mindmap-icon {
+  position: absolute;
+  top: 9px;
+  left: 12px;
+  display: flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  line-height: 18px;
+}
+
+.dr-mindmap-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dr-mindmap-node.has-image {
+  min-width: 180px;
+}
+
+.dr-mindmap-node.has-image .dr-mindmap-icon {
+  top: 125px;
+}
+
+.dr-mindmap-image {
+  display: block;
+  width: 100%;
+  height: 110px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-s);
+  object-fit: cover;
+}
+
+.dr-mindmap-image.is-missing {
+  background: var(--background-modifier-hover);
+}
+
+.dr-mindmap-text img,
+.dr-mindmap-details img {
+  max-width: 100%;
+  max-height: 160px;
+}
+
+/* Depth: the root larger, its own children heavier. */
+.dr-mindmap.is-depth .dr-mindmap-node.is-root {
+  font-size: var(--font-ui-medium);
+  line-height: 22px;
+}
+
+.dr-mindmap.is-depth .dr-mindmap-node[data-depth='1']:not(.is-free) {
+  font-weight: var(--font-semibold, 600);
+}
+
+/* A tint for a node with no colour of its own. */
+.dr-mindmap-node[data-tint='1'] { border-color: var(--color-red); background: color-mix(in srgb, var(--color-red) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='2'] { border-color: var(--color-orange); background: color-mix(in srgb, var(--color-orange) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='3'] { border-color: var(--color-yellow); background: color-mix(in srgb, var(--color-yellow) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='4'] { border-color: var(--color-green); background: color-mix(in srgb, var(--color-green) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='5'] { border-color: var(--color-cyan); background: color-mix(in srgb, var(--color-cyan) 10%, var(--background-secondary)); }
+.dr-mindmap-node[data-tint='6'] { border-color: var(--color-purple); background: color-mix(in srgb, var(--color-purple) 10%, var(--background-secondary)); }
+
+.dr-mindmap-node.is-faded {
+  opacity: 0.25;
+}
+
+.dr-mindmap-node.is-pinned::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px dashed var(--text-faint);
+  border-radius: calc(var(--radius-m) + 3px);
+  pointer-events: none;
+}
+
+.dr-mindmap-node[data-color='1'] { border-color: var(--color-red); }
+.dr-mindmap-node[data-color='2'] { border-color: var(--color-orange); }
+.dr-mindmap-node[data-color='3'] { border-color: var(--color-yellow); }
+.dr-mindmap-node[data-color='4'] { border-color: var(--color-green); }
+.dr-mindmap-node[data-color='5'] { border-color: var(--color-cyan); }
+.dr-mindmap-node[data-color='6'] { border-color: var(--color-purple); }
+
+.dr-mindmap-knob {
+  position: absolute;
+  right: -9px;
+  top: 50%;
+  min-width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 14px;
+  text-align: center;
+}
+
+.dr-mindmap-node.is-folded .dr-mindmap-knob {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+/* Far out: boxes without words. */
+.dr-mindmap.is-far .dr-mindmap-text {
+  visibility: hidden;
+}
+
+/* Findings — a check's, or a comparison's — in the top corner, their nodes marked. */
+.dr-mindmap-findings {
+  position: absolute;
+  right: var(--dr-space-3, 12px);
+  top: 48px;
+  width: 280px;
+  max-height: calc(100% - 72px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  font-size: var(--font-ui-smaller);
+  cursor: default;
+}
+
+.dr-mindmap-findings-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2, 8px);
+  padding: var(--dr-space-2, 8px);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dr-mindmap-findings-title {
+  flex: 1;
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-mindmap-findings-rows {
+  overflow-y: auto;
+  padding: var(--dr-space-1, 4px);
+}
+
+.dr-mindmap-findings-row {
+  display: flex;
+  flex-direction: column;
+  padding: 3px var(--dr-space-2, 8px);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.dr-mindmap-findings-row.is-gone {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.dr-mindmap-findings-text {
+  color: var(--text-muted);
+}
+
+@media (any-hover: hover) {
+  .dr-mindmap-findings-row:not(.is-gone):hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+.dr-mindmap-node[data-mark] { outline: 2px solid var(--text-accent); outline-offset: 3px; }
+.dr-mindmap-node[data-mark='problem'] { outline-color: var(--color-orange); }
+.dr-mindmap-node[data-mark='added'] { outline-color: var(--color-green); }
+.dr-mindmap-node[data-mark='reworded'] { outline-color: var(--color-yellow); }
+.dr-mindmap-node[data-mark='moved'] { outline-color: var(--color-cyan); outline-style: dashed; }
+
+.dr-mindmap-legend {
+  position: absolute;
+  left: var(--dr-space-3, 12px);
+  bottom: var(--dr-space-3, 12px);
+  min-width: 160px;
+  max-width: 240px;
+  padding: var(--dr-space-1, 4px);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  font-size: var(--font-ui-smaller);
+  cursor: default;
+}
+
+.dr-mindmap-legend-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2, 8px);
+  padding: 2px var(--dr-space-2, 8px);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.dr-mindmap-legend-row.is-faded {
+  opacity: 0.45;
+}
+
+.dr-mindmap-legend-row.is-picked {
+  background: var(--background-modifier-active-hover);
+}
+
+.dr-mindmap-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.dr-mindmap-swatch[data-color='1'] { background: var(--color-red); }
+.dr-mindmap-swatch[data-color='2'] { background: var(--color-orange); }
+.dr-mindmap-swatch[data-color='3'] { background: var(--color-yellow); }
+.dr-mindmap-swatch[data-color='4'] { background: var(--color-green); }
+.dr-mindmap-swatch[data-color='5'] { background: var(--color-cyan); }
+.dr-mindmap-swatch[data-color='6'] { background: var(--color-purple); }
+
+.dr-mindmap-legend-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-mindmap-legend-count {
+  color: var(--text-faint);
+}
+
+.dr-mindmap-legend-rename {
+  padding: 2px;
+  opacity: 0;
+}
+
+.dr-mindmap-legend-row:focus-within .dr-mindmap-legend-rename {
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  .dr-mindmap-legend-row:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  .dr-mindmap-legend-row:hover .dr-mindmap-legend-rename {
+    opacity: 1;
+  }
+}
+
+@media (any-hover: none) {
+  .dr-mindmap-legend-rename {
+    opacity: 1;
+  }
+}
+
+.dr-mindmap-bar {
+  position: absolute;
+  top: var(--dr-space-2);
+  right: var(--dr-space-2);
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+}
+
+.dr-mindmap-outline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 240px;
+  overflow-y: auto;
+  padding: var(--dr-space-2);
+  border-right: 1px solid var(--background-modifier-border);
+  background: var(--background-primary);
+  cursor: default;
+}
+
+.dr-mindmap-outline-row {
+  padding: 3px 6px;
+  padding-inline-start: calc(6px + var(--dr-depth, 0) * 14px);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-mindmap-outline-row.is-selected {
+  background: var(--background-modifier-active-hover);
+}
+
+.dr-mindmap-failure {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: auto;
+  padding: var(--dr-space-4);
+  background: var(--background-primary);
+  cursor: default;
+}
+
+.dr-mindmap-failure-head {
+  margin-bottom: var(--dr-space-2);
+  color: var(--text-error);
+}
+
+.dr-mindmap-failure-text {
+  white-space: pre-wrap;
+  font-size: var(--font-ui-small);
+}
+
+@media (any-hover: hover) {
+  .dr-mindmap-node:hover {
+    border-color: var(--interactive-accent);
+  }
+
+  .dr-mindmap-outline-row:hover {
+    background: var(--background-modifier-hover);
+  }
+}
+
+/* Typing in a node, and dragging one. */
+.dr-mindmap-editor {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  border: 2px solid var(--interactive-accent);
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  font-size: var(--font-ui-small);
+  line-height: 20px;
+  cursor: text;
+}
+
+.dr-mindmap-editor .cm-editor {
+  padding: 6px 10px;
+}
+
+.dr-mindmap-editor .cm-editor.cm-focused {
+  outline: none;
+}
+
+.dr-mindmap-ghost {
+  position: absolute;
+  z-index: 4;
+  padding: 4px 10px;
+  border-radius: var(--radius-m);
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-small);
+  opacity: 0.85;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.dr-mindmap-node.is-dragged {
+  opacity: 0.4;
+}
+
+.dr-mindmap-node.is-drop-child {
+  box-shadow: 0 0 0 3px var(--interactive-accent);
+}
+
+.dr-mindmap-node.is-drop-before {
+  box-shadow: 0 -3px 0 0 var(--interactive-accent);
+}
+
+.dr-mindmap-node.is-drop-after {
+  box-shadow: 0 3px 0 0 var(--interactive-accent);
+}
+
+/* Mind map: tasks — a box before the text, chips under it, a ring of what's done below */
+.dr-mindmap-node.is-task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 6px;
+}
+
+.dr-mindmap-node.is-task > .dr-mindmap-text { flex: 1 1 0; min-width: 0; }
+.dr-mindmap-node.is-task > .dr-mindmap-details,
+.dr-mindmap-node.is-task > .dr-mindmap-chips { flex-basis: 100%; }
+
+.dr-mindmap-task {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dr-mindmap-node.is-done .dr-mindmap-task {
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.dr-mindmap-task .svg-icon { width: 10px; height: 10px; stroke-width: 3; }
+
+.dr-mindmap-node.is-done > .dr-mindmap-text {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.dr-mindmap-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.dr-mindmap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--background-modifier-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.dr-mindmap-chip-icon .svg-icon { width: 10px; height: 10px; }
+.dr-mindmap-chip.is-overdue { background: rgba(var(--color-red-rgb), 0.15); color: var(--color-red); }
+.dr-mindmap-chip.is-today { background: rgba(var(--color-orange-rgb), 0.15); color: var(--color-orange); }
+.dr-mindmap-chip.is-soon { color: var(--color-orange); }
+
+.dr-mindmap-progress {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: conic-gradient(var(--interactive-accent) calc(var(--dr-progress) * 360deg), var(--background-modifier-border) 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dr-mindmap-progress span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  font-size: 8px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.dr-mindmap-progress.is-complete span { color: var(--interactive-accent); }
+
+/* Mind map shown another way: an outline, a board, a timeline, a table */
+.dr-mindmap.is-alt .dr-mindmap-plane,
+.dr-mindmap.is-alt .dr-mindmap-minimap,
+.dr-mindmap.is-alt .dr-mindmap-legend { display: none; }
+
+.dr-mindmap-alt {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  padding: calc(var(--dr-space-2) * 2 + 36px) var(--dr-space-4, 24px) var(--dr-space-4, 24px);
+  box-sizing: border-box;
+}
+
+.dr-mindmap:not(.is-alt) .dr-mindmap-alt { display: none; }
+
+.dr-alt-edit,
+.dr-alt-cell {
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 2px 4px;
+  font-size: var(--font-ui-medium);
+}
+
+.dr-alt-edit:focus,
+.dr-alt-cell:focus { background: var(--background-modifier-form-field); box-shadow: none; }
+
+.dr-alt-empty { color: var(--text-muted); padding: var(--dr-space-3, 12px) 0; }
+
+/* The outline */
+.dr-alt-outline { max-width: 720px; margin: 0 auto; }
+
+.dr-alt-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: calc(var(--dr-depth) * 22px);
+  border-radius: var(--radius-s);
+}
+
+.dr-alt-row.is-selected { background: var(--background-modifier-hover); }
+.dr-alt-fold { flex: none; width: 16px; height: 16px; color: var(--text-faint); cursor: pointer; display: flex; align-items: center; }
+.dr-alt-fold .svg-icon { width: 14px; height: 14px; }
+.dr-alt-row .dr-mindmap-chip { flex: none; }
+
+/* The board */
+.dr-alt-head { display: flex; gap: 4px; margin-bottom: var(--dr-space-3, 12px); }
+.dr-alt-switch.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+
+.dr-alt-board {
+  display: flex;
+  gap: var(--dr-space-3, 12px);
+  align-items: flex-start;
+}
+
+.dr-alt-column {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-m);
+  background: var(--background-secondary);
+}
+
+.dr-alt-column.is-drop { outline: 2px dashed var(--interactive-accent); }
+.dr-alt-column-head { display: flex; justify-content: space-between; font-weight: var(--font-semibold); padding: 0 2px 4px; }
+.dr-alt-count { color: var(--text-faint); font-weight: normal; }
+
+.dr-alt-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  cursor: grab;
+}
+
+.dr-alt-card.is-selected { outline: 2px solid var(--interactive-accent); }
+.dr-alt-card-text { flex: 1 1 0; min-width: 0; }
+.dr-alt-card.is-done .dr-alt-card-text,
+.dr-alt-item.is-done .dr-alt-item-text { color: var(--text-muted); text-decoration: line-through; }
+.dr-alt-add { align-self: flex-start; font-size: var(--font-ui-small); }
+
+/* The timeline */
+.dr-alt-timeline { max-width: 720px; margin: 0 auto; }
+.dr-alt-day { margin-bottom: var(--dr-space-3, 12px); }
+.dr-alt-day-head { font-weight: var(--font-semibold); padding: 4px 0; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-day.is-past .dr-alt-day-head { color: var(--color-red); }
+.dr-alt-day.is-today .dr-alt-day-head { color: var(--color-orange); }
+.dr-alt-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.dr-alt-item-text { flex: 1 1 0; min-width: 0; }
+.dr-alt-under { color: var(--text-faint); font-size: var(--font-ui-small); }
+.dr-alt-date { flex: none; width: auto; font-size: var(--font-ui-small); }
+
+/* The table */
+.dr-alt-table { width: 100%; border-collapse: collapse; }
+.dr-alt-table th { text-align: left; color: var(--text-muted); font-weight: var(--font-medium); font-size: var(--font-ui-small); padding: 4px; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-table td { padding: 1px 4px; border-bottom: 1px solid var(--background-modifier-border); }
+.dr-alt-table td[data-column='text'] { padding-left: calc(var(--dr-depth) * 18px + 4px); }
+.dr-alt-table tr.is-selected td { background: var(--background-modifier-hover); }
+.dr-alt-make-task { padding: 0 6px; height: 20px; color: var(--text-faint); background: transparent; box-shadow: none; }
+
+/* Mind map: what a linked note says, under its node's title */
+.dr-mindmap-note-facts { flex-basis: 100%; }
+
+.dr-mindmap-note-line {
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 15px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The selected node, in the note panel */
+.dr-node-text {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  font-size: var(--font-ui-small);
+}
+
+.dr-node-attrs { display: flex; flex-direction: column; gap: 2px; margin: 6px 0; }
+.dr-node-attr { display: flex; align-items: center; gap: 8px; font-size: var(--font-ui-small); }
+.dr-node-attr-key { color: var(--text-muted); min-width: 64px; }
+.dr-node-attr-value { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dr-node-attr-off { flex: none; }
+.dr-node-make { margin-top: 8px; }
+.dr-mention-note { color: var(--text-faint); font-size: var(--font-ui-smaller); margin-left: auto; }
+
+/* Mind map: the filter bar, and the way down to a branch shown alone */
+.dr-mindmap-filter,
+.dr-mindmap-crumbs {
+  position: absolute;
+  left: var(--dr-space-2);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--radius-m);
+  background: var(--background-primary);
+  box-shadow: var(--shadow-s);
+  max-width: calc(100% - 320px);
+  flex-wrap: wrap;
+}
+
+.dr-mindmap-filter { top: var(--dr-space-2); }
+.dr-mindmap-crumbs { top: calc(var(--dr-space-2) + 44px); font-size: var(--font-ui-small); }
+.dr-mindmap:not(:has(.dr-mindmap-filter)) .dr-mindmap-crumbs { top: var(--dr-space-2); }
+.dr-mindmap-filter-text { width: 160px; }
+.dr-mindmap-filter-pick { max-width: 140px; font-size: var(--font-ui-small); }
+.dr-mindmap-crumb { cursor: pointer; color: var(--text-muted); }
+.dr-mindmap-crumb.is-current { cursor: default; color: var(--text-normal); font-weight: var(--font-semibold); }
+.dr-mindmap.is-alt .dr-mindmap-filter,
+.dr-mindmap.is-alt .dr-mindmap-crumbs { display: none; }
+
+@media (any-hover: hover) {
+  .dr-mindmap-crumb:not(.is-current):hover { color: var(--text-normal); text-decoration: underline; }
+}
+
+/* A map drawn in a note: read-only, a click opens it */
+.dr-mindmap-embed-host { display: block; }
+
+.dr-mindmap.dr-mindmap-embed {
+  cursor: default;
+  touch-action: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m);
+  margin: var(--dr-space-2) 0;
+}
+
+.dr-mindmap-embed[tabindex] { cursor: pointer; }
+.dr-mindmap-embed .dr-mindmap-node { pointer-events: none; }
+.dr-mindmap-embed > .dr-empty { padding: var(--dr-space-3, 12px); color: var(--text-muted); }
+
+@media (any-hover: hover) {
+  .dr-mindmap-embed[tabindex]:hover { border-color: var(--interactive-accent); }
+}
+
+/* Mind map: the node something's dropped on */
+.dr-mindmap-node.is-drop { outline: 2px dashed var(--interactive-accent); outline-offset: 3px; }
+
+/* Mind map: the line a screen reader hears as the picked node changes */
+.dr-mindmap-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Mind map: a query's notes, drawn under it but not the map's own */
+.dr-mindmap-node.is-queried { border-style: dashed; opacity: 0.85; cursor: pointer; }
+

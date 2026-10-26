@@ -1,0 +1,325 @@
+/* -- the brief ------------------------------------------------------- */
+
+/* What the library tells of a pick, in the inspector: an album in brief. */
+.dr-browse {
+  position: relative;
+}
+
+.dr-inspector-brief {
+  padding-bottom: var(--dr-space-3);
+}
+
+.dr-preview-art {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  margin-bottom: var(--dr-space-3);
+  border-radius: var(--dr-radius-cover);
+  background-color: var(--background-secondary);
+  box-shadow: var(--dr-shadow-sm);
+}
+
+.dr-preview-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-preview-title {
+  color: var(--text-normal);
+  font-size: var(--dr-heading-size, 1.25em);
+  font-weight: var(--dr-display-weight, var(--font-semibold, 600));
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.dr-preview-lead {
+  margin-top: 2px;
+  color: var(--text-accent);
+  font-size: var(--font-ui-small);
+}
+
+.dr-preview-about {
+  margin-top: var(--dr-space-2);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  line-height: 1.45;
+}
+
+.dr-preview-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--dr-space-1) var(--dr-space-3);
+  margin: var(--dr-space-3) 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-preview-fact {
+  display: contents;
+}
+
+.dr-preview-label {
+  color: var(--text-faint);
+}
+
+.dr-preview-value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-normal);
+}
+
+.dr-preview-value.is-link {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.dr-preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-2);
+}
+
+.dr-preview-btn.is-active {
+  color: var(--text-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-preview-value.is-link:hover {
+    text-decoration: underline;
+  }
+}
+
+/* The note page: its album above its title, one grey line under it, its properties as chips, shelves at its end. */
+.dr-has-glow {
+  position: relative;
+  isolation: isolate;
+}
+
+.dr-note-glow {
+  position: absolute;
+  z-index: -1;
+  top: -60px;
+  left: -10%;
+  right: -10%;
+  height: 260px;
+  overflow: hidden;
+  opacity: 0.22;
+  filter: blur(60px) saturate(1.4);
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent 100%);
+  pointer-events: none;
+}
+
+.dr-note-glow img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-note-album {
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--text-accent);
+  cursor: pointer;
+  width: fit-content;
+}
+
+.dr-note-meta {
+  margin: calc(-1 * var(--size-4-2)) 0 var(--size-4-3);
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+}
+
+.dr-note-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-2-2);
+  margin-bottom: var(--size-4-4);
+}
+
+.dr-note-chip {
+  padding: 0 var(--size-4-2);
+  border-radius: var(--radius-l);
+  background: var(--background-secondary);
+  border: 1px solid var(--background-modifier-border);
+  color: var(--text-muted);
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-smaller);
+  line-height: 20px;
+}
+
+/* The chips stand for the properties block; editing them is the Properties button's. */
+.dr-props-as-chips .metadata-container {
+  display: none !important;
+}
+
+.dr-note-shelves {
+  margin: var(--size-4-8) 0 var(--size-4-4);
+  padding-top: var(--size-4-4);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dr-note-shelf + .dr-note-shelf {
+  margin-top: var(--size-4-4);
+}
+
+.dr-note-shelf-head {
+  margin-bottom: var(--size-4-2);
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-bold);
+  color: var(--text-normal);
+}
+
+.dr-note-shelf-head[role='link'] {
+  cursor: pointer;
+}
+
+.dr-note-shelf-row {
+  display: flex;
+  gap: var(--size-4-3);
+  overflow-x: auto;
+  padding-bottom: var(--size-4-1);
+}
+
+.dr-note-tile {
+  flex: none;
+  width: 180px;
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--dr-r, var(--radius-m));
+  background: var(--background-secondary);
+  cursor: pointer;
+  font-family: var(--dr-font-ui);
+}
+
+.dr-note-tile-title {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dr-note-tile-line {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (any-hover: hover) {
+  .dr-note-tile:hover {
+    background: var(--background-modifier-hover);
+  }
+
+  .dr-note-album:hover,
+  .dr-note-shelf-head[role='link']:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Glass: menus, suggestions and the canvas's bar and controls frosted, the note behind them showing through — not in the flat editorial look. */
+body.dr-glass:not(.dr-look-editorial) .menu,
+body.dr-glass:not(.dr-look-editorial) .suggestion-container,
+body.dr-glass:not(.dr-look-editorial) .canvas-menu,
+body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+  background-color: color-mix(in srgb, var(--background-primary) 78%, transparent);
+  backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  body.dr-glass:not(.dr-look-editorial) .menu,
+  body.dr-glass:not(.dr-look-editorial) .suggestion-container,
+  body.dr-glass:not(.dr-look-editorial) .canvas-menu,
+  body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+    background-color: var(--background-primary);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* Classic: the look from before 2.0, kept for one release — 2.0's additions to the page out of sight. */
+body.dr-look-classic :is(.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves, .dr-note-glow) {
+  display: none !important;
+}
+
+body.dr-look-classic .dr-props-as-chips .metadata-container {
+  display: block !important;
+}
+
+body.dr-look-classic .dr-track-name.has-excerpt::after,
+body.dr-look-classic .dr-track.is-unread .dr-track-num::before {
+  display: none;
+}
+
+/* Editing an album: a box to tick on each note, and a bar for what's ticked. */
+.dr-edit-tick {
+  flex: none;
+  margin: 0;
+}
+
+.dr-track.is-editing.is-ticked {
+  background-color: var(--dr-hover);
+}
+
+.dr-bulk-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-3);
+  margin-bottom: var(--size-4-2);
+  padding: var(--size-4-2) var(--size-4-3);
+  border-radius: var(--dr-r, var(--radius-m));
+  background: color-mix(in srgb, var(--background-primary) 85%, transparent);
+  border: 1px solid var(--background-modifier-border);
+  backdrop-filter: blur(var(--dr-glass-blur));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
+  font-family: var(--dr-font-ui);
+  font-size: var(--font-ui-small);
+}
+
+.dr-bulk-bar.is-empty {
+  display: none;
+}
+
+.dr-bulk-count {
+  margin-right: auto;
+  font-weight: var(--font-semibold);
+}
+
+.dr-bulk-action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2-2);
+  padding: var(--size-2-1) var(--size-4-2);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.dr-bulk-action.mod-warning {
+  color: var(--text-error);
+}
+
+.dr-bulk-action .svg-icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+@media (any-hover: hover) {
+  .dr-bulk-action:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
+}
+

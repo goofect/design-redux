@@ -1,0 +1,182 @@
+/* The note's look, Apple-style — unless "Use the theme's look" is on. Type and spacing only:
+   every colour stays the theme's, so light and dark themes keep working. Every gap is a multiple of 4px. */
+.dr-note-rule {
+  display: none;
+}
+
+body.dr-note-apple .markdown-source-view,
+body.dr-note-apple .markdown-preview-view,
+body.dr-note-apple .markdown-rendered {
+  --font-text: var(--dr-font-ui);
+  --font-text-size: 17px;
+  --line-height-normal: 1.5;
+  --file-line-width: 680px;
+  /* One face for the title, the headings and the text — the same as the rest of the interface. */
+  --inline-title-font: var(--dr-font-display);
+  --h1-font: var(--dr-font-ui);
+  --h2-font: var(--dr-font-ui);
+  --h3-font: var(--dr-font-ui);
+  --h4-font: var(--dr-font-ui);
+  --h5-font: var(--dr-font-ui);
+  --h6-font: var(--dr-font-ui);
+  --inline-title-size: 34px;
+  --inline-title-line-height: 1.15;
+  --inline-title-weight: 700;
+  --h1-size: 28px;
+  --h1-weight: 700;
+  --h2-size: 22px;
+  --h2-weight: 600;
+  --h3-size: 19px;
+  --h3-weight: 600;
+  --h4-size: 17px;
+  --h4-weight: 600;
+  --heading-spacing: 24px;
+  --p-spacing: 12px;
+  --hr-thickness: 1px;
+}
+
+body.dr-note-apple .markdown-source-view .cm-content,
+body.dr-note-apple .markdown-preview-view {
+  font-family: var(--font-text);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.5;
+  /* Text drawn as Apple draws it: regular, smoothed in greyscale so it isn't heavier than it should
+     be, and never with a faux bold or italic. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+/* Regular text at 400 and bold at 600 (semibold), as Apple sets body copy — not the theme's heavier bold. */
+body.dr-note-apple .markdown-source-view,
+body.dr-note-apple .markdown-preview-view,
+body.dr-note-apple .markdown-rendered {
+  --font-weight: 400;
+  --bold-weight: 600;
+}
+
+body.dr-note-apple .markdown-rendered :is(strong, b),
+body.dr-note-apple .markdown-source-view .cm-strong {
+  font-weight: 600;
+}
+
+body.dr-note-apple .inline-title,
+body.dr-note-apple .dr-note-album,
+body.dr-note-apple .dr-note-meta,
+body.dr-note-apple .dr-pages {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* The text column: 680px at most, centred. */
+body.dr-note-apple .markdown-source-view.mod-cm6 .cm-sizer,
+body.dr-note-apple .markdown-preview-view .markdown-preview-sizer {
+  max-width: 680px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* A large title, as Apple's: the theme's own title rules give way. */
+body.dr-note-apple .inline-title {
+  font-family: var(--dr-font-display) !important;
+  font-size: 34px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em !important;
+}
+
+body.dr-note-apple .markdown-rendered h1 { font-size: 28px; font-weight: 700; }
+body.dr-note-apple .markdown-rendered h2 { font-size: 22px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h3 { font-size: 19px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h4 { font-size: 17px; font-weight: 600; }
+
+body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4, h5, h6),
+body.dr-note-apple .markdown-source-view .cm-header,
+body.dr-note-apple .markdown-source-view .HyperMD-header {
+  font-family: var(--dr-font-ui);
+}
+
+body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4) {
+  margin-top: 24px;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+body.dr-note-apple .markdown-rendered p {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+/* Rules between sections: 1px, 32px above and below, never thicker. */
+body.dr-note-apple .markdown-rendered hr {
+  height: 0;
+  margin: 32px 0;
+  border: none;
+  border-top: 1px solid var(--hr-color, var(--background-modifier-border));
+}
+
+/* The header: folder label, title, chips, the grey line. */
+body.dr-note-apple .dr-note-album {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body.dr-note-apple .dr-note-chips {
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+body.dr-note-apple .dr-note-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: 13px;
+  line-height: 1;
+}
+
+body.dr-note-apple .dr-note-rule {
+  display: block;
+  height: 1px;
+  margin: 16px 0 20px;
+  background-color: var(--background-modifier-border);
+}
+
+/* With pages, the control sits 16px under the grey line and 20px above the text. */
+body.dr-note-apple .dr-note-rule:has(~ .dr-pages) {
+  margin-bottom: 0;
+}
+
+body.dr-note-apple .dr-note-rule ~ .dr-pages {
+  margin-top: 16px;
+}
+
+/* The strip answers a press: a button scales to 0.97. */
+.dr-strip-btn:active {
+  transform: scale(0.97);
+}
+
+/* In a narrow pane the strip can't widen sideways: pointed at, it grows upward as a small sheet. */
+.dr-strip.is-sheet {
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (any-hover: hover) {
+  .dr-strip.is-sheet:hover .dr-strip-actions {
+    order: -1;
+    flex-basis: 100%;
+    justify-content: center;
+  }
+}
+
+.dr-strip.is-sheet:focus-within .dr-strip-actions {
+  order: -1;
+  flex-basis: 100%;
+  justify-content: center;
+}
+

@@ -1,0 +1,368 @@
+/* Library sidebar ----------------------------------------------------------
+ *
+ * Shaped after the reference: compact rows, one neutral pill marking
+ * where you are with the accent on its icon and label, small grey
+ * section labels, and a gutter left of every icon holding a disclosure
+ * chevron where there's something to open out — kept even where empty,
+ * so all the icons line up.
+ */
+
+.dr-library .view-content {
+  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) var(--dr-space-3);
+}
+
+.dr-lib-group {
+  margin-top: calc(var(--dr-u) * 4.5);
+  padding: 0 calc(var(--dr-u) * 2.5) var(--dr-space-1);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium, 500);
+}
+
+/* More, and any section that folds: its heading opens and closes it. */
+.dr-lib-fold {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  cursor: pointer;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-lib-fold-icon {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.dr-lib-fold-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-lib-fold:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+@media (any-hover: hover) {
+  .dr-lib-fold:hover {
+    color: var(--text-normal);
+  }
+}
+
+.dr-lib-group:first-child {
+  margin-top: 2px;
+}
+
+.dr-lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dr-lib-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  min-height: var(--dr-row-height);
+  padding: 0 calc(var(--dr-u) * 2.5) 0 var(--dr-space-1);
+  line-height: var(--dr-line-label);
+  border-radius: var(--dr-radius-md);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* As the reference's sidebar: every icon in the accent, the labels
+   plain, and where you are a soft grey block with its label a touch
+   heavier. */
+@media (any-hover: hover) {
+  .dr-lib-row:hover {
+    background-color: var(--dr-hover);
+  }
+}
+
+.dr-lib-row.is-active {
+  background-color: var(--dr-press);
+}
+
+.dr-lib-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* Pins opened out sit one gutter in. */
+.dr-lib-row.is-nested {
+  padding-left: calc(var(--dr-u) * 5.5);
+}
+
+.dr-lib-disclosure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  height: 20px;
+  border-radius: var(--dr-radius-sm);
+  color: var(--text-muted);
+}
+
+@media (any-hover: hover) {
+  .dr-lib-disclosure.is-expandable:hover {
+    color: var(--text-normal);
+  }
+}
+
+.dr-lib-disclosure .svg-icon {
+  width: 12px;
+  height: 12px;
+  transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-lib-disclosure.is-open .svg-icon {
+  transform: rotate(90deg);
+}
+
+.dr-lib-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--text-accent);
+}
+
+.dr-lib-icon .svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+/* Artwork, as a playlist with a cover shows it. */
+.dr-lib-icon.has-art {
+  overflow: hidden;
+  border-radius: var(--dr-radius-sm);
+  background-color: var(--background-modifier-hover);
+}
+
+.dr-lib-icon.has-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dr-lib-icon.has-art.is-blank {
+  background-color: transparent;
+}
+
+.dr-lib-icon .dr-card-glyph {
+  display: inline-flex;
+  color: inherit;
+}
+
+.dr-lib-icon .dr-card-glyph .svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.dr-lib-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-lib-empty {
+  padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+/* The panel -----------------------------------------------------------------
+ *
+ * A floating rounded card, as the reference's sidebar is, applied only
+ * while the library is the view showing in the left sidebar. Collapsed,
+ * it takes no room at all rather than leaving a sliver of border.
+ */
+
+body:not(.dr-left-collapsed)
+  .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
+  /* Above the main area, so its shadow is drawn over it every time —
+     not shown and hidden by turns as the main area's layers are redrawn
+     (a cover fading in, the album's glow, the strip's blur), which
+     flickered. */
+  position: relative;
+  z-index: 1;
+  /* And a layer of its own for good: otherwise the browser moves it in
+     and out of one as the layers beneath come and go, redrawing the
+     shadow each time — which flickered too. */
+  will-change: transform;
+  margin: var(--dr-space-2) 0 var(--dr-space-2) var(--dr-space-2);
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-xl, 12px);
+  background-color: var(--background-secondary);
+  box-shadow: var(--dr-shadow-lg);
+}
+
+.dr-apple-sidebar .workspace-tab-header-container {
+  border-bottom: none;
+  background-color: transparent;
+}
+
+.dr-apple-sidebar .workspace-leaf-content[data-type="design-redux-library"] {
+  background-color: transparent;
+}
+
+/* The vault row as the account row: an initial in a circle where the
+   avatar would be, in place of the switcher arrows. */
+.dr-apple-sidebar .workspace-sidedock-vault-profile {
+  padding: var(--dr-space-2) var(--dr-space-3) calc(var(--dr-u) * 2.5);
+  border-top: none;
+  background-color: transparent;
+}
+
+.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial] {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--dr-u) * 2.5);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial]::before {
+  content: attr(data-dr-initial);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--dr-radius-pill);
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--interactive-accent) 60%, white),
+    var(--interactive-accent)
+  );
+  color: var(--text-on-accent);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-apple-sidebar
+  .workspace-drawer-vault-switcher[data-dr-initial]
+  .workspace-drawer-vault-switcher-icon {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dr-lib-disclosure .svg-icon {
+    transition: none;
+  }
+}
+
+/* Getting the sidebar back ------------------------------------------------
+ *
+ * Obsidian's own reopen buttons live in the tab bar and the note
+ * header, both hidden in single content area. These appear in the strip
+ * and the browse view's top bar only while the sidebar is closed, so
+ * they're never a second copy of the one in the sidebar itself.
+ */
+
+.dr-browse-up.dr-sidebar-toggle,
+.dr-strip-btn.dr-sidebar-toggle {
+  display: none;
+}
+
+body.dr-left-collapsed .dr-browse-up.dr-sidebar-toggle,
+body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
+  display: flex;
+}
+
+/* The name prompt for a new folder. */
+.dr-name-input {
+  width: 100%;
+}
+
+/* Properties to copy or paste, each ticked or not; a paste says what each
+ * would do — added, unchanged, joined, replacing, or kept as it is. */
+.dr-paste-mode {
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-checklist,
+.dr-paste-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-bottom: var(--dr-space-3);
+}
+
+.dr-checklist-row,
+.dr-paste-row {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  min-height: var(--dr-row-height);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-checklist-name,
+.dr-paste-key {
+  font-weight: var(--font-semibold);
+}
+
+.dr-checklist-note,
+.dr-paste-value {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-checklist-note {
+  margin-left: auto;
+}
+
+.dr-paste-text {
+  flex: 1;
+  min-width: 0;
+  line-height: var(--dr-line-label);
+}
+
+.dr-paste-status {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-paste-row[data-status="add"] .dr-paste-status,
+.dr-paste-row[data-status="merge"] .dr-paste-status {
+  color: var(--text-success, var(--color-green));
+}
+
+.dr-paste-row[data-status="replace"] .dr-paste-status {
+  color: var(--text-warning, var(--color-orange));
+}
+
+.dr-paste-row[data-status="same"] {
+  opacity: var(--dr-disabled-opacity);
+  cursor: default;
+}
+
+@media (any-hover: hover) {
+  .dr-checklist-row:hover,
+  .dr-paste-row:not([data-status="same"]):hover {
+    background: var(--dr-hover);
+  }
+}
+
