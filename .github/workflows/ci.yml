@@ -203,5 +203,14 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           v="${{ steps.version.outputs.version }}"
-          gh release create "$v" main.js manifest.json styles.css \
-            --target "$(git rev-parse HEAD)" --title "$v" --generate-notes
+          # A release made by hand meanwhile (3.0.24 was, and lost its files)
+          # gets them attached rather than failing on its tag.
+          if gh release view "$v" >/dev/null 2>&1; then
+            gh release upload "$v" main.js manifest.json styles.css --clobber
+          else
+            gh release create "$v" main.js manifest.json styles.css \
+              --target "$(git rev-parse HEAD)" --title "$v" --generate-notes ||
+              gh release upload "$v" main.js manifest.json styles.css --clobber
+          fi
+          n=$(gh release view "$v" --json assets -q '.assets | length')
+          [ "$n" -ge 3 ] || { echo "::error::release $v has $n of 3 files"; exit 1; }
