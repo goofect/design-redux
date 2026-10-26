@@ -358,10 +358,8 @@ export class Library extends Feature {
         icon: 'panel-right',
         when: () => this.enabled && this.settings.inspector !== false,
         run: async () => {
-          if (inspectorShowing(this.app)) {
-            closeInspector(this.app);
-            if (this.plugin.selection) this.plugin.selection.clear();
-          } else {
+          if (inspectorShowing(this.app)) closeInspector(this.app);
+          else {
             await openInspector(this.app);
           }
           this.plugin.refreshBrowse();

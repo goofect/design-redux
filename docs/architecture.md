@@ -870,5 +870,20 @@ inspector, one selection.
 - **The library's preview pane is gone.** Its button and `open-inspector`
   show or close the inspector; `inspectorShowing` (076) is what makes a click
   pick. `libraryPreview` is kept, unused.
-- Next, per the proposal: canvas cards followed live, the popup's floating
-  code left to the phone, then the library's navigation.
+- Docked, it follows a card picked on a canvas: there's no event for that,
+  so a click or key in the canvas is looked at once it's done.
+- **Hiding it keeps what's picked** (the proposal: give the width back
+  without losing the selection); Escape in the library lets go.
+- **Space is Quick Look**: on a note's row or tile, Obsidian's page preview
+  (105, with type to jump on, as before); Enter opens.
+
+## 31. No strip to begin with
+
+- `contextStrip` is off by default (step 16 keeps it on for an existing
+  install that never said: `run(saved, was)` is told whether settings were
+  saved before). The strip stays, as a choice.
+- What only the strip had, « » through the collection, sits in the note's
+  header beside back and forward while it's off (191 `HeaderSkip`).
+  Properties is the header's button and the inspector.
+- The real-Obsidian suite puts the strip on in its `before`, to keep
+  testing it.

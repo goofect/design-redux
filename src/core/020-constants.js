@@ -56,7 +56,8 @@ export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collecti
 export const DEFAULTS = {
   library: true,
   singleArea: false,
-  contextStrip: true,
+  // Off to begin with since 3.1: « » sit in the note's header, Properties in the inspector.
+  contextStrip: false,
   // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,
   // What the strip shows beside that: properties and the like, by name; empty for its pick.
@@ -322,7 +323,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 15,
+  settingsVersion: 16,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

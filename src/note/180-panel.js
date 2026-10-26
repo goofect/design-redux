@@ -301,6 +301,19 @@ export class PropertiesPanel extends Feature {
         else if (item.folder) this.showDocked(null, { folder: item.folder });
       })
     );
+    // A card picked on a canvas says nothing, so a click or a key there is looked at once it's done.
+    const onCanvas = (evt) => {
+      if (!this.dockView || !this.popupEl) return;
+      const leaf = this.app.workspace.activeLeaf;
+      const view = leaf && !leaf.isDeferred ? leaf.view : null;
+      const el = evt.target;
+      if (!view || !view.canvas || !el || el.nodeType !== 1 || !view.containerEl.contains(el)) return;
+      window.setTimeout(() => {
+        if (this.dockView) this.follow(leaf, true);
+      }, 0);
+    };
+    this.plugin.registerDomEvent(document, 'pointerup', onCanvas);
+    this.plugin.registerDomEvent(document, 'keyup', onCanvas);
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
     this.plugin.registerEvent(
       this.app.workspace.on('design-redux:panel-changed', (file) => {

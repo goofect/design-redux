@@ -345,6 +345,16 @@ body {
   border-radius: var(--dr-radius-sm);
 }
 
+/* « » beside back and forward, without the strip. */
+.dr-header-skip {
+  display: flex;
+  align-items: center;
+}
+
+.dr-header-skip.is-hidden {
+  display: none;
+}
+
 /* And any other control the plugin draws, reached by the keyboard: a
    ring, unless it draws its own. Zero specificity, so its own wins. */
 :where([class^="dr-"], [class*=" dr-"]) :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,

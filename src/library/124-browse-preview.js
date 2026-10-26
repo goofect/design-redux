@@ -32,11 +32,10 @@ export class BrowsePreview {
     return this.plugin.settings.inspectorClick !== 'never' && this.previewShowing();
   }
 
-  /** The inspector shown or closed. Closed, nothing stays picked. */
+  /** The inspector shown or closed. Closed, what's picked stays picked. */
   async togglePreview() {
     if (this.previewOn()) {
       closeInspector(this.app);
-      if (this.plugin.selection) this.plugin.selection.clear();
     } else {
       await openInspector(this.app);
     }

@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 15);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 16);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -242,6 +242,14 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(d.lookScope, 'window');
     const e = { look: 'editorial', lookScope: 'plugin' }; scope.run(e);
     assert.strictEqual(e.lookScope, 'plugin', 'the editorial look keeps its scope');
+    // Step 16: the strip is off to begin with; whoever had the plugin keeps it on unless they'd said.
+    const strip = R.SETTINGS_MIGRATIONS.find((m) => m.to === 16);
+    const f = { look: 'apple' }; strip.run(f, { existing: true });
+    assert.strictEqual(f.contextStrip, true);
+    const g = { contextStrip: false }; strip.run(g, { existing: true });
+    assert.strictEqual(g.contextStrip, false);
+    const h = {}; strip.run(h, { existing: false });
+    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false, 'a first install starts without it');
   });
 
   /* -- pins in your own order ------------------------------------------------ */

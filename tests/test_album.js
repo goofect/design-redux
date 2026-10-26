@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -919,7 +919,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 15);
+    assert.strictEqual(s.settingsVersion, 16);
+    assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -1281,6 +1282,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.defaultSort = 'name-desc';
     plugin.orders.setAlbumOn(app.vault.getFolderByPath('IR'), false);
     assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
+  });
+
+  await t('without the strip, « » sit in the note’s header, name where they go and open it there', () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const containerEl = document.body.createDiv();
+    containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' });
+    const leaf = { isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file }), openFile(f) { this.view.file = f; } };
+    app.workspace.iterateAllLeaves = (fn) => fn(leaf);
+    // Obsidian's own, which the buttons are made with.
+    if (typeof global.createDiv !== 'function') global.createDiv = (o) => { const el = document.createElement('div').createDiv(o); el.remove(); return el; };
+    const skip = new R.HeaderSkip(plugin);
+    const labels = () => Array.from(containerEl.querySelectorAll('.dr-header-skip-btn')).map((b) => b.getAttribute('aria-label'));
+    plugin.settings.contextStrip = true;
+    skip.sync();
+    assert.deepStrictEqual(labels(), [], 'the strip has them');
+    plugin.settings.contextStrip = false;
+    skip.sync();
+    assert.deepStrictEqual(labels(), ['Previous in collection: Anarchy', 'Next in collection: Cooperation']);
+    containerEl.querySelectorAll('.dr-header-skip-btn')[1].click();
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation');
+    skip.sync();
+    assert.strictEqual(containerEl.querySelectorAll('.dr-header-skip').length, 1, 'one pair a tab');
+    skip.disable();
+    assert.ok(!containerEl.querySelector('.dr-header-skip'));
+    containerEl.remove();
   });
 
   await t("the strip's skip buttons name where they go and open it in the page", () => {
@@ -1685,14 +1712,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.selection.followDelete(app.vault.getFolderByPath('IR'));
     assert.strictEqual(plugin.selection.get(), null, 'gone, no longer picked');
 
-    // Set always to open; and closed again, nothing stays picked.
+    // Set always to open; and closed again, what's picked stays picked.
     plugin.settings.inspectorClick = 'never';
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     click(row('Deterrence'));
     assert.strictEqual(opened[3].basename, 'Deterrence', 'set always to open');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR/Theories') });
     await view.togglePreview();
-    assert.ok(tabs.length === 0 && plugin.selection.get() === null);
+    assert.ok(tabs.length === 0 && plugin.selection.get().folder.path === 'IR/Theories');
   });
 
   await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {

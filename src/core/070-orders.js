@@ -214,6 +214,13 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.look === 'apple' && saved.lookScope === 'plugin') saved.lookScope = 'window';
     },
   },
+  {
+    // The strip is off to begin with now. Whoever already had the plugin keeps it as it was.
+    to: 16,
+    run(saved, was) {
+      if (was && was.existing && saved.contextStrip === undefined) saved.contextStrip = true;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */
