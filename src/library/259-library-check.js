@@ -24,8 +24,7 @@ import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js'
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { BrowseScreen } from './110-browse-screens.js';
-import { BROWSE_SCREENS } from './119-browse-registry.js';
+import { BrowseScreen } from './108-browse-screen.js';
 import { Library } from './130-browse-filters.js';
 import { FolderPicker } from '../ui/230-pickers.js';
 import { Knowledge } from './254-knowledge.js';
@@ -207,9 +206,6 @@ export class InboxScreen extends BrowseScreen {
     });
   }
 }
-
-BROWSE_SCREENS['library-check'] = ReportScreen;
-BROWSE_SCREENS.inbox = InboxScreen;
 
 export class LibraryCheck extends Feature {
   settingsSchema() {

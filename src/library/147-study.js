@@ -16,8 +16,8 @@ import { actionsOn, addActionItems } from '../core/078-actions.js';
 import { addTextCard, cardBox, liveCards, requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { DAY, dueNotes, nextDue, sessionSummary, startOfDay, studiedAlbum, studyLadder, studyOf } from '../core/081-study.js';
-import { BrowseScreen, copyText } from './110-browse-screens.js';
-import { BROWSE_SCREENS } from './119-browse-registry.js';
+import { BrowseScreen } from './108-browse-screen.js';
+import { copyText } from './110-browse-screens.js';
 import { Library } from './130-browse-filters.js';
 
 /* What a grade is called, on its button and in the palette. */
@@ -632,5 +632,3 @@ export class HighlightsScreen extends BrowseScreen {
     });
   }
 }
-
-BROWSE_SCREENS.highlights = HighlightsScreen;

@@ -30,7 +30,7 @@ export class OnePage extends Feature {
       {
         key: 'onePage',
         name: 'Keep to one page',
-        desc: 'Open new tabs, splits and windows in the current page instead.',
+        desc: 'Open new tabs, splits and windows in the current page instead. Kept for now, for whoever uses it: the library works with Obsidian’s tabs and splits, which this overrides.',
       },
     ];
   }

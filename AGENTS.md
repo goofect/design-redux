@@ -60,7 +60,7 @@ Coffee N' Christmas.
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
 - `DEFAULTS` holds every setting. Settings rows are placed by `SETTINGS_TABS`: a tab for each
-  task (General, Navigation, Notes, Advanced), in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
+  category (General, Appearance — the look's rows first —, Library, Notes, Inspector, Maps, Advanced), in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
   row's key must be added to one feature, and to none twice. The look rows are `LOOK_KEYS`.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
@@ -78,12 +78,13 @@ Coffee N' Christmas.
   `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
   `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
   and links stay as they are; read it rather than walking the vault.
-- A large class can be written in parts: a later piece exports `class Part {…}`,
-  and the class's own module imports it and, at its end, calls
-  `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120, its parts 121–125; MindMapView in 421 and MindMaps in 420, their parts
-  the rest of maps). No `super` in a part. A part for a class of a lower
-  area, which mustn't import it, puts itself on (KnowledgeMindMap, 441).
+- A large class can be written in parts, chained by `extends`: each part
+  extends the one before it, and the class extends the last (BrowseView in
+  120 over 121–125; MindMaps in 420 and MindMapView in 421 over the rest of
+  maps, in the order their `extends` name). A part's methods are the class's;
+  a test refuses a name written in two parts, so none quietly replaces
+  another. A lower area that needs a higher one's work asks the plugin
+  (`plugin.mapNoteRelationships`), never patches a class.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).
@@ -91,8 +92,10 @@ Coffee N' Christmas.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
   is where a note is edited: on a computer, docked in the right sidebar as
-  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. Docked, it
-  follows the open note and what's picked.
+  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. What the
+  inspector is about is `plugin.coordinator`'s to say (084): the tab worked
+  in, a pick, a canvas card, a map node, and the pin, kept as a snapshot
+  `{ target, leaf, origin, pinned }` the docked panel draws.
 - What's picked is `plugin.selection` (076), apart from what's open. In the
   browse view, rows and tiles go through `pickOrOpen`. While the inspector
   shows (`inspectorShowing`), a click picks and a double click or Enter

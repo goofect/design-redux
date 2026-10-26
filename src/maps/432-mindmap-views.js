@@ -15,10 +15,11 @@ import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { savedViews, setSavedView } from '../tree/406-tree-layout-block.js';
 import { nodeLabel, pinOf } from './423-mindmap-scene.js';
+import { MindMapLegend } from './431-mindmap-legend.js';
 
 export const MAP_LOOKS_KEPT = 30;
 
-export class MindMapViews {
+export class MindMapViews extends MindMapLegend {
   /** A node pinned where it is now — or, pinned, let go to where the layout puts it. */
   togglePin(id) {
     const n = this.model && nodeById(this.model, id);

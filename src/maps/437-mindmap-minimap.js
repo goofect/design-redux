@@ -8,11 +8,12 @@
 /* ------------------------------------------------------------------ */
 
 import { viewBox } from './423-mindmap-scene.js';
+import { MindMapCheck } from './435-mindmap-check.js';
 
 const MINIMAP_SVG = 'http://www.w3.org/2000/svg';
 export const MAP_MINIMAP_SIZE = { width: 200, height: 136 };
 
-export class MindMapMinimap {
+export class MindMapMinimap extends MindMapCheck {
   minimapOn() {
     return !this.plugin || this.plugin.settings.mindmapMinimap !== false;
   }

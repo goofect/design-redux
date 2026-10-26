@@ -2,7 +2,7 @@
 /* Browse view: editing an album                                      */
 /*                                                                    */
 /* Edit mode (rename, move, delete, add, arrange by drag) and pins in */
-/* your own order. Methods of BrowseView, put on by mixInto.          */
+/* your own order. A part of BrowseView (see 120).                    */
 /* ------------------------------------------------------------------ */
 
 import { Menu, normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
@@ -12,6 +12,7 @@ import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-propertie
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
 import { schemaFor } from '../core/086-property-schema.js';
+import { BrowseSorting } from './121-browse-sorting.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
@@ -22,7 +23,7 @@ import { AlbumStructure } from './257-album-structure.js';
 export const TILES_AT_ONCE = 60;
 export const TILES_A_FRAME = 120;
 
-export class BrowseEditing {
+export class BrowseEditing extends BrowseSorting {
   /* -- editing an album -------------------------------------------- */
 
   /**
@@ -770,7 +771,7 @@ export class BrowseEditing {
   }
 }
 
-export class RowValues {
+export class RowValues extends BrowseEditing {
   /** A row's value as a button: pick, set or tick it there, the album not drawn again. */
   editableCell(cell, file, key) {
     cell.addClass('is-editable');

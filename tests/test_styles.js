@@ -1,5 +1,6 @@
 /*
- * The stylesheet's own lint: no duration that isn't a motion token, and no
+ * The stylesheet's own lint: no rule for a class the code no longer makes,
+ * no duration that isn't a motion token, and no
  * colour value that isn't already on the list in tests/snapshots/styles.json.
  * Colour belongs to the theme; the few fixed values the plugin keeps (Apple's
  * fills and thumbs, cover art) are recorded, and a new one has to be added
@@ -35,6 +36,20 @@ const t = (name, fn) => {
   passed++;
   console.log(`  ok  ${name}`);
 };
+
+t('every class the stylesheet dresses is one the code makes: no rules left for what’s gone', () => {
+  const raw = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+  const src = path.join(__dirname, '..', 'src');
+  const code = fs.readdirSync(src).filter((d) => fs.statSync(path.join(src, d)).isDirectory())
+    .map((d) => fs.readdirSync(path.join(src, d)).map((f) => fs.readFileSync(path.join(src, d, f), 'utf8')).join('\n')).join('\n');
+  // Style Settings' toggles, named in the @settings block, are put on by that plugin.
+  const toggles = new Set((raw.match(/^\s*id: (dr-[a-z0-9-]+)\s*$/gm) || []).map((l) => l.trim().slice(4)));
+  // Made from a name at run time: dr-mode-<id> by the workspace modes.
+  const made = ['dr-mode-'];
+  const classes = [...new Set((css.match(/\.dr-[a-z0-9-]+/g) || []).map((c) => c.slice(1)))];
+  const unmade = classes.filter((c) => !toggles.has(c) && !made.some((p) => c.startsWith(p)) && code.indexOf(c) === -1);
+  assert.deepStrictEqual(unmade, [], 'classes no code makes — take their rules out: ' + unmade.join(', '));
+});
 
 t('every duration is a motion token', () => {
   assert.deepStrictEqual(durations, [], 'durations not on a token: ' + durations.join(' | '));

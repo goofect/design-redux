@@ -245,7 +245,9 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     // Step 16: the strip is off to begin with; whoever had the plugin keeps it on unless they'd said.
     const strip = R.SETTINGS_MIGRATIONS.find((m) => m.to === 16);
     const f = { look: 'apple' }; strip.run(f, { existing: true });
-    assert.ok(f.contextStrip === true && f.settingsInHeader === true && f.lookScope === 'window');
+    assert.ok(f.contextStrip === true && f.settingsInHeader === true && f.lookScope === 'window' && f.hideNativeProperties === true);
+    const off = { propertiesDropdown: false }; strip.run(off, { existing: true });
+    assert.strictEqual(off.hideNativeProperties, false, 'the panel off hid nothing, so nothing is hidden');
     const g = { contextStrip: false }; strip.run(g, { existing: true });
     assert.strictEqual(g.contextStrip, false);
     // Step 9 leaves a first install's Relationships on.

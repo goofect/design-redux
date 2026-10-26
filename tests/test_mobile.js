@@ -114,7 +114,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView, drSegmented, drOpenSheet };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView, WorkspaceCoordinator, Selection, drSegmented, drOpenSheet };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -311,10 +311,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       { key: 'graphRoutes', name: 'Graph routes' },
     ] }];
     const tab = new T.DesignReduxSettingTab(p.app, p);
-    tab.tab = 'navigation';
+    tab.tab = 'general';
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
-    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Navigation', 'Notes', 'Advanced'], 'by task, not by part of the code');
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Maps', 'Advanced'], 'by category, not by part of the code');
     assert.ok(row('contextStrip').closest('.dr-set-feature'), 'the switch is the feature’s own row');
     const more = row('stripDetail').closest('.dr-set-more');
     assert.ok(more && more.classList.contains('is-off') && !more.classList.contains('is-open'), 'a feature that is off has its options out of sight');
@@ -649,31 +649,59 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       },
       folderNote: () => null,
     };
+    // What it's about is the coordinator's to say; the panel draws it.
+    panel.plugin.selection = new T.Selection(panel.plugin);
+    const coordinator = (panel.plugin.coordinator = new T.WorkspaceCoordinator(panel.plugin));
+    panel.plugin.register = () => {};
+    panel.plugin.selection.onChange((item) => coordinator.pick(item));
+    coordinator.onChange((snap) => panel.showSnapshot(snap));
     panel.toggle(noteLeaf, null);
     await new Promise((r) => setTimeout(r));
     const view = sidebarLeaf.view;
     assert.ok(view.contentEl.contains(panel.popupEl), 'in the sidebar');
     assert.ok(panel.isOpen() && panel.popupEl.textContent === a.path, 'the note last worked in');
     // Another note opens: it follows; the sidebar's own leaf and an empty pane leave it be.
-    panel.follow({ view: new MarkdownView(b) });
+    coordinator.look({ view: new MarkdownView(b) });
     assert.strictEqual(panel.popupEl.textContent, b.path);
-    panel.follow(view.leaf);
-    panel.follow({ view: {} });
+    coordinator.look(view.leaf);
+    coordinator.look({ view: {} });
     assert.strictEqual(panel.popupEl.textContent, b.path);
     // A map says what it's about — its file — and stays the page the node section reads its selection from.
     const map = new TFile('Theories/Map.mindmap');
     const mapLeaf = { view: { panelTarget: () => ({ file: map }) } };
-    panel.follow(mapLeaf);
+    coordinator.look(mapLeaf);
     assert.ok(panel.popupEl.textContent === map.path && panel.leaf === mapLeaf);
-    panel.follow(view.leaf);
+    coordinator.look(view.leaf);
     assert.strictEqual(panel.leaf, mapLeaf, 'working in the inspector keeps the map as its page');
     // Picked in the library, without opening.
-    panel.showDocked(null, { file: c });
+    panel.plugin.selection.set({ file: c });
     assert.strictEqual(panel.popupEl.textContent, c.path);
     // An album picked: its name, at least, with no page of the library to tell more.
     const album = new TFolder('Theories');
-    panel.showDocked(null, { folder: album });
+    panel.plugin.selection.set({ folder: album });
     assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
+    // Why it shows it, above it; pinned, it stays while notes open and picks change; unpinned, it catches up.
+    const origin = () => view.contentEl.querySelector('.dr-panel-dock-origin').textContent;
+    // The note open, then picked: drawn again, as a pick.
+    coordinator.look({ view: new MarkdownView(b) });
+    let mounts = 0;
+    const mount = panel.mount;
+    panel.mount = function () { mounts++; mount.call(this); };
+    panel.plugin.selection.set({ file: b });
+    assert.ok(mounts === 1 && panel.picked, 'redrawn as picked');
+    panel.mount = mount;
+    assert.strictEqual(origin(), 'Picked in the library');
+    panel.togglePin();
+    assert.strictEqual(origin(), 'Pinned · Picked in the library');
+    coordinator.look({ view: new MarkdownView(c) });
+    panel.plugin.selection.set({ file: a });
+    assert.strictEqual(panel.popupEl.textContent, b.path, 'pinned: neither the open note nor a pick moves it');
+    panel.togglePin();
+    assert.ok(panel.popupEl.textContent === a.path && origin() === 'The open note', 'unpinned: the note last worked in');
+    // Deleted, it's let go of, pinned or not.
+    panel.togglePin();
+    coordinator.forget(a);
+    assert.ok(!panel.isOpen() && !panel.pinned && origin() === '');
     // Closed, it's a popup again.
     panel.undock(view);
     assert.ok(panel.popupEl.parentElement === document.body && !panel.isOpen() && !panel.popupEl.hasClass('is-docked'));

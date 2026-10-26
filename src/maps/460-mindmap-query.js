@@ -14,6 +14,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { NamePrompt } from '../ui/230-pickers.js';
 import { newId, nodeById } from '../tree/400-tree-model.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
+import { MindMapAccess } from './459-mindmap-access.js';
 
 /* The most notes a query hangs under its node. */
 export const QUERY_LIMIT = 200;
@@ -77,7 +78,7 @@ function hidden(obj, key, value) {
   Object.defineProperty(obj, key, { value, writable: true, configurable: true, enumerable: false });
 }
 
-export class MindMapQuery {
+export class MindMapQuery extends MindMapAccess {
   /** The notes under each query node, worked out again when the map or the vault changed. */
   answerQueries() {
     if (!this.model || !this.app || !this.app.metadataCache) return;

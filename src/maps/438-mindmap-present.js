@@ -16,8 +16,9 @@ import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { mapPresentation } from '../tree/412-tree-present.js';
 import { boundsOfBoxes, fitCamera, nodeLabel, nodeParts } from './423-mindmap-scene.js';
+import { MindMapMinimap } from './437-mindmap-minimap.js';
 
-export class MindMapPresent {
+export class MindMapPresent extends MindMapMinimap {
   /** From the root, or from a node's branch. */
   present(fromId) {
     if (this.presenting || !this.model) return null;

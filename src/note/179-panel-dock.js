@@ -7,7 +7,7 @@
 /* button shows it instead of floating it.                            */
 /* ------------------------------------------------------------------ */
 
-import { ItemView } from 'obsidian';
+import { ItemView, setIcon } from 'obsidian';
 import { INSPECTOR_VIEW } from '../core/020-constants.js';
 
 export class PanelDockView extends ItemView {
@@ -30,11 +30,28 @@ export class PanelDockView extends ItemView {
 
   async onOpen() {
     this.containerEl.addClass('dr-panel-dock');
+    // Why it shows what it shows: the open note, a pick in the library, a map, a card — or pinned.
+    this.originEl = this.contentEl.createDiv({ cls: 'dr-panel-dock-origin' });
+    if (typeof this.addAction === 'function') this.pinEl = this.addAction('pin', 'Pin to what it shows', () => this.panel.togglePin());
     this.panel.dock(this);
   }
 
   async onClose() {
     this.panel.undock(this);
+  }
+
+  /** The line saying why, and the pin's state. */
+  showOrigin(text, pinned) {
+    if (this.originEl) {
+      this.originEl.setText(text ? (pinned ? `Pinned · ${text}` : text) : '');
+      this.originEl.toggleClass('is-hidden', !text);
+    }
+    if (this.pinEl) {
+      this.pinEl.toggleClass('is-active', !!pinned);
+      this.pinEl.setAttribute('aria-label', pinned ? 'Unpin: follow the open note and picks again' : 'Pin to what it shows');
+      this.pinEl.setAttribute('aria-pressed', String(!!pinned));
+      setIcon(this.pinEl, pinned ? 'pin-off' : 'pin');
+    }
   }
 
   /** What shows while there's nothing to show. */

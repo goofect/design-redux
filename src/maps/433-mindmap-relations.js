@@ -16,8 +16,9 @@ import { nodeById, walk } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { addAnswer, addRelation, relationMeaning, relationsOf, relationStatements, removeRelation, reverseRelation, setRelationMeaning, statementsMarkdown } from '../tree/407-tree-relations.js';
 import { boundsOfBoxes, fitCamera, nodeLabel, nodeParts } from './423-mindmap-scene.js';
+import { MindMapViews } from './432-mindmap-views.js';
 
-export class MindMapRelations {
+export class MindMapRelations extends MindMapViews {
   kinds() {
     return relationTypes(this.plugin ? this.plugin.settings : {});
   }

@@ -2,6 +2,8 @@ export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
 // The note panel docked in the right sidebar. The old inspector's type (design-redux-inspector) is still closed on load.
 export const INSPECTOR_VIEW = 'design-redux-properties';
+// Quick Look in the library: Obsidian's page preview, shown without a modifier key.
+export const LIBRARY_HOVER_SOURCE = 'design-redux-library';
 
 /* Destinations that aren't a file or folder. */
 /* The browse screen each built-in entry opens, which is also how the
@@ -242,6 +244,8 @@ export const DEFAULTS = {
   headerOrder: {},
   ribbonInMenu: true,
   propertiesDropdown: true,
+  // The note's own properties block hidden while the panel shows them: asked for, not by default, since 3.1.
+  hideNativeProperties: false,
   // The note panel's properties: 'compact', the main ones first and alone, or 'all'.
   panelPropertiesView: 'compact',
   // The main ones, by name.

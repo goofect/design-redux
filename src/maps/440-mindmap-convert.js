@@ -16,8 +16,9 @@ import { noteLinkOf } from '../tree/408-tree-notes.js';
 import { canvasFromMap, mapFromCanvas } from '../tree/414-tree-convert.js';
 import { MINDMAP_EXTENSION } from './421-mindmap-view.js';
 import { layoutScene } from './423-mindmap-scene.js';
+import { MindMapAlbumFeature } from './439-mindmap-album.js';
 
-export class MindMapConvert {
+export class MindMapConvert extends MindMapAlbumFeature {
   /** A new file beside another, written and opened. */
   async writeBeside(near, base, ext, text) {
     const folder = near && near.parent ? near.parent : this.app.vault.getRoot();

@@ -78,11 +78,6 @@
   padding-bottom: var(--dr-space-2);
 }
 
-.dr-set-number input[type='number'] {
-  width: 84px;
-  text-align: right;
-}
-
 /* A word at the top of a tab whose settings wait on another. */
 .dr-set-callout {
   display: flex;

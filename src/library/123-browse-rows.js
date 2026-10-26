@@ -2,7 +2,7 @@
 /* Browse view: the list, shelves and cards                           */
 /*                                                                    */
 /* Rows of notes with their lengths and marks, shelves of albums, and */
-/* cards. Methods of BrowseView, put on by mixInto.                   */
+/* cards. A part of BrowseView (see 120).                             */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFolder } from 'obsidian';
@@ -14,10 +14,11 @@ import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { RowValues } from './122-browse-editing.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
 
-export class BrowseRows {
+export class BrowseRows extends RowValues {
   /* -- the list --------------------------------------------------- */
 
   trackRow(list, file, index, nest) {

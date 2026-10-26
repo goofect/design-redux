@@ -17,6 +17,8 @@ import { setAttr, setText } from '../tree/404-tree-ops.js';
 import { noteLinkOf } from '../tree/408-tree-notes.js';
 import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
+import { MindMapConvert } from './440-mindmap-convert.js';
+import { MindMapLinked } from './452-mindmap-linked.js';
 
 /** An attribute's value as the panel shows it. */
 function attrText(v) {
@@ -101,9 +103,13 @@ export class NodeSection extends PanelSection {
 export function linkingNotes(app, plugin, mapFile, n) {
   if (!n.anchor || !(mapFile instanceof TFile) || !app || !app.metadataCache || typeof app.metadataCache.getFileCache !== 'function') return [];
   const want = `#^${n.id}`;
+  // The index gives the paths linking to the map, with how often: { path: count }.
   let from = [];
   try {
-    from = libraryIndex(plugin).incoming(mapFile) || [];
+    const vault = app.vault;
+    from = Object.keys(libraryIndex(plugin).incoming(mapFile) || {})
+      .map((path) => (vault && typeof vault.getAbstractFileByPath === 'function' ? vault.getAbstractFileByPath(path) : null))
+      .filter((f) => f instanceof TFile);
   } catch (err) {
     from = [];
   }
@@ -113,7 +119,7 @@ export function linkingNotes(app, plugin, mapFile, n) {
   });
 }
 
-export class MindMapNodePanel {
+export class MindMapNodePanel extends MindMapLinked {
   /** What the note panel is about on a map: its note. */
   panelTarget() {
     return this.file ? { file: this.file } : { none: 'This map has no file yet.' };
@@ -130,7 +136,7 @@ export class MindMapNodePanel {
   }
 }
 
-export class MindMapsPanel {
+export class MindMapsPanel extends MindMapConvert {
   panelSections(panel) {
     return this.enabled && this.settings.mindmapNodePanel !== false ? [new NodeSection(panel)] : [];
   }

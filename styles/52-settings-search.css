@@ -31,10 +31,6 @@
   height: var(--dr-control-icon);
 }
 
-.dr-set-look {
-  margin-bottom: var(--dr-space-4);
-}
-
 .dr-set-search {
   display: flex;
   flex: 1 1 auto;

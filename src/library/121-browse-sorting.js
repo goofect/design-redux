@@ -2,10 +2,10 @@
 /* Browse view: sorting and filtering                                 */
 /*                                                                    */
 /* The order every screen shares; filters on properties, tags and     */
-/* dates; the Find field. Methods of BrowseView, put on by mixInto.   */
+/* dates; the Find field. A part of BrowseView (see 120).             */
 /* ------------------------------------------------------------------ */
 
-import { Menu, setIcon } from 'obsidian';
+import { ItemView, Menu, setIcon } from 'obsidian';
 import { BROWSE_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { byName, composing, liveViews, showMenuAt, sortByOrder } from '../core/030-helpers-art.js';
 import { asButton, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, noteTags, onActivate, OWN_ORDER, propertyFilterLabel, SORTS, TABLE_SORTS, vaultTags } from '../core/040-helpers-sorting.js';
@@ -18,7 +18,7 @@ import { paintValue } from '../ui/248-value-options.js';
 import { ALBUM_LAYOUTS, AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
-export class BrowseSorting {
+export class BrowseSorting extends ItemView {
   /** A property, tag or value renamed by the bulk tools: what this screen shows and filters by follows. */
   followRenamed(what) {
     if (what.property) {

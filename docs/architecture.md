@@ -17,7 +17,7 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 
  src/core/     constants; helpers (art, colours 031, properties 045, text 047,      19 modules  4,622 lines
                sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
-               Selection 076; actions 078; Feature and mixInto 080; appearance
+               Selection 076; actions 078; Feature 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
  src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
                album features, note page, study, knowledge, library checks
@@ -431,8 +431,8 @@ and the pairs of pieces that use each other from 14 to 12.
   - `121-browse-sorting`.
   - `122-browse-editing`, which includes pins in your own order.
   - `123-browse-rows`: the list, shelves and cards.
-  - These are methods of `BrowseView`, put on it by `mixInto` (in `080`). It refuses a name
-    written twice. The methods that call `super` stay in the class.
+  - These are parts of `BrowseView`, which extends them (since §41, by `extends`; before,
+    `mixInto` put them on).
 - **The bulk dialogs are in pieces by family:** `300` keeps `BulkModal` and the "where"
   conditions; then `301` properties, `302` tags and values, `303` types and missing values,
   and `304` the property list and the tools window.
@@ -970,3 +970,50 @@ related) again: docked, it has room. Step 9, which took it out on 14 Oct,
 now applies only to an install that had settings then, so whoever has it off
 keeps it off.
 
+## 40. The development spec: inspector pin, native properties, categories
+
+From the development specification (26 Oct 2026), after the first plan:
+
+- The inspector can be pinned (a pin in its header): it keeps what it shows
+  while notes open and picks change. A line above says why it shows it —
+  the open note, picked in the library, the open map, a card on the canvas.
+  What it shows, deleted, it lets go of (`forget`).
+- Obsidian's own properties block stays in sight unless "Hide the note's own
+  properties" (`hideNativeProperties`) is on; step 16 keeps an existing
+  install's hidden if its panel was on.
+- Settings in the spec's categories: General (Home, strip and modes),
+  Appearance (the look's rows, then covers), Library, Notes, Inspector,
+  Maps, Advanced. Rows moved whole; a link to a look setting opens
+  Appearance. §32's four tabs were never released.
+
+## 41. No more mixInto, nothing registered as it loads
+
+- A class in parts is now a chain of `extends`: `BrowseSorting` (121) extends `ItemView`,
+  each later part the one before, and `BrowseView` the last (125). `MindMaps` and
+  `MindMapView` likewise over the maps' parts, `Feature` and `TextFileView` at the bottom;
+  the modules that hold a part of each (439, 453, 459, 461) sit in both chains.
+- Nothing patches a prototype any more. A test walks each chain and refuses a method
+  written in two links, the check `mixInto` made as it ran.
+- `KnowledgeMindMap` is gone: `Knowledge.map` asks `plugin.mapNoteRelationships`, which
+  passes to `MindMaps`, so the library area still never imports the maps.
+- **No registry filled as modules load.** `BROWSE_SCREENS` (119) names every screen,
+  features' too (smart, concept, highlights, library-check, inbox, knowledge-check); no
+  module adds itself any more. `BrowseScreen`, the class every screen extends, has a
+  module of its own that imports nothing (108), so whichever screen loads first can
+  extend it. `src/main.js` imports the plugin and nothing else: no module has to be
+  loaded first.
+
+## 42. The workspace coordinator
+
+- `WorkspaceCoordinator` (core 084, `plugin.coordinator`) decides what the inspector is
+  about. It follows tab changes, notes opening, picks (`plugin.selection`), a click or
+  key on a canvas (in every window) and deletes, and keeps the answer as a snapshot:
+  `{ target, leaf, origin, pinned }`, origin one of note, map, card, picked.
+- The pin is its: pinned, nothing but the Properties button or a delete changes the
+  target; unpinned, it looks again at the tab last worked in. The inspector's own tab,
+  and a tab with nothing to show, leave the target as it was.
+- The docked panel subscribes and draws (`showSnapshot`); it no longer listens to tabs,
+  picks or canvases itself. The floating panel on a phone keeps its own simple follow
+  of the open note. `targetOf` and `hostsPanel` moved to the coordinator.
+- Selection stays apart from what's open: a pick has no leaf; a tab's target has the
+  leaf it came from, which a map's node section reads.

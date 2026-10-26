@@ -13,6 +13,7 @@ import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { dueState, taskOf, taskText } from '../tree/415-tree-tasks.js';
 import { estimateSize, nodeParts } from './423-mindmap-scene.js';
+import { MindMapPeek } from './429-mindmap-peek.js';
 
 /** How a node's text is set: the root larger, and — with depth shown — the root's own children heavier. */
 export function nodeTier(model, n, depth) {
@@ -51,7 +52,7 @@ function imagesIn(els) {
   );
 }
 
-export class MindMapCards {
+export class MindMapCards extends MindMapPeek {
   depthShown() {
     return !this.plugin || this.plugin.settings.mindmapDepth !== false;
   }

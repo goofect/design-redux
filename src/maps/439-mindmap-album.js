@@ -23,11 +23,13 @@ import { applyPatch } from '../tree/404-tree-ops.js';
 import { albumEntry, albumEntryOps } from '../tree/406-tree-layout-block.js';
 import { albumParentTree, albumSyncOps } from '../tree/413-tree-album.js';
 import { FILE_FORMATS, MINDMAP_EXTENSION } from './421-mindmap-view.js';
+import { MindMapVaultMap } from './436-mindmap-vault-map.js';
+import { MindMapPresent } from './438-mindmap-present.js';
 
 /* How long the notes are left to settle before an open map follows them. */
 export const MAP_ALBUM_WAIT = 500;
 
-export class MindMapAlbumFeature {
+export class MindMapAlbumFeature extends MindMapVaultMap {
   get parentProperty() {
     return String(this.settings.graphRouteProperty || 'parent').trim() || 'parent';
   }
@@ -167,7 +169,7 @@ export class MindMapAlbumFeature {
   }
 }
 
-export class MindMapAlbumView {
+export class MindMapAlbumView extends MindMapPresent {
   albumFolder() {
     const entry = this.model ? albumEntry(this.model) : null;
     const f = entry && this.app ? this.app.vault.getAbstractFileByPath(entry.path) : null;

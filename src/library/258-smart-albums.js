@@ -17,8 +17,7 @@ import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { LibraryView } from './100-library.js';
-import { BrowseScreen } from './110-browse-screens.js';
-import { BROWSE_SCREENS } from './119-browse-registry.js';
+import { BrowseScreen } from './108-browse-screen.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ComparePicker, NamePrompt } from '../ui/230-pickers.js';
@@ -86,8 +85,6 @@ export class SmartScreen extends BrowseScreen {
     view.renderAlbumFoot(root, files);
   }
 }
-
-BROWSE_SCREENS.smart = SmartScreen;
 
 export let smartAlbumCount = 0;
 

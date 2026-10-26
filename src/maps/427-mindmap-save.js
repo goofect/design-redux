@@ -14,11 +14,12 @@ import { Notice } from 'obsidian';
 import { adoptIds, nodeById } from '../tree/400-tree-model.js';
 import { bindSource } from '../tree/401-tree-outline.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
+import { MindMapEditing } from './426-mindmap-editor.js';
 
 /* How long after a change the file's written. */
 export const SAVE_PAUSE = 400;
 
-export class MindMapSaving {
+export class MindMapSaving extends MindMapEditing {
   /** The file's text, read into the map: a file new to the view centres it; the same one keeps its place. */
   setViewData(data, clear) {
     // Its own write, back: nothing new. (Obsidian sets the view's `data` before this, so the text read is kept apart.)

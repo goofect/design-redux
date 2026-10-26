@@ -15,6 +15,7 @@ import { walk } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { legendName, setLegendName } from '../tree/406-tree-layout-block.js';
 import { colourKey, NODE_COLOURS } from './423-mindmap-scene.js';
+import { MindMapCards } from './430-mindmap-cards.js';
 
 /** The colours a map's nodes have and how many of each: the six in order, then others, then none — but only beside others. [[key, count]]. */
 export function colourCounts(model) {
@@ -38,7 +39,7 @@ export function colourName(model, key) {
   return legendName(model, key) || (key === 'none' ? 'No colour' : NODE_COLOURS[key] || key);
 }
 
-export class MindMapLegend {
+export class MindMapLegend extends MindMapCards {
   legendShown() {
     return (!this.plugin || this.plugin.settings.mindmapLegend !== false) && !this.legendHidden;
   }

@@ -10,8 +10,9 @@ import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js'
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { dueNotes } from '../core/081-study.js';
+import { BrowseScreen } from './108-browse-screen.js';
 import { homeShelves } from './109-home-shelves.js';
-import { BrowseScreen, collectionTiles } from './110-browse-screens.js';
+import { collectionTiles } from './110-browse-screens.js';
 import { fromReading } from './145-reading-history.js';
 
 export class HomeScreen extends BrowseScreen {

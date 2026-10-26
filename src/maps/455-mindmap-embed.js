@@ -15,6 +15,7 @@ import { MINDMAP_EXTENSION, MINDMAP_VIEW } from './421-mindmap-view.js';
 import { isMindMapNote, showFileAs } from './422-mindmap-takeover.js';
 import { estimateSize, fitCamera, layoutScene, nodeLabel, nodeTints } from './423-mindmap-scene.js';
 import { MindMapRenderer } from './424-mindmap-render.js';
+import { MindMapsPanel } from './453-mindmap-node-panel.js';
 
 /* How tall a map drawn in a note is. */
 export const EMBED_HEIGHT = 320;
@@ -103,7 +104,7 @@ export class MapEmbed extends MarkdownRenderChild {
   }
 }
 
-export class MindMapsEmbeds {
+export class MindMapsEmbeds extends MindMapsPanel {
   embedsOn() {
     return this.enabled && this.settings.mindmapEmbeds !== false;
   }

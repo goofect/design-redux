@@ -92,11 +92,14 @@ describe('Design Redux in Obsidian', function () {
       const started = performance.now();
       await app.plugins.enablePlugin('design-redux');
       window.__drLoadMs = Math.round(performance.now() - started);
-      // A first install starts without the strip, and with notes as the theme draws them; both are
-      // still offered, and tested here, so they're put on.
+      // A first install starts without the strip, with notes as the theme draws them, its own
+      // properties in sight and Obsidian's gear where it was; all are still offered, and tested
+      // here, so they're put on.
       const plugin = app.plugins.plugins['design-redux'];
       plugin.settings.contextStrip = true;
       plugin.settings.lookScope = 'window';
+      plugin.settings.hideNativeProperties = true;
+      plugin.settings.settingsInHeader = true;
       await plugin.saveSettings();
     });
     await browser.pause(1500);
@@ -202,7 +205,7 @@ describe('Design Redux in Obsidian', function () {
     });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
-    expect(where.tabs).toBe(4);
+    expect(where.tabs).toBe(7);
 
     // A screenshot from whichever window they're in.
     const main = await browser.getWindowHandle();
@@ -214,8 +217,8 @@ describe('Design Redux in Obsidian', function () {
       }
     }
     await shot('settings-appearance');
-    await clickText('.dr-settings .dr-set-tab', 'Navigation');
-    await shot('settings-navigation');
+    await clickText('.dr-settings .dr-set-tab', 'Library');
+    await shot('settings-library');
 
     // Searching shows the matching rows from every tab, named as ever, and nothing else.
     const found = await browser.execute(() => {
@@ -233,7 +236,7 @@ describe('Design Redux in Obsidian', function () {
     expect(found.names).toContain('Drop to set a cover');
     expect(found.names.length).toBe(found.seen);
     expect(found.seen).toBeLessThan(found.all);
-    expect(found.panes).toContain('general');
+    expect(found.panes).toContain('appearance');
     await browser.switchToWindow(main);
     await browser.executeObsidian(({ app }) => app.setting.close());
     await browser.pause(500);
@@ -714,15 +717,24 @@ describe('Design Redux in Obsidian', function () {
     await input.waitForExist({ timeout: 8000 });
     // A notice left by an earlier test can sit over the field.
     await browser.execute(() => document.querySelectorAll('.notice').forEach((n) => n.remove()));
+    // Whatever leaves the field from here on, kept with where it went and the stack.
+    await browser.execute(() => {
+      window.__drBlur = null;
+      document.addEventListener('focusout', (e) => {
+        if (!e.target.closest || !e.target.closest('.dr-browse-search')) return;
+        window.__drBlur = { to: e.relatedTarget ? `${e.relatedTarget.tagName}.${e.relatedTarget.className}` : null, at: Math.round(performance.now()), stack: String(new Error().stack).split('\n').slice(1, 9).map((l) => l.trim()) };
+      }, { capture: true });
+    });
     await input.click();
-    // Typed only once the field holds the focus: the page can still be settling as it opens.
+    // Typed only once the field has held the focus a moment: the page can still be settling as it opens.
+    let held = 0;
     const focused = await readUntil(
       () => browser.execute(() => {
         const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
         if (field && document.activeElement !== field) field.focus();
         return !!field && document.activeElement === field;
       }),
-      (f) => f
+      (f) => (f ? ++held >= 4 : (held = 0) > 0)
     );
     expect(focused).toBe(true);
     // Where the keys go, kept for a miss: what got them, and whether something stopped them.
@@ -753,6 +765,7 @@ describe('Design Redux in Obsidian', function () {
         active: document.activeElement ? `${document.activeElement.tagName}.${document.activeElement.className}` : null,
         focus: document.hasFocus(),
         modal: document.querySelectorAll('.modal-container').length,
+        blur: window.__drBlur || null,
       }));
       expect(seen).toEqual({});
     }
@@ -1433,7 +1446,8 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
       el().querySelector('.dr-preview-btn').click();
       const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
-      await until(() => !!dock() && !!row());
+      // In sight, not only open: until then a click opens rather than picks.
+      await until(() => !!dock() && !!row() && page.view.previewOn());
       row().click();
       const title = () => { const t = dock() && dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Anarchy');
@@ -1658,7 +1672,7 @@ describe('Design Redux in Obsidian', function () {
       };
     });
     fs.writeFileSync(path.join(OUT, `${version}-properties-facts.json`), JSON.stringify(facts, null, 2));
-    // With the Properties panel on (the default), the note's own block is hidden.
+    // With the note's own properties hidden while the panel shows them (put on in before), the block is hidden.
     expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
   });
 

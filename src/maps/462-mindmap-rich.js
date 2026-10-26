@@ -14,10 +14,11 @@ import { putIcon } from '../ui/248-value-options.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { MAP_THEMES, mapThemeOf, NODE_SHAPES, nodeShape, setMapTheme } from '../tree/406-tree-layout-block.js';
+import { MindMapHistory } from './461-mindmap-history.js';
 
 const SHAPE_NAMES = { box: 'A box', pill: 'A pill', underline: 'A line under it', plain: 'No outline' };
 
-export class MindMapRich {
+export class MindMapRich extends MindMapHistory {
   richOn() {
     return !this.plugin || this.plugin.settings.mindmapRichNodes !== false;
   }

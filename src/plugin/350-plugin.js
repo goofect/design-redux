@@ -14,6 +14,7 @@ import { Files } from '../core/074-files.js';
 import { Reading } from '../core/075-reading.js';
 import { Selection } from '../core/076-selection.js';
 import { LibraryIndex } from '../core/077-library-index.js';
+import { WorkspaceCoordinator } from '../core/084-workspace-coordinator.js';
 import { Appearance } from '../core/085-appearance.js';
 import { ListKeys } from '../note/105-list-keys.js';
 import { SidebarDrop } from '../library/107-sidebar-drop.js';
@@ -71,6 +72,9 @@ export class DesignRedux extends Plugin {
     this.files = new Files(this);
     this.notes = new Notes(this);
     this.selection = new Selection(this);
+    // What the inspector is about: the tab worked in, a pick, a card, a map node; and the pin.
+    this.coordinator = new WorkspaceCoordinator(this);
+    this.coordinator.listen();
     // What every screen reads of the vault, kept while files and links stay as they are.
     this.libraryIndex = new LibraryIndex(this);
     this.reading = new Reading(this);
@@ -265,6 +269,13 @@ export class DesignRedux extends Plugin {
 
   newCanvas(folder) {
     return this.files.newCanvas(folder);
+  }
+
+  /** A note's relationships, from Knowledge, as a mind map: undefined where mind maps are off, so a canvas is made instead. */
+  mapNoteRelationships(file, knowledge) {
+    const maps = this.feature(MindMaps);
+    if (!maps || maps.enabled === false) return undefined;
+    return maps.mapNoteRelationships(file, knowledge);
   }
 
   /** A new mind map in the folder, where mind maps are on. */
@@ -472,6 +483,8 @@ export class DesignRedux extends Plugin {
     // Whether these were saved before, or it's a first install: some steps keep an old default for the first.
     const was = { existing: Object.keys(saved).length > 0 };
     const steps = SETTINGS_MIGRATIONS.filter((m) => m.to > from).sort((a, b) => a.to - b.to);
+    // What this load brought up to date, for the diagnostics.
+    this.migrated = { from, ran: [], failed: [] };
     if (steps.length) {
       try {
         const dir = this.manifest && this.manifest.dir;
@@ -483,7 +496,9 @@ export class DesignRedux extends Plugin {
         try {
           m.run(saved, was);
           saved.settingsVersion = m.to;
+          this.migrated.ran.push(m.to);
         } catch (err) {
+          this.migrated.failed.push(m.to);
           console.error(`Design Redux: settings step ${m.to} failed`, err);
         }
       });

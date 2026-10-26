@@ -11,6 +11,7 @@
 /* redo. Paste puts lines in as nodes.                                  */
 /* ------------------------------------------------------------------ */
 
+import { TextFileView } from 'obsidian';
 import { nodeById } from '../tree/400-tree-model.js';
 import { addChild, addSibling, indentNode, moveNode, outdentNode, pasteLines, removeNode, reorderNode, setAttr } from '../tree/404-tree-ops.js';
 import { nodeNudge, setNudge } from '../tree/406-tree-layout-block.js';
@@ -40,7 +41,7 @@ export function dropTarget(model, scene, draggedId, point, vertical) {
   return { parentId: target.id, index: target.children.length, target: target.id, zone: 'child' };
 }
 
-export class MindMapInput {
+export class MindMapInput extends TextFileView {
   listen() {
     const root = this.root;
     let drag = null;

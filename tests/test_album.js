@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -267,6 +267,18 @@ let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
 (async () => {
+  await t('the browse view’s parts each write a method once: a later one never quietly replaces an earlier', () => {
+    const seen = new Map();
+    for (let proto = R.BrowseView.prototype; proto && proto.constructor !== ItemView; proto = Object.getPrototypeOf(proto)) {
+      Object.getOwnPropertyNames(proto).forEach((name) => {
+        if (name === 'constructor') return;
+        assert.ok(!seen.has(name), `${name} is written in ${seen.get(name)} and ${proto.constructor.name}`);
+        seen.set(name, proto.constructor.name);
+      });
+    }
+    assert.ok(seen.size > 100);
+  });
+
   await t('an arrangement lists what it names in its order, and anything new after', () => {
     const items = ['a', 'b', 'c', 'd'].map((n) => ({ n }));
     const out = R.arrange(items, (x) => x.n, ['c', 'a', 'gone'], (rest) => rest.slice().reverse());
@@ -919,6 +931,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
     assert.strictEqual(s.settingsVersion, 17);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
+    // The diagnostics say what loading did.
+    assert.match(R.settingsLine(ctx), /^Settings: version 17, brought up from \d+; steps [\d, ]+17$/);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -1703,6 +1717,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.previewAlbum(el, app.vault.getFolderByPath('IR'));
     assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
     assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
+
+    // Space on a note's row: a look at it, Obsidian's page preview; on an album, nothing.
+    const looked = [];
+    const trigger = app.workspace.trigger;
+    app.workspace.trigger = (name, info) => (name === 'hover-link' ? looked.push(info) : trigger && trigger.call(app.workspace, name, info));
+    const noteRow = document.createElement('div');
+    noteRow.dataset.path = 'IR/Balance.md';
+    let stopped = 0;
+    view.onKey({ key: ' ', target: noteRow, preventDefault: () => stopped++ });
+    view.onKey({ key: ' ', target: view.contentEl.querySelector('.dr-card[data-path="IR"]'), preventDefault: () => stopped++ });
+    app.workspace.trigger = trigger;
+    assert.deepStrictEqual([looked.length, looked[0].linktext, looked[0].source, stopped], [1, 'IR/Balance.md', 'design-redux-library', 1]);
 
     view.onKey({ key: 'Escape', target: view.contentEl, preventDefault() {} });
     assert.strictEqual(plugin.selection.get(), null, 'Escape lets go');

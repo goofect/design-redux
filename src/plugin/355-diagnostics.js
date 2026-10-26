@@ -172,6 +172,7 @@ export class Diagnostics extends Feature {
       `Obsidian ${apiVersion || '?'} on ${where.join(', ')}`,
       `On: ${features.filter((f) => f.enabled).map((f) => f.constructor.name).join(', ')}`,
       `Off: ${features.filter((f) => !f.enabled).map((f) => f.constructor.name).join(', ') || 'none'}`,
+      settingsLine(plugin),
       '',
       'Compatibility:',
       ...compatibility(this.app).map((p) => `  ${p.ok === null ? '·' : p.ok ? '✓' : '✗'} ${p.what}`),
@@ -192,5 +193,15 @@ export class Diagnostics extends Feature {
       new Notice('Couldn’t copy; the diagnostics are in the developer console.');
     }
   }
+}
+
+/** The settings' version, and what this load brought up to date — the steps run, and any that failed. */
+export function settingsLine(plugin) {
+  const version = (plugin.settings && plugin.settings.settingsVersion) || '?';
+  const m = plugin.migrated;
+  if (!m || (!m.ran.length && !m.failed.length)) return `Settings: version ${version}`;
+  const ran = m.ran.length ? `; steps ${m.ran.join(', ')}` : '';
+  const failed = m.failed.length ? `; failed ${m.failed.join(', ')} (the settings before are in data.before-v${m.ran.concat(m.failed).sort((a, b) => a - b)[0]}.json)` : '';
+  return `Settings: version ${version}, brought up from ${m.from}${ran}${failed}`;
 }
 

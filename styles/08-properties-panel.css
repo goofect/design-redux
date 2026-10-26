@@ -6,13 +6,13 @@
  * rules meant for a note's full-width column.
  */
 
-/* A note's own properties, hidden while the panel shows them. Newer
+/* A note's own properties, hidden while the panel shows them, when asked. Newer
    Obsidian versions give this block a display of their own that outranks
    a plain rule, so this one insists; it's also matched through the
    editor and reading views, in case the leaf around them changes. */
-body.dr-props-active .workspace-leaf-content[data-type="markdown"] .metadata-container,
-body.dr-props-active .workspace-split.mod-root .markdown-source-view .metadata-container,
-body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-container {
+body.dr-props-hide-native .workspace-leaf-content[data-type="markdown"] .metadata-container,
+body.dr-props-hide-native .workspace-split.mod-root .markdown-source-view .metadata-container,
+body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .metadata-container {
   display: none !important;
 }
 
@@ -70,6 +70,17 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
 }
 
 .dr-panel-dock-empty.is-hidden {
+  display: none;
+}
+
+/* Why it shows what it shows: a quiet line above it. */
+.dr-panel-dock-origin {
+  padding: var(--dr-space-2) 0 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-panel-dock-origin.is-hidden {
   display: none;
 }
 
@@ -697,10 +708,6 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 /* Suggestions ------------------------------------------------------------ */
-
-.dr-field {
-  position: relative;
-}
 
 .dr-suggest {
   position: fixed;

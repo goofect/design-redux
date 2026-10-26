@@ -12,30 +12,9 @@ import { blankLook, drawFolderArt, onContextMenu } from '../core/030-helpers-art
 import { asButton, iconWord, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { BrowseScreen } from './108-browse-screen.js';
 import { AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
-
-export class BrowseScreen {
-  constructor(view) {
-    this.view = view;
-    this.plugin = view.plugin;
-  }
-
-  get app() {
-    return this.plugin.app;
-  }
-
-  get settings() {
-    return this.plugin.settings;
-  }
-
-  /** What the tab and the search field call this screen. */
-  title() {
-    return '';
-  }
-
-  render() {}
-}
 
 /* -- a folder, as an album ------------------------------------------ */
 

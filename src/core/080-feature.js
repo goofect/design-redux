@@ -77,17 +77,3 @@ export class Feature {
   disable() {}
   sync() {}
 }
-
-/**
- * A class written in parts: the methods of `part` put on `target`, so a
- * large view can be split by what it does across pieces. A name already
- * there is refused, as the build refuses a name declared twice. A part
- * has no super of its own to call: what needs one stays in the class.
- */
-export function mixInto(target, part) {
-  Object.getOwnPropertyNames(part.prototype).forEach((name) => {
-    if (name === 'constructor') return;
-    if (Object.prototype.hasOwnProperty.call(target.prototype, name)) throw new Error(`${target.name}.${name} is written twice`);
-    Object.defineProperty(target.prototype, name, Object.getOwnPropertyDescriptor(part.prototype, name));
-  });
-}

@@ -226,6 +226,8 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.contextStrip === undefined) saved.contextStrip = true;
       if (saved.settingsInHeader === undefined) saved.settingsInHeader = true;
       if (saved.lookScope === undefined) saved.lookScope = 'window';
+      // The panel used to hide the note's own properties whenever it was on.
+      if (saved.hideNativeProperties === undefined) saved.hideNativeProperties = saved.propertiesDropdown !== false;
     },
   },
   {
