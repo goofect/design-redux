@@ -717,15 +717,24 @@ describe('Design Redux in Obsidian', function () {
     await input.waitForExist({ timeout: 8000 });
     // A notice left by an earlier test can sit over the field.
     await browser.execute(() => document.querySelectorAll('.notice').forEach((n) => n.remove()));
+    // Whatever leaves the field from here on, kept with where it went and the stack.
+    await browser.execute(() => {
+      window.__drBlur = null;
+      document.addEventListener('focusout', (e) => {
+        if (!e.target.closest || !e.target.closest('.dr-browse-search')) return;
+        window.__drBlur = { to: e.relatedTarget ? `${e.relatedTarget.tagName}.${e.relatedTarget.className}` : null, at: Math.round(performance.now()), stack: String(new Error().stack).split('\n').slice(1, 9).map((l) => l.trim()) };
+      }, { capture: true });
+    });
     await input.click();
-    // Typed only once the field holds the focus: the page can still be settling as it opens.
+    // Typed only once the field has held the focus a moment: the page can still be settling as it opens.
+    let held = 0;
     const focused = await readUntil(
       () => browser.execute(() => {
         const field = document.querySelector('.workspace-leaf.mod-active .dr-browse-search input');
         if (field && document.activeElement !== field) field.focus();
         return !!field && document.activeElement === field;
       }),
-      (f) => f
+      (f) => (f ? ++held >= 4 : (held = 0) > 0)
     );
     expect(focused).toBe(true);
     // Where the keys go, kept for a miss: what got them, and whether something stopped them.
@@ -736,10 +745,6 @@ describe('Design Redux in Obsidian', function () {
       document.addEventListener('keydown', (e) => log.push(['down', e.key, e.target.className || e.target.tagName]), { capture: true });
       window.addEventListener('keydown', (e) => e.defaultPrevented && log.push(['stopped', e.key]), false);
       if (field) field.addEventListener('input', () => log.push(['input', field.value]));
-      // What took the focus, if something does: the stack where the field lost it.
-      if (field) field.addEventListener('blur', (e) => {
-        window.__drBlur = { to: e.relatedTarget ? `${e.relatedTarget.tagName}.${e.relatedTarget.className}` : null, stack: String(new Error().stack).split('\n').slice(1, 9).map((l) => l.trim()) };
-      });
     });
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
