@@ -73,6 +73,17 @@ body.dr-props-active .workspace-split.mod-root .markdown-reading-view .metadata-
   display: none;
 }
 
+/* Why it shows what it shows: a quiet line above it. */
+.dr-panel-dock-origin {
+  padding: var(--dr-space-2) 0 0;
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-panel-dock-origin.is-hidden {
+  display: none;
+}
+
 @keyframes dr-appear {
   from {
     opacity: 0;

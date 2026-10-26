@@ -115,8 +115,9 @@ export class PropertiesPanel extends Feature {
     this.leaf = null;
     this.trigger = null;
     this.sections = [];
-    // The sidebar view the panel is in, when it's docked there.
+    // The sidebar view the panel is in, when it's docked there; pinned, it keeps what it shows.
     this.dockView = null;
+    this.pinned = false;
     // leaf -> its trigger element, so a fitted leaf costs a lookup
     // rather than a querySelector. Weak, so closing a tab drops it.
     this.fitted = new WeakMap();
@@ -296,7 +297,7 @@ export class PropertiesPanel extends Feature {
     // Docked, it shows what's picked in the library too.
     this.plugin.register(
       this.plugin.selection.onChange((item) => {
-        if (!this.dockView || !this.popupEl || !item) return;
+        if (!this.dockView || !this.popupEl || !item || this.pinned) return;
         if (item.file instanceof TFile && item.file.extension === 'md') this.showDocked(null, { file: item.file, picked: true });
         else if (item.folder) this.showDocked(null, { folder: item.folder });
       })
@@ -341,6 +342,10 @@ export class PropertiesPanel extends Feature {
     const edited = (file) => {
       if (!this.file || !file || file.path !== this.file.path) this.otherEdits++;
     };
+    // What it shows deleted, it lets go of — pinned or not.
+    this.plugin.registerEvent(
+      this.app.vault.on('delete', (file) => this.forget(file))
+    );
     ['modify', 'create', 'delete', 'rename'].forEach((type) =>
       this.plugin.registerEvent(this.app.vault.on(type, edited))
     );
@@ -532,6 +537,7 @@ export class PropertiesPanel extends Feature {
     if (this.dockView) {
       this.popupEl.addClass('is-open');
       this.dockView.showEmpty('');
+      this.dockView.showOrigin(this.originOf(leaf, target), this.pinned);
       return;
     }
 
@@ -659,6 +665,7 @@ export class PropertiesPanel extends Feature {
   /** Switching notes moves the panel rather than closing it. */
   follow(leaf, force) {
     if (this.dockView) {
+      if (this.pinned) return;
       // Docked, it keeps what it shows until there's something else: the sidebar itself, a pane with no note, leave it.
       const target = leaf && leaf !== this.dockView.leaf && this.popupEl ? this.targetOf(leaf) : null;
       if (target && !target.none) this.showDocked(leaf, target);
@@ -757,7 +764,35 @@ export class PropertiesPanel extends Feature {
       this.trigger.focus();
     }
     this.trigger = null;
-    if (this.dockView) this.dockView.showEmpty(EMPTY_TEXT);
+    if (this.dockView) {
+      this.dockView.showEmpty(EMPTY_TEXT);
+      this.dockView.showOrigin('', this.pinned);
+    }
+  }
+
+  /** A file or folder deleted: if it's what's shown, it's let go of, pinned or not. */
+  forget(file) {
+    if (!this.isOpen() || !file || (file !== this.file && file !== this.folder)) return;
+    this.pinned = false;
+    this.close();
+  }
+
+  /** Why the inspector shows `target`, in a few words. */
+  originOf(leaf, target) {
+    if (target.picked || target.folder) return 'Picked in the library';
+    if (target.card) return 'A card on the canvas';
+    if (leaf && hostsPanel(leaf.view)) return 'The open map';
+    return 'The open note';
+  }
+
+  /** Pinned, it keeps what it shows while notes open and picks change; unpinned, it catches up. */
+  togglePin() {
+    this.pinned = !this.pinned && this.isOpen();
+    if (!this.dockView) return;
+    this.dockView.showOrigin(this.isOpen() ? this.originOf(this.leaf, { file: this.file, folder: this.folder, card: this.card, picked: this.picked }) : '', this.pinned);
+    if (this.pinned) return;
+    const ws = this.app.workspace;
+    this.follow(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf);
   }
 
   /** Into the sidebar view: shown there from now on, starting with the note last worked in. */
@@ -778,6 +813,7 @@ export class PropertiesPanel extends Feature {
   /** The sidebar view closed: a popup again. */
   undock(view) {
     if (this.dockView !== view) return;
+    this.pinned = false;
     this.close();
     this.dockView = null;
     if (this.popupEl) {

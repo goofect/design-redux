@@ -674,6 +674,20 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const album = new TFolder('Theories');
     panel.showDocked(null, { folder: album });
     assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
+    // Why it shows it, above it; pinned, it stays while notes open and picks change; unpinned, it catches up.
+    const origin = () => view.contentEl.querySelector('.dr-panel-dock-origin').textContent;
+    panel.showDocked(null, { file: b, picked: true });
+    assert.strictEqual(origin(), 'Picked in the library');
+    panel.togglePin();
+    assert.strictEqual(origin(), 'Pinned · Picked in the library');
+    panel.follow({ view: new MarkdownView(c) });
+    assert.strictEqual(panel.popupEl.textContent, b.path, 'pinned: the open note doesn’t move it');
+    panel.togglePin();
+    assert.ok(panel.popupEl.textContent === a.path && origin() === 'The open note', 'unpinned: the note last worked in');
+    // Deleted, it's let go of, pinned or not.
+    panel.togglePin();
+    panel.forget(a);
+    assert.ok(!panel.isOpen() && !panel.pinned && origin() === '');
     // Closed, it's a popup again.
     panel.undock(view);
     assert.ok(panel.popupEl.parentElement === document.body && !panel.isOpen() && !panel.popupEl.hasClass('is-docked'));
