@@ -163,7 +163,8 @@ export const featureKeys = (feature) => (feature.switch ? [feature.switch] : [])
  */
 export const SETTING_PRESETS = {
   minimal: { name: 'Minimal', on: ['library', 'notePage'] },
-  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps', 'contextStrip'] },
+  // Without the strip, as a first install has it: « » sit in the note's header, Properties in the inspector.
+  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps'] },
   everything: { name: 'Everything', on: null },
 };
 
@@ -174,6 +175,8 @@ export const FORMER_TABS = {
   Maps: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing', 'mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'],
   Workspace: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
+  // 3.0's last tab, before the tabs went by task.
+  Tools: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
 };
 
 /**

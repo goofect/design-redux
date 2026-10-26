@@ -325,6 +325,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tab.display();
     assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
     tab.query = '';
+    // And by the tab it had last, before the tabs went by task.
+    tab.query = 'tools';
+    tab.display();
+    assert.ok(row('stripDetail').closest('.dr-set-more').classList.contains('is-open'));
+    tab.query = '';
 
     // A link to an option opens its gear, and it stays open while the page redraws.
     p.settings.contextStrip = true;
