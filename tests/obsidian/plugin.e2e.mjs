@@ -736,6 +736,10 @@ describe('Design Redux in Obsidian', function () {
       document.addEventListener('keydown', (e) => log.push(['down', e.key, e.target.className || e.target.tagName]), { capture: true });
       window.addEventListener('keydown', (e) => e.defaultPrevented && log.push(['stopped', e.key]), false);
       if (field) field.addEventListener('input', () => log.push(['input', field.value]));
+      // What took the focus, if something does: the stack where the field lost it.
+      if (field) field.addEventListener('blur', (e) => {
+        window.__drBlur = { to: e.relatedTarget ? `${e.relatedTarget.tagName}.${e.relatedTarget.className}` : null, stack: String(new Error().stack).split('\n').slice(1, 9).map((l) => l.trim()) };
+      });
     });
     // Words from a note's text: the passage they're in, shown.
     await browser.keys('lettered item'.split(''));
@@ -756,6 +760,7 @@ describe('Design Redux in Obsidian', function () {
         active: document.activeElement ? `${document.activeElement.tagName}.${document.activeElement.className}` : null,
         focus: document.hasFocus(),
         modal: document.querySelectorAll('.modal-container').length,
+        blur: window.__drBlur || null,
       }));
       expect(seen).toEqual({});
     }
