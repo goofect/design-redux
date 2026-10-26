@@ -9,9 +9,7 @@
 /* system asks for less motion.                                        */
 /* ------------------------------------------------------------------ */
 
-import { mixInto } from '../core/080-feature.js';
 import { nodeById } from '../tree/400-tree-model.js';
-import { MindMapView } from './421-mindmap-view.js';
 
 export const MAP_GLIDE_MS = 240;
 
@@ -49,7 +47,7 @@ export function glideBoxes(from, to, t) {
   return { boxes, bounds: to.bounds };
 }
 
-class MindMapMotion {
+export class MindMapMotion {
   /** Nodes glide from `before` to the map's new scene — or, with no `before`, are simply put there. */
   glideFrom(before) {
     this.stopGlide();
@@ -99,5 +97,3 @@ class MindMapMotion {
     if (win && g.frame) win.cancelAnimationFrame(g.frame);
   }
 }
-
-mixInto(MindMapView, MindMapMotion);

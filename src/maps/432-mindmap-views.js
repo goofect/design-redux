@@ -10,17 +10,15 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, NamePrompt } from '../ui/230-pickers.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { savedViews, setSavedView } from '../tree/406-tree-layout-block.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel, pinOf } from './423-mindmap-scene.js';
 
 export const MAP_LOOKS_KEPT = 30;
 
-class MindMapViews {
+export class MindMapViews {
   /** A node pinned where it is now — or, pinned, let go to where the layout puts it. */
   togglePin(id) {
     const n = this.model && nodeById(this.model, id);
@@ -97,5 +95,3 @@ class MindMapViews {
     }).open();
   }
 }
-
-mixInto(MindMapView, MindMapViews);

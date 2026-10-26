@@ -11,7 +11,8 @@ Coffee N' Christmas.
   (core, ui, tree, then the four places — library, note, maps, tools —
   and plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
-  them all and exports the plugin. After using a name from another module,
+  the plugin, whose imports reach every module (the build refuses one
+  nothing imports), and exports it. After using a name from another module,
   `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
   between its neighbours'. `obsidian` and `@codemirror/*` are imported as
   usual and provided by Obsidian at runtime.
@@ -77,9 +78,12 @@ Coffee N' Christmas.
   `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
   `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
   and links stay as they are; read it rather than walking the vault.
-- A large class can be written in parts: a later piece writes `class Part {…}`
-  and `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
-  120–125, MindMapView in the maps area). No `super` in a part.
+- A large class can be written in parts: a later piece exports `class Part {…}`,
+  and the class's own module imports it and, at its end, calls
+  `mixInto(Target, Part)`, which refuses a name written twice (BrowseView in
+  120, its parts 121–125; MindMapView in 421 and MindMaps in 420, their parts
+  the rest of maps). No `super` in a part. A part for a class of a lower
+  area, which mustn't import it, puts itself on (KnowledgeMindMap, 441).
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).

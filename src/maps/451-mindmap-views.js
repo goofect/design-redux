@@ -10,14 +10,12 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, setIcon } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { NamePrompt } from '../ui/230-pickers.js';
 import { newId } from '../tree/400-tree-model.js';
 import { addChild, addSibling, applyPatch, indentNode, outdentNode, removeNode, reorderNode, setAttr, setText } from '../tree/404-tree-ops.js';
 import { MAP_VIEWS, mapViewOf, setMapView } from '../tree/406-tree-layout-block.js';
 import { dayKey, dueState, parseDayInput, taskOf, taskText } from '../tree/415-tree-tasks.js';
 import { kanbanColumns, moveCard, outlineRows, tableColumns, timelineDays } from '../tree/416-tree-views.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel, nodeParts } from './423-mindmap-scene.js';
 import { dueLabel, TASK_STATUSES } from './450-mindmap-tasks.js';
 
@@ -31,7 +29,7 @@ export const VIEW_CHOICES = [
   ['table', 'Table', 'table'],
 ];
 
-class MindMapShowAs {
+export class MindMapShowAs {
   viewsOn() {
     return !this.plugin || this.plugin.settings.mindmapOtherViews !== false;
   }
@@ -397,5 +395,3 @@ export function cellValue(text, was) {
   }
   return t;
 }
-
-mixInto(MindMapView, MindMapShowAs);

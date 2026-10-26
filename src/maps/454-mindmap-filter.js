@@ -10,16 +10,14 @@
 
 import { setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { statusesOf } from '../tree/415-tree-tasks.js';
 import { filtering, filterSet, mapTags, pathTo } from '../tree/417-tree-filter.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { colourKey, nodeLabel } from './423-mindmap-scene.js';
 import { colourName } from './431-mindmap-legend.js';
 
-class MindMapFilter {
+export class MindMapFilter {
   filtersOn() {
     return !this.plugin || this.plugin.settings.mindmapFilters !== false;
   }
@@ -168,5 +166,3 @@ class MindMapFilter {
     onActivate(out, () => this.solo(null));
   }
 }
-
-mixInto(MindMapView, MindMapFilter);

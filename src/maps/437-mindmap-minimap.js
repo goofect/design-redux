@@ -7,14 +7,12 @@
 /* again; a pan moves just the outline.                               */
 /* ------------------------------------------------------------------ */
 
-import { mixInto } from '../core/080-feature.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { viewBox } from './423-mindmap-scene.js';
 
 const MINIMAP_SVG = 'http://www.w3.org/2000/svg';
 export const MAP_MINIMAP_SIZE = { width: 200, height: 136 };
 
-class MindMapMinimap {
+export class MindMapMinimap {
   minimapOn() {
     return !this.plugin || this.plugin.settings.mindmapMinimap !== false;
   }
@@ -106,5 +104,3 @@ class MindMapMinimap {
     this.minimapD = null;
   }
 }
-
-mixInto(MindMapView, MindMapMinimap);

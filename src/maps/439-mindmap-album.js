@@ -16,20 +16,18 @@ import { Notice, TFile, TFolder } from 'obsidian';
 import { sortByOrder } from '../core/030-helpers-art.js';
 import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, SetParentPrompt } from '../ui/230-pickers.js';
 import { nodeById, treeModel } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
 import { applyPatch } from '../tree/404-tree-ops.js';
 import { albumEntry, albumEntryOps } from '../tree/406-tree-layout-block.js';
 import { albumParentTree, albumSyncOps } from '../tree/413-tree-album.js';
-import { MindMaps } from './420-mindmap-feature.js';
-import { FILE_FORMATS, MINDMAP_EXTENSION, MindMapView } from './421-mindmap-view.js';
+import { FILE_FORMATS, MINDMAP_EXTENSION } from './421-mindmap-view.js';
 
 /* How long the notes are left to settle before an open map follows them. */
 export const MAP_ALBUM_WAIT = 500;
 
-class MindMapAlbumFeature {
+export class MindMapAlbumFeature {
   get parentProperty() {
     return String(this.settings.graphRouteProperty || 'parent').trim() || 'parent';
   }
@@ -169,9 +167,7 @@ class MindMapAlbumFeature {
   }
 }
 
-mixInto(MindMaps, MindMapAlbumFeature);
-
-class MindMapAlbumView {
+export class MindMapAlbumView {
   albumFolder() {
     const entry = this.model ? albumEntry(this.model) : null;
     const f = entry && this.app ? this.app.vault.getAbstractFileByPath(entry.path) : null;
@@ -265,5 +261,3 @@ class MindMapAlbumView {
       });
   }
 }
-
-mixInto(MindMapView, MindMapAlbumView);

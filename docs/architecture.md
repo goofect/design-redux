@@ -915,3 +915,16 @@ surfaces, but the parts interleave — the Apple look's overrides sit at the
 end, after what they override — so moving a rule can change the cascade.
 That wants screenshots across the looks before and after, part by part.
 
+## 34. Parts put on where the class is; a small entry
+
+- A class written in parts — BrowseView (120), MindMapView (421), MindMaps
+  (420) — imports its parts and puts them on at its own end. The parts no
+  longer import their class to put themselves on it, so nothing is loaded for
+  that alone. KnowledgeMindMap still puts itself on Knowledge: the library
+  mustn't import from maps.
+- `src/main.js` imports the plugin and exports it, with one line before: smart
+  albums first, for the one cycle the order decides (SmartScreen extends
+  BrowseScreen as it loads). Every other module is reached through the
+  plugin's imports; tests/map.js refuses one nothing imports.
+- The bundle is the same modules and lines as before.
+

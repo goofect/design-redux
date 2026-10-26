@@ -10,12 +10,10 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, setIcon } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, NamePrompt } from '../ui/230-pickers.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { dayKey, dueState, openTaskSet, parseDayInput, setTaskDone, statusesOf, taskOf, taskProgress, toggleTask, untask } from '../tree/415-tree-tasks.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 
 /* Statuses offered before a map has any of its own. */
@@ -33,7 +31,7 @@ export function dueLabel(due, today) {
   return d.toLocaleDateString(undefined, opts);
 }
 
-class MindMapTasks {
+export class MindMapTasks {
   tasksOn() {
     return !this.plugin || this.plugin.settings.mindmapTasks !== false;
   }
@@ -154,5 +152,3 @@ class MindMapTasks {
     return this.openTasksOnly && this.model ? openTaskSet(this.model) || new Set() : null;
   }
 }
-
-mixInto(MindMapView, MindMapTasks);

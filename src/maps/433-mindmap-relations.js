@@ -11,15 +11,13 @@
 
 import { Notice } from 'obsidian';
 import { relationTypes } from '../core/020-constants.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, NamePrompt } from '../ui/230-pickers.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
 import { addAnswer, addRelation, relationMeaning, relationsOf, relationStatements, removeRelation, reverseRelation, setRelationMeaning, statementsMarkdown } from '../tree/407-tree-relations.js';
-import { MindMapView } from './421-mindmap-view.js';
 import { boundsOfBoxes, fitCamera, nodeLabel, nodeParts } from './423-mindmap-scene.js';
 
-class MindMapRelations {
+export class MindMapRelations {
   kinds() {
     return relationTypes(this.plugin ? this.plugin.settings : {});
   }
@@ -146,5 +144,3 @@ class MindMapRelations {
     if (p && p.selection[0]) this.edit(p.selection[0]);
   }
 }
-
-mixInto(MindMapView, MindMapRelations);

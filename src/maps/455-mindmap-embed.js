@@ -9,10 +9,8 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownRenderChild, TFile } from 'obsidian';
-import { mixInto } from '../core/080-feature.js';
 import { parseOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson } from '../tree/402-tree-json.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW } from './421-mindmap-view.js';
 import { isMindMapNote, showFileAs } from './422-mindmap-takeover.js';
 import { estimateSize, fitCamera, layoutScene, nodeLabel, nodeTints } from './423-mindmap-scene.js';
@@ -105,7 +103,7 @@ export class MapEmbed extends MarkdownRenderChild {
   }
 }
 
-class MindMapsEmbeds {
+export class MindMapsEmbeds {
   embedsOn() {
     return this.enabled && this.settings.mindmapEmbeds !== false;
   }
@@ -160,5 +158,3 @@ class MindMapsEmbeds {
     return file.extension === MINDMAP_EXTENSION || (file.extension === 'md' && isMindMapNote(this.app, file)) ? file : null;
   }
 }
-
-mixInto(MindMaps, MindMapsEmbeds);

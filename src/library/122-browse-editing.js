@@ -11,9 +11,7 @@ import { asButton, edgeScroll, onActivate, roveFocus } from '../core/040-helpers
 import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
-import { mixInto } from '../core/080-feature.js';
 import { schemaFor } from '../core/086-property-schema.js';
-import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
@@ -772,7 +770,7 @@ export class BrowseEditing {
   }
 }
 
-class RowValues {
+export class RowValues {
   /** A row's value as a button: pick, set or tick it there, the album not drawn again. */
   editableCell(cell, file, key) {
     cell.addClass('is-editable');
@@ -868,6 +866,3 @@ class RowValues {
     markDue(cell, this.plugin, key, text);
   }
 }
-
-mixInto(BrowseView, RowValues);
-mixInto(BrowseView, BrowseEditing);

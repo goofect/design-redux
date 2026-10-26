@@ -13,8 +13,6 @@ import { Platform, setIcon } from 'obsidian';
 import { albumKindOf, drawFolderArt } from '../core/030-helpers-art.js';
 import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
-import { mixInto } from '../core/080-feature.js';
-import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowsePreview {
@@ -125,5 +123,3 @@ export class BrowsePreview {
     this.navigate({ mode: 'folder', path: file.parent.path, property: null });
   }
 }
-
-mixInto(BrowseView, BrowsePreview);

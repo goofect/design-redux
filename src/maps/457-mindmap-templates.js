@@ -10,10 +10,8 @@
 
 import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 import { noteNameFrom } from '../core/047-helpers-text.js';
-import { mixInto } from '../core/080-feature.js';
 import { ChoicePicker, NamePrompt } from '../ui/230-pickers.js';
 import { dayKey } from '../tree/415-tree-tasks.js';
-import { MindMaps } from './420-mindmap-feature.js';
 import { MINDMAP_EXTENSION, MINDMAP_VIEW } from './421-mindmap-view.js';
 import { isMindMapNote, showFileAs } from './422-mindmap-takeover.js';
 
@@ -32,7 +30,7 @@ export function fillTemplate(text, title, date) {
   return String(text).replace(/\{\{\s*title\s*\}\}/gi, title).replace(/\{\{\s*date\s*\}\}/gi, date);
 }
 
-class MindMapsTemplates {
+export class MindMapsTemplates {
   /** The folder of templates set, if it's there. */
   templateFolder() {
     const path = String(this.settings.mindmapTemplateFolder || '').trim();
@@ -105,5 +103,3 @@ class MindMapsTemplates {
     }
   }
 }
-
-mixInto(MindMaps, MindMapsTemplates);

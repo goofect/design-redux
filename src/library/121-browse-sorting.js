@@ -12,7 +12,6 @@ import { asButton, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, no
 import { dateDueState, dueKeys, knownPropertyNames, plainValue, propertyValues } from '../core/045-helpers-properties.js';
 import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { mixInto } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { paintValue } from '../ui/248-value-options.js';
@@ -687,5 +686,3 @@ export class BrowseSorting {
     return btn;
   }
 }
-
-mixInto(BrowseView, BrowseSorting);

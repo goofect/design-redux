@@ -8,7 +8,7 @@
 
 import { Notice, TFile, TFolder } from 'obsidian';
 import { actionsOn, addActionEntries, setMindMapContext } from '../core/078-actions.js';
-import { Feature } from '../core/080-feature.js';
+import { Feature, mixInto } from '../core/080-feature.js';
 import { ChoicePicker } from '../ui/230-pickers.js';
 import { nodeById, treeModel, walk } from '../tree/400-tree-model.js';
 import { writeOutline } from '../tree/401-tree-outline.js';
@@ -23,7 +23,16 @@ import { MINDMAP_EXTENSION, MINDMAP_VIEW, MindMapView } from './421-mindmap-view
 import { isMindMapNote, keepAsText, showFileAs, takeOverLeaves } from './422-mindmap-takeover.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 import { MAP_SNAPSHOTS } from './435-mindmap-check.js';
+import { MindMapVaultMap } from './436-mindmap-vault-map.js';
+import { MindMapAlbumFeature } from './439-mindmap-album.js';
+import { MindMapConvert } from './440-mindmap-convert.js';
 import { VIEW_CHOICES } from './451-mindmap-views.js';
+import { MindMapsPanel } from './453-mindmap-node-panel.js';
+import { MindMapsEmbeds } from './455-mindmap-embed.js';
+import { MindMapsTemplates } from './457-mindmap-templates.js';
+import { MindMapsImportExport } from './458-mindmap-import-export.js';
+import { MindMapsLinks } from './459-mindmap-access.js';
+import { MindMapsHistory } from './461-mindmap-history.js';
 
 /* The kinds of file a new map can be. */
 export const MINDMAP_FORMATS = [
@@ -554,3 +563,15 @@ export function mapHandlers() {
   handlers['canvas-card-later'] = { when: notRoot, run: (ctx) => ctx.view.apply(reorderNode(ctx.model, ctx.node.id, 1)) };
   return handlers;
 }
+
+// Its parts, each written in a module of its own, put on here where the class is:
+// what it is made of, read in one place.
+mixInto(MindMaps, MindMapVaultMap);
+mixInto(MindMaps, MindMapAlbumFeature);
+mixInto(MindMaps, MindMapConvert);
+mixInto(MindMaps, MindMapsPanel);
+mixInto(MindMaps, MindMapsEmbeds);
+mixInto(MindMaps, MindMapsTemplates);
+mixInto(MindMaps, MindMapsImportExport);
+mixInto(MindMaps, MindMapsLinks);
+mixInto(MindMaps, MindMapsHistory);

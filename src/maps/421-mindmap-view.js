@@ -11,6 +11,7 @@
 
 import { setIcon, TextFileView } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { mixInto } from '../core/080-feature.js';
 import { nodeById, walk } from '../tree/400-tree-model.js';
 import { bindSource, parseOutline, writeOutline } from '../tree/401-tree-outline.js';
 import { parseMindmapJson, writeMindmapJson } from '../tree/402-tree-json.js';
@@ -18,6 +19,31 @@ import { applyPatch, setAttr, undoPatch } from '../tree/404-tree-ops.js';
 import { UndoStack } from '../tree/405-tree-history.js';
 import { boundsOfBoxes, estimateSize, fitCamera, layoutScene, nodeLabel, nodeTints } from './423-mindmap-scene.js';
 import { MindMapRenderer } from './424-mindmap-render.js';
+import { MindMapInput } from './425-mindmap-input.js';
+import { MindMapEditing } from './426-mindmap-editor.js';
+import { MindMapSaving } from './427-mindmap-save.js';
+import { MindMapMotion } from './428-mindmap-motion.js';
+import { MindMapPeek } from './429-mindmap-peek.js';
+import { MindMapCards } from './430-mindmap-cards.js';
+import { MindMapLegend } from './431-mindmap-legend.js';
+import { MindMapViews } from './432-mindmap-views.js';
+import { MindMapRelations } from './433-mindmap-relations.js';
+import { MindMapNotes } from './434-mindmap-notes.js';
+import { MindMapCheck } from './435-mindmap-check.js';
+import { MindMapMinimap } from './437-mindmap-minimap.js';
+import { MindMapPresent } from './438-mindmap-present.js';
+import { MindMapAlbumView } from './439-mindmap-album.js';
+import { MindMapFocus } from './441-mindmap-focus.js';
+import { MindMapTasks } from './450-mindmap-tasks.js';
+import { MindMapShowAs } from './451-mindmap-views.js';
+import { MindMapLinked } from './452-mindmap-linked.js';
+import { MindMapNodePanel } from './453-mindmap-node-panel.js';
+import { MindMapFilter } from './454-mindmap-filter.js';
+import { MindMapDrop } from './456-mindmap-drop.js';
+import { MindMapAccess } from './459-mindmap-access.js';
+import { MindMapQuery } from './460-mindmap-query.js';
+import { MindMapHistory } from './461-mindmap-history.js';
+import { MindMapRich } from './462-mindmap-rich.js';
 
 export const MINDMAP_VIEW = 'design-redux-mindmap';
 export const MINDMAP_EXTENSION = 'mindmap';
@@ -393,3 +419,31 @@ export class MindMapView extends TextFileView {
     if (typeof this.flushSave === 'function') this.flushSave();
   }
 }
+
+// Its parts, each written in a module of its own, put on here where the class is:
+// what it is made of, read in one place.
+mixInto(MindMapView, MindMapInput);
+mixInto(MindMapView, MindMapEditing);
+mixInto(MindMapView, MindMapSaving);
+mixInto(MindMapView, MindMapMotion);
+mixInto(MindMapView, MindMapPeek);
+mixInto(MindMapView, MindMapCards);
+mixInto(MindMapView, MindMapLegend);
+mixInto(MindMapView, MindMapViews);
+mixInto(MindMapView, MindMapRelations);
+mixInto(MindMapView, MindMapNotes);
+mixInto(MindMapView, MindMapCheck);
+mixInto(MindMapView, MindMapMinimap);
+mixInto(MindMapView, MindMapPresent);
+mixInto(MindMapView, MindMapAlbumView);
+mixInto(MindMapView, MindMapFocus);
+mixInto(MindMapView, MindMapTasks);
+mixInto(MindMapView, MindMapShowAs);
+mixInto(MindMapView, MindMapLinked);
+mixInto(MindMapView, MindMapNodePanel);
+mixInto(MindMapView, MindMapFilter);
+mixInto(MindMapView, MindMapDrop);
+mixInto(MindMapView, MindMapAccess);
+mixInto(MindMapView, MindMapQuery);
+mixInto(MindMapView, MindMapHistory);
+mixInto(MindMapView, MindMapRich);

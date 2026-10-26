@@ -11,6 +11,8 @@
 //     something that module doesn't declare, a module that needs a name as
 //     it loads from one that runs after it, or a use across the layers that
 //     isn't on the known list (tests/map.js --verify);
+//   - a module nothing imports (src/main.js imports only the plugin; the
+//     rest are reached through it);
 //   - a main.js that fails as it loads.
 // Then it joins the stylesheet's parts, styles/NN-name.css, in their order,
 // into styles.css, the one Obsidian loads.
