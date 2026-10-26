@@ -23,7 +23,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { loadStyles, rulesFor } from './css-owners.mjs';
-import { TOOL_SUITES } from './affected-tests.mjs';
+import { TOOL_SUITES, affected } from './affected-tests.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
@@ -245,16 +245,13 @@ function invariants(pieces) {
   return { title: 'Invariants', lines, trim: false };
 }
 
+/** The suites, from tools/affected-tests.mjs: those naming the pieces, and those reached through their users. */
 function testsSection(pieces) {
   const lines = [];
-  const suites = new Map();
-  // The tools' own suites name pieces to test the tools, not to test them.
-  pieces.forEach((p) => p.suites.filter((s) => !TOOL_SUITES.includes(s)).forEach((s) => suites.set(s, (suites.get(s) || []).concat(p.name))));
-  [...suites.keys()].sort().forEach((s) => lines.push(`${s === 'obsidian' ? 'tests/obsidian (real Obsidian, tests/e2e.sh)' : `tests/test_${s}.js`} — names what ${suites.get(s).join(', ')} declare${suites.get(s).length > 1 ? '' : 's'}`));
-  const sims = [...suites.keys()].filter((s) => s !== 'obsidian').sort();
-  lines.push(sims.length ? `targeted: node tests/run.js ${sims.join(' ')}` : 'targeted: no suite names these pieces — see missing evidence');
-  if (pieces.some((p) => p.features.some((f) => /\(/.test(f)))) lines.push('setting keys or commands touched: node tests/test_lifecycle.js');
-  if (pieces.some((p) => Object.values(p.uses).some((u) => u.from))) lines.push('a new import across areas: node tests/map.js --check');
+  const { suites } = affected(pieces.map((p) => p.file));
+  suites.forEach((why, s) => lines.push(`tests/test_${s}.js — ${why[0]}${why.length > 1 ? ` (+${why.length - 1})` : ''}`));
+  if (pieces.some((p) => p.suites.includes('obsidian'))) lines.push('tests/obsidian names them too: tests/e2e.sh "name" for a change only real Obsidian shows');
+  lines.push(`targeted: node tools/affected-tests.mjs --changed ${pieces.map((p) => p.file).join(' ')} --run`);
   lines.push('full gate before a PR: npm test');
   return { title: 'Tests', lines, trim: false };
 }
