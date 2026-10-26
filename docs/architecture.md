@@ -947,3 +947,12 @@ whoever had it the theme's look with what Classic hid switched off: the note
 page's additions (`notePage`), row excerpts (`albumExcerpts`) and glass. The
 unread dot, which Classic also hid, stays: it comes with reading history.
 
+## 37. The look on what the plugin draws, to begin with
+
+A first install has the Apple look on what Design Redux draws — the library,
+collection pages, the panel, settings — and notes as the theme draws them
+(`lookScope: 'plugin'`); the whole window is a choice. Step 16 keeps an
+existing install's scope. The Apple look's own rules only reach the plugin's
+elements; notes were the one thing the scope decides. The Standard preset no
+longer turns the strip on, and settings search knows 3.0's Tools tab.
+

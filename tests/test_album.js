@@ -2872,10 +2872,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const has = (c) => document.body.classList.contains(c);
     look.enable();
     assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard');
-    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'Apple by default, notes too');
-    plugin.settings.lookScope = 'plugin';
+    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'Apple by default, on what the plugin draws; notes as the theme draws them');
+    plugin.settings.lookScope = 'window';
     look.enable();
-    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'only what the plugin draws');
+    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'the whole window, when asked');
     plugin.settings.lookScope = 'window';
     plugin.settings.gridDensity = 'large';
     plugin.settings.canvasSpacing = 'compact';

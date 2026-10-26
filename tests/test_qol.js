@@ -245,11 +245,11 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     // Step 16: the strip is off to begin with; whoever had the plugin keeps it on unless they'd said.
     const strip = R.SETTINGS_MIGRATIONS.find((m) => m.to === 16);
     const f = { look: 'apple' }; strip.run(f, { existing: true });
-    assert.ok(f.contextStrip === true && f.settingsInHeader === true);
+    assert.ok(f.contextStrip === true && f.settingsInHeader === true && f.lookScope === 'window');
     const g = { contextStrip: false }; strip.run(g, { existing: true });
     assert.strictEqual(g.contextStrip, false);
     const h = {}; strip.run(h, { existing: false });
-    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false, 'a first install starts without them');
+    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
   });
 
   /* -- pins in your own order ------------------------------------------------ */

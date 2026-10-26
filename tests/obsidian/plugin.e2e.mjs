@@ -92,9 +92,11 @@ describe('Design Redux in Obsidian', function () {
       const started = performance.now();
       await app.plugins.enablePlugin('design-redux');
       window.__drLoadMs = Math.round(performance.now() - started);
-      // A first install starts without the strip; it's still offered, and tested here, so it's put on.
+      // A first install starts without the strip, and with notes as the theme draws them; both are
+      // still offered, and tested here, so they're put on.
       const plugin = app.plugins.plugins['design-redux'];
       plugin.settings.contextStrip = true;
+      plugin.settings.lookScope = 'window';
       await plugin.saveSettings();
     });
     await browser.pause(1500);

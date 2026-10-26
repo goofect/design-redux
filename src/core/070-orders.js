@@ -215,12 +215,14 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // The strip and the moved gear are off to begin with now. Whoever already had the plugin keeps them as they were.
+    // The strip and the moved gear are off to begin with now, and the look stays on what the plugin draws.
+    // Whoever already had the plugin keeps them as they were.
     to: 16,
     run(saved, was) {
       if (!was || !was.existing) return;
       if (saved.contextStrip === undefined) saved.contextStrip = true;
       if (saved.settingsInHeader === undefined) saved.settingsInHeader = true;
+      if (saved.lookScope === undefined) saved.lookScope = 'window';
     },
   },
   {

@@ -227,7 +227,8 @@ export const DEFAULTS = {
   homePath: 'Home.md',
   homeShelves: [],
   inspector: true,
-  lookScope: 'window',
+  // Only what Design Redux draws, to begin with since 3.1: notes stay as the theme draws them unless asked.
+  lookScope: 'plugin',
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
