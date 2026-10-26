@@ -122,7 +122,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -249,7 +249,7 @@ function setup() {
   document.body.appendChild(view.containerEl);
   Object.assign(view, { mode: 'folder', path: 'IR', property: null, value: null });
   v.vault.on('rename', (file, old) => { view.followRename(file, old); view.render(); });
-  v.vault.on('delete', () => view.render());
+  v.vault.on('delete', (file) => { view.followDelete(file); view.render(); });
   v.vault.on('create', () => view.render());
   view.render();
   return { v, plugin, app, view, ir, theories, opened };
@@ -979,6 +979,40 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.setEditing(false);
     assert.strictEqual(view.ticked().size, 0);
     assert.ok(!view.contentEl.querySelector('.dr-edit-tick, .dr-bulk-bar'));
+  });
+
+  await t('what is ticked: a run from the last one ticked, followed through renames, let go when deleted', () => {
+    const sel = new R.BulkSelection();
+    const shown = ['A/1.md', 'A/2.md', 'A/3.md', 'A/4.md'];
+    sel.set('A/1.md', true);
+    assert.deepStrictEqual(sel.set('A/3.md', true, { range: shown }), ['A/1.md', 'A/2.md', 'A/3.md'], 'Shift: the run');
+    sel.set('A/2.md', false, { range: shown });
+    assert.deepStrictEqual(Array.from(sel.paths), ['A/1.md'], 'Shift-untick from 3 back to 2 unticks the run 2–3');
+    sel.set('A/3.md', true);
+    sel.set('Elsewhere.md', true, { range: shown });
+    assert.ok(sel.has('Elsewhere.md') && sel.size === 3, 'a path not among those shown is ticked alone');
+    sel.rename('A', 'B');
+    assert.deepStrictEqual(Array.from(sel.paths).sort(), ['B/1.md', 'B/3.md', 'Elsewhere.md'], 'a folder renamed takes its ticks along');
+    sel.rename('Elsewhere.md', 'There.md');
+    sel.remove('B');
+    assert.deepStrictEqual(Array.from(sel.paths), ['There.md'], 'a folder deleted lets go of what was in it');
+    assert.strictEqual(sel.anchor, 'There.md', 'the last ticked follows too');
+    sel.clear();
+    assert.ok(sel.size === 0 && sel.anchor === null);
+  });
+
+  await t('a ticked note renamed stays ticked; deleted, it leaves the count', async () => {
+    const { v, view } = setup();
+    view.setEditing(true);
+    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    tick('Anarchy');
+    tick('Balance');
+    await v.fileManager.renameFile(v.vault.getAbstractFileByPath('IR/Anarchy.md'), 'IR/Anarchy, again.md');
+    assert.deepStrictEqual(Array.from(view.ticked()).sort(), ['IR/Anarchy, again.md', 'IR/Balance.md']);
+    await v.fileManager.trashFile(v.vault.getAbstractFileByPath('IR/Balance.md'));
+    assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Anarchy, again.md']);
+    view.render();
+    assert.strictEqual(view.contentEl.querySelector('.dr-bulk-count').textContent, '1 note selected');
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {

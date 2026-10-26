@@ -100,7 +100,10 @@ Coffee N' Christmas.
   inspector is about is `plugin.coordinator`'s to say (084): the tab worked
   in, a pick, a canvas card, a map node, and the pin, kept as a snapshot
   `{ target, leaf, origin, pinned }` the docked panel draws.
-- What's picked is `plugin.selection` (076), apart from what's open. In the
+- What's picked is `plugin.selection` (076), apart from what's open. What's
+  ticked to act on together, while editing an album, is the view's
+  `BulkSelection` (118: paths and the Shift anchor, following renames), apart
+  from both. In the
   browse view, rows and tiles go through `pickOrOpen`. While the inspector
   shows (`inspectorShowing`), a click picks and a double click or Enter
   opens. The browse view (124) draws what the library knows of a pick into

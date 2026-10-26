@@ -12,6 +12,7 @@ import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-propertie
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
 import { schemaFor } from '../core/086-property-schema.js';
+import { BulkSelection } from './118-bulk-selection.js';
 import { BrowseSorting } from './121-browse-sorting.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
@@ -36,7 +37,7 @@ export class BrowseEditing extends BrowseSorting {
 
   setEditing(on) {
     this.editing = !!on;
-    if (!on && this.tickedPaths) this.tickedPaths.clear();
+    if (!on && this.bulkSelection) this.bulkSelection.clear();
     this.render();
     if (!on) return;
     const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-track .dr-edit-name');
@@ -176,10 +177,15 @@ export class BrowseEditing extends BrowseSorting {
 
   /* -- several notes at once, while editing ----------------------- */
 
+  /** What's ticked while editing: paths, and the last ticked, for Shift. */
+  bulk() {
+    if (!this.bulkSelection) this.bulkSelection = new BulkSelection();
+    return this.bulkSelection;
+  }
+
   /** The notes ticked while editing, by path. */
   ticked() {
-    if (!this.tickedPaths) this.tickedPaths = new Set();
-    return this.tickedPaths;
+    return this.bulk().paths;
   }
 
   /** A row's box to tick; Shift ticks every row from the last one ticked. */
@@ -190,16 +196,10 @@ export class BrowseEditing extends BrowseSorting {
     row.toggleClass('is-ticked', box.checked);
     box.addEventListener('click', (evt) => {
       evt.stopPropagation();
-      const ticked = this.ticked();
       const rows = Array.from(list.querySelectorAll('.dr-track.is-editing'));
-      const paths = rows.map((r) => r.dataset.path);
-      const from = this.lastTick ? paths.indexOf(this.lastTick) : -1;
-      const to = paths.indexOf(file.path);
-      const run = evt.shiftKey && from !== -1 ? paths.slice(Math.min(from, to), Math.max(from, to) + 1) : [file.path];
-      run.forEach((p) => (box.checked ? ticked.add(p) : ticked.delete(p)));
-      this.lastTick = file.path;
+      this.bulk().set(file.path, box.checked, { range: evt.shiftKey ? rows.map((r) => r.dataset.path) : null });
       rows.forEach((r) => {
-        const on = ticked.has(r.dataset.path);
+        const on = this.bulk().has(r.dataset.path);
         r.toggleClass('is-ticked', on);
         const b = r.querySelector('.dr-edit-tick');
         if (b) b.checked = on;
@@ -231,7 +231,7 @@ export class BrowseEditing extends BrowseSorting {
     if (clip) button('table', 'Copy as table', () => clip.copyTable(this.tickedFiles()));
     button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
     button('x', 'Clear', () => {
-      this.ticked().clear();
+      this.bulk().clear();
       this.render();
     });
   }
@@ -253,7 +253,7 @@ export class BrowseEditing extends BrowseSorting {
       const kept = order ? JSON.parse(JSON.stringify(order)) : null;
       if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
     }
-    this.ticked().clear();
+    this.bulk().clear();
     this.render();
     if (!moved.length) return;
     const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
@@ -275,7 +275,7 @@ export class BrowseEditing extends BrowseSorting {
           console.error('Design Redux: could not delete', err);
         }
       }
-      this.ticked().clear();
+      this.bulk().clear();
       this.render();
     }, { warning: true }).open();
   }

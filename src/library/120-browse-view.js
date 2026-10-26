@@ -182,7 +182,12 @@ export class BrowseView extends BrowseAlbum {
     );
 
     this.registerEvent(this.app.vault.on('create', () => this.queueRender()));
-    this.registerEvent(this.app.vault.on('delete', () => this.queueRender()));
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        this.followDelete(file);
+        this.queueRender();
+      })
+    );
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         this.followRename(file, oldPath);
@@ -263,12 +268,19 @@ export class BrowseView extends BrowseAlbum {
     if (this.stale) this.render();
   }
 
+  /** A note or a folder deleted: what was ticked there is let go. */
+  followDelete(file) {
+    if (this.bulkSelection) this.bulkSelection.remove(file.path);
+  }
+
   /**
    * A folder renamed or moved while it's shown — or while it's the
    * filter, or on the way back down — is followed to its new path,
    * rather than the page falling back to the vault's root.
    */
   followRename(file, oldPath) {
+    // What's ticked follows a note or a folder renamed.
+    if (this.bulkSelection) this.bulkSelection.rename(oldPath, file.path);
     if (!(file instanceof TFolder)) return;
     const moved = (p) =>
       !p ? p : p === oldPath ? file.path : p.startsWith(oldPath + '/') ? file.path + p.slice(oldPath.length) : p;
