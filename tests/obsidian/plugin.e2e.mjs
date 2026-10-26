@@ -92,12 +92,14 @@ describe('Design Redux in Obsidian', function () {
       const started = performance.now();
       await app.plugins.enablePlugin('design-redux');
       window.__drLoadMs = Math.round(performance.now() - started);
-      // A first install starts without the strip, and with notes as the theme draws them; both are
-      // still offered, and tested here, so they're put on.
+      // A first install starts without the strip, with notes as the theme draws them, its own
+      // properties in sight and Obsidian's gear where it was; all are still offered, and tested
+      // here, so they're put on.
       const plugin = app.plugins.plugins['design-redux'];
       plugin.settings.contextStrip = true;
       plugin.settings.lookScope = 'window';
       plugin.settings.hideNativeProperties = true;
+      plugin.settings.settingsInHeader = true;
       await plugin.saveSettings();
     });
     await browser.pause(1500);
@@ -1434,7 +1436,8 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
       el().querySelector('.dr-preview-btn').click();
       const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
-      await until(() => !!dock() && !!row());
+      // In sight, not only open: until then a click opens rather than picks.
+      await until(() => !!dock() && !!row() && page.view.previewOn());
       row().click();
       const title = () => { const t = dock() && dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Anarchy');

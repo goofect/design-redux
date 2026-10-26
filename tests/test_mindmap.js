@@ -1638,9 +1638,12 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     // Notes linking to the node by its ^id: of those linking to the map.
     const other = new TFile('Notes/Week.md');
     const cache = { getFileCache: (f) => (f === other ? { links: [{ link: 'Plan#^b1' }, { link: 'Plan' }] } : null) };
-    const linkers = R.linkingNotes({ metadataCache: cache }, { libraryIndex: { incoming: () => [other] } }, view.file, build);
+    // The index's own shape: the paths linking to the map, with how often.
+    const linking = { metadataCache: cache, vault: { getAbstractFileByPath: (p) => (p === other.path ? other : null) } };
+    const index = { libraryIndex: { incoming: () => ({ [other.path]: 2 }) } };
+    const linkers = R.linkingNotes(linking, index, view.file, build);
     assert.deepStrictEqual(linkers.map((f) => f.path), ['Notes/Week.md']);
-    assert.deepStrictEqual(R.linkingNotes({ metadataCache: cache }, { libraryIndex: { incoming: () => [other] } }, view.file, view.model.root), [], 'a link to the map, but not to this node');
+    assert.deepStrictEqual(R.linkingNotes(linking, index, view.file, view.model.root), [], 'a link to the map, but not to this node');
     assert.deepStrictEqual(R.linkingNotes({}, {}, view.file, research), [], 'a node with no ^id: nothing can link to it');
     section.destroy();
     host.remove();

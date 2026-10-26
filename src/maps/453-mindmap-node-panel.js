@@ -101,9 +101,13 @@ export class NodeSection extends PanelSection {
 export function linkingNotes(app, plugin, mapFile, n) {
   if (!n.anchor || !(mapFile instanceof TFile) || !app || !app.metadataCache || typeof app.metadataCache.getFileCache !== 'function') return [];
   const want = `#^${n.id}`;
+  // The index gives the paths linking to the map, with how often: { path: count }.
   let from = [];
   try {
-    from = libraryIndex(plugin).incoming(mapFile) || [];
+    const vault = app.vault;
+    from = Object.keys(libraryIndex(plugin).incoming(mapFile) || {})
+      .map((path) => (vault && typeof vault.getAbstractFileByPath === 'function' ? vault.getAbstractFileByPath(path) : null))
+      .filter((f) => f instanceof TFile);
   } catch (err) {
     from = [];
   }

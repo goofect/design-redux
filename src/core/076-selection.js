@@ -81,7 +81,8 @@ export async function openInspector(app) {
     if (!leaf) return null;
     await leaf.setViewState({ type: INSPECTOR_VIEW, active: false });
   }
-  ws.revealLeaf(leaf);
+  // Awaited: newer Obsidian opens a folded sidebar after it returns.
+  await ws.revealLeaf(leaf);
   return leaf;
 }
 
