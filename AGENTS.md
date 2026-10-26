@@ -134,7 +134,9 @@ Coffee N' Christmas.
   code. Report changed files and tests run, briefly.
 - Test lightly, the author wants it quick: while working, run the simulation
   suites the change touches (`node tests/run.js qol album`: a line per suite,
-  details only on failure); before pushing, all of them (`npm test`, ~10 s,
+  details only on failure; `node tools/affected-tests.mjs --base origin/main
+  --run` picks them from what changed and says why); before pushing, all of
+  them (`npm test`, ~15 s,
   a few at once). A real-Obsidian test only for what can't be checked
   otherwise: `tests/e2e.sh "test name"` (latest version only, prints just the
   outcome; the full log is `logs/e2e.log`). CI runs everything on both
