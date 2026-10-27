@@ -123,7 +123,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -546,51 +546,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     clearTimeout(hist.glance);
   });
 
-  await t('a library that notices: rings on covers for how far through, notes your reading points to, notes too thin to be much use', async () => {
+  await t('a library that notices: notes your reading points to, notes too thin to be much use', async () => {
     const { v, plugin, app } = setup();
     plugin.saveData = () => {};
     const r = R.readingOf(plugin);
     const f = (p) => v.vault.getAbstractFileByPath(p);
-    // Rings: nothing for none read, a ring for some, a tick for all; sub-collections count.
-    const ir = f('IR');
-    const theories = f('IR/Theories');
-    assert.deepStrictEqual(r.albumProgress(ir), { read: 0, total: 6 });
+    // No rings on covers, partway read or all: they've gone, and their switch with them.
     r.markRead(f('IR/Anarchy.md'));
-    r.markRead(f('IR/Theories/Realism.md'));
-    assert.deepStrictEqual(r.albumProgress(ir), { read: 2, total: 6 }, 'its sub-collections count');
-    assert.deepStrictEqual(r.albumProgress(theories), { read: 1, total: 2 });
-    assert.strictEqual(R.progressRing(document, 0, 6), null);
-    const some = R.progressRing(document, 3, 6);
-    assert.ok(some.querySelector('svg .dr-ring-fill') && some.getAttribute('aria-label') === '3 of 6 read');
-    assert.strictEqual(some.style.getPropertyValue('--dr-ring'), '0.500');
-    assert.ok(R.progressRing(document, 6, 6).classList.contains('is-done'), 'all read: a tick');
-    const art = () => {
-      const el = document.createElement('div');
-      R.drawFolderArt(plugin, el, theories);
-      return el.querySelector('.dr-progress-ring');
-    };
-    assert.ok(art() && !art().classList.contains('is-done'), 'on the cover, wherever covers are drawn');
-    r.markRead(f('IR/Theories/Liberalism.md'));
-    assert.ok(art().classList.contains('is-done'));
-    plugin.settings.albumProgressRing = false;
-    assert.strictEqual(art(), null, 'switched off');
-    plugin.settings.albumProgressRing = true;
-    // A screen of covers walks the vault once: 500 albums, well under the budget.
-    const big = { children: [] };
-    for (let i = 0; i < 500; i++) {
-      const folder = new TFolder(`Big/${i}`);
-      folder.children = [0, 1, 2, 3].map((n) => Object.assign(new TFile(`Big/${i}/${n}.md`), { parent: folder }));
-      big.children.push(folder);
-    }
-    const realRoot = app.vault.getRoot;
-    app.vault.getRoot = () => big;
-    r.version++;
-    const started = Date.now();
-    big.children.forEach((folder) => R.progressRing(document, r.albumProgress(folder).read, 4) || 0);
-    const took = Date.now() - started;
-    assert.ok(took < 100, `500 albums' progress in ${took} ms`);
-    app.vault.getRoot = realRoot;
-    r.version++;
+    const art = document.createElement('div');
+    R.drawFolderArt(plugin, art, f('IR/Theories'));
+    assert.strictEqual(art.querySelector('.dr-progress-ring'), null);
+    const saved = { albumProgressRing: true };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 18).run(saved);
+    assert.ok(!('albumProgressRing' in saved) && !('albumProgressRing' in R.DEFAULTS));
 
     // From what you read: linked from what you read lately, not opened, by how many point there, then how lately.
     const now = 100 * 86400000;
@@ -930,10 +898,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 17);
+    assert.strictEqual(s.settingsVersion, 18);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 17, brought up from \d+; steps [\d, ]+17$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 18, brought up from \d+; steps [\d, ]+18$/);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -1755,7 +1723,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     };
     const cards = (title) => Array.from(shelf(title).querySelectorAll('.dr-card')).map((c) => `${c.querySelector('.dr-card-title').textContent} · ${(c.querySelector('.dr-card-sub') || {}).textContent}`);
     assert.deepStrictEqual(cards('Continue reading'), [`${notes[2].basename} · IR · 3 of ${notes.length}`], 'the note after the last one opened, with how far along');
-    assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress').style.getPropertyValue('--dr-progress'), (2 / notes.length).toFixed(4));
+    assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress'), null, 'no bar of how far along');
 
 
     // Your collections: smart albums, then albums that gather notes from elsewhere.

@@ -9,7 +9,6 @@ import { drawnArt } from './032-drawn-covers.js';
 import { iconForFile } from './040-helpers-sorting.js';
 import { fmGet, plainValue } from './045-helpers-properties.js';
 import { noteProps } from './073-notes.js';
-import { readingOf } from './075-reading.js';
 
 /** Recover a lucide icon name from a button's inline svg. */
 export function iconNameOf(btn) {
@@ -216,46 +215,6 @@ export function drawFolderArt(plugin, el, folder) {
   else fillArt(el, src, 'folder', coverGen(settings, name, folder.path), blankLook(settings, name, folder.path));
   // Printed on a cover that isn't a picture: its kind, its name and where it's from, in the same places on every album.
   if (settings.coverPrint && !src && !root && settings.coverFallback !== 'title') printCover(plugin, el, folder);
-  if (!root) drawProgressRing(plugin, el, folder);
-}
-
-/** On an album's cover, how far through it you are: a ring while you're partway, a tick once it's all read. */
-export function drawProgressRing(plugin, el, folder) {
-  const s = plugin.settings;
-  if (!s.albumProgressRing || !s.readingHistory || !folder) return null;
-  const { read, total } = readingOf(plugin).albumProgress(folder);
-  const ring = progressRing(el.ownerDocument || document, read, total);
-  if (ring) el.appendChild(ring);
-  return ring;
-}
-
-/** A small ring filled `read` of `total` of the way round, or a tick for all; null for none read. */
-export function progressRing(doc, read, total) {
-  if (!(total > 0) || !(read > 0)) return null;
-  const ring = doc.createElement('span');
-  ring.className = 'dr-progress-ring';
-  ring.setAttribute('aria-label', `${Math.min(read, total)} of ${total} read`);
-  if (read >= total) {
-    ring.classList.add('is-done');
-    setIcon(ring, 'check');
-    return ring;
-  }
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = doc.createElementNS(NS, 'svg');
-  svg.setAttribute('viewBox', '0 0 20 20');
-  const round = 2 * Math.PI * 7;
-  [['dr-ring-track', round], ['dr-ring-fill', (read / total) * round]].forEach(([cls, length]) => {
-    const c = doc.createElementNS(NS, 'circle');
-    c.setAttribute('class', cls);
-    c.setAttribute('cx', '10');
-    c.setAttribute('cy', '10');
-    c.setAttribute('r', '7');
-    c.setAttribute('stroke-dasharray', `${length.toFixed(2)} ${round.toFixed(2)}`);
-    svg.appendChild(c);
-  });
-  ring.appendChild(svg);
-  ring.style.setProperty('--dr-ring', (read / total).toFixed(3));
-  return ring;
 }
 
 /** An album's kind, from its folder note, or null. */

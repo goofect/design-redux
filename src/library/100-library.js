@@ -9,9 +9,8 @@
 
 import { ItemView, Menu, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, progressRing, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
+import { drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
-import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
@@ -291,16 +290,8 @@ export class LibraryView extends ItemView {
         onClick: open,
         onMenu: (evt) => menu(evt, open),
       });
-      // Partway through it: a small ring at the end of its row.
-      const s = this.plugin.settings;
-      let ring = null;
-      if (s.albumProgressRing && s.readingHistory) {
-        const { read, total } = readingOf(this.plugin).albumProgress(target);
-        ring = read < total ? progressRing(row.ownerDocument, read, total) : null;
-        if (ring) row.appendChild(ring);
-      }
-      // The Apple look: how many notes it holds, muted at the end, where no ring is.
-      if (!ring && !pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
+      // The Apple look: how many notes it holds, muted at the end.
+      if (!pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       return row;
     }
     return this.row(list, {

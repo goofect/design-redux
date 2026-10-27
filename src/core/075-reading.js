@@ -3,12 +3,12 @@
 /*                                                                     */
 /* When each note was last opened, and when it was read — reached to   */
 /* its end — kept in the plugin's own data, never in the notes: a note  */
-/* changed since it was read reads as changed. Albums count from it     */
-/* how far through you are; lists mark what's new to you; an album     */
-/* opens where you were. Kept by path, so it follows renames.          */
+/* changed since it was read reads as changed. From it, lists mark     */
+/* what's new to you, and an album opens where you were. Kept by path, */
+/* so it follows renames.                                              */
 /* ------------------------------------------------------------------ */
 
-import { TFile, TFolder } from 'obsidian';
+import { TFile } from 'obsidian';
 
 /* How many notes the history keeps, the latest. */
 export const READING_KEEP = 3000;
@@ -131,45 +131,6 @@ export class Reading {
     if (state === 'changed') return true;
     if (state === 'read') return false;
     return ((file.stat && file.stat.ctime) || 0) > this.since();
-  }
-
-  /**
-   * How far through each folder you are: Map folder → { read, total },
-   * its notes however deep, folder notes left out. Worked out in one walk
-   * and kept a moment, so a screen of covers walks the vault once.
-   */
-  progressByFolder() {
-    const now = Date.now();
-    const kept = this.progressKept;
-    if (kept && kept.version === this.version && now - kept.at < 1000) return kept.map;
-    const map = new Map();
-    const plugin = this.plugin;
-    const folderNote = (f) => typeof plugin.isFolderNote === 'function' && plugin.isFolderNote(f);
-    const walk = (folder) => {
-      let read = 0;
-      let total = 0;
-      (folder.children || []).forEach((c) => {
-        if (c instanceof TFolder) {
-          const p = walk(c);
-          read += p.read;
-          total += p.total;
-        } else if (c instanceof TFile && c.extension === 'md' && !folderNote(c)) {
-          total++;
-          if (this.state(c) === 'read') read++;
-        }
-      });
-      const p = { read, total };
-      map.set(folder, p);
-      return p;
-    };
-    walk(this.app.vault.getRoot());
-    this.progressKept = { version: this.version, at: now, map };
-    return map;
-  }
-
-  /** How far through an album you are: { read, total }. */
-  albumProgress(folder) {
-    return this.progressByFolder().get(folder) || { read: 0, total: 0 };
   }
 
   /** How many of these notes are read. */

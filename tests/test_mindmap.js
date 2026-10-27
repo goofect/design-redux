@@ -1490,11 +1490,9 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     assert.ok(el('Book hall').querySelector('.dr-mindmap-task'), 'a box, and the text without it');
     assert.ok(el('Send invites').hasClass('is-done'));
     assert.ok(!el('Food').querySelector('.dr-mindmap-task'));
-    const ring = () => el('Launch').querySelector('.dr-mindmap-progress');
-    assert.strictEqual(ring().getAttribute('aria-label'), '1 of 3 done');
+    assert.ok(!el('Launch').querySelector('.dr-mindmap-progress'), 'no ring of how many are done');
     pointer(el('Book hall').querySelector('.dr-mindmap-task'), 'pointerdown');
     assert.strictEqual(hall.text, '[x] Book hall');
-    assert.strictEqual(ring().getAttribute('aria-label'), '2 of 3 done', 'the ring follows');
     view.flushSave();
     assert.ok(view.text.includes('\t- [x] Book hall\n'), 'ticked in the note');
     view.undoStep(false);

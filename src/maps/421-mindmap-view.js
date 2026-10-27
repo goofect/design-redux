@@ -144,7 +144,6 @@ export class MindMapView extends MindMapRich {
       return;
     }
     if (typeof this.answerQueries === 'function') this.answerQueries();
-    if (typeof this.countTasks === 'function') this.countTasks();
     this.panelDirty = true;
     const sizeOf = typeof this.sizeOf === 'function' ? (n) => this.sizeOf(n) : (n) => estimateSize(n.text || nodeLabel(n));
     this.scene = layoutScene(this.model, sizeOf, this.mode, typeof this.sceneOpts === 'function' ? this.sceneOpts() : {});

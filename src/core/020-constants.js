@@ -89,7 +89,6 @@ export const DEFAULTS = {
   // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
   readingHistory: true,
   // On a collection's cover, a ring for how much of it you've read.
-  albumProgressRing: true,
   // Home's From what you read: notes linked from what you read in this many days.
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
@@ -333,7 +332,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 17,
+  settingsVersion: 18,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

@@ -49,7 +49,7 @@ function assert(cond, msg) {
     const [styling, context] = out.stdout.split('as context for something inside it:');
     assert(/styles\/26-library-sidebar\.css:\d+ +\(0,1,0\) +\.dr-lib-row\n/.test(styling), 'the bare rule, with its specificity');
     assert(/\.dr-lib-row:hover +\[@media \(any-hover: hover\)\]/.test(styling), 'conditions shown');
-    assert(/\.dr-lib-row \.dr-progress-ring/.test(context) && !/progress-ring/.test(styling), 'a descendant rule is context, not styling');
+    assert(/\.dr-lib-row\.is-pin \.dr-lib-icon/.test(context) && !/is-pin \.dr-lib-icon/.test(styling), 'a descendant rule is context, not styling');
     assert(/ {2}always:\n(?: {4}.*\n)*? {4}display: flex — styles\/26-library-sidebar\.css:\d+/.test(out.stdout), 'the bare element is a flex row from the sidebar part');
     assert(/in body\.is-mobile:\n(?: {4}.*\n)*? {4}min-height: 44px \(over var\(--dr-row-height\)\)/.test(out.stdout), 'a context variant says what it overrides');
     (styling.match(/styles\/[\w-]+\.css:\d+/g) || []).forEach((w) => {

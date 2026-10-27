@@ -107,30 +107,6 @@ export function dueState(node, today) {
   return days < 0 ? 'overdue' : days === 0 ? 'today' : days <= DUE_SOON_DAYS ? 'soon' : 'later';
 }
 
-/** Each node with tasks below it: id -> { done, total }, counting every task in its branch but itself. */
-export function taskProgress(model) {
-  const out = new Map();
-  const go = (n) => {
-    let done = 0;
-    let total = 0;
-    n.children.forEach((c) => {
-      const t = taskOf(c);
-      if (t) {
-        total++;
-        if (t.done) done++;
-      }
-      const below = go(c);
-      done += below.done;
-      total += below.total;
-    });
-    if (total) out.set(n.id, { done, total });
-    return { done, total };
-  };
-  if (model.root) go(model.root);
-  (model.free || []).forEach(go);
-  return out;
-}
-
 /** The open tasks and every node on the way down to them; null where the map has no open task. */
 export function openTaskSet(model) {
   const lit = new Set();

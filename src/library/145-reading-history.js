@@ -78,13 +78,7 @@ export class ReadingHistory extends Feature {
       {
         key: 'readingHistory',
         name: 'Reading history',
-        desc: 'Notes you’ve read to the end are remembered — in the plugin’s data, never in your notes. Collections show how far through you are, lists mark what’s new or changed, and a collection opens where you were.',
-      },
-      {
-        key: 'albumProgressRing',
-        showIf: 'readingHistory',
-        name: 'Progress rings on covers',
-        desc: 'A small ring on a collection’s cover while you’re partway through it, and a tick once it’s all read.',
+        desc: 'Notes you’ve read to the end are remembered — in the plugin’s data, never in your notes. Lists mark what’s new or changed, and a collection opens where you were.',
       },
       {
         key: 'rememberPlace',

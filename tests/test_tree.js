@@ -441,13 +441,12 @@ const edge = (from, to, fromSide, toSide, extra) => Object.assign({ id: `${from}
     assert.deepStrictEqual([back.relations.length, back.free.map((n) => n.text)], [1, ['Loose again']]);
   });
 
-  await t('tasks: a box ticked and unticked, written as - [ ] in the note; due dates read and placed; done counted up the branch; open tasks lit', () => {
+  await t('tasks: a box ticked and unticked, written as - [ ] in the note; due dates read and placed; open tasks lit', () => {
     let text = '- Plan\n\t- [ ] Book hall\n\t- [x] Send invites\n\t- Food\n\t\t- [ ] Order cake\n';
     const m = R.parseOutline(text).model;
     const [hall, invites, food] = m.root.children;
     const cake = food.children[0];
     assert.deepStrictEqual([R.taskOf(hall), R.taskOf(invites), R.taskOf(food)], [{ done: false }, { done: true }, null]);
-    assert.deepStrictEqual(Object.fromEntries(R.taskProgress(m)), { [m.root.id]: { done: 1, total: 3 }, [food.id]: { done: 0, total: 1 } });
     R.toggleTask(m, food.id);
     assert.strictEqual(food.text, '[ ] Food', 'a plain node made a task');
     R.setTaskDone(m, cake.id, true);
