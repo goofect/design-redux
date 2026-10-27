@@ -618,19 +618,22 @@ function strip(page) {
 }
 
 t('the strip carries a show-sidebar button that reopens it', () => {
-  const { cs, app } = strip(browsePage('search'));
+  const { cs, app } = strip(notePage('Concepts Folder/Logic.md'));
   const toggle = cs.el.querySelector('.dr-sidebar-toggle');
   assert.ok(toggle);
   toggle.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   assert.strictEqual(app.workspace.leftSplit.expanded, 1);
 });
 
-t('the strip stays up on an empty page, where the sidebar toggle is needed', () => {
+t('the strip is only up inside a note: down on an empty tab and a library page, the header buttons back', () => {
   const empty = { isDeferred: false, view: { getDisplayText: () => 'New tab', getIcon: () => 'file' } };
-  const { cs } = strip(empty);
-  assert.ok(!cs.el.classList.contains('is-empty'));
-  assert.ok(cs.el.querySelector('.dr-sidebar-toggle'));
-  assert.strictEqual(cs.el.querySelector('.dr-strip-title').textContent, 'New tab');
+  [empty, browsePage('search')].forEach((page) => {
+    const { cs } = strip(page);
+    assert.ok(cs.el.classList.contains('is-empty') && !cs.el.querySelector('.dr-strip-btn'));
+    assert.ok(!document.body.classList.contains('dr-strip-up'));
+  });
+  strip(notePage('Concepts Folder/Logic.md'));
+  assert.ok(document.body.classList.contains('dr-strip-up'));
 });
 
 t("a note's More opens the page menu the hidden header had", () => {
@@ -643,19 +646,6 @@ t("a note's More opens the page menu the hidden header had", () => {
   more.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 3, clientY: 3 }));
   assert.deepStrictEqual(asked, ['more-options']);
 });
-
-t("a folder page's More offers making something in it", () => {
-  const page = browsePage('folder', { path: 'Books Folder' });
-  page.view.folder = () => folders['Books Folder'];
-  page.view.getDisplayText = () => 'Books Folder';
-  const { cs } = strip(page);
-  lastMenu = null;
-  const more = Array.from(cs.el.querySelectorAll('.dr-strip-btn')).find(
-    (b) => b.getAttribute('aria-label') === 'More');
-  more.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 3, clientY: 3 }));
-  assert.deepStrictEqual(lastMenu.titles().slice(0, 2), ['New note', 'New folder']);
-});
-
 
 /* -- the header's own copies of the strip's buttons ----------------- */
 

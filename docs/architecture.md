@@ -452,7 +452,7 @@ and the pairs of pieces that use each other from 14 to 12.
 
 The 29 crossings left:
 - **Features asking each other for a capability through `plugin.feature(X)`:**
-  - the strip with Library, Knowledge, AlbumStructure and Footnotes;
+  - the strip with Library, Knowledge and Footnotes;
   - the panel with AlbumProperty, BulkEditing and QuietLinks;
   - the browse view with ContextStrip, UpNext and BulkEditing;
   - workspace modes and one-page;

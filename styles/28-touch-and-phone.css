@@ -42,7 +42,7 @@ body.is-mobile .dr-split-row:not(.is-selected):active,
 body.is-mobile .dr-recent:active,
 body.is-mobile .dr-shelf-label.is-linked:active,
 body.is-mobile .dr-detail-action:active,
-body.is-mobile .dr-strip-now:not(.is-screen):active {
+body.is-mobile .dr-strip-now:active {
   background-color: var(--background-modifier-hover);
 }
 

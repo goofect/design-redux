@@ -1461,26 +1461,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(titles.slice(0, 3), ['Read', 'Properties', 'Pin']);
     assert.ok(titles.includes('Delete') && titles[titles.length - 1] !== 'Read');
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
-    // An album's strip: the actions written for albums elsewhere, sorting, and More.
-    const made = [];
-    plugin.features = [{ actions: () => [{ id: 'new-note-here', name: 'New note in the current folder', on: 'album', run: (ctx) => made.push(`${ctx.folder.path} from ${ctx.from}`) }] }];
+    // An album's page: no strip — it's only inside a note — and the header's own buttons back.
     const { view } = setup();
     Object.assign(view, { app, plugin });
     leaf.view = view;
     strip.update();
-    assert.deepStrictEqual(Array.from(strip.el.querySelectorAll('.dr-strip-actions .dr-strip-btn')).map((b) => b.dataset.action), ['new-note-here', 'sort', 'more']);
-    assert.strictEqual(strip.el.querySelector('[data-action="new-note-here"]').getAttribute('aria-label'), 'New note');
-    click(strip.el.querySelector('[data-action="new-note-here"]'));
-    assert.deepStrictEqual(made, ['IR from strip']);
-    assert.ok(!strip.el.querySelector('[data-action="more"]').classList.contains('is-secondary'));
-    // An album screen: its cover, what it holds and what it is.
-    const browse = Object.assign(Object.create(R.BrowseView.prototype), { mode: 'folder', path: 'IR', plugin, app, leaf: {} });
-    browse.folder = () => app.vault.getFolderByPath('IR');
-    browse.getDisplayText = () => 'IR';
-    leaf.view = browse;
-    strip.update();
-    assert.ok(/\d+ items/.test(strip.el.querySelector('.dr-strip-sub').textContent), strip.el.querySelector('.dr-strip-sub').textContent);
-    assert.ok(!strip.el.querySelector('.dr-strip-art').classList.contains('is-blank'), 'the collection’s cover');
+    assert.ok(strip.el.classList.contains('is-empty') && !strip.el.querySelector('.dr-strip-btn'));
+    assert.ok(!document.body.classList.contains('dr-strip-up'));
   });
 
   await t('a note without a cover shows the first image in it, where the setting has it', () => {

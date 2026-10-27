@@ -8,17 +8,15 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
-import { albumNeighbours, canStep, drawFolderArt, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, showTargetMenu, step, valueText } from '../core/030-helpers-art.js';
+import { albumNeighbours, canStep, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, step, valueText } from '../core/030-helpers-art.js';
 import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
-import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
 import { dueNotes, sessionPlace } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
 import { Knowledge } from '../library/254-knowledge.js';
-import { AlbumStructure } from '../library/257-album-structure.js';
 import { Footnotes } from '../note/285-footnotes.js';
 import { WorkspaceModes } from './348-workspace-modes.js';
 
@@ -51,7 +49,6 @@ export function headerDuplicates(leaf) {
   return Array.from(found);
 }
 
-/* The sign a screen shows where a note shows its cover. */
 /* Narrower than this, the strip keeps what's open and its main buttons; the rest go into More. */
 /* Under this, the pane is too narrow for the strip to widen sideways: it grows upward as a small sheet. */
 export const STRIP_NARROW = 480;
@@ -64,12 +61,10 @@ export const STRIP_NARROW = 480;
  * told when that changes.
  */
 export const STRIP_ACTIONS = {
-  album: [['new-note-here', 'New note', false, 'file-plus']],
   note: [['add-page', 'Add a page', true, 'plus']],
   canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true], ['present-map', 'Present', true]],
 };
 
-export const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };
 
 export class ContextStrip extends Feature {
   constructor(plugin) {
@@ -269,6 +264,8 @@ export class ContextStrip extends Feature {
 
   disable() {
     document.body.removeClass('dr-strip-active');
+    document.body.removeClass('dr-strip-up');
+    document.querySelectorAll('.dr-header-sidebar-toggle').forEach((el) => el.remove());
     document.body.removeClass('dr-strip-side');
     document.body.style.removeProperty('--dr-strip-h');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
@@ -311,7 +308,6 @@ export class ContextStrip extends Feature {
    */
   update() {
     if (!this.el) return;
-    this.markDuplicates();
 
     const leaf = pageLeaf(this.app);
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
@@ -322,65 +318,23 @@ export class ContextStrip extends Feature {
     this.narrow = this.isNarrow();
     this.el.toggleClass('is-narrow', this.narrow);
     this.el.toggleClass('is-sheet', this.narrow);
-    // Up whenever there's a page at all — including an empty one, since
-    // the strip is also where a closed sidebar comes back from.
-    this.el.toggleClass('is-empty', !view);
-    if (!view) {
+    // Up only inside a note (or another file open in a tab): not on the
+    // library's pages, the graph or an empty tab. While it's down, the
+    // header buttons it stands in for show again.
+    this.el.toggleClass('is-empty', !file);
+    document.body.toggleClass('dr-strip-up', !!file);
+    if (!file) {
+      if (view && !browse) this.headerToggle(view);
       this.fitPadding();
       return;
     }
 
+    // The header buttons the strip stands in for, marked to be hidden while it's up.
+    this.markDuplicates();
     this.renderNav(this.el);
-    if (file) {
-      this.renderNow(this.el, file, view);
-      this.renderActions(this.el, file, leaf);
-    } else {
-      this.renderScreen(this.el, view);
-    }
+    this.renderNow(this.el, file, view);
+    this.renderActions(this.el, file, leaf);
     this.fitPadding();
-  }
-
-  /**
-   * Anything that isn't a note: a browse screen, graph view, an empty
-   * page. A folder screen gets the folder's menu, so making something
-   * in it is a click away.
-   */
-  renderScreen(strip, view) {
-    const browse = isBrowseView(view) ? view : null;
-    const now = strip.createDiv({ cls: 'dr-strip-now is-screen' });
-    const art = now.createDiv({ cls: 'dr-strip-art is-blank' });
-    const icon = browse
-      ? 'library'
-      : (typeof view.getIcon === 'function' && view.getIcon()) || 'layout';
-    setIcon(art.createSpan({ cls: 'dr-card-glyph' }), icon);
-
-    const title =
-      (typeof view.getDisplayText === 'function' && view.getDisplayText()) ||
-      'Nothing open';
-    const text = now.createDiv({ cls: 'dr-strip-text' });
-    text.createDiv({ cls: 'dr-strip-title', text: title });
-    const folder = browse && browse.mode === 'folder' ? browse.folder() : null;
-    text.createDiv({ cls: 'dr-strip-sub', text: this.screenLine(browse, folder) });
-    // An album shows its cover, as a note does; other screens their own sign.
-    if (folder && !(folder.isRoot && folder.isRoot())) {
-      art.empty();
-      art.removeClass('is-blank');
-      drawFolderArt(this.plugin, art, folder);
-    } else if (browse && STRIP_SCREEN_ICONS[browse.mode]) {
-      art.empty();
-      setIcon(art.createSpan({ cls: 'dr-card-glyph' }), STRIP_SCREEN_ICONS[browse.mode]);
-    }
-    if (!folder) return;
-    const actions = strip.createDiv({ cls: 'dr-strip-actions' });
-    const specs = this.contextSpecs('album');
-    if (typeof browse.filterMenu === 'function') specs.push({ icon: 'arrow-up-down', label: 'Sort and filter', role: 'sort', run: (evt) => showMenuAt(browse.filterMenu(), evt) });
-    specs.push({
-      icon: 'ellipsis',
-      label: 'More',
-      role: 'more',
-      run: (evt) => showTargetMenu(this.plugin, evt, folder, { here: true, source: 'design-redux-strip', redraw: () => browse.render() }),
-    });
-    specs.forEach((spec) => this.stripButton(actions, spec));
   }
 
   /** Narrow enough that the strip's secondary buttons go into More. Not on a phone, whose strip is its own. */
@@ -481,18 +435,21 @@ export class ContextStrip extends Feature {
     };
   }
 
-  /** The line under a screen's name: what an album holds and what it is; otherwise the vault. */
-  screenLine(browse, folder) {
-    const vault = this.app.vault.getName();
-    if (!browse) return vault;
-    if (browse.mode === 'smart') return 'Saved view';
-    if (browse.mode === 'library-check') return 'What to look at';
-    if (browse.mode === 'inbox') return 'Notes in no collection';
-    if (!folder || (folder.isRoot && folder.isRoot())) return vault;
-    const n = libraryIndex(this.plugin).count(folder);
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
-    const kind = structure ? structure.info(folder).label : '';
-    return [n === 1 ? '1 item' : `${n} items`, kind || (folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent.name : '')].filter(Boolean).join(' · ');
+  /**
+   * With the strip down, its way back to a closed sidebar goes in the
+   * page's own header — an empty tab, the graph — where a hidden ribbon
+   * leaves Obsidian none. A library page draws its own. Shown only while
+   * the sidebar is closed.
+   */
+  headerToggle(view) {
+    const header = view.containerEl && view.containerEl.querySelector('.view-header-left, .view-header');
+    if (!header || header.querySelector('.dr-header-sidebar-toggle')) return;
+    const toggle = header.createDiv({ cls: 'clickable-icon dr-header-sidebar-toggle dr-sidebar-toggle' });
+    header.prepend(toggle);
+    toggle.setAttribute('aria-label', 'Show sidebar');
+    asButton(toggle);
+    setIcon(toggle, 'panel-left');
+    onActivate(toggle, () => this.app.workspace.leftSplit.expand());
   }
 
   renderNav(strip) {
