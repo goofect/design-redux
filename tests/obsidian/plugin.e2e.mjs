@@ -443,7 +443,9 @@ describe('Design Redux in Obsidian', function () {
       const tiles = Array.from(page.querySelectorAll('.dr-card-art, .dr-pick-art')).filter((c) => c.offsetWidth > 0);
       await library.browseMode({ mode: 'folder', path: 'Politics' });
       // A note open beside it, so the strip — shown only inside a note — has buttons to measure.
-      await app.workspace.getLeaf('split').openFile(app.vault.getFileByPath('Politics/Anarchy.md'));
+      const beside = app.workspace.getLeaf('split');
+      await beside.openFile(app.vault.getFileByPath('Politics/Anarchy.md'));
+      window.__drBeside = beside;
       return tiles.map((c) => Math.abs(c.offsetWidth - c.offsetHeight));
     });
     expect(covers.length).toBeGreaterThan(0);
@@ -521,8 +523,12 @@ describe('Design Redux in Obsidian', function () {
     expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
     check(compact, 'compact');
     check(spacious, 'spacious');
-    // Back as it was, for the tests after.
+    // Back as it was, for the tests after: the look, and the note beside the album closed.
     await measure(started, 'apple', 'standard');
+    await browser.executeObsidian(() => {
+      if (window.__drBeside) window.__drBeside.detach();
+      delete window.__drBeside;
+    });
   });
 
   it('keeps the ribbon’s buttons out of sight while they’re in the menu', async function () {
