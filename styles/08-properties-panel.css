@@ -19,6 +19,8 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 .dr-props-popup {
   --dr-label-width: 38%;
   --dr-gutter: 10px;
+  /* How far in what the sections below the properties hold sits: from the sheet's edge, as the property rows do. */
+  --dr-section-inset: var(--dr-space-1);
   position: fixed;
   z-index: calc(var(--layer-menu, 65) - 10);
   display: none;
@@ -157,7 +159,7 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 }
 
 .dr-empty {
-  margin-left: calc(var(--dr-label-width, 84px) + var(--dr-gutter, 10px));
+  margin-left: var(--dr-section-inset, 0px);
   padding: 3px calc(var(--dr-u) * 1.5);
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
@@ -746,7 +748,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   align-items: center;
   justify-content: space-between;
   gap: var(--dr-space-2);
-  margin-left: calc(var(--dr-label-width) + var(--dr-gutter));
+  margin-left: var(--dr-section-inset, 0px);
   padding: 3px calc(var(--dr-u) * 1.5);
   border-radius: var(--dr-radius-sm);
   color: var(--text-normal);
@@ -888,15 +890,13 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 /* Sections the features add below the properties — a note's relationships,
- * where it's kept: a small heading, rows as the mentions have them, a way
+ * where it's kept: a heading as the Properties one is, rows as the mentions have them, a way
  * up through what it comes under, and a few actions. */
 .dr-section-label {
-  margin: var(--dr-space-3) 0 var(--dr-space-1) calc(var(--dr-label-width) + var(--dr-gutter));
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
+  margin: var(--dr-space-3) 0 var(--dr-space-1) var(--dr-section-inset, 0px);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .dr-relations-under {
@@ -904,7 +904,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-space-1);
-  margin: 0 0 var(--dr-space-1) calc(var(--dr-label-width) + var(--dr-gutter));
+  margin: 0 0 var(--dr-space-1) var(--dr-section-inset, 0px);
   padding: 0 calc(var(--dr-u) * 1.5);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
@@ -947,7 +947,7 @@ body.is-mobile .dr-mention-remove {
   display: flex;
   flex-wrap: wrap;
   gap: var(--dr-space-1);
-  margin: var(--dr-space-1) 0 var(--dr-space-2) calc(var(--dr-label-width) + var(--dr-gutter));
+  margin: var(--dr-space-1) 0 var(--dr-space-2) var(--dr-section-inset, 0px);
 }
 
 .dr-section-action {
