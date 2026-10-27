@@ -1622,6 +1622,40 @@ describe('Design Redux in Obsidian', function () {
     expect(back).toBe(true);
   });
 
+  it('keeps the library index right as folders move, notes go and links change', async function () {
+    const drift = await browser.executeObsidian(async ({ app, plugins }) => {
+      const index = plugins.designRedux.libraryIndex;
+      const settle = () => new Promise((done) => setTimeout(done, 600));
+      const ask = () => (index.count(app.vault.getRoot()), index.incoming(''));
+      const out = [];
+      const check = (step) => index.drift().forEach((line) => out.push(`${step}: ${line}`));
+      ask();
+      await app.vault.createFolder('Index/Inner');
+      await app.vault.create('Index/Inner/One.md', '[[Two]]');
+      await app.vault.create('Index/Two.md', '');
+      await app.vault.create('Index/Index.md', '');
+      await settle();
+      ask();
+      check('made');
+      await app.fileManager.renameFile(app.vault.getFolderByPath('Index/Inner'), 'Politics/Inner');
+      await settle();
+      check('folder moved');
+      ask();
+      await app.vault.modify(app.vault.getFileByPath('Politics/Inner/One.md'), '[[Balance of power]] [[Balance of power]]');
+      await settle();
+      check('links changed');
+      await app.fileManager.renameFile(app.vault.getFolderByPath('Index'), 'Indexed');
+      await settle();
+      check('folder renamed');
+      await app.vault.delete(app.vault.getFolderByPath('Politics/Inner'), true);
+      await app.vault.delete(app.vault.getFolderByPath('Indexed'), true);
+      await settle();
+      check('deleted');
+      return out;
+    });
+    expect(drift).toEqual([]);
+  });
+
   it('reports what works on this version, and copies diagnostics', async function () {
     const report = await browser.executeObsidian(({ plugins }) => {
       const d = plugins.designRedux.features.find((f) => f.constructor.name === 'Diagnostics');
