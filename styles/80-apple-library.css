@@ -4,7 +4,7 @@
 
 /* The sidebar: 36px rows, a 28px cover, groups apart by space, counts muted at the end. */
 body.dr-look-apple .dr-lib-row {
-  font-size: var(--dr-type-subhead);
+  font-size: var(--dr-type-footnote);
 }
 
 body.dr-look-apple .dr-lib-icon.has-art {

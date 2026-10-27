@@ -819,7 +819,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(moved.length, 1, 'gone before it could move: nothing');
   });
 
-  await t('an album says how far through it you are, dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
+  await t('an album dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
     const { v, plugin, view, opened } = setup();
     plugin.saveData = () => {};
     const r = R.readingOf(plugin);
@@ -830,7 +830,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     r.opened(f('Cooperation'));
     plugin.settings.readingLog['IR/Cooperation.md'].opened += 5;
     view.render();
-    assert.ok(/1 of 4 read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent), view.contentEl.querySelector('.dr-detail-meta').textContent);
+    assert.ok(!/ read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent), 'no count of what’s read under its title');
     const row = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"]`);
     assert.ok(!row('Anarchy').classList.contains('is-unread') && row('Balance').classList.contains('is-unread'));
     const open = action(view, 'Continue');
@@ -2527,6 +2527,20 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(view.contentEl.querySelector('.dr-album-panels, .dr-album-lead, .dr-disc'), null);
     assert.ok(text('.dr-shelf-title').includes('In IR'));
     assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'));
+    // Under an album shown as a list — Automatic or Lists — the folders at the foot are rows under the same title.
+    ['auto', 'lists'].forEach((layout) => {
+      plugin.settings.libraryLayout = layout;
+      view.render();
+      assert.ok(text('.dr-shelf-title').includes('In IR'), layout);
+      assert.ok(view.contentEl.querySelector('.dr-folder-rows .dr-search-prop[data-path="IR/Theories"]'), layout);
+      assert.ok(!view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'), layout);
+    });
+    // Under an album of covers, covers.
+    fm.layout = 'covers';
+    view.render();
+    assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'));
+    delete fm.layout;
+    plugin.settings.libraryLayout = 'covers';
     // Empty, and why.
     v.folder('Plans');
     const plans = v.file('Plans/Plans.md');

@@ -626,9 +626,9 @@ describe('Design Redux in Obsidian', function () {
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
-    // A collection inside the album: its tile on the shelf at the album's foot.
+    // A collection inside the album: its row (or, among covers, its tile) at the album's foot.
     // Scrolled to by selector, then found again: the page may have redrawn it meanwhile.
-    const tile = ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]';
+    const tile = [ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]', ACTIVE + '.dr-folder-rows [data-path="Politics/Theories"]'].join(', ');
     await browser.$(tile).waitForExist({ timeout: 5000 });
     await browser.execute((sel) => document.querySelector(sel).scrollIntoView({ block: 'center' }), tile);
     await browser.pause(300);
@@ -1809,7 +1809,7 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
-  it('remembers a note read to its end, in its own data, and shows the album how far through it is', async function () {
+  it('remembers a note read to its end, in its own data, without counting it under the album’s title', async function () {
     await browser.executeObsidian(async ({ app }) => {
       if (!app.vault.getFolderByPath('Read album')) await app.vault.createFolder('Read album');
       for (const n of ['One', 'Two']) {
@@ -1830,7 +1830,9 @@ describe('Design Redux in Obsidian', function () {
       const el = document.querySelector('.workspace-leaf.mod-active .dr-detail-meta');
       return el ? el.textContent : '';
     });
-    expect(meta).toContain('1 of 2 read');
+    // The album's header says what it holds, not how much of it is read.
+    expect(meta).toContain('2 notes');
+    expect(meta).not.toMatch(/\d+ of \d+ read/);
     await browser.executeObsidian(async ({ app }) => {
       const folder = app.vault.getFolderByPath('Read album');
       if (folder) await app.vault.delete(folder, true);

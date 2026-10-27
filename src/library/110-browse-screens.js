@@ -93,8 +93,8 @@ export class FolderScreen extends BrowseScreen {
         const add = folder.isRoot && folder.isRoot() ? null : ['New note', () => this.plugin.newNote(folder)];
         view.emptyState(root, this.emptyText(about), 'folder-open', view.clearAction() || add);
       }
-      this.renderInside(root, folder);
-      view.renderMoreIn(root, folder);
+      this.renderInside(root, folder, about);
+      view.renderMoreIn(root, folder, this.footCovers(about));
       return;
     }
     const drawNotes = (el) => {
@@ -107,15 +107,20 @@ export class FolderScreen extends BrowseScreen {
     drawNotes(root);
     if (view.editing) return;
     if (about && about.related.length) view.shelf(root, 'Related collections', about.related);
-    this.renderInside(root, folder);
-    view.renderMoreIn(root, folder);
+    this.renderInside(root, folder, about);
+    view.renderMoreIn(root, folder, this.footCovers(about));
   }
 
-  /** The folders inside the album, at its foot: a shelf, before those beside it. */
-  renderInside(root, folder) {
+  /** The folders inside the album, at its foot, before those beside it. */
+  renderInside(root, folder, about) {
     const view = this.view;
     const inside = view.sortFolders(view.visibleFolders(folder)).filter((f) => view.folderInFilter(f) && view.matches(f.name));
-    if (inside.length) view.shelf(root, `In ${view.folderName(folder)}`, inside);
+    if (inside.length) view.folderShelf(root, `In ${view.folderName(folder)}`, inside, { covers: this.footCovers(about) });
+  }
+
+  /** The folders at an album's foot go as it does: covers under an album of covers, or where everything is covers; rows under a list. */
+  footCovers(about) {
+    return this.settings.libraryLayout === 'covers' || !!(about && about.layout === 'covers');
   }
 
   /** The album's notes as a table: a row each, the columns set for tables. */

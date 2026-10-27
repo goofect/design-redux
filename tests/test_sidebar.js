@@ -339,7 +339,7 @@ t('the chevron opens pins in place without leaving the page', () => {
   assert.ok(view.contentEl.querySelector('.dr-lib-disclosure.is-open'));
 });
 
-t('what is pinned shows its artwork, never a blank, and a line beneath: what a folder holds, where a note lives', () => {
+t('what is pinned shows its artwork, never a blank; a folder no count of its notes, a note a line beneath for where it lives', () => {
   const { view, saved } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], files['Home.md']] });
   const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
   assert.strictEqual(rows.length, 2, 'pinned rows, and only those, are pins');
@@ -347,7 +347,7 @@ t('what is pinned shows its artwork, never a blank, and a line beneath: what a f
     const art = r.querySelector('.dr-lib-icon');
     assert.ok(art.classList.contains('has-art') && art.childNodes.length, `${r.dataset.path}: artwork, or art made for it`);
   });
-  assert.match(rows[0].querySelector('.dr-lib-sub').textContent, /^\d+ notes?$/, 'a folder: how much it holds');
+  assert.ok(!rows[0].querySelector('.dr-lib-sub'), 'a folder: no count of its notes');
   assert.ok(!rows[1].querySelector('.dr-lib-sub'), 'a note at the top of the vault: nothing to say where it is');
   assert.ok(!view.contentEl.querySelector('.dr-lib-row:not(.is-pin) .dr-lib-sub'), 'other rows stay one line');
   // Drawn again, nothing changed: the same rows, so the covers don't flash.

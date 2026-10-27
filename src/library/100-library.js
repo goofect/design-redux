@@ -282,9 +282,9 @@ export class LibraryView extends ItemView {
         depth: depth,
         icon: 'folder',
         art: this.plugin.folderCoverSrc(target),
-        // Pinned, its own artwork — a cover, or one made for it — and how much it holds beneath its name.
+        // Pinned, its own artwork — a cover, or one made for it — and nothing beneath its name.
         draw: pinned ? (el) => drawFolderArt(this.plugin, el, target) : null,
-        sub: pinned ? (n === 1 ? '1 note' : `${n} notes`) : null,
+        sub: null,
         label: target.name,
         path: target.path,
         onClick: open,
