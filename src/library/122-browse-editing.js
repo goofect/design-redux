@@ -268,7 +268,7 @@ export class BrowseEditing extends BrowseSorting {
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
     button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
-    button('more-horizontal', 'More', (evt) => this.bulkMenu(evt), 'dr-bulk-more', false);
+    button('more-horizontal', 'More', (evt) => this.bulkMenu(evt), 'dr-bulk-more', false).setAttribute('aria-haspopup', 'menu');
     button('x', 'Clear selection', () => {
       this.bulk().clear();
       this.showTicks();

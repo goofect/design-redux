@@ -1045,6 +1045,21 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     bar().querySelector('.dr-bulk-more').click();
     const items = menus[0].items.map((i) => i.title);
     assert.strictEqual(items[items.length - 1], 'Delete…');
+    assert.strictEqual(bar().querySelector('.dr-bulk-more').getAttribute('aria-haspopup'), 'menu', 'More says it opens a menu');
+    // Delete asks first; cancelled, nothing goes to the trash and what's ticked stays ticked.
+    const trashed = [];
+    const trash = v.fileManager.trashFile;
+    v.fileManager.trashFile = async (f) => { trashed.push(f.path); return trash(f); };
+    modals.length = 0;
+    menus[0].items.find((i) => i.title === 'Delete…').click();
+    const confirm = modals[modals.length - 1];
+    assert.match(confirm.modalEl.textContent, /Delete 3 notes\?/);
+    Array.from(confirm.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Cancel').click();
+    await new Promise((r) => setTimeout(r));
+    assert.deepStrictEqual(trashed, []);
+    assert.strictEqual(view.ticked().size, 3, 'cancelled: the selection kept');
+    assert.ok(!confirm.modalEl.isConnected);
+    v.fileManager.trashFile = trash;
     assert.ok(items.includes('Copy as table') && items.some((i) => /^Select all \d+$/.test(i)), items.join(' | '));
     const shown = view.contentEl.querySelectorAll('.dr-track.is-editing').length;
     menus[0].items.find((i) => i.title.startsWith('Select all')).click();
