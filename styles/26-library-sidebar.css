@@ -70,7 +70,7 @@
   line-height: var(--dr-line-label);
   border-radius: var(--dr-radius-md);
   color: var(--text-normal);
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-smaller);
   cursor: pointer;
   user-select: none;
 }
@@ -86,11 +86,16 @@
 
 .dr-lib-row.is-active {
   background-color: var(--dr-selected);
-  font-weight: var(--font-semibold, 600);
 }
 
+/* Where you are, marked on what stands for it, not on its name: the icon
+   in the accent, and a cover ringed in it. */
 .dr-lib-row.is-active .dr-lib-icon {
   color: var(--text-accent);
+}
+
+.dr-lib-row.is-active .dr-lib-icon.has-art {
+  box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
 .dr-lib-row:focus-visible {
@@ -194,7 +199,7 @@
 }
 
 /* What's pinned: its artwork at a size you can tell it by, its name, and
-   beneath it a quiet line — how much a folder holds, where a note lives.
+   beneath a note's a quiet line — where it lives.
    Large covers, from the Pinned row's menu, as an album's own shelf has them. */
 .dr-lib-row.is-pin {
   padding-top: var(--dr-space-1);
