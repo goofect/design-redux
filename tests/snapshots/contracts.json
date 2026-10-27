@@ -99,8 +99,13 @@
     "files",
     "find",
     "folders",
+    "forget",
     "has",
     "instance",
+    "likely",
+    "missing",
+    "move",
+    "repoint",
     "toggle"
    ]
   },
