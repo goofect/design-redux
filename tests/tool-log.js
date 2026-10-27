@@ -52,10 +52,10 @@ function hook() {
   });
 }
 
-function sessions() {
-  if (!fs.existsSync(log)) return new Map();
+function sessions(file = log) {
+  if (!fs.existsSync(file)) return new Map();
   const by = new Map();
-  fs.readFileSync(log, 'utf8').split('\n').forEach((l) => {
+  fs.readFileSync(file, 'utf8').split('\n').forEach((l) => {
     if (!l) return;
     try {
       const r = JSON.parse(l);
@@ -101,9 +101,12 @@ function sum(rows) {
   };
 }
 
-/** A session's tokens from its transcript, each reply counted once: { fresh, written, cached, out, replies }, or null. */
-function tokens(rows) {
-  const tp = rows.map((r) => r.tp).filter(Boolean).pop();
+/**
+ * A session's tokens from its transcript, each reply counted once:
+ * { fresh, written, cached, out, replies, peak, last, models }, where
+ * models holds the same four counts for each model that replied — or null.
+ */
+function tokens(rows, tp = rows.map((r) => r.tp).filter(Boolean).pop()) {
   if (!tp || !fs.existsSync(tp)) return null;
   const seen = new Map();
   fs.readFileSync(tp, 'utf8').split('\n').forEach((l) => {
@@ -111,23 +114,70 @@ function tokens(rows) {
     try {
       const e = JSON.parse(l);
       const m = e.message;
-      if (m && m.usage) seen.set(m.id || e.uuid, m.usage);
+      if (m && m.usage) seen.set(m.id || e.uuid, { usage: m.usage, model: m.model || 'unknown' });
     } catch (err) {
       /* a line being written */
     }
   });
-  const sum = { fresh: 0, written: 0, cached: 0, out: 0, replies: seen.size, peak: 0, last: 0 };
-  seen.forEach((u) => {
-    sum.fresh += u.input_tokens || 0;
-    sum.written += u.cache_creation_input_tokens || 0;
-    sum.cached += u.cache_read_input_tokens || 0;
-    sum.out += u.output_tokens || 0;
+  const sum = { fresh: 0, written: 0, cached: 0, out: 0, replies: seen.size, peak: 0, last: 0, models: {} };
+  seen.forEach(({ usage: u, model }) => {
+    const by = sum.models[model] || (sum.models[model] = { fresh: 0, written: 0, cached: 0, out: 0 });
+    [sum, by].forEach((into) => {
+      into.fresh += u.input_tokens || 0;
+      into.written += u.cache_creation_input_tokens || 0;
+      into.cached += u.cache_read_input_tokens || 0;
+      into.out += u.output_tokens || 0;
+    });
     // How full the context was for this reply: everything it was given.
     const held = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
     sum.peak = Math.max(sum.peak, held);
     sum.last = held;
   });
   return sum;
+}
+
+/** Test runs: the suites, a real-Obsidian test, CI. */
+const TEST_RUN = /tests\/run\.js|npm (run )?test|tests\/e2e\.sh|tests\/ci\.sh|node tests\/test_/;
+/** What a test run's output says when it failed, piped through tail or not. */
+const TEST_FAILED = /\bFAIL\b|\d+ failing|AssertionError|\b0 of \d+ suites|\b(\d+) of (?!\1\b)\d+ suites passed|completed failure|Exit code [1-9]/;
+
+/**
+ * What went wrong along the way, from the transcript, as counts only
+ * (what came back is read, never kept): tool calls that failed, test
+ * runs, and retries — a test run after one that failed.
+ * { errors, tests, retries }, or null.
+ */
+function attempts(tp) {
+  if (!tp || !fs.existsSync(tp)) return null;
+  const runs = new Map();
+  const order = [];
+  const failed = new Set();
+  fs.readFileSync(tp, 'utf8').split('\n').forEach((l) => {
+    if (!l.includes('"tool_use"') && !l.includes('"tool_result"')) return;
+    try {
+      const content = (JSON.parse(l).message || {}).content;
+      (Array.isArray(content) ? content : []).forEach((c) => {
+        // A call can come again later in the transcript (after a compaction): counted once.
+        if (c.type === 'tool_use' && c.name === 'Bash' && c.input && !runs.has(c.id) && TEST_RUN.test(String(c.input.command || ''))) {
+          runs.set(c.id, null);
+          order.push(c.id);
+        }
+        if (c.type === 'tool_result') {
+          if (c.is_error) failed.add(c.tool_use_id);
+          if (!runs.has(c.tool_use_id)) return;
+          const text = typeof c.content === 'string' ? c.content : JSON.stringify(c.content || '');
+          runs.set(c.tool_use_id, !c.is_error && !TEST_FAILED.test(text));
+        }
+      });
+    } catch (err) {
+      /* a line being written */
+    }
+  });
+  let retries = 0;
+  order.forEach((id, i) => {
+    if (i > 0 && runs.get(order[i - 1]) === false) retries++;
+  });
+  return { errors: failed.size, tests: order.length, retries };
 }
 
 const thousands = (n) => (n >= 10000 ? `${Math.round(n / 1000)}k` : String(n));
@@ -164,5 +214,9 @@ function report(which) {
   }
 }
 
-if (process.argv[2] === 'hook') hook();
-else report(process.argv[2]);
+module.exports = { sessions, sum, tokens, attempts };
+
+if (require.main === module) {
+  if (process.argv[2] === 'hook') hook();
+  else report(process.argv[2]);
+}

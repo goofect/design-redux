@@ -1,0 +1,13 @@
+diff --git a/src/core/084-workspace-coordinator.js b/src/core/084-workspace-coordinator.js
+index 00b43cc..6dc01e8 100644
+--- a/src/core/084-workspace-coordinator.js
++++ b/src/core/084-workspace-coordinator.js
+@@ -131,7 +131,7 @@ export class WorkspaceCoordinator {
+ 
+   /** Picked in the library, without opening: a note or an album. */
+   pick(item) {
+-    if (this.state.pinned || !item) return;
++    if (!item) return;
+     if (item.file instanceof TFile && item.file.extension === 'md') this.show(null, { file: item.file, picked: true });
+     else if (item.folder) this.show(null, { folder: item.folder });
+   }
