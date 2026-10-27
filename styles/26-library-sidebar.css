@@ -1,7 +1,7 @@
 /* Library sidebar ----------------------------------------------------------
  *
- * Shaped after the reference: compact rows, one neutral pill marking
- * where you are with the accent on its icon alone and its label set
+ * Shaped after the reference: compact rows, one softly tinted pill
+ * marking where you are, its icon in the accent and its label set
  * bolder, the other icons quiet, small grey section labels apart by
  * space rather than lines, and a gutter left of every icon holding a disclosure
  * chevron where there's something to open out — kept even where empty,
@@ -75,9 +75,9 @@
   user-select: none;
 }
 
-/* As the reference's sidebar: every icon in the accent, the labels
-   plain, and where you are a soft grey block with its label a touch
-   heavier. */
+/* Under the pointer, the theme's grey; where you are, the accent tint,
+   so the two never look alike; the keyboard's place, an accent ring
+   that shows on either. */
 @media (any-hover: hover) {
   .dr-lib-row:hover {
     background-color: var(--dr-hover);
@@ -85,7 +85,7 @@
 }
 
 .dr-lib-row.is-active {
-  background-color: var(--dr-press);
+  background-color: var(--dr-selected);
   font-weight: var(--font-semibold, 600);
 }
 
@@ -94,8 +94,21 @@
 }
 
 .dr-lib-row:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
+}
+
+/* Colours forced: no tint to see, so where you are is outlined, and the keyboard's place dashed. */
+@media (forced-colors: active) {
+  .dr-lib-row.is-active {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+
+  .dr-lib-row:focus-visible {
+    outline: 2px dashed CanvasText;
+    outline-offset: -2px;
+  }
 }
 
 /* Pins opened out sit one gutter in. */
