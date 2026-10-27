@@ -2211,13 +2211,69 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(index.notes().length, before + 1);
     // Links both ways, kept until Obsidian resolves again.
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 2 } };
-    on.resolved();
     assert.deepStrictEqual(index.incoming(app.vault.getFileByPath('IR/Balance.md')), { 'IR/Anarchy.md': 2 });
     assert.deepStrictEqual(index.outgoing(app.vault.getFileByPath('IR/Anarchy.md')), { 'IR/Balance.md': 2 });
     app.metadataCache.resolvedLinks = {};
     assert.deepStrictEqual(index.incoming('IR/Balance.md'), { 'IR/Anarchy.md': 2 }, 'kept');
     on.resolve();
     assert.deepStrictEqual(index.incoming('IR/Balance.md'), {});
+  });
+
+  await t('the library index: kept up as files come, go and move, and links resolve, equal to working it out afresh', async () => {
+    const { v, plugin, app } = setup();
+    app.metadataCache.on = (type, fn) => ((app.metadataCache['on' + type] = fn), {});
+    plugin.registerEvent = () => {};
+    const index = new R.LibraryIndex(plugin);
+    index.listen();
+    app.metadataCache.resolvedLinks = {};
+    // Seeded, so a failure comes back the same.
+    let seed = 7;
+    const rand = (n) => ((seed = (seed * 16807) % 2147483647), seed % n);
+    const pick = (list) => list[rand(list.length)];
+    const folders = () => [v.root, ...index.folders()];
+    const files = () => app.vault.getFiles();
+    let made = 0;
+    let walks = 0;
+    const tally = index.tally.bind(index);
+    for (let step = 0; step < 300; step++) {
+      index.count(v.root);
+      index.incoming('');
+      const kind = rand(6);
+      if (kind === 0) {
+        const at = pick(folders());
+        const path = `${at.path === '/' ? '' : at.path + '/'}${rand(3) || at === v.root ? 'N' + made++ : at.name}.md`;
+        if (!app.vault.getAbstractFileByPath(path)) await app.vault.create(path);
+      } else if (kind === 1) {
+        const at = pick(folders());
+        const folder = v.folder(`${at.path === '/' ? '' : at.path + '/'}F${made++}`);
+        v.handlers.create.forEach((h) => h(folder));
+      } else if (kind === 2 && files().length > 3) {
+        await v.fileManager.trashFile(pick(files()));
+      } else if (kind === 3) {
+        const entry = pick([...files(), ...index.folders()]);
+        const to = pick(folders());
+        if (entry instanceof TFolder && (to === entry || to.path.startsWith(entry.path + '/'))) continue;
+        const name = entry instanceof TFolder && rand(2) ? 'R' + made++ : entry.name;
+        const path = `${to.path === '/' ? '' : to.path + '/'}${name}`;
+        if (!app.vault.getAbstractFileByPath(path)) await v.fileManager.renameFile(entry, path);
+      } else {
+        const from = pick(files());
+        const links = {};
+        for (let i = rand(3); i > 0; i--) links[pick(files()).path] = 1 + rand(2);
+        app.metadataCache.resolvedLinks[from.path] = links;
+        app.metadataCache.onresolve(from);
+      }
+      assert.deepStrictEqual(index.drift(), [], `step ${step}`);
+    }
+    // A file's move tallies the folders on its two branches, not the vault.
+    index.tally = (held, folder) => (walks++, tally(held, folder));
+    const at = index.folders().sort((a, b) => b.path.split('/').length - a.path.split('/').length)[0];
+    const depth = at.path.split('/').length;
+    const deep = v.folder(`${at.path}/Deep`);
+    v.handlers.create.forEach((h) => h(deep));
+    assert.ok(index.folders().length > 10, 'a vault worth tallying');
+    assert.strictEqual(walks, depth + 2, 'the new folder, the one it is in and each above, to the vault');
+    assert.deepStrictEqual(index.drift(), []);
   });
 
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {
