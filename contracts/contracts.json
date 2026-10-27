@@ -1,0 +1,47 @@
+{
+ "about": "What other code and users rely on, a line each, and the test that keeps it. `node tests/map.js --contracts` checks every cited test still exists and each listed module's surface (exports, its classes' methods, the design-redux events it sends or hears) is as recorded in tests/snapshots/contracts.json; after a deliberate change, --contracts --update.",
+ "selection-and-inspector": {
+  "modules": ["076-selection", "084-workspace-coordinator", "178-inspectables"],
+  "invariants": [
+   { "rule": "What's picked stays apart from what's open; pinned, the inspector follows neither; a deleted target is let go", "test": "mobile: docked in the sidebar, the panel stays open and follows the note and what the library picks" },
+   { "rule": "While the inspector shows, a click in the library picks and a double click or Enter opens", "test": "album: the inspector: while it shows, a click in the library picks" },
+   { "rule": "Note, album and card are drawn through one inspectable each; the panel only holds them", "test": "bulk: the inspector’s targets: a text card’s properties changed and taken away at its top" }
+  ]
+ },
+ "properties": {
+  "modules": ["073-notes", "089-property-history"],
+  "invariants": [
+   { "rule": "Writes go through plugin.notes.write; Undo puts back only what's still as the change left it", "test": "bulk: undo puts back what’s still as the change left it, keeps what was edited since" },
+   { "rule": "Each write's changes are kept, a value put back alone", "test": "bulk: property history: each write’s changes kept" }
+  ]
+ },
+ "library-and-files": {
+  "modules": ["060-pins", "070-orders", "074-files"],
+  "invariants": [
+   { "rule": "Pins keep your order and follow a rename, forget a deletion", "test": "qol: arranged pins follow a rename and forget a deletion" },
+   { "rule": "Album orders follow a note renamed, moved, deleted, and a folder renamed", "test": "album: arrangements follow a note renamed in place, moved away, deleted, and a folder renamed" },
+   { "rule": "A move is one step of Undo that puts it back, order and all", "test": "album: a move says so with an Undo, which puts it back, album order and all" }
+  ]
+ },
+ "bulk-selection": {
+  "modules": [],
+  "invariants": [
+   { "rule": "Ticked with Shift for a run; moved together, one Undo for all", "test": "album: editing an album, notes ticked — Shift for a run — are moved together, one Undo putting them all back" }
+  ]
+ },
+ "mind-map": {
+  "modules": [],
+  "invariants": [
+   { "rule": "A file that can't be read is never written", "test": "mindmap: a file that can’t be read is shown as it is, with what went wrong, and never written" },
+   { "rule": "A change made outside while typing loses nothing on either side", "test": "mindmap: the note changed outside while typing" },
+   { "rule": "History is kept before a save and put back as one step of Undo", "test": "mindmap: map history: a state kept before a save after a pause" }
+  ]
+ },
+ "commands-settings-views": {
+  "modules": [],
+  "invariants": [
+   { "rule": "Command ids, setting keys and view types are kept, or moved by a tested migration", "test": "lifecycle: command ids, setting keys and view types are kept" },
+   { "rule": "Settings from an older version open with nothing lost, a backup first", "test": "album: 1.x settings open on 2.0 with nothing lost" }
+  ]
+ }
+}
