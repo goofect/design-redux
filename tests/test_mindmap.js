@@ -1668,6 +1668,41 @@ const NOTE = '---\nmindmap: true\n---\n- Launch plan ^root\n\t- Research\n\t\t- 
     host.remove();
   });
 
+  await t('a node picked is what the inspector is about: its own head, kept on it while pinned, and said gone when it goes', async () => {
+    const view = await open('---\nmindmap: true\n---\n- Launch ^root\n\t- Research\n\t- Build\n');
+    const [research, build] = view.model.root.children;
+    const looked = [];
+    const leaf = { view };
+    view.leaf = leaf;
+    view.app = { workspace: { activeLeaf: leaf, trigger() {}, getLeaf: () => ({ openFile: () => {} }) }, metadataCache: {}, vault: {} };
+    view.plugin = Object.assign({}, plugin, { app: view.app, coordinator: { look: (l) => looked.push(l) } });
+    assert.deepStrictEqual(view.panelTarget(), { file: view.file }, 'nothing picked: the map\'s note');
+    view.select(research.id);
+    assert.deepStrictEqual(view.panelTarget(), { file: view.file, node: research.id, map: view });
+    assert.strictEqual(looked.pop(), leaf, 'the inspector asked to look again');
+    // Not the tab worked in: the inspector is left alone.
+    view.app.workspace.activeLeaf = null;
+    view.select(build.id);
+    assert.strictEqual(looked.length, 0);
+    view.select(research.id);
+    const host = document.body.appendChild(document.createElement('div'));
+    const [section] = view.drawNodeInspector({ plugin: view.plugin, leaf }, host, research.id);
+    assert.strictEqual(host.querySelector('.dr-props-identity .dr-props-title').textContent, 'Research');
+    assert.strictEqual(host.querySelector('.dr-props-identity .dr-props-meta').textContent, `A node on ${view.file.basename}`);
+    assert.strictEqual(host.querySelector('.dr-node-text').value, 'Research');
+    // Another picked, as when pinned: it stays on its own node.
+    view.select(build.id);
+    section.refresh(view.file);
+    assert.strictEqual(host.querySelector('.dr-props-title').textContent, 'Research');
+    // Taken off the map: said so, nothing stale.
+    view.model.root.children.splice(view.model.root.children.indexOf(research), 1);
+    section.refresh(view.file);
+    assert.strictEqual(host.querySelector('.dr-empty').textContent, 'This node is no longer on the map.');
+    assert.ok(!host.querySelector('.dr-node-text'));
+    section.destroy();
+    host.remove();
+  });
+
   await t('filter, levels, one branch alone: the filter bar dims all but what meets it; levels and a branch alone narrow the view, a trail to step back; nothing written', async () => {
     const view = await open(NOTE);
     view.flushSave();

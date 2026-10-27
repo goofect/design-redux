@@ -102,8 +102,9 @@ export function libraryPage(app) {
   return leaf && leaf.view && typeof leaf.view.previewAlbum === 'function' ? leaf.view : null;
 }
 
-/** What `target` ({ file, picked } | { folder } | { card }) is, to be drawn. */
+/** What `target` ({ file, picked } | { folder } | { card } | { file, node, map }) is, to be drawn. */
 export function inspectableOf(plugin, target) {
+  if (target.node) return new NodeInspectable(plugin, target);
   if (target.card) return new CardInspectable(plugin, target);
   if (target.folder) return new FolderInspectable(plugin, target);
   return new NoteInspectable(plugin, target);
@@ -170,6 +171,22 @@ class FolderInspectable extends Inspectable {
     if (view) view.previewAlbum(brief, folder);
     else brief.createDiv({ cls: 'dr-props-head dr-props-identity' }).createDiv({ cls: 'dr-props-info' }).createDiv({ cls: 'dr-props-title', text: folder.name });
     return super.draw(panel, el);
+  }
+}
+
+/**
+ * A node picked on a mind map. The map draws it — what it is, its text,
+ * what points to it, the note it is — since the maps sit above this.
+ * Its file is the map's, so a change to the map draws it again.
+ */
+class NodeInspectable extends Inspectable {
+  get kind() {
+    return 'node';
+  }
+
+  draw(panel, el) {
+    const map = this.target.map;
+    return map && typeof map.drawNodeInspector === 'function' ? map.drawNodeInspector(panel, el, this.target.node) : [];
   }
 }
 

@@ -914,6 +914,9 @@ describe('Design Redux in Obsidian', function () {
     expect(await section.getValue()).toBe('Research');
     const attrs = await browser.execute(() => Array.from(document.querySelectorAll('.dr-node-section .dr-node-attr')).map((r) => r.textContent));
     expect(attrs).toEqual(['statusDoing']);
+    // Its own head: the node, not the map's note.
+    const title = () => browser.execute(() => { const t = document.querySelector('.dr-node-section .dr-props-identity .dr-props-title'); return t ? t.textContent : null; });
+    expect(await readUntil(title, (v) => v === 'Research')).toBe('Research');
     // Another node picked: the section follows.
     await browser.executeObsidian(({ app }) => {
       const view = app.workspace.getLeavesOfType('design-redux-mindmap')[0].view;
