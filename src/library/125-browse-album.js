@@ -437,12 +437,6 @@ export class BrowseAlbum extends BrowsePreview {
     // What its notes come to, as settings ask: the done count unless progress has said it, a date property's span.
     const rolled = folder && structure ? structure.rollupText(structure.rollup(files), !progress) : '';
     if (rolled) meta.push(rolled);
-    // How far through it you are, once you've read any of it.
-    else if (folder && this.plugin.settings.readingHistory) {
-      const notes = files.filter((f) => f.extension === 'md');
-      const read = readingOf(this.plugin).countRead(notes);
-      if (read) meta.push(`${read} of ${notes.length} read`);
-    }
     // Studied: when you last sat down with it.
     const studied = folder && studyReady(this.plugin) ? this.plugin.study.lastSession(folder) : null;
     if (studied) meta.push(`Last studied ${this.relative(studied.endedAt)}`);

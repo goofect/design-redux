@@ -14,6 +14,7 @@ import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { folderRows } from './110-browse-screens.js';
 import { RowValues } from './122-browse-editing.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -375,18 +376,40 @@ export class BrowseRows extends RowValues {
     foot.createDiv({ text: length ? `${count}, ${length.replace(/ read$/, '')}` : count });
   }
 
+  /** A shelf's title, a link through where it has one. */
+  shelfHead(root, title, opts = {}) {
+    const head = root.createDiv({ cls: 'dr-shelf-head' });
+    const label = head.createDiv({ cls: 'dr-shelf-label' });
+    const through = opts.head || (opts.mode ? () => this.navigate({ mode: opts.mode, property: null }) : null);
+    if (through) {
+      asButton(label);
+      label.addClass('is-linked');
+      onActivate(label, through);
+    }
+    label.createSpan({ cls: 'dr-shelf-title', text: title });
+    if (through) setIcon(label.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
+    return head;
+  }
+
+  /** Folders under a title at a page's foot: a shelf of covers, or rows, as the page says. */
+  folderShelf(root, title, folders, opts = {}) {
+    if (opts.covers) return this.shelf(root, title, folders, opts);
+    this.shelfHead(root, title, opts);
+    folderRows(this, root, folders);
+  }
+
   /**
    * The folders beside this one, as an album page ends with more by the
    * same artist. Not while Find or a filter narrows the page.
    */
-  renderMoreIn(root, folder) {
+  renderMoreIn(root, folder, covers = false) {
     if (!folder || (folder.isRoot && folder.isRoot()) || !folder.parent) return;
     if (this.query.trim() || this.hasFilters()) return;
     const parent = folder.parent;
     const others = this.sortFolders(this.visibleFolders(parent).filter((f) => f !== folder));
     if (!others.length) return;
     const top = !!(parent.isRoot && parent.isRoot());
-    this.shelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent) });
+    this.folderShelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent), covers });
   }
 
   /** Count what the drawing found uncounted, and draw again once it's known. */
@@ -444,16 +467,7 @@ export class BrowseRows extends RowValues {
    */
   shelf(root, title, items, opts = {}) {
     const view = this;
-    const head = root.createDiv({ cls: 'dr-shelf-head' });
-    const label = head.createDiv({ cls: 'dr-shelf-label' });
-    const through = opts.head || (opts.mode ? () => view.navigate({ mode: opts.mode, property: null }) : null);
-    if (through) {
-      asButton(label);
-      label.addClass('is-linked');
-      onActivate(label, through);
-    }
-    label.createSpan({ cls: 'dr-shelf-title', text: title });
-    if (through) setIcon(label.createSpan({ cls: 'dr-shelf-more' }), 'chevron-right');
+    const head = this.shelfHead(root, title, opts);
 
     const row = root.createDiv({ cls: 'dr-shelf-row' });
     roveFocus(row, '.dr-card');

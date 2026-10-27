@@ -626,9 +626,9 @@ describe('Design Redux in Obsidian', function () {
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
-    // A collection inside the album: its tile on the shelf at the album's foot.
+    // A collection inside the album: its row (or, among covers, its tile) at the album's foot.
     // Scrolled to by selector, then found again: the page may have redrawn it meanwhile.
-    const tile = ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]';
+    const tile = [ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]', ACTIVE + '.dr-folder-rows [data-path="Politics/Theories"]'].join(', ');
     await browser.$(tile).waitForExist({ timeout: 5000 });
     await browser.execute((sel) => document.querySelector(sel).scrollIntoView({ block: 'center' }), tile);
     await browser.pause(300);
