@@ -62,6 +62,7 @@ class Menu {
     item.setIcon = (i) => { item.icon = i; return item; };
     item.setChecked = (c) => { item.checked = c; return item; };
     item.setSection = (sec) => { item.section = sec; return item; };
+    item.setDisabled = (d) => { item.disabled = d; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item);
     this.items.push(item);
@@ -169,6 +170,13 @@ function setup({ page, pinsExpanded = false, pinned = [], missing = [] } = {}) {
       likely: (pin) => pin.likely || null,
       repoint: (pin, target) => { calls.push(['repoint', pin.path, target.path]); return true; },
       forget: (pin) => { calls.push(['forget', pin.path]); return true; },
+      move: (path, before, paths) => {
+        calls.push(['move', path, before, paths]);
+        const t = pinned.find((x) => x.path === path);
+        pinned.splice(pinned.indexOf(t), 1);
+        const at = before === null ? -1 : pinned.findIndex((x) => x.path === before);
+        pinned.splice(at === -1 ? pinned.length : at, 0, t);
+      },
     },
   };
   const view = new LibraryView({}, plugin);
@@ -354,6 +362,27 @@ t('what is pinned shows its artwork, never a blank, and a line beneath: what a f
   item.click();
   assert.strictEqual(saved.pop().pinsLarge, true);
   assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-pin.is-large').length, 2);
+});
+
+t('a pin moves a place with Alt+arrows or its menu, keeping the focus', () => {
+  const { view, calls } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], folders['Concepts Folder']] });
+  const order = () => Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin')).map((r) => r.dataset.path);
+  const row = (p) => view.contentEl.querySelector(`.dr-lib-row.is-pin[data-path="${p}"]`);
+  const key = (el, k, alt = true) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, altKey: alt, bubbles: true }));
+  // Already first: Alt+Up does nothing.
+  key(row('Books Folder'), 'ArrowUp');
+  assert.deepStrictEqual(calls, []);
+  key(row('Books Folder'), 'ArrowDown');
+  assert.deepStrictEqual(calls.pop(), ['move', 'Books Folder', null, ['Books Folder', 'Concepts Folder']]);
+  assert.deepStrictEqual(order(), ['Concepts Folder', 'Books Folder']);
+  assert.strictEqual(document.activeElement, row('Books Folder'), 'the moved row keeps the focus');
+  // From its menu, for touch: Earlier, and Later greyed at the end.
+  row('Books Folder').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  const later = lastMenu.items.find((i) => /later/i.test(i.title));
+  const earlier = lastMenu.items.find((i) => /earlier/i.test(i.title));
+  assert.ok(later && later.disabled, 'last: no later');
+  earlier.click();
+  assert.deepStrictEqual(order(), ['Books Folder', 'Concepts Folder']);
 });
 
 t('a pin whose note or folder has gone is shown, greyed, with where it may be now, and what to do with it', () => {

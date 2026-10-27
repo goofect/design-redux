@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFolder } from 'obsidian';
+import { moveBefore } from './070-orders.js';
 
 export class Pins {
   constructor(plugin) {
@@ -18,6 +19,19 @@ export class Pins {
   /** Pins in the order they've been arranged in, if they have been. */
   arranged(items) {
     return this.plugin.orders ? this.plugin.orders.arrangePins(items) : items;
+  }
+
+  /**
+   * One pin put before another, or last, and the order from then on your
+   * own: in the sidebar and on the Pinned screen alike. `paths` is the
+   * order it was moved in, where that's shown sorted rather than as kept.
+   */
+  move(path, before, paths = this.all().map((t) => t.path)) {
+    if (!this.plugin.orders) return;
+    this.plugin.orders.setPins(moveBefore(paths, path, before));
+    const settings = this.plugin.settings;
+    settings.keepOwnOrder = Object.assign({}, settings.keepOwnOrder, { pinned: true });
+    this.plugin.saveData(settings);
   }
 
   /** Folders and notes together, in their arrangement, or folders first. */

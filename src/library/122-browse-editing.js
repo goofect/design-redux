@@ -602,11 +602,7 @@ export class BrowseEditing extends BrowseSorting {
 
   /** Move a pin one place, or to before another. */
   arrangePin(path, before) {
-    const paths = this.pinnedInOrder().map((t) => t.path);
-    this.plugin.orders.setPins(moveBefore(paths, path, before));
-    const settings = this.plugin.settings;
-    settings.keepOwnOrder = Object.assign({}, settings.keepOwnOrder, { pinned: true });
-    this.plugin.saveData(settings);
+    this.plugin.pins.move(path, before, this.pinnedInOrder().map((t) => t.path));
     this.plugin.refreshBrowse();
     const library = this.plugin.feature(Library);
     if (library) library.refreshViews();

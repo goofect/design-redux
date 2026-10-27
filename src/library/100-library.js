@@ -267,12 +267,13 @@ export class LibraryView extends ItemView {
   }
 
   /** A folder or file, with its artwork and its menu. */
-  targetRow(list, target, depth, pinned = false) {
+  targetRow(list, target, depth, pinned = false, arrange = null) {
     const menu = (evt, open) =>
       showTargetMenu(this.plugin, evt, target, {
         open: open,
         source: LIBRARY_VIEW,
         redraw: () => this.render(),
+        arrange: arrange,
       });
 
     if (target instanceof TFolder) {
@@ -300,9 +301,9 @@ export class LibraryView extends ItemView {
       }
       // The Apple look: how many notes it holds, muted at the end, where no ring is.
       if (!ring && !pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
-      return;
+      return row;
     }
-    this.row(list, {
+    return this.row(list, {
       depth: depth,
       icon: iconForFile(target),
       art: noteCoverSrc(this.plugin, target),
@@ -343,8 +344,38 @@ export class LibraryView extends ItemView {
       list.createDiv({ cls: 'dr-lib-empty', text: 'Nothing pinned yet' });
       return;
     }
-    items.forEach((target) => this.targetRow(list, target, 1, true));
+    const paths = items.map((t) => t.path);
+    items.forEach((target, at) => {
+      const arrange = this.pinMoves(paths, at);
+      const row = this.targetRow(list, target, 1, true, arrange);
+      // Alt+Up and Alt+Down move a pin a place, as dragging one would on the Pinned screen.
+      row.addEventListener('keydown', (evt) => {
+        if (!evt.altKey || evt.metaKey || evt.ctrlKey || (evt.key !== 'ArrowUp' && evt.key !== 'ArrowDown')) return;
+        evt.preventDefault();
+        const run = evt.key === 'ArrowUp' ? arrange.earlier : arrange.later;
+        if (run) run();
+      });
+    });
     missing.forEach((pin) => this.missingRow(list, pin));
+  }
+
+  /**
+   * A pin a place earlier or later, where it isn't already at that end;
+   * the row keeps the focus, so it can be moved again straight away.
+   */
+  pinMoves(paths, at) {
+    const path = paths[at];
+    const move = (before) => () => {
+      this.plugin.pins.move(path, before, paths);
+      this.plugin.refreshBrowse();
+      this.render();
+      const row = Array.from(this.contentEl.querySelectorAll('.dr-lib-row.is-pin')).find((el) => el.dataset.path === path);
+      if (row) row.focus();
+    };
+    return {
+      earlier: at > 0 ? move(paths[at - 1]) : null,
+      later: at < paths.length - 1 ? move(at + 2 < paths.length ? paths[at + 2] : null) : null,
+    };
   }
 
   /** The Pinned row's own menu: its covers small, a row each, or large, the way an album's are. */
