@@ -156,6 +156,11 @@ Coffee N' Christmas.
     step; conclusions, not transcripts — at the turn between phases, and read
     it after a compaction or in a new session. Unrelated work goes in a
     session of its own.
+  - Comparing ways of working (a model, an effort, context packs) is done
+    on the real tasks in `evals/tasks.json`, a fresh session each:
+    `node tools/eval-usage.mjs start|finish|report` — cost per accepted
+    task, uncached input, repeated reads, retries; no savings claimed
+    before three accepted runs a side.
   - `node tests/tool-log.js` sums up the session (a hook logs each tool call:
     file and size, not contents): repeat and broad reads, output size, and
     tokens — input not served from the cache is the number to bring down.

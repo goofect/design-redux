@@ -1,0 +1,9 @@
+{
+  "note": "US dollars per million tokens, for tools/eval-usage.mjs. A model without all four prices is reported in tokens only, never priced by guess. Fill these from your plan's or the API's price page; the Fable input and output prices are the ones the execution brief quotes (October 2026), its cache prices aren't given there.",
+  "models": {
+    "claude-fable-5-1": { "input": 10, "output": 50, "cacheWrite": null, "cacheRead": null },
+    "claude-opus-5-5": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
+    "claude-sonnet-5-5": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
+    "claude-haiku-5-5": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null }
+  }
+}
