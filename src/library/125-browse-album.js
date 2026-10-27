@@ -241,7 +241,6 @@ export class BrowseAlbum extends BrowsePreview {
    * shows the first few dozen, with a row for the rest.
    */
   renderDiscs(root, discs, album) {
-    if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
     const list = root.createDiv({ cls: 'dr-tracks' });
     roveFocus(list, '.dr-track, .dr-disc[role="button"]');
     // Discs are folders, so dragging a note onto one moves it there; onto
@@ -307,6 +306,8 @@ export class BrowseAlbum extends BrowsePreview {
 
     if (discs.length > cap) this.renderMoreRow(list, key, discs.length, 'discs');
     if (pdfs.length) this.renderPdfs(root, pdfs, album);
+    // After the notes, so at the end it sits below the last of them rather than over it.
+    if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
   }
 
   /** A folder's PDFs: under their own heading, after its notes, each a row without a number. */

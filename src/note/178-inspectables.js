@@ -55,7 +55,7 @@ export function cardValue(typed, was) {
  * the inspector both open with it.
  */
 export function drawNoteHead(plugin, parentEl, file) {
-  const head = parentEl.createDiv({ cls: 'dr-props-head' });
+  const head = parentEl.createDiv({ cls: 'dr-props-head dr-props-identity' });
   const art = head.createDiv({ cls: 'dr-props-art' });
   drawNoteArt(plugin, art, file);
   // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
@@ -102,8 +102,9 @@ export function libraryPage(app) {
   return leaf && leaf.view && typeof leaf.view.previewAlbum === 'function' ? leaf.view : null;
 }
 
-/** What `target` ({ file, picked } | { folder } | { card }) is, to be drawn. */
+/** What `target` ({ file, picked } | { folder } | { card } | { file, node, map }) is, to be drawn. */
 export function inspectableOf(plugin, target) {
+  if (target.node) return new NodeInspectable(plugin, target);
   if (target.card) return new CardInspectable(plugin, target);
   if (target.folder) return new FolderInspectable(plugin, target);
   return new NoteInspectable(plugin, target);
@@ -168,8 +169,24 @@ class FolderInspectable extends Inspectable {
     const brief = el.createDiv({ cls: 'dr-inspector-brief' });
     const view = libraryPage(this.plugin.app);
     if (view) view.previewAlbum(brief, folder);
-    else brief.createDiv({ cls: 'dr-preview-title', text: folder.name });
+    else brief.createDiv({ cls: 'dr-props-head dr-props-identity' }).createDiv({ cls: 'dr-props-info' }).createDiv({ cls: 'dr-props-title', text: folder.name });
     return super.draw(panel, el);
+  }
+}
+
+/**
+ * A node picked on a mind map. The map draws it — what it is, its text,
+ * what points to it, the note it is — since the maps sit above this.
+ * Its file is the map's, so a change to the map draws it again.
+ */
+class NodeInspectable extends Inspectable {
+  get kind() {
+    return 'node';
+  }
+
+  draw(panel, el) {
+    const map = this.target.map;
+    return map && typeof map.drawNodeInspector === 'function' ? map.drawNodeInspector(panel, el, this.target.node) : [];
   }
 }
 
@@ -191,7 +208,9 @@ class CardInspectable extends Inspectable {
     const node = this.target.card;
     const text = (node.getData() || {}).text || '';
     const parsed = cardFrontmatter(text);
-    const head = el.createDiv({ cls: 'dr-props-head' });
+    const head = el.createDiv({ cls: 'dr-props-head dr-props-identity' });
+    // A card has no cover: in its place, what it is.
+    setIcon(head.createDiv({ cls: 'dr-props-art is-blank', attr: { 'aria-hidden': 'true' } }).createSpan({ cls: 'dr-card-glyph' }), 'sticky-note');
     const info = head.createDiv({ cls: 'dr-props-info' });
     const first = parsed.body.split('\n').map((l) => plainMarkdownLine(l)).find(Boolean);
     info.createDiv({ cls: 'dr-props-title', text: first || 'Card' });

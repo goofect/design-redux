@@ -10,6 +10,25 @@ body.dr-look-apple .dr-props-popup .dr-rows {
   background-color: var(--dr-group-bg);
 }
 
+/* The sections below — relationships, mentions — each a group of the same
+   kind, apart by space rather than a line; inside, nothing more set in. */
+body.dr-look-apple .dr-props-popup .dr-section:not(.dr-properties) {
+  --dr-section-inset: 0px;
+  padding: var(--dr-space-1) 12px var(--dr-space-2);
+  border-radius: 10px;
+  background-color: var(--dr-group-bg);
+}
+
+body.dr-look-apple .dr-props-popup .dr-section + .dr-section {
+  margin-top: var(--dr-space-2);
+  border-top: none;
+}
+
+/* A section with nothing to say for this note takes no room. */
+body.dr-look-apple .dr-props-popup .dr-section:empty {
+  display: none;
+}
+
 body.dr-look-apple .dr-props-popup .dr-row {
   align-items: center;
   min-height: 40px;

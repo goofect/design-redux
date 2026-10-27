@@ -76,6 +76,7 @@ export const DEFAULTS = {
   propertyForAlbum: true,
   onePage: false,
   pinsExpanded: false,
+  pinsLarge: false,
   albumNoteLimit: 8,
   discNoteLimit: 10,
   albumColumns: 'domain, modified',

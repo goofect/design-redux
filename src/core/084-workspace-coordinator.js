@@ -21,12 +21,12 @@ export function hostsPanel(view) {
 
 /** Why the inspector shows `target`, in a few words. */
 export function originLabel(origin) {
-  return { picked: 'Picked in the library', card: 'A card on the canvas', map: 'The open map', note: 'The open note' }[origin] || '';
+  return { picked: 'Picked in the library', card: 'A card on the canvas', node: 'A node on the map', map: 'The open map', note: 'The open note' }[origin] || '';
 }
 
 /** Whether two targets are about the same thing, drawn the same way. */
 export const sameTarget = (a, b) =>
-  a === b || (!!a && !!b && a.file === b.file && a.folder === b.folder && a.card === b.card && !!a.picked === !!b.picked);
+  a === b || (!!a && !!b && a.file === b.file && a.folder === b.folder && a.card === b.card && a.node === b.node && !!a.picked === !!b.picked);
 
 export class WorkspaceCoordinator {
   constructor(plugin) {
@@ -114,6 +114,7 @@ export class WorkspaceCoordinator {
     if (!target) return '';
     if (target.picked || target.folder) return 'picked';
     if (target.card) return 'card';
+    if (target.node) return 'node';
     if (leaf && hostsPanel(leaf.view)) return 'map';
     return 'note';
   }

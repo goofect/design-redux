@@ -182,7 +182,12 @@ export class BrowseView extends BrowseAlbum {
     );
 
     this.registerEvent(this.app.vault.on('create', () => this.queueRender()));
-    this.registerEvent(this.app.vault.on('delete', () => this.queueRender()));
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        this.followDelete(file);
+        this.queueRender();
+      })
+    );
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         this.followRename(file, oldPath);
@@ -263,12 +268,19 @@ export class BrowseView extends BrowseAlbum {
     if (this.stale) this.render();
   }
 
+  /** A note or a folder deleted: what was ticked there is let go. */
+  followDelete(file) {
+    if (this.bulkSelection) this.bulkSelection.remove(file.path);
+  }
+
   /**
    * A folder renamed or moved while it's shown — or while it's the
    * filter, or on the way back down — is followed to its new path,
    * rather than the page falling back to the vault's root.
    */
   followRename(file, oldPath) {
+    // What's ticked follows a note or a folder renamed.
+    if (this.bulkSelection) this.bulkSelection.rename(oldPath, file.path);
     if (!(file instanceof TFolder)) return;
     const moved = (p) =>
       !p ? p : p === oldPath ? file.path : p.startsWith(oldPath + '/') ? file.path + p.slice(oldPath.length) : p;
@@ -435,6 +447,9 @@ export class BrowseView extends BrowseAlbum {
   render() {
     this.stale = false;
     const root = this.contentEl;
+    // What had the keys, if it's drawn again unchanged, keeps them.
+    const active = root.ownerDocument.activeElement;
+    const held = active && active !== root && root.contains(active) ? active : null;
     root.empty();
     const density = this.plugin.settings.gridDensity;
     this.containerEl.dataset.drDensity = GRID_DENSITIES[density] ? density : 'standard';
@@ -458,6 +473,7 @@ export class BrowseView extends BrowseAlbum {
       });
     }
     this.measureLater();
+    if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();
@@ -777,17 +793,26 @@ export class BrowseView extends BrowseAlbum {
 
   /* -- keys and scroll ----------------------------------------------- */
 
-  /** "/" jumps to Find, as on the web; Escape leaves editing. */
+  /** "/" jumps to Find, as on the web; Escape lets go of what's ticked, then leaves editing; Mod+A ticks every note shown. */
   onKey(evt) {
     const target = evt.target;
-    const typing = target && typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]');
+    // A row's tick box is an input, but no one types in it.
+    const typing = target && typeof target.closest === 'function' && target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable="true"]');
     if (evt.key === '/' && !evt.metaKey && !evt.ctrlKey && !evt.altKey && !typing) {
       if (this.focusFind()) evt.preventDefault();
       return;
     }
     if (evt.key === 'Escape' && this.editing && !typing) {
       evt.preventDefault();
-      this.setEditing(false);
+      if (this.bulkSelection && this.bulkSelection.size) {
+        this.bulkSelection.clear();
+        this.showTicks();
+      } else this.setEditing(false);
+      return;
+    }
+    if (evt.key === 'a' && (evt.metaKey || evt.ctrlKey) && !evt.altKey && !evt.shiftKey && this.editing && !typing && this.shownPaths().length) {
+      evt.preventDefault();
+      this.tickAllShown();
       return;
     }
     // Space on a note's row or tile: a look at it, without opening it.

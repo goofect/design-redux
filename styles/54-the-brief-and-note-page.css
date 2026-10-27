@@ -9,70 +9,30 @@
   padding-bottom: var(--dr-space-3);
 }
 
-.dr-preview-art {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  margin-bottom: var(--dr-space-3);
-  border-radius: var(--dr-radius-cover);
-  background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-sm);
-}
-
-.dr-preview-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-preview-title {
-  color: var(--text-normal);
-  font-size: var(--dr-heading-size, 1.25em);
-  font-weight: var(--dr-display-weight, var(--font-semibold, 600));
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.dr-preview-lead {
-  margin-top: 2px;
-  color: var(--text-accent);
-  font-size: var(--font-ui-small);
-}
-
+/* What it's for, in line with the head's name above it; clicked, it's
+   changed. With none yet, a quiet line offering to write one. */
 .dr-preview-about {
-  margin-top: var(--dr-space-2);
+  margin: var(--dr-space-2) var(--dr-space-3) var(--dr-space-3);
+  border-radius: var(--dr-radius-sm);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.45;
+  cursor: pointer;
 }
 
-.dr-preview-facts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--dr-space-1) var(--dr-space-3);
-  margin: var(--dr-space-3) 0;
-  font-size: var(--font-ui-small);
-}
-
-.dr-preview-fact {
-  display: contents;
-}
-
-.dr-preview-label {
+.dr-preview-about.is-empty {
   color: var(--text-faint);
 }
 
-.dr-preview-value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-normal);
+.dr-preview-about:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
-.dr-preview-value.is-link {
-  color: var(--text-accent);
-  cursor: pointer;
+@media (any-hover: hover) {
+  .dr-preview-about:hover {
+    color: var(--text-normal);
+  }
 }
 
 .dr-preview-actions {
@@ -83,12 +43,6 @@
 
 .dr-preview-btn.is-active {
   color: var(--text-accent);
-}
-
-@media (any-hover: hover) {
-  .dr-preview-value.is-link:hover {
-    text-decoration: underline;
-  }
 }
 
 /* The note page: its album above its title, one grey line under it, its properties as chips, shelves at its end. */
@@ -256,18 +210,23 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
   background-color: var(--dr-hover);
 }
 
+/* The tray: at the foot of the notes, floating over them as they scroll
+   and below the last when scrolled to the end; nothing ticked, no tray. */
 .dr-bulk-bar {
   position: sticky;
-  top: 0;
+  bottom: var(--dr-space-3);
   z-index: 2;
   display: flex;
   align-items: center;
-  gap: var(--size-4-3);
-  margin-bottom: var(--size-4-2);
-  padding: var(--size-4-2) var(--size-4-3);
-  border-radius: var(--dr-r, var(--radius-m));
-  background: color-mix(in srgb, var(--background-primary) 85%, transparent);
+  gap: var(--dr-space-1);
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--dr-space-4) auto 0;
+  padding: var(--dr-space-1);
+  border-radius: var(--dr-radius-pill);
+  background: var(--dr-float-bg);
   border: 1px solid var(--background-modifier-border);
+  box-shadow: var(--dr-float-shadow);
   backdrop-filter: blur(var(--dr-glass-blur));
   -webkit-backdrop-filter: blur(var(--dr-glass-blur));
   font-family: var(--dr-font-ui);
@@ -278,23 +237,81 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
   display: none;
 }
 
+/* It rises into place once, when the first note is ticked. */
+.dr-bulk-bar.is-arriving {
+  animation: dr-tray-in var(--dr-dur-slow) var(--dr-ease-move);
+}
+
+@keyframes dr-tray-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--dr-space-3));
+  }
+}
+
+.dr-bulk-bar.is-busy .dr-bulk-action {
+  opacity: var(--dr-disabled-opacity);
+  pointer-events: none;
+}
+
+/* A few of the ticked notes' covers, stacked. */
+.dr-bulk-art {
+  display: flex;
+  flex: none;
+  padding-left: var(--dr-space-1);
+}
+
+.dr-bulk-cover {
+  width: calc(var(--dr-u) * 7);
+  height: calc(var(--dr-u) * 7);
+  border-radius: var(--dr-radius-sm);
+  overflow: hidden;
+  box-shadow: 0 0 0 2px var(--background-primary);
+}
+
+.dr-bulk-cover + .dr-bulk-cover {
+  margin-left: calc(var(--dr-u) * -4);
+}
+
+.dr-bulk-cover > * {
+  width: 100%;
+  height: 100%;
+}
+
 .dr-bulk-count {
-  margin-right: auto;
+  min-width: 0;
+  padding: 0 var(--dr-space-2);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-weight: var(--font-semibold);
+}
+
+.dr-bulk-hidden {
+  color: var(--text-muted);
+  font-weight: var(--font-normal);
 }
 
 .dr-bulk-action {
   display: inline-flex;
+  flex: none;
   align-items: center;
-  gap: var(--size-2-2);
-  padding: var(--size-2-1) var(--size-4-2);
-  border-radius: var(--radius-s);
+  gap: var(--dr-space-1);
+  min-height: var(--dr-control-size);
+  padding: 0 var(--dr-space-3);
+  border-radius: var(--dr-radius-pill);
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-normal);
+  background: var(--background-modifier-hover);
 }
 
-.dr-bulk-action.mod-warning {
-  color: var(--text-error);
+.dr-bulk-action.dr-bulk-more,
+.dr-bulk-action.dr-bulk-clear {
+  justify-content: center;
+  width: var(--dr-control-size);
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
 }
 
 .dr-bulk-action .svg-icon {
@@ -304,8 +321,42 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
 
 @media (any-hover: hover) {
   .dr-bulk-action:hover {
-    background: var(--background-modifier-hover);
+    background: var(--background-modifier-active-hover);
     color: var(--text-normal);
+  }
+}
+
+/* On a phone: the width of the page, clear of the home indicator, and big enough for a thumb. */
+body.is-phone .dr-bulk-bar {
+  bottom: calc(var(--dr-space-2) + env(safe-area-inset-bottom, 0px));
+  width: auto;
+  border-radius: var(--dr-radius-lg);
+}
+
+body.is-phone .dr-bulk-count {
+  flex: 1;
+}
+
+body.is-mobile .dr-bulk-action {
+  min-height: 44px;
+}
+
+body.is-mobile .dr-bulk-action.dr-bulk-more,
+body.is-mobile .dr-bulk-action.dr-bulk-clear {
+  width: 44px;
+}
+
+body.is-phone .dr-bulk-action:not(.dr-bulk-more):not(.dr-bulk-clear) > span:last-child {
+  display: none;
+}
+
+/* Forced colours: a solid tray with a border the system draws. */
+@media (forced-colors: active) {
+  .dr-bulk-bar {
+    background: Canvas;
+    border-color: CanvasText;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 

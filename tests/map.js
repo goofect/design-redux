@@ -11,6 +11,7 @@
  *   node tests/map.js --verify     for the build: every use imported, nothing needed as a module loads run later,
  *                                  no new use across the layers
  *   node tests/map.js --fix-imports  each module's import lines rewritten to what it uses
+ *   node tests/map.js --json       the index as JSON (pieces, what each declares and uses), for tools/
  *   node tests/map.js --internals  fails on more lines reaching into Obsidian's canvas than
  *                                  tests/snapshots/canvas-internals.json allows a module (--update rewrites it);
  *                                  the canvas adapter (core/079) is where they belong
@@ -535,8 +536,113 @@ if (args[0] === '--check') {
   process.exit(fresh.length || gone.length ? 1 : 0);
 }
 
-const words = args.map((a) => a.toLowerCase());
-pieces.forEach((p) => {
+/*
+ * What other code relies on, checked (contracts/contracts.json): each cited
+ * test still there, by its suite and the start of its title; and each listed
+ * module's surface — what it exports, its classes' methods, the
+ * design-redux events it sends or hears — as recorded. --update records it.
+ */
+function surface(text) {
+  const acorn = require('acorn');
+  const ast = acorn.parse(text, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true });
+  const exports = [];
+  const methods = {};
+  ast.body.forEach((st) => {
+    if (st.type !== 'ExportNamedDeclaration' || !st.declaration) return;
+    const d = st.declaration;
+    if (d.type === 'VariableDeclaration') d.declarations.forEach((v) => bound(v.id, []).forEach((n) => exports.push(n)));
+    else if (d.id) exports.push(d.id.name);
+    if (d.type === 'ClassDeclaration') {
+      methods[d.id.name] = d.body.body
+        .filter((m) => m.type === 'MethodDefinition' && m.kind !== 'constructor' && !m.static && m.key.type === 'Identifier')
+        .map((m) => (m.kind === 'get' || m.kind === 'set' ? `${m.kind} ${m.key.name}` : m.key.name))
+        .sort();
+    }
+  });
+  const events = Array.from(new Set(text.match(/design-redux:[a-z-]+/g) || [])).sort();
+  return { exports: exports.sort(), methods, events };
+}
+
+if (args[0] === '--contracts') {
+  const contracts = JSON.parse(read(path.join(__dirname, '..', 'contracts', 'contracts.json')));
+  const file = path.join(__dirname, 'snapshots', 'contracts.json');
+  const found = {};
+  const problems = [];
+  const titles = {};
+  const titlesOf = (suite) => {
+    if (titles[suite]) return titles[suite];
+    const f = path.join(__dirname, `test_${suite}.js`);
+    titles[suite] = fs.existsSync(f) ? (read(f).match(/\bt\('([^']*)'/g) || []).map((m) => m.slice(3, -1)) : null;
+    return titles[suite];
+  };
+  let cited = 0;
+  Object.keys(contracts).filter((k) => k !== 'about').forEach((key) => {
+    const c = contracts[key];
+    (c.modules || []).forEach((name) => {
+      const p = pieces.find((x) => x.name === name);
+      if (!p) problems.push(`${key}: no module ${name}`);
+      else found[name] = surface(p.text);
+    });
+    (c.invariants || []).forEach((inv) => {
+      cited++;
+      const m = /^(\w+): (.+)$/.exec(inv.test || '');
+      const list = m && titlesOf(m[1]);
+      if (!list) problems.push(`${key}: “${inv.rule}” cites no suite (${inv.test})`);
+      else if (!list.some((t) => t.startsWith(m[2]))) problems.push(`${key}: “${inv.rule}”: no test in ${m[1]} starts “${m[2]}” — renamed or gone?`);
+    });
+  });
+  if (args.includes('--update')) {
+    fs.writeFileSync(file, JSON.stringify(found, null, 1) + '\n');
+    console.log(`contracts: ${Object.keys(found).length} modules' surfaces recorded`);
+    problems.forEach((x) => console.log(x));
+    process.exit(problems.length ? 1 : 0);
+  }
+  let known = {};
+  try {
+    known = JSON.parse(read(file));
+  } catch (err) {
+    known = {};
+  }
+  const diff = (a, b) => a.filter((x) => !b.includes(x));
+  Object.keys(found).forEach((name) => {
+    const now = found[name];
+    const was = known[name];
+    if (!was) return problems.push(`${name}: not recorded — --contracts --update`);
+    const say = (what, gone, added) => {
+      if (gone.length) problems.push(`${name}: ${what} gone: ${gone.join(', ')}`);
+      if (added.length) problems.push(`${name}: ${what} new: ${added.join(', ')}`);
+    };
+    say('exports', diff(was.exports, now.exports), diff(now.exports, was.exports));
+    say('events', diff(was.events, now.events), diff(now.events, was.events));
+    new Set(Object.keys(was.methods).concat(Object.keys(now.methods))).forEach((cls) => say(`${cls} methods`, diff(was.methods[cls] || [], now.methods[cls] || []), diff(now.methods[cls] || [], was.methods[cls] || [])));
+  });
+  Object.keys(known).filter((n) => !found[n]).forEach((n) => problems.push(`${n}: recorded but no longer under contract — --contracts --update`));
+  problems.forEach((x) => console.log(x));
+  if (problems.length) console.log('after a deliberate change: node tests/map.js --contracts --update, and the rule beside it in contracts/contracts.json');
+  else console.log(`contracts: ${cited} rules, each kept by a test; ${Object.keys(found).length} modules' surfaces as recorded`);
+  process.exit(problems.length ? 1 : 0);
+}
+
+if (args[0] === '--json') {
+  // The index as data, for tools that build on it (tools/context-pack.mjs) rather than parse src/ again.
+  const out = pieces.map((p) => ({
+    name: p.name,
+    area: p.area,
+    level: areaOf(p).level,
+    file: `src/${p.file}`,
+    heading: p.heading,
+    features: p.features,
+    suites: p.suites,
+    declared: p.declared,
+    functions: p.functions,
+    uses: Object.fromEntries(Object.keys(p.uses).sort().map((n) => [n, { from: homeOf.has(n) ? homeOf.get(n).name : null, lines: p.uses[n] }])),
+  }));
+  // Written without process.exit, which would cut a long write to a pipe short.
+  process.stdout.write(`${JSON.stringify({ areas: AREAS, pieces: out })}\n`);
+}
+
+const words = args[0] === '--json' ? null : args.map((a) => a.toLowerCase());
+if (words) pieces.forEach((p) => {
   const line = [p.name, p.heading, p.features.join(', '), p.suites.length ? `tests: ${p.suites.join(' ')}` : ''].filter(Boolean).join(' — ');
   if (words.every((w) => line.toLowerCase().includes(w))) console.log(line);
 });

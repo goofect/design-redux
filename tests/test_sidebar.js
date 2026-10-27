@@ -60,7 +60,9 @@ class Menu {
     const item = { title: '', icon: '', click: null };
     item.setTitle = (t) => { item.title = t; return item; };
     item.setIcon = (i) => { item.icon = i; return item; };
-    item.setChecked = () => item;
+    item.setChecked = (c) => { item.checked = c; return item; };
+    item.setSection = (sec) => { item.section = sec; return item; };
+    item.setDisabled = (d) => { item.disabled = d; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item);
     this.items.push(item);
@@ -107,7 +109,7 @@ folders['Concepts Folder'].parent = root;
 folders['Books Folder'].parent = root;
 const all = Object.assign({}, folders, files);
 
-function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
+function setup({ page, pinsExpanded = false, pinned = [], missing = [] } = {}) {
   const sections = [
     { title: '', items: [{ kind: 'builtin', id: 'search' }, { kind: 'builtin', id: 'home' }] },
     { title: 'Library', items: [
@@ -136,6 +138,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
       getName: () => 'All the Notes',
       getAbstractFileByPath: (p) => all[p] || null,
       getFileByPath: (p) => files[p] || null,
+      getMarkdownFiles: () => Object.values(files).filter((f) => f.extension === 'md'),
       getResourcePath: (f) => 'app://' + f.path,
     },
     metadataCache: { getFileCache: () => null, getFirstLinkpathDest: () => null },
@@ -143,6 +146,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
   };
   const saved = [];
   const created = [];
+  const calls = [];
   const plugin = {
     app,
     settings: { librarySections: sections, pinsExpanded, coverProperty: 'cover' },
@@ -162,6 +166,17 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
       folders: () => pinned.filter((t) => t instanceof TFolder),
       files: () => pinned.filter((t) => t instanceof TFile),
       all: () => pinned.filter((t) => t instanceof TFolder).concat(pinned.filter((t) => t instanceof TFile)),
+      missing: () => missing,
+      likely: (pin) => pin.likely || null,
+      repoint: (pin, target) => { calls.push(['repoint', pin.path, target.path]); return true; },
+      forget: (pin) => { calls.push(['forget', pin.path]); return true; },
+      move: (path, before, paths) => {
+        calls.push(['move', path, before, paths]);
+        const t = pinned.find((x) => x.path === path);
+        pinned.splice(pinned.indexOf(t), 1);
+        const at = before === null ? -1 : pinned.findIndex((x) => x.path === before);
+        pinned.splice(at === -1 ? pinned.length : at, 0, t);
+      },
     },
   };
   const view = new LibraryView({}, plugin);
@@ -175,7 +190,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
   leafEl.appendChild(view.containerEl);
   view.syncChrome();
   view.render();
-  return { view, split, leafEl, saved, plugin, created, triggered, app };
+  return { view, split, leafEl, saved, plugin, created, triggered, app, calls };
 }
 
 const browsePage = (mode, extra) => {
@@ -319,9 +334,76 @@ t('the chevron opens pins in place without leaving the page', () => {
     .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   assert.strictEqual(navigated, false, 'chevron also navigated');
   const nested = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-nested'));
-  assert.deepStrictEqual(nested.map((r) => r.textContent), ['Books Folder', 'Home']);
+  assert.deepStrictEqual(nested.map((r) => r.querySelector('.dr-lib-label').textContent), ['Books Folder', 'Home']);
   assert.strictEqual(saved.pop().pinsExpanded, true);
   assert.ok(view.contentEl.querySelector('.dr-lib-disclosure.is-open'));
+});
+
+t('what is pinned shows its artwork, never a blank, and a line beneath: what a folder holds, where a note lives', () => {
+  const { view, saved } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], files['Home.md']] });
+  const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
+  assert.strictEqual(rows.length, 2, 'pinned rows, and only those, are pins');
+  rows.forEach((r) => {
+    const art = r.querySelector('.dr-lib-icon');
+    assert.ok(art.classList.contains('has-art') && art.childNodes.length, `${r.dataset.path}: artwork, or art made for it`);
+  });
+  assert.match(rows[0].querySelector('.dr-lib-sub').textContent, /^\d+ notes?$/, 'a folder: how much it holds');
+  assert.ok(!rows[1].querySelector('.dr-lib-sub'), 'a note at the top of the vault: nothing to say where it is');
+  assert.ok(!view.contentEl.querySelector('.dr-lib-row:not(.is-pin) .dr-lib-sub'), 'other rows stay one line');
+  // Drawn again, nothing changed: the same rows, so the covers don't flash.
+  const before = rows[0];
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row.is-pin'), before);
+  // Large covers, from the Pinned row's menu.
+  const pinsRow = view.contentEl.querySelector('.dr-lib-row[data-group="pins"]');
+  pinsRow.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  const item = lastMenu.items.find((i) => i.title === 'Large covers');
+  assert.ok(item && item.section === 'action' && item.checked === false);
+  item.click();
+  assert.strictEqual(saved.pop().pinsLarge, true);
+  assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-pin.is-large').length, 2);
+});
+
+t('a pin moves a place with Alt+arrows or its menu, keeping the focus', () => {
+  const { view, calls } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], folders['Concepts Folder']] });
+  const order = () => Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin')).map((r) => r.dataset.path);
+  const row = (p) => view.contentEl.querySelector(`.dr-lib-row.is-pin[data-path="${p}"]`);
+  const key = (el, k, alt = true) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, altKey: alt, bubbles: true }));
+  // Already first: Alt+Up does nothing.
+  key(row('Books Folder'), 'ArrowUp');
+  assert.deepStrictEqual(calls, []);
+  key(row('Books Folder'), 'ArrowDown');
+  assert.deepStrictEqual(calls.pop(), ['move', 'Books Folder', null, ['Books Folder', 'Concepts Folder']]);
+  assert.deepStrictEqual(order(), ['Concepts Folder', 'Books Folder']);
+  assert.strictEqual(document.activeElement, row('Books Folder'), 'the moved row keeps the focus');
+  // From its menu, for touch: Earlier, and Later greyed at the end.
+  row('Books Folder').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  const later = lastMenu.items.find((i) => /later/i.test(i.title));
+  const earlier = lastMenu.items.find((i) => /earlier/i.test(i.title));
+  assert.ok(later && later.disabled, 'last: no later');
+  earlier.click();
+  assert.deepStrictEqual(order(), ['Books Folder', 'Concepts Folder']);
+});
+
+t('a pin whose note or folder has gone is shown, greyed, with where it may be now, and what to do with it', () => {
+  const gone = { type: 'file', path: 'Old/Gone.md', name: 'Gone' };
+  const moved = { type: 'folder', path: 'Books Folder Old', name: 'Books Folder Old', likely: folders['Books Folder'] };
+  const { view, calls } = setup({ page: null, pinsExpanded: true, pinned: [files['Home.md']], missing: [moved, gone] });
+  const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-missing'));
+  assert.deepStrictEqual(rows.map((r) => [r.querySelector('.dr-lib-label').textContent, r.querySelector('.dr-lib-sub').textContent]), [['Books Folder Old', `Found in ${view.app.vault.getName()}?`], ['Gone', 'Not found']]);
+  assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-lib-icon').dataset.icon), ['folder-x', 'file-x']);
+  assert.ok(rows.every((r) => r.classList.contains('is-pin') && r.getAttribute('aria-label').includes('Choose what to do')));
+  // Clicked: pin where it is now, find it, or let it go.
+  rows[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.deepStrictEqual(lastMenu.items.map((i) => [i.title, i.section]), [['Pin Books Folder', 'action'], ['Find the folder…', 'action'], ['Remove pin', 'danger']]);
+  lastMenu.items[0].click();
+  rows[1].dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  assert.deepStrictEqual(lastMenu.titles(), ['Find the note…', 'Remove pin'], 'nothing of its name to offer');
+  lastMenu.items[1].click();
+  assert.deepStrictEqual(calls, [['repoint', 'Books Folder Old', 'Books Folder'], ['forget', 'Old/Gone.md']]);
+  // Only missing pins: not 'Nothing pinned yet'.
+  const only = setup({ page: null, pinsExpanded: true, missing: [gone] }).view;
+  assert.ok(!only.contentEl.querySelector('.dr-lib-empty'));
 });
 
 t('clicking Pinned opens and closes it, and goes nowhere', () => {
@@ -361,6 +443,25 @@ t('right arrow opens, left arrow closes', () => {
   assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-nested').length, 0);
 });
 
+t('a titled section is a heading, its rows a group it names; where you are is the current row, once', () => {
+  const { view } = setup({ page: browsePage('search') });
+  const heads = Array.from(view.contentEl.querySelectorAll('.dr-lib-group'));
+  assert.ok(heads.length, 'some sections are titled');
+  heads.forEach((h) => {
+    assert.ok(h.id, 'each heading has an id');
+    const list = view.contentEl.querySelector(`.dr-lib-list[aria-labelledby="${h.id}"]`);
+    assert.ok(list && list.getAttribute('role') === 'group', `${h.textContent}: its rows a group named by it`);
+    if (!h.classList.contains('dr-lib-fold')) assert.strictEqual(h.getAttribute('role'), 'heading');
+  });
+  const current = Array.from(view.contentEl.querySelectorAll('[aria-current="page"]'));
+  assert.deepStrictEqual(current.map((el) => el.querySelector('.dr-lib-label').textContent), active(view), 'aria-current goes with is-active');
+  assert.strictEqual(current.length, 1);
+  // Marking where you are is no difference in what's listed: the rows stay.
+  const before = view.contentEl.querySelector('.dr-lib-row');
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), before);
+});
+
 t('opened out with nothing pinned says so', () => {
   const { view } = setup({ page: null, pinsExpanded: true });
   assert.ok(view.contentEl.querySelector('.dr-lib-empty'));
@@ -374,6 +475,7 @@ t('the panel shape follows the view being shown, and comes off cleanly', () => {
   assert.ok(split.classList.contains('dr-apple-sidebar'));
   assert.strictEqual(
     split.querySelector('.workspace-drawer-vault-switcher').getAttribute('data-dr-initial'), 'A');
+  assert.match(split.querySelector('.workspace-drawer-vault-switcher').getAttribute('data-dr-count'), /^\d[\d,]* notes?$/, 'the vault row says how many notes');
 
   const leafEl = view.containerEl.closest('.workspace-leaf');
   leafEl.style.display = 'none'; // another sidebar tab chosen
@@ -383,7 +485,7 @@ t('the panel shape follows the view being shown, and comes off cleanly', () => {
   leafEl.style.display = '';
   view.syncChrome();
   clearSidebarChrome();
-  assert.strictEqual(document.querySelectorAll('.dr-apple-sidebar, [data-dr-initial]').length, 0);
+  assert.strictEqual(document.querySelectorAll('.dr-apple-sidebar, [data-dr-initial], [data-dr-count]').length, 0);
 });
 
 t('docked outside the left sidebar, it leaves the surroundings alone', () => {

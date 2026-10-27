@@ -1,0 +1,172 @@
+{
+ "076-selection": {
+  "exports": [
+   "Selection",
+   "closeInspector",
+   "inspectorShowing",
+   "openInspector"
+  ],
+  "methods": {
+   "Selection": [
+    "clear",
+    "followDelete",
+    "get",
+    "holds",
+    "onChange",
+    "set"
+   ]
+  },
+  "events": []
+ },
+ "084-workspace-coordinator": {
+  "exports": [
+   "WorkspaceCoordinator",
+   "hostsPanel",
+   "originLabel",
+   "sameTarget"
+  ],
+  "methods": {
+   "WorkspaceCoordinator": [
+    "forget",
+    "get app",
+    "isInspector",
+    "listen",
+    "look",
+    "onChange",
+    "originOf",
+    "pick",
+    "pin",
+    "set",
+    "show",
+    "snapshot",
+    "targetOf"
+   ]
+  },
+  "events": []
+ },
+ "178-inspectables": {
+  "exports": [
+   "cardFrontmatter",
+   "cardValue",
+   "drawNoteHead",
+   "fillNoteMeta",
+   "inspectableOf",
+   "libraryPage",
+   "withCardFrontmatter"
+  ],
+  "methods": {},
+  "events": []
+ },
+ "073-notes": {
+  "exports": [
+   "Notes",
+   "copyValue",
+   "noteProps",
+   "orderKeys",
+   "sameValue"
+  ],
+  "methods": {
+   "Notes": [
+    "get",
+    "get app",
+    "offerUndo",
+    "props",
+    "undo",
+    "watch",
+    "write"
+   ]
+  },
+  "events": []
+ },
+ "089-property-history": {
+  "exports": [
+   "diffProps",
+   "historyOf",
+   "withEntry"
+  ],
+  "methods": {},
+  "events": []
+ },
+ "060-pins": {
+  "exports": [
+   "Pins"
+  ],
+  "methods": {
+   "Pins": [
+    "all",
+    "arranged",
+    "collect",
+    "files",
+    "find",
+    "folders",
+    "forget",
+    "has",
+    "instance",
+    "likely",
+    "missing",
+    "move",
+    "repoint",
+    "toggle"
+   ]
+  },
+  "events": []
+ },
+ "070-orders": {
+  "exports": [
+   "MINDMAP_TWINS",
+   "MINDMAP_TWINS_KNOWLEDGE",
+   "Orders",
+   "PATH_KEYED",
+   "RETIRED_CANVAS_KEYS",
+   "SETTINGS_MIGRATIONS",
+   "arrange",
+   "moveBefore",
+   "movedPath"
+  ],
+  "methods": {
+   "Orders": [
+    "album",
+    "albumOn",
+    "arrangeAlbum",
+    "arrangePins",
+    "coverColor",
+    "coverDesign",
+    "followDelete",
+    "followRename",
+    "get settings",
+    "hasAlbum",
+    "pinOrder",
+    "save",
+    "setAlbum",
+    "setAlbumOn",
+    "setCover",
+    "setCoverColor",
+    "setPins"
+   ]
+  },
+  "events": []
+ },
+ "074-files": {
+  "exports": [
+   "Files"
+  ],
+  "methods": {
+   "Files": [
+    "ensureFolderNote",
+    "folderHasNotes",
+    "folderNote",
+    "followFolderNote",
+    "freeChildPath",
+    "get app",
+    "get settings",
+    "isFolderNote",
+    "moveFile",
+    "newCanvas",
+    "newNote",
+    "putBack",
+    "renameFolderNote"
+   ]
+  },
+  "events": []
+ }
+}

@@ -1,0 +1,50 @@
+{
+  "note": "Tasks for paired runs (tools/eval-usage.mjs): each is run in a fresh session per variant, from the same commit, with the same prompt and the same checks. A run is accepted when every check passes, nothing outside `scope` changed, and — where `review` is true — the reviewer says so. Checks run in the task's worktree with BASE set to the commit it began from.",
+  "tasks": [
+    {
+      "id": "rename-label",
+      "title": "Rename one UI label",
+      "prompt": "On an album's note rows, the ⋯ button is labelled “More” for screen readers. Label it “More actions” instead — on the rows only, not on the album's head. Keep the change as small as it can be.",
+      "scope": ["src/library/123-browse-rows.js", "tests/"],
+      "checks": [
+        "grep -q \"'aria-label', 'More actions'\" src/library/123-browse-rows.js",
+        "npm test"
+      ],
+      "review": false
+    },
+    {
+      "id": "inspector-pin",
+      "title": "Fix an inspector pin regression",
+      "seed": "seeds/inspector-pin.patch",
+      "prompt": "Bug report: with the inspector pinned, picking another note in an album still changes what the inspector shows. Pinned, it should keep showing its note until unpinned. Find the cause and fix it; the tests describe what's right.",
+      "scope": ["src/"],
+      "checks": [
+        "npm test"
+      ],
+      "review": false
+    },
+    {
+      "id": "css-token",
+      "title": "Change a CSS selector's value to a token",
+      "prompt": "The library sidebar's active row (.dr-lib-row.is-active) borrows --dr-press for its background. Give it a design token of its own, --dr-selected, defined in styles/06-shared.css as a light tint of the accent colour, and use it for that row. Nothing else should change.",
+      "scope": ["styles/"],
+      "checks": [
+        "grep -q -- '--dr-selected:' styles/06-shared.css",
+        "grep -A3 '^\\.dr-lib-row\\.is-active' styles/26-library-sidebar.css | grep -q 'var(--dr-selected)'",
+        "npm test"
+      ],
+      "review": true
+    },
+    {
+      "id": "tray-select-all",
+      "title": "Keyboard acceptance for the Edit tray",
+      "prompt": "In an album's Edit mode, make Ctrl/Cmd+A tick every note in the album, and pressing it again with all ticked untick them all; the bulk bar's count follows. Not while typing in a field. Add a simulation test for it.",
+      "scope": ["src/library/", "styles/", "tests/"],
+      "checks": [
+        "git diff --name-only \"$BASE\" -- tests | grep -q 'tests/test_'",
+        "npm test"
+      ],
+      "review": true
+    }
+  ]
+}

@@ -643,8 +643,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
         await sidebarLeaf.view.onOpen();
       },
     };
+    const ran = [];
     panel.plugin = {
       app: {
+        commands: { executeCommandById: (id) => ran.push(id) },
         workspace: {
           getMostRecentLeaf: () => noteLeaf,
           revealLeaf() {},
@@ -678,6 +680,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(panel.popupEl.textContent === map.path && panel.leaf === mapLeaf);
     coordinator.look(view.leaf);
     assert.strictEqual(panel.leaf, mapLeaf, 'working in the inspector keeps the map as its page');
+    // A node picked on it: the map draws it, and the line says it's a node.
+    const nodeMap = { drawNodeInspector: (p, el, id) => { el.createDiv({ text: `node ${id}` }); return []; } };
+    coordinator.look({ view: { panelTarget: () => ({ file: map, node: 'n1', map: nodeMap }) } });
+    assert.strictEqual(panel.popupEl.textContent, 'node n1');
+    assert.strictEqual(view.contentEl.querySelector('.dr-panel-dock-origin').textContent, 'A node on the map');
     // Picked in the library, without opening.
     panel.plugin.selection.set({ file: c });
     assert.strictEqual(panel.popupEl.textContent, c.path);
@@ -696,7 +703,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(mounts === 1 && panel.picked, 'redrawn as picked');
     panel.mount = mount;
     assert.strictEqual(origin(), 'Picked in the library');
-    panel.togglePin();
+    // The line is the pin too: a button, pressed while pinned.
+    const originEl = view.contentEl.querySelector('.dr-panel-dock-origin');
+    assert.ok(originEl.getAttribute('role') === 'button' && originEl.getAttribute('aria-pressed') === 'false');
+    assert.match(originEl.getAttribute('aria-label'), /^Following: Picked in the library\./);
+    originEl.click();
+    assert.ok(panel.pinned && originEl.classList.contains('is-pinned') && originEl.getAttribute('aria-pressed') === 'true', 'clicked, it pins');
     assert.strictEqual(origin(), 'Pinned · Picked in the library');
     coordinator.look({ view: new MarkdownView(c) });
     panel.plugin.selection.set({ file: a });
@@ -707,6 +719,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     panel.togglePin();
     coordinator.forget(a);
     assert.ok(!panel.isOpen() && !panel.pinned && origin() === '');
+    // Nothing to show: what to do, and a way to start.
+    const empty = view.contentEl.querySelector('.dr-panel-dock-empty');
+    assert.ok(!empty.classList.contains('is-hidden'));
+    assert.strictEqual(empty.querySelector('.dr-panel-dock-empty-text').textContent, 'Open or pick a note to see its properties.');
+    empty.querySelector('.dr-panel-dock-empty-action').click();
+    assert.deepStrictEqual(ran, ['design-redux:open-library']);
+    // Pinned, or following something else: said once, politely.
+    assert.strictEqual(view.contentEl.querySelector('.dr-panel-dock-origin-text').getAttribute('aria-live'), 'polite');
+    // Something shown again: the empty state, and its button, gone.
+    panel.plugin.selection.set({ file: b });
+    assert.ok(empty.classList.contains('is-hidden') && !empty.querySelector('.dr-panel-dock-empty-action'));
     // Closed, it's a popup again.
     panel.undock(view);
     assert.ok(panel.popupEl.parentElement === document.body && !panel.isOpen() && !panel.popupEl.hasClass('is-docked'));

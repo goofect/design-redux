@@ -129,7 +129,7 @@ export class DesignRedux extends Plugin {
     this.syncFrame = 0;
     // Before the workspace is restored, so saved leaves of these types
     // can be rebuilt rather than dropped.
-    this.each((f) => f.registerTypes());
+    this.each((f) => f.registerTypes(), 'types');
 
     this.settingTab = new DesignReduxSettingTab(this.app, this);
     this.addSettingTab(this.settingTab);
@@ -155,7 +155,7 @@ export class DesignRedux extends Plugin {
     });
 
     this.app.workspace.onLayoutReady(() => {
-      this.each((f) => f.register());
+      this.each((f) => f.register(), 'register');
       this.refresh();
       // Stray library panes left by an old version are cleared. Browse
       // pages aren't: several are normal — tabs, splits, one per page.
@@ -417,13 +417,21 @@ export class DesignRedux extends Plugin {
   }
 
   /** A throw in one feature must not leave the others half set up. */
-  each(fn) {
+  each(fn, phase) {
+    // Named, a step is timed for each feature — the last time it ran — so
+    // what loading costs, and which feature, can be read (startupTimes).
+    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
     (this.features || []).forEach((f) => {
+      const started = phase ? now() : 0;
       try {
         fn(f);
       } catch (err) {
         console.error(`Design Redux: ${f.constructor.name} failed`, err);
         this.noteError(`${f.constructor.name}: ${(err && err.stack) || err}`);
+      }
+      if (phase) {
+        const times = this.startupTimes || (this.startupTimes = {});
+        (times[phase] || (times[phase] = {}))[f.constructor.name] = now() - started;
       }
     });
   }
@@ -457,7 +465,7 @@ export class DesignRedux extends Plugin {
   }
 
   refresh() {
-    this.each((f) => (f.enabled ? f.enable() : f.disable()));
+    this.each((f) => (f.enabled ? f.enable() : f.disable()), 'enable');
   }
 
   /**

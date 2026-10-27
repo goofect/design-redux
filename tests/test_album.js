@@ -27,6 +27,7 @@ const apply = (el, o) => {
   if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
   if (o.text !== undefined) el.textContent = o.text;
   if (o.type) el.setAttribute('type', o.type);
+  if (o.attr) Object.entries(o.attr).forEach(([k, v]) => el.setAttribute(k, v));
   return el;
 };
 P.createEl = function (tag, o) { return apply(this.appendChild(document.createElement(tag)), o); };
@@ -122,7 +123,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, progressRing, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -249,7 +250,7 @@ function setup() {
   document.body.appendChild(view.containerEl);
   Object.assign(view, { mode: 'folder', path: 'IR', property: null, value: null });
   v.vault.on('rename', (file, old) => { view.followRename(file, old); view.render(); });
-  v.vault.on('delete', () => view.render());
+  v.vault.on('delete', (file) => { view.followDelete(file); view.render(); });
   v.vault.on('create', () => view.render());
   view.render();
   return { v, plugin, app, view, ir, theories, opened };
@@ -979,6 +980,133 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.setEditing(false);
     assert.strictEqual(view.ticked().size, 0);
     assert.ok(!view.contentEl.querySelector('.dr-edit-tick, .dr-bulk-bar'));
+  });
+
+  await t('what is ticked: a run from the last one ticked, followed through renames, let go when deleted', () => {
+    const sel = new R.BulkSelection();
+    const shown = ['A/1.md', 'A/2.md', 'A/3.md', 'A/4.md'];
+    sel.set('A/1.md', true);
+    assert.deepStrictEqual(sel.set('A/3.md', true, { range: shown }), ['A/1.md', 'A/2.md', 'A/3.md'], 'Shift: the run');
+    sel.set('A/2.md', false, { range: shown });
+    assert.deepStrictEqual(Array.from(sel.paths), ['A/1.md'], 'Shift-untick from 3 back to 2 unticks the run 2–3');
+    sel.set('A/3.md', true);
+    sel.set('Elsewhere.md', true, { range: shown });
+    assert.ok(sel.has('Elsewhere.md') && sel.size === 3, 'a path not among those shown is ticked alone');
+    sel.rename('A', 'B');
+    assert.deepStrictEqual(Array.from(sel.paths).sort(), ['B/1.md', 'B/3.md', 'Elsewhere.md'], 'a folder renamed takes its ticks along');
+    sel.rename('Elsewhere.md', 'There.md');
+    sel.remove('B');
+    assert.deepStrictEqual(Array.from(sel.paths), ['There.md'], 'a folder deleted lets go of what was in it');
+    assert.strictEqual(sel.anchor, 'There.md', 'the last ticked follows too');
+    sel.clear();
+    assert.ok(sel.size === 0 && sel.anchor === null);
+  });
+
+  await t('a ticked note renamed stays ticked; deleted, it leaves the count', async () => {
+    const { v, view } = setup();
+    view.setEditing(true);
+    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    tick('Anarchy');
+    tick('Balance');
+    await v.fileManager.renameFile(v.vault.getAbstractFileByPath('IR/Anarchy.md'), 'IR/Anarchy, again.md');
+    assert.deepStrictEqual(Array.from(view.ticked()).sort(), ['IR/Anarchy, again.md', 'IR/Balance.md']);
+    await v.fileManager.trashFile(v.vault.getAbstractFileByPath('IR/Balance.md'));
+    assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Anarchy, again.md']);
+    view.render();
+    assert.strictEqual(view.contentEl.querySelector('.dr-bulk-count').textContent, '1 note selected');
+  });
+
+  await t('the tray: at the foot of the notes, covers and count, More holding Delete apart, Escape and Mod+A', async () => {
+    const { v, plugin, view } = setup();
+    view.setEditing(true);
+    const tick = (n, shift) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
+    const bar = () => view.contentEl.querySelector('.dr-bulk-bar');
+    const key = (k, mods = {}) => {
+      let stopped = 0;
+      view.onKey(Object.assign({ key: k, target: view.contentEl, preventDefault: () => stopped++ }, mods));
+      return stopped;
+    };
+    const lists = Array.from(view.contentEl.querySelectorAll('.dr-tracks'));
+    assert.ok(lists.every((l) => l.compareDocumentPosition(bar()) & window.Node.DOCUMENT_POSITION_FOLLOWING), 'after the notes, so the last row is never under it');
+    assert.ok(bar().classList.contains('is-empty') && bar().getAttribute('role') === 'toolbar');
+    tick('Anarchy');
+    assert.ok(bar().classList.contains('is-arriving'), 'it rises in with the first tick');
+    tick('Cooperation', true);
+    assert.strictEqual(bar().querySelectorAll('.dr-bulk-cover').length, 3, 'a cover for each, up to three');
+    assert.strictEqual(bar().querySelector('.dr-bulk-count').textContent, '3 notes selected');
+    view.render();
+    assert.ok(!bar().classList.contains('is-arriving') && bar().classList.contains('is-shown'), 'redrawn, it stays put rather than rising again');
+    const labels = Array.from(bar().querySelectorAll('.dr-bulk-action')).map((b) => b.getAttribute('aria-label'));
+    assert.deepStrictEqual(labels, ['Move to…', 'Properties…', 'More', 'Clear selection']);
+
+    // More: Copy as table, Select all, and Delete last, in a section of its own, as a warning.
+    menus.length = 0;
+    plugin.feature = ((feature) => (C) => (C && C.name === 'PropertyClipboard' ? { copyTable() {} } : feature.call(plugin, C)))(plugin.feature);
+    bar().querySelector('.dr-bulk-more').click();
+    const items = menus[0].items.map((i) => i.title);
+    assert.strictEqual(items[items.length - 1], 'Delete…');
+    assert.strictEqual(bar().querySelector('.dr-bulk-more').getAttribute('aria-haspopup'), 'menu', 'More says it opens a menu');
+    // Delete asks first; cancelled, nothing goes to the trash and what's ticked stays ticked.
+    const trashed = [];
+    const trash = v.fileManager.trashFile;
+    v.fileManager.trashFile = async (f) => { trashed.push(f.path); return trash(f); };
+    modals.length = 0;
+    menus[0].items.find((i) => i.title === 'Delete…').click();
+    const confirm = modals[modals.length - 1];
+    assert.match(confirm.modalEl.textContent, /Delete 3 notes\?/);
+    Array.from(confirm.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Cancel').click();
+    await new Promise((r) => setTimeout(r));
+    assert.deepStrictEqual(trashed, []);
+    assert.strictEqual(view.ticked().size, 3, 'cancelled: the selection kept');
+    assert.ok(!confirm.modalEl.isConnected);
+    v.fileManager.trashFile = trash;
+    assert.ok(items.includes('Copy as table') && items.some((i) => /^Select all \d+$/.test(i)), items.join(' | '));
+    const shown = view.contentEl.querySelectorAll('.dr-track.is-editing').length;
+    menus[0].items.find((i) => i.title.startsWith('Select all')).click();
+    assert.strictEqual(view.ticked().size, shown, 'Select all ticks every note shown');
+
+    // Escape lets go of what's ticked first, and only then leaves editing.
+    assert.strictEqual(key('Escape'), 1);
+    assert.ok(view.editing && view.ticked().size === 0 && bar().classList.contains('is-empty'));
+    assert.ok(!view.contentEl.querySelector('.dr-track.is-ticked'), 'the rows let go too');
+    // Mod+A ticks them all; not while typing in a field.
+    const field = view.contentEl.createEl('input');
+    assert.strictEqual(key('a', { ctrlKey: true, target: field }), 0, 'a field keeps Mod+A');
+    assert.strictEqual(key('a', { ctrlKey: true }), 1);
+    assert.strictEqual(view.ticked().size, shown);
+    // A tick box focused is no field: Escape still lets go.
+    key('Escape', { target: view.contentEl.querySelector('.dr-edit-tick') });
+    assert.strictEqual(view.ticked().size, 0);
+    key('Escape');
+    assert.ok(!view.editing, 'nothing ticked: Escape leaves editing');
+  });
+
+  await t('the tray: a move that half works keeps what stayed ticked and says so; a second Move waits for the first', async () => {
+    const { v, plugin, view } = setup();
+    let undo = null;
+    plugin.offerUndo = (message, fn) => { undo = [message, fn]; };
+    let calls = 0;
+    const real = plugin.moveFile;
+    let release;
+    const gate = new Promise((r) => (release = r));
+    plugin.moveFile = async (file, to) => {
+      calls++;
+      await gate;
+      return file.basename === 'Balance' ? false : real.call(plugin, file, to);
+    };
+    view.setEditing(true);
+    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    ['Anarchy', 'Balance', 'Cooperation'].forEach(tick);
+    const target = v.vault.getAbstractFileByPath('IR/Theories');
+    const first = view.moveTicked(target);
+    assert.ok(view.contentEl.querySelector('.dr-bulk-bar').classList.contains('is-busy'), 'busy while it runs');
+    await view.moveTicked(target);
+    release();
+    await first;
+    assert.strictEqual(calls, 3, 'the second Move did nothing');
+    assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Balance.md'], 'the note that stayed is still ticked');
+    assert.strictEqual(undo[0], "Moved 2 notes to Theories. 1 note couldn't be moved, and is still selected.");
+    assert.ok(!view.contentEl.querySelector('.dr-bulk-bar').classList.contains('is-busy'));
   });
 
   await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
@@ -1715,8 +1843,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
     el = document.createElement('div');
     view.previewAlbum(el, app.vault.getFolderByPath('IR'));
-    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
-    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
+    // As a note's head: cover, name, kind, and how much it holds.
+    assert.ok(el.querySelector('.dr-props-identity .dr-props-art'));
+    assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
+    assert.strictEqual(el.querySelector('.dr-props-meta').textContent, view.countLabel(app.vault.getFolderByPath('IR')));
+    assert.deepStrictEqual(buttons(el), ['Open', 'More']);
+    // One inside another: where it is, a way there.
+    el = document.createElement('div');
+    view.previewAlbum(el, app.vault.getFolderByPath('IR/Theories'));
+    const up = el.querySelector('.dr-props-meta-link');
+    assert.strictEqual(up.textContent, 'IR');
+    went.length = 0;
+    click(up);
+    assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR']);
 
     // Space on a note's row: a look at it, Obsidian's page preview; on an album, nothing.
     const looked = [];
@@ -2002,6 +2141,46 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(view.query, 'bal', 'carried over');
   });
 
+  await t('a redraw that changes nothing puts the same rows back, focus and pick kept; a changed note or setting draws anew', () => {
+    const { view, plugin, app } = setup();
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-path]'));
+    const row = (name) => rows().find((r) => r.dataset.path === `IR/${name}.md`);
+    // The first drawing ever notes when reading began, a setting: drawn once more, settled.
+    view.render();
+    const before = rows();
+    assert.ok(before.length >= 4);
+    const balance = row('Balance');
+    balance.focus();
+    assert.strictEqual(document.activeElement, balance, 'focused to begin with');
+    view.render();
+    assert.ok(rows().length === before.length && rows().every((r, i) => r === before[i]), 'the same elements, in the same order');
+    assert.strictEqual(document.activeElement, balance, 'focus kept');
+    // What's picked is marked on a row put back, too.
+    plugin.selection = new R.Selection(plugin);
+    plugin.selection.set({ file: app.vault.getFileByPath('IR/Anarchy.md') });
+    view.render();
+    assert.ok(row('Anarchy').classList.contains('is-selected'));
+    plugin.selection.set(null);
+    view.render();
+    assert.ok(!row('Anarchy').classList.contains('is-selected'));
+    // A note changed, or its properties: that row alone is new.
+    app.vault.getFileByPath('IR/Cooperation.md').stat.mtime = 99;
+    const props = { 'IR/Deterrence.md': { frontmatter: { status: 'done' } } };
+    app.metadataCache.getFileCache = (f) => props[f.path] || null;
+    const anarchy = row('Anarchy');
+    const cooperation = row('Cooperation');
+    const deterrence = row('Deterrence');
+    view.render();
+    assert.strictEqual(row('Anarchy'), anarchy);
+    assert.notStrictEqual(row('Cooperation'), cooperation, 'changed: drawn anew');
+    assert.notStrictEqual(row('Deterrence'), deterrence, 'its properties changed: drawn anew');
+    // Moved in the order: numbered anew.
+    const kept = row('Anarchy');
+    plugin.settings.albumExcerpts = !plugin.settings.albumExcerpts;
+    view.render();
+    assert.notStrictEqual(row('Anarchy'), kept, 'a setting changed: every row anew');
+  });
+
   await t('the library index: worked out once while listening, forgotten as files come and go and links resolve', () => {
     const { v, plugin, app } = setup();
     const on = {};
@@ -2032,13 +2211,69 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(index.notes().length, before + 1);
     // Links both ways, kept until Obsidian resolves again.
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 2 } };
-    on.resolved();
     assert.deepStrictEqual(index.incoming(app.vault.getFileByPath('IR/Balance.md')), { 'IR/Anarchy.md': 2 });
     assert.deepStrictEqual(index.outgoing(app.vault.getFileByPath('IR/Anarchy.md')), { 'IR/Balance.md': 2 });
     app.metadataCache.resolvedLinks = {};
     assert.deepStrictEqual(index.incoming('IR/Balance.md'), { 'IR/Anarchy.md': 2 }, 'kept');
     on.resolve();
     assert.deepStrictEqual(index.incoming('IR/Balance.md'), {});
+  });
+
+  await t('the library index: kept up as files come, go and move, and links resolve, equal to working it out afresh', async () => {
+    const { v, plugin, app } = setup();
+    app.metadataCache.on = (type, fn) => ((app.metadataCache['on' + type] = fn), {});
+    plugin.registerEvent = () => {};
+    const index = new R.LibraryIndex(plugin);
+    index.listen();
+    app.metadataCache.resolvedLinks = {};
+    // Seeded, so a failure comes back the same.
+    let seed = 7;
+    const rand = (n) => ((seed = (seed * 16807) % 2147483647), seed % n);
+    const pick = (list) => list[rand(list.length)];
+    const folders = () => [v.root, ...index.folders()];
+    const files = () => app.vault.getFiles();
+    let made = 0;
+    let walks = 0;
+    const tally = index.tally.bind(index);
+    for (let step = 0; step < 300; step++) {
+      index.count(v.root);
+      index.incoming('');
+      const kind = rand(6);
+      if (kind === 0) {
+        const at = pick(folders());
+        const path = `${at.path === '/' ? '' : at.path + '/'}${rand(3) || at === v.root ? 'N' + made++ : at.name}.md`;
+        if (!app.vault.getAbstractFileByPath(path)) await app.vault.create(path);
+      } else if (kind === 1) {
+        const at = pick(folders());
+        const folder = v.folder(`${at.path === '/' ? '' : at.path + '/'}F${made++}`);
+        v.handlers.create.forEach((h) => h(folder));
+      } else if (kind === 2 && files().length > 3) {
+        await v.fileManager.trashFile(pick(files()));
+      } else if (kind === 3) {
+        const entry = pick([...files(), ...index.folders()]);
+        const to = pick(folders());
+        if (entry instanceof TFolder && (to === entry || to.path.startsWith(entry.path + '/'))) continue;
+        const name = entry instanceof TFolder && rand(2) ? 'R' + made++ : entry.name;
+        const path = `${to.path === '/' ? '' : to.path + '/'}${name}`;
+        if (!app.vault.getAbstractFileByPath(path)) await v.fileManager.renameFile(entry, path);
+      } else {
+        const from = pick(files());
+        const links = {};
+        for (let i = rand(3); i > 0; i--) links[pick(files()).path] = 1 + rand(2);
+        app.metadataCache.resolvedLinks[from.path] = links;
+        app.metadataCache.onresolve(from);
+      }
+      assert.deepStrictEqual(index.drift(), [], `step ${step}`);
+    }
+    // A file's move tallies the folders on its two branches, not the vault.
+    index.tally = (held, folder) => (walks++, tally(held, folder));
+    const at = index.folders().sort((a, b) => b.path.split('/').length - a.path.split('/').length)[0];
+    const depth = at.path.split('/').length;
+    const deep = v.folder(`${at.path}/Deep`);
+    v.handlers.create.forEach((h) => h(deep));
+    assert.ok(index.folders().length > 10, 'a vault worth tallying');
+    assert.strictEqual(walks, depth + 2, 'the new folder, the one it is in and each above, to the vault');
+    assert.deepStrictEqual(index.drift(), []);
   });
 
   await t('the sidebar\'s new places: Recently added newest first, Collections, and Subjects', async () => {
@@ -2136,6 +2371,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(written[1].album, 'reading list');
     await structure.setType(v.vault.getFolderByPath('IR'), '');
     assert.ok(!('album' in written[1]));
+    // What it's for: in the inspector's brief, and changed from there or from the album's menu.
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); written = [file, fm]; };
+    const ir = v.vault.getFolderByPath('IR');
+    const brief = document.createElement('div');
+    view.previewAlbum(brief, ir);
+    const about = brief.querySelector('.dr-preview-about');
+    assert.deepStrictEqual([about.textContent, about.getAttribute('role')], ['How states deal with each other.', 'button']);
+    click(about);
+    let dialog = modals[modals.length - 1];
+    const box = dialog.contentEl.querySelector('textarea.dr-name-input');
+    assert.strictEqual(box.value, 'How states deal with each other.');
+    box.value = 'Power,\n  and order. ';
+    dialog.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.deepStrictEqual([written[0], written[1].description], [note, 'Power, and order.'], 'one line, written to the folder note');
+    assert.strictEqual(about.textContent, 'Power, and order.', 'shown at once');
+    // Emptied, it's taken away, and the brief offers to write one.
+    click(about);
+    dialog = modals[modals.length - 1];
+    dialog.contentEl.querySelector('textarea').value = '';
+    dialog.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.ok(!('description' in written[1]));
+    assert.deepStrictEqual([about.textContent, about.classList.contains('is-empty')], ['Add a description', true]);
+    const menu = new Menu();
+    structure.addFolderItems(menu, ir, (item) => item, () => {});
+    assert.ok(menu.items.some((i) => i.title === 'Add a description…'));
+    fms.get(note).description = 'Back.';
+    const menu2 = new Menu();
+    structure.addFolderItems(menu2, ir, (item) => item, () => {});
+    assert.ok(menu2.items.some((i) => i.title === 'Edit description…'));
     // Switched off: nothing of it shows.
     plugin.settings.albumStructure = false;
     Object.assign(view, { path: 'IR' });

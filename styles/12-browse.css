@@ -100,7 +100,8 @@
   z-index: -1;
   top: -90px;
   left: -40px;
-  right: -40px;
+  /* To the page's own edge, no further: past it, a narrow page scrolls sideways. */
+  right: calc(var(--dr-u) * -5);
   bottom: -40px;
   overflow: hidden;
   opacity: 0.45;
@@ -786,6 +787,8 @@ body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
 
 .dr-detail-actions {
   display: flex;
+  /* Short of room, the actions go onto a second line rather than off the page. */
+  flex-wrap: wrap;
   gap: var(--dr-space-3);
   margin-top: calc(var(--dr-u) * 5.5);
 }

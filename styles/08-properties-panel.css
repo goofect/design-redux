@@ -19,6 +19,8 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 .dr-props-popup {
   --dr-label-width: 38%;
   --dr-gutter: 10px;
+  /* How far in what the sections below the properties hold sits: from the sheet's edge, as the property rows do. */
+  --dr-section-inset: var(--dr-space-1);
   position: fixed;
   z-index: calc(var(--layer-menu, 65) - 10);
   display: none;
@@ -63,21 +65,68 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 }
 
 .dr-panel-dock-empty {
-  padding: var(--dr-space-4) var(--dr-space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dr-space-2);
+  padding: var(--dr-space-6) var(--dr-space-4);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   text-align: center;
+}
+
+.dr-panel-dock-empty-icon {
+  display: inline-flex;
+  color: var(--text-faint);
+}
+
+.dr-panel-dock-empty-icon .svg-icon {
+  width: var(--icon-l);
+  height: var(--icon-l);
+}
+
+.dr-panel-dock-empty-action {
+  margin-top: var(--dr-space-1);
 }
 
 .dr-panel-dock-empty.is-hidden {
   display: none;
 }
 
-/* Why it shows what it shows: a quiet line above it. */
+/* Why it shows what it shows, and whether it follows or is pinned: a
+   small button above it, an eye while it follows, the pin in the accent
+   once pinned. */
 .dr-panel-dock-origin {
-  padding: var(--dr-space-2) 0 0;
-  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  margin: var(--dr-space-2) 0 0;
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-radius-pill);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+
+.dr-panel-dock-origin-icon {
+  display: inline-flex;
+}
+
+.dr-panel-dock-origin-icon .svg-icon {
+  width: var(--icon-xs);
+  height: var(--icon-xs);
+}
+
+.dr-panel-dock-origin.is-pinned {
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--text-accent);
+}
+
+@media (any-hover: hover) {
+  .dr-panel-dock-origin:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+  }
 }
 
 .dr-panel-dock-origin.is-hidden {
@@ -114,7 +163,7 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 }
 
 .dr-empty {
-  margin-left: calc(var(--dr-label-width, 84px) + var(--dr-gutter, 10px));
+  margin-left: var(--dr-section-inset, 0px);
   padding: 3px calc(var(--dr-u) * 1.5);
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
@@ -260,6 +309,51 @@ body.is-mobile .dr-props-popup .dr-row-more {
   align-items: center;
   gap: 2px;
   margin-bottom: var(--dr-space-1);
+}
+
+/* The note's own head — cover, name, what it is — shares the class with
+   the Properties heading below it, but not its size: it opens the sheet. */
+.dr-props-popup .dr-props-head.dr-props-identity {
+  gap: var(--dr-space-3);
+  padding: var(--dr-space-3);
+  margin-bottom: 0;
+}
+
+.dr-props-popup .dr-props-identity .dr-props-art {
+  flex-basis: calc(var(--dr-u) * 16);
+  width: calc(var(--dr-u) * 16);
+  height: calc(var(--dr-u) * 16);
+}
+
+.dr-props-popup .dr-props-identity .dr-props-title {
+  font-size: var(--dr-type-headline, var(--font-ui-medium));
+  line-height: var(--dr-line-heading);
+}
+
+.dr-props-popup .dr-props-identity .dr-props-meta {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
+/* An album's meta line names where it is, and takes you there. */
+.dr-props-popup .dr-props-meta-link {
+  color: var(--text-accent);
+  cursor: pointer;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-props-popup .dr-props-meta-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-props-meta-link:hover {
+    text-decoration: underline;
+  }
 }
 
 .dr-props-popup .dr-props-toggle {
@@ -676,7 +770,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   align-items: center;
   justify-content: space-between;
   gap: var(--dr-space-2);
-  margin-left: calc(var(--dr-label-width) + var(--dr-gutter));
+  margin-left: var(--dr-section-inset, 0px);
   padding: 3px calc(var(--dr-u) * 1.5);
   border-radius: var(--dr-radius-sm);
   color: var(--text-normal);
@@ -818,15 +912,13 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 /* Sections the features add below the properties — a note's relationships,
- * where it's kept: a small heading, rows as the mentions have them, a way
+ * where it's kept: a heading as the Properties one is, rows as the mentions have them, a way
  * up through what it comes under, and a few actions. */
 .dr-section-label {
-  margin: var(--dr-space-3) 0 var(--dr-space-1) calc(var(--dr-label-width) + var(--dr-gutter));
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
+  margin: var(--dr-space-3) 0 var(--dr-space-1) var(--dr-section-inset, 0px);
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .dr-relations-under {
@@ -834,7 +926,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-space-1);
-  margin: 0 0 var(--dr-space-1) calc(var(--dr-label-width) + var(--dr-gutter));
+  margin: 0 0 var(--dr-space-1) var(--dr-section-inset, 0px);
   padding: 0 calc(var(--dr-u) * 1.5);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
@@ -877,7 +969,7 @@ body.is-mobile .dr-mention-remove {
   display: flex;
   flex-wrap: wrap;
   gap: var(--dr-space-1);
-  margin: var(--dr-space-1) 0 var(--dr-space-2) calc(var(--dr-label-width) + var(--dr-gutter));
+  margin: var(--dr-space-1) 0 var(--dr-space-2) var(--dr-section-inset, 0px);
 }
 
 .dr-section-action {
