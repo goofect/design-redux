@@ -135,6 +135,15 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(state).not.toBeNull();
     perf.push(`perf: plugin load ${await browser.executeObsidian(() => window.__drLoadMs)} ms`);
+    // What loading costs, by step and by feature, and what's loaded: where lazy setup would pay (P05).
+    const steps = await browser.executeObsidian(({ plugins }) => plugins.designRedux.startupTimes || {});
+    const total = (o) => Object.values(o || {}).reduce((a, b) => a + b, 0);
+    const features = new Set();
+    const each = [];
+    Object.entries(steps).forEach(([step, o]) => Object.entries(o).forEach(([k, ms]) => (features.add(k), each.push([`${k} ${step}`, ms]))));
+    const slowest = each.sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, ms]) => `${k} ${ms.toFixed(1)}`).join(', ');
+    const kb = (f) => (fs.existsSync(f) ? `${Math.round(fs.statSync(f).size / 1024)} KB` : '?');
+    perf.push(`perf: startup steps: types ${total(steps.types).toFixed(1)} ms, register ${total(steps.register).toFixed(1)} ms, enable ${total(steps.enable).toFixed(1)} ms over ${features.size} features; slowest ${slowest}; main.js ${kb(path.resolve('main.js'))}, styles.css ${kb(path.resolve('styles.css'))}`);
     const on = Object.fromEntries(state);
     // Switched on by default.
     for (const name of ['Library', 'ContextStrip', 'CoverImages', 'Scripts', 'MindMaps', 'BulkEditing']) {
