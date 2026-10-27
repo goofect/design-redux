@@ -435,6 +435,9 @@ export class BrowseView extends BrowseAlbum {
   render() {
     this.stale = false;
     const root = this.contentEl;
+    // What had the keys, if it's drawn again unchanged, keeps them.
+    const active = root.ownerDocument.activeElement;
+    const held = active && active !== root && root.contains(active) ? active : null;
     root.empty();
     const density = this.plugin.settings.gridDensity;
     this.containerEl.dataset.drDensity = GRID_DENSITIES[density] ? density : 'standard';
@@ -458,6 +461,7 @@ export class BrowseView extends BrowseAlbum {
       });
     }
     this.measureLater();
+    if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();
