@@ -136,6 +136,18 @@ export class LibraryView extends ItemView {
     if (switcher && name) {
       switcher.setAttribute('data-dr-initial', name.charAt(0).toUpperCase());
     }
+    this.showVaultCount();
+  }
+
+  /** Under the vault's name at the foot of the panel, how many notes it holds: a fact, read from the index. */
+  showVaultCount() {
+    if (Platform.isMobile) return;
+    const split = this.containerEl.closest('.workspace-split.mod-left-split');
+    const switcher = split && split.querySelector('.workspace-drawer-vault-switcher[data-dr-initial]');
+    if (!switcher) return;
+    const n = libraryIndex(this.plugin).markdown().length;
+    const text = n === 1 ? '1 note' : `${n.toLocaleString()} notes`;
+    if (switcher.getAttribute('data-dr-count') !== text) switcher.setAttribute('data-dr-count', text);
   }
 
   render() {
@@ -148,11 +160,14 @@ export class LibraryView extends ItemView {
     // lists changes with every key typed in it, and drawing the same rows
     // again would make their covers flash.
     const fresh = root.ownerDocument.createElement('div');
-    this.plugin.settings.librarySections.forEach((section) => {
+    this.plugin.settings.librarySections.forEach((section, n) => {
+      // Each titled section a heading, and its rows a group named by it, for a screen reader's list of them.
+      const headId = section.title ? `dr-lib-head-${n}` : null;
       // A section that folds — More, to begin with — has a heading that opens and closes it.
       const folds = typeof section.folded === 'boolean';
       if (section.title && folds) {
         const head = fresh.createDiv({ cls: `dr-lib-group dr-lib-fold${section.folded ? ' is-folded' : ''}` });
+        head.id = headId;
         asButton(head, section.folded ? `Show ${section.title}` : `Fold ${section.title}`);
         head.setAttribute('aria-expanded', String(!section.folded));
         head.createSpan({ text: section.title });
@@ -164,9 +179,14 @@ export class LibraryView extends ItemView {
         });
         if (section.folded) return;
       } else if (section.title) {
-        fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
+        const head = fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
+        head.id = headId;
+        head.setAttribute('role', 'heading');
+        head.setAttribute('aria-level', '2');
       }
       const list = fresh.createDiv({ cls: 'dr-lib-list' });
+      list.setAttribute('role', 'group');
+      if (headId) list.setAttribute('aria-labelledby', headId);
       roveFocus(list, '.dr-lib-row');
       (section.items || []).forEach((item) => {
         const t = now();
@@ -181,6 +201,7 @@ export class LibraryView extends ItemView {
     const norm = (html) =>
       html
         .replace(/ is-active/g, '')
+        .replace(/ aria-current="page"/g, '')
         .replace(/ tabindex="-?\d+"/g, '')
         .replace(/ ?is-arriving/g, '')
         .replace(/ class=""/g, '')
@@ -193,6 +214,7 @@ export class LibraryView extends ItemView {
     }
     const t2 = now();
     this.markActive();
+    this.showVaultCount();
     const t3 = now();
     Object.assign(times, { build: t1 - t0, compare: t2 - t1, mark: t3 - t2 });
     this.lastTimes = times;
@@ -418,9 +440,15 @@ export class LibraryView extends ItemView {
   /** Exactly one row marks where you are, as the reference does. */
   markActive() {
     const rows = Array.from(this.contentEl.querySelectorAll('.dr-lib-row'));
-    rows.forEach((el) => el.removeClass('is-active'));
+    rows.forEach((el) => {
+      el.removeClass('is-active');
+      el.removeAttribute('aria-current');
+    });
     const here = this.activeRow(rows);
-    if (here) here.addClass('is-active');
+    if (here) {
+      here.addClass('is-active');
+      here.setAttribute('aria-current', 'page');
+    }
   }
 
   /**

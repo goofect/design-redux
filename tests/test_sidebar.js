@@ -136,6 +136,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
       getName: () => 'All the Notes',
       getAbstractFileByPath: (p) => all[p] || null,
       getFileByPath: (p) => files[p] || null,
+      getMarkdownFiles: () => Object.values(files).filter((f) => f.extension === 'md'),
       getResourcePath: (f) => 'app://' + f.path,
     },
     metadataCache: { getFileCache: () => null, getFirstLinkpathDest: () => null },
@@ -361,6 +362,25 @@ t('right arrow opens, left arrow closes', () => {
   assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-nested').length, 0);
 });
 
+t('a titled section is a heading, its rows a group it names; where you are is the current row, once', () => {
+  const { view } = setup({ page: browsePage('search') });
+  const heads = Array.from(view.contentEl.querySelectorAll('.dr-lib-group'));
+  assert.ok(heads.length, 'some sections are titled');
+  heads.forEach((h) => {
+    assert.ok(h.id, 'each heading has an id');
+    const list = view.contentEl.querySelector(`.dr-lib-list[aria-labelledby="${h.id}"]`);
+    assert.ok(list && list.getAttribute('role') === 'group', `${h.textContent}: its rows a group named by it`);
+    if (!h.classList.contains('dr-lib-fold')) assert.strictEqual(h.getAttribute('role'), 'heading');
+  });
+  const current = Array.from(view.contentEl.querySelectorAll('[aria-current="page"]'));
+  assert.deepStrictEqual(current.map((el) => el.querySelector('.dr-lib-label').textContent), active(view), 'aria-current goes with is-active');
+  assert.strictEqual(current.length, 1);
+  // Marking where you are is no difference in what's listed: the rows stay.
+  const before = view.contentEl.querySelector('.dr-lib-row');
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), before);
+});
+
 t('opened out with nothing pinned says so', () => {
   const { view } = setup({ page: null, pinsExpanded: true });
   assert.ok(view.contentEl.querySelector('.dr-lib-empty'));
@@ -374,6 +394,7 @@ t('the panel shape follows the view being shown, and comes off cleanly', () => {
   assert.ok(split.classList.contains('dr-apple-sidebar'));
   assert.strictEqual(
     split.querySelector('.workspace-drawer-vault-switcher').getAttribute('data-dr-initial'), 'A');
+  assert.match(split.querySelector('.workspace-drawer-vault-switcher').getAttribute('data-dr-count'), /^\d[\d,]* notes?$/, 'the vault row says how many notes');
 
   const leafEl = view.containerEl.closest('.workspace-leaf');
   leafEl.style.display = 'none'; // another sidebar tab chosen
@@ -383,7 +404,7 @@ t('the panel shape follows the view being shown, and comes off cleanly', () => {
   leafEl.style.display = '';
   view.syncChrome();
   clearSidebarChrome();
-  assert.strictEqual(document.querySelectorAll('.dr-apple-sidebar, [data-dr-initial]').length, 0);
+  assert.strictEqual(document.querySelectorAll('.dr-apple-sidebar, [data-dr-initial], [data-dr-count]').length, 0);
 });
 
 t('docked outside the left sidebar, it leaves the surroundings alone', () => {

@@ -504,9 +504,10 @@ export function clearSidebarChrome() {
   document
     .querySelectorAll('.dr-apple-sidebar')
     .forEach((el) => el.removeClass('dr-apple-sidebar'));
-  document
-    .querySelectorAll('[data-dr-initial]')
-    .forEach((el) => el.removeAttribute('data-dr-initial'));
+  document.querySelectorAll('[data-dr-initial], [data-dr-count]').forEach((el) => {
+    el.removeAttribute('data-dr-initial');
+    el.removeAttribute('data-dr-count');
+  });
 }
 
 /* -- menus ------------------------------------------------------------ */
