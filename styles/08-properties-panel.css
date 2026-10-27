@@ -85,6 +85,10 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
   height: var(--icon-l);
 }
 
+.dr-panel-dock-empty-action {
+  margin-top: var(--dr-space-1);
+}
+
 .dr-panel-dock-empty.is-hidden {
   display: none;
 }

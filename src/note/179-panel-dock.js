@@ -36,7 +36,9 @@ export class PanelDockView extends ItemView {
     this.originEl = this.contentEl.createDiv({ cls: 'dr-panel-dock-origin is-hidden' });
     asButton(this.originEl);
     this.originIcon = this.originEl.createSpan({ cls: 'dr-panel-dock-origin-icon' });
+    // Told politely, once, when it's pinned or what it follows changes; not for every note it follows to.
     this.originText = this.originEl.createSpan({ cls: 'dr-panel-dock-origin-text' });
+    this.originText.setAttribute('aria-live', 'polite');
     onActivate(this.originEl, () => this.panel.togglePin());
     if (typeof this.addAction === 'function') this.pinEl = this.addAction('pin', 'Pin to what it shows', () => this.panel.togglePin());
     this.panel.dock(this);
@@ -64,8 +66,8 @@ export class PanelDockView extends ItemView {
     }
   }
 
-  /** What shows while there's nothing to show. */
-  showEmpty(text) {
+  /** What shows while there's nothing to show: what to do, and, given `action` ({ label, run }), a button to start. */
+  showEmpty(text, action = null) {
     let el = this.contentEl.querySelector('.dr-panel-dock-empty');
     if (!el) {
       el = this.contentEl.createDiv({ cls: 'dr-panel-dock-empty' });
@@ -73,6 +75,12 @@ export class PanelDockView extends ItemView {
       el.createDiv({ cls: 'dr-panel-dock-empty-text' });
     }
     el.querySelector('.dr-panel-dock-empty-text').setText(text || '');
+    const old = el.querySelector('.dr-panel-dock-empty-action');
+    if (old) old.remove();
+    if (text && action) {
+      const button = el.createEl('button', { cls: 'dr-panel-dock-empty-action', text: action.label });
+      button.addEventListener('click', () => action.run());
+    }
     el.toggleClass('is-hidden', !text);
   }
 }

@@ -295,7 +295,7 @@ export class PropertiesPanel extends Feature {
       this.popupEl.remove();
       this.popupEl = null;
     }
-    if (this.dockView) this.dockView.showEmpty(OFF_TEXT);
+    if (this.dockView) this.dockView.showEmpty(OFF_TEXT, this.toSettings());
     document.querySelectorAll('.dr-props-trigger').forEach((el) => el.remove());
     this.fitted = new WeakMap();
   }
@@ -524,9 +524,19 @@ export class PropertiesPanel extends Feature {
     }
     this.trigger = null;
     if (this.dockView) {
-      this.dockView.showEmpty(EMPTY_TEXT);
+      this.dockView.showEmpty(EMPTY_TEXT, this.toLibrary());
       this.dockView.showOrigin('', this.pinned);
     }
+  }
+
+  /** With nothing to show, a way to something: the library, to pick from. */
+  toLibrary() {
+    return { label: 'Open the library', run: () => this.app.commands.executeCommandById('design-redux:open-library') };
+  }
+
+  /** Turned off, the way to turn it on. */
+  toSettings() {
+    return { label: 'Open settings', run: () => this.plugin.openSettingsAt('propertiesDropdown') };
   }
 
   /** A file or folder deleted: if it's what's shown, it's let go of. (Docked, the coordinator lets go, pinned or not.) */
@@ -567,7 +577,7 @@ export class PropertiesPanel extends Feature {
   dock(view) {
     this.dockView = view;
     if (!this.popupEl) {
-      view.showEmpty(OFF_TEXT);
+      view.showEmpty(OFF_TEXT, this.toSettings());
       return;
     }
     this.close();
