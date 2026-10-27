@@ -188,7 +188,6 @@ export const DEFAULTS = {
   // Other names for the folder note properties albums are read from: { type, description, includes, related, featured, layout }.
   albumKeyNames: {},
   // In a long album, shelves of what changed and was opened lately.
-  albumRecents: true,
   // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
@@ -332,7 +331,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 18,
+  settingsVersion: 19,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.

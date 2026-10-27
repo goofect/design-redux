@@ -563,38 +563,6 @@ describe('Design Redux in Obsidian', function () {
     expect(seen.visible).toEqual([]);
   });
 
-  it('opens an album with its map embedded, or its folder note as an overview', async function () {
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      if (!app.vault.getFolderByPath('Atlas')) {
-        await app.vault.createFolder('Atlas');
-        await app.vault.create('Atlas/Coast.md', 'Shore.');
-        await app.vault.create('Atlas/Atlas map.canvas', JSON.stringify({ nodes: [{ id: 'a', type: 'text', text: 'Coastline', x: 0, y: 0, width: 200, height: 60 }], edges: [] }));
-        await app.vault.create('Atlas/Atlas.md', '---\nalbum: concept map\nlayout: map\n---\nWhere the land meets the sea.');
-      }
-      const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
-      await until(() => !!(app.metadataCache.getCache('Atlas/Atlas.md') || {}).frontmatter);
-      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
-      await library.browseMode({ mode: 'folder', path: 'Atlas' });
-    });
-    await browser.$(ACTIVE + '.dr-album-lead.is-map .internal-embed').waitForExist({ timeout: 10000 });
-    // Obsidian draws the canvas in it, as a picture of its cards.
-    await browser.waitUntil(async () => browser.execute((active) => {
-      const lead = document.querySelector(active + '.dr-album-lead.is-map');
-      const map = lead && lead.querySelector('svg.canvas-minimap');
-      return !!map && map.childElementCount > 0 && lead.getBoundingClientRect().height > 100;
-    }, ACTIVE), { timeout: 10000, timeoutMsg: 'the map was never drawn in the album' });
-    expect(await browser.$(ACTIVE + '.dr-detail-kind').getText()).toMatch(/concept map/i);
-    await shot('album-map');
-    // As an overview: the folder note's text, without its properties.
-    await browser.executeObsidian(async ({ app }) => {
-      await app.fileManager.processFrontMatter(app.vault.getFileByPath('Atlas/Atlas.md'), (fm) => { fm.layout = 'overview'; });
-    });
-    await browser.waitUntil(async () => browser.execute((active) => {
-      const lead = document.querySelector(active + '.dr-album-lead.is-overview');
-      return !!lead && lead.textContent.includes('Where the land meets the sea') && !lead.textContent.includes('layout');
-    }, ACTIVE), { timeout: 10000, timeoutMsg: 'the overview never showed the folder note’s text' });
-  });
-
   it('renames a folder in Edit mode, and one press of Done finishes', async function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       await app.vault.createFolder('Renaming');
@@ -658,9 +626,13 @@ describe('Design Redux in Obsidian', function () {
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
-    const disc = await browser.$('.dr-disc[data-folder="Politics/Theories"]');
-    await disc.waitForExist({ timeout: 5000 });
-    await disc.click({ button: 'right' });
+    // A collection inside the album: its tile on the shelf at the album's foot.
+    // Scrolled to by selector, then found again: the page may have redrawn it meanwhile.
+    const tile = ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]';
+    await browser.$(tile).waitForExist({ timeout: 5000 });
+    await browser.execute((sel) => document.querySelector(sel).scrollIntoView({ block: 'center' }), tile);
+    await browser.pause(300);
+    await browser.$(tile).click({ button: 'right' });
     await browser.$('.menu').waitForExist({ timeout: 5000 });
     const titles = await menuTitles();
     for (const want of ['New', 'Cover', 'Pin', 'Properties…']) expect(titles).toContain(want);

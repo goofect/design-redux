@@ -280,45 +280,6 @@
   white-space: nowrap;
 }
 
-/* What an album opens with, under its header: its folder note's text, or its map. */
-.dr-album-lead {
-  margin: 0 0 calc(var(--dr-u) * 7);
-}
-
-.dr-album-lead.is-overview {
-  max-width: 70ch;
-  font-size: var(--font-text-size);
-  color: var(--text-normal);
-}
-
-.dr-album-lead.is-map {
-  height: min(420px, 55vh);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--dr-radius-lg);
-  overflow: hidden;
-}
-
-.dr-album-lead.is-map > .internal-embed,
-.dr-album-lead.is-map > p,
-.dr-album-lead.is-map .internal-embed {
-  height: 100%;
-  margin: 0;
-}
-
-.dr-album-lead.is-map.is-linked {
-  cursor: pointer;
-}
-
-.dr-album-lead-empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.dr-album-lead-empty:focus-visible,
 .dr-album-notice:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
@@ -344,19 +305,9 @@
 }
 
 @media (any-hover: hover) {
-  .dr-album-lead-empty:hover,
   .dr-album-notice:hover {
     color: var(--text-normal);
   }
-}
-
-/* An album as covers: each disc's heading over its tiles. */
-.dr-covers-head {
-  margin-top: var(--dr-space-2);
-}
-
-.dr-covers-head + .dr-grid {
-  margin-bottom: var(--dr-space-5);
 }
 
 /* A heading over a group of covers, as a shelf's is. */
@@ -369,81 +320,6 @@
 
 .dr-tile-group-head:first-of-type {
   margin-top: 0;
-}
-
-/* An album's panels: tabs in a quiet row, the chosen one underlined. */
-.dr-album-panels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-1) calc(var(--dr-u) * 5);
-  margin: var(--dr-space-1) 0 calc(var(--dr-u) * 4.5);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.dr-panel-tab {
-  display: inline-flex;
-  align-items: baseline;
-  gap: calc(var(--dr-u) * 1.5);
-  padding: calc(var(--dr-u) * 1.5) 0 var(--dr-space-2);
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.dr-panel-tab.is-active {
-  color: var(--text-normal);
-  border-bottom-color: var(--text-accent);
-}
-
-.dr-panel-tab:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-  border-radius: var(--dr-radius-sm);
-}
-
-.dr-panel-count {
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal, 400);
-  color: var(--text-faint);
-}
-
-@media (any-hover: hover) {
-  .dr-panel-tab:hover {
-    color: var(--text-normal);
-  }
-}
-
-/* Notes linked to but not written: a name, and where it's linked from. */
-.dr-gap-row {
-  display: flex;
-  align-items: baseline;
-  gap: calc(var(--dr-u) * 2.5);
-  padding: var(--dr-space-2) var(--dr-space-3);
-  border-radius: var(--dr-radius-sm);
-  cursor: pointer;
-}
-
-.dr-gap-name {
-  color: var(--text-normal);
-}
-
-.dr-gap-from {
-  font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
-}
-
-.dr-gap-row:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-@media (any-hover: hover) {
-  .dr-gap-row:hover {
-    background-color: var(--background-modifier-hover);
-  }
 }
 
 /* The library report, and the inbox: quiet rows to go through. */
@@ -671,8 +547,7 @@
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
-/* A note linked from elsewhere, and where an inbox note seems to belong: a small, quiet button. */
-.dr-linked-take,
+/* Where an inbox note seems to belong: a small, quiet button. */
 .dr-inbox-suggest {
   flex: 0 0 auto;
   margin-left: auto;
@@ -685,7 +560,6 @@
   white-space: nowrap;
 }
 
-.dr-linked-take:focus-visible,
 .dr-inbox-suggest:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
@@ -696,7 +570,6 @@
     background-color: var(--background-modifier-hover);
   }
 
-  .dr-linked-take:hover,
   .dr-inbox-suggest:hover {
     color: var(--text-normal);
     border-color: var(--text-faint);
@@ -709,9 +582,7 @@
 .dr-lib-row,
 .dr-report-row,
 .dr-inbox-row,
-.dr-gap-row,
-.dr-tree-row,
-.dr-panel-tab {
+.dr-tree-row {
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
 }
 

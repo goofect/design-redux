@@ -310,13 +310,10 @@ export class BrowseAlbum extends BrowsePreview {
     if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
   }
 
-  /** A folder's PDFs: under their own heading, after its notes, each a row without a number. */
+  /** A folder's PDFs: after its notes, in a list of their own, each a row without a number. */
   renderPdfs(root, pdfs, album) {
     const list = root.createDiv({ cls: 'dr-tracks dr-pdf-list' });
     roveFocus(list, '.dr-track');
-    const head = list.createDiv({ cls: 'dr-disc' });
-    head.createSpan({ cls: 'dr-disc-title', text: 'PDFs' });
-    head.createSpan({ cls: 'dr-disc-count', text: pdfs.length === 1 ? '1 PDF' : `${pdfs.length} PDFs` });
     const key = `pdfs:${album ? album.path : ''}`;
     const limit = this.limitFrom('discNoteLimit', 10);
     const shown = this.expanded.has(key) ? pdfs : pdfs.slice(0, limit);
