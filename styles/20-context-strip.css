@@ -227,9 +227,9 @@ body.dr-single-area
  * come back for as long as it's away.
  */
 
-body.dr-strip-active:not(.is-phone) .view-header-nav-buttons,
-body.dr-strip-active:not(.is-phone) .view-header .dr-props-trigger,
-body.dr-strip-active:not(.dr-typing) .dr-strip-dupe {
+body.dr-strip-up:not(.is-phone) .view-header-nav-buttons,
+body.dr-strip-up:not(.is-phone) .view-header .dr-props-trigger,
+body.dr-strip-up:not(.dr-typing) .dr-strip-dupe {
   display: none;
 }
 

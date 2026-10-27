@@ -7,7 +7,7 @@
  * where those controls went.
  */
 
-body.dr-single-area.dr-strip-active
+body.dr-single-area.dr-strip-up
   .workspace-split.mod-root
   .workspace-leaf-content[data-type="markdown"]
   > .view-header {

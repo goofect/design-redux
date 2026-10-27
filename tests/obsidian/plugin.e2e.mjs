@@ -434,7 +434,7 @@ describe('Design Redux in Obsidian', function () {
   it('keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text', async function () {
     const started = await browser.executeObsidian(({ app }) => (app.vault && typeof app.vault.getConfig === 'function' ? app.vault.getConfig('theme') : null) || 'moonstone');
     // The album page, the library beside it; covers are measured on the home screen's tiles.
-    const covers = await browser.executeObsidian(async ({ plugins }) => {
+    const covers = await browser.executeObsidian(async ({ app, plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       if (typeof library.reveal === 'function') await library.reveal();
       await library.browseMode({ mode: 'home' });
@@ -442,6 +442,8 @@ describe('Design Redux in Obsidian', function () {
       const page = document.querySelector('.workspace-leaf.mod-active .dr-browse') || document.querySelector('.dr-browse');
       const tiles = Array.from(page.querySelectorAll('.dr-card-art, .dr-pick-art')).filter((c) => c.offsetWidth > 0);
       await library.browseMode({ mode: 'folder', path: 'Politics' });
+      // A note open beside it, so the strip — shown only inside a note — has buttons to measure.
+      await app.workspace.getLeaf('split').openFile(app.vault.getFileByPath('Politics/Anarchy.md'));
       return tiles.map((c) => Math.abs(c.offsetWidth - c.offsetHeight));
     });
     expect(covers.length).toBeGreaterThan(0);
@@ -495,6 +497,7 @@ describe('Design Redux in Obsidian', function () {
       };
     }, theme, look, density);
     const check = (m, label) => {
+      expect([label, m.buttons.length > 0]).toEqual([label, true]);
       m.buttons.forEach(([w, h]) => expect([label, w, h]).toEqual([label, m.control, m.control]));
       m.rows.forEach(([min, h]) => expect([label, h >= min]).toEqual([label, true]));
       expect([label, m.title >= 4.5, m.meta >= 4.5]).toEqual([label, true, true]);
@@ -2257,11 +2260,24 @@ describe('Design Redux in Obsidian', function () {
       const [W, M, I, C, R] = names;
       const view = app.workspace.getLeavesOfType('graph')[0].view;
       const r = view.renderer;
+      // Hovered until the fade is done — every node's alpha unchanged for
+      // ten frames running — not for a set number of frames: on a slow
+      // machine the animation takes longer. At most six seconds.
       const hover = async (id) => {
         r.highlightNode = r.nodeLookup[id];
-        for (let i = 0; i < 90; i++) {
+        const alphas = () => Object.values(r.nodeLookup).map((n) => Math.round(n.fadeAlpha * 100)).join(',');
+        let last = '';
+        let still = 0;
+        let frames = 0;
+        const end = Date.now() + 6000;
+        // Thirty frames at least, so a fade slow to start isn't taken for one done.
+        while ((still < 10 || frames < 30) && Date.now() < end) {
+          frames++;
           r.changed();
           await new Promise((res) => requestAnimationFrame(res));
+          const now = alphas();
+          still = now === last ? still + 1 : 0;
+          last = now;
         }
       };
       const line = (a, b) => r.links.find((l) => l.source.id === a && l.target.id === b);
