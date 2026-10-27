@@ -135,26 +135,3 @@ body.dr-look-apple .dr-card.is-selected .dr-card-art {
 body.dr-look-apple :is(.dr-track, .dr-tr).is-selected {
   background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
 }
-
-/* The preview: cover, title, one line, Open / Reveal / More. */
-body.dr-look-apple .dr-preview-art {
-  box-shadow: none;
-}
-
-body.dr-look-apple .dr-preview-title {
-  font-size: var(--dr-type-headline);
-  font-weight: 600;
-}
-
-body.dr-look-apple .dr-preview-lead {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-body.dr-look-apple :is(.dr-preview-about, .dr-preview-facts) {
-  display: none;
-}
-

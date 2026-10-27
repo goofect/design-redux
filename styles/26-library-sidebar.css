@@ -385,6 +385,12 @@ body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
   width: 100%;
 }
 
+textarea.dr-name-input {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.45;
+}
+
 /* Properties to copy or paste, each ticked or not; a paste says what each
  * would do — added, unchanged, joined, replacing, or kept as it is. */
 .dr-paste-mode {

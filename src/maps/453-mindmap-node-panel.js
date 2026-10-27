@@ -26,12 +26,20 @@ function attrText(v) {
 }
 
 export class NodeSection extends PanelSection {
+  /** Among the map's note's sections, the node picked; or, given `map` and `node`, that node, kept while pinned. */
+  constructor(panel, map = null, node = null) {
+    super(panel);
+    this.map = map;
+    this.node = node;
+  }
+
   get cls() {
     return 'dr-node-section';
   }
 
   /** The map the panel was opened from, if it's this note's. */
   get view() {
+    if (this.map) return this.map;
     const v = this.panel.leaf && this.panel.leaf.view;
     return v instanceof MindMapView && v.file === this.file ? v : null;
   }
@@ -39,8 +47,14 @@ export class NodeSection extends PanelSection {
   render() {
     const view = this.view;
     if (!view || !view.model) return;
-    this.renderLabel('Node');
-    const n = view.selected ? nodeById(view.model, view.selected) : null;
+    const id = this.node || view.selected;
+    const n = id ? nodeById(view.model, id) : null;
+    if (this.node && !n) {
+      this.containerEl.createDiv({ cls: 'dr-empty', text: 'This node is no longer on the map.' });
+      return;
+    }
+    if (this.node) this.renderIdentity(view, n);
+    else this.renderLabel('Node');
     if (!n) {
       this.containerEl.createDiv({ cls: 'dr-empty', text: 'Select a node on the map to see it here.' });
       return;
@@ -97,6 +111,18 @@ export class NodeSection extends PanelSection {
       make.addEventListener('click', () => view.branchToNote(n.id));
     }
   }
+
+  /** What it is, as a note's head says it: a node has no cover, so its kind in its place; and the note it is, apart from it. */
+  renderIdentity(view, n) {
+    const head = this.containerEl.createDiv({ cls: 'dr-props-head dr-props-identity' });
+    const art = head.createDiv({ cls: 'dr-props-art is-blank', attr: { 'aria-hidden': 'true' } });
+    setIcon(art.createSpan({ cls: 'dr-card-glyph' }), n === view.model.root ? 'circle-dot' : 'git-commit-horizontal');
+    const info = head.createDiv({ cls: 'dr-props-info' });
+    info.createDiv({ cls: 'dr-props-title', text: nodeLabel(n) || 'Untitled' });
+    const where = view.file ? view.file.basename : 'this map';
+    const linked = view.linkedNote(n);
+    info.createDiv({ cls: 'dr-props-meta', text: linked ? `A node on ${where} · its note, ${linked.basename}` : `A node on ${where}` });
+  }
 }
 
 /** The notes that link to a node by its ^id: of those linking to the map, the ones whose link names it. */
@@ -122,7 +148,17 @@ export function linkingNotes(app, plugin, mapFile, n) {
 export class MindMapNodePanel extends MindMapLinked {
   /** What the note panel is about on a map: its note. */
   panelTarget() {
-    return this.file ? { file: this.file } : { none: 'This map has no file yet.' };
+    if (!this.file) return { none: 'This map has no file yet.' };
+    // A node picked: the inspector is about it, apart from the map's note.
+    const n = this.selected && this.model ? nodeById(this.model, this.selected) : null;
+    return n ? { file: this.file, node: n.id, map: this } : { file: this.file };
+  }
+
+  /** The inspector about one of its nodes: drawn here, as a section kept on that node. */
+  drawNodeInspector(panel, el, id) {
+    const section = new NodeSection(panel, this, id);
+    section.mount(el, this.file);
+    return [section];
   }
 
   /** The note panel opened, or closed, against the bar's button. */
@@ -132,7 +168,11 @@ export class MindMapNodePanel extends MindMapLinked {
 
   /** The panel told the node it shows — or the map — changed. */
   panelChanged() {
-    if (this.app && this.app.workspace && typeof this.app.workspace.trigger === 'function') this.app.workspace.trigger('design-redux:panel-changed', this.file);
+    const ws = this.app && this.app.workspace;
+    if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:panel-changed', this.file);
+    // Another node picked, in the tab worked in: the inspector follows it, unless pinned.
+    const coordinator = this.plugin && this.plugin.coordinator;
+    if (coordinator && ws && ws.activeLeaf === this.leaf) coordinator.look(this.leaf);
   }
 }
 

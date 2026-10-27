@@ -9,70 +9,30 @@
   padding-bottom: var(--dr-space-3);
 }
 
-.dr-preview-art {
-  position: relative;
-  aspect-ratio: 1;
-  overflow: hidden;
-  margin-bottom: var(--dr-space-3);
-  border-radius: var(--dr-radius-cover);
-  background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-sm);
-}
-
-.dr-preview-art img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-preview-title {
-  color: var(--text-normal);
-  font-size: var(--dr-heading-size, 1.25em);
-  font-weight: var(--dr-display-weight, var(--font-semibold, 600));
-  line-height: 1.25;
-  overflow-wrap: anywhere;
-}
-
-.dr-preview-lead {
-  margin-top: 2px;
-  color: var(--text-accent);
-  font-size: var(--font-ui-small);
-}
-
+/* What it's for, in line with the head's name above it; clicked, it's
+   changed. With none yet, a quiet line offering to write one. */
 .dr-preview-about {
-  margin-top: var(--dr-space-2);
+  margin: var(--dr-space-2) var(--dr-space-3) var(--dr-space-3);
+  border-radius: var(--dr-radius-sm);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.45;
+  cursor: pointer;
 }
 
-.dr-preview-facts {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--dr-space-1) var(--dr-space-3);
-  margin: var(--dr-space-3) 0;
-  font-size: var(--font-ui-small);
-}
-
-.dr-preview-fact {
-  display: contents;
-}
-
-.dr-preview-label {
+.dr-preview-about.is-empty {
   color: var(--text-faint);
 }
 
-.dr-preview-value {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-normal);
+.dr-preview-about:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
 }
 
-.dr-preview-value.is-link {
-  color: var(--text-accent);
-  cursor: pointer;
+@media (any-hover: hover) {
+  .dr-preview-about:hover {
+    color: var(--text-normal);
+  }
 }
 
 .dr-preview-actions {
@@ -83,12 +43,6 @@
 
 .dr-preview-btn.is-active {
   color: var(--text-accent);
-}
-
-@media (any-hover: hover) {
-  .dr-preview-value.is-link:hover {
-    text-decoration: underline;
-  }
 }
 
 /* The note page: its album above its title, one grey line under it, its properties as chips, shelves at its end. */

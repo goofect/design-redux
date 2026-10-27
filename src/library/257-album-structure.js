@@ -31,7 +31,7 @@ import { PanelSection } from '../core/082-panel-section.js';
 import { ALBUM_RECENTS_FROM } from './110-browse-screens.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
-import { ComparePicker, FolderPicker } from '../ui/230-pickers.js';
+import { ComparePicker, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 
 /* The folder note properties an album is read from; each can be given another name in settings, so none has to clash with your own. */
 export const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured', layout: 'layout' };
@@ -159,6 +159,7 @@ export class AlbumStructure extends Feature {
   actions() {
     return [
       { id: 'album-set-type', name: 'Set what kind of collection this is…', icon: 'shapes', when: () => this.enabled && !!this.currentFolder(), run: () => this.chooseType(this.currentFolder()) },
+      { id: 'album-set-description', name: 'Describe this collection…', icon: 'align-left', when: () => this.enabled && !!this.currentFolder(), run: () => this.chooseDescription(this.currentFolder()) },
       { id: 'album-include-note', name: 'Show this note in another collection too…', icon: 'folder-input', on: 'note', menu: false, when: () => this.enabled, run: (ctx) => this.chooseAlbumFor(ctx.file) },
     ];
   }
@@ -453,6 +454,22 @@ export class AlbumStructure extends Feature {
     return this.setProperty(folder, ALBUM_KEYS.type, type || '');
   }
 
+  /** What the album's for, in a line or two: its folder note's description, or none once emptied. `done` gets the new text. */
+  chooseDescription(folder, done) {
+    if (!folder || (folder.isRoot && folder.isRoot())) return;
+    const now = this.info(folder).description;
+    new NamePrompt(
+      this.app,
+      now ? `Edit ${folder.name}’s description` : `Describe ${folder.name}`,
+      'What this collection is for',
+      async (text) => {
+        if (text === now) return;
+        if ((await this.setProperty(folder, ALBUM_KEYS.description, text)) && done) done(text);
+      },
+      { value: now, multiline: true, allowEmpty: true, button: 'Save' }
+    ).open();
+  }
+
   chooseType(folder) {
     if (!folder) return;
     const now = this.info(folder).type;
@@ -607,11 +624,17 @@ export class AlbumStructure extends Feature {
     );
   }
 
-  /** On a folder's menu: what kind of album it is, and how it opens. */
+  /** On a folder's menu: what it's for, what kind of album it is, and how it opens. */
   addFolderItems(menu, folder, sectioned, redraw) {
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return;
     const info = this.info(folder);
     const now = info.type;
+    menu.addItem((item) =>
+      sectioned(item, 'action')
+        .setTitle(info.description ? 'Edit description…' : 'Add a description…')
+        .setIcon('align-left')
+        .onClick(() => this.chooseDescription(folder, redraw))
+    );
     menuGroup(
       menu,
       'Collection layout',
