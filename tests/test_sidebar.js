@@ -60,7 +60,8 @@ class Menu {
     const item = { title: '', icon: '', click: null };
     item.setTitle = (t) => { item.title = t; return item; };
     item.setIcon = (i) => { item.icon = i; return item; };
-    item.setChecked = () => item;
+    item.setChecked = (c) => { item.checked = c; return item; };
+    item.setSection = (sec) => { item.section = sec; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item);
     this.items.push(item);
@@ -320,9 +321,34 @@ t('the chevron opens pins in place without leaving the page', () => {
     .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   assert.strictEqual(navigated, false, 'chevron also navigated');
   const nested = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-nested'));
-  assert.deepStrictEqual(nested.map((r) => r.textContent), ['Books Folder', 'Home']);
+  assert.deepStrictEqual(nested.map((r) => r.querySelector('.dr-lib-label').textContent), ['Books Folder', 'Home']);
   assert.strictEqual(saved.pop().pinsExpanded, true);
   assert.ok(view.contentEl.querySelector('.dr-lib-disclosure.is-open'));
+});
+
+t('what is pinned shows its artwork, never a blank, and a line beneath: what a folder holds, where a note lives', () => {
+  const { view, saved } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], files['Home.md']] });
+  const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
+  assert.strictEqual(rows.length, 2, 'pinned rows, and only those, are pins');
+  rows.forEach((r) => {
+    const art = r.querySelector('.dr-lib-icon');
+    assert.ok(art.classList.contains('has-art') && art.childNodes.length, `${r.dataset.path}: artwork, or art made for it`);
+  });
+  assert.match(rows[0].querySelector('.dr-lib-sub').textContent, /^\d+ notes?$/, 'a folder: how much it holds');
+  assert.ok(!rows[1].querySelector('.dr-lib-sub'), 'a note at the top of the vault: nothing to say where it is');
+  assert.ok(!view.contentEl.querySelector('.dr-lib-row:not(.is-pin) .dr-lib-sub'), 'other rows stay one line');
+  // Drawn again, nothing changed: the same rows, so the covers don't flash.
+  const before = rows[0];
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row.is-pin'), before);
+  // Large covers, from the Pinned row's menu.
+  const pinsRow = view.contentEl.querySelector('.dr-lib-row[data-group="pins"]');
+  pinsRow.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  const item = lastMenu.items.find((i) => i.title === 'Large covers');
+  assert.ok(item && item.section === 'action' && item.checked === false);
+  item.click();
+  assert.strictEqual(saved.pop().pinsLarge, true);
+  assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-pin.is-large').length, 2);
 });
 
 t('clicking Pinned opens and closes it, and goes nowhere', () => {

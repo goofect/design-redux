@@ -180,6 +180,50 @@
   white-space: nowrap;
 }
 
+/* What's pinned: its artwork at a size you can tell it by, its name, and
+   beneath it a quiet line — how much a folder holds, where a note lives.
+   Large covers, from the Pinned row's menu, as an album's own shelf has them. */
+.dr-lib-row.is-pin {
+  padding-top: var(--dr-space-1);
+  padding-bottom: var(--dr-space-1);
+}
+
+.dr-lib-row.is-pin .dr-lib-icon {
+  flex: 0 0 calc(var(--dr-u) * 9);
+  width: calc(var(--dr-u) * 9);
+  height: calc(var(--dr-u) * 9);
+  border-radius: var(--dr-radius-sm);
+  overflow: hidden;
+}
+
+.dr-lib-row.is-pin.is-large .dr-lib-icon {
+  flex-basis: calc(var(--dr-u) * 13);
+  width: calc(var(--dr-u) * 13);
+  height: calc(var(--dr-u) * 13);
+  border-radius: var(--dr-radius-md);
+}
+
+.dr-lib-row.is-pin .dr-lib-icon > * {
+  width: 100%;
+  height: 100%;
+}
+
+.dr-lib-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dr-lib-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+}
+
 .dr-lib-empty {
   padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
   color: var(--text-faint);

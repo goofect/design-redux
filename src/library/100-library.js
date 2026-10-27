@@ -7,9 +7,9 @@
 /* for when the whole shape matters.                                   */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
+import { ItemView, Menu, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, progressRing, showTargetMenu } from '../core/030-helpers-art.js';
+import { drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, progressRing, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -266,7 +266,7 @@ export class LibraryView extends ItemView {
   }
 
   /** A folder or file, with its artwork and its menu. */
-  targetRow(list, target, depth) {
+  targetRow(list, target, depth, pinned = false) {
     const menu = (evt, open) =>
       showTargetMenu(this.plugin, evt, target, {
         open: open,
@@ -276,10 +276,14 @@ export class LibraryView extends ItemView {
 
     if (target instanceof TFolder) {
       const open = () => this.browseMode({ mode: 'folder', path: target.path });
+      const n = libraryIndex(this.plugin).count(target);
       const row = this.row(list, {
         depth: depth,
         icon: 'folder',
         art: this.plugin.folderCoverSrc(target),
+        // Pinned, its own artwork — a cover, or one made for it — and how much it holds beneath its name.
+        draw: pinned ? (el) => drawFolderArt(this.plugin, el, target) : null,
+        sub: pinned ? (n === 1 ? '1 note' : `${n} notes`) : null,
         label: target.name,
         path: target.path,
         onClick: open,
@@ -294,16 +298,15 @@ export class LibraryView extends ItemView {
         if (ring) row.appendChild(ring);
       }
       // The Apple look: how many notes it holds, muted at the end, where no ring is.
-      if (!ring && isAppleLook()) {
-        const n = libraryIndex(this.plugin).count(target);
-        if (n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
-      }
+      if (!ring && !pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       return;
     }
     this.row(list, {
       depth: depth,
       icon: iconForFile(target),
       art: noteCoverSrc(this.plugin, target),
+      draw: pinned ? (el) => drawNoteArt(this.plugin, el, target) : null,
+      sub: pinned && target.parent && !(target.parent.isRoot && target.parent.isRoot()) ? target.parent.name : null,
       label: target.basename,
       path: target.path,
       onClick: () => this.openFile(target),
@@ -328,6 +331,7 @@ export class LibraryView extends ItemView {
       toggles: true,
       onClick: toggle,
       disclosure: { open: open, toggle: toggle },
+      onMenu: (evt) => this.pinsMenu(evt),
     });
     if (!open) return;
 
@@ -337,7 +341,26 @@ export class LibraryView extends ItemView {
       list.createDiv({ cls: 'dr-lib-empty', text: 'Nothing pinned yet' });
       return;
     }
-    items.forEach((target) => this.targetRow(list, target, 1));
+    items.forEach((target) => this.targetRow(list, target, 1, true));
+  }
+
+  /** The Pinned row's own menu: its covers small, a row each, or large, the way an album's are. */
+  pinsMenu(evt) {
+    const settings = this.plugin.settings;
+    const menu = new Menu();
+    menu.addItem((i) =>
+      i
+        .setSection('action')
+        .setTitle('Large covers')
+        .setIcon('image')
+        .setChecked(!!settings.pinsLarge)
+        .onClick(() => {
+          settings.pinsLarge = !settings.pinsLarge;
+          this.plugin.saveData(settings);
+          this.render();
+        })
+    );
+    showMenuAt(menu, evt);
   }
 
   togglePins() {
@@ -385,6 +408,10 @@ export class LibraryView extends ItemView {
   row(parentEl, spec) {
     const el = parentEl.createDiv({ cls: 'dr-lib-row' });
     if (spec.depth) el.addClass('is-nested');
+    if (spec.draw) {
+      el.addClass('is-pin');
+      if (this.plugin.settings.pinsLarge) el.addClass('is-large');
+    }
     if (spec.path) el.dataset.path = spec.path;
     if (spec.screen) el.dataset.screen = spec.screen;
     if (spec.property) el.dataset.property = spec.property;
@@ -413,14 +440,21 @@ export class LibraryView extends ItemView {
     }
 
     const icon = el.createSpan({ cls: 'dr-lib-icon' });
-    if (spec.art) {
+    if (spec.draw) {
+      icon.addClass('has-art');
+      spec.draw(icon);
+    } else if (spec.art) {
       icon.addClass('has-art');
       fillArt(icon, spec.art, spec.icon);
     } else {
       setIcon(icon, spec.icon);
     }
 
-    el.createSpan({ cls: 'dr-lib-label', text: spec.label });
+    if (spec.sub) {
+      const text = el.createSpan({ cls: 'dr-lib-text' });
+      text.createSpan({ cls: 'dr-lib-label', text: spec.label });
+      text.createSpan({ cls: 'dr-lib-sub', text: spec.sub });
+    } else el.createSpan({ cls: 'dr-lib-label', text: spec.label });
     onActivate(el, (evt) => {
       spec.onClick(evt);
       // On a phone the library is a drawer over the page, so it gets

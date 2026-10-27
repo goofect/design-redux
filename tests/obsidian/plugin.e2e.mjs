@@ -18,7 +18,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'library'];
+const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'library', 'library-pins'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -316,6 +316,29 @@ describe('Design Redux in Obsidian', function () {
     expect([report.panel, report.panelSample]).toEqual([0, []]);
     expect([report.page, report.pageSample]).toEqual([0, []]);
     await shot('library');
+
+    // Pinned, opened: artwork beside each name, and a line beneath it.
+    const pinned = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const targets = ['Politics', 'Politics/Anarchy.md'].map((p) => app.vault.getAbstractFileByPath(p)).filter(Boolean);
+      const added = targets.filter((t) => !plugin.pins.has(t) && plugin.pins.toggle(t));
+      const was = plugin.settings.pinsExpanded;
+      plugin.settings.pinsExpanded = true;
+      const leaf = app.workspace.getLeavesOfType('design-redux-library').find((l) => l.view.containerEl.isShown());
+      leaf.view.render();
+      await new Promise((r) => setTimeout(r, 300));
+      const rows = Array.from(leaf.view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
+      return { added: added.map((t) => t.path), was, rows: rows.map((r) => [r.querySelector('.dr-lib-label').textContent, !!r.querySelector('.dr-lib-icon.has-art > *'), (r.querySelector('.dr-lib-sub') || {}).textContent || '']) };
+    });
+    expect(pinned.rows.length).toBeGreaterThanOrEqual(2);
+    pinned.rows.forEach(([, art]) => expect(art).toBe(true));
+    await shot('library-pins');
+    await browser.executeObsidian(async ({ app, plugins }, put) => {
+      const plugin = plugins.designRedux;
+      put.added.forEach((p) => plugin.pins.toggle(app.vault.getAbstractFileByPath(p)));
+      plugin.settings.pinsExpanded = put.was;
+      app.workspace.getLeavesOfType('design-redux-library').forEach((l) => l.view.render());
+    }, pinned);
   });
 
   it('keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text', async function () {
