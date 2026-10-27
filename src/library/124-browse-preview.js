@@ -61,21 +61,6 @@ export class BrowsePreview extends BrowseRows {
     btn.setAttribute('aria-label', on ? 'Hide the inspector' : 'Show what’s picked in the inspector');
   }
 
-  /** Name, kind, then a few facts, each label beside its value; one can lead somewhere. */
-  previewFacts(el, facts) {
-    const list = el.createDiv({ cls: 'dr-preview-facts' });
-    facts.filter((f) => f && f[1]).forEach(([label, value, go]) => {
-      const row = list.createDiv({ cls: 'dr-preview-fact' });
-      row.createDiv({ cls: 'dr-preview-label', text: label });
-      const v = row.createDiv({ cls: 'dr-preview-value', text: value });
-      if (go) {
-        asButton(v, `${label}: ${value}`);
-        v.addClass('is-link');
-        onActivate(v, go);
-      }
-    });
-  }
-
   previewButtons(el, buttons) {
     const bar = el.createDiv({ cls: 'dr-preview-actions' });
     buttons.filter(Boolean).forEach(([icon, label, run]) => {
@@ -97,20 +82,32 @@ export class BrowsePreview extends BrowseRows {
     ]);
   }
 
+  /**
+   * An album as the inspector opens on it, the way a note does: its cover
+   * beside its name, what kind of album in the accent, and a line on how
+   * much it holds and where it is — that last a way there. Then what it's
+   * about, and Open and More.
+   */
   previewAlbum(el, folder) {
-    drawFolderArt(this.plugin, el.createDiv({ cls: 'dr-preview-art' }), folder);
+    const head = el.createDiv({ cls: 'dr-props-head dr-props-identity' });
+    drawFolderArt(this.plugin, head.createDiv({ cls: 'dr-props-art' }), folder);
+    const info = head.createDiv({ cls: 'dr-props-info' });
     const root = !!(folder.isRoot && folder.isRoot());
-    el.createDiv({ cls: 'dr-preview-title', text: root ? this.app.vault.getName() : folder.name });
+    info.createDiv({ cls: 'dr-props-title', text: root ? this.app.vault.getName() : folder.name });
     const kind = albumKindOf(this.plugin, folder);
-    el.createDiv({ cls: 'dr-preview-lead', text: kind ? kind.label : 'Collection' });
+    info.createDiv({ cls: 'dr-props-lead', text: kind ? kind.label : 'Collection' });
+    const meta = info.createDiv({ cls: 'dr-props-meta' });
+    meta.createSpan({ text: this.countLabel(folder) });
+    const parent = folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent : null;
+    if (parent) {
+      meta.createSpan({ text: '  ·  ' });
+      const up = meta.createSpan({ cls: 'dr-props-meta-link', text: parent.name });
+      asButton(up, `In ${parent.name}: open it`);
+      onActivate(up, () => this.openFolder(parent));
+    }
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
     const about = structure && structure.enabled ? structure.info(folder).description : '';
     if (about) el.createDiv({ cls: 'dr-preview-about', text: about });
-    const parent = folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent : null;
-    this.previewFacts(el, [
-      ['Holds', this.countLabel(folder)],
-      ['In', parent ? parent.name : 'The vault', parent ? () => this.openFolder(parent) : null],
-    ]);
     this.previewButtons(el, [
       ['book-open', 'Open', () => this.openFolder(folder)],
       ['ellipsis', 'More', (evt) => this.folderMenu(evt, folder, this.folderCover(folder))],

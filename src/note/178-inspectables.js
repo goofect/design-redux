@@ -168,7 +168,7 @@ class FolderInspectable extends Inspectable {
     const brief = el.createDiv({ cls: 'dr-inspector-brief' });
     const view = libraryPage(this.plugin.app);
     if (view) view.previewAlbum(brief, folder);
-    else brief.createDiv({ cls: 'dr-preview-title', text: folder.name });
+    else brief.createDiv({ cls: 'dr-props-head dr-props-identity' }).createDiv({ cls: 'dr-props-info' }).createDiv({ cls: 'dr-props-title', text: folder.name });
     return super.draw(panel, el);
   }
 }

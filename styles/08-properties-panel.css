@@ -334,6 +334,24 @@ body.is-mobile .dr-props-popup .dr-row-more {
   white-space: normal;
 }
 
+/* An album's meta line names where it is, and takes you there. */
+.dr-props-popup .dr-props-meta-link {
+  color: var(--text-accent);
+  cursor: pointer;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-props-popup .dr-props-meta-link:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 1px;
+}
+
+@media (any-hover: hover) {
+  .dr-props-popup .dr-props-meta-link:hover {
+    text-decoration: underline;
+  }
+}
+
 .dr-props-popup .dr-props-toggle {
   display: flex;
   flex: 1 1 auto;

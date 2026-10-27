@@ -1715,8 +1715,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
     el = document.createElement('div');
     view.previewAlbum(el, app.vault.getFolderByPath('IR'));
-    assert.deepStrictEqual(['.dr-preview-title', '.dr-preview-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
-    assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-preview-label')).map((e) => e.textContent), ['Holds', 'In']);
+    // As a note's head: cover, name, kind, and how much it holds.
+    assert.ok(el.querySelector('.dr-props-identity .dr-props-art'));
+    assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
+    assert.strictEqual(el.querySelector('.dr-props-meta').textContent, view.countLabel(app.vault.getFolderByPath('IR')));
+    assert.deepStrictEqual(buttons(el), ['Open', 'More']);
+    // One inside another: where it is, a way there.
+    el = document.createElement('div');
+    view.previewAlbum(el, app.vault.getFolderByPath('IR/Theories'));
+    const up = el.querySelector('.dr-props-meta-link');
+    assert.strictEqual(up.textContent, 'IR');
+    went.length = 0;
+    click(up);
+    assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR']);
 
     // Space on a note's row: a look at it, Obsidian's page preview; on an album, nothing.
     const looked = [];
