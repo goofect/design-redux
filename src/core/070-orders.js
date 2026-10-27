@@ -239,6 +239,13 @@ export const SETTINGS_MIGRATIONS = [
       Object.assign(saved, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
     },
   },
+  {
+    // The progress rings on covers and sidebar rows go, and their switch with them.
+    to: 18,
+    run(saved) {
+      delete saved.albumProgressRing;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

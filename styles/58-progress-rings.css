@@ -1,82 +1,8 @@
-/* Progress rings ---------------------------------------------------------------
+/* Study and lengths ------------------------------------------------------------
  *
- * On a collection's cover, how much of it you've read: a ring while you're
- * partway, a tick once it's all read. Not on covers too small to hold one.
+ * A thin note's length, a note's study grade, highlighted passages and
+ * the quiz.
  */
-
-.dr-progress-ring {
-  position: absolute;
-  right: calc(var(--dr-u) * 1.5);
-  bottom: calc(var(--dr-u) * 1.5);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: calc(var(--dr-u) * 5.5);
-  height: calc(var(--dr-u) * 5.5);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.45);
-  color: #fff;
-  pointer-events: none;
-}
-
-.dr-progress-ring svg {
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-
-.dr-progress-ring circle {
-  fill: none;
-  stroke-width: 2.5;
-  stroke-linecap: round;
-}
-
-.dr-ring-track {
-  stroke: rgba(255, 255, 255, 0.3);
-}
-
-.dr-ring-fill {
-  stroke: var(--interactive-accent);
-}
-
-.dr-progress-ring.is-done {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-}
-
-.dr-progress-ring.is-done .svg-icon {
-  width: 60%;
-  height: 60%;
-  stroke-width: 3;
-}
-
-.dr-detail-art .dr-progress-ring {
-  width: calc(var(--dr-u) * 8);
-  height: calc(var(--dr-u) * 8);
-  right: var(--dr-space-3);
-  bottom: var(--dr-space-3);
-}
-
-/* In a sidebar row: small, at the row's end, in the accent on no backing. */
-.dr-lib-row .dr-progress-ring {
-  position: static;
-  flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-  margin-inline-start: auto;
-  background: none;
-}
-
-.dr-lib-row .dr-ring-track {
-  stroke: var(--background-modifier-border);
-}
-
-.dr-detail-glow .dr-progress-ring,
-.dr-strip-art .dr-progress-ring,
-.dr-search-prop-art .dr-progress-ring {
-  display: none;
-}
 
 /* A note too thin to be much use yet: its length underlined. */
 .dr-track-length.is-thin {
