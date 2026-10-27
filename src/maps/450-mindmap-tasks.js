@@ -13,7 +13,7 @@ import { Notice, setIcon } from 'obsidian';
 import { ChoicePicker, NamePrompt } from '../ui/230-pickers.js';
 import { nodeById } from '../tree/400-tree-model.js';
 import { setAttr } from '../tree/404-tree-ops.js';
-import { dayKey, dueState, openTaskSet, parseDayInput, setTaskDone, statusesOf, taskOf, taskProgress, toggleTask, untask } from '../tree/415-tree-tasks.js';
+import { dayKey, dueState, openTaskSet, parseDayInput, setTaskDone, statusesOf, taskOf, toggleTask, untask } from '../tree/415-tree-tasks.js';
 import { nodeLabel } from './423-mindmap-scene.js';
 import { MindMapFocus } from './441-mindmap-focus.js';
 
@@ -37,16 +37,10 @@ export class MindMapTasks extends MindMapFocus {
     return !this.plugin || this.plugin.settings.mindmapTasks !== false;
   }
 
-  /** How many tasks are done under each node, worked out once a layout: the map changed. */
-  countTasks() {
-    this.progress = this.model && this.tasksOn() ? taskProgress(this.model) : null;
-  }
-
   /** What of a node's task look can change without its text: so its card is drawn again when it does. */
   taskKey(n) {
     if (!this.tasksOn()) return '';
-    const p = this.progress && this.progress.get(n.id);
-    return `${n.attrs.status || ''}|${n.attrs.due || ''}|${dueState(n) || ''}|${p ? `${p.done}/${p.total}` : ''}`;
+    return `${n.attrs.status || ''}|${n.attrs.due || ''}|${dueState(n) || ''}`;
   }
 
   /** A task's box, before its text. */
@@ -76,14 +70,6 @@ export class MindMapTasks extends MindMapFocus {
         chip.createSpan({ text: dueLabel(n.attrs.due) });
         chip.setAttribute('aria-label', state === 'overdue' ? `Overdue: ${n.attrs.due}` : `Due ${n.attrs.due}`);
       }
-    }
-    const p = this.progress && this.progress.get(n.id);
-    if (p) {
-      const ring = el.createDiv({ cls: 'dr-mindmap-progress' });
-      ring.toggleClass('is-complete', p.done === p.total);
-      ring.style.setProperty('--dr-progress', (p.done / p.total).toFixed(3));
-      ring.setAttribute('aria-label', `${p.done} of ${p.total} done`);
-      ring.createSpan({ text: String(p.total - p.done || '✓') });
     }
   }
 

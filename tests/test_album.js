@@ -1723,7 +1723,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     };
     const cards = (title) => Array.from(shelf(title).querySelectorAll('.dr-card')).map((c) => `${c.querySelector('.dr-card-title').textContent} · ${(c.querySelector('.dr-card-sub') || {}).textContent}`);
     assert.deepStrictEqual(cards('Continue reading'), [`${notes[2].basename} · IR · 3 of ${notes.length}`], 'the note after the last one opened, with how far along');
-    assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress').style.getPropertyValue('--dr-progress'), (2 / notes.length).toFixed(4));
+    assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress'), null, 'no bar of how far along');
 
 
     // Your collections: smart albums, then albums that gather notes from elsewhere.

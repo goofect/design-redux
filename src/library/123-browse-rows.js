@@ -462,7 +462,7 @@ export class BrowseRows extends RowValues {
     items.forEach((item) => {
       if (item instanceof TFolder) view.folderCard(row, item);
       else if (item.draw) item.draw(row);
-      else if (item.file) view.fileCard(row, item.file, item.subtitle, item.progress);
+      else if (item.file) view.fileCard(row, item.file, item.subtitle);
       else view.fileCard(row, item);
     });
     this.arrows(head, row);
@@ -529,7 +529,7 @@ export class BrowseRows extends RowValues {
   }
 
   /** A single file as a tile: its cover, or an icon for its type. */
-  fileCard(grid, file, subtitle, progress) {
+  fileCard(grid, file, subtitle) {
     const card = this.card(
       grid,
       file.basename,
@@ -538,8 +538,6 @@ export class BrowseRows extends RowValues {
     card.dataset.path = file.path;
     const art = card.querySelector('.dr-card-art');
     drawNoteArt(this.plugin, art, file);
-    // How far along its album: a thin bar along the cover's foot.
-    if (progress > 0) art.createDiv({ cls: 'dr-card-progress' }).style.setProperty('--dr-progress', Math.min(1, progress).toFixed(4));
     this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
 
     this.pickOrOpen(card, { file }, (evt) => this.openFile(file, evt));

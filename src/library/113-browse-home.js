@@ -117,11 +117,11 @@ export class HomeScreen extends BrowseScreen {
       seen.add(album.path);
       const near = albumNeighbours(this.plugin, file);
       if (history && history.entry(file) && history.state(file) !== 'read' && keep(file) && !items.some((i) => i.file === file)) {
-        items.push({ file, subtitle: `${album.name} · ${near.index + 1} of ${near.total}`, progress: near.index / near.total });
+        items.push({ file, subtitle: `${album.name} · ${near.index + 1} of ${near.total}` });
         return;
       }
       if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
-      items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}`, progress: (near.index + 1) / near.total });
+      items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}` });
     });
     return items;
   }
