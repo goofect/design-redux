@@ -2147,6 +2147,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(written[1].album, 'reading list');
     await structure.setType(v.vault.getFolderByPath('IR'), '');
     assert.ok(!('album' in written[1]));
+    // What it's for: in the inspector's brief, and changed from there or from the album's menu.
+    app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); written = [file, fm]; };
+    const ir = v.vault.getFolderByPath('IR');
+    const brief = document.createElement('div');
+    view.previewAlbum(brief, ir);
+    const about = brief.querySelector('.dr-preview-about');
+    assert.deepStrictEqual([about.textContent, about.getAttribute('role')], ['How states deal with each other.', 'button']);
+    click(about);
+    let dialog = modals[modals.length - 1];
+    const box = dialog.contentEl.querySelector('textarea.dr-name-input');
+    assert.strictEqual(box.value, 'How states deal with each other.');
+    box.value = 'Power,\n  and order. ';
+    dialog.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.deepStrictEqual([written[0], written[1].description], [note, 'Power, and order.'], 'one line, written to the folder note');
+    assert.strictEqual(about.textContent, 'Power, and order.', 'shown at once');
+    // Emptied, it's taken away, and the brief offers to write one.
+    click(about);
+    dialog = modals[modals.length - 1];
+    dialog.contentEl.querySelector('textarea').value = '';
+    dialog.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.ok(!('description' in written[1]));
+    assert.deepStrictEqual([about.textContent, about.classList.contains('is-empty')], ['Add a description', true]);
+    const menu = new Menu();
+    structure.addFolderItems(menu, ir, (item) => item, () => {});
+    assert.ok(menu.items.some((i) => i.title === 'Add a description…'));
+    fms.get(note).description = 'Back.';
+    const menu2 = new Menu();
+    structure.addFolderItems(menu2, ir, (item) => item, () => {});
+    assert.ok(menu2.items.some((i) => i.title === 'Edit description…'));
     // Switched off: nothing of it shows.
     plugin.settings.albumStructure = false;
     Object.assign(view, { path: 'IR' });

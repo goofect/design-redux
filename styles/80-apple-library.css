@@ -139,9 +139,3 @@ body.dr-look-apple .dr-card.is-selected .dr-card-art {
 body.dr-look-apple :is(.dr-track, .dr-tr).is-selected {
   background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
 }
-
-/* The brief: the head, Open / Reveal / More; no more. */
-body.dr-look-apple .dr-preview-about {
-  display: none;
-}
-

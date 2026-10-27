@@ -106,12 +106,23 @@ export class BrowsePreview extends BrowseRows {
       onActivate(up, () => this.openFolder(parent));
     }
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
-    const about = structure && structure.enabled ? structure.info(folder).description : '';
-    if (about) el.createDiv({ cls: 'dr-preview-about', text: about });
+    if (structure && structure.enabled && !root) this.previewAbout(el, folder, structure);
     this.previewButtons(el, [
       ['book-open', 'Open', () => this.openFolder(folder)],
       ['ellipsis', 'More', (evt) => this.folderMenu(evt, folder, this.folderCover(folder))],
     ]);
+  }
+
+  /** What the album's for, beneath its head: clicked, it's changed; with none yet, a quiet way to write one. */
+  previewAbout(el, folder, structure) {
+    const about = el.createDiv({ cls: 'dr-preview-about' });
+    const draw = (text) => {
+      about.setText(text || 'Add a description');
+      about.toggleClass('is-empty', !text);
+      asButton(about, text ? `Edit the description: ${text}` : `Describe ${folder.name}`);
+    };
+    draw(structure.info(folder).description);
+    onActivate(about, () => structure.chooseDescription(folder, draw));
   }
 
   /** The note's own album, opened, with the note still picked in it. */

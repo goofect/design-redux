@@ -1465,9 +1465,9 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!head() && head().querySelector('.dr-props-title').textContent === 'Politics');
       const h = head();
       const art = h.querySelector('.dr-props-art').getBoundingClientRect();
-      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0 };
+      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (dock.view.containerEl.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
     });
-    expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true });
+    expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
     await shot('inspector-album');
     const opened = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
