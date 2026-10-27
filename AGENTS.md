@@ -42,7 +42,10 @@ Coffee N' Christmas.
   setting key without a migration.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest.
+  and the latest. One test saves UI snapshots (both sidebars, the Edit
+  tray, a narrow album, forced colours) to `ci-output/snapshots/`; CI
+  compares them with main's last (`tools/snapshot-diff.mjs`, the
+  `ci-snapshots` branch) and `tests/ci.sh` prints what changed.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
   the browse view, quiet links, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing

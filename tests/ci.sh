@@ -58,6 +58,12 @@ for f in $(git ls-tree --name-only origin/ci-results | grep -E 'timings\.txt$');
   fi
   echo "$now" > "$last"
 done
+# The UI snapshots against main's last: only what isn't unchanged
+# (pictures of each change are in snapshots/diff/ on the results branch).
+snaps=$(git show origin/ci-results:snapshots/diff/summary.txt 2>/dev/null | grep -v '^unchanged')
+if git show origin/ci-results:snapshots/diff/summary.txt >/dev/null 2>&1; then
+  if [ -n "$snaps" ]; then echo "snapshots against main:"; echo "$snaps" | sed 's/^/  /'; else echo "snapshots: as on main"; fi
+fi
 tag=$(git tag --contains "$sha" --sort=v:refname 2>/dev/null | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
 if [ -n "$tag" ]; then echo "released: $tag"; else echo "not released"; fi
 
