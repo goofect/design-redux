@@ -223,6 +223,49 @@ function panelFor(initial) {
     assert.strictEqual(pins.find('A.md').subpath, undefined, 'unpinning would remove the heading bookmark');
   });
 
+  await t('a pin whose note or folder has gone is listed, found again by its name, re-pinned in its place, or let go', () => {
+    const root = new TFolder('/');
+    const books = new TFolder('Archive/Books');
+    const moved = new TFile('Archive/Books/Moved.md');
+    const archive = new TFolder('Archive');
+    root.children = [archive];
+    archive.children = [books];
+    books.children = [moved];
+    const all = { '/': root, Archive: archive, 'Archive/Books': books, 'Archive/Books/Moved.md': moved };
+    let bookmarks = [
+      { type: 'folder', path: 'Books' },
+      { type: 'group', items: [{ type: 'file', path: 'Notes/Moved.md', title: 'Kept title' }] },
+      { type: 'file', path: 'Gone.md' },
+      { type: 'file', path: 'Gone.md', subpath: '#Heading' },
+      { type: 'file', path: 'Archive/Books/Moved.md', subpath: '#x' },
+    ];
+    const followed = [];
+    const instance = {
+      getBookmarks: () => bookmarks,
+      removeItem: (item) => {
+        const drop = (items) => items.filter((i) => i !== item).map((i) => (i.type === 'group' ? Object.assign(i, { items: drop(i.items) }) : i));
+        bookmarks = drop(bookmarks);
+      },
+      addItem: (item) => bookmarks.push(item),
+    };
+    const pins = new R.Pins({
+      orders: { followRename: (file, old) => followed.push([file.path, old]), arrangePins: (items) => items },
+      app: {
+        internalPlugins: { getPluginById: () => ({ enabled: true, instance }) },
+        vault: { getRoot: () => root, getAbstractFileByPath: (p) => all[p] || null, getFileByPath: (p) => (all[p] instanceof TFile ? all[p] : null), getFolderByPath: (p) => (all[p] instanceof TFolder ? all[p] : null) },
+      },
+    });
+    const missing = pins.missing();
+    assert.deepStrictEqual(missing.map((m) => [m.type, m.path, m.name]), [['folder', 'Books', 'Books'], ['file', 'Notes/Moved.md', 'Moved'], ['file', 'Gone.md', 'Gone']], 'a heading bookmark is not a pin');
+    assert.deepStrictEqual(missing.map((m) => pins.likely(m)), [books, moved, null], 'the one of its name, of its kind');
+    assert.strictEqual(pins.repoint(missing[1], moved), true);
+    assert.deepStrictEqual(bookmarks.filter((b) => b.path === 'Archive/Books/Moved.md' && !b.subpath), [{ type: 'file', path: 'Archive/Books/Moved.md', title: 'Kept title' }]);
+    assert.deepStrictEqual(followed, [['Archive/Books/Moved.md', 'Notes/Moved.md']], 'its place among the pins follows it');
+    assert.strictEqual(pins.forget(missing[2]), true);
+    assert.deepStrictEqual(pins.missing().map((m) => m.path), ['Books']);
+    assert.deepStrictEqual(pins.files(), [moved]);
+  });
+
   /* -- lists ------------------------------------------------------------- */
 
   const press = (text) => {

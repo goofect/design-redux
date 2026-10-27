@@ -8,6 +8,8 @@ body {
   /* A row under the pointer — the theme's own, everywhere — and one that's chosen or pressed. */
   --dr-hover: var(--background-modifier-hover);
   --dr-press: color-mix(in srgb, var(--text-normal) 9%, transparent);
+  /* Where you are, apart from what's under the pointer: the accent, softly. */
+  --dr-selected: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
   /* Floating things — popups, suggestions — over the page. */
   --dr-float-bg: color-mix(in srgb, var(--background-primary) 90%, transparent);
   --dr-float-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
