@@ -323,9 +323,8 @@ body:not(.dr-left-collapsed)
 
 /* Obsidian 1.14 shows the arrows from body:not(.is-mobile)
    .workspace-split.mod-primary-split .workspace-sidedock-vault-profile:
-   the split and the profile here outrank it. */
-.dr-apple-sidebar
-  .workspace-split
+   the split (whose own class this is) and the profile here outrank it. */
+.workspace-split.dr-apple-sidebar
   .workspace-sidedock-vault-profile
   .workspace-drawer-vault-switcher[data-dr-initial]
   .workspace-drawer-vault-switcher-icon {

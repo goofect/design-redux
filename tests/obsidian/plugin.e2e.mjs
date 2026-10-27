@@ -315,6 +315,12 @@ describe('Design Redux in Obsidian', function () {
     expect(report.body).toEqual([]);
     expect([report.panel, report.panelSample]).toEqual([0, []]);
     expect([report.page, report.pageSample]).toEqual([0, []]);
+    // The vault row: its initial in place of the switcher's arrows (1.14's own rule outranked ours once).
+    const arrows = await browser.execute(() => {
+      const icon = document.querySelector('.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-initial] .workspace-drawer-vault-switcher-icon');
+      return icon ? getComputedStyle(icon).display : null;
+    });
+    expect(arrows).toBe('none');
     await shot('library');
 
     // Pinned, opened: artwork beside each name, and a line beneath it.
