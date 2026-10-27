@@ -21,7 +21,49 @@ import { AlbumStructure } from './257-album-structure.js';
 export class BrowseRows extends RowValues {
   /* -- the list --------------------------------------------------- */
 
+  /**
+   * A note's row in a list. Drawn again with nothing it shows changed —
+   * a redraw for something elsewhere on the page — the row drawn last
+   * time is put back rather than made anew, so what it holds (focus, a
+   * cover, a value being changed) stays as it was.
+   */
   trackRow(list, file, index, nest) {
+    const sig = this.rowSignature(file, index, nest);
+    const kept = this.keptRows && this.keptRows.get(file.path);
+    if (kept && kept.file === file && kept.sig === sig && !kept.row.drUsed) {
+      kept.row.drUsed = true;
+      list.appendChild(kept.row);
+      const selection = this.plugin.selection;
+      kept.row.toggleClass('is-selected', !!selection && selection.holds(file));
+      if (this.rowsDrawn) this.rowsDrawn.set(file.path, kept);
+      return kept.row;
+    }
+    const row = this.drawTrack(list, file, index, nest);
+    row.drUsed = true;
+    if (this.rowsDrawn) this.rowsDrawn.set(file.path, { file, sig, row });
+    return row;
+  }
+
+  /** Everything a note's row shows, as one string: the same string, the same row. */
+  rowSignature(file, index, nest) {
+    const cache = this.app.metadataCache.getFileCache(file);
+    const reading = this.plugin.settings.readingHistory && file.extension === 'md' ? readingOf(this.plugin).state(file) : '';
+    return JSON.stringify([
+      this.mode,
+      index,
+      nest ? [nest.depth, nest.children] : 0,
+      !!(this.foldedNotes && this.foldedNotes.has(file.path)),
+      this.isPinned(file),
+      reading,
+      this.mode === 'search' && this.searchWhy ? this.searchWhy.get(file.path) || '' : '',
+      file.stat ? [file.stat.mtime, file.stat.size] : 0,
+      cache && cache.frontmatter ? cache.frontmatter : null,
+      this.albumColumns().map((key) => this.columnValue(file, key)),
+      this.lengthStyle() ? this.lengthLabel(file) : '',
+    ]);
+  }
+
+  drawTrack(list, file, index, nest) {
     const row = list.createDiv({ cls: 'dr-track' });
     asButton(row);
     if (nest && nest.depth) {
@@ -252,6 +294,13 @@ export class BrowseRows extends RowValues {
   beginDrawing() {
     this.toMeasure = [];
     this.pinMemo = null;
+    // The rows drawn last time, to be put back where nothing in them
+    // changed; none after a settings change, which can change any row.
+    const era = JSON.stringify(this.plugin.settings);
+    this.keptRows = era === this.rowEra ? this.rowsDrawn : null;
+    if (this.keptRows) this.keptRows.forEach((kept) => (kept.row.drUsed = false));
+    this.rowEra = era;
+    this.rowsDrawn = new Map();
   }
 
   /**

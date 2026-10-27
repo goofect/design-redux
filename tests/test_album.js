@@ -2141,6 +2141,46 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(view.query, 'bal', 'carried over');
   });
 
+  await t('a redraw that changes nothing puts the same rows back, focus and pick kept; a changed note or setting draws anew', () => {
+    const { view, plugin, app } = setup();
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-path]'));
+    const row = (name) => rows().find((r) => r.dataset.path === `IR/${name}.md`);
+    // The first drawing ever notes when reading began, a setting: drawn once more, settled.
+    view.render();
+    const before = rows();
+    assert.ok(before.length >= 4);
+    const balance = row('Balance');
+    balance.focus();
+    assert.strictEqual(document.activeElement, balance, 'focused to begin with');
+    view.render();
+    assert.ok(rows().length === before.length && rows().every((r, i) => r === before[i]), 'the same elements, in the same order');
+    assert.strictEqual(document.activeElement, balance, 'focus kept');
+    // What's picked is marked on a row put back, too.
+    plugin.selection = new R.Selection(plugin);
+    plugin.selection.set({ file: app.vault.getFileByPath('IR/Anarchy.md') });
+    view.render();
+    assert.ok(row('Anarchy').classList.contains('is-selected'));
+    plugin.selection.set(null);
+    view.render();
+    assert.ok(!row('Anarchy').classList.contains('is-selected'));
+    // A note changed, or its properties: that row alone is new.
+    app.vault.getFileByPath('IR/Cooperation.md').stat.mtime = 99;
+    const props = { 'IR/Deterrence.md': { frontmatter: { status: 'done' } } };
+    app.metadataCache.getFileCache = (f) => props[f.path] || null;
+    const anarchy = row('Anarchy');
+    const cooperation = row('Cooperation');
+    const deterrence = row('Deterrence');
+    view.render();
+    assert.strictEqual(row('Anarchy'), anarchy);
+    assert.notStrictEqual(row('Cooperation'), cooperation, 'changed: drawn anew');
+    assert.notStrictEqual(row('Deterrence'), deterrence, 'its properties changed: drawn anew');
+    // Moved in the order: numbered anew.
+    const kept = row('Anarchy');
+    plugin.settings.albumExcerpts = !plugin.settings.albumExcerpts;
+    view.render();
+    assert.notStrictEqual(row('Anarchy'), kept, 'a setting changed: every row anew');
+  });
+
   await t('the library index: worked out once while listening, forgotten as files come and go and links resolve', () => {
     const { v, plugin, app } = setup();
     const on = {};
