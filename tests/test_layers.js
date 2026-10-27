@@ -6,9 +6,10 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 // And Obsidian's canvas reached into only through the adapter, the modules
-// that still do it themselves only ever fewer (--internals).
+// that still do it themselves only ever fewer (--internals); and what other
+// code relies on, as contracts/contracts.json says (--contracts).
 let passed = 0;
-['--check', '--internals'].forEach((mode) => {
+['--check', '--internals', '--contracts'].forEach((mode) => {
   const run = spawnSync(process.execPath, [path.join(__dirname, 'map.js'), mode], { encoding: 'utf8' });
   if (run.status !== 0) {
     console.error(run.stdout + run.stderr);

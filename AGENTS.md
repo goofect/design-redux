@@ -43,7 +43,11 @@ Coffee N' Christmas.
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
   shows them). After a deliberate change: `node tests/test_lifecycle.js
   --update`, `node tests/map.js --check --update`. Never drop a command id or a
-  setting key without a migration.
+  setting key without a migration. `contracts/contracts.json` says what other
+  code relies on, a rule each with the test that keeps it; `test_layers` also
+  checks those modules' exports, methods and events against
+  `tests/snapshots/contracts.json` (`node tests/map.js --contracts --update`
+  after a deliberate change, and the rule beside it).
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
   and the latest.
