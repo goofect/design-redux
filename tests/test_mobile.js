@@ -696,7 +696,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(mounts === 1 && panel.picked, 'redrawn as picked');
     panel.mount = mount;
     assert.strictEqual(origin(), 'Picked in the library');
-    panel.togglePin();
+    // The line is the pin too: a button, pressed while pinned.
+    const originEl = view.contentEl.querySelector('.dr-panel-dock-origin');
+    assert.ok(originEl.getAttribute('role') === 'button' && originEl.getAttribute('aria-pressed') === 'false');
+    assert.match(originEl.getAttribute('aria-label'), /^Following: Picked in the library\./);
+    originEl.click();
+    assert.ok(panel.pinned && originEl.classList.contains('is-pinned') && originEl.getAttribute('aria-pressed') === 'true', 'clicked, it pins');
     assert.strictEqual(origin(), 'Pinned · Picked in the library');
     coordinator.look({ view: new MarkdownView(c) });
     panel.plugin.selection.set({ file: a });

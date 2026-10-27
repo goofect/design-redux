@@ -55,7 +55,7 @@ export function cardValue(typed, was) {
  * the inspector both open with it.
  */
 export function drawNoteHead(plugin, parentEl, file) {
-  const head = parentEl.createDiv({ cls: 'dr-props-head' });
+  const head = parentEl.createDiv({ cls: 'dr-props-head dr-props-identity' });
   const art = head.createDiv({ cls: 'dr-props-art' });
   drawNoteArt(plugin, art, file);
   // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
@@ -191,7 +191,9 @@ class CardInspectable extends Inspectable {
     const node = this.target.card;
     const text = (node.getData() || {}).text || '';
     const parsed = cardFrontmatter(text);
-    const head = el.createDiv({ cls: 'dr-props-head' });
+    const head = el.createDiv({ cls: 'dr-props-head dr-props-identity' });
+    // A card has no cover: in its place, what it is.
+    setIcon(head.createDiv({ cls: 'dr-props-art is-blank', attr: { 'aria-hidden': 'true' } }).createSpan({ cls: 'dr-card-glyph' }), 'sticky-note');
     const info = head.createDiv({ cls: 'dr-props-info' });
     const first = parsed.body.split('\n').map((l) => plainMarkdownLine(l)).find(Boolean);
     info.createDiv({ cls: 'dr-props-title', text: first || 'Card' });
