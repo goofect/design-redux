@@ -246,6 +246,15 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.albumProgressRing;
     },
   },
+  {
+    // An album's tabs go — Overview, Map, Sub-collections, Sources, Gaps,
+    // Linked, Lately — and Lately's switch with them; an album that opened
+    // as its overview or map opens as a list.
+    to: 19,
+    run(saved) {
+      delete saved.albumRecents;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

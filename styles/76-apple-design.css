@@ -228,47 +228,6 @@ body.dr-look-apple .dr-browse-search input:focus {
   box-shadow: none;
 }
 
-/* -- An album's panels (Notes, Sub-collections …): a segmented control, not underlined tabs. */
-body.dr-look-apple .dr-album-panels {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 0;
-  height: 32px;
-  margin: 4px 0 20px;
-  padding: 2px;
-  border: none;
-  border-radius: 9px;
-  background-color: var(--dr-fill);
-}
-
-body.dr-look-apple .dr-album-panels .dr-panel-tab {
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 112px;
-  margin: 0;
-  padding: 0 16px;
-  border: none;
-  border-radius: 7px;
-  color: var(--text-normal);
-  font-size: 13px;
-  font-weight: 500;
-  transition: background-color var(--dr-dur-fast) var(--dr-ease);
-}
-
-body.dr-look-apple .dr-album-panels .dr-panel-tab.is-active {
-  border: none;
-  background-color: var(--dr-thumb);
-  box-shadow: var(--dr-thumb-shadow);
-  font-weight: 600;
-}
-
-body.dr-look-apple .dr-album-panels .dr-panel-count {
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
 /* -- One focus ring for everything the plugin draws. */
 body.dr-look-apple [class^='dr-']:focus-visible,
 body.dr-look-apple [class*=' dr-']:focus-visible {

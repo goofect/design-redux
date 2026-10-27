@@ -58,15 +58,22 @@ export class FolderScreen extends BrowseScreen {
       return;
     }
 
-    const discs = view.discsOf(folder, view.notesIn(folder));
+    let discs = view.discsOf(folder, view.notesIn(folder));
     // What the folder note says belongs too: albums, as tiles; notes kept
-    // elsewhere, as a disc of their own. Shown here, not moved.
+    // elsewhere, after its own. Shown here, not moved.
     const structure = view.editing ? null : this.plugin.feature(AlbumStructure);
     const about = structure ? structure.info(folder) : null;
     const kept = discs.reduce((acc, d) => acc.concat(d.files), []);
     const elsewhere = about ? structure.included(folder, kept).filter((f) => view.inFilter(f) && view.matches(f.basename)) : [];
-    if (elsewhere.length) discs.push({ title: 'From elsewhere', folder: null, files: view.sortFiles(elsewhere) });
-    const all = kept.concat(elsewhere);
+    // One list without headings: the album's own notes, then those from
+    // elsewhere. Its folders wait at the foot. Edit mode keeps a disc for
+    // each folder, to rename and fill.
+    if (!view.editing) {
+      const own = discs.find((d) => d.folder === folder);
+      const files = (own ? own.files : []).concat(view.sortFiles(elsewhere));
+      discs = files.length ? [{ title: view.folderName(folder), folder, files }] : [];
+    }
+    const all = discs.reduce((acc, d) => acc.concat(d.files), []);
     const albums = about ? about.includes.filter((t) => t instanceof TFolder && view.matches(t.name)) : [];
 
     view.renderHeader(root, folder, all);
@@ -86,71 +93,38 @@ export class FolderScreen extends BrowseScreen {
         const add = folder.isRoot && folder.isRoot() ? null : ['New note', () => this.plugin.newNote(folder)];
         view.emptyState(root, this.emptyText(about), 'folder-open', view.clearAction() || add);
       }
+      this.renderInside(root, folder);
       view.renderMoreIn(root, folder);
       return;
     }
     const drawNotes = (el) => {
-      if (about && about.layout === 'covers') this.renderCovers(el, discs, folder);
-      else if (about && about.layout === 'table') this.renderTable(el, discs, folder);
+      if (about && about.layout === 'covers') this.renderCovers(el, discs);
+      else if (about && about.layout === 'table') this.renderTable(el, discs);
       else view.renderDiscs(el, discs, folder);
       if (!view.editing) view.renderAlbumEnd(el, folder, all);
       if (!view.editing) view.renderAlbumFoot(el, all, { count: discs.length > 1 });
     };
-    const panels = about ? this.panels(folder, about, all, drawNotes) : [];
-    if (panels.length > 1) this.renderPanels(root, folder, about, panels);
-    else drawNotes(root);
+    drawNotes(root);
     if (view.editing) return;
     if (about && about.related.length) view.shelf(root, 'Related collections', about.related);
+    this.renderInside(root, folder);
     view.renderMoreIn(root, folder);
   }
 
-  /**
-   * What an album can show, one at a time: its notes; the folder note's
-   * text; its map; its sub-albums; its sources; what it hasn't got yet;
-   * and, in a long one, what changed and was opened lately. Each only
-   * where there's something to show.
-   */
-  panels(folder, about, all, drawNotes) {
+  /** The folders inside the album, at its foot: a shelf, before those beside it. */
+  renderInside(root, folder) {
     const view = this.view;
-    const structure = this.plugin.feature(AlbumStructure);
-    const out = [{ id: 'notes', label: 'Notes', count: all.length, draw: drawNotes }];
-    if (structure.hasOverview(about)) out.unshift({ id: 'overview', label: 'Overview', draw: (el) => structure.renderLead(el, folder, about, view, 'overview') });
-    if (structure.mapOf(folder) || about.type === 'concept map' || about.layout === 'map') {
-      out.push({ id: 'map', label: 'Map', draw: (el) => structure.renderLead(el, folder, about, view, 'map') });
-    }
-    const subs = view.sortFolders(view.visibleFolders(folder));
-    if (subs.length) out.push({ id: 'albums', label: 'Sub-collections', count: subs.length, draw: (el) => view.folderTiles(el, subs) });
-    const sources = structure.sources(all);
-    if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
-    const gaps = structure.gaps(all);
-    if (gaps.unwritten.length || gaps.open.length) out.push({ id: 'gaps', label: 'Gaps', count: gaps.unwritten.length + gaps.open.length, draw: (el) => this.renderGaps(el, gaps) });
-    const linked = structure.linked(folder, all);
-    if (linked.length) out.push({ id: 'linked', label: 'Linked', count: linked.length, draw: (el) => this.renderLinked(el, folder, linked) });
-    if (this.settings.albumRecents !== false && all.length >= ALBUM_RECENTS_FROM) out.push({ id: 'lately', label: 'Lately', draw: (el) => this.renderRecents(el, all) });
-    return out;
+    const inside = view.sortFolders(view.visibleFolders(folder)).filter((f) => view.folderInFilter(f) && view.matches(f.name));
+    if (inside.length) view.shelf(root, `In ${view.folderName(folder)}`, inside);
   }
 
-  /** The album's notes as a table — a row each, the columns set for tables — under a heading for each disc. */
-  renderTable(el, discs, album) {
+  /** The album's notes as a table: a row each, the columns set for tables. */
+  renderTable(el, discs) {
     const view = this.view;
     const columns = view.tableColumns();
-    discs.forEach((disc) => {
-      const head = el.createDiv({ cls: 'dr-disc dr-covers-head' });
-      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
-      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
-      if (disc.folder && disc.folder !== album) {
-        asButton(head);
-        onActivate(head, () => view.openFolder(disc.folder));
-      }
-      const table = el.createDiv({ cls: 'dr-table' });
-      roveFocus(table, '.dr-tr:not(.dr-th)');
-      const th = table.createDiv({ cls: 'dr-tr dr-th' });
-      th.createDiv({ cls: 'dr-td dr-td-title', text: 'Title' });
-      columns.forEach((key) => th.createDiv({ cls: 'dr-td', text: view.columnLabel(key) }));
-      if (view.lengthStyle()) iconWord(th.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
-      iconWord(th.createDiv({ cls: 'dr-td dr-td-time' }), 'calendar', 'Modified');
-      disc.files.forEach((file) => view.tableRow(table, file, columns));
-    });
+    const table = el.createDiv({ cls: 'dr-table' });
+    roveFocus(table, '.dr-tr');
+    discs.forEach((disc) => disc.files.forEach((file) => view.tableRow(table, file, columns)));
   }
 
   /** A collection's albums as a tree: each, with its kind and size, and the albums inside it beneath. */
@@ -177,95 +151,6 @@ export class FolderScreen extends BrowseScreen {
     });
   }
 
-  /** Notes elsewhere tied to the album's by links: each, how strongly, and a way to show it here. */
-  renderLinked(el, folder, linked) {
-    const view = this.view;
-    const structure = this.plugin.feature(AlbumStructure);
-    el.createDiv({ cls: 'dr-report-lead', text: 'Notes kept elsewhere that link with this collection’s. Shown here, they stay where they are.' });
-    const list = el.createDiv({ cls: 'dr-tracks dr-linked' });
-    roveFocus(list, '.dr-gap-row');
-    linked.forEach(({ file, count }) => {
-      const row = list.createDiv({ cls: 'dr-gap-row' });
-      row.dataset.path = file.path;
-      row.setAttribute('tabindex', '0');
-      const name = row.createSpan({ cls: 'dr-gap-name', text: file.basename });
-      name.setAttribute('role', 'button');
-      onActivate(name, (evt) => view.openFile(file, evt));
-      row.createSpan({ cls: 'dr-gap-from', text: `${count} ${count === 1 ? 'link' : 'links'} · ${file.parent && file.parent.path !== '/' ? file.parent.name : this.app.vault.getName()}` });
-      const take = row.createSpan({ cls: 'dr-linked-take', text: 'Show here' });
-      asButton(take);
-      onActivate(take, async (evt) => {
-        evt.stopPropagation();
-        if (await structure.include(folder, file)) view.render();
-      });
-    });
-  }
-
-  /** Tabs over the panel shown: as last chosen here, or as the album's layout says. */
-  renderPanels(root, folder, about, panels) {
-    const view = this.view;
-    const structure = this.plugin.feature(AlbumStructure);
-    if (!view.albumPanels) view.albumPanels = new Map();
-    const strip = root.createDiv({ cls: 'dr-album-panels' });
-    strip.setAttribute('role', 'tablist');
-    const body = root.createDiv({ cls: 'dr-album-panel' });
-    body.setAttribute('role', 'tabpanel');
-    const show = (id) => {
-      strip.querySelectorAll('.dr-panel-tab').forEach((tab) => {
-        const on = tab.dataset.panel === id;
-        tab.toggleClass('is-active', on);
-        tab.setAttribute('aria-selected', String(on));
-        tab.setAttribute('tabindex', on ? '0' : '-1');
-      });
-      body.empty();
-      panels.find((p) => p.id === id).draw(body);
-    };
-    panels.forEach((p) => {
-      const tab = strip.createDiv({ cls: 'dr-panel-tab' });
-      tab.dataset.panel = p.id;
-      tab.setAttribute('role', 'tab');
-      tab.createSpan({ text: p.label });
-      if (p.count) tab.createSpan({ cls: 'dr-panel-count', text: String(p.count) });
-      onActivate(tab, () => {
-        // Chosen here: kept while the album's open in this tab.
-        view.albumPanels.set(folder.path, p.id);
-        show(p.id);
-      });
-    });
-    // Left and right step between the tabs.
-    strip.addEventListener('keydown', (evt) => {
-      if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
-      const tabs = Array.from(strip.querySelectorAll('.dr-panel-tab'));
-      const at = tabs.indexOf(evt.target.closest('.dr-panel-tab'));
-      const next = tabs[(at + (evt.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-      if (!next) return;
-      evt.preventDefault();
-      next.focus();
-      next.click();
-    });
-    const has = (id) => panels.some((p) => p.id === id);
-    const kept = view.albumPanels.get(folder.path);
-    show([kept, structure.defaultPanel(about)].find(has) || 'notes');
-  }
-
-  /** What an album hasn't got: notes linked to but not written, then notes marked open. */
-  renderGaps(el, gaps) {
-    const view = this.view;
-    if (gaps.unwritten.length) {
-      const list = el.createDiv({ cls: 'dr-tracks dr-gaps' });
-      list.createDiv({ cls: 'dr-disc' }).createSpan({ cls: 'dr-disc-title', text: 'Not written yet' });
-      gaps.unwritten.forEach((gap) => {
-        const row = list.createDiv({ cls: 'dr-gap-row' });
-        asButton(row);
-        row.createSpan({ cls: 'dr-gap-name', text: gap.name });
-        row.createSpan({ cls: 'dr-gap-from', text: gap.count === 1 ? `linked from ${gap.from.basename}` : `linked from ${gap.count} notes` });
-        // Opened as its link would be: Obsidian makes the note.
-        onActivate(row, () => this.app.workspace.openLinkText(gap.name, gap.from.path, false));
-      });
-    }
-    if (gaps.open.length) view.renderDiscs(el, [{ title: 'Open questions', folder: null, files: gaps.open }], null);
-  }
-
   /** Why an album shows nothing: Find or a filter, or nothing put in it yet. */
   emptyText(about) {
     const view = this.view;
@@ -283,38 +168,14 @@ export class FolderScreen extends BrowseScreen {
     onActivate(note, () => this.app.workspace.getLeaf(false).openFile(about.note));
   }
 
-  /** The album's notes as covers, under a heading for each disc. */
-  renderCovers(root, discs, album) {
+  /** The album's notes as covers. */
+  renderCovers(root, discs) {
     const view = this.view;
-    discs.forEach((disc) => {
-      const head = root.createDiv({ cls: 'dr-disc dr-covers-head' });
-      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
-      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
-      if (disc.folder && disc.folder !== album) {
-        asButton(head);
-        onActivate(head, () => view.openFolder(disc.folder));
-      }
-      const grid = root.createDiv({ cls: 'dr-grid' });
-      roveFocus(grid, '.dr-card');
-      disc.files.forEach((f) => view.fileCard(grid, f));
-    });
+    const grid = root.createDiv({ cls: 'dr-grid' });
+    roveFocus(grid, '.dr-card');
+    discs.forEach((disc) => disc.files.forEach((f) => view.fileCard(grid, f)));
   }
-
-  /** In a long album, what changed lately and what was opened lately, apart from its own order. */
-  renderRecents(root, all) {
-    if (all.length < ALBUM_RECENTS_FROM) return;
-    const view = this.view;
-    const changed = all.slice().sort((a, b) => b.stat.mtime - a.stat.mtime).slice(0, 8);
-    const inAlbum = new Set(all);
-    const opened = this.plugin.recentFiles().filter((f) => inAlbum.has(f)).slice(0, 8);
-    if (opened.length > 1) view.shelf(root, 'Opened lately', opened);
-    view.shelf(root, 'Changed lately', changed);
-  }
-
 }
-
-/* An album this long shows what changed and what was opened lately. */
-export const ALBUM_RECENTS_FROM = 12;
 
 /* -- every folder, as tiles ------------------------------------------ */
 

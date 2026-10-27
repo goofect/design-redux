@@ -19,16 +19,15 @@
 /* And an album's page shows the way down to it from the top.          */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownRenderer, Notice, Setting, TFile } from 'obsidian';
+import { Notice, Setting, TFile } from 'obsidian';
 import { ALBUM_TYPES } from '../core/020-constants.js';
-import { byName, menuGroup } from '../core/030-helpers-art.js';
-import { asButton, noteTags, onActivate } from '../core/040-helpers-sorting.js';
+import { menuGroup } from '../core/030-helpers-art.js';
+import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, rollupOf, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
-import { ALBUM_RECENTS_FROM } from './110-browse-screens.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { ComparePicker, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
@@ -50,16 +49,7 @@ export const ALBUM_LAYOUTS = [
   { id: 'list', label: 'List', icon: 'list' },
   { id: 'covers', label: 'Covers', icon: 'layout-grid' },
   { id: 'table', label: 'Table', icon: 'table' },
-  { id: 'overview', label: 'Overview', icon: 'file-text' },
-  { id: 'map', label: 'Map', icon: 'waypoints' },
 ];
-
-/* What makes a note a source: properties it has, or its type or tags. */
-export const SOURCE_KEYS = ['author', 'authors', 'url', 'source', 'isbn', 'doi', 'publisher'];
-export const SOURCE_KINDS = ['source', 'book', 'article', 'paper', 'reading'];
-
-/* What marks a note as an open question: its status or a tag. */
-export const OPEN_VALUES = ['open', 'question', 'unanswered', 'unresolved', 'gap'];
 
 /* What counts as finished, for a project's notes and a reading list's. */
 export const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
@@ -133,7 +123,7 @@ export class AlbumStructure extends Feature {
       {
         key: 'albumStructure',
         name: 'Collections say what they are',
-        desc: 'A folder note’s collection, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, collections beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. A collection’s page shows the way down to it.',
+        desc: 'A folder note’s collection, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, collections beside it, notes to start with, and whether it opens as a list, covers or a table. A collection’s page shows the way down to it.',
       },
       {
         key: 'albumRollups',
@@ -146,12 +136,6 @@ export class AlbumStructure extends Feature {
         showIf: 'albumRollups',
         name: 'Date property for the span',
         desc: 'Its earliest and latest dates among the collection’s notes; left empty, none.',
-      },
-      {
-        key: 'albumRecents',
-        showIf: 'albumStructure',
-        name: 'Lately, in long collections',
-        desc: `A collection of ${ALBUM_RECENTS_FROM} notes or more shows what changed and what was opened lately, apart from its own order.`,
       },
     ];
   }
@@ -272,32 +256,6 @@ export class AlbumStructure extends Feature {
     }
     this.plugin.notes.offerUndo(`Carried values over in ${changes.length} folder ${changes.length === 1 ? 'note' : 'notes'}.`, changes);
     return changes.length;
-  }
-
-  /**
-   * Notes elsewhere tied to the album's by links, either way: what it
-   * means beside where it's kept. Most linked first; not those already in it.
-   */
-  linked(folder, files) {
-    const inAlbum = new Set(files.map((f) => f.path));
-    const index = libraryIndex(this.plugin);
-    const counts = new Map();
-    const bump = (path, n) => {
-      if (inAlbum.has(path) || this.plugin.isFolderNote(this.app.vault.getFileByPath(path) || {})) return;
-      counts.set(path, (counts.get(path) || 0) + n);
-    };
-    // Links out of the album's notes, and into them.
-    files.forEach((file) => {
-      const out = index.outgoing(file);
-      Object.keys(out).forEach((to) => inAlbum.has(to) || bump(to, out[to]));
-      const into = index.incoming(file);
-      Object.keys(into).forEach((from) => inAlbum.has(from) || bump(from, into[from]));
-    });
-    return Array.from(counts.entries())
-      .map(([path, count]) => ({ file: this.app.vault.getFileByPath(path), count }))
-      .filter((x) => x.file && x.file.extension === 'md')
-      .sort((a, b) => b.count - a.count || byName(a.file.basename, b.file.basename))
-      .slice(0, 40);
   }
 
   /** Above a collection's albums: that it's a collection — or the library itself — the way down, what it's for, how many. */
@@ -514,99 +472,6 @@ export class AlbumStructure extends Feature {
     const kept = list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), from) !== file);
     if (kept.length === list.length) kept.push(`[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`);
     return this.setProperty(folder, ALBUM_KEYS.featured, kept);
-  }
-
-  /**
-   * Under the album's title, as its layout asks: the folder note's own
-   * text, or its canvas, drawn by Obsidian as an embed would be.
-   */
-  renderLead(root, folder, info, view, which = info.layout) {
-    if (which !== 'overview' && which !== 'map') return null;
-    const box = root.createDiv({ cls: `dr-album-lead is-${which} markdown-rendered` });
-    const source = info.note ? info.note.path : folder.path;
-    const draw = (markdown) => {
-      try {
-        if (typeof MarkdownRenderer.render === 'function') MarkdownRenderer.render(this.app, markdown, box, source, view);
-        else MarkdownRenderer.renderMarkdown(markdown, box, source, view);
-      } catch (err) {
-        box.setText(markdown);
-      }
-    };
-    if (which === 'map') {
-      const map = this.mapOf(folder);
-      if (map) {
-        // Drawn by Obsidian as a picture of the map; pressed, the map opens.
-        draw(`![[${map.path}]]`);
-        box.addClass('is-linked');
-        box.setAttribute('aria-label', `Open ${map.basename}`);
-        box.addEventListener('click', (evt) => {
-          evt.preventDefault();
-          this.app.workspace.getLeaf(false).openFile(map);
-        });
-      }
-      else {
-        const make = box.createDiv({ cls: 'dr-album-lead-empty', text: 'No map yet — make one' });
-        asButton(make);
-        onActivate(make, () => this.openMap(folder));
-      }
-      return box;
-    }
-    if (!info.note) return box;
-    this.app.vault.cachedRead(info.note).then((text) => {
-      // The text without its properties, which the header has already said.
-      const body = String(text || '').replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '').trim();
-      if (body) draw(body);
-      else box.remove();
-    }, () => box.remove());
-    return box;
-  }
-
-  /** Whether the folder note has text of its own, past its properties. Unknown counts as yes. */
-  hasOverview(info) {
-    if (!info.note) return false;
-    const cache = this.app.metadataCache.getFileCache(info.note);
-    if (!cache || !Array.isArray(cache.sections)) return true;
-    return cache.sections.some((s) => s.type !== 'yaml');
-  }
-
-  /** Which panel an album opens to: as its layout says. */
-  defaultPanel(info) {
-    return info.layout === 'overview' || info.layout === 'map' ? info.layout : 'notes';
-  }
-
-  /** Notes that are sources: books, articles — anything with an author, a link or a source of its own. */
-  sources(files) {
-    return files.filter((f) => {
-      const cache = this.app.metadataCache.getFileCache(f);
-      const fm = (cache && cache.frontmatter) || {};
-      if (SOURCE_KEYS.some((k) => valueList(fmGet(fm, k)).length)) return true;
-      if (valueList(fmGet(fm, 'type')).some((v) => SOURCE_KINDS.indexOf(v.toLowerCase()) !== -1)) return true;
-      return noteTags(cache).some((t) => SOURCE_KINDS.indexOf(t) !== -1);
-    });
-  }
-
-  /**
-   * What the album hasn't got yet: notes its notes link to that aren't
-   * written — each with how many link to it — and notes marked as open
-   * questions.
-   */
-  gaps(files) {
-    const unresolved = this.app.metadataCache.unresolvedLinks || {};
-    const named = new Map();
-    files.forEach((f) => {
-      Object.keys(unresolved[f.path] || {}).forEach((name) => {
-        const was = named.get(name);
-        named.set(name, { name, from: was ? was.from : f, count: (was ? was.count : 0) + 1 });
-      });
-    });
-    const open = files.filter((f) => {
-      const cache = this.app.metadataCache.getFileCache(f);
-      const fm = (cache && cache.frontmatter) || {};
-      if (valueList(fmGet(fm, 'status')).some((v) => OPEN_VALUES.indexOf(v.toLowerCase()) !== -1)) return true;
-      return noteTags(cache).some((t) => OPEN_VALUES.indexOf(t) !== -1);
-    });
-    const unwritten = Array.from(named.values()).sort((a, b) => b.count - a.count || byName(a.name, b.name));
-    return { unwritten, open };
   }
 
   /** On a note's menu: kept at the top of its album, or not. */

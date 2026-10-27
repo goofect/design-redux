@@ -278,14 +278,15 @@ t('pinned folders are narrowed the same way', () => {
   assert.deepStrictEqual(shownCards(view), ['Law', 'Politics']);
 });
 
-t("an album's discs without a match drop out", () => {
+t("an album's own notes that match, in one list without headings; its folders at the foot", () => {
   const view = page({ mode: 'folder', path: 'Law' });
   view.filterProp = { key: 'status', value: 'draft', negate: false };
   view.render();
-  const discs = Array.from(view.contentEl.querySelectorAll('.dr-disc-title')).map((e) => e.textContent);
-  assert.deepStrictEqual(discs, ['Law', 'Courts']);
+  assert.strictEqual(view.contentEl.querySelector('.dr-disc, .dr-album-panels, .dr-th'), null, 'no headings, no tabs');
   const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
-  assert.deepStrictEqual(tracks, ['Contract', 'Tribunal']);
+  assert.deepStrictEqual(tracks, ['Contract']);
+  assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).some((e) => e.textContent === 'In Law'), 'its folders, at the foot');
+  assert.ok(shownCards(view).includes('Courts'));
   view.filterDate = { field: 'modified', range: 'day' };
   view.render();
   assert.strictEqual(view.contentEl.querySelector('.dr-track-name'), null);
@@ -480,20 +481,24 @@ t('and a page built later — after a note, a new tab, a restart — starts in i
   assert.deepStrictEqual(titles(later), ['Politics', 'Misc', 'Law', 'Courts']);
 });
 
-t("an album's discs follow the order, as do a folder's subfolder tiles", () => {
+t("an album's folders at its foot follow the order, as do a folder's subfolder tiles", () => {
   const extra = folder('Law/Appeals', law);
   const appeal = note(extra, 'Appeal', { age: 0 });
   try {
     const album = page({ mode: 'folder', path: 'Law' });
-    const discs = () => titles(album, '.dr-disc-title');
-    assert.deepStrictEqual(discs(), ['Law', 'Appeals', 'Courts']);
+    // The shelf of what's inside it: the row after its "In Law" heading.
+    const inside = () => {
+      const head = Array.from(album.contentEl.querySelectorAll('.dr-shelf-head')).find((h) => h.textContent === 'In Law');
+      return Array.from(head.nextElementSibling.querySelectorAll('.dr-card-title')).map((e) => e.textContent);
+    };
+    assert.deepStrictEqual(inside(), ['Appeals', 'Courts']);
     openMenu(album).find('Alphabetical (Z–A)').click();
-    assert.deepStrictEqual(discs(), ['Law', 'Courts', 'Appeals'], "the folder's own disc stays first");
+    assert.deepStrictEqual(inside(), ['Courts', 'Appeals']);
 
-    // By date, the disc with the newest note leads.
+    // By date, the folder with the newest note leads.
     caches.get(appeal); appeal.stat.mtime = Date.now() + 1000;
     openMenu(album).find('Recently modified').click();
-    assert.deepStrictEqual(discs(), ['Law', 'Appeals', 'Courts']);
+    assert.deepStrictEqual(inside(), ['Appeals', 'Courts']);
   } finally {
     law.children.splice(law.children.indexOf(extra), 1);
     files.splice(files.indexOf(appeal), 1);
