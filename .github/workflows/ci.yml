@@ -192,6 +192,9 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -q -am "Release $next"
+            # Main may have moved while the tests ran (a merge just after
+            # this one): the bump goes on top of it rather than failing.
+            git pull -q --rebase origin "$GITHUB_REF_NAME"
             git push -q origin "HEAD:$GITHUB_REF_NAME"
           else
             next=$current
