@@ -49,7 +49,6 @@ export function headerDuplicates(leaf) {
   return Array.from(found);
 }
 
-/* The sign a screen shows where a note shows its cover. */
 /* Narrower than this, the strip keeps what's open and its main buttons; the rest go into More. */
 /* Under this, the pane is too narrow for the strip to widen sideways: it grows upward as a small sheet. */
 export const STRIP_NARROW = 480;
@@ -266,6 +265,7 @@ export class ContextStrip extends Feature {
   disable() {
     document.body.removeClass('dr-strip-active');
     document.body.removeClass('dr-strip-up');
+    document.querySelectorAll('.dr-header-sidebar-toggle').forEach((el) => el.remove());
     document.body.removeClass('dr-strip-side');
     document.body.style.removeProperty('--dr-strip-h');
     document.querySelectorAll('.dr-strip-dupe').forEach((el) => el.removeClass('dr-strip-dupe'));
@@ -308,7 +308,6 @@ export class ContextStrip extends Feature {
    */
   update() {
     if (!this.el) return;
-    this.markDuplicates();
 
     const leaf = pageLeaf(this.app);
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
@@ -325,10 +324,13 @@ export class ContextStrip extends Feature {
     this.el.toggleClass('is-empty', !file);
     document.body.toggleClass('dr-strip-up', !!file);
     if (!file) {
+      if (view && !browse) this.headerToggle(view);
       this.fitPadding();
       return;
     }
 
+    // The header buttons the strip stands in for, marked to be hidden while it's up.
+    this.markDuplicates();
     this.renderNav(this.el);
     this.renderNow(this.el, file, view);
     this.renderActions(this.el, file, leaf);
@@ -431,6 +433,23 @@ export class ContextStrip extends Feature {
       }],
       count: due.length,
     };
+  }
+
+  /**
+   * With the strip down, its way back to a closed sidebar goes in the
+   * page's own header — an empty tab, the graph — where a hidden ribbon
+   * leaves Obsidian none. A library page draws its own. Shown only while
+   * the sidebar is closed.
+   */
+  headerToggle(view) {
+    const header = view.containerEl && view.containerEl.querySelector('.view-header-left, .view-header');
+    if (!header || header.querySelector('.dr-header-sidebar-toggle')) return;
+    const toggle = header.createDiv({ cls: 'clickable-icon dr-header-sidebar-toggle dr-sidebar-toggle' });
+    header.prepend(toggle);
+    toggle.setAttribute('aria-label', 'Show sidebar');
+    asButton(toggle);
+    setIcon(toggle, 'panel-left');
+    onActivate(toggle, () => this.app.workspace.leftSplit.expand());
   }
 
   renderNav(strip) {

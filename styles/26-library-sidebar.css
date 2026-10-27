@@ -371,12 +371,14 @@ body:not(.dr-left-collapsed)
  */
 
 .dr-browse-up.dr-sidebar-toggle,
-.dr-strip-btn.dr-sidebar-toggle {
+.dr-strip-btn.dr-sidebar-toggle,
+.dr-header-sidebar-toggle.dr-sidebar-toggle {
   display: none;
 }
 
 body.dr-left-collapsed .dr-browse-up.dr-sidebar-toggle,
-body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
+body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle,
+body.dr-left-collapsed .dr-header-sidebar-toggle.dr-sidebar-toggle {
   display: flex;
 }
 

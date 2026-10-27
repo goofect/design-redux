@@ -444,8 +444,11 @@ describe('Design Redux in Obsidian', function () {
       await library.browseMode({ mode: 'folder', path: 'Politics' });
       // A note open beside it, so the strip — shown only inside a note — has buttons to measure.
       const beside = app.workspace.getLeaf('split');
-      await beside.openFile(app.vault.getFileByPath('Politics/Anarchy.md'));
+      await beside.openFile(app.vault.getFileByPath('Politics/Anarchy.md'), { active: true });
+      app.workspace.setActiveLeaf(beside, { focus: true });
       window.__drBeside = beside;
+      const end = Date.now() + 5000;
+      while (!document.body.classList.contains('dr-strip-up') && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
       return tiles.map((c) => Math.abs(c.offsetWidth - c.offsetHeight));
     });
     expect(covers.length).toBeGreaterThan(0);
@@ -504,31 +507,35 @@ describe('Design Redux in Obsidian', function () {
       m.rows.forEach(([min, h]) => expect([label, h >= min]).toEqual([label, true]));
       expect([label, m.title >= 4.5, m.meta >= 4.5]).toEqual([label, true, true]);
     };
-    const dark = await measure('obsidian', 'theme', 'standard');
-    check(dark, 'dark');
-    expect(dark.dark).toBe(true);
-    expect(dark.rows.length).toBeGreaterThan(0);
-    expect(dark.rows[0][0]).toBe(32);
-    const editorial = await measure('obsidian', 'editorial', 'standard');
-    check(editorial, 'editorial, dark');
-    await shot('album-editorial');
-    check(await measure('moonstone', 'editorial', 'standard'), 'editorial, light');
-    const light = await measure('moonstone', 'theme', 'standard');
-    check(light, 'light');
-    expect(light.dark).toBe(false);
-    await shot('album-light');
-    // Density: rows a unit tighter or looser.
-    const compact = await measure('obsidian', 'theme', 'compact');
-    const spacious = await measure('obsidian', 'theme', 'large');
-    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
-    check(compact, 'compact');
-    check(spacious, 'spacious');
-    // Back as it was, for the tests after: the look, and the note beside the album closed.
-    await measure(started, 'apple', 'standard');
-    await browser.executeObsidian(() => {
-      if (window.__drBeside) window.__drBeside.detach();
-      delete window.__drBeside;
-    });
+    // Whatever happens, the note beside the album is closed after, so the tests after have the page to themselves.
+    try {
+      const dark = await measure('obsidian', 'theme', 'standard');
+      check(dark, 'dark');
+      expect(dark.dark).toBe(true);
+      expect(dark.rows.length).toBeGreaterThan(0);
+      expect(dark.rows[0][0]).toBe(32);
+      const editorial = await measure('obsidian', 'editorial', 'standard');
+      check(editorial, 'editorial, dark');
+      await shot('album-editorial');
+      check(await measure('moonstone', 'editorial', 'standard'), 'editorial, light');
+      const light = await measure('moonstone', 'theme', 'standard');
+      check(light, 'light');
+      expect(light.dark).toBe(false);
+      await shot('album-light');
+      // Density: rows a unit tighter or looser.
+      const compact = await measure('obsidian', 'theme', 'compact');
+      const spacious = await measure('obsidian', 'theme', 'large');
+      expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
+      check(compact, 'compact');
+      check(spacious, 'spacious');
+      // Back as it was, for the tests after.
+      await measure(started, 'apple', 'standard');
+    } finally {
+      await browser.executeObsidian(() => {
+        if (window.__drBeside) window.__drBeside.detach();
+        delete window.__drBeside;
+      });
+    }
   });
 
   it('keeps the ribbon’s buttons out of sight while they’re in the menu', async function () {
@@ -1538,6 +1545,32 @@ describe('Design Redux in Obsidian', function () {
     expect(result.apple.type).not.toEqual(result.theme.type);
     expect(result.theme.type).toEqual(result.without);
     expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
+  });
+
+  it('keeps a way back to a closed sidebar on an empty tab, with one content area and the strip down', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      const was = { singleArea: plugin.settings.singleArea, contextStrip: plugin.settings.contextStrip };
+      Object.assign(plugin.settings, { singleArea: true, contextStrip: true });
+      await plugin.saveSettings();
+      await until(() => document.body.classList.contains('dr-single-area'));
+      app.workspace.leftSplit.collapse();
+      await until(() => document.body.classList.contains('dr-left-collapsed'));
+      const leaf = app.workspace.getLeaf('tab');
+      await leaf.setViewState({ type: 'empty' });
+      app.workspace.setActiveLeaf(leaf, { focus: true });
+      const shown = (el) => el.offsetWidth > 0 && el.offsetHeight > 0;
+      const toggle = () => Array.from(document.querySelectorAll('.workspace-split.mod-root .sidebar-toggle-button.mod-left, .workspace-split.mod-root .dr-sidebar-toggle')).some(shown);
+      await until(() => !document.body.classList.contains('dr-strip-up') && toggle());
+      const out = { stripUp: document.body.classList.contains('dr-strip-up'), toggle: toggle() };
+      leaf.detach();
+      app.workspace.leftSplit.expand();
+      Object.assign(plugin.settings, was);
+      await plugin.saveSettings();
+      return out;
+    });
+    expect(result).toEqual({ stripUp: false, toggle: true });
   });
 
   it('enters a workspace mode and leaves it with the workspace as it was', async function () {

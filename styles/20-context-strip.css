@@ -85,8 +85,7 @@
 }
 
 /* A hairline between the note and what can be done to it, rather than boxes round the buttons. */
-.dr-strip-center + .dr-strip-actions,
-.dr-strip-now.is-screen + .dr-strip-actions {
+.dr-strip-center + .dr-strip-actions {
   padding-left: var(--dr-space-2);
   border-left: 1px solid var(--background-modifier-border);
 }
@@ -195,9 +194,8 @@
 }
 
 /* Room for it, so the last line of a note isn't underneath. */
-body.dr-strip-active .workspace-split.mod-root .markdown-source-view .cm-sizer,
-body.dr-strip-active .workspace-split.mod-root .markdown-preview-sizer,
-body.dr-strip-active .dr-browse .view-content {
+body.dr-strip-up .workspace-split.mod-root .markdown-source-view .cm-sizer,
+body.dr-strip-up .workspace-split.mod-root .markdown-preview-sizer {
   padding-bottom: calc(var(--dr-u) * 20);
 }
 

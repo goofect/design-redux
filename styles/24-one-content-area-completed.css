@@ -21,20 +21,3 @@ body.dr-single-area
   .workspace-tab-header-container-inner {
   display: none;
 }
-
-/* The strip while browsing -------------------------------------------------
- *
- * A screen isn't a thing you can open, so its block doesn't invite a
- * click the way a note's does.
- */
-
-.dr-strip-now.is-screen {
-  cursor: default;
-}
-
-@media (any-hover: hover) {
-  .dr-strip-now.is-screen:hover {
-    background: transparent;
-  }
-}
-
