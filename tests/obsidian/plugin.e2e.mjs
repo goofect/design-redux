@@ -1513,6 +1513,76 @@ describe('Design Redux in Obsidian', function () {
     }, made);
   });
 
+  // P01: before drawing less, what a draw costs now. Recorded, not asserted:
+  // a shared runner's times say little alone, and a baseline isn't a gate.
+  it('times an album of 50, 500 and 2000 notes: each draw, what a redraw replaces, and whether focus holds', async function () {
+    this.timeout(240000);
+    const made = [];
+    for (const n of [50, 500, 2000]) {
+      const root = `Bench album ${n}`;
+      made.push(root);
+      await browser.executeObsidian(async ({ app }, n, root) => {
+        if (!app.vault.getFolderByPath(root)) await app.vault.createFolder(root);
+        for (let i = 0; i < n; i++) {
+          const p = `${root}/Note ${String(i).padStart(4, '0')}.md`;
+          if (!app.vault.getFileByPath(p)) await app.vault.create(p, `A note, the ${i}th.`);
+        }
+      }, n, root);
+      const m = await browser.executeObsidian(async ({ app, plugins }, root) => {
+        const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+        await library.browseMode({ mode: 'folder', path: root });
+        const leaf = app.workspace.getLeavesOfType('design-redux-browse').find((l) => l.view && l.view.path === root);
+        if (!leaf) return null;
+        const view = leaf.view;
+        // Rows and tiles beyond the first are drawn a batch a frame: let them all in before measuring.
+        const frames = (k) => new Promise((r) => { const go = (j) => (j ? requestAnimationFrame(() => go(j - 1)) : r()); go(k); });
+        await frames(30);
+        // Every note shown, not the first few and Show all: the list a long album is.
+        const more = view.contentEl.querySelector('.dr-track-more-row');
+        if (more) more.click();
+        await frames(30);
+        const runs = [];
+        for (let i = 0; i < 15; i++) {
+          const t = performance.now();
+          view.render();
+          runs.push(performance.now() - t);
+        }
+        runs.sort((a, b) => a - b);
+        const pct = (q) => runs[Math.min(runs.length - 1, Math.floor(q * runs.length))];
+        await frames(30);
+        // A redraw with nothing changed: how many elements go and come, and covers among them.
+        let replaced = 0;
+        let covers = 0;
+        const mo = new MutationObserver((records) => records.forEach((r) => r.addedNodes.forEach((n) => {
+          if (n.nodeType !== 1) return;
+          replaced += 1 + n.querySelectorAll('*').length;
+          covers += (n.matches('img') ? 1 : 0) + n.querySelectorAll('img').length;
+        })));
+        mo.observe(view.contentEl, { childList: true, subtree: true });
+        // A row focused, as the keyboard leaves it.
+        const row = view.contentEl.querySelector('.dr-track[data-path]:nth-child(5)') || view.contentEl.querySelector('.dr-track[data-path]');
+        const path = row && row.dataset.path;
+        if (row) {
+          if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '0');
+          row.focus();
+        }
+        view.render();
+        await frames(30);
+        mo.disconnect();
+        const now = view.contentEl.ownerDocument.activeElement;
+        const focus = !row ? 'no row' : now === row ? 'kept' : now && now.dataset && now.dataset.path === path ? 'moved to its new row' : 'lost';
+        return { p50: pct(0.5), p95: pct(0.95), rows: view.contentEl.querySelectorAll('.dr-track').length, replaced, covers, focus };
+      }, root);
+      if (m) perf.push(`perf: album of ${n} notes: draw p50 ${m.p50.toFixed(1)} ms, p95 ${m.p95.toFixed(1)} ms (${m.rows} rows); a redraw with nothing changed replaces ${m.replaced} elements, ${m.covers} covers; focus ${m.focus}`);
+    }
+    await browser.executeObsidian(async ({ app }, roots) => {
+      for (const root of roots) {
+        const folder = app.vault.getFolderByPath(root);
+        if (folder) await app.vault.delete(folder, true);
+      }
+    }, made);
+  });
+
   it('opens a folder in a note’s path at the top as its collection in the library', async function () {
     await obsidianPage.openFile('Politics/Deterrence.md');
     const crumb = await browser.$(ACTIVE + '.view-header-title-parent .view-header-breadcrumb');

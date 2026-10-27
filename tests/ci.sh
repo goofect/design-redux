@@ -46,6 +46,7 @@ for f in $(git ls-tree --name-only origin/ci-results | grep -E 'timings\.txt$');
   set -- $now
   echo "timings $v: shelf of 500 albums $1 ms, sidebar $2 ms, fold on 500 cards $3 ms"
   git show "origin/ci-results:$f" | grep -o 'mind map of 2000 nodes:.*' | sed "s/^/  /"
+  git show "origin/ci-results:$f" | grep -o 'album of 2000 notes:.*' | sed "s/^/  /"
   last="logs/ci-timings-$v.txt"
   if [ -f "$last" ]; then
     read -r ps pb pf < "$last"
