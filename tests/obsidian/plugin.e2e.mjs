@@ -324,15 +324,30 @@ describe('Design Redux in Obsidian', function () {
       const added = targets.filter((t) => !plugin.pins.has(t) && plugin.pins.toggle(t));
       const was = plugin.settings.pinsExpanded;
       plugin.settings.pinsExpanded = true;
+      // And one whose note has moved since it was pinned.
+      plugin.pins.instance().addItem({ type: 'file', path: 'Old place/Anarchy.md' });
       const leaf = app.workspace.getLeavesOfType('design-redux-library').find((l) => l.view.containerEl.isShown());
       leaf.view.render();
       await new Promise((r) => setTimeout(r, 300));
       const rows = Array.from(leaf.view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
-      return { added: added.map((t) => t.path), was, rows: rows.map((r) => [r.querySelector('.dr-lib-label').textContent, !!r.querySelector('.dr-lib-icon.has-art > *'), (r.querySelector('.dr-lib-sub') || {}).textContent || '']) };
+      const missing = Array.from(leaf.view.contentEl.querySelectorAll('.dr-lib-row.is-missing')).map((r) => [r.querySelector('.dr-lib-label').textContent, r.querySelector('.dr-lib-sub').textContent]);
+      return { added: added.map((t) => t.path), was, missing, rows: rows.filter((r) => !r.classList.contains('is-missing')).map((r) => [r.querySelector('.dr-lib-label').textContent, !!r.querySelector('.dr-lib-icon.has-art > *'), (r.querySelector('.dr-lib-sub') || {}).textContent || '']) };
     });
     expect(pinned.rows.length).toBeGreaterThanOrEqual(2);
     pinned.rows.forEach(([, art]) => expect(art).toBe(true));
+    expect(pinned.missing).toEqual([['Anarchy', 'Found in Politics?']]);
     await shot('library-pins');
+    // Pinned where it is now — pinned there already — it goes, and isn't pinned twice.
+    const fixed = await browser.executeObsidian(async ({ app, plugins }) => {
+      const pins = plugins.designRedux.pins;
+      const pin = pins.missing().find((m) => m.path === 'Old place/Anarchy.md');
+      const ok = pins.repoint(pin, app.vault.getAbstractFileByPath('Politics/Anarchy.md'));
+      const flat = [];
+      const walk = (items) => items.forEach((i) => (i.type === 'group' ? walk(i.items) : flat.push(i)));
+      walk(pins.instance().getBookmarks());
+      return { ok, missing: pins.missing().length, twice: flat.filter((i) => i.path === 'Politics/Anarchy.md' && !i.subpath).length };
+    });
+    expect(fixed).toEqual({ ok: true, missing: 0, twice: 1 });
     await browser.executeObsidian(async ({ app, plugins }, put) => {
       const plugin = plugins.designRedux;
       put.added.forEach((p) => plugin.pins.toggle(app.vault.getAbstractFileByPath(p)));

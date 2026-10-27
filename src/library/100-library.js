@@ -16,6 +16,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { isAppleLook } from '../ui/229-components.js';
+import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
 export class LibraryView extends ItemView {
@@ -337,14 +338,81 @@ export class LibraryView extends ItemView {
 
     const pins = this.plugin.pins;
     const items = pins.all();
-    if (!items.length) {
+    const missing = typeof pins.missing === 'function' ? pins.missing() : [];
+    if (!items.length && !missing.length) {
       list.createDiv({ cls: 'dr-lib-empty', text: 'Nothing pinned yet' });
       return;
     }
     items.forEach((target) => this.targetRow(list, target, 1, true));
+    missing.forEach((pin) => this.missingRow(list, pin));
   }
 
   /** The Pinned row's own menu: its covers small, a row each, or large, the way an album's are. */
+  /** A pin whose folder or note has gone: greyed, saying so — or where it may be now — and clicked, what can be done. */
+  missingRow(list, pin) {
+    const likely = this.plugin.pins.likely(pin);
+    const parent = likely && likely.parent;
+    const where = parent && !(parent.isRoot && parent.isRoot()) ? parent.name : this.app.vault.getName();
+    const menu = (evt) => this.missingMenu(evt, pin, likely);
+    const row = this.row(list, {
+      depth: 1,
+      label: pin.name,
+      sub: likely ? `Found in ${where}?` : 'Not found',
+      draw: (el) => {
+        el.addClass('is-blank');
+        setIcon(el, pin.type === 'folder' ? 'folder-x' : 'file-x');
+      },
+      toggles: true,
+      onClick: menu,
+      onMenu: menu,
+    });
+    row.addClass('is-missing');
+    row.dataset.missing = pin.path;
+    row.setAttribute('aria-label', `${pin.name}: ${likely ? `found in ${where}?` : 'not found'}. Choose what to do with this pin`);
+  }
+
+  missingMenu(evt, pin, likely) {
+    const pins = this.plugin.pins;
+    const done = (ok) => ok && this.render();
+    const menu = new Menu();
+    if (likely) {
+      menu.addItem((i) =>
+        i
+          .setSection('action')
+          .setTitle(`Pin ${likely.path}`)
+          .setIcon('pin')
+          .onClick(() => done(pins.repoint(pin, likely)))
+      );
+    }
+    menu.addItem((i) =>
+      i
+        .setSection('action')
+        .setTitle(pin.type === 'folder' ? 'Find the folder…' : 'Find the note…')
+        .setIcon('search')
+        .onClick(() => this.findMissing(pin))
+    );
+    menu.addItem((i) =>
+      i
+        .setSection('danger')
+        .setTitle('Remove pin')
+        .setIcon('pin-off')
+        .onClick(() => done(pins.forget(pin)))
+    );
+    showMenuAt(menu, evt);
+  }
+
+  /** The pin pointed at a folder or note chosen by name. */
+  findMissing(pin) {
+    const pins = this.plugin.pins;
+    const go = (target) => target && pins.repoint(pin, target) && this.render();
+    if (pin.type === 'folder') {
+      new FolderPicker(this.app, go, { placeholder: `Where is ${pin.name} now?` }).open();
+      return;
+    }
+    const items = this.app.vault.getFiles().map((file) => ({ label: file.path, file }));
+    new ChoicePicker(this.app, `Where is ${pin.name} now?`, items, (item) => go(item.file)).open();
+  }
+
   pinsMenu(evt) {
     const settings = this.plugin.settings;
     const menu = new Menu();

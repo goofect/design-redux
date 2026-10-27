@@ -224,6 +224,25 @@
   font-weight: var(--font-normal, 400);
 }
 
+/* A pin whose folder or note has gone: its name greyed, a crossed-out
+   icon in place of its cover, and beneath, where it may be now. */
+.dr-lib-row.is-missing .dr-lib-label {
+  color: var(--text-muted);
+}
+
+.dr-lib-row.is-missing .dr-lib-icon {
+  color: var(--text-faint);
+}
+
+.dr-lib-row.is-missing .dr-lib-icon .svg-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.dr-lib-row.is-missing .dr-lib-sub {
+  color: var(--text-warning, var(--color-orange));
+}
+
 .dr-lib-empty {
   padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
   color: var(--text-faint);

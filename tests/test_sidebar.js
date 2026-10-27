@@ -108,7 +108,7 @@ folders['Concepts Folder'].parent = root;
 folders['Books Folder'].parent = root;
 const all = Object.assign({}, folders, files);
 
-function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
+function setup({ page, pinsExpanded = false, pinned = [], missing = [] } = {}) {
   const sections = [
     { title: '', items: [{ kind: 'builtin', id: 'search' }, { kind: 'builtin', id: 'home' }] },
     { title: 'Library', items: [
@@ -145,6 +145,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
   };
   const saved = [];
   const created = [];
+  const calls = [];
   const plugin = {
     app,
     settings: { librarySections: sections, pinsExpanded, coverProperty: 'cover' },
@@ -164,6 +165,10 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
       folders: () => pinned.filter((t) => t instanceof TFolder),
       files: () => pinned.filter((t) => t instanceof TFile),
       all: () => pinned.filter((t) => t instanceof TFolder).concat(pinned.filter((t) => t instanceof TFile)),
+      missing: () => missing,
+      likely: (pin) => pin.likely || null,
+      repoint: (pin, target) => { calls.push(['repoint', pin.path, target.path]); return true; },
+      forget: (pin) => { calls.push(['forget', pin.path]); return true; },
     },
   };
   const view = new LibraryView({}, plugin);
@@ -177,7 +182,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
   leafEl.appendChild(view.containerEl);
   view.syncChrome();
   view.render();
-  return { view, split, leafEl, saved, plugin, created, triggered, app };
+  return { view, split, leafEl, saved, plugin, created, triggered, app, calls };
 }
 
 const browsePage = (mode, extra) => {
@@ -349,6 +354,27 @@ t('what is pinned shows its artwork, never a blank, and a line beneath: what a f
   item.click();
   assert.strictEqual(saved.pop().pinsLarge, true);
   assert.strictEqual(view.contentEl.querySelectorAll('.dr-lib-row.is-pin.is-large').length, 2);
+});
+
+t('a pin whose note or folder has gone is shown, greyed, with where it may be now, and what to do with it', () => {
+  const gone = { type: 'file', path: 'Old/Gone.md', name: 'Gone' };
+  const moved = { type: 'folder', path: 'Books Folder Old', name: 'Books Folder Old', likely: folders['Books Folder'] };
+  const { view, calls } = setup({ page: null, pinsExpanded: true, pinned: [files['Home.md']], missing: [moved, gone] });
+  const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-missing'));
+  assert.deepStrictEqual(rows.map((r) => [r.querySelector('.dr-lib-label').textContent, r.querySelector('.dr-lib-sub').textContent]), [['Books Folder Old', `Found in ${view.app.vault.getName()}?`], ['Gone', 'Not found']]);
+  assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-lib-icon').dataset.icon), ['folder-x', 'file-x']);
+  assert.ok(rows.every((r) => r.classList.contains('is-pin') && r.getAttribute('aria-label').includes('Choose what to do')));
+  // Clicked: pin where it is now, find it, or let it go.
+  rows[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  assert.deepStrictEqual(lastMenu.items.map((i) => [i.title, i.section]), [['Pin Books Folder', 'action'], ['Find the folder…', 'action'], ['Remove pin', 'danger']]);
+  lastMenu.items[0].click();
+  rows[1].dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 5, clientY: 5 }));
+  assert.deepStrictEqual(lastMenu.titles(), ['Find the note…', 'Remove pin'], 'nothing of its name to offer');
+  lastMenu.items[1].click();
+  assert.deepStrictEqual(calls, [['repoint', 'Books Folder Old', 'Books Folder'], ['forget', 'Old/Gone.md']]);
+  // Only missing pins: not 'Nothing pinned yet'.
+  const only = setup({ page: null, pinsExpanded: true, missing: [gone] }).view;
+  assert.ok(!only.contentEl.querySelector('.dr-lib-empty'));
 });
 
 t('clicking Pinned opens and closes it, and goes nowhere', () => {
