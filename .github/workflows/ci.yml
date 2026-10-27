@@ -13,7 +13,7 @@ name: Test and release
 # except on the default branch, where each run may release.
 on:
   push:
-    branches-ignore: [ci-results]
+    branches-ignore: [ci-results, ci-snapshots]
     paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', '.claude/**', 'tests/map.js', 'tests/tool-log.js']
   workflow_dispatch:
 
@@ -99,6 +99,22 @@ jobs:
             echo "obsidian tests: ${{ steps.obsidian.outcome }}"
             echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } > ci-output/summary.txt
+          # The UI snapshots compared with main's last (the ci-snapshots
+          # branch): snapshots/diff/summary.txt, and a picture of each change.
+          if [ -d ci-output/snapshots ]; then
+            mkdir -p /tmp/snapshots-main
+            if git fetch -q origin ci-snapshots 2>/dev/null; then
+              git archive FETCH_HEAD | tar -x -C /tmp/snapshots-main
+              node tools/snapshot-diff.mjs /tmp/snapshots-main ci-output/snapshots --out ci-output/snapshots/diff || true
+            fi
+            # On main, these become the ones the next runs are compared with.
+            if [ "$GITHUB_REF_NAME" = "${{ github.event.repository.default_branch }}" ]; then
+              rm -rf /tmp/snapshots-new && cp -r ci-output/snapshots /tmp/snapshots-new && rm -rf /tmp/snapshots-new/diff
+              (cd /tmp/snapshots-new && git init -q && git checkout -q -b ci-snapshots && git add -A \
+                && git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Snapshots for ${GITHUB_SHA::7}" \
+                && git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-snapshots) || true
+            fi
+          fi
           cd ci-output
           git init -q
           git checkout -q -b ci-results

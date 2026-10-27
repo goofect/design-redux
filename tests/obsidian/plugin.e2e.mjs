@@ -28,6 +28,39 @@ async function shot(name) {
   await browser.saveScreenshot(path.join(OUT, `${version}-${name}.png`));
 }
 
+/**
+ * Media features emulated through Electron's own DevTools: a list such as
+ * [{ name: 'prefers-reduced-motion', value: 'reduce' }], or [] for none.
+ * True once they took, or why not.
+ */
+async function emulate(features) {
+  return browser.executeObsidian(async ({}, features) => {
+    try {
+      const electron = window.require('electron');
+      const remote = electron.remote || window.require('@electron/remote');
+      const contents = remote.getCurrentWebContents();
+      if (!contents.debugger.isAttached()) contents.debugger.attach('1.3');
+      await contents.debugger.sendCommand('Emulation.setEmulatedMedia', { features });
+      return true;
+    } catch (err) {
+      return String(err);
+    }
+  }, features);
+}
+
+/** The window resized through Electron (WebDriver's own can't here); its size before. */
+async function resize(width, height) {
+  const before = await browser.executeObsidian(({}, width, height) => {
+    const electron = window.require('electron');
+    const win = (electron.remote || window.require('@electron/remote')).getCurrentWindow();
+    const [w, h] = win.getSize();
+    win.setSize(width, height);
+    return { width: w, height: h };
+  }, width, height);
+  await browser.pause(300);
+  return before;
+}
+
 /** Click the first element matching a selector whose text is exactly `text`, in the page. */
 async function clickText(selector, text) {
   const found = await browser.execute(
@@ -2706,6 +2739,108 @@ describe('Design Redux in Obsidian', function () {
     expect(out).toEqual({ before: null, set: 'Open', after: 'Closed' });
   });
 
+
+  // Snapshots for tools/snapshot-diff.mjs, which CI runs against main's last
+  // ones: the same screens at the same size, nothing moving. They add to the
+  // tests of what the screens do, never stand in for them.
+  it('takes snapshots of both sidebars, the Edit tray and a narrow album, and holds up with reduced motion and forced colours', async function () {
+    const dir = path.join(OUT, 'snapshots');
+    const snap = async (name, selector) => {
+      if (version === OLDEST) return;
+      fs.mkdirSync(dir, { recursive: true });
+      await browser.pause(200);
+      await (await browser.$(selector)).saveScreenshot(path.join(dir, `${name}.png`));
+    };
+    const size = await resize(1280, 800);
+    const ready = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const find = (name) => plugin.features.find((f) => f.constructor.name === name);
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      // Nothing moving: no transitions, animations or blinking caret.
+      if (!document.getElementById('dr-snapshot-still')) {
+        const still = document.head.createEl('style', { attr: { id: 'dr-snapshot-still' } });
+        still.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
+      }
+      app.workspace.leftSplit.expand();
+      app.workspace.rightSplit.expand();
+      const library = find('Library');
+      if (typeof library.reveal === 'function') await library.reveal();
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      const page = app.workspace.activeLeaf;
+      const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      const button = () => page.view.containerEl.querySelector('.dr-preview-btn');
+      await until(() => !!row() && !!button());
+      const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
+      if (!page.view.previewOn()) button().click();
+      await until(() => !!dock() && page.view.previewOn());
+      row().click();
+      await until(() => !!dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'));
+      return { row: !!row(), dock: !!dock(), lib: !!document.querySelector('.mod-left-split .dr-lib-row') };
+    });
+    expect(ready).toEqual({ row: true, dock: true, lib: true });
+    await snap('left-sidebar', '.workspace-split.mod-left-split');
+    await snap('right-sidebar', '.workspace-split.mod-right-split');
+
+    // The tray Edit mode shows, with a note ticked.
+    await clickText('.workspace-leaf.mod-active .dr-detail-action', 'Edit');
+    const tick = await browser.$('.workspace-leaf.mod-active .dr-edit-tick');
+    await tick.waitForExist({ timeout: 5000 });
+    await tick.click();
+    await browser.$('.workspace-leaf.mod-active .dr-bulk-bar:not(.is-empty)').waitForExist({ timeout: 5000 });
+    await snap('edit-tray', '.workspace-leaf.mod-active .dr-bulk-bar');
+
+    // Reduced motion: the durations every transition here is made of come to nothing.
+    expect(await emulate([{ name: 'prefers-reduced-motion', value: 'reduce' }])).toBe(true);
+    const motion = await browser.executeObsidian(() => {
+      const body = getComputedStyle(document.body);
+      return {
+        matches: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        durations: ['--dr-dur-press', '--dr-dur-fast', '--dr-dur-base', '--dr-dur-slow'].map((v) => body.getPropertyValue(v).trim()),
+      };
+    });
+    expect(motion).toEqual({ matches: true, durations: ['0ms', '0ms', '0ms', '0ms'] });
+
+    // Forced colours: what's on the sidebars and the tray still reads — its text a different colour from what's behind it.
+    expect(await emulate([{ name: 'forced-colors', value: 'active' }])).toBe(true);
+    const contrast = await browser.executeObsidian(() => {
+      const behind = (el) => {
+        for (let e = el; e; e = e.parentElement) {
+          const bg = getComputedStyle(e).backgroundColor;
+          if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') return bg;
+        }
+        return getComputedStyle(document.body).backgroundColor;
+      };
+      const unreadable = Array.from(document.querySelectorAll('.mod-left-split .dr-lib-row, .workspace-leaf.mod-active .dr-bulk-bar .dr-bulk-action, .workspace-leaf.mod-active .dr-bulk-count, .mod-right-split .dr-props-title'))
+        .filter((el) => el.offsetParent !== null)
+        .filter((el) => getComputedStyle(el).color === behind(el))
+        .map((el) => el.className);
+      return { matches: window.matchMedia('(forced-colors: active)').matches, unreadable };
+    });
+    expect(contrast).toEqual({ matches: true, unreadable: [] });
+    await snap('left-sidebar-forced-colors', '.workspace-split.mod-left-split');
+    await snap('edit-tray-forced-colors', '.workspace-leaf.mod-active .dr-bulk-bar');
+    expect(await emulate([])).toBe(true);
+    await clickText('.workspace-leaf.mod-active .dr-detail-action', 'Done');
+
+    // Narrow: the album fits, with nothing to scroll sideways.
+    await resize(760, 800);
+    await browser.executeObsidian(({ app }) => app.workspace.rightSplit.collapse());
+    await browser.pause(300);
+    const wide = await browser.executeObsidian(({ app }) => {
+      const el = app.workspace.activeLeaf.view.contentEl;
+      const edge = el.getBoundingClientRect().right;
+      const out = Array.from(el.querySelectorAll('*')).filter((e) => e.getBoundingClientRect().right > edge + 1 && !(e.parentElement && e.parentElement.getBoundingClientRect().right > edge + 1)).slice(0, 5).map((e) => `${e.className} ${Math.round(e.getBoundingClientRect().right - edge)} w${Math.round(e.getBoundingClientRect().width)} cw${el.clientWidth}`);
+      return el.scrollWidth - el.clientWidth > 1 ? out : 0;
+    });
+    expect(wide).toBe(0);
+    await snap('album-narrow', '.workspace-leaf.mod-active');
+    await resize(size.width, size.height);
+    await browser.executeObsidian(({ app }) => {
+      app.workspace.rightSplit.expand();
+      const still = document.getElementById('dr-snapshot-still');
+      if (still) still.remove();
+    });
+  });
   it('logged no errors of its own along the way', async function () {
     const errors = await browser.executeObsidian(() => window.__drErrors || []);
     const ours = errors.filter((e) => /design redux|plugin:design-redux/i.test(e));
