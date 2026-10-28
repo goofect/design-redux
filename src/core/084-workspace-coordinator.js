@@ -2,8 +2,8 @@
 /* The workspace coordinator                                          */
 /*                                                                    */
 /* What the inspector is about, decided in one place. What's open in  */
-/* a tab, what's picked in the library, a card on a canvas, a node of */
-/* a map: each can say what to show, and the pin says whether any of  */
+/* a tab, what's picked in the library, a card on a canvas: each can  */
+/* say what to show, and the pin says whether any of                  */
 /* them may. The coordinator keeps the answer as a snapshot —          */
 /* { target, leaf, origin, pinned } — and tells whoever listens when  */
 /* it changes; they draw from it. One for the whole plugin, on        */
@@ -14,19 +14,14 @@ import { MarkdownView, TFile } from 'obsidian';
 import { INSPECTOR_VIEW } from './020-constants.js';
 import { cardElement, pickedOnCanvas } from './079-canvas-adapter.js';
 
-/** A view of a note's own kind — a mind map — that says what the inspector is about. */
-export function hostsPanel(view) {
-  return !!view && typeof view.panelTarget === 'function';
-}
-
 /** Why the inspector shows `target`, in a few words. */
 export function originLabel(origin) {
-  return { picked: 'Picked in the library', card: 'A card on the canvas', node: 'A node on the map', map: 'The open map', note: 'The open note' }[origin] || '';
+  return { picked: 'Picked in the library', card: 'A card on the canvas', note: 'The open note' }[origin] || '';
 }
 
 /** Whether two targets are about the same thing, drawn the same way. */
 export const sameTarget = (a, b) =>
-  a === b || (!!a && !!b && a.file === b.file && a.folder === b.folder && a.card === b.card && a.node === b.node && !!a.picked === !!b.picked);
+  a === b || (!!a && !!b && a.file === b.file && a.folder === b.folder && a.card === b.card && !!a.picked === !!b.picked);
 
 export class WorkspaceCoordinator {
   constructor(plugin) {
@@ -82,14 +77,13 @@ export class WorkspaceCoordinator {
   }
 
   /**
-   * What a tab is about: its note; a map's own answer; on a canvas, the
+   * What a tab is about: its note; on a canvas, the
    * one card selected — a note's card the note, a text card itself.
    * { file } or { card }, { none: why not } or null.
    */
   targetOf(leaf) {
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
     if (view instanceof MarkdownView) return view.file ? { file: view.file } : null;
-    if (hostsPanel(view)) return view.panelTarget();
     const canvas = view && view.canvas;
     if (!canvas) return null;
     const picked = pickedOnCanvas(canvas).filter((n) => n && cardElement(n) && typeof n.getData === 'function');
@@ -114,8 +108,6 @@ export class WorkspaceCoordinator {
     if (!target) return '';
     if (target.picked || target.folder) return 'picked';
     if (target.card) return 'card';
-    if (target.node) return 'node';
-    if (leaf && hostsPanel(leaf.view)) return 'map';
     return 'note';
   }
 

@@ -754,14 +754,6 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
       m.addItem((item) =>
         item.setTitle(nested ? 'Folder' : 'New folder').setIcon('folder-plus').onClick(() => plugin.newFolder(target))
       );
-      if (plugin.settings && plugin.settings.mindmaps !== false && typeof plugin.newMindMap === 'function') {
-        m.addItem((item) =>
-          item
-            .setTitle(nested ? 'Mind map' : 'New mind map')
-            .setIcon('network')
-            .onClick(() => plugin.newMindMap(target))
-        );
-      }
       if (canvasOn(app)) {
         m.addItem((item) =>
           item

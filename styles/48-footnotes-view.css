@@ -201,63 +201,6 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
   font-size: var(--font-ui-small);
 }
 
-/* What a folded branch holds, pointed at: the cards tucked into it, by name. */
-.popover.dr-fold-pop {
-  position: fixed;
-  flex-direction: column;
-}
-
-.popover.dr-fold-list {
-  --popover-width: 252px;
-  padding: calc(var(--dr-u) * 1.5);
-}
-
-.dr-fold-list-head {
-  padding: var(--dr-space-1) var(--dr-space-2) calc(var(--dr-u) * 1.5);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-fold-list-row {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-space-2);
-  padding: var(--dr-space-1) var(--dr-space-2);
-  padding-inline-start: calc(var(--dr-space-2) + var(--dr-depth, 0) * 14px);
-  border-radius: var(--dr-radius-sm);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-
-.dr-fold-list-row:focus-visible {
-  outline: none;
-  background-color: var(--background-modifier-hover);
-}
-
-@media (any-hover: hover) {
-  .dr-fold-list-row:hover {
-    background-color: var(--background-modifier-hover);
-  }
-}
-
-.dr-fold-list-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-fold-list-count,
-.dr-fold-list-more {
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-fold-list-more {
-  padding: var(--dr-space-1) var(--dr-space-2) 2px;
-}
-
 .dr-outline-title {
   padding: var(--dr-space-1) var(--dr-space-2) var(--dr-space-2);
   color: var(--text-muted);

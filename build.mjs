@@ -25,7 +25,7 @@ import * as esbuild from 'esbuild';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.join(root, 'src');
-const AREAS = ['core', 'ui', 'tree', 'library', 'note', 'maps', 'tools', 'plugin'];
+const AREAS = ['core', 'ui', 'library', 'note', 'tools', 'plugin'];
 const fail = (message) => {
   console.error(`build: ${message}`);
   process.exit(1);

@@ -81,7 +81,6 @@ export const ACTION_CONTEXTS = {
     if (!view || !view.canvas || !view.file || view.file.extension !== 'canvas') return null;
     return canvasContext(view, pickedOnCanvas(view.canvas), 'palette');
   },
-  mindmap: () => mindMapNow(),
   album: (app) => {
     const folder = pageFolder(app);
     return folder ? { folder, from: 'palette' } : null;
@@ -124,15 +123,14 @@ export function actionItem(item, action, ctx, title) {
   return item.onClick(() => action.run(ctx));
 }
 
-/** The four places the plugin is organised in, by feature: where its commands are found in the palette. */
+/** The three places the plugin is organised in, by feature: where its commands are found in the palette. */
 export const FEATURE_PLACES = {
   Library: ['Library', 'SidebarDrop', 'AlbumStructure', 'AlbumRefactor', 'AlbumProperty', 'SmartAlbums', 'LibraryCheck', 'CoverImages', 'CoverDrop'],
   Note: ['Footnotes', 'Scripts', 'MarkedLists', 'ListKeys', 'QuietLinks', 'NotePage', 'ReadingHistory', 'ReadingOutline', 'Study', 'Knowledge', 'KnowledgeCheck', 'ImageRouter', 'PropertiesPanel', 'PropertyClipboard', 'PropertyDates', 'PropertyRules', 'PropertyHistory', 'PropertySchemas', 'PropertyLinks'],
-  Maps: ['MindMaps'],
-  Tools: ['BulkEditing', 'ContextStrip', 'WorkspaceModes', 'GraphPropertyFilter', 'GraphRoutes', 'Diagnostics', 'OnePage', 'SettingsButton', 'ActionsMenu', 'MenuFilter', 'Appearance'],
+  Tools: ['BulkEditing', 'ContextStrip', 'GraphPropertyFilter', 'GraphRoutes', 'Diagnostics', 'OnePage', 'SettingsButton', 'ActionsMenu', 'MenuFilter', 'Appearance'],
 };
 
-/** A feature's place, by its class's name: 'Library', 'Note', 'Maps', 'Tools', or null. */
+/** A feature's place, by its class's name: 'Library', 'Note', 'Tools', or null. */
 export function featurePlace(feature) {
   const name = feature && feature.constructor && feature.constructor.name;
   return Object.keys(FEATURE_PLACES).find((place) => FEATURE_PLACES[place].indexOf(name) !== -1) || null;
@@ -141,7 +139,7 @@ export function featurePlace(feature) {
 /** A name in the palette under its place — 'Note: Mark to revisit' — the id it answers to untouched. */
 export function placedName(name, place) {
   if (!place || name.indexOf(`${place}: `) === 0) return name;
-  return `${place}: ${name.replace(/^Mind map: /, '')}`;
+  return `${place}: ${name}`;
 }
 
 /** Actions as commands: offered while there's something they apply to; run on it. */
@@ -162,13 +160,6 @@ export function actionCommands(actions, context, place) {
         if (ctx && applies(a, ctx)) a.run(ctx);
       },
     }));
-}
-
-/* The mind map in use, as an action sees it — or null: set by the mind-map feature. */
-let mindMapNow = () => null;
-
-export function setMindMapContext(find) {
-  mindMapNow = typeof find === 'function' ? find : () => null;
 }
 
 /** The one surface an action is shown on beyond the palette: its own `home`, else the menus unless it keeps off them. */

@@ -57,10 +57,8 @@ import { PropertySchemas } from '../tools/305-bulk-schema.js';
 import { PropertyHistory } from '../tools/306-bulk-history.js';
 import { PropertyRules } from '../tools/307-bulk-rules.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
-import { WorkspaceModes } from '../tools/348-workspace-modes.js';
 import { Diagnostics } from './355-diagnostics.js';
 import { DesignReduxSettingTab } from './360-settings-tab.js';
-import { MindMaps } from '../maps/420-mindmap-feature.js';
 
 export class DesignRedux extends Plugin {
   async onload() {
@@ -104,7 +102,6 @@ export class DesignRedux extends Plugin {
       new AlbumProperty(this),
       new Knowledge(this),
       new KnowledgeCheck(this),
-      new WorkspaceModes(this),
       new AlbumStructure(this),
       new SmartAlbums(this),
       new LibraryCheck(this),
@@ -116,7 +113,6 @@ export class DesignRedux extends Plugin {
       new GraphRoutes(this),
       new QuietLinks(this),
       new NotePages(this),
-      new MindMaps(this),
       new Diagnostics(this),
       new BulkEditing(this),
       new PropertySchemas(this),
@@ -269,19 +265,6 @@ export class DesignRedux extends Plugin {
 
   newCanvas(folder) {
     return this.files.newCanvas(folder);
-  }
-
-  /** A note's relationships, from Knowledge, as a mind map: undefined where mind maps are off, so a canvas is made instead. */
-  mapNoteRelationships(file, knowledge) {
-    const maps = this.feature(MindMaps);
-    if (!maps || maps.enabled === false) return undefined;
-    return maps.mapNoteRelationships(file, knowledge);
-  }
-
-  /** A new mind map in the folder, where mind maps are on. */
-  newMindMap(folder) {
-    const maps = this.feature(MindMaps);
-    return maps && maps.enabled ? maps.newMap(folder) : null;
   }
 
   /**

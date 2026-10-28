@@ -59,7 +59,7 @@ function assert(cond, msg) {
   });
 
   await test('suites, tools and helpers', () => {
-    assert(pick('tests/test_tree.js').join() === 'tree', 'a suite is itself');
+    assert(pick('tests/test_lists.js').join() === 'lists', 'a suite is itself');
     const tools = pick('tools/css-owners.mjs');
     assert(tools.includes('css_owners') && tools.includes('context_pack'), tools.join(' '));
     assert(pick('tests/snapshots/lifecycle.json').includes('lifecycle'), 'a snapshot, its readers');

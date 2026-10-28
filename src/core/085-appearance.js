@@ -4,13 +4,11 @@
 /* How everything the plugin draws is set out, decided in one place:   */
 /* the density — the unit every space is a multiple of, from compact   */
 /* to spacious; the same setting sizes the covers — the look, the      */
-/* theme's own or the editorial one (monochrome, flat, fine lines),   */
-/* and how far apart canvas layouts, tidies and new cards put cards.   */
+/* theme's own or the editorial one (monochrome, flat, fine lines).   */
 /* Density and look are classes on the page; styles.css does the rest. */
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { CANVAS_SPACE } from './020-constants.js';
 import { Feature } from './080-feature.js';
 
 export const LOOKS = { apple: 'Apple: the system font, grouped lists, quiet controls', theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines' };
@@ -18,9 +16,6 @@ export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux o
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
 export const ICON_MODES = { auto: 'Icons with words, the words dropping where it’s narrow', icons: 'Icons only', words: 'Words only' };
-
-export const CANVAS_SPACINGS = { compact: 'Compact', standard: 'Standard', spacious: 'Spacious' };
-export const CANVAS_SPACING_SCALE = { compact: 0.75, standard: 1, spacious: 1.4 };
 
 export class Appearance extends Feature {
   settingsSchema() {
@@ -59,13 +54,6 @@ export class Appearance extends Feature {
         desc: 'Buttons and tabs for common actions — Open, Add, Search, Sort, Filter — show an icon with the word in a tooltip. Anything ambiguous or destructive keeps its words.',
         options: ICON_MODES,
       },
-      {
-        key: 'canvasSpacing',
-        type: 'dropdown',
-        name: 'Canvas spacing',
-        desc: 'How far apart layouts, tidying and new nodes put things on a map — apart from the density of everything else.',
-        options: CANVAS_SPACINGS,
-      },
     ];
   }
 
@@ -77,20 +65,10 @@ export class Appearance extends Feature {
         icon: 'contrast',
         run: () => this.change('look', this.settings.look === 'apple' ? 'theme' : 'apple', `Look: ${this.settings.look === 'apple' ? 'the theme’s' : 'Apple'}`),
       },
-      {
-        id: 'next-canvas-spacing',
-        name: 'Next canvas spacing: compact, standard, spacious',
-        icon: 'move-horizontal',
-        run: () => {
-          const keys = Object.keys(CANVAS_SPACINGS);
-          const next = keys[(keys.indexOf(this.settings.canvasSpacing) + 1) % keys.length];
-          this.change('canvasSpacing', next, `Canvas spacing: ${CANVAS_SPACINGS[next].toLowerCase()}`);
-        },
-      },
     ];
   }
 
-  /** Every settings save: the page's classes, and the canvas's spacing, as set. Safe to run again. */
+  /** Every settings save: the page's classes, as set. Safe to run again. */
   enable() {
     this.apply();
   }
@@ -113,7 +91,6 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-icons-only', !off && this.settings.iconMode === 'icons');
     body.classList.toggle('dr-icons-words', !off && this.settings.iconMode === 'words');
     body.classList.toggle('dr-look-scoped', !off && this.settings.look === 'editorial' && this.settings.lookScope === 'plugin');
-    CANVAS_SPACE.scale = (!off && CANVAS_SPACING_SCALE[this.settings.canvasSpacing]) || 1;
   }
 
   async change(key, value, message) {

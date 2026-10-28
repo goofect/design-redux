@@ -103,54 +103,6 @@
   text-align: center;
 }
 
-/* -- the map minimap ---------------------------------------------------- */
-
-.dr-minimap {
-  position: absolute;
-  right: 12px;
-  /* Clear of the status bar, which floats over the corner. */
-  bottom: 40px;
-  z-index: 20;
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-radius-md);
-  background-color: var(--dr-float-bg);
-  backdrop-filter: blur(var(--dr-glass-blur));
-  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
-  box-shadow: var(--dr-float-shadow);
-  overflow: hidden;
-  cursor: pointer;
-  touch-action: none;
-}
-
-.dr-mindmap-minimap .dr-minimap-view {
-  vector-effect: non-scaling-stroke;
-}
-
-.dr-minimap.is-hidden {
-  display: none;
-}
-
-.dr-minimap svg {
-  display: block;
-}
-
-.dr-minimap-card {
-  fill: var(--text-faint);
-  opacity: 0.55;
-}
-
-.dr-minimap-card.is-selected {
-  fill: var(--interactive-accent);
-  opacity: 1;
-}
-
-.dr-minimap-view {
-  fill: var(--interactive-accent);
-  fill-opacity: 0.08;
-  stroke: var(--interactive-accent);
-  stroke-width: 1.5;
-}
-
 /* The kinds in settings: several controls a row, wrapping where narrow. */
 .dr-relation-type .setting-item-control {
   flex-wrap: wrap;

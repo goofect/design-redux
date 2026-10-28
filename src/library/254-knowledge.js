@@ -256,7 +256,6 @@ export class Knowledge extends Feature {
       { id: 'knowledge-move', name: 'Move this concept under another…', menu: 'Move under another concept…', icon: 'move-up-right', on: 'note', when: on, run: (ctx) => this.askMove(ctx.file) },
       { id: 'knowledge-broader', name: 'Find what this concept comes under…', menu: 'Find broader concepts…', icon: 'arrow-up-to-line', on: 'note', when: (ctx) => on(ctx) && up(ctx), run: (ctx) => this.chooseBroader(ctx.file) },
       { id: 'knowledge-in-album', name: 'Open this note’s collection', menu: 'Open in collection', icon: 'disc', on: 'note', when: on, run: (ctx) => this.openInAlbum(ctx.file) },
-      { id: 'knowledge-map', name: 'Map this note’s relationships', menu: 'Map its relationships', icon: 'network', on: 'note', when: on, run: (ctx) => this.map(ctx.file) },
       { id: 'knowledge-create', name: 'Create a concept…', menu: false, icon: 'file-plus', on: 'app', when: () => this.enabled, run: () => this.createConcept(null) },
     ];
   }
@@ -585,13 +584,6 @@ export class Knowledge extends Feature {
     };
     draw();
     return block;
-  }
-
-  /** A note's relationships as a mind map of their own, opened: the plugin asks the mind maps. */
-  async map(file) {
-    const made = file && typeof this.plugin.mapNoteRelationships === 'function' ? await this.plugin.mapNoteRelationships(file, this) : undefined;
-    if (made === undefined) new Notice('Switch mind maps on in settings to map a note’s relationships.');
-    return made || null;
   }
 
   /** On a note's menu: its relationships. */

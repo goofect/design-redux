@@ -2,14 +2,14 @@
 
 An Obsidian plugin that makes the vault feel like Apple Music: folders open as
 albums, notes as tracks, with covers, a library sidebar, a context strip along
-the bottom, property tools, and mind maps. Goes with the author's theme,
+the bottom, and property tools. Goes with the author's theme,
 Coffee N' Christmas.
 
 ## Files
 
 - `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
-  (core, ui, tree, then the four places — library, note, maps, tools —
-  and plugin). Each
+  (core, ui, then the three places — library, note, tools — and
+  plugin). Each
   imports what it uses and exports what it declares; `src/main.js` imports
   the plugin, whose imports reach every module (the build refuses one
   nothing imports), and exports it. After using a name from another module,
@@ -66,7 +66,7 @@ Coffee N' Christmas.
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
 - What a feature does is written once in `actions()` (`078-actions.js`): each
-  says what it acts on (`on`: app, note, file, editor, canvas, mindmap, album, browse);
+  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
@@ -75,10 +75,9 @@ Coffee N' Christmas.
   row's key must be added to one feature, and to none twice. The look rows are `LOOK_KEYS`.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
-- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`)
-  and the pure map tree (`tree`, which imports only core), then the features by place (library
-  and albums; note: panel, footnotes, scripts, quiet links; maps: mind maps; tools: bulk edits,
-  strip, modes, graph), then the plugin. A module imports from its own area and those below;
+- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
+  then the features by place (library and albums; note: panel, footnotes, scripts,
+  quiet links; tools: bulk edits, strip, graph), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
@@ -91,11 +90,10 @@ Coffee N' Christmas.
   and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts, chained by `extends`: each part
   extends the one before it, and the class extends the last (BrowseView in
-  120 over 121–125; MindMaps in 420 and MindMapView in 421 over the rest of
-  maps, in the order their `extends` name). A part's methods are the class's;
+  120 over 121–125). A part's methods are the class's;
   a test refuses a name written in two parts, so none quietly replaces
   another. A lower area that needs a higher one's work asks the plugin
-  (`plugin.mapNoteRelationships`), never patches a class.
+  (a method on the plugin), never patches a class.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
   `design-redux:panel-changed`).
@@ -109,7 +107,7 @@ Coffee N' Christmas.
   which `hideRightSidebar` hides; the old view types (179) close
   themselves. The reading outline and footnotes are popovers over the
   note (`ui/246` NotePopover). What a tab is about is
-  `plugin.coordinator`'s to say (084): the note, a canvas card, a map node.
+  `plugin.coordinator`'s to say (084): the note, a canvas card.
 - What's picked is `plugin.selection` (076), apart from what's open. What's
   ticked to act on together, while editing an album, is the view's
   `BulkSelection` (118: paths and the Shift anchor, following renames), apart

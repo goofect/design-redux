@@ -7,7 +7,7 @@
 /* built here rather than typed.                                       */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Modal, setIcon, Setting, TFolder } from 'obsidian';
+import { FuzzySuggestModal, Modal, setIcon, TFolder } from 'obsidian';
 import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
 import { blankLook, composing, COVER_SWATCHES, fallbackTint, fillArt, paintTint } from '../core/030-helpers-art.js';
 import { normalHex } from '../core/031-colours.js';
@@ -479,37 +479,6 @@ export function confirmAction(app, opts) {
     };
     modal.open();
   });
-}
-
-/** Asked when a note's card or node is re-linked on a collection's map: set its note's parent? */
-export class SetParentPrompt extends Modal {
-  constructor(app, child, parent, choose) {
-    super(app);
-    this.child = child;
-    this.parent = parent;
-    this.choose = choose;
-    this.chosen = false;
-  }
-
-  onOpen() {
-    const { contentEl } = this;
-    if (this.titleEl) this.titleEl.setText('Set the note’s parent?');
-    contentEl.createEl('p', { text: this.parent ? `Set the parent of “${this.child.basename}” to “${this.parent.basename}”?` : `Take the parent off “${this.child.basename}”, so it hangs from the collection?` });
-    const pick = (choice) => {
-      this.chosen = true;
-      this.close();
-      this.choose(choice);
-    };
-    new Setting(contentEl)
-      .addButton((b) => b.setButtonText('Set').setCta().onClick(() => pick('set')))
-      .addButton((b) => b.setButtonText('Just on the map').onClick(() => pick('map')))
-      .addButton((b) => b.setButtonText('Always set').onClick(() => pick('always')));
-  }
-
-  onClose() {
-    this.contentEl.empty();
-    if (!this.chosen) this.choose('map');
-  }
 }
 
 /**

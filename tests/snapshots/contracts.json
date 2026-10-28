@@ -19,7 +19,6 @@
  "084-workspace-coordinator": {
   "exports": [
    "WorkspaceCoordinator",
-   "hostsPanel",
    "originLabel",
    "sameTarget"
   ],

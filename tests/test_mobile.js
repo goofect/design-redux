@@ -314,7 +314,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tab.tab = 'general';
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
-    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Maps', 'Advanced'], 'by category, not by part of the code');
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Advanced'], 'by category, not by part of the code');
     assert.ok(row('contextStrip').closest('.dr-set-feature'), 'the switch is the feature’s own row');
     const more = row('stripDetail').closest('.dr-set-more');
     assert.ok(more && more.classList.contains('is-off') && !more.classList.contains('is-open'), 'a feature that is off has its options out of sight');

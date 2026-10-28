@@ -642,15 +642,6 @@
   display: block;
 }
 
-/* Study: the page and little else — no status bar, the strip down to the note. */
-body.dr-mode-study .status-bar {
-  display: none;
-}
-
-body.dr-mode-study .dr-strip-actions .dr-strip-btn:not([data-action="more"]) {
-  display: none;
-}
-
 /* Albums an album takes in, before its notes. */
 .dr-album-includes {
   margin-bottom: var(--dr-space-5);

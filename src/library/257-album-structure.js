@@ -379,10 +379,7 @@ export class AlbumStructure extends Feature {
       await this.app.workspace.getLeaf(false).openFile(existing);
       return existing;
     }
-    // The mind maps make it, where they're on.
-    const maps = (this.plugin.features || []).find((f) => typeof f.mapAlbumAsMindMap === 'function');
-    if (maps && maps.enabled) return maps.mapAlbumAsMindMap(folder);
-    new Notice('Switch mind maps on in settings to map a collection.');
+    new Notice(`No canvas in ${folder.name} to open as its map.`);
     return null;
   }
 
