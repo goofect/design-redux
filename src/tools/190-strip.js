@@ -11,12 +11,10 @@ import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
 import { albumNeighbours, canStep, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, step, valueText } from '../core/030-helpers-art.js';
 import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
-import { actionContext, actionsOn, applies, showActionMenu } from '../core/078-actions.js';
+import { actionContext, applies } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
-import { dueNotes, sessionPlace } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
-import { Knowledge } from '../library/254-knowledge.js';
 import { Footnotes } from '../note/285-footnotes.js';
 
 /*
@@ -148,7 +146,6 @@ export class ContextStrip extends Feature {
     // Moving notes around an album moves its neighbours.
     this.plugin.registerEvent(this.app.vault.on('rename', () => this.update()));
     // What's due to be revisited changed.
-    this.plugin.registerEvent(this.app.workspace.on('design-redux:study-changed', () => this.update()));
     // A window made narrow or wide again: what the strip has room for.
     this.plugin.registerDomEvent(window, 'resize', () => {
       if (this.enabled && this.el && this.isNarrow() !== this.narrow) this.update();
@@ -398,43 +395,6 @@ export class ContextStrip extends Feature {
   }
 
   /**
-   * Study, in the More menu: while a session is under way, its next note, marking and
-   * ending it; otherwise how many notes are due and a step to the first. `count` is
-   * what the More button's badge shows.
-   */
-  revisitEntries(file) {
-    const place = sessionPlace(this.plugin, file);
-    if (place) {
-      const entries = [{
-        icon: 'skip-forward',
-        label: place.index === -1 ? `Next note in this session (${place.total})` : `Next note in this session (${place.index + 1} of ${place.total})`,
-        role: 'study-session-next',
-        run: () => this.runAction('study-session-next'),
-      }];
-      [['study-mark-revisit', 'Mark to revisit', 'bookmark-plus'], ['study-end-session', 'End the session', 'square']].forEach(([id, label, icon]) => {
-        const action = this.findAction(id);
-        const ctx = action && actionContext(this.app, action);
-        if (ctx && applies(action, ctx)) entries.push({ icon, label, role: id, run: () => this.runAction(id) });
-      });
-      return { entries, count: place.total };
-    }
-    const due = dueNotes(this.plugin);
-    if (!due.length) return { entries: [], count: 0 };
-    return {
-      entries: [{
-        icon: 'graduation-cap',
-        label: `${due.length} to revisit: open the first`,
-        role: 'revisit',
-        run: () => {
-          const next = dueNotes(this.plugin)[0];
-          if (next) this.app.workspace.getLeaf(false).openFile(next);
-        },
-      }],
-      count: due.length,
-    };
-  }
-
-  /**
    * With the strip down, its way back to a closed sidebar goes in the
    * page's own header — an empty tab, the graph — where a hidden ribbon
    * leaves Obsidian none. A library page draws its own. Shown only while
@@ -585,11 +545,6 @@ export class ContextStrip extends Feature {
       specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: (evt, anchor) => footnotes.showView(undefined, anchor || (evt && evt.currentTarget)) });
     }
 
-    // What can be done to it as a concept, the same as its menu offers.
-    const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
-    if (knowledge && knowledge.enabled && file.extension === 'md') {
-      specs.push({ icon: 'waypoints', label: 'Concept', role: 'concept', secondary: true, run: (evt) => showActionMenu(evt, actionsOn(knowledge.actions(), 'note'), { file, from: 'strip' }) });
-    }
 
     // A note's properties; a canvas or a picture has none to show.
     if (file.extension === 'md') {
@@ -607,21 +562,19 @@ export class ContextStrip extends Feature {
     // The buttons that matter show; the quieter ones fold away until the strip is pointed at or
     // tabbed into, and it widens to show them — at every width; in a narrow pane, upward as a sheet.
     specs.forEach((spec) => this.stripButton(actions, spec));
-    const study = this.revisitEntries(file);
     const more = this.stripButton(actions, {
       icon: 'ellipsis',
-      label: study.count ? `More (${study.count} to revisit)` : 'More',
+      label: 'More',
       role: 'more',
-      run: (evt) => this.moreMenu(evt, file, leaf, specs, study.entries, more),
+      run: (evt) => this.moreMenu(evt, file, leaf, specs, more),
     });
-    if (study.count) more.createSpan({ cls: 'dr-strip-badge', text: String(study.count) });
   }
 
   /**
-   * The ··· menu, short: Read, Properties, Pin, Bookmark, Rename and Delete on top with icons; then
-   * study; and Obsidian's other page entries under one More item that opens a submenu.
+   * The ··· menu, short: Read, Properties, Pin, Bookmark, Rename and Delete on top with icons;
+   * then Obsidian's other page entries under one More item that opens a submenu.
    */
-  moreMenu(evt, file, leaf, specs, study, anchor) {
+  moreMenu(evt, file, leaf, specs, anchor) {
     const menu = new Menu();
     const add = (title, icon, run, section) =>
       menu.addItem((item) => {
@@ -644,7 +597,6 @@ export class ContextStrip extends Feature {
     if (fm && typeof fm.promptForFileRename === 'function') add('Rename', 'pencil', () => fm.promptForFileRename(file));
     if (fm && typeof fm.promptForDeletion === 'function') add('Delete', 'trash-2', () => fm.promptForDeletion(file));
     else add('Delete', 'trash-2', () => this.app.vault.trash(file, true));
-    study.forEach((s) => add(s.label, s.icon, (e) => s.run(e, anchor), 'study'));
 
     // Obsidian's own page entries — find, export, version history and the file's — behind one item.
     const view = leaf && !leaf.isDeferred ? leaf.view : null;

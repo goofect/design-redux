@@ -251,13 +251,6 @@ export class Library extends Feature {
         render: (containerEl) => this.renderHomeShelves(containerEl),
       },
       {
-        key: 'fromReadingDays',
-        type: 'number',
-        showIf: 'library',
-        name: 'From what you read: days back',
-        desc: 'Home’s From what you read shelf lists notes linked from what you’ve read in this many days, that you haven’t opened yet.',
-      },
-      {
         key: 'librarySections',
         type: 'custom',
         name: 'Library layout',
@@ -327,8 +320,8 @@ export class Library extends Feature {
     const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
     const structure = this.plugin.feature(AlbumStructure);
     if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
-    more.push({ kind: 'builtin', id: 'read' }, { kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
-    ['library-check', 'knowledge-check', 'inbox']
+    more.push({ kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
+    ['library-check', 'inbox']
       .filter((id) => this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'])
       .forEach((id) => more.push({ kind: 'builtin', id }));
     more.push({ kind: 'builtin', id: 'settings' });

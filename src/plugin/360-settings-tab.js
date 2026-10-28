@@ -24,8 +24,8 @@ export const SETTINGS_TABS = [
         id: 'home',
         icon: 'home',
         name: 'Home screen',
-        desc: 'What the library opens with: its shelves, and how far back reading counts.',
-        keys: ['homePath', 'homeShelves', 'fromReadingDays'],
+        desc: 'What the library opens with: its shelves.',
+        keys: ['homePath', 'homeShelves'],
       },
       {
         id: 'strip',
@@ -74,23 +74,7 @@ export const SETTINGS_TABS = [
         name: 'Note page',
         desc: 'Its collection above the title, one grey line under it, properties as chips, shelves at the end, and a reading outline.',
         switch: 'notePage',
-        keys: ['notePageShelves', 'readingHistory', 'notePageTint', 'notePageChips', 'rememberPlace', 'readingOutline', 'outlineWordCounts'],
-      },
-      {
-        id: 'relationships',
-        icon: 'waypoints',
-        name: 'Relationships',
-        desc: 'What a note relates to, written in the note: kinds, checks and broader concepts.',
-        switch: 'knowledge',
-        keys: ['canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader'],
-      },
-      {
-        id: 'study',
-        icon: 'graduation-cap',
-        name: 'Study',
-        desc: 'Notes come back to be revisited on a ladder, and passages you highlight can be quizzed.',
-        switch: 'studyEnabled',
-        keys: ['studyAlbums', 'studyHighlights', 'studyLadder', 'studyDailyMax', 'studyCardMax'],
+        keys: ['notePageShelves', 'notePageTint', 'notePageChips', 'readingOutline', 'outlineWordCounts'],
       },
       {
         id: 'writing',
@@ -127,7 +111,7 @@ export const SETTINGS_TABS = [
         name: 'Properties panel',
         desc: 'Where a note is edited: properties, relationships and places in one panel.',
         switch: 'propertiesDropdown',
-        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelRelationships', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
+        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },
     ],
   },
@@ -175,8 +159,8 @@ export const SETTING_PRESETS = {
 
 export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
-  Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'fromReadingDays', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
-  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace', 'readingOutline', 'outlineWordCounts', 'studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax', 'knowledge', 'canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
+  Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
+  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingOutline', 'outlineWordCounts', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
   Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
   // 3.0's last tab, before the tabs went by task.

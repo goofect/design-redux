@@ -4,16 +4,12 @@
 /* The home screen: its shelves, and the order they are shown in.     */
 /* ------------------------------------------------------------------ */
 
-import { TFile } from 'obsidian';
 import { albumNeighbours, drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
-import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { dueNotes } from '../core/081-study.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { homeShelves } from './109-home-shelves.js';
 import { collectionTiles } from './110-browse-screens.js';
-import { fromReading } from './145-reading-history.js';
 
 export class HomeScreen extends BrowseScreen {
   title() {
@@ -61,12 +57,7 @@ export class HomeScreen extends BrowseScreen {
     const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
-      revisit: () => {
-        const due = dueNotes(this.plugin);
-        return shelf(`To revisit · ${due.length}`, due.slice(0, 12));
-      },
       continue: () => shelf('Continue reading', continuing),
-      fromReading: () => shelf('From what you read', this.fromReading(keep)),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
       collections: () => shelf('Your views', collections, { mode: 'collections' }),
@@ -78,28 +69,6 @@ export class HomeScreen extends BrowseScreen {
     if (!drawn) root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
   }
 
-  /** Notes what you've read lately links to, not opened yet: why each is there, under it. */
-  fromReading(keep) {
-    if (!this.settings.readingHistory) return [];
-    const history = readingOf(this.plugin);
-    const index = libraryIndex(this.plugin);
-    const vault = this.app.vault;
-    const recent = history.latest('read', 40).map((f) => ({ path: f.path, at: history.entry(f).read }));
-    const outgoing = (p) => {
-      const f = vault.getAbstractFileByPath(p);
-      return f instanceof TFile ? index.outgoing(f) : {};
-    };
-    const opened = (p) => !!(history.log[p] && history.log[p].opened);
-    return fromReading(recent, outgoing, opened, Date.now(), Number(this.settings.fromReadingDays) || 14, 40)
-      .map((r) => ({ r, file: vault.getAbstractFileByPath(r.path) }))
-      .filter(({ file }) => file instanceof TFile && keep(file) && !this.plugin.isFolderNote(file))
-      .slice(0, 12)
-      .map(({ r, file }) => {
-        const from = vault.getAbstractFileByPath(r.from);
-        return { file, subtitle: r.count > 1 ? `From ${r.count} notes you read` : `From ${from ? from.basename : 'a note you read'}` };
-      });
-  }
-
   /**
    * Where to pick up: the albums you're partway through, the latest
    * first — the note after the last one you opened in each, with how far
@@ -108,18 +77,11 @@ export class HomeScreen extends BrowseScreen {
   continuing(recents, keep) {
     const items = [];
     const seen = new Set();
-    // With a reading history: by when you were last in each, and a note not read to its end is where you pick up.
-    const history = this.settings.readingHistory ? readingOf(this.plugin) : null;
-    const order = history ? history.latest('opened', 200).filter(keep) : recents;
-    (order.length ? order : recents).forEach((file) => {
+    recents.forEach((file) => {
       const album = file.parent;
       if (items.length >= 12 || !album || (album.isRoot && album.isRoot()) || this.plugin.isFolderNote(file) || seen.has(album.path)) return;
       seen.add(album.path);
       const near = albumNeighbours(this.plugin, file);
-      if (history && history.entry(file) && history.state(file) !== 'read' && keep(file) && !items.some((i) => i.file === file)) {
-        items.push({ file, subtitle: `${album.name} · ${near.index + 1} of ${near.total}` });
-        return;
-      }
       if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
       items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}` });
     });
@@ -136,20 +98,12 @@ export class HomeScreen extends BrowseScreen {
     const now = Date.now();
     const seen = new Set(recents.map((f) => f.path));
     const today = Math.floor(now / day);
-    // Due a revisit first: read a month ago or more, the longest ago first.
-    const history = this.settings.readingHistory ? readingOf(this.plugin) : null;
-    const due = history
-      ? notes
-          .filter((f) => !seen.has(f.path) && history.state(f) === 'read' && now - history.entry(f).read > 30 * day)
-          .sort((a, b) => history.entry(a).read - history.entry(b).read)
-      : [];
-    const dueSet = new Set(due);
-    const rest = notes
-      .filter((f) => !seen.has(f.path) && !dueSet.has(f) && now - f.stat.mtime > 30 * day)
+    return notes
+      .filter((f) => !seen.has(f.path) && now - f.stat.mtime > 30 * day)
       .map((f) => ({ file: f, order: stableHash(`${today}:${f.path}`) }))
       .sort((a, b) => a.order - b.order)
-      .map((x) => x.file);
-    return due.concat(rest).slice(0, 13);
+      .map((x) => x.file)
+      .slice(0, 13);
   }
 
   /**

@@ -103,16 +103,6 @@
   text-align: center;
 }
 
-/* The kinds in settings: several controls a row, wrapping where narrow. */
-.dr-relation-type .setting-item-control {
-  flex-wrap: wrap;
-  gap: var(--size-4-2);
-}
-
-.dr-relation-type .setting-item-control input[type="text"] {
-  width: 9em;
-}
-
 /* What's picked, wherever it's listed. */
 .dr-track.is-selected,
 .dr-tr.is-selected {

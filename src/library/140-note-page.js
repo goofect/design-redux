@@ -16,9 +16,7 @@ import { dateDueState, fmGet, plainValue, valueList } from '../core/045-helpers-
 import { noteOpening } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { isDue } from '../core/081-study.js';
 import { Library } from './130-browse-filters.js';
-import { Study, STUDY_GRADES } from './147-study.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
@@ -64,7 +62,7 @@ export class NotePage extends Feature {
   register() {
     const queue = () => this.queue();
     const ws = this.app.workspace;
-    ['layout-change', 'active-leaf-change', 'file-open', 'design-redux:study-changed'].forEach((type) => this.plugin.registerEvent(ws.on(type, queue)));
+    ['layout-change', 'active-leaf-change', 'file-open'].forEach((type) => this.plugin.registerEvent(ws.on(type, queue)));
     this.plugin.registerEvent(this.app.metadataCache.on('changed', queue));
     this.plugin.registerEvent(this.app.metadataCache.on('resolved', queue));
   }
@@ -102,7 +100,7 @@ export class NotePage extends Feature {
 
   /** What this adds to a view, taken away. */
   clear(view) {
-    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-study, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
+    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.querySelectorAll('.dr-has-glow').forEach((el) => el.removeClass('dr-has-glow'));
     view.containerEl.removeClass('dr-props-as-chips');
   }
@@ -221,7 +219,6 @@ export class NotePage extends Feature {
     const chips = on && this.settings.notePageChips ? this.chips(file) : [];
     const shelves = on && this.settings.notePageShelves ? this.shelves(file) : [];
     const glow = on && this.settings.notePageTint !== false ? this.tintSource(file, album) : null;
-    const due = on && isDue(this.plugin, file) ? this.plugin.study.item(file) : null;
     view.containerEl.toggleClass('dr-props-as-chips', chips.length > 0);
     this.places(view).forEach((place) => {
       const title = place.title;
@@ -260,12 +257,8 @@ export class NotePage extends Feature {
           }
         });
       });
-      // Due to be revisited: a quiet row of grades.
-      const chipsEl = place.head.querySelector(':scope > .dr-note-chips');
-      const studyAfter = chipsEl ? chipsEl.nextSibling : line ? line.nextSibling : after;
-      this.put(place.head, 'dr-note-study', due ? `${file.path}:${due.due}` : '', studyAfter, (el) => this.gradeRow(el, file));
       // The grey line: a hairline closing the header, under the chips; the page control sits right under it.
-      const last = ['dr-note-study', 'dr-note-chips', 'dr-note-meta'].map((c) => place.head.querySelector(`:scope > .${c}`)).find(Boolean) || title;
+      const last = ['dr-note-chips', 'dr-note-meta'].map((c) => place.head.querySelector(`:scope > .${c}`)).find(Boolean) || title;
       this.put(place.head, 'dr-note-rule', last ? 'rule' : '', last ? last.nextSibling : null, () => {});
       // At the end, the shelves.
       const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => f.path).join(',')}`).join('|');
@@ -273,19 +266,6 @@ export class NotePage extends Feature {
       // Drawn before the view had its footer: moved there now it has.
       place.root.querySelectorAll('.dr-note-shelves').forEach((el) => el.parentElement !== place.end && el.remove());
       this.put(place.end, 'dr-note-shelves', shelfKey, before, (el) => shelves.forEach((s) => this.shelf(el, s)));
-    });
-  }
-
-  /** Under a note due to be revisited: the grades, each a step to its next date. */
-  gradeRow(el, file) {
-    el.createSpan({ cls: 'dr-note-study-label', text: 'To revisit' });
-    STUDY_GRADES.forEach((g) => {
-      const b = el.createEl('button', { cls: 'dr-note-study-grade', text: g.label });
-      b.dataset.grade = g.id;
-      b.addEventListener('click', () => {
-        const study = this.plugin.feature(Study);
-        if (study) study.gradeNote(file, g.id);
-      });
     });
   }
 

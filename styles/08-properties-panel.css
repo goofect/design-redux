@@ -896,98 +896,13 @@ body.is-mobile .dr-props-popup .dr-row-more {
   margin-top: var(--dr-space-1);
 }
 
-/* Sections the features add below the properties — a note's relationships,
- * where it's kept: a heading as the Properties one is, rows as the mentions have them, a way
- * up through what it comes under, and a few actions. */
+/* Sections the features add below the properties — where a note is kept:
+ * a heading as the Properties one is, rows as the mentions have them. */
 .dr-section-label {
   margin: var(--dr-space-3) 0 var(--dr-space-1) var(--dr-section-inset, 0px);
   color: var(--text-normal);
   font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
-}
-
-.dr-relations-under {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--dr-space-1);
-  margin: 0 0 var(--dr-space-1) var(--dr-section-inset, 0px);
-  padding: 0 calc(var(--dr-u) * 1.5);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-relations-under-word {
-  color: var(--text-faint);
-}
-
-.dr-relations-crumb {
-  border-radius: var(--dr-radius-sm);
-  color: var(--text-accent);
-  cursor: pointer;
-}
-
-.dr-mention-remove {
-  display: inline-flex;
-  flex: none;
-  padding: 2px;
-  border-radius: var(--dr-radius-sm);
-  color: var(--text-faint);
-  opacity: 0;
-}
-
-.dr-mention:focus-within .dr-mention-remove,
-.dr-mention-remove:focus-visible {
-  opacity: 1;
-}
-
-.dr-mention-remove .svg-icon {
-  width: 12px;
-  height: 12px;
-}
-
-body.is-mobile .dr-mention-remove {
-  opacity: 0.7;
-}
-
-.dr-section-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-1);
-  margin: var(--dr-space-1) 0 var(--dr-space-2) var(--dr-section-inset, 0px);
-}
-
-.dr-section-action {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  height: auto;
-  padding: 2px var(--dr-space-2);
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-section-action-icon {
-  display: inline-flex;
-}
-
-.dr-section-action-icon .svg-icon {
-  width: 13px;
-  height: 13px;
-}
-
-@media (any-hover: hover) {
-  .dr-mention:hover .dr-mention-remove {
-    opacity: 1;
-  }
-
-  .dr-mention-remove:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-
-  .dr-relations-crumb:hover {
-    text-decoration: underline;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

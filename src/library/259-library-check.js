@@ -27,7 +27,6 @@ import { Feature } from '../core/080-feature.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { Library } from './130-browse-filters.js';
 import { FolderPicker } from '../ui/230-pickers.js';
-import { Knowledge } from './254-knowledge.js';
 import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
 
 export const LIBRARY_DEEP = 5;
@@ -36,7 +35,6 @@ export const LIBRARY_SECTIONS = [
   { id: 'hierarchy', title: 'Hierarchy' },
   { id: 'overlap', title: 'Duplicates and overlaps' },
   { id: 'coverage', title: 'Coverage and balance' },
-  { id: 'relations', title: 'Relationships' },
 ];
 
 /* Albums sharing at least this many notes, and this much of the smaller one, overlap. */
@@ -396,10 +394,6 @@ export class LibraryCheck extends Feature {
         })
       );
     }
-
-    // -- relationships between notes, as they hold them
-    const knowledge = typeof Knowledge === 'function' ? this.plugin.feature(Knowledge) : null;
-    if (knowledge && knowledge.enabled) knowledge.problems().forEach((p) => add('relations', p.target, p.kind, p.problem));
 
     // -- coverage and balance
     folders.forEach((folder) => {

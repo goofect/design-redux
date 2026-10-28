@@ -11,7 +11,6 @@ import { Lengths } from '../core/065-lengths.js';
 import { Orders, PATH_KEYED, SETTINGS_MIGRATIONS } from '../core/070-orders.js';
 import { Notes } from '../core/073-notes.js';
 import { Files } from '../core/074-files.js';
-import { Reading } from '../core/075-reading.js';
 import { Selection } from '../core/076-selection.js';
 import { LibraryIndex } from '../core/077-library-index.js';
 import { WorkspaceCoordinator } from '../core/084-workspace-coordinator.js';
@@ -22,8 +21,6 @@ import { BrowseView } from '../library/120-browse-view.js';
 import { Library } from '../library/130-browse-filters.js';
 import { ActionsMenu } from '../tools/140-actions-menu.js';
 import { NotePage } from '../library/140-note-page.js';
-import { ReadingHistory } from '../library/145-reading-history.js';
-import { Study } from '../library/147-study.js';
 import { PropertyLinks } from '../note/165-panel-references.js';
 import { PropertiesPanel } from '../note/180-panel.js';
 import { ContextStrip } from '../tools/190-strip.js';
@@ -37,7 +34,6 @@ import { CoverImages } from '../ui/235-covers.js';
 import { CoverDrop } from '../ui/237-cover-drop.js';
 import { ImageRouter } from '../ui/240-image-router.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { Knowledge } from '../library/254-knowledge.js';
 import { AlbumProperty } from '../library/255-album-property.js';
 import { AlbumRefactor } from '../library/256-album-refactor.js';
 import { AlbumStructure } from '../library/257-album-structure.js';
@@ -45,7 +41,6 @@ import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { PropertyDates } from '../library/260-property-dates.js';
-import { KnowledgeCheck } from '../library/261-knowledge-check.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
 import { QuietLinks } from '../note/265-quiet-links.js';
 import { NotePages } from '../note/267-pages.js';
@@ -70,21 +65,18 @@ export class DesignRedux extends Plugin {
     this.files = new Files(this);
     this.notes = new Notes(this);
     this.selection = new Selection(this);
-    // What the inspector is about: the tab worked in, a pick, a card, a map node; and the pin.
+    // What the inspector is about: the tab worked in, a pick, a card.
     this.coordinator = new WorkspaceCoordinator(this);
     this.coordinator.listen();
     // What every screen reads of the vault, kept while files and links stay as they are.
     this.libraryIndex = new LibraryIndex(this);
-    this.reading = new Reading(this);
     this.libraryIndex.listen();
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     this.features = [
       new Appearance(this),
       new Library(this),
-      new ReadingHistory(this),
       new ReadingOutline(this),
-      new Study(this),
       new NotePage(this),
       new ListKeys(this),
       new SidebarDrop(this),
@@ -100,8 +92,6 @@ export class DesignRedux extends Plugin {
       new ImageRouter(this),
       new PropertyClipboard(this),
       new AlbumProperty(this),
-      new Knowledge(this),
-      new KnowledgeCheck(this),
       new AlbumStructure(this),
       new SmartAlbums(this),
       new LibraryCheck(this),
@@ -218,8 +208,6 @@ export class DesignRedux extends Plugin {
     const structure = this.feature(AlbumStructure);
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
     else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
-    const knowledge = this.feature(Knowledge);
-    if (knowledge && !isFolder) knowledge.addFileItems(menu, target, sectioned);
     const refactor = this.feature(AlbumRefactor);
     if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
   }

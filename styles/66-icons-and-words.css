@@ -39,25 +39,6 @@ body:not(.dr-icons-words) .dr-td .dr-icon-label {
   display: none;
 }
 
-/* The strip's More button: a count of what is due to be revisited sits on it. */
-.dr-strip-btn[data-action="more"] {
-  position: relative;
-}
-
-.dr-strip-badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  min-width: 16px;
-  padding: 0 4px;
-  border-radius: var(--dr-radius-pill);
-  background-color: var(--interactive-accent);
-  color: var(--text-on-accent);
-  font-size: var(--font-ui-smaller);
-  line-height: 16px;
-  text-align: center;
-}
-
 /* The strip as a slim rail at the side: 48px wide, the cover, previous, next and More, as icons. */
 body.dr-strip-side .dr-strip {
   left: auto;

@@ -120,7 +120,7 @@ Coffee N' Christmas.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback. A plain canvas's go through the adapter (`core/079`:
-  `liveCards`, `cardCount`, `pickedOnCanvas`, `addTextCard`,
+  `cardCount`, `pickedOnCanvas`,
   `requestCanvasSave`, …); `tests/test_layers.js` refuses a new direct use
   outside it, and after moving some onto it, `node tests/map.js --internals
   --update`.

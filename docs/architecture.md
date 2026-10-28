@@ -7,7 +7,8 @@ each milestone did.
 
 ## 0. Where it stands
 
-Canvas maps were retired in 3.0, and mind maps and workspace modes after them (3.0.32):
+Canvas maps were retired in 3.0, mind maps and workspace modes after them (3.0.32), then
+reading history, Study and the relationships kept in notes (Knowledge and its check):
 `core/079` keeps only the asks of a plain canvas. The source folders are the three places
 of the reform — library, note, tools — with core and ui below them; what follows about
 canvas pieces, maps and the old folders is the record from before.
@@ -20,7 +21,7 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
                Selection 076; actions 078; Feature 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
  src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
-               album features, note page, study, knowledge, library checks
+               album features, note page, library check
  src/note/     properties panel (160–180), reading outline, marked lists, scripts,    (the note place)
                footnotes, quiet links 263–266
  src/tools/    actions menu, strip, one page, graph filter and routes, bulk           (the tools place)

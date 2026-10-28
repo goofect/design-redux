@@ -8,9 +8,7 @@
 /* Home's shelves, in the order they first come; which show, and in what order, is the homeShelves setting. */
 export const HOME_SHELVES = [
   { id: 'picks', label: 'Highlights' },
-  { id: 'revisit', label: 'To revisit' },
   { id: 'continue', label: 'Continue reading' },
-  { id: 'fromReading', label: 'From what you read' },
   { id: 'recents', label: 'Recently opened' },
   { id: 'added', label: 'Recently added' },
   { id: 'collections', label: 'Your views' },

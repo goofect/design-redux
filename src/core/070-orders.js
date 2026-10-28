@@ -36,7 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -62,17 +62,9 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Recently read joins the library, after Pinned.
+    // Recently read joined the library here; it's gone (step 21), so nothing to add.
     to: 4,
-    run(saved) {
-      if (!Array.isArray(saved.librarySections)) return;
-      const items = (sec) => (sec && Array.isArray(sec.items) ? sec.items : []);
-      if (saved.librarySections.some((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'read'))) return;
-      const home = saved.librarySections.find((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'bookmarks'));
-      if (!home) return;
-      const at = home.items.findIndex((i) => i && i.kind === 'builtin' && i.id === 'bookmarks');
-      home.items.splice(at + 1, 0, { kind: 'builtin', id: 'read' });
-    },
+    run() {},
   },
   {
     // Fewer places up front: the occasional ones move under a folded More,
@@ -231,6 +223,26 @@ export const SETTINGS_MIGRATIONS = [
         if (/^mindmap/.test(key) || /^workspaceMode/.test(key)) delete saved[key];
       });
       ['albumMapAuto', 'albumMapWritesParent', 'presentDimLevel', 'canvasSpacing'].forEach((key) => delete saved[key]);
+    },
+  },
+  {
+    // Reading history, Study and the relationships kept in notes go, and
+    // their settings and places in the library with them. Notes keep
+    // whatever properties the relationships wrote.
+    to: 21,
+    run(saved) {
+      Object.keys(saved).forEach((key) => {
+        if (/^(study|knowledge|reading(History|Log|Since)$)/.test(key)) delete saved[key];
+      });
+      ['fromReadingDays', 'rememberPlace', 'panelRelationships', 'canvasRelationNames', 'canvasRelationTypes'].forEach((key) => delete saved[key]);
+      const gone = ['read', 'knowledge-check', 'highlights'];
+      if (Array.isArray(saved.librarySections)) {
+        saved.librarySections.forEach((sec) => {
+          if (sec && Array.isArray(sec.items)) sec.items = sec.items.filter((i) => !(i && i.kind === 'builtin' && gone.includes(i.id)));
+        });
+      }
+      if (Array.isArray(saved.homeShelves)) saved.homeShelves = saved.homeShelves.filter((s) => !(s && (s.id === 'revisit' || s.id === 'fromReading')));
+      if (saved.keepOwnOrder && typeof saved.keepOwnOrder === 'object') delete saved.keepOwnOrder.read;
     },
   },
 ];

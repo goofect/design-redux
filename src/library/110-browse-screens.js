@@ -10,7 +10,6 @@
 import { Notice, setIcon, TFile, TFolder } from 'obsidian';
 import { blankLook, drawFolderArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, iconWord, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
-import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { AlbumStructure } from './257-album-structure.js';
@@ -322,12 +321,8 @@ export class CollectionScreen extends BrowseScreen {
     return this.view.mode === 'added';
   }
 
-  get read() {
-    return this.view.mode === 'read';
-  }
-
   title() {
-    return this.pinned ? 'Pinned' : this.added ? 'Recently added' : this.read ? 'Recently read' : 'Recently opened';
+    return this.pinned ? 'Pinned' : this.added ? 'Recently added' : 'Recently opened';
   }
 
   /** The notes made most lately, the newest first: albums' own notes aside. */
@@ -345,9 +340,7 @@ export class CollectionScreen extends BrowseScreen {
       ? this.plugin.pins.files()
       : this.added
         ? this.recentlyAdded()
-        : this.read
-          ? readingOf(this.plugin).latest('read', 100)
-          : this.plugin.recentFiles()
+        : this.plugin.recentFiles()
     )
       .filter((f) => view.inFilter(f))
       .filter((f) => view.matches(f.basename));
@@ -368,7 +361,7 @@ export class CollectionScreen extends BrowseScreen {
     const orderedFolders = view.keepsOwnOrder() ? folders : view.sortFolders(folders);
 
     if (!files.length && !folders.length) {
-      const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : this.read ? ['Nothing read to the end yet', 'book-check'] : ['Nothing opened yet', 'clock'];
+      const empty = this.pinned ? ['Nothing pinned yet', 'pin'] : this.added ? ['Nothing added yet', 'calendar-plus'] : ['Nothing opened yet', 'clock'];
       view.emptyState(root, empty[0], empty[1], view.clearAction());
       return;
     }

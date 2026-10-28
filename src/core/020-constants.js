@@ -16,13 +16,11 @@ export const BUILTIN_SCREENS = {
   properties: 'properties',
   recents: 'recents',
   added: 'added',
-  read: 'read',
   subjects: 'subjects',
   collections: 'collections',
   bookmarks: 'pinned',
   inbox: 'inbox',
   'library-check': 'library-check',
-  'knowledge-check': 'knowledge-check',
 };
 
 export const LIBRARY_BUILTINS = {
@@ -32,7 +30,6 @@ export const LIBRARY_BUILTINS = {
   bookmarks: { label: 'Pinned', icon: 'pin' },
   recents: { label: 'Recently opened', icon: 'clock' },
   added: { label: 'Recently added', icon: 'calendar-plus' },
-  read: { label: 'Recently read', icon: 'book-check' },
   subjects: { label: 'Subjects', icon: 'book' },
   collections: { label: 'Views', icon: 'library' },
   properties: { label: 'Properties', icon: 'tags' },
@@ -44,12 +41,10 @@ export const LIBRARY_BUILTINS = {
   smart: { label: 'Saved views', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
   'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
-  'knowledge-check': { label: 'Knowledge check', icon: 'network', needs: 'knowledgeCheck' },
-  highlights: { label: 'Highlighted passages', icon: 'highlighter', needs: 'studyEnabled' },
 };
 
 /* The library's places that wait under More, so the first few stand out. */
-export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'read', 'added', 'graph', 'random', 'inbox', 'library-check', 'knowledge-check', 'highlights', 'settings'];
+export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'added', 'graph', 'random', 'inbox', 'library-check', 'settings'];
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -88,32 +83,12 @@ export const DEFAULTS = {
   notePage: true,
   // Menus, suggestions and the canvas's bar and controls as frosted glass.
   glassPanels: false,
-  // Notes read to the end remembered, in this data: albums' progress, what's new, where you were.
-  readingHistory: true,
-  // On a collection's cover, a ring for how much of it you've read.
-  // Home's From what you read: notes linked from what you read in this many days.
-  fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
-  // Notes in studied collections come back to be revisited, on a ladder of days.
-  studyEnabled: false,
-  studyLadder: '1, 3, 7, 21, 60',
-  studyDailyMax: 20,
-  // { path: { added } } — the collections studied.
-  studyAlbums: {},
-  // Passages marked ==like this== gathered, and asked back as a quiz.
-  studyHighlights: true,
-  studyCardMax: 10,
-  // A note opens at the line you were on.
-  rememberPlace: true,
-  // The open note's headings in the right sidebar, the one you're reading lit.
+  // The open note's headings, over it, the one you're reading lit.
   readingOutline: true,
   // Beside each heading in the outline, the words in its section.
   outlineWordCounts: true,
-  // { path: { opened, read, mtime, line, lineAt } } — when each note was opened and read, and where you were.
-  readingLog: {},
-  // When the reading history began: notes made before it aren't news.
-  readingSince: 0,
   // A soft glow of a note's cover, or its album's, behind its title.
   notePageTint: false,
   // A note's properties as quiet chips under its title, the full block a click away.
@@ -130,17 +105,10 @@ export const DEFAULTS = {
   defaultSort: 'name',
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
-  keepOwnOrder: { recents: true, pinned: true, read: true },
+  keepOwnOrder: { recents: true, pinned: true },
   // An album sorted from its filter button keeps that order, by its path.
   albumSortMemory: true,
   // A folder note's album, description, includes and related properties, shown.
-  // Relationships kept in notes as properties named for the canvas's kinds of relationship.
-  knowledge: true,
-  knowledgeCheck: true,
-  knowledgeTreeKinds: '',
-  knowledgeBroader: 'concept',
-  // Warnings marked as meant, by the note they're about: { path: [code] }.
-  knowledgeMeant: {},
   // Property sets kept by name, to apply to a note as a template: { name: { key: value } }.
   propertySets: {},
   albumStructure: true,
@@ -220,9 +188,7 @@ export const DEFAULTS = {
   panelPropsCollapsed: false,
   panelFoldedGroups: [],
   showMentions: true,
-  // The note panel's sections from relationships and albums.
-  // A note's broader, narrower and related notes in the panel, as the inspector has room for them.
-  panelRelationships: true,
+  // The note panel's section from albums.
   panelPlaces: false,
   // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
   settingsInHeader: false,
@@ -264,10 +230,6 @@ export const DEFAULTS = {
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
   // { folderPath: [{ key, type, required, values, default }] } — what notes there should have; '/' for the vault.
-  // Empty: the names the plugin starts with (kept from before kinds had styles).
-  canvasRelationNames: '',
-  // Kinds of relationship, each { name, inverse, category, line, color }; empty: the kinds it starts with.
-  canvasRelationTypes: [],
   propertySchemas: {},
   // { key: { value: { color, icon } } } — how a value shows wherever it's shown.
   propertyOptions: {},
@@ -290,7 +252,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 20,
+  settingsVersion: 21,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
@@ -374,37 +336,3 @@ export const GRAPH_TYPES = ['graph', 'localgraph'];
 /* The properties Obsidian reads tags from. */
 export const TAG_KEYS = ['tags', 'tag'];
 
-/*
- * Each kind: its reading the other way, whether it's hierarchy or
- * association, its line — solid, dashed or dotted — and colour: one of
- * the canvas's six, or none. Grey by default.
- */
-export const DEFAULT_RELATION_TYPES = [
-  { name: 'is a type of', inverse: 'has type', category: 'hierarchy', line: 'solid', color: '' },
-  { name: 'is part of', inverse: 'has part', category: 'hierarchy', line: 'solid', color: '' },
-  { name: 'depends on', inverse: 'is needed by', category: 'association', line: 'dashed', color: '' },
-  { name: 'causes', inverse: 'is caused by', category: 'association', line: 'solid', color: '' },
-  { name: 'contrasts with', inverse: 'contrasts with', category: 'association', line: 'dotted', color: '' },
-  { name: 'supports', inverse: 'is supported by', category: 'association', line: 'solid', color: '' },
-  { name: 'exemplifies', inverse: 'is exemplified by', category: 'association', line: 'dashed', color: '' },
-  { name: 'governed by', inverse: 'governs', category: 'association', line: 'solid', color: '' },
-];
-
-/**
- * The kinds of relationship, as set: each with its reading the other way,
- * its category, line and colour — the defaults' where it's one of them.
- * Shared by the canvas's arrows and the relationships kept in notes.
- */
-export function relationTypes(settings) {
-  const fill = (t) => Object.assign({ inverse: '', category: 'association', line: 'solid', color: '' }, DEFAULT_RELATION_TYPES.find((d) => d.name === t.name) || {}, t);
-  const set = Array.isArray(settings.canvasRelationTypes) ? settings.canvasRelationTypes.filter((t) => t && String(t.name || '').trim()) : [];
-  if (set.length) return set.map(fill);
-  // Names set before kinds had styles: each as the default of that name has, or plain.
-  const names = String(settings.canvasRelationNames || '').trim();
-  if (!names) return DEFAULT_RELATION_TYPES;
-  return names
-    .split(',')
-    .map((n) => n.trim())
-    .filter((n, i, all) => n && all.indexOf(n) === i)
-    .map((name) => fill({ name }));
-}
