@@ -194,15 +194,13 @@ body.dr-look-apple .dr-set-feature[data-feature='relationships']{ --dr-tile: var
 body.dr-look-apple .dr-set-feature[data-feature='writing']{ --dr-tile: var(--color-orange); }
 body.dr-look-apple .dr-set-feature[data-feature='pages']{ --dr-tile: var(--color-cyan); }
 body.dr-look-apple .dr-set-feature[data-feature='quietLinks']{ --dr-tile: #8e8e93; }
-body.dr-look-apple .dr-set-feature[data-feature='mindmaps']{ --dr-tile: var(--color-purple); }
 body.dr-look-apple .dr-set-feature[data-feature='strip']{ --dr-tile: var(--color-pink); }
 body.dr-look-apple .dr-set-feature[data-feature='graph']{ --dr-tile: var(--color-green); }
 body.dr-look-apple .dr-set-feature[data-feature='compat']{ --dr-tile: #8e8e93; }
 
 /* -- Popovers and panels ------------------------------------------------ */
 
-body.dr-look-apple .dr-props-popup,
-body.dr-look-apple .popover.dr-fold-pop {
+body.dr-look-apple .dr-props-popup {
   border: none;
   border-radius: 12px;
   box-shadow: var(--dr-popover-shadow);

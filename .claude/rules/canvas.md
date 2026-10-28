@@ -7,9 +7,8 @@ paths:
 
 # The canvas adapter
 
-Canvas maps are gone (3.0): maps are mind maps (`src/maps/`, `.md` notes
-with a list, or `.mindmap` files). What's left of Obsidian's canvas is a few
-asks of a plain canvas, all through `core/079`:
+Canvas maps are gone (3.0), and mind maps since. What's left of Obsidian's
+canvas is a few asks of a plain canvas, all through `core/079`:
 
 - `liveCards`, `cardCount`: the strip's card count (190). A canvas can open
   before its cards are loaded; count them again when they arrive.

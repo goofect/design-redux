@@ -203,7 +203,7 @@ body.dr-look-apple :is(.dr-tile-line, .dr-card-sub) {
 }
 
 /* 6. Chip — a tag or token: a 24px capsule in a muted fill, 13px text, no border. */
-body.dr-look-apple :is(.dr-chip, .dr-note-chip, .dr-bulk-chip, .dr-mindmap-chip) {
+body.dr-look-apple :is(.dr-chip, .dr-note-chip, .dr-bulk-chip) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -224,7 +224,7 @@ body.dr-look-apple :is(.dr-chip, .dr-note-chip, .dr-bulk-chip, .dr-mindmap-chip)
   to { opacity: 1; transform: none; }
 }
 
-body.dr-look-apple :is(.dr-sheet, .dr-props-popup, .popover.dr-fold-pop) {
+body.dr-look-apple :is(.dr-sheet, .dr-props-popup) {
   border: none;
   border-radius: 12px;
   background-color: var(--dr-material);

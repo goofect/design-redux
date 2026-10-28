@@ -14,7 +14,6 @@ import { INSPECTOR_VIEW } from '../core/020-constants.js';
 import { makeTrigger } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
-import { hostsPanel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
 import { inspectableOf } from './178-inspectables.js';
@@ -218,11 +217,11 @@ export class PropertiesPanel extends Feature {
         // active-leaf-change does not cover. Docked, the coordinator follows.
         if (!this.isOpen() || this.dockView || !file || file === this.file) return;
         const leaf = this.app.workspace.activeLeaf;
-        if (leaf && (leaf.view instanceof MarkdownView || hostsPanel(leaf.view))) this.follow(leaf, true);
+        if (leaf && leaf.view instanceof MarkdownView) this.follow(leaf, true);
         else this.close();
       })
     );
-    // Floating, it follows what its tab says it's about: another node on a map, another card.
+    // Floating, it follows what its tab says it's about: another card picked on a canvas.
     this.plugin.register(this.plugin.coordinator.onChange((snap) => this.followFloat(snap)));
     // Docked in the library's pane, it draws what's picked there.
     this.plugin.register(this.plugin.selection.onChange((item) => this.showPick(item)));
@@ -434,13 +433,12 @@ export class PropertiesPanel extends Feature {
     if (this.dockView || !this.isOpen()) return;
     if (!force && this.leaf === leaf) return;
 
-    const target = leaf && hostsPanel(leaf.view) ? leaf.view.panelTarget() : null;
-    if (!leaf || !(leaf.view instanceof MarkdownView || (target && target.file)) || !leaf.view.file) {
+    if (!leaf || !(leaf.view instanceof MarkdownView) || !leaf.view.file) {
       this.close();
       return;
     }
 
-    this.point({ file: target && target.file ? target.file : leaf.view.file });
+    this.point({ file: leaf.view.file });
     this.leaf = leaf;
     this.mount();
 

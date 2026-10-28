@@ -18,7 +18,6 @@ import { dueNotes, sessionPlace } from '../core/081-study.js';
 import { Library } from '../library/130-browse-filters.js';
 import { Knowledge } from '../library/254-knowledge.js';
 import { Footnotes } from '../note/285-footnotes.js';
-import { WorkspaceModes } from './348-workspace-modes.js';
 
 /*
  * The note header's own reading toggle and More, which the strip
@@ -603,13 +602,6 @@ export class ContextStrip extends Feature {
           if (leaf) this.app.workspace.trigger('design-redux:open-panel', leaf, anchor || evt.currentTarget);
         },
       });
-    }
-
-    // The workspace mode, with the quieter ones.
-    const modes = typeof WorkspaceModes === 'function' ? this.plugin.feature(WorkspaceModes) : null;
-    if (modes && modes.enabled) {
-      const mode = modes.mode(modes.current());
-      specs.push({ icon: mode ? mode.icon : 'layout-template', label: mode ? `${mode.label} mode: switch, or leave it` : 'Workspace mode', role: 'modes', secondary: true, active: !!mode, run: (evt) => modes.showMenu(evt) });
     }
 
     // The buttons that matter show; the quieter ones fold away until the strip is pointed at or

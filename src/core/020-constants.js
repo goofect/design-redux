@@ -95,45 +95,6 @@ export const DEFAULTS = {
   fromReadingDays: 14,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
-  // Mind maps: a note flagged mindmap: true, or a .mindmap file, opened as a map.
-  mindmaps: true,
-  mindmapTakeover: true,
-  mindmapDefaultFormat: '',
-  mindmapLayout: 'right',
-  mindmapGlide: true,
-  mindmapPeek: true,
-  mindmapLegend: true,
-  mindmapDepth: true,
-  mindmapColourBy: '',
-  mindmapPins: true,
-  mindmapViews: true,
-  mindmapRelations: true,
-  mindmapArguments: true,
-  mindmapBranchNotes: true,
-  mindmapCheck: true,
-  mindmapCompare: true,
-  mindmapVaultMap: true,
-  mindmapMinimap: true,
-  mindmapPresent: true,
-  mindmapAlbumMap: true,
-  mindmapConvert: true,
-  mindmapTasks: true,
-  mindmapOtherViews: true,
-  mindmapLinkedCards: true,
-  mindmapNodePanel: true,
-  mindmapFilters: true,
-  mindmapEmbeds: true,
-  mindmapTemplateFolder: '',
-  mindmapQueries: true,
-  mindmapHistory: 20,
-  mindmapPresentSpotlight: false,
-  mindmapPresentNotes: true,
-  mindmapRichNodes: true,
-  mindmapTheme: 'cards',
-  // A collection mapped by its notes' parents: kept current while open; re-linking a card sets the parent as this says.
-  albumMapAuto: true,
-  albumMapWritesParent: 'ask',
-  presentDimLevel: 0.15,
   // Notes in studied collections come back to be revisited, on a ladder of days.
   studyEnabled: false,
   studyLadder: '1, 3, 7, 21, 60',
@@ -182,10 +143,6 @@ export const DEFAULTS = {
   knowledgeMeant: {},
   // Property sets kept by name, to apply to a note as a template: { name: { key: value } }.
   propertySets: {},
-  // Workspace modes, and the one on with the layout it put aside.
-  workspaceModes: true,
-  workspaceMode: '',
-  workspaceModeLayout: null,
   albumStructure: true,
   // Other names for the folder note properties albums are read from: { type, description, includes, related, featured, layout }.
   albumKeyNames: {},
@@ -194,9 +151,8 @@ export const DEFAULTS = {
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
-  // The theme's look, or the editorial one; how far apart canvas layouts put cards.
+  // The theme's look, or the editorial one.
   look: 'apple',
-  canvasSpacing: 'standard',
   // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
   // An album cover that isn't a picture has its kind, name and collection printed on it.
@@ -334,7 +290,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 19,
+  settingsVersion: 20,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
@@ -417,15 +373,6 @@ export const GRAPH_TYPES = ['graph', 'localgraph'];
 
 /* The properties Obsidian reads tags from. */
 export const TAG_KEYS = ['tags', 'tag'];
-
-/* How far apart canvas cards are put, as set (Appearance): every gap a tidy makes goes through canvasGap(). */
-export const CANVAS_SPACE = { scale: 1 };
-
-/* On an arrow: a relationship, not a branch — trees, folds and layouts pass it by. */
-export const RELATED_KEY = 'drRelated';
-
-/* On an arrow: what it means — { kind, subject, object } or { predicate, subject, object }, the ends as card ids. */
-export const RELATION_KEY = 'drRelation';
 
 /*
  * Each kind: its reading the other way, whether it's hierarchy or

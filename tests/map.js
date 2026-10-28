@@ -316,11 +316,8 @@ pieces.forEach((p) => {
 const AREAS = [
   { name: 'core', level: 0 },
   { name: 'ui', level: 1 },
-  // A map's tree, pure: below every feature, above only core.
-  { name: 'tree', level: 1 },
   { name: 'library', level: 2 },
   { name: 'note', level: 2 },
-  { name: 'maps', level: 2 },
   { name: 'tools', level: 2 },
   { name: 'plugin', level: 3 },
 ];

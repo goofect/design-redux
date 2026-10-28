@@ -1,5 +1,5 @@
 /*
- * Where each setting sits: a tab for each category — General, Appearance, Library, Notes, Inspector, Maps, Advanced — and in
+ * Where each setting sits: a tab for each category — General, Appearance, Library, Notes, Inspector, Advanced — and in
  * each tab one row a feature — icon, name, a line, a switch and a gear that opens its options.
  * Features still own their rows (name, control, description); this only decides where each
  * goes. A row shown only while another is on sits indented beneath that one.
@@ -31,9 +31,9 @@ export const SETTINGS_TABS = [
         id: 'strip',
         icon: 'panel-bottom',
         name: 'Context strip and modes',
-        desc: 'Where you are and how far, with previous and next; workspace modes; one page; the sidebar header.',
+        desc: 'Where you are and how far, with previous and next; one page; the sidebar header.',
         switch: 'contextStrip',
-        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'hideRightSidebar', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+        keys: ['onePage', 'stripPlace', 'stripDetail', 'singleArea', 'hideRightSidebar', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
       },
     ],
   },
@@ -132,20 +132,6 @@ export const SETTINGS_TABS = [
     ],
   },
   {
-    id: 'maps',
-    title: 'Maps',
-    features: [
-      {
-        id: 'mindmaps',
-        icon: 'network',
-        name: 'Mind maps',
-        desc: 'A note or a .mindmap file drawn as a map: layout, legend, views, tasks, presenting, import and export.',
-        switch: 'mindmaps',
-        keys: ['mindmapDefaultFormat', 'canvasSpacing', 'mindmapLayout', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapRichNodes', 'mindmapTheme', 'mindmapTemplateFolder', 'presentDimLevel', 'albumMapAuto', 'albumMapWritesParent', 'mindmapHistory'],
-      },
-    ],
-  },
-  {
     id: 'advanced',
     title: 'Advanced',
     features: [
@@ -183,7 +169,7 @@ export const featureKeys = (feature) => (feature.switch ? [feature.switch] : [])
 export const SETTING_PRESETS = {
   minimal: { name: 'Minimal', on: ['library', 'notePage'] },
   // Without the strip, as a first install has it: « » sit in the note's header, Properties in the inspector.
-  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown', 'mindmaps'] },
+  standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown'] },
   everything: { name: 'Everything', on: null },
 };
 
@@ -191,11 +177,10 @@ export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
   Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'fromReadingDays', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
   Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingHistory', 'rememberPlace', 'readingOutline', 'outlineWordCounts', 'studyEnabled', 'studyLadder', 'studyDailyMax', 'studyAlbums', 'studyHighlights', 'studyCardMax', 'knowledge', 'canvasRelationTypes', 'knowledgeCheck', 'knowledgeTreeKinds', 'knowledgeBroader', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelRelationships', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
-  Maps: ['mindmapDefaultFormat', 'mindmapLayout', 'mindmapTemplateFolder', 'canvasSpacing', 'mindmaps', 'mindmapTakeover', 'mindmapGlide', 'mindmapPeek', 'mindmapLegend', 'mindmapDepth', 'mindmapColourBy', 'mindmapPins', 'mindmapViews', 'mindmapRelations', 'mindmapArguments', 'mindmapBranchNotes', 'mindmapCheck', 'mindmapCompare', 'mindmapVaultMap', 'mindmapMinimap', 'mindmapPresent', 'presentDimLevel', 'mindmapPresentSpotlight', 'mindmapPresentNotes', 'mindmapAlbumMap', 'albumMapAuto', 'albumMapWritesParent', 'mindmapConvert', 'mindmapTasks', 'mindmapOtherViews', 'mindmapLinkedCards', 'mindmapNodePanel', 'mindmapFilters', 'mindmapEmbeds', 'mindmapQueries', 'mindmapHistory', 'mindmapRichNodes', 'mindmapTheme'],
-  Workspace: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
+  Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
   // 3.0's last tab, before the tabs went by task.
-  Tools: ['workspaceModes', 'contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
+  Tools: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
 };
 
 /**

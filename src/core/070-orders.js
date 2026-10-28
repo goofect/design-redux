@@ -255,6 +255,16 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.albumRecents;
     },
   },
+  {
+    // Mind maps and workspace modes go, and their settings with them.
+    to: 20,
+    run(saved) {
+      Object.keys(saved).forEach((key) => {
+        if (/^mindmap/.test(key) || /^workspaceMode/.test(key)) delete saved[key];
+      });
+      ['albumMapAuto', 'albumMapWritesParent', 'presentDimLevel', 'canvasSpacing'].forEach((key) => delete saved[key]);
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

@@ -123,7 +123,7 @@ function forFile(file) {
     return exists ? { suites: [{ suite: s, why: 'the suite itself' }] } : { none: 'a deleted suite' };
   }
   if (file.startsWith('tests/obsidian/') || file === 'wdio.conf.mjs' || file === 'tests/e2e.sh') return { none: 'real-Obsidian tests: run tests/e2e.sh "name" for the one changed; CI runs them all' };
-  if (file.startsWith('tests/snapshots/') || file.startsWith('tests/fixtures/') || file === 'tests/mapgen.js') {
+  if (file.startsWith('tests/snapshots/') || file.startsWith('tests/fixtures/')) {
     const users = naming(file.startsWith('tests/fixtures/') ? 'fixtures' : base.replace(/\.js$/, ''));
     return users.length ? { suites: users.map((s) => ({ suite: s, why: `reads ${base}` })) } : { all: `no suite names ${base}` };
   }

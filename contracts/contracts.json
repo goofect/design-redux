@@ -29,14 +29,6 @@
    { "rule": "Ticked with Shift for a run; moved together, one Undo for all", "test": "album: editing an album, notes ticked — Shift for a run — are moved together, one Undo putting them all back" }
   ]
  },
- "mind-map": {
-  "modules": [],
-  "invariants": [
-   { "rule": "A file that can't be read is never written", "test": "mindmap: a file that can’t be read is shown as it is, with what went wrong, and never written" },
-   { "rule": "A change made outside while typing loses nothing on either side", "test": "mindmap: the note changed outside while typing" },
-   { "rule": "History is kept before a save and put back as one step of Undo", "test": "mindmap: map history: a state kept before a save after a pause" }
-  ]
- },
  "commands-settings-views": {
   "modules": [],
   "invariants": [

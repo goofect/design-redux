@@ -123,7 +123,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, CANVAS_SPACE, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, WorkspaceModes, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -897,10 +897,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, given after Pinned, waits under More with the other occasional places.
     assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 19);
+    assert.strictEqual(s.settingsVersion, 20);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 19, brought up from \d+; steps [\d, ]+19$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 20, brought up from \d+; steps [\d, ]+20$/);
     assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
@@ -2959,8 +2959,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const found = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
     ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
     assert.ok(!found.includes('Fusion of powers: relation-roles'), found.join(', '));
-    // Mapped: a mind map's work now (test_mindmap); without mind maps, said so and nothing made.
-    assert.strictEqual(await k.map(parl), null);
   });
 
   await t('the knowledge structure checked: errors, what’s worth a look and modelling choices told apart; fixed, or marked as meant', async () => {
@@ -3066,7 +3064,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('actions: a place prefixes the palette name, never the id; a home says which surface shows it beyond the palette', () => {
     assert.strictEqual(R.placedName('Mark to revisit', 'Note'), 'Note: Mark to revisit');
     assert.strictEqual(R.placedName('Note: Mark', 'Note'), 'Note: Mark', 'not twice');
-    assert.strictEqual(R.placedName('Mind map: fold the branch', 'Maps'), 'Maps: fold the branch');
     assert.strictEqual(R.placedName('Anything', null), 'Anything');
     const cmds = R.actionCommands([{ id: 'x', name: 'Do x', run() {} }, { id: 'y', name: 'Do y', place: 'Tools', run() {} }], () => ({}), 'Library');
     assert.deepStrictEqual(cmds.map((c) => [c.id, c.name]), [['x', 'Library: Do x'], ['y', 'Tools: Do y']]);
@@ -3096,10 +3093,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'the whole window, when asked');
     plugin.settings.lookScope = 'window';
     plugin.settings.gridDensity = 'large';
-    plugin.settings.canvasSpacing = 'compact';
     look.enable();
     assert.ok(has('dr-density-spacious'));
-    assert.strictEqual(R.CANVAS_SPACE.scale, 0.75);
     const cmds = Object.fromEntries(look.commands().map((c) => [c.id, c]));
     cmds['switch-look'].run();
     await new Promise((r) => setTimeout(r, 0));
@@ -3108,10 +3103,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.look = 'editorial';
     look.enable();
     assert.ok(has('dr-look-editorial'));
-    cmds['next-canvas-spacing'].run();
-    await new Promise((r) => setTimeout(r, 0));
-    assert.strictEqual(plugin.settings.canvasSpacing, 'standard');
-    assert.strictEqual(R.CANVAS_SPACE.scale, 1);
     // The editorial look on the whole window, or on Design Redux only.
     assert.ok(!has('dr-look-scoped'));
     plugin.settings.lookScope = 'plugin';
@@ -3150,7 +3141,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const k = new R.Knowledge(plugin);
     plugin.feature = (C) => (C === R.Knowledge ? k : null);
     const ids = k.actions().map((a) => a.id);
-    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-album', 'knowledge-map'].every((id) => ids.includes(id)));
+    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-album'].every((id) => ids.includes(id)));
     // As commands: offered with a note open, not without.
     let active = gov;
     app.workspace.getActiveFile = () => active;
@@ -3166,7 +3157,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       return items;
     };
     assert.ok(titles('menu').includes('Concept: Show related concepts'));
-    assert.ok(titles('menu').includes('Concept: Map its relationships'));
     // A child concept: a note beside it, saying it sits under it; Undo takes it away.
     const child = await k.makeConcept('Parliament', gov);
     assert.deepStrictEqual(created, ['Ideas/Parliament.md', '---\nparent: "[[Government]]"\n---\n']);
@@ -3178,56 +3168,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(fms.get(child).parent, ['[[Law]]']);
     await undo();
     assert.strictEqual(fms.get(child).parent, '[[Government]]');
-  });
-
-  await t('workspace modes — Study, Research, Canvas: entered at a command, the layout kept first; another keeps the first layout; Standard puts it back whole', async () => {
-    const { plugin, app } = setup();
-    const calls = [];
-    let layout = { main: 'as it was' };
-    app.workspace.getLayout = () => JSON.parse(JSON.stringify(layout));
-    app.workspace.changeLayout = async (l) => { calls.push(['changeLayout', l]); layout = l; };
-    app.workspace.leftSplit = { expand: () => calls.push('left open'), collapse: () => calls.push('left shut') };
-    app.workspace.rightSplit = { expand: () => calls.push('right open'), collapse: () => calls.push('right shut') };
-    app.workspace.getLastOpenFiles = () => [];
-    app.workspace.getActiveFile = () => null;
-    app.workspace.onLayoutReady = (fn) => fn();
-    plugin.offerUndo = () => {};
-    const modes = new R.WorkspaceModes(plugin);
-    plugin.feature = (C) => (C === R.WorkspaceModes ? modes : null);
-    assert.strictEqual(modes.current(), null);
-    await modes.enter('study');
-    assert.strictEqual(modes.current(), 'study');
-    assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
-    assert.deepStrictEqual(calls.slice(0, 2), ['left shut', 'right shut']);
-    assert.ok(document.body.classList.contains('dr-mode-study'));
-    // Another mode: the layout from before the first is still the one kept.
-    layout = { main: 'studying' };
-    await modes.enter('mapping');
-    assert.deepStrictEqual(plugin.settings.workspaceModeLayout, { main: 'as it was' });
-    assert.ok(!document.body.classList.contains('dr-mode-study') && document.body.classList.contains('dr-mode-mapping'));
-    // The switcher: Standard and every mode, the one on ticked, and its settings.
-    plugin.openSettingsAt = (key) => calls.push(['settings', key]);
-    modes.showMenu({ clientX: 1, clientY: 1 });
-    const menu = menus[menus.length - 1];
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Standard', 'Study', 'Research', 'Maps', 'Mode settings…']);
-    assert.strictEqual(menu.items.find((i) => i.checked).title, 'Maps');
-    menu.items[4].click();
-    assert.deepStrictEqual(calls[calls.length - 1], ['settings', 'workspaceModes']);
-    // Standard: as it was.
-    menu.items[0].click();
-    await new Promise((r) => setTimeout(r, 0));
-    assert.deepStrictEqual(calls[calls.length - 1], ['changeLayout', { main: 'as it was' }]);
-    assert.strictEqual(modes.current(), null);
-    assert.ok(!document.body.classList.contains('dr-mode-mapping'));
-    assert.strictEqual(modes.commands().find((c) => c.id === 'workspace-mode-leave').check(), false);
-    // Library and Review were modes: their commands, and hotkeys, open those places now.
-    const went = [];
-    const library = { reveal: () => went.push('reveal'), browseMode: async (st) => went.push(st.mode) };
-    plugin.feature = (C) => (C === R.WorkspaceModes ? modes : C === R.Library ? library : null);
-    modes.commands().find((c) => c.id === 'workspace-mode-review').run();
-    await new Promise((r) => setTimeout(r, 0));
-    assert.deepStrictEqual(went, ['reveal', 'library-check']);
-    assert.strictEqual(modes.current(), null, 'no mode');
   });
 
   await t('the note panel: a note’s relationships both ways, to open or take off, and the albums and canvases it’s in', async () => {
