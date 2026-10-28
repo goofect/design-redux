@@ -365,7 +365,7 @@ export class AlbumStructure extends Feature {
   }
 
   /** A concept map's canvas: one named for the album, or the first in it; made from the album if none. */
-  /** An album's map: its mind map, named for it; else a canvas named for it, or the first in it. */
+  /** An album's map: a canvas named for it, or the first in it. */
   mapOf(folder) {
     const own = (folder.children || []).find((c) => c instanceof TFile && c.extension === 'md' && c.basename.toLowerCase() === `${folder.name} map`.toLowerCase());
     if (own) return own;

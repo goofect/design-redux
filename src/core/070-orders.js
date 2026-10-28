@@ -38,27 +38,6 @@ export function moveBefore(list, item, before) {
 /* Settings kept by a file or folder's path, which follow it when it moves. */
 export const PATH_KEYED = ['coverColors', 'coverDesigns', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
-/* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
-export const MINDMAP_TWINS = [
-  ['canvasLegend', 'mindmapLegend'],
-  ['canvasDepth', 'mindmapDepth'],
-  ['canvasColourBy', 'mindmapColourBy', (v) => (v === 'branch' || v === 'depth' ? v : '')],
-  ['canvasPins', 'mindmapPins'],
-  ['canvasViews', 'mindmapViews'],
-];
-
-/* The twins mind maps took on with their knowledge tools. */
-export const MINDMAP_TWINS_KNOWLEDGE = [
-  ['canvasRelations', 'mindmapRelations'],
-  ['canvasArguments', 'mindmapArguments'],
-  ['canvasBranchNote', 'mindmapBranchNotes'],
-  ['canvasCheck', 'mindmapCheck'],
-  ['canvasCompare', 'mindmapCompare'],
-  ['canvasVaultMap', 'mindmapVaultMap'],
-  ['canvasMinimap', 'mindmapMinimap'],
-  ['canvasPresent', 'mindmapPresent'],
-];
-
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
  * or reshaped, a step here carries the old value across, so a choice
@@ -162,24 +141,14 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Mind maps of their own take the choices made for the canvas's maps:
-    // the legend, depth, tints, pinned cards and views. The canvas keeps its own.
+    // Mind maps took the canvas maps' choices here; they're gone (step 20), so nothing to carry.
     to: 10,
-    run(saved) {
-      MINDMAP_TWINS.forEach(([from, to, as]) => {
-        if (saved[from] !== undefined) saved[to] = as ? as(saved[from]) : saved[from];
-      });
-    },
+    run() {},
   },
   {
-    // The same for the tools mind maps took on next: relations, arguments,
-    // branches as notes, check, compare, maps of the vault, the minimap, present.
+    // And their knowledge tools' choices: gone with them too.
     to: 11,
-    run(saved) {
-      MINDMAP_TWINS_KNOWLEDGE.forEach(([from, to]) => {
-        if (saved[from] !== undefined) saved[to] = saved[from];
-      });
-    },
+    run() {},
   },
   {
     // Folder defaults become schemas: the same properties, as defaults
@@ -190,9 +159,8 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // 3.0: canvas maps are gone. Their settings go with them; mind maps
-    // took their place in 2.x, with settings of their own carried over
-    // at step 11. Canvases themselves are untouched.
+    // 3.0: canvas maps are gone. Their settings go with them. Canvases
+    // themselves are untouched.
     to: 13,
     run(saved) {
       RETIRED_CANVAS_KEYS.forEach((k) => delete saved[k]);

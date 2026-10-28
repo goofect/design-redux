@@ -220,7 +220,7 @@ export class Knowledge extends Feature {
       {
         key: 'knowledge',
         name: 'Relationships between notes',
-        desc: 'A note’s relationships kept as its own properties, one for each kind of relationship (and the graph’s parent, as what it sits under). An explorer shows any note’s, both ways; a mind map can be drawn from them, or write its relations into them; the library’s check looks them over.',
+        desc: 'A note’s relationships kept as its own properties, one for each kind of relationship (and the graph’s parent, as what it sits under). An explorer shows any note’s, both ways; the library’s check looks them over.',
       },
       {
         key: 'canvasRelationTypes',
@@ -543,7 +543,7 @@ export class Knowledge extends Feature {
       const list = relationTypes(this.settings).map((t) => Object.assign({}, t));
       new Setting(block)
         .setName('Kinds of relationship')
-        .setDesc('Each kept as a property of the notes it relates, and offered on a mind map’s relations. Hierarchy is what a note sits under; association, alongside. Each draws its line its own way.')
+        .setDesc('Each kept as a property of the notes it relates. Hierarchy is what a note sits under; association, alongside. Each draws its line its own way.')
         .setHeading();
       list.forEach((type, i) => {
         const row = new Setting(block).setClass('dr-relation-type');

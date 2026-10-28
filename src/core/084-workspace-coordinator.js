@@ -3,21 +3,14 @@
 /*                                                                    */
 /* What the inspector is about, decided in one place. What's open in  */
 /* a tab, what's picked in the library, a card on a canvas: each can  */
-/* say what to show, and the pin says whether any of                  */
-/* them may. The coordinator keeps the answer as a snapshot —          */
-/* { target, leaf, origin, pinned } — and tells whoever listens when  */
+/* say what to show. The coordinator keeps the answer as a snapshot —  */
+/* { target, leaf, origin } — and tells whoever listens when         */
 /* it changes; they draw from it. One for the whole plugin, on        */
 /* `plugin.coordinator`.                                              */
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { INSPECTOR_VIEW } from './020-constants.js';
 import { cardElement, pickedOnCanvas } from './079-canvas-adapter.js';
-
-/** Why the inspector shows `target`, in a few words. */
-export function originLabel(origin) {
-  return { picked: 'Picked in the library', card: 'A card on the canvas', note: 'The open note' }[origin] || '';
-}
 
 /** Whether two targets are about the same thing, drawn the same way. */
 export const sameTarget = (a, b) =>
@@ -26,7 +19,7 @@ export const sameTarget = (a, b) =>
 export class WorkspaceCoordinator {
   constructor(plugin) {
     this.plugin = plugin;
-    this.state = { target: null, leaf: null, origin: '', pinned: false };
+    this.state = { target: null, leaf: null, origin: '' };
     this.listeners = new Set();
   }
 
@@ -112,11 +105,11 @@ export class WorkspaceCoordinator {
   }
 
   /**
-   * A tab worked in: what it's about, unless pinned. The inspector's own
-   * tab, and a tab with nothing to show, leave it as it was. The snapshot.
+   * A tab worked in: what it's about. A tab with nothing to show leaves
+   * it as it was. The snapshot.
    */
   look(leaf) {
-    if (this.state.pinned || !leaf || this.isInspector(leaf)) return this.snapshot();
+    if (!leaf) return this.snapshot();
     const target = this.targetOf(leaf);
     if (target && !target.none) this.show(leaf, target);
     return this.snapshot();
@@ -124,41 +117,25 @@ export class WorkspaceCoordinator {
 
   /** Picked in the library, without opening: a note or an album. */
   pick(item) {
-    if (this.state.pinned || !item) return;
+    if (!item) return;
     if (item.file instanceof TFile && item.file.extension === 'md') this.show(null, { file: item.file, picked: true });
     else if (item.folder) this.show(null, { folder: item.folder });
   }
 
-  /** Asked for outright — the Properties button — so shown, pinned or not. */
   show(leaf, target) {
-    this.set({ target, leaf, origin: this.originOf(leaf, target), pinned: this.state.pinned });
+    this.set({ target, leaf, origin: this.originOf(leaf, target) });
   }
 
-  /** Pinned, it keeps what it shows; unpinned, it catches up with the tab last worked in. */
-  pin(on) {
-    const pinned = !!on && !!this.state.target;
-    if (pinned === this.state.pinned) return;
-    this.set(Object.assign({}, this.state, { pinned }));
-    if (!pinned) {
-      const ws = this.app.workspace;
-      this.look(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf);
-    }
-  }
-
-  /** A deleted file or folder it shows is let go of, pinned or not. */
+  /** A deleted file or folder it shows is let go of. */
   forget(file) {
     const target = this.state.target;
     if (!file || !target || (target.file !== file && target.folder !== file)) return;
-    this.set({ target: null, leaf: null, origin: '', pinned: false });
-  }
-
-  isInspector(leaf) {
-    return !!leaf.view && typeof leaf.view.getViewType === 'function' && leaf.view.getViewType() === INSPECTOR_VIEW;
+    this.set({ target: null, leaf: null, origin: '' });
   }
 
   set(next) {
     const now = this.state;
-    if (sameTarget(now.target, next.target) && now.leaf === next.leaf && now.pinned === next.pinned) return;
+    if (sameTarget(now.target, next.target) && now.leaf === next.leaf) return;
     this.state = next;
     const snap = this.snapshot();
     this.listeners.forEach((fn) => {
