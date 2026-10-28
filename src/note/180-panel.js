@@ -222,6 +222,8 @@ export class PropertiesPanel extends Feature {
         else this.close();
       })
     );
+    // Floating, it follows what its tab says it's about: another node on a map, another card.
+    this.plugin.register(this.plugin.coordinator.onChange((snap) => this.followFloat(snap)));
     // Docked in the library's pane, it draws what's picked there.
     this.plugin.register(this.plugin.selection.onChange((item) => this.showPick(item)));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:pane-open', (pane) => this.paneOpened(pane)));
@@ -447,6 +449,15 @@ export class PropertiesPanel extends Feature {
       this.setTrigger(trigger);
       this.place(trigger);
     }
+  }
+
+  /** Floating over `snap.leaf`, what it shows moved on to what that tab is now about. */
+  followFloat(snap) {
+    if (this.dockView || !this.isOpen() || !snap.target || !snap.leaf || snap.leaf !== this.leaf) return;
+    if (this.shown && this.shown.is(snap.target)) return;
+    this.point(snap.target);
+    this.mount();
+    this.reposition();
   }
 
   /** Move the active marker and aria state onto a different trigger. */
