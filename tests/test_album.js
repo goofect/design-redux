@@ -111,6 +111,8 @@ class Setting {
 }
 const obsidian = new Proxy({
   Menu, Modal, FuzzySuggestModal, Component, ItemView, TFile, TFolder, TAbstractFile, MarkdownView, Setting,
+  // As Obsidian's: keys a view takes while it's the active one, whatever has focus.
+  Scope: class { constructor() { this.keys = []; } register(mods, key, func) { this.keys.push({ key, func }); } },
   // As Obsidian's: an icon must be named.
   setIcon: (el, name) => { if (typeof name !== 'string') throw new TypeError("Cannot read properties of undefined (reading 'startsWith')"); el.dataset.icon = name; },
   Notice: class { constructor(m) { notices.push(m); } },
@@ -981,6 +983,29 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(Array.from(view.ticked()), ['IR/Anarchy, again.md']);
     view.render();
     assert.strictEqual(view.contentEl.querySelector('.dr-bulk-count').textContent, '1 note selected');
+  });
+
+  await t('Escape reaches the page with focus gone from it — a redrawn row takes focus along: ticks let go, then editing', async () => {
+    const { app, view } = setup();
+    app.scope = {};
+    app.workspace.on = () => ({});
+    app.metadataCache.on = () => ({});
+    app.vault.on = app.vault.on || (() => ({}));
+    await view.onOpen();
+    view.setEditing(true);
+    view.contentEl.querySelector('.dr-track[data-path="IR/Anarchy.md"] .dr-edit-tick').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    assert.strictEqual(view.ticked().size, 1);
+    const esc = view.scope.keys.find((k) => k.key === 'Escape').func;
+    const press = (target) => {
+      const evt = { key: 'Escape', target, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+      return esc(evt);
+    };
+    assert.strictEqual(press(document.body), false, 'taken, not passed on');
+    assert.ok(view.ticked().size === 0 && view.editing, 'ticks let go, still editing');
+    assert.strictEqual(press(document.body), false);
+    assert.strictEqual(view.editing, false, 'then out of editing');
+    assert.strictEqual(press(document.body), true, 'nothing to let go of: passed on');
+    assert.strictEqual(press(view.contentEl), true, 'inside the page, its own keydown has it');
   });
 
   await t('the tray: at the foot of the notes, covers and count, More holding Delete apart, Escape and Mod+A', async () => {

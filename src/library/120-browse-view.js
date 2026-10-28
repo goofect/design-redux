@@ -151,6 +151,12 @@ export class BrowseView extends BrowseAlbum {
             if (t && typeof t.closest === 'function' && t.closest('input, textarea, select, [contenteditable="true"]')) return true;
             return !this.focusFind();
           });
+          // Escape too — letting go of ticks, editing, a pick — when focus has left the page (a redrawn row takes it along).
+          this.scope.register([], 'Escape', (evt) => {
+            if (evt.target && this.containerEl.contains(evt.target)) return true;
+            this.onKey(evt);
+            return !evt.defaultPrevented;
+          });
         }
       }
     } catch (err) {
