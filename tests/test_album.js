@@ -125,7 +125,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, Knowledge, KnowledgeCheck, knowledgeFindings, loopsAmong, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, RelationsSection, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, Reading, readingOf, atEnd, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, ReadingHistory, fromReading, bodyWords, nextDue, dueNow, studyLadder, StudyStore, Study, studyOf, dueNotes, DAY, sessionSummary, sessionPlace, highlightsIn, passageHash, StudyQuiz, ImageRouter, READ_GRACE, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -265,7 +265,7 @@ const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('ke
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
 
-const HOME_OFF = ['picks', 'revisit', 'continue', 'fromReading', 'added', 'collections', 'pinned', 'rediscover'];
+const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };
 
@@ -420,39 +420,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('classic' in R.LOOKS));
   });
 
-  await t('reading history: what you opened and read, in the plugin’s data; changed since read is news; the latest kept', () => {
-    const { v, plugin } = setup();
-    plugin.saveData = () => {};
-    const r = new R.Reading(plugin);
-    const f = (n) => v.vault.getAbstractFileByPath(`IR/${n}.md`);
-    plugin.settings.readingSince = 0.5;
-    assert.strictEqual(r.state(f('Anarchy')), 'unread');
-    assert.ok(r.isNew(f('Anarchy')), 'made since the history began, not read');
-    r.opened(f('Anarchy'));
-    r.opened(f('Balance'));
-    plugin.settings.readingLog['IR/Balance.md'].opened += 5;
-    assert.ok(r.markRead(f('Anarchy')));
-    assert.ok(!r.markRead(f('Anarchy')), 'read already, as it is');
-    assert.strictEqual(r.state(f('Anarchy')), 'read');
-    assert.ok(!r.isNew(f('Anarchy')));
-    f('Anarchy').stat.mtime += R.READ_GRACE - 500;
-    assert.strictEqual(r.state(f('Anarchy')), 'read', 'a change just after reading is the reading’s own save');
-    f('Anarchy').stat.mtime += 10000;
-    assert.strictEqual(r.state(f('Anarchy')), 'changed', 'changed since');
-    r.edited(f('Anarchy'));
-    assert.strictEqual(r.state(f('Anarchy')), 'read', 'your own change while reading keeps it read');
-    assert.strictEqual(r.countRead(['Anarchy', 'Balance', 'Cooperation'].map(f)), 1);
-    assert.deepStrictEqual(r.latest('read').map((x) => x.basename), ['Anarchy']);
-    assert.ok(plugin.settings.readingLog['IR/Balance.md'].opened >= plugin.settings.readingLog['IR/Anarchy.md'].opened);
-    assert.strictEqual(r.lastOpened(['Anarchy', 'Balance', 'Cooperation'].map(f)).basename, 'Balance');
-    // Kept within its size.
-    for (let i = 0; i < 3005; i++) plugin.settings.readingLog[`x/${i}.md`] = { opened: i + 1 };
-    r.prune();
-    assert.strictEqual(Object.keys(plugin.settings.readingLog).length, 3000);
-    assert.ok(R.atEnd({ scrollHeight: 1000, scrollTop: 560, clientHeight: 400 }) && !R.atEnd({ scrollHeight: 1000, scrollTop: 100, clientHeight: 400 }));
-  });
-
-  await t('reading outline: the heading you’re at, the words in each section, a row goes to its heading; a note opens where you were', async () => {
+  await t('reading outline: the heading you’re at, the words in each section, a row goes to its heading', async () => {
     const H = [{ level: 1, line: 0 }, { level: 2, line: 3 }, { level: 2, line: 6 }, { level: 1, line: 9 }];
     assert.strictEqual(R.currentHeading([], 5), -1, 'no headings');
     assert.strictEqual(R.currentHeading([{ level: 2, line: 4 }], 2), -1, 'before the first');
@@ -463,21 +431,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.sectionWords(text, H), [6, 3, 1, 2], 'a section counts the ones nested in it, not their headings');
     assert.deepStrictEqual(R.sectionEnds(H, 11), [9, 6, 9, 11]);
 
-    // Where you were: kept by line, and kept through pruning as recent.
-    const { v, plugin, app } = setup();
-    plugin.saveData = () => {};
-    const r = R.readingOf(plugin);
-    const f = v.vault.getAbstractFileByPath('IR/Anarchy.md');
-    assert.strictEqual(r.where(f), null);
-    r.place(f, 6.7);
-    assert.strictEqual(r.where(f), 6);
-    r.place(f, -1);
-    assert.strictEqual(r.where(f), 6, 'nonsense ignored');
-    for (let i = 0; i < 3005; i++) plugin.settings.readingLog[`x/${i}.md`] = { opened: i + 1 };
-    r.prune();
-    assert.strictEqual(r.where(f), 6, 'just placed: kept');
-    assert.ok(!plugin.settings.readingLog['x/0.md'] && plugin.settings.readingLog['x/3004.md'], 'the oldest go');
-    plugin.settings.readingLog = { 'IR/Anarchy.md': { opened: 1, line: 6, lineAt: 1 } };
+    const { plugin, app } = setup();
+    const f = app.vault.getAbstractFileByPath('IR/Anarchy.md');
 
     // The panel.
     if (!window.requestAnimationFrame) window.requestAnimationFrame = (fn) => setTimeout(fn, 0);
@@ -525,50 +480,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.getFileCache = () => ({ headings: [] });
     ov.render();
     assert.strictEqual(ov.contentEl.textContent, 'No headings in this note');
-
-    // Opened again: back where you were, unless something already put it elsewhere.
-    const hist = new R.ReadingHistory(plugin);
-    scroll = 0;
-    hist.onOpen(f);
-    await settle(200);
-    assert.strictEqual(scroll, 6, 'opens where you were');
-    scroll = 3;
-    hist.onOpen(f);
-    await settle(200);
-    assert.strictEqual(scroll, 3, 'a link to a heading wins');
-    scroll = 20;
-    hist.track(f);
-    assert.strictEqual(r.where(f), 20, 'kept as you scroll');
-    plugin.settings.rememberPlace = false;
-    scroll = 0;
-    hist.onOpen(f);
-    await settle(200);
-    assert.strictEqual(scroll, 0, 'switched off: from the top');
-    clearTimeout(hist.glance);
   });
 
-  await t('a library that notices: notes your reading points to, notes too thin to be much use', async () => {
+  await t('a library that notices notes too thin to be much use', async () => {
     const { v, plugin, app } = setup();
     plugin.saveData = () => {};
-    const r = R.readingOf(plugin);
     const f = (p) => v.vault.getAbstractFileByPath(p);
-    // No rings on covers, partway read or all: they've gone, and their switch with them.
-    r.markRead(f('IR/Anarchy.md'));
+    // No rings on covers: they've gone, and their switch with them.
     const art = document.createElement('div');
     R.drawFolderArt(plugin, art, f('IR/Theories'));
     assert.strictEqual(art.querySelector('.dr-progress-ring'), null);
     const saved = { albumProgressRing: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 18).run(saved);
     assert.ok(!('albumProgressRing' in saved) && !('albumProgressRing' in R.DEFAULTS));
-
-    // From what you read: linked from what you read lately, not opened, by how many point there, then how lately.
-    const now = 100 * 86400000;
-    const recent = [{ path: 'a.md', at: now - 1000 }, { path: 'b.md', at: now - 2000 }, { path: 'old.md', at: now - 30 * 86400000 }];
-    const links = { 'a.md': { 'x.md': 1, 'y.md': 2, 'b.md': 1, 'pic.png': 1 }, 'b.md': { 'y.md': 1, 'z.md': 1, 'seen.md': 1 }, 'old.md': { 'w.md': 1 } };
-    const got = R.fromReading(recent, (p) => links[p], (p) => p === 'seen.md', now, 14);
-    assert.deepStrictEqual(got.map((g) => g.path), ['y.md', 'x.md', 'z.md'], 'two point to y; then x, linked from the later read');
-    assert.deepStrictEqual([got[0].count, got[0].from], [2, 'a.md']);
-    assert.deepStrictEqual(R.fromReading([], (p) => links[p], () => false, now, 14), [], 'nothing read: nothing');
 
     // Thin notes: words of their own, properties, headings and embeds aside.
     assert.strictEqual(R.bodyWords('---\ntags: a b c\n---\n# A long heading here\nOne two three ![[Big note]] four ![pic](x.png)\n## More\n'), 4);
@@ -584,209 +508,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(await check.thinNotes(), [], '0 turns it off');
     plugin.settings.thinNoteWords = 60;
     assert.ok(plugin.lengths.thin(f('IR/Balance.md'), 60) && !plugin.lengths.thin(f('IR/Deterrence.md'), 60));
-  });
-
-  await t('study: a ladder of revisits, kept in its own file that follows renames, and survives being broken', async () => {
-    const L = [1, 3, 7];
-    const now = 1000 * R.DAY;
-    const first = R.nextDue(null, 'read', L, now);
-    assert.deepStrictEqual([first.rung, first.due, first.lapses, first.grade], [0, now + R.DAY, 0, null], 'read: due after the first rung');
-    assert.deepStrictEqual(R.nextDue(first, 'read', L, now + 5), first, 'read again: unchanged');
-    const got = R.nextDue(first, 'got', L, now);
-    assert.deepStrictEqual([got.rung, got.due, got.grade], [1, now + 3 * R.DAY, 'got']);
-    const top = R.nextDue(R.nextDue(got, 'got', L, now), 'got', L, now);
-    assert.deepStrictEqual([top.rung, top.due], [2, now + 7 * R.DAY], 'at the top it stays, at the top interval');
-    const again = R.nextDue(top, 'again', L, now);
-    assert.deepStrictEqual([again.rung, again.due, again.lapses], [0, now + R.DAY, 1], 'again: back to the start, due tomorrow, a lapse');
-    const later = R.nextDue(got, 'later', L, now);
-    assert.deepStrictEqual([later.rung, later.due], [1, now + R.DAY], 'later: a day on, the same rung');
-    assert.deepStrictEqual(R.studyLadder('2, 5 ,x, 9'), [2, 5, 9]);
-    assert.deepStrictEqual(R.studyLadder(''), [1, 3, 7, 21, 60]);
-    // What's due: the most overdue first, within the day's cap less those graded today.
-    const items = { a: { due: now - 3 }, b: { due: now - 9 }, c: { due: now + 9 }, d: { due: now - 1 }, e: { due: now + 5, grade: 'got', last: now } };
-    assert.deepStrictEqual(R.dueNow(items, now, 20), ['b', 'a', 'd']);
-    assert.deepStrictEqual(R.dueNow(items, now, 2), ['b'], 'one graded today already');
-
-    // The store: its own file, apart from the settings.
-    const { v, plugin, app, view } = setup();
-    plugin.saveData = () => {};
-    plugin.manifest = { dir: '.obsidian/plugins/design-redux' };
-    const disk = {};
-    app.vault.adapter = {
-      exists: async (p) => p in disk,
-      read: async (p) => disk[p],
-      write: async (p, text) => { disk[p] = text; },
-    };
-    const file = '.obsidian/plugins/design-redux/study.json';
-    let store = new R.StudyStore(plugin);
-    assert.ok(!(await store.exists()));
-    await store.load();
-    assert.deepStrictEqual(Object.keys(store.data.items), [], 'missing: starts empty');
-    assert.ok(!(file in disk), 'and writes nothing until something changes');
-    disk[file] = '{ not json';
-    store = new R.StudyStore(plugin);
-    await store.load();
-    await settle();
-    assert.strictEqual(disk[file + '.bad'], '{ not json', 'broken: kept aside');
-    assert.deepStrictEqual(JSON.parse(disk[file]).items, {}, 'and a new one started');
-    const f = (p) => v.vault.getAbstractFileByPath(p);
-    store.grade(f('IR/Anarchy.md'), 'read', L, now);
-    store.grade(f('IR/Theories/Realism.md'), 'read', L, now);
-    store.data.cards['IR/Anarchy.md#abc'] = { rung: 0 };
-    store.flush();
-    store.timer = 1;
-    store.flush();
-    await settle();
-    assert.ok(JSON.parse(disk[file]).items['IR/Anarchy.md']);
-    await v.fileManager.renameFile(f('IR/Anarchy.md'), 'IR/Anarchism.md');
-    store.followRename(f('IR/Anarchism.md'), 'IR/Anarchy.md');
-    assert.ok(store.item('IR/Anarchism.md') && !store.item('IR/Anarchy.md') && store.data.cards['IR/Anarchism.md#abc'], 'a renamed note keeps its schedule');
-    await v.fileManager.renameFile(f('IR/Theories'), 'IR/Schools');
-    store.followRename(f('IR/Schools'), 'IR/Theories');
-    assert.ok(store.item('IR/Schools/Realism.md'), 'and a renamed folder its notes’');
-    store.followDelete({ path: 'IR/Schools' });
-    assert.ok(!store.item('IR/Schools/Realism.md'), 'deleted: gone');
-    clearTimeout(store.timer);
-
-    // The feature: off, nothing; on, a note read in a studied collection comes back.
-    for (const k of Object.keys(disk)) delete disk[k];
-    plugin.study = null;
-    plugin.features = [];
-    plugin.saveSettings = async () => {};
-    app.workspace.trigger = () => {};
-    const study = new R.Study(plugin);
-    plugin.feature = (C) => (C === R.Study ? study : null);
-    study.onRead(f('IR/Balance.md'));
-    await settle();
-    assert.deepStrictEqual(Object.keys(disk), [], 'off: nothing kept');
-    plugin.settings.studyEnabled = true;
-    study.enable();
-    await settle();
-    await study.setStudied(f('IR'), true);
-    assert.ok(plugin.settings.studyAlbums.IR);
-    study.onRead(f('IR/Balance.md'));
-    study.onRead(f('Elsewhere.md'));
-    await settle();
-    const item = R.studyOf(plugin).item('IR/Balance.md');
-    assert.ok(item && item.rung === 0, 'read in a studied collection: on the ladder');
-    assert.strictEqual(Object.keys(R.studyOf(plugin).data.items).length, 1);
-    assert.deepStrictEqual(R.dueNotes(plugin), [], 'not due yet');
-    item.due = Date.now() - 1;
-    assert.deepStrictEqual(R.dueNotes(plugin).map((x) => x.basename), ['Balance']);
-    await view.setState({ mode: 'home' }, {});
-    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).some((e) => e.textContent === 'To revisit · 1'), 'on Home, with a count');
-    study.gradeNote(f('IR/Balance.md'), 'got');
-    assert.deepStrictEqual(R.dueNotes(plugin), [], 'graded: off the shelf');
-    assert.strictEqual(R.studyOf(plugin).item('IR/Balance.md').rung, 1);
-    await study.addEvery(f('IR'));
-    assert.strictEqual(Object.keys(R.studyOf(plugin).data.items).length, 6, 'every note in it, however deep');
-
-    // Sessions: the notes not read yet, then those due; the summary matches the reading log.
-    const sum = R.sessionSummary({ list: ['a', 'b', 'c'], startedAt: 100, marked: ['b'] }, (p) => ({ a: 150, b: 50 })[p] || 0, 100 + 41 * 60000);
-    assert.deepStrictEqual(sum, { total: 3, read: 1, marked: 1, minutes: 41, left: ['b', 'c'] });
-    const reading = R.readingOf(plugin);
-    const sstore = R.studyOf(plugin);
-    sstore.item('IR/Cooperation.md').due = Date.now() - 1;
-    reading.markRead(f('IR/Cooperation.md'));
-    reading.markRead(f('IR/Deterrence.md'));
-    assert.deepStrictEqual(study.sessionList(f('IR')), ['IR/Anarchism.md', 'IR/Balance.md', 'IR/Schools/Liberalism.md', 'IR/Schools/Realism.md', 'IR/Cooperation.md'], 'unread in order, then the read one due');
-    const session = await study.startSession(f('IR'));
-    assert.ok(session && session.list.indexOf('IR/Deterrence.md') === -1, 'read and not due: left out');
-    assert.deepStrictEqual(R.sessionPlace(plugin, f(session.list[1])), { index: 1, total: session.list.length });
-    study.markForRevisit(f(session.list[1]));
-    study.markForRevisit(f(session.list[1]));
-    assert.deepStrictEqual(session.marked, [session.list[1]], 'marked once');
-    sstore.remove(f(session.list[1]));
-    reading.markRead(f(session.list[0]));
-    session.startedAt -= 5 * 60000;
-    reading.log['IR/Cooperation.md'].read -= 10 * 60000;
-    const ended = study.endSession();
-    assert.deepStrictEqual([ended.read, ended.total, ended.marked, ended.minutes], [1, session.list.length, 1, 5]);
-    assert.strictEqual(R.sessionPlace(plugin, f(session.list[0])), null, 'ended');
-    assert.deepStrictEqual(sstore.lastSession(f('IR')).read, 1, 'kept with the latest');
-    const dialog = modals[modals.length - 1];
-    assert.ok(/1 of \d+ read · 1 marked to revisit · 5 min/.test(dialog.contentEl.textContent), dialog.contentEl.textContent);
-    const add = Array.from(dialog.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Add it to the revisits');
-    click(add);
-    await settle();
-    assert.ok(sstore.item(session.list[1]), 'the marked one added');
-    clearTimeout(sstore.timer);
-  });
-
-  await t('study: highlighted passages gathered from notes, on a screen of their own, and asked back as a quiz', async () => {
-    const text = ['---', 'note: ==not this==', '---', 'Say ==this one== and `==code==` and [[A==B]] ==[[Link|shown]] too==', '```', '==fenced==', '```', '==outer ==inner== more==', 'a == b and c == d'].join('\n');
-    assert.deepStrictEqual(R.highlightsIn(text), [
-      { text: 'this one', line: 3, before: 'Say', after: 'and `==code==` and A==B shown too' },
-      { text: 'shown too', line: 3, before: 'Say this one and `==code==` and A==B', after: '' },
-      { text: 'outer inner more', line: 7, before: '', after: '' },
-    ], 'not in properties, code or links; a mark inside a mark is one passage');
-    assert.strictEqual(R.passageHash('x y'), R.passageHash('x y'));
-    assert.notStrictEqual(R.passageHash('x y'), R.passageHash('x z'));
-
-    const { v, plugin, app, view, opened } = setup();
-    plugin.saveData = () => {};
-    plugin.saveSettings = async () => {};
-    plugin.manifest = { dir: 'p' };
-    const disk = {};
-    app.vault.adapter = { exists: async (p) => p in disk, read: async (p) => disk[p], write: async (p, t) => { disk[p] = t; } };
-    app.workspace.trigger = () => {};
-    app.workspace.getLeavesOfType = () => [];
-    const texts = { Anarchy: 'States are ==self-help actors== in anarchy.\nAnd ==no world government==.', Balance: 'Plain.', 'Realism': 'Power ==matters most==.' };
-    app.vault.cachedRead = async (f) => texts[f.basename] || '';
-    plugin.settings.studyEnabled = true;
-    const study = new R.Study(plugin);
-    plugin.feature = (C) => (C === R.Study ? study : null);
-    await R.studyOf(plugin).load();
-    const f = (p) => v.vault.getAbstractFileByPath(p);
-    const found = await study.highlightsOf([f('IR/Anarchy.md'), f('IR/Balance.md')]);
-    assert.deepStrictEqual(found.map((h) => `${h.file.basename}:${h.line}:${h.text}`), ['Anarchy:0:self-help actors', 'Anarchy:1:no world government']);
-    let reads = 0;
-    app.vault.cachedRead = async (file) => { reads++; return texts[file.basename] || ''; };
-    await study.highlightsOf([f('IR/Anarchy.md')]);
-    assert.strictEqual(reads, 0, 'unchanged since: not read again');
-
-    // The screen, for a collection: each passage under its note, a click from its line.
-    await view.setState({ mode: 'highlights', property: 'IR' }, {});
-    await settle(30);
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-highlight-text')).map((e) => e.textContent), ['self-help actors', 'no world government', 'matters most']);
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-highlights-note')).map((e) => e.textContent), ['Anarchy', 'Realism']);
-    click(view.contentEl.querySelectorAll('.dr-highlight')[1]);
-    assert.strictEqual(opened[opened.length - 1].basename, 'Anarchy');
-
-    // The quiz: from the collections studied, within the day's cap; answered on the ladder.
-    assert.deepStrictEqual(await study.quizCards(), [], 'nothing studied: nothing asked');
-    plugin.settings.studyAlbums = { 'IR/Theories': { added: 1 } };
-    let cards = await study.quizCards();
-    assert.deepStrictEqual(cards.map((c) => c.text), ['matters most']);
-    plugin.settings.studyAlbums = { IR: { added: 1 } };
-    plugin.settings.studyCardMax = 2;
-    cards = await study.quizCards();
-    assert.strictEqual(cards.length, 2, 'at most the day’s cap');
-    const quiz = new R.StudyQuiz(study, cards);
-    quiz.open();
-    assert.ok(/_{4}/.test(quiz.contentEl.querySelector('.dr-study-quiz-blank').textContent), 'the marked words hidden');
-    const button = (label) => Array.from(quiz.contentEl.querySelectorAll('button')).find((b) => b.textContent === label);
-    click(button('Show'));
-    assert.strictEqual(quiz.contentEl.querySelector('.dr-study-quiz-answer').textContent, cards[0].text);
-    click(button('Got it'));
-    click(button('Show'));
-    click(button('Again'));
-    assert.ok(/Done: 1 of 2 known/.test(quiz.contentEl.textContent));
-    const kept = R.studyOf(plugin).data.cards;
-    assert.strictEqual(kept[cards[0].key].grade, 'got');
-    assert.strictEqual(kept[cards[1].key].lapses, 1);
-    assert.deepStrictEqual(await study.quizCards(), [], 'the day’s cap reached');
-    // As a card on the open canvas, to the right of what's there.
-    const made = [];
-    const canvas = { nodes: new Map([['n', { getBBox: () => ({ minX: 0, minY: 40, maxX: 200, maxY: 100 }) }]]), createTextNode: (o) => (made.push(o), {}), requestSave: () => {} };
-    app.workspace.getLeavesOfType = (t) => (t === 'canvas' ? [{ view: { canvas, file: { basename: 'Map' } } }] : []);
-    assert.ok(study.addToCanvas(cards[0]));
-    assert.deepStrictEqual([made[0].pos, made[0].text], [{ x: 260, y: 40 }, `> ${cards[0].text}\n\n— [[${cards[0].file.basename}]]`]);
-    app.workspace.getLeavesOfType = () => [];
-    // A renamed note keeps its passages' schedule.
-    R.studyOf(plugin).followRename({ path: 'IR/Anarchism.md' }, 'IR/Anarchy.md');
-    assert.ok(Object.keys(R.studyOf(plugin).data.cards).some((k) => k.startsWith('IR/Anarchism.md#')));
-    clearTimeout(R.studyOf(plugin).timer);
   });
 
   await t('images added go to the image folder once a note links them: names with spaces, any case; a folder made if missing; one gone first left alone', async () => {
@@ -820,59 +541,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(moved.length, 1, 'gone before it could move: nothing');
   });
 
-  await t('an album dots what’s new to you, and Open picks up where you were; Recently read lists what’s read', async () => {
-    const { v, plugin, view, opened } = setup();
-    plugin.saveData = () => {};
-    const r = R.readingOf(plugin);
-    const f = (n) => v.vault.getAbstractFileByPath(`IR/${n}.md`);
-    plugin.settings.readingSince = 0.5;
-    r.opened(f('Anarchy'));
-    r.markRead(f('Anarchy'));
-    r.opened(f('Cooperation'));
-    plugin.settings.readingLog['IR/Cooperation.md'].opened += 5;
-    view.render();
-    assert.ok(!/ read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent), 'no count of what’s read under its title');
-    const row = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"]`);
-    assert.ok(!row('Anarchy').classList.contains('is-unread') && row('Balance').classList.contains('is-unread'));
-    const open = action(view, 'Continue');
-    assert.ok(open, 'Continue, where you were');
-    click(open);
-    assert.strictEqual(opened[opened.length - 1].basename, 'Cooperation');
-    await view.setState({ mode: 'read' }, {});
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Anarchy']);
-    // Home: Continue reading picks up the note you were partway through.
-    plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: id === 'continue' }));
-    await view.setState({ mode: 'home' }, {});
-    const head = Array.from(view.contentEl.querySelectorAll('.dr-shelf-head')).find((x) => /Continue reading/.test(x.textContent));
-    assert.ok(head, 'a Continue reading shelf');
-    assert.strictEqual(head.nextElementSibling.querySelector('.dr-card-title').textContent, 'Cooperation');
-    // Read a month ago or more: the first to revisit.
-    plugin.settings.readingLog['IR/Anarchy.md'].read = Date.now() - 40 * 86400000;
-    plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: id === 'picks' }));
-    await view.setState({ mode: 'home' }, {});
-    const revisit = Array.from(view.contentEl.querySelectorAll('.dr-pick')).find((x) => /Rediscover/.test(x.textContent));
-    assert.ok(revisit && /Anarchy/.test(revisit.textContent), 'read long ago, up first');
-    // Switched off: none of it.
-    plugin.settings.readingHistory = false;
-    Object.assign(view, { mode: 'folder', path: 'IR' });
-    view.render();
-    assert.ok(!/read/.test(view.contentEl.querySelector('.dr-detail-meta').textContent));
-    assert.ok(!view.contentEl.querySelector('.dr-track.is-unread'));
-    assert.ok(action(view, 'Open'));
-  });
-
-  await t('settings step 4 puts Recently read in the library after Pinned, once', () => {
-    const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 4);
-    const saved = { librarySections: [{ title: '', items: [{ kind: 'builtin', id: 'home' }] }, { title: 'Yours', items: [{ kind: 'builtin', id: 'bookmarks' }, { kind: 'builtin', id: 'smart' }] }] };
-    step.run(saved);
-    assert.deepStrictEqual(saved.librarySections[1].items.map((i) => i.id), ['bookmarks', 'read', 'smart']);
-    step.run(saved);
-    assert.strictEqual(saved.librarySections[1].items.filter((i) => i.id === 'read').length, 1);
-    const none = {};
-    step.run(none);
-    assert.deepStrictEqual(none, {});
-  });
-
   await t('1.x settings open on 2.0 with nothing lost: kept as they were, a backup first, retired ones dropped, the library given Recently read', async () => {
     const saved = {
       settingsVersion: 3,
@@ -897,13 +565,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    // Recently read, given after Pinned, waits under More with the other occasional places.
-    assert.deepStrictEqual(s.librarySections[1], { title: 'More', folded: true, items: [{ kind: 'builtin', id: 'read' }] });
-    assert.strictEqual(s.settingsVersion, 20);
+    // Recently read, gone with the reading history, is nowhere in it.
+    assert.ok(!s.librarySections.some((sec) => sec.items.some((i) => i.id === 'read')));
+    assert.strictEqual(s.settingsVersion, 21);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 20, brought up from \d+; steps [\d, ]+20$/);
-    assert.strictEqual(s.panelRelationships, false, 'the note panel without Relationships');
+    assert.match(R.settingsLine(ctx), /^Settings: version 21, brought up from \d+; steps [\d, ]+21$/);
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);
@@ -1757,7 +1424,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // Chosen and ordered in the settings; a shelf new since comes on at the end.
     plugin.settings.homeShelves = [{ id: 'folders', on: true }, { id: 'picks', on: false }, { id: 'recents', on: true }];
-    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'revisit:true', 'continue:true', 'fromReading:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
+    assert.deepStrictEqual(R.homeShelves(plugin.settings).map((s) => `${s.id}:${s.on}`), ['folders:true', 'picks:false', 'recents:true', 'continue:true', 'added:true', 'collections:true', 'pinned:true', 'rediscover:true']);
     plugin.settings.homeShelves = HOME_OFF.map((id) => ({ id, on: false })).concat([{ id: 'folders', on: true }, { id: 'recents', on: true }]);
     await view.setState({ mode: 'home' }, {});
     const titles = Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).map((e) => e.textContent);
@@ -2935,164 +2602,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([linky.path, tagged.path], ['Linky.md', 'Tagged.md']);
   });
 
-  await t('relationships kept in notes: read both ways, explored, added and removed with Undo, looked over', async () => {
-    const { v, plugin, app, view } = setup();
-    v.folder('Ideas');
-    const f = (n) => v.vault.getFileByPath(`Ideas/${n}.md`) || v.file(`Ideas/${n}.md`);
-    const [gov, parl, pres, fusion, sep, rule] = ['Government', 'Parliamentarism', 'Presidentialism', 'Fusion of powers', 'Separation of powers', 'Rule of law'].map(f);
-    const fms = new Map([
-      [parl, { 'is a type of': '[[Government]]', 'contrasts with': ['[[Presidentialism]]'] }],
-      [pres, { 'is a type of': '[[Government]]' }],
-      [fusion, { parent: '[[Parliamentarism]]', 'is part of': ['[[Parliamentarism]]', '[[Parliamentarism]]', '[[Gone]]'] }],
-      [sep, { parent: '[[Presidentialism]]', 'is a type of': ['[[Presidentialism]]', '[[Government]]'] }],
-      [gov, { parent: '[[Rule of law]]' }],
-      [rule, { parent: '[[Government]]' }],
-    ]);
-    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
-    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
-    app.metadataCache.fileToLinktext = (x) => x.basename;
-    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
-    let undo = null;
-    plugin.offerUndo = (m, fn) => { undo = fn; };
-    const k = new R.Knowledge(plugin);
-    plugin.feature = (C) => (C === R.Knowledge ? k : null);
-    // Read both ways: what a note says, and what's said of it.
-    const groups = (file) => k.groups(file).map((g) => [g.label, g.items.map((i) => i.file.basename)]);
-    assert.deepStrictEqual(groups(gov), [['Sits under', ['Rule of law']], ['Holds', ['Rule of law']], ['Has type', ['Parliamentarism', 'Presidentialism', 'Separation of powers']]]);
-    assert.deepStrictEqual(groups(parl).map((g) => g[0]), ['Holds', 'Is a type of', 'Has part', 'Contrasts with']);
-    assert.deepStrictEqual(k.broaderChain(fusion).map((x) => x.basename), ['Rule of law', 'Government', 'Parliamentarism'], 'up until it would go round');
-    // Explored: a screen of them, a step at a time.
-    Object.assign(view, { mode: 'concept', property: parl.path });
-    view.render();
-    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
-    assert.deepStrictEqual(text('.dr-detail-title'), ['Parliamentarism']);
-    assert.deepStrictEqual(text('.dr-crumb'), ['Rule of law', 'Government']);
-    assert.ok(text('.dr-report-head').some((h) => h.startsWith('Contrasts with')));
-    // Added and removed, each with Undo.
-    k.cache = null;
-    assert.strictEqual(await k.add(rule, k.kindNamed('supports'), parl), true);
-    assert.deepStrictEqual(fms.get(rule).supports, ['[[Parliamentarism]]']);
-    await undo();
-    assert.ok(!('supports' in fms.get(rule)));
-    assert.strictEqual(await k.remove(parl, k.kindNamed('contrasts with'), pres), true);
-    assert.ok(!('contrasts with' in fms.get(parl)));
-    await undo();
-    assert.deepStrictEqual(fms.get(parl)['contrasts with'], ['[[Presidentialism]]']);
-    // Looked over: a circle, one twice, one missing, one implied already. Sitting under a note and
-    // being part of it go together — the graph's parent goes with any hierarchy.
-    k.cache = null;
-    const found = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
-    ['Government: relation-loop', 'Rule of law: relation-loop', 'Fusion of powers: relation-twice', 'Fusion of powers: relation-missing', 'Separation of powers: relation-implied'].forEach((x) => assert.ok(found.includes(x), `${x} in ${found.join(', ')}`));
-    assert.ok(!found.includes('Fusion of powers: relation-roles'), found.join(', '));
-  });
-
-  await t('the knowledge structure checked: errors, what’s worth a look and modelling choices told apart; fixed, or marked as meant', async () => {
-    const { v, plugin, app, view } = setup();
-    v.folder('Map');
-    v.folder('Elsewhere');
-    const names = ['Map', 'Animal', 'Mammal', 'Dog', 'Cat', 'Wolf', 'Tail', 'Loose', 'Heat', 'Alone', 'Egg', 'Chicken', 'Part', 'Whole'];
-    const f = {};
-    names.forEach((n) => (f[n] = v.file(`Map/${n}.md`)));
-    ['Note', 'Claim', 'Twice'].forEach((n) => (f[n] = v.file(`Elsewhere/${n}.md`)));
-    const fms = new Map([
-      [f.Map, { 'is a type of': '[[Animal]]' }],
-      [f.Mammal, { 'is a type of': '[[Animal]]' }],
-      [f.Dog, { 'is a type of': ['[[Mammal]]', '[[Animal]]'], 'contrasts with': '[[Cat]]' }],
-      [f.Cat, { 'is a type of': '[[Mammal]]', 'contrasts with': '[[Dog]]' }],
-      [f.Wolf, { 'is a type of': '[[Dog]]', 'is part of': '[[Dog]]' }],
-      [f.Tail, { 'is part of': ['[[Dog]]', '[[Cat]]'] }],
-      [f.Loose, { causes: '[[Heat]]' }],
-      [f.Heat, { causes: '[[Loose]]' }],
-      [f.Egg, { 'is a type of': '[[Chicken]]' }],
-      [f.Chicken, { 'is a type of': '[[Egg]]' }],
-      [f.Part, { 'is part of': '[[Whole]]' }],
-      [f.Whole, { 'is a type of': '[[Part]]' }],
-      [f.Note, { supports: '[[Claim]]', contradicts: '[[Claim]]' }],
-      [f.Claim, { parent: '[[Gone]]' }],
-      [f.Twice, { 'is a type of': ['[[Claim]]', '[[Claim]]'] }],
-    ]);
-    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
-    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
-    app.metadataCache.fileToLinktext = (x) => x.basename;
-    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
-    plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    plugin.offerUndo = () => {};
-    plugin.settings.knowledgeTreeKinds = 'is part of';
-    const k = new R.Knowledge(plugin);
-    const check = new R.KnowledgeCheck(plugin);
-    // The kinds as set, which the canvas and notes both read.
-    plugin.settings.canvasRelationTypes = [
-      { name: 'is a type of', inverse: 'has type', category: 'hierarchy' },
-      { name: 'is part of', inverse: 'has part', category: 'hierarchy' },
-      { name: 'causes', inverse: 'is caused by', category: 'association' },
-      { name: 'contrasts with', inverse: 'contrasts with', category: 'association' },
-      { name: 'supports', inverse: 'is supported by', category: 'association' },
-      { name: 'contradicts', inverse: 'is contradicted by', category: 'association' },
-    ];
-    const structure = new R.AlbumStructure(plugin);
-    const info = structure.info.bind(structure);
-    structure.info = (folder) => Object.assign(info(folder), folder.name === 'Map' ? { type: 'concept map' } : {});
-    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.KnowledgeCheck ? check : C === R.AlbumStructure ? structure : null);
-    const seen = () => check.findings().map((x) => `${x.level} ${x.type} ${x.subject.basename}`);
-    const all = seen();
-    [
-      'error broken Claim', 'error repeat Twice', 'error cycle Chicken', 'error conflict Wolf', 'error parents Tail',
-      'warning cycle Part', 'warning redundant Dog', 'warning both Cat', 'warning oppose Note', 'warning folder Map', 'warning orphan Alone', 'warning broader Loose', 'warning broader Heat',
-      'choice parents Dog', 'choice cycle Heat',
-    ].forEach((x) => assert.ok(all.includes(x), `${x} in\n${all.join('\n')}`));
-    assert.ok(!all.some((x) => / (broader|orphan) (Animal|Map|Mammal)$/.test(x)), 'the top of the hierarchy, and the collection’s own note, need nothing above them');
-    assert.ok(!all.some((x) => x.startsWith('error') && x.includes('Dog')), 'several broader concepts: a polyhierarchy, not an error');
-    // Errors first, then what's worth a look, then the choices.
-    const levels = check.findings().map((x) => x.level);
-    assert.deepStrictEqual(levels.slice().sort((a, b) => ['error', 'warning', 'choice'].indexOf(a) - ['error', 'warning', 'choice'].indexOf(b)), levels);
-    // A strongly connected group of notes, however long the chain.
-    const chain = Array.from({ length: 3000 }, (_, i) => i);
-    assert.deepStrictEqual(R.loopsAmong(chain, (i) => [(i + 1) % 3000]).map((g) => g.length), [3000]);
-    // The library check: the errors and warnings, a row a note, no choices.
-    const problems = k.problems().map((p) => `${p.target.basename}: ${p.kind}`);
-    ['Chicken: relation-loop', 'Egg: relation-loop', 'Claim: relation-missing', 'Dog: relation-implied', 'Loose: relation-broader'].forEach((x) => assert.ok(problems.includes(x), `${x} in ${problems.join(', ')}`));
-    assert.ok(!problems.includes('Heat: relation-loop'), 'a loop of causes is a modelling choice');
-    // Marked as meant: a choice, kept with the note.
-    const both = check.findings().find((x) => x.type === 'both');
-    await check.setMeant(both, true);
-    assert.deepStrictEqual(plugin.settings.knowledgeMeant, { 'Map/Cat.md': ['both:contrasts with'] });
-    assert.ok(seen().includes('choice both Cat'));
-    assert.strictEqual(check.findings().find((x) => x.type === 'both').meant, true);
-    // Fixed: the implied link taken out, the repeat kept once, the missing link taken out.
-    const fix = async (type) => { await check.findings().find((x) => x.type === type).fixes[0].run(); k.cache = null; };
-    await fix('redundant');
-    assert.deepStrictEqual(fms.get(f.Dog)['is a type of'], ['[[Mammal]]']);
-    await fix('repeat');
-    assert.deepStrictEqual(fms.get(f.Twice)['is a type of'], ['[[Claim]]']);
-    const broken = check.findings().find((x) => x.type === 'broken');
-    await broken.fixes[1].run();
-    k.cache = null;
-    assert.ok(!('parent' in fms.get(f.Claim)));
-    assert.ok(!seen().some((x) => / (redundant|repeat|broken) /.test(x)), seen().join('\n'));
-    // On screen: a section for each level; a note's own, where its relationships are explored.
-    Object.assign(view, { mode: 'knowledge-check', property: null });
-    view.render();
-    const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
-    assert.deepStrictEqual(text('.dr-report-head').map((h) => h.replace(/\d+$/, '')), ['Errors', 'Worth a look', 'Modelling choices']);
-    assert.ok(view.contentEl.querySelector('.dr-integrity-row[data-type="conflict"] .dr-integrity-fix') === null, 'no fix to guess at for a conflict');
-    assert.strictEqual(view.contentEl.querySelector('.dr-integrity-row[data-type="broader"] .dr-integrity-fix').textContent, 'Put it under Map (is a type of)');
-    Object.assign(view, { mode: 'concept', property: f.Wolf.path });
-    view.render();
-    assert.ok(text('.dr-report-head').some((h) => h.startsWith('Worth checking')));
-    // Switched off: no screen, nothing worked out.
-    app.workspace.getActiveFile = () => f.Dog;
-    assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), ['knowledge-check', 'knowledge-check-note']);
-    plugin.settings.knowledgeCheck = false;
-    assert.deepStrictEqual(check.commands().filter((c) => c.check()).map((c) => c.id), []);
-  });
-
   await t('actions: a place prefixes the palette name, never the id; a home says which surface shows it beyond the palette', () => {
     assert.strictEqual(R.placedName('Mark to revisit', 'Note'), 'Note: Mark to revisit');
     assert.strictEqual(R.placedName('Note: Mark', 'Note'), 'Note: Mark', 'not twice');
     assert.strictEqual(R.placedName('Anything', null), 'Anything');
     const cmds = R.actionCommands([{ id: 'x', name: 'Do x', run() {} }, { id: 'y', name: 'Do y', place: 'Tools', run() {} }], () => ({}), 'Library');
     assert.deepStrictEqual(cmds.map((c) => [c.id, c.name]), [['x', 'Library: Do x'], ['y', 'Tools: Do y']]);
-    assert.strictEqual(R.featurePlace(new R.Knowledge({ settings: {}, app: {} })), 'Note');
+    assert.strictEqual(R.featurePlace(new R.ReadingOutline({ settings: {}, app: {} })), 'Note');
     const btn = document.createElement('div');
     btn.createSpan = (o) => { const e = document.createElement('span'); if (o.cls) e.className = o.cls; if (o.text) e.textContent = o.text; btn.appendChild(e); return e; };
     R.iconWord(btn, 'clock', 'Length');
@@ -3147,55 +2663,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([view.containerEl.dataset.drDensity, view.containerEl.dataset.drArt], ['compact', 'large']);
   });
 
-  await t('concept actions defined once: commands, a note’s menu, a canvas card’s menu; a child concept made under it, and moved under another, with Undo', async () => {
-    const { v, plugin, app } = setup();
-    v.folder('Ideas');
-    const gov = v.file('Ideas/Government.md');
-    const law = v.file('Ideas/Law.md');
-    const fms = new Map();
-    app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
-    app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((x) => x.basename === link) || null;
-    app.metadataCache.fileToLinktext = (x) => x.basename;
-    app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
-    app.fileManager.trashFile = async () => {};
-    let created = null;
-    app.vault.create = async (path, body) => { created = [path, body]; const f = v.file(path); return f; };
-    let undo = null;
-    plugin.offerUndo = (m, fn) => { undo = fn; };
-    plugin.freeChildPath = (folder, base, ext) => `${folder.path}/${base}.${ext}`;
-    const k = new R.Knowledge(plugin);
-    plugin.feature = (C) => (C === R.Knowledge ? k : null);
-    const ids = k.actions().map((a) => a.id);
-    assert.ok(['knowledge-explore', 'knowledge-add', 'knowledge-child', 'knowledge-move', 'knowledge-in-album'].every((id) => ids.includes(id)));
-    // As commands: offered with a note open, not without.
-    let active = gov;
-    app.workspace.getActiveFile = () => active;
-    const cmds = Object.fromEntries(R.actionCommands(k.actions(), () => (active ? { file: active, from: 'palette' } : null)).map((c) => [c.id, c]));
-    assert.strictEqual(cmds['knowledge-explore'].check(), true);
-    assert.strictEqual(cmds['knowledge-broader'].check(), false, 'nothing above it yet');
-    active = null;
-    assert.strictEqual(cmds['knowledge-explore'].check(), false);
-    // On a menu: one group, each by its short name.
-    const titles = (from) => {
-      const items = [];
-      R.addActionItems({ addItem: (fn) => { const it = {}; ['setSection', 'setIcon', 'setChecked'].forEach((m) => (it[m] = () => it)); it.setTitle = (x) => { it.title = x; return it; }; it.onClick = () => it; fn(it); items.push(it.title); } }, k.actions(), { file: gov, from }, 'Concept', 'waypoints');
-      return items;
-    };
-    assert.ok(titles('menu').includes('Concept: Show related concepts'));
-    // A child concept: a note beside it, saying it sits under it; Undo takes it away.
-    const child = await k.makeConcept('Parliament', gov);
-    assert.deepStrictEqual(created, ['Ideas/Parliament.md', '---\nparent: "[[Government]]"\n---\n']);
-    assert.strictEqual(child.basename, 'Parliament');
-    assert.ok(typeof undo === 'function');
-    // Moved under another: its parent names only that one now, and back.
-    fms.set(child, { parent: '[[Government]]' });
-    assert.strictEqual(await k.moveUnder(child, law), true);
-    assert.deepStrictEqual(fms.get(child).parent, ['[[Law]]']);
-    await undo();
-    assert.strictEqual(fms.get(child).parent, '[[Government]]');
-  });
-
-  await t('the note panel: a note’s relationships both ways, to open or take off, and the albums and canvases it’s in', async () => {
+  await t('the note panel: the albums and canvases a note is in', async () => {
     const { v, plugin, app } = setup();
     v.folder('Ideas');
     const gov = v.file('Ideas/Government.md');
@@ -3217,37 +2685,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
     plugin.offerUndo = () => {};
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const k = new R.Knowledge(plugin);
     const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.Knowledge ? k : C === R.AlbumStructure ? structure : null);
-    const closed = [];
-    const panel = { plugin, close: () => closed.push(true) };
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const panel = { plugin, close() {} };
     const host = document.body.createDiv();
-
-    // Relationships: what it comes under, then each kind, both ways.
-    const rel = new R.RelationsSection(panel, k);
-    rel.mount(host, parl);
-    const el = rel.containerEl;
-    assert.strictEqual(el.querySelector('.dr-section-label').textContent, 'Relationships');
-    assert.deepStrictEqual([...el.querySelectorAll('.dr-relations-crumb')].map((c) => c.textContent), ['Government']);
-    const heads = [...el.querySelectorAll('.dr-section-title')].map((h) => h.textContent);
-    assert.ok(heads.includes('Sits under') && heads.includes('Contrasts with'), heads.join(', '));
-    // From the other side, the same relationship under its inverse.
-    const other = new R.RelationsSection(panel, k);
-    other.mount(host, gov);
-    assert.deepStrictEqual([...other.containerEl.querySelectorAll('.dr-section-title')].map((h) => h.textContent), ['Holds']);
-    assert.deepStrictEqual([...other.containerEl.querySelectorAll('.dr-mention-name')].map((n) => n.textContent), ['Parliamentarism']);
-    // Taken off from the panel: written into the note that holds it.
-    const off = [...el.querySelectorAll('.dr-mention-remove')].find((x) => /contrasts with Presidentialism/.test(x.getAttribute('aria-label')));
-    off.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 20));
-    assert.strictEqual(fms.get(parl)['contrasts with'], undefined);
-    assert.strictEqual(closed.length, 0, 'taking one off doesn’t open the note');
-    // Nothing related: said so, with Add.
-    const none = new R.RelationsSection(panel, k);
-    none.mount(host, v.file('IR/Balance.md'));
-    assert.ok(none.containerEl.textContent.includes('Nothing related to it yet.'));
-    assert.deepStrictEqual([...none.containerEl.querySelectorAll('.dr-section-action')].map((b) => b.textContent), ['Add']);
 
     // Kept in: its own album, the albums that include it, the canvases it's on.
     const places = new R.PlacesSection(panel, structure);

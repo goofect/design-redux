@@ -12,7 +12,6 @@ import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { noteProps } from '../core/073-notes.js';
-import { readingOf } from '../core/075-reading.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { folderRows } from './110-browse-screens.js';
 import { RowValues } from './122-browse-editing.js';
@@ -48,19 +47,17 @@ export class BrowseRows extends RowValues {
   /** Everything a note's row shows, as one string: the same string, the same row. */
   rowSignature(file, index, nest) {
     const cache = this.app.metadataCache.getFileCache(file);
-    const reading = this.plugin.settings.readingHistory && file.extension === 'md' ? readingOf(this.plugin).state(file) : '';
     return JSON.stringify([
       this.mode,
       index,
       nest ? [nest.depth, nest.children] : 0,
       !!(this.foldedNotes && this.foldedNotes.has(file.path)),
       this.isPinned(file),
-      reading,
       this.mode === 'search' && this.searchWhy ? this.searchWhy.get(file.path) || '' : '',
       file.stat ? [file.stat.mtime, file.stat.size] : 0,
       cache && cache.frontmatter ? cache.frontmatter : null,
       this.albumColumns().map((key) => this.columnValue(file, key)),
-      this.lengthStyle() ? this.lengthLabel(file) : '',
+      this.lengthStyle() ? [this.lengthStyle(), this.lengthLabel(file)] : '',
     ]);
   }
 
@@ -95,11 +92,6 @@ export class BrowseRows extends RowValues {
     }
 
     row.createDiv({ cls: 'dr-track-num', text: String(index) });
-    // New to you — made since, or changed since you read it: a dot by its number.
-    if (this.plugin.settings.readingHistory && file.extension === 'md' && readingOf(this.plugin).isNew(file)) {
-      row.addClass('is-unread');
-      row.setAttribute('aria-description', readingOf(this.plugin).state(file) === 'changed' ? 'Changed since you read it' : 'Not read yet');
-    }
 
     const name = row.createDiv({ cls: 'dr-track-name' });
     if (nest && nest.children) {

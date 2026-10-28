@@ -18,23 +18,9 @@ function guarded(ask, fallback) {
   }
 }
 
-/** Every card on a canvas: [node]. */
-export function liveCards(canvas) {
-  return guarded(() => (canvas && canvas.nodes ? Array.from(canvas.nodes.values()) : []), []);
-}
-
 /** How many cards a canvas holds, or null where it can't be asked. */
 export function cardCount(canvas) {
   return guarded(() => (canvas.nodes && typeof canvas.nodes.size === 'number' ? canvas.nodes.size : null), null);
-}
-
-/** A new text card in a box, not yet saved or opened; null if one can't be made. */
-export function addTextCard(canvas, box, text) {
-  return guarded(() => {
-    if (typeof canvas.createTextNode !== 'function') return null;
-    const size = { width: box.width, height: box.height };
-    return canvas.createTextNode({ pos: { x: box.x, y: box.y }, size, text: text || '', focus: false, save: false }) || null;
-  }, null);
 }
 
 /** The cards and arrows selected: [node or edge]. */
@@ -45,14 +31,6 @@ export function pickedOnCanvas(canvas) {
 /** Saved — Obsidian's own save, a step of its Undo — or, where it can't be now, with the canvas's next change. */
 export function requestCanvasSave(canvas) {
   guarded(() => typeof canvas.requestSave === 'function' && canvas.requestSave(), null);
-}
-
-/** A card's box: { minX, minY, maxX, maxY }, from its own measure or its place and size. */
-export function cardBox(card) {
-  return guarded(
-    () => (typeof card.getBBox === 'function' ? card.getBBox() : null),
-    null
-  ) || { minX: card.x, minY: card.y, maxX: card.x + card.width, maxY: card.y + card.height };
 }
 
 /** A card's element, or null. */

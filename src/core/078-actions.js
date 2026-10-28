@@ -26,8 +26,8 @@
 /* it says) prefixes its name in the palette; its id never changes.    */
 /* ------------------------------------------------------------------ */
 
-import { MarkdownView, Menu, TFile } from 'obsidian';
-import { isBrowseView, menuGroup, pageFolder, pageLeaf, showMenuAt } from './030-helpers-art.js';
+import { MarkdownView, TFile } from 'obsidian';
+import { isBrowseView, menuGroup, pageFolder, pageLeaf } from './030-helpers-art.js';
 import { pickedOnCanvas } from './079-canvas-adapter.js';
 
 /** The note a command acts on: the one open. */
@@ -210,9 +210,3 @@ export function addActionEntries(menu, actions, ctx, mark) {
   return items;
 }
 
-/** The same actions as a menu of their own, at a button. */
-export function showActionMenu(evt, actions, ctx) {
-  const menu = new Menu();
-  addActionEntries(menu, actions, ctx);
-  showMenuAt(menu, evt);
-}

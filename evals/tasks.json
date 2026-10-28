@@ -13,17 +13,6 @@
       "review": false
     },
     {
-      "id": "inspector-pin",
-      "title": "Fix an inspector pin regression",
-      "seed": "seeds/inspector-pin.patch",
-      "prompt": "Bug report: with the inspector pinned, picking another note in an album still changes what the inspector shows. Pinned, it should keep showing its note until unpinned. Find the cause and fix it; the tests describe what's right.",
-      "scope": ["src/"],
-      "checks": [
-        "npm test"
-      ],
-      "review": false
-    },
-    {
       "id": "css-token",
       "title": "Change a CSS selector's value to a token",
       "prompt": "The library sidebar's active row (.dr-lib-row.is-active) borrows --dr-press for its background. Give it a design token of its own, --dr-selected, defined in styles/06-shared.css as a light tint of the accent colour, and use it for that row. Nothing else should change.",

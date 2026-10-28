@@ -10,8 +10,6 @@ import { Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { blankLook, byName, drawFolderArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { nestByProperty } from '../core/045-helpers-properties.js';
-import { readingOf } from '../core/075-reading.js';
-import { studyReady } from '../core/081-study.js';
 import { ROOT_MODES } from './119-browse-registry.js';
 import { BrowsePreview } from './124-browse-preview.js';
 import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
@@ -437,9 +435,6 @@ export class BrowseAlbum extends BrowsePreview {
     // What its notes come to, as settings ask: the done count unless progress has said it, a date property's span.
     const rolled = folder && structure ? structure.rollupText(structure.rollup(files), !progress) : '';
     if (rolled) meta.push(rolled);
-    // Studied: when you last sat down with it.
-    const studied = folder && studyReady(this.plugin) ? this.plugin.study.lastSession(folder) : null;
-    if (studied) meta.push(`Last studied ${this.relative(studied.endedAt)}`);
     info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
     if (about && about.description) info.createDiv({ cls: 'dr-detail-desc', text: about.description });
 
@@ -450,11 +445,9 @@ export class BrowseAlbum extends BrowsePreview {
       this.action(actions, 'folder-plus', 'New folder', () => this.editNewFolder(folder));
       return;
     }
-    // Open leads, filled, as Play does — at the note you were on, where you've been in it.
-    const resume = this.plugin.settings.readingHistory ? readingOf(this.plugin).lastOpened(files) : null;
-    this.action(actions, 'book-open', resume && resume !== files[0] ? 'Continue' : 'Open', () => {
-      const target = resume || files[0];
-      if (target) this.app.workspace.getLeaf(false).openFile(target);
+    // Open leads, filled, as Play does.
+    this.action(actions, 'book-open', 'Open', () => {
+      if (files[0]) this.app.workspace.getLeaf(false).openFile(files[0]);
     }).addClass('is-primary');
     const random = () => {
       if (!files.length) return;

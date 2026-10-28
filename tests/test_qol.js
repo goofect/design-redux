@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 20);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 21);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -252,7 +252,15 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(g.contextStrip, false);
     // Step 9 leaves a first install's Relationships on.
     const rel = {}; R.SETTINGS_MIGRATIONS.find((m) => m.to === 9).run(rel, { existing: false });
-    assert.ok(!('panelRelationships' in rel) && R.DEFAULTS.panelRelationships === true);
+    assert.ok(!('panelRelationships' in rel));
+    // Step 21: reading history, Study and the relationships go, and their places in the library.
+    const s21 = { readingHistory: true, readingLog: { 'a.md': {} }, studyEnabled: true, knowledge: true, knowledgeMeant: {}, panelRelationships: true, fromReadingDays: 14, notePage: true,
+      librarySections: [{ title: 'More', items: [{ kind: 'builtin', id: 'read' }, { kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'knowledge-check' }] }],
+      homeShelves: [{ id: 'revisit', on: true }, { id: 'recents', on: true }] };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 21).run(s21);
+    assert.deepStrictEqual(Object.keys(s21).sort(), ['homeShelves', 'librarySections', 'notePage']);
+    assert.deepStrictEqual(s21.librarySections[0].items, [{ kind: 'builtin', id: 'added' }]);
+    assert.deepStrictEqual(s21.homeShelves, [{ id: 'recents', on: true }]);
     const h = {}; strip.run(h, { existing: false });
     assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
   });
@@ -553,7 +561,6 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       settings: {
         coverColors: { A: '#123456', Gone: '#000000' },
         coverDesigns: { 'Map.canvas': {}, 'Old.canvas': {} },
-        readingLog: { 'Old.canvas': { opened: 1 } },
         albumOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
         folderDefaults: { Gone: [] },
       },
@@ -564,7 +571,6 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), true);
     assert.deepStrictEqual(Object.keys(fake.settings.coverColors), ['A']);
     assert.deepStrictEqual(Object.keys(fake.settings.coverDesigns), ['Map.canvas']);
-    assert.deepStrictEqual(fake.settings.readingLog, {});
     assert.deepStrictEqual(Object.keys(fake.settings.albumOrders), ['/', 'A']);
     assert.deepStrictEqual(fake.settings.folderDefaults, {});
     assert.strictEqual(fake.saved, 1);

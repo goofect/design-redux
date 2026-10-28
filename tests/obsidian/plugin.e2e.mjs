@@ -760,55 +760,6 @@ describe('Design Redux in Obsidian', function () {
     expect(await readUntil(lit, (t) => t === 'Two')).toBe('Two');
   }
 
-  it('brings a note read in a studied collection back when it’s due, and lets it go once graded', async function () {
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      const plugin = plugins.designRedux;
-      const old = app.vault.getAbstractFileByPath('Politics/Study me.md');
-      if (old) await app.vault.delete(old);
-      await app.vault.create('Politics/Study me.md', 'A short note to remember.');
-      plugin.settings.studyEnabled = true;
-      await plugin.saveSettings();
-      plugin.refresh();
-      const study = plugin.features.find((f) => f.constructor.name === 'Study');
-      await plugin.study.load();
-      await study.setStudied(app.vault.getAbstractFileByPath('Politics'), true);
-      // Read to its end.
-      plugin.features.find((f) => f.constructor.name === 'ReadingHistory').read(app.vault.getAbstractFileByPath('Politics/Study me.md'));
-    });
-    const item = await readUntil(
-      () => browser.executeObsidian(({ plugins }) => plugins.designRedux.study.item('Politics/Study me.md')),
-      (i) => !!i
-    );
-    expect(item && item.rung).toBe(0);
-    // A day on: due.
-    await browser.executeObsidian(({ app, plugins }) => {
-      plugins.designRedux.study.item('Politics/Study me.md').due = Date.now() - 1000;
-      app.workspace.trigger('design-redux:study-changed');
-    });
-    await obsidianPage.openFile('Politics/Study me.md');
-    const grade = await browser.$(ACTIVE + '.dr-note-study-grade[data-grade="got"]');
-    await grade.waitForExist({ timeout: 8000 });
-    expect(await browser.execute(() => (document.querySelector('.dr-strip-badge') || {}).textContent)).toBe('1');
-    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .dr-note-study-grade[data-grade="got"]').click());
-    const after = await readUntil(
-      () => browser.executeObsidian(({ plugins }) => {
-        const i = plugins.designRedux.study.item('Politics/Study me.md');
-        return { rung: i.rung, due: i.due > Date.now(), chip: !!document.querySelector('.dr-strip-badge'), row: !!document.querySelector('.workspace-leaf.mod-active .dr-note-study') };
-      }),
-      (r) => r.rung === 1 && !r.chip && !r.row
-    );
-    expect(after).toEqual({ rung: 1, due: true, chip: false, row: false });
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      const plugin = plugins.designRedux;
-      plugin.settings.studyEnabled = false;
-      plugin.settings.studyAlbums = {};
-      await plugin.saveSettings();
-      plugin.refresh();
-      const note = app.vault.getAbstractFileByPath('Politics/Study me.md');
-      if (note) await app.vault.delete(note);
-    });
-  });
-
   it('searches: words from a note show their passage; the note named for the query comes first, and Enter opens it', async function () {
     await browser.executeObsidian(async ({ plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -1407,36 +1358,6 @@ describe('Design Redux in Obsidian', function () {
       await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source' }) });
       // Its notes gone again, so later tests count the vault as it was.
       const folder = app.vault.getFolderByPath('Page album');
-      if (folder) await app.vault.delete(folder, true);
-    });
-  });
-
-  it('remembers a note read to its end, in its own data, without counting it under the album’s title', async function () {
-    await browser.executeObsidian(async ({ app }) => {
-      if (!app.vault.getFolderByPath('Read album')) await app.vault.createFolder('Read album');
-      for (const n of ['One', 'Two']) {
-        const old = app.vault.getFileByPath(`Read album/${n}.md`);
-        if (old) await app.vault.delete(old);
-        await app.vault.create(`Read album/${n}.md`, `${n}: short enough to fit.`);
-      }
-    });
-    await obsidianPage.openFile('Read album/One.md');
-    const log = () => browser.executeObsidian(({ plugins }) => plugins.designRedux.settings.readingLog['Read album/One.md'] || null);
-    await browser.waitUntil(async () => !!(await log()), { timeout: 4000, timeoutMsg: 'its opening was never noted' });
-    await browser.waitUntil(async () => !!((await log()) || {}).read, { timeout: 9000, timeoutMsg: 'a short note open a while was never counted read' });
-    const meta = await browser.executeObsidian(async ({ plugins }) => {
-      const p = plugins.designRedux;
-      const lib = p.features.find((f) => f.constructor.name === 'Library');
-      await lib.browseMode({ mode: 'folder', path: 'Read album' });
-      await new Promise((r) => setTimeout(r, 500));
-      const el = document.querySelector('.workspace-leaf.mod-active .dr-detail-meta');
-      return el ? el.textContent : '';
-    });
-    // The album's header says what it holds, not how much of it is read.
-    expect(meta).toContain('2 notes');
-    expect(meta).not.toMatch(/\d+ of \d+ read/);
-    await browser.executeObsidian(async ({ app }) => {
-      const folder = app.vault.getFolderByPath('Read album');
       if (folder) await app.vault.delete(folder, true);
     });
   });

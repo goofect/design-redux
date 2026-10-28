@@ -19,20 +19,17 @@
  "084-workspace-coordinator": {
   "exports": [
    "WorkspaceCoordinator",
-   "originLabel",
    "sameTarget"
   ],
   "methods": {
    "WorkspaceCoordinator": [
     "forget",
     "get app",
-    "isInspector",
     "listen",
     "look",
     "onChange",
     "originOf",
     "pick",
-    "pin",
     "set",
     "show",
     "snapshot",
@@ -110,8 +107,6 @@
  },
  "070-orders": {
   "exports": [
-   "MINDMAP_TWINS",
-   "MINDMAP_TWINS_KNOWLEDGE",
    "Orders",
    "PATH_KEYED",
    "RETIRED_CANVAS_KEYS",

@@ -36,28 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'readingLog', 'albumSorts', 'knowledgeMeant', 'studyAlbums', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
-
-/* The canvas settings a mind map has a twin of: [canvas key, mind-map key, how its value reads there]. */
-export const MINDMAP_TWINS = [
-  ['canvasLegend', 'mindmapLegend'],
-  ['canvasDepth', 'mindmapDepth'],
-  ['canvasColourBy', 'mindmapColourBy', (v) => (v === 'branch' || v === 'depth' ? v : '')],
-  ['canvasPins', 'mindmapPins'],
-  ['canvasViews', 'mindmapViews'],
-];
-
-/* The twins mind maps took on with their knowledge tools. */
-export const MINDMAP_TWINS_KNOWLEDGE = [
-  ['canvasRelations', 'mindmapRelations'],
-  ['canvasArguments', 'mindmapArguments'],
-  ['canvasBranchNote', 'mindmapBranchNotes'],
-  ['canvasCheck', 'mindmapCheck'],
-  ['canvasCompare', 'mindmapCompare'],
-  ['canvasVaultMap', 'mindmapVaultMap'],
-  ['canvasMinimap', 'mindmapMinimap'],
-  ['canvasPresent', 'mindmapPresent'],
-];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -83,17 +62,9 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Recently read joins the library, after Pinned.
+    // Recently read joined the library here; it's gone (step 21), so nothing to add.
     to: 4,
-    run(saved) {
-      if (!Array.isArray(saved.librarySections)) return;
-      const items = (sec) => (sec && Array.isArray(sec.items) ? sec.items : []);
-      if (saved.librarySections.some((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'read'))) return;
-      const home = saved.librarySections.find((sec) => items(sec).some((i) => i && i.kind === 'builtin' && i.id === 'bookmarks'));
-      if (!home) return;
-      const at = home.items.findIndex((i) => i && i.kind === 'builtin' && i.id === 'bookmarks');
-      home.items.splice(at + 1, 0, { kind: 'builtin', id: 'read' });
-    },
+    run() {},
   },
   {
     // Fewer places up front: the occasional ones move under a folded More,
@@ -162,24 +133,14 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Mind maps of their own take the choices made for the canvas's maps:
-    // the legend, depth, tints, pinned cards and views. The canvas keeps its own.
+    // Mind maps took the canvas maps' choices here; they're gone (step 20), so nothing to carry.
     to: 10,
-    run(saved) {
-      MINDMAP_TWINS.forEach(([from, to, as]) => {
-        if (saved[from] !== undefined) saved[to] = as ? as(saved[from]) : saved[from];
-      });
-    },
+    run() {},
   },
   {
-    // The same for the tools mind maps took on next: relations, arguments,
-    // branches as notes, check, compare, maps of the vault, the minimap, present.
+    // And their knowledge tools' choices: gone with them too.
     to: 11,
-    run(saved) {
-      MINDMAP_TWINS_KNOWLEDGE.forEach(([from, to]) => {
-        if (saved[from] !== undefined) saved[to] = saved[from];
-      });
-    },
+    run() {},
   },
   {
     // Folder defaults become schemas: the same properties, as defaults
@@ -190,9 +151,8 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // 3.0: canvas maps are gone. Their settings go with them; mind maps
-    // took their place in 2.x, with settings of their own carried over
-    // at step 11. Canvases themselves are untouched.
+    // 3.0: canvas maps are gone. Their settings go with them. Canvases
+    // themselves are untouched.
     to: 13,
     run(saved) {
       RETIRED_CANVAS_KEYS.forEach((k) => delete saved[k]);
@@ -263,6 +223,26 @@ export const SETTINGS_MIGRATIONS = [
         if (/^mindmap/.test(key) || /^workspaceMode/.test(key)) delete saved[key];
       });
       ['albumMapAuto', 'albumMapWritesParent', 'presentDimLevel', 'canvasSpacing'].forEach((key) => delete saved[key]);
+    },
+  },
+  {
+    // Reading history, Study and the relationships kept in notes go, and
+    // their settings and places in the library with them. Notes keep
+    // whatever properties the relationships wrote.
+    to: 21,
+    run(saved) {
+      Object.keys(saved).forEach((key) => {
+        if (/^(study|knowledge|reading(History|Log|Since)$)/.test(key)) delete saved[key];
+      });
+      ['fromReadingDays', 'rememberPlace', 'panelRelationships', 'canvasRelationNames', 'canvasRelationTypes'].forEach((key) => delete saved[key]);
+      const gone = ['read', 'knowledge-check', 'highlights'];
+      if (Array.isArray(saved.librarySections)) {
+        saved.librarySections.forEach((sec) => {
+          if (sec && Array.isArray(sec.items)) sec.items = sec.items.filter((i) => !(i && i.kind === 'builtin' && gone.includes(i.id)));
+        });
+      }
+      if (Array.isArray(saved.homeShelves)) saved.homeShelves = saved.homeShelves.filter((s) => !(s && (s.id === 'revisit' || s.id === 'fromReading')));
+      if (saved.keepOwnOrder && typeof saved.keepOwnOrder === 'object') delete saved.keepOwnOrder.read;
     },
   },
 ];
