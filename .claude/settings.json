@@ -1,4 +1,7 @@
 {
+  "permissions": {
+    "allow": ["Bash(gh pr merge:*)"]
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -6,11 +9,5 @@
         "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/tests/tool-log.js\" hook", "timeout": 5 }]
       }
     ]
-  }
-}
-
-{
-  "permissions": {
-    "allow": ["Bash(gh pr merge:*)"]
   }
 }
