@@ -290,6 +290,7 @@ export class BrowseView extends BrowseAlbum {
   }
 
   async onClose() {
+    this.removePane();
     if (this.unpick) this.unpick();
     this.unpick = null;
     // Replaced by a result opened in the same page.
@@ -472,6 +473,7 @@ export class BrowseView extends BrowseAlbum {
         text: 'This screen could not be drawn. See the console for details.',
       });
     }
+    this.syncPane();
     this.measureLater();
     if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is

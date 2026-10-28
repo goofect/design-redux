@@ -718,15 +718,14 @@ describe('Design Redux in Obsidian', function () {
       await app.vault.create('Long read.md', ['One', 'Two', 'Three', 'Four'].map((h) => `## ${h}\n\n${para}\n`).join('\n'));
     });
     await obsidianPage.openFile('Long read.md');
-    // The right sidebar left as it was found, whatever happens: later tests need the room.
-    const wasCollapsed = await browser.executeObsidian(({ app }) => !!app.workspace.rightSplit.collapsed);
+    // Closed, whatever happens: it floats over the note later tests use.
     try {
       await followOutline();
     } finally {
-      await browser.executeObsidian(({ app }, collapse) => {
-        app.workspace.getLeavesOfType('design-redux-outline').forEach((l) => l.detach());
-        if (collapse) app.workspace.rightSplit.collapse();
-      }, wasCollapsed);
+      await browser.executeObsidian(({ plugins }) => {
+        const outline = plugins.designRedux.features.find((f) => f.constructor.name === 'ReadingOutline');
+        outline.views().forEach((v) => v.hide());
+      });
     }
   });
 
@@ -1571,7 +1570,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result.after.cls).toBe(false);
   });
 
-  it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {
+  it('shows a note picked in an album in its pane, and opens it on a double click', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const find = (name) => plugin.features.find((f) => f.constructor.name === name);
@@ -1581,28 +1580,29 @@ describe('Design Redux in Obsidian', function () {
       const el = () => page.view.containerEl;
       const row = () => el().querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
       await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
-      el().querySelector('.dr-preview-btn').click();
-      const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
-      // In sight, not only open: until then a click opens rather than picks.
-      await until(() => !!dock() && !!row() && page.view.previewOn());
+      if (!page.view.previewShowing()) el().querySelector('.dr-preview-btn').click();
+      const pane = () => el().querySelector('.dr-browse-pane');
+      // Shown, not only asked for: until then a click opens rather than picks.
+      await until(() => !!pane() && !!row() && page.view.previewShowing());
       row().click();
-      const title = () => { const t = dock() && dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
+      const title = () => { const t = pane() && pane().querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Anarchy');
-      const actions = Array.from(dock().view.containerEl.querySelectorAll('.dr-detail-action')).map((b) => b.textContent.trim());
-      return { title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected'), right: dock().getRoot() === app.workspace.rightSplit, open: actions.includes('Open') };
+      const actions = Array.from(pane().querySelectorAll('.dr-detail-action')).map((b) => b.textContent.trim());
+      const right = pane().getBoundingClientRect().left > el().querySelector('.view-content').getBoundingClientRect().left;
+      return { title: title(), still: page.view.getViewType(), marked: row().classList.contains('is-selected'), right, open: actions.includes('Open'), noSidebar: app.workspace.getLeavesOfType('design-redux-properties').length };
     });
-    expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true });
+    expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true, noSidebar: 0 });
     await shot('inspector-picked');
     // The album picked: its own head, as a note's — cover, name, kind, what it holds.
     const album = await browser.executeObsidian(async ({ app, plugins }) => {
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
       plugins.designRedux.selection.set({ folder: app.vault.getFolderByPath('Politics') });
-      const dock = app.workspace.getLeavesOfType('design-redux-properties')[0];
-      const head = () => dock.view.containerEl.querySelector('.dr-inspector-brief .dr-props-identity');
+      const pane = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-browse-pane');
+      const head = () => pane.querySelector('.dr-inspector-brief .dr-props-identity');
       await until(() => !!head() && head().querySelector('.dr-props-title').textContent === 'Politics');
       const h = head();
       const art = h.querySelector('.dr-props-art').getBoundingClientRect();
-      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (dock.view.containerEl.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
+      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
     });
     expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
     await shot('inspector-album');
@@ -1610,11 +1610,12 @@ describe('Design Redux in Obsidian', function () {
       const plugin = plugins.designRedux;
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
       const row = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      const page = app.workspace.activeLeaf.view;
       row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
       const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
       await until(() => active() === 'Anarchy');
       // Closed again, for the tests after.
-      app.workspace.detachLeavesOfType('design-redux-properties');
+      if (page.previewShowing()) await page.togglePreview();
       plugin.selection.clear();
       return active();
     });
@@ -1908,7 +1909,7 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidianCommand('design-redux:open-properties');
     await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
     await shot('note-and-strip');
-    await browser.executeObsidian(({ app }) => app.workspace.detachLeavesOfType('design-redux-properties'));
+    await browser.executeObsidian(({ plugins }) => plugins.designRedux.features.find((f) => f.constructor.name === 'PropertiesPanel').close());
 
     // What this version draws for the note's own properties, which the
     // Properties panel setting hides.
@@ -2472,13 +2473,15 @@ describe('Design Redux in Obsidian', function () {
       if (link) link.click();
       await new Promise((r) => setTimeout(r, 600));
       out.highlighted = Array.from(document.querySelectorAll('.dr-fn-view .dr-fn-item.is-highlighted')).map((i) => i.dataset.label);
-      for (const l of app.workspace.getLeavesOfType('design-redux-footnotes')) l.detach();
+      // Over the note, by the number clicked: not in a sidebar.
+      out.popover = !!document.querySelector('.dr-note-popover.dr-fn-view') && !app.workspace.getLeavesOfType('design-redux-footnotes').length;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
       leaf.detach();
       const file = app.vault.getFileByPath('Cited.md');
       if (file) await app.vault.delete(file);
       return out;
     });
-    expect(reading).toEqual({ listHidden: true, hasLink: true, highlighted: ['1'] });
+    expect(reading).toEqual({ listHidden: true, hasLink: true, highlighted: ['1'], popover: true });
   });
 
   it('renames and merges properties from Edit on the Properties screen', async function () {
@@ -2662,19 +2665,18 @@ describe('Design Redux in Obsidian', function () {
     await obsidianPage.openFile('Inspector note.md');
     await browser.executeObsidianCommand('design-redux:open-properties');
     await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
-    // Docked in the right sidebar, it stays while another note opens, and follows it.
+    // Floating over the note, no sidebar; it stays while another note opens in its tab, and follows it.
     await obsidianPage.openFile('Politics/Balance of power.md');
     const followed = await browser.executeObsidian(async ({ app }) => {
       const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
-      const leaf = app.workspace.getLeavesOfType('design-redux-properties')[0];
-      const title = () => { const t = leaf && leaf.view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
+      const title = () => { const t = document.querySelector('body > .dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Balance of power');
-      return { right: !!leaf && leaf.getRoot() === app.workspace.rightSplit, title: title() };
+      return { docked: app.workspace.getLeavesOfType('design-redux-properties').length, title: title() };
     });
-    expect(followed).toEqual({ right: true, title: 'Balance of power' });
+    expect(followed).toEqual({ docked: 0, title: 'Balance of power' });
     await obsidianPage.openFile('Inspector note.md');
     await browser.waitUntil(() => browser.execute(() => {
-      const t = document.querySelector('.dr-panel-dock .dr-props-popup.is-open .dr-props-title');
+      const t = document.querySelector('.dr-props-popup.is-open .dr-props-title');
       return !!t && t.textContent === 'Inspector note';
     }), { timeout: 5000 });
     await browser.waitUntil(() => browser.execute(() => document.querySelectorAll('.dr-props-popup.is-open .dr-row').length === 6), { timeout: 5000 });
@@ -2734,8 +2736,8 @@ describe('Design Redux in Obsidian', function () {
     expect(items).toEqual(['Type', 'Rename', 'Find notes', 'Across the vault', 'Remove']);
     await browser.keys('Escape');
     await browser.keys('Escape');
-    await browser.executeObsidian(async ({ app }) => {
-      app.workspace.detachLeavesOfType('design-redux-properties');
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      plugins.designRedux.features.find((f) => f.constructor.name === 'PropertiesPanel').close();
       const f = app.vault.getFileByPath('Inspector note.md');
       if (f) await app.vault.delete(f);
     });
@@ -2776,7 +2778,7 @@ describe('Design Redux in Obsidian', function () {
   // Snapshots for tools/snapshot-diff.mjs, which CI runs against main's last
   // ones: the same screens at the same size, nothing moving. They add to the
   // tests of what the screens do, never stand in for them.
-  it('takes snapshots of both sidebars, the Edit tray and a narrow album, and holds up with reduced motion and forced colours', async function () {
+  it('takes snapshots of the sidebar, the album’s pane, the Edit tray and a narrow album, and holds up with reduced motion and forced colours', async function () {
     const dir = path.join(OUT, 'snapshots');
     const snap = async (name, selector) => {
       if (version === OLDEST) return;
@@ -2795,7 +2797,6 @@ describe('Design Redux in Obsidian', function () {
         still.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; caret-color: transparent !important; }';
       }
       app.workspace.leftSplit.expand();
-      app.workspace.rightSplit.expand();
       const library = find('Library');
       if (typeof library.reveal === 'function') await library.reveal();
       await library.browseMode({ mode: 'folder', path: 'Politics' });
@@ -2803,16 +2804,16 @@ describe('Design Redux in Obsidian', function () {
       const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
       const button = () => page.view.containerEl.querySelector('.dr-preview-btn');
       await until(() => !!row() && !!button());
-      const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
-      if (!page.view.previewOn()) button().click();
-      await until(() => !!dock() && page.view.previewOn());
+      const pane = () => page.view.containerEl.querySelector('.dr-browse-pane');
+      if (!page.view.previewShowing()) button().click();
+      await until(() => !!pane() && page.view.previewShowing());
       row().click();
-      await until(() => !!dock().view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'));
-      return { row: !!row(), dock: !!dock(), lib: !!document.querySelector('.mod-left-split .dr-lib-row') };
+      await until(() => !!pane().querySelector('.dr-props-popup.is-open .dr-props-title'));
+      return { row: !!row(), pane: !!pane(), lib: !!document.querySelector('.mod-left-split .dr-lib-row'), right: getComputedStyle(document.querySelector('.workspace-split.mod-right-split')).display };
     });
-    expect(ready).toEqual({ row: true, dock: true, lib: true });
+    expect(ready).toEqual({ row: true, pane: true, lib: true, right: 'none' });
     await snap('left-sidebar', '.workspace-split.mod-left-split');
-    await snap('right-sidebar', '.workspace-split.mod-right-split');
+    await snap('album-pane', '.workspace-leaf.mod-active .dr-browse-pane');
 
     // The tray Edit mode shows, with a note ticked.
     await clickText('.workspace-leaf.mod-active .dr-detail-action', 'Edit');
@@ -2843,7 +2844,7 @@ describe('Design Redux in Obsidian', function () {
         }
         return getComputedStyle(document.body).backgroundColor;
       };
-      const unreadable = Array.from(document.querySelectorAll('.mod-left-split .dr-lib-row, .workspace-leaf.mod-active .dr-bulk-bar .dr-bulk-action, .workspace-leaf.mod-active .dr-bulk-count, .mod-right-split .dr-props-title'))
+      const unreadable = Array.from(document.querySelectorAll('.mod-left-split .dr-lib-row, .workspace-leaf.mod-active .dr-bulk-bar .dr-bulk-action, .workspace-leaf.mod-active .dr-bulk-count, .dr-browse-pane .dr-props-title'))
         .filter((el) => el.offsetParent !== null)
         .filter((el) => getComputedStyle(el).color === behind(el))
         .map((el) => el.className);
@@ -2857,7 +2858,10 @@ describe('Design Redux in Obsidian', function () {
 
     // Narrow: the album fits, with nothing to scroll sideways.
     await resize(760, 800);
-    await browser.executeObsidian(({ app }) => app.workspace.rightSplit.collapse());
+    await browser.executeObsidian(async ({ app }) => {
+      const page = app.workspace.activeLeaf.view;
+      if (page.previewShowing()) await page.togglePreview();
+    });
     await browser.pause(300);
     const wide = await browser.executeObsidian(({ app }) => {
       const el = app.workspace.activeLeaf.view.contentEl;
@@ -2868,8 +2872,7 @@ describe('Design Redux in Obsidian', function () {
     expect(wide).toBe(0);
     await snap('album-narrow', '.workspace-leaf.mod-active');
     await resize(size.width, size.height);
-    await browser.executeObsidian(({ app }) => {
-      app.workspace.rightSplit.expand();
+    await browser.executeObsidian(() => {
       const still = document.getElementById('dr-snapshot-still');
       if (still) still.remove();
     });

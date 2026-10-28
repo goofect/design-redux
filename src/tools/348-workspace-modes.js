@@ -191,6 +191,8 @@ export class WorkspaceModes extends Feature {
 
   sidebars(left, right) {
     const ws = this.app.workspace;
+    // The right sidebar stays folded while it's hidden.
+    if (this.settings.hideRightSidebar && this.settings.library !== false) right = false;
     [[ws.leftSplit, left], [ws.rightSplit, right]].forEach(([split, open]) => {
       if (!split) return;
       if (open && typeof split.expand === 'function') split.expand();
@@ -224,14 +226,14 @@ export class WorkspaceModes extends Feature {
     if (id === 'study') {
       const outline = this.plugin.featureNamed('ReadingOutline');
       const withOutline = !!(outline && outline.enabled);
-      this.sidebars(false, withOutline);
+      this.sidebars(false, false);
       // What's due to be revisited first, the most overdue; else the note you were reading.
       const note = dueNotes(this.plugin)[0] || this.recent('md');
       if (note) {
         const leaf = ws.getLeaf(false);
         await leaf.setViewState({ type: 'markdown', state: { file: note.path, mode: 'preview' }, active: true });
       }
-      if (withOutline) await outline.show();
+      if (withOutline) outline.show();
     } else if (id === 'mapping') {
       this.sidebars(false, false);
       const map = this.recent((f) => this.isMap(f));

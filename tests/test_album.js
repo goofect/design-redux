@@ -495,10 +495,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.workspace.on = () => ({});
     app.workspace.getMostRecentLeaf = () => ({ view: noteView });
     app.workspace.getActiveViewOfType = () => noteView;
-    const ov = new R.ReadingOutlineView({}, new R.ReadingOutline(plugin));
+    const ov = new R.ReadingOutlineView(new R.ReadingOutline(plugin));
     ov.app = app;
-    document.body.appendChild(ov.containerEl);
-    await ov.onOpen();
+    ov.show(null);
     await settle();
     const rows = () => Array.from(ov.contentEl.querySelectorAll('.dr-reading-row'));
     const words = () => rows().map((row) => row.querySelector('.dr-reading-words').textContent);
@@ -1745,17 +1744,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const { view, plugin, app, opened } = setup();
     plugin.selection = new R.Selection(plugin);
     view.unpick = plugin.selection.onChange(() => view.markPicked());
-    // The inspector's tab, in the right sidebar.
-    const tabs = [];
-    const tab = { view: { containerEl: document.body.createDiv() }, detach: () => tabs.splice(0) };
-    tab.setViewState = async () => tabs.push(tab);
-    Object.assign(app.workspace, {
-      getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
-      getRightLeaf: () => tab,
-      revealLeaf() {},
-    });
+    // The inspector: a pane along the page's right edge, the panel told of it.
+    const panes = [];
+    const was = app.workspace.trigger;
+    app.workspace.trigger = (name, pane) => (name === 'design-redux:pane-open' ? panes.push(pane) : name === 'design-redux:pane-close' ? panes.splice(panes.indexOf(pane), 1) : was && was.call(app.workspace, name, pane));
+    plugin.settings.libraryPreview = false;
+    plugin.saveSettings = async () => {};
     const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
     view.render();
+    assert.ok(!view.containerEl.querySelector('.dr-browse-pane'), 'closed, no pane');
     click(row('Anarchy'));
     assert.strictEqual(opened.length, 1, 'without it, a click opens as it always has');
 
@@ -1763,9 +1760,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.refreshBrowse = () => view.render();
     click(view.contentEl.querySelector('.dr-preview-btn'));
     await new Promise((r) => setTimeout(r));
-    assert.strictEqual(tabs.length, 1, 'the inspector opened');
+    assert.strictEqual(plugin.settings.libraryPreview, true, 'kept open');
+    assert.strictEqual(panes.length, 1, 'the panel told of the pane');
+    assert.strictEqual(panes[0].leaf, view.leaf);
+    assert.ok(view.containerEl.querySelector('.dr-browse-pane'), 'the pane along the page');
+    assert.ok(view.containerEl.classList.contains('dr-has-pane'));
     assert.ok(view.contentEl.querySelector('.dr-preview-btn').classList.contains('is-active'));
-    assert.ok(!view.containerEl.querySelector('.dr-preview'), 'no pane of its own: the inspector shows it');
     click(row('Balance'));
     assert.strictEqual(opened.length, 1, 'while it shows, a click picks');
     assert.ok(row('Balance').classList.contains('is-selected'));
@@ -1837,7 +1837,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(opened[3].basename, 'Deterrence', 'set always to open');
     plugin.selection.set({ folder: app.vault.getFolderByPath('IR/Theories') });
     await view.togglePreview();
-    assert.ok(tabs.length === 0 && plugin.selection.get().folder.path === 'IR/Theories');
+    assert.ok(panes.length === 0 && !view.containerEl.querySelector('.dr-browse-pane') && plugin.selection.get().folder.path === 'IR/Theories');
   });
 
   await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {

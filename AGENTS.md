@@ -50,8 +50,8 @@ Coffee N' Christmas.
   after a deliberate change, and the rule beside it).
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest. One test saves UI snapshots (both sidebars, the Edit
-  tray, a narrow album, forced colours) to `ci-output/snapshots/`; CI
+  and the latest. One test saves UI snapshots (the sidebar, the album's
+  pane, the Edit tray, a narrow album, forced colours) to `ci-output/snapshots/`; CI
   compares them with main's last (`tools/snapshot-diff.mjs`, the
   `ci-snapshots` branch) and `tests/ci.sh` prints what changed.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
@@ -102,17 +102,20 @@ Coffee N' Christmas.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited: on a computer, docked in the right sidebar as
-  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. What the
-  inspector is about is `plugin.coordinator`'s to say (084): the tab worked
-  in, a pick, a canvas card, a map node, and the pin, kept as a snapshot
-  `{ target, leaf, origin, pinned }` the docked panel draws.
+  is where a note is edited: on a computer, floating under the note's
+  Properties button, or docked in a library page's pane as the inspector
+  (124 makes the pane, `design-redux:pane-open`/`-close`; it shows the
+  pick); on a phone, a sheet. Nothing of ours is in the right sidebar,
+  which `hideRightSidebar` hides; the old view types (179) close
+  themselves. The reading outline and footnotes are popovers over the
+  note (`ui/246` NotePopover). What a tab is about is
+  `plugin.coordinator`'s to say (084): the note, a canvas card, a map node.
 - What's picked is `plugin.selection` (076), apart from what's open. What's
   ticked to act on together, while editing an album, is the view's
   `BulkSelection` (118: paths and the Shift anchor, following renames), apart
   from both. In the
-  browse view, rows and tiles go through `pickOrOpen`. While the inspector
-  shows (`inspectorShowing`), a click picks and a double click or Enter
+  browse view, rows and tiles go through `pickOrOpen`. While the page's
+  pane shows (`inspectorShowing`), a click picks and a double click or Enter
   opens. The browse view (124) draws what the library knows of a pick into
   the inspector: an album in brief, and a picked note's Open / Reveal in
   collection / More.

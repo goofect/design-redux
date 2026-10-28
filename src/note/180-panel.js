@@ -13,16 +13,15 @@ import { MarkdownView, Notice, Platform, Setting } from 'obsidian';
 import { INSPECTOR_VIEW } from '../core/020-constants.js';
 import { makeTrigger } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
-import { openInspector } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';
-import { hostsPanel, originLabel } from '../core/084-workspace-coordinator.js';
+import { hostsPanel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './160-panel-properties.js';
 import { MentionsSection } from './170-panel-native.js';
 import { inspectableOf } from './178-inspectables.js';
-import { PanelDockView } from './179-panel-dock.js';
+import { RetiredView } from './179-panel-dock.js';
 import { drSheetIn } from '../ui/229-components.js';
 
-const EMPTY_TEXT = 'Open or pick a note to see its properties.';
+const EMPTY_TEXT = 'Pick a note or a collection to see its properties.';
 const OFF_TEXT = 'Turn on “Properties button” in settings to see properties here.';
 
 export class PropertiesPanel extends Feature {
@@ -34,8 +33,10 @@ export class PropertiesPanel extends Feature {
     this.trigger = null;
     this.sections = [];
     this.shown = null;
-    // The sidebar view the panel is in, when it's docked there.
+    // The library's pane the panel is in, when it's docked there; and
+    // the pane it goes back to once it's done floating over a note.
     this.dockView = null;
+    this.pane = null;
     // leaf -> its trigger element, so a fitted leaf costs a lookup
     // rather than a querySelector. Weak, so closing a tab drops it.
     this.fitted = new WeakMap();
@@ -46,7 +47,7 @@ export class PropertiesPanel extends Feature {
       {
         key: 'propertiesDropdown',
         name: 'Properties button',
-        desc: 'A button in each note’s header that shows its properties in the inspector, or as a sheet on a phone.',
+        desc: 'A button in each note’s header that shows its properties in a panel under it, or as a sheet on a phone.',
       },
       {
         key: 'hideNativeProperties',
@@ -198,13 +199,17 @@ export class PropertiesPanel extends Feature {
   }
 
   registerTypes() {
-    this.plugin.registerView(INSPECTOR_VIEW, (leaf) => new PanelDockView(leaf, this));
+    this.plugin.registerView(INSPECTOR_VIEW, (leaf) => new RetiredView(leaf, INSPECTOR_VIEW));
   }
 
   register() {
     this.plugin.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {
-        if (this.enabled && !this.dockView) this.follow(leaf);
+        if (!this.enabled) return;
+        // Back to a library page with a pane: the panel goes back into it, unless it's floating over a note.
+        const pane = leaf && leaf.view && leaf.view.inspectorPane;
+        if (pane && pane !== this.dockView && !(this.isOpen() && !this.dockView)) this.dock(pane);
+        else if (!this.dockView) this.follow(leaf);
       })
     );
     this.plugin.registerEvent(
@@ -217,8 +222,10 @@ export class PropertiesPanel extends Feature {
         else this.close();
       })
     );
-    // Docked, it draws what the coordinator says the inspector is about: the note worked in, a pick, a card, a map.
-    this.plugin.register(this.plugin.coordinator.onChange((snap) => this.showSnapshot(snap)));
+    // Docked in the library's pane, it draws what's picked there.
+    this.plugin.register(this.plugin.selection.onChange((item) => this.showPick(item)));
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:pane-open', (pane) => this.paneOpened(pane)));
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:pane-close', (pane) => this.paneClosed(pane)));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
     this.plugin.registerEvent(
       this.app.workspace.on('design-redux:panel-changed', (file) => {
@@ -352,21 +359,15 @@ export class PropertiesPanel extends Feature {
       return;
     }
     if (!target) return;
-    // On a computer it docks, as an inspector; on a phone it's a sheet.
-    if (!this.dockView && !Platform.isPhone) {
-      openInspector(this.app).then(() => this.showAsked(leaf, target));
-      return;
-    }
+    // Floating under the button, out of the library's pane while it does; on a phone, a sheet.
     if (this.dockView) {
-      this.app.workspace.revealLeaf(this.dockView.leaf);
-      this.showAsked(leaf, target);
-      return;
-    }
-    if (this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
+      if (leaf === this.dockView.leaf) return;
+      this.undock(this.dockView, true);
+    } else if (this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
       this.close();
       return;
     }
-    this.close();
+    this.close(false);
     this.open(leaf, trigger, target);
   }
 
@@ -392,7 +393,6 @@ export class PropertiesPanel extends Feature {
     if (this.dockView) {
       this.popupEl.addClass('is-open');
       this.dockView.showEmpty('');
-      this.dockView.showOrigin(originLabel(this.plugin.coordinator.originOf(leaf, target)), this.pinned);
       return;
     }
 
@@ -491,7 +491,8 @@ export class PropertiesPanel extends Feature {
     }
   }
 
-  close() {
+  /** Closed; floating, it goes back into the library's pane, if there's one, unless `redock` is false. */
+  close(redock = true) {
     const wasInside =
       this.popupEl && this.popupEl.contains(document.activeElement);
 
@@ -523,15 +524,8 @@ export class PropertiesPanel extends Feature {
       this.trigger.focus();
     }
     this.trigger = null;
-    if (this.dockView) {
-      this.dockView.showEmpty(EMPTY_TEXT, this.toLibrary());
-      this.dockView.showOrigin('', this.pinned);
-    }
-  }
-
-  /** With nothing to show, a way to something: the library, to pick from. */
-  toLibrary() {
-    return { label: 'Open the library', run: () => this.app.commands.executeCommandById('design-redux:open-library') };
+    if (this.dockView) this.dockView.showEmpty(EMPTY_TEXT);
+    else if (redock && this.pane && this.pane.contentEl.isConnected && this.popupEl) this.dock(this.pane);
   }
 
   /** Turned off, the way to turn it on. */
@@ -539,61 +533,57 @@ export class PropertiesPanel extends Feature {
     return { label: 'Open settings', run: () => this.plugin.openSettingsAt('propertiesDropdown') };
   }
 
-  /** A file or folder deleted: if it's what's shown, it's let go of. (Docked, the coordinator lets go, pinned or not.) */
+  /** A file or folder deleted: if it's what's shown, it's let go of. */
   forget(file) {
     if (!this.isOpen() || !file || (file !== this.file && file !== this.folder)) return;
     this.close();
   }
 
-  /** Pinned, the coordinator keeps what it shows while notes open and picks change. */
-  get pinned() {
-    return !!(this.plugin.coordinator && this.plugin.coordinator.state.pinned);
-  }
-
-  togglePin() {
-    this.plugin.coordinator.pin(!this.pinned);
-  }
-
-  /** Docked, it draws the coordinator's snapshot: nothing to show, it shows that. */
-  showSnapshot(snap) {
+  /** Docked, it draws what's picked in the library: a note or an album. Nothing picked, it says so. */
+  showPick(item) {
     if (!this.dockView || !this.popupEl) return;
-    if (!snap.target) {
-      if (this.isOpen()) this.close();
-      else this.dockView.showOrigin('', false);
-      return;
-    }
-    this.showDocked(snap.leaf, snap.target);
-    this.dockView.showOrigin(originLabel(snap.origin), snap.pinned);
+    const target =
+      item && item.file && item.file.extension === 'md' ? { file: item.file, picked: true } : item && item.folder ? { folder: item.folder } : null;
+    if (target) this.showDocked(this.dockView.leaf, target);
+    else if (this.isOpen()) this.close();
+    else this.dockView.showEmpty(EMPTY_TEXT);
   }
 
-  /** Asked for outright, from the Properties button: shown, and the coordinator told. */
-  showAsked(leaf, target) {
-    if (!this.dockView) return;
-    this.plugin.coordinator.show(leaf, target);
-    this.showSnapshot(this.plugin.coordinator.snapshot());
+  /** A library page's pane opened: the panel goes in, unless it's floating over a note, when it goes in after. */
+  paneOpened(pane) {
+    this.pane = pane;
+    if (this.dockView || !this.isOpen()) this.dock(pane);
+    else pane.showEmpty(EMPTY_TEXT);
   }
 
-  /** Into the sidebar view: shown there from now on, starting with the note last worked in. */
-  dock(view) {
-    this.dockView = view;
+  /** A pane closed, or its page did: the panel leaves it. */
+  paneClosed(pane) {
+    if (this.pane === pane) this.pane = null;
+    this.undock(pane);
+  }
+
+  /** Into a library page's pane: shown there from now on, starting with what's picked. */
+  dock(pane) {
+    if (this.dockView && this.dockView !== pane) this.dockView.showEmpty(EMPTY_TEXT);
+    this.dockView = pane;
+    this.pane = pane;
     if (!this.popupEl) {
-      view.showEmpty(OFF_TEXT, this.toSettings());
+      pane.showEmpty(OFF_TEXT, this.toSettings());
       return;
     }
     this.close();
     this.popupEl.style.left = this.popupEl.style.top = this.popupEl.style.bottom = '';
     this.popupEl.addClass('is-docked');
-    view.contentEl.appendChild(this.popupEl);
-    const ws = this.app.workspace;
-    this.showSnapshot(this.plugin.coordinator.look(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf));
+    pane.contentEl.appendChild(this.popupEl);
+    this.showPick(this.plugin.selection.get());
   }
 
-  /** The sidebar view closed: a popup again. */
-  undock(view) {
-    if (this.dockView !== view) return;
-    this.close();
+  /** Out of the pane: a popup again. Kept, it goes back in when it's done floating. */
+  undock(pane, keep = false) {
+    if (this.dockView !== pane) return;
+    this.close(false);
     this.dockView = null;
-    this.plugin.coordinator.pin(false);
+    if (!keep && this.pane === pane) this.pane = null;
     if (this.popupEl) {
       this.popupEl.removeClass('is-docked');
       document.body.appendChild(this.popupEl);

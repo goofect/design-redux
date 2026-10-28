@@ -51,10 +51,15 @@ class ItemView {
   }
   registerEvent() {}
 }
+class Component {
+  registerEvent() {}
+  registerDomEvent(el, type, fn) { el.addEventListener(type, fn); }
+}
 const notices = [];
 const obsidian = new Proxy({
   MarkdownView,
   ItemView,
+  Component,
   editorLivePreviewField: livePreview,
   setIcon: () => {},
   Notice: class { constructor(m) { notices.push(m); } },
@@ -411,9 +416,10 @@ t('the Footnotes view: each number, its citation, the words it follows; change a
     metadataCache: { on: () => ({}) },
   };
   const feature = new R.Footnotes({ app, settings, registerEvent: () => {} });
-  const view = new R.FootnotesView({}, feature);
+  const view = new R.FootnotesView(feature);
   view.app = app;
-  document.body.appendChild(view.containerEl);
+  view.show(null);
+  assert.ok(view.containerEl.classList.contains('dr-note-popover'), 'over the note, not in a sidebar');
   view.render();
   const items = () => Array.from(view.contentEl.querySelectorAll('.dr-fn-item'));
   assert.deepStrictEqual(items().map((i) => i.querySelector('.dr-fn-num').textContent), ['1', '2', '3']);

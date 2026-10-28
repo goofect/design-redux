@@ -2,13 +2,13 @@
 /* Choosing what goes in the list                                      */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Notice, Platform, Setting, TFolder } from 'obsidian';
+import { FuzzySuggestModal, Notice, Setting, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/030-helpers-art.js';
 import { SORTS } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
-import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
+import { inspectorShowing } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { Appearance } from '../core/085-appearance.js';
@@ -88,6 +88,11 @@ export class Library extends Feature {
         name: 'Hide the tab bar',
         desc: 'Move through one page with back and forward. Tabs still work behind it.',
         showIf: 'library',
+      },
+      {
+        key: 'hideRightSidebar',
+        name: 'Hide the right sidebar',
+        desc: 'Fold Obsidian’s right sidebar and hide its button. Properties float under the note’s button and sit in the library’s pane; the outline and footnotes open from the note.',
       },
       {
         key: 'hideEmptyFolders',
@@ -227,7 +232,7 @@ export class Library extends Feature {
       {
         key: 'inspector',
         name: 'Inspector',
-        desc: 'The button by Sort and filter shows the inspector in the right sidebar: the picked note’s or collection’s properties, to read and change, with Open, Reveal in collection and More — without opening it.',
+        desc: 'The button by Sort and filter shows a pane along the page’s right edge: the picked note’s or collection’s properties, to read and change, with Open, Reveal in collection and More — without opening it.',
         showIf: 'library',
       },
       {
@@ -359,10 +364,8 @@ export class Library extends Feature {
         icon: 'panel-right',
         when: () => this.enabled && this.settings.inspector !== false,
         run: async () => {
-          if (inspectorShowing(this.app)) closeInspector(this.app);
-          else {
-            await openInspector(this.app);
-          }
+          this.settings.libraryPreview = !inspectorShowing(this.app);
+          await this.plugin.saveSettings();
           this.plugin.refreshBrowse();
         },
       },
@@ -553,6 +556,7 @@ export class Library extends Feature {
    */
   enable() {
     document.body.toggleClass('dr-single-area', singleAreaOn(this.settings));
+    this.followRightSidebar();
     const turnedOn = this.active === false;
     this.active = true;
     if (!turnedOn) return;
@@ -603,6 +607,7 @@ export class Library extends Feature {
    * the front, since there'd be no way to switch to it otherwise.
    */
   followSidebar() {
+    this.followRightSidebar();
     const collapsed = this.leftCollapsed();
     document.body.toggleClass('dr-left-collapsed', collapsed);
     if (this.wasCollapsed && !collapsed && this.enabled && singleAreaOn(this.settings)) {
@@ -612,12 +617,11 @@ export class Library extends Feature {
     liveViews(this.app, LIBRARY_VIEW, LibraryView).forEach((v) => v.syncChrome());
   }
 
-  /** The library back on the left and the inspector on the right, however they were moved or lost. */
+  /** The library back on the left, however it was moved or lost; the inspector's old tab gone. */
   async resetLayout() {
     const ws = this.app.workspace;
     [LIBRARY_VIEW, INSPECTOR_VIEW].forEach((type) => ws.getLeavesOfType(type).forEach((leaf) => leaf.detach()));
     await this.mount();
-    if (!Platform.isPhone && this.settings.inspector !== false) await openInspector(this.app);
     this.showLibraryTab();
   }
 
@@ -653,9 +657,18 @@ export class Library extends Feature {
     return this.browseMode({ mode: 'folder', path: '/' });
   }
 
+  /** Hidden, the right sidebar is kept folded, whatever opened it; its button goes with the body class. */
+  followRightSidebar() {
+    const hide = this.enabled !== false && !!this.settings.hideRightSidebar;
+    document.body.toggleClass('dr-no-right-sidebar', hide);
+    const split = this.app.workspace.rightSplit;
+    if (hide && split && !split.collapsed && typeof split.collapse === 'function') split.collapse();
+  }
+
   disable() {
     this.active = false;
     document.body.removeClass('dr-single-area');
+    document.body.removeClass('dr-no-right-sidebar');
 
     // Only when the user switches the feature off. On unload Obsidian
     // reopens these views itself, at the position the user left them.

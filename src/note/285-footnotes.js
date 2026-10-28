@@ -23,6 +23,8 @@ import { findSubmenu } from '../core/030-helpers-art.js';
 import { activeEditorView } from '../core/050-helpers-dom.js';
 import { actionsOn, addActionEntries, editorContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
+import { RetiredView } from './179-panel-dock.js';
+import { noteHeaderAnchor } from './195-reading-outline.js';
 import { applyFootnoteChanges, footnoteAt, footnoteBody, planFootnotes, scanFootnotes } from './283-footnote-text.js';
 import { FootnoteBox, footnoteHider, FOOTNOTES_VIEW, FootnotesView } from './284-footnote-views.js';
 
@@ -75,7 +77,8 @@ export class Footnotes extends Feature {
   registerTypes() {
     this.extensions = [];
     this.plugin.registerEditorExtension(this.extensions);
-    this.plugin.registerView(FOOTNOTES_VIEW, (leaf) => new FootnotesView(leaf, this));
+    // Its old sidebar tab, closed if a saved layout still has it.
+    this.plugin.registerView(FOOTNOTES_VIEW, (leaf) => new RetiredView(leaf, FOOTNOTES_VIEW));
   }
 
   get aside() {
@@ -96,18 +99,15 @@ export class Footnotes extends Feature {
     this.app.workspace.updateOptions();
   }
 
-  /** The Footnotes view in the right sidebar, opened if it isn't, and shown. */
-  async showView(highlight) {
-    const ws = this.app.workspace;
-    let leaf = ws.getLeavesOfType(FOOTNOTES_VIEW)[0];
-    if (!leaf) {
-      leaf = ws.getRightLeaf(false);
-      if (!leaf) return null;
-      await leaf.setViewState({ type: FOOTNOTES_VIEW, active: false });
+  /** The footnotes over the note, under `anchor` (what asked) or the note's header, opened if they aren't, `highlight` lit. */
+  showView(highlight, anchor) {
+    if (!this.popover) {
+      this.popover = new FootnotesView(this);
+      this.popover.onHide = () => (this.popover = null);
     }
-    ws.revealLeaf(leaf);
-    if (leaf.view instanceof FootnotesView) leaf.view.render(highlight);
-    return leaf;
+    this.popover.show(anchor || noteHeaderAnchor(this.app));
+    this.popover.render(highlight);
+    return this.popover;
   }
 
   /** How many footnotes a note has, from what Obsidian read of it. */
@@ -131,7 +131,7 @@ export class Footnotes extends Feature {
         evt.stopPropagation();
         // Reading view numbers them in order, as the view does.
         const label = (link.textContent || '').replace(/[^\w-]/g, '');
-        this.showView(label || undefined);
+        this.showView(label || undefined, link);
       },
       true
     );
@@ -150,6 +150,7 @@ export class Footnotes extends Feature {
 
   disable() {
     if (this.box) this.box.finish(false);
+    if (this.popover) this.popover.hide();
     // Off whatever the setting says: unloading, the setting is still on.
     this.applyAside(false);
   }

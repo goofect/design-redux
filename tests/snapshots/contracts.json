@@ -2,9 +2,7 @@
  "076-selection": {
   "exports": [
    "Selection",
-   "closeInspector",
-   "inspectorShowing",
-   "openInspector"
+   "inspectorShowing"
   ],
   "methods": {
    "Selection": [

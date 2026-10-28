@@ -1,6 +1,6 @@
 export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
-// The note panel docked in the right sidebar. The old inspector's type (design-redux-inspector) is still closed on load.
+// The note panel's sidebar tab, retired: a layout that still names it closes it. The old inspector's type (design-redux-inspector) is still closed on load.
 export const INSPECTOR_VIEW = 'design-redux-properties';
 // Quick Look in the library: Obsidian's page preview, shown without a modifier key.
 export const LIBRARY_HOVER_SOURCE = 'design-redux-library';
@@ -60,6 +60,8 @@ export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collecti
 export const DEFAULTS = {
   library: true,
   singleArea: false,
+  // Obsidian's right sidebar folded and its button hidden: what Design Redux had there is in the note and the library now.
+  hideRightSidebar: true,
   // Off to begin with since 3.1: « » sit in the note's header, Properties in the inspector.
   contextStrip: false,
   // The strip says where the note falls in its album: "3 of 12".
@@ -233,6 +235,7 @@ export const DEFAULTS = {
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
+  // The library page's pane, where the inspector shows what's picked: open or not.
   libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
   // starting layout from the vault the first time it's shown".
