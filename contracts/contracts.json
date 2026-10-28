@@ -3,7 +3,7 @@
  "selection-and-inspector": {
   "modules": ["076-selection", "084-workspace-coordinator", "178-inspectables"],
   "invariants": [
-   { "rule": "What's picked stays apart from what's open; pinned, the inspector follows neither; a deleted target is let go", "test": "mobile: docked in the sidebar, the panel stays open and follows the note and what the library picks" },
+   { "rule": "What's picked stays apart from what's open: the library's pane shows the pick, a note's button floats the panel over the note; a deleted target is let go", "test": "mobile: in the library’s pane, the panel shows what’s picked" },
    { "rule": "While the inspector shows, a click in the library picks and a double click or Enter opens", "test": "album: the inspector: while it shows, a click in the library picks" },
    { "rule": "Note, album and card are drawn through one inspectable each; the panel only holds them", "test": "bulk: the inspector’s targets: a text card’s properties changed and taken away at its top" }
   ]

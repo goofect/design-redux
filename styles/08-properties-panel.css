@@ -44,6 +44,31 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
   animation: dr-appear var(--dr-dur-fast) var(--dr-ease);
 }
 
+/* A popover from the note — the reading outline, the footnotes — floats as the panel does. */
+.dr-note-popover {
+  position: fixed;
+  z-index: calc(var(--layer-menu, 65) - 10);
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  max-height: 60vh;
+  background-color: var(--dr-float-bg);
+  backdrop-filter: blur(var(--dr-glass-blur));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-md);
+  box-shadow: var(--dr-float-shadow);
+  font-family: var(--dr-font-ui);
+  animation: dr-appear var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-note-popover > .view-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* Docked in the right sidebar: the same panel, laid in the view rather than floating. */
 .dr-panel-dock .dr-props-popup.is-docked {
   position: static;
@@ -90,46 +115,6 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 }
 
 .dr-panel-dock-empty.is-hidden {
-  display: none;
-}
-
-/* Why it shows what it shows, and whether it follows or is pinned: a
-   small button above it, an eye while it follows, the pin in the accent
-   once pinned. */
-.dr-panel-dock-origin {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--dr-space-1);
-  margin: var(--dr-space-2) 0 0;
-  padding: var(--dr-space-1) var(--dr-space-2);
-  border-radius: var(--dr-radius-pill);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  cursor: pointer;
-}
-
-.dr-panel-dock-origin-icon {
-  display: inline-flex;
-}
-
-.dr-panel-dock-origin-icon .svg-icon {
-  width: var(--icon-xs);
-  height: var(--icon-xs);
-}
-
-.dr-panel-dock-origin.is-pinned {
-  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
-  color: var(--text-accent);
-}
-
-@media (any-hover: hover) {
-  .dr-panel-dock-origin:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
-  }
-}
-
-.dr-panel-dock-origin.is-hidden {
   display: none;
 }
 

@@ -33,6 +33,15 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
+/* No right sidebar: folded, and its button, ribbon and drawer hidden, so
+   it isn't opened by accident. Obsidian outranks plain rules on its own. */
+body.dr-no-right-sidebar .workspace-split.mod-right-split,
+body.dr-no-right-sidebar .workspace-ribbon.mod-right,
+body.dr-no-right-sidebar .sidebar-toggle-button.mod-right,
+body.dr-no-right-sidebar .workspace-drawer.mod-right {
+  display: none !important;
+}
+
 /* The panel's title block --------------------------------------------------
  *
  * The note's name, with one property raised beneath it in the accent —

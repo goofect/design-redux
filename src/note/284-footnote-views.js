@@ -7,10 +7,11 @@
 
 import { RangeSetBuilder, StateField } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
-import { ItemView, MarkdownRenderer, MarkdownView, Notice, Platform, setIcon } from 'obsidian';
+import { MarkdownRenderer, MarkdownView, Notice, Platform, setIcon } from 'obsidian';
 import { composing } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
+import { NotePopover } from '../ui/246-note-popover.js';
 import { applyFootnoteChanges, footnoteBody, planFootnotes, scanFootnotes, trailingFootnotes } from './283-footnote-text.js';
 
 /* -- the citations, kept off the page ------------------------------ */
@@ -94,13 +95,13 @@ export function renderCitation(app, text, el, sourcePath, component) {
 }
 
 /**
- * The note's footnotes, in a view of their own beside it: each number,
+ * The note's footnotes, in a popover over it: each number,
  * what it cites, and the sentence it's in. A footnote opens where it's
  * cited; its citation is changed or removed right here.
  */
-export class FootnotesView extends ItemView {
-  constructor(leaf, feature) {
-    super(leaf);
+export class FootnotesView extends NotePopover {
+  constructor(feature) {
+    super(feature.app, 'dr-fn-view');
     this.feature = feature;
     this.plugin = feature.plugin;
     this.file = null;
@@ -108,20 +109,8 @@ export class FootnotesView extends ItemView {
     this.editing = null;
   }
 
-  getViewType() {
-    return FOOTNOTES_VIEW;
-  }
-
-  getDisplayText() {
-    return 'Footnotes';
-  }
-
-  getIcon() {
-    return 'file-signature';
-  }
-
-  async onOpen() {
-    this.containerEl.addClass('dr-fn-view');
+  onOpen() {
+    this.containerEl.setAttribute('aria-label', 'Footnotes');
     const queue = () => this.queue();
     this.registerEvent(this.app.workspace.on('active-leaf-change', queue));
     this.registerEvent(this.app.workspace.on('file-open', queue));
@@ -130,7 +119,7 @@ export class FootnotesView extends ItemView {
     this.render();
   }
 
-  async onClose() {
+  onClose() {
     window.clearTimeout(this.timer);
   }
 

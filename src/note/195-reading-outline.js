@@ -1,20 +1,22 @@
 /* ------------------------------------------------------------------ */
 /* Reading outline                                                     */
 /*                                                                     */
-/* The open note's headings in the right sidebar, following you as     */
+/* The open note's headings in a popover over it, following you as     */
 /* lyrics follow a song: the heading you're reading lit, with a thin   */
 /* line for how far through its section you are, the ones above it     */
 /* dimmed as done, and the words left in each. A row goes to its        */
-/* heading. Scrolling the panel never moves the note, and it stops      */
+/* heading. Scrolling the popover never moves the note, and it stops    */
 /* following for a moment after you scroll it yourself.                 */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, MarkdownView } from 'obsidian';
+import { MarkdownView } from 'obsidian';
 import { pageLeaf } from '../core/030-helpers-art.js';
 import { onActivate } from '../core/040-helpers-sorting.js';
 import { currentHeading, sectionEnds, sectionWords } from '../core/047-helpers-text.js';
 import { noteLine, scrollNoteTo } from '../core/075-reading.js';
 import { Feature } from '../core/080-feature.js';
+import { RetiredView } from './179-panel-dock.js';
+import { NotePopover } from '../ui/246-note-popover.js';
 
 
 export const READING_OUTLINE_VIEW = 'design-redux-outline';
@@ -56,9 +58,9 @@ export function readingAt(view, headings) {
   return { index, line };
 }
 
-export class ReadingOutlineView extends ItemView {
-  constructor(leaf, feature) {
-    super(leaf);
+export class ReadingOutlineView extends NotePopover {
+  constructor(feature) {
+    super(feature.app, 'dr-reading-outline');
     this.feature = feature;
     this.plugin = feature.plugin;
     this.noteView = null;
@@ -73,20 +75,8 @@ export class ReadingOutlineView extends ItemView {
     this.handsOffAt = 0;
   }
 
-  getViewType() {
-    return READING_OUTLINE_VIEW;
-  }
-
-  getDisplayText() {
-    return 'Reading outline';
-  }
-
-  getIcon() {
-    return 'list';
-  }
-
-  async onOpen() {
-    this.containerEl.addClass('dr-reading-outline');
+  onOpen() {
+    this.containerEl.setAttribute('aria-label', 'Reading outline');
     const queue = () => this.queue();
     this.registerEvent(this.app.workspace.on('active-leaf-change', queue));
     this.registerEvent(this.app.workspace.on('file-open', queue));
@@ -112,7 +102,7 @@ export class ReadingOutlineView extends ItemView {
     this.render();
   }
 
-  async onClose() {
+  onClose() {
     window.clearTimeout(this.timer);
     if (this.frame) window.cancelAnimationFrame(this.frame);
   }
@@ -245,7 +235,7 @@ export class ReadingOutline extends Feature {
       {
         key: 'readingOutline',
         name: 'Reading outline',
-        desc: 'The open note’s headings in the right sidebar: the one you’re reading lit, the ones you’ve passed dimmed. Click one to go to it.',
+        desc: 'The open note’s headings, from its menu or a command, over the note: the one you’re reading lit, the ones you’ve passed dimmed. Click one to go to it.',
       },
       {
         key: 'outlineWordCounts',
@@ -257,11 +247,12 @@ export class ReadingOutline extends Feature {
   }
 
   registerTypes() {
-    this.plugin.registerView(READING_OUTLINE_VIEW, (leaf) => new ReadingOutlineView(leaf, this));
+    // Its old sidebar tab, closed if a saved layout still has it.
+    this.plugin.registerView(READING_OUTLINE_VIEW, (leaf) => new RetiredView(leaf, READING_OUTLINE_VIEW));
   }
 
   actions() {
-    return [{ id: 'open-reading-outline', name: 'Show or hide the reading outline', icon: 'list', on: 'note', menu: false, when: () => this.enabled, run: () => this.toggle() }];
+    return [{ id: 'open-reading-outline', name: 'Show or hide the reading outline', icon: 'list', on: 'note', when: () => this.enabled, run: () => this.toggle() }];
   }
 
   enable() {
@@ -269,40 +260,40 @@ export class ReadingOutline extends Feature {
   }
 
   disable() {
-    // Closed when switched off — not when the plugin's only unloading, so it's back where it was after.
-    if (!this.plugin.unloading) this.app.workspace.getLeavesOfType(READING_OUTLINE_VIEW).forEach((leaf) => leaf.detach());
+    this.views().forEach((view) => view.hide());
   }
 
   views() {
-    return this.app.workspace
-      .getLeavesOfType(READING_OUTLINE_VIEW)
-      .map((leaf) => leaf.view)
-      .filter((view) => view instanceof ReadingOutlineView);
+    return this.popover && this.popover.isShown() ? [this.popover] : [];
   }
 
   /** Open if it's closed, closed if it's open. */
-  async toggle() {
-    const open = this.app.workspace.getLeavesOfType(READING_OUTLINE_VIEW);
-    if (open.length) {
-      open.forEach((leaf) => leaf.detach());
+  toggle(anchor) {
+    if (this.views().length) {
+      this.popover.hide();
       return null;
     }
-    return this.show();
+    return this.show(anchor);
   }
 
-  /** The outline in the right sidebar, opened if it isn't, and shown. */
-  async show() {
-    const ws = this.app.workspace;
-    let leaf = ws.getLeavesOfType(READING_OUTLINE_VIEW)[0];
-    if (!leaf) {
-      leaf = ws.getRightLeaf(false);
-      if (!leaf) return null;
-      await leaf.setViewState({ type: READING_OUTLINE_VIEW, active: false });
+  /** The outline over the note, under `anchor` or the note's header, opened if it isn't. */
+  show(anchor) {
+    if (!this.popover) {
+      this.popover = new ReadingOutlineView(this);
+      this.popover.onHide = () => (this.popover = null);
     }
-    ws.revealLeaf(leaf);
-    if (leaf.view instanceof ReadingOutlineView) leaf.view.render();
-    return leaf;
+    const was = this.popover.isShown();
+    this.popover.show(anchor || noteHeaderAnchor(this.app));
+    if (was) this.popover.render();
+    return this.popover;
   }
+}
+
+/** Where a popover from the note sits by default: under the buttons in its header. */
+export function noteHeaderAnchor(app) {
+  const leaf = pageLeaf(app);
+  const el = leaf && !leaf.isDeferred && leaf.view ? leaf.view.containerEl : null;
+  return el ? el.querySelector('.view-header .view-actions') : null;
 }
 
 ReadingOutline.settingKey = 'readingOutline';

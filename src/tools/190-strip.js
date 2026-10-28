@@ -583,7 +583,7 @@ export class ContextStrip extends Feature {
     // The note's footnotes, kept off the page, a press away.
     const footnotes = typeof Footnotes === 'function' ? this.plugin.feature(Footnotes) : null;
     if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
-      specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: () => footnotes.showView() });
+      specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: (evt, anchor) => footnotes.showView(undefined, anchor || (evt && evt.currentTarget)) });
     }
 
     // What can be done to it as a concept, the same as its menu offers.
