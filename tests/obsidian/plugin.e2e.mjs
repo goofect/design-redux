@@ -2680,6 +2680,8 @@ describe('Design Redux in Obsidian', function () {
       return !!t && t.textContent === 'Inspector note';
     }), { timeout: 5000 });
     await browser.waitUntil(() => browser.execute(() => document.querySelectorAll('.dr-props-popup.is-open .dr-row').length === 6), { timeout: 5000 });
+    // The pointer off the panel, which floats where it may have been left: a row hovered shows its menu.
+    await (await browser.$('.workspace-leaf.mod-active .view-header-title')).moveTo();
     const look = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
       const shown = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
