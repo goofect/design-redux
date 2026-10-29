@@ -1594,9 +1594,10 @@ describe('Design Redux in Obsidian', function () {
     });
 
     // Obsidian's own properties block names the note, not the stand-in.
+    // Read from the tab showing Quiet.md: after a new note opened, the most recent tab isn't always it on older Obsidian.
     const property = await readUntil(() => browser.executeObsidian(({ app }) => {
-      const leaf = app.workspace.getMostRecentLeaf(app.workspace.rootSplit);
-      const link = leaf.view.containerEl.querySelector('.metadata-container .internal-link.dr-quiet-link');
+      const leaf = app.workspace.getLeavesOfType('markdown').find((l) => l.view.file && l.view.file.path === 'Quiet.md');
+      const link = leaf && leaf.view.containerEl.querySelector('.metadata-container .internal-link.dr-quiet-link');
       return link ? [link.getAttribute('data-href'), link.textContent] : null;
     }), (v) => !!v);
     expect(property).toEqual(['Target two', 'Target two']);
