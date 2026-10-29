@@ -1141,7 +1141,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(offTag.items.length, 0);
   });
 
-  await t("the properties panel's menu: this note's choices, then what reaches the vault, then Remove from note", () => {
+  await t("the properties panel's menu: this note's choices, one step to the property's page for the rest, then Remove", () => {
     const v = makeVault({ 'a.md': note({ domain: ['[[Politics]]', 'Law'] }) });
     const { plugin } = makePlugin(v);
     // The library, to see the notes using it.
@@ -1156,30 +1156,21 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-key-icon'));
     const m = menus.pop();
     const sections = m.items.map((i) => i.section).filter((x, i, all) => all.indexOf(x) === i);
-    assert.deepStrictEqual(sections, ['edit', 'find', 'vault', 'remove'], 'by how far each reaches');
+    assert.deepStrictEqual(sections, ['edit', 'library', 'remove'], 'by how far each reaches');
     const titles = (section) => m.items.filter((i) => i.section === section).map((i) => i.title);
-    // Menus that can't open beside one another list a group's entries in place, under longer names.
-    // Five entries where menus open beside one another: Type ›, Rename, Find notes ›, Across the vault ›, Remove.
+    // Menus that can't open beside one another list Type's entries in place, under longer names.
+    // Where menus open beside one another: Type ›, Rename, Show in library, Remove — one submenu.
     assert.deepStrictEqual(titles('edit').filter((t) => !t.startsWith('Type: ')), ['Rename', 'Link a note…'], 'moving is the grip’s, with a pointer; a property naming notes links another');
     assert.ok(titles('edit').includes('Type: Text'));
-    assert.deepStrictEqual(titles('find'), ['Notes with “Politics”', 'Notes with “Law”', 'Notes with this property']);
-    assert.deepStrictEqual(titles('vault'), ['Rename domain everywhere…', 'Merge domain with…', 'Remove domain everywhere…']);
+    assert.deepStrictEqual(titles('library'), ['Show in library'], 'the notes with it, its values and the vault-wide tools: its page');
     assert.deepStrictEqual(titles('remove'), ['Remove']);
     assert.strictEqual(m.items[m.items.length - 1].title, 'Remove');
-    m.items.find((i) => i.title === 'Notes with “Politics”').click();
-    assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: 'Politics' });
-    m.items.find((i) => i.title === 'Notes with this property').click();
+    assert.ok(!m.items.some((i) => /everywhere|Merge|Notes with/.test(i.title)), 'nothing here reaches other notes');
+    m.items.find((i) => i.title === 'Show in library').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: null });
     // The row's ··· and a right-click open the same menu.
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-row-more'));
     assert.deepStrictEqual(menus.pop().items.map((i) => i.title), m.items.map((i) => i.title));
-    const item = m.items.find((i) => i.title === 'Rename domain everywhere…');
-    assert.ok(item, `not offered: ${m.items.map((i) => i.title)}`);
-    item.click();
-    const opened = modals.pop();
-    assert.ok(opened instanceof R.RenamePropertyModal);
-    assert.strictEqual(opened.from, 'domain');
-    opened.close();
     popupEl.remove();
   });
 
@@ -1279,7 +1270,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
   });
 
 
-  await t("a property's menu sets its value for the whole album, asking before it replaces a note's own, with one Undo", async () => {
+  await t("a note's property given to its whole album, asking before it replaces a note's own, with one Undo", async () => {
     const v = makeVault({
       'IR/IR.md': note({ cover: 'x.png' }),
       'IR/a.md': note({ status: 'done' }),
@@ -1293,15 +1284,11 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     plugin.features.push(album);
     assert.strictEqual(R.DEFAULTS.propertyForAlbum, true);
 
-    // Offered on the row's menu, under Manage across vault, by the collection's name.
-    const popupEl = document.body.appendChild(document.createElement('div'));
-    const section = new R.PropertiesSection({ plugin, popupEl });
-    section.mount(popupEl, v.file('IR/a.md'));
-    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    const item = menus.pop().items.find((i) => i.title === 'Apply status to all of IR…');
-    assert.ok(item, 'not offered');
+    // A command on the note: its one property, straight to it.
+    const action = album.actions().find((x) => x.id === 'property-to-album');
+    assert.ok(action.when({ file: v.file('IR/a.md') }), 'not offered');
     const before = v.text('IR/c.md');
-    item.click();
+    action.run({ file: v.file('IR/a.md') });
     await settle();
     // c has its own: asked first. Cancel leaves everything.
     let ask = modals.pop();
@@ -1324,11 +1311,9 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     await bulk.undo();
     assert.strictEqual(v.text('IR/c.md'), before);
 
-    // Off: not on the menu.
+    // Off: not offered.
     plugin.settings.propertyForAlbum = false;
-    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    assert.ok(!menus.pop().items.some((i) => i.title.startsWith('Apply ')));
-    popupEl.remove();
+    assert.ok(!action.when({ file: v.file('IR/a.md') }));
   });
 
   await t('the commands are there, and Undo only when there is something to undo', async () => {

@@ -18,9 +18,7 @@ import { optionFor } from '../core/088-property-options.js';
 import { Library } from '../library/130-browse-filters.js';
 import { LinkNotePicker, NamePrompt } from '../ui/230-pickers.js';
 import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
-import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from './265-quiet-links.js';
-import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 /** The names in a comma list, lower case. */
 export const propNames = (text) =>
@@ -680,11 +678,13 @@ export class PropertiesSection extends PanelSection {
   }
 
   /**
-   * A property's menu, kept to five: its type, its name, the notes that
-   * share it, what reaches other notes — all a press further — and taking
-   * it off this note. Moving is the grip's (and Alt+arrows'); on touch,
-   * where dragging is harder to aim, it's here too. A note a value names
-   * opens as its link does.
+   * A property's menu: this note's property, and one step to the rest.
+   * Its type (the one choice, so the one submenu), its name, a note to
+   * link where it names notes, and taking it off. Everything that reaches
+   * other notes — the notes with it, its values, renaming, merging or
+   * removing it everywhere — is on its page in the library, a press away.
+   * Moving is the grip's (and Alt+arrows'); on touch, where dragging is
+   * harder to aim, it's here too.
    */
   showMenu(key, anchorEl) {
     const menu = new Menu();
@@ -748,64 +748,21 @@ export class PropertiesSection extends PanelSection {
       });
     }
 
-    // The notes that share it.
-    const find = this.findEntries(key);
-    const finds = find.values.map(([value, run]) => [find.values.length === 1 ? 'With this value' : `With “${value}”`, find.values.length === 1 ? 'Notes with this value' : `Notes with “${value}”`, run]);
-    if (find.all) finds.push(['With this property', 'Notes with this property', find.all]);
-    if (finds.length) group('Find notes', 'search', 'find', finds);
-
-    // What changes other notes: each shown before it's done.
-    const manage = this.manageEntries(key).map(([short, long, , run]) => [short, long, run]);
-    if (manage.length) group('Across the vault', 'globe', 'vault', manage);
+    // The rest of the vault: the property's page, its notes and values, and the tools that change them all.
+    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
+    if (library && library.enabled) {
+      menu.addItem((item) =>
+        sectioned(item, 'library')
+          .setTitle('Show in library')
+          .setIcon('library')
+          .onClick(() => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: null }))
+      );
+    }
 
     menu.addItem((item) => sectioned(item, 'remove').setTitle('Remove').setIcon('trash-2').onClick(() => this.remove(key)));
 
     const r = anchorEl.getBoundingClientRect();
     menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
-  }
-
-  /**
-   * The notes that share it, in the Properties screen: `values`, each of
-   * this note's values — a list's first three — as [value, run]; and
-   * `all`, every note with the property. None without the library.
-   */
-  findEntries(key) {
-    const out = { values: [], all: null };
-    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
-    if (!library || !library.enabled) return out;
-    // The Properties screen knows a property by Obsidian's key for it, in lower case.
-    const open = (value) => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: value || null });
-    const raw = noteProps(this.app, this.file)[key];
-    (Array.isArray(raw) ? raw : [raw])
-      .map((v) => (v === null || v === undefined || typeof v === 'object' ? '' : String(v)))
-      .map((v) => v.replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
-      .filter((v) => v && v.length <= 60)
-      .slice(0, 3)
-      .forEach((v) => out.values.push([v, () => open(v)]));
-    out.all = () => open(null);
-    return out;
-  }
-
-  /**
-   * What changes other notes, each [short title, title when not nested,
-   * icon, run] — each shown first, with Undo: renaming it everywhere,
-   * applying it to the collection, merging it with another property,
-   * taking it out of every note.
-   */
-  manageEntries(key) {
-    const out = [];
-    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
-    if (bulk) out.push(['Rename everywhere…', `Rename ${key} everywhere…`, 'pencil', () => bulk.openRenameProperty(key)]);
-    const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
-    const file = this.file;
-    if (album && album.enabled && file && album.albumNotes(file).length) {
-      out.push([`Apply to ${album.albumName(file)}…`, `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);
-    }
-    if (bulk) {
-      out.push(['Merge with…', `Merge ${key} with…`, 'git-merge', () => bulk.openMerge([key])]);
-      out.push(['Remove everywhere…', `Remove ${key} everywhere…`, 'list-minus', () => bulk.openRemove([this.app.vault.getRoot()], [key])]);
-    }
-    return out;
   }
 
   /**

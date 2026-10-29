@@ -2177,7 +2177,7 @@ describe('Design Redux in Obsidian', function () {
     });
   });
 
-  it('shows a note\'s properties as a light inspector: the main ones, + to add, a five-entry menu per row', async function () {
+  it('shows a note\'s properties as a light inspector: the main ones, + to add, a short menu per row', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const path = 'Inspector note.md';
       const old = app.vault.getFileByPath(path);
@@ -2256,8 +2256,8 @@ describe('Design Redux in Obsidian', function () {
     await browser.execute(() => document.querySelector('.dr-props-popup.is-open .dr-row[data-key="domain"] .dr-row-more').click());
     await browser.$('.menu').waitForExist({ timeout: 3000 });
     const items = await browser.execute(() => Array.from(document.querySelectorAll('.menu .menu-item-title')).map((e) => e.textContent));
-    // Five, the rest a press further: Type ›, Rename, Find notes ›, Across the vault ›, Remove.
-    expect(items).toEqual(['Type', 'Rename', 'Find notes', 'Across the vault', 'Remove']);
+    // This note's property, and one step to its page for the rest: Type ›, Rename, Show in library, Remove.
+    expect(items).toEqual(['Type', 'Rename', 'Show in library', 'Remove']);
     await browser.keys('Escape');
     await browser.keys('Escape');
     await browser.executeObsidian(async ({ app, plugins }) => {
