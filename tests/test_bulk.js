@@ -62,7 +62,7 @@ class Menu {
     const item = { title: '', section: null };
     item.setTitle = (v) => { item.title = v; return item; };
     item.setIcon = () => item;
-    item.setChecked = () => item;
+    item.setChecked = (c) => { item.checked = !!c; return item; };
     item.setSection = (v) => { item.section = v; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item); this.items.push(item); return this;
@@ -1278,6 +1278,54 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(R.propertyPresentation('type', 'concept', 'text', s).primary, true);
   });
 
+
+  await t("the panel's own menu: this note's properties to tick as main, the folder's list or the vault's, then grouping", async () => {
+    const v = makeVault({ 'IR/a.md': note({ domain: 'Law', status: 'draft', field: 'x' }) });
+    const { plugin } = makePlugin(v);
+    plugin.settings.panelPrimaryProps = 'type, domain, status';
+    const popupEl = document.body.appendChild(document.createElement('div'));
+    const section = new R.PropertiesSection({ plugin, popupEl });
+    section.mount(popupEl, v.file('IR/a.md'));
+    const open = () => {
+      click(popupEl.querySelector('.dr-props-menu'));
+      return menus.pop();
+    };
+    let m = open();
+    const main = () => m.items.filter((i) => i.section === 'main').map((i) => `${i.title}${i.checked ? ' ✓' : ''}`);
+    assert.deepStrictEqual(main(), ['domain ✓', 'status ✓', 'field'], 'its own properties, the main ones ticked');
+    assert.ok(!m.items.some((i) => /Show all|…$/.test(i.title) && i.section !== 'settings'), 'no typing a list, no Show all: the panel has Show more');
+    // Ticked: on the vault's list, at its end.
+    m.items.find((i) => i.title === 'field').click();
+    await settle();
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field');
+    // Only in IR: the folder keeps a list of its own, starting from the one in effect; ticks change it alone.
+    m = open();
+    const only = m.items.find((i) => i.title === 'Only in IR');
+    assert.ok(only && !only.checked);
+    only.click();
+    await settle();
+    assert.deepStrictEqual(plugin.settings.panelFolderViews.IR, { main: 'type, domain, status, field' });
+    m = open();
+    assert.ok(m.items.find((i) => i.title === 'Only in IR').checked);
+    m.items.find((i) => i.title === 'status').click();
+    await settle();
+    assert.strictEqual(plugin.settings.panelFolderViews.IR.main, 'type, domain, field');
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field', 'the vault’s list left alone');
+    // Show more, with the folder's list in effect: the panel's own setting changes, and the vault's list stays.
+    const more = popupEl.querySelector('.dr-props-more');
+    assert.ok(more, 'status, off the folder’s list, waits under Show more');
+    const was = plugin.settings.panelPropertiesView;
+    click(more);
+    await settle();
+    assert.notStrictEqual(plugin.settings.panelPropertiesView, was);
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field', 'not overwritten by the folder’s');
+    // Unticked: back to the vault's.
+    m = open();
+    m.items.find((i) => i.title === 'Only in IR').click();
+    await settle();
+    assert.ok(!('IR' in plugin.settings.panelFolderViews));
+    popupEl.remove();
+  });
 
   await t("a note's property given to its whole album, asking before it replaces a note's own, with one Undo", async () => {
     const v = makeVault({
