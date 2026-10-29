@@ -1,0 +1,137 @@
+
+Execution of 2 workers started at 2026-10-29T01:14:27.679Z
+
+[1-0] RUNNING in chrome(150.0.7871.250) - file:///tests/obsidian/plugin.e2e.mjs
+[0-0] RUNNING in chrome(114.0.5735.289) - file:///tests/obsidian/plugin.e2e.mjs
+[0-0] 2026-10-29T01:14:40.939Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:40.960Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:41.344Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:41.367Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:41.390Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:41.410Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:41.673Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:41.699Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:42.873Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:42.897Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:42.914Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:14:42.931Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:51.968Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:51.992Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:54.221Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:14:54.242Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:16:15.046Z WARN webdriver: Request encountered a stale element - terminating request
+[1-0] 2026-10-29T01:16:15.066Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-10-29T01:16:25.102Z WARN webdriver: WebDriverError: element not interactable
+[0-0]   (Session info: chrome=114.0.5735.289) when running "element/174C0640E54D94E4476C50C0A574C121_element_520/click" with method "POST"
+[0-0] 2026-10-29T01:16:25.633Z WARN webdriver: WebDriverError: element not interactable
+[0-0]   (Session info: chrome=114.0.5735.289) when running "element/174C0640E54D94E4476C50C0A574C121_element_520/click" with method "POST"
+[1-0] PASSED in chrome(150.0.7871.250) - file:///tests/obsidian/plugin.e2e.mjs
+[0-0] PASSED in chrome(114.0.5735.289) - file:///tests/obsidian/plugin.e2e.mjs
+
+ "obsidian" Reporter:
+------------------------------------------------------------------
+Running: obsidian v1.14.5 (installer: v1.14.5, platform: linux)
+Session ID: 8e61d9042ec3d0dd299e3c649329e8c9
+
+» tests/obsidian/plugin.e2e.mjs
+Design Redux in Obsidian
+   ✓ loads, with its features running
+   ✓ shows one settings gear, in the sidebar header
+   ✓ finds the unofficial parts of Obsidian it relies on
+   ✓ draws its settings as four places and a look, by what they’re for
+   ✓ opens a folder as an album, with an Edit mode
+   ✓ holds the left panel and the album page still while nothing changes
+   ✓ keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text
+   ✓ keeps the ribbon’s buttons out of sight while they’re in the menu
+   ✓ renames a folder in Edit mode, and one press of Done finishes
+   ✓ groups its right-click entries, with New canvas under New
+   ✓ opens the Properties window as a list of properties, each tool a sheet over it
+   ✓ follows a long note in the reading outline, and a row goes to its heading
+   ✓ searches: words from a note show their passage; the note named for the query comes first, and Enter opens it
+   ✓ shows one page of a note with pages, in editing and in reading view
+   ✓ draws the page control as a segmented control, in light and dark
+   ✓ draws the nine components to their measures, in light and dark
+   ✓ adds a page to a plain note in one step and names it where it stands
+   ✓ gives notes an Apple-style look in type and spacing only, keeps room under them for the strip, and keeps the header in order
+   ✓ keeps a way back to a closed sidebar on an empty tab, with one content area and the strip down
+   ✓ shows a note picked in an album in its pane, and opens it on a double click
+   ✓ times a shelf of 50 and of 500 albums, and the sidebar beside them
+   ✓ times an album of 50 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ times an album of 500 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ times an album of 2000 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ opens a folder in a note’s path at the top as its collection in the library
+   ✓ opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading
+   ✓ offers Undo after a move, and it puts the note back
+   ✓ keeps the library index right as folders move, notes go and links change
+   ✓ reports what works on this version, and copies diagnostics
+   ✓ puts « » either side of the note in the strip
+   ✓ draws Home with its shelves
+   ✓ lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays
+   ✓ draws quiet links, keeps them off the graph and backlinks, and follows renames
+   ✓ draws graph links through the notes between, and lights the routes on hover
+   ✓ adds a footnote in place from a box at the cursor, keeping numbers in order
+   ✓ keeps citations off the page and lists them in a Footnotes view
+   ✓ renames and merges properties from Edit on the Properties screen
+   ✓ writes a property the same way in every note, where Obsidian lists it one way and notes another
+   ✓ routes graph links by a property where notes name what they sit under
+   ✓ shows a note's properties as a light inspector: the main ones, + to add, a short menu per row
+   ✓ sets a property by a rule when a note is moved into a folder, once, with Undo
+   ✓ takes snapshots of the sidebar, the album’s pane, the Edit tray and a narrow album, and holds up with reduced motion and forced colours
+   ✓ logged no errors of its own along the way
+
+43 passing (2m 25s)
+------------------------------------------------------------------
+Running: obsidian v1.7.7 (installer: v1.4.13, platform: linux)
+Session ID: b364109c2a21587ee9c1adef532b265a
+
+» tests/obsidian/plugin.e2e.mjs
+Design Redux in Obsidian
+   ✓ loads, with its features running
+   ✓ shows one settings gear, in the sidebar header
+   ✓ finds the unofficial parts of Obsidian it relies on
+   ✓ draws its settings as four places and a look, by what they’re for
+   ✓ opens a folder as an album, with an Edit mode
+   ✓ holds the left panel and the album page still while nothing changes
+   ✓ keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text
+   ✓ keeps the ribbon’s buttons out of sight while they’re in the menu
+   ✓ renames a folder in Edit mode, and one press of Done finishes
+   ✓ groups its right-click entries, with New canvas under New
+   ✓ opens the Properties window as a list of properties, each tool a sheet over it
+   ✓ follows a long note in the reading outline, and a row goes to its heading
+   ✓ searches: words from a note show their passage; the note named for the query comes first, and Enter opens it
+   ✓ shows one page of a note with pages, in editing and in reading view
+   ✓ draws the page control as a segmented control, in light and dark
+   ✓ draws the nine components to their measures, in light and dark
+   ✓ adds a page to a plain note in one step and names it where it stands
+   ✓ gives notes an Apple-style look in type and spacing only, keeps room under them for the strip, and keeps the header in order
+   ✓ keeps a way back to a closed sidebar on an empty tab, with one content area and the strip down
+   ✓ shows a note picked in an album in its pane, and opens it on a double click
+   ✓ times a shelf of 50 and of 500 albums, and the sidebar beside them
+   ✓ times an album of 50 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ times an album of 500 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ times an album of 2000 notes: each draw, what a redraw replaces, and whether focus holds
+   ✓ opens a folder in a note’s path at the top as its collection in the library
+   ✓ opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading
+   ✓ offers Undo after a move, and it puts the note back
+   ✓ keeps the library index right as folders move, notes go and links change
+   ✓ reports what works on this version, and copies diagnostics
+   ✓ puts « » either side of the note in the strip
+   ✓ draws Home with its shelves
+   ✓ lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays
+   ✓ draws quiet links, keeps them off the graph and backlinks, and follows renames
+   ✓ draws graph links through the notes between, and lights the routes on hover
+   ✓ adds a footnote in place from a box at the cursor, keeping numbers in order
+   ✓ keeps citations off the page and lists them in a Footnotes view
+   ✓ renames and merges properties from Edit on the Properties screen
+   ✓ writes a property the same way in every note, where Obsidian lists it one way and notes another
+   ✓ routes graph links by a property where notes name what they sit under
+   ✓ shows a note's properties as a light inspector: the main ones, + to add, a short menu per row
+   ✓ sets a property by a rule when a note is moved into a folder, once, with Undo
+   ✓ takes snapshots of the sidebar, the album’s pane, the Edit tray and a narrow album, and holds up with reduced motion and forced colours
+   ✓ logged no errors of its own along the way
+
+43 passing (2m 41.6s)
+
+
+Spec Files:	 2 passed, 2 total (100% completed) in 00:02:51  
+

@@ -1,0 +1,6 @@
+changed    album-narrow: 0.09% of pixels, within x 113–163, y 11–23
+unchanged  album-pane
+unchanged  edit-tray-forced-colors
+unchanged  edit-tray
+changed    left-sidebar-forced-colors: 0.22% of pixels, within x 89–138, y 448–460
+changed    left-sidebar: 0.22% of pixels, within x 89–138, y 448–460

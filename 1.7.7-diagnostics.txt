@@ -1,0 +1,19 @@
+Design Redux 3.0.34
+Obsidian 1.7.7 on desktop, Linux
+On: Appearance, Library, ReadingOutline, NotePage, ListKeys, SidebarDrop, ActionsMenu, PropertiesPanel, ContextStrip, HeaderSkip, MenuFilter, SettingsButton, CoverImages, CoverDrop, PropertyClipboard, AlbumProperty, AlbumStructure, SmartAlbums, LibraryCheck, AlbumRefactor, MarkedLists, Scripts, Footnotes, GraphPropertyFilter, GraphRoutes, NotePages, Diagnostics, BulkEditing, PropertySchemas, PropertyHistory, PropertyDates, PropertyLinks
+Off: OnePage, ImageRouter, QuietLinks, PropertyRules
+Settings: version 21
+
+Compatibility:
+  ✓ Grouped right-click entries (New ▸, Cover ▸)
+  ✓ Taking unwanted entries out of menus
+  ✓ Suggestions in settings fields
+  ✓ Property names and types in the property tools
+  ✓ Dropping a note or image from the file list onto the library or a cover
+  ✓ Listing tags, for a map of a tag
+  ✓ Knowing whether Canvas is switched on
+  · Graph links through the notes between
+  ✓ Keeping quiet links out of Obsidian’s count of links
+  ✓ The list after [[[ ahead of Obsidian’s
+
+Recent errors: none

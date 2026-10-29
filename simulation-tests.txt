@@ -1,0 +1,28 @@
+pass  test_affected_tests.js   2.1s  9 passed
+pass  test_album.js          6.7s  84 passed
+pass  test_audit.js          1.2s  18 passed
+pass  test_bulk.js          10.7s  82 passed
+pass  test_context_pack.js  11.0s  6 passed
+pass  test_css_owners.js     4.5s  7 passed
+pass  test_evals.js          0.2s  4 passed
+pass  test_filters.js        1.7s  38 passed
+pass  test_foldernav.js      1.1s  10 passed
+pass  test_footnotes.js      1.0s  25 passed
+pass  test_graph.js          0.9s  23 passed
+pass  test_layers.js         1.6s  3 passed
+pass  test_lifecycle.js      1.5s  6 passed
+pass  test_lists.js          1.0s  40 passed
+pass  test_mentions.js       1.0s  9 passed
+pass  test_mobile.js         6.5s  24 passed
+pass  test_onepage.js        0.2s  11 passed
+pass  test_preserve.js       0.1s  5 passed
+pass  test_qol.js            1.3s  22 passed
+pass  test_reorder.js        0.8s  10 passed
+pass  test_routes.js         1.1s  18 passed
+pass  test_scripts.js        0.8s  19 passed
+pass  test_search.js         1.4s  12 passed
+pass  test_sidebar.js        1.1s  44 passed
+pass  test_snapshots.js      0.1s  3 passed
+pass  test_styles.js         0.3s  4 passed
+
+26 of 26 suites passed in 17.2s
