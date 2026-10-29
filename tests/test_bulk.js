@@ -1050,6 +1050,15 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(modal.titleEl.querySelector('.dr-sheet-back'));
     assert.ok(modal.tool instanceof R.PropertyListTool);
 
+    // Its menu, the same as on its page in the library: what changes it, then taking it out, apart.
+    click(first.querySelector('.dr-plist-more'));
+    const m = menus.pop();
+    assert.deepStrictEqual(m.items.map((i) => i.title), ['Rename', 'Change type…', 'Merge with…', 'Clean up values…', 'Fill in the 1 without it…', 'Remove from these notes…'], 'a folder chosen: these notes');
+    assert.deepStrictEqual(m.items.map((i) => i.section), ['action', 'action', 'action', 'action', 'action', 'danger']);
+    m.items.find((i) => i.title === 'Merge with…').click();
+    assert.ok(modal.tool instanceof R.MergePropertiesModal, 'each tool a sheet here');
+    click(modal.titleEl.querySelector('.dr-sheet-back'));
+
     // Two picked: Remove, and Merge.
     click(rows()[1].querySelector('.dr-plist-pick'));
     assert.deepStrictEqual(foot(), ['Clear', 'Remove', 'Merge…']);

@@ -714,6 +714,20 @@ t('a property is a page, as an artist\'s: its values as covers or a list, each o
     const menu = menus.pop();
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Open', 'Open in new tab', 'Rename value…', 'Merge with…', 'Colour and icon…', 'Copy value', 'Narrow the library to these']);
 
+    // The property's own menu: the same as in the Properties window, across the vault.
+    const tools = [];
+    const real = plugin.feature;
+    plugin.feature = () => ({ openRenameProperty: (n) => tools.push(['rename', n]), openChangeType: (n) => tools.push(['type', n]), openMerge: (n) => tools.push(['merge', n]), openTools: (t, tab, a) => tools.push([tab, a.key]), openMissing: (t, n) => tools.push(['missing', n]), openRemove: (t, n) => tools.push(['remove', n]) });
+    view.contentEl.querySelector('.dr-prop-page-title').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 1, clientY: 1 }));
+    const own = menus.pop();
+    // Fill in, with the count the page gives under Without it, while there are any.
+    const without = view.screen().inspect('status').without;
+    const fill = without ? [`Fill in the ${without} without it…`] : [];
+    assert.deepStrictEqual(own.items.map((i) => i.title), ['Rename', 'Change type…', 'Merge with…', 'Clean up values…', ...fill, 'Remove from every note…']);
+    own.items.forEach((i) => i.click());
+    assert.deepStrictEqual(tools.map((x) => x[0]), ['rename', 'type', 'merge', 'cleanup', ...(without ? ['missing'] : []), 'remove']);
+    plugin.feature = real;
+
     // The list: by name, or by how many notes use each.
     const sort = view.contentEl.querySelector('.dr-prop-sort');
     assert.ok(sort.textContent.startsWith('Sort: Name'));

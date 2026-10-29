@@ -15,6 +15,7 @@ import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { copyText, EMPTY_VALUE, VALUE_GRID_MOST, valueArt } from './110-browse-screens.js';
+import { addPropertyEntries } from '../ui/247-property-menu.js';
 import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
 import { renamePropertyInPlace } from '../tools/290-bulk-engine.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
@@ -610,24 +611,23 @@ export class PropertiesScreen extends BrowseScreen {
     });
   }
 
-  /** A property's menu: its values, then what changes it everywhere, and copying its name. */
+  /** A property's menu: the same as in the Properties window, each tool across the vault. Its values are a click away. */
   propertyMenu(evt, prop) {
-    const view = this.view;
     evt.preventDefault();
+    const bulk = this.plugin.feature(BulkEditing);
+    if (!bulk) return;
     const menu = new Menu();
     const name = prop.name;
-    const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
-    add('View values', 'layout-grid', 'open', () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
-    const bulk = this.plugin.feature(BulkEditing);
-    if (bulk) {
-      const root = this.app.vault.getRoot();
-      add('Rename property…', 'pencil', 'action', () => bulk.openRenameProperty(name));
-      add('Merge property…', 'git-merge', 'action', () => bulk.openMerge([name]));
-      add('Change type…', 'shapes', 'action', () => bulk.openChangeType(name));
-      add('Find notes missing it…', 'list-checks', 'action', () => bulk.openMissing([root], name));
-    }
-    add('Copy property name', 'copy', 'action', () => copyText(name));
-    if (bulk) add('Remove from every note…', 'list-minus', 'remove', () => bulk.openRemove([this.app.vault.getRoot()], [name]));
+    const root = this.app.vault.getRoot();
+    const open = {
+      rename: () => bulk.openRenameProperty(name),
+      type: () => bulk.openChangeType(name),
+      merge: () => bulk.openMerge([name]),
+      cleanup: () => bulk.openTools([root], 'cleanup', { key: name }),
+      missing: () => bulk.openMissing([root], name),
+      remove: () => bulk.openRemove([root], [name]),
+    };
+    addPropertyEntries(menu, { name, missing: this.inspect(prop.key).without }, (tool) => open[tool]());
     showMenuAt(menu, evt);
   }
 }
