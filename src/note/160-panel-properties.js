@@ -16,11 +16,9 @@ import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { optionFor } from '../core/088-property-options.js';
 import { Library } from '../library/130-browse-filters.js';
-import { LinkNotePicker, NamePrompt } from '../ui/230-pickers.js';
+import { LinkNotePicker } from '../ui/230-pickers.js';
 import { paintValue, valueOptionsOn } from '../ui/248-value-options.js';
-import { AlbumProperty } from '../library/255-album-property.js';
 import { QuietLinks } from './265-quiet-links.js';
-import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 /** The names in a comma list, lower case. */
 export const propNames = (text) =>
@@ -145,8 +143,8 @@ export class PropertiesSection extends PanelSection {
         onActivate(head, () => {
           if (folded.has(title)) folded.delete(title);
           else folded.add(title);
-          settings.panelFoldedGroups = Array.from(folded);
-          this.plugin.saveData(settings);
+          this.settings.panelFoldedGroups = Array.from(folded);
+          this.plugin.saveData(this.settings);
           this.redraw();
         });
       }
@@ -162,8 +160,9 @@ export class PropertiesSection extends PanelSection {
       more.createSpan({ text: compact ? `Show ${rest} more` : 'Show fewer' });
       setIcon(more.createSpan({ cls: 'dr-props-more-icon' }), compact ? 'chevron-down' : 'chevron-up');
       onActivate(more, async () => {
-        settings.panelPropertiesView = compact ? 'all' : 'compact';
-        await this.plugin.saveData(settings);
+        // The plugin's own settings: `settings` may be a copy carrying a folder's main properties.
+        this.settings.panelPropertiesView = compact ? 'all' : 'compact';
+        await this.plugin.saveData(this.settings);
         this.redraw();
       });
     }
@@ -207,7 +206,7 @@ export class PropertiesSection extends PanelSection {
       this.redraw();
     });
     const more = head.createDiv({ cls: 'clickable-icon dr-props-menu' });
-    asButton(more, 'How properties show');
+    asButton(more, 'Main properties');
     setIcon(more, 'ellipsis');
     onActivate(more, (evt) => {
       if (evt && evt.stopPropagation) evt.stopPropagation();
@@ -215,41 +214,64 @@ export class PropertiesSection extends PanelSection {
     });
   }
 
-  /** How the panel shows properties: all or the main ones, grouped or not, and the settings for both. */
+  /**
+   * Which of this note's properties lead: each a tick, the main ones
+   * ticked, a click adding or taking one off the list in effect here —
+   * the nearest folder's own, or the vault's. Then whether this folder
+   * keeps a list of its own, grouping where groups are set, and the
+   * settings. Showing all or only the main ones is the panel's own
+   * Show more and Show fewer, so it isn't here too.
+   */
   showViewMenu(evt) {
     const menu = new Menu();
-    const view = this.settings.panelPropertiesView || 'compact';
-    const set = async (key, value) => {
-      this.settings[key] = value;
-      await this.plugin.saveData(this.settings);
+    const settings = this.settings;
+    const at = this.file ? panelViewFolder(settings, this.file) : null;
+    const main = propNames(this.viewSettings().panelPrimaryProps);
+    const listed = String(this.viewSettings().panelPrimaryProps || '').split(',').map((n) => n.trim()).filter(Boolean);
+    const save = async () => {
+      await this.plugin.saveData(settings);
       this.redraw();
     };
-    menu.addItem((item) => item.setTitle('Show all properties').setChecked(view === 'all').setSection('view').onClick(() => set('panelPropertiesView', view === 'all' ? 'compact' : 'all')));
-    if (propertyGroups(this.settings).length) {
-      const on = this.settings.panelPropertyGroups === 'on';
-      menu.addItem((item) => item.setTitle('Group properties').setChecked(on).setSection('view').onClick(() => set('panelPropertyGroups', on ? 'off' : 'on')));
-    }
-    // The main properties kept for the folder the note is in, the folders below taking them too.
+    const keep = (names) => {
+      const text = names.join(', ');
+      if (at) settings.panelFolderViews = Object.assign({}, settings.panelFolderViews, { [at]: { main: text } });
+      else settings.panelPrimaryProps = text;
+      return save();
+    };
+    Object.keys(this.frontmatter)
+      .filter((k) => k !== 'position')
+      .forEach((key) => {
+        const on = main.indexOf(key.toLowerCase()) !== -1;
+        menu.addItem((item) =>
+          item
+            .setTitle(key)
+            .setChecked(on)
+            .setSection('main')
+            .onClick(() => keep(on ? listed.filter((n) => n.toLowerCase() !== key.toLowerCase()) : listed.concat(key)))
+        );
+      });
+    // A list of the folder's own, or the vault's: the folder that has one, else the note's own.
     const folder = this.file && this.file.parent;
-    if (folder) {
-      const path = folder.path || '/';
-      const views = this.settings.panelFolderViews || {};
-      const own = views[path] && views[path].main;
-      const keep = async (main) => {
-        const next = Object.assign({}, views);
-        if (main && main.trim()) next[path] = { main: propNames(main).join(', ') };
-        else delete next[path];
-        this.settings.panelFolderViews = next;
-        await this.plugin.saveData(this.settings);
-        this.redraw();
-      };
+    const own = at || (folder && folder.path && folder.path !== '/' ? folder.path : null);
+    if (own) {
+      const name = own.split('/').pop();
       menu.addItem((item) =>
         item
-          .setTitle('Main properties for this folder…')
-          .setSection('settings')
-          .onClick(() => new NamePrompt(this.app, `Main properties in ${folder.name || this.app.vault.getName()}`, 'Their names, by commas, in order', keep, { value: this.viewSettings().panelPrimaryProps || '', button: 'Keep', allowEmpty: true }).open())
+          .setTitle(`Only in ${name}`)
+          .setChecked(!!at)
+          .setSection('scope')
+          .onClick(() => {
+            const views = Object.assign({}, settings.panelFolderViews);
+            if (at) delete views[at];
+            else views[own] = { main: listed.join(', ') };
+            settings.panelFolderViews = views;
+            return save();
+          })
       );
-      if (own) menu.addItem((item) => item.setTitle('Main properties as the vault’s').setSection('settings').onClick(() => keep('')));
+    }
+    if (propertyGroups(settings).length) {
+      const on = settings.panelPropertyGroups === 'on';
+      menu.addItem((item) => item.setTitle('Group properties').setChecked(on).setSection('view').onClick(() => ((settings.panelPropertyGroups = on ? 'off' : 'on'), save())));
     }
     if (typeof this.plugin.openSettingsAt === 'function') {
       menu.addItem((item) => item.setTitle('Property settings…').setSection('settings').onClick(() => this.plugin.openSettingsAt('panelPrimaryProps')));
@@ -680,11 +702,13 @@ export class PropertiesSection extends PanelSection {
   }
 
   /**
-   * A property's menu, kept to five: its type, its name, the notes that
-   * share it, what reaches other notes — all a press further — and taking
-   * it off this note. Moving is the grip's (and Alt+arrows'); on touch,
-   * where dragging is harder to aim, it's here too. A note a value names
-   * opens as its link does.
+   * A property's menu: this note's property, and one step to the rest.
+   * Its type (the one choice, so the one submenu), its name, a note to
+   * link where it names notes, and taking it off. Everything that reaches
+   * other notes — the notes with it, its values, renaming, merging or
+   * removing it everywhere — is on its page in the library, a press away.
+   * Moving is the grip's (and Alt+arrows'); on touch, where dragging is
+   * harder to aim, it's here too.
    */
   showMenu(key, anchorEl) {
     const menu = new Menu();
@@ -748,64 +772,21 @@ export class PropertiesSection extends PanelSection {
       });
     }
 
-    // The notes that share it.
-    const find = this.findEntries(key);
-    const finds = find.values.map(([value, run]) => [find.values.length === 1 ? 'With this value' : `With “${value}”`, find.values.length === 1 ? 'Notes with this value' : `Notes with “${value}”`, run]);
-    if (find.all) finds.push(['With this property', 'Notes with this property', find.all]);
-    if (finds.length) group('Find notes', 'search', 'find', finds);
-
-    // What changes other notes: each shown before it's done.
-    const manage = this.manageEntries(key).map(([short, long, , run]) => [short, long, run]);
-    if (manage.length) group('Across the vault', 'globe', 'vault', manage);
+    // The rest of the vault: the property's page, its notes and values, and the tools that change them all.
+    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
+    if (library && library.enabled) {
+      menu.addItem((item) =>
+        sectioned(item, 'library')
+          .setTitle('Show in library')
+          .setIcon('library')
+          .onClick(() => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: null }))
+      );
+    }
 
     menu.addItem((item) => sectioned(item, 'remove').setTitle('Remove').setIcon('trash-2').onClick(() => this.remove(key)));
 
     const r = anchorEl.getBoundingClientRect();
     menu.showAtPosition({ x: r.left, y: r.bottom + 4 });
-  }
-
-  /**
-   * The notes that share it, in the Properties screen: `values`, each of
-   * this note's values — a list's first three — as [value, run]; and
-   * `all`, every note with the property. None without the library.
-   */
-  findEntries(key) {
-    const out = { values: [], all: null };
-    const library = this.plugin.feature ? this.plugin.feature(Library) : null;
-    if (!library || !library.enabled) return out;
-    // The Properties screen knows a property by Obsidian's key for it, in lower case.
-    const open = (value) => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: value || null });
-    const raw = noteProps(this.app, this.file)[key];
-    (Array.isArray(raw) ? raw : [raw])
-      .map((v) => (v === null || v === undefined || typeof v === 'object' ? '' : String(v)))
-      .map((v) => v.replace(/^\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]$/, '$1').trim())
-      .filter((v) => v && v.length <= 60)
-      .slice(0, 3)
-      .forEach((v) => out.values.push([v, () => open(v)]));
-    out.all = () => open(null);
-    return out;
-  }
-
-  /**
-   * What changes other notes, each [short title, title when not nested,
-   * icon, run] — each shown first, with Undo: renaming it everywhere,
-   * applying it to the collection, merging it with another property,
-   * taking it out of every note.
-   */
-  manageEntries(key) {
-    const out = [];
-    const bulk = this.plugin.feature ? this.plugin.feature(BulkEditing) : null;
-    if (bulk) out.push(['Rename everywhere…', `Rename ${key} everywhere…`, 'pencil', () => bulk.openRenameProperty(key)]);
-    const album = this.plugin.feature ? this.plugin.feature(AlbumProperty) : null;
-    const file = this.file;
-    if (album && album.enabled && file && album.albumNotes(file).length) {
-      out.push([`Apply to ${album.albumName(file)}…`, `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);
-    }
-    if (bulk) {
-      out.push(['Merge with…', `Merge ${key} with…`, 'git-merge', () => bulk.openMerge([key])]);
-      out.push(['Remove everywhere…', `Remove ${key} everywhere…`, 'list-minus', () => bulk.openRemove([this.app.vault.getRoot()], [key])]);
-    }
-    return out;
   }
 
   /**

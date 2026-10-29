@@ -62,7 +62,7 @@ class Menu {
     const item = { title: '', section: null };
     item.setTitle = (v) => { item.title = v; return item; };
     item.setIcon = () => item;
-    item.setChecked = () => item;
+    item.setChecked = (c) => { item.checked = !!c; return item; };
     item.setSection = (v) => { item.section = v; return item; };
     item.onClick = (f) => { item.click = f; return item; };
     cb(item); this.items.push(item); return this;
@@ -1050,6 +1050,15 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(modal.titleEl.querySelector('.dr-sheet-back'));
     assert.ok(modal.tool instanceof R.PropertyListTool);
 
+    // Its menu, the same as on its page in the library: what changes it, then taking it out, apart.
+    click(first.querySelector('.dr-plist-more'));
+    const m = menus.pop();
+    assert.deepStrictEqual(m.items.map((i) => i.title), ['Rename', 'Change type…', 'Merge with…', 'Clean up values…', 'Fill in the 1 without it…', 'Remove from these notes…'], 'a folder chosen: these notes');
+    assert.deepStrictEqual(m.items.map((i) => i.section), ['action', 'action', 'action', 'action', 'action', 'danger']);
+    m.items.find((i) => i.title === 'Merge with…').click();
+    assert.ok(modal.tool instanceof R.MergePropertiesModal, 'each tool a sheet here');
+    click(modal.titleEl.querySelector('.dr-sheet-back'));
+
     // Two picked: Remove, and Merge.
     click(rows()[1].querySelector('.dr-plist-pick'));
     assert.deepStrictEqual(foot(), ['Clear', 'Remove', 'Merge…']);
@@ -1141,7 +1150,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(offTag.items.length, 0);
   });
 
-  await t("the properties panel's menu: this note's choices, then what reaches the vault, then Remove from note", () => {
+  await t("the properties panel's menu: this note's choices, one step to the property's page for the rest, then Remove", () => {
     const v = makeVault({ 'a.md': note({ domain: ['[[Politics]]', 'Law'] }) });
     const { plugin } = makePlugin(v);
     // The library, to see the notes using it.
@@ -1156,30 +1165,21 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-key-icon'));
     const m = menus.pop();
     const sections = m.items.map((i) => i.section).filter((x, i, all) => all.indexOf(x) === i);
-    assert.deepStrictEqual(sections, ['edit', 'find', 'vault', 'remove'], 'by how far each reaches');
+    assert.deepStrictEqual(sections, ['edit', 'library', 'remove'], 'by how far each reaches');
     const titles = (section) => m.items.filter((i) => i.section === section).map((i) => i.title);
-    // Menus that can't open beside one another list a group's entries in place, under longer names.
-    // Five entries where menus open beside one another: Type ›, Rename, Find notes ›, Across the vault ›, Remove.
+    // Menus that can't open beside one another list Type's entries in place, under longer names.
+    // Where menus open beside one another: Type ›, Rename, Show in library, Remove — one submenu.
     assert.deepStrictEqual(titles('edit').filter((t) => !t.startsWith('Type: ')), ['Rename', 'Link a note…'], 'moving is the grip’s, with a pointer; a property naming notes links another');
     assert.ok(titles('edit').includes('Type: Text'));
-    assert.deepStrictEqual(titles('find'), ['Notes with “Politics”', 'Notes with “Law”', 'Notes with this property']);
-    assert.deepStrictEqual(titles('vault'), ['Rename domain everywhere…', 'Merge domain with…', 'Remove domain everywhere…']);
+    assert.deepStrictEqual(titles('library'), ['Show in library'], 'the notes with it, its values and the vault-wide tools: its page');
     assert.deepStrictEqual(titles('remove'), ['Remove']);
     assert.strictEqual(m.items[m.items.length - 1].title, 'Remove');
-    m.items.find((i) => i.title === 'Notes with “Politics”').click();
-    assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: 'Politics' });
-    m.items.find((i) => i.title === 'Notes with this property').click();
+    assert.ok(!m.items.some((i) => /everywhere|Merge|Notes with/.test(i.title)), 'nothing here reaches other notes');
+    m.items.find((i) => i.title === 'Show in library').click();
     assert.deepStrictEqual(browsed.pop(), { mode: 'properties', property: 'domain', value: null });
     // The row's ··· and a right-click open the same menu.
     click(popupEl.querySelector('.dr-row[data-key="domain"] .dr-row-more'));
     assert.deepStrictEqual(menus.pop().items.map((i) => i.title), m.items.map((i) => i.title));
-    const item = m.items.find((i) => i.title === 'Rename domain everywhere…');
-    assert.ok(item, `not offered: ${m.items.map((i) => i.title)}`);
-    item.click();
-    const opened = modals.pop();
-    assert.ok(opened instanceof R.RenamePropertyModal);
-    assert.strictEqual(opened.from, 'domain');
-    opened.close();
     popupEl.remove();
   });
 
@@ -1279,7 +1279,55 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
   });
 
 
-  await t("a property's menu sets its value for the whole album, asking before it replaces a note's own, with one Undo", async () => {
+  await t("the panel's own menu: this note's properties to tick as main, the folder's list or the vault's, then grouping", async () => {
+    const v = makeVault({ 'IR/a.md': note({ domain: 'Law', status: 'draft', field: 'x' }) });
+    const { plugin } = makePlugin(v);
+    plugin.settings.panelPrimaryProps = 'type, domain, status';
+    const popupEl = document.body.appendChild(document.createElement('div'));
+    const section = new R.PropertiesSection({ plugin, popupEl });
+    section.mount(popupEl, v.file('IR/a.md'));
+    const open = () => {
+      click(popupEl.querySelector('.dr-props-menu'));
+      return menus.pop();
+    };
+    let m = open();
+    const main = () => m.items.filter((i) => i.section === 'main').map((i) => `${i.title}${i.checked ? ' ✓' : ''}`);
+    assert.deepStrictEqual(main(), ['domain ✓', 'status ✓', 'field'], 'its own properties, the main ones ticked');
+    assert.ok(!m.items.some((i) => /Show all|…$/.test(i.title) && i.section !== 'settings'), 'no typing a list, no Show all: the panel has Show more');
+    // Ticked: on the vault's list, at its end.
+    m.items.find((i) => i.title === 'field').click();
+    await settle();
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field');
+    // Only in IR: the folder keeps a list of its own, starting from the one in effect; ticks change it alone.
+    m = open();
+    const only = m.items.find((i) => i.title === 'Only in IR');
+    assert.ok(only && !only.checked);
+    only.click();
+    await settle();
+    assert.deepStrictEqual(plugin.settings.panelFolderViews.IR, { main: 'type, domain, status, field' });
+    m = open();
+    assert.ok(m.items.find((i) => i.title === 'Only in IR').checked);
+    m.items.find((i) => i.title === 'status').click();
+    await settle();
+    assert.strictEqual(plugin.settings.panelFolderViews.IR.main, 'type, domain, field');
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field', 'the vault’s list left alone');
+    // Show more, with the folder's list in effect: the panel's own setting changes, and the vault's list stays.
+    const more = popupEl.querySelector('.dr-props-more');
+    assert.ok(more, 'status, off the folder’s list, waits under Show more');
+    const was = plugin.settings.panelPropertiesView;
+    click(more);
+    await settle();
+    assert.notStrictEqual(plugin.settings.panelPropertiesView, was);
+    assert.strictEqual(plugin.settings.panelPrimaryProps, 'type, domain, status, field', 'not overwritten by the folder’s');
+    // Unticked: back to the vault's.
+    m = open();
+    m.items.find((i) => i.title === 'Only in IR').click();
+    await settle();
+    assert.ok(!('IR' in plugin.settings.panelFolderViews));
+    popupEl.remove();
+  });
+
+  await t("a note's property given to its whole album, asking before it replaces a note's own, with one Undo", async () => {
     const v = makeVault({
       'IR/IR.md': note({ cover: 'x.png' }),
       'IR/a.md': note({ status: 'done' }),
@@ -1293,15 +1341,11 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     plugin.features.push(album);
     assert.strictEqual(R.DEFAULTS.propertyForAlbum, true);
 
-    // Offered on the row's menu, under Manage across vault, by the collection's name.
-    const popupEl = document.body.appendChild(document.createElement('div'));
-    const section = new R.PropertiesSection({ plugin, popupEl });
-    section.mount(popupEl, v.file('IR/a.md'));
-    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    const item = menus.pop().items.find((i) => i.title === 'Apply status to all of IR…');
-    assert.ok(item, 'not offered');
+    // A command on the note: its one property, straight to it.
+    const action = album.actions().find((x) => x.id === 'property-to-album');
+    assert.ok(action.when({ file: v.file('IR/a.md') }), 'not offered');
     const before = v.text('IR/c.md');
-    item.click();
+    action.run({ file: v.file('IR/a.md') });
     await settle();
     // c has its own: asked first. Cancel leaves everything.
     let ask = modals.pop();
@@ -1324,11 +1368,9 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     await bulk.undo();
     assert.strictEqual(v.text('IR/c.md'), before);
 
-    // Off: not on the menu.
+    // Off: not offered.
     plugin.settings.propertyForAlbum = false;
-    click(popupEl.querySelector('.dr-row[data-key="status"] .dr-key-icon'));
-    assert.ok(!menus.pop().items.some((i) => i.title.startsWith('Apply ')));
-    popupEl.remove();
+    assert.ok(!action.when({ file: v.file('IR/a.md') }));
   });
 
   await t('the commands are there, and Undo only when there is something to undo', async () => {
