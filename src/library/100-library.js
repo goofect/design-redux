@@ -577,11 +577,16 @@ export class LibraryView extends ItemView {
       here.addClass('is-active');
       here.setAttribute('aria-current', 'page');
     }
-    this.placeMarker(here);
+    // Placed once the rows are laid out, rather than laying them out now to measure.
+    const win = this.contentEl.ownerDocument.defaultView;
+    if (win && typeof win.requestAnimationFrame === 'function') win.requestAnimationFrame(() => this.placeMarker(here));
+    else this.placeMarker(here);
   }
 
   placeMarker(row) {
     const root = this.contentEl;
+    // Drawn again since it was asked for: the later ask places it.
+    if (row && !row.isConnected) return;
     if (!this.marker) {
       this.marker = root.ownerDocument.createElement('div');
       this.marker.className = 'dr-lib-marker';

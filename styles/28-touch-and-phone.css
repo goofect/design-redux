@@ -164,24 +164,16 @@ body.is-phone .dr-browse-search input {
 /* -- the album page ------------------------------------------------------- */
 
 body.is-phone .dr-detail {
-  flex-direction: column;
-  align-items: center;
-  gap: var(--dr-space-4);
-  margin-bottom: calc(var(--dr-u) * 4.5);
-  text-align: center;
+  gap: var(--dr-space-3);
+  margin-bottom: var(--dr-space-5);
 }
 
 body.is-phone .dr-detail-art {
-  width: min(250px, 66vw);
-  height: min(250px, 66vw);
-}
-
-body.is-phone .dr-detail-sub.is-link {
-  align-self: center;
+  width: 44px;
+  height: 44px;
 }
 
 body.is-phone .dr-detail-info {
-  align-items: center;
   width: 100%;
 }
 
@@ -189,18 +181,9 @@ body.is-phone .dr-detail-title {
   font-size: var(--dr-title-size);
 }
 
-body.is-phone .dr-detail-sub {
-  font-size: 1.1em;
-}
-
-body.is-phone .dr-detail-meta {
-  margin-top: calc(var(--dr-u) * 1.5);
-}
-
 body.is-phone .dr-detail-actions {
   width: 100%;
-  gap: var(--dr-space-3);
-  margin-top: calc(var(--dr-u) * 4.5);
+  gap: var(--dr-space-2);
 }
 
 body.is-phone .dr-detail-action {

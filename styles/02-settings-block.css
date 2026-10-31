@@ -31,12 +31,12 @@ settings:
         format: px
     -
         id: dr-album-art-size
-        title: Album cover size
-        description: The large cover at the top of an album.
+        title: Collection cover size
+        description: The cover beside a collection's title.
         type: variable-number-slider
-        default: 200
-        min: 160
-        max: 440
+        default: 56
+        min: 32
+        max: 240
         step: 10
         format: px
     -

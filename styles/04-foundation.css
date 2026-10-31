@@ -102,7 +102,7 @@ body {
   --dr-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --dr-radius-cover: var(--dr-cover-radius, var(--radius-m, 8px));
 
-  --dr-display-size: 2.5em;
+  --dr-display-size: 1.75em;
   --dr-display-weight: var(--font-semibold, 600);
   --dr-title-size: 1.5em;
   --dr-heading-size: 1.25em;

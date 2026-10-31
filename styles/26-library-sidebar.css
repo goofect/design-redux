@@ -76,7 +76,6 @@
   font-size: var(--font-ui-small);
   cursor: pointer;
   user-select: none;
-  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 /* The marker: under the rows, moved to the one where you are. While it's

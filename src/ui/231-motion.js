@@ -117,20 +117,26 @@ export function transitionScreen(el, update, opts = {}) {
 
 /**
  * Rows that change place glide from where they were: notes where each element matching
- * selector in container is, makes the change, then moves each back and lets it go.
+ * selector in container is, makes the change, then moves each back and lets it go. Rows are
+ * matched by their data-path where they have one, so a row drawn again in its new place still
+ * glides from its old one. Only what's on screen moves; a long list's far rows just arrive.
  */
 export function flip(container, selector, mutate) {
   if (!container || motionLevel(container) !== 'full') return mutate();
-  const els = Array.from(container.querySelectorAll(selector));
-  const before = new Map(els.map((el) => [el, el.getBoundingClientRect().top]));
+  const keyOf = (el) => (el.dataset && el.dataset.path) || el;
+  const before = new Map(Array.from(container.querySelectorAll(selector)).map((el) => [keyOf(el), el.getBoundingClientRect().top]));
   const result = mutate();
   const duration = ms(container, '--dr-dur-move');
   const easing = token(container, '--dr-ease-out') || 'ease-out';
   if (!duration) return result;
-  els.forEach((el) => {
-    if (!el.isConnected || !canAnimate(el)) return;
-    const dy = before.get(el) - el.getBoundingClientRect().top;
-    if (Math.abs(dy) > 0.5) track(el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration, easing }));
+  const view = container.getBoundingClientRect();
+  const seen = (top) => top > view.top - view.height && top < view.bottom + view.height;
+  Array.from(container.querySelectorAll(selector)).forEach((el) => {
+    const was = before.get(keyOf(el));
+    if (was === undefined || !canAnimate(el)) return;
+    const now = el.getBoundingClientRect().top;
+    const dy = was - now;
+    if (Math.abs(dy) > 0.5 && (seen(was) || seen(now))) track(el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration, easing }));
   });
   return result;
 }

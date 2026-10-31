@@ -14,6 +14,7 @@ import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
+import { flip } from '../ui/231-motion.js';
 import { paintValue } from '../ui/248-value-options.js';
 import { ALBUM_LAYOUTS, AlbumStructure } from './257-album-structure.js';
 import { SmartAlbums } from './258-smart-albums.js';
@@ -182,6 +183,11 @@ export class BrowseSorting extends ItemView {
     });
   }
 
+  /** Drawn again in a new order: the rows glide from where they were to where they are now. */
+  renderSorted() {
+    flip(this.contentEl, '.dr-track, .dr-tr:not(.dr-th), .dr-card', () => this.render());
+  }
+
   /** Where a screen has nothing: a quiet icon, why, and at most one thing to do. */
   emptyState(root, text, icon, action) {
     const box = root.createDiv({ cls: 'dr-empty' });
@@ -339,7 +345,7 @@ export class BrowseSorting extends ItemView {
           .setChecked(current === key)
           .onClick(() => {
             this.setSort(key);
-            redraw();
+            this.renderSorted();
           })
       )
     );

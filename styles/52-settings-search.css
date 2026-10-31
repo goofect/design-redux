@@ -104,9 +104,11 @@
 }
 
 /* What's picked, wherever it's listed. */
+/* What's picked: the accent's tint, and a bar at its edge, so it isn't told by colour alone. */
 .dr-track.is-selected,
 .dr-tr.is-selected {
-  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  background-color: var(--dr-accent-soft);
+  box-shadow: inset 3px 0 0 var(--interactive-accent);
 }
 
 .dr-card.is-selected .dr-card-art {

@@ -349,14 +349,10 @@ export class BrowseAlbum extends BrowsePreview {
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
-    // The cover's own colours, blurred, behind the header — as the
-    // reference tints an album's page with its artwork.
-    const glow = head.createDiv({ cls: 'dr-detail-glow' });
+    // The cover, small beside the title: a mark to know it by, and where an image is dropped.
     const art = head.createDiv({ cls: 'dr-detail-art' });
-    [glow, art].forEach((el) => {
-      if (folder) drawFolderArt(this.plugin, el, folder);
-      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
-    });
+    if (folder) drawFolderArt(this.plugin, art, folder);
+    else this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
     // An image dropped here — or pasted, once it's clicked — becomes the album's cover.
     if (folder && folder.path !== '/') {
       art.dataset.coverFolder = folder.path;

@@ -249,13 +249,10 @@ body.dr-glass .canvas-controls .canvas-control-group {
   max-width: 100%;
   margin: var(--dr-space-4) auto 0;
   padding: var(--dr-space-1);
-  border-radius: var(--dr-radius-pill);
-  background: var(--dr-float-bg);
-  border: 1px solid var(--background-modifier-border);
-  box-shadow: var(--dr-float-shadow);
-  backdrop-filter: blur(var(--dr-glass-blur));
-  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
-  font-family: var(--dr-font-ui);
+  border-radius: var(--dr-radius-lg);
+  background: var(--dr-raised);
+  border: none;
+  box-shadow: 0 0 0 1px var(--dr-separator), var(--dr-shadow-md);
   font-size: var(--font-ui-small);
 }
 
@@ -265,13 +262,13 @@ body.dr-glass .canvas-controls .canvas-control-group {
 
 /* It rises into place once, when the first note is ticked. */
 .dr-bulk-bar.is-arriving {
-  animation: dr-tray-in var(--dr-dur-slow) var(--dr-ease-move);
+  animation: dr-tray-in var(--dr-dur-page) var(--dr-ease-out);
 }
 
 @keyframes dr-tray-in {
   from {
     opacity: 0;
-    transform: translateY(var(--dr-space-3));
+    transform: translateY(calc(var(--dr-rise) * 3));
   }
 }
 
