@@ -377,7 +377,7 @@
 
 .dr-shelf-more {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -473,7 +473,7 @@ body.dr-single-area .status-bar {
 
 .dr-search-section-count {
   margin-left: var(--dr-space-2);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
   font-variant-numeric: tabular-nums;
 }
@@ -547,7 +547,7 @@ body.dr-single-area .status-bar {
 
 .dr-search-text-status {
   padding: var(--dr-space-3) 2px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
@@ -583,7 +583,7 @@ body.dr-single-area .status-bar {
 
 .dr-recent-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-recent-icon .svg-icon {

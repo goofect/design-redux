@@ -34,7 +34,7 @@
 .dr-lib-fold-icon {
   display: inline-flex;
   margin-left: auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-lib-fold-icon .svg-icon {
@@ -290,7 +290,7 @@
 }
 
 .dr-lib-row.is-missing .dr-lib-icon {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-lib-row.is-missing .dr-lib-icon .svg-icon {
@@ -304,7 +304,7 @@
 
 .dr-lib-empty {
   padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 

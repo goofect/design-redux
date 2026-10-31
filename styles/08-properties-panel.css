@@ -101,7 +101,7 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
 
 .dr-panel-dock-empty-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-panel-dock-empty-icon .svg-icon {
@@ -217,7 +217,7 @@ body.dr-props-hide-native .workspace-split.mod-root .markdown-reading-view .meta
   top: 10px;
   left: -13px;
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
   opacity: 0;
   cursor: grab;
   touch-action: none;
@@ -354,14 +354,14 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 .dr-props-popup .dr-props-count {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 .dr-props-popup .dr-props-chevron,
 .dr-props-popup .dr-row-group-chevron {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-props-popup .dr-props-chevron .svg-icon,
@@ -391,7 +391,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   gap: var(--dr-space-1);
   cursor: pointer;
   margin: var(--dr-space-4) 0 2px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold, 600);
   letter-spacing: 0.04em;
@@ -417,7 +417,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 .dr-props-popup .dr-add-heading {
   padding: var(--dr-space-1) var(--dr-space-2) 2px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold, 600);
   letter-spacing: 0.04em;
@@ -542,7 +542,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   display: inline-flex;
   flex: 0 0 auto;
   order: -1;
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: pointer;
   opacity: 0;
   transition: opacity var(--dr-dur-fast) var(--dr-ease);
@@ -649,7 +649,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 .dr-props-popup .dr-value .metadata-input-longtext:empty::before {
   content: attr(placeholder);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 /* -- pills ------------------------------------------------------------- */
@@ -715,7 +715,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
 }
 
 .dr-props-popup .dr-add input[type="text"]::placeholder {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -779,7 +779,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
 
 .dr-mention-count {
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 /* Suggestions ------------------------------------------------------------ */
@@ -828,7 +828,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
 .dr-suggest-icon {
   display: inline-flex;
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-suggest-icon .svg-icon {

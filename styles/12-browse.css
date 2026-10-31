@@ -233,7 +233,7 @@
 }
 
 .dr-crumb-sep {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -289,7 +289,7 @@
 
 .dr-album-notice-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -329,7 +329,7 @@
 
 .dr-report-count {
   font-weight: var(--font-normal, 400);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-report-row,
@@ -344,7 +344,7 @@
 
 .dr-report-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-report-text {
@@ -369,7 +369,7 @@
 .dr-inbox-when {
   flex: 0 1 auto;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -479,7 +479,7 @@
 
 .dr-tree-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-tree-name {
@@ -492,7 +492,7 @@
 .dr-tree-count {
   margin-left: auto;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -705,7 +705,7 @@
 .dr-end-row.is-unwritten .dr-track-name,
 .dr-new-note-row .dr-track-name,
 .dr-new-note-row .dr-track-num {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-style: normal;
 }
 
@@ -740,7 +740,7 @@
   vertical-align: middle;
   margin: 0 var(--size-2-2) 0 calc(-1 * var(--size-4-1));
   padding: 0;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-track-fold .svg-icon {
@@ -798,7 +798,7 @@
 .dr-track-pin {
   flex: 0 0 auto;
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-track-pin .svg-icon {
@@ -1162,7 +1162,7 @@
 
 .dr-card-glyph {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-card-glyph .svg-icon {
@@ -1349,7 +1349,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-td-title {
@@ -1402,7 +1402,7 @@
 
 .dr-split-count {
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 

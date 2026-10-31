@@ -83,7 +83,7 @@
 
 .dr-fn-hint {
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-fn-buttons {

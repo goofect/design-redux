@@ -217,7 +217,7 @@
 
 .dr-history-when {
   flex: none;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
@@ -319,7 +319,7 @@
 
 /* What a collection comes to, beside its row. */
 .dr-tree-rollup {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
 }
@@ -333,7 +333,7 @@
 }
 
 .dr-prop-fact-label {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   text-transform: uppercase;
   letter-spacing: 0.04em;

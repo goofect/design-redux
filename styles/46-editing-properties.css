@@ -347,7 +347,7 @@
 .dr-plist-count {
   margin-left: auto;
   font-size: var(--font-ui-small);
-  color: var(--text-faint);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -487,7 +487,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-plist-icon .svg-icon {
@@ -540,12 +540,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 .dr-plist-values.is-none {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -571,7 +571,7 @@
   flex: 0 0 auto;
   min-width: 56px;
   text-align: right;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -579,7 +579,7 @@
 
 .dr-plist-more {
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-plist-foot {

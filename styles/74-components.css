@@ -237,15 +237,16 @@
   animation: dr-sheet-in var(--dr-dur-enter) var(--dr-ease-out) both;
 }
 
-/* 8. Field — 32px, 8px corners, a hairline; the focus ring in the accent. */
-:is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *) {
+/* 8. Field — 32px, 8px corners, a hairline; the focus ring in the accent. A field inside a
+   search box of its own (settings') is the box's, not framed again. */
+:is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *, .dr-set-search *) {
   height: 32px;
   border: 1px solid var(--dr-separator);
   border-radius: var(--dr-radius-md);
   box-shadow: none;
 }
 
-:is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *):focus {
+:is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *, .dr-set-search *):focus {
   box-shadow: var(--dr-focus-ring);
 }
 

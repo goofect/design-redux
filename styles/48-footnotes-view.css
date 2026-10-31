@@ -37,7 +37,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-fn-view-empty {
   padding: var(--dr-space-5) var(--dr-space-2);
   text-align: center;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
@@ -108,7 +108,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 }
 
 .dr-fn-missing {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -148,7 +148,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 .dr-fn-where {
   margin: var(--dr-space-1) 0 0 calc(var(--dr-u) * 7);
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -197,7 +197,7 @@ body.dr-footnotes-aside .markdown-reading-view .footnotes-sep {
 }
 
 .dr-card-props-note {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 

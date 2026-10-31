@@ -30,7 +30,7 @@
 
 .dr-set-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-set-icon .svg-icon {

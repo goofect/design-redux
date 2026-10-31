@@ -165,7 +165,7 @@ body.dr-flat-covers .dr-detail-art.is-drawn {
 
 .dr-color-hint {
   margin-top: 2px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 

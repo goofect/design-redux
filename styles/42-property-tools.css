@@ -33,7 +33,7 @@
 
 .dr-bulk-check-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-bulk-check-icon .svg-icon {
@@ -50,7 +50,7 @@
 }
 
 .dr-bulk-check-count {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -146,7 +146,7 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 }
 
 .dr-compat-row.is-pending .dr-compat-mark {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-compat-what {

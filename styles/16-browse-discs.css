@@ -59,7 +59,7 @@
 
 .dr-empty-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-empty-icon .svg-icon {
