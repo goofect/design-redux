@@ -29,10 +29,6 @@
   -webkit-user-select: none;
 }
 
-.dr-detail-art.is-generated {
-  box-shadow: var(--dr-shadow-lg);
-}
-
 /* A colour of its own, or one for all: lighter to darker in that colour,
  * rather than the drift between two hues a name gets. */
 :where([class*="dr-"]).is-generated.is-tinted {
@@ -121,10 +117,6 @@
   display: block;
   width: 100%;
   height: 100%;
-}
-
-.dr-detail-art.is-drawn {
-  box-shadow: var(--dr-shadow-lg);
 }
 
 body.dr-flat-covers .dr-detail-art.is-drawn {

@@ -258,6 +258,7 @@
   padding-left: 8px;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
   font-variant-numeric: tabular-nums;
 }
 
