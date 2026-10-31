@@ -474,7 +474,7 @@ function panelFor(initial) {
     assert.ok(!/\.dr-shelf-head:first-child/.test(css) && !/\.dr-search-section:first-child/.test(css),
       'a :first-child rule that can never match (the title bar comes first)');
     assert.ok(/\.dr-browse-up:not\(\.dr-sidebar-toggle\) \+ \.dr-browse-up/.test(css));
-    assert.ok(/\.dr-browse \.dr-empty\s*\{/.test(css));
+    assert.ok(/\.dr-browse \.dr-empty[^{,]*\{/.test(css));
     assert.ok(!/var\(--dr-label-width\) \+ var\(--dr-gutter\)\);\s*\n\s*padding: 3px 6px;\s*\n\s*color: var\(--text-faint\)/.test(css),
       '.dr-empty has no fallback outside the panel');
   });

@@ -1112,7 +1112,7 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true, noSidebar: 0 });
     await shot('inspector-picked');
-    // The album picked: its own head, as a note's — cover, name, kind, what it holds.
+    // The album picked: its own head, as a note's — its cover as a small mark, name, kind, what it holds.
     const album = await browser.executeObsidian(async ({ app, plugins }) => {
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
       plugins.designRedux.selection.set({ folder: app.vault.getFolderByPath('Politics') });
@@ -1121,7 +1121,7 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!head() && head().querySelector('.dr-props-title').textContent === 'Politics');
       const h = head();
       const art = h.querySelector('.dr-props-art').getBoundingClientRect();
-      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
+      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width >= 32 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
     });
     expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
     await shot('inspector-album');

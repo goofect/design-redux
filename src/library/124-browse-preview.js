@@ -109,8 +109,10 @@ export class BrowsePreview extends BrowseRows {
 
   previewButtons(el, buttons) {
     const bar = el.createDiv({ cls: 'dr-preview-actions' });
-    buttons.filter(Boolean).forEach(([icon, label, run]) => {
+    buttons.filter(Boolean).forEach(([icon, label, run], i) => {
       const b = bar.createDiv({ cls: 'dr-detail-action' });
+      // The first is the one main action, in the accent.
+      if (i === 0) b.addClass('is-primary');
       asButton(b);
       iconWord(b, icon, label);
       onActivate(b, run);

@@ -11,19 +11,24 @@
   left: 50%;
   bottom: 26px;
   transform: translateX(-50%);
-  transition: transform var(--dr-dur-base) var(--dr-ease-move);
+  transition: transform var(--dr-dur-page) var(--dr-ease-out);
   z-index: calc(var(--layer-menu, 65) - 20);
   display: flex;
   align-items: center;
-  gap: calc(var(--dr-u) * 3.5);
+  gap: var(--dr-space-3);
   max-width: min(680px, 72vw);
-  padding: var(--dr-space-2) calc(var(--dr-u) * 3.5);
-  border-radius: var(--dr-radius-pill);
+  padding: var(--dr-space-2) var(--dr-space-3);
+  border-radius: var(--dr-radius-lg);
+  background-color: var(--dr-raised);
+  border: none;
+  box-shadow: 0 0 0 1px var(--dr-separator), var(--dr-shadow-md);
+}
+
+/* Glass, where it's asked for in settings. */
+body.dr-glass .dr-strip {
   background-color: var(--glass-solid, var(--background-secondary));
   backdrop-filter: blur(var(--dr-strip-blur, var(--dr-glass-blur)));
   -webkit-backdrop-filter: blur(var(--dr-strip-blur, var(--dr-glass-blur)));
-  border: 1px solid var(--background-modifier-border);
-  box-shadow: var(--dr-shadow-lg);
 }
 
 .dr-strip.is-narrow {
