@@ -175,7 +175,8 @@ export class FolderScreen extends BrowseScreen {
   /** The album's notes as covers. */
   renderCovers(root, discs) {
     const view = this.view;
-    const grid = root.createDiv({ cls: 'dr-grid' });
+    // A gallery: the one place covers are shown large.
+    const grid = root.createDiv({ cls: 'dr-grid is-gallery' });
     roveFocus(grid, '.dr-card');
     discs.forEach((disc) => disc.files.forEach((f) => view.fileCard(grid, f)));
   }

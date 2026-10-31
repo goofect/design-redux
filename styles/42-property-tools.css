@@ -260,35 +260,50 @@ body.dr-strip-flat .dr-strip {
   opacity: 0.6;
 }
 
-.dr-detail-art .dr-type-cover {
-  padding: calc(var(--dr-u) * 5) calc(var(--dr-u) * 5.5);
+/* A cover small enough to be a mark — beside a collection's title, on a
+   card — prints only its name's first letter, as a monogram. */
+:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
-.dr-detail-art .dr-type-title {
-  font-size: 24px;
+:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-title {
+  display: block;
+  font-size: 0;
+  line-height: 1;
 }
 
-.dr-detail-art .dr-type-cover::after {
-  left: 22px;
-  bottom: 20px;
-  width: 26px;
+:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-title::first-letter {
+  font-family: var(--font-interface);
+  font-size: 18px;
+  font-weight: var(--font-semibold, 600);
+}
+
+:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-cover::after {
+  display: none;
+}
+
+/* Being edited, the collection's cover is large again, and prints its name. */
+.dr-detail.is-editing .dr-detail-art .dr-type-cover {
+  display: block;
+  padding: var(--dr-space-3);
+}
+
+.dr-detail.is-editing .dr-detail-art .dr-type-title {
+  display: -webkit-box;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.dr-detail.is-editing .dr-detail-art .dr-type-title::first-letter {
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .dr-album-art .dr-type-title {
   font-size: 18px;
-}
-
-.dr-pick-art .dr-type-cover {
-  padding: var(--dr-space-4) calc(var(--dr-u) * 4.5);
-}
-
-.dr-pick-art .dr-type-title {
-  font-size: 20px;
-}
-
-.dr-pick-art .dr-type-cover::after {
-  left: 18px;
-  bottom: 16px;
 }
 
 .dr-color-preview .dr-type-cover {

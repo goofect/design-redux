@@ -1058,35 +1058,91 @@
   --dr-tile-size: 230px;
 }
 
+/* Cards: a quiet panel each, its cover a small mark beside its name — a
+ * note's, a collection's, alike. Only a collection laid out as a gallery
+ * (.is-gallery) shows covers large, a grid of them with names beneath.
+ */
 .dr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
-  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--dr-space-3);
   margin-bottom: var(--dr-space-2);
 }
 
+.dr-grid.is-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
+  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
+}
+
 .dr-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-auto-rows: auto;
+  align-content: center;
+  column-gap: var(--dr-space-3);
+  min-height: 64px;
+  padding: var(--dr-space-3);
   cursor: pointer;
-  border-radius: var(--dr-radius-sm);
+  border-radius: var(--dr-radius-lg);
+  background-color: var(--background-secondary);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), box-shadow var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-card > :not(.dr-card-art) {
+  grid-column: 2;
 }
 
 .dr-card-art {
   position: relative;
+  grid-row: 1 / span 3;
+  align-self: center;
   aspect-ratio: 1;
-  margin-bottom: var(--dr-cover-gap);
   overflow: hidden;
-  border-radius: var(--dr-radius-cover);
+  border-radius: var(--dr-radius-md);
   background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-sm);
+  box-shadow: var(--dr-cover-edge);
   transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+/* A mark's buttons would cover it: its menu is a right-click or a long press away. */
+.dr-card:not(.is-gallery .dr-card) .dr-card-buttons {
+  display: none;
+}
+
+@media (any-hover: hover) {
+  .dr-card:not(.is-gallery .dr-card):hover {
+    background-color: var(--dr-fill-strong);
+  }
+}
+
+.is-gallery .dr-card {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--dr-radius-sm);
+  background-color: transparent;
+}
+
+.is-gallery .dr-card-art {
+  margin-bottom: var(--dr-cover-gap);
+  border-radius: var(--dr-radius-cover);
+  box-shadow: var(--dr-shadow-sm);
 }
 
 .dr-card:focus-visible {
   outline: none;
 }
 
-.dr-card:focus-visible .dr-card-art {
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+.dr-card:focus-visible {
+  box-shadow: var(--dr-focus-ring);
+}
+
+.is-gallery .dr-card:focus-visible {
+  box-shadow: none;
+}
+
+.is-gallery .dr-card:focus-visible .dr-card-art {
+  box-shadow: var(--dr-focus-ring);
 }
 
 .dr-card-art img {
@@ -1110,13 +1166,18 @@
 }
 
 .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.is-gallery .dr-card-glyph .svg-icon {
   width: 34px;
   height: 34px;
 }
 
 .dr-detail-art .dr-card-glyph .svg-icon {
-  width: 58px;
-  height: 58px;
+  width: 24px;
+  height: 24px;
 }
 
 .dr-card-title {

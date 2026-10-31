@@ -1455,6 +1455,7 @@ describe('Design Redux in Obsidian', function () {
       return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
     });
     expect(home).toEqual({ shelf: '13px', gap: '12px', scrolls: 'auto' });
+    await shot('home');
     await browse({ mode: 'folder', path: 'Politics' });
     await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
     const album = await read(() => {
