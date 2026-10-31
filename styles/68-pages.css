@@ -70,7 +70,7 @@
 }
 
 .dr-pages-pill.is-sliding {
-  transition: transform var(--dr-dur-base) var(--dr-ease-move), width var(--dr-dur-base) var(--dr-ease-move), scale var(--dr-dur-press) var(--dr-ease-move);
+  transition: transform var(--dr-dur-move) var(--dr-ease-out), width var(--dr-dur-move) var(--dr-ease-out), scale var(--dr-dur-press) var(--dr-ease-out);
 }
 
 /* Pressing the open page sinks the thumb a little, as on iOS. */

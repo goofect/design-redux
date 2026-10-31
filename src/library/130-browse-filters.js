@@ -208,8 +208,8 @@ export class Library extends Feature {
       {
         key: 'discNoteLimit',
         type: 'number',
-        name: 'Notes per disc',
-        desc: 'How many notes a disc shows before Show all.',
+        name: 'Notes per section',
+        desc: 'How many notes a subfolder’s section shows before Show all.',
         showIf: 'library',
       },
       {

@@ -14,7 +14,7 @@ import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '.
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
-import { isAppleLook } from '../ui/229-components.js';
+import { isClearLook } from '../ui/229-components.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
@@ -208,10 +208,14 @@ export class LibraryView extends ItemView {
         .replace(/ title="[^"]*"/g, '')
         .replace(/ data-dr-full-name=""/g, '');
     this.containerEl.dataset.drDensity = this.plugin.settings.gridDensity || 'standard';
+    // The marker isn't a row: out of the way while the rows are compared, first again after.
+    const marker = this.marker;
+    if (marker && marker.parentNode === root) marker.remove();
     if (norm(fresh.innerHTML) !== norm(root.innerHTML)) {
       root.empty();
       while (fresh.firstChild) root.appendChild(fresh.firstChild);
     }
+    if (marker) root.prepend(marker);
     const t2 = now();
     this.markActive();
     this.showVaultCount();
@@ -291,7 +295,7 @@ export class LibraryView extends ItemView {
         onMenu: (evt) => menu(evt, open),
       });
       // The Apple look: how many notes it holds, muted at the end.
-      if (!pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
+      if (!pinned && isClearLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       return row;
     }
     return this.row(list, {
@@ -561,7 +565,7 @@ export class LibraryView extends ItemView {
     if (split && typeof split.collapse === 'function') split.collapse();
   }
 
-  /** Exactly one row marks where you are, as the reference does. */
+  /** Exactly one row marks where you are, and the marker under it glides there from the last. */
   markActive() {
     const rows = Array.from(this.contentEl.querySelectorAll('.dr-lib-row'));
     rows.forEach((el) => {
@@ -572,6 +576,38 @@ export class LibraryView extends ItemView {
     if (here) {
       here.addClass('is-active');
       here.setAttribute('aria-current', 'page');
+    }
+    // Placed once the rows are laid out, rather than laying them out now to measure.
+    const win = this.contentEl.ownerDocument.defaultView;
+    if (win && typeof win.requestAnimationFrame === 'function') win.requestAnimationFrame(() => this.placeMarker(here));
+    else this.placeMarker(here);
+  }
+
+  placeMarker(row) {
+    const root = this.contentEl;
+    // Drawn again since it was asked for: the later ask places it.
+    if (row && !row.isConnected) return;
+    if (!this.marker) {
+      this.marker = root.ownerDocument.createElement('div');
+      this.marker.className = 'dr-lib-marker';
+      this.marker.setAttribute('aria-hidden', 'true');
+    }
+    const marker = this.marker;
+    if (marker.parentNode !== root) root.prepend(marker);
+    root.addClass('has-marker');
+    // Shown for the first time, it's put in place, not slid there from the top.
+    const first = !marker.classList.contains('is-placed');
+    if (!row || !row.offsetParent) {
+      marker.removeClass('is-shown');
+      return;
+    }
+    if (first) marker.addClass('is-still');
+    marker.style.transform = `translateY(${row.offsetTop}px)`;
+    marker.style.height = `${row.offsetHeight}px`;
+    marker.addClass('is-shown', 'is-placed');
+    if (first) {
+      void marker.offsetWidth;
+      marker.removeClass('is-still');
     }
   }
 

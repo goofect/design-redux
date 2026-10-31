@@ -753,6 +753,8 @@ export class BrowseEditing extends BrowseSorting {
           : null;
     const draw = (list) => {
       const grid = root.createDiv({ cls: 'dr-grid' });
+      // Covers asked for, in settings: a gallery.
+      if (this.plugin.settings.libraryLayout === 'covers') grid.addClass('is-gallery');
       roveFocus(grid, '.dr-card');
       const card = (f) => this.folderCard(grid, f, subtitle ? subtitle(f) : undefined);
       // The first rows at once; the rest a batch a frame, so a shelf of hundreds shows straight away.

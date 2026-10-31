@@ -45,7 +45,7 @@
 
 /* A screen with nothing to show says so in its own space, not indented
  * under a properties-panel label column it doesn't have. */
-.dr-browse .dr-empty {
+.dr-browse .dr-empty:not(.dr-props-popup .dr-empty) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,7 +59,7 @@
 
 .dr-empty-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-empty-icon .svg-icon {

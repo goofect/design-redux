@@ -106,10 +106,7 @@ export class HomeScreen extends BrowseScreen {
       .slice(0, 13);
   }
 
-  /**
-   * The large cards: a caption above each, its cover, and a band of
-   * that cover's colour — the cover itself, blurred — under the title.
-   */
+  /** The cards up front: a caption above each, then its cover small, its name and where it is. */
   picks(root, picks) {
     const view = this.view;
     const row = root.createDiv({ cls: 'dr-picks' });
@@ -121,10 +118,6 @@ export class HomeScreen extends BrowseScreen {
       card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
       const body = card.createDiv({ cls: 'dr-pick-body' });
-      const glow = body.createDiv({ cls: 'dr-pick-glow' });
-      drawNoteArt(this.plugin, glow, file);
-      // White type on the cover's colours; a plain icon has none to give.
-      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued') || glow.hasClass('is-drawn')));
       const art = body.createDiv({ cls: 'dr-pick-art' });
       drawNoteArt(this.plugin, art, file);
 

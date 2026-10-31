@@ -12,7 +12,7 @@ import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js'
 import { nestByProperty } from '../core/045-helpers-properties.js';
 import { ROOT_MODES } from './119-browse-registry.js';
 import { BrowsePreview } from './124-browse-preview.js';
-import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
+import { drIconButton, drMenu, isClearLook } from '../ui/229-components.js';
 import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseAlbum extends BrowsePreview {
@@ -349,14 +349,10 @@ export class BrowseAlbum extends BrowsePreview {
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
-    // The cover's own colours, blurred, behind the header — as the
-    // reference tints an album's page with its artwork.
-    const glow = head.createDiv({ cls: 'dr-detail-glow' });
+    // The cover, small beside the title: a mark to know it by, and where an image is dropped.
     const art = head.createDiv({ cls: 'dr-detail-art' });
-    [glow, art].forEach((el) => {
-      if (folder) drawFolderArt(this.plugin, el, folder);
-      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
-    });
+    if (folder) drawFolderArt(this.plugin, art, folder);
+    else this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
     // An image dropped here — or pasted, once it's clicked — becomes the album's cover.
     if (folder && folder.path !== '/') {
       art.dataset.coverFolder = folder.path;
@@ -455,8 +451,8 @@ export class BrowseAlbum extends BrowsePreview {
       this.app.workspace.getLeaf(false).openFile(pick);
     };
     const map = about && about.type === 'concept map' ? () => structure.openMap(folder) : null;
-    // The Apple look: one filled button, Edit in plain text, the rest under an icon-only More.
-    if (isAppleLook()) {
+    // One filled button, Edit in plain text, the rest under an icon-only More.
+    if (isClearLook()) {
       if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
       const more = [{ title: 'Random', icon: 'shuffle', run: random }];
       if (map) more.push({ title: 'Map', icon: 'waypoints', run: map });

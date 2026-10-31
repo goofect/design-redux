@@ -259,50 +259,26 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  border-radius: 12px;
+  gap: var(--dr-space-3);
+  min-height: 132px;
+  padding: var(--dr-space-4);
+  border-radius: var(--dr-radius-lg);
   background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-md);
-  transition: filter var(--dr-dur-fast) var(--dr-ease);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
 }
 
 .dr-pick:focus-visible .dr-pick-body {
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-}
-
-/* The cover again, blurred and darkened behind everything: the band under
-   the title takes on the cover's colours without anything measuring them. */
-.dr-pick-glow {
-  position: absolute;
-  inset: -30px;
-  display: none;
-  filter: blur(30px) saturate(1.5) brightness(0.72);
-}
-
-.dr-pick-body.is-lit .dr-pick-glow {
-  display: block;
-}
-
-/* A soft placeholder is pale; darkened further so white type stays readable on it. */
-.dr-pick-glow.is-blank {
-  filter: blur(30px) saturate(1.8) brightness(0.5);
-}
-
-.dr-pick-glow img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-pick-glow .dr-gen-initials,
-.dr-pick-glow .dr-card-glyph {
-  display: none;
+  box-shadow: var(--dr-focus-ring);
 }
 
 .dr-pick-art {
   position: relative;
+  flex: none;
+  width: 40px;
   aspect-ratio: 1;
   overflow: hidden;
+  border-radius: var(--dr-radius-md);
+  box-shadow: var(--dr-cover-edge);
 }
 
 .dr-pick-art img {
@@ -316,18 +292,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--background-modifier-hover);
+  background-color: var(--dr-fill);
 }
 
 .dr-pick-art .dr-card-glyph .svg-icon {
-  width: 52px;
-  height: 52px;
+  width: 20px;
+  height: 20px;
 }
 
 .dr-pick-text {
   position: relative;
-  min-height: 62px;
-  padding: calc(var(--dr-u) * 2.5) var(--dr-space-3) var(--dr-space-3);
+  margin-top: auto;
 }
 
 .dr-pick-title {
@@ -336,7 +311,7 @@
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-medium);
   font-weight: var(--font-semibold, 600);
   line-height: 1.3;
   color: var(--text-normal);
@@ -351,17 +326,9 @@
   color: var(--text-muted);
 }
 
-.dr-pick-body.is-lit .dr-pick-title {
-  color: #fff;
-}
-
-.dr-pick-body.is-lit .dr-pick-sub {
-  color: rgba(255, 255, 255, 0.75);
-}
-
 @media (any-hover: hover) {
   .dr-pick:hover .dr-pick-body {
-    filter: brightness(1.06);
+    background-color: var(--dr-fill-strong);
   }
 }
 
@@ -400,15 +367,17 @@
   }
 }
 
+/* A shelf's name: small and in weight, the shelf itself saying the rest. */
 .dr-shelf-title {
-  font-size: var(--font-ui-large);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.02em;
   color: var(--text-normal);
 }
 
 .dr-shelf-more {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -452,8 +421,8 @@
 .dr-shelf-row {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: var(--dr-tile-size, 170px);
-  gap: calc(var(--dr-u) * 5);
+  grid-auto-columns: 220px;
+  gap: var(--dr-space-3);
   margin: 0 calc(var(--dr-u) * -1) var(--dr-space-2);
   padding: var(--dr-space-1) var(--dr-space-1) var(--dr-space-2);
   overflow-x: auto;
@@ -504,7 +473,7 @@ body.dr-single-area .status-bar {
 
 .dr-search-section-count {
   margin-left: var(--dr-space-2);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
   font-variant-numeric: tabular-nums;
 }
@@ -578,7 +547,7 @@ body.dr-single-area .status-bar {
 
 .dr-search-text-status {
   padding: var(--dr-space-3) 2px;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
@@ -614,7 +583,7 @@ body.dr-single-area .status-bar {
 
 .dr-recent-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-recent-icon .svg-icon {
@@ -636,66 +605,69 @@ body.dr-single-area .status-bar {
 
 /* Browse categories --------------------------------------------------------
  *
- * Landscape tiles with the name over the artwork. A vault has no genre
- * art, so the colour is derived from the name and stays with it; where
- * a note under that value carries a cover, it sits behind, dimmed
- * enough to keep the name readable.
+ * A quiet panel each: a dot in a colour of the name's own (the same name,
+ * the same colour, visit after visit), the name, and how many notes.
  */
 
 .dr-cat-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: var(--dr-space-4);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--dr-space-3);
   margin-bottom: var(--dr-space-5);
 }
 
 .dr-cat {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  aspect-ratio: 16 / 9;
-  padding: var(--dr-space-3) calc(var(--dr-u) * 3.5);
-  overflow: hidden;
-  border-radius: var(--dr-radius-md);
-  background-image: linear-gradient(
-    150deg,
-    hsl(var(--dr-cat-hue, 210) 58% 42%),
-    hsl(var(--dr-cat-hue, 210) 52% 26%)
-  );
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--dr-space-3);
+  min-height: 64px;
+  padding: var(--dr-space-3) var(--dr-space-4);
+  border-radius: var(--dr-radius-lg);
+  background-color: var(--background-secondary);
   cursor: pointer;
+  transition: background-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-cat::before {
+  content: '';
+  grid-row: 1 / span 2;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: hsl(var(--dr-cat-hue, 210) 58% 42%);
 }
 
 .dr-cat:focus-visible {
-  filter: brightness(1.08);
+  box-shadow: var(--dr-focus-ring);
   outline: none;
 }
 
 @media (any-hover: hover) {
   .dr-cat:hover {
-    filter: brightness(1.08);
-    outline: none;
+    background-color: var(--dr-fill-strong);
   }
-}
-
-.dr-cat-art {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0.4;
-  mix-blend-mode: luminosity;
 }
 
 .dr-cat-name,
 .dr-cat-count {
-  position: relative;
+  grid-column: 2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #fff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.dr-cat-name {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-cat-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
 }
 
 .dr-cat-name {

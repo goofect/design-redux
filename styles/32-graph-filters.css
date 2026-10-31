@@ -197,7 +197,7 @@
 .dr-choice-note {
   float: right;
   margin-left: var(--dr-space-3);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 

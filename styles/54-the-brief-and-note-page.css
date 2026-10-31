@@ -21,7 +21,7 @@
 }
 
 .dr-preview-about.is-empty {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-preview-about:focus-visible {
@@ -98,11 +98,12 @@
   object-fit: cover;
 }
 
+/* The collection a note is in, above its title: quiet, a way back to it. */
 .dr-note-album {
   font-family: var(--dr-font-ui);
   font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold);
-  color: var(--text-accent);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-muted);
   cursor: pointer;
   width: fit-content;
 }
@@ -206,20 +207,20 @@
 }
 
 /* Glass: menus, suggestions and the canvas's bar and controls frosted, the note behind them showing through — not in the flat editorial look. */
-body.dr-glass:not(.dr-look-editorial) .menu,
-body.dr-glass:not(.dr-look-editorial) .suggestion-container,
-body.dr-glass:not(.dr-look-editorial) .canvas-menu,
-body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+body.dr-glass .menu,
+body.dr-glass .suggestion-container,
+body.dr-glass .canvas-menu,
+body.dr-glass .canvas-controls .canvas-control-group {
   background-color: color-mix(in srgb, var(--background-primary) 78%, transparent);
   backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
   -webkit-backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  body.dr-glass:not(.dr-look-editorial) .menu,
-  body.dr-glass:not(.dr-look-editorial) .suggestion-container,
-  body.dr-glass:not(.dr-look-editorial) .canvas-menu,
-  body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+  body.dr-glass .menu,
+  body.dr-glass .suggestion-container,
+  body.dr-glass .canvas-menu,
+  body.dr-glass .canvas-controls .canvas-control-group {
     background-color: var(--background-primary);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
@@ -249,13 +250,10 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
   max-width: 100%;
   margin: var(--dr-space-4) auto 0;
   padding: var(--dr-space-1);
-  border-radius: var(--dr-radius-pill);
-  background: var(--dr-float-bg);
-  border: 1px solid var(--background-modifier-border);
-  box-shadow: var(--dr-float-shadow);
-  backdrop-filter: blur(var(--dr-glass-blur));
-  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
-  font-family: var(--dr-font-ui);
+  border-radius: var(--dr-radius-lg);
+  background: var(--dr-raised);
+  border: none;
+  box-shadow: 0 0 0 1px var(--dr-separator), var(--dr-shadow-md);
   font-size: var(--font-ui-small);
 }
 
@@ -265,13 +263,13 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
 
 /* It rises into place once, when the first note is ticked. */
 .dr-bulk-bar.is-arriving {
-  animation: dr-tray-in var(--dr-dur-slow) var(--dr-ease-move);
+  animation: dr-tray-in var(--dr-dur-page) var(--dr-ease-out);
 }
 
 @keyframes dr-tray-in {
   from {
     opacity: 0;
-    transform: translateY(var(--dr-space-3));
+    transform: translateY(calc(var(--dr-rise) * 3));
   }
 }
 

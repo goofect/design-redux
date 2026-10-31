@@ -1016,3 +1016,27 @@ From the development specification (26 Oct 2026), after the first plan:
   of the open note. `targetOf` and `hostsPanel` moved to the coordinator.
 - Selection stays apart from what's open: a pick has no leaf; a tab's target has the
   leaf it came from, which a map's node section reads.
+
+## 43. One look, Clear
+
+- **One look** in place of Apple's, the theme's and the editorial (settings step 22 moves
+  whichever was chosen; `lookScope` goes). Notes are the theme's; the plugin draws only its
+  own screens. `body.dr-look-clear` while it's on; `isClearLook()` (ui/229) for what a
+  screen draws differently under it.
+- **Principles, as rules:** type and space part things, not boxes or lines; colours are
+  the theme's; the accent marks only where you are, what's picked and the main action;
+  readable text is `--text-muted` at quietest, never faint; one raised surface
+  (`--dr-raised`, a hairline ring and `--dr-shadow-md`) for whatever floats, glass only
+  with the Glass setting.
+- **Motion** is `ui/231-motion.js`: `transitionScreen` (a view transition where there is
+  one, else a slide), `flip` (rows matched by `data-path` glide to a new order), `enter`
+  (`.dr-enter`, staggered). Timings are the tokens in `04-foundation.css`; the Motion
+  setting (`dr-motion-subtle`, `dr-motion-off`) and reduced motion zero them, and every
+  helper then just makes the change. Nothing waits on an animation, and nothing measures
+  mid-drawing: the bar and the sidebar's marker are measured in the next frame (forcing
+  layout in `render()` made a 2000-note album six times slower).
+- **Covers are marks:** a card is a panel with its cover small beside its name; a
+  collection's cover sits small beside its title. Only `.is-gallery` (a collection laid
+  out as covers, or covers asked for in settings) shows them large.
+- **Kept for what relies on them:** class names (`.dr-track`, `.dr-disc`, `.dr-card`…),
+  the `look` key and the `switch-look` command (now animations on and off).

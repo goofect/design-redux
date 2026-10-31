@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 21);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 22);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -235,7 +235,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(b, { look: 'theme' }, 'whoever asked for the theme’s look keeps it');
     const c = { look: 'editorial', noteThemeLook: false }; step.run(c);
     assert.deepStrictEqual(c, { look: 'editorial' });
-    assert.strictEqual(R.DEFAULTS.look, 'apple');
+    assert.strictEqual(R.DEFAULTS.look, 'clear');
     // Step 15: Apple's look covers notes too, whatever scope the editorial look was given.
     const scope = R.SETTINGS_MIGRATIONS.find((m) => m.to === 15);
     const d = { look: 'apple', lookScope: 'plugin' }; scope.run(d);
@@ -262,7 +262,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(s21.librarySections[0].items, [{ kind: 'builtin', id: 'added' }]);
     assert.deepStrictEqual(s21.homeShelves, [{ id: 'recents', on: true }]);
     const h = {}; strip.run(h, { existing: false });
-    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
+    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && !('lookScope' in R.DEFAULTS), 'a first install starts without them, its notes as the theme draws them');
   });
 
   /* -- pins in your own order ------------------------------------------------ */

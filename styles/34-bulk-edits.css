@@ -57,7 +57,7 @@
   top: 50%;
   left: 10px;
   transform: translateY(-50%);
-  color: var(--text-faint);
+  color: var(--text-muted);
   pointer-events: none;
 }
 
@@ -67,7 +67,7 @@
 
 .dr-bulk-hint {
   min-height: 1em;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
@@ -183,7 +183,7 @@
 }
 
 .dr-bulk-type.is-locked {
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: default;
 }
 
@@ -289,7 +289,7 @@
 }
 
 .dr-bulk-more {
-  color: var(--text-faint);
+  color: var(--text-muted);
   cursor: pointer;
 }
 

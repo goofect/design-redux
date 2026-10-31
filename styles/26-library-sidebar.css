@@ -1,23 +1,25 @@
 /* Library sidebar ----------------------------------------------------------
  *
- * Shaped after the reference: compact rows, one softly tinted pill
- * marking where you are, its icon in the accent and its label set
- * bolder, the other icons quiet, small grey section labels apart by
- * space rather than lines, and a gutter left of every icon holding a disclosure
- * chevron where there's something to open out — kept even where empty,
- * so all the icons line up.
+ * Quiet rows apart by space, small capitals naming each section, and one
+ * soft marker under where you are — its icon in the accent, its label
+ * bolder, a short accent bar at its edge — that glides from row to row
+ * as you go. A gutter left of every icon holds a disclosure chevron where
+ * there's something to open out, kept even where empty so the icons line up.
  */
 
 .dr-library .view-content {
+  position: relative;
   padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) var(--dr-space-3);
 }
 
 .dr-lib-group {
-  margin-top: var(--dr-space-5);
+  margin-top: var(--dr-space-4);
   padding: 0 calc(var(--dr-u) * 2.5) var(--dr-space-1);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-medium, 500);
+  font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 /* More, and any section that folds: its heading opens and closes it. */
@@ -32,7 +34,7 @@
 .dr-lib-fold-icon {
   display: inline-flex;
   margin-left: auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-lib-fold-icon .svg-icon {
@@ -62,6 +64,7 @@
 }
 
 .dr-lib-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--dr-space-2);
@@ -70,9 +73,42 @@
   line-height: var(--dr-line-label);
   border-radius: var(--dr-radius-md);
   color: var(--text-normal);
-  font-size: var(--font-ui-smaller);
+  font-size: var(--font-ui-small);
   cursor: pointer;
   user-select: none;
+}
+
+/* The marker: under the rows, moved to the one where you are. While it's
+   there the row itself stays clear, so the two never show at once. */
+.dr-lib-marker {
+  position: absolute;
+  top: 0;
+  right: var(--dr-space-2);
+  left: var(--dr-space-2);
+  border-radius: var(--dr-radius-md);
+  background-color: var(--dr-selected);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform var(--dr-dur-move) var(--dr-ease-out), height var(--dr-dur-move) var(--dr-ease-out), opacity var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-lib-marker::before {
+  content: '';
+  position: absolute;
+  top: 30%;
+  bottom: 30%;
+  left: 0;
+  width: 3px;
+  border-radius: 3px;
+  background-color: var(--interactive-accent);
+}
+
+.dr-lib-marker.is-shown {
+  opacity: 1;
+}
+
+.dr-lib-marker.is-still {
+  transition: none;
 }
 
 /* Under the pointer, the theme's grey; where you are, the accent tint,
@@ -86,6 +122,11 @@
 
 .dr-lib-row.is-active {
   background-color: var(--dr-selected);
+  font-weight: var(--font-semibold, 600);
+}
+
+.has-marker .dr-lib-row.is-active {
+  background-color: transparent;
 }
 
 /* Where you are, marked on what stands for it, not on its name: the icon
@@ -249,7 +290,7 @@
 }
 
 .dr-lib-row.is-missing .dr-lib-icon {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-lib-row.is-missing .dr-lib-icon .svg-icon {
@@ -263,35 +304,21 @@
 
 .dr-lib-empty {
   padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 /* The panel -----------------------------------------------------------------
  *
- * A floating rounded card, as the reference's sidebar is, applied only
- * while the library is the view showing in the left sidebar. Collapsed,
- * it takes no room at all rather than leaving a sliver of border.
+ * Flat, a step apart from the page in the theme's secondary background and
+ * parted from it by one hairline, applied only while the library is the
+ * view showing in the left sidebar. Collapsed, it takes no room at all.
  */
 
 body:not(.dr-left-collapsed)
   .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
-  /* Above the main area, so its shadow is drawn over it every time —
-     not shown and hidden by turns as the main area's layers are redrawn
-     (a cover fading in, the album's glow, the strip's blur), which
-     flickered. */
-  position: relative;
-  z-index: 1;
-  /* And a layer of its own for good: otherwise the browser moves it in
-     and out of one as the layers beneath come and go, redrawing the
-     shadow each time — which flickered too. */
-  will-change: transform;
-  margin: var(--dr-space-2) 0 var(--dr-space-2) var(--dr-space-2);
-  overflow: hidden;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-xl, 12px);
+  border-right: 1px solid var(--dr-separator);
   background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-lg);
 }
 
 .dr-apple-sidebar .workspace-tab-header-container {

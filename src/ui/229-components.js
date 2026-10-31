@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Components: nine shared pieces                                      */
 /*                                                                     */
-/* The Apple look's pieces, each one helper here and one block in      */
+/* The look's pieces, each one helper here and one block in      */
 /* styles.css, so a button on the strip, in the panel and in the       */
 /* browse view is the same button: icon button, text button, segmented */
 /* control, row, tile, chip, menu, sheet, and (in CSS) toggle and      */
@@ -12,9 +12,9 @@ import { Menu, setIcon } from 'obsidian';
 import { showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 
-/** Whether the Apple look is on: what a screen draws differently under it, beyond its styles. */
-export function isAppleLook() {
-  return typeof document !== 'undefined' && !!document.body && document.body.classList.contains('dr-look-apple');
+/** Whether the plugin's look is on: what a screen draws differently under it, beyond its styles. */
+export function isClearLook() {
+  return typeof document !== 'undefined' && !!document.body && document.body.classList.contains('dr-look-clear');
 }
 
 /** A toolbar button: a symbol alone, its name the tooltip. */

@@ -12,7 +12,7 @@ import { normalHex } from '../core/031-colours.js';
 import { roveFocus } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { Library } from '../library/130-browse-filters.js';
-import { drSegmented, isAppleLook } from '../ui/229-components.js';
+import { drSegmented, isClearLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
 
 export const SETTINGS_TABS = [
@@ -58,7 +58,7 @@ export const SETTINGS_TABS = [
         id: 'library',
         icon: 'library',
         name: 'Library',
-        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
+        desc: 'Folders as collections of notes, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
         switch: 'library',
         keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
       },
@@ -139,7 +139,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
+export const LOOK_KEYS = ['motion', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */
@@ -268,7 +268,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     containerEl.addClass('dr-settings');
     // Settings can open in a window of their own, whose page doesn't carry the look: told here.
     const page = containerEl.ownerDocument.body;
-    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-apple', this.settings.look === 'apple');
+    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-clear', true);
     const rows = this.rows();
     const placed = new Set();
     const resolve = (feature) => {
@@ -671,8 +671,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
             if (Number.isFinite(n) && n >= (row.min || 1)) this.set(row.key, n);
           });
       });
-    } else if (row.type === 'dropdown' && row.segmented && isAppleLook()) {
-      // A few short choices, side by side as the Apple look draws them.
+    } else if (row.type === 'dropdown' && row.segmented && isClearLook()) {
+      // A few short choices, side by side.
       this.addReset(setting, row);
       const items = Object.keys(row.options).map((v) => ({ id: v, label: row.options[v] }));
       drSegmented(setting.controlEl, items, value, (v) => this.set(row.key, v, true));

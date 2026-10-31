@@ -18,6 +18,7 @@ import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
 import { BrowseAlbum } from './125-browse-album.js';
 import { ContextStrip } from '../tools/190-strip.js';
+import { enter, transitionScreen } from '../ui/231-motion.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class BrowseView extends BrowseAlbum {
@@ -102,8 +103,17 @@ export class BrowseView extends BrowseAlbum {
     if (!moved && active && this.contentEl.contains(active) && active.matches('.dr-browse-search input')) {
       this.renderBelowBar();
     } else {
-      this.render();
-      if (this.contentEl) this.contentEl.scrollTop = 0;
+      const draw = () => {
+        this.render();
+        if (this.contentEl) this.contentEl.scrollTop = 0;
+        // A screen arrived at: its rows and tiles come in one after another.
+        if (moved && this.contentEl) enter(Array.from(this.contentEl.querySelectorAll('.dr-track, .dr-tr:not(.dr-th), .dr-card, .dr-disc')).slice(0, 24));
+      };
+      // Another screen slides in, back the other way; the same one is just drawn again.
+      const back = this.goingBack;
+      this.goingBack = false;
+      if (moved && this.contentEl && this.contentEl.isConnected && this.contentEl.childElementCount) transitionScreen(this.contentEl, draw, { back });
+      else draw();
     }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
@@ -142,6 +152,7 @@ export class BrowseView extends BrowseAlbum {
     // focus inside it; the view's scope covers the page being active
     // with nothing on it focused, which keys wouldn't otherwise reach.
     this.registerDomEvent(this.containerEl, 'keydown', (evt) => this.onKey(evt));
+    this.registerDomEvent(this.contentEl, 'scroll', () => this.markScrolled(), { passive: true });
     try {
       if (typeof Scope === 'function' && this.app.scope) {
         this.scope = new Scope(this.app.scope);
@@ -332,11 +343,24 @@ export class BrowseView extends BrowseAlbum {
     });
   }
 
+  /**
+   * The bar stays at the top; a hairline under it once the page has scrolled beneath. Its
+   * height is told to the page, so what else stays (a table's head) stays under it.
+   */
+  markScrolled() {
+    const bar = this.contentEl && this.contentEl.querySelector('.dr-detail-bar');
+    if (!bar) return;
+    bar.toggleClass('is-scrolled', this.contentEl.scrollTop > 4);
+    const h = `${bar.offsetHeight}px`;
+    if (this.contentEl.style.getPropertyValue('--dr-bar-h') !== h) this.contentEl.style.setProperty('--dr-bar-h', h);
+  }
+
   canGo(dir) {
     return canStep(this.leaf, dir);
   }
 
   go(dir) {
+    this.goingBack = dir === 'back';
     step(this.leaf, dir);
   }
 
@@ -380,7 +404,10 @@ export class BrowseView extends BrowseAlbum {
         'chevron-left',
         parent ? `Back to ${this.folderName(parent)}` : 'Back',
         !!parent,
-        () => this.folderUp(folder, parent)
+        () => {
+          this.goingBack = true;
+          this.folderUp(folder, parent);
+        }
       ).addClass('is-folder-step');
       button(
         'chevron-right',
@@ -480,6 +507,10 @@ export class BrowseView extends BrowseAlbum {
       });
     }
     this.syncPane();
+    // After the drawing is laid out, not by forcing it now: a long list's layout is the cost.
+    const win = root.ownerDocument.defaultView;
+    if (win && typeof win.requestAnimationFrame === 'function') win.requestAnimationFrame(() => this.markScrolled());
+    else this.markScrolled();
     this.measureLater();
     if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is
@@ -559,7 +590,7 @@ export class BrowseView extends BrowseAlbum {
       );
       if (shared) this.setSort(shared);
       else this.columnSort = next;
-      this.render();
+      this.renderSorted();
     });
   }
 

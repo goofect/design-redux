@@ -361,7 +361,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       { key: 'library', name: 'Library' },
       { key: 'libraryLayout', type: 'dropdown', segmented: true, name: 'Layout', options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' } },
     ] }];
-    document.body.classList.add('dr-look-apple');
+    document.body.classList.add('dr-look-clear');
     try {
       const tab = new T.DesignReduxSettingTab(p.app, p);
       tab.tab = 'library';
@@ -374,7 +374,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       seg.querySelectorAll('.dr-segment')[1].click();
       assert.strictEqual(p.settings.libraryLayout, 'covers');
     } finally {
-      document.body.classList.remove('dr-look-apple');
+      document.body.classList.remove('dr-look-clear');
     }
   });
 

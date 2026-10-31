@@ -361,13 +361,13 @@ export class PropertySchemas extends Feature {
       },
       {
         key: 'propertyInlineEdit',
-        name: 'Change values in album rows',
-        desc: 'A property’s value in an album’s row, pressed, is changed there: a checkbox ticked, a date picked, or a value chosen from the folder’s schema, those with a colour, or the most used.',
+        name: 'Change values in rows',
+        desc: 'A property’s value in a collection’s row, pressed, is changed there: a checkbox ticked, a date picked, or a value chosen from the folder’s schema, those with a colour, or the most used.',
       },
       {
         key: 'propertyValueChips',
         name: 'Colours and icons for values',
-        desc: 'A property’s value can take a colour and an icon — from its menu on the property’s page, Colour and icon… — shown wherever it shows: the note panel, the note page, album rows and filters.',
+        desc: 'A property’s value can take a colour and an icon — from its menu on the property’s page, Colour and icon… — shown wherever it shows: the note panel, the note page, collection rows and filters.',
       },
     ];
   }

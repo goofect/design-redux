@@ -125,12 +125,11 @@ describe('Design Redux in Obsidian', function () {
       const started = performance.now();
       await app.plugins.enablePlugin('design-redux');
       window.__drLoadMs = Math.round(performance.now() - started);
-      // A first install starts without the strip, with notes as the theme draws them, its own
+      // A first install starts without the strip, its own
       // properties in sight and Obsidian's gear where it was; all are still offered, and tested
       // here, so they're put on.
       const plugin = app.plugins.plugins['design-redux'];
       plugin.settings.contextStrip = true;
-      plugin.settings.lookScope = 'window';
       plugin.settings.hideNativeProperties = true;
       plugin.settings.settingsInHeader = true;
       await plugin.saveSettings();
@@ -431,7 +430,7 @@ describe('Design Redux in Obsidian', function () {
     }, pinned);
   });
 
-  it('keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text', async function () {
+  it('keeps to its design system in the dark theme and the light one: one control size, square covers, rows by density, readable text', async function () {
     const started = await browser.executeObsidian(({ app }) => (app.vault && typeof app.vault.getConfig === 'function' ? app.vault.getConfig('theme') : null) || 'moonstone');
     // The album page, the library beside it; covers are measured on the home screen's tiles.
     const covers = await browser.executeObsidian(async ({ app, plugins }) => {
@@ -509,27 +508,23 @@ describe('Design Redux in Obsidian', function () {
     };
     // Whatever happens, the note beside the album is closed after, so the tests after have the page to themselves.
     try {
-      const dark = await measure('obsidian', 'theme', 'standard');
+      const dark = await measure('obsidian', 'clear', 'standard');
       check(dark, 'dark');
       expect(dark.dark).toBe(true);
       expect(dark.rows.length).toBeGreaterThan(0);
       expect(dark.rows[0][0]).toBe(32);
-      const editorial = await measure('obsidian', 'editorial', 'standard');
-      check(editorial, 'editorial, dark');
-      await shot('album-editorial');
-      check(await measure('moonstone', 'editorial', 'standard'), 'editorial, light');
-      const light = await measure('moonstone', 'theme', 'standard');
+      const light = await measure('moonstone', 'clear', 'standard');
       check(light, 'light');
       expect(light.dark).toBe(false);
       await shot('album-light');
       // Density: rows a unit tighter or looser.
-      const compact = await measure('obsidian', 'theme', 'compact');
-      const spacious = await measure('obsidian', 'theme', 'large');
+      const compact = await measure('obsidian', 'clear', 'compact');
+      const spacious = await measure('obsidian', 'clear', 'large');
       expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
       check(compact, 'compact');
       check(spacious, 'spacious');
       // Back as it was, for the tests after.
-      await measure(started, 'apple', 'standard');
+      await measure(started, 'clear', 'standard');
     } finally {
       await browser.executeObsidian(() => {
         if (window.__drBeside) window.__drBeside.detach();
@@ -880,7 +875,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result.first.widthClosed).toBe(result.first.widthOpen);
     expect(result.first.firstLine).toBe('Alpha text');
     expect(result.second.firstLine).toBe('Beta text');
-    expect(result.first.slide).toContain('0.22s');
+    expect(result.first.slide).toContain('0.32s');
     expect(result.first.text).toContain('Alpha text');
     expect(result.first.text).not.toContain('Beta text');
     expect(result.second.open).toBe('Sources');
@@ -910,11 +905,11 @@ describe('Design Redux in Obsidian', function () {
       const root = app.workspace.activeLeaf.view.containerEl;
       const tabs = Array.from(root.querySelectorAll('.markdown-source-view .dr-page-tab'));
       const widths = tabs.map((t) => t.offsetWidth);
-      // A theme with a serif face: the control and the title stay in the system's.
+      // A theme with a serif face: the control stays in the system's, the note's title is the theme's.
       document.body.style.setProperty('--font-interface', 'Georgia, serif');
       document.body.style.setProperty('--inline-title-font', 'Georgia, serif');
       const title = root.querySelector('.markdown-source-view .inline-title');
-      const faces = [getComputedStyle(tabs[0]).fontFamily, title ? getComputedStyle(title).fontFamily : '-apple-system'].map((f) => f.startsWith('-apple-system'));
+      const faces = [getComputedStyle(tabs[0]).fontFamily.startsWith('-apple-system'), !title || getComputedStyle(title).fontFamily.startsWith('Georgia')];
       document.body.style.removeProperty('--font-interface');
       document.body.style.removeProperty('--inline-title-font');
       // The open page always shows its thumb: the measured pill, or worn by the page itself.
@@ -955,30 +950,31 @@ describe('Design Redux in Obsidian', function () {
         const out = {
           icon: [icon.offsetWidth, icon.offsetHeight, cs(icon).borderRadius],
           main: cs(main).backgroundColor !== 'rgba(0, 0, 0, 0)' && main.offsetHeight,
-          plain: [cs(plain).backgroundColor, cs(plain).color === cs(document.body).getPropertyValue('--text-accent') || cs(plain).color !== cs(document.body).color],
+          // The rest a soft fill in the text's own colour; only the main action takes the accent.
+          plain: [cs(plain).backgroundColor !== 'rgba(0, 0, 0, 0)', cs(plain).color === cs(document.body).color],
           segmented: seg.offsetHeight,
           row: [row.offsetHeight >= 44, row.querySelector('.dr-list-row-cover').offsetWidth],
           tile: [cs(art).boxShadow, cs(art).borderTopWidth],
           chip: [chip.offsetHeight, cs(chip).borderTopWidth, cs(chip).fontSize],
           sheet: [cs(sheet).borderTopLeftRadius, cs(sheet).boxShadow !== 'none'],
-          toggle: [toggle.offsetWidth, toggle.offsetHeight],
-          // A hairline: Chromium snaps 0.5px to one device pixel.
-          field: [field.offsetHeight, parseFloat(cs(field).borderTopWidth) > 0 && parseFloat(cs(field).borderTopWidth) * devicePixelRatio <= 1, cs(field).boxShadow],
+          // The toggle is Obsidian's own, as it draws it.
+          toggle: toggle.offsetWidth > 0,
+          field: [field.offsetHeight, cs(field).borderTopWidth, cs(field).boxShadow],
         };
         box.remove();
         return out;
       });
     const expected = {
-      icon: [32, 32, '50%'],
+      icon: [32, 32, '8px'],
       main: 32,
-      plain: ['rgba(0, 0, 0, 0)', true],
+      plain: [true, true],
       segmented: 32,
-      row: [true, 36],
+      row: [true, 32],
       tile: ['none', '0px'],
-      chip: [24, '0px', '13px'],
+      chip: [22, '0px', '12px'],
       sheet: ['12px', true],
-      toggle: [51, 31],
-      field: [32, true, 'none'],
+      toggle: true,
+      field: [32, '1px', 'none'],
     };
     await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('moonstone'));
     expect(await measure()).toEqual(expected);
@@ -1024,7 +1020,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result.names).toEqual(['Untitled', 'Sources']);
   });
 
-  it('gives notes an Apple-style look in type and spacing only, keeps room under them for the strip, and keeps the header in order', async function () {
+  it('leaves a note’s type and colours to the theme, keeps room under it for the strip, and keeps the header in order', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       const mine = plugins.designRedux;
@@ -1033,7 +1029,6 @@ describe('Design Redux in Obsidian', function () {
       if (old) await app.vault.delete(old);
       const file = await app.vault.create('Look/Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n---\n\n- an item\n\n%%page: Two%%\nOther\n');
       mine.settings.notePageChips = true;
-      mine.settings.look = 'apple';
       await mine.saveSettings();
       const leaf = app.workspace.getLeaf(true);
       await leaf.openFile(file, { state: { mode: 'preview' } });
@@ -1043,56 +1038,28 @@ describe('Design Redux in Obsidian', function () {
         return props.map((p) => c[p]).join('|');
       };
       const root = () => leaf.view.containerEl.querySelector('.markdown-preview-view');
-      const typeOf = () => ['h1', 'p', 'li'].map((t) => {
-        const el = root().querySelector(t);
-        return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'marginTop', 'marginBottom']) : '';
-      });
-      const colours = () => ['h1', 'p', 'li', '.inline-title', '.dr-note-meta'].map((t) => {
+      const look = () => ['h1', 'p', 'li', '.inline-title'].map((t) => {
         const el = leaf.view.containerEl.querySelector('.markdown-preview-view ' + t);
-        return el ? css(el, ['color', 'backgroundColor', 'borderTopColor']) : '';
+        return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'color', 'backgroundColor']) : '';
       });
-      const apple = {
-        title: css(leaf.view.containerEl.querySelector('.markdown-preview-view .inline-title'), ['fontSize', 'fontWeight']),
-        body: css(root().querySelector('p'), ['fontSize', 'lineHeight']),
-        column: root().querySelector('.markdown-preview-sizer').getBoundingClientRect().width,
-        rule: getComputedStyle(root().querySelector('hr')).borderTopWidth,
-        weights: ['p', 'li', '.inline-title', 'h1'].map((t) => {
-          const el = leaf.view.containerEl.querySelector('.markdown-preview-view ' + t);
-          return el ? t + ':' + getComputedStyle(el).fontWeight + ':' + getComputedStyle(el).webkitFontSmoothing : t + ':none';
-        }),
-        order: Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-album, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips, .markdown-preview-view .dr-note-rule')).map((el) => el.className.split(' ')[0]),
-        colours: colours(),
-        type: typeOf(),
-      };
+      const order = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-album, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips')).map((el) => el.className.split(' ')[0]);
+      const on = look();
       const strip = document.querySelector('.dr-strip');
       const room = { strip: strip ? strip.offsetHeight : 0, reading: parseFloat(getComputedStyle(root()).paddingBottom) };
-      // The theme's look: none of it applies, and it is as with the plugin off.
-      mine.settings.look = 'theme';
-      await mine.saveSettings();
-      await wait(600);
-      const theme = { colours: colours(), type: typeOf() };
       await app.plugins.disablePlugin('design-redux');
       await wait(1500);
-      const without = typeOf();
+      const without = look();
       await app.plugins.enablePlugin('design-redux');
       await wait(1500);
       const again = app.plugins.plugins['design-redux'];
-      again.settings.look = 'apple';
       again.settings.notePageChips = false;
       await again.saveSettings();
       leaf.detach();
       await app.vault.delete(file);
-      return { apple, theme, without, room };
+      return { on, without, order, room };
     });
-    expect(result.apple.weights).toEqual(['p:400:antialiased', 'li:400:antialiased', '.inline-title:700:antialiased', 'h1:700:antialiased']);
-    expect(result.apple.title).toBe('34px|700');
-    expect(result.apple.body).toBe('17px|25.5px');
-    expect(result.apple.column).toBeLessThanOrEqual(680);
-    expect(result.apple.rule).toBe('1px');
-    expect(result.apple.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips', 'dr-note-rule']);
-    expect(result.apple.colours).toEqual(result.theme.colours);
-    expect(result.apple.type).not.toEqual(result.theme.type);
-    expect(result.theme.type).toEqual(result.without);
+    expect(result.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips']);
+    expect(result.on).toEqual(result.without);
     expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
   });
 
@@ -1145,7 +1112,7 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true, noSidebar: 0 });
     await shot('inspector-picked');
-    // The album picked: its own head, as a note's — cover, name, kind, what it holds.
+    // The album picked: its own head, as a note's — its cover as a small mark, name, kind, what it holds.
     const album = await browser.executeObsidian(async ({ app, plugins }) => {
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
       plugins.designRedux.selection.set({ folder: app.vault.getFolderByPath('Politics') });
@@ -1154,7 +1121,7 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!head() && head().querySelector('.dr-props-title').textContent === 'Politics');
       const h = head();
       const art = h.querySelector('.dr-props-art').getBoundingClientRect();
-      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width > 40 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
+      return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width >= 32 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
     });
     expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
     await shot('inspector-album');
@@ -1473,7 +1440,7 @@ describe('Design Redux in Obsidian', function () {
     await shot('home');
   });
 
-  it('lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays', async function () {
+  it('lays out the library: shelf names small and in weight, tiles 12px apart, an album with one filled button, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
         const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -1487,7 +1454,8 @@ describe('Design Redux in Obsidian', function () {
       const row = page.querySelector('.dr-shelf-row');
       return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
     });
-    expect(home).toEqual({ shelf: '22px', gap: '16px', scrolls: 'auto' });
+    expect(home).toEqual({ shelf: '13px', gap: '12px', scrolls: 'auto' });
+    await shot('home');
     await browse({ mode: 'folder', path: 'Politics' });
     await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
     const album = await read(() => {
@@ -2227,7 +2195,7 @@ describe('Design Redux in Obsidian', function () {
     expect(look.rowHeight).toBeGreaterThanOrEqual(32);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);
-    // The Apple look: one rounded group, hairlines between rows, the value at the right.
+    // Rows apart by space, not boxed in a group or ruled; the value beside its name, from the start.
     const group = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
       const rows = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
@@ -2239,7 +2207,7 @@ describe('Design Redux in Obsidian', function () {
         right: field ? getComputedStyle(field).textAlign : 'right',
       };
     });
-    expect(group).toEqual({ radius: '10px', hairline: true, boxed: false, right: 'right' });
+    expect(group).toEqual({ radius: '0px', hairline: false, boxed: false, right: 'start' });
     await shot('properties-inspector');
 
     // + : the search, with the cursor in it.

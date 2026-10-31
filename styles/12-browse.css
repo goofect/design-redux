@@ -6,15 +6,32 @@
  */
 
 .dr-browse .view-content {
-  padding: var(--dr-space-4) calc(var(--dr-u) * 5) calc(var(--dr-u) * 10);
+  --dr-page-top: var(--dr-space-4);
+  --dr-page-side: calc(var(--dr-u) * 5);
+  padding: var(--dr-page-top) var(--dr-page-side) calc(var(--dr-u) * 10);
   overflow-y: auto;
 }
 
+/* The bar: back, the screen's name and Find. It stays at the top as the page scrolls under it,
+   reaching across the page's margins so nothing shows beside it; a hairline under it only once
+   something has gone beneath. */
 .dr-detail-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: calc(var(--dr-u) * 2.5);
-  margin-bottom: calc(var(--dr-u) * 4.5);
+  min-height: calc(var(--dr-control-size) + var(--dr-space-3));
+  margin: calc(var(--dr-page-top) * -1) calc(var(--dr-page-side) * -1) calc(var(--dr-u) * 4.5);
+  padding: var(--dr-space-2) var(--dr-page-side);
+  border-bottom: 1px solid transparent;
+  background-color: var(--background-primary);
+  transition: border-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-detail-bar.is-scrolled {
+  border-bottom-color: var(--dr-separator);
 }
 
 .dr-browse-up {
@@ -42,21 +59,28 @@
   height: var(--dr-control-icon);
 }
 
+/* Find: a soft field, no frame; the accent ring only while typing in it. */
 .dr-browse-search {
   display: flex;
   align-items: center;
-  gap: calc(var(--dr-u) * 1.5);
+  gap: var(--dr-space-2);
   margin-left: auto;
-  padding: var(--dr-space-1) var(--dr-space-3);
+  height: var(--dr-control-size);
+  padding: 0 var(--dr-space-3);
   min-width: 220px;
-  background-color: var(--background-modifier-form-field);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--dr-radius-pill);
+  background-color: var(--dr-fill);
+  border: none;
+  border-radius: var(--dr-radius-md);
+  transition: box-shadow var(--dr-dur-fast) var(--dr-ease), background-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-browse-search:focus-within {
+  box-shadow: var(--dr-focus-ring);
 }
 
 .dr-browse-search-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-browse-search-icon .svg-icon {
@@ -87,59 +111,27 @@
   position: relative;
   isolation: isolate;
   display: flex;
-  align-items: flex-end;
-  gap: calc(var(--dr-u) * 7.5);
-  margin-bottom: calc(var(--dr-u) * 7.5);
-}
-
-/* The artwork again, blurred to its colours and faded out downwards,
-   behind the header and the bar above it: the page takes on the album's
-   colour, as the reference's does. */
-.dr-detail-glow {
-  position: absolute;
-  z-index: -1;
-  top: -90px;
-  left: -40px;
-  /* To the page's own edge, no further: past it, a narrow page scrolls sideways. */
-  right: calc(var(--dr-u) * -5);
-  bottom: -40px;
-  overflow: hidden;
-  opacity: 0.45;
-  filter: blur(60px) saturate(1.5);
-  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
-  pointer-events: none;
-}
-
-.dr-detail-glow img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-detail-glow .dr-card-glyph,
-.dr-detail-glow .dr-gen-initials {
-  display: none;
-}
-
-/* A plain grey stand-in gives the page no colour to take on. */
-.dr-detail-glow.is-blank:not(.is-hued) {
-  display: none;
-}
-
-.theme-dark .dr-detail-glow {
-  opacity: 0.55;
+  align-items: flex-start;
+  gap: var(--dr-space-4);
+  margin-bottom: var(--dr-space-6);
 }
 
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 260px);
-  height: var(--dr-album-art-size, 260px);
+  width: var(--dr-album-art-size, 56px);
+  height: var(--dr-album-art-size, 56px);
+  margin-top: var(--dr-space-1);
   overflow: hidden;
-  border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
+  border-radius: var(--dr-radius-md);
   background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-lg);
+  box-shadow: var(--dr-cover-edge);
+}
+
+/* Being edited, the cover is big enough for its tools. */
+.dr-detail.is-editing .dr-detail-art {
+  width: 120px;
+  height: 120px;
 }
 
 .dr-detail-art img {
@@ -159,27 +151,25 @@
 .dr-detail-info {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   min-width: 0;
-  padding-bottom: var(--dr-space-1);
+  gap: var(--dr-space-1);
 }
 
 .dr-detail-title {
   font-size: var(--dr-display-size);
   font-weight: var(--dr-display-weight);
-  letter-spacing: -0.02em;
-  line-height: var(--dr-line-display);
+  letter-spacing: -0.012em;
+  line-height: var(--dr-line-heading);
+  text-wrap: balance;
   color: var(--text-normal);
 }
 
-/* The one accented line, as the artist name is in the reference — and,
-   where it names the folder this one is in, a way there. */
-
+/* A line under the title: the folder note's lead property, or the folder
+   this one is in — and then a way there. Quiet: the accent is kept for
+   where you are and what's picked. */
 .dr-detail-sub {
-  margin-top: var(--dr-space-1);
-  font-size: var(--dr-heading-size);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-accent);
+  font-size: var(--font-ui-medium);
+  color: var(--text-muted);
 }
 
 .dr-detail-sub.is-link {
@@ -202,10 +192,9 @@
 
 /* Quiet and small, as the genre and year are under an album's title. */
 .dr-detail-meta {
-  margin-top: var(--dr-space-2);
-  font-size: var(--dr-ui-size);
-  font-weight: var(--dr-ui-weight);
+  font-size: var(--font-ui-small);
   line-height: var(--dr-line-meta);
+  font-variant-numeric: tabular-nums;
   color: var(--dr-meta-color);
 }
 
@@ -216,7 +205,6 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px calc(var(--dr-u) * 2.5);
-  margin-bottom: calc(var(--dr-u) * 1.5);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold, 600);
   color: var(--text-muted);
@@ -245,7 +233,7 @@
 }
 
 .dr-crumb-sep {
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -258,9 +246,9 @@
 
 /* What the album is for, in a few lines at most. */
 .dr-detail-desc {
-  margin-top: var(--dr-space-2);
+  margin-top: var(--dr-space-1);
   max-width: 60ch;
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-medium);
   line-height: var(--dr-line-body);
   color: var(--text-muted);
   display: -webkit-box;
@@ -301,7 +289,7 @@
 
 .dr-album-notice-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
@@ -341,7 +329,7 @@
 
 .dr-report-count {
   font-weight: var(--font-normal, 400);
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-report-row,
@@ -356,7 +344,7 @@
 
 .dr-report-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-report-text {
@@ -381,7 +369,7 @@
 .dr-inbox-when {
   flex: 0 1 auto;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -491,7 +479,7 @@
 
 .dr-tree-icon {
   display: flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-tree-name {
@@ -504,7 +492,7 @@
 .dr-tree-count {
   margin-left: auto;
   font-size: var(--font-ui-smaller);
-  color: var(--text-faint);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -592,8 +580,8 @@
   display: flex;
   /* Short of room, the actions go onto a second line rather than off the page. */
   flex-wrap: wrap;
-  gap: var(--dr-space-3);
-  margin-top: calc(var(--dr-u) * 5.5);
+  gap: var(--dr-space-2);
+  margin-top: var(--dr-space-3);
 }
 
 .dr-detail-action {
@@ -654,9 +642,10 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: calc(var(--dr-u) * 3.5);
-  padding: var(--dr-space-2);
-  border-radius: var(--dr-r);
+  gap: var(--dr-space-3);
+  min-height: 44px;
+  padding: var(--dr-space-2) var(--dr-space-2) var(--dr-space-2) var(--dr-space-3);
+  border-radius: var(--dr-radius-md);
   cursor: pointer;
 }
 
@@ -674,12 +663,14 @@
   }
 }
 
+/* No track numbers: the place is kept, narrow, for the unread dot, and the
+   number stays for whoever reads the page aloud. */
 .dr-track-num {
-  flex: 0 0 20px;
-  text-align: right;
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
-  font-variant-numeric: tabular-nums;
+  flex: 0 0 6px;
+  align-self: stretch;
+  overflow: visible;
+  color: var(--text-muted);
+  font-size: 0;
 }
 
 .dr-track-name {
@@ -701,7 +692,7 @@
 .dr-track.is-unread .dr-track-num::before {
   content: '';
   position: absolute;
-  left: -2px;
+  left: 0;
   top: 50%;
   width: 6px;
   height: 6px;
@@ -714,7 +705,7 @@
 .dr-end-row.is-unwritten .dr-track-name,
 .dr-new-note-row .dr-track-name,
 .dr-new-note-row .dr-track-num {
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-style: normal;
 }
 
@@ -749,7 +740,7 @@
   vertical-align: middle;
   margin: 0 var(--size-2-2) 0 calc(-1 * var(--size-4-1));
   padding: 0;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-track-fold .svg-icon {
@@ -763,14 +754,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
 }
 
 .dr-track-time {
   flex: 0 0 auto;
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
 }
 
 /* How long the note is: the row's last column, a fixed width so the
@@ -780,8 +772,8 @@
   flex: 0 0 4.6em;
   text-align: right;
   white-space: nowrap;
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
 }
 
@@ -806,7 +798,7 @@
 .dr-track-pin {
   flex: 0 0 auto;
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-track-pin .svg-icon {
@@ -821,6 +813,7 @@
   flex: 0 0 auto;
   padding: 2px;
   opacity: 0.7;
+  transition: opacity var(--dr-dur-fast) var(--dr-ease);
 }
 
 @media (any-hover: hover) {
@@ -829,6 +822,8 @@
   }
 
   .dr-track:hover .dr-track-more,
+  .dr-track.is-selected .dr-track-more,
+  .dr-track:focus-within .dr-track-more,
   .dr-track-more:focus-visible {
     opacity: 0.7;
   }
@@ -1063,35 +1058,91 @@
   --dr-tile-size: 230px;
 }
 
+/* Cards: a quiet panel each, its cover a small mark beside its name — a
+ * note's, a collection's, alike. Only a collection laid out as a gallery
+ * (.is-gallery) shows covers large, a grid of them with names beneath.
+ */
 .dr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
-  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+  gap: var(--dr-space-3);
   margin-bottom: var(--dr-space-2);
 }
 
+.dr-grid.is-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
+  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
+}
+
 .dr-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  grid-auto-rows: auto;
+  align-content: center;
+  column-gap: var(--dr-space-3);
+  min-height: 64px;
+  padding: var(--dr-space-3);
   cursor: pointer;
-  border-radius: var(--dr-radius-sm);
+  border-radius: var(--dr-radius-lg);
+  background-color: var(--background-secondary);
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), box-shadow var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-card > :not(.dr-card-art) {
+  grid-column: 2;
 }
 
 .dr-card-art {
   position: relative;
+  grid-row: 1 / span 3;
+  align-self: center;
   aspect-ratio: 1;
-  margin-bottom: var(--dr-cover-gap);
   overflow: hidden;
-  border-radius: var(--dr-radius-cover);
+  border-radius: var(--dr-radius-md);
   background-color: var(--background-secondary);
-  box-shadow: var(--dr-shadow-sm);
+  box-shadow: var(--dr-cover-edge);
   transition: transform var(--dr-dur-fast) var(--dr-ease);
+}
+
+/* A mark's buttons would cover it: its menu is a right-click or a long press away. */
+.dr-card:not(.is-gallery .dr-card) .dr-card-buttons {
+  display: none;
+}
+
+@media (any-hover: hover) {
+  .dr-card:not(.is-gallery .dr-card):hover {
+    background-color: var(--dr-fill-strong);
+  }
+}
+
+.is-gallery .dr-card {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  border-radius: var(--dr-radius-sm);
+  background-color: transparent;
+}
+
+.is-gallery .dr-card-art {
+  margin-bottom: var(--dr-cover-gap);
+  border-radius: var(--dr-radius-cover);
+  box-shadow: var(--dr-shadow-sm);
 }
 
 .dr-card:focus-visible {
   outline: none;
 }
 
-.dr-card:focus-visible .dr-card-art {
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+.dr-card:focus-visible {
+  box-shadow: var(--dr-focus-ring);
+}
+
+.is-gallery .dr-card:focus-visible {
+  box-shadow: none;
+}
+
+.is-gallery .dr-card:focus-visible .dr-card-art {
+  box-shadow: var(--dr-focus-ring);
 }
 
 .dr-card-art img {
@@ -1111,17 +1162,22 @@
 
 .dr-card-glyph {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-card-glyph .svg-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.is-gallery .dr-card-glyph .svg-icon {
   width: 34px;
   height: 34px;
 }
 
 .dr-detail-art .dr-card-glyph .svg-icon {
-  width: 58px;
-  height: 58px;
+  width: 24px;
+  height: 24px;
 }
 
 .dr-card-title {
@@ -1236,11 +1292,17 @@
 /* The header sorts, so its cells are controls, with the arrow on
    whichever column is ordering the table. */
 
+/* The table's head stays as it scrolls, just under the page's bar. */
 .dr-th {
-  color: var(--text-faint);
+  position: sticky;
+  top: var(--dr-bar-h, 0px);
+  z-index: 2;
+  background-color: var(--background-primary);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
   border-radius: 0;
-  border-bottom: 1px solid var(--dr-line);
+  border-bottom: 1px solid var(--dr-separator);
   cursor: default;
 }
 
@@ -1287,7 +1349,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-td-title {
@@ -1340,7 +1402,7 @@
 
 .dr-split-count {
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
@@ -1384,17 +1446,25 @@
   height: 15px;
 }
 
-/* Discs -------------------------------------------------------------------- */
+/* Sections ------------------------------------------------------------------
+ *
+ * A folder's subfolders as sections of its list: a plain heading, its count
+ * beside it, that stays at the top under the bar while its notes scroll by.
+ */
 
 .dr-disc {
+  position: sticky;
+  top: var(--dr-bar-h, 0px);
+  z-index: 2;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--dr-space-2);
-  margin-top: calc(var(--dr-u) * 6.5);
-  padding: 0 var(--dr-space-2) var(--dr-space-2);
-  color: var(--text-faint);
-  font-size: var(--font-ui-smaller);
-  border-bottom: 1px solid var(--dr-line);
+  margin-top: var(--dr-space-6);
+  padding: var(--dr-space-2) var(--dr-space-3);
+  background-color: var(--background-primary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  border-bottom: 1px solid var(--dr-separator);
 }
 
 .dr-tracks > .dr-disc:first-child {
@@ -1402,18 +1472,19 @@
 }
 
 .dr-disc-title {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-muted);
-  font-weight: var(--font-medium, 500);
+  color: var(--text-normal);
+  font-weight: var(--font-semibold, 600);
 }
 
 .dr-disc-count {
   flex: 0 0 auto;
-  color: var(--text-faint);
+  color: var(--text-muted);
   font-weight: var(--font-normal, 400);
+  font-variant-numeric: tabular-nums;
 }
 

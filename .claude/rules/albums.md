@@ -29,3 +29,6 @@ paths:
   `plugin.moveFile` returns true, not the old path, and `processFrontMatter`
   does nothing — replace either in a test that needs them.
   Its plugin has a real `notes` and `files`.
+- The look is Clear (docs/architecture.md §43): a new screen's motion goes through
+  `ui/231-motion.js`, never a measurement inside `render()`; a card is a panel with a
+  small cover, large covers only inside `.is-gallery`.

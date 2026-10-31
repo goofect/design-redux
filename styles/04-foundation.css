@@ -18,6 +18,7 @@
  *   Generated covers; Drawn covers; Choosing a cover colour; Artwork where
  *     there's none; Covers by dropping — covers (030–032, 230–240)
  *   Arranging by drag; Editing an album (122)
+ *   Components — the shared pieces of ui/229, in the Clear look
  * Each part uses the foundation's tokens; a value written out by hand is
  * a measure of that part's own (a cover's artwork, a canvas glyph).
  */
@@ -30,7 +31,7 @@
  * it), three corners and a pill, three depths of shadow, two speeds of
  * motion, and type in three levels — display and title for what a screen
  * is, interface for rows and buttons, metadata for counts and dates.
- * Colours stay the theme's unless the editorial look is chosen. Motion
+ * Colours are always the theme's. Motion
  * stops where the system asks for less of it, here, once.
  */
 body {
@@ -62,6 +63,32 @@ body {
   --dr-ease-move: cubic-bezier(0.2, 0, 0, 1);
   --dr-ease: ease;
 
+  /* The Clear look's motion: what enters slows to a stop (ease-out), what leaves speeds away
+     (ease-in) in about 70% of the time, and nothing takes more than 400ms. Enter: a row, a
+     popover. Exit: the same going. Page: a screen or a pane coming in; Leave: going. Move: what
+     glides to a new place (a sorted row, the sidebar's mark). Stagger: each row of a list after
+     the one before, ten at most. Rise and slide: how far things travel as they come. */
+  --dr-dur-enter: 220ms;
+  --dr-dur-exit: 150ms;
+  --dr-dur-page: 320ms;
+  --dr-dur-leave: 220ms;
+  --dr-dur-move: 320ms;
+  --dr-dur-stagger: 24ms;
+  --dr-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dr-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --dr-rise: 8px;
+  --dr-slide: 24px;
+
+  /* The Clear look's surfaces, from the theme's own colours: a fill for what's pointed at, a
+     stronger one for what's pressed, a hairline only where spacing can't part two groups, a
+     raised surface for what floats, and the accent softened for what's picked. */
+  --dr-fill: var(--background-modifier-hover);
+  --dr-fill-strong: var(--background-modifier-active-hover);
+  --dr-separator: var(--background-modifier-border);
+  --dr-raised: var(--background-primary);
+  --dr-accent-soft: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  --dr-focus-ring: 0 0 0 2px var(--interactive-accent);
+
   /* Glass, for what floats over the page — the strip, menus, popups — so
      what's beneath stays the brightest thing on screen: how much it blurs. */
   --dr-glass-blur: var(--glass-blur, 14px);
@@ -75,7 +102,7 @@ body {
   --dr-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --dr-radius-cover: var(--dr-cover-radius, var(--radius-m, 8px));
 
-  --dr-display-size: 2.5em;
+  --dr-display-size: 1.75em;
   --dr-display-weight: var(--font-semibold, 600);
   --dr-title-size: 1.5em;
   --dr-heading-size: 1.25em;
@@ -95,7 +122,7 @@ body {
   /* Components' own measures, from the unit: a sidebar row (28, 32 or 36px
      by density), the gap under a cover, and the gap under a card's title. */
   --dr-row-height: calc(var(--dr-u) * 4 + 16px);
-  --dr-control-size: 30px;
+  --dr-control-size: 32px;
   --dr-control-icon: 16px;
 
   /* On a canvas: how far the rest steps back while something is singled
@@ -117,101 +144,76 @@ body {
     --dr-dur-fast: 0ms;
     --dr-dur-base: 0ms;
     --dr-dur-slow: 0ms;
+    --dr-dur-enter: 0ms;
+    --dr-dur-exit: 0ms;
+    --dr-dur-page: 0ms;
+    --dr-dur-leave: 0ms;
+    --dr-dur-move: 0ms;
+    --dr-dur-stagger: 0ms;
+    --dr-rise: 0px;
+    --dr-slide: 0px;
   }
 }
 
-/* The editorial look, chosen in settings: monochrome surfaces a step
- * apart, fine low-contrast lines instead of shadows, small corners,
- * titles in a medium weight, and covers without colour of their own
- * unless they have art. The accent stays the theme's, for what it means.
- * Its colours go on the whole window, or — set to Design Redux only
- * (dr-look-scoped) — on just what the plugin draws. */
-body.dr-look-editorial.theme-dark:not(.dr-look-scoped),
-body.dr-look-editorial.dr-look-scoped.theme-dark :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup) {
-  --color-base-00: #090909;
-  --color-base-05: #0d0d0d;
-  --color-base-10: #111111;
-  --color-base-20: #181818;
-  --color-base-25: #1e1e1e;
-  --color-base-30: #252525;
-  --color-base-35: #2e2e2e;
-  --color-base-40: #3a3a3a;
-  --color-base-50: #575757;
-  --color-base-60: #7d7d7d;
-  --color-base-70: #a0a0a0;
-  --color-base-100: #e8e8e8;
-  --background-primary: #090909;
-  --background-primary-alt: #111111;
-  --background-secondary: #111111;
-  --background-secondary-alt: #181818;
-  --background-modifier-border: #252525;
-  --background-modifier-border-hover: #333333;
-  --background-modifier-border-focus: #4a4a4a;
-  --background-modifier-hover: rgba(255, 255, 255, 0.05);
-  --background-modifier-active-hover: rgba(255, 255, 255, 0.08);
-  --divider-color: #252525;
-  --text-normal: #e8e8e8;
-  --text-muted: #a0a0a0;
-  --text-faint: #7d7d7d;
+/* The Motion setting. Subtle keeps the fades and drops what travels; Off stops it all. */
+body.dr-motion-subtle {
+  --dr-dur-move: 0ms;
+  --dr-dur-stagger: 0ms;
+  --dr-rise: 0px;
+  --dr-slide: 0px;
 }
 
-body.dr-look-editorial.theme-light:not(.dr-look-scoped),
-body.dr-look-editorial.dr-look-scoped.theme-light :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup) {
-  --color-base-00: #fbfbfa;
-  --color-base-05: #f7f7f6;
-  --color-base-10: #f2f2f1;
-  --color-base-20: #ececeb;
-  --color-base-25: #e6e6e5;
-  --color-base-30: #e1e1df;
-  --color-base-35: #d6d6d4;
-  --color-base-40: #c4c4c2;
-  --color-base-50: #9a9a98;
-  --color-base-60: #737373;
-  --color-base-70: #5c5c5c;
-  --color-base-100: #161616;
-  --background-primary: #fbfbfa;
-  --background-primary-alt: #f4f4f3;
-  --background-secondary: #f4f4f3;
-  --background-secondary-alt: #ececeb;
-  --background-modifier-border: #e1e1df;
-  --background-modifier-border-hover: #d0d0ce;
-  --background-modifier-border-focus: #b5b5b3;
-  --background-modifier-hover: rgba(0, 0, 0, 0.04);
-  --background-modifier-active-hover: rgba(0, 0, 0, 0.07);
-  --divider-color: #e1e1df;
-  --text-normal: #161616;
-  --text-muted: #5c5c5c;
-  --text-faint: #737373;
+body.dr-motion-off {
+  --dr-dur-press: 0ms;
+  --dr-dur-fast: 0ms;
+  --dr-dur-base: 0ms;
+  --dr-dur-slow: 0ms;
+  --dr-dur-enter: 0ms;
+  --dr-dur-exit: 0ms;
+  --dr-dur-page: 0ms;
+  --dr-dur-leave: 0ms;
+  --dr-dur-move: 0ms;
+  --dr-dur-stagger: 0ms;
+  --dr-rise: 0px;
+  --dr-slide: 0px;
 }
 
-body.dr-look-editorial {
-  --dr-shadow-sm: 0 0 0 1px var(--background-modifier-border);
-  --dr-shadow-md: 0 0 0 1px var(--background-modifier-border);
-  --dr-shadow-lg: 0 0 0 1px var(--background-modifier-border);
-  --dr-float-shadow: 0 0 0 1px var(--background-modifier-border);
-  --dr-cover-edge: inset 0 0 0 1px var(--background-modifier-border);
-  --dr-radius-pill: var(--dr-radius-sm);
-  --dr-display-weight: var(--font-medium, 500);
-  --dr-ui-weight: var(--font-normal, 400);
+/* Coming in: rows and tiles drawn for the first time, one after another. A row drawn again
+   unchanged isn't given the class, so it stays still. */
+@keyframes dr-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--dr-rise));
+  }
 }
 
-/* Scoped, the plugin's own views take their surfaces from those colours. */
-body.dr-look-editorial.dr-look-scoped .dr-browse {
-  background-color: var(--background-primary);
+.dr-enter {
+  animation: dr-rise var(--dr-dur-enter) var(--dr-ease-out) both;
+  animation-delay: calc(min(var(--dr-i, 0), 10) * var(--dr-dur-stagger));
 }
 
-body.dr-look-editorial.dr-look-scoped .dr-library {
-  background-color: var(--background-secondary);
+/* Changing screen in the library, where the platform has view transitions: the old screen
+   leaves a little the way it came, the new one slides in from the side it's going to. */
+::view-transition-old(dr-screen) {
+  animation: dr-screen-out var(--dr-dur-leave) var(--dr-ease-in) both;
 }
 
-body.dr-look-editorial .dr-detail-glow {
-  display: none;
+::view-transition-new(dr-screen) {
+  animation: dr-screen-in var(--dr-dur-page) var(--dr-ease-out) both;
 }
 
-body.dr-look-editorial .is-generated,
-body.dr-look-editorial [class].is-blank.is-hued,
-body.dr-look-editorial .dr-cat {
-  filter: grayscale(1);
+@keyframes dr-screen-out {
+  to {
+    opacity: 0;
+    transform: translateX(calc(var(--dr-dir, 1) * var(--dr-slide) * -0.6));
+  }
+}
+
+@keyframes dr-screen-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--dr-dir, 1) * var(--dr-slide)));
+  }
 }
 
 /* Icon buttons a finger can find. */

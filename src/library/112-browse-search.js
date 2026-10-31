@@ -158,21 +158,13 @@ export class SearchScreen extends BrowseScreen {
     const card = grid.createDiv({ cls: 'dr-cat' });
     asButton(card);
 
-    // No artwork to draw on, so the colour comes from the name itself —
-    // stable, so a category keeps its colour between visits.
+    // Its dot's colour comes from the name itself — stable, so a
+    // category keeps its colour between visits.
     let hash = 0;
     for (let i = 0; i < group.value.length; i++) {
       hash = (hash * 31 + group.value.charCodeAt(i)) % 360;
     }
     card.style.setProperty('--dr-cat-hue', String(hash));
-
-    const cover = this.view.groupCover(group);
-    if (cover) {
-      const img = card.createEl('img', { cls: 'dr-cat-art' });
-      img.src = cover;
-      img.alt = '';
-      img.addEventListener('error', () => img.remove());
-    }
 
     card.createSpan({ cls: 'dr-cat-name', text: group.value });
     card.createSpan({
