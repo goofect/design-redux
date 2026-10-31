@@ -875,7 +875,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result.first.widthClosed).toBe(result.first.widthOpen);
     expect(result.first.firstLine).toBe('Alpha text');
     expect(result.second.firstLine).toBe('Beta text');
-    expect(result.first.slide).toContain('0.22s');
+    expect(result.first.slide).toContain('0.32s');
     expect(result.first.text).toContain('Alpha text');
     expect(result.first.text).not.toContain('Beta text');
     expect(result.second.open).toBe('Sources');
@@ -1440,7 +1440,7 @@ describe('Design Redux in Obsidian', function () {
     await shot('home');
   });
 
-  it('lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays', async function () {
+  it('lays out the library: shelf names small and in weight, tiles 12px apart, an album with one filled button, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
         const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -1454,7 +1454,7 @@ describe('Design Redux in Obsidian', function () {
       const row = page.querySelector('.dr-shelf-row');
       return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
     });
-    expect(home).toEqual({ shelf: '22px', gap: '16px', scrolls: 'auto' });
+    expect(home).toEqual({ shelf: '13px', gap: '12px', scrolls: 'auto' });
     await browse({ mode: 'folder', path: 'Politics' });
     await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
     const album = await read(() => {
@@ -2194,7 +2194,7 @@ describe('Design Redux in Obsidian', function () {
     expect(look.rowHeight).toBeGreaterThanOrEqual(32);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);
-    // The Apple look: one rounded group, hairlines between rows, the value at the right.
+    // Rows apart by space, not boxed in a group or ruled; the value beside its name, from the start.
     const group = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
       const rows = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
@@ -2206,7 +2206,7 @@ describe('Design Redux in Obsidian', function () {
         right: field ? getComputedStyle(field).textAlign : 'right',
       };
     });
-    expect(group).toEqual({ radius: '10px', hairline: true, boxed: false, right: 'right' });
+    expect(group).toEqual({ radius: '0px', hairline: false, boxed: false, right: 'start' });
     await shot('properties-inspector');
 
     // + : the search, with the cursor in it.

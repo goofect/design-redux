@@ -34,7 +34,7 @@ settings:
         title: Album cover size
         description: The large cover at the top of an album.
         type: variable-number-slider
-        default: 300
+        default: 200
         min: 160
         max: 440
         step: 10

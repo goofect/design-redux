@@ -341,10 +341,16 @@ export class BrowseView extends BrowseAlbum {
     });
   }
 
-  /** The bar stays at the top; a hairline under it once the page has scrolled beneath. */
+  /**
+   * The bar stays at the top; a hairline under it once the page has scrolled beneath. Its
+   * height is told to the page, so what else stays (a table's head) stays under it.
+   */
   markScrolled() {
     const bar = this.contentEl && this.contentEl.querySelector('.dr-detail-bar');
-    if (bar) bar.toggleClass('is-scrolled', this.contentEl.scrollTop > 4);
+    if (!bar) return;
+    bar.toggleClass('is-scrolled', this.contentEl.scrollTop > 4);
+    const h = `${bar.offsetHeight}px`;
+    if (this.contentEl.style.getPropertyValue('--dr-bar-h') !== h) this.contentEl.style.setProperty('--dr-bar-h', h);
   }
 
   canGo(dir) {

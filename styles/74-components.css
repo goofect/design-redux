@@ -19,7 +19,8 @@
   background-color: transparent;
   box-shadow: none;
   color: var(--text-muted);
-  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-fast) var(--dr-ease), transform var(--dr-dur-press) var(--dr-ease-out);
+  /* The width too: the strip's folded buttons open out smoothly, so nothing jumps from under the pointer. */
+  transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-fast) var(--dr-ease), width var(--dr-dur-move) var(--dr-ease-out), transform var(--dr-dur-press) var(--dr-ease-out);
 }
 
 :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold) .svg-icon {

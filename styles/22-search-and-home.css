@@ -400,9 +400,11 @@
   }
 }
 
+/* A shelf's name: small and in weight, the shelf itself saying the rest. */
 .dr-shelf-title {
-  font-size: var(--font-ui-large);
+  font-size: var(--font-ui-small);
   font-weight: var(--font-semibold, 600);
+  letter-spacing: 0.02em;
   color: var(--text-normal);
 }
 
@@ -453,7 +455,7 @@
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: var(--dr-tile-size, 170px);
-  gap: calc(var(--dr-u) * 5);
+  gap: var(--dr-space-3);
   margin: 0 calc(var(--dr-u) * -1) var(--dr-space-2);
   padding: var(--dr-space-1) var(--dr-space-1) var(--dr-space-2);
   overflow-x: auto;

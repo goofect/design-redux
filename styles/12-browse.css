@@ -158,8 +158,8 @@
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 260px);
-  height: var(--dr-album-art-size, 260px);
+  width: var(--dr-album-art-size, 200px);
+  height: var(--dr-album-art-size, 200px);
   overflow: hidden;
   border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
   background-color: var(--background-secondary);
@@ -1260,11 +1260,17 @@
 /* The header sorts, so its cells are controls, with the arrow on
    whichever column is ordering the table. */
 
+/* The table's head stays as it scrolls, just under the page's bar. */
 .dr-th {
-  color: var(--text-faint);
+  position: sticky;
+  top: var(--dr-bar-h, 0px);
+  z-index: 2;
+  background-color: var(--background-primary);
+  color: var(--text-muted);
   font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
   border-radius: 0;
-  border-bottom: 1px solid var(--dr-line);
+  border-bottom: 1px solid var(--dr-separator);
   cursor: default;
 }
 
