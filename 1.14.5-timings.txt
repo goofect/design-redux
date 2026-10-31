@@ -1,0 +1,51 @@
+perf: plugin load 49 ms
+perf: startup steps: types 10.1 ms, register 1.8 ms, enable 2.4 ms over 36 features; slowest MarkedLists types 3.4, Footnotes types 2.3, Scripts types 2.3, NotePages types 2.0, ContextStrip enable 1.9, QuietLinks register 1.5; main.js 1083 KB, styles.css 220 KB
+perf: library redraw 2 ms
+perf: shelf of 50 albums: drawn 10 ms, the sidebar 1 ms {"items":{}}
+perf: shelf of 500 albums: drawn 15 ms, the sidebar 1 ms {"items":{}}
+perf: album of 50 notes: draw p50 1.6 ms, p95 9.5 ms (51 rows); a redraw with nothing changed replaces 87 elements, 0 covers; focus kept
+perf: album of 500 notes: draw p50 5.3 ms, p95 10.9 ms (501 rows); a redraw with nothing changed replaces 89 elements, 0 covers; focus kept
+perf: album of 2000 notes: draw p50 37.8 ms, p95 109.3 ms (2001 rows); a redraw with nothing changed replaces 135 elements, 0 covers; focus kept
+ 14.3s  times an album of 2000 notes: each draw, what a redraw replaces, and whether focus holds
+ 11.6s  draws quiet links, keeps them off the graph and backlinks, and follows renames
+  7.1s  routes graph links by a property where notes name what they sit under
+  5.9s  renames and merges properties from Edit on the Properties screen
+  5.8s  holds the left panel and the album page still while nothing changes
+  5.1s  leaves a note’s type and colours to the theme, keeps room under it for the strip, and keeps the header in order
+  4.9s  keeps citations off the page and lists them in a Footnotes view
+  4.4s  shows one page of a note with pages, in editing and in reading view
+  4.2s  times an album of 500 notes: each draw, what a redraw replaces, and whether focus holds
+  4.0s  writes a property the same way in every note, where Obsidian lists it one way and notes another
+  3.9s  times a shelf of 50 and of 500 albums, and the sidebar beside them
+  3.3s  draws the page control as a segmented control, in light and dark
+  3.3s  keeps to its design system in the dark theme and the light one: one control size, square covers, rows by density, readable text
+  3.3s  takes snapshots of the sidebar, the album’s pane, the Edit tray and a narrow album, and holds up with reduced motion and forced colours
+  3.2s  draws graph links through the notes between, and lights the routes on hover
+  3.1s  renames a folder in Edit mode, and one press of Done finishes
+  3.0s  keeps the library index right as folders move, notes go and links change
+  2.7s  adds a footnote in place from a box at the cursor, keeping numbers in order
+  2.6s  draws its settings as four places and a look, by what they’re for
+  2.4s  adds a page to a plain note in one step and names it where it stands
+  2.3s  opens the Properties window as a list of properties, each tool a sheet over it
+  2.1s  times an album of 50 notes: each draw, what a redraw replaces, and whether focus holds
+  1.8s  groups its right-click entries, with New canvas under New
+  1.7s  opens a folder as an album, with an Edit mode
+  1.5s  sets a property by a rule when a note is moved into a folder, once, with Undo
+  1.4s  searches: words from a note show their passage; the note named for the query comes first, and Enter opens it
+  1.4s  offers Undo after a move, and it puts the note back
+  1.2s  opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading
+  1.1s  shows a note picked in an album in its pane, and opens it on a double click
+  1.0s  shows a note's properties as a light inspector: the main ones, + to add, a short menu per row
+  0.8s  draws the nine components to their measures, in light and dark
+  0.8s  opens a folder in a note’s path at the top as its collection in the library
+  0.6s  lays out the library: shelf names small and in weight, tiles 12px apart, an album with one filled button, a header that stays
+  0.6s  puts « » either side of the note in the strip
+  0.6s  draws Home with its shelves
+  0.5s  keeps a way back to a closed sidebar on an empty tab, with one content area and the strip down
+  0.2s  follows a long note in the reading outline, and a row goes to its heading
+  0.0s  shows one settings gear, in the sidebar header
+  0.0s  logged no errors of its own along the way
+  0.0s  loads, with its features running
+  0.0s  keeps the ribbon’s buttons out of sight while they’re in the menu
+  0.0s  reports what works on this version, and copies diagnostics
+  0.0s  finds the unofficial parts of Obsidian it relies on

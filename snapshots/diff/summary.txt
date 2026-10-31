@@ -1,0 +1,6 @@
+resized    album-narrow: 966×440 → 974×440
+changed    album-pane: 12.89% of pixels, within x 9–316, y 4–355
+resized    edit-tray-forced-colors: 455×42 → 481×40
+resized    edit-tray: 455×42 → 481×40
+resized    left-sidebar-forced-colors: 300×472 → 300×480
+resized    left-sidebar: 300×472 → 300×480

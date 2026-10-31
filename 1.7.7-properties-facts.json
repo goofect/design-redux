@@ -1,0 +1,22 @@
+{
+  "addPropertyChain": [
+    "span.text-button-label",
+    "div.metadata-add-button.text-icon-button",
+    "div.metadata-content",
+    "div.metadata-container",
+    "div.cm-sizer",
+    "div.cm-scroller",
+    "div.cm-editor.cm-focused.ͼ1.ͼ2",
+    "div.markdown-source-view.cm-s-obsidian.mod-cm6.node-insert-event.is-readable-line-width.is-live-preview.is-folding.show-properties"
+  ],
+  "bodyHasPanelClass": true,
+  "inRootSplit": true,
+  "leafType": "markdown",
+  "metadataContainers": [
+    [
+      "metadata-container",
+      "none"
+    ]
+  ],
+  "style": null
+}
