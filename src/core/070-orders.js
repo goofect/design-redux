@@ -245,6 +245,15 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.keepOwnOrder && typeof saved.keepOwnOrder === 'object') delete saved.keepOwnOrder.read;
     },
   },
+  {
+    // One look, Clear, in place of Apple's, the theme's and the editorial: whichever was
+    // chosen, and where it applied, go. How much moves is a setting of its own now.
+    to: 22,
+    run(saved) {
+      if (saved.look !== undefined) saved.look = 'clear';
+      delete saved.lookScope;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

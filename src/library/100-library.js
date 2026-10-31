@@ -14,7 +14,7 @@ import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '.
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
-import { isAppleLook } from '../ui/229-components.js';
+import { isClearLook } from '../ui/229-components.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { SmartAlbums } from './258-smart-albums.js';
 
@@ -291,7 +291,7 @@ export class LibraryView extends ItemView {
         onMenu: (evt) => menu(evt, open),
       });
       // The Apple look: how many notes it holds, muted at the end.
-      if (!pinned && isAppleLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
+      if (!pinned && isClearLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       return row;
     }
     return this.row(list, {

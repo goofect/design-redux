@@ -206,20 +206,20 @@
 }
 
 /* Glass: menus, suggestions and the canvas's bar and controls frosted, the note behind them showing through — not in the flat editorial look. */
-body.dr-glass:not(.dr-look-editorial) .menu,
-body.dr-glass:not(.dr-look-editorial) .suggestion-container,
-body.dr-glass:not(.dr-look-editorial) .canvas-menu,
-body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+body.dr-glass .menu,
+body.dr-glass .suggestion-container,
+body.dr-glass .canvas-menu,
+body.dr-glass .canvas-controls .canvas-control-group {
   background-color: color-mix(in srgb, var(--background-primary) 78%, transparent);
   backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
   -webkit-backdrop-filter: blur(var(--dr-glass-blur)) saturate(1.6);
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  body.dr-glass:not(.dr-look-editorial) .menu,
-  body.dr-glass:not(.dr-look-editorial) .suggestion-container,
-  body.dr-glass:not(.dr-look-editorial) .canvas-menu,
-  body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
+  body.dr-glass .menu,
+  body.dr-glass .suggestion-container,
+  body.dr-glass .canvas-menu,
+  body.dr-glass .canvas-controls .canvas-control-group {
     background-color: var(--background-primary);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

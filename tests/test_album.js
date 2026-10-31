@@ -125,7 +125,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_album_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
+  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, MOTION_LEVELS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -417,7 +417,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const classic = { look: 'classic', notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 17).run(classic);
     assert.deepStrictEqual(classic, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
-    assert.ok(!('classic' in R.LOOKS));
+    assert.ok(!('classic' in R.MOTION_LEVELS));
   });
 
   await t('reading outline: the heading you’re at, the words in each section, a row goes to its heading', async () => {
@@ -567,10 +567,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, gone with the reading history, is nowhere in it.
     assert.ok(!s.librarySections.some((sec) => sec.items.some((i) => i.id === 'read')));
-    assert.strictEqual(s.settingsVersion, 21);
+    assert.strictEqual(s.settingsVersion, 22);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 21, brought up from \d+; steps [\d, ]+21$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 22, brought up from \d+; steps [\d, ]+22$/);
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);
@@ -1287,9 +1287,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.el.remove();
   });
 
-  await t('the Apple look: an album page has one filled Open, Edit in plain text, Random under an icon-only More', async () => {
+  await t('the look: an album page has one filled Open, Edit in plain text, Random under an icon-only More', async () => {
     const { view } = setup();
-    document.body.addClass('dr-look-apple');
+    document.body.addClass('dr-look-clear');
     try {
       view.render();
       const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-actions > *'));
@@ -1298,7 +1298,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       const more = view.contentEl.querySelector('.dr-detail-more');
       assert.strictEqual(more.getAttribute('aria-label'), 'More');
     } finally {
-      document.body.removeClass('dr-look-apple');
+      document.body.removeClass('dr-look-clear');
     }
   });
 
@@ -2621,36 +2621,34 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.menuActions(acts, {}, 'strip').map((a) => a.id), ['c']);
   });
 
-  await t('appearance: density and the look as classes on the page, canvas spacing as a scale; a command for each; gone when unloaded', async () => {
+  await t('appearance: density, the look and how much moves as classes on the page; a command for animations; gone when unloaded', async () => {
     const { plugin } = setup();
     const look = new R.Appearance(plugin);
     plugin.feature = (C) => (C === R.Appearance ? look : null);
     const has = (c) => document.body.classList.contains(c);
     look.enable();
-    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard');
-    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'Apple by default, on what the plugin draws; notes as the theme draws them');
-    plugin.settings.lookScope = 'window';
-    look.enable();
-    assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'the whole window, when asked');
-    plugin.settings.lookScope = 'window';
+    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious'), 'standard');
+    assert.ok(has('dr-look-clear') && !has('dr-motion-subtle') && !has('dr-motion-off'), 'the one look, everything moving');
     plugin.settings.gridDensity = 'large';
+    plugin.settings.motion = 'subtle';
     look.enable();
-    assert.ok(has('dr-density-spacious'));
+    assert.ok(has('dr-density-spacious') && has('dr-motion-subtle'));
     const cmds = Object.fromEntries(look.commands().map((c) => [c.id, c]));
     cmds['switch-look'].run();
     await new Promise((r) => setTimeout(r, 0));
-    assert.strictEqual(plugin.settings.look, 'theme');
-    assert.ok(!has('dr-look-apple') && !has('dr-note-apple'), 'the theme’s look: none of it');
-    plugin.settings.look = 'editorial';
-    look.enable();
-    assert.ok(has('dr-look-editorial'));
-    // The editorial look on the whole window, or on Design Redux only.
-    assert.ok(!has('dr-look-scoped'));
-    plugin.settings.lookScope = 'plugin';
-    look.enable();
-    assert.ok(has('dr-look-editorial') && has('dr-look-scoped'));
+    assert.strictEqual(plugin.settings.motion, 'off');
+    assert.ok(has('dr-motion-off') && !has('dr-motion-subtle'), 'animations off');
+    cmds['switch-look'].run();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.strictEqual(plugin.settings.motion, 'full', 'and on again, fully');
     look.disable();
-    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial') && !has('dr-look-scoped') && !has('dr-look-apple'), 'nothing left behind');
+    assert.ok(!has('dr-density-spacious') && !has('dr-look-clear') && !has('dr-motion-off'), 'nothing left behind');
+    // Step 22: whichever look was chosen, and where, gives way to the one.
+    const s22 = R.SETTINGS_MIGRATIONS.find((m) => m.to === 22);
+    const old = { look: 'editorial', lookScope: 'plugin' }; s22.run(old);
+    assert.deepStrictEqual(old, { look: 'clear' });
+    const fresh = {}; s22.run(fresh);
+    assert.deepStrictEqual(fresh, {}, 'nothing written for a first install');
   });
 
   await t('covers sized on their own, apart from the density', () => {

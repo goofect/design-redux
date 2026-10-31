@@ -269,15 +269,15 @@ t('a folder screen highlights its folder', () => {
   assert.deepStrictEqual(active(view), ['Books Folder']);
 });
 
-t('the Apple look: a folder row ends with how many notes it holds, muted', () => {
-  document.body.classList.add('dr-look-apple');
+t('the look: a folder row ends with how many notes it holds, muted', () => {
+  document.body.classList.add('dr-look-clear');
   folders['Concepts Folder'].children = [files['Concepts Folder/Logic.md']];
   try {
     const { view } = setup({ page: browsePage('folder', { path: 'Books Folder' }) });
     const row = view.contentEl.querySelector('.dr-lib-row[data-path="Concepts Folder"]');
     assert.strictEqual(row.querySelector('.dr-lib-count').textContent, '1');
   } finally {
-    document.body.classList.remove('dr-look-apple');
+    document.body.classList.remove('dr-look-clear');
     folders['Concepts Folder'].children = [];
   }
   const { view } = setup({ page: browsePage('folder', { path: 'Books Folder' }) });

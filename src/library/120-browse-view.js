@@ -18,6 +18,7 @@ import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
 import { BrowseAlbum } from './125-browse-album.js';
 import { ContextStrip } from '../tools/190-strip.js';
+import { transitionScreen } from '../ui/231-motion.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class BrowseView extends BrowseAlbum {
@@ -102,8 +103,15 @@ export class BrowseView extends BrowseAlbum {
     if (!moved && active && this.contentEl.contains(active) && active.matches('.dr-browse-search input')) {
       this.renderBelowBar();
     } else {
-      this.render();
-      if (this.contentEl) this.contentEl.scrollTop = 0;
+      const draw = () => {
+        this.render();
+        if (this.contentEl) this.contentEl.scrollTop = 0;
+      };
+      // Another screen slides in, back the other way; the same one is just drawn again.
+      const back = this.goingBack;
+      this.goingBack = false;
+      if (moved && this.contentEl && this.contentEl.isConnected && this.contentEl.childElementCount) transitionScreen(this.contentEl, draw, { back });
+      else draw();
     }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
@@ -337,6 +345,7 @@ export class BrowseView extends BrowseAlbum {
   }
 
   go(dir) {
+    this.goingBack = dir === 'back';
     step(this.leaf, dir);
   }
 
@@ -380,7 +389,10 @@ export class BrowseView extends BrowseAlbum {
         'chevron-left',
         parent ? `Back to ${this.folderName(parent)}` : 'Back',
         !!parent,
-        () => this.folderUp(folder, parent)
+        () => {
+          this.goingBack = true;
+          this.folderUp(folder, parent);
+        }
       ).addClass('is-folder-step');
       button(
         'chevron-right',

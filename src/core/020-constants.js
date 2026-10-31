@@ -119,8 +119,10 @@ export const DEFAULTS = {
   smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
-  // The theme's look, or the editorial one.
-  look: 'apple',
+  // The one look; kept by name for any to come.
+  look: 'clear',
+  // How much moves: full, subtle (fades only) or off.
+  motion: 'full',
   // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
   // An album cover that isn't a picture has its kind, name and collection printed on it.
@@ -155,7 +157,6 @@ export const DEFAULTS = {
   homeShelves: [],
   inspector: true,
   // Only what Design Redux draws, to begin with since 3.1: notes stay as the theme draws them unless asked.
-  lookScope: 'plugin',
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
@@ -252,7 +253,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 21,
+  settingsVersion: 22,
   graphProperties: true,
   // Links written [[[Note]]] open their note but stay off the graph and
   // out of backlinks.
