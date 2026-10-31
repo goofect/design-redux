@@ -150,6 +150,7 @@ export class BrowseView extends BrowseAlbum {
     // focus inside it; the view's scope covers the page being active
     // with nothing on it focused, which keys wouldn't otherwise reach.
     this.registerDomEvent(this.containerEl, 'keydown', (evt) => this.onKey(evt));
+    this.registerDomEvent(this.contentEl, 'scroll', () => this.markScrolled(), { passive: true });
     try {
       if (typeof Scope === 'function' && this.app.scope) {
         this.scope = new Scope(this.app.scope);
@@ -340,6 +341,12 @@ export class BrowseView extends BrowseAlbum {
     });
   }
 
+  /** The bar stays at the top; a hairline under it once the page has scrolled beneath. */
+  markScrolled() {
+    const bar = this.contentEl && this.contentEl.querySelector('.dr-detail-bar');
+    if (bar) bar.toggleClass('is-scrolled', this.contentEl.scrollTop > 4);
+  }
+
   canGo(dir) {
     return canStep(this.leaf, dir);
   }
@@ -492,6 +499,7 @@ export class BrowseView extends BrowseAlbum {
       });
     }
     this.syncPane();
+    this.markScrolled();
     this.measureLater();
     if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is

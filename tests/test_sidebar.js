@@ -224,6 +224,23 @@ t('drawn again with nothing changed, the rows on screen stay — their covers do
   assert.notStrictEqual(view.contentEl.querySelector('.dr-lib-row'), before, 'changed: drawn again');
 });
 
+t('one marker glides under where you are: kept first, apart from the rows, through every drawing', () => {
+  const { view } = setup({ page: browsePage('search') });
+  const markers = () => view.contentEl.querySelectorAll('.dr-lib-marker');
+  assert.strictEqual(markers().length, 1);
+  const marker = markers()[0];
+  assert.strictEqual(view.contentEl.firstElementChild, marker, 'first, under the rows');
+  assert.strictEqual(marker.getAttribute('aria-hidden'), 'true', 'nothing for a reader');
+  assert.ok(view.contentEl.classList.contains('has-marker'));
+  const row = view.contentEl.querySelector('.dr-lib-row');
+  view.render();
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-row'), row, 'the marker isn’t a change in what’s listed');
+  view.plugin.settings.librarySections[0].items.reverse();
+  view.render();
+  assert.deepStrictEqual(Array.from(markers()), [marker], 'the same one, still first, after the rows are drawn again');
+  assert.strictEqual(view.contentEl.firstElementChild, marker);
+});
+
 t('More folds away the occasional places, and opens again, remembered', () => {
   const { view } = setup({ page: browsePage('search') });
   view.plugin.settings.librarySections.push({ title: 'More', folded: true, items: [{ kind: 'builtin', id: 'graph' }] });

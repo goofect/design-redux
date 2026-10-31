@@ -6,15 +6,32 @@
  */
 
 .dr-browse .view-content {
-  padding: var(--dr-space-4) calc(var(--dr-u) * 5) calc(var(--dr-u) * 10);
+  --dr-page-top: var(--dr-space-4);
+  --dr-page-side: calc(var(--dr-u) * 5);
+  padding: var(--dr-page-top) var(--dr-page-side) calc(var(--dr-u) * 10);
   overflow-y: auto;
 }
 
+/* The bar: back, the screen's name and Find. It stays at the top as the page scrolls under it,
+   reaching across the page's margins so nothing shows beside it; a hairline under it only once
+   something has gone beneath. */
 .dr-detail-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: calc(var(--dr-u) * 2.5);
-  margin-bottom: calc(var(--dr-u) * 4.5);
+  min-height: calc(var(--dr-control-size) + var(--dr-space-3));
+  margin: calc(var(--dr-page-top) * -1) calc(var(--dr-page-side) * -1) calc(var(--dr-u) * 4.5);
+  padding: var(--dr-space-2) var(--dr-page-side);
+  border-bottom: 1px solid transparent;
+  background-color: var(--background-primary);
+  transition: border-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-detail-bar.is-scrolled {
+  border-bottom-color: var(--dr-separator);
 }
 
 .dr-browse-up {
@@ -42,21 +59,28 @@
   height: var(--dr-control-icon);
 }
 
+/* Find: a soft field, no frame; the accent ring only while typing in it. */
 .dr-browse-search {
   display: flex;
   align-items: center;
-  gap: calc(var(--dr-u) * 1.5);
+  gap: var(--dr-space-2);
   margin-left: auto;
-  padding: var(--dr-space-1) var(--dr-space-3);
+  height: var(--dr-control-size);
+  padding: 0 var(--dr-space-3);
   min-width: 220px;
-  background-color: var(--background-modifier-form-field);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--dr-radius-pill);
+  background-color: var(--dr-fill);
+  border: none;
+  border-radius: var(--dr-radius-md);
+  transition: box-shadow var(--dr-dur-fast) var(--dr-ease), background-color var(--dr-dur-fast) var(--dr-ease);
+}
+
+.dr-browse-search:focus-within {
+  box-shadow: var(--dr-focus-ring);
 }
 
 .dr-browse-search-icon {
   display: inline-flex;
-  color: var(--text-faint);
+  color: var(--text-muted);
 }
 
 .dr-browse-search-icon .svg-icon {
