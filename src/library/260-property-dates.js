@@ -11,7 +11,7 @@ import { Notice } from 'obsidian';
 import { dueKeys } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
 import { BrowseView } from './120-browse-view.js';
-import { SmartAlbums } from './258-smart-albums.js';
+import { SmartCollections } from './258-smart-collections.js';
 
 export class PropertyDates extends Feature {
   settingsSchema() {
@@ -37,7 +37,7 @@ export class PropertyDates extends Feature {
         id: 'saved-view-due',
         name: 'Keep a saved view of what’s due',
         icon: 'alarm-clock',
-        when: () => dueKeys(this.settings).length > 0 && !!this.plugin.feature(SmartAlbums) && this.plugin.feature(SmartAlbums).enabled,
+        when: () => dueKeys(this.settings).length > 0 && !!this.plugin.feature(SmartCollections) && this.plugin.feature(SmartCollections).enabled,
         run: () => this.keepDueView(),
       },
     ];
@@ -45,7 +45,7 @@ export class PropertyDates extends Feature {
 
   /** A saved view of the notes due soon or overdue, by the first due-date property; opened. */
   keepDueView() {
-    const smart = this.plugin.feature(SmartAlbums);
+    const smart = this.plugin.feature(SmartCollections);
     const key = dueKeys(this.settings)[0];
     if (!smart || !key) return null;
     const name = 'Due';
@@ -54,14 +54,14 @@ export class PropertyDates extends Feature {
       new Notice(`There’s a saved view of what’s due already: “${have.name}”.`);
       return have;
     }
-    const album = { id: `due${Date.now().toString(36)}`, name, folder: null, tag: null, prop: { key, value: null, negate: false, due: true }, date: null };
-    this.settings.smartAlbumList = smart.list().concat(album);
+    const collection = { id: `due${Date.now().toString(36)}`, name, folder: null, tag: null, prop: { key, value: null, negate: false, due: true }, date: null };
+    this.settings.smartCollectionList = smart.list().concat(collection);
     smart.listInLibrary();
     smart.persist();
     const ws = this.app.workspace;
     const view = typeof ws.getActiveViewOfType === 'function' ? ws.getActiveViewOfType(BrowseView) : null;
-    if (view) view.navigate({ mode: 'smart', property: album.id, path: '/' });
-    return album;
+    if (view) view.navigate({ mode: 'smart', property: collection.id, path: '/' });
+    return collection;
   }
 }
 

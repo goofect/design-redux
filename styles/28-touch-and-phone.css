@@ -7,7 +7,7 @@
  * also select its text or raise iOS's callout.
  */
 
-body.is-mobile .dr-track-more,
+body.is-mobile .dr-note-row-more,
 body.is-mobile .dr-td-more {
   opacity: 0.6;
 }
@@ -36,7 +36,7 @@ body.is-mobile .dr-browse .view-content input {
 }
 
 body.is-mobile .dr-lib-row:active,
-body.is-mobile .dr-track:active,
+body.is-mobile .dr-note-row:active,
 body.is-mobile .dr-tr:not(.dr-th):active,
 body.is-mobile .dr-split-row:not(.is-selected):active,
 body.is-mobile .dr-recent:active,
@@ -113,7 +113,7 @@ body.is-mobile .dr-lib-empty {
 /* Phone -------------------------------------------------------------------------
  *
  * One column, as the iPhone app is laid out: a large title, the search
- * field on a line of its own, album art centred above its title, lists
+ * field on a line of its own, collection art centred above its title, lists
  * that show the name and nothing that would crowd it, and the
  * properties screen showing its list or one property's values in turn.
  * Back and forward are on Obsidian's bottom bar, so a page carries only
@@ -161,7 +161,7 @@ body.is-phone .dr-browse-search input {
   font-size: 16px;
 }
 
-/* -- the album page ------------------------------------------------------- */
+/* -- the collection page ------------------------------------------------------- */
 
 body.is-phone .dr-detail {
   gap: var(--dr-space-3);
@@ -192,65 +192,36 @@ body.is-phone .dr-detail-action {
   padding: var(--dr-space-3);
 }
 
-body.is-phone .dr-track {
+body.is-phone .dr-note-row {
   gap: var(--dr-space-3);
   padding: var(--dr-space-3) calc(var(--dr-u) * 1.5);
 }
 
-body.is-phone .dr-track-sub,
-body.is-phone .dr-track-time {
+body.is-phone .dr-note-row-sub,
+body.is-phone .dr-note-row-time {
   display: none;
 }
 
-body.is-phone .dr-track-more {
+body.is-phone .dr-note-row-more {
   margin: calc(var(--dr-u) * -1.5) calc(var(--dr-u) * -1) calc(var(--dr-u) * -1.5) 0;
   padding: var(--dr-space-2);
 }
 
-body.is-phone .dr-album-body {
+body.is-phone .dr-collection-body {
   flex-direction: column;
   gap: var(--dr-space-3);
 }
 
-body.is-phone .dr-album-art {
+body.is-phone .dr-collection-art {
   width: 120px;
   height: 120px;
 }
 
-body.is-phone .dr-album-body .dr-tracks {
+body.is-phone .dr-collection-body .dr-note-rows {
   width: 100%;
 }
 
 /* -- tiles ------------------------------------------------------------------ */
-
-/* Cards a column of their own; a gallery's covers two or three across. */
-body.is-phone .dr-grid {
-  grid-template-columns: 1fr;
-  gap: var(--dr-space-2);
-}
-
-body.is-phone .dr-grid.is-gallery {
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: calc(var(--dr-u) * 4.5) calc(var(--dr-u) * 3.5);
-}
-
-/* Home's shelves run to the screen's edges, a little of the next tile
-   showing so it's plain there's more. */
-body.is-phone .dr-shelf-row {
-  grid-auto-columns: calc((100% - 14px) / 1.3);
-  gap: calc(var(--dr-u) * 3.5);
-  margin-inline: calc(var(--dr-u) * -4);
-  padding: var(--dr-space-1) var(--dr-space-4) var(--dr-space-2);
-  scroll-padding-inline: 16px;
-}
-
-body.is-phone .dr-picks {
-  grid-auto-columns: calc((100% - 32px) / 1.6);
-  gap: calc(var(--dr-u) * 3.5);
-  margin-inline: calc(var(--dr-u) * -4);
-  padding: var(--dr-space-1) var(--dr-space-4) calc(var(--dr-u) * 2.5);
-  scroll-padding-inline: 16px;
-}
 
 body.is-mobile .dr-pick:active .dr-pick-body {
   transform: scale(0.98);
@@ -411,19 +382,19 @@ body.is-phone .dr-recent {
   padding: var(--dr-space-2) var(--dr-space-1);
 }
 
-body.is-phone .dr-album-art.is-blank {
+body.is-phone .dr-collection-art.is-blank {
   display: none;
 }
 
-body.is-phone .dr-album-name {
+body.is-phone .dr-collection-name {
   font-size: 1.15em;
 }
 
-body.is-phone .dr-album-name.is-primary {
+body.is-phone .dr-collection-name.is-primary {
   font-size: 1.3em;
 }
 
-body.is-phone .dr-album + .dr-album {
+body.is-phone .dr-collection + .dr-collection {
   margin-top: calc(var(--dr-u) * 5.5);
   padding-top: calc(var(--dr-u) * 4.5);
 }

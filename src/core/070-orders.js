@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* Your own order                                                      */
 /*                                                                     */
-/* An album's notes, and the pins, in an order you've arranged by      */
-/* dragging. Kept in settings — albums by note name, pins by path —    */
+/* A collection's notes, and the pins, in an order you've arranged by      */
+/* dragging. Kept in settings — collections by note name, pins by path —    */
 /* and followed through renames, moves and deletions, so the           */
 /* arrangement outlives the files being tidied.                        */
 /* ------------------------------------------------------------------ */
@@ -36,7 +36,7 @@ export function moveBefore(list, item, before) {
 
 /** A path moved with a folder, or as it was. */
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'collectionSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -44,6 +44,27 @@ export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propert
  * isn't lost to the change. Each step gets the saved data as it was and
  * edits it in place: { to: 2, run(saved) { ... } }.
  */
+/* Step 24's names, old to new. */
+export const RENAMED_KEYS = {
+  propertyForAlbum: 'propertyForCollection',
+  albumNoteLimit: 'collectionNoteLimit',
+  discNoteLimit: 'sectionNoteLimit',
+  albumColumns: 'collectionColumns',
+  albumExcerpts: 'collectionExcerpts',
+  albumStillToWrite: 'collectionStillToWrite',
+  albumNestBy: 'collectionNestBy',
+  trackLength: 'noteLength',
+  albumSortMemory: 'collectionSortMemory',
+  albumStructure: 'collectionStructure',
+  albumKeyNames: 'collectionKeyNames',
+  smartAlbums: 'smartCollections',
+  albumRefactor: 'collectionRefactor',
+  smartAlbumList: 'smartCollectionList',
+  albumSorts: 'collectionSorts',
+  albumOrders: 'collectionOrders',
+  albumRollups: 'collectionRollups',
+};
+
 export const SETTINGS_MIGRATIONS = [
   {
     // The quieter look: a note or folder without a cover shows its name,
@@ -254,6 +275,26 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.lookScope;
     },
   },
+  {
+    // Lists everywhere: no gallery to choose, for the library or a property's values.
+    to: 23,
+    run(saved) {
+      delete saved.libraryLayout;
+      delete saved.propertyValueView;
+    },
+  },
+  {
+    // Settings named for albums, tracks and discs take plain names; what they hold stays.
+    to: 24,
+    run(saved) {
+      Object.entries(RENAMED_KEYS).forEach(([was, now]) => {
+        if (was in saved) {
+          saved[now] = saved[was];
+          delete saved[was];
+        }
+      });
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */
@@ -328,39 +369,39 @@ export class Orders {
     return this.plugin.settings;
   }
 
-  album(folder) {
-    const saved = folder && (this.settings.albumOrders || {})[folder.path];
+  collection(folder) {
+    const saved = folder && (this.settings.collectionOrders || {})[folder.path];
     return saved && Array.isArray(saved.names) ? saved : null;
   }
 
-  hasAlbum(folder) {
-    return !!this.album(folder);
+  hasCollection(folder) {
+    return !!this.collection(folder);
   }
 
-  /** Whether an album is showing its own order rather than the shared one. */
-  albumOn(folder) {
-    const saved = this.album(folder);
+  /** Whether a collection is showing its own order rather than the shared one. */
+  collectionOn(folder) {
+    const saved = this.collection(folder);
     return !!saved && saved.on !== false;
   }
 
-  setAlbumOn(folder, on) {
-    const saved = this.album(folder);
+  setCollectionOn(folder, on) {
+    const saved = this.collection(folder);
     if (!saved || saved.on === on) return;
     saved.on = on;
     this.save();
   }
 
-  /** Save an album's arrangement, by file name, and use it. */
-  setAlbum(folder, names) {
-    this.settings.albumOrders = Object.assign({}, this.settings.albumOrders, {
+  /** Save a collection's arrangement, by file name, and use it. */
+  setCollection(folder, names) {
+    this.settings.collectionOrders = Object.assign({}, this.settings.collectionOrders, {
       [folder.path]: { names: names.slice(), on: true },
     });
     this.save();
   }
 
-  arrangeAlbum(folder, files, fallback) {
-    if (!this.albumOn(folder)) return fallback(files);
-    return arrange(files, (f) => f.name, this.album(folder).names, fallback);
+  arrangeCollection(folder, files, fallback) {
+    if (!this.collectionOn(folder)) return fallback(files);
+    return arrange(files, (f) => f.name, this.collection(folder).names, fallback);
   }
 
   pinOrder() {
@@ -428,7 +469,7 @@ export class Orders {
       this.settings[key] = next;
       changed = true;
     });
-    const orders = this.settings.albumOrders || {};
+    const orders = this.settings.collectionOrders || {};
     if (file instanceof TFolder) {
       // Its own arrangement, and those of the folders inside it.
       const next = {};
@@ -437,14 +478,14 @@ export class Orders {
         if (moved !== p) changed = true;
         next[moved] = orders[p];
       });
-      if (changed) this.settings.albumOrders = next;
+      if (changed) this.settings.collectionOrders = next;
     } else {
       const oldParent = oldPath.includes('/') ? oldPath.slice(0, oldPath.lastIndexOf('/')) : '/';
       const oldName = oldPath.split('/').pop();
       const newParent = file.parent ? file.parent.path : '/';
       const saved = orders[oldParent];
       if (saved && Array.isArray(saved.names) && saved.names.indexOf(oldName) !== -1) {
-        // Renamed in place keeps its position; moved away leaves the album.
+        // Renamed in place keeps its position; moved away leaves the collection.
         saved.names =
           newParent === oldParent
             ? saved.names.map((n) => (n === oldName ? file.name : n))
@@ -473,7 +514,7 @@ export class Orders {
         }
       });
     });
-    const orders = this.settings.albumOrders || {};
+    const orders = this.settings.collectionOrders || {};
     if (file instanceof TFolder) {
       Object.keys(orders).forEach((p) => {
         if (p === file.path || p.startsWith(file.path + '/')) {

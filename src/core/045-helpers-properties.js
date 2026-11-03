@@ -159,7 +159,7 @@ export function propertyLabel(app, key) {
 /**
  * The notes a parent property names, as link paths to resolve: from
  * [[Note]], [[Note|alias]], [[folder/Note#heading]], a path or plain
- * text, one value or a list. What the graph's routes and an album's map
+ * text, one value or a list. What the graph's routes and a collection's map
  * both read, so they read it the same way.
  */
 export function parentLinkpaths(raw) {
@@ -237,7 +237,7 @@ export function dueKeys(settings) {
 }
 
 /**
- * What an album's notes come to, from their properties: how many, how
+ * What a collection's notes come to, from their properties: how many, how
  * many are done by `isDone(fm)`, and the earliest and latest of a date
  * property — the fixed set, no formulas. { count, done, earliest, latest }.
  */

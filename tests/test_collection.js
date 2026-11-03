@@ -1,4 +1,4 @@
-// Albums, against the real main.js: their own order by drag, the edit
+// Collections, against the real main.js: their own order by drag, the edit
 // mode (rename, move, delete, add, arrange), the strip's skip buttons,
 // arrangements that follow renames and deletions, each note's length,
 // and the Home screen.
@@ -123,9 +123,9 @@ const origLoad = Module._load;
 Module._load = function (req, ...rest) {
   return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
 };
-const tmp = path.join(__dirname, '_album_under_test.js');
+const tmp = path.join(__dirname, '_collection_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, MOTION_LEVELS, settingsLine };\n');
+  '\nmodule.exports.__test = { COLLECTION_KEY_DEFAULTS, RENAMED_KEYS, PropertyDates, BrowseView, BulkSelection, ContextStrip, Orders, DEFAULTS, collectionNeighbours, collectionSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, CollectionStructure, SmartCollections, LibraryCheck, drawNoteArt, CollectionRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, currentHeading, sectionWords, sectionEnds, ReadingOutline, ReadingOutlineView, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, MOTION_LEVELS, settingsLine };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -198,7 +198,7 @@ function setup() {
   ['Realism', 'Liberalism'].forEach((n) => v.file(`IR/Theories/${n}.md`));
   const plugin = {
     // Covers, as the screens' own tests expect; Automatic and Lists have a test of their own.
-    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { libraryLayout: 'covers' }),
+    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { showCovers: true }),
     saved: 0,
     saveData: async () => { plugin.saved++; },
     isFolderNote: (f) => f.basename === (f.parent && f.parent.name),
@@ -227,9 +227,9 @@ function setup() {
   plugin.orders = new R.Orders(plugin);
   plugin.notes = new R.Notes(plugin);
   plugin.files = new R.Files(plugin);
-  // The album features reached through the plugin, as in Obsidian.
-  plugin.albumInfo = R.DesignRedux.prototype.albumInfo.bind(plugin);
-  plugin.addAlbumMenuItems = R.DesignRedux.prototype.addAlbumMenuItems.bind(plugin);
+  // The collection features reached through the plugin, as in Obsidian.
+  plugin.collectionInfo = R.DesignRedux.prototype.collectionInfo.bind(plugin);
+  plugin.addCollectionMenuItems = R.DesignRedux.prototype.addCollectionMenuItems.bind(plugin);
   const app = {
     vault: v.vault,
     fileManager: v.fileManager,
@@ -258,8 +258,8 @@ function setup() {
   return { v, plugin, app, view, ir, theories, opened };
 }
 
-const names = (view, folder = 'IR') => Array.from(view.contentEl.querySelectorAll(`.dr-track[data-folder="${folder}"]`))
-  .map((r) => (r.querySelector('.dr-edit-name') ? r.querySelector('.dr-edit-name').value : r.querySelector('.dr-track-name').textContent));
+const names = (view, folder = 'IR') => Array.from(view.contentEl.querySelectorAll(`.dr-note-row[data-folder="${folder}"]`))
+  .map((r) => (r.querySelector('.dr-edit-name') ? r.querySelector('.dr-edit-name').value : r.querySelector('.dr-note-row-name').textContent));
 const click = (el) => el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true, cancelable: true }, extra)));
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
@@ -290,71 +290,71 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.moveBefore(['a', 'b', 'c'], 'a', null), ['b', 'c', 'a']);
   });
 
-  await t('an album nests each note under the note its parent property names, folding open; the property gets no column', () => {
+  await t('a collection nests each note under the note its parent property names, folding open; the property gets no column', () => {
     const { v, plugin, app, view } = setup();
     const parents = { Deterrence: '[[Anarchy]]', Cooperation: ['[[Deterrence|deterrence]]'], Balance: '[[Nowhere]]' };
     app.metadataCache.getFileCache = (f) => ({ frontmatter: parents[f.basename] ? { parent: parents[f.basename] } : {} });
     app.metadataCache.getFirstLinkpathDest = (name) => v.vault.getMarkdownFiles().find((f) => f.basename === name) || null;
-    plugin.settings.albumColumns = 'parent, modified';
+    plugin.settings.collectionColumns = 'parent, modified';
     view.render();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Deterrence', 'Cooperation', 'Balance']);
-    const row = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"]`);
+    const row = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"]`);
     assert.deepStrictEqual(['Anarchy', 'Deterrence', 'Cooperation', 'Balance'].map((n) => row(n).style.getPropertyValue('--dr-nest') || '0'), ['0', '1', '2', '0']);
-    assert.strictEqual(row('Anarchy').querySelectorAll('.dr-track-time, .dr-track-sub').length, 1, 'no parent column');
+    assert.strictEqual(row('Anarchy').querySelectorAll('.dr-note-row-time, .dr-note-row-sub').length, 1, 'no parent column');
     // Folded: what's under it, at any depth, out of sight; and back.
-    click(row('Anarchy').querySelector('.dr-track-fold'));
+    click(row('Anarchy').querySelector('.dr-note-row-fold'));
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance']);
-    click(row('Anarchy').querySelector('.dr-track-fold'));
+    click(row('Anarchy').querySelector('.dr-note-row-fold'));
     assert.deepStrictEqual(names(view), ['Anarchy', 'Deterrence', 'Cooperation', 'Balance']);
     // Not nested: a flat list, the property a column again.
-    plugin.settings.albumNestBy = '';
+    plugin.settings.collectionNestBy = '';
     view.render();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
-    assert.ok(!view.contentEl.querySelector('.dr-track.is-nested, .dr-track-fold'));
+    assert.ok(!view.contentEl.querySelector('.dr-note-row.is-nested, .dr-note-row-fold'));
   });
 
-  await t('under each note in an album, a grey line: its description, or its first sentence', async () => {
+  await t('under each note in a collection, a grey line: its description, or its first sentence', async () => {
     const { v, plugin, app, view } = setup();
     app.metadataCache.getFileCache = (f) => ({ frontmatter: f.basename === 'Anarchy' ? { description: 'No **one** above the states' } : {} });
     v.vault.cachedRead = async (f) => (f.basename === 'Balance' ? '---\ntags: x\n---\n# Balance\n\nStates [[Alliance|ally]] against power. Then more.' : '');
     view.render();
     await settle();
-    const line = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-track-name`).dataset.excerpt;
+    const line = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"] .dr-note-row-name`).dataset.excerpt;
     assert.strictEqual(line('Anarchy'), 'No one above the states');
     assert.strictEqual(line('Balance'), 'States ally against power.');
     assert.strictEqual(line('Cooperation'), undefined, 'nothing to say, no line');
     assert.deepStrictEqual(names(view).slice(0, 2), ['Anarchy', 'Balance'], 'the title is only the title');
-    plugin.settings.albumExcerpts = false;
+    plugin.settings.collectionExcerpts = false;
     view.render();
     assert.strictEqual(line('Anarchy'), undefined);
-    // An album of its own notes alone: one count, under its title — no heading for them, no count at the foot.
+    // A collection of its own notes alone: one count, under its title — no heading for them, no count at the foot.
     Object.assign(view, { path: 'IR/Theories' });
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-disc'));
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 2);
-    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-album-foot div')).some((d) => /notes?\b/.test(d.textContent)));
+    assert.ok(!view.contentEl.querySelector('.dr-list-section'));
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-note-row').length, 2);
+    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-collection-foot div')).some((d) => /notes?\b/.test(d.textContent)));
     assert.ok(/2 notes/.test(view.contentEl.querySelector('.dr-detail-meta').textContent));
   });
 
-  await t('an album ends with what its notes link to that isn’t written yet, greyed — a click writes it there — and a New note row', () => {
+  await t('a collection ends with what its notes link to that isn’t written yet, greyed — a click writes it there — and a New note row', () => {
     const { plugin, app, view } = setup();
     app.metadataCache.unresolvedLinks = { 'IR/Anarchy.md': { Hegemony: 2, 'pic.png': 1 }, 'IR/Balance.md': { 'Ideas/Hegemony': 1, 'Security dilemma': 1 } };
     const made = [];
     plugin.newNote = (folder, name) => made.push([folder.path, name]);
     view.render();
     const rows = Array.from(view.contentEl.querySelectorAll('.dr-end-row.is-unwritten'));
-    assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-track-name').textContent), ['Hegemony', 'Security dilemma']);
-    assert.strictEqual(rows[0].querySelector('.dr-track-time').textContent, '3 links');
+    assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-note-row-name').textContent), ['Hegemony', 'Security dilemma']);
+    assert.strictEqual(rows[0].querySelector('.dr-note-row-time').textContent, '3 links');
     click(rows[0]);
     assert.deepStrictEqual(made, [['IR', 'Hegemony']]);
     click(view.contentEl.querySelector('.dr-new-note-row'));
     assert.deepStrictEqual(made[1], ['IR', undefined]);
-    plugin.settings.albumStillToWrite = false;
+    plugin.settings.collectionStillToWrite = false;
     view.render();
     assert.ok(!view.contentEl.querySelector('.is-unwritten') && view.contentEl.querySelector('.dr-new-note-row'));
   });
 
-  await t('a note opens with its album above its title, one grey line under it, chips, and shelves at its end', async () => {
+  await t('a note opens with its collection above its title, one grey line under it, chips, and shelves at its end', async () => {
     const { v, plugin, app } = setup();
     const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
     app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { parent: '[[Balance]]', status: 'draft', cover: 'https://example.com/a.png', tags: ['#law'] } : {} });
@@ -362,7 +362,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
     plugin.lengths = { label: () => '3 min read', measure: async () => false };
     plugin.settings.notePageTint = true;
-    Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
+    Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, collectionNestBy: 'parent' });
     // A note's view as Obsidian lays it out, editing.
     const containerEl = document.createElement('div');
     const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
@@ -373,11 +373,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const view = { containerEl, file };
     const page = new R.NotePage(plugin);
     page.draw(view);
-    const album = sizer.querySelector('.dr-note-album');
-    assert.strictEqual(album.textContent, 'IR');
+    const collection = sizer.querySelector('.dr-note-collection');
+    assert.strictEqual(collection.textContent, 'IR');
     assert.strictEqual(sizer.querySelector('.dr-note-glow img').getAttribute('src'), 'https://example.com/a.png', 'a glow of its cover');
     assert.ok(sizer.classList.contains('dr-has-glow'));
-    assert.strictEqual(album.nextElementSibling, title, 'above the title');
+    assert.strictEqual(collection.nextElementSibling, title, 'above the title');
     const meta = title.nextElementSibling;
     assert.ok(meta.classList.contains('dr-note-meta'));
     assert.ok(/^Under Balance {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
@@ -393,11 +393,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     // Drawn again with nothing changed: the same elements.
     page.draw(view);
     assert.strictEqual(sizer.querySelector('.dr-note-shelves'), shelves);
-    assert.strictEqual(sizer.querySelector('.dr-note-album'), album);
+    assert.strictEqual(sizer.querySelector('.dr-note-collection'), collection);
     // Off: all of it gone.
     plugin.settings.notePage = false;
     page.draw(view);
-    assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves'));
+    assert.ok(!sizer.querySelector('.dr-note-collection, .dr-note-meta, .dr-note-chips, .dr-note-shelves'));
     assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
   });
 
@@ -561,16 +561,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     };
     await R.DesignRedux.prototype.loadSettings.call(ctx);
     const s = ctx.settings;
-    assert.strictEqual(s.albumColumns, 'status, modified');
+    assert.strictEqual(s.collectionColumns, 'status, modified');
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
     // Recently read, gone with the reading history, is nowhere in it.
     assert.ok(!s.librarySections.some((sec) => sec.items.some((i) => i.id === 'read')));
-    assert.strictEqual(s.settingsVersion, 22);
+    assert.strictEqual(s.settingsVersion, 24);
+    assert.ok(!('libraryLayout' in s) && !('propertyValueView' in s), 'lists everywhere: no layout to choose');
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 22, brought up from \d+; steps [\d, ]+22$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 24, brought up from \d+; steps [\d, ]+24$/);
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);
@@ -581,14 +582,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.keys(R.DEFAULTS).forEach((k) => assert.ok(k in s, `${k} there`));
   });
 
-  await t('editing an album, notes ticked — Shift for a run — are moved together, one Undo putting them all back', async () => {
+  await t('editing a collection, notes ticked — Shift for a run — are moved together, one Undo putting them all back', async () => {
     const { v, plugin, view } = setup();
     let undo = null;
     plugin.offerUndo = (message, fn) => { undo = [message, fn]; };
     plugin.putBack = async (file, from) => { await v.fileManager.renameFile(file, from); return true; };
     view.setEditing(true);
     const tick = (n, shift) => {
-      const box = view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`);
+      const box = view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"] .dr-edit-tick`);
       box.dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
     };
     const bar = () => view.contentEl.querySelector('.dr-bulk-bar');
@@ -597,7 +598,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     tick('Cooperation', true);
     assert.deepStrictEqual(Array.from(view.ticked()).sort(), ['IR/Anarchy.md', 'IR/Balance.md', 'IR/Cooperation.md'], 'the run between');
     assert.strictEqual(bar().querySelector('.dr-bulk-count').textContent, '3 notes selected');
-    assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Balance.md"]').classList.contains('is-ticked'));
+    assert.ok(view.contentEl.querySelector('.dr-note-row[data-path="IR/Balance.md"]').classList.contains('is-ticked'));
     // Properties…: the property tools over the notes ticked.
     const opened = [];
     const feature = plugin.feature;
@@ -641,7 +642,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('a ticked note renamed stays ticked; deleted, it leaves the count', async () => {
     const { v, view } = setup();
     view.setEditing(true);
-    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const tick = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     tick('Anarchy');
     tick('Balance');
     await v.fileManager.renameFile(v.vault.getAbstractFileByPath('IR/Anarchy.md'), 'IR/Anarchy, again.md');
@@ -660,7 +661,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.vault.on = app.vault.on || (() => ({}));
     await view.onOpen();
     view.setEditing(true);
-    view.contentEl.querySelector('.dr-track[data-path="IR/Anarchy.md"] .dr-edit-tick').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    view.contentEl.querySelector('.dr-note-row[data-path="IR/Anarchy.md"] .dr-edit-tick').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     assert.strictEqual(view.ticked().size, 1);
     const esc = view.scope.keys.find((k) => k.key === 'Escape').func;
     const press = (target) => {
@@ -678,14 +679,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('the tray: at the foot of the notes, covers and count, More holding Delete apart, Escape and Mod+A', async () => {
     const { v, plugin, view } = setup();
     view.setEditing(true);
-    const tick = (n, shift) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
+    const tick = (n, shift) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true, shiftKey: !!shift }));
     const bar = () => view.contentEl.querySelector('.dr-bulk-bar');
     const key = (k, mods = {}) => {
       let stopped = 0;
       view.onKey(Object.assign({ key: k, target: view.contentEl, preventDefault: () => stopped++ }, mods));
       return stopped;
     };
-    const lists = Array.from(view.contentEl.querySelectorAll('.dr-tracks'));
+    const lists = Array.from(view.contentEl.querySelectorAll('.dr-note-rows'));
     assert.ok(lists.every((l) => l.compareDocumentPosition(bar()) & window.Node.DOCUMENT_POSITION_FOLLOWING), 'after the notes, so the last row is never under it');
     assert.ok(bar().classList.contains('is-empty') && bar().getAttribute('role') === 'toolbar');
     tick('Anarchy');
@@ -720,14 +721,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!confirm.modalEl.isConnected);
     v.fileManager.trashFile = trash;
     assert.ok(items.includes('Copy as table') && items.some((i) => /^Select all \d+$/.test(i)), items.join(' | '));
-    const shown = view.contentEl.querySelectorAll('.dr-track.is-editing').length;
+    const shown = view.contentEl.querySelectorAll('.dr-note-row.is-editing').length;
     menus[0].items.find((i) => i.title.startsWith('Select all')).click();
     assert.strictEqual(view.ticked().size, shown, 'Select all ticks every note shown');
 
     // Escape lets go of what's ticked first, and only then leaves editing.
     assert.strictEqual(key('Escape'), 1);
     assert.ok(view.editing && view.ticked().size === 0 && bar().classList.contains('is-empty'));
-    assert.ok(!view.contentEl.querySelector('.dr-track.is-ticked'), 'the rows let go too');
+    assert.ok(!view.contentEl.querySelector('.dr-note-row.is-ticked'), 'the rows let go too');
     // Mod+A ticks them all; not while typing in a field.
     const field = view.contentEl.createEl('input');
     assert.strictEqual(key('a', { ctrlKey: true, target: field }), 0, 'a field keeps Mod+A');
@@ -754,7 +755,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       return file.basename === 'Balance' ? false : real.call(plugin, file, to);
     };
     view.setEditing(true);
-    const tick = (n) => view.contentEl.querySelector(`.dr-track[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    const tick = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${n}.md"] .dr-edit-tick`).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     ['Anarchy', 'Balance', 'Cooperation'].forEach(tick);
     const target = v.vault.getAbstractFileByPath('IR/Theories');
     const first = view.moveTicked(target);
@@ -768,22 +769,22 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-bulk-bar').classList.contains('is-busy'));
   });
 
-  await t('dragging a note onto another in its album puts it there, and the album keeps that order', () => {
+  await t('dragging a note onto another in its collection puts it there, and the collection keeps that order', () => {
     const { view, plugin } = setup();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
-    view.arrangeTrack('IR/Deterrence.md', 'IR/Balance.md', false);
+    view.arrangeNote('IR/Deterrence.md', 'IR/Balance.md', false);
     assert.deepStrictEqual(names(view), ['Anarchy', 'Deterrence', 'Balance', 'Cooperation']);
-    view.arrangeTrack('IR/Anarchy.md', 'IR/Cooperation.md', true);
+    view.arrangeNote('IR/Anarchy.md', 'IR/Cooperation.md', true);
     assert.deepStrictEqual(names(view), ['Deterrence', 'Balance', 'Cooperation', 'Anarchy']);
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR, { names: ['Deterrence.md', 'Balance.md', 'Cooperation.md', 'Anarchy.md'], on: true });
-    const numbers = Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"] .dr-track-num')).map((n) => n.textContent);
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR, { names: ['Deterrence.md', 'Balance.md', 'Cooperation.md', 'Anarchy.md'], on: true });
+    const numbers = Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-folder="IR"] .dr-note-row-num')).map((n) => n.textContent);
     assert.deepStrictEqual(numbers, ['1', '2', '3', '4'], 'the numbers follow the new order');
   });
 
-  await t('dropping a row on a row of its own disc arranges it; with Find on, it does nothing', () => {
+  await t('dropping a row on a row of its own section arranges it; with Find on, it does nothing', () => {
     const { view } = setup();
-    const list = view.contentEl.querySelector('.dr-tracks');
-    const rowOf = (p) => list.querySelector(`.dr-track[data-path="${p}"]`);
+    const list = view.contentEl.querySelector('.dr-note-rows');
+    const rowOf = (p) => list.querySelector(`.dr-note-row[data-path="${p}"]`);
     const drag = (from, to, y) => {
       view.dragging = { path: from, folder: 'IR' };
       const target = rowOf(to);
@@ -808,17 +809,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(names(view), ['Balance', 'Cooperation', 'Anarchy', 'Deterrence']);
   });
 
-  await t("the album's own order is on its menu, and choosing another keeps it to go back to", () => {
+  await t("the collection's own order is on its menu, and choosing another keeps it to go back to", () => {
     const { view, plugin, ir } = setup();
     const menuTitles = () => view.filterMenu().items;
     assert.ok(!menuTitles().some((i) => i.title === 'Collection order'), 'offered before there is one');
-    view.arrangeTrack('IR/Deterrence.md', 'IR/Anarchy.md', false);
+    view.arrangeNote('IR/Deterrence.md', 'IR/Anarchy.md', false);
     let items = menuTitles();
     assert.strictEqual(items[0].title, 'Collection order');
     assert.strictEqual(items[0].checked, true);
     items.find((i) => i.title === 'Alphabetical (A–Z)').click();
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
-    assert.strictEqual(plugin.orders.albumOn(ir), false);
+    assert.strictEqual(plugin.orders.collectionOn(ir), false);
     items = menuTitles();
     assert.strictEqual(items[0].checked, false);
     items[0].click();
@@ -827,15 +828,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   await t('arrangements follow a note renamed in place, moved away, deleted, and a folder renamed', async () => {
     const { v, view, plugin, app } = setup();
-    view.arrangeTrack('IR/Deterrence.md', 'IR/Anarchy.md', false);
+    view.arrangeNote('IR/Deterrence.md', 'IR/Anarchy.md', false);
     await app.fileManager.renameFile(app.vault.getFileByPath('IR/Balance.md'), 'IR/Balancing.md');
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR.names, ['Deterrence.md', 'Anarchy.md', 'Balancing.md', 'Cooperation.md']);
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR.names, ['Deterrence.md', 'Anarchy.md', 'Balancing.md', 'Cooperation.md']);
     await app.fileManager.renameFile(app.vault.getFileByPath('IR/Anarchy.md'), 'IR/Theories/Anarchy.md');
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR.names, ['Deterrence.md', 'Balancing.md', 'Cooperation.md']);
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR.names, ['Deterrence.md', 'Balancing.md', 'Cooperation.md']);
     await app.fileManager.trashFile(app.vault.getFileByPath('IR/Cooperation.md'));
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR.names, ['Deterrence.md', 'Balancing.md']);
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR.names, ['Deterrence.md', 'Balancing.md']);
     await app.fileManager.renameFile(app.vault.getFolderByPath('IR'), 'International');
-    assert.ok(plugin.settings.albumOrders.International && !plugin.settings.albumOrders.IR);
+    assert.ok(plugin.settings.collectionOrders.International && !plugin.settings.collectionOrders.IR);
     assert.strictEqual(view.path, 'International', 'the page followed its folder');
     void v;
   });
@@ -877,13 +878,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(app.vault.getFileByPath('IR/Balance.md'));
   });
 
-  await t('the album itself, and a subfolder, are renamed from their headings', async () => {
+  await t('the collection itself, and a subfolder, are renamed from their headings', async () => {
     const { view, app } = setup();
     view.setEditing(true);
-    const disc = view.contentEl.querySelector('.dr-disc.is-editing .dr-edit-name');
-    assert.strictEqual(disc.value, 'Theories');
-    disc.value = 'Schools';
-    key(disc, 'Enter');
+    const section = view.contentEl.querySelector('.dr-list-section.is-editing .dr-edit-name');
+    assert.strictEqual(section.value, 'Theories');
+    section.value = 'Schools';
+    key(section, 'Enter');
     await settle();
     assert.ok(app.vault.getFolderByPath('IR/Schools'));
     const title = view.contentEl.querySelector('.dr-detail-title.dr-edit-name');
@@ -897,7 +898,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t("delete asks as Obsidian does, and nothing's lost when it's declined", async () => {
     const { v, view, app } = setup();
     view.setEditing(true);
-    const del = () => view.contentEl.querySelector('.dr-track[data-path="IR/Anarchy.md"] .dr-edit-tool[aria-label="Delete"]');
+    const del = () => view.contentEl.querySelector('.dr-note-row[data-path="IR/Anarchy.md"] .dr-edit-tool[aria-label="Delete"]');
     v.setConfirm(false);
     click(del());
     await settle();
@@ -912,14 +913,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('move sends a note to another folder, chosen from a list', async () => {
     const { view, app, theories } = setup();
     view.setEditing(true);
-    click(view.contentEl.querySelector('.dr-track[data-path="IR/Balance.md"] .dr-edit-tool[aria-label="Move to another folder"]'));
+    click(view.contentEl.querySelector('.dr-note-row[data-path="IR/Balance.md"] .dr-edit-tool[aria-label="Move to another folder"]'));
     pickers.pop().onChooseItem(theories);
     await settle();
     assert.ok(app.vault.getFileByPath('IR/Theories/Balance.md'));
     assert.ok(names(view, 'IR/Theories').includes('Balance'));
   });
 
-  await t('New note joins the album with its name ready to type, not opened', async () => {
+  await t('New note joins the collection with its name ready to type, not opened', async () => {
     const { view, app, opened } = setup();
     view.setEditing(true);
     click(action(view, 'New note'));
@@ -935,9 +936,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const { v, view } = setup();
     v.folder('IR/Empty');
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-disc[data-folder="IR/Empty"]'), 'shown outside editing');
+    assert.ok(!view.contentEl.querySelector('.dr-list-section[data-folder="IR/Empty"]'), 'shown outside editing');
     view.setEditing(true);
-    assert.ok(view.contentEl.querySelector('.dr-disc[data-folder="IR/Empty"]'));
+    assert.ok(view.contentEl.querySelector('.dr-list-section[data-folder="IR/Empty"]'));
     click(action(view, 'Done'));
     assert.strictEqual(view.editing, false);
     assert.ok(action(view, 'Edit'));
@@ -946,41 +947,41 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('a row dragged by its handle, or moved with Alt+arrows, saves the new order', () => {
     const { view, plugin } = setup();
     view.setEditing(true);
-    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"]'));
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-folder="IR"]'));
     rows().forEach((r) => {
       r.getBoundingClientRect = () => {
         const i = rows().indexOf(r);
         return { top: i * 40, bottom: i * 40 + 40, height: 40 };
       };
     });
-    const grip = view.contentEl.querySelector('.dr-track[data-path="IR/Anarchy.md"] .dr-edit-grip');
+    const grip = view.contentEl.querySelector('.dr-note-row[data-path="IR/Anarchy.md"] .dr-edit-grip');
     const ptr = (target, type, y) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, clientY: y, button: 0 }));
     ptr(grip, 'pointerdown', 20);
     ptr(window, 'pointermove', 30);
     ptr(window, 'pointermove', 130);
     ptr(window, 'pointerup', 130);
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR.names, ['Balance.md', 'Cooperation.md', 'Anarchy.md', 'Deterrence.md']);
-    const g2 = view.contentEl.querySelector('.dr-track[data-path="IR/Deterrence.md"] .dr-edit-grip');
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR.names, ['Balance.md', 'Cooperation.md', 'Anarchy.md', 'Deterrence.md']);
+    const g2 = view.contentEl.querySelector('.dr-note-row[data-path="IR/Deterrence.md"] .dr-edit-grip');
     key(g2, 'ArrowUp', { altKey: true });
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR.names, ['Balance.md', 'Cooperation.md', 'Deterrence.md', 'Anarchy.md']);
-    assert.strictEqual(document.activeElement.closest('.dr-track').dataset.path, 'IR/Deterrence.md', 'focus lost');
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR.names, ['Balance.md', 'Cooperation.md', 'Deterrence.md', 'Anarchy.md']);
+    assert.strictEqual(document.activeElement.closest('.dr-note-row').dataset.path, 'IR/Deterrence.md', 'focus lost');
   });
 
-  await t('Alt+arrows over the edge of a disc move the note into the next folder, at the top', async () => {
+  await t('Alt+arrows over the edge of a section move the note into the next folder, at the top', async () => {
     const { view, app, plugin } = setup();
     view.setEditing(true);
-    const grip = view.contentEl.querySelector('.dr-track[data-path="IR/Deterrence.md"] .dr-edit-grip');
+    const grip = view.contentEl.querySelector('.dr-note-row[data-path="IR/Deterrence.md"] .dr-edit-grip');
     key(grip, 'ArrowDown', { altKey: true });
     await settle();
     assert.ok(app.vault.getFileByPath('IR/Theories/Deterrence.md'), 'not moved');
-    assert.strictEqual(plugin.settings.albumOrders['IR/Theories'].names[0], 'Deterrence.md');
+    assert.strictEqual(plugin.settings.collectionOrders['IR/Theories'].names[0], 'Deterrence.md');
   });
 
-  await t('a move says so with an Undo, which puts it back, album order and all', async () => {
+  await t('a move says so with an Undo, which puts it back, collection order and all', async () => {
     const { plugin, app } = setup();
     ['moveFile', 'offerUndo', 'putBack'].forEach((m) => (plugin[m] = R.DesignRedux.prototype[m].bind(plugin)));
-    plugin.orders.setAlbum(app.vault.getFolderByPath('IR'), ['Deterrence.md', 'Balance.md', 'Anarchy.md', 'Cooperation.md']);
-    const before = JSON.parse(JSON.stringify(plugin.settings.albumOrders.IR));
+    plugin.orders.setCollection(app.vault.getFolderByPath('IR'), ['Deterrence.md', 'Balance.md', 'Anarchy.md', 'Cooperation.md']);
+    const before = JSON.parse(JSON.stringify(plugin.settings.collectionOrders.IR));
     const file = app.vault.getFileByPath('IR/Balance.md');
     notices.length = 0;
     assert.strictEqual(await plugin.moveFile(file, 'IR/Theories', { announce: true }), 'IR/Balance.md');
@@ -990,7 +991,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     note.querySelector('.dr-undo').dispatchEvent(new window.MouseEvent('click', { bubbles: true, cancelable: true }));
     await settle();
     assert.strictEqual(file.path, 'IR/Balance.md', 'not put back');
-    assert.deepStrictEqual(plugin.settings.albumOrders.IR, before, 'its place in the collection was lost');
+    assert.deepStrictEqual(plugin.settings.collectionOrders.IR, before, 'its place in the collection was lost');
   });
 
   await t('a rename made in Edit mode can be undone too', async () => {
@@ -1043,15 +1044,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('Escape mid-drag puts the row back, and saves nothing', () => {
     const { view, plugin } = setup();
     view.setEditing(true);
-    const grip = view.contentEl.querySelector('.dr-track[data-path="IR/Anarchy.md"] .dr-edit-grip');
-    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"]'));
+    const grip = view.contentEl.querySelector('.dr-note-row[data-path="IR/Anarchy.md"] .dr-edit-grip');
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-folder="IR"]'));
     rows().forEach((r) => { r.getBoundingClientRect = () => { const i = rows().indexOf(r); return { top: i * 40, bottom: i * 40 + 40, height: 40 }; }; });
     const ptr = (target, type, y) => target.dispatchEvent(new window.MouseEvent(type, { bubbles: true, cancelable: true, clientY: y, button: 0 }));
     ptr(grip, 'pointerdown', 20);
     ptr(window, 'pointermove', 140);
     window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     assert.deepStrictEqual(names(view), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
-    assert.ok(!plugin.settings.albumOrders.IR);
+    assert.ok(!plugin.settings.collectionOrders.IR);
   });
 
   await t('a redraw waits while a name is being typed', async () => {
@@ -1068,19 +1069,19 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   /* -- the strip ---------------------------------------------------------- */
 
-  await t('skip goes to the note before and after, in the album order', () => {
+  await t('skip goes to the note before and after, in the collection order', () => {
     const { view, plugin, app } = setup();
     const anarchy = app.vault.getFileByPath('IR/Anarchy.md');
-    let near = R.albumNeighbours(plugin, anarchy);
+    let near = R.collectionNeighbours(plugin, anarchy);
     assert.strictEqual(near.previous, null);
     assert.strictEqual(near.next.basename, 'Balance');
-    view.arrangeTrack('IR/Anarchy.md', 'IR/Deterrence.md', true);
-    near = R.albumNeighbours(plugin, anarchy);
+    view.arrangeNote('IR/Anarchy.md', 'IR/Deterrence.md', true);
+    near = R.collectionNeighbours(plugin, anarchy);
     assert.strictEqual(near.previous.basename, 'Deterrence');
     assert.strictEqual(near.next, null);
     plugin.settings.defaultSort = 'name-desc';
-    plugin.orders.setAlbumOn(app.vault.getFolderByPath('IR'), false);
-    assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
+    plugin.orders.setCollectionOn(app.vault.getFolderByPath('IR'), false);
+    assert.deepStrictEqual(R.collectionSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
   });
 
   await t('without the strip, « » sit in the note’s header, name where they go and open it there', () => {
@@ -1152,7 +1153,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(titles.slice(0, 3), ['Read', 'Properties', 'Pin']);
     assert.ok(titles.includes('Delete') && titles[titles.length - 1] !== 'Read');
     Object.defineProperty(window, 'innerWidth', { value: 1024, configurable: true });
-    // An album's page: no strip — it's only inside a note — and the header's own buttons back.
+    // A collection's page: no strip — it's only inside a note — and the header's own buttons back.
     const { view } = setup();
     Object.assign(view, { app, plugin });
     leaf.view = view;
@@ -1181,7 +1182,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://own.png');
   });
 
-  await t("an image dropped on an album's cover becomes its folder note's cover; one from outside is saved first", async () => {
+  await t("an image dropped on a collection's cover becomes its folder note's cover; one from outside is saved first", async () => {
     const image = new TFile('Pictures/view.png');
     const note = new TFile('Law/Law.md');
     const set = [];
@@ -1225,7 +1226,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     art.remove();
   });
 
-  await t('the strip says where the note falls in its album, as "2 of 4", unless switched off', () => {
+  await t('the strip says where the note falls in its collection, as "2 of 4", unless switched off', () => {
     const { plugin, app } = setup();
     const file = app.vault.getFileByPath('IR/Balance.md');
     const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file, getMode: () => 'source' }), openFile(f) { this.view.file = f; } };
@@ -1265,7 +1266,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(JSON.stringify(R.SETTINGS_TABS).includes('"stripDetail"'), 'a row in settings');
   });
 
-  await t("no player: the album page offers Random, and the strip's » goes to the album's next note", async () => {
+  await t("no player: the collection page offers Random, and the strip's » goes to the collection's next note", async () => {
     const { plugin, app, view } = setup();
     const strip = new R.ContextStrip(plugin);
     plugin.feature = (C) => (C === R.ContextStrip ? strip : null);
@@ -1287,14 +1288,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.el.remove();
   });
 
-  await t('the look: an album page has one filled Open, Edit in plain text, Random under an icon-only More', async () => {
+  await t('the look: a collection page has Open and Edit in plain text, Random under an icon-only More', async () => {
     const { view } = setup();
     document.body.addClass('dr-look-clear');
     try {
       view.render();
       const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-actions > *'));
       assert.deepStrictEqual(actions.map((b) => b.textContent), ['Open', 'Edit', '']);
-      assert.strictEqual(view.contentEl.querySelectorAll('.dr-detail-actions .is-primary').length, 1);
+      assert.strictEqual(view.contentEl.querySelectorAll('.dr-detail-actions .is-primary').length, 0, 'nothing filled: the accent is for what is picked');
       const more = view.contentEl.querySelector('.dr-detail-more');
       assert.strictEqual(more.getAttribute('aria-label'), 'More');
     } finally {
@@ -1337,7 +1338,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.vault.cachedRead = async (file) => 'word '.repeat(words[file.basename] || 0);
     view.render();
     await settle(120);
-    const lengths = Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"] .dr-track-length')).map((e) => e.textContent);
+    const lengths = Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-folder="IR"] .dr-note-row-length')).map((e) => e.textContent);
     assert.deepStrictEqual(lengths, ['2 min', '5 min', '<1 min', '']);
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
   });
@@ -1346,18 +1347,21 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const { view, plugin, app } = setup();
     plugin.recentFiles = () => [f(app, 'IR/Cooperation.md')];
     view.render();
-    const row = view.contentEl.querySelector('.dr-track[data-path="IR/Cooperation.md"]');
-    assert.strictEqual(row.querySelector('.dr-track-num').textContent, '3');
-    assert.strictEqual(row.querySelector('.dr-track-num').children.length, 0, 'a mark was drawn over its number');
+    const row = view.contentEl.querySelector('.dr-note-row[data-path="IR/Cooperation.md"]');
+    assert.strictEqual(row.querySelector('.dr-note-row-num').textContent, '3');
+    assert.strictEqual(row.querySelector('.dr-note-row-num').children.length, 0, 'a mark was drawn over its number');
     assert.ok(!row.classList.contains('is-current'));
   });
 
   await t("without a cover: a cover drawn for it by default, the folder's cover when asked, or the icon on a soft colour", () => {
     const { view, plugin, app } = setup();
     plugin.folderCoverSrc = (folder) => (folder.path === 'IR' ? 'ir.png' : null);
-    plugin.recentFiles = () => [f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')];
-    Object.assign(view, { mode: 'recents' });
-    const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-card-art')).map((el) => {
+    const marks = () => [f(app, 'IR/Anarchy.md'), f(app, 'IR/Theories/Realism.md')].map((file) => {
+      const el = document.createElement('div');
+      R.drawNoteArt(plugin, el, file);
+      return el;
+    });
+    const tiles = () => marks().map((el) => {
       const img = el.querySelector('img');
       if (img) return img.getAttribute('src');
       if (el.classList.contains('is-drawn')) return 'drawn';
@@ -1372,14 +1376,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.coverFallback = 'soft';
     view.render();
     assert.deepStrictEqual(tiles(), ['soft', 'soft']);
-    const hues = Array.from(view.contentEl.querySelectorAll('.dr-card-art')).map((el) => el.style.getPropertyValue('--dr-gen-h'));
+    const hues = marks().map((el) => el.style.getPropertyValue('--dr-gen-h'));
     assert.notStrictEqual(hues[0], hues[1], 'each note should take its own colour');
     const folder = document.createElement('div');
     R.drawFolderArt(plugin, folder, app.vault.getFolderByPath('IR/Theories'));
     assert.ok(folder.classList.contains('is-hued'), 'a folder without a cover took no soft colour');
   });
 
-  await t('Home leads with large cards, then shelves that scroll sideways', async () => {
+  await t('Home leads with its highlights, then a list under each heading', async () => {
     const { view, plugin, app, opened } = setup();
     plugin.recentFiles = () => [f(app, 'IR/Balance.md')];
     await view.setState({ mode: 'home' }, {});
@@ -1390,9 +1394,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(opened[0].basename, 'Balance');
   });
 
-  await t("Home's shelves: where to pick up in each album, your collections, and the shelves you chose in the order you chose", async () => {
+  await t("Home's shelves: where to pick up in each collection, your collections, and the shelves you chose in the order you chose", async () => {
     const { v, view, plugin, app } = setup();
-    const notes = R.albumSequence(plugin, f(app, 'IR/Balance.md'));
+    const notes = R.collectionSequence(plugin, f(app, 'IR/Balance.md'));
     plugin.recentFiles = () => [notes[1]];
     await view.setState({ mode: 'home' }, {});
     const shelf = (title) => {
@@ -1404,17 +1408,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(shelf('Continue reading').querySelector('.dr-card-progress'), null, 'no bar of how far along');
 
 
-    // Your collections: smart albums, then albums that gather notes from elsewhere.
-    const smart = new R.SmartAlbums(plugin);
+    // Your collections: smart collections, then collections that gather notes from elsewhere.
+    const smart = new R.SmartCollections(plugin);
     smart.enabled = true;
-    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Unread' }];
-    const structure = new R.AlbumStructure(plugin);
+    plugin.settings.smartCollectionList = [{ id: 's1', name: 'Unread' }];
+    const structure = new R.CollectionStructure(plugin);
     structure.enabled = true;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     v.folder('Reading');
     const reading = v.file('Reading/Reading.md');
     app.metadataCache.getFileCache = (f) => (f === reading ? { frontmatter: { includes: ['[[Anarchy]]'] } } : null);
-    plugin.feature = (C) => (C === R.SmartAlbums ? smart : C === R.AlbumStructure ? structure : null);
+    plugin.feature = (C) => (C === R.SmartCollections ? smart : C === R.CollectionStructure ? structure : null);
     view.render();
     assert.deepStrictEqual(cards('Your views'), ['Unread · Saved view', `Reading · ${(shelf('Your views').querySelectorAll('.dr-card-sub')[1] || {}).textContent}`]);
     const went = [];
@@ -1442,7 +1446,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.workspace.trigger = (name, pane) => (name === 'design-redux:pane-open' ? panes.push(pane) : name === 'design-redux:pane-close' ? panes.splice(panes.indexOf(pane), 1) : was && was.call(app.workspace, name, pane));
     plugin.settings.libraryPreview = false;
     plugin.saveSettings = async () => {};
-    const row = (name) => view.contentEl.querySelector(`.dr-track[data-path="IR/${name}.md"]`);
+    const row = (name) => view.contentEl.querySelector(`.dr-note-row[data-path="IR/${name}.md"]`);
     view.render();
     assert.ok(!view.containerEl.querySelector('.dr-browse-pane'), 'closed, no pane');
     click(row('Anarchy'));
@@ -1473,7 +1477,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     let el = document.createElement('div');
     view.inspectNoteActions(el, app.vault.getFileByPath('IR/Balance.md'));
     assert.deepStrictEqual(buttons(el), ['Open', 'More'], 'already in its collection: nothing to reveal');
-    // Elsewhere, it can take you to the note's album, still picked there.
+    // Elsewhere, it can take you to the note's collection, still picked there.
     const went = [];
     view.leaf.setViewState = async (st) => went.push(st.state);
     await view.setState({ mode: 'recents' }, {});
@@ -1484,12 +1488,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR/Theories']);
     assert.strictEqual(plugin.selection.get().file.basename, 'Realism');
 
-    // An album: what kind, what it holds, where it is.
+    // A collection: what kind, what it holds, where it is.
     await view.setState({ mode: 'folders' }, {});
     click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
     el = document.createElement('div');
-    view.previewAlbum(el, app.vault.getFolderByPath('IR'));
+    view.previewCollection(el, app.vault.getFolderByPath('IR'));
     // As a note's head: cover, name, kind, and how much it holds.
     assert.ok(el.querySelector('.dr-props-identity .dr-props-art'));
     assert.deepStrictEqual(['.dr-props-title', '.dr-props-lead'].map((sel) => el.querySelector(sel).textContent), ['IR', 'Collection']);
@@ -1497,14 +1501,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(buttons(el), ['Open', 'More']);
     // One inside another: where it is, a way there.
     el = document.createElement('div');
-    view.previewAlbum(el, app.vault.getFolderByPath('IR/Theories'));
+    view.previewCollection(el, app.vault.getFolderByPath('IR/Theories'));
     const up = el.querySelector('.dr-props-meta-link');
     assert.strictEqual(up.textContent, 'IR');
     went.length = 0;
     click(up);
     assert.deepStrictEqual([went[0].mode, went[0].path], ['folder', 'IR']);
 
-    // Space on a note's row: a look at it, Obsidian's page preview; on an album, nothing.
+    // Space on a note's row: a look at it, Obsidian's page preview; on a collection, nothing.
     const looked = [];
     const trigger = app.workspace.trigger;
     app.workspace.trigger = (name, info) => (name === 'hover-link' ? looked.push(info) : trigger && trigger.call(app.workspace, name, info));
@@ -1532,13 +1536,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(panes.length === 0 && !view.containerEl.querySelector('.dr-browse-pane') && plugin.selection.get().folder.path === 'IR/Theories');
   });
 
-  await t('search answers as a music app does: the top result large, then albums as covers, notes as rows, collections — See All for the rest of one', async () => {
+  await t('search answers as a music app does: the top result large, then collections as covers, notes as rows, collections — See All for the rest of one', async () => {
     const { v, view, plugin } = setup();
     plugin.settings.searchNoteText = false;
-    const smart = new R.SmartAlbums(plugin);
+    const smart = new R.SmartCollections(plugin);
     smart.enabled = true;
-    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Reading list' }];
-    plugin.feature = (C) => (C === R.SmartAlbums ? smart : null);
+    plugin.settings.smartCollectionList = [{ id: 's1', name: 'Reading list' }];
+    plugin.feature = (C) => (C === R.SmartCollections ? smart : null);
     v.folder('Readings');
     v.file('Readings/One.md');
     v.file('IR/Reading notes.md');
@@ -1551,23 +1555,23 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(top.dataset.path, 'IR/Reading notes.md', 'the note whose name starts with it');
     assert.strictEqual(top.querySelector('.dr-search-top-sub').textContent, 'Note · IR');
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent), ['Readings', 'Reading list']);
-    assert.ok(!view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="IR/Reading notes.md"]'), 'not again below');
-    assert.ok(view.contentEl.querySelector('.dr-search-notes .dr-track[data-path="Readings/One.md"]'), 'in the collection named for it');
+    assert.ok(!view.contentEl.querySelector('.dr-search-notes .dr-note-row[data-path="IR/Reading notes.md"]'), 'not again below');
+    assert.ok(view.contentEl.querySelector('.dr-search-notes .dr-note-row[data-path="Readings/One.md"]'), 'in the collection named for it');
 
-    // An album named exactly so is the top result.
+    // A collection named exactly so is the top result.
     view.query = 'readings';
     view.render();
-    assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.kind, 'albums');
+    assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.kind, 'collections');
 
     // More than six notes: See All shows them all, and back again.
     for (let i = 0; i < 8; i++) v.file(`IR/Reading ${i}.md`);
     view.query = 'reading';
     view.render();
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-track').length, 6);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-note-row').length, 6);
     view.contentEl.querySelector('.dr-search-see-all[data-kind="notes"]').click();
     assert.strictEqual(view.query, 'reading');
     assert.deepStrictEqual(heads(), ['Notes']);
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-track').length, 9, 'all but the top result');
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-search-notes .dr-note-row').length, 9, 'all but the top result');
     view.contentEl.querySelector('.dr-search-back').click();
     assert.strictEqual(view.searchKind, null);
     assert.ok(heads().includes('Top Result'));
@@ -1584,8 +1588,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'search' }, {});
     view.query = 'constitutional law';
     view.render();
-    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-search-notes .dr-track')).map((r) => r.dataset.path);
-    const why = (p) => view.contentEl.querySelector(`.dr-track[data-path="${p}"] .dr-track-name`).dataset.excerpt;
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-search-notes .dr-note-row')).map((r) => r.dataset.path);
+    const why = (p) => view.contentEl.querySelector(`.dr-note-row[data-path="${p}"] .dr-note-row-name`).dataset.excerpt;
     assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.path, law.path, 'the exact title on top');
     assert.deepStrictEqual(rows(), [sep.path]);
     assert.strictEqual(why(sep.path), 'Property: domain = Constitutional Law');
@@ -1621,9 +1625,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.ok(view.contentEl.querySelector('.dr-search-text-status'), 'looking');
     await new Promise((r) => setTimeout(r, R.TEXT_PAUSE + 100));
-    const found = () => Array.from(view.contentEl.querySelectorAll('.dr-search-text-notes .dr-track')).map((r) => r.dataset.path);
+    const found = () => Array.from(view.contentEl.querySelectorAll('.dr-search-text-notes .dr-note-row')).map((r) => r.dataset.path);
     assert.deepStrictEqual(found(), ['IR/Theories/Realism.md'], 'the note named for it is listed above, not again');
-    const line = view.contentEl.querySelector('.dr-search-text-notes .dr-track-name').dataset.excerpt;
+    const line = view.contentEl.querySelector('.dr-search-text-notes .dr-note-row-name').dataset.excerpt;
     assert.ok(line.includes('Parliamentary sovereignty is a doctrine') && !line.includes('topic'), line);
     assert.strictEqual(view.contentEl.querySelector('.dr-search-top').dataset.path, 'IR/Sovereignty.md');
 
@@ -1647,7 +1651,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-search-text'));
   });
 
-  await t('Search with nothing typed: searches as a short list, categories as tiles from a property you choose — else the ways in; a note offers a new tab, its album and its link', async () => {
+  await t('Search with nothing typed: searches as a short list, categories as tiles from a property you choose — else the ways in; a note offers a new tab, its collection and its link', async () => {
     const { v, view, app, plugin } = setup();
     v.file('IR/Newest.md');
     plugin.settings.recentSearches = ['realism', 'anarchy'];
@@ -1694,23 +1698,34 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(textExcerpt('nothing', 'parliament'), null);
   });
 
-  await t('layout: Automatic shows collections as covers and notes you opened as a list; Lists shows collections as rows too', async () => {
+  await t('settings named for albums, tracks and discs take plain names, what they hold kept', () => {
+    const saved = { albumOrders: { IR: { names: ['a.md'] } }, trackLength: 'words', discNoteLimit: 3, smartAlbumList: [{ id: 's1' }], albumKeyNames: { type: 'kind' } };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 24).run(saved);
+    assert.deepStrictEqual(saved, { collectionOrders: { IR: { names: ['a.md'] } }, noteLength: 'words', sectionNoteLimit: 3, smartCollectionList: [{ id: 's1' }], collectionKeyNames: { type: 'kind' } });
+    Object.keys(R.RENAMED_KEYS).forEach((was) => assert.ok(!(was in R.DEFAULTS), `${was} still a setting`));
+    Object.values(R.RENAMED_KEYS).forEach((now) => assert.ok(now in R.DEFAULTS, `${now} is no setting`));
+    assert.strictEqual(R.COLLECTION_KEY_DEFAULTS.type, 'album', 'the property in people\'s notes keeps its name');
+    assert.strictEqual(R.DEFAULTS.showCovers, false, 'covers are asked for');
+  });
+
+  await t('notes you opened are plain rows; collections are rows too, with the icon in place of a cover until covers are on', async () => {
     const { view, plugin, app } = setup();
-    plugin.settings.libraryLayout = 'auto';
     plugin.recentFiles = () => [app.vault.getFileByPath('IR/Anarchy.md')];
     await view.setState({ mode: 'recents' }, {});
-    assert.ok(view.contentEl.querySelector('.dr-collection-tracks .dr-track[data-path="IR/Anarchy.md"]'), 'recently opened: a list');
+    assert.ok(view.contentEl.querySelector('.dr-recent-rows .dr-note-row[data-path="IR/Anarchy.md"]'), 'recently opened: a list');
     assert.ok(!view.contentEl.querySelector('.dr-card'));
+    plugin.settings.showCovers = false;
     await view.setState({ mode: 'folders' }, {});
     assert.strictEqual(view.contentEl.querySelector('.dr-browse-title').textContent, 'Collections');
-    assert.ok(view.contentEl.querySelector('.dr-card'), 'collections: covers');
-    plugin.settings.libraryLayout = 'lists';
+    assert.ok(view.contentEl.querySelector('.dr-card[data-path="IR"] .dr-card-art.is-blank .dr-card-glyph'), 'collections: an icon');
+    assert.ok(!view.contentEl.querySelector('.dr-card-art img, .dr-card-art.is-generated, .dr-card-art svg.dr-drawn'));
+    assert.ok(!view.contentEl.querySelector('.is-gallery'), 'never a gallery');
+    await view.setState({ mode: 'folder', path: 'IR' }, {});
+    assert.ok(!view.contentEl.querySelector('.dr-detail-art'), 'no cover in the head');
+    assert.ok(view.contentEl.querySelector('.dr-detail .dr-detail-title'), 'its title and facts stay');
+    plugin.settings.showCovers = true;
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-card'));
-    assert.ok(view.contentEl.querySelector('.dr-folder-rows .dr-search-prop[data-path="IR"]'), 'collections: rows');
-    plugin.settings.libraryLayout = 'covers';
-    await view.setState({ mode: 'recents' }, {});
-    assert.ok(view.contentEl.querySelector('.dr-card'), 'covers, as set');
+    assert.ok(view.contentEl.querySelector('.dr-detail-art'), 'turned on, a small mark');
   });
 
   await t('a folder’s PDFs wait after its notes, in a list of their own without numbers or a heading', async () => {
@@ -1718,12 +1733,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     v.file('IR/Keohane.pdf');
     v.file('IR/Martin.pdf');
     await view.setState({ mode: 'folder', path: 'IR' }, {});
-    const notes = Array.from(view.contentEl.querySelectorAll('.dr-tracks:not(.dr-pdf-list) .dr-track')).map((r) => r.dataset.path);
+    const notes = Array.from(view.contentEl.querySelectorAll('.dr-note-rows:not(.dr-pdf-list) .dr-note-row')).map((r) => r.dataset.path);
     assert.ok(notes.length && notes.every((p) => !p.endsWith('.pdf')), 'none among the notes');
     const pdfs = view.contentEl.querySelector('.dr-pdf-list');
-    assert.strictEqual(pdfs.querySelector('.dr-disc'), null, 'no heading');
-    assert.deepStrictEqual(Array.from(pdfs.querySelectorAll('.dr-track')).map((r) => r.dataset.path).sort(), ['IR/Keohane.pdf', 'IR/Martin.pdf']);
-    assert.ok(Array.from(pdfs.querySelectorAll('.dr-track')).every((r) => r.classList.contains('is-unnumbered') && r.querySelector('.dr-track-num').textContent === ''));
+    assert.strictEqual(pdfs.querySelector('.dr-list-section'), null, 'no heading');
+    assert.deepStrictEqual(Array.from(pdfs.querySelectorAll('.dr-note-row')).map((r) => r.dataset.path).sort(), ['IR/Keohane.pdf', 'IR/Martin.pdf']);
+    assert.ok(Array.from(pdfs.querySelectorAll('.dr-note-row')).every((r) => r.classList.contains('is-unnumbered') && r.querySelector('.dr-note-row-num').textContent === ''));
   });
 
   await t('a PDF in a list has no grey line: only a note has text to read one from', async () => {
@@ -1738,7 +1753,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!el.dataset.excerpt && !el.classList.contains('has-excerpt'));
   });
 
-  await t('a note matches by its title, alias, a property, its album, or nearly its title — in that order', () => {
+  await t('a note matches by its title, alias, a property, its collection, or nearly its title — in that order', () => {
     const { rankNote } = R;
     const score = (parts, q) => (rankNote(parts, q) || { score: 0 }).score;
     const title = score({ title: 'Deterrence' }, 'deterrence');
@@ -1746,23 +1761,23 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const alias = score({ title: 'X', props: { aliases: ['Deterrence'] } }, 'deterrence');
     const near = score({ title: 'Deterrence' }, 'dtrnc');
     const prop = score({ title: 'X', props: { topic: 'nuclear deterrence' } }, 'deterrence');
-    const album = score({ title: 'X', album: 'Security/Deterrence' }, 'deterrence');
-    assert.ok(title > starts && starts > alias && alias > prop && prop > album, [title, starts, alias, prop, album].join());
+    const collection = score({ title: 'X', album: 'Security/Deterrence' }, 'deterrence');
+    assert.ok(title > starts && starts > alias && alias > prop && prop > collection, [title, starts, alias, prop, collection].join());
     assert.ok(near > prop && near < alias);
     assert.strictEqual(rankNote({ title: 'X', props: { aliases: ['Deterrence'] } }, 'deterrence').why, 'Alias: Deterrence');
     assert.strictEqual(rankNote({ title: 'Balance' }, 'deterrence'), null);
     assert.strictEqual(rankNote({ title: 'Deterrence' }, 'zzz'), null);
   });
 
-  await t('the sort menu says how an album shows and opens its display settings; Find offers the whole library', async () => {
+  await t('the sort menu says how a collection shows and opens its display settings; Find offers the whole library', async () => {
     const { v, view, plugin, app } = setup();
-    const structure = new R.AlbumStructure(plugin);
+    const structure = new R.CollectionStructure(plugin);
     structure.enabled = true;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     v.file('IR/IR.md');
     const set = [];
     structure.setLayout = async (folder, id) => set.push([folder.path, id]);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const opened = [];
     plugin.openSettingsAt = (key) => opened.push(key);
     await view.setState({ mode: 'folder', path: 'IR' }, {});
@@ -1774,7 +1789,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await settle(0);
     assert.deepStrictEqual(set, [['IR', 'covers']]);
     menu.items.find((i) => i.title === 'Display settings…').click();
-    assert.deepStrictEqual(opened, ['albumColumns']);
+    assert.deepStrictEqual(opened, ['collectionColumns']);
 
     const went = [];
     view.leaf.setViewState = async (s) => went.push(s.state);
@@ -1790,7 +1805,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   await t('a redraw that changes nothing puts the same rows back, focus and pick kept; a changed note or setting draws anew', () => {
     const { view, plugin, app } = setup();
-    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-path]'));
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-path]'));
     const row = (name) => rows().find((r) => r.dataset.path === `IR/${name}.md`);
     // The first drawing ever notes when reading began, a setting: drawn once more, settled.
     view.render();
@@ -1823,7 +1838,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.notStrictEqual(row('Deterrence'), deterrence, 'its properties changed: drawn anew');
     // Moved in the order: numbered anew.
     const kept = row('Anarchy');
-    plugin.settings.albumExcerpts = !plugin.settings.albumExcerpts;
+    plugin.settings.collectionExcerpts = !plugin.settings.collectionExcerpts;
     view.render();
     assert.notStrictEqual(row('Anarchy'), kept, 'a setting changed: every row anew');
   });
@@ -1928,15 +1943,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     f(app, 'IR/Balance.md').stat.ctime = 30;
     f(app, 'IR/Theories/Realism.md').stat.ctime = 20;
     await view.setState({ mode: 'added' }, {});
-    const titles = () => Array.from(view.contentEl.querySelectorAll('.dr-card-title')).map((e) => e.textContent);
+    const titles = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row-name, .dr-card-title')).map((e) => e.textContent);
     assert.deepStrictEqual(titles().slice(0, 2), ['Balance', 'Realism'], 'newest first');
 
     await view.setState({ mode: 'collections' }, {});
     assert.ok(view.contentEl.querySelector('.dr-empty'), 'none yet');
-    const smart = new R.SmartAlbums(plugin);
+    const smart = new R.SmartCollections(plugin);
     smart.enabled = true;
-    plugin.settings.smartAlbumList = [{ id: 's1', name: 'Unread' }];
-    const structure = new R.AlbumStructure(plugin);
+    plugin.settings.smartCollectionList = [{ id: 's1', name: 'Unread' }];
+    const structure = new R.CollectionStructure(plugin);
     structure.enabled = true;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     v.folder('Reading');
@@ -1945,7 +1960,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const law = v.file('Law/Law.md');
     const fms = new Map([[reading, { includes: ['[[Anarchy]]'] }], [law, { album: 'Subject' }]]);
     app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
-    plugin.feature = (C) => (C === R.SmartAlbums ? smart : C === R.AlbumStructure ? structure : null);
+    plugin.feature = (C) => (C === R.SmartCollections ? smart : C === R.CollectionStructure ? structure : null);
     view.render();
     assert.deepStrictEqual(titles(), ['Unread', 'Reading']);
 
@@ -1963,7 +1978,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(sections[2].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
   });
 
-  await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {
+  await t('a collection says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, collections in it and beside it', async () => {
     const { v, plugin, app, view } = setup();
     const note = v.file('IR/IR.md');
     v.folder('Elsewhere');
@@ -1978,17 +1993,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.fileToLinktext = (f) => f.basename;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
     view.render();
     assert.deepStrictEqual(text('.dr-detail-kind'), ['Project']);
     assert.deepStrictEqual(text('.dr-detail-desc'), ['How states deal with each other.']);
     assert.ok(text('.dr-detail-meta')[0].includes('1 of 5 done'), text('.dr-detail-meta')[0]);
-    assert.deepStrictEqual(text('.dr-disc-title'), [], 'notes from elsewhere follow its own, without a heading');
-    assert.ok(view.contentEl.querySelector('.dr-track[data-path="Elsewhere/Sovereignty.md"]'), 'shown in the collection, not moved');
+    assert.deepStrictEqual(text('.dr-list-section-title'), [], 'notes from elsewhere follow its own, without a heading');
+    assert.ok(view.contentEl.querySelector('.dr-note-row[data-path="Elsewhere/Sovereignty.md"]'), 'shown in the collection, not moved');
     assert.strictEqual(sov.parent.path, 'Elsewhere');
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-album-includes .dr-card')).map((c) => c.dataset.path), ['Law'], 'a collection it takes in, as a tile');
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-collection-includes .dr-card')).map((c) => c.dataset.path), ['Law'], 'a collection it takes in, as a tile');
     assert.ok(text('.dr-shelf-title').includes('Related collections'));
     assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="Treaties"]'));
     assert.ok(!action(view, 'Map'));
@@ -2006,7 +2021,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.assign(view, { path: '/' });
     view.render();
     assert.deepStrictEqual(text('.dr-card[data-path="IR"] .dr-card-kind'), ['Concept map']);
-    // A note shown in another album too: listed in its includes, left where it is.
+    // A note shown in another collection too: listed in its includes, left where it is.
     let written = null;
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); written = [file, fm]; };
     fms.set(law, {});
@@ -2017,12 +2032,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await structure.setType(v.vault.getFolderByPath('IR'), 'reading list');
     assert.strictEqual(written[1].album, 'reading list');
     await structure.setType(v.vault.getFolderByPath('IR'), '');
-    assert.ok(!('album' in written[1]));
-    // What it's for: in the inspector's brief, and changed from there or from the album's menu.
+    assert.ok(!('collection' in written[1]));
+    // What it's for: in the inspector's brief, and changed from there or from the collection's menu.
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); written = [file, fm]; };
     const ir = v.vault.getFolderByPath('IR');
     const brief = document.createElement('div');
-    view.previewAlbum(brief, ir);
+    view.previewCollection(brief, ir);
     const about = brief.querySelector('.dr-preview-about');
     assert.deepStrictEqual([about.textContent, about.getAttribute('role')], ['How states deal with each other.', 'button']);
     click(about);
@@ -2050,62 +2065,62 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     structure.addFolderItems(menu2, ir, (item) => item, () => {});
     assert.ok(menu2.items.some((i) => i.title === 'Edit description…'));
     // Switched off: nothing of it shows.
-    plugin.settings.albumStructure = false;
+    plugin.settings.collectionStructure = false;
     Object.assign(view, { path: 'IR' });
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-detail-kind, .dr-detail-desc, .dr-album-includes'));
-    assert.ok(!text('.dr-disc-title').includes('From elsewhere'));
+    assert.ok(!view.contentEl.querySelector('.dr-detail-kind, .dr-detail-desc, .dr-collection-includes'));
+    assert.ok(!text('.dr-list-section-title').includes('From elsewhere'));
   });
 
-  await t('a smart album keeps filters, order and grouping; changed chips can be saved back; the library lists it', async () => {
+  await t('a smart collection keeps filters, order and grouping; changed chips can be saved back; the library lists it', async () => {
     const { v, plugin, app, view } = setup();
     const f = (p) => v.vault.getFileByPath(p);
     const fms = new Map([[f('IR/Anarchy.md'), { domain: 'Security', status: 'Done' }], [f('IR/Balance.md'), { domain: 'Security' }], [f('IR/Theories/Realism.md'), { domain: 'Theory' }]]);
     app.metadataCache.getFileCache = (file) => (fms.has(file) ? { frontmatter: fms.get(file) } : null);
-    const smart = new R.SmartAlbums(plugin);
-    plugin.feature = (C) => (C === R.SmartAlbums ? smart : null);
+    const smart = new R.SmartCollections(plugin);
+    plugin.feature = (C) => (C === R.SmartCollections ? smart : null);
     plugin.settings.librarySections = [{ title: '', items: [{ kind: 'builtin', id: 'home' }] }];
     const defaultSort = plugin.settings.defaultSort;
     view.filterFolder = 'IR';
     view.filterProp = { key: 'domain', value: null };
-    const album = smart.save(view, ' Domains ');
-    assert.deepStrictEqual([album.name, album.folder, album.prop], ['Domains', 'IR', { key: 'domain', value: null }]);
+    const collection = smart.save(view, ' Domains ');
+    assert.deepStrictEqual([collection.name, collection.folder, collection.prop], ['Domains', 'IR', { key: 'domain', value: null }]);
     assert.ok(plugin.settings.librarySections[0].items.some((i) => i.id === 'smart'), 'listed in the library');
     const open = () => {
-      Object.assign(view, { mode: 'smart', property: album.id, smartLoaded: null });
+      Object.assign(view, { mode: 'smart', property: collection.id, smartLoaded: null });
       view.clearFilters();
       view.render();
     };
-    const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track[data-path]')).map((r) => r.dataset.path.split('/').pop());
+    const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row[data-path]')).map((r) => r.dataset.path.split('/').pop());
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
     open();
     assert.deepStrictEqual(text('.dr-detail-title'), ['Domains']);
-    assert.deepStrictEqual(tracks(), ['Anarchy.md', 'Balance.md', 'Realism.md']);
+    assert.deepStrictEqual(rows(), ['Anarchy.md', 'Balance.md', 'Realism.md']);
     assert.ok(!action(view, 'Save changes'));
-    // Grouped by a property: a disc per value — the same notes seen another way.
-    smart.change(album, { group: 'domain' });
+    // Grouped by a property: a section per value — the same notes seen another way.
+    smart.change(collection, { group: 'domain' });
     view.render();
-    assert.deepStrictEqual(text('.dr-disc-title'), ['Security', 'Theory']);
+    assert.deepStrictEqual(text('.dr-list-section-title'), ['Security', 'Theory']);
     // Its own order, kept with it.
     view.setSort('name-desc');
-    assert.strictEqual(album.sort, 'name-desc');
+    assert.strictEqual(collection.sort, 'name-desc');
     assert.strictEqual(plugin.settings.defaultSort, defaultSort, 'the shared order is left alone');
     view.render();
-    assert.deepStrictEqual(tracks(), ['Balance.md', 'Anarchy.md', 'Realism.md']);
+    assert.deepStrictEqual(rows(), ['Balance.md', 'Anarchy.md', 'Realism.md']);
     // The chips changed, and saved back.
     view.filterProp = { key: 'status', value: 'Done' };
     view.render();
-    assert.deepStrictEqual(tracks(), ['Anarchy.md']);
+    assert.deepStrictEqual(rows(), ['Anarchy.md']);
     click(action(view, 'Save changes'));
-    assert.deepStrictEqual(album.prop, { key: 'status', value: 'Done' });
+    assert.deepStrictEqual(collection.prop, { key: 'status', value: 'Done' });
     open();
-    assert.deepStrictEqual(tracks(), ['Anarchy.md'], 'opened again, as saved');
+    assert.deepStrictEqual(rows(), ['Anarchy.md'], 'opened again, as saved');
     // In the library, a row each.
-    const rows = [];
-    smart.renderRows({ row: (list, spec) => rows.push(spec), browseMode() {} }, null);
-    assert.deepStrictEqual(rows.map((r) => [r.label, r.screen, r.property]), [['Domains', 'smart', album.id]]);
+    const listed = [];
+    smart.renderRows({ row: (list, spec) => listed.push(spec), browseMode() {} }, null);
+    assert.deepStrictEqual(listed.map((r) => [r.label, r.screen, r.property]), [['Domains', 'smart', collection.id]]);
     // Gone, or switched off: said so, nothing else.
-    smart.remove(album);
+    smart.remove(collection);
     open();
     assert.ok(text('.dr-empty')[0].includes('any more'));
   });
@@ -2121,7 +2136,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(view.containerEl.dataset.drDensity, 'standard');
   });
 
-  await t('looking the library over: empty albums, no description, notes in no album, missing and circular includes, deep nesting, a name twice', () => {
+  await t('looking the library over: empty collections, no description, notes in no collection, missing and circular includes, deep nesting, a name twice', () => {
     const { v, plugin, app } = setup();
     v.file('IR/IR.md');
     v.folder('Law');
@@ -2147,9 +2162,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
     app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const structure = new R.AlbumStructure(plugin);
+    const structure = new R.CollectionStructure(plugin);
     const check = new R.LibraryCheck(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const found = check.problems().map((p) => `${p.target.path}: ${p.kind}`);
     assert.deepStrictEqual(found.sort(), [
       'A/B/C/D/E/F: about',
@@ -2168,7 +2183,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(kept);
   });
 
-  await t('inside an album: notes to start with, a list, covers or a table without headings, its folders at the foot, and why it’s empty', async () => {
+  await t('inside a collection: notes to start with, a list, covers or a table without headings, its folders at the foot, and why it’s empty', async () => {
     const { v, plugin, app, view } = setup();
     const note = v.file('IR/IR.md');
     const fm = { album: 'project', featured: ['[[Balance]]'], includes: '[[Gone]]' };
@@ -2181,14 +2196,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
     let written = null;
     app.fileManager.processFrontMatter = async (file, fn) => { const copy = Object.assign({}, fms.get(file)); fn(copy); written = copy; };
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
     view.render();
     assert.ok(text('.dr-shelf-title').includes('Start here'));
     assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Balance.md"]'));
-    assert.ok(text('.dr-album-notice')[0].includes('“Gone”'), 'a link that leads nowhere, said');
-    assert.ok(view.contentEl.querySelector('.dr-track[data-path]'), 'a list, as it opens by default');
+    assert.ok(text('.dr-collection-notice')[0].includes('“Gone”'), 'a link that leads nowhere, said');
+    assert.ok(view.contentEl.querySelector('.dr-note-row[data-path]'), 'a list, as it opens by default');
     // Kept at the top, and no longer, from a note's menu.
     const items = [];
     structure.addFileItems({ addItem: (fn) => { const item = {}; ['setSection', 'setIcon'].forEach((m) => (item[m] = () => item)); item.setTitle = (x) => { item.title = x; return item; }; item.onClick = (f) => { item.run = f; return item; }; fn(item); items.push(item); } }, v.vault.getFileByPath('IR/Balance.md'), (i) => i, () => {});
@@ -2197,42 +2212,29 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('featured' in written), 'an empty list is taken away');
     await structure.toggleFeatured(v.vault.getFolderByPath('IR'), v.vault.getFileByPath('IR/Anarchy.md'));
     assert.deepStrictEqual(written.featured, ['[[Balance]]', '[[Anarchy]]']);
-    // As covers: tiles, without headings; as a table: rows, without a row of column names.
+    // Covers is no longer a way to open: a list, as by default. As a table: rows, without a row of column names.
     fm.layout = 'covers';
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-track[data-path]'));
-    assert.deepStrictEqual(text('.dr-disc-title'), []);
-    assert.ok(view.contentEl.querySelector('.dr-grid .dr-card[data-path="IR/Anarchy.md"]'));
+    assert.ok(view.contentEl.querySelector('.dr-note-row[data-path="IR/Anarchy.md"]'));
+    assert.ok(!view.contentEl.querySelector('.is-gallery'));
     fm.layout = 'table';
     view.render();
     assert.deepStrictEqual(text('.dr-table .dr-td-text').slice(0, 1), ['Anarchy']);
-    assert.strictEqual(view.contentEl.querySelector('.dr-th, .dr-disc'), null);
+    assert.strictEqual(view.contentEl.querySelector('.dr-th, .dr-list-section'), null);
     await structure.setLayout(v.vault.getFolderByPath('IR'), 'list');
     assert.ok(!('layout' in written), 'a list is how it opens anyway');
     // An overview or a map is no longer a way to open: a list, as by default.
     fm.layout = 'overview';
     view.render();
-    assert.ok(view.contentEl.querySelector('.dr-track[data-path]'));
+    assert.ok(view.contentEl.querySelector('.dr-note-row[data-path]'));
     delete fm.layout;
     // No tabs: its notes, then the folders in it, at the foot.
     view.render();
-    assert.strictEqual(view.contentEl.querySelector('.dr-album-panels, .dr-album-lead, .dr-disc'), null);
+    assert.strictEqual(view.contentEl.querySelector('.dr-collection-panels, .dr-collection-lead, .dr-list-section'), null);
     assert.ok(text('.dr-shelf-title').includes('In IR'));
-    assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'));
-    // Under an album shown as a list — Automatic or Lists — the folders at the foot are rows under the same title.
-    ['auto', 'lists'].forEach((layout) => {
-      plugin.settings.libraryLayout = layout;
-      view.render();
-      assert.ok(text('.dr-shelf-title').includes('In IR'), layout);
-      assert.ok(view.contentEl.querySelector('.dr-folder-rows .dr-search-prop[data-path="IR/Theories"]'), layout);
-      assert.ok(!view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'), layout);
-    });
-    // Under an album of covers, covers.
-    fm.layout = 'covers';
-    view.render();
-    assert.ok(view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'));
-    delete fm.layout;
-    plugin.settings.libraryLayout = 'covers';
+    // The folders at the foot are rows under the same title.
+    assert.ok(view.contentEl.querySelector('.dr-folder-rows .dr-search-prop[data-path="IR/Theories"]'));
+    assert.ok(!view.contentEl.querySelector('.dr-shelf-row .dr-card[data-path="IR/Theories"]'));
     // Empty, and why.
     v.folder('Plans');
     const plans = v.file('Plans/Plans.md');
@@ -2247,7 +2249,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(text('.dr-empty-action'), ['Clear filters']);
   });
 
-  await t('covers grouped by kind or collection; a shelf’s albums put in your own order, kept by name', async () => {
+  await t('covers grouped by kind or collection; a shelf’s collections put in your own order, kept by name', async () => {
     const { v, plugin, app, view } = setup();
     v.folder('Politics');
     ['Theory', 'Law', 'Ideas'].forEach((n) => { v.folder(`Politics/${n}`); v.file(`Politics/${n}/Note ${n}.md`); });
@@ -2255,8 +2257,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const fms = new Map([[lawNote, { album: 'reference' }]]);
     app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-grid .dr-card')).map((c) => c.dataset.path);
     const heads = () => Array.from(view.contentEl.querySelectorAll('.dr-tile-group-head')).map((h) => h.textContent);
     // A shelf, in its own order once one's moved.
@@ -2264,10 +2266,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.deepStrictEqual(tiles(), ['Politics/Ideas', 'Politics/Law', 'Politics/Theory']);
     view.tileSteps(v.vault.getFolderByPath('Politics/Theory')).earlier();
-    assert.deepStrictEqual(plugin.settings.albumOrders.Politics.names, ['Ideas', 'Theory', 'Law']);
+    assert.deepStrictEqual(plugin.settings.collectionOrders.Politics.names, ['Ideas', 'Theory', 'Law']);
     assert.deepStrictEqual(tiles(), ['Politics/Ideas', 'Politics/Theory', 'Politics/Law']);
     assert.strictEqual(view.tileSteps(v.vault.getFolderByPath('Politics/Ideas')).earlier, null, 'already first');
-    // Not in an album of notes: its disc folders aren't tiles to arrange.
+    // Not in a collection of notes: its section folders aren't tiles to arrange.
     Object.assign(view, { path: 'IR' });
     view.render();
     assert.strictEqual(view.tileSteps(v.vault.getFolderByPath('IR/Theories')), null);
@@ -2285,14 +2287,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(heads(), []);
   });
 
-  await t('covers by kind: each kind its symbol and colour, a note its album’s; and kind, name and collection printed on a cover', () => {
+  await t('covers by kind: each kind its symbol and colour, a note its collection’s; and kind, name and collection printed on a cover', () => {
     const { v, plugin, app } = setup();
     const note = v.file('IR/Theories/Theories.md');
     const fms = new Map([[note, { album: 'project' }]]);
     app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     plugin.settings.coverFallback = 'kind';
     const art = () => document.createElement('div');
     const theories = v.vault.getFolderByPath('IR/Theories');
@@ -2305,11 +2307,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     R.drawFolderArt(plugin, plain, v.vault.getFolderByPath('IR'));
     assert.strictEqual(plain.querySelector('.dr-card-glyph').dataset.icon, 'folder', 'no kind: plain');
     assert.notStrictEqual(plain.style.getPropertyValue('--dr-gen-h'), projectHue);
-    const track = art();
-    R.drawNoteArt(plugin, track, v.vault.getFileByPath('IR/Theories/Realism.md'));
-    assert.ok(track.classList.contains('is-kind'));
-    assert.strictEqual(track.style.getPropertyValue('--dr-gen-h'), projectHue, 'a note in its collection’s colour');
-    // A colour chosen for the album wins.
+    const row = art();
+    R.drawNoteArt(plugin, row, v.vault.getFileByPath('IR/Theories/Realism.md'));
+    assert.ok(row.classList.contains('is-kind'));
+    assert.strictEqual(row.style.getPropertyValue('--dr-gen-h'), projectHue, 'a note in its collection’s colour');
+    // A colour chosen for the collection wins.
     plugin.settings.coverColors = { 'IR/Theories': '#3e63dd' };
     const own = art();
     R.drawFolderArt(plugin, own, theories);
@@ -2328,7 +2330,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!titled.querySelector('.dr-cover-print'));
   });
 
-  await t('the library report: roles at odds, parents in a circle, albums in no collection, overlaps, a cover twice, subjects with nothing to start with, and size out of balance', () => {
+  await t('the library report: roles at odds, parents in a circle, collections in no collection, overlaps, a cover twice, subjects with nothing to start with, and size out of balance', () => {
     const { v, plugin, app, view } = setup();
     v.folder('Shelf');
     v.folder('Shelf/Inner');
@@ -2355,9 +2357,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     plugin.folderCoverSrc = (folder) => (folder.name === 'Top' || folder.name === 'Big' ? 'app://cover.png' : null);
-    const structure = new R.AlbumStructure(plugin);
+    const structure = new R.CollectionStructure(plugin);
     const check = new R.LibraryCheck(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : C === R.LibraryCheck ? check : null);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : C === R.LibraryCheck ? check : null);
     const found = check.problems();
     const has = (path, kind) => found.some((p) => p.target.path === path && p.kind === kind);
     assert.ok(has('Top', 'roles'), 'takes in a collection it lists as related too');
@@ -2379,16 +2381,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(shared.length === 3);
   });
 
-  await t('the inbox: notes in no album, picked a few at a time, moved into an album or shown in one, with Undo', async () => {
+  await t('the inbox: notes in no collection, picked a few at a time, moved into a collection or shown in one, with Undo', async () => {
     const { v, plugin, app, view } = setup();
     const one = v.file('Loose one.md');
     const two = v.file('Loose two.md');
     v.file('Home.md');
     app.metadataCache.fileToLinktext = (f) => f.basename;
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const structure = new R.AlbumStructure(plugin);
+    const structure = new R.CollectionStructure(plugin);
     const check = new R.LibraryCheck(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : C === R.LibraryCheck ? check : null);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : C === R.LibraryCheck ? check : null);
     let undo = null;
     plugin.offerUndo = (msg, fn) => { undo = fn; };
     plugin.putBack = async (file, from) => { await v.fileManager.renameFile(file, from); return true; };
@@ -2401,7 +2403,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     box('Loose two.md').click();
     assert.deepStrictEqual(Array.from(view.inboxPicked), ['Loose two.md']);
     assert.ok(view.contentEl.querySelector('.dr-inbox-count').textContent.includes('1 picked'));
-    // Moved into an album as one step, and put back with Undo.
+    // Moved into a collection as one step, and put back with Undo.
     const ir = v.vault.getFolderByPath('IR');
     assert.strictEqual(await check.moveFilesInto([two], ir), true);
     assert.strictEqual(two.path, 'IR/Loose two.md');
@@ -2410,7 +2412,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await undo();
     view.render();
     assert.deepStrictEqual(rows(), ['Loose one.md', 'Loose two.md']);
-    // Shown in an album where they are: listed in its includes, and out of the inbox.
+    // Shown in a collection where they are: listed in its includes, and out of the inbox.
     const fms = new Map();
     app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
     app.metadataCache.getFirstLinkpathDest = (link) => v.vault.getMarkdownFiles().find((f) => f.basename === link) || null;
@@ -2427,7 +2429,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('includes' in fms.get(irNote)));
   });
 
-  await t('reorganising albums: rename, move, merge and split, each shown first, done as shown, and undone in one step', async () => {
+  await t('reorganising collections: rename, move, merge and split, each shown first, done as shown, and undone in one step', async () => {
     const { v, plugin, app } = setup();
     const fms = new Map();
     app.metadataCache.getFileCache = (f) => (fms.has(f) ? { frontmatter: fms.get(f) } : null);
@@ -2446,11 +2448,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.putBack = async (entry, from) => { await v.fileManager.renameFile(entry, from); return true; };
     let undo = null;
     plugin.offerUndo = (msg, fn) => { undo = fn; };
-    const refactor = new R.AlbumRefactor(plugin);
+    const refactor = new R.CollectionRefactor(plugin);
     plugin.feature = () => null;
     const folder = (p) => v.vault.getFolderByPath(p);
     const file = (p) => v.vault.getFileByPath(p);
-    // Written once: the album's menu and the palette, which offers them only for the album on screen.
+    // Written once: the collection's menu and the palette, which offers them only for the collection on screen.
     const menu = new Menu();
     refactor.addFolderItems(menu, folder('IR'), (item) => item);
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Reorganise: Rename…', 'Reorganise: Move into…', 'Reorganise: Merge into…', 'Reorganise: Split notes off…']);
@@ -2490,8 +2492,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
     assert.ok(plan.warnings.some((w) => w.includes('“Realism.md” is in both')));
     assert.ok(plan.lines.some((l) => l.includes('Its includes, related join Law’s')), plan.lines.join(' | '));
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
     await refactor.perform(plan);
     assert.ok(!folder('IR/Theories'), 'the empty folder is gone');
@@ -2499,13 +2501,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(fms.get(lawNote).related, ['[[Courts]]', '[[Power]]']);
     assert.deepStrictEqual(fms.get(lawNote).includes, ['[[Anarchy]]'], 'not the collection it went into');
     assert.strictEqual(fms.get(lawNote).description, 'Rules.', 'its own description kept');
-    assert.ok(!('album' in fms.get(theoriesNote)), 'a note like the rest: not saying it’s a collection');
+    assert.ok(!('collection' in fms.get(theoriesNote)), 'a note like the rest: not saying it’s a collection');
     await undo();
     assert.ok(file('IR/Theories/Realism.md') && file('IR/Theories/Liberalism.md') && file('IR/Theories/Theories.md'));
     assert.ok(file('Law/Realism.md') && !file('Law/Realism 1.md'));
     assert.deepStrictEqual(fms.get(lawNote), { description: 'Rules.', related: ['[[Courts]]'] });
     assert.strictEqual(fms.get(theoriesNote).album, 'subject');
-    // Split notes off into a new album beside it, and back.
+    // Split notes off into a new collection beside it, and back.
     plan = refactor.planSplit(folder('IR'), [], 'Security');
     assert.ok(plan.blocked.includes('Pick'));
     plan = refactor.planSplit(folder('IR'), [file('IR/Anarchy.md'), file('IR/Deterrence.md')], 'Security');
@@ -2516,7 +2518,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(file('IR/Anarchy.md') && !folder('Security'), 'the new collection gone again');
   });
 
-  await t('levels and views: a collection says so and can open as a tree; an album as a table; covers numbered; property names of your own', async () => {
+  await t('levels and views: a collection says so and can open as a tree; a collection as a table; covers numbered; property names of your own', async () => {
     const { v, plugin, app, view } = setup();
     v.folder('Politics');
     ['Theory', 'Law'].forEach((n) => { v.folder(`Politics/${n}`); v.file(`Politics/${n}/Note ${n}.md`); });
@@ -2531,16 +2533,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); };
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
     plugin.ensureFolderNote = async (folder) => plugin.folderNote(folder);
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((el) => el.textContent);
-    // A collection: said to be one, what it's for, how many albums.
+    // A collection: said to be one, what it's for, how many collections.
     Object.assign(view, { path: 'Politics' });
     view.render();
-    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-kind'), ['Shelf']);
-    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-meta'), ['2 collections']);
-    assert.deepStrictEqual(text('.dr-collection-head .dr-detail-desc'), ['The study of power.']);
-    // Opened as a list: a tree of its albums, the ones inside beneath.
+    assert.deepStrictEqual(text('.dr-shelf-page-head .dr-detail-kind'), ['Shelf']);
+    assert.deepStrictEqual(text('.dr-shelf-page-head .dr-detail-meta'), ['2 collections']);
+    assert.deepStrictEqual(text('.dr-shelf-page-head .dr-detail-desc'), ['The study of power.']);
+    // Opened as a list: a tree of its collections, the ones inside beneath.
     fms.get(shelfNote).layout = 'list';
     view.render();
     assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-tree-row')).map((r) => [r.dataset.path, r.style.getPropertyValue('--dr-tree-depth')]), [['Politics/Law', '0'], ['Politics/Law/Courts', '1'], ['Politics/Theory', '0']]);
@@ -2548,7 +2550,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.assign(view, { path: '/' });
     view.render();
     assert.deepStrictEqual(text('.dr-detail-kind'), ['Library']);
-    // An album as a table.
+    // A collection as a table.
     fms.get(irNote).layout = 'table';
     Object.assign(view, { path: 'IR' });
     view.render();
@@ -2560,7 +2562,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     R.drawFolderArt(plugin, el, v.vault.getFolderByPath('Politics/Theory'));
     assert.deepStrictEqual(Array.from(el.querySelectorAll('.dr-cover-print-kind')).map((x) => x.textContent), ['No. 02']);
     // Property names of your own: read under them, and earlier values carried over with Undo.
-    plugin.settings.albumKeyNames = { type: 'album-kind' };
+    plugin.settings.collectionKeyNames = { type: 'collection-kind' };
     structure.enable();
     fms.set(irNote, { album: 'project' });
     assert.strictEqual(structure.info(v.vault.getFolderByPath('IR')).type, '', 'read under the new name only');
@@ -2568,7 +2570,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.offerUndo = (m, fn) => { undo = fn; };
     plugin.isFolderNote = (f) => f.basename === (f.parent && f.parent.name);
     assert.strictEqual(await structure.carryKeys(), 1);
-    assert.deepStrictEqual(fms.get(irNote), { 'album-kind': 'project' });
+    assert.deepStrictEqual(fms.get(irNote), { 'collection-kind': 'project' });
     assert.strictEqual(structure.info(v.vault.getFolderByPath('IR')).type, 'project');
     await undo();
     assert.deepStrictEqual(fms.get(irNote), { album: 'project' });
@@ -2661,7 +2663,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([view.containerEl.dataset.drDensity, view.containerEl.dataset.drArt], ['compact', 'large']);
   });
 
-  await t('the note panel: the albums and canvases a note is in', async () => {
+  await t('the note panel: the collections and canvases a note is in', async () => {
     const { v, plugin, app } = setup();
     v.folder('Ideas');
     const gov = v.file('Ideas/Government.md');
@@ -2683,12 +2685,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = JSON.parse(JSON.stringify(fms.get(file) || {})); fn(fm); fms.set(file, fm); };
     plugin.offerUndo = () => {};
     plugin.folderNote = (folder) => v.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const panel = { plugin, close() {} };
     const host = document.body.createDiv();
 
-    // Kept in: its own album, the albums that include it, the canvases it's on.
+    // Kept in: its own collection, the collections that include it, the canvases it's on.
     const places = new R.PlacesSection(panel, structure);
     places.mount(host, parl);
     const names = [...places.containerEl.querySelectorAll('.dr-mention-name')].map((n) => n.textContent);
@@ -2713,28 +2715,28 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   await t('a saved view of what’s due: the first due-date property, due soon or overdue, kept once and listed', () => {
     const { plugin } = setup();
-    const smart = new R.SmartAlbums(plugin);
+    const smart = new R.SmartCollections(plugin);
     smart.enabled = true;
     const dates = new R.PropertyDates(plugin);
-    plugin.feature = (C) => (C === R.SmartAlbums ? smart : null);
+    plugin.feature = (C) => (C === R.SmartCollections ? smart : null);
     plugin.settings.propertyDueKeys = 'deadline, due';
-    plugin.settings.smartAlbumList = [];
-    const album = dates.keepDueView();
-    assert.deepStrictEqual([album.name, album.prop], ['Due', { key: 'deadline', value: null, negate: false, due: true }]);
-    assert.strictEqual(dates.keepDueView(), album, 'kept once');
-    assert.strictEqual(plugin.settings.smartAlbumList.length, 1);
+    plugin.settings.smartCollectionList = [];
+    const collection = dates.keepDueView();
+    assert.deepStrictEqual([collection.name, collection.prop], ['Due', { key: 'deadline', value: null, negate: false, due: true }]);
+    assert.strictEqual(dates.keepDueView(), collection, 'kept once');
+    assert.strictEqual(plugin.settings.smartCollectionList.length, 1);
   });
 
   await t('what a collection comes to: how many done and a date property’s span, under its title and beside it in a list', () => {
     const { v, plugin, app, view } = setup();
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    const structure = new R.CollectionStructure(plugin);
+    plugin.feature = (C) => (C === R.CollectionStructure ? structure : null);
     const fms = { Anarchy: { status: 'Done', due: '2026-03-03' }, Balance: { done: true, due: '2026-04-12' }, Cooperation: { status: 'Doing', due: '2026-03-20' } };
     app.metadataCache.getFileCache = (f) => ({ frontmatter: fms[f.basename] || {} });
     const meta = () => view.contentEl.querySelector('.dr-detail-meta').textContent;
     view.render();
     assert.ok(!/done/.test(meta()), 'off by default');
-    Object.assign(plugin.settings, { albumRollups: true, rollupDateKey: 'due' });
+    Object.assign(plugin.settings, { collectionRollups: true, rollupDateKey: 'due' });
     view.render();
     const span = `due ${new Date('2026-03-03T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} – ${new Date('2026-04-12T12:00').toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
     assert.ok(meta().includes(`2 of 4 done  ·  ${span}`), meta());

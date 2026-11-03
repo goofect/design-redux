@@ -145,7 +145,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   const everything = [ir, books, a, b, c];
   const bookmarks = [{ type: 'file', path: 'IR/Anarchy.md' }, { type: 'folder', path: 'Books' }, { type: 'file', path: 'Books/Crisis.md' }];
   const plugin = {
-    settings: JSON.parse(JSON.stringify(R.DEFAULTS)),
+    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { showCovers: true }),
     saveData: async () => {},
     isFolderNote: () => false, folderHasNotes: () => true, recentFiles: () => [],
     folderNote: () => null, folderCoverSrc: () => null, feature: () => null,
@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 22);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 24);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -323,7 +323,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     Object.assign(view, { mode: 'folder', path: 'IR' });
     view.render();
     view.onOpen && view.registerDomEvent(view.containerEl, 'keydown', (evt) => view.onKey(evt));
-    const row = view.contentEl.querySelector('.dr-track');
+    const row = view.contentEl.querySelector('.dr-note-row');
     row.focus();
     key(row, '/');
     const find = view.contentEl.querySelector('.dr-browse-search input');
@@ -337,11 +337,11 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     find.value = 'bal';
     find.dispatchEvent(new window.Event('input'));
     await settle(120);
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 1);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-note-row').length, 1);
     key(find, 'Escape');
     assert.strictEqual(view.query, '');
     assert.strictEqual(find.value, '');
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 2);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-note-row').length, 2);
     key(find, 'Escape');
     assert.notStrictEqual(document.activeElement, find);
   });
@@ -561,7 +561,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       settings: {
         coverColors: { A: '#123456', Gone: '#000000' },
         coverDesigns: { 'Map.canvas': {}, 'Old.canvas': {} },
-        albumOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
+        collectionOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
         folderDefaults: { Gone: [] },
       },
       saved: 0,
@@ -571,7 +571,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), true);
     assert.deepStrictEqual(Object.keys(fake.settings.coverColors), ['A']);
     assert.deepStrictEqual(Object.keys(fake.settings.coverDesigns), ['Map.canvas']);
-    assert.deepStrictEqual(Object.keys(fake.settings.albumOrders), ['/', 'A']);
+    assert.deepStrictEqual(Object.keys(fake.settings.collectionOrders), ['/', 'A']);
     assert.deepStrictEqual(fake.settings.folderDefaults, {});
     assert.strictEqual(fake.saved, 1);
     fake.app.vault.getAllLoadedFiles = () => [];
@@ -582,25 +582,25 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 
   /* -- type to jump, Space to preview ---------------------------------- */
 
-  const trackList = () => {
+  const rowList = () => {
     const el = document.body.createDiv();
     ['Anarchy', 'Balance of power', 'Contract', 'Realism', 'Tort', 'Tribunal'].forEach((name, i) => {
-      const row = el.createDiv({ cls: 'dr-track' });
+      const row = el.createDiv({ cls: 'dr-note-row' });
       row.setAttribute('tabindex', '0');
       row.dataset.path = `Law/${name}.md`;
-      row.createDiv({ cls: 'dr-track-num', text: String(i + 1) });
-      row.createDiv({ cls: 'dr-track-name', text: name });
+      row.createDiv({ cls: 'dr-note-row-num', text: String(i + 1) });
+      row.createDiv({ cls: 'dr-note-row-name', text: name });
       row.addEventListener('keydown', (evt) => {
         if (evt.key === ' ') row.dataset.opened = 'yes';
       });
     });
-    R.roveFocus(el, '.dr-track');
+    R.roveFocus(el, '.dr-note-row');
     return el;
   };
-  const focusedName = () => document.activeElement.querySelector('.dr-track-name').textContent;
+  const focusedName = () => document.activeElement.querySelector('.dr-note-row-name').textContent;
 
   await t('typing the start of a name jumps to it; the same letter again moves on', () => {
-    const el = trackList();
+    const el = rowList();
     R.listKeys.on = true;
     try {
       el.firstChild.focus();
@@ -627,7 +627,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   });
 
   await t("Space previews the note in focus; switched off, the keys are the row's own again", () => {
-    const el = trackList();
+    const el = rowList();
     const seen = [];
     const keys = new R.ListKeys({ settings: { typeToJump: true }, app: { vault: { getAbstractFileByPath: () => null } } });
     keys.enable();

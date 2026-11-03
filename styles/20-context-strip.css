@@ -100,7 +100,7 @@ body.dr-glass .dr-strip {
   height: var(--dr-control-icon);
 }
 
-/* The middle: « the note » — back and on through its album either side,
+/* The middle: « the note » — back and on through its collection either side,
  * as a player's skip buttons sit around what's playing. */
 .dr-strip-center {
   display: flex;

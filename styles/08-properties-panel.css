@@ -319,7 +319,7 @@ body.is-mobile .dr-props-popup .dr-row-more {
   white-space: normal;
 }
 
-/* An album's meta line names where it is, and takes you there: quiet, underlined when pointed at. */
+/* A collection's meta line names where it is, and takes you there: quiet, underlined when pointed at. */
 .dr-props-popup .dr-props-meta-link {
   color: var(--text-muted);
   cursor: pointer;

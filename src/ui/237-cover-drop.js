@@ -1,9 +1,9 @@
 /* ------------------------------------------------------------------ */
 /* Covers by dropping                                                  */
 /*                                                                     */
-/* An image dragged onto a cover — an album's on its page, a note's in */
+/* An image dragged onto a cover — a collection's on its page, a note's in */
 /* its properties or on the strip — becomes that cover, as artwork     */
-/* dropped onto an album does. An image from the vault is linked where */
+/* dropped onto a collection does. An image from the vault is linked where */
 /* it is; one from outside is saved where Obsidian keeps attachments,  */
 /* and the image router moves it on if it's on. With a cover in focus, */
 /* pasting an image does the same.                                     */

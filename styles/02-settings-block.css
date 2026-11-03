@@ -12,32 +12,12 @@ settings:
     -
         id: dr-cover-radius
         title: Cover corners
-        description: How rounded album and note covers are. Unset follows your theme.
+        description: How rounded collection and note covers are. Unset follows your theme.
         type: variable-number-slider
         default: 8
         min: 0
         max: 40
         step: 1
-        format: px
-    -
-        id: dr-tile-size
-        title: Tile size
-        description: The narrowest a folder or note tile gets in a grid.
-        type: variable-number-slider
-        default: 170
-        min: 110
-        max: 280
-        step: 10
-        format: px
-    -
-        id: dr-album-art-size
-        title: Collection cover size
-        description: The cover beside a collection's title.
-        type: variable-number-slider
-        default: 56
-        min: 32
-        max: 240
-        step: 10
         format: px
     -
         id: dr-flat-covers

@@ -24,7 +24,7 @@ export const SETTINGS_TABS = [
         id: 'home',
         icon: 'home',
         name: 'Home screen',
-        desc: 'What the library opens with: its shelves.',
+        desc: 'What the library opens with: its lists.',
         keys: ['homePath', 'homeShelves'],
       },
       {
@@ -45,8 +45,9 @@ export const SETTINGS_TABS = [
         id: 'covers',
         icon: 'image',
         name: 'Covers',
-        desc: 'Where covers come from, and how the made ones look.',
-        keys: ['coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
+        desc: 'A small cover beside a name: where they come from, and how the made ones look. Off by default.',
+        switch: 'showCovers',
+        keys: ['artworkSize', 'coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
       },
     ],
   },
@@ -60,7 +61,7 @@ export const SETTINGS_TABS = [
         name: 'Library',
         desc: 'Folders as collections of notes, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
         switch: 'library',
-        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
+        keys: ['inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'collectionSortMemory', 'typeToJump', 'searchNoteText', 'collectionColumns', 'collectionExcerpts', 'collectionStillToWrite', 'collectionNestBy', 'noteLength', 'tileGroups', 'categoryProperty', 'smartCollections', 'collectionStructure', 'collectionRollups', 'libraryCheck', 'libraryInbox', 'collectionRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'sectionNoteLimit', 'collectionNoteLimit', 'tableColumns', 'collectionKeyNames', 'rollupDateKey', 'thinNoteWords'],
       },
     ],
   },
@@ -72,7 +73,7 @@ export const SETTINGS_TABS = [
         id: 'notePage',
         icon: 'file-text',
         name: 'Note page',
-        desc: 'Its collection above the title, one grey line under it, properties as chips, shelves at the end, and a reading outline.',
+        desc: 'Its collection above the title, one grey line under it, properties as chips, related notes at the end, and a reading outline.',
         switch: 'notePage',
         keys: ['notePageShelves', 'notePageTint', 'notePageChips', 'readingOutline', 'outlineWordCounts'],
       },
@@ -111,7 +112,7 @@ export const SETTINGS_TABS = [
         name: 'Properties panel',
         desc: 'Where a note is edited: properties, relationships and places in one panel.',
         switch: 'propertiesDropdown',
-        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
+        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForCollection', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },
     ],
   },
@@ -139,7 +140,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['motion', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
+export const LOOK_KEYS = ['motion', 'glassPanels', 'gridDensity', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */
@@ -159,8 +160,8 @@ export const SETTING_PRESETS = {
 
 export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
-  Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
-  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingOutline', 'outlineWordCounts', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
+  Library: ['library', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'collectionSortMemory', 'typeToJump', 'sectionNoteLimit', 'collectionNoteLimit', 'collectionColumns', 'collectionExcerpts', 'collectionStillToWrite', 'collectionNestBy', 'noteLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'collectionStructure', 'collectionKeyNames', 'collectionRollups', 'rollupDateKey', 'smartCollections', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'collectionRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
+  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingOutline', 'outlineWordCounts', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForCollection', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
   Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
   // 3.0's last tab, before the tabs went by task.

@@ -100,8 +100,8 @@ body.is-phone .dr-bulk-missing-row {
   gap: var(--dr-space-1);
 }
 
-/* Editing on a phone: the tools stay, the album columns go. */
-body.is-phone .dr-track.is-editing .dr-track-num {
+/* Editing on a phone: the tools stay, the collection columns go. */
+body.is-phone .dr-note-row.is-editing .dr-note-row-num {
   display: none;
 }
 
@@ -161,7 +161,7 @@ body.is-phone .dr-track.is-editing .dr-track-num {
 
 /* Style Settings switches: covers and the strip without their shadows. */
 body.dr-flat-covers .dr-card-art,
-body.dr-flat-covers .dr-album-art,
+body.dr-flat-covers .dr-collection-art,
 body.dr-flat-covers .dr-detail-art,
 body.dr-flat-covers .dr-detail-art.is-generated {
   box-shadow: none;
@@ -217,21 +217,21 @@ body.dr-strip-flat .dr-strip {
  * the foot; smaller ones keep the icon. 'The icon on a soft colour': a
  * glyph on a gentle gradient in a colour picked from the name. The rest
  * follows the reference: round buttons over a cover when it's pointed at,
- * and an album's small print under its last track.
+ * and a collection's small print under its last row.
  */
 
 .dr-type-cover {
   display: none;
 }
 
-:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-type-cover {
+:is(.dr-card-art, .dr-detail-art, .dr-collection-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-type-cover {
   display: block;
   position: absolute;
   inset: 0;
   padding: var(--dr-space-3) var(--dr-space-3);
 }
 
-:is(.dr-card-art, .dr-detail-art, .dr-album-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-card-glyph {
+:is(.dr-card-art, .dr-detail-art, .dr-collection-art, .dr-pick-art, .dr-color-preview).is-titled > .dr-card-glyph {
   display: none;
 }
 
@@ -262,26 +262,26 @@ body.dr-strip-flat .dr-strip {
 
 /* A cover small enough to be a mark — beside a collection's title, on a
    card — prints only its name's first letter, as a monogram. */
-:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-cover {
+:is(.dr-detail-art, .dr-pick-art, .dr-card > .dr-card-art) .dr-type-cover {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
 }
 
-:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-title {
+:is(.dr-detail-art, .dr-pick-art, .dr-card > .dr-card-art) .dr-type-title {
   display: block;
   font-size: 0;
   line-height: 1;
 }
 
-:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-title::first-letter {
+:is(.dr-detail-art, .dr-pick-art, .dr-card > .dr-card-art) .dr-type-title::first-letter {
   font-family: var(--font-interface);
   font-size: 18px;
   font-weight: var(--font-semibold, 600);
 }
 
-:is(.dr-detail-art, .dr-pick-art, .dr-card:not(.is-gallery .dr-card) > .dr-card-art) .dr-type-cover::after {
+:is(.dr-detail-art, .dr-pick-art, .dr-card > .dr-card-art) .dr-type-cover::after {
   display: none;
 }
 
@@ -302,7 +302,7 @@ body.dr-strip-flat .dr-strip {
   font-weight: inherit;
 }
 
-.dr-album-art .dr-type-title {
+.dr-collection-art .dr-type-title {
   font-size: 18px;
 }
 
@@ -346,79 +346,16 @@ body.dr-strip-flat .dr-strip {
   opacity: 0.75;
 }
 
-/* -- round buttons on a tile's cover -- */
+/* -- a collection's small print -- */
 
-.dr-card-buttons {
-  position: absolute;
-  inset: auto 8px 8px 8px;
-  display: flex;
-  justify-content: space-between;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dr-dur-fast) var(--dr-ease);
-}
-
-.dr-card-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--dr-control-size);
-  height: var(--dr-control-size);
-  border-radius: var(--dr-radius-pill);
-  background-color: rgba(20, 20, 20, 0.55);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: #fff;
-  cursor: pointer;
-  pointer-events: auto;
-}
-
-.dr-card-button.is-more {
-  margin-left: auto;
-}
-
-.dr-card-button .svg-icon {
-  width: var(--dr-control-icon);
-  height: var(--dr-control-icon);
-}
-
-@media (any-hover: hover) {
-  .dr-card:hover .dr-card-buttons,
-  .dr-card:focus-within .dr-card-buttons {
-    opacity: 1;
-  }
-
-  .dr-card-button:hover {
-    background-color: var(--interactive-accent);
-    color: var(--text-on-accent, #fff);
-  }
-
-  .dr-card:hover .dr-card-art::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.35), transparent 55%);
-    pointer-events: none;
-  }
-}
-
-/* Not on touch: there, the tile itself is the button and a long press its menu. */
-@media (any-hover: none) {
-  .dr-card-buttons {
-    display: none;
-  }
-}
-
-/* -- an album's small print -- */
-
-.dr-album-foot {
+.dr-collection-foot {
   margin: calc(var(--dr-u) * 4.5) 0 var(--dr-space-2) calc(var(--dr-u) * 11.5);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   line-height: 1.6;
 }
 
-body.is-phone .dr-album-foot {
+body.is-phone .dr-collection-foot {
   margin-left: calc(var(--dr-u) * 10);
 }
 
@@ -437,7 +374,6 @@ body.is-phone .dr-td-length {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dr-card-buttons,
   .dr-detail-action {
     transition: none;
   }

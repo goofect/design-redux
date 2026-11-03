@@ -548,7 +548,7 @@ export class PropertiesPanel extends Feature {
     this.close();
   }
 
-  /** Docked, it draws what's picked in the library: a note or an album. Nothing picked, it says so. */
+  /** Docked, it draws what's picked in the library: a note or a collection. Nothing picked, it says so. */
   showPick(item) {
     if (!this.dockView || !this.popupEl) return;
     const target =

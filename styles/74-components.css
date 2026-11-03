@@ -7,7 +7,7 @@
  */
 
 /* 1. Icon button — a symbol alone, its name the tooltip; 8px corners, muted until pointed at. */
-:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold) {
+:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-note-row-fold) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -23,13 +23,13 @@
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-fast) var(--dr-ease), width var(--dr-dur-move) var(--dr-ease-out), transform var(--dr-dur-press) var(--dr-ease-out);
 }
 
-:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold) .svg-icon {
+:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-note-row-fold) .svg-icon {
   width: var(--dr-control-icon);
   height: var(--dr-control-icon);
   stroke-width: 1.75px;
 }
 
-:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold):active {
+:is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-note-row-fold):active {
   transform: scale(0.96);
   background-color: var(--dr-fill-strong);
 }
@@ -39,7 +39,7 @@
 }
 
 @media (any-hover: hover) {
-  :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold):not(.is-disabled):hover {
+  :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-note-row-fold):not(.is-disabled):hover {
     background-color: var(--dr-fill);
     color: var(--text-normal);
   }
@@ -89,7 +89,7 @@
   }
 }
 
-/* 3. Segmented control — one soft track; the chosen segment raised on it. */
+/* 3. Segmented control — one soft row; the chosen segment raised on it. */
 .dr-segmented {
   position: relative;
   display: inline-grid;
@@ -194,7 +194,7 @@
 :is(.dr-tile-title, .dr-card-title) {
   color: var(--text-normal);
   font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold, 600);
+  font-weight: var(--font-normal, 400);
 }
 
 :is(.dr-tile-line, .dr-card-sub) {

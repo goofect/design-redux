@@ -115,7 +115,7 @@ export class WorkspaceCoordinator {
     return this.snapshot();
   }
 
-  /** Picked in the library, without opening: a note or an album. */
+  /** Picked in the library, without opening: a note or a collection. */
   pick(item) {
     if (!item) return;
     if (item.file instanceof TFile && item.file.extension === 'md') this.show(null, { file: item.file, picked: true });

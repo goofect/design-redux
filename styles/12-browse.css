@@ -1,6 +1,6 @@
 /* Browse ----------------------------------------------------------------
  *
- * A folder as an album page: large art, a title block, two actions,
+ * A folder as a collection page: large art, a title block, two actions,
  * then the notes as a numbered list. Subfolders keep the grid, since
  * a collection of collections reads better as tiles.
  */
@@ -112,15 +112,15 @@
   isolation: isolate;
   display: flex;
   align-items: flex-start;
-  gap: var(--dr-space-4);
-  margin-bottom: var(--dr-space-6);
+  gap: var(--dr-space-3);
+  margin-bottom: var(--dr-space-3);
 }
 
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 56px);
-  height: var(--dr-album-art-size, 56px);
+  width: var(--dr-mark-size, 28px);
+  height: var(--dr-mark-size, 28px);
   margin-top: var(--dr-space-1);
   overflow: hidden;
   border-radius: var(--dr-radius-md);
@@ -148,19 +148,24 @@
   background-color: var(--background-modifier-hover);
 }
 
+/* Name and facts on the left, its actions at the end of the same line. */
 .dr-detail-info {
-  display: flex;
-  flex-direction: column;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--dr-space-3);
+  row-gap: var(--dr-space-1);
   min-width: 0;
-  gap: var(--dr-space-1);
+}
+
+.dr-detail-info > * {
+  grid-column: 1;
 }
 
 .dr-detail-title {
-  font-size: var(--dr-display-size);
-  font-weight: var(--dr-display-weight);
-  letter-spacing: -0.012em;
+  font-size: var(--font-ui-large, 1.15em);
+  font-weight: var(--font-semibold, 600);
   line-height: var(--dr-line-heading);
-  text-wrap: balance;
   color: var(--text-normal);
 }
 
@@ -190,7 +195,7 @@
   }
 }
 
-/* Quiet and small, as the genre and year are under an album's title. */
+/* Quiet and small, as the genre and year are under a collection's title. */
 .dr-detail-meta {
   font-size: var(--font-ui-small);
   line-height: var(--dr-line-meta);
@@ -198,8 +203,8 @@
   color: var(--dr-meta-color);
 }
 
-/* Above the title, small and quiet: what kind of album, and the way down
-   to it — a classification line, the same place on every album. */
+/* Above the title, small and quiet: what kind of collection, and the way down
+   to it — a classification line, the same place on every collection. */
 .dr-detail-kicker {
   display: flex;
   flex-wrap: wrap;
@@ -244,7 +249,7 @@
   }
 }
 
-/* What the album is for, in a few lines at most. */
+/* What the collection is for, in a few lines at most. */
 .dr-detail-desc {
   margin-top: var(--dr-space-1);
   max-width: 60ch;
@@ -268,13 +273,13 @@
   white-space: nowrap;
 }
 
-.dr-album-notice:focus-visible {
+.dr-collection-notice:focus-visible {
   outline: none;
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
-/* Something an album's properties name that isn't there: quiet, but said. */
-.dr-album-notice {
+/* Something a collection's properties name that isn't there: quiet, but said. */
+.dr-collection-notice {
   display: flex;
   align-items: center;
   gap: var(--dr-space-2);
@@ -287,13 +292,13 @@
   cursor: pointer;
 }
 
-.dr-album-notice-icon {
+.dr-collection-notice-icon {
   display: flex;
   color: var(--text-muted);
 }
 
 @media (any-hover: hover) {
-  .dr-album-notice:hover {
+  .dr-collection-notice:hover {
     color: var(--text-normal);
   }
 }
@@ -419,7 +424,7 @@
   color: var(--text-warning, var(--color-orange));
 }
 
-/* Reorganising an album: what will happen, before it does. */
+/* Reorganising a collection: what will happen, before it does. */
 .dr-refactor-effects {
   margin: 0 0 var(--dr-space-3);
   padding-left: 1.2em;
@@ -463,11 +468,11 @@
 }
 
 /* A collection's header, under its title: that it is one, what it's for. */
-.dr-collection-head {
+.dr-shelf-page-head {
   margin: calc(var(--dr-u) * -1) 0 calc(var(--dr-u) * 5.5);
 }
 
-/* A collection as a tree of its albums. */
+/* A collection as a tree of its collections. */
 .dr-tree-row {
   display: flex;
   align-items: center;
@@ -532,7 +537,7 @@
 
 /* States, the same on every row the plugin draws: hover shows quickly,
  * selection at once; what's off is quieter but still readable. */
-.dr-track,
+.dr-note-row,
 .dr-lib-row,
 .dr-report-row,
 .dr-inbox-row,
@@ -561,18 +566,18 @@
 }
 
 /* Density: rows follow the cover size, from a compact catalogue to comfortable. */
-.dr-browse[data-dr-density="compact"] .dr-track {
+.dr-browse[data-dr-density="compact"] .dr-note-row {
   padding-top: var(--dr-space-1);
   padding-bottom: var(--dr-space-1);
 }
 
-.dr-browse[data-dr-density="large"] .dr-track {
+.dr-browse[data-dr-density="large"] .dr-note-row {
   padding-top: var(--dr-space-3);
   padding-bottom: var(--dr-space-3);
 }
 
-/* Albums an album takes in, before its notes. */
-.dr-album-includes {
+/* Collections a collection takes in, before its notes. */
+.dr-collection-includes {
   margin-bottom: var(--dr-space-5);
 }
 
@@ -581,7 +586,12 @@
   /* Short of room, the actions go onto a second line rather than off the page. */
   flex-wrap: wrap;
   gap: var(--dr-space-2);
-  margin-top: var(--dr-space-3);
+}
+
+.dr-detail-info > .dr-detail-actions {
+  grid-column: 2;
+  grid-row: 1 / span 6;
+  align-self: start;
 }
 
 .dr-detail-action {
@@ -633,11 +643,11 @@
  * columns after the name quiet, and ••• only on the row pointed at.
  */
 
-.dr-tracks {
+.dr-note-rows {
   margin-top: calc(var(--dr-u) * 1.5);
 }
 
-.dr-track,
+.dr-note-row,
 .dr-end-row {
   position: relative;
   display: flex;
@@ -649,23 +659,23 @@
   cursor: pointer;
 }
 
-.dr-track:focus-visible,
+.dr-note-row:focus-visible,
 .dr-end-row:focus-visible {
   background-color: var(--dr-hover);
   outline: none;
 }
 
 @media (any-hover: hover) {
-  .dr-track:hover,
+  .dr-note-row:hover,
   .dr-end-row:hover {
     background-color: var(--dr-hover);
     outline: none;
   }
 }
 
-/* No track numbers: the place is kept, narrow, for the unread dot, and the
+/* No row numbers: the place is kept, narrow, for the unread dot, and the
    number stays for whoever reads the page aloud. */
-.dr-track-num {
+.dr-note-row-num {
   flex: 0 0 6px;
   align-self: stretch;
   overflow: visible;
@@ -673,7 +683,7 @@
   font-size: 0;
 }
 
-.dr-track-name {
+.dr-note-row-name {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -685,11 +695,11 @@
 }
 
 /* New to you: a dot beside its number. */
-.dr-track.is-unread .dr-track-num {
+.dr-note-row.is-unread .dr-note-row-num {
   position: relative;
 }
 
-.dr-track.is-unread .dr-track-num::before {
+.dr-note-row.is-unread .dr-note-row-num::before {
   content: '';
   position: absolute;
   left: 0;
@@ -701,10 +711,10 @@
   background: var(--interactive-accent);
 }
 
-/* An album's end: notes still to write, greyed, and a row for a new note. */
-.dr-end-row.is-unwritten .dr-track-name,
-.dr-new-note-row .dr-track-name,
-.dr-new-note-row .dr-track-num {
+/* A collection's end: notes still to write, greyed, and a row for a new note. */
+.dr-end-row.is-unwritten .dr-note-row-name,
+.dr-new-note-row .dr-note-row-name,
+.dr-new-note-row .dr-note-row-num {
   color: var(--text-muted);
   font-style: normal;
 }
@@ -714,12 +724,12 @@
   margin-top: var(--dr-space-5);
 }
 
-.dr-track.is-unnumbered .dr-track-num {
+.dr-note-row.is-unnumbered .dr-note-row-num {
   visibility: hidden;
 }
 
 /* A note's description, or its first sentence, in grey under its title. */
-.dr-track-name.has-excerpt::after {
+.dr-note-row-name.has-excerpt::after {
   content: attr(data-excerpt);
   display: block;
   overflow: hidden;
@@ -731,11 +741,11 @@
 }
 
 /* Notes nested under their parent: a step in for each level, a fold on the parent. */
-.dr-track.is-nested .dr-track-name {
+.dr-note-row.is-nested .dr-note-row-name {
   padding-left: calc(var(--dr-nest, 1) * var(--size-4-6));
 }
 
-.dr-track-fold {
+.dr-note-row-fold {
   display: inline-flex;
   vertical-align: middle;
   margin: 0 var(--size-2-2) 0 calc(-1 * var(--size-4-1));
@@ -743,12 +753,12 @@
   color: var(--text-muted);
 }
 
-.dr-track-fold .svg-icon {
+.dr-note-row-fold .svg-icon {
   width: var(--icon-xs);
   height: var(--icon-xs);
 }
 
-.dr-track-sub {
+.dr-note-row-sub {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -758,7 +768,7 @@
   font-size: var(--font-ui-smaller);
 }
 
-.dr-track-time {
+.dr-note-row-time {
   flex: 0 0 auto;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
@@ -768,7 +778,7 @@
 /* How long the note is: the row's last column, a fixed width so the
    lengths line up down the list. */
 
-.dr-track-length {
+.dr-note-row-length {
   flex: 0 0 4.6em;
   text-align: right;
   white-space: nowrap;
@@ -777,31 +787,31 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dr-track-length.is-words {
+.dr-note-row-length.is-words {
   flex-basis: 7em;
 }
 
 /* Pinned, beside the title. */
 
-.dr-track-name.has-mark {
+.dr-note-row-name.has-mark {
   display: flex;
   align-items: center;
   gap: calc(var(--dr-u) * 1.5);
 }
 
-.dr-track-title {
+.dr-note-row-title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.dr-track-pin {
+.dr-note-row-pin {
   flex: 0 0 auto;
   display: inline-flex;
   color: var(--text-muted);
 }
 
-.dr-track-pin .svg-icon {
+.dr-note-row-pin .svg-icon {
   width: 12px;
   height: 12px;
 }
@@ -809,7 +819,7 @@
 /* On every row, so a row never changes width; seen on the row pointed
    at, or always where nothing points. */
 
-.dr-track-more {
+.dr-note-row-more {
   flex: 0 0 auto;
   padding: 2px;
   opacity: 0.7;
@@ -817,18 +827,18 @@
 }
 
 @media (any-hover: hover) {
-  .dr-track-more {
+  .dr-note-row-more {
     opacity: 0;
   }
 
-  .dr-track:hover .dr-track-more,
-  .dr-track.is-selected .dr-track-more,
-  .dr-track:focus-within .dr-track-more,
-  .dr-track-more:focus-visible {
+  .dr-note-row:hover .dr-note-row-more,
+  .dr-note-row.is-selected .dr-note-row-more,
+  .dr-note-row:focus-within .dr-note-row-more,
+  .dr-note-row-more:focus-visible {
     opacity: 0.7;
   }
 
-  .dr-track-more:hover {
+  .dr-note-row-more:hover {
     opacity: 1;
   }
 }
@@ -934,8 +944,8 @@
 }
 
 .dr-split-thumb .dr-card-glyph .svg-icon {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
 }
 
 .dr-split-name {
@@ -955,49 +965,49 @@
   padding-left: calc(var(--dr-u) * 5.5);
 }
 
-/* -- an album block ------------------------------------------------------ */
+/* -- a collection block ------------------------------------------------------ */
 
-.dr-album + .dr-album {
+.dr-collection + .dr-collection {
   margin-top: calc(var(--dr-u) * 8.5);
   padding-top: calc(var(--dr-u) * 6.5);
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.dr-album-head {
+.dr-collection-head {
   display: flex;
   align-items: flex-start;
   gap: calc(var(--dr-u) * 2.5);
   margin-bottom: calc(var(--dr-u) * 3.5);
 }
 
-.dr-album-titles {
+.dr-collection-titles {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.dr-album-name {
+.dr-collection-name {
   font-size: var(--dr-heading-size);
   font-weight: var(--font-semibold, 600);
   color: var(--text-normal);
 }
 
-.dr-album-name.is-primary {
+.dr-collection-name.is-primary {
   font-size: var(--dr-title-size);
 }
 
-.dr-album-meta {
+.dr-collection-meta {
   margin-top: 2px;
   font-size: var(--font-ui-small);
   color: var(--text-muted);
 }
 
-.dr-album-body {
+.dr-collection-body {
   display: flex;
   gap: calc(var(--dr-u) * 5);
   align-items: flex-start;
 }
 
-.dr-album-art {
+.dr-collection-art {
   position: relative;
   flex: 0 0 auto;
   width: 168px;
@@ -1008,14 +1018,14 @@
   box-shadow: var(--dr-shadow-md);
 }
 
-.dr-album-art img {
+.dr-collection-art img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
-.dr-album-art.is-blank {
+.dr-collection-art.is-blank {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1023,12 +1033,12 @@
   box-shadow: none;
 }
 
-.dr-album-art .dr-card-glyph .svg-icon {
+.dr-collection-art .dr-card-glyph .svg-icon {
   width: 44px;
   height: 44px;
 }
 
-.dr-album-body .dr-tracks {
+.dr-collection-body .dr-note-rows {
   flex: 1 1 auto;
   min-width: 0;
   margin-top: 0;
@@ -1038,95 +1048,65 @@
 
 /* Cover size: a compact catalogue, standard, or large covers. */
 .dr-browse[data-dr-density="compact"] {
-  --dr-tile-size: 120px;
+  --dr-mark-size: 22px;
 }
 
 .dr-browse[data-dr-density="large"] {
-  --dr-tile-size: 230px;
+  --dr-mark-size: 34px;
 }
 
 /* Or sized on their own, whatever the density. */
 .dr-browse[data-dr-art="small"] {
-  --dr-tile-size: 120px;
+  --dr-mark-size: 22px;
 }
 
 .dr-browse[data-dr-art="medium"] {
-  --dr-tile-size: 170px;
+  --dr-mark-size: 28px;
 }
 
 .dr-browse[data-dr-art="large"] {
-  --dr-tile-size: 230px;
+  --dr-mark-size: 40px;
 }
 
-/* Cards: a quiet panel each, its cover a small mark beside its name — a
- * note's, a collection's, alike. Only a collection laid out as a gallery
- * (.is-gallery) shows covers large, a grid of them with names beneath.
- */
+/* Cards are rows: a mark, the name, what's said about it at the end. */
 .dr-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: var(--dr-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   margin-bottom: var(--dr-space-2);
 }
 
-.dr-grid.is-gallery {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--dr-tile-size, 170px)), 1fr));
-  gap: calc(var(--dr-u) * 5.5) calc(var(--dr-u) * 5);
-}
-
 .dr-card {
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  grid-auto-rows: auto;
-  align-content: center;
-  column-gap: var(--dr-space-3);
-  min-height: 64px;
-  padding: var(--dr-space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-3);
+  min-height: 34px;
+  padding: var(--dr-space-1) var(--dr-space-2);
   cursor: pointer;
-  border-radius: var(--dr-radius-lg);
-  background-color: var(--background-secondary);
+  border-radius: var(--dr-radius-sm);
   transition: background-color var(--dr-dur-fast) var(--dr-ease), box-shadow var(--dr-dur-fast) var(--dr-ease);
-}
-
-.dr-card > :not(.dr-card-art) {
-  grid-column: 2;
 }
 
 .dr-card-art {
   position: relative;
-  grid-row: 1 / span 3;
-  align-self: center;
-  aspect-ratio: 1;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
   overflow: hidden;
-  border-radius: var(--dr-radius-md);
-  background-color: var(--background-secondary);
-  box-shadow: var(--dr-cover-edge);
-  transition: transform var(--dr-dur-fast) var(--dr-ease);
+  border-radius: var(--dr-radius-sm);
 }
 
-/* A mark's buttons would cover it: its menu is a right-click or a long press away. */
-.dr-card:not(.is-gallery .dr-card) .dr-card-buttons {
-  display: none;
+/* With covers on, the mark is a small picture, as large as Cover size says. */
+body.dr-covers .dr-card-art {
+  width: var(--dr-mark-size, 28px);
+  height: var(--dr-mark-size, 28px);
+  box-shadow: var(--dr-cover-edge);
 }
 
 @media (any-hover: hover) {
-  .dr-card:not(.is-gallery .dr-card):hover {
+  .dr-card:hover {
     background-color: var(--dr-fill-strong);
   }
-}
-
-.is-gallery .dr-card {
-  display: block;
-  min-height: 0;
-  padding: 0;
-  border-radius: var(--dr-radius-sm);
-  background-color: transparent;
-}
-
-.is-gallery .dr-card-art {
-  margin-bottom: var(--dr-cover-gap);
-  border-radius: var(--dr-radius-cover);
-  box-shadow: var(--dr-shadow-sm);
 }
 
 .dr-card:focus-visible {
@@ -1134,14 +1114,6 @@
 }
 
 .dr-card:focus-visible {
-  box-shadow: var(--dr-focus-ring);
-}
-
-.is-gallery .dr-card:focus-visible {
-  box-shadow: none;
-}
-
-.is-gallery .dr-card:focus-visible .dr-card-art {
   box-shadow: var(--dr-focus-ring);
 }
 
@@ -1156,7 +1128,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--background-modifier-hover);
   box-shadow: none;
 }
 
@@ -1170,29 +1141,25 @@
   height: 20px;
 }
 
-.is-gallery .dr-card-glyph .svg-icon {
-  width: 34px;
-  height: 34px;
-}
-
 .dr-detail-art .dr-card-glyph .svg-icon {
   width: 24px;
   height: 24px;
 }
 
 .dr-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
   line-height: var(--dr-line-label);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dr-card-sub {
-  margin-top: var(--dr-title-gap);
+  flex: 0 1 auto;
+  max-width: 45%;
   font-size: var(--dr-meta-size);
   line-height: var(--dr-line-meta);
   color: var(--dr-meta-color);
@@ -1245,7 +1212,7 @@
 
 /* Show more --------------------------------------------------------------- */
 
-.dr-track-more-row {
+.dr-note-row-more-row {
   cursor: pointer;
 }
 
@@ -1257,7 +1224,7 @@
 /* Note table ------------------------------------------------------------
  *
  * Dense rows, quiet hairlines, columns from settings. Closer to a
- * spreadsheet than the album lists, because that's what it's for.
+ * spreadsheet than the collection lists, because that's what it's for.
  */
 
 .dr-table {
@@ -1452,7 +1419,7 @@
  * beside it, that stays at the top under the bar while its notes scroll by.
  */
 
-.dr-disc {
+.dr-list-section {
   position: sticky;
   top: var(--dr-bar-h, 0px);
   z-index: 2;
@@ -1467,11 +1434,11 @@
   border-bottom: 1px solid var(--dr-separator);
 }
 
-.dr-tracks > .dr-disc:first-child {
+.dr-note-rows > .dr-list-section:first-child {
   margin-top: var(--dr-space-1);
 }
 
-.dr-disc-title {
+.dr-list-section-title {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -1481,7 +1448,7 @@
   font-weight: var(--font-semibold, 600);
 }
 
-.dr-disc-count {
+.dr-list-section-count {
   flex: 0 0 auto;
   color: var(--text-muted);
   font-weight: var(--font-normal, 400);

@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Notes ticked together                                              */
 /*                                                                    */
-/* What's ticked while editing an album, apart from what's open and   */
+/* What's ticked while editing a collection, apart from what's open and   */
 /* from the one thing picked (plugin.selection): paths, and the last  */
 /* one ticked, from which Shift ticks a run. It follows renames and   */
 /* lets go of what's deleted, so the ticks stay on the notes and not  */

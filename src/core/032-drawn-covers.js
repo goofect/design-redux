@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Drawn covers                                                        */
 /*                                                                     */
-/* For a note or folder without artwork: an album cover drawn for it — */
+/* For a note or folder without artwork: a collection cover drawn for it — */
 /* a sun on a horizon, a moon over the fields, a few Bauhaus shapes, a  */
 /* stack of bars — in warm, printed colours on a backdrop that darkens */
 /* downwards. The name picks the design and the colours, so the same    */

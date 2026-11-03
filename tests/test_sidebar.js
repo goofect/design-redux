@@ -149,7 +149,7 @@ function setup({ page, pinsExpanded = false, pinned = [], missing = [] } = {}) {
   const calls = [];
   const plugin = {
     app,
-    settings: { librarySections: sections, pinsExpanded, coverProperty: 'cover' },
+    settings: { librarySections: sections, pinsExpanded, coverProperty: 'cover', showCovers: true },
     saveData: (s) => saved.push(JSON.parse(JSON.stringify(s))),
     propertyLabel: (k) => k.charAt(0).toUpperCase() + k.slice(1),
     folderCoverSrc: (f) => (f.name === 'Books Folder' ? 'app://books.jpg' : null),
@@ -354,6 +354,18 @@ t('the chevron opens pins in place without leaving the page', () => {
   assert.deepStrictEqual(nested.map((r) => r.querySelector('.dr-lib-label').textContent), ['Books Folder', 'Home']);
   assert.strictEqual(saved.pop().pinsExpanded, true);
   assert.ok(view.contentEl.querySelector('.dr-lib-disclosure.is-open'));
+});
+
+t('with covers off, what is pinned keeps its row, to put in order, with a plain icon', () => {
+  const { view } = setup({ page: null, pinsExpanded: true, pinned: [folders['Books Folder'], files['Home.md']] });
+  const before = view.contentEl.querySelectorAll('.dr-lib-row.is-pin').length;
+  assert.strictEqual(before, 2);
+  view.plugin.settings.showCovers = false;
+  view.render();
+  const rows = Array.from(view.contentEl.querySelectorAll('.dr-lib-row.is-pin'));
+  assert.strictEqual(rows.length, before);
+  rows.forEach((r) => assert.ok(r.querySelector('.dr-lib-icon .dr-card-glyph'), 'an icon'));
+  assert.strictEqual(view.contentEl.querySelector('.dr-lib-icon img'), null, 'no cover anywhere');
 });
 
 t('what is pinned shows its artwork, never a blank; a folder no count of its notes, a note a line beneath for where it lives', () => {
@@ -625,7 +637,7 @@ function strip(page) {
   const { app, plugin } = setup({ page });
   app.workspace.leftSplit = { expanded: 0, expand() { this.expanded++; } };
   plugin.app = app;
-  plugin.orders = { arrangeAlbum: (f, files, fallback) => fallback(files), albumOn: () => false, hasAlbum: () => false, pinOrder: () => [], arrangePins: (x) => x };
+  plugin.orders = { arrangeCollection: (f, files, fallback) => fallback(files), collectionOn: () => false, hasCollection: () => false, pinOrder: () => [], arrangePins: (x) => x };
   plugin.isFolderNote = plugin.isFolderNote || (() => false);
   const cs = Object.create(ContextStrip.prototype);
   cs.plugin = plugin;
@@ -727,7 +739,7 @@ t('switching the strip off gives the buttons back', () => {
   assert.deepStrictEqual(marked(note.buttons), []);
 });
 
-t('a track dropped on a folder in the library, or in the file list, moves there with an Undo', () => {
+t('a row dropped on a folder in the library, or in the file list, moves there with an Undo', () => {
   const file = new TFile('Law/Tort.md');
   const moves = [];
   const plugin = {
@@ -753,7 +765,7 @@ t('a track dropped on a folder in the library, or in the file list, moves there 
   assert.deepStrictEqual(moves, [['Law/Tort.md', 'Politics', { announce: true }]]);
   assert.ok(!row.classList.contains('dr-drop-target'));
 
-  // A folder in Obsidian's file list takes a track from a list too — not its own drags, which it takes itself.
+  // A folder in Obsidian's file list takes a row from a list too — not its own drags, which it takes itself.
   const explorer = document.body.createDiv({ cls: 'nav-folder-title' });
   explorer.dataset.path = 'Politics';
   const fromList = event(explorer, transfer);
@@ -783,12 +795,12 @@ t('a name cut short shows in full under the pointer, only while it doesn’t fit
   fullNameOnHover(view, box);
   const row = box.createDiv({ cls: 'dr-lib-row' });
   row.setAttribute('tabindex', '0');
-  const label = row.createSpan({ cls: 'dr-lib-label', text: 'A rather long album name' });
+  const label = row.createSpan({ cls: 'dr-lib-label', text: 'A rather long collection name' });
   const size = (scroll, client) => Object.defineProperties(label, { scrollWidth: { value: scroll, configurable: true }, clientWidth: { value: client, configurable: true } });
   const point = () => label.dispatchEvent(new window.Event('pointerover', { bubbles: true }));
   size(240, 120);
   point();
-  assert.strictEqual(row.getAttribute('title'), 'A rather long album name');
+  assert.strictEqual(row.getAttribute('title'), 'A rather long collection name');
   size(120, 120);
   point();
   assert.ok(!row.hasAttribute('title'), 'fits again: no tooltip');

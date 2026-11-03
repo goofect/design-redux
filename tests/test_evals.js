@@ -18,11 +18,11 @@ function transcript(file) {
   const use = (id, cmd) => line({ type: 'assistant', message: { id: `m-${id}`, model: 'claude-opus-5-5', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: cmd } }], usage: { input_tokens: 10, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000, output_tokens: 50 } } });
   const result = (id, content, err) => line({ type: 'user', message: { content: [{ type: 'tool_result', tool_use_id: id, content, is_error: !!err }] } });
   fs.writeFileSync(file, [
-    use('a', 'node tests/run.js album 2>&1 | tail -3'),
-    result('a', `FAIL  test_album.js\n${SECRET}\n0 of 1 suites passed`),
-    use('b', 'node tests/run.js album 2>&1 | tail -3'),
-    result('b', 'pass  test_album.js\n1 of 1 suites passed'),
-    use('a', 'node tests/run.js album 2>&1 | tail -3'),
+    use('a', 'node tests/run.js collection 2>&1 | tail -3'),
+    result('a', `FAIL  test_collection.js\n${SECRET}\n0 of 1 suites passed`),
+    use('b', 'node tests/run.js collection 2>&1 | tail -3'),
+    result('b', 'pass  test_collection.js\n1 of 1 suites passed'),
+    use('a', 'node tests/run.js collection 2>&1 | tail -3'),
     use('c', 'cat missing.txt'),
     result('c', 'No such file', true),
     line({ type: 'assistant', message: { id: 'm-d', model: 'claude-fable-5-1', content: [{ type: 'text', text: 'done' }], usage: { input_tokens: 1, cache_creation_input_tokens: 2, cache_read_input_tokens: 3, output_tokens: 4 } } }),

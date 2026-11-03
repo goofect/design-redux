@@ -1,6 +1,6 @@
-/* Pages: one note, several pages — a segmented control as Apple draws one. A soft rounded track,
+/* Pages: one note, several pages — a segmented control. A soft rounded row,
    segments of equal width, a raised thumb that glides under the open page, hairline separators
-   between the others, and a small round + beside it. Track and thumb use Apple's system fills,
+   between the others, and a small round + beside it. Its track and thumb use soft system fills,
    one pair for light themes and one for dark; text uses the theme's colours. */
 .dr-pages {
   --dr-seg-track: rgba(118, 118, 128, 0.12);

@@ -1,12 +1,12 @@
 /* ------------------------------------------------------------------ */
 /* Browse view: the list, shelves and cards                           */
 /*                                                                    */
-/* Rows of notes with their lengths and marks, shelves of albums, and */
+/* Rows of notes with their lengths and marks, shelves of collections, and */
 /* cards. A part of BrowseView (see 120).                             */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFolder } from 'obsidian';
-import { blankLook, byName, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
+import { blankLook, byName, coverGen, drawFolderArt, drawNoteArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, relativeDay, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
@@ -16,7 +16,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { folderRows } from './110-browse-screens.js';
 import { RowValues } from './122-browse-editing.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
-import { AlbumStructure } from './257-album-structure.js';
+import { CollectionStructure } from './257-collection-structure.js';
 
 export class BrowseRows extends RowValues {
   /* -- the list --------------------------------------------------- */
@@ -27,7 +27,7 @@ export class BrowseRows extends RowValues {
    * time is put back rather than made anew, so what it holds (focus, a
    * cover, a value being changed) stays as it was.
    */
-  trackRow(list, file, index, nest) {
+  noteRow(list, file, index, nest) {
     const sig = this.rowSignature(file, index, nest);
     const kept = this.keptRows && this.keptRows.get(file.path);
     if (kept && kept.file === file && kept.sig === sig && !kept.row.drUsed) {
@@ -38,7 +38,7 @@ export class BrowseRows extends RowValues {
       if (this.rowsDrawn) this.rowsDrawn.set(file.path, kept);
       return kept.row;
     }
-    const row = this.drawTrack(list, file, index, nest);
+    const row = this.drawNoteRow(list, file, index, nest);
     row.drUsed = true;
     if (this.rowsDrawn) this.rowsDrawn.set(file.path, { file, sig, row });
     return row;
@@ -56,20 +56,20 @@ export class BrowseRows extends RowValues {
       this.mode === 'search' && this.searchWhy ? this.searchWhy.get(file.path) || '' : '',
       file.stat ? [file.stat.mtime, file.stat.size] : 0,
       cache && cache.frontmatter ? cache.frontmatter : null,
-      this.albumColumns().map((key) => this.columnValue(file, key)),
+      this.collectionColumns().map((key) => this.columnValue(file, key)),
       this.lengthStyle() ? [this.lengthStyle(), this.lengthLabel(file)] : '',
     ]);
   }
 
-  drawTrack(list, file, index, nest) {
-    const row = list.createDiv({ cls: 'dr-track' });
+  drawNoteRow(list, file, index, nest) {
+    const row = list.createDiv({ cls: 'dr-note-row' });
     asButton(row);
     if (nest && nest.depth) {
       row.addClass('is-nested');
       row.style.setProperty('--dr-nest', String(nest.depth));
     }
 
-    // Which disc the row belongs to, so a drop knows what it's over.
+    // Which section the row belongs to, so a drop knows what it's over.
     if (file.parent) row.dataset.folder = file.parent.path;
     row.dataset.path = file.path;
     // Not on touch: iOS starts a drag from a long press on anything
@@ -82,7 +82,7 @@ export class BrowseRows extends RowValues {
         evt.dataTransfer.effectAllowed = 'move';
         row.addClass('is-dragging');
         // Types, not data, can be read while dragging, so which note and
-        // disc are kept here for the rows to compare against.
+        // section are kept here for the rows to compare against.
         this.dragging = { path: file.path, folder: file.parent ? file.parent.path : '/' };
       });
       row.addEventListener('dragend', () => {
@@ -91,13 +91,13 @@ export class BrowseRows extends RowValues {
       });
     }
 
-    row.createDiv({ cls: 'dr-track-num', text: String(index) });
+    row.createDiv({ cls: 'dr-note-row-num', text: String(index) });
 
-    const name = row.createDiv({ cls: 'dr-track-name' });
+    const name = row.createDiv({ cls: 'dr-note-row-name' });
     if (nest && nest.children) {
       // A parent's notes fold away under it, and open again.
       const folded = this.foldedNotes && this.foldedNotes.has(file.path);
-      const toggle = name.createSpan({ cls: 'dr-track-fold clickable-icon' });
+      const toggle = name.createSpan({ cls: 'dr-note-row-fold clickable-icon' });
       toggle.setAttribute('aria-label', folded ? `Show the ${nest.children} under it` : 'Fold away what’s under it');
       setIcon(toggle, folded ? 'chevron-right' : 'chevron-down');
       toggle.addEventListener('click', (evt) => {
@@ -111,12 +111,12 @@ export class BrowseRows extends RowValues {
     if (this.isPinned(file)) {
       // Pinned is this list's favourite: a mark beside the title.
       name.addClass('has-mark');
-      name.createSpan({ cls: 'dr-track-title', text: file.basename });
-      const pin = name.createSpan({ cls: 'dr-track-pin' });
+      name.createSpan({ cls: 'dr-note-row-title', text: file.basename });
+      const pin = name.createSpan({ cls: 'dr-note-row-pin' });
       pin.setAttribute('aria-label', 'Pinned');
       setIcon(pin, 'pin');
     } else if (nest && nest.children) {
-      name.createSpan({ cls: 'dr-track-title', text: file.basename });
+      name.createSpan({ cls: 'dr-note-row-title', text: file.basename });
     } else {
       name.setText(file.basename);
     }
@@ -127,11 +127,11 @@ export class BrowseRows extends RowValues {
       name.dataset.excerpt = why;
       name.addClass('has-excerpt');
       name.addClass('is-why');
-    } else if (this.plugin.settings.albumExcerpts !== false) this.showExcerpt(name, file);
+    } else if (this.plugin.settings.collectionExcerpts !== false) this.showExcerpt(name, file);
 
-    this.albumColumns().forEach((key) => {
+    this.collectionColumns().forEach((key) => {
       const text = this.columnValue(file, key);
-      const cell = row.createDiv({ cls: this.isTimeColumn(key) ? 'dr-track-time' : 'dr-track-sub', text });
+      const cell = row.createDiv({ cls: this.isTimeColumn(key) ? 'dr-note-row-time' : 'dr-note-row-sub', text });
       // A value with a colour or an icon of its own shows them.
       if (text && !this.isTimeColumn(key)) {
         paintValue(cell, this.plugin, key, text);
@@ -141,10 +141,10 @@ export class BrowseRows extends RowValues {
       if (this.plugin.settings.propertyInlineEdit && file.extension === 'md' && !this.isTimeColumn(key) && key !== 'folder') this.editableCell(cell, file, key);
     });
 
-    // Its length, where a track's would be: the last column, lined up.
+    // Its length, where a row's would be: the last column, lined up.
     const style = this.lengthStyle();
     if (style) {
-      const length = row.createDiv({ cls: 'dr-track-length', text: this.lengthLabel(file) });
+      const length = row.createDiv({ cls: 'dr-note-row-length', text: this.lengthLabel(file) });
       if (style === 'words') length.addClass('is-words');
       // Too thin to be much use yet: underlined, as the library check lists it.
       if (this.plugin.lengths.thin(file, this.plugin.settings.thinNoteWords)) {
@@ -153,7 +153,7 @@ export class BrowseRows extends RowValues {
       }
     }
 
-    const more = row.createDiv({ cls: 'clickable-icon dr-track-more' });
+    const more = row.createDiv({ cls: 'clickable-icon dr-note-row-more' });
     more.setAttribute('aria-label', 'More');
     setIcon(more, 'ellipsis');
 
@@ -224,18 +224,18 @@ export class BrowseRows extends RowValues {
   markPicked() {
     const item = this.plugin.selection && this.plugin.selection.get();
     const target = item && (item.file || item.folder);
-    this.contentEl.querySelectorAll('.dr-track[data-path], .dr-tr[data-path], .dr-card[data-path]').forEach((el) => el.toggleClass('is-selected', !!target && el.dataset.path === target.path));
+    this.contentEl.querySelectorAll('.dr-note-row[data-path], .dr-tr[data-path], .dr-card[data-path]').forEach((el) => el.toggleClass('is-selected', !!target && el.dataset.path === target.path));
   }
 
   /**
-   * What each album row shows after the title, from settings. Property
+   * What each collection row shows after the title, from settings. Property
    * names, plus three that aren't properties: modified, created and
    * folder.
    */
-  albumColumns() {
+  collectionColumns() {
     // Nested by a property, the nesting says it: no column for it.
-    const nest = String(this.plugin.settings.albumNestBy || '').trim().toLowerCase();
-    return (this.plugin.settings.albumColumns || '')
+    const nest = String(this.plugin.settings.collectionNestBy || '').trim().toLowerCase();
+    return (this.plugin.settings.collectionColumns || '')
       .split(',')
       .map((k) => k.trim())
       .filter((k) => k && k.toLowerCase() !== nest);
@@ -257,7 +257,7 @@ export class BrowseRows extends RowValues {
 
   /** How lengths are written here — 'time' or 'words' — or null for none. */
   lengthStyle() {
-    const style = this.plugin.settings.trackLength;
+    const style = this.plugin.settings.noteLength;
     if (!this.plugin.lengths || !LENGTH_STYLES[style] || style === 'none') return null;
     return style;
   }
@@ -270,7 +270,7 @@ export class BrowseRows extends RowValues {
   }
 
   /**
-   * An album's length, all its notes together. Not for a very large
+   * A collection's length, all its notes together. Not for a very large
    * one — the vault's root holds every note — which would mean reading
    * the whole vault to write one line.
    */
@@ -297,11 +297,11 @@ export class BrowseRows extends RowValues {
   }
 
   /**
-   * The end of an album, as the reference ends one: when it began, and
-   * how much there is — small, under the last track.
+   * The end of a collection, as the reference ends one: when it began, and
+   * how much there is — small, under the last row.
    */
   /**
-   * The names the album's notes link to that are no note yet, most
+   * The names the collection's notes link to that are no note yet, most
    * linked first: [{ name, count }].
    */
   stillToWrite(folder, files) {
@@ -322,46 +322,46 @@ export class BrowseRows extends RowValues {
   }
 
   /**
-   * At the foot of an album's notes: what its notes link to that's not
+   * At the foot of a collection's notes: what its notes link to that's not
    * written yet, greyed — a click writes it here — and a row for a new
    * note.
    */
-  renderAlbumEnd(root, folder, files) {
+  renderCollectionEnd(root, folder, files) {
     if (!folder || (folder.isRoot && folder.isRoot())) return;
-    const list = root.createDiv({ cls: 'dr-tracks dr-album-end' });
-    const missing = this.plugin.settings.albumStillToWrite === false ? [] : this.stillToWrite(folder, files);
+    const list = root.createDiv({ cls: 'dr-note-rows dr-collection-end' });
+    const missing = this.plugin.settings.collectionStillToWrite === false ? [] : this.stillToWrite(folder, files);
     const cap = 12;
     if (missing.length) {
-      const head = list.createDiv({ cls: 'dr-disc dr-still-head' });
-      head.createSpan({ cls: 'dr-disc-title', text: 'Still to write' });
-      head.createSpan({ cls: 'dr-disc-count', text: missing.length === 1 ? '1 note' : `${missing.length} notes` });
+      const head = list.createDiv({ cls: 'dr-list-section dr-still-head' });
+      head.createSpan({ cls: 'dr-list-section-title', text: 'Still to write' });
+      head.createSpan({ cls: 'dr-list-section-count', text: missing.length === 1 ? '1 note' : `${missing.length} notes` });
       missing.slice(0, cap).forEach((m) => {
         const row = list.createDiv({ cls: 'dr-end-row is-unwritten' });
         asButton(row, `Write “${m.name}” here`);
-        row.createDiv({ cls: 'dr-track-num' });
-        row.createDiv({ cls: 'dr-track-name', text: m.name });
-        row.createDiv({ cls: 'dr-track-time', text: m.count === 1 ? '1 link' : `${m.count} links` });
+        row.createDiv({ cls: 'dr-note-row-num' });
+        row.createDiv({ cls: 'dr-note-row-name', text: m.name });
+        row.createDiv({ cls: 'dr-note-row-time', text: m.count === 1 ? '1 link' : `${m.count} links` });
         onActivate(row, () => this.plugin.newNote(folder, m.name));
       });
       if (missing.length > cap) list.createDiv({ cls: 'dr-end-row is-unwritten dr-more-label', text: `And ${missing.length - cap} more` });
     }
     const add = list.createDiv({ cls: 'dr-end-row dr-new-note-row' });
     asButton(add, 'New note');
-    setIcon(add.createDiv({ cls: 'dr-track-num' }), 'plus');
-    add.createDiv({ cls: 'dr-track-name', text: 'New note' });
+    setIcon(add.createDiv({ cls: 'dr-note-row-num' }), 'plus');
+    add.createDiv({ cls: 'dr-note-row-name', text: 'New note' });
     onActivate(add, () => this.plugin.newNote(folder));
   }
 
-  renderAlbumFoot(root, files, opts = {}) {
+  renderCollectionFoot(root, files, opts = {}) {
     if (!files.length) return;
     const first = files.reduce((t, f) => Math.min(t, f.stat.ctime || Infinity), Infinity);
-    const foot = root.createDiv({ cls: 'dr-album-foot' });
+    const foot = root.createDiv({ cls: 'dr-collection-foot' });
     if (Number.isFinite(first) && first > 0) {
       foot.createDiv({
         text: `Started ${new Date(first).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`,
       });
     }
-    // The count, where the header's isn't the whole of it: an album with discs.
+    // The count, where the header's isn't the whole of it: a collection with sections.
     if (opts.count === false) return;
     const count = files.length === 1 ? '1 note' : `${files.length} notes`;
     const length = this.totalLength(files);
@@ -383,25 +383,24 @@ export class BrowseRows extends RowValues {
     return head;
   }
 
-  /** Folders under a title at a page's foot: a shelf of covers, or rows, as the page says. */
+  /** Folders under a title at a page's foot, as rows. */
   folderShelf(root, title, folders, opts = {}) {
-    if (opts.covers) return this.shelf(root, title, folders, opts);
     this.shelfHead(root, title, opts);
     folderRows(this, root, folders);
   }
 
   /**
-   * The folders beside this one, as an album page ends with more by the
+   * The folders beside this one, as a collection page ends with more by the
    * same artist. Not while Find or a filter narrows the page.
    */
-  renderMoreIn(root, folder, covers = false) {
+  renderMoreIn(root, folder) {
     if (!folder || (folder.isRoot && folder.isRoot()) || !folder.parent) return;
     if (this.query.trim() || this.hasFilters()) return;
     const parent = folder.parent;
     const others = this.sortFolders(this.visibleFolders(parent).filter((f) => f !== folder));
     if (!others.length) return;
     const top = !!(parent.isRoot && parent.isRoot());
-    this.folderShelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent), covers });
+    this.folderShelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent) });
   }
 
   /** Count what the drawing found uncounted, and draw again once it's known. */
@@ -427,7 +426,7 @@ export class BrowseRows extends RowValues {
     return this.pinMemo.has(file.path);
   }
 
-  /** Short, in the spirit of a track length: a glance, not a date. */
+  /** Short, in the spirit of a row length: a glance, not a date. */
   relative(mtime) {
     return relativeDay(mtime);
   }
@@ -453,13 +452,12 @@ export class BrowseRows extends RowValues {
   /* -- shelves ---------------------------------------------------- */
 
   /**
-   * A titled row of tiles that scrolls sideways. The heading is the way
-   * through to the whole of whatever it's showing, as a section header
-   * is on a home screen; arrows beside it page through the row.
+   * A titled list. The heading is the way through to the whole of
+   * whatever it's showing, as a section header is on a home screen.
    */
   shelf(root, title, items, opts = {}) {
     const view = this;
-    const head = this.shelfHead(root, title, opts);
+    this.shelfHead(root, title, opts);
 
     const row = root.createDiv({ cls: 'dr-shelf-row' });
     roveFocus(row, '.dr-card');
@@ -471,39 +469,6 @@ export class BrowseRows extends RowValues {
       else if (item.file) view.fileCard(row, item.file, item.subtitle);
       else view.fileCard(row, item);
     });
-    this.arrows(head, row);
-  }
-
-  /** ‹ and ›, paging a shelf that runs past the edge. Swiped on touch instead. */
-  arrows(head, row) {
-    const arrows = head.createDiv({ cls: 'dr-shelf-arrows' });
-    const button = (icon, label, dir) => {
-      const el = arrows.createDiv({ cls: 'clickable-icon dr-shelf-arrow' });
-      el.setAttribute('aria-label', label);
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '-1');
-      setIcon(el, icon);
-      onActivate(el, () => {
-        const by = Math.max(row.clientWidth * 0.85, 160) * dir;
-        if (typeof row.scrollBy === 'function') row.scrollBy({ left: by, behavior: 'smooth' });
-        else row.scrollLeft += by;
-      });
-      return el;
-    };
-    const back = button('chevron-left', 'Scroll back', -1);
-    const on = button('chevron-right', 'Scroll on', 1);
-    const sync = () => {
-      const room = row.scrollWidth - row.clientWidth;
-      head.toggleClass('has-overflow', room > 2);
-      back.toggleClass('is-disabled', row.scrollLeft <= 2);
-      on.toggleClass('is-disabled', row.scrollLeft >= room - 2);
-    };
-    row.addEventListener('scroll', sync, { passive: true });
-    // Its width is only known once it's on the page, and changes with
-    // the page's; pointing at the shelf is when the arrows matter.
-    head.addEventListener('pointerenter', sync);
-    row.addEventListener('pointerenter', sync);
-    window.setTimeout(sync, 0);
   }
 
   /* -- cards ------------------------------------------------------ */
@@ -511,8 +476,8 @@ export class BrowseRows extends RowValues {
   folderCard(grid, folder, subtitle) {
     const card = this.card(grid, folder.name, subtitle || this.countLabel(folder));
     card.dataset.path = folder.path;
-    // What kind of album, small above its name.
-    const structure = this.plugin.feature(AlbumStructure);
+    // What kind of collection, small above its name.
+    const structure = this.plugin.feature(CollectionStructure);
     const kind = structure ? structure.info(folder).label : '';
     if (kind) {
       const label = card.ownerDocument.createElement('div');
@@ -522,13 +487,6 @@ export class BrowseRows extends RowValues {
     }
     const src = this.folderCover(folder);
     drawFolderArt(this.plugin, card.querySelector('.dr-card-art'), folder);
-    // On the cover, when pointed at: straight into its first note, and
-    // its menu — as a tile offers Play and More.
-    this.cardButtons(card, () => {
-      const first = this.notesIn(folder)[0] || this.allNotesIn(folder)[0];
-      if (first) this.openFile(first);
-      else this.openFolder(folder);
-    }, (evt) => this.folderMenu(evt, folder, src));
 
     this.pickOrOpen(card, { folder }, () => this.openFolder(folder));
     onContextMenu(card, (evt) => this.folderMenu(evt, folder, src));
@@ -542,45 +500,18 @@ export class BrowseRows extends RowValues {
       subtitle || (file.parent && file.parent.path !== '/' ? file.parent.name : '')
     );
     card.dataset.path = file.path;
-    const art = card.querySelector('.dr-card-art');
-    drawNoteArt(this.plugin, art, file);
-    this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
+    drawNoteArt(this.plugin, card.querySelector('.dr-card-art'), file);
 
     this.pickOrOpen(card, { file }, (evt) => this.openFile(file, evt));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
   }
 
-  /**
-   * Round buttons over a tile's cover, shown when it's pointed at: one
-   * to open straight away where there's something to open, and More.
-   * Their clicks are theirs, not the tile's.
-   */
-  cardButtons(card, open, menu) {
-    const art = card.querySelector('.dr-card-art');
-    if (!art) return;
-    const bar = art.createDiv({ cls: 'dr-card-buttons' });
-    const button = (icon, label, run, cls) => {
-      const el = bar.createDiv({ cls: `dr-card-button ${cls}` });
-      el.setAttribute('role', 'button');
-      el.setAttribute('tabindex', '-1');
-      el.setAttribute('aria-label', label);
-      setIcon(el, icon);
-      el.addEventListener('click', (evt) => {
-        evt.stopPropagation();
-        evt.preventDefault();
-        run(evt);
-      });
-    };
-    if (open) button('book-open', 'Open the first note', open, 'is-open');
-    if (menu) button('ellipsis', 'More', menu, 'is-more');
-  }
-
-  /** A smart album's tile: drawn as the covers are, for its name; opens the album. */
-  smartCard(grid, album) {
-    const card = this.card(grid, album.name, 'Saved view');
-    const key = `smart:${album.id}`;
-    fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.plugin.settings, album.name, key), blankLook(this.plugin.settings, album.name, key));
-    onActivate(card, () => this.navigate({ mode: 'smart', property: album.id, path: '/' }));
+  /** A smart collection's row: its mark drawn for its name; opens the collection. */
+  smartCard(grid, collection) {
+    const card = this.card(grid, collection.name, 'Saved view');
+    const key = `smart:${collection.id}`;
+    this.fillArt(card.querySelector('.dr-card-art'), null, 'sparkles', coverGen(this.plugin.settings, collection.name, key), blankLook(this.plugin.settings, collection.name, key));
+    onActivate(card, () => this.navigate({ mode: 'smart', property: collection.id, path: '/' }));
     return card;
   }
 

@@ -3,12 +3,12 @@
 /*                                                                     */
 /* The one piece of furniture the reference has that Obsidian doesn't: */
 /* a bar that stays put and says what you're in. It carries the note   */
-/* you're on, the way the now-playing bar carries the track, with the  */
+/* you're on, the way the now-playing bar carries the row, with the  */
 /* actions that belong to it.                                          */
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
-import { albumNeighbours, canStep, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, step, valueText } from '../core/030-helpers-art.js';
+import { collectionNeighbours, canStep, coversOn, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, step, valueText } from '../core/030-helpers-art.js';
 import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { actionContext, applies } from '../core/078-actions.js';
@@ -74,7 +74,7 @@ export class ContextStrip extends Feature {
       {
         key: 'contextStrip',
         name: 'Context strip',
-        desc: 'A bar along the bottom with the current note, its cover and actions.',
+        desc: 'A bar along the bottom with the current note and its actions.',
       },
       {
         key: 'stripPlace',
@@ -97,7 +97,7 @@ export class ContextStrip extends Feature {
         key: 'stripSide',
         type: 'dropdown',
         name: 'Where it sits',
-        desc: 'Along the bottom, or as a slim rail at the side with only the cover, previous, next and more — for narrow windows and split panes.',
+        desc: 'Along the bottom, or as a slim rail at the side with only its mark, previous, next and more — for narrow windows and split panes.',
         options: { bottom: 'Along the bottom', side: 'A rail at the side' },
         showIf: 'contextStrip',
       },
@@ -106,7 +106,7 @@ export class ContextStrip extends Feature {
 
   actions() {
     const step = (ctx, dir) => {
-      const near = albumNeighbours(this.plugin, ctx.file);
+      const near = collectionNeighbours(this.plugin, ctx.file);
       return near && near[dir];
     };
     return [
@@ -115,11 +115,11 @@ export class ContextStrip extends Feature {
     ];
   }
 
-  /** The note before or after this one in its album, opened in the same page. */
+  /** The note before or after this one in its collection, opened in the same page. */
   skip(dir) {
     const file = pageFile(this.app);
     if (!file) return false;
-    const target = albumNeighbours(this.plugin, file)[dir];
+    const target = collectionNeighbours(this.plugin, file)[dir];
     const leaf = pageLeaf(this.app);
     if (!target || !leaf) return false;
     leaf.openFile(target);
@@ -143,7 +143,7 @@ export class ContextStrip extends Feature {
         if (file === this.app.workspace.getActiveFile()) this.update();
       })
     );
-    // Moving notes around an album moves its neighbours.
+    // Moving notes around a collection moves its neighbours.
     this.plugin.registerEvent(this.app.vault.on('rename', () => this.update()));
     // What's due to be revisited changed.
     // A window made narrow or wide again: what the strip has room for.
@@ -441,23 +441,23 @@ export class ContextStrip extends Feature {
   /** The note itself: cover, name, and one property beneath it — for a canvas, how many cards. */
   renderNow(strip, file, view) {
     // The middle of the strip, as a player's: back a note through the
-    // album, the note itself, and on a note.
+    // collection, the note itself, and on a note.
     const center = strip.createDiv({ cls: 'dr-strip-center' });
-    const near = albumNeighbours(this.plugin, file);
+    const near = collectionNeighbours(this.plugin, file);
     this.skipButton(center, near, 'previous');
     const now = center.createDiv({ cls: 'dr-strip-now' });
     asButton(now);
 
     const art = now.createDiv({ cls: 'dr-strip-art' });
     drawNoteArt(this.plugin, art, file);
-    if (file.extension === 'md') art.dataset.coverNote = file.path;
+    if (file.extension === 'md' && coversOn(this.settings)) art.dataset.coverNote = file.path;
 
     const text = now.createDiv({ cls: 'dr-strip-text' });
     text.createDiv({ cls: 'dr-strip-title', text: file.basename });
     const count = file.extension === 'canvas' && view && view.canvas ? cardCount(view.canvas) : null;
     const cards = count === null ? -1 : count;
     const lead = cards >= 0 ? `${cards} ${cards === 1 ? 'card' : 'cards'}` : this.leadOf(file);
-    // Where it falls in its album, as a player says "3 of 12".
+    // Where it falls in its collection, as a player says "3 of 12".
     const place = this.settings.stripPlace !== false && near.index >= 0 && near.total > 1 ? `${near.index + 1} of ${near.total}` : '';
     if (lead || place) {
       const sub = text.createDiv({ cls: 'dr-strip-sub' });
@@ -466,7 +466,7 @@ export class ContextStrip extends Feature {
     }
 
     // Clicking it goes to where the note lives, as the now-playing
-    // bar goes to the album.
+    // bar goes to the collection.
     onActivate(now, () => {
       if (!file.parent) return;
       const library = this.plugin.feature(Library);
@@ -475,7 +475,7 @@ export class ContextStrip extends Feature {
     this.skipButton(center, near, 'next');
   }
 
-  /** « or »: the note before or after this one in its album. */
+  /** « or »: the note before or after this one in its collection. */
   skipButton(parent, near, dir) {
     const target = near[dir];
     const word = dir === 'previous' ? 'Previous' : 'Next';
@@ -622,7 +622,7 @@ export class ContextStrip extends Feature {
     showMenuAt(menu, evt);
   }
 
-  /** What goes beside the note's place in its album: as the setting says, or one property worth showing. */
+  /** What goes beside the note's place in its collection: as the setting says, or one property worth showing. */
   leadOf(file) {
     return stripDetail(this.app, file, this.settings.stripDetail);
   }

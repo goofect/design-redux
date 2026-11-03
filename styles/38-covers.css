@@ -58,7 +58,7 @@
   stroke-width: 1.5px;
 }
 
-/* Printed along a cover's foot: kind, name, collection — the same places on every album. */
+/* Printed along a cover's foot: kind, name, collection — the same places on every collection. */
 .dr-card-art.has-print,
 .dr-detail-art.has-print {
   container-type: inline-size;
@@ -108,7 +108,7 @@
 
 /* Drawn covers ----------------------------------------------------------------
  *
- * An album cover drawn for something without one — a sun on a horizon, a
+ * A collection cover drawn for something without one — a sun on a horizon, a
  * few Bauhaus shapes — on a backdrop that darkens downwards, set inline
  * from its palette. Artwork, not chrome: the same colours in either theme.
  */
@@ -370,3 +370,19 @@ body.dr-flat-covers .dr-detail-art.is-drawn {
   pointer-events: none;
 }
 
+
+/* With covers off, what stands in for one is a plain icon, wherever it shows. */
+body:not(.dr-covers) :is(.dr-search-prop-art, .dr-prop-value-art, .dr-props-art, .dr-strip-art, .dr-split-thumb) {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+body:not(.dr-covers) .dr-lib-row.is-pin .dr-lib-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}

@@ -3,7 +3,7 @@
  * Where things are, worked out from src/ so it never goes stale.
  *
  *   node tests/map.js              a line per piece: heading, features (setting), suites that test it
- *   node tests/map.js album sort only the pieces whose line has every word
+ *   node tests/map.js collection sort only the pieces whose line has every word
  *   node tests/map.js --who NAME   where NAME is declared, and the lines in each piece that use it
  *   node tests/map.js --deps PIECE what a piece uses from others, and which use it (e.g. 120 or 120-browse-view)
  *   node tests/map.js --areas      the areas (number ranges) and what each uses from the others, pieces
@@ -310,8 +310,8 @@ pieces.forEach((p) => {
 
 // The areas, each a folder of src/, and their layer: a module may import
 // from its own area and lower layers (shared UI is below every feature);
-// the plugin, from anywhere. The library and its albums are one subsystem
-// (see .claude/rules/albums.md): album features draw inside the browse view
+// the plugin, from anywhere. The library and its collections are one subsystem
+// (see .claude/rules/collections.md): collection features draw inside the browse view
 // and add its screens.
 const AREAS = [
   { name: 'core', level: 0 },

@@ -4,7 +4,7 @@
     {
       "id": "rename-label",
       "title": "Rename one UI label",
-      "prompt": "On an album's note rows, the ⋯ button is labelled “More” for screen readers. Label it “More actions” instead — on the rows only, not on the album's head. Keep the change as small as it can be.",
+      "prompt": "On a collection's note rows, the ⋯ button is labelled “More” for screen readers. Label it “More actions” instead — on the rows only, not on the collection's head. Keep the change as small as it can be.",
       "scope": ["src/library/123-browse-rows.js", "tests/"],
       "checks": [
         "grep -q \"'aria-label', 'More actions'\" src/library/123-browse-rows.js",
@@ -27,7 +27,7 @@
     {
       "id": "tray-select-all",
       "title": "Keyboard acceptance for the Edit tray",
-      "prompt": "In an album's Edit mode, make Ctrl/Cmd+A tick every note in the album, and pressing it again with all ticked untick them all; the bulk bar's count follows. Not while typing in a field. Add a simulation test for it.",
+      "prompt": "In a collection's Edit mode, make Ctrl/Cmd+A tick every note in the collection, and pressing it again with all ticked untick them all; the bulk bar's count follows. Not while typing in a field. Add a simulation test for it.",
       "scope": ["src/library/", "styles/", "tests/"],
       "checks": [
         "git diff --name-only \"$BASE\" -- tests | grep -q 'tests/test_'",

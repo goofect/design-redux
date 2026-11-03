@@ -1,29 +1,29 @@
-/* Moving notes between discs ---------------------------------------------
+/* Moving notes between sections ---------------------------------------------
  *
- * A dragged row fades; the disc it would land in is outlined whole, so
- * the target is the disc rather than the particular row under the
+ * A dragged row fades; the section it would land in is outlined whole, so
+ * the target is the section rather than the particular row under the
  * cursor.
  */
 
-.dr-track[draggable="true"] {
+.dr-note-row[draggable="true"] {
   cursor: pointer;
 }
 
-.dr-track.is-dragging {
+.dr-note-row.is-dragging {
   opacity: 0.4;
 }
 
-.dr-track.is-drop-target, .dr-disc.is-drop-target {
+.dr-note-row.is-drop-target, .dr-list-section.is-drop-target {
   background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
   box-shadow: none;
 }
 
-.dr-disc.is-drop-target {
+.dr-list-section.is-drop-target {
   border-bottom-color: var(--interactive-accent);
 }
 
 /* A subfolder being dragged onto another, in Edit mode. */
-.dr-disc.is-dragging {
+.dr-list-section.is-dragging {
   opacity: 0.4;
 }
 

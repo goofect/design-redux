@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* What the inspector can be about                                    */
 /*                                                                    */
-/* A note, an album picked in the library, a text card on a canvas.   */
+/* A note, a collection picked in the library, a text card on a canvas.   */
 /* Each is drawn its own way, but                                     */
 /* the panel holding it neither knows nor cares which: it asks the    */
 /* inspectable whether it's already about a target, which note its    */
@@ -11,7 +11,7 @@
 
 import { parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
-import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
+import { coversOn, drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
 import { relativeDay } from '../core/040-helpers-sorting.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { requestCanvasSave } from '../core/079-canvas-adapter.js';
@@ -48,8 +48,7 @@ export function cardValue(typed, was) {
 
 /**
  * A note as an info sheet opens: its cover beside its name, one property
- * raised beneath in the accent — the title-and-artist shape an album
- * page opens with — and a line on where it lives, how long it is and
+ * raised beneath in the accent, and a line on where it lives, how long it is and
  * when it last changed. It says what you're looking at before the
  * details, which a bare list of fields never does. The note panel and
  * the inspector both open with it.
@@ -59,7 +58,7 @@ export function drawNoteHead(plugin, parentEl, file) {
   const art = head.createDiv({ cls: 'dr-props-art' });
   drawNoteArt(plugin, art, file);
   // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
-  if (file.extension === 'md') {
+  if (file.extension === 'md' && coversOn(plugin.settings)) {
     art.dataset.coverNote = file.path;
     art.setAttribute('tabindex', '-1');
   }
@@ -77,7 +76,7 @@ export function fillNoteMeta(plugin, meta, file) {
   const parts = [];
   const folder = file.parent;
   if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
-  const style = plugin.settings.trackLength;
+  const style = plugin.settings.noteLength;
   const lengths = plugin.lengths;
   const counts = !!lengths && style !== 'none';
   const length = counts ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
@@ -99,7 +98,7 @@ export function libraryPage(app) {
   const leaves = ws.getLeavesOfType(BROWSE_VIEW);
   const recent = typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : null;
   const leaf = recent && leaves.includes(recent) ? recent : leaves[0];
-  return leaf && leaf.view && typeof leaf.view.previewAlbum === 'function' ? leaf.view : null;
+  return leaf && leaf.view && typeof leaf.view.previewCollection === 'function' ? leaf.view : null;
 }
 
 /** What `target` ({ file, picked } | { folder } | { card }) is, to be drawn. */
@@ -148,7 +147,7 @@ class NoteInspectable extends Inspectable {
   }
 }
 
-/** An album picked in the library: what it is, as the library tells it, then its folder note's properties. */
+/** A collection picked in the library: what it is, as the library tells it, then its folder note's properties. */
 class FolderInspectable extends Inspectable {
   constructor(plugin, target) {
     super(plugin, target);
@@ -167,7 +166,7 @@ class FolderInspectable extends Inspectable {
     const folder = this.target.folder;
     const brief = el.createDiv({ cls: 'dr-inspector-brief' });
     const view = libraryPage(this.plugin.app);
-    if (view) view.previewAlbum(brief, folder);
+    if (view) view.previewCollection(brief, folder);
     else brief.createDiv({ cls: 'dr-props-head dr-props-identity' }).createDiv({ cls: 'dr-props-info' }).createDiv({ cls: 'dr-props-title', text: folder.name });
     return super.draw(panel, el);
   }

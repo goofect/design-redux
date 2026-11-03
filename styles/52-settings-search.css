@@ -111,7 +111,7 @@
 }
 
 /* What's picked: the accent's tint, and a bar at its edge, so it isn't told by colour alone. */
-.dr-track.is-selected,
+.dr-note-row.is-selected,
 .dr-tr.is-selected {
   background-color: var(--dr-accent-soft);
   box-shadow: inset 3px 0 0 var(--interactive-accent);
@@ -120,15 +120,6 @@
 .dr-card.is-selected {
   background-color: var(--dr-accent-soft);
   box-shadow: inset 3px 0 0 var(--interactive-accent);
-}
-
-.is-gallery .dr-card.is-selected {
-  background-color: transparent;
-  box-shadow: none;
-}
-
-.is-gallery .dr-card.is-selected .dr-card-art {
-  box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
 }
 
 /* A setting opened to from where it shows: marked a moment. */

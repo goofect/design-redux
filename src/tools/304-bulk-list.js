@@ -136,7 +136,7 @@ export class PropertyListTool extends BulkModal {
       const icon = row.createDiv({ cls: 'dr-plist-icon' });
       setIcon(icon, TYPE_ICONS[propertyType(this.app, prop.name)] || 'text');
 
-      // The name, and under it the values it holds — as a track's
+      // The name, and under it the values it holds — as a row's
       // artist sits under its title.
       const text = row.createDiv({ cls: 'dr-plist-text' });
       const name = text.createDiv({ cls: 'dr-plist-name', text: prop.name });

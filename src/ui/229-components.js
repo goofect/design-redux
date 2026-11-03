@@ -38,7 +38,7 @@ export function drTextButton(parent, label, run, opts = {}) {
 }
 
 /**
- * A segmented control: one track, the chosen segment raised. `items` are
+ * A segmented control: one row, the chosen segment raised. `items` are
  * { id, label, icon? }; `onChange(id)` runs when another is chosen, by
  * click or by the keys a tab list has: the arrows, round from either end,
  * and Home and End. Only the chosen segment is reached with Tab.

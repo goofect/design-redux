@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Browse view: editing an album                                      */
+/* Browse view: editing a collection                                      */
 /*                                                                    */
 /* Edit mode (rename, move, delete, add, arrange by drag) and pins in */
 /* your own order. A part of BrowseView (see 120).                    */
@@ -18,14 +18,14 @@ import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { markDue, paintValue } from '../ui/248-value-options.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { AlbumStructure } from './257-album-structure.js';
+import { CollectionStructure } from './257-collection-structure.js';
 
 /* A shelf's tiles drawn at once, and then a frame at a time. */
 export const TILES_AT_ONCE = 60;
 export const TILES_A_FRAME = 120;
 
 export class BrowseEditing extends BrowseSorting {
-  /* -- editing an album -------------------------------------------- */
+  /* -- editing a collection -------------------------------------------- */
 
   /**
    * What a cover is made from, while generated covers are on: the name,
@@ -40,7 +40,7 @@ export class BrowseEditing extends BrowseSorting {
     if (!on && this.bulkSelection) this.bulkSelection.clear();
     this.render();
     if (!on) return;
-    const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-track .dr-edit-name');
+    const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-note-row .dr-edit-name');
     if (first && !Platform.isMobile) first.focus();
   }
 
@@ -144,7 +144,7 @@ export class BrowseEditing extends BrowseSorting {
 
   /** A row being edited: a handle to drag, the name to change, move and delete. */
   editRow(list, file, index) {
-    const row = list.createDiv({ cls: 'dr-track is-editing' });
+    const row = list.createDiv({ cls: 'dr-note-row is-editing' });
     row.dataset.path = file.path;
     if (file.parent) row.dataset.folder = file.parent.path;
     this.tickBox(row, file, list);
@@ -153,8 +153,8 @@ export class BrowseEditing extends BrowseSorting {
     setIcon(grip, 'grip-vertical');
     asButton(grip, `Move “${file.basename}” — drag, or Alt+↑ and Alt+↓`);
 
-    row.createDiv({ cls: 'dr-track-num', text: String(index) });
-    const name = row.createEl('input', { cls: 'dr-track-name dr-edit-name', type: 'text' });
+    row.createDiv({ cls: 'dr-note-row-num', text: String(index) });
+    const name = row.createEl('input', { cls: 'dr-note-row-name dr-edit-name', type: 'text' });
     name.value = file.basename;
     name.dataset.editPath = file.path;
     name.setAttribute('aria-label', 'Note name');
@@ -203,12 +203,12 @@ export class BrowseEditing extends BrowseSorting {
 
   /** The notes' rows while editing, in the order they're shown, by path. */
   shownPaths() {
-    return Array.from(this.contentEl.querySelectorAll('.dr-track.is-editing')).map((r) => r.dataset.path);
+    return Array.from(this.contentEl.querySelectorAll('.dr-note-row.is-editing')).map((r) => r.dataset.path);
   }
 
   /** The rows' boxes and the tray brought in line with what's ticked. */
   showTicks() {
-    this.contentEl.querySelectorAll('.dr-track.is-editing').forEach((r) => {
+    this.contentEl.querySelectorAll('.dr-note-row.is-editing').forEach((r) => {
       const on = this.bulk().has(r.dataset.path);
       r.toggleClass('is-ticked', on);
       const b = r.querySelector('.dr-edit-tick');
@@ -319,7 +319,7 @@ export class BrowseEditing extends BrowseSorting {
       for (const file of this.tickedFiles()) {
         const from = file.path;
         const current = file.parent ? file.parent.path : '/';
-        const order = (this.plugin.settings.albumOrders || {})[current];
+        const order = (this.plugin.settings.collectionOrders || {})[current];
         const kept = order ? JSON.parse(JSON.stringify(order)) : null;
         if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
         else stuck.push(from);
@@ -362,29 +362,29 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /** A subfolder's heading while editing: its name, and a way to delete it. */
-  editDiscHead(head, disc, album) {
+  editSectionHead(head, section, collection) {
     head.addClass('is-editing');
     const grip = head.createDiv({ cls: 'dr-edit-grip' });
     setIcon(grip, 'grip-vertical');
-    asButton(grip, `Move the folder “${disc.folder.name}” — drag it onto another`);
-    this.dragDisc(head, grip, disc.folder, album);
-    const name = head.createEl('input', { cls: 'dr-disc-title dr-edit-name', type: 'text' });
-    name.value = disc.folder.name;
-    name.dataset.editPath = disc.folder.path;
+    asButton(grip, `Move the folder “${section.folder.name}” — drag it onto another`);
+    this.dragSection(head, grip, section.folder, collection);
+    const name = head.createEl('input', { cls: 'dr-list-section-title dr-edit-name', type: 'text' });
+    name.value = section.folder.name;
+    name.dataset.editPath = section.folder.path;
     name.setAttribute('aria-label', 'Folder name');
-    this.editField(name, disc.folder.name, (value) => this.renameEntry(disc.folder, value));
+    this.editField(name, section.folder.name, (value) => this.renameEntry(section.folder, value));
     head.createSpan({
-      cls: 'dr-disc-count',
-      text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes`,
+      cls: 'dr-list-section-count',
+      text: section.files.length === 1 ? '1 note' : `${section.files.length} notes`,
     });
     const move = head.createDiv({ cls: 'clickable-icon dr-edit-tool' });
-    asButton(move, `Move the folder “${disc.folder.name}” into another`);
+    asButton(move, `Move the folder “${section.folder.name}” into another`);
     setIcon(move, 'folder-input');
-    onActivate(move, () => this.pickFolderHome(disc.folder));
+    onActivate(move, () => this.pickFolderHome(section.folder));
     const del = head.createDiv({ cls: 'clickable-icon dr-edit-tool mod-warning' });
-    asButton(del, `Delete the folder “${disc.folder.name}”`);
+    asButton(del, `Delete the folder “${section.folder.name}”`);
     setIcon(del, 'trash-2');
-    onActivate(del, () => this.deleteEntry(disc.folder));
+    onActivate(del, () => this.deleteEntry(section.folder));
   }
 
   /** Somewhere else for a folder: any folder but itself and those inside it. */
@@ -402,11 +402,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Drag a subfolder's heading onto another disc's to put it inside that
-   * folder — or onto the album's own heading to bring it back to the
+   * Drag a subfolder's heading onto another section's to put it inside that
+   * folder — or onto the collection's own heading to bring it back to the
    * top. The heading under the pointer lights up; Escape calls it off.
    */
-  dragDisc(head, grip, folder, album) {
+  dragSection(head, grip, folder, collection) {
     grip.addEventListener('pointerdown', (down) => {
       if (down.button !== undefined && down.button !== 0) return;
       down.preventDefault();
@@ -431,7 +431,7 @@ export class BrowseEditing extends BrowseSorting {
       const hover = (x, y) => {
         const doc = head.ownerDocument;
         const under = doc.elementFromPoint ? doc.elementFromPoint(x, y) : null;
-        const over = under && typeof under.closest === 'function' ? under.closest('.dr-disc[data-folder]') : null;
+        const over = under && typeof under.closest === 'function' ? under.closest('.dr-list-section[data-folder]') : null;
         mark(over && list.contains(over) && allowed(over.dataset.folder) ? over : null);
       };
       const scroller = edgeScroll(list, (y) => hover(lastX, y));
@@ -474,7 +474,7 @@ export class BrowseEditing extends BrowseSorting {
     });
   }
 
-  /** A note made in the album, named where it's listed rather than opened. */
+  /** A note made in the collection, named where it's listed rather than opened. */
   async editNewNote(folder) {
     try {
       const file = await this.app.vault.create(this.plugin.freeChildPath(folder, 'Untitled', 'md'), '');
@@ -492,7 +492,7 @@ export class BrowseEditing extends BrowseSorting {
     }
   }
 
-  /** A subfolder — a new disc — named first, and shown even while empty. */
+  /** A subfolder — a new section — named first, and shown even while empty. */
   editNewFolder(parent) {
     new NamePrompt(this.app, 'New folder', 'Folder name', async (name) => {
       const clean = name.replace(/[\\/:]/g, '').trim();
@@ -514,11 +514,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Put a note before or after another in its album, and keep that
-   * order. The album switches to it, as a playlist keeps the order you
+   * Put a note before or after another in its collection, and keep that
+   * order. The collection switches to it, as a playlist keeps the order you
    * drag its songs into.
    */
-  arrangeTrack(path, targetPath, after) {
+  arrangeNote(path, targetPath, after) {
     const file = this.app.vault.getFileByPath(path);
     const target = this.app.vault.getFileByPath(targetPath);
     if (!file || !target || !file.parent || file.parent !== target.parent) return false;
@@ -526,41 +526,41 @@ export class BrowseEditing extends BrowseSorting {
     const rest = names.filter((n) => n !== file.name);
     const at = rest.indexOf(target.name);
     const before = after ? rest[at + 1] : target.name;
-    this.plugin.orders.setAlbum(file.parent, moveBefore(names, file.name, before === undefined ? null : before));
+    this.plugin.orders.setCollection(file.parent, moveBefore(names, file.name, before === undefined ? null : before));
     this.plugin.refreshBrowse();
     return true;
   }
 
-  /** Save the order a disc's rows are in now. */
+  /** Save the order a section's rows are in now. */
   saveRowOrder(list, folderPath) {
     const folder = this.app.vault.getFolderByPath(folderPath);
     if (!folder) return;
-    const rows = Array.from(list.querySelectorAll('.dr-track[data-path]')).filter(
+    const rows = Array.from(list.querySelectorAll('.dr-note-row[data-path]')).filter(
       (r) => r.dataset.folder === folderPath
     );
     const shown = rows.map((r) => r.dataset.path.split('/').pop());
     // Notes not drawn (there are none while editing, but to be sure) keep their place after.
     const others = this.allNotesIn(folder).map((f) => f.name).filter((n) => shown.indexOf(n) === -1);
-    this.plugin.orders.setAlbum(folder, shown.concat(others));
+    this.plugin.orders.setCollection(folder, shown.concat(others));
     this.plugin.refreshBrowse();
   }
 
   /**
-   * Drag a row by its handle, to anywhere in the album: among its own
-   * disc's rows to put it in order, or into another disc to move the
+   * Drag a row by its handle, to anywhere in the collection: among its own
+   * section's rows to put it in order, or into another section to move the
    * note into that folder, at that place. Pointer events, so a finger
    * works as well as a mouse; nothing happens until it has moved a
    * little, and Escape puts the row back. Alt+arrows move it one place
-   * from the keyboard, over the edge of a disc into the next.
+   * from the keyboard, over the edge of a section into the next.
    */
   dragRow(row, grip, file) {
     const home = row.dataset.folder;
-    // Rows and disc headings, top to bottom; a row belongs to the
+    // Rows and section headings, top to bottom; a row belongs to the
     // heading above it.
-    const items = (list) => Array.from(list.querySelectorAll('.dr-track[data-path], .dr-disc[data-folder]'));
-    const discAbove = (el) => {
+    const items = (list) => Array.from(list.querySelectorAll('.dr-note-row[data-path], .dr-list-section[data-folder]'));
+    const sectionAbove = (el) => {
       let at = el.previousElementSibling;
-      while (at && !(at.matches('.dr-disc[data-folder]'))) at = at.previousElementSibling;
+      while (at && !(at.matches('.dr-list-section[data-folder]'))) at = at.previousElementSibling;
       return at;
     };
 
@@ -574,13 +574,13 @@ export class BrowseEditing extends BrowseSorting {
       const next = all[at + (up ? -1 : 1)];
       if (!next) return;
       if (up) {
-        // Over the album's first heading there's nowhere to go.
-        if (next.matches('.dr-disc') && all.indexOf(next) === 0) return;
+        // Over the collection's first heading there's nowhere to go.
+        if (next.matches('.dr-list-section') && all.indexOf(next) === 0) return;
         list.insertBefore(row, next);
       } else {
         list.insertBefore(row, next.nextSibling);
       }
-      this.commitRow(list, row, file, home, discAbove(row));
+      this.commitRow(list, row, file, home, sectionAbove(row));
     });
 
     grip.addEventListener('pointerdown', (down) => {
@@ -590,7 +590,7 @@ export class BrowseEditing extends BrowseSorting {
       const startY = down.clientY;
       const before = Array.from(list.children);
       let dragging = false;
-      // Near the album's top or bottom edge, it scrolls, and the row follows.
+      // Near the collection's top or bottom edge, it scrolls, and the row follows.
       const scroller = edgeScroll(list, (y) => place(y));
 
       const place = (y) => {
@@ -600,7 +600,7 @@ export class BrowseEditing extends BrowseSorting {
           const box = el.getBoundingClientRect();
           return y < box.top + box.height / 2;
         });
-        // Never above the first heading: a row needs a disc to be in.
+        // Never above the first heading: a row needs a section to be in.
         if (next === others[0]) {
           if (others[1] !== undefined && row.nextElementSibling !== others[1]) list.insertBefore(row, others[1]);
           else if (others[1] === undefined) list.appendChild(row);
@@ -609,9 +609,9 @@ export class BrowseEditing extends BrowseSorting {
         } else if (list.lastElementChild !== row) {
           list.appendChild(row);
         }
-        const disc = discAbove(row);
-        list.querySelectorAll('.dr-disc.is-drop-target').forEach((el) => el !== disc && el.removeClass('is-drop-target'));
-        if (disc && disc.dataset.folder !== home) disc.addClass('is-drop-target');
+        const section = sectionAbove(row);
+        list.querySelectorAll('.dr-list-section.is-drop-target').forEach((el) => el !== section && el.removeClass('is-drop-target'));
+        if (section && section.dataset.folder !== home) section.addClass('is-drop-target');
       };
       const move = (evt) => {
         if (!dragging) {
@@ -633,12 +633,12 @@ export class BrowseEditing extends BrowseSorting {
         if (!dragging) return;
         row.removeClass('is-dragging');
         list.removeClass('is-sorting');
-        list.querySelectorAll('.dr-disc.is-drop-target').forEach((el) => el.removeClass('is-drop-target'));
+        list.querySelectorAll('.dr-list-section.is-drop-target').forEach((el) => el.removeClass('is-drop-target'));
         if (!keep) {
           before.forEach((el) => list.appendChild(el));
           return;
         }
-        this.commitRow(list, row, file, home, discAbove(row));
+        this.commitRow(list, row, file, home, sectionAbove(row));
       };
       const up = () => finish(true);
       const cancel = () => finish(false);
@@ -656,11 +656,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Where a moved row landed, kept: the order of its disc, and — if
-   * that's another disc — the note moved into that folder first.
+   * Where a moved row landed, kept: the order of its section, and — if
+   * that's another section — the note moved into that folder first.
    */
-  async commitRow(list, row, file, home, disc) {
-    const folder = disc ? disc.dataset.folder : home;
+  async commitRow(list, row, file, home, section) {
+    const folder = section ? section.dataset.folder : home;
     if (folder !== home) {
       if (!(await this.plugin.moveFile(file, folder, { announce: true }))) {
         this.render();
@@ -670,7 +670,7 @@ export class BrowseEditing extends BrowseSorting {
       row.dataset.path = file.path;
     }
     this.saveRowOrder(list, folder);
-    const again = this.contentEl.querySelector(`.dr-track[data-path="${CSS.escape(file.path)}"] .dr-edit-grip`);
+    const again = this.contentEl.querySelector(`.dr-note-row[data-path="${CSS.escape(file.path)}"] .dr-edit-grip`);
     if (again) again.focus();
   }
 
@@ -694,9 +694,9 @@ export class BrowseEditing extends BrowseSorting {
     return this.mode === 'pinned' ? this.tileSteps(target) : null;
   }
 
-  /** A shelf's albums, in the order they were put in, or as sorted. */
+  /** A shelf's collections, in the order they were put in, or as sorted. */
   shelfFolders(shelf) {
-    return this.plugin.orders.arrangeAlbum(shelf, this.visibleFolders(shelf), (list) => this.sortFolders(list));
+    return this.plugin.orders.arrangeCollection(shelf, this.visibleFolders(shelf), (list) => this.sortFolders(list));
   }
 
   /** A folder of nothing but folders. */
@@ -706,7 +706,7 @@ export class BrowseEditing extends BrowseSorting {
 
   /**
    * Where tiles on screen can be put in order: pins in their own order,
-   * or the albums on a shelf, kept by name as an album keeps its notes.
+   * or the collections on a shelf, kept by name as a collection keeps its notes.
    */
   tileOrder() {
     if (this.mode === 'pinned') {
@@ -718,7 +718,7 @@ export class BrowseEditing extends BrowseSorting {
     return {
       paths,
       move: (path, before) => {
-        this.plugin.orders.setAlbum(shelf, moveBefore(paths(), path, before).map((p) => p.split('/').pop()));
+        this.plugin.orders.setCollection(shelf, moveBefore(paths(), path, before).map((p) => p.split('/').pop()));
         this.render();
       },
     };
@@ -739,11 +739,11 @@ export class BrowseEditing extends BrowseSorting {
 
   /**
    * Folder tiles in one grid, or grouped as the setting says: by kind of
-   * album, or by the folder they're in. The grids, to arrange.
+   * collection, or by the folder they're in. The grids, to arrange.
    */
   folderTiles(root, folders, subtitle) {
     const by = this.plugin.settings.tileGroups;
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = typeof CollectionStructure === 'function' ? this.plugin.feature(CollectionStructure) : null;
     const top = (f) => !f.parent || (f.parent.isRoot && f.parent.isRoot());
     const keyOf =
       by === 'kind' && structure && structure.enabled
@@ -753,8 +753,6 @@ export class BrowseEditing extends BrowseSorting {
           : null;
     const draw = (list) => {
       const grid = root.createDiv({ cls: 'dr-grid' });
-      // Covers asked for, in settings: a gallery.
-      if (this.plugin.settings.libraryLayout === 'covers') grid.addClass('is-gallery');
       roveFocus(grid, '.dr-card');
       const card = (f) => this.folderCard(grid, f, subtitle ? subtitle(f) : undefined);
       // The first rows at once; the rest a batch a frame, so a shelf of hundreds shows straight away.
@@ -773,7 +771,7 @@ export class BrowseEditing extends BrowseSorting {
     });
   }
 
-  /** Tiles that can be dragged into order, on desktop: pins, or a shelf's albums. */
+  /** Tiles that can be dragged into order, on desktop: pins, or a shelf's collections. */
   /** Tiles drawn a batch a frame, into a grid still on the page; those that can be arranged made draggable as they come. */
   drawLater(grid, rest, draw) {
     if (!rest.length) return;
@@ -851,7 +849,7 @@ export class BrowseEditing extends BrowseSorting {
 }
 
 export class RowValues extends BrowseEditing {
-  /** A row's value as a button: pick, set or tick it there, the album not drawn again. */
+  /** A row's value as a button: pick, set or tick it there, the collection not drawn again. */
   editableCell(cell, file, key) {
     cell.addClass('is-editable');
     asButton(cell, `Change ${key}`);
@@ -920,7 +918,7 @@ export class RowValues extends BrowseEditing {
       .map((g) => String(g.value));
   }
 
-  /** A value written through the notes service — one step of Undo — and shown in its cell, the album as it is. */
+  /** A value written through the notes service — one step of Undo — and shown in its cell, the collection as it is. */
   async writeRowValue(cell, file, key, value) {
     if (!this.quietChanges) this.quietChanges = new Set();
     this.quietChanges.add(file.path);

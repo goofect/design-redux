@@ -2,7 +2,7 @@
 /* Browse screens: properties                                         */
 /*                                                                    */
 /* The properties as Artists: each property a page, each value a tile,*/
-/* a value's notes an album of its own.                               */
+/* a value's notes a collection of its own.                               */
 /* ------------------------------------------------------------------ */
 
 import { Menu, setIcon } from 'obsidian';
@@ -14,7 +14,7 @@ import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { copyText, EMPTY_VALUE, VALUE_GRID_MOST, valueArt } from './110-browse-screens.js';
+import { copyText, EMPTY_VALUE, valueArt } from './110-browse-screens.js';
 import { addPropertyEntries } from '../ui/247-property-menu.js';
 import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
 import { renamePropertyInPlace } from '../tools/290-bulk-engine.js';
@@ -28,13 +28,13 @@ export class PropertiesScreen extends BrowseScreen {
   /**
    * As a music app's Artists: the properties listed on the left, and the
    * one chosen as a page of its own on the right — its values as covers,
-   * each opening as an album of the notes that carry it.
+   * each opening as a collection of the notes that carry it.
    */
   render(root) {
     const view = this.view;
     const all = view.propertyList();
     const chosen = all.find((p) => p.key === view.property) || null;
-    // A value is a page of its own, as an album is.
+    // A value is a page of its own, as a collection is.
     if (chosen && view.value && !view.editing) return this.renderValuePage(root, chosen, view.value);
 
     view.renderTitleBar(root, this.title());
@@ -182,18 +182,9 @@ export class PropertiesScreen extends BrowseScreen {
     if (facts.last) fact('Last changed', this.view.relative(facts.last));
   }
 
-  /** Values as covers or as a list: as chosen, or covers while there are few enough to take in. */
-  showsGrid(n) {
-    const as = this.settings.propertyValueView || 'auto';
-    if (as !== 'auto') return as === 'grid';
-    const layout = this.settings.libraryLayout || 'auto';
-    return layout === 'covers' || (layout === 'auto' && n <= VALUE_GRID_MOST);
-  }
-
   /**
-   * A property's page, as an artist's: its name, how many notes and
-   * values, then the values — as covers, or a list when there are many —
-   * each opening its own page. Picking values to merge is Edit's.
+   * A property's page: its name, how many notes and values, then the
+   * values as a list, each opening its own page. Picking values to merge is Edit's.
    */
   renderOverview(detail, prop) {
     const view = this.view;
@@ -218,68 +209,30 @@ export class PropertiesScreen extends BrowseScreen {
     head.createSpan({ cls: 'dr-search-section-count', text: String(groups.length) });
     if (view.editing) return this.renderValuePicks(detail, prop, groups);
 
-    const grid = this.showsGrid(groups.length);
-    const toggle = head.createDiv({ cls: 'dr-prop-view-toggle' });
-    [
-      ['grid', 'layout-grid', 'Covers'],
-      ['list', 'list', 'List'],
-    ].forEach(([id, icon, label]) => {
-      const b = toggle.createDiv({ cls: 'clickable-icon dr-prop-view' });
-      asButton(b, `Show values as ${label.toLowerCase()}`);
-      b.dataset.view = id;
-      b.toggleClass('is-active', (id === 'grid') === grid);
-      setIcon(b, icon);
-      onActivate(b, () => {
-        this.settings.propertyValueView = id;
-        view.render();
-        this.plugin.saveData(this.settings);
-      });
-    });
-
     const open = (value) => view.navigate({ mode: 'properties', property: prop.key, value, keepFilters: true });
     const limit = view.expanded.has(`values:${prop.key}`) ? groups.length : 200;
     const shown = groups.slice(0, limit);
-    if (grid) {
-      const tiles = detail.createDiv({ cls: 'dr-grid dr-prop-values-grid' });
-      roveFocus(tiles, '.dr-card');
-      shown.forEach((group) => {
-        const value = String(group.value);
-        const card = view.card(tiles, value, bulkCount(group.files.length, 'note'));
-        card.dataset.value = value;
-        valueArt(view, card.querySelector('.dr-card-art'), prop.key, value, group.files);
-        onActivate(card, () => open(value));
-        onContextMenu(card, (evt) => this.valueMenu(evt, prop, value));
-      });
-      if (empty.length) {
-        const card = view.card(tiles, 'No value', bulkCount(empty.length, 'note'));
-        card.addClass('is-empty-value');
-        card.dataset.value = EMPTY_VALUE;
-        view.fillArt(card.querySelector('.dr-card-art'), null, 'circle-dashed', null, null);
-        onActivate(card, () => open(EMPTY_VALUE));
-      }
-    } else {
-      const list = detail.createDiv({ cls: 'dr-prop-values' });
-      roveFocus(list, '.dr-prop-value');
-      shown.forEach((group) => {
-        const value = String(group.value);
-        const row = list.createDiv({ cls: 'dr-prop-value' });
-        asButton(row);
-        row.dataset.value = value;
-        valueArt(view, row.createDiv({ cls: 'dr-prop-value-art' }), prop.key, value, group.files);
-        paintValue(row.createDiv({ cls: 'dr-prop-value-name', text: value }), this.plugin, prop.key, value);
-        row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
-        onActivate(row, () => open(value));
-        onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
-      });
-      if (empty.length) {
-        const row = list.createDiv({ cls: 'dr-prop-value is-empty-value' });
-        asButton(row);
-        row.dataset.value = EMPTY_VALUE;
-        row.createDiv({ cls: 'dr-prop-value-art is-blank' });
-        row.createDiv({ cls: 'dr-prop-value-name', text: 'No value' });
-        row.createDiv({ cls: 'dr-prop-value-count', text: String(empty.length) });
-        onActivate(row, () => open(EMPTY_VALUE));
-      }
+    const list = detail.createDiv({ cls: 'dr-prop-values' });
+    roveFocus(list, '.dr-prop-value');
+    shown.forEach((group) => {
+      const value = String(group.value);
+      const row = list.createDiv({ cls: 'dr-prop-value' });
+      asButton(row);
+      row.dataset.value = value;
+      valueArt(view, row.createDiv({ cls: 'dr-prop-value-art' }), prop.key, value, group.files);
+      paintValue(row.createDiv({ cls: 'dr-prop-value-name', text: value }), this.plugin, prop.key, value);
+      row.createDiv({ cls: 'dr-prop-value-count', text: String(group.files.length) });
+      onActivate(row, () => open(value));
+      onContextMenu(row, (evt) => this.valueMenu(evt, prop, value));
+    });
+    if (empty.length) {
+      const row = list.createDiv({ cls: 'dr-prop-value is-empty-value' });
+      asButton(row);
+      row.dataset.value = EMPTY_VALUE;
+      row.createDiv({ cls: 'dr-prop-value-art is-blank' });
+      row.createDiv({ cls: 'dr-prop-value-name', text: 'No value' });
+      row.createDiv({ cls: 'dr-prop-value-count', text: String(empty.length) });
+      onActivate(row, () => open(EMPTY_VALUE));
     }
     if (groups.length > limit) {
       const more = detail.createDiv({ cls: 'dr-prop-value-more', text: `Show all ${groups.length}` });
@@ -352,8 +305,8 @@ export class PropertiesScreen extends BrowseScreen {
   }
 
   /**
-   * One value, as an album: its cover, its name, the property it's a
-   * value of — the way back — and its notes, in the album's own list.
+   * One value, as a collection: its cover, its name, the property it's a
+   * value of — the way back — and its notes, in the collection's own list.
    * "No value" gathers the notes that leave the property empty.
    */
   renderValuePage(root, prop, value) {
@@ -375,7 +328,7 @@ export class PropertiesScreen extends BrowseScreen {
     const files = view.sortFiles(group.files.filter((f) => view.matches(f.basename)));
     const title = String(group.value);
     const id = `value:${prop.key}:${title}`;
-    view.renderAlbumHead(root, {
+    view.renderCollectionHead(root, {
       title,
       sub: prop.name,
       cover: isEmpty ? null : view.groupCover(group),
@@ -384,7 +337,7 @@ export class PropertiesScreen extends BrowseScreen {
       files,
       onArtMenu: isEmpty ? null : (evt) => this.valueMenu(evt, prop, title),
     });
-    // The property it belongs to, under the name, is the way back to it — as an album's artist is.
+    // The property it belongs to, under the name, is the way back to it — as a collection's artist is.
     const sub = root.querySelector('.dr-detail-sub');
     if (sub) {
       sub.addClass('is-link');
@@ -397,8 +350,8 @@ export class PropertiesScreen extends BrowseScreen {
       more.addClass('dr-value-more');
     }
 
-    const list = root.createDiv({ cls: 'dr-tracks dr-value-tracks' });
-    roveFocus(list, '.dr-track');
+    const list = root.createDiv({ cls: 'dr-note-rows dr-value-rows' });
+    roveFocus(list, '.dr-note-row');
     view.renderLimited(list, files, `value:${prop.key}:${title}`, 1000);
   }
 
@@ -425,7 +378,7 @@ export class PropertiesScreen extends BrowseScreen {
   }
 
   /**
-   * A value's menu, as an album's: opening it first, then what changes
+   * A value's menu, as a collection's: opening it first, then what changes
    * it — renamed or merged everywhere — and copying it; last, narrowing
    * the library to its notes.
    */
@@ -462,7 +415,7 @@ export class PropertiesScreen extends BrowseScreen {
     showMenuAt(menu, evt);
   }
 
-  /** Edit, beside Find, as an album has it: on a property's page, to pick values to merge; else to rename and merge properties. */
+  /** Edit, beside Find, as a collection has it: on a property's page, to pick values to merge; else to rename and merge properties. */
   editButton(root, any, onProperty) {
     const view = this.view;
     const bar = root.querySelector('.dr-detail-bar');
