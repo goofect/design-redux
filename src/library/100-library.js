@@ -9,14 +9,14 @@
 
 import { ItemView, Menu, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
+import { coversOn, drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
 import { isClearLook } from '../ui/229-components.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
-import { SmartAlbums } from './258-smart-albums.js';
+import { SmartCollections } from './258-smart-collections.js';
 
 export class LibraryView extends ItemView {
   constructor(leaf, plugin) {
@@ -251,7 +251,7 @@ export class LibraryView extends ItemView {
         return;
       }
       if (id === 'smart') {
-        const smart = this.plugin.feature(SmartAlbums);
+        const smart = this.plugin.feature(SmartCollections);
         if (smart) smart.renderRows(this, list);
         return;
       }
@@ -271,6 +271,7 @@ export class LibraryView extends ItemView {
 
   /** A folder or file, with its artwork and its menu. */
   targetRow(list, target, depth, pinned = false, arrange = null) {
+    const covers = coversOn(this.plugin.settings);
     const menu = (evt, open) =>
       showTargetMenu(this.plugin, evt, target, {
         open: open,
@@ -285,7 +286,7 @@ export class LibraryView extends ItemView {
       const row = this.row(list, {
         depth: depth,
         icon: 'folder',
-        art: this.plugin.folderCoverSrc(target),
+        art: covers ? this.plugin.folderCoverSrc(target) : null,
         // Pinned, its own artwork — a cover, or one made for it — and nothing beneath its name.
         draw: pinned ? (el) => drawFolderArt(this.plugin, el, target) : null,
         sub: null,
@@ -294,14 +295,14 @@ export class LibraryView extends ItemView {
         onClick: open,
         onMenu: (evt) => menu(evt, open),
       });
-      // The Apple look: how many notes it holds, muted at the end.
+      // How many notes it holds, muted at the end.
       if (!pinned && isClearLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
       return row;
     }
     return this.row(list, {
       depth: depth,
       icon: iconForFile(target),
-      art: noteCoverSrc(this.plugin, target),
+      art: covers ? noteCoverSrc(this.plugin, target) : null,
       draw: pinned ? (el) => drawNoteArt(this.plugin, el, target) : null,
       sub: pinned && target.parent && !(target.parent.isRoot && target.parent.isRoot()) ? target.parent.name : null,
       label: target.basename,
@@ -373,7 +374,7 @@ export class LibraryView extends ItemView {
     };
   }
 
-  /** The Pinned row's own menu: its covers small, a row each, or large, the way an album's are. */
+  /** The Pinned row's own menu: its covers small, a row each, or large, the way a collection's are. */
   /** A pin whose folder or note has gone: greyed, saying so — or where it may be now — and clicked, what can be done. */
   missingRow(list, pin) {
     const likely = this.plugin.pins.likely(pin);

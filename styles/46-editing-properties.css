@@ -1,6 +1,6 @@
 /* Editing properties ---------------------------------------------------------- */
 
-/* Edit and Done, in the bar beside Find: a word, as the album's are. */
+/* Edit and Done, in the bar beside Find: a word, as the collection's are. */
 .dr-bar-edit {
   flex: 0 0 auto;
   margin-left: auto;
@@ -45,21 +45,6 @@
   margin: 2px 2px var(--dr-space-3);
   color: var(--text-muted);
   font-size: var(--font-ui-small);
-}
-
-.dr-prop-view-toggle {
-  display: flex;
-  gap: 2px;
-  margin-left: auto;
-}
-
-.dr-prop-view.is-active {
-  color: var(--text-accent);
-}
-
-.dr-prop-values-grid .dr-card.is-empty-value .dr-card-title {
-  color: var(--text-muted);
-  font-style: italic;
 }
 
 .dr-prop-value-art {
@@ -495,7 +480,7 @@
   height: 15px;
 }
 
-/* The name over its values, as a track's title over its artist. */
+/* The name over its values, as a row's title over its artist. */
 .dr-plist-text {
   flex: 1 1 auto;
   min-width: 0;

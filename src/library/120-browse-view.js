@@ -1,14 +1,14 @@
 /* ------------------------------------------------------------------ */
 /* Browse                                                              */
 /*                                                                     */
-/* The main area, in four shapes: a folder as an album page, a         */
+/* The main area, in four shapes: a folder as a collection page, a         */
 /* property as a list of its values, every folder as tiles, and every  */
 /* note as a table.                                                    */
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_HOVER_SOURCE, TAG_KEYS } from '../core/020-constants.js';
-import { blankLook, byName, canStep, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
+import { blankArt, blankLook, byName, canStep, coversOn, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -16,12 +16,12 @@ import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
-import { BrowseAlbum } from './125-browse-album.js';
+import { BrowseCollection } from './125-browse-collection.js';
 import { ContextStrip } from '../tools/190-strip.js';
 import { enter, transitionScreen } from '../ui/231-motion.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
-export class BrowseView extends BrowseAlbum {
+export class BrowseView extends BrowseCollection {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -107,7 +107,7 @@ export class BrowseView extends BrowseAlbum {
         this.render();
         if (this.contentEl) this.contentEl.scrollTop = 0;
         // A screen arrived at: its rows and tiles come in one after another.
-        if (moved && this.contentEl) enter(Array.from(this.contentEl.querySelectorAll('.dr-track, .dr-tr:not(.dr-th), .dr-card, .dr-disc')).slice(0, 24));
+        if (moved && this.contentEl) enter(Array.from(this.contentEl.querySelectorAll('.dr-note-row, .dr-tr:not(.dr-th), .dr-card, .dr-list-section')).slice(0, 24));
       };
       // Another screen slides in, back the other way; the same one is just drawn again.
       const back = this.goingBack;
@@ -716,12 +716,12 @@ export class BrowseView extends BrowseAlbum {
   }
 
   renderGroup(detail, group, isPrimary) {
-    const block = detail.createDiv({ cls: 'dr-album' });
+    const block = detail.createDiv({ cls: 'dr-collection' });
 
-    const head = block.createDiv({ cls: 'dr-album-head' });
-    const titles = head.createDiv({ cls: 'dr-album-titles' });
+    const head = block.createDiv({ cls: 'dr-collection-head' });
+    const titles = head.createDiv({ cls: 'dr-collection-titles' });
     titles.createDiv({
-      cls: isPrimary ? 'dr-album-name is-primary' : 'dr-album-name',
+      cls: isPrimary ? 'dr-collection-name is-primary' : 'dr-collection-name',
       text: group.value,
     });
     // A value can be renamed everywhere it's used; under tags, each
@@ -751,24 +751,26 @@ export class BrowseView extends BrowseAlbum {
       });
     }
     titles.createDiv({
-      cls: 'dr-album-meta',
+      cls: 'dr-collection-meta',
       text:
         `${this.propertyLabel()}  ·  ` +
         (group.files.length === 1 ? '1 note' : `${group.files.length} notes`),
     });
 
-    const body = block.createDiv({ cls: 'dr-album-body' });
-    const art = body.createDiv({ cls: 'dr-album-art' });
-    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), blankLook(this.plugin.settings, String(group.value)));
+    const body = block.createDiv({ cls: 'dr-collection-body' });
+    if (coversOn(this.plugin.settings)) {
+      const art = body.createDiv({ cls: 'dr-collection-art' });
+      this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), blankLook(this.plugin.settings, String(group.value)));
+    }
 
-    const list = body.createDiv({ cls: 'dr-tracks' });
-    roveFocus(list, '.dr-track');
+    const list = body.createDiv({ cls: 'dr-note-rows' });
+    roveFocus(list, '.dr-note-row');
     // Keyed by property too: the same value can occur under two.
     this.renderLimited(
       list,
       group.files,
       `value:${this.property}:${group.value}`,
-      this.limitFrom('albumNoteLimit', 8)
+      this.limitFrom('collectionNoteLimit', 8)
     );
   }
 
@@ -781,6 +783,7 @@ export class BrowseView extends BrowseAlbum {
   }
 
   fillArt(el, src, glyph, name, look) {
+    if (!coversOn(this.plugin.settings)) return blankArt(el, glyph);
     fillArt(el, src, glyph, name, look);
   }
 
@@ -802,12 +805,12 @@ export class BrowseView extends BrowseAlbum {
     showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), first });
   }
 
-  /** A note's own ways out of a list: a new tab, its album where that isn't here, and a link to paste. */
+  /** A note's own ways out of a list: a new tab, its collection where that isn't here, and a link to paste. */
   noteOpenings(file) {
     if (!(file instanceof TFile) || file.extension !== 'md') return [];
     const out = [['Open in new tab', 'file-plus', () => this.app.workspace.getLeaf('tab').openFile(file)]];
     const here = this.mode === 'folder' && file.parent && file.parent.path === this.path;
-    if (file.parent && !here && typeof this.revealInAlbum === 'function') out.push(['Reveal in collection', 'folder-open', () => this.revealInAlbum(file)]);
+    if (file.parent && !here && typeof this.revealInCollection === 'function') out.push(['Reveal in collection', 'folder-open', () => this.revealInCollection(file)]);
     out.push([
       'Copy link',
       'link',
@@ -911,7 +914,7 @@ export class BrowseView extends BrowseAlbum {
   }
 }
 
-/* What a browse action acts on: the album the browse view shows. */
+/* What a browse action acts on: the collection the browse view shows. */
 ACTION_CONTEXTS.browse = (app) => {
   const view = app.workspace.getActiveViewOfType(BrowseView);
   const folder = view && view.mode === 'folder' ? view.folder() : null;

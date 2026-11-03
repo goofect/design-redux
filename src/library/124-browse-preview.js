@@ -4,16 +4,16 @@
 /* A pane along the page's right edge where the note panel — the      */
 /* inspector — shows what's picked here. While it shows, a click      */
 /* picks and a double click or Enter opens. What the library knows of */
-/* a pick, it draws: an album in brief (what it is, where it is) and, */
+/* a pick, it draws: a collection in brief (what it is, where it is) and, */
 /* for a note, Open, Reveal in collection and More. A part of         */
 /* BrowseView, which extends it through 125.                          */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon } from 'obsidian';
-import { albumKindOf, drawFolderArt } from '../core/030-helpers-art.js';
+import { collectionKindOf, drawFolderArt } from '../core/030-helpers-art.js';
 import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
 import { BrowseRows } from './123-browse-rows.js';
-import { AlbumStructure } from './257-album-structure.js';
+import { CollectionStructure } from './257-collection-structure.js';
 
 /**
  * Where the panel docks: the pane's element, the page's leaf, and what
@@ -121,28 +121,28 @@ export class BrowsePreview extends BrowseRows {
 
   /** A note picked here, in the pane: Open, Reveal in collection, More. */
   inspectNoteActions(el, file) {
-    const album = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
-    const here = !!album && this.mode === 'folder' && this.path === album.path;
+    const collection = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent : null;
+    const here = !!collection && this.mode === 'folder' && this.path === collection.path;
     this.previewButtons(el, [
       ['book-open', 'Open', (evt) => this.openFile(file, evt)],
-      album && !here ? ['folder-open', 'Reveal in collection', () => this.revealInAlbum(file)] : null,
+      collection && !here ? ['folder-open', 'Reveal in collection', () => this.revealInCollection(file)] : null,
       ['ellipsis', 'More', (evt) => this.fileMenu(evt, file)],
     ]);
   }
 
   /**
-   * An album as the pane opens on it, the way a note does: its cover
-   * beside its name, what kind of album in the accent, and a line on how
+   * A collection as the pane opens on it, the way a note does: its cover
+   * beside its name, what kind of collection in the accent, and a line on how
    * much it holds and where it is — that last a way there. Then what it's
    * about, and Open and More.
    */
-  previewAlbum(el, folder) {
+  previewCollection(el, folder) {
     const head = el.createDiv({ cls: 'dr-props-head dr-props-identity' });
     drawFolderArt(this.plugin, head.createDiv({ cls: 'dr-props-art' }), folder);
     const info = head.createDiv({ cls: 'dr-props-info' });
     const root = !!(folder.isRoot && folder.isRoot());
     info.createDiv({ cls: 'dr-props-title', text: root ? this.app.vault.getName() : folder.name });
-    const kind = albumKindOf(this.plugin, folder);
+    const kind = collectionKindOf(this.plugin, folder);
     info.createDiv({ cls: 'dr-props-lead', text: kind ? kind.label : 'Collection' });
     const meta = info.createDiv({ cls: 'dr-props-meta' });
     meta.createSpan({ text: this.countLabel(folder) });
@@ -153,7 +153,7 @@ export class BrowsePreview extends BrowseRows {
       asButton(up, `In ${parent.name}: open it`);
       onActivate(up, () => this.openFolder(parent));
     }
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = typeof CollectionStructure === 'function' ? this.plugin.feature(CollectionStructure) : null;
     if (structure && structure.enabled && !root) this.previewAbout(el, folder, structure);
     this.previewButtons(el, [
       ['book-open', 'Open', () => this.openFolder(folder)],
@@ -161,7 +161,7 @@ export class BrowsePreview extends BrowseRows {
     ]);
   }
 
-  /** What the album's for, beneath its head: clicked, it's changed; with none yet, a quiet way to write one. */
+  /** What the collection's for, beneath its head: clicked, it's changed; with none yet, a quiet way to write one. */
   previewAbout(el, folder, structure) {
     const about = el.createDiv({ cls: 'dr-preview-about' });
     const draw = (text) => {
@@ -173,8 +173,8 @@ export class BrowsePreview extends BrowseRows {
     onActivate(about, () => structure.chooseDescription(folder, draw));
   }
 
-  /** The note's own album, opened, with the note still picked in it. */
-  revealInAlbum(file) {
+  /** The note's own collection, opened, with the note still picked in it. */
+  revealInCollection(file) {
     if (this.plugin.selection) this.plugin.selection.set({ file });
     if (!file.parent) return;
     this.navigate({ mode: 'folder', path: file.parent.path, property: null });

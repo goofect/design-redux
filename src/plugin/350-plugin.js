@@ -34,10 +34,10 @@ import { CoverImages } from '../ui/235-covers.js';
 import { CoverDrop } from '../ui/237-cover-drop.js';
 import { ImageRouter } from '../ui/240-image-router.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { AlbumProperty } from '../library/255-album-property.js';
-import { AlbumRefactor } from '../library/256-album-refactor.js';
-import { AlbumStructure } from '../library/257-album-structure.js';
-import { SmartAlbums } from '../library/258-smart-albums.js';
+import { CollectionProperty } from '../library/255-collection-property.js';
+import { CollectionRefactor } from '../library/256-collection-refactor.js';
+import { CollectionStructure } from '../library/257-collection-structure.js';
+import { SmartCollections } from '../library/258-smart-collections.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { PropertyDates } from '../library/260-property-dates.js';
@@ -91,11 +91,11 @@ export class DesignRedux extends Plugin {
       new CoverDrop(this),
       new ImageRouter(this),
       new PropertyClipboard(this),
-      new AlbumProperty(this),
-      new AlbumStructure(this),
-      new SmartAlbums(this),
+      new CollectionProperty(this),
+      new CollectionStructure(this),
+      new SmartCollections(this),
       new LibraryCheck(this),
-      new AlbumRefactor(this),
+      new CollectionRefactor(this),
       new MarkedLists(this),
       new Scripts(this),
       new Footnotes(this),
@@ -196,19 +196,19 @@ export class DesignRedux extends Plugin {
     this.each((f) => f.disable());
   }
 
-  /** An album's info from its folder note — its kind and label — or null: asked by helpers below the album features. */
-  albumInfo(folder) {
-    const structure = this.feature(AlbumStructure);
+  /** A collection's info from its folder note — its kind and label — or null: asked by helpers below the collection features. */
+  collectionInfo(folder) {
+    const structure = this.feature(CollectionStructure);
     return structure ? structure.info(folder) : null;
   }
 
-  /** The album features' entries on a folder's or a note's menu, in this order. */
-  addAlbumMenuItems(menu, target, sectioned, redraw) {
+  /** The collection features' entries on a folder's or a note's menu, in this order. */
+  addCollectionMenuItems(menu, target, sectioned, redraw) {
     const isFolder = target instanceof TFolder;
-    const structure = this.feature(AlbumStructure);
+    const structure = this.feature(CollectionStructure);
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
     else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
-    const refactor = this.feature(AlbumRefactor);
+    const refactor = this.feature(CollectionRefactor);
     if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
   }
 
@@ -417,7 +417,7 @@ export class DesignRedux extends Plugin {
     if (typeof vault.getAllLoadedFiles === 'function' && vault.getAllLoadedFiles().length < 2) return;
     const exists = (p) => p === '/' || !!vault.getAbstractFileByPath(p);
     let changed = false;
-    PATH_KEYED.concat(['albumOrders', 'folderDefaults']).forEach((key) => {
+    PATH_KEYED.concat(['collectionOrders', 'folderDefaults']).forEach((key) => {
       const kept = this.settings[key];
       if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return;
       Object.keys(kept).forEach((p) => {
@@ -512,7 +512,7 @@ export class DesignRedux extends Plugin {
       this.refreshTimer = 0;
       if (this.unloading) return;
       this.refresh();
-      // Open screens show the change at once — an order, album columns,
+      // Open screens show the change at once — an order, collection columns,
       // a limit — rather than on their next visit.
       this.refreshBrowse();
     }, 200);

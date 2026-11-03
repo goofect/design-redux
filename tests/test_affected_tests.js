@@ -34,7 +34,7 @@ function assert(cond, msg) {
 
   await test('a class written in parts reaches the suites naming its last part', () => {
     const s = pick('src/library/122-browse-editing.js');
-    assert(s.includes('album') && s.length < total, s.join(' '));
+    assert(s.includes('collection') && s.length < total, s.join(' '));
   });
 
   await test('a core module reaches far', () => {

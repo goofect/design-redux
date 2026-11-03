@@ -35,8 +35,9 @@ export class Appearance extends Feature {
       {
         key: 'artworkSize',
         type: 'dropdown',
+        showIf: 'showCovers',
         name: 'Cover size',
-        desc: 'How large covers are on screens of collections and notes, apart from the density of everything else.',
+        desc: 'How large the mark beside a name is, apart from the density of everything else.',
         options: ARTWORK_SIZES,
       },
       {
@@ -79,6 +80,7 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
     body.classList.toggle('dr-look-clear', !off);
+    body.classList.toggle('dr-covers', !off && this.settings.showCovers === true);
     body.classList.toggle('dr-motion-subtle', !off && this.settings.motion === 'subtle');
     body.classList.toggle('dr-motion-off', !off && this.settings.motion === 'off');
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);

@@ -16,8 +16,8 @@ import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { flip } from '../ui/231-motion.js';
 import { paintValue } from '../ui/248-value-options.js';
-import { ALBUM_LAYOUTS, AlbumStructure } from './257-album-structure.js';
-import { SmartAlbums } from './258-smart-albums.js';
+import { COLLECTION_LAYOUTS, CollectionStructure } from './257-collection-structure.js';
+import { SmartCollections } from './258-smart-collections.js';
 
 export class BrowseSorting extends ItemView {
   /** A property, tag or value renamed by the bulk tools: what this screen shows and filters by follows. */
@@ -109,12 +109,12 @@ export class BrowseSorting extends ItemView {
    */
   get sort() {
     const settings = this.plugin.settings;
-    // A smart album keeps its own order.
-    const smart = this.mode === 'smart' ? this.smartAlbum() : null;
+    // A smart collection keeps its own order.
+    const smart = this.mode === 'smart' ? this.smartCollection() : null;
     if (smart && smart.sort && SORTS.some(([key]) => key === smart.sort)) return smart.sort;
-    // An album sorted on its own keeps that order; everywhere else, the shared one.
-    if (this.mode === 'folder' && settings.albumSortMemory !== false) {
-      const kept = (settings.albumSorts || {})[this.path];
+    // A collection sorted on its own keeps that order; everywhere else, the shared one.
+    if (this.mode === 'folder' && settings.collectionSortMemory !== false) {
+      const kept = (settings.collectionSorts || {})[this.path];
       if (kept && SORTS.some(([key]) => key === kept)) return kept;
     }
     return settings.defaultSort || 'name';
@@ -127,21 +127,21 @@ export class BrowseSorting extends ItemView {
 
   /**
    * The name of this screen's own order, if it has one: Recently opened
-   * and Pinned always do, and an album does once it's been arranged.
+   * and Pinned always do, and a collection does once it's been arranged.
    */
   ownOrderLabel() {
     if (this.mode === 'folder') {
       const folder = this.folder();
-      return folder && this.plugin.orders.hasAlbum(folder) ? 'Collection order' : null;
+      return folder && this.plugin.orders.hasCollection(folder) ? 'Collection order' : null;
     }
     return OWN_ORDER[this.mode] || null;
   }
 
-  /** Whether this screen keeps its own order — Recently opened, Pinned, an arranged album. */
+  /** Whether this screen keeps its own order — Recently opened, Pinned, an arranged collection. */
   keepsOwnOrder() {
     if (this.mode === 'folder') {
       const folder = this.folder();
-      return !!folder && this.plugin.orders.albumOn(folder);
+      return !!folder && this.plugin.orders.collectionOn(folder);
     }
     if (!OWN_ORDER[this.mode]) return false;
     const own = this.plugin.settings.keepOwnOrder || {};
@@ -155,21 +155,21 @@ export class BrowseSorting extends ItemView {
   setSort(key) {
     const settings = this.plugin.settings;
     if (this.mode === 'folder') {
-      // An arranged album keeps its arrangement to go back to.
+      // An arranged collection keeps its arrangement to go back to.
       const folder = this.folder();
-      if (folder && this.plugin.orders.hasAlbum(folder)) this.plugin.orders.setAlbumOn(folder, key === 'own');
+      if (folder && this.plugin.orders.hasCollection(folder)) this.plugin.orders.setCollectionOn(folder, key === 'own');
     } else if (OWN_ORDER[this.mode]) {
       settings.keepOwnOrder = Object.assign({}, settings.keepOwnOrder, {
         [this.mode]: key === 'own',
       });
     }
-    const smart = this.mode === 'smart' ? this.smartAlbum() : null;
-    if (smart && key !== 'own') this.plugin.feature(SmartAlbums).change(smart, { sort: key });
+    const smart = this.mode === 'smart' ? this.smartCollection() : null;
+    if (smart && key !== 'own') this.plugin.feature(SmartCollections).change(smart, { sort: key });
     else if (key !== 'own') {
       const folder = this.mode === 'folder' ? this.folder() : null;
-      // An album's order is its own, kept by its path; other screens share one.
-      if (folder && settings.albumSortMemory !== false) {
-        settings.albumSorts = Object.assign({}, settings.albumSorts, { [folder.path]: key });
+      // A collection's order is its own, kept by its path; other screens share one.
+      if (folder && settings.collectionSortMemory !== false) {
+        settings.collectionSorts = Object.assign({}, settings.collectionSorts, { [folder.path]: key });
       } else settings.defaultSort = key;
     }
     this.columnSort = null;
@@ -185,7 +185,7 @@ export class BrowseSorting extends ItemView {
 
   /** Drawn again in a new order: the rows glide from where they were to where they are now. */
   renderSorted() {
-    flip(this.contentEl, '.dr-track, .dr-tr:not(.dr-th), .dr-card', () => this.render());
+    flip(this.contentEl, '.dr-note-row, .dr-tr:not(.dr-th), .dr-card', () => this.render());
   }
 
   /** Where a screen has nothing: a quiet icon, why, and at most one thing to do. */
@@ -214,9 +214,9 @@ export class BrowseSorting extends ItemView {
     ];
   }
 
-  /** The smart album on screen, if it's one. */
-  smartAlbum() {
-    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+  /** The smart collection on screen, if it's one. */
+  smartCollection() {
+    const smart = typeof SmartCollections === 'function' ? this.plugin.feature(SmartCollections) : null;
     return smart && smart.enabled ? smart.byId(this.property) : null;
   }
 
@@ -350,10 +350,10 @@ export class BrowseSorting extends ItemView {
       )
     );
 
-    // Covers on a screen of albums, grouped.
+    // Covers on a screen of collections, grouped.
     if (this.mode === 'folders' || (this.mode === 'folder' && this.isShelf(this.folder()))) {
       menu.addSeparator();
-      const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+      const structure = typeof CollectionStructure === 'function' ? this.plugin.feature(CollectionStructure) : null;
       const by = this.plugin.settings.tileGroups || '';
       Object.keys(TILE_GROUPS)
         .filter((key) => (key !== 'kind' || (structure && structure.enabled)) && (key !== 'collection' || this.mode === 'folders'))
@@ -442,7 +442,7 @@ export class BrowseSorting extends ItemView {
       () => this.pickDate(), () => (this.filterDate = null)
     );
 
-    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+    const smart = typeof SmartCollections === 'function' ? this.plugin.feature(SmartCollections) : null;
     if (smart) smart.addFilterItems(menu, this);
 
     if (this.hasFilters()) {
@@ -461,20 +461,20 @@ export class BrowseSorting extends ItemView {
     // What this screen shows, and how, in settings.
     if (typeof this.plugin.openSettingsAt === 'function') {
       menu.addSeparator();
-      const key = { home: 'homeShelves', folder: 'albumColumns', notes: 'tableColumns' }[this.mode] || 'gridDensity';
+      const key = { home: 'homeShelves', folder: 'collectionColumns', notes: 'tableColumns' }[this.mode] || 'gridDensity';
       menu.addItem((item) => item.setTitle('Display settings…').setIcon('settings').onClick(() => this.plugin.openSettingsAt(key)));
     }
     return menu;
   }
 
-  /** An album shown as a list, covers, a table, an overview or its map — as its folder note says, set from here. */
+  /** A collection shown as a list, covers, a table, an overview or its map — as its folder note says, set from here. */
   addViewItems(menu, redraw) {
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = typeof CollectionStructure === 'function' ? this.plugin.feature(CollectionStructure) : null;
     const folder = this.mode === 'folder' ? this.folder() : null;
     if (!structure || !structure.enabled || !folder || this.isShelf(folder)) return;
     const now = structure.info(folder).layout;
     menu.addSeparator();
-    ALBUM_LAYOUTS.forEach((l) =>
+    COLLECTION_LAYOUTS.forEach((l) =>
       menu.addItem((item) =>
         item
           .setTitle(`View as ${l.label.toLowerCase()}`)

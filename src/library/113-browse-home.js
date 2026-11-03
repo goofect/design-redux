@@ -4,12 +4,15 @@
 /* The home screen: its shelves, and the order they are shown in.     */
 /* ------------------------------------------------------------------ */
 
-import { albumNeighbours, drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
+import { collectionNeighbours, drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { homeShelves } from './109-home-shelves.js';
-import { collectionTiles } from './110-browse-screens.js';
+import { viewTiles } from './110-browse-screens.js';
+
+/* How many rows each of home's lists shows: its heading goes through to the rest. */
+const HOME_ROWS = 8;
 
 export class HomeScreen extends BrowseScreen {
   title() {
@@ -53,8 +56,8 @@ export class HomeScreen extends BrowseScreen {
 
     // The shelves, in the order and as many as the settings say.
     const continuing = this.continuing(recents, keep);
-    const collections = collectionTiles(view);
-    const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
+    const collections = viewTiles(view);
+    const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items.slice(0, HOME_ROWS), opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
       continue: () => shelf('Continue reading', continuing),
@@ -70,7 +73,7 @@ export class HomeScreen extends BrowseScreen {
   }
 
   /**
-   * Where to pick up: the albums you're partway through, the latest
+   * Where to pick up: the collections you're partway through, the latest
    * first — the note after the last one you opened in each, with how far
    * along it is.
    */
@@ -78,12 +81,12 @@ export class HomeScreen extends BrowseScreen {
     const items = [];
     const seen = new Set();
     recents.forEach((file) => {
-      const album = file.parent;
-      if (items.length >= 12 || !album || (album.isRoot && album.isRoot()) || this.plugin.isFolderNote(file) || seen.has(album.path)) return;
-      seen.add(album.path);
-      const near = albumNeighbours(this.plugin, file);
+      const collection = file.parent;
+      if (items.length >= 12 || !collection || (collection.isRoot && collection.isRoot()) || this.plugin.isFolderNote(file) || seen.has(collection.path)) return;
+      seen.add(collection.path);
+      const near = collectionNeighbours(this.plugin, file);
       if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
-      items.push({ file: near.next, subtitle: `${album.name} · ${near.index + 2} of ${near.total}` });
+      items.push({ file: near.next, subtitle: `${collection.name} · ${near.index + 2} of ${near.total}` });
     });
     return items;
   }

@@ -16,7 +16,7 @@ import { LibraryEditor } from './090-library-editor.js';
 import { LibraryView } from './100-library.js';
 import { homeShelves } from './109-home-shelves.js';
 import { BrowseView } from './120-browse-view.js';
-import { AlbumStructure } from './257-album-structure.js';
+import { CollectionStructure } from './257-collection-structure.js';
 
 export class LibraryItemPicker extends FuzzySuggestModal {
   constructor(app, onChoose) {
@@ -135,13 +135,13 @@ export class Library extends Feature {
         options: Object.fromEntries(SORTS),
       },
       {
-        key: 'albumSortMemory',
+        key: 'collectionSortMemory',
         showIf: 'library',
         name: 'Remember each collection’s sort',
         desc: 'A collection sorted from its filter button keeps that order.',
       },
       {
-        key: 'albumColumns',
+        key: 'collectionColumns',
         type: 'text',
         showIf: 'library',
         name: 'Collection columns',
@@ -152,19 +152,19 @@ export class Library extends Feature {
         suggestExtra: ['modified', 'created', 'folder'],
       },
       {
-        key: 'albumExcerpts',
+        key: 'collectionExcerpts',
         showIf: 'library',
         name: 'A line under each note',
         desc: 'In a collection, a short grey line under each title: the note’s description property, or its first sentence.',
       },
       {
-        key: 'albumStillToWrite',
+        key: 'collectionStillToWrite',
         showIf: 'library',
         name: 'Still to write',
         desc: 'At the end of a collection, greyed: what its notes link to that isn’t a note yet. Click one to write it there.',
       },
       {
-        key: 'albumNestBy',
+        key: 'collectionNestBy',
         type: 'text',
         showIf: 'library',
         name: 'Nest notes by',
@@ -173,7 +173,7 @@ export class Library extends Feature {
         suggest: 'properties',
       },
       {
-        key: 'trackLength',
+        key: 'noteLength',
         type: 'dropdown',
         showIf: 'library',
         name: 'Note length',
@@ -185,35 +185,26 @@ export class Library extends Feature {
         type: 'dropdown',
         segmented: true,
         name: 'Density',
-        desc: 'How much room everything gets — covers, rows, the library, the strip, panels and windows: compact, standard or spacious.',
+        desc: 'How much room everything gets — rows, the library, the strip, panels and windows: compact, standard or spacious.',
         options: GRID_DENSITIES,
-      },
-      {
-        key: 'libraryLayout',
-        type: 'dropdown',
-        segmented: true,
-        showIf: 'library',
-        name: 'Layout',
-        desc: 'Covers or lists. Automatic shows collections, pins and a few values as covers, and notes — recently opened, added and read — as lists.',
-        options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' },
       },
       {
         key: 'tileGroups',
         type: 'dropdown',
         showIf: 'library',
-        name: 'Group covers by',
-        desc: 'On screens of collections: by the kind of collection each is, or the shelf — the folder — each is in.',
+        name: 'Group collections by',
+        desc: 'On screens of collections: by the kind of collection each is, or the folder each is in.',
         options: TILE_GROUPS,
       },
       {
-        key: 'discNoteLimit',
+        key: 'sectionNoteLimit',
         type: 'number',
         name: 'Notes per section',
         desc: 'How many notes a subfolder’s section shows before Show all.',
         showIf: 'library',
       },
       {
-        key: 'albumNoteLimit',
+        key: 'collectionNoteLimit',
         type: 'number',
         name: 'Notes per value',
         desc: 'How many notes each value shows on the Properties screen before Show all.',
@@ -246,7 +237,7 @@ export class Library extends Feature {
       {
         key: 'homeShelves',
         type: 'custom',
-        name: 'Home shelves',
+        name: 'Home lists',
         showIf: 'library',
         render: (containerEl) => this.renderHomeShelves(containerEl),
       },
@@ -315,10 +306,10 @@ export class Library extends Feature {
       .map((f) => ({ kind: 'file', path: f.path }));
 
     // A few places first, as a music app's sidebar has: where to start,
-    // everything, the albums and what's pinned; then what you opened last;
+    // everything, the collections and what's pinned; then what you opened last;
     // the rest under More, folded until wanted.
     const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = this.plugin.feature(CollectionStructure);
     if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
     more.push({ kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
     ['library-check', 'inbox']
@@ -413,7 +404,7 @@ export class Library extends Feature {
         id: 'new-note-here',
         name: 'New note in the current folder',
         icon: 'file-plus',
-        on: 'album',
+        on: 'collection',
         menu: false,
         run: (ctx) => this.plugin.newNote(ctx.folder),
       },
@@ -421,7 +412,7 @@ export class Library extends Feature {
         id: 'new-folder-here',
         name: 'New folder in the current folder',
         icon: 'folder-plus',
-        on: 'album',
+        on: 'collection',
         menu: false,
         run: (ctx) => this.plugin.newFolder(ctx.folder),
       },

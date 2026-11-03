@@ -4,8 +4,8 @@
   "modules": ["076-selection", "084-workspace-coordinator", "178-inspectables"],
   "invariants": [
    { "rule": "What's picked stays apart from what's open: the library's pane shows the pick, a note's button floats the panel over the note; a deleted target is let go", "test": "mobile: in the library’s pane, the panel shows what’s picked" },
-   { "rule": "While the inspector shows, a click in the library picks and a double click or Enter opens", "test": "album: the inspector: while it shows, a click in the library picks" },
-   { "rule": "Note, album and card are drawn through one inspectable each; the panel only holds them", "test": "bulk: the inspector’s targets: a text card’s properties changed and taken away at its top" }
+   { "rule": "While the inspector shows, a click in the library picks and a double click or Enter opens", "test": "collection: the inspector: while it shows, a click in the library picks" },
+   { "rule": "Note, collection and card are drawn through one inspectable each; the panel only holds them", "test": "bulk: the inspector’s targets: a text card’s properties changed and taken away at its top" }
   ]
  },
  "properties": {
@@ -19,21 +19,21 @@
   "modules": ["060-pins", "070-orders", "074-files"],
   "invariants": [
    { "rule": "Pins keep your order and follow a rename, forget a deletion", "test": "qol: arranged pins follow a rename and forget a deletion" },
-   { "rule": "Album orders follow a note renamed, moved, deleted, and a folder renamed", "test": "album: arrangements follow a note renamed in place, moved away, deleted, and a folder renamed" },
-   { "rule": "A move is one step of Undo that puts it back, order and all", "test": "album: a move says so with an Undo, which puts it back, album order and all" }
+   { "rule": "Collection orders follow a note renamed, moved, deleted, and a folder renamed", "test": "collection: arrangements follow a note renamed in place, moved away, deleted, and a folder renamed" },
+   { "rule": "A move is one step of Undo that puts it back, order and all", "test": "collection: a move says so with an Undo, which puts it back, collection order and all" }
   ]
  },
  "bulk-selection": {
   "modules": [],
   "invariants": [
-   { "rule": "Ticked with Shift for a run; moved together, one Undo for all", "test": "album: editing an album, notes ticked — Shift for a run — are moved together, one Undo putting them all back" }
+   { "rule": "Ticked with Shift for a run; moved together, one Undo for all", "test": "collection: editing a collection, notes ticked — Shift for a run — are moved together, one Undo putting them all back" }
   ]
  },
  "commands-settings-views": {
   "modules": [],
   "invariants": [
    { "rule": "Command ids, setting keys and view types are kept, or moved by a tested migration", "test": "lifecycle: command ids, setting keys and view types are kept" },
-   { "rule": "Settings from an older version open with nothing lost, a backup first", "test": "album: 1.x settings open on 2.0 with nothing lost" }
+   { "rule": "Settings from an older version open with nothing lost, a backup first", "test": "collection: 1.x settings open on 2.0 with nothing lost" }
   ]
  }
 }

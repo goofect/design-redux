@@ -127,7 +127,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
   'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
+  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, CollectionProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
   'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, dateDueState, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker, propertiesTable, parseTable, tablePlan, TablePasteModal, panelViewFolder };\n');
 const R = require(tmp).__test;
@@ -527,7 +527,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.deepStrictEqual(changed, ['Search categories', 'Collection columns', 'Notes table columns', 'Library', 'Property schemas', 'Value colours and icons', 'Graph property filters']);
     assert.deepStrictEqual([s.propertySchemas.Law[0], s.propertyOptions], [{ key: 'field', required: true }, { field: { Law: { color: 'red' } } }]);
     assert.strictEqual(s.categoryProperty, 'field');
-    assert.strictEqual(s.albumColumns, 'field, modified');
+    assert.strictEqual(s.collectionColumns, 'field, modified');
     assert.strictEqual(s.tableColumns, 'field, status');
     assert.strictEqual(s.librarySections[0].items[0].key, 'field');
     assert.strictEqual(s.graphFilters.graph.rules[0].key, 'field');
@@ -536,7 +536,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     s.graphFilters.graph.clause = '[field]'; // re-saved by an open graph: its rule still goes back
     undo();
     assert.strictEqual(s.categoryProperty, 'domain');
-    assert.strictEqual(s.albumColumns, 'domain, modified');
+    assert.strictEqual(s.collectionColumns, 'domain, modified');
     assert.strictEqual(s.tableColumns, 'field');
     assert.strictEqual(s.graphFilters.graph.rules[0].key, 'domain');
     assert.deepStrictEqual([s.propertySchemas.Law[0].key, Object.keys(s.propertyOptions)], ['Domain', ['domain']]);
@@ -587,7 +587,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     await bulk.undo();
     v.files.forEach((f) => assert.strictEqual(v.texts.get(f), before.get(f), `${f.path} not restored`));
     assert.strictEqual(plugin.settings.categoryProperty, 'domain');
-    assert.strictEqual(plugin.settings.albumColumns, 'domain, modified');
+    assert.strictEqual(plugin.settings.collectionColumns, 'domain, modified');
   });
 
   await t('new capitals for a property change the name Obsidian lists it by too, even with every note written so already', async () => {
@@ -1327,7 +1327,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     popupEl.remove();
   });
 
-  await t("a note's property given to its whole album, asking before it replaces a note's own, with one Undo", async () => {
+  await t("a note's property given to its whole collection, asking before it replaces a note's own, with one Undo", async () => {
     const v = makeVault({
       'IR/IR.md': note({ cover: 'x.png' }),
       'IR/a.md': note({ status: 'done' }),
@@ -1337,12 +1337,12 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     });
     const { plugin, bulk } = makePlugin(v);
     plugin.isFolderNote = (f) => !!f.parent && f.basename === f.parent.name;
-    const album = new R.AlbumProperty(plugin);
-    plugin.features.push(album);
-    assert.strictEqual(R.DEFAULTS.propertyForAlbum, true);
+    const collection = new R.CollectionProperty(plugin);
+    plugin.features.push(collection);
+    assert.strictEqual(R.DEFAULTS.propertyForCollection, true);
 
     // A command on the note: its one property, straight to it.
-    const action = album.actions().find((x) => x.id === 'property-to-album');
+    const action = collection.actions().find((x) => x.id === 'property-to-album');
     assert.ok(action.when({ file: v.file('IR/a.md') }), 'not offered');
     const before = v.text('IR/c.md');
     action.run({ file: v.file('IR/a.md') });
@@ -1355,7 +1355,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(v.text('IR/c.md'), before);
     assert.strictEqual(v.writes.length, 0);
 
-    const done = album.apply(v.file('IR/a.md'), 'status');
+    const done = collection.apply(v.file('IR/a.md'), 'status');
     await settle();
     ask = modals.pop();
     Array.from(ask.contentEl.querySelectorAll('button')).find((b) => b.textContent === 'Replace').click();
@@ -1369,7 +1369,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(v.text('IR/c.md'), before);
 
     // Off: not offered.
-    plugin.settings.propertyForAlbum = false;
+    plugin.settings.propertyForCollection = false;
     assert.ok(!action.when({ file: v.file('IR/a.md') }));
   });
 
@@ -2222,7 +2222,7 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     section.destroy();
   });
 
-  await t('the inspector’s targets: a text card’s properties changed and taken away at its top, a note picked not the note open, an album’s folder note', () => {
+  await t('the inspector’s targets: a text card’s properties changed and taken away at its top, a note picked not the note open, a collection’s folder note', () => {
     let text = '---\nstatus: draft\ntags:\n  - a\n---\nThe **plan**\n';
     const card = { getData: () => ({ type: 'text', text }), setText: (t) => (text = t) };
     let redraws = 0;
@@ -2254,8 +2254,8 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     const open = R.inspectableOf({ app: {} }, { file });
     assert.ok(open.kind === 'note' && open.file === file && open.is({ file }) && !open.is({ file, picked: true }), 'a pick is drawn otherwise than the note open');
     const folder = file.parent;
-    const album = R.inspectableOf({ app: {}, folderNote: () => v.file('Law/Law.md') }, { folder });
-    assert.ok(album.kind === 'folder' && album.file === v.file('Law/Law.md') && album.is({ folder }));
+    const collection = R.inspectableOf({ app: {}, folderNote: () => v.file('Law/Law.md') }, { folder });
+    assert.ok(collection.kind === 'folder' && collection.file === v.file('Law/Law.md') && collection.is({ folder }));
     el.remove();
   });
 

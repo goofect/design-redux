@@ -17,7 +17,7 @@
  *   Bulk edits; Property tools; Editing properties; The Properties window (250, 300–310)
  *   Generated covers; Drawn covers; Choosing a cover colour; Artwork where
  *     there's none; Covers by dropping — covers (030–032, 230–240)
- *   Arranging by drag; Editing an album (122)
+ *   Arranging by drag; Editing a collection (122)
  *   Components — the shared pieces of ui/229, in the Clear look
  * Each part uses the foundation's tokens; a value written out by hand is
  * a measure of that part's own (a cover's artwork, a canvas glyph).
@@ -97,7 +97,7 @@ body {
   /* The interface's face; the theme's unless a setting asks for the system's. */
   --dr-font-ui: var(--font-interface);
   /* The system's own faces, wherever it runs: San Francisco on Apple's, Segoe on Windows, then
-     the platform's sans serif. Never the theme's: Apple's controls are drawn in the system font. */
+     the platform's sans serif. Never the theme's: controls are drawn in the system font. */
   --dr-font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Segoe UI Variable Text", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --dr-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Segoe UI Variable Display", "Segoe UI", "Inter", system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
   --dr-radius-cover: var(--dr-cover-radius, var(--radius-m, 8px));
@@ -242,7 +242,7 @@ body.dr-density-spacious {
  * render them exactly as they render the native block.
  *
  * The browsing screens take after a music library: covers with depth,
- * the album's colours behind its page, the accent on icons and actions,
+ * the collection's colours behind its page, the accent on icons and actions,
  * bold titles. Lists, windows and settings stay quiet — hairlines, a
  * soft band under the pointer, controls shown where they're wanted. The
  * tokens below are what the quiet parts share.

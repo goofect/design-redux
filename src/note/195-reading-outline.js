@@ -2,7 +2,7 @@
 /* Reading outline                                                     */
 /*                                                                     */
 /* The open note's headings in a popover over it, following you as     */
-/* lyrics follow a song: the heading you're reading lit, with a thin   */
+/* you read: the heading you're reading lit, with a thin               */
 /* line for how far through its section you are, the ones above it     */
 /* dimmed as done, and the words left in each. A row goes to its        */
 /* heading. Scrolling the popover never moves the note, and it stops    */

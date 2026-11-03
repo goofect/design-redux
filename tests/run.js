@@ -2,7 +2,7 @@
 // These are simulations: Obsidian is stood in for, CodeMirror and the DOM are real.
 // Each suite is a process of its own, so none can leave state behind for another.
 //   node tests/run.js              every suite
-//   node tests/run.js qol album    the suites whose names hold these words
+//   node tests/run.js qol collection    the suites whose names hold these words
 // TEST_JOBS sets how many run at once (default: the CPUs, at most 4);
 // TEST_TIMEOUT, in seconds, how long one may take before it's stopped (default 180).
 const { spawn } = require('child_process');

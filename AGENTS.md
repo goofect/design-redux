@@ -1,8 +1,8 @@
 # Design Redux
 
-An Obsidian plugin that makes the vault feel like Apple Music: folders open as
-albums, notes as tracks, with covers, a library sidebar, a context strip along
-the bottom, and property tools. Goes with the author's theme,
+An Obsidian plugin that makes the vault a plain library: folders open as
+collections, notes as rows, with a library sidebar, a context strip along the
+bottom, and property tools; covers are optional. Goes with the author's theme,
 Coffee N' Christmas.
 
 ## Files
@@ -37,7 +37,7 @@ Coffee N' Christmas.
 - `docs/architecture.md` — the architecture audit and the refactor roadmap
   (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
-  in for). `npm test`, or `node tests/run.js qol album` for just some.
+  in for). `npm test`, or `node tests/run.js qol collection` for just some.
 - `tests/test_lifecycle.js` checks command ids, setting keys and view types against
   `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
@@ -50,11 +50,11 @@ Coffee N' Christmas.
   after a deliberate change, and the rule beside it).
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest. One test saves UI snapshots (the sidebar, the album's
-  pane, the Edit tray, a narrow album, forced colours) to `ci-output/snapshots/`; CI
+  and the latest. One test saves UI snapshots (the sidebar, the collection's
+  pane, the Edit tray, a narrow collection, forced colours) to `ci-output/snapshots/`; CI
   compares them with main's last (`tools/snapshot-diff.mjs`, the
   `ci-snapshots` branch) and `tests/ci.sh` prints what changed.
-- `.claude/rules/` — notes for one area each (the canvas adapter, albums and
+- `.claude/rules/` — notes for one area each (the canvas adapter, collections and
   the browse view, quiet links, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
   that area. `.claude/skills/diagnose-tests` says how to read a failure.
@@ -66,7 +66,7 @@ Coffee N' Christmas.
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
 - What a feature does is written once in `actions()` (`078-actions.js`): each
-  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
+  says what it acts on (`on`: app, note, file, editor, canvas, collection, browse);
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
@@ -76,7 +76,7 @@ Coffee N' Christmas.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
 - Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
-  then the features by place (library and albums; note: panel, footnotes, scripts,
+  then the features by place (library and collections; note: panel, footnotes, scripts,
   quiet links; tools: bulk edits, strip, graph), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
@@ -109,13 +109,13 @@ Coffee N' Christmas.
   note (`ui/246` NotePopover). What a tab is about is
   `plugin.coordinator`'s to say (084): the note, a canvas card.
 - What's picked is `plugin.selection` (076), apart from what's open. What's
-  ticked to act on together, while editing an album, is the view's
+  ticked to act on together, while editing a collection, is the view's
   `BulkSelection` (118: paths and the Shift anchor, following renames), apart
   from both. In the
   browse view, rows and tiles go through `pickOrOpen`. While the page's
   pane shows (`inspectorShowing`), a click picks and a double click or Enter
   opens. The browse view (124) draws what the library knows of a pick into
-  the inspector: an album in brief, and a picked note's Open / Reveal in
+  the inspector: a collection in brief, and a picked note's Open / Reveal in
   collection / More.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
@@ -144,7 +144,7 @@ Coffee N' Christmas.
 - Make the smallest complete change: no rewriting files or touching unrelated
   code. Report changed files and tests run, briefly.
 - Test lightly, the author wants it quick: while working, run the simulation
-  suites the change touches (`node tests/run.js qol album`: a line per suite,
+  suites the change touches (`node tests/run.js qol collection`: a line per suite,
   details only on failure; `node tools/affected-tests.mjs --base origin/main
   --run` picks them from what changed and says why); before pushing, all of
   them (`npm test`, ~15 s,

@@ -1,6 +1,6 @@
 /* -- the brief ------------------------------------------------------- */
 
-/* What the library tells of a pick, in the inspector: an album in brief. */
+/* What the library tells of a pick, in the inspector: a collection in brief. */
 .dr-browse {
   position: relative;
 }
@@ -71,7 +71,7 @@
   border-left: 1px solid var(--dr-line);
 }
 
-/* The note page: its album above its title, one grey line under it, its properties as chips, shelves at its end. */
+/* The note page: its collection above its title, one grey line under it, its properties as chips, shelves at its end. */
 .dr-has-glow {
   position: relative;
   isolation: isolate;
@@ -99,7 +99,7 @@
 }
 
 /* The collection a note is in, above its title: quiet, a way back to it. */
-.dr-note-album {
+.dr-note-collection {
   font-family: var(--dr-font-ui);
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium, 500);
@@ -162,17 +162,13 @@
 
 .dr-note-shelf-row {
   display: flex;
-  gap: var(--size-4-3);
-  overflow-x: auto;
-  padding-bottom: var(--size-4-1);
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dr-note-tile {
-  flex: none;
-  width: 180px;
-  padding: var(--size-4-2) var(--size-4-3);
+  padding: var(--size-4-1) var(--size-4-2);
   border-radius: var(--dr-r, var(--radius-m));
-  background: var(--background-secondary);
   cursor: pointer;
   font-family: var(--dr-font-ui);
 }
@@ -190,7 +186,7 @@
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -200,7 +196,7 @@
     background: var(--background-modifier-hover);
   }
 
-  .dr-note-album:hover,
+  .dr-note-collection:hover,
   .dr-note-shelf-head[role='link']:hover {
     text-decoration: underline;
   }
@@ -227,13 +223,13 @@ body.dr-glass .canvas-controls .canvas-control-group {
   }
 }
 
-/* Editing an album: a box to tick on each note, and a bar for what's ticked. */
+/* Editing a collection: a box to tick on each note, and a bar for what's ticked. */
 .dr-edit-tick {
   flex: none;
   margin: 0;
 }
 
-.dr-track.is-editing.is-ticked {
+.dr-note-row.is-editing.is-ticked {
   background-color: var(--dr-hover);
 }
 

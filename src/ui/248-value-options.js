@@ -3,7 +3,7 @@
 /*                                                                    */
 /* A property's value painted as its options say — a tint of its      */
 /* colour, its icon before it — in the panel, on the note page, in     */
-/* album rows, filters and the property's page; and the dialog that    */
+/* collection rows, filters and the property's page; and the dialog that    */
 /* sets them, from a value's menu.                                     */
 /* ------------------------------------------------------------------ */
 

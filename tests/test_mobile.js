@@ -354,12 +354,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   });
 
   await t('settings: under the Apple look, a choice marked segmented is a segmented control', async () => {
-    const p = fakePlugin(Object.assign(settings(), { library: true, libraryLayout: 'auto' }));
+    const p = fakePlugin(Object.assign(settings(), { library: true, tileGroups: 'auto' }));
     p.saveData = async () => {};
     p.saveSettings = async () => {};
     p.features = [{ settingsSchema: () => [
       { key: 'library', name: 'Library' },
-      { key: 'libraryLayout', type: 'dropdown', segmented: true, name: 'Layout', options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' } },
+      { key: 'tileGroups', type: 'dropdown', segmented: true, name: 'Layout', options: { auto: 'Automatic', covers: 'Covers', lists: 'Lists' } },
     ] }];
     document.body.classList.add('dr-look-clear');
     try {
@@ -372,7 +372,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       assert.deepStrictEqual(Array.from(seg.querySelectorAll('.dr-segment')).map((s) => s.textContent), ['Automatic', 'Covers', 'Lists']);
       assert.strictEqual(seg.querySelector('.is-active').textContent, 'Automatic');
       seg.querySelectorAll('.dr-segment')[1].click();
-      assert.strictEqual(p.settings.libraryLayout, 'covers');
+      assert.strictEqual(p.settings.tileGroups, 'covers');
     } finally {
       document.body.classList.remove('dr-look-clear');
     }
@@ -435,7 +435,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   const browseView = () => {
     const plugin = {
-      settings: { albumColumns: 'domain, modified', coverProperty: 'cover', recentSearches: [] },
+      settings: { collectionColumns: 'domain, modified', coverProperty: 'cover', recentSearches: [] },
       isFolderNote: () => false,
       pins: { has: () => false },
     };
@@ -451,10 +451,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const file = new TFile('Concepts/Logic.md');
     phone(true);
     const list = document.createElement('div');
-    view.trackRow(list, file, 1);
+    view.noteRow(list, file, 1);
     assert.ok(!list.firstChild.hasAttribute('draggable'));
     phone(false);
-    view.trackRow(list, file, 2);
+    view.noteRow(list, file, 2);
     assert.strictEqual(list.lastChild.getAttribute('draggable'), 'true');
   });
 
@@ -546,7 +546,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const plugin = {
       settings: { coverProperty: 'cover' },
       pins: { has: () => false },
-      orders: { arrangeAlbum: (f, files, fallback) => fallback(files), albumOn: () => false, hasAlbum: () => false, pinOrder: () => [], arrangePins: (x) => x },
+      orders: { arrangeCollection: (f, files, fallback) => fallback(files), collectionOn: () => false, hasCollection: () => false, pinOrder: () => [], arrangePins: (x) => x },
       isFolderNote: () => false,
       folderCoverSrc: () => null,
       feature: () => null,
@@ -627,7 +627,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const panel = Object.create(T.PropertiesPanel.prototype);
     Object.assign(panel, { sections: [], dockView: null, pane: null, fitted: new WeakMap() });
     panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
-    // A note drawn as its path; an album, as the panel draws it.
+    // A note drawn as its path; a collection, as the panel draws it.
     panel.mount = function () {
       if (this.shown.kind !== 'note') return T.PropertiesPanel.prototype.mount.call(this);
       this.popupEl.empty();
@@ -646,7 +646,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!panel.isOpen() && /^Pick a note/.test(pane.empty), 'nothing picked: it says so');
     panel.plugin.selection.set({ file: b });
     assert.ok(panel.isOpen() && panel.picked && panel.popupEl.textContent === b.path, 'a pick shown');
-    // An album picked: its name, at least, with no page of the library to tell more.
+    // A collection picked: its name, at least, with no page of the library to tell more.
     panel.plugin.selection.set({ folder: new TFolder('Theories') });
     assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
     panel.plugin.selection.set({ file: b });

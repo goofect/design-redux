@@ -95,7 +95,7 @@ note(ir, 'Anarchy'); note(theories, 'Realism'); note(critical, 'Cox'); note(libe
 const plugin = {
   settings: {
     defaultSort: 'name', recentSearches: [], categoryProperty: '', hideEmptyFolders: false,
-    albumColumns: '', albumNoteLimit: 8, discNoteLimit: 10, coverProperty: 'cover', tableColumns: '',
+    collectionColumns: '', collectionNoteLimit: 8, sectionNoteLimit: 10, coverProperty: 'cover', tableColumns: '',
   },
   saveData: async () => {},
   isFolderNote: () => false,

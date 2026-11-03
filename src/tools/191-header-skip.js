@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView } from 'obsidian';
-import { albumNeighbours } from '../core/030-helpers-art.js';
+import { collectionNeighbours } from '../core/030-helpers-art.js';
 import { makeTrigger } from '../core/040-helpers-sorting.js';
 import { Feature } from '../core/080-feature.js';
 
@@ -61,7 +61,7 @@ export class HeaderSkip extends Feature {
     }
     box.empty();
     const file = leaf.view.file;
-    const near = file ? albumNeighbours(this.plugin, file) : null;
+    const near = file ? collectionNeighbours(this.plugin, file) : null;
     [
       ['previous', 'chevrons-left', 'Previous in collection'],
       ['next', 'chevrons-right', 'Next in collection'],

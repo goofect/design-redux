@@ -18,7 +18,7 @@ let version = 'unknown';
 // small: these, on the latest Obsidian only (not the oldest, the first
 // entry in wdio.conf.mjs), plus any test that fails, on either.
 const OLDEST = '1.7.7';
-const SHOTS = ['page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'album-tray', 'library', 'library-pins', 'inspector-picked', 'inspector-album'];
+const SHOTS = ['page-control-light', 'page-control-dark', 'collection', 'collection-editorial', 'collection-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'collection-edit', 'collection-tray', 'library', 'library-pins', 'inspector-picked', 'inspector-collection'];
 
 async function shot(name) {
   const failed = name.startsWith('FAILED-');
@@ -283,18 +283,18 @@ describe('Design Redux in Obsidian', function () {
     await browser.pause(500);
   });
 
-  it('opens a folder as an album, with an Edit mode', async function () {
+  it('opens a folder as a collection, with an Edit mode', async function () {
     await browser.executeObsidian(async ({ plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode({ mode: 'folder', path: 'Politics' });
     });
     await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
-    const rows = await browser.$$('.dr-track');
+    const rows = await browser.$$('.dr-note-row');
     expect(rows.length).toBeGreaterThanOrEqual(3);
-    await shot('album');
+    await shot('collection');
     await clickText('.dr-detail-action', 'Edit');
     await browser.$('.dr-edit-grip').waitForExist({ timeout: 5000 });
-    await shot('album-edit');
+    await shot('collection-edit');
 
     // Two ticked: the tray floats at the foot of the page, and at the end sits below the last note, not over it.
     const boxes = await browser.$$(`${ACTIVE}.dr-edit-tick`);
@@ -312,21 +312,21 @@ describe('Design Redux in Obsidian', function () {
       };
       const floating = inView();
       scroller.scrollTop = scroller.scrollHeight;
-      const rows = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-track.is-editing'));
+      const rows = Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-note-row.is-editing'));
       const last = rows[rows.length - 1].getBoundingClientRect();
       return { floating, atEnd: inView(), clear: last.bottom <= bar.getBoundingClientRect().top + 1, count: bar.querySelector('.dr-bulk-count').textContent };
     }, `${ACTIVE}.dr-bulk-bar`);
     expect(tray).toEqual({ floating: true, atEnd: true, clear: true, count: '2 notes selected' });
-    await shot('album-tray');
+    await shot('collection-tray');
     // Escape lets go of the ticks and stays in Edit.
     await browser.keys('Escape');
     await browser.$(`${ACTIVE}.dr-bulk-bar.is-empty`).waitForExist({ timeout: 5000 });
-    expect(await browser.$$(`${ACTIVE}.dr-track.is-ticked`)).toHaveLength(0);
+    expect(await browser.$$(`${ACTIVE}.dr-note-row.is-ticked`)).toHaveLength(0);
     await clickText('.dr-detail-action', 'Done');
   });
 
-  it('holds the left panel and the album page still while nothing changes', async function () {
-    // Watched for three seconds with an album open and nothing touched: the
+  it('holds the left panel and the collection page still while nothing changes', async function () {
+    // Watched for three seconds with a collection open and nothing touched: the
     // left panel's classes, the page's, and anything redrawn on either side.
     await browser.executeObsidian(async ({ app, plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -432,7 +432,7 @@ describe('Design Redux in Obsidian', function () {
 
   it('keeps to its design system in the dark theme and the light one: one control size, square covers, rows by density, readable text', async function () {
     const started = await browser.executeObsidian(({ app }) => (app.vault && typeof app.vault.getConfig === 'function' ? app.vault.getConfig('theme') : null) || 'moonstone');
-    // The album page, the library beside it; covers are measured on the home screen's tiles.
+    // The collection page, the library beside it; covers are measured on the home screen's tiles.
     const covers = await browser.executeObsidian(async ({ app, plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       if (typeof library.reveal === 'function') await library.reveal();
@@ -506,7 +506,7 @@ describe('Design Redux in Obsidian', function () {
       m.rows.forEach(([min, h]) => expect([label, h >= min]).toEqual([label, true]));
       expect([label, m.title >= 4.5, m.meta >= 4.5]).toEqual([label, true, true]);
     };
-    // Whatever happens, the note beside the album is closed after, so the tests after have the page to themselves.
+    // Whatever happens, the note beside the collection is closed after, so the tests after have the page to themselves.
     try {
       const dark = await measure('obsidian', 'clear', 'standard');
       check(dark, 'dark');
@@ -516,7 +516,7 @@ describe('Design Redux in Obsidian', function () {
       const light = await measure('moonstone', 'clear', 'standard');
       check(light, 'light');
       expect(light.dark).toBe(false);
-      await shot('album-light');
+      await shot('collection-light');
       // Density: rows a unit tighter or looser.
       const compact = await measure('obsidian', 'clear', 'compact');
       const spacious = await measure('obsidian', 'clear', 'large');
@@ -562,7 +562,8 @@ describe('Design Redux in Obsidian', function () {
     await browser.executeObsidian(async ({ app, plugins }) => {
       await app.vault.createFolder('Renaming');
       await app.vault.create('Renaming/Inside.md', 'Hello.');
-      // A cover, kept on the folder's note.
+      // A cover, kept on the folder's note, and shown while covers are on.
+      plugins.designRedux.settings.showCovers = true;
       const png = Uint8Array.from(
         atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='),
         (c) => c.charCodeAt(0)
@@ -596,7 +597,7 @@ describe('Design Redux in Obsidian', function () {
         tab: leaf.tabHeaderInnerTitleEl ? leaf.tabHeaderInnerTitleEl.textContent : 'Renamed',
         folderNote: !!app.vault.getFileByPath('Renamed/Renamed.md'),
         cover: !!page.querySelector('.dr-detail-art img[src*="pic.png"]'),
-        noteAsTrack: !!page.querySelector('.dr-track[data-path$="Renamed.md"], .dr-track[data-path$="Renaming.md"]'),
+        noteAsRow: !!page.querySelector('.dr-note-row[data-path$="Renamed.md"], .dr-note-row[data-path$="Renaming.md"]'),
       };
       // Back to Politics, where the tests after this one expect to be.
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -616,21 +617,22 @@ describe('Design Redux in Obsidian', function () {
       tab: 'Renamed',
       folderNote: true,
       cover: true,
-      noteAsTrack: false,
+      noteAsRow: false,
     });
   });
 
   it('groups its right-click entries, with New canvas under New', async function () {
-    // A collection inside the album: its row (or, among covers, its tile) at the album's foot.
+    // A collection inside the collection: its row at the collection's foot.
+    await browser.executeObsidian(async ({ plugins }) => { plugins.designRedux.settings.showCovers = false; plugins.designRedux.refreshBrowse(); });
     // Scrolled to by selector, then found again: the page may have redrawn it meanwhile.
-    const tile = [ACTIVE + '.dr-shelf-row .dr-card[data-path="Politics/Theories"]', ACTIVE + '.dr-folder-rows [data-path="Politics/Theories"]'].join(', ');
+    const tile = [ACTIVE + '.dr-folder-rows [data-path="Politics/Theories"]'].join(', ');
     await browser.$(tile).waitForExist({ timeout: 5000 });
     await browser.execute((sel) => document.querySelector(sel).scrollIntoView({ block: 'center' }), tile);
     await browser.pause(300);
     await browser.$(tile).click({ button: 'right' });
     await browser.$('.menu').waitForExist({ timeout: 5000 });
     const titles = await menuTitles();
-    for (const want of ['New', 'Cover', 'Pin', 'Properties…']) expect(titles).toContain(want);
+    for (const want of ['New', 'Pin', 'Properties…']) expect(titles).toContain(want);
     // The New entry opens beside the menu, under a real pointer.
     const items = await browser.$$('.menu .menu-item');
     let newItem = null;
@@ -1042,7 +1044,7 @@ describe('Design Redux in Obsidian', function () {
         const el = leaf.view.containerEl.querySelector('.markdown-preview-view ' + t);
         return el ? css(el, ['fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'color', 'backgroundColor']) : '';
       });
-      const order = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-album, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips')).map((el) => el.className.split(' ')[0]);
+      const order = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-view .dr-note-collection, .markdown-preview-view .inline-title, .markdown-preview-view .dr-note-chips')).map((el) => el.className.split(' ')[0]);
       const on = look();
       const strip = document.querySelector('.dr-strip');
       const room = { strip: strip ? strip.offsetHeight : 0, reading: parseFloat(getComputedStyle(root()).paddingBottom) };
@@ -1058,7 +1060,7 @@ describe('Design Redux in Obsidian', function () {
       await app.vault.delete(file);
       return { on, without, order, room };
     });
-    expect(result.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips']);
+    expect(result.order).toEqual(['dr-note-collection', 'inline-title', 'dr-note-chips']);
     expect(result.on).toEqual(result.without);
     expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
   });
@@ -1089,7 +1091,7 @@ describe('Design Redux in Obsidian', function () {
     expect(result).toEqual({ stripUp: false, toggle: true });
   });
 
-  it('shows a note picked in an album in its pane, and opens it on a double click', async function () {
+  it('shows a note picked in a collection in its pane, and opens it on a double click', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const find = (name) => plugin.features.find((f) => f.constructor.name === name);
@@ -1097,7 +1099,7 @@ describe('Design Redux in Obsidian', function () {
       await find('Library').browseMode({ mode: 'folder', path: 'Politics' });
       const page = app.workspace.activeLeaf;
       const el = () => page.view.containerEl;
-      const row = () => el().querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      const row = () => el().querySelector('.dr-note-row[data-path="Politics/Anarchy.md"]');
       await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
       if (!page.view.previewShowing()) el().querySelector('.dr-preview-btn').click();
       const pane = () => el().querySelector('.dr-browse-pane');
@@ -1112,9 +1114,10 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(result).toEqual({ title: 'Anarchy', still: 'design-redux-browse', marked: true, right: true, open: true, noSidebar: 0 });
     await shot('inspector-picked');
-    // The album picked: its own head, as a note's — its cover as a small mark, name, kind, what it holds.
-    const album = await browser.executeObsidian(async ({ app, plugins }) => {
+    // The collection picked: its own head, as a note's — its cover as a small mark, name, kind, what it holds.
+    const collection = await browser.executeObsidian(async ({ app, plugins }) => {
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      plugins.designRedux.settings.showCovers = true;
       plugins.designRedux.selection.set({ folder: app.vault.getFolderByPath('Politics') });
       const pane = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-browse-pane');
       const head = () => pane.querySelector('.dr-inspector-brief .dr-props-identity');
@@ -1123,12 +1126,13 @@ describe('Design Redux in Obsidian', function () {
       const art = h.querySelector('.dr-props-art').getBoundingClientRect();
       return { title: h.querySelector('.dr-props-title').textContent, meta: /\d+ items?/.test(h.querySelector('.dr-props-meta').textContent), art: art.width >= 32 && Math.abs(art.width - art.height) < 1, drawn: h.querySelector('.dr-props-art').childElementCount > 0, about: (pane.querySelector('.dr-inspector-brief .dr-preview-about') || {}).textContent || '' };
     });
-    expect(album).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
-    await shot('inspector-album');
+    expect(collection).toEqual({ title: 'Politics', meta: true, art: true, drawn: true, about: 'Add a description' });
+    await browser.executeObsidian(async ({ plugins }) => { plugins.designRedux.settings.showCovers = false; });
+    await shot('inspector-collection');
     const opened = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
-      const row = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      const row = app.workspace.activeLeaf.view.containerEl.querySelector('.dr-note-row[data-path="Politics/Anarchy.md"]');
       const page = app.workspace.activeLeaf.view;
       row.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
       const active = () => { const f = app.workspace.getActiveFile(); return f ? f.basename : null; };
@@ -1141,17 +1145,17 @@ describe('Design Redux in Obsidian', function () {
     expect(opened).toBe('Anarchy');
   });
 
-  it('times a shelf of 50 and of 500 albums, and the sidebar beside them', async function () {
-    // A baseline, not a check: a folder of albums, each with one note.
+  it('times a shelf of 50 and of 500 collections, and the sidebar beside them', async function () {
+    // A baseline, not a check: a folder of collections, each with one note.
     this.timeout(300000);
     const made = [];
     for (const n of [50, 500]) {
-      const root = `Bench ${n} albums`;
+      const root = `Bench ${n} collections`;
       made.push(root);
       await browser.executeObsidian(async ({ app }, n, root) => {
         if (!app.vault.getFolderByPath(root)) await app.vault.createFolder(root);
         for (let i = 0; i < n; i++) {
-          const dir = `${root}/Album ${i}`;
+          const dir = `${root}/Collection ${i}`;
           if (!app.vault.getFolderByPath(dir)) await app.vault.createFolder(dir);
           if (!app.vault.getFileByPath(`${dir}/Note.md`)) await app.vault.create(`${dir}/Note.md`, 'A note.');
         }
@@ -1173,7 +1177,7 @@ describe('Design Redux in Obsidian', function () {
         const round = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => typeof v === 'number' && v >= 1).map(([k, v]) => [k, Math.round(v)]));
         return { shelf, sidebar, parts: parts ? JSON.stringify(Object.assign(round(parts), { items: round(parts.items) })) : '' };
       }, root);
-      perf.push(`perf: shelf of ${n} albums: drawn ${times.shelf} ms, the sidebar ${times.sidebar} ms ${times.parts}`);
+      perf.push(`perf: shelf of ${n} collections: drawn ${times.shelf} ms, the sidebar ${times.sidebar} ms ${times.parts}`);
     }
     await browser.executeObsidian(async ({ app }, roots) => {
       for (const root of roots) {
@@ -1188,8 +1192,8 @@ describe('Design Redux in Obsidian', function () {
   // A test for each size, so each has its own time; the notes made a few
   // hundred at a time, together, so no one call runs long.
   for (const n of [50, 500, 2000]) {
-    it(`times an album of ${n} notes: each draw, what a redraw replaces, and whether focus holds`, async function () {
-      const root = `Bench album ${n}`;
+    it(`times a collection of ${n} notes: each draw, what a redraw replaces, and whether focus holds`, async function () {
+      const root = `Bench collection ${n}`;
       await browser.executeObsidian(async ({ app }, root) => {
         if (!app.vault.getFolderByPath(root)) await app.vault.createFolder(root);
       }, root);
@@ -1216,8 +1220,8 @@ describe('Design Redux in Obsidian', function () {
         // Rows and tiles beyond the first are drawn a batch a frame: let them all in before measuring.
         const frames = (k) => new Promise((r) => { const go = (j) => (j ? requestAnimationFrame(() => go(j - 1)) : r()); go(k); });
         await frames(30);
-        // Every note shown, not the first few and Show all: the list a long album is.
-        const more = view.contentEl.querySelector('.dr-track-more-row');
+        // Every note shown, not the first few and Show all: the list a long collection is.
+        const more = view.contentEl.querySelector('.dr-note-row-more-row');
         if (more) more.click();
         // The notes just made are still being read, and each read can draw the view again: wait for quiet.
         await new Promise((done) => {
@@ -1242,7 +1246,7 @@ describe('Design Redux in Obsidian', function () {
         // What this one redraw puts in: the elements there just after it that weren't just before.
         const before = new Set(view.contentEl.querySelectorAll('*'));
         // A row focused, as the keyboard leaves it.
-        const row = view.contentEl.querySelector('.dr-track[data-path]:nth-child(5)') || view.contentEl.querySelector('.dr-track[data-path]');
+        const row = view.contentEl.querySelector('.dr-note-row[data-path]:nth-child(5)') || view.contentEl.querySelector('.dr-note-row[data-path]');
         const path = row && row.dataset.path;
         if (row) {
           if (!row.hasAttribute('tabindex')) row.setAttribute('tabindex', '0');
@@ -1252,9 +1256,9 @@ describe('Design Redux in Obsidian', function () {
         const all = Array.from(view.contentEl.querySelectorAll('*')).filter((e) => !before.has(e));
         const now = view.contentEl.ownerDocument.activeElement;
         const focus = !row ? 'no row' : now === row ? 'kept' : now && now.dataset && now.dataset.path === path ? 'moved to its new row' : 'lost';
-        return { p50: pct(0.5), p95: pct(0.95), rows: view.contentEl.querySelectorAll('.dr-track').length, replaced: all.length, covers: all.filter((e) => e.matches('img, canvas, svg.dr-cover')).length, focus };
+        return { p50: pct(0.5), p95: pct(0.95), rows: view.contentEl.querySelectorAll('.dr-note-row').length, replaced: all.length, covers: all.filter((e) => e.matches('img, canvas, svg.dr-cover')).length, focus };
       }, root);
-      if (m) perf.push(`perf: album of ${n} notes: draw p50 ${m.p50.toFixed(1)} ms, p95 ${m.p95.toFixed(1)} ms (${m.rows} rows); a redraw with nothing changed replaces ${m.replaced} elements, ${m.covers} covers; focus ${m.focus}`);
+      if (m) perf.push(`perf: collection of ${n} notes: draw p50 ${m.p50.toFixed(1)} ms, p95 ${m.p95.toFixed(1)} ms (${m.rows} rows); a redraw with nothing changed replaces ${m.replaced} elements, ${m.covers} covers; focus ${m.focus}`);
       await browser.executeObsidian(async ({ app }, root) => {
         const folder = app.vault.getFolderByPath(root);
         if (folder) await app.vault.delete(folder, true);
@@ -1277,29 +1281,29 @@ describe('Design Redux in Obsidian', function () {
     expect(shown).toBe('folder:Politics');
   });
 
-  it('opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading', async function () {
+  it('opens a note with its collection above its title, a grey line under it, and shelves at its end, editing and reading', async function () {
     await browser.executeObsidian(async ({ app }) => {
-      if (!app.vault.getFolderByPath('Page album')) await app.vault.createFolder('Page album');
+      if (!app.vault.getFolderByPath('Page collection')) await app.vault.createFolder('Page collection');
       for (const [path, text] of [
-        ['Page album/Judicial review.md', 'Courts check power. See [[Page album/Standing]].'],
-        ['Page album/Standing.md', '---\nparent: "[[Judicial review]]"\n---\nWho may sue. Back to [[Page album/Judicial review]].'],
+        ['Page collection/Judicial review.md', 'Courts check power. See [[Page collection/Standing]].'],
+        ['Page collection/Standing.md', '---\nparent: "[[Judicial review]]"\n---\nWho may sue. Back to [[Page collection/Judicial review]].'],
       ]) {
         const old = app.vault.getFileByPath(path);
         if (old) await app.vault.delete(old);
         await app.vault.create(path, text);
       }
     });
-    await obsidianPage.openFile('Page album/Standing.md');
+    await obsidianPage.openFile('Page collection/Standing.md');
     const look = () =>
       browser.executeObsidian(({ app }) => {
         const view = app.workspace.activeLeaf.view;
         const root = view.containerEl.querySelector(view.getMode() === 'preview' ? '.markdown-reading-view' : '.markdown-source-view');
-        const album = root.querySelector('.dr-note-album');
+        const collection = root.querySelector('.dr-note-collection');
         const title = root.querySelector('.inline-title');
         const meta = root.querySelector('.dr-note-meta');
         return {
-          album: album ? album.textContent : null,
-          above: !!album && !!title && album.nextElementSibling === title,
+          collection: collection ? collection.textContent : null,
+          above: !!collection && !!title && collection.nextElementSibling === title,
           meta: meta ? meta.textContent : null,
           shelves: Array.from(root.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent),
         };
@@ -1307,10 +1311,10 @@ describe('Design Redux in Obsidian', function () {
     // The link shelves come once Obsidian has the links: all three, not the first drawn.
     await browser.waitUntil(async () => (await look()).shelves.length >= 3, { timeout: 5000, timeoutMsg: 'the note page was never drawn with its shelves' });
     let now = await look();
-    expect(now.album).toBe('Page album');
+    expect(now.collection).toBe('Page collection');
     expect(now.above).toBe(true);
     expect(now.meta.startsWith('Under Judicial review')).toBe(true);
-    expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›', 'More in Page album ›']);
+    expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›', 'More in Page collection ›']);
     // Reading: the same.
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;
@@ -1318,13 +1322,13 @@ describe('Design Redux in Obsidian', function () {
     });
     await browser.waitUntil(async () => (await look()).shelves.length > 0, { timeout: 5000, timeoutMsg: 'not drawn in reading view' });
     now = await look();
-    expect(now.album).toBe('Page album');
+    expect(now.collection).toBe('Page collection');
     expect(now.shelves.length).toBe(3);
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;
       await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source' }) });
       // Its notes gone again, so later tests count the vault as it was.
-      const folder = app.vault.getFolderByPath('Page album');
+      const folder = app.vault.getFolderByPath('Page collection');
       if (folder) await app.vault.delete(folder, true);
     });
   });
@@ -1431,7 +1435,7 @@ describe('Design Redux in Obsidian', function () {
     expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
   });
 
-  it('draws Home with its shelves', async function () {
+  it('draws Home with its lists', async function () {
     await browser.executeObsidian(async ({ plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode({ mode: 'home' });
@@ -1440,7 +1444,7 @@ describe('Design Redux in Obsidian', function () {
     await shot('home');
   });
 
-  it('lays out the library: shelf names small and in weight, tiles 12px apart, an album with one filled button, a header that stays', async function () {
+  it('lays out the library: list names small and in weight, rows close together, a collection with nothing filled, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
         const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -1452,22 +1456,22 @@ describe('Design Redux in Obsidian', function () {
     const home = await read(() => {
       const page = document.querySelector('.workspace-leaf.mod-active .dr-browse');
       const row = page.querySelector('.dr-shelf-row');
-      return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
+      return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).rowGap, scrolls: getComputedStyle(row).overflowX };
     });
-    expect(home).toEqual({ shelf: '13px', gap: '12px', scrolls: 'auto' });
+    expect(home).toEqual({ shelf: '13px', gap: '2px', scrolls: 'visible' });
     await shot('home');
     await browse({ mode: 'folder', path: 'Politics' });
     await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
-    const album = await read(() => {
+    const collection = await read(() => {
       const page = document.querySelector('.workspace-leaf.mod-active .dr-browse');
       const more = page.querySelector('.dr-detail-more');
       return {
-        art: page.querySelector('.dr-detail-art').offsetWidth <= 240,
+        art: !page.querySelector('.dr-detail-art'),
         filled: page.querySelectorAll('.dr-detail-actions .is-primary').length,
         more: more ? [more.getAttribute('aria-label'), more.offsetWidth, more.textContent] : null,
       };
     });
-    expect(album).toEqual({ art: true, filled: 1, more: ['More', 32, ''] });
+    expect(collection).toEqual({ art: true, filled: 0, more: ['More', 32, ''] });
     await browse({ mode: 'notes' });
     const head = await readUntil(
       () => read(() => {
@@ -2271,7 +2275,7 @@ describe('Design Redux in Obsidian', function () {
   // Snapshots for tools/snapshot-diff.mjs, which CI runs against main's last
   // ones: the same screens at the same size, nothing moving. They add to the
   // tests of what the screens do, never stand in for them.
-  it('takes snapshots of the sidebar, the album’s pane, the Edit tray and a narrow album, and holds up with reduced motion and forced colours', async function () {
+  it('takes snapshots of the sidebar, the collection’s pane, the Edit tray and a narrow collection, and holds up with reduced motion and forced colours', async function () {
     const dir = path.join(OUT, 'snapshots');
     const snap = async (name, selector) => {
       if (version === OLDEST) return;
@@ -2294,7 +2298,7 @@ describe('Design Redux in Obsidian', function () {
       if (typeof library.reveal === 'function') await library.reveal();
       await library.browseMode({ mode: 'folder', path: 'Politics' });
       const page = app.workspace.activeLeaf;
-      const row = () => page.view.containerEl.querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
+      const row = () => page.view.containerEl.querySelector('.dr-note-row[data-path="Politics/Anarchy.md"]');
       const button = () => page.view.containerEl.querySelector('.dr-preview-btn');
       await until(() => !!row() && !!button());
       const pane = () => page.view.containerEl.querySelector('.dr-browse-pane');
@@ -2306,7 +2310,7 @@ describe('Design Redux in Obsidian', function () {
     });
     expect(ready).toEqual({ row: true, pane: true, lib: true, right: 'none' });
     await snap('left-sidebar', '.workspace-split.mod-left-split');
-    await snap('album-pane', '.workspace-leaf.mod-active .dr-browse-pane');
+    await snap('collection-pane', '.workspace-leaf.mod-active .dr-browse-pane');
 
     // The tray Edit mode shows, with a note ticked.
     await clickText('.workspace-leaf.mod-active .dr-detail-action', 'Edit');
@@ -2349,7 +2353,7 @@ describe('Design Redux in Obsidian', function () {
     expect(await emulate([])).toBe(true);
     await clickText('.workspace-leaf.mod-active .dr-detail-action', 'Done');
 
-    // Narrow: the album fits, with nothing to scroll sideways.
+    // Narrow: the collection fits, with nothing to scroll sideways.
     await resize(760, 800);
     await browser.executeObsidian(async ({ app }) => {
       const page = app.workspace.activeLeaf.view;
@@ -2363,7 +2367,7 @@ describe('Design Redux in Obsidian', function () {
       return el.scrollWidth - el.clientWidth > 1 ? out : 0;
     });
     expect(wide).toBe(0);
-    await snap('album-narrow', '.workspace-leaf.mod-active');
+    await snap('collection-narrow', '.workspace-leaf.mod-active');
     await resize(size.width, size.height);
     await browser.executeObsidian(() => {
       const still = document.getElementById('dr-snapshot-still');

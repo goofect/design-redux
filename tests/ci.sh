@@ -39,13 +39,13 @@ mkdir -p logs
 for f in $(git ls-tree --name-only origin/ci-results | grep -E 'timings\.txt$'); do
   v=${f%-timings.txt}
   now=$(git show "origin/ci-results:$f" | awk '
-    /shelf of 500 albums/ { for (i = 1; i <= NF; i++) { if ($i == "drawn") s = $(i + 1); if ($i == "sidebar") b = $(i + 1) } }
+    /shelf of 500 collections/ { for (i = 1; i <= NF; i++) { if ($i == "drawn") s = $(i + 1); if ($i == "sidebar") b = $(i + 1) } }
     /canvas of 500 cards/ { for (i = 1; i <= NF; i++) if ($i == "fold") f = $(i + 1) }
     END { if (s != "") print s, b, f }')
   [ -n "$now" ] || continue
   set -- $now
-  echo "timings $v: shelf of 500 albums $1 ms, sidebar $2 ms, fold on 500 cards $3 ms"
-  git show "origin/ci-results:$f" | grep -o 'album of 2000 notes:.*' | sed "s/^/  /"
+  echo "timings $v: shelf of 500 collections $1 ms, sidebar $2 ms, fold on 500 cards $3 ms"
+  git show "origin/ci-results:$f" | grep -o 'collection of 2000 notes:.*' | sed "s/^/  /"
   last="logs/ci-timings-$v.txt"
   if [ -f "$last" ]; then
     read -r ps pb pf < "$last"

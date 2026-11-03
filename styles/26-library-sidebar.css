@@ -241,7 +241,7 @@
 
 /* What's pinned: its artwork at a size you can tell it by, its name, and
    beneath a note's a quiet line — where it lives.
-   Large covers, from the Pinned row's menu, as an album's own shelf has them. */
+   Large covers, from the Pinned row's menu, as a collection's own shelf has them. */
 .dr-lib-row.is-pin {
   padding-top: var(--dr-space-1);
   padding-bottom: var(--dr-space-1);
