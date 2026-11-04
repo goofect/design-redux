@@ -35,6 +35,7 @@ export class BrowseAlbum extends BrowsePreview {
 
     this.renderNav(bar);
 
+    bar.createDiv({ cls: 'dr-browse-title', text: this.getDisplayText() });
     this.renderSearchField(bar);
     this.renderFilterChips(root);
   }
@@ -384,21 +385,42 @@ export class BrowseAlbum extends BrowsePreview {
     // Above the title, small: what kind of album it is, and the way down to it.
     const structure = folder ? this.plugin.feature(AlbumStructure) : null;
     const about = structure ? structure.info(folder) : null;
+    const trail = structure && structure.enabled ? structure.trail(folder) : [];
     // The vault itself is the library, at the top of everything.
     const level = about && about.label ? about.label : structure && structure.enabled && folder.isRoot && folder.isRoot() ? 'Library' : '';
-    if (level) info.createDiv({ cls: 'dr-detail-kicker' }).createSpan({ cls: 'dr-detail-kind', text: level });
+    if (level || trail.length) {
+      const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
+      if (level) kicker.createSpan({ cls: 'dr-detail-kind', text: level });
+      if (trail.length) {
+        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
+        trail.forEach((f, i) => {
+          if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+          const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
+          asButton(crumb);
+          onActivate(crumb, () => this.openFolder(f));
+        });
+      }
+    }
     if (editing && folder.path !== '/') {
       const title = info.createEl('input', { cls: 'dr-detail-title dr-edit-name', type: 'text' });
       title.value = folder.name;
       title.dataset.editPath = folder.path;
       title.setAttribute('aria-label', 'Folder name');
       this.editField(title, folder.name, (name) => this.renameEntry(folder, name));
-    } else if (!folder) {
-      // A folder's page goes without its name: the tab and the sidebar say it.
+    } else {
       info.createDiv({ cls: 'dr-detail-title', text: spec.title });
     }
-    // The accented line: the folder note's own lead property.
-    if (spec.sub) info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
+    // The accented line under the title, as the artist is: the folder
+    // note's own lead property, or else the folder this one is in —
+    // which it opens, as the artist's name does.
+    const parent = folder && folder.parent && !(folder.isRoot && folder.isRoot()) ? folder.parent : null;
+    if (spec.sub) {
+      info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
+    } else if (parent && !(parent.isRoot && parent.isRoot()) && !trail.length) {
+      const up = info.createDiv({ cls: 'dr-detail-sub is-link', text: parent.name });
+      asButton(up);
+      onActivate(up, () => this.openFolder(parent));
+    }
 
     const files = spec.files || [];
     const notes = files.every((f) => f.extension === 'md');

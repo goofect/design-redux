@@ -251,18 +251,18 @@ describe('Design Redux in Obsidian', function () {
     const rows = await browser.$$('.dr-track');
     expect(rows.length).toBeGreaterThanOrEqual(3);
     await shot('album');
-    // No title or parent on a folder's page, and a left sidebar as square as the right.
+    // A folder's page keeps its title, and a left sidebar as square as the right.
     const look = await browser.execute(() => {
       const left = getComputedStyle(document.querySelector('.workspace-split.mod-left-split'));
       return {
-        named: !!document.querySelector('.dr-detail .dr-detail-title, .dr-detail .dr-crumb, .dr-detail .dr-detail-sub.is-link'),
+        named: !!document.querySelector('.dr-detail .dr-detail-title'),
         tabs: Array.from(document.querySelectorAll('.dr-panel-tab')).map((t) => t.dataset.panel).filter((id) => id !== 'notes' && id !== 'sources'),
         corner: left.borderTopRightRadius,
         shadow: left.boxShadow,
         margin: left.marginLeft,
       };
     });
-    expect(look).toEqual({ named: false, tabs: [], corner: '0px', shadow: 'none', margin: '0px' });
+    expect(look).toEqual({ named: true, tabs: [], corner: '0px', shadow: 'none', margin: '0px' });
     await clickText('.dr-detail-action', 'Edit');
     await browser.$('.dr-edit-grip').waitForExist({ timeout: 5000 });
     await shot('album-edit');
@@ -499,7 +499,7 @@ describe('Design Redux in Obsidian', function () {
     expect(after).toEqual({
       renamed: true,
       stillEditing: false,
-      shows: null,
+      shows: 'Renamed',
       tab: 'Renamed',
       folderNote: true,
       cover: true,

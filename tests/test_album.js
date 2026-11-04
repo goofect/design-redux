@@ -1691,10 +1691,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.ok(!action(view, 'Map'));
     fms.get(note).album = 'Project';
-    // Further down: no title, no parent, no way back up on the page.
+    // Further down: the way back up, and no lone parent link under the title.
     Object.assign(view, { path: 'IR/Theories' });
     view.render();
-    assert.ok(!view.contentEl.querySelector('.dr-detail-title, .dr-crumb, .dr-detail-sub.is-link'));
+    assert.deepStrictEqual(text('.dr-detail-title'), ['Theories']);
+    assert.deepStrictEqual(text('.dr-crumb'), ['IR']);
+    assert.ok(!view.contentEl.querySelector('.dr-detail-sub.is-link'));
     // On its tile, its kind.
     Object.assign(view, { path: '/' });
     view.render();
@@ -1885,7 +1887,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-album-panels'), 'just its notes');
     assert.ok(!text('.dr-detail-meta')[0].includes('sub-collection'));
-    assert.ok(!view.contentEl.querySelector('.dr-detail-title'), 'no title on a folder’s page');
+    assert.deepStrictEqual(text('.dr-detail-title'), ['IR'], 'a folder’s page keeps its title');
     // Sources alone keep a tab, beside the notes.
     fms.set(v.vault.getFileByPath('IR/Extra 1.md'), { author: 'Waltz' });
     view.render();
@@ -2216,6 +2218,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     Object.assign(view, { path: 'IR' });
     view.render();
     assert.ok(view.contentEl.querySelector('.dr-album-panel .dr-table .dr-tr') || view.contentEl.querySelector('.dr-table .dr-tr'));
+    assert.ok(!view.contentEl.querySelector('.dr-table .dr-th'), 'no row of column names in a folder’s table');
     // Covers numbered in their collection, in its order.
     plugin.settings.coverPrint = true;
     plugin.settings.coverFallback = 'art';

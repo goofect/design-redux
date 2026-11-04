@@ -225,6 +225,36 @@
 .dr-card-kind {
 }
 
+.dr-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--dr-space-1);
+  min-width: 0;
+}
+
+.dr-crumb {
+  border-radius: var(--dr-radius-sm);
+  cursor: pointer;
+}
+
+.dr-crumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-crumb-sep {
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-crumb:hover {
+    color: var(--text-normal);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
 /* What the album is for, in a few lines at most. */
 .dr-detail-desc {
   margin-top: var(--dr-space-2);

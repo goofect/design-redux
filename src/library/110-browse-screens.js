@@ -116,7 +116,7 @@ export class FolderScreen extends BrowseScreen {
     return out;
   }
 
-  /** The album's notes as a table — a row each, the columns set for tables — under a heading for each disc. */
+  /** The album's notes as a table — a row each, the columns set for tables, no row of column names — under a heading for each disc. */
   renderTable(el, discs, album) {
     const view = this.view;
     const columns = view.tableColumns();
@@ -130,11 +130,6 @@ export class FolderScreen extends BrowseScreen {
       }
       const table = el.createDiv({ cls: 'dr-table' });
       roveFocus(table, '.dr-tr:not(.dr-th)');
-      const th = table.createDiv({ cls: 'dr-tr dr-th' });
-      th.createDiv({ cls: 'dr-td dr-td-title', text: 'Title' });
-      columns.forEach((key) => th.createDiv({ cls: 'dr-td', text: view.columnLabel(key) }));
-      if (view.lengthStyle()) iconWord(th.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
-      iconWord(th.createDiv({ cls: 'dr-td dr-td-time' }), 'calendar', 'Modified');
       disc.files.forEach((file) => view.tableRow(table, file, columns));
     });
   }

@@ -14,6 +14,7 @@
 /*   related: albums beside it, not above or below;                    */
 /*   featured: notes to start with, at the top of the album;           */
 /*   layout: how it opens — its notes as a list, as covers or a table. */
+/* And an album's page shows the way down to it from the top.          */
 /* ------------------------------------------------------------------ */
 
 import { Notice, Setting, TFile } from 'obsidian';
@@ -265,6 +266,16 @@ export class AlbumStructure extends Feature {
     const head = root.createDiv({ cls: 'dr-collection-head' });
     const kicker = head.createDiv({ cls: 'dr-detail-kicker' });
     kicker.createSpan({ cls: 'dr-detail-kind', text: top ? 'Library' : info.label || 'Shelf' });
+    const trail = top ? [] : this.trail(folder);
+    if (trail.length) {
+      const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this shelf is' } });
+      trail.forEach((f, i) => {
+        if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+        const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
+        asButton(crumb);
+        onActivate(crumb, () => view.openFolder(f));
+      });
+    }
     head.createDiv({ cls: 'dr-detail-meta', text: count === 1 ? '1 collection' : `${count} collections` });
     if (info.description) head.createDiv({ cls: 'dr-detail-desc', text: info.description });
     return head;
@@ -301,6 +312,13 @@ export class AlbumStructure extends Feature {
   included(folder, already) {
     const have = new Set(already || []);
     return this.info(folder).includes.filter((t) => t instanceof TFile && !have.has(t));
+  }
+
+  /** The folders above an album, from the top down; not the vault itself. */
+  trail(folder) {
+    const out = [];
+    for (let p = folder && folder.parent; p && !(p.isRoot && p.isRoot()); p = p.parent) out.unshift(p);
+    return out;
   }
 
   /** How far along a project is: { done, total, word }, or null. */
