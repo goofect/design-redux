@@ -129,7 +129,7 @@ fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'ut
   'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
   'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
   'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker, propertiesTable, parseTable, tablePlan, TablePasteModal, panelViewFolder };\n');
+  'widgetsTakeEntry, typeInfoOf, schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker, propertiesTable, parseTable, tablePlan, TablePasteModal, panelViewFolder };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -1858,6 +1858,29 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 12).run(saved);
     assert.deepStrictEqual(saved.propertySchemas.Law, [{ key: 'Court', required: true }, { key: 'year', type: 'number' }], 'one already there kept; defaults only');
     assert.deepStrictEqual(saved.folderDefaults.Law.length, 2, 'the defaults themselves stay');
+  });
+
+  await t('a property’s type asked as its Obsidian asks: by name on newer versions, by { key, type, value } on older', () => {
+    const newer = { metadataTypeManager: { getTypeInfo: (k) => ({ expected: { type: k === 'parent' ? 'multitext' : 'text' } }) } };
+    const older = { metadataTypeManager: { getTypeInfo: (e) => ({ expected: { type: e.key.toLowerCase() === 'parent' ? e.type : 'text' } }) } };
+    assert.strictEqual(R.typeInfoOf(newer, 'parent').expected.type, 'multitext');
+    const told = (value) => R.typeInfoOf(older, 'parent', value).expected.type;
+    assert.deepStrictEqual([['a'], true, 3, '2026-01-02', '2026-01-02T10:00', 'x', null].map(told), ['multitext', 'checkbox', 'number', 'date', 'datetime', 'text', 'text']);
+    assert.strictEqual(R.typeInfoOf({}, 'parent'), null);
+  });
+
+  await t('value widgets are given what their Obsidian takes: an entry on older versions, the value on newer', () => {
+    const entryText = { render: (el, data) => { const i = document.createElement('input'); i.value = String(data.value === null || data.value === undefined ? '' : data.value); el.appendChild(i); } };
+    const valueText = { render: (el, value) => { const i = document.createElement('input'); i.value = String(value === null || value === undefined ? '' : value); el.appendChild(i); } };
+    assert.strictEqual(R.widgetsTakeEntry({ text: entryText }), true);
+    assert.strictEqual(R.widgetsTakeEntry({ text: valueText }), false);
+    assert.strictEqual(R.widgetsTakeEntry({ text: { render() { throw new Error('no'); } } }), false, 'a widget that fails counts as the newer way');
+    assert.strictEqual(R.widgetsTakeEntry({}), false);
+    assert.strictEqual(R.widgetsTakeEntry(null), false);
+    let asked = 0;
+    const once = { text: { render: (el) => { asked++; el.appendChild(document.createElement('input')); } } };
+    R.widgetsTakeEntry(once); R.widgetsTakeEntry(once);
+    assert.strictEqual(asked, 1, 'asked once');
   });
 
   await t('value options and near duplicates: “Done”, “done ” and “done.” one value; small typos in words, not numbers', () => {

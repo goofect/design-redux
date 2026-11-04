@@ -236,11 +236,35 @@ export function rollupOf(fms, isDone, dateKey) {
   return out;
 }
 
+/** The type a value reads as, for older Obsidian, which is told it rather than working it out. */
+function typeOfValue(value) {
+  if (Array.isArray(value)) return 'multitext';
+  if (typeof value === 'boolean') return 'checkbox';
+  if (typeof value === 'number') return 'number';
+  const text = String(value === null || value === undefined ? '' : value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return 'date';
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)) return 'datetime';
+  return 'text';
+}
+
+/**
+ * What Obsidian knows of a property's type. Newer versions ask for its name;
+ * older ones for { key, type, value }, and throw given a name alone.
+ */
+export function typeInfoOf(app, key, value) {
+  const m = app && app.metadataTypeManager;
+  if (!m || typeof m.getTypeInfo !== 'function') return null;
+  try {
+    return m.getTypeInfo(key);
+  } catch (err) {
+    return m.getTypeInfo({ key, type: typeOfValue(value), value });
+  }
+}
+
 /** A property's type as Obsidian has it — assigned, else inferred — or text where it can't say. */
 export function typeOfProperty(app, key) {
-  const m = app && app.metadataTypeManager;
   try {
-    const info = m && typeof m.getTypeInfo === 'function' ? m.getTypeInfo(String(key).toLowerCase()) : null;
+    const info = typeInfoOf(app, String(key).toLowerCase());
     return (info && info.expected && info.expected.type) || (info && info.inferred && info.inferred.type) || 'text';
   } catch (err) {
     return 'text';

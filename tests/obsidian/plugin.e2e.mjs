@@ -947,6 +947,7 @@ describe('Design Redux in Obsidian', function () {
       await until(() => !!dock() && !!dock().view.containerEl.querySelector('.dr-rows .dr-value'));
       await new Promise((r) => setTimeout(r, 400));
     }, theme);
+    try {
     await prepare('obsidian');
     const look = await browser.execute(() => {
       const dock = document.querySelector('.dr-panel-dock');
@@ -969,21 +970,24 @@ describe('Design Redux in Obsidian', function () {
         box: [rows.backgroundColor, rows.borderRadius],
         lines: Array.from(dock.querySelectorAll('.dr-section, .dr-row, .dr-preview-actions, .dr-props-head')).filter((el) => parseFloat(getComputedStyle(el).borderTopWidth) > 0 || parseFloat(getComputedStyle(el).borderBottomWidth) > 0).length,
         valueAlign: css('.dr-value .multi-select-container') ? css('.dr-value .multi-select-container').justifyContent : 'none',
+        pills: Array.from(dock.querySelectorAll('.dr-value .multi-select-pill')).map((p) => p.textContent.trim()),
         action: css('.dr-preview-actions .dr-detail-action').color === css('.dr-props-title').color,
         titleWhole: dock.querySelector('.dr-props-title').scrollHeight <= dock.querySelector('.dr-props-title').clientHeight + 1,
         handle: css('.dr-key-icon').display !== 'none' && dock.querySelector('.dr-key-icon').getBoundingClientRect().right <= dock.querySelector('.dr-key-name').getBoundingClientRect().left,
       };
     });
-    expect(look).toEqual({ edge: 1, fonts: 1, box: ['rgba(0, 0, 0, 0)', '0px'], lines: 0, valueAlign: 'flex-start', action: true, titleWhole: true, handle: true });
+    expect(look).toEqual({ edge: 1, fonts: 1, box: ['rgba(0, 0, 0, 0)', '0px'], lines: 0, valueAlign: 'flex-start', action: true, titleWhole: true, handle: true, pills: ['Parliamentary system', 'Federalism', 'Constitutional monarchy'] });
     await shot('right-sidebar-dark');
     await prepare('moonstone');
     await shot('right-sidebar-light');
-    await browser.executeObsidian(async ({ app, plugins }) => {
-      plugins.designRedux.settings.panelPropertiesView = 'compact';
-      if (typeof app.changeTheme === 'function') app.changeTheme('obsidian');
-      const file = app.vault.getFileByPath('Politics/Canada’s Federal parliamentary constitutional monarchy.md');
-      if (file) await app.vault.delete(file);
-    });
+    } finally {
+      await browser.executeObsidian(async ({ app, plugins }) => {
+        plugins.designRedux.settings.panelPropertiesView = 'compact';
+        if (typeof app.changeTheme === 'function') app.changeTheme('obsidian');
+        const file = app.vault.getFileByPath('Politics/Canada’s Federal parliamentary constitutional monarchy.md');
+        if (file) await app.vault.delete(file);
+      });
+    }
   });
 
   it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {

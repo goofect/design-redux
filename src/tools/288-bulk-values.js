@@ -8,7 +8,7 @@
 
 import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
 import { byName } from '../core/030-helpers-art.js';
-import { parseDateInput } from '../core/045-helpers-properties.js';
+import { parseDateInput, typeInfoOf } from '../core/045-helpers-properties.js';
 import { bulkCount, renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { noteProps, sameValue } from '../core/073-notes.js';
 
@@ -48,7 +48,7 @@ export function keyLike(fm, name) {
 /** A property's type as Obsidian has it: assigned, or else inferred. */
 export function propertyType(app, key) {
   try {
-    const info = app.metadataTypeManager.getTypeInfo(key);
+    const info = typeInfoOf(app, key);
     const t =
       (info && info.expected && info.expected.type) ||
       (info && info.inferred && info.inferred.type);
@@ -63,7 +63,7 @@ export function propertyType(app, key) {
 /** Whether a property has a type assigned, not just one inferred from its values. */
 export function assignedType(app, key) {
   try {
-    const info = app.metadataTypeManager.getTypeInfo(key);
+    const info = typeInfoOf(app, key);
     const t = info && info.expected && info.expected.type;
     return t && TYPE_ICONS[t] ? t : null;
   } catch (err) {

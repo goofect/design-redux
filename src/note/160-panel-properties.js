@@ -11,7 +11,7 @@ import { Menu, normalizePath, Notice, Platform, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
 import { composing, menuGroup } from '../core/030-helpers-art.js';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { fmGet, knownPropertyNames } from '../core/045-helpers-properties.js';
+import { fmGet, knownPropertyNames, typeInfoOf } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { optionFor } from '../core/088-property-options.js';
@@ -68,6 +68,34 @@ export function panelViewFolder(settings, file) {
   return null;
 }
 
+/**
+ * Whether this Obsidian's value widgets take an entry rather than the value:
+ * found by asking the text widget to show one, off the page, and seeing what
+ * it shows. Asked once for each set of widgets. Unknown counts as no: the newer way.
+ */
+const ENTRY_WIDGETS = new WeakMap();
+
+export function widgetsTakeEntry(widgets, context) {
+  if (!widgets || typeof widgets !== 'object') return false;
+  if (ENTRY_WIDGETS.has(widgets)) return ENTRY_WIDGETS.get(widgets);
+  let entry = false;
+  try {
+    const text = widgets.text;
+    if (text && typeof text.render === 'function') {
+      const el = document.createElement('div');
+      const noop = () => {};
+      text.render(el, { key: 'dr', type: 'text', value: 'dr-probe' }, Object.assign({}, context, { key: 'dr', blur: noop, onChange: noop }));
+      const field = el.querySelector('input, textarea, [contenteditable]');
+      const shown = field ? ('value' in field ? field.value : field.textContent) : el.textContent;
+      entry = String(shown).trim() === 'dr-probe';
+    }
+  } catch (err) {
+    entry = false;
+  }
+  ENTRY_WIDGETS.set(widgets, entry);
+  return entry;
+}
+
 export class PropertiesSection extends PanelSection {
   get cls() {
     return 'dr-properties';
@@ -94,7 +122,7 @@ export class PropertiesSection extends PanelSection {
     const fm = this.frontmatter;
     const keys = Object.keys(fm).filter((k) => k !== 'position');
     const settings = this.viewSettings();
-    const shown = keys.map((k) => propertyPresentation(k, fm[k], this.typeOf(k), settings));
+    const shown = keys.map((k) => propertyPresentation(k, fm[k], this.typeOf(k, fm[k]), settings));
     const collapsed = !!settings.panelPropsCollapsed;
 
     this.renderHead(keys.length, collapsed);
@@ -259,7 +287,7 @@ export class PropertiesSection extends PanelSection {
   }
 
   renderRow(parentEl, key, value, shown) {
-    const type = this.typeOf(key);
+    const type = this.typeOf(key, value);
     const row = parentEl.createDiv({ cls: 'dr-row' });
     row.setAttribute('data-property-type', type);
     row.dataset.key = key;
@@ -470,7 +498,7 @@ export class PropertiesSection extends PanelSection {
       const widget = widgets && widgets[type];
       if (!widget || typeof widget.render !== 'function') return false;
 
-      widget.render(parentEl, value, {
+      const context = {
         app: this.app,
         key: key,
         sourcePath: this.file.path,
@@ -482,7 +510,9 @@ export class PropertiesSection extends PanelSection {
           register: () => {},
           sourcePath: this.file.path,
         },
-      });
+      };
+      // Older Obsidian's widgets take { key, type, value }, newer ones the value alone.
+      widget.render(parentEl, widgetsTakeEntry(widgets, context) ? { key, type, value } : value, context);
       return parentEl.childElementCount > 0;
     } catch (err) {
       console.error('Design Redux: value widget failed', err);
@@ -662,9 +692,9 @@ export class PropertiesSection extends PanelSection {
     return knownPropertyNames(this.app);
   }
 
-  typeOf(key) {
+  typeOf(key, value) {
     try {
-      const info = this.app.metadataTypeManager.getTypeInfo(key);
+      const info = typeInfoOf(this.app, key, value);
       const t =
         (info && info.expected && info.expected.type) ||
         (info && info.inferred && info.inferred.type);
