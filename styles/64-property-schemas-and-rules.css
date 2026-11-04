@@ -217,7 +217,7 @@
 
 .dr-history-when {
   flex: none;
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
 
@@ -226,21 +226,6 @@
   color: var(--text-accent);
   font-size: var(--font-ui-smaller);
   cursor: pointer;
-}
-
-/* A due date: overdue, today, soon. */
-.dr-due.is-overdue {
-  color: var(--text-error);
-  font-weight: var(--font-semibold, 600);
-}
-
-.dr-due.is-today {
-  color: var(--text-warning);
-  font-weight: var(--font-semibold, 600);
-}
-
-.dr-due.is-soon {
-  color: var(--text-accent);
 }
 
 .dr-bulk-chip.is-more {
@@ -319,7 +304,7 @@
 
 /* What a collection comes to, beside its row. */
 .dr-tree-rollup {
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   white-space: nowrap;
 }
@@ -333,7 +318,7 @@
 }
 
 .dr-prop-fact-label {
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -349,14 +334,14 @@
   cursor: pointer;
 }
 
-/* A value changed in its collection row. */
-.dr-note-row-sub.is-editable {
+/* A value changed in its album row. */
+.dr-track-sub.is-editable {
   cursor: pointer;
   border-radius: var(--radius-s);
 }
 
 @media (any-hover: hover) {
-  .dr-note-row-sub.is-editable:hover {
+  .dr-track-sub.is-editable:hover {
     background: var(--background-modifier-hover);
   }
 }

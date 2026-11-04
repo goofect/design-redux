@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* Browse screens: search                                             */
 /*                                                                    */
-/* Search across the library, grouped by kind: a top                  */
-/* result, then views, notes and properties, each with See All. */
+/* Search across the library, grouped as Apple Music groups it: a top */
+/* result, then collections, notes and properties, each with See All. */
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, setIcon, TFolder } from 'obsidian';
@@ -14,7 +14,7 @@ import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { viewTiles, TEXT_MOST, TEXT_PAUSE, tileGrid, valueArt } from './110-browse-screens.js';
+import { collectionTiles, TEXT_MOST, TEXT_PAUSE, tileGrid, valueArt } from './110-browse-screens.js';
 
 export class SearchScreen extends BrowseScreen {
   title() {
@@ -141,7 +141,7 @@ export class SearchScreen extends BrowseScreen {
   }
 
   /**
-   * The values of one property, as a way in: the
+   * The values of one property, standing in for Apple's genres: the
    * broadest thing a vault divides itself into. Which property is a
    * setting, since every vault names its own.
    */
@@ -158,13 +158,21 @@ export class SearchScreen extends BrowseScreen {
     const card = grid.createDiv({ cls: 'dr-cat' });
     asButton(card);
 
-    // Its dot's colour comes from the name itself — stable, so a
-    // category keeps its colour between visits.
+    // No artwork to draw on, so the colour comes from the name itself —
+    // stable, so a category keeps its colour between visits.
     let hash = 0;
     for (let i = 0; i < group.value.length; i++) {
       hash = (hash * 31 + group.value.charCodeAt(i)) % 360;
     }
     card.style.setProperty('--dr-cat-hue', String(hash));
+
+    const cover = this.view.groupCover(group);
+    if (cover) {
+      const img = card.createEl('img', { cls: 'dr-cat-art' });
+      img.src = cover;
+      img.alt = '';
+      img.addEventListener('error', () => img.remove());
+    }
 
     card.createSpan({ cls: 'dr-cat-name', text: group.value });
     card.createSpan({
@@ -184,9 +192,9 @@ export class SearchScreen extends BrowseScreen {
   /* -- results ----------------------------------------------------- */
 
   /**
-   * The best match on its own;
-   * then each kind under its name — collections and notes as rows,
-   * properties and their values, your views, and what notes say —
+   * As a music app's search answers: the best match on its own, large;
+   * then each kind under its name — albums as covers, notes as rows,
+   * properties and their values, your collections, and what notes say —
    * a few of each, with See All for the rest of one kind.
    */
   renderResults(root, q) {
@@ -201,12 +209,12 @@ export class SearchScreen extends BrowseScreen {
         walk(child);
       });
     walk(this.app.vault.getRoot());
-    // The collection named for the query first, then those it starts.
-    const collectionScore = (f) => {
+    // The album named for the query first, then those it starts.
+    const albumScore = (f) => {
       const name = f.name.toLowerCase();
       return name === q ? 95 : name.startsWith(q) ? 80 : 60;
     };
-    folders.sort((a, b) => collectionScore(b) - collectionScore(a) || a.name.localeCompare(b.name));
+    folders.sort((a, b) => albumScore(b) - albumScore(a) || a.name.localeCompare(b.name));
 
     // Names and property values, both of which the cache already holds;
     // what notes say is read after, a moment later.
@@ -216,30 +224,30 @@ export class SearchScreen extends BrowseScreen {
       .forEach((f) => {
         if (!view.inFilter(f)) return;
         const parent = f.parent && f.parent.path !== '/' ? f.parent.path : '';
-        const match = rankNote({ title: f.basename, props: noteProps(this.app, f), collection: parent }, q);
+        const match = rankNote({ title: f.basename, props: noteProps(this.app, f), album: parent }, q);
         if (match) ranked.push({ file: f, score: match.score, why: match.why });
       });
     ranked.sort((a, b) => b.score - a.score || a.file.basename.localeCompare(b.file.basename));
     view.searchWhy = new Map(ranked.map((r) => [r.file.path, r.why]));
 
-    // Your views by name: smart collections, and collections that gather
-    // notes from elsewhere not already among the collections.
-    const views = viewTiles(view).filter((item) => !(item instanceof TFolder) || folders.indexOf(item) === -1);
+    // Your collections by name: smart albums, and albums that gather
+    // notes from elsewhere not already among the albums.
+    const collections = collectionTiles(view).filter((item) => !(item instanceof TFolder) || folders.indexOf(item) === -1);
     const properties = this.propertyHits(hasAll, q);
     const textOn = this.settings.searchNoteText !== false && q.length >= 3;
 
     // The one best match, whichever kind it is.
     const candidates = [];
     if (ranked.length) candidates.push({ kind: 'notes', score: ranked[0].score, item: ranked[0].file });
-    if (folders.length) candidates.push({ kind: 'collections', score: collectionScore(folders[0]), item: folders[0] });
+    if (folders.length) candidates.push({ kind: 'albums', score: albumScore(folders[0]), item: folders[0] });
     if (properties.length && properties[0].exact) candidates.push({ kind: 'properties', score: 90, item: properties[0] });
     candidates.sort((a, b) => b.score - a.score);
     const top = candidates[0] || null;
 
     const notes = ranked.map((r) => r.file).filter((f) => !top || top.item !== f);
-    const collections = folders.filter((f) => !top || top.item !== f);
+    const albums = folders.filter((f) => !top || top.item !== f);
     const props = properties.filter((p) => !top || top.item !== p);
-    const count = ranked.length + folders.length + views.length + properties.length;
+    const count = ranked.length + folders.length + collections.length + properties.length;
 
     const head = root.createDiv({ cls: 'dr-search-head' });
     head.createSpan({ cls: 'dr-search-count', text: count === 1 ? '1 result' : `${count} results` });
@@ -258,12 +266,12 @@ export class SearchScreen extends BrowseScreen {
     });
 
     const sections = {
-      collections: { title: 'Collections', n: collections.length, draw: (el, all) => this.collectionsSection(el, all ? collections : collections.slice(0, 6)) },
+      albums: { title: 'Collections', n: albums.length, draw: (el, all) => this.albumsSection(el, all ? albums : albums.slice(0, 6)) },
       notes: { title: 'Notes', n: notes.length, draw: (el, all) => this.notesSection(el, all ? notes : notes.slice(0, 6), all) },
       properties: { title: 'Properties', n: props.length, draw: (el, all) => this.propertiesSection(el, all ? props : props.slice(0, 5)) },
-      views: { title: 'Views', n: views.length, draw: (el, all) => tileGrid(view, el, all ? views : views.slice(0, 6)) },
+      collections: { title: 'Views', n: collections.length, draw: (el, all) => tileGrid(view, el, all ? collections : collections.slice(0, 6)) },
     };
-    const limits = { collections: 6, notes: 6, properties: 5, views: 6 };
+    const limits = { albums: 6, notes: 6, properties: 5, collections: 6 };
     const skip = new Set(ranked.map((r) => r.file.path));
 
     // See All: one kind, whole, with the way back to everything.
@@ -285,7 +293,7 @@ export class SearchScreen extends BrowseScreen {
 
     if (!count) root.createDiv({ cls: 'dr-split-empty dr-search-none', text: 'No matches by name or property' });
     if (top) this.topResult(root, top);
-    ['collections', 'notes', 'properties', 'views'].forEach((id) => {
+    ['albums', 'notes', 'properties', 'collections'].forEach((id) => {
       const s = sections[id];
       if (!s.n) return;
       const h = this.heading(root, s.title);
@@ -334,7 +342,7 @@ export class SearchScreen extends BrowseScreen {
       card.dataset.path = file.path;
       view.pickOrOpen(card, { file }, (evt) => view.openFile(file, evt), false);
       onContextMenu(card, (evt) => view.fileMenu(evt, file));
-    } else if (top.kind === 'collections') {
+    } else if (top.kind === 'albums') {
       const folder = top.item;
       drawFolderArt(this.plugin, art, folder);
       title = folder.name;
@@ -353,15 +361,15 @@ export class SearchScreen extends BrowseScreen {
     text.createDiv({ cls: 'dr-search-top-sub', text: sub });
   }
 
-  collectionsSection(root, folders) {
+  albumsSection(root, folders) {
     const grid = root.createDiv({ cls: 'dr-grid' });
     roveFocus(grid, '.dr-card');
     folders.forEach((f) => this.view.folderCard(grid, f, f.parent && f.parent.path !== '/' ? f.parent.name : null));
   }
 
   notesSection(root, notes, all) {
-    const list = root.createDiv({ cls: 'dr-note-rows dr-search-notes' });
-    roveFocus(list, '.dr-note-row');
+    const list = root.createDiv({ cls: 'dr-tracks dr-search-notes' });
+    roveFocus(list, '.dr-track');
     this.view.renderLimited(list, notes, 'search', all ? 500 : notes.length);
   }
 
@@ -444,8 +452,8 @@ export class SearchScreen extends BrowseScreen {
     const head = this.heading(section, 'In Notes');
     const count = head.createSpan({ cls: 'dr-search-section-count' });
     const status = section.createDiv({ cls: 'dr-search-text-status', text: 'Looking through notes…' });
-    const list = section.createDiv({ cls: 'dr-note-rows dr-search-text-notes' });
-    roveFocus(list, '.dr-note-row');
+    const list = section.createDiv({ cls: 'dr-tracks dr-search-text-notes' });
+    roveFocus(list, '.dr-track');
 
     const key = [q, view.filterFolder, view.filterTag, JSON.stringify(view.propFilters()), JSON.stringify(view.filterDate)].join('|');
     const show = (hits) => {
@@ -459,7 +467,7 @@ export class SearchScreen extends BrowseScreen {
       if (!view.searchWhy) view.searchWhy = new Map();
       const shown = limit ? hits.slice(0, limit) : hits;
       shown.forEach((h) => view.searchWhy.set(h.file.path, h.excerpt));
-      shown.forEach((h, i) => view.noteRow(list, h.file, i + 1));
+      shown.forEach((h, i) => view.trackRow(list, h.file, i + 1));
     };
     const kept = view.textFound;
     if (kept && kept.key === key && Date.now() - kept.at < 15000) return show(kept.hits.filter((h) => !skip.has(h.file.path)));

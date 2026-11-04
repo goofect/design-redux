@@ -3,7 +3,7 @@
 /*                                                                    */
 /* A property's values can each take a colour and an icon, kept by    */
 /* property and value — "status: Done" green with a check — and shown  */
-/* wherever the value is: the panel's chips, collection rows, filters. And  */
+/* wherever the value is: the panel's chips, album rows, filters. And  */
 /* the values that are one value written differently — "Done", "done " */
 /* and "done." — found, to be merged into the one most used. Pure.     */
 /* ------------------------------------------------------------------ */

@@ -33,19 +33,10 @@ body.dr-single-area .workspace-split.mod-root .view-header {
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* No right sidebar: folded, and its button, ribbon and drawer hidden, so
-   it isn't opened by accident. Obsidian outranks plain rules on its own. */
-body.dr-no-right-sidebar .workspace-split.mod-right-split,
-body.dr-no-right-sidebar .workspace-ribbon.mod-right,
-body.dr-no-right-sidebar .sidebar-toggle-button.mod-right,
-body.dr-no-right-sidebar .workspace-drawer.mod-right {
-  display: none !important;
-}
-
 /* The panel's title block --------------------------------------------------
  *
  * The note's name, with one property raised beneath it in the accent —
- * the shape a collection page opens with, so the panel says what it's about
+ * the shape an album page opens with, so the panel says what it's about
  * before it lists anything.
  */
 
@@ -119,11 +110,11 @@ body.dr-no-right-sidebar .workspace-drawer.mod-right {
   display: none;
 }
 
-/* What it is, under its name: quiet — the accent is kept for where you are and what's picked. */
 .dr-props-lead {
   margin-top: 1px;
   font-size: var(--font-ui-small);
-  color: var(--text-muted);
+  font-weight: var(--font-medium, 500);
+  color: var(--text-accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

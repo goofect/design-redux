@@ -4,7 +4,7 @@
  */
 
 /* A note too thin to be much use yet: its length underlined. */
-.dr-note-row-length.is-thin {
+.dr-track-length.is-thin {
   text-decoration: underline dotted;
   text-underline-offset: 3px;
 }

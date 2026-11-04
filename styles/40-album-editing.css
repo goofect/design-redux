@@ -4,11 +4,11 @@
  * the one it's over.
  */
 
-.dr-note-row.is-drop-before {
+.dr-track.is-drop-before {
   box-shadow: inset 0 2px 0 var(--interactive-accent);
 }
 
-.dr-note-row.is-drop-after {
+.dr-track.is-drop-after {
   box-shadow: inset 0 -2px 0 var(--interactive-accent);
 }
 
@@ -24,7 +24,7 @@
   opacity: 0.4;
 }
 
-/* Editing a collection ---------------------------------------------------------------
+/* Editing an album ---------------------------------------------------------------
  *
  * The page stays itself, with its names turned into fields: the title,
  * each note, each subfolder's heading. A handle to drag by leads each
@@ -74,15 +74,15 @@
   color: var(--text-on-accent, #fff);
 }
 
-.dr-note-row.is-editing {
+.dr-track.is-editing {
   gap: calc(var(--dr-u) * 2.5);
   padding-top: var(--dr-space-2);
   padding-bottom: var(--dr-space-2);
   cursor: default;
 }
 
-.dr-note-row.is-editing .dr-edit-name,
-.dr-list-section.is-editing .dr-edit-name {
+.dr-track.is-editing .dr-edit-name,
+.dr-disc.is-editing .dr-edit-name {
   flex: 1 1 auto;
   min-width: 0;
   height: 32px;
@@ -93,13 +93,13 @@
   font-family: inherit;
 }
 
-.dr-note-row.is-editing .dr-edit-name:focus,
-.dr-list-section.is-editing .dr-edit-name:focus {
+.dr-track.is-editing .dr-edit-name:focus,
+.dr-disc.is-editing .dr-edit-name:focus {
   border-color: var(--background-modifier-border-focus);
   background-color: var(--background-modifier-form-field, transparent);
 }
 
-.dr-list-section.is-editing .dr-edit-name {
+.dr-disc.is-editing .dr-edit-name {
   height: 28px;
   font-size: var(--font-ui-small);
   font-weight: var(--font-medium, 500);
@@ -113,7 +113,7 @@
   flex: 0 0 24px;
   height: 32px;
   border-radius: var(--dr-radius-sm);
-  color: var(--text-muted);
+  color: var(--text-faint);
   cursor: grab;
   touch-action: none;
 }
@@ -123,8 +123,8 @@
   height: 16px;
 }
 
-.dr-note-rows.is-sorting,
-.dr-note-rows.is-sorting * {
+.dr-tracks.is-sorting,
+.dr-tracks.is-sorting * {
   cursor: grabbing;
   user-select: none;
   -webkit-user-select: none;
@@ -147,12 +147,12 @@
   color: var(--text-error, var(--color-red));
 }
 
-.dr-note-row.is-editing + .dr-note-row::before {
+.dr-track.is-editing + .dr-track::before {
   left: 80px;
 }
 
 @media (any-hover: hover) {
-  .dr-note-row.is-editing:hover {
+  .dr-track.is-editing:hover {
     background-color: transparent;
   }
 

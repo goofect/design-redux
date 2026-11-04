@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* Your own order                                                      */
 /*                                                                     */
-/* A collection's notes, and the pins, in an order you've arranged by      */
-/* dragging. Kept in settings — collections by note name, pins by path —    */
+/* An album's notes, and the pins, in an order you've arranged by      */
+/* dragging. Kept in settings — albums by note name, pins by path —    */
 /* and followed through renames, moves and deletions, so the           */
 /* arrangement outlives the files being tidied.                        */
 /* ------------------------------------------------------------------ */
@@ -35,8 +35,29 @@ export function moveBefore(list, item, before) {
 }
 
 /** A path moved with a folder, or as it was. */
+/* The plain names some versions after 3.0.25 gave settings, and the ones they have here: step 25 puts them back. */
+export const UNRENAMED_KEYS = {
+  propertyForCollection: 'propertyForAlbum',
+  collectionNoteLimit: 'albumNoteLimit',
+  sectionNoteLimit: 'discNoteLimit',
+  collectionColumns: 'albumColumns',
+  collectionExcerpts: 'albumExcerpts',
+  collectionStillToWrite: 'albumStillToWrite',
+  collectionNestBy: 'albumNestBy',
+  noteLength: 'trackLength',
+  collectionSortMemory: 'albumSortMemory',
+  collectionStructure: 'albumStructure',
+  collectionKeyNames: 'albumKeyNames',
+  smartCollections: 'smartAlbums',
+  collectionRefactor: 'albumRefactor',
+  smartCollectionList: 'smartAlbumList',
+  collectionSorts: 'albumSorts',
+  collectionOrders: 'albumOrders',
+  collectionRollups: 'albumRollups',
+};
+
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'collectionSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -44,27 +65,6 @@ export const PATH_KEYED = ['coverColors', 'coverDesigns', 'collectionSorts', 'pr
  * isn't lost to the change. Each step gets the saved data as it was and
  * edits it in place: { to: 2, run(saved) { ... } }.
  */
-/* Step 24's names, old to new. */
-export const RENAMED_KEYS = {
-  propertyForAlbum: 'propertyForCollection',
-  albumNoteLimit: 'collectionNoteLimit',
-  discNoteLimit: 'sectionNoteLimit',
-  albumColumns: 'collectionColumns',
-  albumExcerpts: 'collectionExcerpts',
-  albumStillToWrite: 'collectionStillToWrite',
-  albumNestBy: 'collectionNestBy',
-  trackLength: 'noteLength',
-  albumSortMemory: 'collectionSortMemory',
-  albumStructure: 'collectionStructure',
-  albumKeyNames: 'collectionKeyNames',
-  smartAlbums: 'smartCollections',
-  albumRefactor: 'collectionRefactor',
-  smartAlbumList: 'smartCollectionList',
-  albumSorts: 'collectionSorts',
-  albumOrders: 'collectionOrders',
-  albumRollups: 'collectionRollups',
-};
-
 export const SETTINGS_MIGRATIONS = [
   {
     // The quieter look: a note or folder without a cover shows its name,
@@ -83,7 +83,7 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Recently read joined the library here; it's gone (step 21), so nothing to add.
+    // Recently read joined the library here; it's gone (step 26), so nothing to add.
     to: 4,
     run() {},
   },
@@ -154,12 +154,12 @@ export const SETTINGS_MIGRATIONS = [
     },
   },
   {
-    // Mind maps took the canvas maps' choices here; they're gone (step 20), so nothing to carry.
+    // Mind maps took the canvas maps' choices here; they're gone (step 26), so nothing to carry.
     to: 10,
     run() {},
   },
   {
-    // And their knowledge tools' choices: gone with them too.
+    // And their tools' choices: gone with them too.
     to: 11,
     run() {},
   },
@@ -220,79 +220,45 @@ export const SETTINGS_MIGRATIONS = [
       Object.assign(saved, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
     },
   },
+  // Steps 18–24 belonged to the versions after 3.0.25 and are gone with them.
+  // A vault that ran them is at 24, one on 3.0.25 at 17: 25 and 26 suit both.
   {
-    // The progress rings on covers and sidebar rows go, and their switch with them.
-    to: 18,
+    // Back to 3.0.25 from the plain names, the one Clear look and covers off by default.
+    to: 25,
     run(saved) {
-      delete saved.albumProgressRing;
+      Object.entries(UNRENAMED_KEYS).forEach(([now, was]) => {
+        if (now in saved) {
+          saved[was] = saved[now];
+          delete saved[now];
+        }
+      });
+      if (saved.look === 'clear') delete saved.look;
+      ['motion', 'hideRightSidebar', 'pinsLarge', 'showCovers'].forEach((key) => delete saved[key]);
     },
   },
   {
-    // An album's tabs go — Overview, Map, Sub-collections, Sources, Gaps,
-    // Linked, Lately — and Lately's switch with them; an album that opened
-    // as its overview or map opens as a list.
-    to: 19,
-    run(saved) {
-      delete saved.albumRecents;
-    },
-  },
-  {
-    // Mind maps and workspace modes go, and their settings with them.
-    to: 20,
+    // Maps, due dates, workspace modes, reading history, the reading outline,
+    // Study, relationships and the knowledge check, quiet links, a folder's
+    // tabs and covers for notes go, with their settings and places. Notes
+    // keep their text and properties: what relationships wrote stays in them,
+    // [[[quiet links]]] stay as typed, and a saved layout of overview or map
+    // opens as a list.
+    to: 26,
     run(saved) {
       Object.keys(saved).forEach((key) => {
-        if (/^mindmap/.test(key) || /^workspaceMode/.test(key)) delete saved[key];
+        if (/^(mindmap|workspaceMode|study|knowledge|reading(History|Log|Since|Outline)$|propertyDue)/.test(key)) delete saved[key];
       });
-      ['albumMapAuto', 'albumMapWritesParent', 'presentDimLevel', 'canvasSpacing'].forEach((key) => delete saved[key]);
-    },
-  },
-  {
-    // Reading history, Study and the relationships kept in notes go, and
-    // their settings and places in the library with them. Notes keep
-    // whatever properties the relationships wrote.
-    to: 21,
-    run(saved) {
-      Object.keys(saved).forEach((key) => {
-        if (/^(study|knowledge|reading(History|Log|Since)$)/.test(key)) delete saved[key];
-      });
-      ['fromReadingDays', 'rememberPlace', 'panelRelationships', 'canvasRelationNames', 'canvasRelationTypes'].forEach((key) => delete saved[key]);
-      const gone = ['read', 'knowledge-check', 'highlights'];
+      ['albumProgressRing', 'albumRecents', 'albumMapAuto', 'albumMapWritesParent', 'presentDimLevel', 'canvasSpacing', 'fromReadingDays', 'rememberPlace', 'propertyValueView', 'outlineWordCounts', 'stripProgress', 'quietLinks', 'panelRelationships', 'canvasRelationNames', 'canvasRelationTypes'].forEach((key) => delete saved[key]);
+      if (saved.libraryLayout === 'covers') saved.libraryLayout = 'auto';
+      const gone = ['read', 'highlights', 'knowledge-check'];
       if (Array.isArray(saved.librarySections)) {
         saved.librarySections.forEach((sec) => {
           if (sec && Array.isArray(sec.items)) sec.items = sec.items.filter((i) => !(i && i.kind === 'builtin' && gone.includes(i.id)));
         });
       }
-      if (Array.isArray(saved.homeShelves)) saved.homeShelves = saved.homeShelves.filter((s) => !(s && (s.id === 'revisit' || s.id === 'fromReading')));
+      if (Array.isArray(saved.homeShelves)) saved.homeShelves = saved.homeShelves.filter((sh) => !(sh && ['continue', 'revisit', 'fromReading'].includes(sh.id)));
       if (saved.keepOwnOrder && typeof saved.keepOwnOrder === 'object') delete saved.keepOwnOrder.read;
-    },
-  },
-  {
-    // One look, Clear, in place of Apple's, the theme's and the editorial: whichever was
-    // chosen, and where it applied, go. How much moves is a setting of its own now.
-    to: 22,
-    run(saved) {
-      if (saved.look !== undefined) saved.look = 'clear';
-      delete saved.lookScope;
-    },
-  },
-  {
-    // Lists everywhere: no gallery to choose, for the library or a property's values.
-    to: 23,
-    run(saved) {
-      delete saved.libraryLayout;
-      delete saved.propertyValueView;
-    },
-  },
-  {
-    // Settings named for albums, tracks and discs take plain names; what they hold stays.
-    to: 24,
-    run(saved) {
-      Object.entries(RENAMED_KEYS).forEach(([was, now]) => {
-        if (was in saved) {
-          saved[now] = saved[was];
-          delete saved[was];
-        }
-      });
+      if (Array.isArray(saved.smartAlbumList)) saved.smartAlbumList = saved.smartAlbumList.filter((a) => !(a && a.prop && a.prop.due));
     },
   },
 ];
@@ -369,39 +335,39 @@ export class Orders {
     return this.plugin.settings;
   }
 
-  collection(folder) {
-    const saved = folder && (this.settings.collectionOrders || {})[folder.path];
+  album(folder) {
+    const saved = folder && (this.settings.albumOrders || {})[folder.path];
     return saved && Array.isArray(saved.names) ? saved : null;
   }
 
-  hasCollection(folder) {
-    return !!this.collection(folder);
+  hasAlbum(folder) {
+    return !!this.album(folder);
   }
 
-  /** Whether a collection is showing its own order rather than the shared one. */
-  collectionOn(folder) {
-    const saved = this.collection(folder);
+  /** Whether an album is showing its own order rather than the shared one. */
+  albumOn(folder) {
+    const saved = this.album(folder);
     return !!saved && saved.on !== false;
   }
 
-  setCollectionOn(folder, on) {
-    const saved = this.collection(folder);
+  setAlbumOn(folder, on) {
+    const saved = this.album(folder);
     if (!saved || saved.on === on) return;
     saved.on = on;
     this.save();
   }
 
-  /** Save a collection's arrangement, by file name, and use it. */
-  setCollection(folder, names) {
-    this.settings.collectionOrders = Object.assign({}, this.settings.collectionOrders, {
+  /** Save an album's arrangement, by file name, and use it. */
+  setAlbum(folder, names) {
+    this.settings.albumOrders = Object.assign({}, this.settings.albumOrders, {
       [folder.path]: { names: names.slice(), on: true },
     });
     this.save();
   }
 
-  arrangeCollection(folder, files, fallback) {
-    if (!this.collectionOn(folder)) return fallback(files);
-    return arrange(files, (f) => f.name, this.collection(folder).names, fallback);
+  arrangeAlbum(folder, files, fallback) {
+    if (!this.albumOn(folder)) return fallback(files);
+    return arrange(files, (f) => f.name, this.album(folder).names, fallback);
   }
 
   pinOrder() {
@@ -469,7 +435,7 @@ export class Orders {
       this.settings[key] = next;
       changed = true;
     });
-    const orders = this.settings.collectionOrders || {};
+    const orders = this.settings.albumOrders || {};
     if (file instanceof TFolder) {
       // Its own arrangement, and those of the folders inside it.
       const next = {};
@@ -478,14 +444,14 @@ export class Orders {
         if (moved !== p) changed = true;
         next[moved] = orders[p];
       });
-      if (changed) this.settings.collectionOrders = next;
+      if (changed) this.settings.albumOrders = next;
     } else {
       const oldParent = oldPath.includes('/') ? oldPath.slice(0, oldPath.lastIndexOf('/')) : '/';
       const oldName = oldPath.split('/').pop();
       const newParent = file.parent ? file.parent.path : '/';
       const saved = orders[oldParent];
       if (saved && Array.isArray(saved.names) && saved.names.indexOf(oldName) !== -1) {
-        // Renamed in place keeps its position; moved away leaves the collection.
+        // Renamed in place keeps its position; moved away leaves the album.
         saved.names =
           newParent === oldParent
             ? saved.names.map((n) => (n === oldName ? file.name : n))
@@ -514,7 +480,7 @@ export class Orders {
         }
       });
     });
-    const orders = this.settings.collectionOrders || {};
+    const orders = this.settings.albumOrders || {};
     if (file instanceof TFolder) {
       Object.keys(orders).forEach((p) => {
         if (p === file.path || p.startsWith(file.path + '/')) {

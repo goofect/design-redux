@@ -1,8 +1,8 @@
 # Design Redux
 
-An Obsidian plugin that makes the vault a plain library: folders open as
-collections, notes as rows, with a library sidebar, a context strip along the
-bottom, and property tools; covers are optional. Goes with the author's theme,
+An Obsidian plugin that makes the vault feel like Apple Music: folders open as
+albums, notes as tracks, with covers, a library sidebar, a context strip along
+the bottom, and property tools. Goes with the author's theme,
 Coffee N' Christmas.
 
 ## Files
@@ -26,36 +26,28 @@ Coffee N' Christmas.
   `styles.css` (built, not committed; never edit it: edit `styles/`). The
   order is the cascade: a new rule goes in the part it dresses, after what it
   overrides. The map at the top of `04-foundation.css` says what each part is.
-  Who styles a class, and which rule wins each property: `node tools/css-owners.mjs
-  --selector .dr-lib-row --explain`; a component's classes and the code that
-  makes them: `--component bulk-bar` (or a source name, `renderBulkBar`);
-  `--report repeated-overrides|brittle|effects|tokens|hardcoded [--since REF]`.
 - `manifest.json`, `versions.json` — **never edit versions by hand.** The release
   workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
   line releases that version instead (only when the author asks).
 - `README.md` — don't update unless asked.
+- `tools/` — `context-pack.mjs` (a task's context at once), `css-owners.mjs` (who
+  styles a class), `affected-tests.mjs` (the suites a change needs),
+  `eval-usage.mjs`, `snapshot-diff.mjs`. They work with `tests/map.js`.
 - `docs/architecture.md` — the architecture audit and the refactor roadmap
   (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
-  in for). `npm test`, or `node tests/run.js qol collection` for just some.
+  in for). `npm test`, or `node tests/run.js qol album` for just some.
 - `tests/test_lifecycle.js` checks command ids, setting keys and view types against
   `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
   shows them). After a deliberate change: `node tests/test_lifecycle.js
   --update`, `node tests/map.js --check --update`. Never drop a command id or a
-  setting key without a migration. `contracts/contracts.json` says what other
-  code relies on, a rule each with the test that keeps it; `test_layers` also
-  checks those modules' exports, methods and events against
-  `tests/snapshots/contracts.json` (`node tests/map.js --contracts --update`
-  after a deliberate change, and the rule beside it).
+  setting key without a migration.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
   wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest. One test saves UI snapshots (the sidebar, the collection's
-  pane, the Edit tray, a narrow collection, forced colours) to `ci-output/snapshots/`; CI
-  compares them with main's last (`tools/snapshot-diff.mjs`, the
-  `ci-snapshots` branch) and `tests/ci.sh` prints what changed.
-- `.claude/rules/` — notes for one area each (the canvas adapter, collections and
-  the browse view, quiet links, real-Obsidian tests). Claude Code loads one
+  and the latest.
+- `.claude/rules/` — notes for one area each (the canvas adapter, albums and
+  the browse view, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
   that area. `.claude/skills/diagnose-tests` says how to read a failure.
 
@@ -66,7 +58,7 @@ Coffee N' Christmas.
   and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
   every settings save, so it must be safe to call repeatedly.
 - What a feature does is written once in `actions()` (`078-actions.js`): each
-  says what it acts on (`on`: app, note, file, editor, canvas, collection, browse);
+  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
   its commands come from them, and menus of that thing are built from the
   same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
   hang on them.
@@ -76,8 +68,8 @@ Coffee N' Christmas.
 - Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
   deletes (see `Orders.followRename`).
 - Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
-  then the features by place (library and collections; note: panel, footnotes, scripts,
-  quiet links; tools: bulk edits, strip, graph), then the plugin. A module imports from its own area and those below;
+  then the features by place (library and albums; note: panel, footnotes, scripts;
+  tools: bulk edits, strip, graph), then the plugin. A module imports from its own area and those below;
   the build and `tests/test_layers.js` refuse a new import across.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
@@ -100,22 +92,16 @@ Coffee N' Christmas.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited: on a computer, floating under the note's
-  Properties button, or docked in a library page's pane as the inspector
-  (124 makes the pane, `design-redux:pane-open`/`-close`; it shows the
-  pick); on a phone, a sheet. Nothing of ours is in the right sidebar,
-  which `hideRightSidebar` hides; the old view types (179) close
-  themselves. The reading outline and footnotes are popovers over the
-  note (`ui/246` NotePopover). What a tab is about is
-  `plugin.coordinator`'s to say (084): the note, a canvas card.
-- What's picked is `plugin.selection` (076), apart from what's open. What's
-  ticked to act on together, while editing a collection, is the view's
-  `BulkSelection` (118: paths and the Shift anchor, following renames), apart
-  from both. In the
-  browse view, rows and tiles go through `pickOrOpen`. While the page's
-  pane shows (`inspectorShowing`), a click picks and a double click or Enter
+  is where a note is edited: on a computer, docked in the right sidebar as
+  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. What the
+  inspector is about is `plugin.coordinator`'s to say (084): the tab worked
+  in, a pick, a canvas card, and the pin, kept as a snapshot
+  `{ target, leaf, origin, pinned }` the docked panel draws.
+- What's picked is `plugin.selection` (076), apart from what's open. In the
+  browse view, rows and tiles go through `pickOrOpen`. While the inspector
+  shows (`inspectorShowing`), a click picks and a double click or Enter
   opens. The browse view (124) draws what the library knows of a pick into
-  the inspector: a collection in brief, and a picked note's Open / Reveal in
+  the inspector: an album in brief, and a picked note's Open / Reveal in
   collection / More.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
@@ -137,17 +123,15 @@ Coffee N' Christmas.
   them after its own.
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
-- The canvas adapter and quiet links have notes of their own in `.claude/rules/`.
+- The canvas adapter has notes of its own in `.claude/rules/`.
 
 ## Working here
 
 - Make the smallest complete change: no rewriting files or touching unrelated
   code. Report changed files and tests run, briefly.
 - Test lightly, the author wants it quick: while working, run the simulation
-  suites the change touches (`node tests/run.js qol collection`: a line per suite,
-  details only on failure; `node tools/affected-tests.mjs --base origin/main
-  --run` picks them from what changed and says why); before pushing, all of
-  them (`npm test`, ~15 s,
+  suites the change touches (`node tests/run.js qol album`: a line per suite,
+  details only on failure); before pushing, all of them (`npm test`, ~10 s,
   a few at once). A real-Obsidian test only for what can't be checked
   otherwise: `tests/e2e.sh "test name"` (latest version only, prints just the
   outcome; the full log is `logs/e2e.log`). CI runs everything on both
@@ -161,9 +145,6 @@ Coffee N' Christmas.
   - No throwaway probe scripts in real Obsidian when a simulation or an
     existing test can show it.
   - Don't read a large `src/` file whole: grep, then read the lines needed.
-  - For a task's whole context at once — owners, definitions, callers,
-    styles, rules to keep, suites — `node tools/context-pack.mjs --feature
-    WORDS` or `--files PATHS` (`--budget N` tokens, default 3000).
   - Look before reading, narrowest first: file names → `node tests/map.js
     [words]` (pieces, their features and suites) → `--who NAME` or `--deps
     PIECE` (where a name is declared and who uses it; `--who` gives the
@@ -176,11 +157,6 @@ Coffee N' Christmas.
     step; conclusions, not transcripts — at the turn between phases, and read
     it after a compaction or in a new session. Unrelated work goes in a
     session of its own.
-  - Comparing ways of working (a model, an effort, context packs) is done
-    on the real tasks in `evals/tasks.json`, a fresh session each:
-    `node tools/eval-usage.mjs start|finish|report` — cost per accepted
-    task, uncached input, repeated reads, retries; no savings claimed
-    before three accepted runs a side.
   - `node tests/tool-log.js` sums up the session (a hook logs each tool call:
     file and size, not contents): repeat and broad reads, output size, and
     tokens — input not served from the cache is the number to bring down.

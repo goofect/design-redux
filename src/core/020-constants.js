@@ -1,6 +1,6 @@
 export const LIBRARY_VIEW = 'design-redux-library';
 export const BROWSE_VIEW = 'design-redux-browse';
-// The note panel's sidebar tab, retired: a layout that still names it closes it. The old inspector's type (design-redux-inspector) is still closed on load.
+// The note panel docked in the right sidebar. The old inspector's type (design-redux-inspector) is still closed on load.
 export const INSPECTOR_VIEW = 'design-redux-properties';
 // Quick Look in the library: Obsidian's page preview, shown without a modifier key.
 export const LIBRARY_HOVER_SOURCE = 'design-redux-library';
@@ -49,93 +49,83 @@ export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', '
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
 
-/* How screens of collections group their covers. */
+/* How screens of albums group their covers. */
 export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collection: 'Shelf' };
 
 export const DEFAULTS = {
   library: true,
   singleArea: false,
-  // Obsidian's right sidebar folded and its button hidden: what Design Redux had there is in the note and the library now.
-  hideRightSidebar: true,
   // Off to begin with since 3.1: « » sit in the note's header, Properties in the inspector.
   contextStrip: false,
-  // The strip says where the note falls in its collection: "3 of 12".
+  // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,
   // What the strip shows beside that: properties and the like, by name; empty for its pick.
   stripDetail: '',
   // A line along the strip's foot for how far down the note you are.
-  stripProgress: true,
   stripSide: 'bottom',
   notePages: true,
   pagesOpen: {},
   // Notes lined up to read next, by path; the strip's » goes through them first.
-  // A property's menu gives its value to the rest of the note's collection.
-  propertyForCollection: true,
+  // A property's menu gives its value to the rest of the note's album.
+  propertyForAlbum: true,
   onePage: false,
   pinsExpanded: false,
-  pinsLarge: false,
-  collectionNoteLimit: 8,
-  sectionNoteLimit: 10,
-  collectionColumns: 'domain, modified',
-  // A grey line under each note in a collection: its description, or its first sentence.
-  collectionExcerpts: true,
-  // A note's collection above its title, and one grey line under it.
+  albumNoteLimit: 8,
+  discNoteLimit: 10,
+  albumColumns: 'domain, modified',
+  // A grey line under each note in an album: its description, or its first sentence.
+  albumExcerpts: true,
+  // A note's album above its title, and one grey line under it.
   notePage: true,
   // Menus, suggestions and the canvas's bar and controls as frosted glass.
   glassPanels: false,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
-  // The open note's headings, over it, the one you're reading lit.
-  readingOutline: true,
-  // Beside each heading in the outline, the words in its section.
-  outlineWordCounts: true,
-  // A soft glow of a note's cover, or its collection's, behind its title.
+  // A soft glow of a note's cover, or its album's, behind its title.
   notePageTint: false,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
-  // Shelves at a note's end: linked from here, mentioned in, more in its collection.
+  // Shelves at a note's end: linked from here, mentioned in, more in its album.
   notePageShelves: true,
-  // At a collection's end, greyed: the notes its notes link to that aren't written yet.
-  collectionStillToWrite: true,
-  // The property naming a note's parent, to nest a collection's notes by; empty for a flat list.
-  collectionNestBy: 'parent',
-  // What a collection row ends with, where a row's length would be:
+  // At an album's end, greyed: the notes its notes link to that aren't written yet.
+  albumStillToWrite: true,
+  // The property naming a note's parent, to nest an album's notes by; empty for a flat list.
+  albumNestBy: 'parent',
+  // What an album row ends with, where a track's length would be:
   // 'time' to read it, 'words', or 'none'.
-  noteLength: 'time',
+  trackLength: 'time',
   defaultSort: 'name',
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
   keepOwnOrder: { recents: true, pinned: true },
-  // A collection sorted from its filter button keeps that order, by its path.
-  collectionSortMemory: true,
-  // A folder note's collection, description, includes and related properties, shown.
+  // An album sorted from its filter button keeps that order, by its path.
+  albumSortMemory: true,
+  // A folder note's album, description, includes and related properties, shown.
   // Property sets kept by name, to apply to a note as a template: { name: { key: value } }.
   propertySets: {},
-  collectionStructure: true,
-  // Other names for the folder note properties collections are read from: { type, description, includes, related, featured, layout }.
-  collectionKeyNames: {},
-  // In a long collection, shelves of what changed and was opened lately.
-  // Filters kept as collections, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
-  smartCollections: true,
+  albumStructure: true,
+  // Other names for the folder note properties albums are read from: { type, description, includes, related, featured, layout }.
+  albumKeyNames: {},
+  // In a long album, shelves of what changed and was opened lately.
+  // Filters kept as albums, and the list of them: { id, name, folder, tag, prop, date, sort?, group? }.
+  smartAlbums: true,
   // How large covers are on screens of tiles: compact, standard or large.
   gridDensity: 'standard',
-  // The one look; kept by name for any to come.
-  look: 'clear',
-  // How much moves: full, subtle (fades only) or off.
-  motion: 'full',
-  // Screens of collections grouped: '' not at all, 'kind' by kind of collection, 'collection' by the folder they're in.
+  // The theme's look, or the editorial one.
+  look: 'apple',
+  // Screens of albums grouped: '' not at all, 'kind' by kind of album, 'collection' by the folder they're in.
   tileGroups: '',
-  // A collection cover that isn't a picture has its kind, name and collection printed on it.
+  // An album cover that isn't a picture has its kind, name and collection printed on it.
   coverPrint: false,
   // A command listing what the library has lost track of.
   libraryCheck: true,
-  // The notes in no collection, in one place, to put in collections a few at a time.
+  // The notes in no album, in one place, to put in albums a few at a time.
   libraryInbox: true,
-  // Renaming, moving, merging and splitting collections, shown first and undone in one step.
-  collectionRefactor: true,
-  smartCollectionList: [],
+  // Renaming, moving, merging and splitting albums, shown first and undone in one step.
+  albumRefactor: true,
+  smartAlbumList: [],
   // { folderPath: sort key }
-  collectionSorts: {},
+  albumSorts: {},
   // In lists, typing a name jumps to it and Space previews the note in focus.
   typeToJump: true,
   // A note dragged onto a folder in the library, or from a list onto the file list's, moves there.
@@ -145,20 +135,20 @@ export const DEFAULTS = {
   searchNoteText: true,
   // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
   propertiesSort: 'name',
-  // A property's values: 'auto' (covers while there are few), 'grid' or 'list'.
   // Settings shown: 'basic', the everyday ones, or 'all'.
   settingsLevel: 'basic',
   // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
+  libraryLayout: 'auto',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',
   homeShelves: [],
   inspector: true,
   // Only what Design Redux draws, to begin with since 3.1: notes stay as the theme draws them unless asked.
+  lookScope: 'plugin',
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
-  // The library page's pane, where the inspector shows what's picked: open or not.
   libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
   // starting layout from the vault the first time it's shown".
@@ -187,7 +177,7 @@ export const DEFAULTS = {
   panelPropsCollapsed: false,
   panelFoldedGroups: [],
   showMentions: true,
-  // The note panel's section from collections.
+  // The note panel's section from albums.
   panelPlaces: false,
   // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
   settingsInHeader: false,
@@ -205,16 +195,14 @@ export const DEFAULTS = {
   scriptSyntax: 'short',
   // 1st, 2nd, 3rd written as 1^st^ as you type.
   autoOrdinals: false,
-  // { folderPath: { names: [file names], on } } — a collection's own order.
-  collectionOrders: {},
+  // { folderPath: { names: [file names], on } } — an album's own order.
+  albumOrders: {},
   // Pinned things by path, in the order they were arranged.
   pinOrder: [],
-  // What stands in for a missing cover: 'art', a collection cover drawn for
+  // What stands in for a missing cover: 'art', an album cover drawn for
   // its name; 'title', its name set as a title; 'icon', the folder or
   // note's icon; 'soft', that icon on a soft colour from its name; or a
   // gradient with initials, coloured 'name', 'accent' or 'custom'.
-  // Covers show only when asked for, and then as a small mark beside a name.
-  showCovers: false,
   coverFallback: 'art',
   // A note without a cover shows the cover of the folder it's in.
   coverFromFolder: false,
@@ -224,9 +212,9 @@ export const DEFAULTS = {
   coverDrop: true,
   // The one colour used when the fallback is 'custom'.
   generatedCoverColor: '#fa2d48',
-  // { path: '#rrggbb' | 'accent' } — a colour chosen for one collection or note.
+  // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
   coverColors: {},
-  // { path: designId } — a drawn cover's design, picked for one collection or note.
+  // { path: designId } — a drawn cover's design, picked for one album or note.
   coverDesigns: {},
   // { folderPath: [{ key, value, type }] } — given to notes made there.
   folderDefaults: {},
@@ -239,8 +227,6 @@ export const DEFAULTS = {
   // { notePath: [{ at, changes: { key: [before, after, how] } }] } — the last changes written to each note.
   propertyHistory: {},
   propertyHistoryLimit: 20,
-  propertyDueChips: true,
-  propertyDueKeys: 'due, deadline',
   // [{ id, name, on, when: { kind, folder | tag | key, value }, set: [{ key, value }], replace }]
   propertyRules: [],
   propertyRulesOn: false,
@@ -250,14 +236,11 @@ export const DEFAULTS = {
   propertyLinks: true,
   // { folderPath: { main: 'status, due' } } — the note panel's main properties for notes there.
   panelFolderViews: {},
-  collectionRollups: false,
+  albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 24,
+  settingsVersion: 26,
   graphProperties: true,
-  // Links written [[[Note]]] open their note but stay off the graph and
-  // out of backlinks.
-  quietLinks: false,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
   // A switch in the graph's Display settings: links drawn through the
@@ -319,17 +302,15 @@ export const NAV_BUTTONS = '.workspace-leaf-content[data-type="file-explorer"] .
 export const RIBBON_ACTIONS = '.workspace-ribbon:is(.mod-left, .mod-primary) .side-dock-actions';
 
 /* Each kind's symbol, and its colour where covers are coloured by kind: muted, so colour means kind and no more. */
-export const COLLECTION_TYPES = [
+export const ALBUM_TYPES = [
   { id: 'subject', label: 'Subject', icon: 'book', color: '#4f6d8f' },
-  { id: 'concept map', label: 'Concept map', icon: 'waypoints', color: '#7a5c8e' },
   { id: 'project', label: 'Project', icon: 'target', color: '#b0703a' },
-  { id: 'reading list', label: 'Reading list', icon: 'library', color: '#5e7f5a' },
   { id: 'reference', label: 'Reference', icon: 'bookmark', color: '#4d7f80' },
   { id: 'index', label: 'Index', icon: 'list', color: '#8a6f52' },
 ];
 
-/* A collection of no kind, where covers are coloured by kind. */
-export const COLLECTION_KIND_NEUTRAL = '#7d7770';
+/* An album of no kind, where covers are coloured by kind. */
+export const ALBUM_KIND_NEUTRAL = '#7d7770';
 
 /* The graph views: the vault's and a note's own. */
 export const GRAPH_TYPES = ['graph', 'localgraph'];

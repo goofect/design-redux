@@ -12,7 +12,7 @@ import { normalHex } from '../core/031-colours.js';
 import { roveFocus } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { Library } from '../library/130-browse-filters.js';
-import { drSegmented, isClearLook } from '../ui/229-components.js';
+import { drSegmented, isAppleLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
 
 export const SETTINGS_TABS = [
@@ -24,7 +24,7 @@ export const SETTINGS_TABS = [
         id: 'home',
         icon: 'home',
         name: 'Home screen',
-        desc: 'What the library opens with: its lists.',
+        desc: 'What the library opens with: its shelves.',
         keys: ['homePath', 'homeShelves'],
       },
       {
@@ -33,7 +33,7 @@ export const SETTINGS_TABS = [
         name: 'Context strip and modes',
         desc: 'Where you are and how far, with previous and next; one page; the sidebar header.',
         switch: 'contextStrip',
-        keys: ['onePage', 'stripPlace', 'stripDetail', 'singleArea', 'hideRightSidebar', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
       },
     ],
   },
@@ -45,9 +45,8 @@ export const SETTINGS_TABS = [
         id: 'covers',
         icon: 'image',
         name: 'Covers',
-        desc: 'A small cover beside a name: where they come from, and how the made ones look. Off by default.',
-        switch: 'showCovers',
-        keys: ['artworkSize', 'coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
+        desc: 'Where covers come from, and how the made ones look.',
+        keys: ['coverDrop', 'coverProperty', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'coverPrint', 'generatedCoverColor'],
       },
     ],
   },
@@ -59,9 +58,9 @@ export const SETTINGS_TABS = [
         id: 'library',
         icon: 'library',
         name: 'Library',
-        desc: 'Folders as collections of notes, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
+        desc: 'Folders as albums, notes as tracks, and a sidebar to browse them: layout, sorting, lists, limits, collections and folder notes.',
         switch: 'library',
-        keys: ['inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'collectionSortMemory', 'typeToJump', 'searchNoteText', 'collectionColumns', 'collectionExcerpts', 'collectionStillToWrite', 'collectionNestBy', 'noteLength', 'tileGroups', 'categoryProperty', 'smartCollections', 'collectionStructure', 'collectionRollups', 'libraryCheck', 'libraryInbox', 'collectionRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'sectionNoteLimit', 'collectionNoteLimit', 'tableColumns', 'collectionKeyNames', 'rollupDateKey', 'thinNoteWords'],
+        keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey', 'thinNoteWords'],
       },
     ],
   },
@@ -73,9 +72,9 @@ export const SETTINGS_TABS = [
         id: 'notePage',
         icon: 'file-text',
         name: 'Note page',
-        desc: 'Its collection above the title, one grey line under it, properties as chips, related notes at the end, and a reading outline.',
+        desc: 'Its collection above the title, one grey line under it, properties as chips, and shelves at the end.',
         switch: 'notePage',
-        keys: ['notePageShelves', 'notePageTint', 'notePageChips', 'readingOutline', 'outlineWordCounts'],
+        keys: ['notePageShelves', 'notePageTint', 'notePageChips'],
       },
       {
         id: 'writing',
@@ -92,14 +91,6 @@ export const SETTINGS_TABS = [
         switch: 'notePages',
         keys: [],
       },
-      {
-        id: 'quietLinks',
-        icon: 'link-2-off',
-        name: 'Quiet links',
-        desc: 'Links kept off the graph, and the notes they point at.',
-        switch: 'quietLinks',
-        keys: [],
-      },
     ],
   },
   {
@@ -110,9 +101,9 @@ export const SETTINGS_TABS = [
         id: 'properties',
         icon: 'list',
         name: 'Properties panel',
-        desc: 'Where a note is edited: properties, relationships and places in one panel.',
+        desc: 'Where a note is edited: properties and places in one panel.',
         switch: 'propertiesDropdown',
-        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForCollection', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
+        keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },
     ],
   },
@@ -140,7 +131,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['motion', 'glassPanels', 'gridDensity', 'iconMode'];
+export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */
@@ -160,12 +151,12 @@ export const SETTING_PRESETS = {
 
 export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
-  Library: ['library', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'collectionSortMemory', 'typeToJump', 'sectionNoteLimit', 'collectionNoteLimit', 'collectionColumns', 'collectionExcerpts', 'collectionStillToWrite', 'collectionNestBy', 'noteLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'collectionStructure', 'collectionKeyNames', 'collectionRollups', 'rollupDateKey', 'smartCollections', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'collectionRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
-  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'readingOutline', 'outlineWordCounts', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForCollection', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'quietLinks', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
-  Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
+  Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
+  Notes: ['notePage', 'notePageTint', 'notePageChips', 'notePageShelves', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
+  Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
   // 3.0's last tab, before the tabs went by task.
-  Tools: ['contextStrip', 'stripPlace', 'stripDetail', 'stripProgress', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
+  Tools: ['contextStrip', 'stripPlace', 'stripDetail', 'stripSide', 'graphProperties', 'graphRoutes', 'graphRouteProperty', 'compatibility'],
 };
 
 /**
@@ -269,7 +260,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     containerEl.addClass('dr-settings');
     // Settings can open in a window of their own, whose page doesn't carry the look: told here.
     const page = containerEl.ownerDocument.body;
-    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-clear', true);
+    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-apple', this.settings.look === 'apple');
     const rows = this.rows();
     const placed = new Set();
     const resolve = (feature) => {
@@ -672,8 +663,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
             if (Number.isFinite(n) && n >= (row.min || 1)) this.set(row.key, n);
           });
       });
-    } else if (row.type === 'dropdown' && row.segmented && isClearLook()) {
-      // A few short choices, side by side.
+    } else if (row.type === 'dropdown' && row.segmented && isAppleLook()) {
+      // A few short choices, side by side as the Apple look draws them.
       this.addReset(setting, row);
       const items = Object.keys(row.options).map((v) => ({ id: v, label: row.options[v] }));
       drSegmented(setting.controlEl, items, value, (v) => this.set(row.key, v, true));

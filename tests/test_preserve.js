@@ -1,6 +1,5 @@
-// What the plugin writes into notes' text, byte for byte: renaming quiet
-// links, making them shareable and quiet again, renaming tags — against a
-// note made to be awkward (Unicode, CRLF, code, maths, comments, footnotes,
+// What the plugin writes into notes' text, byte for byte: renaming tags —
+// against a note made to be awkward (Unicode, CRLF, code, maths, comments, footnotes,
 // links in properties). Only what's meant changes; the rest is the same.
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +13,7 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_preserve_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { renameQuietLinksIn, renameSpans, quietSpans, tagSpots, renameTagsAt };\n');
+  '\nmodule.exports.__test = { tagSpots, renameTagsAt };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -62,27 +61,6 @@ function build() {
 let passed = 0;
 const t = (name, fn) => { fn(); passed++; console.log('  ok  ' + name); };
 const { text, cache, after } = build();
-const renamed = after('link', 'prop');
-
-t('renaming a note renames its quiet links where they are links — properties, text, footnotes — and nothing else', () => {
-  const out = R.renameQuietLinksIn(text, [{ oldPath: 'Politics/Anarchy.md', linktext: 'Anarchism' }], null, R.renameSpans(text, cache));
-  assert.strictEqual(out.text, renamed);
-  assert.strictEqual(out.count, 6);
-  assert.ok(out.text.includes('```\n[[[Anarchy]]] #law\n```') && out.text.includes('%% [[[Anarchy]]] %%') && out.text.includes('`inline [[[Anarchy]]] #law`'), 'code, maths and comments keep what’s written');
-});
-
-t('a rename that touches none of them leaves every byte as it was', () => {
-  const out = R.renameQuietLinksIn(text, [{ oldPath: 'Elsewhere/Gone.md', linktext: 'Other' }], null, R.renameSpans(text, cache));
-  assert.strictEqual(out.text, text);
-  assert.strictEqual(out.count, 0);
-});
-
-t('text edited since Obsidian read it: the links it no longer finds are left alone, nothing else is touched', () => {
-  const edited = text.replace('# Heading', '# A heading');
-  const out = R.renameQuietLinksIn(edited, [{ oldPath: 'Anarchy.md', linktext: 'Anarchism' }], null, R.renameSpans(edited, cache));
-  // Only the property's link, found in the text itself, is renamed.
-  assert.strictEqual(out.text, edited.replace('related: "[[[Anarchy]]]"', 'related: "[[[Anarchism]]]"'));
-});
 
 t('renaming a tag renames it and the tags under it where Obsidian found them; not #lawyer, not in code', () => {
   const out = R.renameTagsAt(text, R.tagSpots(cache, 'law'), 'law', 'jurisprudence');

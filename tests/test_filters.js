@@ -129,8 +129,8 @@ note(misc, 'Shopping', { fm: {}, age: 1 });
 
 const plugin = {
   settings: {
-    defaultSort: 'name', recentSearches: [], categoryProperty: '', hideEmptyFolders: false,
-    collectionColumns: '', collectionNoteLimit: 8, sectionNoteLimit: 10, coverProperty: 'cover', tableColumns: '',
+    defaultSort: 'name', libraryLayout: 'covers', recentSearches: [], categoryProperty: '', hideEmptyFolders: false,
+    albumColumns: '', albumNoteLimit: 8, discNoteLimit: 10, coverProperty: 'cover', tableColumns: '',
   },
   saveData: async () => {},
   isFolderNote: () => false,
@@ -169,7 +169,7 @@ plugin.orders = new Orders(plugin);
 function page(state, { keep = false } = {}) {
   if (!keep) {
     plugin.settings.defaultSort = 'name';
-    plugin.settings.collectionSorts = {};
+    plugin.settings.albumSorts = {};
     plugin.settings.keepOwnOrder = { recents: true, pinned: true };
     app.workspace.open = [];
     document.body.innerHTML = '';
@@ -278,18 +278,17 @@ t('pinned folders are narrowed the same way', () => {
   assert.deepStrictEqual(shownCards(view), ['Law', 'Politics']);
 });
 
-t("a collection's own notes that match, in one list without headings; its folders at the foot", () => {
+t("an album's discs without a match drop out", () => {
   const view = page({ mode: 'folder', path: 'Law' });
   view.filterProp = { key: 'status', value: 'draft', negate: false };
   view.render();
-  assert.strictEqual(view.contentEl.querySelector('.dr-list-section, .dr-collection-panels, .dr-th'), null, 'no headings, no tabs');
-  const rows = Array.from(view.contentEl.querySelectorAll('.dr-note-row .dr-note-row-name')).map((e) => e.textContent);
-  assert.deepStrictEqual(rows, ['Contract']);
-  assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-shelf-title')).some((e) => e.textContent === 'In Law'), 'its folders, at the foot');
-  assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-search-prop-title')).some((e) => e.textContent === 'Courts'));
+  const discs = Array.from(view.contentEl.querySelectorAll('.dr-disc-title')).map((e) => e.textContent);
+  assert.deepStrictEqual(discs, ['Law', 'Courts']);
+  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
+  assert.deepStrictEqual(tracks, ['Contract', 'Tribunal']);
   view.filterDate = { field: 'modified', range: 'day' };
   view.render();
-  assert.strictEqual(view.contentEl.querySelector('.dr-note-row-name'), null);
+  assert.strictEqual(view.contentEl.querySelector('.dr-track-name'), null);
 });
 
 t('the menu lists the filters; a tag is chosen from a picker with counts', () => {
@@ -407,10 +406,10 @@ t('numbers in names sort by value: Week 2 before Week 10', () => {
 
 t('Recently opened keeps its own order until an order is chosen', () => {
   const view = page({ mode: 'recents' });
-  const before = Array.from(view.contentEl.querySelectorAll('.dr-note-row-name')).map((e) => e.textContent);
+  const before = Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
   assert.deepStrictEqual(before, files.map((f) => f.basename), 'recency order');
   openMenu(view).find('Alphabetical (A–Z)').click();
-  const after = Array.from(view.contentEl.querySelectorAll('.dr-note-row-name')).map((e) => e.textContent);
+  const after = Array.from(view.contentEl.querySelectorAll('.dr-track-name')).map((e) => e.textContent);
   assert.deepStrictEqual(after, ['Contract', 'Realism', 'Shopping', 'Supreme Court', 'Tort', 'Tribunal']);
 });
 
@@ -428,17 +427,17 @@ t('folder tiles follow alphabetical either way', () => {
   );
 });
 
-t("a collection's notes follow Z–A too", () => {
+t("an album's notes follow Z–A too", () => {
   const view = page({ mode: 'folder', path: 'Law' });
   openMenu(view).find('Alphabetical (Z–A)').click();
-  const rows = Array.from(view.contentEl.querySelectorAll('.dr-note-row .dr-note-row-name')).map((e) => e.textContent);
-  assert.deepStrictEqual(rows.slice(0, 2), ['Tort', 'Contract']);
+  const tracks = Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
+  assert.deepStrictEqual(tracks.slice(0, 2), ['Tort', 'Contract']);
 });
 
 
 /* -- one order, across the system --------------------------------------- */
 
-const titles = (view, sel = '.dr-card-title, .dr-note-row-name') =>
+const titles = (view, sel = '.dr-card-title') =>
   Array.from(view.contentEl.querySelectorAll(sel)).map((e) => e.textContent);
 
 t('an order chosen on one screen is saved, and every open screen follows it', () => {
@@ -450,27 +449,27 @@ t('an order chosen on one screen is saved, and every open screen follows it', ()
     ['Tribunal', 'Tort', 'Supreme Court', 'Shopping', 'Realism', 'Contract'], 'the other open screen');
 });
 
-t('a collection sorted on its own keeps that order, and the other screens keep theirs', () => {
+t('an album sorted on its own keeps that order, and the other screens keep theirs', () => {
   const view = page({ mode: 'folder', path: 'Law' });
   openMenu(view).find('Alphabetical (Z–A)').click();
   assert.strictEqual(plugin.settings.defaultSort, 'name', 'the shared order is left alone');
-  assert.deepStrictEqual(plugin.settings.collectionSorts, { Law: 'name-desc' });
-  const rows = () => Array.from(view.contentEl.querySelectorAll('.dr-note-row .dr-note-row-name')).map((e) => e.textContent);
-  assert.deepStrictEqual(rows().slice(0, 2), ['Tort', 'Contract']);
-  // Another collection, and the Notes table, still in the shared order.
+  assert.deepStrictEqual(plugin.settings.albumSorts, { Law: 'name-desc' });
+  const tracks = () => Array.from(view.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent);
+  assert.deepStrictEqual(tracks().slice(0, 2), ['Tort', 'Contract']);
+  // Another album, and the Notes table, still in the shared order.
   const other = page({ mode: 'folder', path: 'Politics' }, { keep: true });
   assert.ok(openMenu(other).find('Alphabetical (A–Z)').checked);
   // Back to Law later: still Z–A.
   const again = page({ mode: 'folder', path: 'Law' }, { keep: true });
-  assert.deepStrictEqual(Array.from(again.contentEl.querySelectorAll('.dr-note-row .dr-note-row-name')).map((e) => e.textContent).slice(0, 2), ['Tort', 'Contract']);
-  // Switched off, a collection's order is the shared one again, as it was.
-  plugin.settings.collectionSortMemory = false;
+  assert.deepStrictEqual(Array.from(again.contentEl.querySelectorAll('.dr-track .dr-track-name')).map((e) => e.textContent).slice(0, 2), ['Tort', 'Contract']);
+  // Switched off, an album's order is the shared one again, as it was.
+  plugin.settings.albumSortMemory = false;
   try {
     const shared = page({ mode: 'folder', path: 'Law' }, { keep: true });
     openMenu(shared).find('Alphabetical (Z–A)').click();
     assert.strictEqual(plugin.settings.defaultSort, 'name-desc');
   } finally {
-    plugin.settings.collectionSortMemory = true;
+    plugin.settings.albumSortMemory = true;
   }
 });
 
@@ -481,24 +480,20 @@ t('and a page built later — after a note, a new tab, a restart — starts in i
   assert.deepStrictEqual(titles(later), ['Politics', 'Misc', 'Law', 'Courts']);
 });
 
-t("a collection's folders at its foot follow the order, as do a folder's subfolder tiles", () => {
+t("an album's discs follow the order, as do a folder's subfolder tiles", () => {
   const extra = folder('Law/Appeals', law);
   const appeal = note(extra, 'Appeal', { age: 0 });
   try {
-    const collection = page({ mode: 'folder', path: 'Law' });
-    // The shelf of what's inside it: the row after its "In Law" heading.
-    const inside = () => {
-      const head = Array.from(collection.contentEl.querySelectorAll('.dr-shelf-head')).find((h) => h.textContent === 'In Law');
-      return Array.from(head.nextElementSibling.querySelectorAll('.dr-search-prop-title')).map((e) => e.textContent);
-    };
-    assert.deepStrictEqual(inside(), ['Appeals', 'Courts']);
-    openMenu(collection).find('Alphabetical (Z–A)').click();
-    assert.deepStrictEqual(inside(), ['Courts', 'Appeals']);
+    const album = page({ mode: 'folder', path: 'Law' });
+    const discs = () => titles(album, '.dr-disc-title');
+    assert.deepStrictEqual(discs(), ['Law', 'Appeals', 'Courts']);
+    openMenu(album).find('Alphabetical (Z–A)').click();
+    assert.deepStrictEqual(discs(), ['Law', 'Courts', 'Appeals'], "the folder's own disc stays first");
 
-    // By date, the folder with the newest note leads.
+    // By date, the disc with the newest note leads.
     caches.get(appeal); appeal.stat.mtime = Date.now() + 1000;
-    openMenu(collection).find('Recently modified').click();
-    assert.deepStrictEqual(inside(), ['Appeals', 'Courts']);
+    openMenu(album).find('Recently modified').click();
+    assert.deepStrictEqual(discs(), ['Law', 'Appeals', 'Courts']);
   } finally {
     law.children.splice(law.children.indexOf(extra), 1);
     files.splice(files.indexOf(appeal), 1);
@@ -533,16 +528,17 @@ t("Home's folder shelf follows it", () => {
     ['Politics', 'Misc', 'Law']);
 });
 
-t('a value with a colour and an icon shows them: on its property’s page, in collection rows and in filter chips; switched off, nowhere', () => {
+t('a value with a colour and an icon shows them: on its property’s page, in album rows and in filter chips; switched off, nowhere', () => {
   plugin.settings.propertyOptions = { Status: { done: { color: 'green', icon: 'check' } } };
+  plugin.settings.propertyValueView = 'list';
   try {
     const painted = (el) => !!el && el.classList.contains('dr-value-painted') && el.dataset.drColor === 'green' && el.querySelector('.dr-value-icon').dataset.icon === 'check';
     let view = page({ mode: 'properties', property: 'status' });
     const name = (text) => Array.from(view.contentEl.querySelectorAll('.dr-prop-value-name')).find((e) => e.textContent === text);
     assert.ok(painted(name('Done')) && !name('draft').classList.contains('dr-value-painted'));
-    plugin.settings.collectionColumns = 'status';
+    plugin.settings.albumColumns = 'status';
     view = page({ mode: 'folder', path: 'Law' });
-    const cell = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="Law/${n}.md"] .dr-note-row-sub`);
+    const cell = (n) => view.contentEl.querySelector(`.dr-track[data-path="Law/${n}.md"] .dr-track-sub`);
     assert.ok(painted(cell('Tort')) && !cell('Contract').classList.contains('dr-value-painted'));
     view.addPropFilter({ key: 'status', value: 'Done', negate: false });
     view.render();
@@ -553,33 +549,8 @@ t('a value with a colour and an icon shows them: on its property’s page, in co
   } finally {
     delete plugin.settings.propertyOptions;
     delete plugin.settings.propertyValueChips;
-    plugin.settings.collectionColumns = '';
-  }
-});
-
-t('a due date marked in collection rows — overdue, today, soon — and a filter for what’s due soon or overdue', () => {
-  const day = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
-  const contract = files.find((f) => f.basename === 'Contract');
-  const tort = files.find((f) => f.basename === 'Tort');
-  const saved = [caches.get(contract).frontmatter, caches.get(tort).frontmatter];
-  caches.get(contract).frontmatter = Object.assign({}, saved[0], { due: day(-1) });
-  caches.get(tort).frontmatter = Object.assign({}, saved[1], { due: day(20) });
-  plugin.settings.collectionColumns = 'due';
-  plugin.settings.propertyDueKeys = 'due';
-  try {
-    let view = page({ mode: 'folder', path: 'Law' });
-    const cell = (n) => view.contentEl.querySelector(`.dr-note-row[data-path="Law/${n}.md"] .dr-note-row-sub`);
-    assert.ok(cell('Contract').classList.contains('is-overdue') && cell('Tort').classList.contains('is-later'));
-    view = page({ mode: 'notes', path: '/' });
-    view.addPropFilter({ key: 'due', value: null, negate: false, due: true });
-    view.render();
-    assert.deepStrictEqual(shownNotes(view), ['Contract']);
-    assert.strictEqual(view.contentEl.querySelector('.dr-filter-chips .dr-chip-label').textContent, 'due due soon or overdue');
-  } finally {
-    caches.get(contract).frontmatter = saved[0];
-    caches.get(tort).frontmatter = saved[1];
-    plugin.settings.collectionColumns = '';
-    delete plugin.settings.propertyDueKeys;
+    plugin.settings.albumColumns = '';
+    plugin.settings.propertyValueView = 'auto';
   }
 });
 
@@ -600,7 +571,7 @@ t('a property’s facts on its page: type, notes with it and without, top values
   }
 });
 
-t('a value changed in its collection row: chosen from the menu, written through the notes service, shown in place with no redraw', () => {
+t('a value changed in its album row: chosen from the menu, written through the notes service, shown in place with no redraw', () => {
   const tort = files.find((f) => f.basename === 'Tort');
   const saved = JSON.parse(JSON.stringify(caches.get(tort).frontmatter));
   const writes = [];
@@ -613,7 +584,7 @@ t('a value changed in its collection row: chosen from the menu, written through 
       return { file, before, after: { status: fm.status } };
     },
   };
-  plugin.settings.collectionColumns = 'status';
+  plugin.settings.albumColumns = 'status';
   plugin.settings.propertyInlineEdit = true;
   let view;
   let cell;
@@ -623,7 +594,7 @@ t('a value changed in its collection row: chosen from the menu, written through 
     view = page({ mode: 'folder', path: 'Law' });
     const render = view.render;
     view.render = function () { renders++; return render.apply(this, arguments); };
-    cell = view.contentEl.querySelector('.dr-note-row[data-path="Law/Tort.md"] .dr-note-row-sub');
+    cell = view.contentEl.querySelector('.dr-track[data-path="Law/Tort.md"] .dr-track-sub');
     assert.ok(cell.classList.contains('is-editable'));
     menus = [];
     cell.dispatchEvent(new window.MouseEvent('click', { bubbles: true, clientX: 1, clientY: 1 }));
@@ -635,13 +606,13 @@ t('a value changed in its collection row: chosen from the menu, written through 
   } finally {
     caches.get(tort).frontmatter = saved;
     delete plugin.notes;
-    plugin.settings.collectionColumns = '';
+    plugin.settings.albumColumns = '';
     delete plugin.settings.propertyInlineEdit;
   }
-  // Shown once written: in its cell, the collection not drawn again.
+  // Shown once written: in its cell, the album not drawn again.
   return written.then(() => {
     assert.strictEqual(cell.textContent, 'draft');
-    assert.strictEqual(renders, 0, 'the collection not drawn again');
+    assert.strictEqual(renders, 0, 'the album not drawn again');
     assert.ok(view.quietChanges.has('Law/Tort.md'), 'its change from Obsidian brings no redraw');
   });
 });
@@ -659,7 +630,7 @@ t("the Properties screen's list and a property's values follow it", () => {
   assert.deepStrictEqual(values(), ['draft', 'Done'], 'draft has the newest note (Contract)');
 });
 
-t('a property is a page, as an artist\'s: its values as covers or a list, each opening as a collection of its notes; No value gathers the blank', () => {
+t('a property is a page, as an artist\'s: its values as covers or a list, each opening as an album of its notes; No value gathers the blank', () => {
   const opened = [];
   plugin.feature = () => ({ openMergeValues: (key, values) => opened.push([key, values]), openRenameValue() {} });
   const shopping = files.find((f) => f.basename === 'Shopping');
@@ -671,20 +642,21 @@ t('a property is a page, as an artist\'s: its values as covers or a list, each o
     const tiles = () => Array.from(view.contentEl.querySelectorAll('.dr-prop-values .dr-prop-value'));
     assert.deepStrictEqual(tiles().map((c) => c.querySelector('.dr-prop-value-name').textContent), ['Done', 'draft', 'No value']);
     assert.deepStrictEqual(tiles().map((c) => c.querySelector('.dr-prop-value-count').textContent), ['1', '2', '1']);
+    assert.ok(!view.contentEl.querySelector('.dr-prop-values-grid, .dr-prop-view'), 'values are a list, with no covers to choose');
     assert.ok(!view.contentEl.querySelector('.dr-prop-value-tick'), 'no picking outside Edit');
 
-    // A value opens as a collection: its name, the property under it as the way back, its notes.
+    // A value opens as an album: its name, the property under it as the way back, its notes.
     tiles()[1].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     assert.strictEqual(view.value, 'draft');
     assert.strictEqual(view.contentEl.querySelector('.dr-detail-title').textContent, 'draft');
-    assert.deepStrictEqual(titles(view, '.dr-value-rows .dr-note-row-name'), ['Contract', 'Tribunal']);
+    assert.deepStrictEqual(titles(view, '.dr-value-tracks .dr-track-name'), ['Contract', 'Tribunal']);
     assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.startsWith('2 notes'));
     const sub = view.contentEl.querySelector('.dr-detail-sub');
     assert.strictEqual(sub.textContent, 'status');
     sub.click();
     assert.strictEqual(view.value, null);
     tiles()[2].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    assert.deepStrictEqual(titles(view, '.dr-value-rows .dr-note-row-name'), ['Shopping'], 'No value: the note left blank');
+    assert.deepStrictEqual(titles(view, '.dr-value-tracks .dr-track-name'), ['Shopping'], 'No value: the note left blank');
 
     // In Edit, the values to pick, and Merge for two.
     view.navigate({ mode: 'properties', property: 'status', value: null });
@@ -705,20 +677,6 @@ t('a property is a page, as an artist\'s: its values as covers or a list, each o
     const menu = menus.pop();
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Open', 'Open in new tab', 'Rename value…', 'Merge with…', 'Colour and icon…', 'Copy value', 'Narrow the library to these']);
 
-    // The property's own menu: the same as in the Properties window, across the vault.
-    const tools = [];
-    const real = plugin.feature;
-    plugin.feature = () => ({ openRenameProperty: (n) => tools.push(['rename', n]), openChangeType: (n) => tools.push(['type', n]), openMerge: (n) => tools.push(['merge', n]), openTools: (t, tab, a) => tools.push([tab, a.key]), openMissing: (t, n) => tools.push(['missing', n]), openRemove: (t, n) => tools.push(['remove', n]) });
-    view.contentEl.querySelector('.dr-prop-page-title').dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, clientX: 1, clientY: 1 }));
-    const own = menus.pop();
-    // Fill in, with the count the page gives under Without it, while there are any.
-    const without = view.screen().inspect('status').without;
-    const fill = without ? [`Fill in the ${without} without it…`] : [];
-    assert.deepStrictEqual(own.items.map((i) => i.title), ['Rename', 'Change type…', 'Merge with…', 'Clean up values…', ...fill, 'Remove from every note…']);
-    own.items.forEach((i) => i.click());
-    assert.deepStrictEqual(tools.map((x) => x[0]), ['rename', 'type', 'merge', 'cleanup', ...(without ? ['missing'] : []), 'remove']);
-    plugin.feature = real;
-
     // The list: by name, or by how many notes use each.
     const sort = view.contentEl.querySelector('.dr-prop-sort');
     assert.ok(sort.textContent.startsWith('Sort: Name'));
@@ -730,6 +688,7 @@ t('a property is a page, as an artist\'s: its values as covers or a list, each o
     assert.deepStrictEqual(titles(view, '.dr-split-name'), ['status', 'domain'], 'status in 4, domain in 3');
   } finally {
     plugin.settings.propertiesSort = 'name';
+    plugin.settings.propertyValueView = 'auto';
     caches.get(shopping).frontmatter = {};
     plugin.feature = () => null;
   }
@@ -877,10 +836,10 @@ t('Recently opened offers its own order first, and goes back to it', () => {
   assert.strictEqual(menu.items[0].title, 'Most recently opened');
   assert.ok(menu.items[0].checked);
   menu.find('Alphabetical (A–Z)').click();
-  assert.deepStrictEqual(titles(view), ['Contract', 'Realism', 'Shopping', 'Supreme Court', 'Tort', 'Tribunal']);
+  assert.deepStrictEqual(titles(view, '.dr-track-name'), ['Contract', 'Realism', 'Shopping', 'Supreme Court', 'Tort', 'Tribunal']);
   assert.strictEqual(plugin.settings.keepOwnOrder.recents, false);
   openMenu(view).find('Most recently opened').click();
-  assert.deepStrictEqual(titles(view), files.map((f) => f.basename));
+  assert.deepStrictEqual(titles(view, '.dr-track-name'), files.map((f) => f.basename));
   assert.strictEqual(plugin.settings.keepOwnOrder.recents, true);
   assert.strictEqual(plugin.settings.defaultSort, 'name', 'the shared order is untouched');
 });

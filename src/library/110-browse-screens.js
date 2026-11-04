@@ -12,10 +12,10 @@ import { blankLook, drawFolderArt, onContextMenu } from '../core/030-helpers-art
 import { asButton, iconWord, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { CollectionStructure } from './257-collection-structure.js';
-import { SmartCollections } from './258-smart-collections.js';
+import { AlbumStructure } from './257-album-structure.js';
+import { SmartAlbums } from './258-smart-albums.js';
 
-/* -- a folder, as a collection ------------------------------------------ */
+/* -- a folder, as an album ------------------------------------------ */
 
 export class FolderScreen extends BrowseScreen {
   title() {
@@ -31,49 +31,42 @@ export class FolderScreen extends BrowseScreen {
 
     // Which layout is decided by what the folder holds, not by what
     // Find or a filter lets through — otherwise typing flips the page
-    // between tiles and a collection, and hides the notes that match.
+    // between tiles and an album, and hides the notes that match.
     const holdsNotes = (folder.children || []).some(
       (c) => c instanceof TFile && !this.plugin.isFolderNote(c)
     );
     const subfolders = view.visibleFolders(folder);
 
     // A folder of nothing but folders is a shelf: plain heading and
-    // tiles. The collection treatment is for one that actually holds notes.
+    // tiles. The album treatment is for one that actually holds notes.
     if (subfolders.length && !holdsNotes) {
       view.renderPlainHeader(root, folder);
       // In the order they were put in, where they have been.
       const folders = view.shelfFolders(folder).filter((c) => view.folderInFilter(c)).filter((c) => view.matches(c.name));
-      const structure = this.plugin.feature(CollectionStructure);
+      const structure = this.plugin.feature(AlbumStructure);
       const shows = !!(structure && structure.enabled);
-      if (shows) structure.renderShelfPageHead(root, folder, view, subfolders.length);
+      if (shows) structure.renderCollectionHead(root, folder, view, subfolders.length);
       if (!folders.length) {
         view.emptyState(root, 'No folders', 'folder', view.clearAction());
         return;
       }
-      // A collection asked to open as a list: its collections as a tree.
+      // A collection asked to open as a list: its albums as a tree.
       const about = shows ? structure.info(folder) : null;
       if (about && about.layoutGiven && about.layout === 'list') this.renderTree(root, folders, 0);
       else view.folderTiles(root, folders).forEach((grid) => view.arrangeableTiles(grid));
       return;
     }
 
-    let sections = view.sectionsOf(folder, view.notesIn(folder));
-    // What the folder note says belongs too: collections, as tiles; notes kept
-    // elsewhere, after its own. Shown here, not moved.
-    const structure = view.editing ? null : this.plugin.feature(CollectionStructure);
+    const discs = view.discsOf(folder, view.notesIn(folder));
+    // What the folder note says belongs too: albums, as tiles; notes kept
+    // elsewhere, as a disc of their own. Shown here, not moved.
+    const structure = view.editing ? null : this.plugin.feature(AlbumStructure);
     const about = structure ? structure.info(folder) : null;
-    const kept = sections.reduce((acc, d) => acc.concat(d.files), []);
+    const kept = discs.reduce((acc, d) => acc.concat(d.files), []);
     const elsewhere = about ? structure.included(folder, kept).filter((f) => view.inFilter(f) && view.matches(f.basename)) : [];
-    // One list without headings: the collection's own notes, then those from
-    // elsewhere. Its folders wait at the foot. Edit mode keeps a section for
-    // each folder, to rename and fill.
-    if (!view.editing) {
-      const own = sections.find((d) => d.folder === folder);
-      const files = (own ? own.files : []).concat(view.sortFiles(elsewhere));
-      sections = files.length ? [{ title: view.folderName(folder), folder, files }] : [];
-    }
-    const all = sections.reduce((acc, d) => acc.concat(d.files), []);
-    const collections = about ? about.includes.filter((t) => t instanceof TFolder && view.matches(t.name)) : [];
+    if (elsewhere.length) discs.push({ title: 'From elsewhere', folder: null, files: view.sortFiles(elsewhere) });
+    const all = kept.concat(elsewhere);
+    const albums = about ? about.includes.filter((t) => t instanceof TFolder && view.matches(t.name)) : [];
 
     view.renderHeader(root, folder, all);
     if (about) {
@@ -82,53 +75,74 @@ export class FolderScreen extends BrowseScreen {
       const featured = about.featured.filter((f) => view.matches(f.basename));
       if (featured.length) view.shelf(root, 'Start here', featured);
     }
-    if (collections.length) {
-      const grid = root.createDiv({ cls: 'dr-grid dr-collection-includes' });
+    if (albums.length) {
+      const grid = root.createDiv({ cls: 'dr-grid dr-album-includes' });
       roveFocus(grid, '.dr-card');
-      collections.forEach((f) => view.folderCard(grid, f));
+      albums.forEach((f) => view.folderCard(grid, f));
     }
     if (!all.length && !view.editing) {
-      if (!collections.length) {
+      if (!albums.length) {
         const add = folder.isRoot && folder.isRoot() ? null : ['New note', () => this.plugin.newNote(folder)];
         view.emptyState(root, this.emptyText(about), 'folder-open', view.clearAction() || add);
       }
-      this.renderInside(root, folder);
       view.renderMoreIn(root, folder);
       return;
     }
     const drawNotes = (el) => {
-      if (about && about.layout === 'table') this.renderTable(el, sections);
-      else view.renderSections(el, sections, folder);
-      if (!view.editing) view.renderCollectionEnd(el, folder, all);
-      if (!view.editing) view.renderCollectionFoot(el, all, { count: sections.length > 1 });
+      if (about && about.layout === 'covers') this.renderCovers(el, discs, folder);
+      else if (about && about.layout === 'table') this.renderTable(el, discs, folder);
+      else view.renderDiscs(el, discs, folder);
+      if (!view.editing) view.renderAlbumEnd(el, folder, all);
+      if (!view.editing) view.renderAlbumFoot(el, all, { count: discs.length > 1 });
     };
-    drawNotes(root);
+    const panels = about ? this.panels(folder, about, all, drawNotes) : [];
+    if (panels.length > 1) this.renderPanels(root, folder, about, panels);
+    else drawNotes(root);
     if (view.editing) return;
     if (about && about.related.length) view.shelf(root, 'Related collections', about.related);
-    this.renderInside(root, folder);
     view.renderMoreIn(root, folder);
   }
 
-  /** The folders inside the collection, at its foot, before those beside it. */
-  renderInside(root, folder) {
+  /**
+   * What an album can show, one at a time: its notes and, where it has
+   * any, its sources.
+   */
+  panels(folder, about, all, drawNotes) {
     const view = this.view;
-    const inside = view.sortFolders(view.visibleFolders(folder)).filter((f) => view.folderInFilter(f) && view.matches(f.name));
-    if (inside.length) view.folderShelf(root, `In ${view.folderName(folder)}`, inside);
+    const structure = this.plugin.feature(AlbumStructure);
+    const out = [{ id: 'notes', label: 'Notes', count: all.length, draw: drawNotes }];
+    const sources = structure.sources(all);
+    if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
+    return out;
   }
 
-  /** The collection's notes as a table: a row each, the columns set for tables. */
-  renderTable(el, sections) {
+  /** The album's notes as a table — a row each, the columns set for tables — under a heading for each disc. */
+  renderTable(el, discs, album) {
     const view = this.view;
     const columns = view.tableColumns();
-    const table = el.createDiv({ cls: 'dr-table' });
-    roveFocus(table, '.dr-tr');
-    sections.forEach((section) => section.files.forEach((file) => view.tableRow(table, file, columns)));
+    discs.forEach((disc) => {
+      const head = el.createDiv({ cls: 'dr-disc dr-covers-head' });
+      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
+      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
+      if (disc.folder && disc.folder !== album) {
+        asButton(head);
+        onActivate(head, () => view.openFolder(disc.folder));
+      }
+      const table = el.createDiv({ cls: 'dr-table' });
+      roveFocus(table, '.dr-tr:not(.dr-th)');
+      const th = table.createDiv({ cls: 'dr-tr dr-th' });
+      th.createDiv({ cls: 'dr-td dr-td-title', text: 'Title' });
+      columns.forEach((key) => th.createDiv({ cls: 'dr-td', text: view.columnLabel(key) }));
+      if (view.lengthStyle()) iconWord(th.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
+      iconWord(th.createDiv({ cls: 'dr-td dr-td-time' }), 'calendar', 'Modified');
+      disc.files.forEach((file) => view.tableRow(table, file, columns));
+    });
   }
 
-  /** A collection's collections as a tree: each, with its kind and size, and the collections inside it beneath. */
+  /** A collection's albums as a tree: each, with its kind and size, and the albums inside it beneath. */
   renderTree(root, folders, depth) {
     const view = this.view;
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     const list = depth ? root : root.createDiv({ cls: 'dr-tree' });
     if (!depth) roveFocus(list, '.dr-tree-row');
     folders.forEach((f) => {
@@ -149,7 +163,53 @@ export class FolderScreen extends BrowseScreen {
     });
   }
 
-  /** Why a collection shows nothing: Find or a filter, or nothing put in it yet. */
+  /** Tabs over the panel shown: as last chosen here, or its notes. */
+  renderPanels(root, folder, about, panels) {
+    const view = this.view;
+    if (!view.albumPanels) view.albumPanels = new Map();
+    const strip = root.createDiv({ cls: 'dr-album-panels' });
+    strip.setAttribute('role', 'tablist');
+    const body = root.createDiv({ cls: 'dr-album-panel' });
+    body.setAttribute('role', 'tabpanel');
+    const show = (id) => {
+      strip.querySelectorAll('.dr-panel-tab').forEach((tab) => {
+        const on = tab.dataset.panel === id;
+        tab.toggleClass('is-active', on);
+        tab.setAttribute('aria-selected', String(on));
+        tab.setAttribute('tabindex', on ? '0' : '-1');
+      });
+      body.empty();
+      panels.find((p) => p.id === id).draw(body);
+    };
+    panels.forEach((p) => {
+      const tab = strip.createDiv({ cls: 'dr-panel-tab' });
+      tab.dataset.panel = p.id;
+      tab.setAttribute('role', 'tab');
+      tab.createSpan({ text: p.label });
+      if (p.count) tab.createSpan({ cls: 'dr-panel-count', text: String(p.count) });
+      onActivate(tab, () => {
+        // Chosen here: kept while the album's open in this tab.
+        view.albumPanels.set(folder.path, p.id);
+        show(p.id);
+      });
+    });
+    // Left and right step between the tabs.
+    strip.addEventListener('keydown', (evt) => {
+      if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
+      const tabs = Array.from(strip.querySelectorAll('.dr-panel-tab'));
+      const at = tabs.indexOf(evt.target.closest('.dr-panel-tab'));
+      const next = tabs[(at + (evt.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+      if (!next) return;
+      evt.preventDefault();
+      next.focus();
+      next.click();
+    });
+    const has = (id) => panels.some((p) => p.id === id);
+    const kept = view.albumPanels.get(folder.path);
+    show(has(kept) ? kept : 'notes');
+  }
+
+  /** Why an album shows nothing: Find or a filter, or nothing put in it yet. */
   emptyText(about) {
     const view = this.view;
     if (view.query.trim() || view.hasFilters()) return 'Nothing matches';
@@ -159,12 +219,30 @@ export class FolderScreen extends BrowseScreen {
 
   missingNotice(root, about) {
     const names = about.missing.map((m) => `“${m.name}”`).join(', ');
-    const note = root.createDiv({ cls: 'dr-collection-notice' });
-    setIcon(note.createSpan({ cls: 'dr-collection-notice-icon' }), 'link-2-off');
+    const note = root.createDiv({ cls: 'dr-album-notice' });
+    setIcon(note.createSpan({ cls: 'dr-album-notice-icon' }), 'link-2-off');
     note.createSpan({ text: `${about.missing.length === 1 ? 'A link in its properties leads' : 'Links in its properties lead'} nowhere: ${names}` });
     asButton(note, 'Open the folder note to fix it');
     onActivate(note, () => this.app.workspace.getLeaf(false).openFile(about.note));
   }
+
+  /** The album's notes as covers, under a heading for each disc. */
+  renderCovers(root, discs, album) {
+    const view = this.view;
+    discs.forEach((disc) => {
+      const head = root.createDiv({ cls: 'dr-disc dr-covers-head' });
+      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
+      head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
+      if (disc.folder && disc.folder !== album) {
+        asButton(head);
+        onActivate(head, () => view.openFolder(disc.folder));
+      }
+      const grid = root.createDiv({ cls: 'dr-grid' });
+      roveFocus(grid, '.dr-card');
+      disc.files.forEach((f) => view.fileCard(grid, f));
+    });
+  }
+
 }
 
 /* -- every folder, as tiles ------------------------------------------ */
@@ -195,7 +273,8 @@ export class FoldersScreen extends BrowseScreen {
       return;
     }
 
-    view.folderTiles(root, shown, (f) => f.parent && f.parent.name);
+    if (foldersAsCovers(this.settings)) view.folderTiles(root, shown, (f) => f.parent && f.parent.name);
+    else folderRows(view, root, shown);
   }
 }
 
@@ -241,13 +320,18 @@ export class NotesScreen extends BrowseScreen {
   }
 }
 
-/* -- a property's values ---------------------------------------------- */
+/* -- a property, as an artist list ----------------------------------- */
 
 /* How long Search waits after typing before reading notes' text, and how many it shows. */
 export const TEXT_PAUSE = 250;
 export const TEXT_MOST = 50;
 
-/** Collections as rows: the name and how many it holds, with its mark. */
+/** Whether a screen of folders shows covers or lists, as set. Only folders are ever covers: notes are lists. */
+export function foldersAsCovers(settings) {
+  return (settings.libraryLayout || 'auto') !== 'lists';
+}
+
+/** Collections as rows, for Lists: a small cover, the name, how many it holds. */
 export function folderRows(view, root, folders) {
   const list = root.createDiv({ cls: 'dr-search-props dr-folder-rows' });
   roveFocus(list, '.dr-search-prop');
@@ -258,7 +342,7 @@ export function folderRows(view, root, folders) {
     drawFolderArt(view.plugin, row.createDiv({ cls: 'dr-search-prop-art' }), folder);
     const text = row.createDiv({ cls: 'dr-search-prop-text' });
     text.createDiv({ cls: 'dr-search-prop-title', text: folder.name });
-    const structure = view.plugin.feature(CollectionStructure);
+    const structure = view.plugin.feature(AlbumStructure);
     const rolled = structure ? structure.rollupText(structure.rollup(structure.notesUnder(folder))) : '';
     text.createDiv({ cls: 'dr-search-prop-sub', text: rolled ? `${view.countLabel(folder)}  ·  ${rolled}` : view.countLabel(folder) });
     view.pickOrOpen(row, { folder }, () => view.openFolder(folder), false);
@@ -277,7 +361,6 @@ export function valueArt(view, el, key, value, files) {
 /* The Properties screen's name for the notes that leave a property empty, where a value would go. */
 export const EMPTY_VALUE = '\u2205';
 
-
 /** Text to the clipboard, with a word that it's there. */
 export function copyText(text) {
   const clip = typeof navigator !== 'undefined' && navigator.clipboard;
@@ -287,7 +370,7 @@ export function copyText(text) {
 
 /* -- recents and pins, as tiles -------------------------------------- */
 
-export class RecentsScreen extends BrowseScreen {
+export class CollectionScreen extends BrowseScreen {
   get pinned() {
     return this.view.mode === 'pinned';
   }
@@ -300,7 +383,7 @@ export class RecentsScreen extends BrowseScreen {
     return this.pinned ? 'Pinned' : this.added ? 'Recently added' : 'Recently opened';
   }
 
-  /** The notes made most lately, the newest first: collections' own notes aside. */
+  /** The notes made most lately, the newest first: albums' own notes aside. */
   recentlyAdded() {
     return libraryIndex(this.plugin).notes()
       .sort((a, b) => b.stat.ctime - a.stat.ctime)
@@ -341,11 +424,11 @@ export class RecentsScreen extends BrowseScreen {
       return;
     }
 
-    // Notes you opened, added or read are plain rows; pins are cards, to keep your order.
+    // Notes you opened or added are a list, whatever the setting holds; pins stay tiles, in your order.
     if (!this.pinned) {
-      const list = root.createDiv({ cls: 'dr-note-rows dr-recent-rows' });
-      roveFocus(list, '.dr-note-row');
-      files.forEach((file, i) => view.noteRow(list, file, i + 1));
+      const list = root.createDiv({ cls: 'dr-tracks dr-collection-tracks' });
+      roveFocus(list, '.dr-track');
+      files.forEach((file, i) => view.trackRow(list, file, i + 1));
       return;
     }
 
@@ -353,7 +436,7 @@ export class RecentsScreen extends BrowseScreen {
     roveFocus(grid, '.dr-card');
     // Pins you've put in order are shown in it, folders and notes mixed;
     // otherwise folders lead, as a way into many of the notes after them.
-    if (this.pinned && view.keepsOwnOrder() && this.plugin.orders.pinOrder().length) {
+    if (view.keepsOwnOrder() && this.plugin.orders.pinOrder().length) {
       const shown = new Set(files.concat(folders));
       this.plugin.pins.all().filter((t) => shown.has(t)).forEach((t) => {
         if (t instanceof TFolder) view.folderCard(grid, t);
@@ -363,21 +446,21 @@ export class RecentsScreen extends BrowseScreen {
       orderedFolders.forEach((f) => view.folderCard(grid, f));
       files.forEach((file) => view.fileCard(grid, file));
     }
-    if (this.pinned && view.keepsOwnOrder()) view.arrangeableTiles(grid);
+    if (view.keepsOwnOrder()) view.arrangeableTiles(grid);
   }
 }
 
 /* -- subjects and collections, as tiles ------------------------------ */
 
-/** Your own collections, as tiles: smart collections, then collections that gather notes from elsewhere. */
-export function viewTiles(view) {
+/** Your own collections, as tiles: smart albums, then albums that gather notes from elsewhere. */
+export function collectionTiles(view) {
   const plugin = view.plugin;
   const items = [];
-  const smart = plugin.feature(SmartCollections);
+  const smart = plugin.feature(SmartAlbums);
   if (smart && smart.enabled) {
-    smart.list().filter((collection) => view.matches(collection.name)).forEach((collection) => items.push({ draw: (row) => view.smartCard(row, collection) }));
+    smart.list().filter((album) => view.matches(album.name)).forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
   }
-  const structure = plugin.feature(CollectionStructure);
+  const structure = plugin.feature(AlbumStructure);
   if (structure && structure.enabled) {
     structure.gathering().filter((f) => view.folderInFilter(f) && view.matches(f.name)).forEach((f) => items.push(f));
   }
@@ -392,7 +475,7 @@ export function tileGrid(view, root, items) {
   return grid;
 }
 
-export class ViewsScreen extends BrowseScreen {
+export class CollectionsScreen extends BrowseScreen {
   title() {
     return 'Views';
   }
@@ -400,7 +483,7 @@ export class ViewsScreen extends BrowseScreen {
   render(root) {
     const view = this.view;
     view.renderTitleBar(root, this.title());
-    const items = viewTiles(view);
+    const items = collectionTiles(view);
     if (!items.length) {
       view.emptyState(root, 'No views yet: saved views, and collections that gather notes from elsewhere, show here', 'library', null);
       return;
@@ -409,7 +492,7 @@ export class ViewsScreen extends BrowseScreen {
   }
 }
 
-/** The collections marked as a subject: the vault's fields of knowledge. */
+/** The albums marked as a subject: the vault's fields of knowledge. */
 export class SubjectsScreen extends BrowseScreen {
   title() {
     return 'Subjects';
@@ -418,7 +501,7 @@ export class SubjectsScreen extends BrowseScreen {
   render(root) {
     const view = this.view;
     view.renderTitleBar(root, this.title());
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     const subjects = structure && structure.enabled
       ? view.sortFolders(structure.ofKind('subject').filter((f) => view.folderInFilter(f) && view.matches(f.name)))
       : [];

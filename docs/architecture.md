@@ -1,5 +1,7 @@
 # Design Redux: architecture audit and refactor roadmap
 
+> Since this was written the plugin went back to 3.0.25, then lost mind maps and `src/tree`, workspace modes, reading history, the reading outline, Study, relationships and the knowledge check, quiet links and due dates. What follows about those is history.
+
 The refactor is done (M0–M6 and M8; M7, ES modules, was weighed and left out). The first
 section says how the code stands now. §1–§3 are the milestone-0 audit as it was taken
 (2026-10-11: 88 pieces, 36,627 lines), kept as the record. The rest is the roadmap and what
@@ -7,11 +9,10 @@ each milestone did.
 
 ## 0. Where it stands
 
-Canvas maps were retired in 3.0, mind maps and workspace modes after them (3.0.32), then
-reading history, Study and the relationships kept in notes (Knowledge and its check):
-`core/079` keeps only the asks of a plain canvas. The source folders are the three places
-of the reform — library, note, tools — with core and ui below them; what follows about
-canvas pieces, maps and the old folders is the record from before.
+Canvas maps were retired in 3.0 (`docs/plans/canvas-retirement.md`): the canvas area is
+gone, maps are mind maps, and `core/079` keeps only the asks of a plain canvas. The source
+folders are the four places of the reform — library, note, maps, tools — with core and ui below
+them; what follows about canvas pieces and the old folders is the record from before.
 
 ```text
 esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.0, phase 1)
@@ -21,10 +22,12 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
                Selection 076; actions 078; Feature 080; appearance
  src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
  src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
-               collection features, note page, library check
+               album features, note page, library check
  src/note/     properties panel (160–180), reading outline, marked lists, scripts,    (the note place)
                footnotes, quiet links 263–266
- src/tools/    actions menu, strip, one page, graph filter and routes, bulk           (the tools place)
+ src/maps/     mind maps: view, editor, layouts, views, import/export, history        (the maps place)
+ src/tree/     the map's tree, pure: model, layouts, conversions                      (below every place)
+ src/tools/    actions menu, strip, one page, modes, graph filter and routes, bulk    (the tools place)
                engine, dialogs, schema, rules
  src/plugin/   the plugin (lifecycle, settings, features, delegates), settings      2 modules  1,076
 ```
@@ -57,7 +60,7 @@ build.mjs joins src/NNN-*.js in name order → main.js (one shared scope)
  090–139  library       sidebar library, browse view and screens, filters          7 pieces   4,977
  140–229  chrome        actions menu, properties panel, strip, Up Next, menus     11 pieces   2,976
  230–253  shared UI     pickers, covers, property clipboard, action registry       6 pieces   1,360
- 254–261  collections        knowledge, collection property/refactor/structure, smart,       7 pieces   3,148
+ 254–261  albums        knowledge, album property/refactor/structure, smart,       7 pieces   3,148
                         library check, knowledge check
  260–269  links         graph filter, graph routes, quiet links                    3 pieces   2,754
  270–289  editor        marked lists, scripts, footnotes                           3 pieces   2,393
@@ -102,18 +105,18 @@ Names used by one area from another, counting each name once:
 | library → core | 52 | expected |
 | chrome → core | 36 | expected |
 | composition → canvas | 30 | expected: the plugin builds the features |
-| shared UI → core, bulk → core, collections → core, canvas → core | 22 / 17 / 13 / 13 | expected |
-| collections → canvas | 13 | **questionable**: the knowledge model draws on canvas internals |
-| collections → library | 6 | BrowseView, BROWSE_SCREENS, Library… |
-| **core → collections** | 5 | **upward**: CollectionStructure, COLLECTION_TYPES, COLLECTION_KIND_NEUTRAL, Knowledge, CollectionRefactor |
+| shared UI → core, bulk → core, albums → core, canvas → core | 22 / 17 / 13 / 13 | expected |
+| albums → canvas | 13 | **questionable**: the knowledge model draws on canvas internals |
+| albums → library | 6 | BrowseView, BROWSE_SCREENS, Library… |
+| **core → albums** | 5 | **upward**: AlbumStructure, ALBUM_TYPES, ALBUM_KIND_NEUTRAL, Knowledge, AlbumRefactor |
 | **core → library / chrome / canvas** | 1 each | **upward**: BrowseView, UpNext, CANVAS_SPACE |
-| shared UI, links, chrome, collections → canvas | 1–3 each | ComparePicker and plainMarkdownLine sit in canvas pieces but are used everywhere |
+| shared UI, links, chrome, albums → canvas | 1–3 each | ComparePicker and plainMarkdownLine sit in canvas pieces but are used everywhere |
 
 The pieces everything leans on:
 
 | Piece | Used by | Lines | Note |
 |---|---|---|---|
-| `030-helpers-art` | 45 pieces | 949 | a grab-bag: pure helpers next to collection-aware ones |
+| `030-helpers-art` | 45 pieces | 949 | a grab-bag: pure helpers next to album-aware ones |
 | `080-feature` | 34 | 72 | expected |
 | `316-canvas-tree` | 28 | 590 | the de facto canvas adapter |
 | `040-helpers-sorting` | 24 | 381 | expected |
@@ -135,7 +138,7 @@ carries behaviour (see issue 7).
 
 There are 21 pairs of pieces that use each other. The ones that matter:
 
-- **`030-helpers-art` with 032, 120, 254, 256 and 257.** Core helpers call into collection code.
+- **`030-helpers-art` with 032, 120, 254, 256 and 257.** Core helpers call into album code.
 - **`120-browse-view` with 130, 190, 195, 257, 258 and 290.** The browse view is a hub.
 - **Inside the library:** 090↔130 and 100↔130/258.
 - **190↔195 and 190↔348.**
@@ -155,14 +158,14 @@ before the code concerned is touched.
 
    | Name | Declared in | Used by |
    |---|---|---|
-   | `ComparePicker` | `331-canvas-compare` | 8 pieces: collections, links, shared UI, chrome |
-   | `valueList` | `257-collection-structure` | the clipboard and bulk |
-   | `confirmAction` | `265-quiet-links` | collections and the plugin |
+   | `ComparePicker` | `331-canvas-compare` | 8 pieces: albums, links, shared UI, chrome |
+   | `valueList` | `257-album-structure` | the clipboard and bulk |
+   | `confirmAction` | `265-quiet-links` | albums and the plugin |
    | `knownPropertyNames`, `propertyValues` | `260-graph-filter` | library, chrome and bulk |
    | `plainMarkdownLine` | a canvas piece | the panel |
 
    Reading any of these means opening an unrelated feature.
-2. **Confirmed: `030-helpers-art` mixes layers.** It has five mutual pairs with collection and
+2. **Confirmed: `030-helpers-art` mixes layers.** It has five mutual pairs with album and
    browse pieces, which makes the most depended-on piece also one of the most coupled.
 3. **Confirmed: exact duplicates.** Each pair has the same function body, normalised:
    - `pageFile`: `190-strip` and `195-up-next`;
@@ -171,7 +174,7 @@ before the code concerned is touched.
    - `reorder`/`spread`: `323` and `325-canvas-layouts`, twice.
 4. **Confirmed: a note's properties are read and written in many ways.**
    - **Reads:** four "properties of a note" methods (`PropertyClipboard.propertiesOf`,
-     `CollectionProperty.frontmatter`, `CollectionRefactor.frontmatter`, `BulkEdits.frontmatterOf`),
+     `AlbumProperty.frontmatter`, `AlbumRefactor.frontmatter`, `BulkEdits.frontmatterOf`),
      plus 30 inline `getFileCache(f).frontmatter || {}` reads in 15 pieces.
    - **Writes:** `processFrontMatter` is called in 10 pieces, each with its own error notice and
      its own undo.
@@ -179,7 +182,7 @@ before the code concerned is touched.
    - **Bulk edits** keep a record and restore a file only if it is still exactly what they
      wrote, so they detect conflicts.
    - **`plugin.offerUndo(message, fn)`** runs whatever closure it is given. It is used in 14
-     places in collections and others, including the new property paste. These closures put old
+     places in albums and others, including the new property paste. These closures put old
      values back even if the note has been edited since the change.
 6. **Risk: lifecycle leftovers aren't tested as a whole.**
    - `enable()` must be safe to repeat, and `disable()` must undo everything (body classes, DOM
@@ -202,7 +205,7 @@ before the code concerned is touched.
      own access.
 9. **Risk: there are two hubs.**
    - `120-browse-view` (2,723 lines, six mutual pairs) is where navigation, rendering, filters
-     and collection rules meet.
+     and album rules meet.
    - `300-bulk-dialogs` (2,210 lines) holds eleven dialogs; their shared parts (`BulkModal`)
      are reused well, but the dialogs aren't split.
 10. **Risk: popout windows.** Several features set classes on `document.body` (41 uses of
@@ -218,7 +221,7 @@ is the layer:
  core (010–089)         constants, pure helpers, Feature, services: Notes (read/write
                         properties, with undo), Files (move/put back), Orders, Pins, Queue
  shared UI (230–253)    pickers (ComparePicker included), checklists, summaries
- domain features        library · chrome · collections · links · editor · bulk · canvas
+ domain features        library · chrome · albums · links · editor · bulk · canvas
    each one: pure planning (testable without Obsidian) → one service call that writes
  adapters               canvas (316 + 315 the only door to view.canvas), CodeMirror bits
  composition (348–999)  plugin: builds the features and wires events; nothing else
@@ -250,13 +253,13 @@ The rules, to be checked by a script (warnings at first):
 | M2 | 331 → 230 | move `ComparePicker` to the pickers | none |
 | M2 | 257, 260, 265, canvas → 030/040/230 | move `valueList`, `knownPropertyNames`, `propertyValues`, `confirmAction`, `plainMarkdownLine` down | none |
 | M2 | 190/195, 270/280, 323/334, 323/325 | one copy of each duplicate | none |
-| M2 | 030 | split pure helpers from collection-aware ones (the latter go to 257); break 030's mutual pairs | none |
+| M2 | 030 | split pure helpers from album-aware ones (the latter go to 257); break 030's mutual pairs | none |
 | M3 | new `Notes` service (core) | `props(file)`, `write(file, change, message)` with undo that restores only what's unchanged since | undo no longer overwrites later edits |
 | M3 | 160, 235, 250, 254, 255, 256, 257, 345 | use `Notes` for reads and writes | same results |
 | M3 | 290 | the bulk engine keeps its records and shares the conflict rule | none |
 | M3 | 265 | split into parsing (pure), cache integration, editor, reading view, commands: 263–267 | none |
 | M4 | 350 → new `Files` service | `moveFile`, `putBack`, `offerUndo`, folder-note renames | none |
-| M4 | 120 | split navigation, rendering and filtering; collection membership queries into 257 | none |
+| M4 | 120 | split navigation, rendering and filtering; album membership queries into 257 | none |
 | M4 | 300 | one piece per dialog family (properties, tags/values, types/missing, the list tool) | none |
 | M5 | 300, 250, 259, 261 | shared summary/checklist/note-link builders; CSS sections follow pieces; unused selectors removed after a scan | none |
 | M6 | 317–347 | canvas internals only through 315/316; layout maths separate from applying it; one glide-and-save step for the 8 copies in 323, 325, 326, 334, 338, 341; knowledge's canvas mapping (254 → 316/321/326/332/334) into the canvas area; benchmarks | none |
@@ -274,7 +277,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | M1 | safety net — **done** | low | lifecycle test green for all 56 features; `--areas` prints today's matrix |
 | M2 | helpers in the right place, duplicates gone — **done** | low | no shared helper declared in a feature piece; nothing in core reaches up; 030 has no mutual pairs |
 | M3 | note and property operations; quiet links split — **done** | high | one read path and one write path for properties; undo doesn't overwrite later edits |
-| M4 | library, collections, the plugin class — **done** | high | 120 under ~1,200 lines; 350 only composes |
+| M4 | library, albums, the plugin class — **done** | high | 120 under ~1,200 lines; 350 only composes |
 | M5 | UI parts and CSS — **done** | medium | dialogs build from shared parts |
 | M6 | canvas — **done** (target revised, §16) | very high | 2 pieces touch `view.canvas`; benchmarks within 10% of the baseline |
 | M7 | build (optional) | high | only if §4's conditions hold |
@@ -301,7 +304,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 - **Already recorded:** each real-Obsidian test's time (`ci-output/<version>-timings.txt`).
 - **Added in M1:** plugin load time and one library redraw, as `perf:` lines at the top of
   the same file.
-- **To add with the milestones that touch them:** library redraws with 50 and 500 collections (M4);
+- **To add with the milestones that touch them:** library redraws with 50 and 500 albums (M4);
   canvas fold, unfold and tidy on 20, 100 and 500 cards (M6). They are compared by eye at
   first, and later flagged at more than 10% slower.
 
@@ -350,7 +353,7 @@ Behaviour is unchanged, and every suite passed at every step. The crossings went
   - `031-colours`: normalHex, hexToRgb, hexToHsl.
 - **Moved down:**
   - ComparePicker and confirmAction to `230-pickers`.
-  - The shared constants (collection kinds, graph types, tag keys, canvas spacing) to
+  - The shared constants (album kinds, graph types, tag keys, canvas spacing) to
     `020-constants`.
   - scriptLivePreview and one rerenderReading (three copies before) to `050-helpers-dom`.
 - **The action registry** moved into core, from `253-actions` to `078-actions`, beside
@@ -358,21 +361,21 @@ Behaviour is unchanged, and every suite passed at every step. The crossings went
 - **Core no longer reaches up:**
   - The queue tells its listeners of changes, and Up Next listens.
   - Core helpers recognise the browse view by its type (`isBrowseView`).
-  - The collection features' menu entries and kind info come through the plugin
-    (`addCollectionMenuItems`, `collectionInfo`).
+  - The album features' menu entries and kind info come through the plugin
+    (`addAlbumMenuItems`, `albumInfo`).
 - **Duplicates merged:** `pageFile(app)` and `soleCard(selected)`. The canvas glide-and-save
   block (8 copies) moves to M6, since it's canvas saving.
 
 The 52 crossings left, by kind, and the milestone that takes each kind:
 - **Features asking for each other with `plugin.feature(X)`:** Library, BrowseView,
-  CollectionStructure, SmartCollections, BulkEditing, ContextStrip, UpNext, QuietLinks, Footnotes,
+  AlbumStructure, SmartAlbums, BulkEditing, ContextStrip, UpNext, QuietLinks, Footnotes,
   CanvasOutline and others. Taken in M4, where the library and the plugin class are split, and
   in M6 for the canvas ones.
-- **Collections adding screens to the browse view:** `BROWSE_SCREENS`, `BrowseScreen`. These are
-  by design: library is the host, and the collections area adds to it. M4 decides whether collections
+- **Albums adding screens to the browse view:** `BROWSE_SCREENS`, `BrowseScreen`. These are
+  by design: library is the host, and the albums area adds to it. M4 decides whether albums
   sits above library.
 - **Knowledge mapping notes onto canvases** (11 canvas names): M6.
-- **Collection property using the bulk engine's notices** (`bulkNotice`, `bulkTail`): M3, when bulk
+- **Album property using the bulk engine's notices** (`bulkNotice`, `bulkTail`): M3, when bulk
   and notes share one undo.
 
 ## 13. M3, done
@@ -390,12 +393,12 @@ The 52 crossings left, by kind, and the milestone that takes each kind:
   - the property clipboard;
   - the properties panel, whose own put-back is gone;
   - knowledge relationships, whose own restore is gone;
-  - carrying collection values over to new names;
-  - a collection's properties, and the merge undo;
+  - carrying album values over to new names;
+  - an album's properties, and the merge undo;
   - covers, set and cleared;
   - folder defaults.
 - **This is the one behaviour change in M3, and it was deliberate.** Undo no longer overwrites
-  later edits for the clipboard, knowledge, collection carry-over and collection merges. Before, those
+  later edits for the clipboard, knowledge, album carry-over and album merges. Before, those
   put old values back blindly.
 - **Still outside it:**
   - The bulk engine keeps its own records. They are text-level, and restore a file only if it
@@ -409,11 +412,11 @@ The 52 crossings left, by kind, and the milestone that takes each kind:
 - **Tests:** the notes tests are in `test_bulk`, on its real-YAML vault. The suites' stand-in
   plugins now carry a real `Notes`.
 
-**Next, M4:** the library and collections.
+**Next, M4:** the library and albums.
 - Move file operations (`moveFile`, `putBack`, `offerUndo`, folder-note renames) out of the
   plugin class into a `Files` service.
 - Split `120-browse-view`.
-- Decide where collections sit relative to the library.
+- Decide where albums sit relative to the library.
 - Take on the `plugin.feature(X)` lookups between features.
 
 ## 14. M4, done
@@ -435,9 +438,9 @@ and the pairs of pieces that use each other from 14 to 12.
 - **The bulk dialogs are in pieces by family:** `300` keeps `BulkModal` and the "where"
   conditions; then `301` properties, `302` tags and values, `303` types and missing values,
   and `304` the property list and the tools window.
-- **Collections and the library are one area** in `map.js` (090–139 and 254–259), as
-  `.claude/rules/collections.md` already says. Collection features draw inside the browse view and add
-  its screens, so it's one subsystem. Splitting it would mean a delegate for every collection panel,
+- **Albums and the library are one area** in `map.js` (090–139 and 254–259), as
+  `.claude/rules/albums.md` already says. Album features draw inside the browse view and add
+  its screens, so it's one subsystem. Splitting it would mean a delegate for every album panel,
   for no gain.
 - **Bulk renames are announced** (`design-redux:renamed`, `design-redux:property-renamed`)
   rather than handed to three features. The library moves open screens on
@@ -446,17 +449,17 @@ and the pairs of pieces that use each other from 14 to 12.
 - **Not done, and moved to M8:**
   - **The plugin class still holds behaviour beyond composing:** covers (`folderCoverSrc`,
     setting and clearing them), `newFolder`, `togglePin` and `pruneLeftovers`.
-  - **The library benchmarks with 50 and 500 collections.** M4 only moved code, so there's no
+  - **The library benchmarks with 50 and 500 albums.** M4 only moved code, so there's no
     redraw change to measure.
 
 The 29 crossings left:
 - **Features asking each other for a capability through `plugin.feature(X)`:**
-  - the strip with Library, Knowledge and Footnotes;
-  - the panel with CollectionProperty, BulkEditing and QuietLinks;
+  - the strip with Library, Knowledge, AlbumStructure and Footnotes;
+  - the panel with AlbumProperty, BulkEditing and QuietLinks;
   - the browse view with ContextStrip, UpNext and BulkEditing;
   - workspace modes and one-page;
-  - collection property with the bulk notices;
-  - collection structure with the canvas vault map.
+  - album property with the bulk notices;
+  - album structure with the canvas vault map.
 - **Knowledge mapping notes onto canvases:** 11 names, for M6.
 
 ## 15. M5, done
@@ -540,18 +543,18 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Unused code:** a scan of every top-level name found three nothing used, and they're
   gone: `renameQuietLinks` (tests use `renameQuietLinksIn`), `outlineCards` and
   `DEFAULT_RELATIONS`. In M5, one unused CSS rule went the same way.
-- **Library benchmarks:** the real-Obsidian suite times a shelf of 50 and of 500 collections, and
+- **Library benchmarks:** the real-Obsidian suite times a shelf of 50 and of 500 albums, and
   the sidebar beside them. The first run, locally on the latest Obsidian:
 
-  | Collections | Shelf drawn | Sidebar |
+  | Albums | Shelf drawn | Sidebar |
   |---|---|---|
   | 50 | 22 ms | 18 ms |
   | 500 | 135 ms | 100 ms |
 
-  The sidebar's 100 ms at 500 collections is worth watching, since it redraws as the vault
+  The sidebar's 100 ms at 500 albums is worth watching, since it redraws as the vault
   changes. It's for a later look, not this refactor.
 - **Docs:** `AGENTS.md` now states the layers, the services, `mixInto`, the events, the
-  canvas helpers and `asButton`. The rules notes for collections, the canvas and quiet links say
+  canvas helpers and `asButton`. The rules notes for albums, the canvas and quiet links say
   what moved. §0 above gives the current state.
 
 ## 18. 2.0, phase 1: ES modules, done
@@ -568,7 +571,7 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **Load order:** ES modules run their imports first, so the old number
   order no longer decides it. Of the 13 pairs of modules that use each other,
   one needs the other as it loads: `SmartScreen extends BrowseScreen` (258 on
-  110), while 110 only reaches for `SmartCollections` when drawing. A cycle runs
+  110), while 110 only reaches for `SmartAlbums` when drawing. A cycle runs
   from the module imported first, so `src/main.js` imports 258 before the
   rest. `tests/map.js` now records which names a module needs as it loads.
 - **What the build refuses, besides a name declared twice:** a name used
@@ -592,7 +595,7 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 - **The library index** (`core/077`, `libraryIndex(plugin)`): every file, the
   notes, the folders and their folder notes, what each folder holds, and the
   links each way, worked out once and kept while files and links stay as they
-  are. The browse view, Home, smart collections, knowledge, the sidebar and the
+  are. The browse view, Home, smart albums, knowledge, the sidebar and the
   canvas's links read it rather than walking the vault. Shelves and the
   sidebar draw as fast as before (within noise).
 - **Design tokens:** durations, easings, glass blur, the interface font and
@@ -660,32 +663,32 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   fold feature's own buttons give way to the toolbar's. The canvas settings
   are in six groups: Map, Cards, Arrows, Arrange, Find and focus, Check.
 - **Cards that hold more** (`CanvasCardFacts` in 322): a card shows how far
-  its checklist is done (3/5), a note card its cover and title like a collection
+  its checklist is done (3/5), a note card its cover and title like an album
   tile, and the properties chosen in settings as chips. Cards can be tinted
   by their branch or their depth (347), leaving cards' own colours as they
   are.
 
 ## 22. 2.0, phase 5: design, note-first
 
-- **A quieter collection page.** Notes nest under the note their parent property
-  names (`collectionNestBy`, `parent` to begin with; `nestByProperty` in 045),
+- **A quieter album page.** Notes nest under the note their parent property
+  names (`albumNestBy`, `parent` to begin with; `nestByProperty` in 045),
   a step in, folding open, and that property gets no column. Under each
   title, a grey line: the note's description, or its first sentence
   (`noteOpening` in 047, read once per change of the note). One count,
-  under the title: a collection of its own notes alone has no heading for them
+  under the title: an album of its own notes alone has no heading for them
   and no count at its foot. At the end, "Still to write" — what its notes
   link to that isn't a note yet, greyed; a click writes it there — and a
   New note row.
-- **The note page** (`library/140`): a note opens with its collection above its
-  title, in the accent colour (a click opens the collection), and one grey line
+- **The note page** (`library/140`): a note opens with its album above its
+  title, in the accent colour (a click opens the album), and one grey line
   under it — what it hangs from, its length, when it was edited. Its
   properties can sit there as quiet chips, the full block a click away
   (off to begin with). At its end, shelves: Linked from here, Mentioned in,
-  More in its collection — each note its title and opening line. In editing and
+  More in its album — each note its title and opening line. In editing and
   reading views, only in the note's own layout (not an embed's), drawn again
   only where what it says changed.
 - **Colour from the cover, and glass.** A note's page takes a soft glow of
-  its cover, or its collection's, behind its title; without one it stays plain
+  its cover, or its album's, behind its title; without one it stays plain
   (`notePageTint`). Menus, suggestions and the canvas's bar and controls
   are frosted glass (`glassPanels`, a class on the page), not in the
   editorial look and not where the system asks for less transparency.
@@ -698,9 +701,9 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   text has been on screen to its end (`library/145`: scrolled there, or
   short enough to fit and open a few seconds); changed since, it's
   "changed"; changed by you while open, still read.
-- **What it shows:** a collection's header counts "12 of 17 read"; a row new to
+- **What it shows:** an album's header counts "12 of 17 read"; a row new to
   you — made since the history began, or changed since you read it — has a
-  dot; Open on a collection becomes Continue, at the note you were last on;
+  dot; Open on an album becomes Continue, at the note you were last on;
   Recently read is a collection and joins the library after Pinned
   (settings step 4); Home's Continue reading picks up a note you didn't
   finish before the next one. Home's Rediscover leads with notes due a revisit: read a month ago or
@@ -721,10 +724,10 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 
 ## 25. Several notes at once
 
-- While a collection is in Edit (122), each row has a tick box; Shift ticks a
-  run from the last one ticked. A bar at the top of the collection says how many
+- While an album is in Edit (122), each row has a tick box; Shift ticks a
+  run from the last one ticked. A bar at the top of the album says how many
   are ticked and offers Move to…, Delete and Clear.
-- Moving goes through `plugin.moveFile`, each note's place in its collection
+- Moving goes through `plugin.moveFile`, each note's place in its album
   kept; one Undo puts them all back (`putBack`, in reverse). Delete asks
   first (`ConfirmModal`, ui/230) and sends the notes to the trash.
 - Leaving Edit clears the ticks.
@@ -732,10 +735,10 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
 ## 26. Search and properties, reworked
 
 - **Ranked search** (core/048 `rankNote`): a note's title, aliases, one
-  property, its collection, or its letters nearly in order, scored so the note
+  property, its album, or its letters nearly in order, scored so the note
   named for the query comes first; the reason shows as the row's grey line
   (`view.searchWhy`). A row above the results picks the kind (All, Notes,
-  Collections, Collections, Properties — `view.searchKind`) and the order of notes
+  Albums, Collections, Properties — `view.searchKind`) and the order of notes
   (`view.searchSort`), neither touching the query. Search rows aren't nested.
 - **A property** (110 `renderOverview`): its facts — notes using it, values,
   empty, type — then its values, in the sort menu's order, each opening its
@@ -747,45 +750,45 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   this note; then Manage property (`manageEntries`, nested where Obsidian
   allows): View all notes using it and View notes with each of its values
   (the Properties screen, through `Library.browseMode`), Rename across vault,
-  Set for the collection; last, Remove from note.
+  Set for the album; last, Remove from note.
 - **Narrowing across properties** (121): `filterProp` and `filterMore`
   (`propFilters()`, `addPropFilter`) — a note passes all of them; each is a
   chip with its ×. A value's notes offer Narrow to these; the Properties
   screen keeps the filters as it moves (`keepFilters` in the state, which
   otherwise starts each screen clean) and says how many notes match, with
-  Show them (Notes) and Search among them. Smart collections keep `more`.
+  Show them (Notes) and Search among them. Smart albums keep `more`.
 - **Search inside notes** (110 `renderText`, setting `searchNoteText`): for
   three letters or more, a moment after typing stops (`TEXT_PAUSE`), notes'
   text is read with `cachedRead`, forty at a time between yields, stopped
   when the query changes; up to `TEXT_MOST` notes not already found by name,
   each with its passage (core/048 `textExcerpt`), kept 15 s for redraws. The
   kind row gains In text. Obsidian's own search stays a button.
-- **Search with nothing typed**: Recently searched, Browse by (Collections,
+- **Search with nothing typed**: Recently searched, Browse by (Albums,
   Properties, Tags), Recently added, then the categories if set.
 - **A note's menu in the library** opens with Open in new tab, Reveal in
-  collection (when it isn't this collection) and Copy link (`noteOpenings`, through
+  album (when it isn't this album) and Copy link (`noteOpenings`, through
   `showTargetMenu`'s `first`).
 
 ## 27. Search and Properties as a music app's
 
 - **Search results** (110 `renderResults`): Top Result — the best of the
-  ranked notes, a collection named for the query, or a value that is the query —
-  large, then Collections (covers), Notes (rows, each saying why), Properties
+  ranked notes, an album named for the query, or a value that is the query —
+  large, then Albums (covers), Notes (rows, each saying why), Properties
   (values as "domain: Law" and properties by name, `propertyHits`, one pass
   over the notes), Collections, and In Notes (what notes say). A few of each;
   See All (`view.searchKind`) shows one kind whole, with All results back.
   The kind pills and the sort are gone.
 - **Search with nothing typed**: Recently Searched as a short list, then
   Browse Categories as tiles, with the property they come from chosen
-  beside the heading (`categoryProperty`); with none, Collections, Properties and
+  beside the heading (`categoryProperty`); with none, Albums, Properties and
   Tags instead.
 - **Properties as Artists** (110 `PropertiesScreen`): the list on the left;
   a property's page on the right — its name, "N notes · N values · N empty",
   then its values as covers (`valueArt`, the same on the value's page) or a
   list (`propertyValueView`: auto shows covers up to `VALUE_GRID_MOST`),
-  "No value" last. A value opens as a collection (`renderValuePage`, through
-  `renderCollectionHead`): cover, name, the property under it as the way back,
-  Open, Random and More, and its notes in the collection list. Management is in
+  "No value" last. A value opens as an album (`renderValuePage`, through
+  `renderAlbumHead`): cover, name, the property under it as the way back,
+  Open, Random and More, and its notes in the album list. Management is in
   the menus — a value's: Open, Open in new tab, Rename value, Merge with
   (Edit with it picked), Copy value, Narrow the library to these; a
   property's: View values, Rename, Merge, Change type, Find notes missing
@@ -800,7 +803,7 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   every row), or a link to one of them (`reveal`, for as long as the tab is
   open). A tab or section with nothing everyday hides with them.
 - **A shorter library** (130 `defaultSections`, settings step 5): Search,
-  Home, All Notes, the collections and Pinned first; Recent; then More, a section
+  Home, All Notes, the albums and Pinned first; Recent; then More, a section
   with `folded` (its heading opens and closes it, remembered), holding the
   occasional places (`LIBRARY_MORE`). Step 5 moves those places in a saved
   layout under More, in their order, and drops a section they alone filled.
@@ -817,10 +820,10 @@ Behaviour is unchanged, and every suite passed at each step. The crossings went 
   as before). The library and its review are places: their old commands
   (`workspace-mode-library`, `-review`) open Home and the library check, so
   hotkeys keep working; anyone left in either is in Standard.
-- **One vocabulary** (interface only): a collection is a Collection, a smart
-  collection a Saved view, the screen of saved views and gathering collections
+- **One vocabulary** (interface only): an album is a Collection, a smart
+  album a Saved view, the screen of saved views and gathering collections
   Views, and a folder that holds collections a Shelf. Ids, class names,
-  property names (`collection`, `includes`…) and stored data keep the old words.
+  property names (`album`, `includes`…) and stored data keep the old words.
 - **Layout** (`libraryLayout`, 110 `showsCovers`): Automatic shows
   collections, pins and a property's values (up to `VALUE_GRID_MOST`) as
   covers, and notes opened, added or read as a list; Covers and Lists set
@@ -863,9 +866,9 @@ inspector, one selection.
   isn't placed, nor closed by Escape or a click elsewhere.
 - **It follows** the note being worked in (not the sidebar itself, nor a pane
   with no note) and `plugin.selection`: a note picked in the library, with
-  Open / Reveal in collection / More; a collection, in brief, then its folder
+  Open / Reveal in collection / More; an album, in brief, then its folder
   note's properties. The library draws those (124 `inspectNoteActions`,
-  `previewCollection`); the panel finds a page of the library by its view type.
+  `previewAlbum`); the panel finds a page of the library by its view type.
 - **The library's preview pane is gone.** Its button and `open-inspector`
   show or close the inspector; `inspectorShowing` (076) is what makes a click
   pick. `libraryPreview` is kept, unused.
@@ -922,7 +925,7 @@ That wants screenshots across the looks before and after, part by part.
   that alone. KnowledgeMindMap still puts itself on Knowledge: the library
   mustn't import from maps.
 - `src/main.js` imports the plugin and exports it, with one line before: smart
-  collections first, for the one cycle the order decides (SmartScreen extends
+  albums first, for the one cycle the order decides (SmartScreen extends
   BrowseScreen as it loads). Every other module is reached through the
   plugin's imports; tests/map.js refuses one nothing imports.
 - The bundle is the same modules and lines as before.
@@ -943,7 +946,7 @@ That wants screenshots across the looks before and after, part by part.
 
 Classic, 1.x's look kept for one release after 2.0, is retired. Step 17 gives
 whoever had it the theme's look with what Classic hid switched off: the note
-page's additions (`notePage`), row excerpts (`collectionExcerpts`) and glass. The
+page's additions (`notePage`), row excerpts (`albumExcerpts`) and glass. The
 unread dot, which Classic also hid, stays: it comes with reading history.
 
 ## 37. The look on what the plugin draws, to begin with
@@ -1016,40 +1019,3 @@ From the development specification (26 Oct 2026), after the first plan:
   of the open note. `targetOf` and `hostsPanel` moved to the coordinator.
 - Selection stays apart from what's open: a pick has no leaf; a tab's target has the
   leaf it came from, which a map's node section reads.
-
-## 43. One look, Clear
-
-- **One look** in place of Apple's, the theme's and the editorial (settings step 22 moves
-  whichever was chosen; `lookScope` goes). Notes are the theme's; the plugin draws only its
-  own screens. `body.dr-look-clear` while it's on; `isClearLook()` (ui/229) for what a
-  screen draws differently under it.
-- **Principles, as rules:** type and space part things, not boxes or lines; colours are
-  the theme's; the accent marks only where you are, what's picked and the main action;
-  readable text is `--text-muted` at quietest, never faint; one raised surface
-  (`--dr-raised`, a hairline ring and `--dr-shadow-md`) for whatever floats, glass only
-  with the Glass setting.
-- **Motion** is `ui/231-motion.js`: `transitionScreen` (a view transition where there is
-  one, else a slide), `flip` (rows matched by `data-path` glide to a new order), `enter`
-  (`.dr-enter`, staggered). Timings are the tokens in `04-foundation.css`; the Motion
-  setting (`dr-motion-subtle`, `dr-motion-off`) and reduced motion zero them, and every
-  helper then just makes the change. Nothing waits on an animation, and nothing measures
-  mid-drawing: the bar and the sidebar's marker are measured in the next frame (forcing
-  layout in `render()` made a 2000-note collection six times slower).
-- **Covers are marks:** see §44.
-- **Kept for what relies on them:** class names (`.dr-note-row`, `.dr-list-section`, `.dr-card`…),
-  the `look` key and the `switch-look` command (now animations on and off).
-
-## 44. Plain library
-
-- **Everything is rows.** Cards (`.dr-grid`, `.dr-card`), shelves (`.dr-shelf-row`) and home's
-  highlights (`.dr-picks`) stay in the code, since picking, menus, keys and your own order
-  hang on them, but draw as lists. No gallery: `libraryLayout` and `propertyValueView` went
-  at settings step 23, and a folder note's `layout: covers` opens as a list.
-- **Covers are off by default.** `showCovers` (`coversOn`, core/030): off, `drawNoteArt`,
-  `drawFolderArt` and the view's `fillArt` draw a plain icon, and nothing takes a dropped
-  image; on, a small mark sized by Cover size (`--dr-mark-size`). Cover properties and
-  commands work either way, and the Bases feature doesn't depend on the setting.
-- **Words.** album → collection, track → note row, disc → section, in code, classes and
-  settings keys (settings step 24, `RENAMED_KEYS`; older steps keep the old names, which is
-  what they read). What keeps them: command ids, and the note property `album` (the default
-  of `COLLECTION_KEY_DEFAULTS.type`), since hotkeys and people's notes hang on them.

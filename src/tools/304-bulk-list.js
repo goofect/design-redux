@@ -11,7 +11,6 @@ import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js'
 import { plainValue } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
-import { addPropertyEntries } from '../ui/247-property-menu.js';
 import { propertyType } from './288-bulk-values.js';
 import { renamePropertyInPlace } from './290-bulk-engine.js';
 import { BulkModal, whereHolds, whereReady } from './300-bulk-dialogs.js';
@@ -136,7 +135,7 @@ export class PropertyListTool extends BulkModal {
       const icon = row.createDiv({ cls: 'dr-plist-icon' });
       setIcon(icon, TYPE_ICONS[propertyType(this.app, prop.name)] || 'text');
 
-      // The name, and under it the values it holds — as a row's
+      // The name, and under it the values it holds — as a track's
       // artist sits under its title.
       const text = row.createDiv({ cls: 'dr-plist-text' });
       const name = text.createDiv({ cls: 'dr-plist-name', text: prop.name });
@@ -214,11 +213,20 @@ export class PropertyListTool extends BulkModal {
     evt.preventDefault();
     evt.stopPropagation();
     const menu = new Menu();
-    // The same menu as on the property's page in the library; here each tool is a sheet, and Rename is in place.
-    const everyNote = !this.targets.length && !this.where.some(whereReady);
-    addPropertyEntries(menu, { name: prop.name, missing, where: everyNote ? 'every note' : 'these notes' }, (tool, args) =>
-      tool === 'rename' ? this.startRename(row, name, prop) : this.host.openSheet(tool, args)
-    );
+    const item = (title, icon, run, warn) =>
+      menu.addItem((i) => {
+        i.setTitle(title).setIcon(icon).onClick(run);
+        if (warn && typeof i.setWarning === 'function') i.setWarning(true);
+      });
+    item('Rename', 'pencil', () => this.startRename(row, name, prop));
+    item('Merge with…', 'git-merge', () => this.host.openSheet('merge', { keys: [prop.name] }));
+    if (missing > 0) {
+      item(`Fill in the ${missing} without it…`, 'list-checks', () => this.host.openSheet('missing', { key: prop.name }));
+    }
+    item('Change type…', 'shapes', () => this.host.openSheet('type', { key: prop.name }));
+    item('Clean up values…', 'sparkles', () => this.host.openSheet('cleanup', { key: prop.name }));
+    menu.addSeparator();
+    item('Remove from these notes…', 'trash-2', () => this.host.openSheet('remove', { keys: [prop.name] }), true);
     showMenuAt(menu, evt);
   }
 

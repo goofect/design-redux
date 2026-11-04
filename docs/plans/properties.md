@@ -40,10 +40,10 @@
      Part                   What it does now                         Where
 
      Browsing               A Properties screen listing each         110 , 255 , 258 , 260
-                            property and its values as collections,
+                            property and its values as albums,
                             sorted by name, count or type, in grid
-                            or list; a collection can be defined by a
-                            property; smart collections filter by
+                            or list; an album can be defined by a
+                            property; smart albums filter by
                             property; the graph can filter by
                             property
 
@@ -66,12 +66,12 @@
     4. Act on a change. Moving a note into a folder or setting a tag changes nothing else;
        defaults are given once at creation.
     5. Edit many notes from where you are. Bulk starts from folders or properties, not from
-       the notes picked in a list, a search or a smart collection.
+       the notes picked in a list, a search or a smart album.
     6. Look back. Undo covers the last change; there is no record of what a note's status
            was last week.
     7. Work with dates. Date properties are stored and sorted, but there is no "tomorrow", no
-       due soon or overdue state, and no collection of what is due.
-    8. Edit in place. Collection rows show values as text and have no write path, so changing one
+       due soon or overdue state, and no album of what is due.
+    8. Edit in place. Album rows show values as text and have no write path, so changing one
        means opening the note or the panel.
 
 Untitled
@@ -82,7 +82,7 @@
 
      #     Addition        What it does                     Builds on                   Phase
 
-     1     Schemas         Per folder or collection kind:        folderDefaults , find-      P1
+     1     Schemas         Per folder or album kind:        folderDefaults , find-      P1
                            which keys are required,         missing
                            their type, allowed values, a
                            default; the panel marks
@@ -99,7 +99,7 @@
 
      3     Value options   Per property, a list of values   propertyValueView , graph   P1
                            with a colour and icon; used     filter
-                           by panel chips, collection rows,
+                           by panel chips, album rows,
                            filters and graph colours
 
      4     Panel           An invalid value shows a         panel section (160)         P1
@@ -116,7 +116,7 @@
 
      6     Bulk from a     Property tools act on the        plugin.selection , bulk     P2
            selection       notes picked in a list, a        modals
-                           search, a smart collection or a
+                           search, a smart album or a
                            table, not only on folders
 
 Untitled
@@ -128,13 +128,13 @@
                            panel section to look back
                            and restore one value
 
-     8     Dates           Type "tomorrow" or "+2w"        date type, smart collections    P2
+     8     Dates           Type "tomorrow" or "+2w"        date type, smart albums    P2
                            into a date; due, soon and
                            overdue states on chips; a
-                           smart collection of what is due
+                           smart album of what is due
 
      9     Rollups         Read-only values on an          libraryIndex               P3
-                           collection: count, how many
+                           album: count, how many
                            done, earliest and latest
                            date, shown in the header
                            and as a column
@@ -146,7 +146,7 @@
                            used, with the fix tools one
                            click away
 
-     11    Edit in place   Click a value in a collection       rows (123), plugin.notes   P3
+     11    Edit in place   Click a value in an album       rows (123), plugin.notes   P3
                            row to pick from its options,
                            set a date or tick a
                            checkbox
@@ -185,7 +185,7 @@
            are labels, so 086 to 089 are free; node tests/map.js --fix-imports writes the
            imports.
            Screens. Schema marks and history are PanelSection s (082) in the note panel; inline
-           editing goes in noteRow (123); the inspector extends PropertiesScreen (110); the
+           editing goes in trackRow (123); the inspector extends PropertiesScreen (110); the
            tools stay in the bulk area's property tools menu.
            Settings. New keys in DEFAULTS and SETTINGS_TABS : propertySchemas and
            propertyHistory (both keyed by path, so in PATH_KEYED ), propertyOptions ,
@@ -252,7 +252,7 @@
       migration copying folderDefaults .
     3. SchemaSection in the panel: marks, reason on hover, one-click fix written through
        plugin.notes .
-    4. Value chips with colour and icon in the panel, collection rows and filters.
+    4. Value chips with colour and icon in the panel, album rows and filters.
     5. "Check against schema" and "Clean up values" in the property tools menu, each ending
        in one Undo step.
 
@@ -264,9 +264,9 @@
     1. 089 and propertyHistory : record from plugin.notes writes only, capped per note,
            path-keyed so it follows renames.
     2. HistorySection : browse and restore one value.
-    3. Dates: parseDateInput , dueState , due chips, a smart collection for what is due.
+    3. Dates: parseDateInput , dueState , due chips, a smart album for what is due.
     4. 307 : property tools take picked notes from plugin.selection , search results and
-           smart collections.
+           smart albums.
     5. 087 and 306 : rules with dry run, preview list, loop guard and the 200-note
       confirmation; run on create , rename and metadata change for the one file concerned.
 
@@ -275,10 +275,10 @@
   restores one value without touching the others.
 
   P3: computing and editing (about 8 sessions)
-    1. Rollups for collections: count, done, earliest and latest, in the header and as a column; no
+    1. Rollups for albums: count, done, earliest and latest, in the header and as a column; no
        formulas beyond a fixed set.
     2. Property inspector on the Properties screen.
-    3. Inline editing in collection rows, using each key's options or type.
+    3. Inline editing in album rows, using each key's options or type.
     4. Link properties: picker with create, and "referenced by" per key.
 
 Untitled
@@ -286,11 +286,11 @@
     5. Panel views per folder; table copy and paste with a preview.
 
   Done when: a value changed in a row is written and shown without a full redraw of the
-  collection; the inspector's counts match propertyCounter on the test vault; a pasted table
+  album; the inspector's counts match propertyCounter on the test vault; a pasted table
   changes exactly the cells that differ.
 
   Tests. New tests/test_schema.js , test_rules.js and test_prophistory.js
-  (simulation), additions to test_bulk.js and test_collection.js , and one real-Obsidian test
+  (simulation), additions to test_bulk.js and test_album.js , and one real-Obsidian test
   for rules on a file move, run with tests/e2e.sh on the latest version only.
 
   Decisions and risks
@@ -310,7 +310,7 @@
                          per note                         adds text to every note
 
      Computed            A fixed set of rollups on        Free-form formulas: powerful, but
-     values              collections only                      Obsidian's Bases already covers tables
+     values              albums only                      Obsidian's Bases already covers tables
                                                           and formulas, and an expression
                                                           language is a lot to keep safe
 

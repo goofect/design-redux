@@ -145,7 +145,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   const everything = [ir, books, a, b, c];
   const bookmarks = [{ type: 'file', path: 'IR/Anarchy.md' }, { type: 'folder', path: 'Books' }, { type: 'file', path: 'Books/Crisis.md' }];
   const plugin = {
-    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { showCovers: true }),
+    settings: JSON.parse(JSON.stringify(R.DEFAULTS)),
     saveData: async () => {},
     isFolderNote: () => false, folderHasNotes: () => true, recentFiles: () => [],
     folderNote: () => null, folderCoverSrc: () => null, feature: () => null,
@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 24);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 26);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);
@@ -235,7 +235,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(b, { look: 'theme' }, 'whoever asked for the theme’s look keeps it');
     const c = { look: 'editorial', noteThemeLook: false }; step.run(c);
     assert.deepStrictEqual(c, { look: 'editorial' });
-    assert.strictEqual(R.DEFAULTS.look, 'clear');
+    assert.strictEqual(R.DEFAULTS.look, 'apple');
     // Step 15: Apple's look covers notes too, whatever scope the editorial look was given.
     const scope = R.SETTINGS_MIGRATIONS.find((m) => m.to === 15);
     const d = { look: 'apple', lookScope: 'plugin' }; scope.run(d);
@@ -253,16 +253,28 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     // Step 9 leaves a first install's Relationships on.
     const rel = {}; R.SETTINGS_MIGRATIONS.find((m) => m.to === 9).run(rel, { existing: false });
     assert.ok(!('panelRelationships' in rel));
-    // Step 21: reading history, Study and the relationships go, and their places in the library.
-    const s21 = { readingHistory: true, readingLog: { 'a.md': {} }, studyEnabled: true, knowledge: true, knowledgeMeant: {}, panelRelationships: true, fromReadingDays: 14, notePage: true,
-      librarySections: [{ title: 'More', items: [{ kind: 'builtin', id: 'read' }, { kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'knowledge-check' }] }],
-      homeShelves: [{ id: 'revisit', on: true }, { id: 'recents', on: true }] };
-    R.SETTINGS_MIGRATIONS.find((m) => m.to === 21).run(s21);
-    assert.deepStrictEqual(Object.keys(s21).sort(), ['homeShelves', 'librarySections', 'notePage']);
-    assert.deepStrictEqual(s21.librarySections[0].items, [{ kind: 'builtin', id: 'added' }]);
-    assert.deepStrictEqual(s21.homeShelves, [{ id: 'recents', on: true }]);
+    // Step 25: a vault back from the plain names and the one Clear look; what it had set stays.
+    const s25 = { look: 'clear', motion: 'off', hideRightSidebar: true, pinsLarge: true, showCovers: false, collectionColumns: 'status', smartCollectionList: [{ id: 'a' }], noteLength: 'words', notePage: true };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 25).run(s25);
+    assert.deepStrictEqual(s25, { notePage: true, albumColumns: 'status', smartAlbumList: [{ id: 'a' }], trackLength: 'words' });
+    const apple = { look: 'apple', albumColumns: 'status' };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 25).run(apple);
+    assert.deepStrictEqual(apple, { look: 'apple', albumColumns: 'status' }, 'a vault on 3.0.25 keeps what it has');
+    // Step 26: maps, due dates, modes, reading history, the outline, Study, relationships and quiet links go, and their places.
+    const s26 = { mindmaps: true, mindmapLegend: true, workspaceModes: true, workspaceMode: 'study', readingHistory: true, readingLog: { 'a.md': {} }, studyEnabled: true, fromReadingDays: 14, rememberPlace: true,
+      propertyDueChips: true, propertyDueKeys: 'due', albumRecents: true, albumProgressRing: true, propertyValueView: 'grid', libraryLayout: 'covers', knowledge: true, knowledgeCheck: true, knowledgeMeant: {}, knowledgeBroader: 'concept', panelRelationships: true, canvasRelationTypes: [], canvasRelationNames: '', readingOutline: true, outlineWordCounts: true, stripProgress: true, quietLinks: true, notePage: true,
+      smartAlbumList: [{ id: 'd', prop: { key: 'due', value: null, negate: false, due: true } }, { id: 'k', prop: { key: 'status', value: 'x' } }],
+      librarySections: [{ title: 'More', items: [{ kind: 'builtin', id: 'read' }, { kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'highlights' }, { kind: 'builtin', id: 'knowledge-check' }] }],
+      homeShelves: [{ id: 'continue', on: true }, { id: 'recents', on: true }], keepOwnOrder: { read: true, pinned: true } };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 26).run(s26);
+    assert.deepStrictEqual(Object.keys(s26).sort(), ['homeShelves', 'keepOwnOrder', 'libraryLayout', 'librarySections', 'notePage', 'smartAlbumList']);
+    assert.strictEqual(s26.libraryLayout, 'auto', 'notes are no longer covers');
+    assert.deepStrictEqual(s26.smartAlbumList.map((a) => a.id), ['k'], 'the saved view of what’s due goes');
+    assert.deepStrictEqual(s26.librarySections[0].items, [{ kind: 'builtin', id: 'added' }]);
+    assert.deepStrictEqual(s26.homeShelves, [{ id: 'recents', on: true }]);
+    assert.deepStrictEqual(s26.keepOwnOrder, { pinned: true });
     const h = {}; strip.run(h, { existing: false });
-    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && !('lookScope' in R.DEFAULTS), 'a first install starts without them, its notes as the theme draws them');
+    assert.ok(!('contextStrip' in h) && R.DEFAULTS.contextStrip === false && R.DEFAULTS.settingsInHeader === false && R.DEFAULTS.lookScope === 'plugin', 'a first install starts without them, its notes as the theme draws them');
   });
 
   /* -- pins in your own order ------------------------------------------------ */
@@ -323,7 +335,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     Object.assign(view, { mode: 'folder', path: 'IR' });
     view.render();
     view.onOpen && view.registerDomEvent(view.containerEl, 'keydown', (evt) => view.onKey(evt));
-    const row = view.contentEl.querySelector('.dr-note-row');
+    const row = view.contentEl.querySelector('.dr-track');
     row.focus();
     key(row, '/');
     const find = view.contentEl.querySelector('.dr-browse-search input');
@@ -337,11 +349,11 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     find.value = 'bal';
     find.dispatchEvent(new window.Event('input'));
     await settle(120);
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-note-row').length, 1);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 1);
     key(find, 'Escape');
     assert.strictEqual(view.query, '');
     assert.strictEqual(find.value, '');
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-note-row').length, 2);
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 2);
     key(find, 'Escape');
     assert.notStrictEqual(document.activeElement, find);
   });
@@ -561,7 +573,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       settings: {
         coverColors: { A: '#123456', Gone: '#000000' },
         coverDesigns: { 'Map.canvas': {}, 'Old.canvas': {} },
-        collectionOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
+        albumOrders: { '/': { names: [] }, A: { names: [] }, 'Gone/Sub': { names: [] } },
         folderDefaults: { Gone: [] },
       },
       saved: 0,
@@ -571,7 +583,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(R.DesignRedux.prototype.pruneLeftovers.call(fake), true);
     assert.deepStrictEqual(Object.keys(fake.settings.coverColors), ['A']);
     assert.deepStrictEqual(Object.keys(fake.settings.coverDesigns), ['Map.canvas']);
-    assert.deepStrictEqual(Object.keys(fake.settings.collectionOrders), ['/', 'A']);
+    assert.deepStrictEqual(Object.keys(fake.settings.albumOrders), ['/', 'A']);
     assert.deepStrictEqual(fake.settings.folderDefaults, {});
     assert.strictEqual(fake.saved, 1);
     fake.app.vault.getAllLoadedFiles = () => [];
@@ -582,25 +594,25 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 
   /* -- type to jump, Space to preview ---------------------------------- */
 
-  const rowList = () => {
+  const trackList = () => {
     const el = document.body.createDiv();
     ['Anarchy', 'Balance of power', 'Contract', 'Realism', 'Tort', 'Tribunal'].forEach((name, i) => {
-      const row = el.createDiv({ cls: 'dr-note-row' });
+      const row = el.createDiv({ cls: 'dr-track' });
       row.setAttribute('tabindex', '0');
       row.dataset.path = `Law/${name}.md`;
-      row.createDiv({ cls: 'dr-note-row-num', text: String(i + 1) });
-      row.createDiv({ cls: 'dr-note-row-name', text: name });
+      row.createDiv({ cls: 'dr-track-num', text: String(i + 1) });
+      row.createDiv({ cls: 'dr-track-name', text: name });
       row.addEventListener('keydown', (evt) => {
         if (evt.key === ' ') row.dataset.opened = 'yes';
       });
     });
-    R.roveFocus(el, '.dr-note-row');
+    R.roveFocus(el, '.dr-track');
     return el;
   };
-  const focusedName = () => document.activeElement.querySelector('.dr-note-row-name').textContent;
+  const focusedName = () => document.activeElement.querySelector('.dr-track-name').textContent;
 
   await t('typing the start of a name jumps to it; the same letter again moves on', () => {
-    const el = rowList();
+    const el = trackList();
     R.listKeys.on = true;
     try {
       el.firstChild.focus();
@@ -627,7 +639,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   });
 
   await t("Space previews the note in focus; switched off, the keys are the row's own again", () => {
-    const el = rowList();
+    const el = trackList();
     const seen = [];
     const keys = new R.ListKeys({ settings: { typeToJump: true }, app: { vault: { getAbstractFileByPath: () => null } } });
     keys.enable();

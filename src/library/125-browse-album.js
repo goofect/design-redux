@@ -1,21 +1,21 @@
 /* ------------------------------------------------------------------ */
-/* The browse view: a collection's page                                    */
+/* The browse view: an album's page                                    */
 /*                                                                     */
-/* How a collection is laid out: its head, sections of notes, the limits and  */
+/* How an album is laid out: its head, discs of notes, the limits and  */
 /* "more" rows, PDFs, and where things can be dropped. A part of the   */
 /* view: BrowseView extends it.                                        */
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFile, TFolder } from 'obsidian';
-import { blankLook, byName, coversOn, drawFolderArt, onContextMenu } from '../core/030-helpers-art.js';
+import { blankLook, byName, drawFolderArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { nestByProperty } from '../core/045-helpers-properties.js';
 import { ROOT_MODES } from './119-browse-registry.js';
 import { BrowsePreview } from './124-browse-preview.js';
-import { drIconButton, drMenu, isClearLook } from '../ui/229-components.js';
-import { CollectionStructure } from './257-collection-structure.js';
+import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
+import { AlbumStructure } from './257-album-structure.js';
 
-export class BrowseCollection extends BrowsePreview {
+export class BrowseAlbum extends BrowsePreview {
   /** Title and search, for the screens with no folder behind them. */
   renderTitleBar(root, title) {
     const bar = root.createDiv({ cls: 'dr-detail-bar' });
@@ -35,14 +35,13 @@ export class BrowseCollection extends BrowsePreview {
 
     this.renderNav(bar);
 
-    bar.createDiv({ cls: 'dr-browse-title', text: this.getDisplayText() });
     this.renderSearchField(bar);
     this.renderFilterChips(root);
   }
 
   /* -- header ----------------------------------------------------- */
 
-  /* -- sections ------------------------------------------------------ */
+  /* -- discs ------------------------------------------------------ */
 
   /** Notes directly inside a folder, filtered and in the chosen order. */
   notesIn(folder) {
@@ -58,7 +57,7 @@ export class BrowseCollection extends BrowsePreview {
 
   /** A folder's notes in its own arrangement, if it has one on, or the shared order. */
   arranged(folder, files) {
-    return this.plugin.orders.arrangeCollection(folder, files, (list) => this.sortFiles(list));
+    return this.plugin.orders.arrangeAlbum(folder, files, (list) => this.sortFiles(list));
   }
 
   /** Every note in a folder, Find and filters aside — what an arrangement covers. */
@@ -75,20 +74,20 @@ export class BrowseCollection extends BrowsePreview {
   }
 
   /**
-   * A collection's contents split the way a multi-section collection is: the
+   * An album's contents split the way a multi-disc album is: the
    * folder's own notes first, then each subfolder beneath it as its
-   * own section, numbered from one. Deeper folders become sections too,
+   * own disc, numbered from one. Deeper folders become discs too,
    * titled by their path, so nothing nested goes missing.
    */
-  sectionsOf(folder, loose) {
-    const sections = [];
-    // Editing shows the whole collection — every note, and a section for every
+  discsOf(folder, loose) {
+    const discs = [];
+    // Editing shows the whole album — every note, and a disc for every
     // subfolder, even an empty one, so it can be renamed or filled.
     const editing = !!this.editing;
     const own = editing ? this.allNotesIn(folder) : loose;
-    if (own.length || editing) sections.push({ title: this.folderName(folder), folder: folder, files: own });
+    if (own.length || editing) discs.push({ title: this.folderName(folder), folder: folder, files: own });
 
-    // Each level in the shared order, a folder's own sections after it.
+    // Each level in the shared order, a folder's own discs after it.
     const subfolders = (parent) =>
       editing
         ? (parent.children || []).filter((c) => c instanceof TFolder).sort((a, b) => byName(a.name, b.name))
@@ -97,16 +96,16 @@ export class BrowseCollection extends BrowsePreview {
       this.sortFolders(subfolders(parent)).forEach((child) => {
         const title = prefix ? `${prefix} / ${child.name}` : child.name;
         const files = editing ? this.allNotesIn(child) : this.notesIn(child);
-        if (files.length || editing) sections.push({ title: title, folder: child, files: files });
+        if (files.length || editing) discs.push({ title: title, folder: child, files: files });
         walk(child, title);
       });
     walk(folder, '');
 
-    return sections;
+    return discs;
   }
 
   /**
-   * A run of note rows that stops after `limit`, with a row to reveal
+   * A run of track rows that stops after `limit`, with a row to reveal
    * the rest. `key` remembers the choice across redraws, so expanding a
    * list survives a sort or a metadata change.
    */
@@ -117,7 +116,7 @@ export class BrowseCollection extends BrowsePreview {
     }
     // Notes under the note their property names as parent, a step in; what's under a folded one hidden.
     // Not in search, whose order is how well each matches.
-    const nestKey = this.mode === 'search' ? '' : String(this.plugin.settings.collectionNestBy || '').trim();
+    const nestKey = this.mode === 'search' ? '' : String(this.plugin.settings.albumNestBy || '').trim();
     const entries = [];
     let hideBelow = -1;
     (nestKey ? nestByProperty(this.app, files, nestKey) : files.map((file) => ({ file, depth: 0, children: 0 }))).forEach((e) => {
@@ -127,14 +126,14 @@ export class BrowseCollection extends BrowsePreview {
     });
     const expanded = this.expanded.has(key);
     const shown = expanded ? entries : entries.slice(0, limit);
-    shown.forEach((e, i) => this.noteRow(list, e.file, i + 1, e));
+    shown.forEach((e, i) => this.trackRow(list, e.file, i + 1, e));
     if (entries.length <= limit) return;
 
-    const more = list.createDiv({ cls: 'dr-note-row dr-note-row-more-row' });
+    const more = list.createDiv({ cls: 'dr-track dr-track-more-row' });
     asButton(more);
-    more.createDiv({ cls: 'dr-note-row-num' });
+    more.createDiv({ cls: 'dr-track-num' });
     more.createDiv({
-      cls: 'dr-note-row-name dr-more-label',
+      cls: 'dr-track-name dr-more-label',
       text: expanded ? 'Show less' : `Show all ${files.length}`,
     });
     onActivate(more, () => {
@@ -150,11 +149,11 @@ export class BrowseCollection extends BrowsePreview {
   }
 
   /**
-   * Dropping a note on a section moves it into that folder.
+   * Dropping a note on a disc moves it into that folder.
    *
    * Rows and headings both carry the folder they belong to, so the
    * target is whatever the cursor is over — dropping on a note in a
-   * section means the same as dropping on its heading.
+   * disc means the same as dropping on its heading.
    */
   acceptDrops(list) {
     const folderAt = (evt) => {
@@ -170,12 +169,12 @@ export class BrowseCollection extends BrowsePreview {
         .querySelectorAll('.is-drop-target, .is-drop-before, .is-drop-after')
         .forEach((el) => el.removeClass('is-drop-target', 'is-drop-before', 'is-drop-after'));
 
-    // Over a row of the section it came from, it's being put in order: a
+    // Over a row of the disc it came from, it's being put in order: a
     // line shows where it will go.
     const arrangingOver = (evt) => {
       const drag = this.dragging;
       const el = evt.target && typeof evt.target.closest === 'function'
-        ? evt.target.closest('.dr-note-row[data-path]')
+        ? evt.target.closest('.dr-track[data-path]')
         : null;
       if (!drag || !el || el.dataset.folder !== drag.folder) return null;
       const box = el.getBoundingClientRect();
@@ -201,7 +200,7 @@ export class BrowseCollection extends BrowsePreview {
       evt.dataTransfer.dropEffect = 'move';
 
       clear();
-      // Mark the whole section, not just the row under the cursor.
+      // Mark the whole disc, not just the row under the cursor.
       list
         .querySelectorAll(`[data-folder="${CSS.escape(folder)}"]`)
         .forEach((el) => el.addClass('is-drop-target'));
@@ -219,7 +218,7 @@ export class BrowseCollection extends BrowsePreview {
       if (over) {
         evt.preventDefault();
         if (path && this.canArrange() && over.row.dataset.path !== path) {
-          this.arrangeNote(path, over.row.dataset.path, over.after);
+          this.arrangeTrack(path, over.row.dataset.path, over.after);
         }
         return;
       }
@@ -233,100 +232,102 @@ export class BrowseCollection extends BrowsePreview {
   }
 
   /**
-   * The sections, each headed. A subfolder's heading opens that folder, as
-   * a section's does; the folder's own section is the page already showing.
-   * A collection of very many sections — the vault's root holds every folder —
+   * The discs, each headed. A subfolder's heading opens that folder, as
+   * a disc's does; the folder's own disc is the page already showing.
+   * An album of very many discs — the vault's root holds every folder —
    * shows the first few dozen, with a row for the rest.
    */
-  renderSections(root, sections, collection) {
-    const list = root.createDiv({ cls: 'dr-note-rows' });
-    roveFocus(list, '.dr-note-row, .dr-list-section[role="button"]');
-    // Sections are folders, so dragging a note onto one moves it there; onto
-    // a row of its own section, it goes there in the collection's order.
+  renderDiscs(root, discs, album) {
+    if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
+    const list = root.createDiv({ cls: 'dr-tracks' });
+    roveFocus(list, '.dr-track, .dr-disc[role="button"]');
+    // Discs are folders, so dragging a note onto one moves it there; onto
+    // a row of its own disc, it goes there in the album's order.
     if (!Platform.isMobile && !this.editing) this.acceptDrops(list);
 
-    // PDFs aren't notes in the collection's order: they wait at the end, in a list of their own, unnumbered.
+    // PDFs aren't notes in the album's order: they wait at the end, in a list of their own, unnumbered.
     const pdfs = [];
     if (!this.editing) {
-      sections = sections
-        .map((section) => {
-          const notes = section.files.filter((f) => f.extension !== 'pdf');
-          section.files.forEach((f) => f.extension === 'pdf' && pdfs.push(f));
-          return notes.length === section.files.length ? section : Object.assign({}, section, { files: notes });
+      discs = discs
+        .map((disc) => {
+          const notes = disc.files.filter((f) => f.extension !== 'pdf');
+          disc.files.forEach((f) => f.extension === 'pdf' && pdfs.push(f));
+          return notes.length === disc.files.length ? disc : Object.assign({}, disc, { files: notes });
         })
-        .filter((section) => section.files.length);
+        .filter((disc) => disc.files.length);
     }
 
-    const key = `sections:${collection ? collection.path : ''}`;
+    const key = `discs:${album ? album.path : ''}`;
     const cap = 24;
-    const shown = this.expanded.has(key) ? sections : sections.slice(0, cap);
+    const shown = this.expanded.has(key) ? discs : discs.slice(0, cap);
 
-    // Every section is headed, including the folder's own notes — but an
-    // collection of its own notes alone, whose header already counts them,
+    // Every disc is headed, including the folder's own notes — but an
+    // album of its own notes alone, whose header already counts them,
     // needs no heading for them.
-    const lone = !this.editing && sections.length === 1 && !!collection && sections[0].folder === collection;
-    shown.forEach((section) => {
+    const lone = !this.editing && discs.length === 1 && !!album && discs[0].folder === album;
+    shown.forEach((disc) => {
       if (lone) {
-        this.renderLimited(list, section.files, `section:${collection.path}`, this.limitFrom('sectionNoteLimit', 10));
+        this.renderLimited(list, disc.files, `disc:${album.path}`, this.limitFrom('discNoteLimit', 10));
         return;
       }
-      const head = list.createDiv({ cls: 'dr-list-section' });
-      if (section.folder) head.dataset.folder = section.folder.path;
-      if (this.editing && section.folder && collection && section.folder !== collection) {
-        this.editSectionHead(head, section, collection);
-        this.renderLimited(list, section.files, `section:${section.folder.path}`, 0);
+      const head = list.createDiv({ cls: 'dr-disc' });
+      if (disc.folder) head.dataset.folder = disc.folder.path;
+      if (this.editing && disc.folder && album && disc.folder !== album) {
+        this.editDiscHead(head, disc, album);
+        this.renderLimited(list, disc.files, `disc:${disc.folder.path}`, 0);
         return;
       }
-      head.createSpan({ cls: 'dr-list-section-title', text: section.title });
+      head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({
-        cls: 'dr-list-section-count',
-        text: section.files.length === 1 ? '1 note' : `${section.files.length} notes`,
+        cls: 'dr-disc-count',
+        text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes`,
       });
 
-      if (section.folder) {
-        const here = !!collection && section.folder === collection;
+      if (disc.folder) {
+        const here = !!album && disc.folder === album;
         if (!here) {
-          asButton(head, `Open ${section.folder.name}`);
-          onActivate(head, () => this.openFolder(section.folder));
+          asButton(head, `Open ${disc.folder.name}`);
+          onActivate(head, () => this.openFolder(disc.folder));
         }
         onContextMenu(head, (evt) =>
-          this.folderMenu(evt, section.folder, this.folderCover(section.folder), { here })
+          this.folderMenu(evt, disc.folder, this.folderCover(disc.folder), { here })
         );
       }
 
       this.renderLimited(
         list,
-        section.files,
-        `section:${section.folder ? section.folder.path : section.title}`,
-        this.limitFrom('sectionNoteLimit', 10)
+        disc.files,
+        `disc:${disc.folder ? disc.folder.path : disc.title}`,
+        this.limitFrom('discNoteLimit', 10)
       );
     });
 
-    if (sections.length > cap) this.renderMoreRow(list, key, sections.length, 'sections');
-    if (pdfs.length) this.renderPdfs(root, pdfs, collection);
-    // After the notes, so at the end it sits below the last of them rather than over it.
-    if (this.editing && this.mode === 'folder') this.renderBulkBar(root);
+    if (discs.length > cap) this.renderMoreRow(list, key, discs.length, 'discs');
+    if (pdfs.length) this.renderPdfs(root, pdfs, album);
   }
 
-  /** A folder's PDFs: after its notes, in a list of their own, each a row without a number. */
-  renderPdfs(root, pdfs, collection) {
-    const list = root.createDiv({ cls: 'dr-note-rows dr-pdf-list' });
-    roveFocus(list, '.dr-note-row');
-    const key = `pdfs:${collection ? collection.path : ''}`;
-    const limit = this.limitFrom('sectionNoteLimit', 10);
+  /** A folder's PDFs: under their own heading, after its notes, each a row without a number. */
+  renderPdfs(root, pdfs, album) {
+    const list = root.createDiv({ cls: 'dr-tracks dr-pdf-list' });
+    roveFocus(list, '.dr-track');
+    const head = list.createDiv({ cls: 'dr-disc' });
+    head.createSpan({ cls: 'dr-disc-title', text: 'PDFs' });
+    head.createSpan({ cls: 'dr-disc-count', text: pdfs.length === 1 ? '1 PDF' : `${pdfs.length} PDFs` });
+    const key = `pdfs:${album ? album.path : ''}`;
+    const limit = this.limitFrom('discNoteLimit', 10);
     const shown = this.expanded.has(key) ? pdfs : pdfs.slice(0, limit);
-    shown.forEach((file) => this.noteRow(list, file, '').addClass('is-unnumbered'));
+    shown.forEach((file) => this.trackRow(list, file, '').addClass('is-unnumbered'));
     if (pdfs.length > limit) this.renderMoreRow(list, key, pdfs.length, 'PDFs');
   }
 
   /** "Show all N …" / "Show less", remembered across redraws. */
   renderMoreRow(list, key, total, noun) {
     const expanded = this.expanded.has(key);
-    const more = list.createDiv({ cls: 'dr-note-row dr-note-row-more-row' });
+    const more = list.createDiv({ cls: 'dr-track dr-track-more-row' });
     asButton(more);
-    more.createDiv({ cls: 'dr-note-row-num' });
+    more.createDiv({ cls: 'dr-track-num' });
     more.createDiv({
-      cls: 'dr-note-row-name dr-more-label',
+      cls: 'dr-track-name dr-more-label',
       text: expanded ? 'Show less' : `Show all ${total} ${noun}`,
     });
     onActivate(more, () => {
@@ -336,93 +337,73 @@ export class BrowseCollection extends BrowsePreview {
     });
   }
 
-  /* -- the collection header ------------------------------------------ */
-
-  /** With covers on, a small mark beside the title, and where an image is dropped. */
-  renderHeadCover(head, spec, folder, editing) {
-    const art = head.createDiv({ cls: 'dr-detail-art' });
-    if (folder) drawFolderArt(this.plugin, art, folder);
-    else this.fillArt(art, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
-    // An image dropped here — or pasted, once it's clicked — becomes the collection's cover.
-    if (folder && folder.path !== '/') {
-      art.dataset.coverFolder = folder.path;
-      art.setAttribute('tabindex', '-1');
-    }
-    if (!editing || folder.path === '/') return;
-    const tools = art.createDiv({ cls: 'dr-art-tools' });
-    if (!spec.cover) {
-      const tint = tools.createDiv({ cls: 'dr-art-edit' });
-      asButton(tint, 'Cover colour');
-      setIcon(tint, 'palette');
-      onActivate(tint, () => this.plugin.chooseCoverColor(folder));
-    }
-    const change = tools.createDiv({ cls: 'dr-art-edit' });
-    asButton(change, spec.cover ? 'Change cover image' : 'Set cover image');
-    setIcon(change, 'image');
-    onActivate(change, () => this.plugin.setFolderCover(folder, () => this.render()));
-  }
+  /* -- the album header ------------------------------------------ */
 
   /**
-   * A title, a line of facts and its actions. Shared by folders and by
+   * Large art, a title block and two actions. Shared by folders and by
    * the collections — recents and pins — which have no folder behind
    * them but read the same way.
    */
-  renderCollectionHead(root, spec) {
+  renderAlbumHead(root, spec) {
     const head = root.createDiv({ cls: 'dr-detail' });
     const folder = spec.folder || null;
     const editing = !!folder && !!this.editing;
     head.toggleClass('is-editing', editing);
 
-    // Its menu, from anywhere on the head.
-    if (spec.onArtMenu) onContextMenu(head, (evt) => spec.onArtMenu(evt));
-    if (coversOn(this.plugin.settings)) this.renderHeadCover(head, spec, folder, editing);
+    // The cover's own colours, blurred, behind the header — as the
+    // reference tints an album's page with its artwork.
+    const glow = head.createDiv({ cls: 'dr-detail-glow' });
+    const art = head.createDiv({ cls: 'dr-detail-art' });
+    [glow, art].forEach((el) => {
+      if (folder) drawFolderArt(this.plugin, el, folder);
+      else this.fillArt(el, spec.cover, spec.glyph || 'folder', spec.genName, blankLook(this.plugin.settings, spec.title));
+    });
+    // An image dropped here — or pasted, once it's clicked — becomes the album's cover.
+    if (folder && folder.path !== '/') {
+      art.dataset.coverFolder = folder.path;
+      art.setAttribute('tabindex', '-1');
+    }
+    if (spec.onArtMenu) {
+      onContextMenu(art, (evt) => spec.onArtMenu(evt));
+    }
+    if (editing && folder.path !== '/') {
+      const tools = art.createDiv({ cls: 'dr-art-tools' });
+      if (!spec.cover) {
+        const tint = tools.createDiv({ cls: 'dr-art-edit' });
+        asButton(tint, 'Cover colour');
+        setIcon(tint, 'palette');
+        onActivate(tint, () => this.plugin.chooseCoverColor(folder));
+      }
+      const change = tools.createDiv({ cls: 'dr-art-edit' });
+      asButton(change, spec.cover ? 'Change cover image' : 'Set cover image');
+      setIcon(change, 'image');
+      onActivate(change, () => this.plugin.setFolderCover(folder, () => this.render()));
+    }
 
     const info = head.createDiv({ cls: 'dr-detail-info' });
-    // Above the title, small: what kind of collection it is, and the way down to it.
-    const structure = folder ? this.plugin.feature(CollectionStructure) : null;
+    // Above the title, small: what kind of album it is, and the way down to it.
+    const structure = folder ? this.plugin.feature(AlbumStructure) : null;
     const about = structure ? structure.info(folder) : null;
-    const trail = structure && structure.enabled ? structure.trail(folder) : [];
     // The vault itself is the library, at the top of everything.
     const level = about && about.label ? about.label : structure && structure.enabled && folder.isRoot && folder.isRoot() ? 'Library' : '';
-    if (level || trail.length) {
-      const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
-      if (level) kicker.createSpan({ cls: 'dr-detail-kind', text: level });
-      if (trail.length) {
-        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
-        trail.forEach((f, i) => {
-          if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
-          const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
-          asButton(crumb);
-          onActivate(crumb, () => this.openFolder(f));
-        });
-      }
-    }
+    if (level) info.createDiv({ cls: 'dr-detail-kicker' }).createSpan({ cls: 'dr-detail-kind', text: level });
     if (editing && folder.path !== '/') {
       const title = info.createEl('input', { cls: 'dr-detail-title dr-edit-name', type: 'text' });
       title.value = folder.name;
       title.dataset.editPath = folder.path;
       title.setAttribute('aria-label', 'Folder name');
       this.editField(title, folder.name, (name) => this.renameEntry(folder, name));
-    } else {
+    } else if (!folder) {
+      // A folder's page goes without its name: the tab and the sidebar say it.
       info.createDiv({ cls: 'dr-detail-title', text: spec.title });
     }
-    // The line under the title: the folder note's own lead property, or
-    // else the folder this one is in, which it opens.
-    const parent = folder && folder.parent && !(folder.isRoot && folder.isRoot()) ? folder.parent : null;
-    if (spec.sub) {
-      info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
-    } else if (parent && !(parent.isRoot && parent.isRoot()) && !trail.length) {
-      const up = info.createDiv({ cls: 'dr-detail-sub is-link', text: parent.name });
-      asButton(up);
-      onActivate(up, () => this.openFolder(parent));
-    }
+    // The accented line: the folder note's own lead property.
+    if (spec.sub) info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
 
     const files = spec.files || [];
     const notes = files.every((f) => f.extension === 'md');
     const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
-    const subs = about ? this.visibleFolders(folder).length : 0;
-    if (subs) meta.push(subs === 1 ? '1 sub-collection' : `${subs} sub-collections`);
-    // How long the collection is, as a collection gives its running time.
+    // How long the album is, as an album gives its running time.
     const length = this.totalLength(files);
     if (length) meta.push(length);
     const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
@@ -442,25 +423,23 @@ export class BrowseCollection extends BrowsePreview {
       this.action(actions, 'folder-plus', 'New folder', () => this.editNewFolder(folder));
       return;
     }
+    // Open leads, filled, as Play does.
     this.action(actions, 'book-open', 'Open', () => {
       if (files[0]) this.app.workspace.getLeaf(false).openFile(files[0]);
-    });
+    }).addClass('is-primary');
     const random = () => {
       if (!files.length) return;
       const pick = files[Math.floor(Math.random() * files.length)];
       this.app.workspace.getLeaf(false).openFile(pick);
     };
-    const map = about && about.type === 'concept map' ? () => structure.openMap(folder) : null;
-    // Edit in plain text, the rest under an icon-only More.
-    if (isClearLook()) {
+    // The Apple look: one filled button, Edit in plain text, the rest under an icon-only More.
+    if (isAppleLook()) {
       if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
       const more = [{ title: 'Random', icon: 'shuffle', run: random }];
-      if (map) more.push({ title: 'Map', icon: 'waypoints', run: map });
       drIconButton(actions, 'more-horizontal', 'More', (evt) => drMenu(evt, more)).addClass('dr-detail-more');
       return;
     }
     this.action(actions, 'shuffle', 'Random', random);
-    if (map) this.action(actions, 'waypoints', 'Map', map);
     if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
   }
 
@@ -473,14 +452,14 @@ export class BrowseCollection extends BrowsePreview {
 
     const note = this.plugin.folderNote(folder);
     const src = this.folderCover(folder);
-    this.renderCollectionHead(root, {
+    this.renderAlbumHead(root, {
       title: this.getDisplayText(),
       sub: note ? this.subtitleFor(note) : '',
       cover: src,
       glyph: 'folder',
       genName: this.genName(this.getDisplayText(), folder.path),
       folder: folder,
-      // files is in display order — sections concatenated, each sorted —
+      // files is in display order — discs concatenated, each sorted —
       // so Open lands on the first row you see. The folder note stands
       // for the folder rather than being part of its contents.
       files: files,

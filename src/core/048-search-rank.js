@@ -2,7 +2,7 @@
 /* Search: how well a note matches                                     */
 /*                                                                     */
 /* A query's words against a note's title, aliases, properties and     */
-/* collection: a score, so the note named for what you typed comes first,   */
+/* album: a score, so the note named for what you typed comes first,   */
 /* and a few words on why it matched. Pure: given the note's parts,    */
 /* not the vault.                                                      */
 /* ------------------------------------------------------------------ */
@@ -34,17 +34,17 @@ const flat = (v) => (Array.isArray(v) ? v.map(flat).join(', ') : v === null || v
 
 /**
  * How well a note matches: { score, why }, or null for no match.
- * parts: { title, props: { key: value }, collection } — collection the folder's path.
+ * parts: { title, props: { key: value }, album } — album the folder's path.
  */
 export function rankNote(parts, query) {
   const q = String(query || '').trim().toLowerCase();
   const words = searchWords(q);
   if (!words.length) return null;
   const title = String(parts.title || '').toLowerCase();
-  const collection = parts.collection || '';
+  const album = parts.album || '';
 
   if (title === q) return { score: 100, why: 'Exact title match' };
-  const where = collection ? ` · ${collection}` : '';
+  const where = album ? ` · ${album}` : '';
   if (title.startsWith(q)) return { score: 85, why: `Title match${where}` };
   if (title.indexOf(q) !== -1) return { score: 75, why: `Title match${where}` };
   if (hasAll(title, words)) return { score: 70, why: `Title match${where}` };
@@ -70,9 +70,9 @@ export function rankNote(parts, query) {
     }
   }
 
-  if (collection && hasAll(collection.toLowerCase(), words)) return { score: 40, why: `In ${collection}` };
+  if (album && hasAll(album.toLowerCase(), words)) return { score: 40, why: `In ${album}` };
 
-  const everything = [title, collection.toLowerCase()].concat(keys.map((k) => flat(props[k]).toLowerCase())).join(' ');
+  const everything = [title, album.toLowerCase()].concat(keys.map((k) => flat(props[k]).toLowerCase())).join(' ');
   if (hasAll(everything, words)) return { score: 30, why: 'Title and properties' };
   return null;
 }

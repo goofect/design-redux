@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
-/* Drop a note on a collection in the library                              */
+/* Drop a note on an album in the library                              */
 /*                                                                     */
-/* A row dragged from a list onto a folder in the library — or in    */
-/* Obsidian's own file list — moves it there, as a file is dragged    */
+/* A track dragged from a list onto a folder in the library — or in    */
+/* Obsidian's own file list — moves it there, as a song is dragged     */
 /* onto a playlist, and says so with an Undo. A note dragged from the  */
 /* file list onto the library's folders does the same; the file list  */
 /* already takes its own drags.                                        */

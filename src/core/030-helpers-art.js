@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, MenuItem, Platform, setIcon, TFile, TFolder } from 'obsidian';
-import { COLLECTION_KIND_NEUTRAL, COLLECTION_TYPES, BROWSE_VIEW, DEFAULTS, IMAGE_EXTENSIONS } from './020-constants.js';
+import { ALBUM_KIND_NEUTRAL, ALBUM_TYPES, BROWSE_VIEW, DEFAULTS, IMAGE_EXTENSIONS } from './020-constants.js';
 import { hexToHsl, hexToRgb, normalHex } from './031-colours.js';
 import { drawnArt } from './032-drawn-covers.js';
 import { iconForFile } from './040-helpers-sorting.js';
@@ -32,7 +32,7 @@ export function liveViews(app, type, ctor) {
     .map((leaf) => leaf.view);
 }
 
-/* The properties that make the one line about a note, in the order they're
+/* The properties that stand in for an artist line, in the order they're
    tried. Every place that shows one line about a note uses this. */
 export const LEAD_PROPERTIES = ['domain', 'author', 'book', 'status'];
 
@@ -111,7 +111,7 @@ export function noteCoverSrc(plugin, file) {
 /**
  * Artwork into an element: the image if there is one, a glyph if not,
  * and the glyph as well if the image turns out to be missing. `look`
- * says how the glyph is drawn: { art } for a collection cover drawn for the
+ * says how the glyph is drawn: { art } for an album cover drawn for the
  * name, { hue } for a backdrop coloured from a name, { title } for the
  * name set as a title page (see blankLook).
  */
@@ -145,7 +145,7 @@ export function fillArt(el, src, glyph, gen, look) {
  * Where there's no artwork at all: the glyph for what it is — on a soft
  * gradient in a colour picked from a name, or with the name itself set
  * as a title page, which the larger covers show in its place — so a
- * vault of notes without covers still reads as a list.
+ * vault of notes without covers still reads as a shelf of records.
  */
 export function blankArt(el, glyph, look) {
   el.addClass('is-blank');
@@ -162,11 +162,6 @@ export function blankArt(el, glyph, look) {
 }
 
 /* -- artwork, as the settings ask for it -------------------------------- */
-
-/** Whether covers show at all: while they don't, a plain icon stands in. */
-export function coversOn(settings) {
-  return settings.showCovers === true;
-}
 
 /**
  * How a placeholder named `name` is drawn, as the settings ask: see
@@ -186,16 +181,15 @@ export function blankLook(settings, name, path) {
 /**
  * A note's artwork: its own cover, or a colour chosen for it; then, with
  * 'Folder cover for notes' on, the cover of the folder it's directly in,
- * then the icon — on a soft colour picked
+ * as a song shows its album's; then the icon — on a soft colour picked
  * from the note's own name, where that's the choice.
  */
 export function drawNoteArt(plugin, el, file) {
   const settings = plugin.settings;
-  if (!coversOn(settings)) return blankArt(el, iconForFile(file));
   const md = file.extension === 'md';
   const look = blankLook(settings, file.basename, file.path);
   const src = md ? noteCoverSrc(plugin, file) : null;
-  // Coloured by kind: a note takes its collection's colour, with its own icon.
+  // Coloured by kind: a note takes its album's colour, with its own icon.
   if (settings.coverFallback === 'kind' && md && !src) {
     kindArt(plugin, el, file.parent, iconForFile(file), file.path);
     return;
@@ -214,43 +208,42 @@ export function drawNoteArt(plugin, el, file) {
 /** A folder's artwork: its cover, or a colour chosen for it, or the icon as the settings say. */
 export function drawFolderArt(plugin, el, folder) {
   const settings = plugin.settings;
-  if (!coversOn(settings)) return blankArt(el, 'folder');
   const root = !!(folder.isRoot && folder.isRoot());
   const name = root ? plugin.app.vault.getName() : folder.name;
   const src = plugin.folderCoverSrc(folder);
   if (settings.coverFallback === 'kind' && !src) kindArt(plugin, el, root ? null : folder, null, folder.path);
   else fillArt(el, src, 'folder', coverGen(settings, name, folder.path), blankLook(settings, name, folder.path));
-  // Printed on a cover that isn't a picture: its kind, its name and where it's from, in the same places on every collection.
+  // Printed on a cover that isn't a picture: its kind, its name and where it's from, in the same places on every album.
   if (settings.coverPrint && !src && !root && settings.coverFallback !== 'title') printCover(plugin, el, folder);
 }
 
-/** A collection's kind, from its folder note, or null. */
-export function collectionKindOf(plugin, folder) {
-  const info = folder && typeof plugin.collectionInfo === 'function' ? plugin.collectionInfo(folder) : null;
-  return info && info.type ? COLLECTION_TYPES.find((t) => t.id === info.type) || { id: info.type, label: info.label, icon: 'folder', color: COLLECTION_KIND_NEUTRAL } : null;
+/** An album's kind, from its folder note, or null. */
+export function albumKindOf(plugin, folder) {
+  const info = folder && typeof plugin.albumInfo === 'function' ? plugin.albumInfo(folder) : null;
+  return info && info.type ? ALBUM_TYPES.find((t) => t.id === info.type) || { id: info.type, label: info.label, icon: 'folder', color: ALBUM_KIND_NEUTRAL } : null;
 }
 
 /**
- * A cover for a collection's kind: its symbol, on its colour — or on the
- * colour chosen for it. A note gets its collection's colour and its own icon.
+ * A cover for an album's kind: its symbol, on its colour — or on the
+ * colour chosen for it. A note gets its album's colour and its own icon.
  */
 export function kindArt(plugin, el, folder, glyph, path) {
-  const kind = collectionKindOf(plugin, folder);
+  const kind = albumKindOf(plugin, folder);
   el.addClass('is-generated', 'is-kind');
-  paintTint(el, ownTint(plugin.settings, path) || (kind ? kind.color : COLLECTION_KIND_NEUTRAL), folder ? folder.name : '');
+  paintTint(el, ownTint(plugin.settings, path) || (kind ? kind.color : ALBUM_KIND_NEUTRAL), folder ? folder.name : '');
   setIcon(el.createSpan({ cls: 'dr-card-glyph' }), glyph || (kind ? kind.icon : 'folder'));
 }
 
 /** The kind, the name and the collection, printed along a cover's foot. */
 export function printCover(plugin, el, folder) {
-  const kind = collectionKindOf(plugin, folder);
+  const kind = albumKindOf(plugin, folder);
   el.addClass('has-print');
   const band = el.createDiv({ cls: 'dr-cover-print' });
   // Its number in its collection, in the collection's own order: a catalogue number, as a series has.
   const parent = folder.parent;
   const siblings = parent ? (parent.children || []).filter((c) => c instanceof TFolder) : [];
-  const ordered = plugin.orders && typeof plugin.orders.arrangeCollection === 'function'
-    ? plugin.orders.arrangeCollection(parent, siblings, (list) => list.slice().sort((a, b) => byName(a.name, b.name)))
+  const ordered = plugin.orders && typeof plugin.orders.arrangeAlbum === 'function'
+    ? plugin.orders.arrangeAlbum(parent, siblings, (list) => list.slice().sort((a, b) => byName(a.name, b.name)))
     : siblings.slice().sort((a, b) => byName(a.name, b.name));
   const number = siblings.length > 1 ? ordered.indexOf(folder) + 1 : 0;
   const label = [kind ? kind.label : '', number ? `No. ${String(number).padStart(2, '0')}` : ''].filter(Boolean).join(' · ');
@@ -352,7 +345,7 @@ export function coverTint(settings, path) {
 
 /**
  * What fillArt needs to make a cover, or null for the plain icon. A
- * colour chosen for one collection makes it a cover whatever the default.
+ * colour chosen for one album makes it a cover whatever the default.
  */
 export function coverGen(settings, name, path) {
   if (name == null || name === '') return null;
@@ -377,21 +370,21 @@ export const COVER_SWATCHES = [
 ];
 
 /**
- * The notes of the collection a file is in, in the collection's order — its own
+ * The notes of the album a file is in, in the album's order — its own
  * arrangement if it has one on, otherwise the shared order. The folder
- * note stands for the collection, so it isn't one of them.
+ * note stands for the album, so it isn't one of them.
  */
-export function collectionSequence(plugin, file) {
+export function albumSequence(plugin, file) {
   const folder = file && file.parent;
   if (!folder) return [];
   const files = (folder.children || []).filter((c) => c instanceof TFile && !plugin.isFolderNote(c));
   const sort = plugin.settings.defaultSort || 'name';
-  return plugin.orders.arrangeCollection(folder, files, (list) => sortByOrder(list, sort));
+  return plugin.orders.arrangeAlbum(folder, files, (list) => sortByOrder(list, sort));
 }
 
-/** The note before and after one in its collection. */
-export function collectionNeighbours(plugin, file) {
-  const list = collectionSequence(plugin, file);
+/** The note before and after one in its album. */
+export function albumNeighbours(plugin, file) {
+  const list = albumSequence(plugin, file);
   const at = list.indexOf(file);
   if (at === -1) return { previous: null, next: null, index: -1, total: list.length };
   return { previous: list[at - 1] || null, next: list[at + 1] || null, index: at, total: list.length };
@@ -470,10 +463,9 @@ export function clearSidebarChrome() {
   document
     .querySelectorAll('.dr-apple-sidebar')
     .forEach((el) => el.removeClass('dr-apple-sidebar'));
-  document.querySelectorAll('[data-dr-initial], [data-dr-count]').forEach((el) => {
-    el.removeAttribute('data-dr-initial');
-    el.removeAttribute('data-dr-count');
-  });
+  document
+    .querySelectorAll('[data-dr-initial]')
+    .forEach((el) => el.removeAttribute('data-dr-initial'));
 }
 
 /* -- menus ------------------------------------------------------------ */
@@ -653,7 +645,7 @@ export function singleAreaOn(settings) {
 
 /**
  * The menu for a folder or file, wherever it appears — the sidebar, a
- * tile, a section, a collection's artwork, the page itself or the strip — so
+ * tile, a disc, an album's artwork, the page itself or the strip — so
  * the same thing offers the same actions everywhere.
  *
  * Obsidian's file explorer adds New note and New folder itself, before
@@ -772,8 +764,8 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
     }, 'action');
   }
 
-  // The collection features' own entries, through the plugin: this helper is below them.
-  if (typeof plugin.addCollectionMenuItems === 'function') plugin.addCollectionMenuItems(menu, target, sectioned, redraw);
+  // The album features' own entries, through the plugin: this helper is below them.
+  if (typeof plugin.addAlbumMenuItems === 'function') plugin.addAlbumMenuItems(menu, target, sectioned, redraw);
 
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.
@@ -782,7 +774,7 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
     return;
   }
 
-  if (coversOn(plugin.settings) && (isFolder || target.extension === 'md')) {
+  if (isFolder || target.extension === 'md') {
     const src = isFolder
       ? plugin.folderCoverSrc(target)
       : resolveCover(app, target, plugin.settings.coverProperty);

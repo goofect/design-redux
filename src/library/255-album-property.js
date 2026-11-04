@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* A property for the whole collection                                      */
+/* A property for the whole album                                      */
 /*                                                                     */
 /* From a property's menu: its value given to every other note in the */
 /* note's folder, through the bulk engine, so it's one Undo. Notes     */
@@ -12,11 +12,11 @@ import { Feature } from '../core/080-feature.js';
 import { confirmAction } from '../ui/230-pickers.js';
 import { bulkNotice, bulkTail } from '../tools/290-bulk-engine.js';
 
-export class CollectionProperty extends Feature {
+export class AlbumProperty extends Feature {
   settingsSchema() {
     return [
       {
-        key: 'propertyForCollection',
+        key: 'propertyForAlbum',
         name: 'Set for the whole collection',
         desc: 'A property’s menu can give its value to every note in the collection, with Undo.',
       },
@@ -51,7 +51,7 @@ export class CollectionProperty extends Feature {
   }
 
   /** The other notes in the note's folder; the folder note stands for it, so isn't one. */
-  collectionNotes(file) {
+  albumNotes(file) {
     const folder = file && file.parent;
     if (!folder) return [];
     return (folder.children || []).filter(
@@ -59,7 +59,7 @@ export class CollectionProperty extends Feature {
     );
   }
 
-  collectionName(file) {
+  albumName(file) {
     const folder = file.parent;
     return !folder || (folder.isRoot && folder.isRoot()) ? this.app.vault.getName() : folder.name;
   }
@@ -80,18 +80,18 @@ export class CollectionProperty extends Feature {
         feature.apply(file, key);
       }
     })(this.app);
-    modal.setPlaceholder(`A property to give all of ${this.collectionName(file)}`);
+    modal.setPlaceholder(`A property to give all of ${this.albumName(file)}`);
     modal.open();
   }
 
-  /** The note's value for a property, in every other note of its collection. */
+  /** The note's value for a property, in every other note of its album. */
   async apply(file, key) {
     const bulk = this.plugin.bulk;
     const fm = this.frontmatter(file);
     if (!bulk || !Object.prototype.hasOwnProperty.call(fm, key)) return null;
     const value = fm[key];
-    const notes = this.collectionNotes(file);
-    const name = this.collectionName(file);
+    const notes = this.albumNotes(file);
+    const name = this.albumName(file);
     if (!notes.length) {
       new Notice(`There are no other notes in ${name}.`);
       return null;
@@ -118,4 +118,4 @@ export class CollectionProperty extends Feature {
   }
 }
 
-CollectionProperty.settingKey = 'propertyForCollection';
+AlbumProperty.settingKey = 'propertyForAlbum';

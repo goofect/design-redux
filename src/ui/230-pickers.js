@@ -51,15 +51,14 @@ export class NamePrompt extends Modal {
 
   onOpen() {
     this.titleEl.setText(this.titleText);
-    // A line or two — a description — wraps as it's typed; Enter still saves.
-    const input = this.opts.multiline ? this.contentEl.createEl('textarea', { attr: { rows: '4' } }) : this.contentEl.createEl('input', { type: 'text' });
+    const input = this.contentEl.createEl('input', { type: 'text' });
     input.addClass('dr-name-input');
     input.placeholder = this.placeholder;
     if (this.opts.value !== undefined) input.value = String(this.opts.value);
     if (this.opts.numeric) input.setAttribute('inputmode', 'numeric');
 
     const submit = () => {
-      const value = (this.opts.multiline ? input.value.replace(/\s*\n\s*/g, ' ') : input.value).trim();
+      const value = input.value.trim();
       this.close();
       if (value || this.opts.allowEmpty) this.onSubmit(value);
     };

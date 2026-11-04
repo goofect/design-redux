@@ -1,0 +1,96 @@
+{
+	"nodes": [
+		{
+			"id": "r",
+			"type": "text",
+			"text": "Centre",
+			"x": 0,
+			"y": 0,
+			"width": 180,
+			"height": 60,
+			"drLayout": "both"
+		},
+		{
+			"id": "l1",
+			"type": "text",
+			"text": "West",
+			"x": -300,
+			"y": -60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "l2",
+			"type": "text",
+			"text": "South west",
+			"x": -300,
+			"y": 60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "r1",
+			"type": "text",
+			"text": "East",
+			"x": 300,
+			"y": -60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "r2",
+			"type": "text",
+			"text": "South east",
+			"x": 300,
+			"y": 60,
+			"width": 180,
+			"height": 60
+		},
+		{
+			"id": "r11",
+			"type": "text",
+			"text": "Far east",
+			"x": 600,
+			"y": -60,
+			"width": 180,
+			"height": 60
+		}
+	],
+	"edges": [
+		{
+			"id": "e-r-l1",
+			"fromNode": "r",
+			"fromSide": "left",
+			"toNode": "l1",
+			"toSide": "right"
+		},
+		{
+			"id": "e-r-l2",
+			"fromNode": "r",
+			"fromSide": "left",
+			"toNode": "l2",
+			"toSide": "right"
+		},
+		{
+			"id": "e-r-r1",
+			"fromNode": "r",
+			"fromSide": "right",
+			"toNode": "r1",
+			"toSide": "left"
+		},
+		{
+			"id": "e-r-r2",
+			"fromNode": "r",
+			"fromSide": "right",
+			"toNode": "r2",
+			"toSide": "left"
+		},
+		{
+			"id": "e-r1-r11",
+			"fromNode": "r1",
+			"fromSide": "right",
+			"toNode": "r11",
+			"toSide": "left"
+		}
+	]
+}

@@ -37,22 +37,15 @@
   align-items: center;
   gap: calc(var(--dr-u) * 1.5);
   min-width: 0;
-  height: var(--dr-control-size);
-  padding: 0 var(--dr-space-3);
-  border: none;
+  padding: 0 calc(var(--dr-u) * 2.5);
+  border: 1px solid var(--background-modifier-border);
   border-radius: var(--dr-radius-md);
-  background-color: var(--dr-fill);
-  transition: box-shadow var(--dr-dur-fast) var(--dr-ease);
-}
-
-/* As Find is in the library: a soft field, the accent ring while typing in it. */
-.dr-set-search:focus-within {
-  box-shadow: var(--dr-focus-ring);
+  background-color: var(--background-modifier-form-field);
 }
 
 .dr-set-search-icon {
   display: inline-flex;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .dr-set-search-icon .svg-icon {
@@ -110,16 +103,14 @@
   text-align: center;
 }
 
-/* What's picked: the accent's tint, and a bar at its edge, so it isn't told by colour alone. */
-.dr-note-row.is-selected,
+/* What's picked, wherever it's listed. */
+.dr-track.is-selected,
 .dr-tr.is-selected {
-  background-color: var(--dr-accent-soft);
-  box-shadow: inset 3px 0 0 var(--interactive-accent);
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
 }
 
-.dr-card.is-selected {
-  background-color: var(--dr-accent-soft);
-  box-shadow: inset 3px 0 0 var(--interactive-accent);
+.dr-card.is-selected .dr-card-art {
+  box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
 }
 
 /* A setting opened to from where it shows: marked a moment. */

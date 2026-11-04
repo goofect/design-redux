@@ -4,15 +4,12 @@
 /* The home screen: its shelves, and the order they are shown in.     */
 /* ------------------------------------------------------------------ */
 
-import { collectionNeighbours, drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
+import { drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
 import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { homeShelves } from './109-home-shelves.js';
-import { viewTiles } from './110-browse-screens.js';
-
-/* How many rows each of home's lists shows: its heading goes through to the rest. */
-const HOME_ROWS = 8;
+import { collectionTiles } from './110-browse-screens.js';
 
 export class HomeScreen extends BrowseScreen {
   title() {
@@ -55,12 +52,10 @@ export class HomeScreen extends BrowseScreen {
     pick('Rediscover', older[0]);
 
     // The shelves, in the order and as many as the settings say.
-    const continuing = this.continuing(recents, keep);
-    const collections = viewTiles(view);
-    const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items.slice(0, HOME_ROWS), opts), true);
+    const collections = collectionTiles(view);
+    const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
-      continue: () => shelf('Continue reading', continuing),
       recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
       collections: () => shelf('Your views', collections, { mode: 'collections' }),
@@ -70,25 +65,6 @@ export class HomeScreen extends BrowseScreen {
     };
     const drawn = homeShelves(this.settings).filter((s) => s.on && shelves[s.id]()).length;
     if (!drawn) root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
-  }
-
-  /**
-   * Where to pick up: the collections you're partway through, the latest
-   * first — the note after the last one you opened in each, with how far
-   * along it is.
-   */
-  continuing(recents, keep) {
-    const items = [];
-    const seen = new Set();
-    recents.forEach((file) => {
-      const collection = file.parent;
-      if (items.length >= 12 || !collection || (collection.isRoot && collection.isRoot()) || this.plugin.isFolderNote(file) || seen.has(collection.path)) return;
-      seen.add(collection.path);
-      const near = collectionNeighbours(this.plugin, file);
-      if (!near.next || !keep(near.next) || items.some((i) => i.file === near.next)) return;
-      items.push({ file: near.next, subtitle: `${collection.name} · ${near.index + 2} of ${near.total}` });
-    });
-    return items;
   }
 
   /**
@@ -109,7 +85,10 @@ export class HomeScreen extends BrowseScreen {
       .slice(0, 13);
   }
 
-  /** The cards up front: a caption above each, then its cover small, its name and where it is. */
+  /**
+   * The large cards: a caption above each, its cover, and a band of
+   * that cover's colour — the cover itself, blurred — under the title.
+   */
   picks(root, picks) {
     const view = this.view;
     const row = root.createDiv({ cls: 'dr-picks' });
@@ -121,6 +100,10 @@ export class HomeScreen extends BrowseScreen {
       card.createDiv({ cls: 'dr-pick-caption', text: caption });
 
       const body = card.createDiv({ cls: 'dr-pick-body' });
+      const glow = body.createDiv({ cls: 'dr-pick-glow' });
+      drawNoteArt(this.plugin, glow, file);
+      // White type on the cover's colours; a plain icon has none to give.
+      body.toggleClass('is-lit', !!(glow.querySelector('img') || glow.hasClass('is-generated') || glow.hasClass('is-hued') || glow.hasClass('is-drawn')));
       const art = body.createDiv({ cls: 'dr-pick-art' });
       drawNoteArt(this.plugin, art, file);
 

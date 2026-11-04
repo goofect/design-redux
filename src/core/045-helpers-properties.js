@@ -159,7 +159,7 @@ export function propertyLabel(app, key) {
 /**
  * The notes a parent property names, as link paths to resolve: from
  * [[Note]], [[Note|alias]], [[folder/Note#heading]], a path or plain
- * text, one value or a list. What the graph's routes and a collection's map
+ * text, one value or a list. What the graph's routes and an album's map
  * both read, so they read it the same way.
  */
 export function parentLinkpaths(raw) {
@@ -214,30 +214,8 @@ export function parseDateInput(text, today) {
   return null;
 }
 
-/* How many days ahead a date counts as soon. */
-export const DUE_SOON = 3;
-
-/** Where a date stands against today: overdue, today, soon (within DUE_SOON days) or later; null for what isn't a date. */
-export function dateDueState(value, today) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value === null || value === undefined ? '' : value).trim());
-  if (!m) return null;
-  const base = today === undefined ? new Date() : new Date(today);
-  const day = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  const now = Date.UTC(base.getFullYear(), base.getMonth(), base.getDate());
-  const days = Math.round((day - now) / 86400000);
-  return days < 0 ? 'overdue' : days === 0 ? 'today' : days <= DUE_SOON ? 'soon' : 'later';
-}
-
-/** The properties whose dates are due dates, as settings name them. */
-export function dueKeys(settings) {
-  return String((settings && settings.propertyDueKeys) || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 /**
- * What a collection's notes come to, from their properties: how many, how
+ * What an album's notes come to, from their properties: how many, how
  * many are done by `isDone(fm)`, and the earliest and latest of a date
  * property — the fixed set, no formulas. { count, done, earliest, latest }.
  */

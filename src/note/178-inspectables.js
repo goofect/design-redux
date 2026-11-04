@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* What the inspector can be about                                    */
 /*                                                                    */
-/* A note, a collection picked in the library, a text card on a canvas.   */
+/* A note, an album picked in the library, a text card on a canvas.   */
 /* Each is drawn its own way, but                                     */
 /* the panel holding it neither knows nor cares which: it asks the    */
 /* inspectable whether it's already about a target, which note its    */
@@ -11,7 +11,7 @@
 
 import { parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
-import { coversOn, drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
+import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
 import { relativeDay } from '../core/040-helpers-sorting.js';
 import { plainMarkdownLine } from '../core/047-helpers-text.js';
 import { requestCanvasSave } from '../core/079-canvas-adapter.js';
@@ -48,17 +48,18 @@ export function cardValue(typed, was) {
 
 /**
  * A note as an info sheet opens: its cover beside its name, one property
- * raised beneath in the accent, and a line on where it lives, how long it is and
+ * raised beneath in the accent — the title-and-artist shape an album
+ * page opens with — and a line on where it lives, how long it is and
  * when it last changed. It says what you're looking at before the
  * details, which a bare list of fields never does. The note panel and
  * the inspector both open with it.
  */
 export function drawNoteHead(plugin, parentEl, file) {
-  const head = parentEl.createDiv({ cls: 'dr-props-head dr-props-identity' });
+  const head = parentEl.createDiv({ cls: 'dr-props-head' });
   const art = head.createDiv({ cls: 'dr-props-art' });
   drawNoteArt(plugin, art, file);
   // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
-  if (file.extension === 'md' && coversOn(plugin.settings)) {
+  if (file.extension === 'md') {
     art.dataset.coverNote = file.path;
     art.setAttribute('tabindex', '-1');
   }
@@ -76,7 +77,7 @@ export function fillNoteMeta(plugin, meta, file) {
   const parts = [];
   const folder = file.parent;
   if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
-  const style = plugin.settings.noteLength;
+  const style = plugin.settings.trackLength;
   const lengths = plugin.lengths;
   const counts = !!lengths && style !== 'none';
   const length = counts ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
@@ -98,7 +99,7 @@ export function libraryPage(app) {
   const leaves = ws.getLeavesOfType(BROWSE_VIEW);
   const recent = typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : null;
   const leaf = recent && leaves.includes(recent) ? recent : leaves[0];
-  return leaf && leaf.view && typeof leaf.view.previewCollection === 'function' ? leaf.view : null;
+  return leaf && leaf.view && typeof leaf.view.previewAlbum === 'function' ? leaf.view : null;
 }
 
 /** What `target` ({ file, picked } | { folder } | { card }) is, to be drawn. */
@@ -147,7 +148,7 @@ class NoteInspectable extends Inspectable {
   }
 }
 
-/** A collection picked in the library: what it is, as the library tells it, then its folder note's properties. */
+/** An album picked in the library: what it is, as the library tells it, then its folder note's properties. */
 class FolderInspectable extends Inspectable {
   constructor(plugin, target) {
     super(plugin, target);
@@ -166,8 +167,8 @@ class FolderInspectable extends Inspectable {
     const folder = this.target.folder;
     const brief = el.createDiv({ cls: 'dr-inspector-brief' });
     const view = libraryPage(this.plugin.app);
-    if (view) view.previewCollection(brief, folder);
-    else brief.createDiv({ cls: 'dr-props-head dr-props-identity' }).createDiv({ cls: 'dr-props-info' }).createDiv({ cls: 'dr-props-title', text: folder.name });
+    if (view) view.previewAlbum(brief, folder);
+    else brief.createDiv({ cls: 'dr-preview-title', text: folder.name });
     return super.draw(panel, el);
   }
 }
@@ -190,9 +191,7 @@ class CardInspectable extends Inspectable {
     const node = this.target.card;
     const text = (node.getData() || {}).text || '';
     const parsed = cardFrontmatter(text);
-    const head = el.createDiv({ cls: 'dr-props-head dr-props-identity' });
-    // A card has no cover: in its place, what it is.
-    setIcon(head.createDiv({ cls: 'dr-props-art is-blank', attr: { 'aria-hidden': 'true' } }).createSpan({ cls: 'dr-card-glyph' }), 'sticky-note');
+    const head = el.createDiv({ cls: 'dr-props-head' });
     const info = head.createDiv({ cls: 'dr-props-info' });
     const first = parsed.body.split('\n').map((l) => plainMarkdownLine(l)).find(Boolean);
     info.createDiv({ cls: 'dr-props-title', text: first || 'Card' });

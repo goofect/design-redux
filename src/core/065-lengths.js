@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Lengths                                                             */
 /*                                                                     */
-/* How long a note is, standing where a row's length does in a list. */
+/* How long a note is, standing where a track's length does in a list. */
 /* Nothing Obsidian caches holds a word count, so each note is read    */
 /* once and its count kept against its modified time: it's counted     */
 /* again only after it changes. A list is drawn first and its lengths  */
@@ -138,7 +138,7 @@ export class Lengths {
   }
 
   /**
-   * The length of many notes together, for a collection's header — or null
+   * The length of many notes together, for an album's header — or null
    * while any of them is still to be counted.
    */
   total(files, style) {

@@ -25,7 +25,7 @@ import { PropertyLinks } from '../note/165-panel-references.js';
 import { PropertiesPanel } from '../note/180-panel.js';
 import { ContextStrip } from '../tools/190-strip.js';
 import { HeaderSkip } from '../tools/191-header-skip.js';
-import { ReadingOutline } from '../note/195-reading-outline.js';
+import { RETIRED_VIEWS, RetiredView } from '../note/196-retired-views.js';
 import { OnePage } from '../tools/200-one-page.js';
 import { MenuFilter } from '../tools/210-menu-filter.js';
 import { SettingsButton } from '../tools/220-settings-button.js';
@@ -34,15 +34,13 @@ import { CoverImages } from '../ui/235-covers.js';
 import { CoverDrop } from '../ui/237-cover-drop.js';
 import { ImageRouter } from '../ui/240-image-router.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { CollectionProperty } from '../library/255-collection-property.js';
-import { CollectionRefactor } from '../library/256-collection-refactor.js';
-import { CollectionStructure } from '../library/257-collection-structure.js';
-import { SmartCollections } from '../library/258-smart-collections.js';
+import { AlbumProperty } from '../library/255-album-property.js';
+import { AlbumRefactor } from '../library/256-album-refactor.js';
+import { AlbumStructure } from '../library/257-album-structure.js';
+import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
-import { PropertyDates } from '../library/260-property-dates.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
-import { QuietLinks } from '../note/265-quiet-links.js';
 import { NotePages } from '../note/267-pages.js';
 import { MarkedLists } from '../note/270-lists.js';
 import { Scripts } from '../note/280-scripts.js';
@@ -73,10 +71,11 @@ export class DesignRedux extends Plugin {
     this.libraryIndex.listen();
     this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
+    RETIRED_VIEWS.forEach((type) => this.registerView(type, (leaf) => new RetiredView(leaf, type)));
+
     this.features = [
       new Appearance(this),
       new Library(this),
-      new ReadingOutline(this),
       new NotePage(this),
       new ListKeys(this),
       new SidebarDrop(this),
@@ -91,23 +90,21 @@ export class DesignRedux extends Plugin {
       new CoverDrop(this),
       new ImageRouter(this),
       new PropertyClipboard(this),
-      new CollectionProperty(this),
-      new CollectionStructure(this),
-      new SmartCollections(this),
+      new AlbumProperty(this),
+      new AlbumStructure(this),
+      new SmartAlbums(this),
       new LibraryCheck(this),
-      new CollectionRefactor(this),
+      new AlbumRefactor(this),
       new MarkedLists(this),
       new Scripts(this),
       new Footnotes(this),
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
-      new QuietLinks(this),
       new NotePages(this),
       new Diagnostics(this),
       new BulkEditing(this),
       new PropertySchemas(this),
       new PropertyHistory(this),
-      new PropertyDates(this),
       new PropertyRules(this),
       new PropertyLinks(this),
     ];
@@ -115,7 +112,7 @@ export class DesignRedux extends Plugin {
     this.syncFrame = 0;
     // Before the workspace is restored, so saved leaves of these types
     // can be rebuilt rather than dropped.
-    this.each((f) => f.registerTypes(), 'types');
+    this.each((f) => f.registerTypes());
 
     this.settingTab = new DesignReduxSettingTab(this.app, this);
     this.addSettingTab(this.settingTab);
@@ -141,7 +138,7 @@ export class DesignRedux extends Plugin {
     });
 
     this.app.workspace.onLayoutReady(() => {
-      this.each((f) => f.register(), 'register');
+      this.each((f) => f.register());
       this.refresh();
       // Stray library panes left by an old version are cleared. Browse
       // pages aren't: several are normal — tabs, splits, one per page.
@@ -196,19 +193,19 @@ export class DesignRedux extends Plugin {
     this.each((f) => f.disable());
   }
 
-  /** A collection's info from its folder note — its kind and label — or null: asked by helpers below the collection features. */
-  collectionInfo(folder) {
-    const structure = this.feature(CollectionStructure);
+  /** An album's info from its folder note — its kind and label — or null: asked by helpers below the album features. */
+  albumInfo(folder) {
+    const structure = this.feature(AlbumStructure);
     return structure ? structure.info(folder) : null;
   }
 
-  /** The collection features' entries on a folder's or a note's menu, in this order. */
-  addCollectionMenuItems(menu, target, sectioned, redraw) {
+  /** The album features' entries on a folder's or a note's menu, in this order. */
+  addAlbumMenuItems(menu, target, sectioned, redraw) {
     const isFolder = target instanceof TFolder;
-    const structure = this.feature(CollectionStructure);
+    const structure = this.feature(AlbumStructure);
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
     else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
-    const refactor = this.feature(CollectionRefactor);
+    const refactor = this.feature(AlbumRefactor);
     if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
   }
 
@@ -388,21 +385,13 @@ export class DesignRedux extends Plugin {
   }
 
   /** A throw in one feature must not leave the others half set up. */
-  each(fn, phase) {
-    // Named, a step is timed for each feature — the last time it ran — so
-    // what loading costs, and which feature, can be read (startupTimes).
-    const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+  each(fn) {
     (this.features || []).forEach((f) => {
-      const started = phase ? now() : 0;
       try {
         fn(f);
       } catch (err) {
         console.error(`Design Redux: ${f.constructor.name} failed`, err);
         this.noteError(`${f.constructor.name}: ${(err && err.stack) || err}`);
-      }
-      if (phase) {
-        const times = this.startupTimes || (this.startupTimes = {});
-        (times[phase] || (times[phase] = {}))[f.constructor.name] = now() - started;
       }
     });
   }
@@ -417,7 +406,7 @@ export class DesignRedux extends Plugin {
     if (typeof vault.getAllLoadedFiles === 'function' && vault.getAllLoadedFiles().length < 2) return;
     const exists = (p) => p === '/' || !!vault.getAbstractFileByPath(p);
     let changed = false;
-    PATH_KEYED.concat(['collectionOrders', 'folderDefaults']).forEach((key) => {
+    PATH_KEYED.concat(['albumOrders', 'folderDefaults']).forEach((key) => {
       const kept = this.settings[key];
       if (!kept || typeof kept !== 'object' || Array.isArray(kept)) return;
       Object.keys(kept).forEach((p) => {
@@ -436,7 +425,7 @@ export class DesignRedux extends Plugin {
   }
 
   refresh() {
-    this.each((f) => (f.enabled ? f.enable() : f.disable()), 'enable');
+    this.each((f) => (f.enabled ? f.enable() : f.disable()));
   }
 
   /**
@@ -512,7 +501,7 @@ export class DesignRedux extends Plugin {
       this.refreshTimer = 0;
       if (this.unloading) return;
       this.refresh();
-      // Open screens show the change at once — an order, collection columns,
+      // Open screens show the change at once — an order, album columns,
       // a limit — rather than on their next visit.
       this.refreshBrowse();
     }, 200);

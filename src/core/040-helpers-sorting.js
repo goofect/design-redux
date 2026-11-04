@@ -78,7 +78,6 @@ export function dateFloor(range, now = Date.now()) {
 
 /** How a property filter reads: "status is draft", "has domain". */
 export function propertyFilterLabel(f) {
-  if (f.due) return f.negate ? `${f.key} not due yet` : `${f.key} due soon or overdue`;
   if (f.value === null || f.value === undefined) return f.negate ? `No ${f.key}` : `Has ${f.key}`;
   return `${f.key} ${f.negate ? 'is not' : 'is'} ${f.value}`;
 }
@@ -169,7 +168,7 @@ export function edgeScroll(el, moved) {
 export const listKeys = { on: false, preview: null };
 
 /* Where a row says what it's called: the start of a name to jump to. */
-export const ROW_NAMES = '.dr-note-row-name, .dr-card-title, .dr-lib-label, .dr-td-text, .dr-recent-title, .dr-pick-title, .dr-plist-name';
+export const ROW_NAMES = '.dr-track-name, .dr-card-title, .dr-lib-label, .dr-td-text, .dr-recent-title, .dr-pick-title, .dr-plist-name';
 
 export function rowName(row) {
   const label = row.querySelector(ROW_NAMES);
@@ -336,7 +335,7 @@ export function iconWord(el, icon, label) {
   return el;
 }
 
-/** When, in the spirit of a row length: a glance, not a date. */
+/** When, in the spirit of a track length: a glance, not a date. */
 export function relativeDay(time) {
   const day = 86400000;
   const now = new Date();

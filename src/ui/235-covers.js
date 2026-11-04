@@ -9,11 +9,6 @@ export class CoverImages extends Feature {
   settingsSchema() {
     return [
       {
-        key: 'showCovers',
-        name: 'Show covers',
-        desc: 'A small cover beside a note’s or collection’s name. Off, a plain icon stands in; covers already set stay in your notes.',
-      },
-      {
         key: 'folderNoteName',
         type: 'text',
         name: 'Folder note name',
@@ -38,7 +33,7 @@ export class CoverImages extends Feature {
       {
         key: 'coverFromFolder',
         name: 'Folder cover for notes',
-        desc: 'A note without a cover uses its folder’s.',
+        desc: 'A note without a cover uses its folder’s, as a song uses its collection’s.',
       },
       {
         key: 'coverFromFirstImage',
@@ -72,7 +67,7 @@ export class CoverImages extends Feature {
       {
         key: 'coverPrint',
         name: 'Print collections’ names on their covers',
-        desc: 'A collection without a picture has its kind, its name and the folder it’s in printed along the foot of its cover, in the same places on every collection.',
+        desc: 'A collection without a picture has its kind, its name and the shelf it’s in printed along the foot of its cover, in the same places on every collection.',
       },
     ];
   }

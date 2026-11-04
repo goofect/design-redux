@@ -2,7 +2,7 @@
 /* Browse screens: properties                                         */
 /*                                                                    */
 /* The properties as Artists: each property a page, each value a tile,*/
-/* a value's notes a collection of its own.                               */
+/* a value's notes an album of its own.                               */
 /* ------------------------------------------------------------------ */
 
 import { Menu, setIcon } from 'obsidian';
@@ -15,7 +15,6 @@ import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { copyText, EMPTY_VALUE, valueArt } from './110-browse-screens.js';
-import { addPropertyEntries } from '../ui/247-property-menu.js';
 import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
 import { renamePropertyInPlace } from '../tools/290-bulk-engine.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
@@ -28,13 +27,13 @@ export class PropertiesScreen extends BrowseScreen {
   /**
    * As a music app's Artists: the properties listed on the left, and the
    * one chosen as a page of its own on the right — its values as covers,
-   * each opening as a collection of the notes that carry it.
+   * each opening as an album of the notes that carry it.
    */
   render(root) {
     const view = this.view;
     const all = view.propertyList();
     const chosen = all.find((p) => p.key === view.property) || null;
-    // A value is a page of its own, as a collection is.
+    // A value is a page of its own, as an album is.
     if (chosen && view.value && !view.editing) return this.renderValuePage(root, chosen, view.value);
 
     view.renderTitleBar(root, this.title());
@@ -183,8 +182,9 @@ export class PropertiesScreen extends BrowseScreen {
   }
 
   /**
-   * A property's page: its name, how many notes and values, then the
-   * values as a list, each opening its own page. Picking values to merge is Edit's.
+   * A property's page, as an artist's: its name, how many notes and
+   * values, then the values as a list,
+   * each opening its own page. Picking values to merge is Edit's.
    */
   renderOverview(detail, prop) {
     const view = this.view;
@@ -305,8 +305,8 @@ export class PropertiesScreen extends BrowseScreen {
   }
 
   /**
-   * One value, as a collection: its cover, its name, the property it's a
-   * value of — the way back — and its notes, in the collection's own list.
+   * One value, as an album: its cover, its name, the property it's a
+   * value of — the way back — and its notes, in the album's own list.
    * "No value" gathers the notes that leave the property empty.
    */
   renderValuePage(root, prop, value) {
@@ -328,7 +328,7 @@ export class PropertiesScreen extends BrowseScreen {
     const files = view.sortFiles(group.files.filter((f) => view.matches(f.basename)));
     const title = String(group.value);
     const id = `value:${prop.key}:${title}`;
-    view.renderCollectionHead(root, {
+    view.renderAlbumHead(root, {
       title,
       sub: prop.name,
       cover: isEmpty ? null : view.groupCover(group),
@@ -337,7 +337,7 @@ export class PropertiesScreen extends BrowseScreen {
       files,
       onArtMenu: isEmpty ? null : (evt) => this.valueMenu(evt, prop, title),
     });
-    // The property it belongs to, under the name, is the way back to it — as a collection's artist is.
+    // The property it belongs to, under the name, is the way back to it — as an album's artist is.
     const sub = root.querySelector('.dr-detail-sub');
     if (sub) {
       sub.addClass('is-link');
@@ -350,8 +350,8 @@ export class PropertiesScreen extends BrowseScreen {
       more.addClass('dr-value-more');
     }
 
-    const list = root.createDiv({ cls: 'dr-note-rows dr-value-rows' });
-    roveFocus(list, '.dr-note-row');
+    const list = root.createDiv({ cls: 'dr-tracks dr-value-tracks' });
+    roveFocus(list, '.dr-track');
     view.renderLimited(list, files, `value:${prop.key}:${title}`, 1000);
   }
 
@@ -378,7 +378,7 @@ export class PropertiesScreen extends BrowseScreen {
   }
 
   /**
-   * A value's menu, as a collection's: opening it first, then what changes
+   * A value's menu, as an album's: opening it first, then what changes
    * it — renamed or merged everywhere — and copying it; last, narrowing
    * the library to its notes.
    */
@@ -415,7 +415,7 @@ export class PropertiesScreen extends BrowseScreen {
     showMenuAt(menu, evt);
   }
 
-  /** Edit, beside Find, as a collection has it: on a property's page, to pick values to merge; else to rename and merge properties. */
+  /** Edit, beside Find, as an album has it: on a property's page, to pick values to merge; else to rename and merge properties. */
   editButton(root, any, onProperty) {
     const view = this.view;
     const bar = root.querySelector('.dr-detail-bar');
@@ -564,23 +564,24 @@ export class PropertiesScreen extends BrowseScreen {
     });
   }
 
-  /** A property's menu: the same as in the Properties window, each tool across the vault. Its values are a click away. */
+  /** A property's menu: its values, then what changes it everywhere, and copying its name. */
   propertyMenu(evt, prop) {
+    const view = this.view;
     evt.preventDefault();
-    const bulk = this.plugin.feature(BulkEditing);
-    if (!bulk) return;
     const menu = new Menu();
     const name = prop.name;
-    const root = this.app.vault.getRoot();
-    const open = {
-      rename: () => bulk.openRenameProperty(name),
-      type: () => bulk.openChangeType(name),
-      merge: () => bulk.openMerge([name]),
-      cleanup: () => bulk.openTools([root], 'cleanup', { key: name }),
-      missing: () => bulk.openMissing([root], name),
-      remove: () => bulk.openRemove([root], [name]),
-    };
-    addPropertyEntries(menu, { name, missing: this.inspect(prop.key).without }, (tool) => open[tool]());
+    const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
+    add('View values', 'layout-grid', 'open', () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
+    const bulk = this.plugin.feature(BulkEditing);
+    if (bulk) {
+      const root = this.app.vault.getRoot();
+      add('Rename property…', 'pencil', 'action', () => bulk.openRenameProperty(name));
+      add('Merge property…', 'git-merge', 'action', () => bulk.openMerge([name]));
+      add('Change type…', 'shapes', 'action', () => bulk.openChangeType(name));
+      add('Find notes missing it…', 'list-checks', 'action', () => bulk.openMissing([root], name));
+    }
+    add('Copy property name', 'copy', 'action', () => copyText(name));
+    if (bulk) add('Remove from every note…', 'list-minus', 'remove', () => bulk.openRemove([this.app.vault.getRoot()], [name]));
     showMenuAt(menu, evt);
   }
 }

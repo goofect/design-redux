@@ -2,7 +2,7 @@
 /* Files: made, moved, put back                                         */
 /*                                                                      */
 /* Notes, canvases and folders made under a free name; files moved as   */
-/* Obsidian moves them, links kept, and put back with the collection order   */
+/* Obsidian moves them, links kept, and put back with the album order   */
 /* they left; the folder note found, made, and renamed with its folder. */
 /* The plugin answers for these too (plugin.moveFile and so on), as     */
 /* features and tests ask it.                                           */
@@ -141,8 +141,8 @@ export class Files {
     const current = file.parent ? file.parent.path : '/';
     if (current === (dir || '/')) return false;
     const from = file.path;
-    // The order of the collection it leaves, to restore if it comes back.
-    const order = (this.settings.collectionOrders || {})[current];
+    // The order of the album it leaves, to restore if it comes back.
+    const order = (this.settings.albumOrders || {})[current];
     const kept = order ? JSON.parse(JSON.stringify(order)) : null;
     // A folder can't go inside itself, or inside anything in it.
     const isFolder = file instanceof TFolder;
@@ -172,7 +172,7 @@ export class Files {
   }
 
   /**
-   * A file or folder back where it was, and the order of the collection it
+   * A file or folder back where it was, and the order of the album it
    * came from as it was then. Not if something else has taken its place.
    */
   async putBack(entry, oldPath, parentPath, order) {
@@ -192,7 +192,7 @@ export class Files {
       return false;
     }
     if (order && parentPath) {
-      this.settings.collectionOrders = Object.assign({}, this.settings.collectionOrders, { [parentPath]: order });
+      this.settings.albumOrders = Object.assign({}, this.settings.albumOrders, { [parentPath]: order });
       await this.plugin.saveData(this.settings);
     }
     this.plugin.refreshBrowse();

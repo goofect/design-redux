@@ -1,14 +1,14 @@
 /* ------------------------------------------------------------------ */
 /* Browse                                                              */
 /*                                                                     */
-/* The main area, in four shapes: a folder as a collection page, a         */
+/* The main area, in four shapes: a folder as an album page, a         */
 /* property as a list of its values, every folder as tiles, and every  */
 /* note as a table.                                                    */
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_HOVER_SOURCE, TAG_KEYS } from '../core/020-constants.js';
-import { blankArt, blankLook, byName, canStep, coversOn, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
+import { blankLook, byName, canStep, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -16,12 +16,11 @@ import { ACTION_CONTEXTS } from '../core/078-actions.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
-import { BrowseCollection } from './125-browse-collection.js';
+import { BrowseAlbum } from './125-browse-album.js';
 import { ContextStrip } from '../tools/190-strip.js';
-import { enter, transitionScreen } from '../ui/231-motion.js';
 import { BulkEditing } from '../tools/310-bulk-feature.js';
 
-export class BrowseView extends BrowseCollection {
+export class BrowseView extends BrowseAlbum {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -103,17 +102,8 @@ export class BrowseView extends BrowseCollection {
     if (!moved && active && this.contentEl.contains(active) && active.matches('.dr-browse-search input')) {
       this.renderBelowBar();
     } else {
-      const draw = () => {
-        this.render();
-        if (this.contentEl) this.contentEl.scrollTop = 0;
-        // A screen arrived at: its rows and tiles come in one after another.
-        if (moved && this.contentEl) enter(Array.from(this.contentEl.querySelectorAll('.dr-note-row, .dr-tr:not(.dr-th), .dr-card, .dr-list-section')).slice(0, 24));
-      };
-      // Another screen slides in, back the other way; the same one is just drawn again.
-      const back = this.goingBack;
-      this.goingBack = false;
-      if (moved && this.contentEl && this.contentEl.isConnected && this.contentEl.childElementCount) transitionScreen(this.contentEl, draw, { back });
-      else draw();
+      this.render();
+      if (this.contentEl) this.contentEl.scrollTop = 0;
     }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
@@ -152,7 +142,6 @@ export class BrowseView extends BrowseCollection {
     // focus inside it; the view's scope covers the page being active
     // with nothing on it focused, which keys wouldn't otherwise reach.
     this.registerDomEvent(this.containerEl, 'keydown', (evt) => this.onKey(evt));
-    this.registerDomEvent(this.contentEl, 'scroll', () => this.markScrolled(), { passive: true });
     try {
       if (typeof Scope === 'function' && this.app.scope) {
         this.scope = new Scope(this.app.scope);
@@ -161,12 +150,6 @@ export class BrowseView extends BrowseCollection {
             const t = evt.target;
             if (t && typeof t.closest === 'function' && t.closest('input, textarea, select, [contenteditable="true"]')) return true;
             return !this.focusFind();
-          });
-          // Escape too — letting go of ticks, editing, a pick — when focus has left the page (a redrawn row takes it along).
-          this.scope.register([], 'Escape', (evt) => {
-            if (evt.target && this.containerEl.contains(evt.target)) return true;
-            this.onKey(evt);
-            return !evt.defaultPrevented;
           });
         }
       }
@@ -199,12 +182,7 @@ export class BrowseView extends BrowseCollection {
     );
 
     this.registerEvent(this.app.vault.on('create', () => this.queueRender()));
-    this.registerEvent(
-      this.app.vault.on('delete', (file) => {
-        this.followDelete(file);
-        this.queueRender();
-      })
-    );
+    this.registerEvent(this.app.vault.on('delete', () => this.queueRender()));
     this.registerEvent(
       this.app.vault.on('rename', (file, oldPath) => {
         this.followRename(file, oldPath);
@@ -285,19 +263,12 @@ export class BrowseView extends BrowseCollection {
     if (this.stale) this.render();
   }
 
-  /** A note or a folder deleted: what was ticked there is let go. */
-  followDelete(file) {
-    if (this.bulkSelection) this.bulkSelection.remove(file.path);
-  }
-
   /**
    * A folder renamed or moved while it's shown — or while it's the
    * filter, or on the way back down — is followed to its new path,
    * rather than the page falling back to the vault's root.
    */
   followRename(file, oldPath) {
-    // What's ticked follows a note or a folder renamed.
-    if (this.bulkSelection) this.bulkSelection.rename(oldPath, file.path);
     if (!(file instanceof TFolder)) return;
     const moved = (p) =>
       !p ? p : p === oldPath ? file.path : p.startsWith(oldPath + '/') ? file.path + p.slice(oldPath.length) : p;
@@ -307,7 +278,6 @@ export class BrowseView extends BrowseCollection {
   }
 
   async onClose() {
-    this.removePane();
     if (this.unpick) this.unpick();
     this.unpick = null;
     // Replaced by a result opened in the same page.
@@ -343,24 +313,11 @@ export class BrowseView extends BrowseCollection {
     });
   }
 
-  /**
-   * The bar stays at the top; a hairline under it once the page has scrolled beneath. Its
-   * height is told to the page, so what else stays (a table's head) stays under it.
-   */
-  markScrolled() {
-    const bar = this.contentEl && this.contentEl.querySelector('.dr-detail-bar');
-    if (!bar) return;
-    bar.toggleClass('is-scrolled', this.contentEl.scrollTop > 4);
-    const h = `${bar.offsetHeight}px`;
-    if (this.contentEl.style.getPropertyValue('--dr-bar-h') !== h) this.contentEl.style.setProperty('--dr-bar-h', h);
-  }
-
   canGo(dir) {
     return canStep(this.leaf, dir);
   }
 
   go(dir) {
-    this.goingBack = dir === 'back';
     step(this.leaf, dir);
   }
 
@@ -404,10 +361,7 @@ export class BrowseView extends BrowseCollection {
         'chevron-left',
         parent ? `Back to ${this.folderName(parent)}` : 'Back',
         !!parent,
-        () => {
-          this.goingBack = true;
-          this.folderUp(folder, parent);
-        }
+        () => this.folderUp(folder, parent)
       ).addClass('is-folder-step');
       button(
         'chevron-right',
@@ -481,9 +435,6 @@ export class BrowseView extends BrowseCollection {
   render() {
     this.stale = false;
     const root = this.contentEl;
-    // What had the keys, if it's drawn again unchanged, keeps them.
-    const active = root.ownerDocument.activeElement;
-    const held = active && active !== root && root.contains(active) ? active : null;
     root.empty();
     const density = this.plugin.settings.gridDensity;
     this.containerEl.dataset.drDensity = GRID_DENSITIES[density] ? density : 'standard';
@@ -506,13 +457,7 @@ export class BrowseView extends BrowseCollection {
         text: 'This screen could not be drawn. See the console for details.',
       });
     }
-    this.syncPane();
-    // After the drawing is laid out, not by forcing it now: a long list's layout is the cost.
-    const win = root.ownerDocument.defaultView;
-    if (win && typeof win.requestAnimationFrame === 'function') win.requestAnimationFrame(() => this.markScrolled());
-    else this.markScrolled();
     this.measureLater();
-    if (held && held.isConnected && root.ownerDocument.activeElement !== held) held.focus({ preventScroll: true });
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();
@@ -590,7 +535,7 @@ export class BrowseView extends BrowseCollection {
       );
       if (shared) this.setSort(shared);
       else this.columnSort = next;
-      this.renderSorted();
+      this.render();
     });
   }
 
@@ -716,12 +661,12 @@ export class BrowseView extends BrowseCollection {
   }
 
   renderGroup(detail, group, isPrimary) {
-    const block = detail.createDiv({ cls: 'dr-collection' });
+    const block = detail.createDiv({ cls: 'dr-album' });
 
-    const head = block.createDiv({ cls: 'dr-collection-head' });
-    const titles = head.createDiv({ cls: 'dr-collection-titles' });
+    const head = block.createDiv({ cls: 'dr-album-head' });
+    const titles = head.createDiv({ cls: 'dr-album-titles' });
     titles.createDiv({
-      cls: isPrimary ? 'dr-collection-name is-primary' : 'dr-collection-name',
+      cls: isPrimary ? 'dr-album-name is-primary' : 'dr-album-name',
       text: group.value,
     });
     // A value can be renamed everywhere it's used; under tags, each
@@ -751,26 +696,24 @@ export class BrowseView extends BrowseCollection {
       });
     }
     titles.createDiv({
-      cls: 'dr-collection-meta',
+      cls: 'dr-album-meta',
       text:
         `${this.propertyLabel()}  ·  ` +
         (group.files.length === 1 ? '1 note' : `${group.files.length} notes`),
     });
 
-    const body = block.createDiv({ cls: 'dr-collection-body' });
-    if (coversOn(this.plugin.settings)) {
-      const art = body.createDiv({ cls: 'dr-collection-art' });
-      this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), blankLook(this.plugin.settings, String(group.value)));
-    }
+    const body = block.createDiv({ cls: 'dr-album-body' });
+    const art = body.createDiv({ cls: 'dr-album-art' });
+    this.fillArt(art, this.groupCover(group), 'file-text', this.genName(String(group.value)), blankLook(this.plugin.settings, String(group.value)));
 
-    const list = body.createDiv({ cls: 'dr-note-rows' });
-    roveFocus(list, '.dr-note-row');
+    const list = body.createDiv({ cls: 'dr-tracks' });
+    roveFocus(list, '.dr-track');
     // Keyed by property too: the same value can occur under two.
     this.renderLimited(
       list,
       group.files,
       `value:${this.property}:${group.value}`,
-      this.limitFrom('collectionNoteLimit', 8)
+      this.limitFrom('albumNoteLimit', 8)
     );
   }
 
@@ -783,7 +726,6 @@ export class BrowseView extends BrowseCollection {
   }
 
   fillArt(el, src, glyph, name, look) {
-    if (!coversOn(this.plugin.settings)) return blankArt(el, glyph);
     fillArt(el, src, glyph, name, look);
   }
 
@@ -805,12 +747,12 @@ export class BrowseView extends BrowseCollection {
     showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), first });
   }
 
-  /** A note's own ways out of a list: a new tab, its collection where that isn't here, and a link to paste. */
+  /** A note's own ways out of a list: a new tab, its album where that isn't here, and a link to paste. */
   noteOpenings(file) {
     if (!(file instanceof TFile) || file.extension !== 'md') return [];
     const out = [['Open in new tab', 'file-plus', () => this.app.workspace.getLeaf('tab').openFile(file)]];
     const here = this.mode === 'folder' && file.parent && file.parent.path === this.path;
-    if (file.parent && !here && typeof this.revealInCollection === 'function') out.push(['Reveal in collection', 'folder-open', () => this.revealInCollection(file)]);
+    if (file.parent && !here && typeof this.revealInAlbum === 'function') out.push(['Reveal in collection', 'folder-open', () => this.revealInAlbum(file)]);
     out.push([
       'Copy link',
       'link',
@@ -835,26 +777,17 @@ export class BrowseView extends BrowseCollection {
 
   /* -- keys and scroll ----------------------------------------------- */
 
-  /** "/" jumps to Find, as on the web; Escape lets go of what's ticked, then leaves editing; Mod+A ticks every note shown. */
+  /** "/" jumps to Find, as on the web; Escape leaves editing. */
   onKey(evt) {
     const target = evt.target;
-    // A row's tick box is an input, but no one types in it.
-    const typing = target && typeof target.closest === 'function' && target.closest('input:not([type="checkbox"]), textarea, select, [contenteditable="true"]');
+    const typing = target && typeof target.closest === 'function' && target.closest('input, textarea, select, [contenteditable="true"]');
     if (evt.key === '/' && !evt.metaKey && !evt.ctrlKey && !evt.altKey && !typing) {
       if (this.focusFind()) evt.preventDefault();
       return;
     }
     if (evt.key === 'Escape' && this.editing && !typing) {
       evt.preventDefault();
-      if (this.bulkSelection && this.bulkSelection.size) {
-        this.bulkSelection.clear();
-        this.showTicks();
-      } else this.setEditing(false);
-      return;
-    }
-    if (evt.key === 'a' && (evt.metaKey || evt.ctrlKey) && !evt.altKey && !evt.shiftKey && this.editing && !typing && this.shownPaths().length) {
-      evt.preventDefault();
-      this.tickAllShown();
+      this.setEditing(false);
       return;
     }
     // Space on a note's row or tile: a look at it, without opening it.
@@ -914,7 +847,7 @@ export class BrowseView extends BrowseCollection {
   }
 }
 
-/* What a browse action acts on: the collection the browse view shows. */
+/* What a browse action acts on: the album the browse view shows. */
 ACTION_CONTEXTS.browse = (app) => {
   const view = app.workspace.getActiveViewOfType(BrowseView);
   const folder = view && view.mode === 'folder' ? view.folder() : null;

@@ -2,22 +2,22 @@
 /* Looking the library over                                            */
 /*                                                                     */
 /* What a growing library loses track of, in a report to go through:   */
-/*   hierarchy — collections with nothing in them, nested very deep, in no  */
+/*   hierarchy — albums with nothing in them, nested very deep, in no  */
 /*     collection, taking each other in, or taking in the collection   */
 /*     they're in; notes whose parents lead round in a circle; notes   */
-/*     that say they're collections without being one; links that lead      */
+/*     that say they're albums without being one; links that lead      */
 /*     nowhere;                                                        */
-/*   duplicates and overlaps — collections of one name, or one cover;       */
-/*     collections sharing most of their notes; a note listed twice;        */
-/*   coverage and balance — collections with no description, subjects with  */
-/*     nothing to start with, collections and collections far larger than   */
+/*   duplicates and overlaps — albums of one name, or one cover;       */
+/*     albums sharing most of their notes; a note listed twice;        */
+/*   coverage and balance — albums with no description, subjects with  */
+/*     nothing to start with, albums and collections far larger than   */
 /*     the rest.                                                       */
-/* And an inbox: the notes in no collection, to be put in one a few at a    */
+/* And an inbox: the notes in no album, to be put in one a few at a    */
 /* time. Things to look at, not rules: the report changes nothing.     */
 /* ------------------------------------------------------------------ */
 
 import { setIcon, TFile, TFolder } from 'obsidian';
-import { COLLECTION_TYPES } from '../core/020-constants.js';
+import { ALBUM_TYPES } from '../core/020-constants.js';
 import { byName } from '../core/030-helpers-art.js';
 import { asButton, noteTags, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
@@ -27,7 +27,7 @@ import { Feature } from '../core/080-feature.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { Library } from './130-browse-filters.js';
 import { FolderPicker } from '../ui/230-pickers.js';
-import { COLLECTION_KEYS, CollectionStructure } from './257-collection-structure.js';
+import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
 
 export const LIBRARY_DEEP = 5;
 
@@ -37,14 +37,14 @@ export const LIBRARY_SECTIONS = [
   { id: 'coverage', title: 'Coverage and balance' },
 ];
 
-/* Collections sharing at least this many notes, and this much of the smaller one, overlap. */
+/* Albums sharing at least this many notes, and this much of the smaller one, overlap. */
 export const OVERLAP_NOTES = 3;
 export const OVERLAP_SHARE = 0.5;
 
-/* A collection or collection this many times the usual size, and at least this large, is out of balance. */
+/* An album or collection this many times the usual size, and at least this large, is out of balance. */
 export const BALANCE_TIMES = 3;
 export const BALANCE_NOTES = 40;
-export const BALANCE_COLLECTIONS = 12;
+export const BALANCE_ALBUMS = 12;
 
 export function middleOf(numbers) {
   if (!numbers.length) return 0;
@@ -163,11 +163,11 @@ export class InboxScreen extends BrowseScreen {
     placed.toggleClass('is-disabled', !chosen().some((f) => suggested.has(f)));
     const show = view.action(bar, 'link', 'Show in a collection…', () => check.showIn(chosen(), () => picked.clear()));
     [move, show].forEach((b) => b.toggleClass('is-disabled', !picked.size));
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     if (!structure || !structure.enabled) show.remove();
     bar.createSpan({ cls: 'dr-inbox-count', text: picked.size ? `${picked.size} picked` : '' });
 
-    const list = root.createDiv({ cls: 'dr-note-rows dr-inbox' });
+    const list = root.createDiv({ cls: 'dr-tracks dr-inbox' });
     roveFocus(list, '.dr-inbox-row');
     notes.forEach((file) => {
       const row = list.createDiv({ cls: 'dr-inbox-row' });
@@ -269,9 +269,9 @@ export class LibraryCheck extends Feature {
     return f instanceof TFile && f.extension === 'md' && !this.plugin.isFolderNote(f);
   }
 
-  /** Notes in no collection: at the top of the vault, taken in by none; not the home note. */
+  /** Notes in no album: at the top of the vault, taken in by none; not the home note. */
   unclassified() {
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     const included = new Set();
     if (structure && structure.enabled) this.folders().forEach((f) => structure.info(f).includes.forEach((t) => included.add(t)));
     const home = String(this.settings.homePath || '');
@@ -299,14 +299,14 @@ export class LibraryCheck extends Feature {
 
   /** What there is to look at: [{ target, problem, kind, section }]. */
   problems() {
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     const shows = !!(structure && structure.enabled);
     const out = [];
     const add = (section, target, kind, problem) => out.push({ section, target, kind, problem });
     const folders = this.folders();
     const infos = new Map(folders.map((f) => [f, shows ? structure.info(f) : null]));
     const own = (f) => (f.children || []).filter((c) => this.isNote(c));
-    const collections = folders.filter((f) => own(f).length);
+    const albums = folders.filter((f) => own(f).length);
     const shelves = folders.filter((f) => !own(f).length && (f.children || []).some((c) => c instanceof TFolder));
     const takenIn = new Set();
     infos.forEach((info) => info && info.includes.forEach((t) => takenIn.add(t)));
@@ -327,19 +327,19 @@ export class LibraryCheck extends Feature {
     // In no collection: at the top of the vault where others are kept in collections, and taken in by none.
     const topShelves = shelves.some((f) => f.parent && f.parent.isRoot && f.parent.isRoot());
     if (topShelves) {
-      collections.filter((f) => f.parent && f.parent.isRoot && f.parent.isRoot() && !takenIn.has(f)).forEach((f) => add('hierarchy', f, 'orphan', 'On no shelf, and taken in by no collection'));
+      albums.filter((f) => f.parent && f.parent.isRoot && f.parent.isRoot() && !takenIn.has(f)).forEach((f) => add('hierarchy', f, 'orphan', 'On no shelf, and taken in by no collection'));
     }
     if (shows) {
       const takes = (f) => (infos.get(f) ? infos.get(f).includes.filter((t) => t instanceof TFolder) : []);
       folders.forEach((start) => {
         if (this.loops(start, takes)) add('hierarchy', start, 'loop', 'Takes in a collection that takes it in');
       });
-      // A note saying it's a collection, without being a folder note.
+      // A note saying it's an album, without being a folder note.
       libraryIndex(this.plugin).markdown().forEach((f) => {
         if (this.plugin.isFolderNote(f)) return;
-        const kind = valueList(fmGet(noteProps(this.app, f), COLLECTION_KEYS.type))[0];
-        // Only the kinds it knows: a collection property can mean a record's collection.
-        if (kind && COLLECTION_TYPES.some((t) => t.id === String(kind).toLowerCase())) add('hierarchy', f, 'roles', `Says it’s a ${kind} collection, but isn’t a folder’s note`);
+        const kind = valueList(fmGet(noteProps(this.app, f), ALBUM_KEYS.type))[0];
+        // Only the kinds it knows: an album property can mean a record's album.
+        if (kind && ALBUM_TYPES.some((t) => t.id === String(kind).toLowerCase())) add('hierarchy', f, 'roles', `Says it’s a ${kind} collection, but isn’t a folder’s note`);
       });
     }
     // Notes whose parents lead round to themselves.
@@ -372,7 +372,7 @@ export class LibraryCheck extends Feature {
         const note = info.note;
         if (!note) return;
         const fm = noteProps(this.app, note);
-        [COLLECTION_KEYS.includes, COLLECTION_KEYS.related, COLLECTION_KEYS.featured].forEach((k) => {
+        [ALBUM_KEYS.includes, ALBUM_KEYS.related, ALBUM_KEYS.featured].forEach((k) => {
           const seen = new Set();
           valueList(fmGet(fm, k)).forEach((v) => {
             const t = this.app.metadataCache.getFirstLinkpathDest(plainValue(v), note.path);
@@ -382,8 +382,8 @@ export class LibraryCheck extends Feature {
           });
         });
       });
-      // Collections sharing most of their notes, by what they hold and take in.
-      const members = new Map(collections.concat(folders.filter((f) => infos.get(f).includes.length)).map((f) => [f, new Set(own(f).concat(infos.get(f).includes.filter((t) => t instanceof TFile)))]));
+      // Albums sharing most of their notes, by what they hold and take in.
+      const members = new Map(albums.concat(folders.filter((f) => infos.get(f).includes.length)).map((f) => [f, new Set(own(f).concat(infos.get(f).includes.filter((t) => t instanceof TFile)))]));
       const list = Array.from(members.keys());
       list.forEach((a, i) =>
         list.slice(i + 1).forEach((b) => {
@@ -402,8 +402,8 @@ export class LibraryCheck extends Feature {
       if (!info.description) add('coverage', folder, 'about', 'No description');
       if (info.type === 'subject' && !info.featured.length) add('coverage', folder, 'start', 'A subject with no notes to start with');
     });
-    const usual = middleOf(collections.map((f) => own(f).length));
-    collections.forEach((f) => {
+    const usual = middleOf(albums.map((f) => own(f).length));
+    albums.forEach((f) => {
       const n = own(f).length;
       if (n >= BALANCE_NOTES && n > usual * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} notes; most collections hold ${usual}`);
     });
@@ -411,7 +411,7 @@ export class LibraryCheck extends Feature {
     const usualShelf = middleOf(shelves.map(sizeOf));
     shelves.forEach((f) => {
       const n = sizeOf(f);
-      if (n >= BALANCE_COLLECTIONS && n > usualShelf * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} collections; most shelves hold ${usualShelf}`);
+      if (n >= BALANCE_ALBUMS && n > usualShelf * BALANCE_TIMES) add('coverage', f, 'large', `Holds ${n} collections; most shelves hold ${usualShelf}`);
     });
     return out;
   }
@@ -430,7 +430,7 @@ export class LibraryCheck extends Feature {
     return false;
   }
 
-  /** A collection opened; a note in no collection, to the inbox; anything else, opened. */
+  /** An album opened; a note in no album, to the inbox; anything else, opened. */
   goTo(p) {
     if (p.target instanceof TFolder) {
       const library = this.plugin.feature(Library);
@@ -441,16 +441,16 @@ export class LibraryCheck extends Feature {
   }
 
   /**
-   * Where notes in no collection seem to belong: the collection whose notes they
+   * Where notes in no album seem to belong: the album whose notes they
    * link with most, either way, with a nudge for a tag or property
    * naming it. Those with nothing to go on are left out.
    */
   suggestions(notes) {
-    const structure = this.plugin.feature(CollectionStructure);
-    const collectionOf = new Map();
+    const structure = this.plugin.feature(AlbumStructure);
+    const albumOf = new Map();
     this.folders().forEach((f) => {
-      (f.children || []).forEach((c) => this.isNote(c) && collectionOf.set(c.path, f));
-      if (structure && structure.enabled) structure.info(f).includes.forEach((t) => t instanceof TFile && !collectionOf.has(t.path) && collectionOf.set(t.path, f));
+      (f.children || []).forEach((c) => this.isNote(c) && albumOf.set(c.path, f));
+      if (structure && structure.enabled) structure.info(f).includes.forEach((t) => t instanceof TFile && !albumOf.has(t.path) && albumOf.set(t.path, f));
     });
     const index = libraryIndex(this.plugin);
     const slug = (s) => String(s).toLowerCase().replace(/\s+/g, '-');
@@ -458,12 +458,12 @@ export class LibraryCheck extends Feature {
     notes.forEach((file) => {
       const score = new Map();
       const add = (folder, n) => folder && score.set(folder, (score.get(folder) || 0) + n);
-      Object.entries(index.outgoing(file)).forEach(([to, n]) => add(collectionOf.get(to), n));
-      Object.entries(index.incoming(file)).forEach(([from, n]) => add(collectionOf.get(from), n));
+      Object.entries(index.outgoing(file)).forEach(([to, n]) => add(albumOf.get(to), n));
+      Object.entries(index.incoming(file)).forEach(([from, n]) => add(albumOf.get(from), n));
       const cache = this.app.metadataCache.getFileCache(file);
       const tags = noteTags(cache);
       const values = Object.values((cache && cache.frontmatter) || {}).reduce((acc, v) => acc.concat(valueList(v).map((x) => slug(plainValue(x)))), []);
-      new Set(collectionOf.values()).forEach((folder) => {
+      new Set(albumOf.values()).forEach((folder) => {
         const name = slug(folder.name);
         if (tags.some((t) => t === name || t.endsWith('/' + name))) add(folder, 2);
         if (values.indexOf(name) !== -1) add(folder, 2);
@@ -477,7 +477,7 @@ export class LibraryCheck extends Feature {
     return out;
   }
 
-  /** Each note moved into its own collection, as one step of Undo. */
+  /** Each note moved into its own album, as one step of Undo. */
   async moveEach(pairs) {
     const moved = [];
     for (const [file, folder] of pairs) {
@@ -493,7 +493,7 @@ export class LibraryCheck extends Feature {
     return true;
   }
 
-  /** The notes moved into a collection chosen from a list. */
+  /** The notes moved into an album chosen from a list. */
   moveInto(files, done) {
     if (!files.length) return;
     new FolderPicker(this.app, async (folder) => {
@@ -501,7 +501,7 @@ export class LibraryCheck extends Feature {
     }, { placeholder: `Move ${files.length} ${files.length === 1 ? 'note' : 'notes'} into which collection?` }).open();
   }
 
-  /** The notes moved into a collection, as one step of Undo. */
+  /** The notes moved into an album, as one step of Undo. */
   async moveFilesInto(files, folder) {
     const moved = [];
     for (const file of files) {
@@ -517,7 +517,7 @@ export class LibraryCheck extends Feature {
     return true;
   }
 
-  /** The notes shown in a collection chosen from a list. */
+  /** The notes shown in an album chosen from a list. */
   showIn(files, done) {
     if (!files.length) return;
     new FolderPicker(this.app, async (folder) => {
@@ -525,20 +525,20 @@ export class LibraryCheck extends Feature {
     }, { placeholder: `Show ${files.length} ${files.length === 1 ? 'note' : 'notes'} in which collection?` }).open();
   }
 
-  /** The notes listed in a collection's includes, where they are, as one step of Undo. */
+  /** The notes listed in an album's includes, where they are, as one step of Undo. */
   async showFilesIn(files, folder) {
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     if (!files.length || !structure || !structure.enabled) return false;
     {
       const note = this.plugin.folderNote(folder);
-      const before = valueList(fmGet(noteProps(this.app, note), COLLECTION_KEYS.includes));
+      const before = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes));
       const from = note ? note.path : `${folder.path}/x.md`;
       const have = structure.info(folder).includes;
       const added = files.filter((f) => have.indexOf(f) === -1).map((f) => `[[${this.app.metadataCache.fileToLinktext(f, from, true)}]]`);
-      if (!added.length || !(await structure.setProperty(folder, COLLECTION_KEYS.includes, before.concat(added)))) return false;
+      if (!added.length || !(await structure.setProperty(folder, ALBUM_KEYS.includes, before.concat(added)))) return false;
       this.plugin.refreshBrowse();
       this.plugin.offerUndo(`${added.length} ${added.length === 1 ? 'note shows' : 'notes show'} in ${folder.name} now, where ${added.length === 1 ? 'it is' : 'they are'}.`, async () => {
-        await structure.setProperty(folder, COLLECTION_KEYS.includes, before);
+        await structure.setProperty(folder, ALBUM_KEYS.includes, before);
         this.plugin.refreshBrowse();
       });
       return true;

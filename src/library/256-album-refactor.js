@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
-/* Reorganising collections safely                                          */
+/* Reorganising albums safely                                          */
 /*                                                                     */
-/* Renaming a collection, moving it into another collection, merging it    */
+/* Renaming an album, moving it into another collection, merging it    */
 /* into another, or splitting notes off into a new one: each shown     */
 /* first — what moves, what's renamed for a name already taken, how    */
 /* many links point in — and done only when that's agreed. Files move  */
@@ -16,7 +16,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { FolderPicker, NamePrompt } from '../ui/230-pickers.js';
-import { COLLECTION_KEYS, CollectionStructure } from './257-collection-structure.js';
+import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
 
 /** What's about to happen, to agree to or not. */
 export class RefactorPreview extends Modal {
@@ -56,7 +56,7 @@ export class RefactorPreview extends Modal {
   }
 }
 
-/** Notes of a collection to split off, and the new collection's name. */
+/** Notes of an album to split off, and the new album's name. */
 export class SplitChooser extends Modal {
   constructor(app, folder, files, onChoose) {
     super(app);
@@ -98,21 +98,21 @@ export class SplitChooser extends Modal {
   }
 }
 
-/* What merging carries from one collection's folder note to the other's. */
-export const mergedKeys = () => [COLLECTION_KEYS.includes, COLLECTION_KEYS.related, COLLECTION_KEYS.featured];
+/* What merging carries from one album's folder note to the other's. */
+export const mergedKeys = () => [ALBUM_KEYS.includes, ALBUM_KEYS.related, ALBUM_KEYS.featured];
 
-export class CollectionRefactor extends Feature {
+export class AlbumRefactor extends Feature {
   settingsSchema() {
     return [
       {
-        key: 'collectionRefactor',
+        key: 'albumRefactor',
         name: 'Reorganise collections safely',
         desc: 'A folder’s menu can rename a collection, move it into another folder, merge it into another or split notes off it — each shown before it’s done, with links kept and one Undo.',
       },
     ];
   }
 
-  /** On the collection's menu as Reorganise; from the palette, for the collection open. */
+  /** On the album's menu as Reorganise; from the palette, for the album open. */
   actions() {
     const when = (ctx) => this.enabled && !(ctx.folder.isRoot && ctx.folder.isRoot());
     const act = (id, name, menu, icon, run) => ({ id, name, menu, icon, on: 'browse', when, run: (ctx) => run(ctx.folder) });
@@ -242,7 +242,7 @@ export class CollectionRefactor extends Feature {
     const taken = (name) => !!this.app.vault.getAbstractFileByPath(this.pathIn(target, name));
     const lines = [`${notes.length} ${notes.length === 1 ? 'note moves' : 'notes move'} from “${folder.name}” into “${target.name}”.`];
     if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-collection moves' : 'sub-collections move'} too.`);
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     const fm = this.frontmatter(note);
     const carried = mergedKeys().filter((k) => valueList(fmGet(fm, k)).length);
     if (carried.length) lines.push(`Its ${carried.join(', ')} join ${target.name}’s.`);
@@ -320,28 +320,28 @@ export class CollectionRefactor extends Feature {
     const targetNote = this.plugin.folderNote(target);
     const before = this.frontmatter(targetNote);
     const carried = mergedKeys().filter((k) => valueList(fmGet(theirs, k)).length);
-    const description = valueList(fmGet(theirs, COLLECTION_KEYS.description)).join(' ');
+    const description = valueList(fmGet(theirs, ALBUM_KEYS.description)).join(' ');
     const ownKind = {};
     // What changed in notes' properties, undone the notes way: what's edited since is kept.
     const records = [];
-    if (structure && (carried.length || (description && !valueList(fmGet(before, COLLECTION_KEYS.description)).length))) {
+    if (structure && (carried.length || (description && !valueList(fmGet(before, ALBUM_KEYS.description)).length))) {
       const into = targetNote || (await this.plugin.ensureFolderNote(target));
       records.push(await this.change(into, (fm) => {
         carried.forEach((k) => {
           const merged = valueList(fmGet(fm, k));
           valueList(fmGet(theirs, k)).forEach((v) => {
-            // Not the collection it's going into, nor one already listed.
+            // Not the album it's going into, nor one already listed.
             if (plainValue(v) === target.name || merged.some((m) => plainValue(m) === plainValue(v))) return;
             merged.push(v);
           });
           fm[k] = merged;
         });
-        if (description && !valueList(fmGet(fm, COLLECTION_KEYS.description)).length) fm[COLLECTION_KEYS.description] = description;
+        if (description && !valueList(fmGet(fm, ALBUM_KEYS.description)).length) fm[ALBUM_KEYS.description] = description;
       }));
     }
-    // Its note, a note like the rest now: no longer saying what kind of collection it is.
+    // Its note, a note like the rest now: no longer saying what kind of album it is.
     if (note) {
-      [COLLECTION_KEYS.type, COLLECTION_KEYS.layout].forEach((k) => {
+      [ALBUM_KEYS.type, ALBUM_KEYS.layout].forEach((k) => {
         if (fmGet(theirs, k) !== undefined) ownKind[k] = fmGet(theirs, k);
       });
       if (Object.keys(ownKind).length) records.push(await this.change(note, (fm) => Object.keys(ownKind).forEach((k) => delete fm[k])));
@@ -414,4 +414,4 @@ export class CollectionRefactor extends Feature {
   }
 }
 
-CollectionRefactor.settingKey = 'collectionRefactor';
+AlbumRefactor.settingKey = 'albumRefactor';

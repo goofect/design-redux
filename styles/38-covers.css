@@ -29,6 +29,10 @@
   -webkit-user-select: none;
 }
 
+.dr-detail-art.is-generated {
+  box-shadow: var(--dr-shadow-lg);
+}
+
 /* A colour of its own, or one for all: lighter to darker in that colour,
  * rather than the drift between two hues a name gets. */
 :where([class*="dr-"]).is-generated.is-tinted {
@@ -58,7 +62,7 @@
   stroke-width: 1.5px;
 }
 
-/* Printed along a cover's foot: kind, name, collection — the same places on every collection. */
+/* Printed along a cover's foot: kind, name, collection — the same places on every album. */
 .dr-card-art.has-print,
 .dr-detail-art.has-print {
   container-type: inline-size;
@@ -108,7 +112,7 @@
 
 /* Drawn covers ----------------------------------------------------------------
  *
- * A collection cover drawn for something without one — a sun on a horizon, a
+ * An album cover drawn for something without one — a sun on a horizon, a
  * few Bauhaus shapes — on a backdrop that darkens downwards, set inline
  * from its palette. Artwork, not chrome: the same colours in either theme.
  */
@@ -117,6 +121,10 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.dr-detail-art.is-drawn {
+  box-shadow: var(--dr-shadow-lg);
 }
 
 body.dr-flat-covers .dr-detail-art.is-drawn {
@@ -165,7 +173,7 @@ body.dr-flat-covers .dr-detail-art.is-drawn {
 
 .dr-color-hint {
   margin-top: 2px;
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
 
@@ -370,19 +378,3 @@ body.dr-flat-covers .dr-detail-art.is-drawn {
   pointer-events: none;
 }
 
-
-/* With covers off, what stands in for one is a plain icon, wherever it shows. */
-body:not(.dr-covers) :is(.dr-search-prop-art, .dr-prop-value-art, .dr-props-art, .dr-strip-art, .dr-split-thumb) {
-  flex: none;
-  width: 18px;
-  height: 18px;
-  background: none;
-  box-shadow: none;
-  border-radius: 0;
-}
-
-body:not(.dr-covers) .dr-lib-row.is-pin .dr-lib-icon {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-}

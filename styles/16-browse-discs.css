@@ -1,29 +1,29 @@
-/* Moving notes between sections ---------------------------------------------
+/* Moving notes between discs ---------------------------------------------
  *
- * A dragged row fades; the section it would land in is outlined whole, so
- * the target is the section rather than the particular row under the
+ * A dragged row fades; the disc it would land in is outlined whole, so
+ * the target is the disc rather than the particular row under the
  * cursor.
  */
 
-.dr-note-row[draggable="true"] {
+.dr-track[draggable="true"] {
   cursor: pointer;
 }
 
-.dr-note-row.is-dragging {
+.dr-track.is-dragging {
   opacity: 0.4;
 }
 
-.dr-note-row.is-drop-target, .dr-list-section.is-drop-target {
+.dr-track.is-drop-target, .dr-disc.is-drop-target {
   background-color: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
   box-shadow: none;
 }
 
-.dr-list-section.is-drop-target {
+.dr-disc.is-drop-target {
   border-bottom-color: var(--interactive-accent);
 }
 
 /* A subfolder being dragged onto another, in Edit mode. */
-.dr-list-section.is-dragging {
+.dr-disc.is-dragging {
   opacity: 0.4;
 }
 
@@ -45,7 +45,7 @@
 
 /* A screen with nothing to show says so in its own space, not indented
  * under a properties-panel label column it doesn't have. */
-.dr-browse .dr-empty:not(.dr-props-popup .dr-empty) {
+.dr-browse .dr-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -59,7 +59,7 @@
 
 .dr-empty-icon {
   display: flex;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .dr-empty-icon .svg-icon {

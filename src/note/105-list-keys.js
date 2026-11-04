@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* List keys                                                           */
 /*                                                                     */
-/* In the library and on every screen of notes:                        */
+/* In the library and on every screen of notes, as in a song list:     */
 /* the arrow keys move and Enter opens, as they always have; typing    */
 /* the start of a name jumps to it; and Space shows the note in focus  */
 /* in a preview, without leaving the list.                             */

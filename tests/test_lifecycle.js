@@ -413,7 +413,7 @@ const add = (p, f) => {
 };
 const texts = {
   'Politics/Politics.md': '---\nalbum: true\n---\n',
-  'Politics/Realism.md': '---\nstatus: draft\n---\nPower. See [[[Anarchy]]].',
+  'Politics/Realism.md': '---\nstatus: draft\n---\nPower. See [[Anarchy]].',
   'Politics/Anarchy.md': 'No ruler.',
   'Maps/Map.canvas': '{"nodes":[],"edges":[]}',
   'Inbox.md': 'Loose note.',
@@ -559,7 +559,7 @@ const update = process.argv.includes('--update');
     await plugin.onUserEnable();
     await settle(120);
     assert.deepStrictEqual(quietErrors(), [], 'errors while loading');
-    assert.ok(plugin.features.length > 35, `${plugin.features.length} features`);
+    assert.ok(plugin.features.length > 30, `${plugin.features.length} features`);
     viewTypes = Object.keys(app.views).sort();
     // A window of its own opened: what the plugin listens to there, it takes away on unloading too.
     const popout = win.document.implementation.createHTMLDocument('popout');

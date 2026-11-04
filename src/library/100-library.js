@@ -7,16 +7,15 @@
 /* for when the whole shape matters.                                   */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, Menu, Platform, setIcon, TFile, TFolder } from 'obsidian';
+import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { coversOn, drawFolderArt, drawNoteArt, fillArt, noteCoverSrc, onContextMenu, pageLeaf, showMenuAt, showTargetMenu } from '../core/030-helpers-art.js';
+import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, showTargetMenu } from '../core/030-helpers-art.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
 import { Library } from './130-browse-filters.js';
-import { isClearLook } from '../ui/229-components.js';
-import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
-import { SmartCollections } from './258-smart-collections.js';
+import { isAppleLook } from '../ui/229-components.js';
+import { SmartAlbums } from './258-smart-albums.js';
 
 export class LibraryView extends ItemView {
   constructor(leaf, plugin) {
@@ -136,18 +135,6 @@ export class LibraryView extends ItemView {
     if (switcher && name) {
       switcher.setAttribute('data-dr-initial', name.charAt(0).toUpperCase());
     }
-    this.showVaultCount();
-  }
-
-  /** Under the vault's name at the foot of the panel, how many notes it holds: a fact, read from the index. */
-  showVaultCount() {
-    if (Platform.isMobile) return;
-    const split = this.containerEl.closest('.workspace-split.mod-left-split');
-    const switcher = split && split.querySelector('.workspace-drawer-vault-switcher[data-dr-initial]');
-    if (!switcher) return;
-    const n = libraryIndex(this.plugin).markdown().length;
-    const text = n === 1 ? '1 note' : `${n.toLocaleString()} notes`;
-    if (switcher.getAttribute('data-dr-count') !== text) switcher.setAttribute('data-dr-count', text);
   }
 
   render() {
@@ -160,14 +147,11 @@ export class LibraryView extends ItemView {
     // lists changes with every key typed in it, and drawing the same rows
     // again would make their covers flash.
     const fresh = root.ownerDocument.createElement('div');
-    this.plugin.settings.librarySections.forEach((section, n) => {
-      // Each titled section a heading, and its rows a group named by it, for a screen reader's list of them.
-      const headId = section.title ? `dr-lib-head-${n}` : null;
+    this.plugin.settings.librarySections.forEach((section) => {
       // A section that folds — More, to begin with — has a heading that opens and closes it.
       const folds = typeof section.folded === 'boolean';
       if (section.title && folds) {
         const head = fresh.createDiv({ cls: `dr-lib-group dr-lib-fold${section.folded ? ' is-folded' : ''}` });
-        head.id = headId;
         asButton(head, section.folded ? `Show ${section.title}` : `Fold ${section.title}`);
         head.setAttribute('aria-expanded', String(!section.folded));
         head.createSpan({ text: section.title });
@@ -179,14 +163,9 @@ export class LibraryView extends ItemView {
         });
         if (section.folded) return;
       } else if (section.title) {
-        const head = fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
-        head.id = headId;
-        head.setAttribute('role', 'heading');
-        head.setAttribute('aria-level', '2');
+        fresh.createDiv({ cls: 'dr-lib-group', text: section.title });
       }
       const list = fresh.createDiv({ cls: 'dr-lib-list' });
-      list.setAttribute('role', 'group');
-      if (headId) list.setAttribute('aria-labelledby', headId);
       roveFocus(list, '.dr-lib-row');
       (section.items || []).forEach((item) => {
         const t = now();
@@ -201,24 +180,18 @@ export class LibraryView extends ItemView {
     const norm = (html) =>
       html
         .replace(/ is-active/g, '')
-        .replace(/ aria-current="page"/g, '')
         .replace(/ tabindex="-?\d+"/g, '')
         .replace(/ ?is-arriving/g, '')
         .replace(/ class=""/g, '')
         .replace(/ title="[^"]*"/g, '')
         .replace(/ data-dr-full-name=""/g, '');
     this.containerEl.dataset.drDensity = this.plugin.settings.gridDensity || 'standard';
-    // The marker isn't a row: out of the way while the rows are compared, first again after.
-    const marker = this.marker;
-    if (marker && marker.parentNode === root) marker.remove();
     if (norm(fresh.innerHTML) !== norm(root.innerHTML)) {
       root.empty();
       while (fresh.firstChild) root.appendChild(fresh.firstChild);
     }
-    if (marker) root.prepend(marker);
     const t2 = now();
     this.markActive();
-    this.showVaultCount();
     const t3 = now();
     Object.assign(times, { build: t1 - t0, compare: t2 - t1, mark: t3 - t2 });
     this.lastTimes = times;
@@ -251,7 +224,7 @@ export class LibraryView extends ItemView {
         return;
       }
       if (id === 'smart') {
-        const smart = this.plugin.feature(SmartCollections);
+        const smart = this.plugin.feature(SmartAlbums);
         if (smart) smart.renderRows(this, list);
         return;
       }
@@ -270,41 +243,36 @@ export class LibraryView extends ItemView {
   }
 
   /** A folder or file, with its artwork and its menu. */
-  targetRow(list, target, depth, pinned = false, arrange = null) {
-    const covers = coversOn(this.plugin.settings);
+  targetRow(list, target, depth) {
     const menu = (evt, open) =>
       showTargetMenu(this.plugin, evt, target, {
         open: open,
         source: LIBRARY_VIEW,
         redraw: () => this.render(),
-        arrange: arrange,
       });
 
     if (target instanceof TFolder) {
       const open = () => this.browseMode({ mode: 'folder', path: target.path });
-      const n = libraryIndex(this.plugin).count(target);
       const row = this.row(list, {
         depth: depth,
         icon: 'folder',
-        art: covers ? this.plugin.folderCoverSrc(target) : null,
-        // Pinned, its own artwork — a cover, or one made for it — and nothing beneath its name.
-        draw: pinned ? (el) => drawFolderArt(this.plugin, el, target) : null,
-        sub: null,
+        art: this.plugin.folderCoverSrc(target),
         label: target.name,
         path: target.path,
         onClick: open,
         onMenu: (evt) => menu(evt, open),
       });
-      // How many notes it holds, muted at the end.
-      if (!pinned && isClearLook() && n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
-      return row;
+      // The Apple look: how many notes it holds, muted at the end.
+      if (isAppleLook()) {
+        const n = libraryIndex(this.plugin).count(target);
+        if (n) row.createSpan({ cls: 'dr-lib-count', text: String(n) });
+      }
+      return;
     }
-    return this.row(list, {
+    this.row(list, {
       depth: depth,
       icon: iconForFile(target),
-      art: covers ? noteCoverSrc(this.plugin, target) : null,
-      draw: pinned ? (el) => drawNoteArt(this.plugin, el, target) : null,
-      sub: pinned && target.parent && !(target.parent.isRoot && target.parent.isRoot()) ? target.parent.name : null,
+      art: noteCoverSrc(this.plugin, target),
       label: target.basename,
       path: target.path,
       onClick: () => this.openFile(target),
@@ -329,133 +297,16 @@ export class LibraryView extends ItemView {
       toggles: true,
       onClick: toggle,
       disclosure: { open: open, toggle: toggle },
-      onMenu: (evt) => this.pinsMenu(evt),
     });
     if (!open) return;
 
     const pins = this.plugin.pins;
     const items = pins.all();
-    const missing = typeof pins.missing === 'function' ? pins.missing() : [];
-    if (!items.length && !missing.length) {
+    if (!items.length) {
       list.createDiv({ cls: 'dr-lib-empty', text: 'Nothing pinned yet' });
       return;
     }
-    const paths = items.map((t) => t.path);
-    items.forEach((target, at) => {
-      const arrange = this.pinMoves(paths, at);
-      const row = this.targetRow(list, target, 1, true, arrange);
-      // Alt+Up and Alt+Down move a pin a place, as dragging one would on the Pinned screen.
-      row.addEventListener('keydown', (evt) => {
-        if (!evt.altKey || evt.metaKey || evt.ctrlKey || (evt.key !== 'ArrowUp' && evt.key !== 'ArrowDown')) return;
-        evt.preventDefault();
-        const run = evt.key === 'ArrowUp' ? arrange.earlier : arrange.later;
-        if (run) run();
-      });
-    });
-    missing.forEach((pin) => this.missingRow(list, pin));
-  }
-
-  /**
-   * A pin a place earlier or later, where it isn't already at that end;
-   * the row keeps the focus, so it can be moved again straight away.
-   */
-  pinMoves(paths, at) {
-    const path = paths[at];
-    const move = (before) => () => {
-      this.plugin.pins.move(path, before, paths);
-      this.plugin.refreshBrowse();
-      this.render();
-      const row = Array.from(this.contentEl.querySelectorAll('.dr-lib-row.is-pin')).find((el) => el.dataset.path === path);
-      if (row) row.focus();
-    };
-    return {
-      earlier: at > 0 ? move(paths[at - 1]) : null,
-      later: at < paths.length - 1 ? move(at + 2 < paths.length ? paths[at + 2] : null) : null,
-    };
-  }
-
-  /** The Pinned row's own menu: its covers small, a row each, or large, the way a collection's are. */
-  /** A pin whose folder or note has gone: greyed, saying so — or where it may be now — and clicked, what can be done. */
-  missingRow(list, pin) {
-    const likely = this.plugin.pins.likely(pin);
-    const parent = likely && likely.parent;
-    const where = parent && !(parent.isRoot && parent.isRoot()) ? parent.name : this.app.vault.getName();
-    const menu = (evt) => this.missingMenu(evt, pin, likely);
-    const row = this.row(list, {
-      depth: 1,
-      label: pin.name,
-      sub: likely ? `Found in ${where}?` : 'Not found',
-      draw: (el) => {
-        el.addClass('is-blank');
-        setIcon(el, pin.type === 'folder' ? 'folder-x' : 'file-x');
-      },
-      toggles: true,
-      onClick: menu,
-      onMenu: menu,
-    });
-    row.addClass('is-missing');
-    row.dataset.missing = pin.path;
-    row.setAttribute('aria-label', `${pin.name}: ${likely ? `found in ${where}?` : 'not found'}. Choose what to do with this pin`);
-  }
-
-  missingMenu(evt, pin, likely) {
-    const pins = this.plugin.pins;
-    const done = (ok) => ok && this.render();
-    const menu = new Menu();
-    if (likely) {
-      menu.addItem((i) =>
-        i
-          .setSection('action')
-          .setTitle(`Pin ${likely.path}`)
-          .setIcon('pin')
-          .onClick(() => done(pins.repoint(pin, likely)))
-      );
-    }
-    menu.addItem((i) =>
-      i
-        .setSection('action')
-        .setTitle(pin.type === 'folder' ? 'Find the folder…' : 'Find the note…')
-        .setIcon('search')
-        .onClick(() => this.findMissing(pin))
-    );
-    menu.addItem((i) =>
-      i
-        .setSection('danger')
-        .setTitle('Remove pin')
-        .setIcon('pin-off')
-        .onClick(() => done(pins.forget(pin)))
-    );
-    showMenuAt(menu, evt);
-  }
-
-  /** The pin pointed at a folder or note chosen by name. */
-  findMissing(pin) {
-    const pins = this.plugin.pins;
-    const go = (target) => target && pins.repoint(pin, target) && this.render();
-    if (pin.type === 'folder') {
-      new FolderPicker(this.app, go, { placeholder: `Where is ${pin.name} now?` }).open();
-      return;
-    }
-    const items = this.app.vault.getFiles().map((file) => ({ label: file.path, file }));
-    new ChoicePicker(this.app, `Where is ${pin.name} now?`, items, (item) => go(item.file)).open();
-  }
-
-  pinsMenu(evt) {
-    const settings = this.plugin.settings;
-    const menu = new Menu();
-    menu.addItem((i) =>
-      i
-        .setSection('action')
-        .setTitle('Large covers')
-        .setIcon('image')
-        .setChecked(!!settings.pinsLarge)
-        .onClick(() => {
-          settings.pinsLarge = !settings.pinsLarge;
-          this.plugin.saveData(settings);
-          this.render();
-        })
-    );
-    showMenuAt(menu, evt);
+    items.forEach((target) => this.targetRow(list, target, 1));
   }
 
   togglePins() {
@@ -503,10 +354,6 @@ export class LibraryView extends ItemView {
   row(parentEl, spec) {
     const el = parentEl.createDiv({ cls: 'dr-lib-row' });
     if (spec.depth) el.addClass('is-nested');
-    if (spec.draw) {
-      el.addClass('is-pin');
-      if (this.plugin.settings.pinsLarge) el.addClass('is-large');
-    }
     if (spec.path) el.dataset.path = spec.path;
     if (spec.screen) el.dataset.screen = spec.screen;
     if (spec.property) el.dataset.property = spec.property;
@@ -535,21 +382,14 @@ export class LibraryView extends ItemView {
     }
 
     const icon = el.createSpan({ cls: 'dr-lib-icon' });
-    if (spec.draw) {
-      icon.addClass('has-art');
-      spec.draw(icon);
-    } else if (spec.art) {
+    if (spec.art) {
       icon.addClass('has-art');
       fillArt(icon, spec.art, spec.icon);
     } else {
       setIcon(icon, spec.icon);
     }
 
-    if (spec.sub) {
-      const text = el.createSpan({ cls: 'dr-lib-text' });
-      text.createSpan({ cls: 'dr-lib-label', text: spec.label });
-      text.createSpan({ cls: 'dr-lib-sub', text: spec.sub });
-    } else el.createSpan({ cls: 'dr-lib-label', text: spec.label });
+    el.createSpan({ cls: 'dr-lib-label', text: spec.label });
     onActivate(el, (evt) => {
       spec.onClick(evt);
       // On a phone the library is a drawer over the page, so it gets
@@ -566,50 +406,12 @@ export class LibraryView extends ItemView {
     if (split && typeof split.collapse === 'function') split.collapse();
   }
 
-  /** Exactly one row marks where you are, and the marker under it glides there from the last. */
+  /** Exactly one row marks where you are, as the reference does. */
   markActive() {
     const rows = Array.from(this.contentEl.querySelectorAll('.dr-lib-row'));
-    rows.forEach((el) => {
-      el.removeClass('is-active');
-      el.removeAttribute('aria-current');
-    });
+    rows.forEach((el) => el.removeClass('is-active'));
     const here = this.activeRow(rows);
-    if (here) {
-      here.addClass('is-active');
-      here.setAttribute('aria-current', 'page');
-    }
-    // Placed once the rows are laid out, rather than laying them out now to measure.
-    const win = this.contentEl.ownerDocument.defaultView;
-    if (win && typeof win.requestAnimationFrame === 'function') win.requestAnimationFrame(() => this.placeMarker(here));
-    else this.placeMarker(here);
-  }
-
-  placeMarker(row) {
-    const root = this.contentEl;
-    // Drawn again since it was asked for: the later ask places it.
-    if (row && !row.isConnected) return;
-    if (!this.marker) {
-      this.marker = root.ownerDocument.createElement('div');
-      this.marker.className = 'dr-lib-marker';
-      this.marker.setAttribute('aria-hidden', 'true');
-    }
-    const marker = this.marker;
-    if (marker.parentNode !== root) root.prepend(marker);
-    root.addClass('has-marker');
-    // Shown for the first time, it's put in place, not slid there from the top.
-    const first = !marker.classList.contains('is-placed');
-    if (!row || !row.offsetParent) {
-      marker.removeClass('is-shown');
-      return;
-    }
-    if (first) marker.addClass('is-still');
-    marker.style.transform = `translateY(${row.offsetTop}px)`;
-    marker.style.height = `${row.offsetHeight}px`;
-    marker.addClass('is-shown', 'is-placed');
-    if (first) {
-      void marker.offsetWidth;
-      marker.removeClass('is-still');
-    }
+    if (here) here.addClass('is-active');
   }
 
   /**

@@ -1,23 +1,23 @@
 /* ------------------------------------------------------------------ */
 /* The note page: the note first                                       */
 /*                                                                     */
-/* A note opens with its collection above its title, in the accent colour,  */
+/* A note opens with its album above its title, in the accent colour,  */
 /* and one grey line beneath it: what it hangs from, how long it is,    */
 /* when it was last edited. Its properties can sit there as quiet       */
 /* chips, the full block a click away. At its end come shelves: what    */
-/* it links to, where it's mentioned, and more in its collection. In both    */
+/* it links to, where it's mentioned, and more in its album. In both    */
 /* reading and editing views; the text itself is left alone.           */
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
 import { noteCoverSrc } from '../core/030-helpers-art.js';
 import { relativeDay } from '../core/040-helpers-sorting.js';
-import { dateDueState, fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteOpening } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { Library } from './130-browse-filters.js';
-import { markDue, paintValue } from '../ui/248-value-options.js';
+import { paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
 export const NOTE_SHELF_SIZE = 10;
@@ -52,7 +52,7 @@ export class NotePage extends Feature {
       },
       {
         key: 'notePageShelves',
-        name: 'Related notes at the end',
+        name: 'Shelves at the end',
         desc: 'At a note’s end: what it links to, where it’s mentioned, and more in its collection.',
         showIf: 'notePage',
       },
@@ -100,7 +100,7 @@ export class NotePage extends Feature {
 
   /** What this adds to a view, taken away. */
   clear(view) {
-    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-collection, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
+    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.querySelectorAll('.dr-has-glow').forEach((el) => el.removeClass('dr-has-glow'));
     view.containerEl.removeClass('dr-props-as-chips');
   }
@@ -123,30 +123,30 @@ export class NotePage extends Feature {
     return out;
   }
 
-  /** The collection a note is in, or null — the vault's top is none, and a folder note stands for its collection. */
-  collectionOf(file) {
+  /** The album a note is in, or null — the vault's top is none, and a folder note stands for its album. */
+  albumOf(file) {
     const folder = file.parent;
     if (!folder || !folder.parent || folder.path === '/') return null;
     const own = typeof this.plugin.folderNote === 'function' ? this.plugin.folderNote(folder) : null;
     return own === file ? null : folder;
   }
 
-  /** The picture a note's page takes its tint from: its own cover, else its collection's; or null. */
-  tintSource(file, collection) {
+  /** The picture a note's page takes its tint from: its own cover, else its album's; or null. */
+  tintSource(file, album) {
     const own = noteCoverSrc(this.plugin, file);
     if (own) return own;
-    return collection && typeof this.plugin.folderCoverSrc === 'function' ? this.plugin.folderCoverSrc(collection) || null : null;
+    return album && typeof this.plugin.folderCoverSrc === 'function' ? this.plugin.folderCoverSrc(album) || null : null;
   }
 
   /** The one grey line: what the note hangs from, its length, when it was edited. */
   metaLine(file) {
     const parts = [];
-    const key = String(this.settings.collectionNestBy || '').trim();
+    const key = String(this.settings.albumNestBy || '').trim();
     const cache = this.app.metadataCache.getFileCache(file);
     const parent = key ? valueList(cache ? fmGet(cache.frontmatter, key) : undefined)[0] : null;
     if (parent) parts.push(`Under ${plainValue(parent)}`);
     const lengths = this.plugin.lengths;
-    const length = lengths ? lengths.label(file, this.settings.noteLength === 'words' ? 'words' : 'time') : '';
+    const length = lengths ? lengths.label(file, this.settings.trackLength === 'words' ? 'words' : 'time') : '';
     if (length) parts.push(length);
     else if (lengths && typeof lengths.measure === 'function') lengths.measure([file]).then((fresh) => fresh && this.queue());
     if (file.stat && file.stat.mtime) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
@@ -157,7 +157,7 @@ export class NotePage extends Feature {
   chips(file) {
     const cache = this.app.metadataCache.getFileCache(file);
     const fm = (cache && cache.frontmatter) || {};
-    const skip = new Set(['position', 'aliases', 'cssclasses', String(this.settings.coverProperty || 'cover').toLowerCase(), String(this.settings.collectionNestBy || '').toLowerCase()]);
+    const skip = new Set(['position', 'aliases', 'cssclasses', String(this.settings.coverProperty || 'cover').toLowerCase(), String(this.settings.albumNestBy || '').toLowerCase()]);
     return Object.keys(fm)
       .filter((k) => !skip.has(k.toLowerCase()))
       .map((k) => ({ key: k, text: chipValue(fm[k]), raw: Array.isArray(fm[k]) && fm[k].length === 1 ? fm[k][0] : fm[k] }))
@@ -177,14 +177,14 @@ export class NotePage extends Feature {
       { title: 'Linked from here', files: notes(index.outgoing(file)) },
       { title: 'Mentioned in', files: notes(index.incoming(file)) },
     ];
-    const collection = this.collectionOf(file);
-    if (collection) {
+    const album = this.albumOf(file);
+    if (album) {
       const more = index
         .notes()
-        .filter((f) => f.parent === collection && f !== file)
+        .filter((f) => f.parent === album && f !== file)
         .sort((a, b) => b.stat.mtime - a.stat.mtime)
         .slice(0, NOTE_SHELF_SIZE);
-      out.push({ title: `More in ${collection.name}`, files: more, collection });
+      out.push({ title: `More in ${album.name}`, files: more, album });
     }
     return out.filter((s) => s.files.length);
   }
@@ -214,15 +214,15 @@ export class NotePage extends Feature {
   draw(view) {
     const file = view.file;
     const on = this.enabled;
-    const collection = on ? this.collectionOf(file) : null;
+    const album = on ? this.albumOf(file) : null;
     const meta = on ? this.metaLine(file) : '';
     const chips = on && this.settings.notePageChips ? this.chips(file) : [];
     const shelves = on && this.settings.notePageShelves ? this.shelves(file) : [];
-    const glow = on && this.settings.notePageTint !== false ? this.tintSource(file, collection) : null;
+    const glow = on && this.settings.notePageTint !== false ? this.tintSource(file, album) : null;
     view.containerEl.toggleClass('dr-props-as-chips', chips.length > 0);
     this.places(view).forEach((place) => {
       const title = place.title;
-      // Behind the header, a soft glow of the note's cover, or its collection's; without one, nothing.
+      // Behind the header, a soft glow of the note's cover, or its album's; without one, nothing.
       place.head.toggleClass('dr-has-glow', !!glow);
       this.put(place.head, 'dr-note-glow', glow || '', place.head.firstChild, (el) => {
         const img = el.ownerDocument.createElement('img');
@@ -230,14 +230,14 @@ export class NotePage extends Feature {
         img.setAttribute('alt', '');
         el.appendChild(img);
       });
-      // Above the title: its collection, a step to it.
-      this.put(place.head, 'dr-note-collection', collection ? collection.path : '', title || place.head.firstChild, (el) => {
-        el.setText(collection.name);
+      // Above the title: its album, a step to it.
+      this.put(place.head, 'dr-note-album', album ? album.path : '', title || place.head.firstChild, (el) => {
+        el.setText(album.name);
         el.setAttribute('role', 'link');
         el.setAttribute('tabindex', '0');
         const go = () => {
           const library = this.plugin.feature(Library);
-          if (library) library.browseMode({ mode: 'folder', path: collection.path });
+          if (library) library.browseMode({ mode: 'folder', path: album.path });
         };
         el.addEventListener('click', go);
         el.addEventListener('keydown', (evt) => evt.key === 'Enter' && go());
@@ -245,15 +245,13 @@ export class NotePage extends Feature {
       // Under it, the one grey line, then the chips.
       const after = title ? title.nextSibling : place.head.firstChild;
       const line = this.put(place.head, 'dr-note-meta', meta, after, (el) => el.setText(meta));
-      // A due date's state is part of what's drawn: a day on, it may be due.
-      const chipKey = chips.map((c) => `${c.key}=${c.text}=${dateDueState(c.raw) || ''}`).join('|');
+      const chipKey = chips.map((c) => `${c.key}=${c.text}`).join('|');
       this.put(place.head, 'dr-note-chips', chipKey, line ? line.nextSibling : after, (el) => {
         chips.forEach((c) => {
           const chip = el.createSpan({ cls: 'dr-note-chip', text: c.text });
           chip.setAttribute('aria-label', c.key);
           if (c.raw !== null && typeof c.raw !== 'object') {
             paintValue(chip, this.plugin, c.key, String(c.raw));
-            markDue(chip, this.plugin, c.key, String(c.raw));
           }
         });
       });
@@ -273,11 +271,11 @@ export class NotePage extends Feature {
   shelf(el, s) {
     const box = el.createDiv({ cls: 'dr-note-shelf' });
     const head = box.createDiv({ cls: 'dr-note-shelf-head', text: `${s.title} ›` });
-    if (s.collection) {
+    if (s.album) {
       head.setAttribute('role', 'link');
       head.addEventListener('click', () => {
         const library = this.plugin.feature(Library);
-        if (library) library.browseMode({ mode: 'folder', path: s.collection.path });
+        if (library) library.browseMode({ mode: 'folder', path: s.album.path });
       });
     }
     const row = box.createDiv({ cls: 'dr-note-shelf-row' });

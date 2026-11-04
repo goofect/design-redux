@@ -1,12 +1,12 @@
 /* ------------------------------------------------------------------ */
-/* Smart collections                                                        */
+/* Smart albums                                                        */
 /*                                                                     */
-/* Filters kept as a collection: a folder, a tag, a property — or one      */
+/* Filters kept as an album: a folder, a tag, a property — or one      */
 /* missing, as "no parent" — and a date, with an order of their own,   */
 /* and the notes grouped by a property if you like, so the same notes */
 /* can be seen by subject, by status or by kind without moving any.    */
 /* Saved from the filter button; listed in the library; opened as an   */
-/* collection whose chips can be changed and the changes saved.             */
+/* album whose chips can be changed and the changes saved.             */
 /* ------------------------------------------------------------------ */
 
 import { Menu } from 'obsidian';
@@ -24,32 +24,32 @@ import { ComparePicker, NamePrompt } from '../ui/230-pickers.js';
 
 export class SmartScreen extends BrowseScreen {
   get smart() {
-    const smart = this.plugin.feature(SmartCollections);
+    const smart = this.plugin.feature(SmartAlbums);
     return smart && smart.enabled ? smart : null;
   }
 
-  collection() {
+  album() {
     return this.smart ? this.smart.byId(this.view.property) : null;
   }
 
   title() {
-    const collection = this.collection();
-    return collection ? collection.name : 'Saved view';
+    const album = this.album();
+    return album ? album.name : 'Saved view';
   }
 
   render(root) {
     const view = this.view;
     const smart = this.smart;
-    const collection = this.collection();
-    if (!collection) {
+    const album = this.album();
+    if (!album) {
       view.renderTitleBar(root, 'Saved view');
       view.emptyState(root, 'This saved view isn’t there any more.', 'sparkles');
       return;
     }
     // Its filters, once on arriving; after that the chips are yours to change.
-    if (view.smartLoaded !== collection.id) {
-      smart.apply(view, collection);
-      view.smartLoaded = collection.id;
+    if (view.smartLoaded !== album.id) {
+      smart.apply(view, album);
+      view.smartLoaded = album.id;
     }
     const files = view.sortFiles(smart.files(view));
     const bar = root.createDiv({ cls: 'dr-detail-bar' });
@@ -57,42 +57,42 @@ export class SmartScreen extends BrowseScreen {
     view.renderNav(bar);
     view.renderSearchField(bar);
     view.renderFilterChips(root);
-    const changed = !smart.same(view, collection);
-    view.renderCollectionHead(root, {
-      title: collection.name,
-      sub: collection.group ? `Saved view · by ${this.plugin.propertyLabel(collection.group)}` : 'Saved view',
+    const changed = !smart.same(view, album);
+    view.renderAlbumHead(root, {
+      title: album.name,
+      sub: album.group ? `Saved view · by ${this.plugin.propertyLabel(album.group)}` : 'Saved view',
       cover: null,
       glyph: 'sparkles',
-      genName: view.genName(collection.name, `smart/${collection.id}`),
+      genName: view.genName(album.name, `smart/${album.id}`),
       files,
-      onArtMenu: (evt) => smart.menu(evt, view, collection),
+      onArtMenu: (evt) => smart.menu(evt, view, album),
     });
     const actions = root.querySelector('.dr-detail-actions');
     if (actions) {
       if (changed) {
         view.action(actions, 'save', 'Save changes', () => {
-          smart.update(view, collection);
+          smart.update(view, album);
           view.render();
         });
       }
-      view.action(actions, 'ellipsis', 'More', (evt) => smart.menu(evt, view, collection));
+      view.action(actions, 'ellipsis', 'More', (evt) => smart.menu(evt, view, album));
     }
     if (!files.length) {
       view.emptyState(root, 'Nothing matches its filters', 'sparkles');
       return;
     }
-    view.renderSections(root, smart.sections(collection, files, view), null);
-    view.renderCollectionFoot(root, files);
+    view.renderDiscs(root, smart.discs(album, files, view), null);
+    view.renderAlbumFoot(root, files);
   }
 }
 
-export let smartCollectionCount = 0;
+export let smartAlbumCount = 0;
 
-export class SmartCollections extends Feature {
+export class SmartAlbums extends Feature {
   settingsSchema() {
     return [
       {
-        key: 'smartCollections',
+        key: 'smartAlbums',
         name: 'Saved views',
         desc: 'The filter button keeps its filters, order and grouping as a collection, listed in the library. The notes stay where they are.',
       },
@@ -122,7 +122,7 @@ export class SmartCollections extends Feature {
   }
 
   list() {
-    const list = this.settings.smartCollectionList;
+    const list = this.settings.smartAlbumList;
     return Array.isArray(list) ? list.filter((a) => a && a.id && a.name) : [];
   }
 
@@ -130,28 +130,28 @@ export class SmartCollections extends Feature {
     return this.list().find((a) => a.id === id) || null;
   }
 
-  /** A view's filters, as kept: copies, so changing the chips doesn't change the collection. */
+  /** A view's filters, as kept: copies, so changing the chips doesn't change the album. */
   filtersOf(view) {
     const copy = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
     const out = { folder: view.filterFolder || null, tag: view.filterTag || null, prop: copy(view.filterProp), date: copy(view.filterDate) };
-    // More property filters, only when there are: a collection kept before them stays the same.
+    // More property filters, only when there are: an album kept before them stays the same.
     if (view.filterMore && view.filterMore.length) out.more = copy(view.filterMore);
     return out;
   }
 
-  apply(view, collection) {
+  apply(view, album) {
     const copy = (o) => (o ? JSON.parse(JSON.stringify(o)) : null);
-    view.filterFolder = collection.folder || null;
-    view.filterTag = collection.tag || null;
-    view.filterProp = copy(collection.prop);
-    view.filterMore = copy(collection.more) || [];
-    view.filterDate = copy(collection.date);
+    view.filterFolder = album.folder || null;
+    view.filterTag = album.tag || null;
+    view.filterProp = copy(album.prop);
+    view.filterMore = copy(album.more) || [];
+    view.filterDate = copy(album.date);
   }
 
-  /** Whether the chips on screen are still the collection's. */
-  same(view, collection) {
-    const kept = { folder: collection.folder || null, tag: collection.tag || null, prop: collection.prop || null, date: collection.date || null };
-    if (collection.more && collection.more.length) kept.more = collection.more;
+  /** Whether the chips on screen are still the album's. */
+  same(view, album) {
+    const kept = { folder: album.folder || null, tag: album.tag || null, prop: album.prop || null, date: album.date || null };
+    if (album.more && album.more.length) kept.more = album.more;
     return JSON.stringify(this.filtersOf(view)) === JSON.stringify(kept);
   }
 
@@ -163,14 +163,14 @@ export class SmartCollections extends Feature {
       .filter((f) => !(hide && this.plugin.isFolderNote(f)) && view.inFilter(f) && view.matches(f.basename));
   }
 
-  /** One section, or one per value of the property it's grouped by, those without it last. */
-  sections(collection, files) {
-    if (!collection.group) return [{ title: collection.name, folder: null, files }];
+  /** One disc, or one per value of the property it's grouped by, those without it last. */
+  discs(album, files) {
+    if (!album.group) return [{ title: album.name, folder: null, files }];
     const groups = new Map();
     const none = [];
     files.forEach((file) => {
       const cache = this.app.metadataCache.getFileCache(file);
-      const raw = cache && fmGet(cache.frontmatter, collection.group);
+      const raw = cache && fmGet(cache.frontmatter, album.group);
       const values = (Array.isArray(raw) ? raw : [raw]).map((v) => (v === null || v === undefined ? '' : plainValue(v))).filter(Boolean);
       if (!values.length) none.push(file);
       values.forEach((v) => {
@@ -181,12 +181,12 @@ export class SmartCollections extends Feature {
     const out = Array.from(groups.keys())
       .sort(byName)
       .map((v) => ({ title: v, folder: null, files: groups.get(v) }));
-    if (none.length) out.push({ title: `No ${this.plugin.propertyLabel(collection.group)}`, folder: null, files: none });
+    if (none.length) out.push({ title: `No ${this.plugin.propertyLabel(album.group)}`, folder: null, files: none });
     return out;
   }
 
   persist() {
-    // saveData, not saveSettings: a list of collections isn't a setting, and a
+    // saveData, not saveSettings: a list of albums isn't a setting, and a
     // full save re-runs every feature.
     this.plugin.saveData(this.settings);
     if (typeof this.app.workspace.getLeavesOfType === 'function') {
@@ -194,17 +194,17 @@ export class SmartCollections extends Feature {
     }
   }
 
-  /** The view's filters and order kept as a new collection, which opens. */
+  /** The view's filters and order kept as a new album, which opens. */
   save(view, name) {
     const sort = view.currentSort();
-    const collection = Object.assign({ id: `${Date.now().toString(36)}${(smartCollectionCount++).toString(36)}`, name: String(name).trim() }, this.filtersOf(view));
-    if (sort && sort !== 'own') collection.sort = sort;
-    if (!collection.name) return null;
-    this.settings.smartCollectionList = this.list().concat(collection);
+    const album = Object.assign({ id: `${Date.now().toString(36)}${(smartAlbumCount++).toString(36)}`, name: String(name).trim() }, this.filtersOf(view));
+    if (sort && sort !== 'own') album.sort = sort;
+    if (!album.name) return null;
+    this.settings.smartAlbumList = this.list().concat(album);
     this.listInLibrary();
     this.persist();
-    view.navigate({ mode: 'smart', property: collection.id, path: '/' });
-    return collection;
+    view.navigate({ mode: 'smart', property: album.id, path: '/' });
+    return album;
   }
 
   /** Listed in the library: added to its first section the first time, if it isn't there. */
@@ -215,36 +215,36 @@ export class SmartCollections extends Feature {
     if (!listed) sections[0].items = (sections[0].items || []).concat({ kind: 'builtin', id: 'smart' });
   }
 
-  update(view, collection) {
-    Object.assign(collection, this.filtersOf(view));
+  update(view, album) {
+    Object.assign(album, this.filtersOf(view));
     this.persist();
   }
 
-  change(collection, fields) {
-    Object.assign(collection, fields);
+  change(album, fields) {
+    Object.assign(album, fields);
     Object.keys(fields).forEach((k) => {
-      if (fields[k] === null || fields[k] === '') delete collection[k];
+      if (fields[k] === null || fields[k] === '') delete album[k];
     });
     this.persist();
   }
 
-  remove(collection) {
-    this.settings.smartCollectionList = this.list().filter((a) => a !== collection);
+  remove(album) {
+    this.settings.smartAlbumList = this.list().filter((a) => a !== album);
     this.persist();
   }
 
-  askName(view, collection) {
+  askName(view, album) {
     if (!view) return;
-    new NamePrompt(this.app, collection ? 'Rename saved view' : 'New saved view', 'Name', (name) => {
+    new NamePrompt(this.app, album ? 'Rename saved view' : 'New saved view', 'Name', (name) => {
       if (!String(name || '').trim()) return;
-      if (collection) {
-        this.change(collection, { name: String(name).trim() });
+      if (album) {
+        this.change(album, { name: String(name).trim() });
         view.render();
       } else this.save(view, name);
-    }, { value: collection ? collection.name : '' }).open();
+    }, { value: album ? album.name : '' }).open();
   }
 
-  chooseGroup(view, collection) {
+  chooseGroup(view, album) {
     let keys = view.propertyList().map((p) => p.key);
     // Where Obsidian won't list its properties, the notes' own.
     if (!keys.length) {
@@ -254,10 +254,10 @@ export class SmartCollections extends Feature {
       });
       keys = Array.from(seen).sort(byName);
     }
-    const items = keys.map((key) => ({ label: this.plugin.propertyLabel(key), note: key === collection.group ? 'Now' : '', key }));
-    if (collection.group) items.unshift({ label: 'Not grouped', note: '', key: '' });
+    const items = keys.map((key) => ({ label: this.plugin.propertyLabel(key), note: key === album.group ? 'Now' : '', key }));
+    if (album.group) items.unshift({ label: 'Not grouped', note: '', key: '' });
     new ComparePicker(this.app, items, 'Group the notes by…', (item) => {
-      this.change(collection, { group: item.key });
+      this.change(album, { group: item.key });
       view.render();
     }).open();
   }
@@ -267,24 +267,24 @@ export class SmartCollections extends Feature {
     new ComparePicker(this.app, items, 'Which saved view?', (item) => this.plugin.feature(Library).browseMode({ mode: 'smart', property: item.a.id })).open();
   }
 
-  menu(evt, view, collection) {
+  menu(evt, view, album) {
     const menu = new Menu();
     const add = (title, icon, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).onClick(run));
-    if (!this.same(view, collection)) add('Save changes', 'save', () => {
-      this.update(view, collection);
+    if (!this.same(view, album)) add('Save changes', 'save', () => {
+      this.update(view, album);
       view.render();
     });
-    add('Rename…', 'pencil', () => this.askName(view, collection));
+    add('Rename…', 'pencil', () => this.askName(view, album));
     add('Properties of these notes…', 'list', () => view.propertyToolsFor(this.files(view)));
-    add(collection.group ? `Grouped by ${this.plugin.propertyLabel(collection.group)}…` : 'Group by…', 'rows-3', () => this.chooseGroup(view, collection));
+    add(album.group ? `Grouped by ${this.plugin.propertyLabel(album.group)}…` : 'Group by…', 'rows-3', () => this.chooseGroup(view, album));
     add('Delete saved view', 'trash-2', () => {
-      this.remove(collection);
+      this.remove(album);
       view.navigate({ mode: 'home', property: null });
     });
     showMenuAt(menu, evt);
   }
 
-  /** On the filter button's menu: keep the filters as a collection. */
+  /** On the filter button's menu: keep the filters as an album. */
   addFilterItems(menu, view) {
     if (!this.enabled || !view.hasFilters() || view.mode === 'smart') return;
     menu.addSeparator();
@@ -294,16 +294,16 @@ export class SmartCollections extends Feature {
   /** In the library: a row each. */
   renderRows(library, list) {
     if (!this.enabled) return;
-    this.list().forEach((collection) =>
+    this.list().forEach((album) =>
       library.row(list, {
         icon: 'sparkles',
-        label: collection.name,
+        label: album.name,
         screen: 'smart',
-        property: collection.id,
-        onClick: () => library.browseMode({ mode: 'smart', property: collection.id }),
+        property: album.id,
+        onClick: () => library.browseMode({ mode: 'smart', property: album.id }),
       })
     );
   }
 }
 
-SmartCollections.settingKey = 'smartCollections';
+SmartAlbums.settingKey = 'smartAlbums';

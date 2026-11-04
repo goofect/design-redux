@@ -2,7 +2,7 @@
 /* Actions, defined once                                               */
 /*                                                                     */
 /* Something you can do — show what a note relates to, fold a card's   */
-/* branch, shuffle a collection — written once and offered everywhere it   */
+/* branch, shuffle an album — written once and offered everywhere it   */
 /* applies: the command palette (where it can have a hotkey), the      */
 /* menu of what it acts on, the context strip. A feature lists them as */
 /* actions(), each { id, name, menu, icon, on, when(ctx), run(ctx) }:  */
@@ -13,8 +13,8 @@
 /*   editor  the note being written in: { file, editor, cm, view }     */
 /*   canvas  the canvas open and its selection: { view, file, nodes,   */
 /*           node — the one card selected, or null }                   */
-/*   collection   the collection open, or the open note's: { folder }            */
-/*   browse  the collection open in the browse view, only: { folder, view } */
+/*   album   the album open, or the open note's: { folder }            */
+/*   browse  the album open in the browse view, only: { folder, view } */
 /* — and ctx.from says where it was asked: palette, menu, canvas,      */
 /* strip. `menu` is its short name on a menu (a function of ctx when   */
 /* it changes, false to keep it off menus), `menuIcon(ctx)` its icon   */
@@ -22,7 +22,7 @@
 /* and `palette: false` (menus only) as needed. `home` is the one     */
 /* surface that shows it beyond the palette — menu (the default; panel,*/
 /* strip or palette when given) — so moving an entry is a one-line     */
-/* change. `place` (library, note, maps, tools: its feature's, unless  */
+/* change. `place` (library, note, tools: its feature's, unless       */
 /* it says) prefixes its name in the palette; its id never changes.    */
 /* ------------------------------------------------------------------ */
 
@@ -81,7 +81,7 @@ export const ACTION_CONTEXTS = {
     if (!view || !view.canvas || !view.file || view.file.extension !== 'canvas') return null;
     return canvasContext(view, pickedOnCanvas(view.canvas), 'palette');
   },
-  collection: (app) => {
+  album: (app) => {
     const folder = pageFolder(app);
     return folder ? { folder, from: 'palette' } : null;
   },
@@ -125,8 +125,8 @@ export function actionItem(item, action, ctx, title) {
 
 /** The three places the plugin is organised in, by feature: where its commands are found in the palette. */
 export const FEATURE_PLACES = {
-  Library: ['Library', 'SidebarDrop', 'CollectionStructure', 'CollectionRefactor', 'CollectionProperty', 'SmartCollections', 'LibraryCheck', 'CoverImages', 'CoverDrop'],
-  Note: ['Footnotes', 'Scripts', 'MarkedLists', 'ListKeys', 'QuietLinks', 'NotePage', 'ReadingHistory', 'ReadingOutline', 'Study', 'Knowledge', 'KnowledgeCheck', 'ImageRouter', 'PropertiesPanel', 'PropertyClipboard', 'PropertyDates', 'PropertyRules', 'PropertyHistory', 'PropertySchemas', 'PropertyLinks'],
+  Library: ['Library', 'SidebarDrop', 'AlbumStructure', 'AlbumRefactor', 'AlbumProperty', 'SmartAlbums', 'LibraryCheck', 'CoverImages', 'CoverDrop'],
+  Note: ['Footnotes', 'Scripts', 'MarkedLists', 'ListKeys', 'NotePage', 'ImageRouter', 'PropertiesPanel', 'PropertyClipboard', 'PropertyDates', 'PropertyRules', 'PropertyHistory', 'PropertySchemas', 'PropertyLinks'],
   Tools: ['BulkEditing', 'ContextStrip', 'GraphPropertyFilter', 'GraphRoutes', 'Diagnostics', 'OnePage', 'SettingsButton', 'ActionsMenu', 'MenuFilter', 'Appearance'],
 };
 

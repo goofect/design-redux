@@ -54,7 +54,7 @@ export function compatibility(app) {
       without: 'only notes from Design Redux\'s own lists, and images from outside the vault, can be dropped there',
     },
     {
-      what: 'Listing tags, for a map of a tag',
+      what: 'Listing tags',
       ok: has(() => typeof app.metadataCache.getTags === 'function'),
       without: 'tags are gathered from each note instead, a little slower',
     },
@@ -83,21 +83,6 @@ export function compatibility(app) {
         : null,
       without: 'the graph draws every link straight across, and its switch does nothing',
       pending: 'Checked while a graph is open.',
-    },
-    {
-      what: 'Keeping quiet links out of Obsidian’s count of links',
-      ok: has(
-        () =>
-          typeof app.metadataCache.getFileCache === 'function' &&
-          typeof app.metadataCache.unresolvedLinks === 'object' &&
-          typeof app.metadataCache.resolvedLinks === 'object'
-      ),
-      without: 'the graph and link lists show each quiet link as a missing note called "[Name"',
-    },
-    {
-      what: 'The list after [[[ ahead of Obsidian’s',
-      ok: has(() => Array.isArray(app.workspace.editorSuggest.suggests)),
-      without: 'typing [[[ shows Obsidian’s list of links instead',
     },
   ];
 }

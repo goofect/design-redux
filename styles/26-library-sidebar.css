@@ -1,25 +1,22 @@
 /* Library sidebar ----------------------------------------------------------
  *
- * Quiet rows apart by space, small capitals naming each section, and one
- * soft marker under where you are — its icon in the accent, its label
- * bolder, a short accent bar at its edge — that glides from row to row
- * as you go. A gutter left of every icon holds a disclosure chevron where
- * there's something to open out, kept even where empty so the icons line up.
+ * Shaped after the reference: compact rows, one neutral pill marking
+ * where you are with the accent on its icon and label, small grey
+ * section labels, and a gutter left of every icon holding a disclosure
+ * chevron where there's something to open out — kept even where empty,
+ * so all the icons line up.
  */
 
 .dr-library .view-content {
-  position: relative;
   padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) var(--dr-space-3);
 }
 
 .dr-lib-group {
-  margin-top: var(--dr-space-4);
+  margin-top: calc(var(--dr-u) * 4.5);
   padding: 0 calc(var(--dr-u) * 2.5) var(--dr-space-1);
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-weight: var(--font-medium, 500);
 }
 
 /* More, and any section that folds: its heading opens and closes it. */
@@ -34,7 +31,7 @@
 .dr-lib-fold-icon {
   display: inline-flex;
   margin-left: auto;
-  color: var(--text-muted);
+  color: var(--text-faint);
 }
 
 .dr-lib-fold-icon .svg-icon {
@@ -64,7 +61,6 @@
 }
 
 .dr-lib-row {
-  position: relative;
   display: flex;
   align-items: center;
   gap: var(--dr-space-2);
@@ -78,42 +74,9 @@
   user-select: none;
 }
 
-/* The marker: under the rows, moved to the one where you are. While it's
-   there the row itself stays clear, so the two never show at once. */
-.dr-lib-marker {
-  position: absolute;
-  top: 0;
-  right: var(--dr-space-2);
-  left: var(--dr-space-2);
-  border-radius: var(--dr-radius-md);
-  background-color: var(--dr-selected);
-  opacity: 0;
-  pointer-events: none;
-  transition: transform var(--dr-dur-move) var(--dr-ease-out), height var(--dr-dur-move) var(--dr-ease-out), opacity var(--dr-dur-fast) var(--dr-ease);
-}
-
-.dr-lib-marker::before {
-  content: '';
-  position: absolute;
-  top: 30%;
-  bottom: 30%;
-  left: 0;
-  width: 3px;
-  border-radius: 3px;
-  background-color: var(--interactive-accent);
-}
-
-.dr-lib-marker.is-shown {
-  opacity: 1;
-}
-
-.dr-lib-marker.is-still {
-  transition: none;
-}
-
-/* Under the pointer, the theme's grey; where you are, the accent tint,
-   so the two never look alike; the keyboard's place, an accent ring
-   that shows on either. */
+/* As the reference's sidebar: every icon in the accent, the labels
+   plain, and where you are a soft grey block with its label a touch
+   heavier. */
 @media (any-hover: hover) {
   .dr-lib-row:hover {
     background-color: var(--dr-hover);
@@ -121,40 +84,12 @@
 }
 
 .dr-lib-row.is-active {
-  background-color: var(--dr-selected);
-  font-weight: var(--font-semibold, 600);
-}
-
-.has-marker .dr-lib-row.is-active {
-  background-color: transparent;
-}
-
-/* Where you are, marked on what stands for it, not on its name: the icon
-   in the accent, and a cover ringed in it. */
-.dr-lib-row.is-active .dr-lib-icon {
-  color: var(--text-accent);
-}
-
-.dr-lib-row.is-active .dr-lib-icon.has-art {
-  box-shadow: 0 0 0 2px var(--interactive-accent);
+  background-color: var(--dr-press);
 }
 
 .dr-lib-row:focus-visible {
-  outline: 2px solid var(--interactive-accent);
-  outline-offset: -2px;
-}
-
-/* Colours forced: no tint to see, so where you are is outlined, and the keyboard's place dashed. */
-@media (forced-colors: active) {
-  .dr-lib-row.is-active {
-    outline: 1px solid Highlight;
-    outline-offset: -1px;
-  }
-
-  .dr-lib-row:focus-visible {
-    outline: 2px dashed CanvasText;
-    outline-offset: -2px;
-  }
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
 }
 
 /* Pins opened out sit one gutter in. */
@@ -195,7 +130,7 @@
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  color: var(--text-muted);
+  color: var(--text-accent);
 }
 
 .dr-lib-icon .svg-icon {
@@ -239,87 +174,17 @@
   white-space: nowrap;
 }
 
-/* What's pinned: its artwork at a size you can tell it by, its name, and
-   beneath a note's a quiet line — where it lives.
-   Large covers, from the Pinned row's menu, as a collection's own shelf has them. */
-.dr-lib-row.is-pin {
-  padding-top: var(--dr-space-1);
-  padding-bottom: var(--dr-space-1);
-}
-
-.dr-lib-row.is-pin .dr-lib-icon {
-  flex: 0 0 calc(var(--dr-u) * 9);
-  width: calc(var(--dr-u) * 9);
-  height: calc(var(--dr-u) * 9);
-  border-radius: var(--dr-radius-sm);
-  overflow: hidden;
-}
-
-.dr-lib-row.is-pin.is-large .dr-lib-icon {
-  flex-basis: calc(var(--dr-u) * 13);
-  width: calc(var(--dr-u) * 13);
-  height: calc(var(--dr-u) * 13);
-  border-radius: var(--dr-radius-md);
-}
-
-.dr-lib-row.is-pin .dr-lib-icon > * {
-  width: 100%;
-  height: 100%;
-}
-
-.dr-lib-text {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.dr-lib-sub {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal, 400);
-}
-
-/* A pin whose folder or note has gone: its name greyed, a crossed-out
-   icon in place of its cover, and beneath, where it may be now. */
-.dr-lib-row.is-missing .dr-lib-label {
-  color: var(--text-muted);
-}
-
-.dr-lib-row.is-missing .dr-lib-icon {
-  color: var(--text-muted);
-}
-
-.dr-lib-row.is-missing .dr-lib-icon .svg-icon {
-  width: 17px;
-  height: 17px;
-}
-
-.dr-lib-row.is-missing .dr-lib-sub {
-  color: var(--text-warning, var(--color-orange));
-}
-
 .dr-lib-empty {
   padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
-  color: var(--text-muted);
+  color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
 
 /* The panel -----------------------------------------------------------------
  *
- * Flat, a step apart from the page in the theme's secondary background and
- * parted from it by one hairline, applied only while the library is the
- * view showing in the left sidebar. Collapsed, it takes no room at all.
+ * Square and flush, as the right sidebar is; these apply only while the
+ * library is the view showing in the left sidebar.
  */
-
-body:not(.dr-left-collapsed)
-  .workspace-split.mod-left-split.dr-apple-sidebar:not(.is-sidedock-collapsed) {
-  border-right: 1px solid var(--dr-separator);
-  background-color: var(--background-secondary);
-}
 
 .dr-apple-sidebar .workspace-tab-header-container {
   border-bottom: none;
@@ -366,26 +231,10 @@ body:not(.dr-left-collapsed)
   font-weight: var(--font-semibold, 600);
 }
 
-/* Obsidian 1.14 shows the arrows from body:not(.is-mobile)
-   .workspace-split.mod-primary-split .workspace-sidedock-vault-profile:
-   the split (whose own class this is) and the profile here outrank it. */
-.workspace-split.dr-apple-sidebar
-  .workspace-sidedock-vault-profile
+.dr-apple-sidebar
   .workspace-drawer-vault-switcher[data-dr-initial]
   .workspace-drawer-vault-switcher-icon {
   display: none;
-}
-
-/* And at the end of the row, how many notes the vault holds. */
-.dr-apple-sidebar .workspace-drawer-vault-switcher[data-dr-count]::after {
-  content: attr(data-dr-count);
-  margin-left: auto;
-  padding-left: var(--dr-space-2);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal, 400);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -403,26 +252,18 @@ body:not(.dr-left-collapsed)
  */
 
 .dr-browse-up.dr-sidebar-toggle,
-.dr-strip-btn.dr-sidebar-toggle,
-.dr-header-sidebar-toggle.dr-sidebar-toggle {
+.dr-strip-btn.dr-sidebar-toggle {
   display: none;
 }
 
 body.dr-left-collapsed .dr-browse-up.dr-sidebar-toggle,
-body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle,
-body.dr-left-collapsed .dr-header-sidebar-toggle.dr-sidebar-toggle {
+body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
   display: flex;
 }
 
 /* The name prompt for a new folder. */
 .dr-name-input {
   width: 100%;
-}
-
-textarea.dr-name-input {
-  resize: vertical;
-  font-family: inherit;
-  line-height: 1.45;
 }
 
 /* Properties to copy or paste, each ticked or not; a paste says what each

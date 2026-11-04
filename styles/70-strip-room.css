@@ -1,7 +1,7 @@
 /* The strip never covers text: the note keeps room at its foot for the strip and 24px more, and
    the strip slides out of view (the base duration) while you scroll down or type. */
-body.dr-strip-up .markdown-source-view.mod-cm6 .cm-scroller,
-body.dr-strip-up .markdown-preview-view {
+body.dr-strip-active .markdown-source-view.mod-cm6 .cm-scroller,
+body.dr-strip-active .markdown-preview-view {
   padding-bottom: calc(var(--dr-strip-h, 0px) + 24px) !important;
 }
 
@@ -11,13 +11,6 @@ body.dr-strip-up .markdown-preview-view {
 
 body.dr-strip-side .dr-strip.is-away {
   transform: translate(calc(100% + 24px), -50%);
-}
-
-/* While notes are ticked in the page being worked in, their tray has the foot of the window to itself. */
-body:has(.workspace-leaf.mod-active .dr-bulk-bar.is-shown) .dr-strip {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

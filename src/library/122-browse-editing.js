@@ -1,31 +1,30 @@
 /* ------------------------------------------------------------------ */
-/* Browse view: editing a collection                                      */
+/* Browse view: editing an album                                      */
 /*                                                                    */
 /* Edit mode (rename, move, delete, add, arrange by drag) and pins in */
 /* your own order. A part of BrowseView (see 120).                    */
 /* ------------------------------------------------------------------ */
 
 import { Menu, normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
-import { byName, composing, coverGen, drawNoteArt, showMenuAt } from '../core/030-helpers-art.js';
+import { byName, composing, coverGen, showMenuAt } from '../core/030-helpers-art.js';
 import { asButton, edgeScroll, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
 import { schemaFor } from '../core/086-property-schema.js';
-import { BulkSelection } from './118-bulk-selection.js';
 import { BrowseSorting } from './121-browse-sorting.js';
 import { Library } from './130-browse-filters.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
-import { markDue, paintValue } from '../ui/248-value-options.js';
+import { paintValue } from '../ui/248-value-options.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { CollectionStructure } from './257-collection-structure.js';
+import { AlbumStructure } from './257-album-structure.js';
 
 /* A shelf's tiles drawn at once, and then a frame at a time. */
 export const TILES_AT_ONCE = 60;
 export const TILES_A_FRAME = 120;
 
 export class BrowseEditing extends BrowseSorting {
-  /* -- editing a collection -------------------------------------------- */
+  /* -- editing an album -------------------------------------------- */
 
   /**
    * What a cover is made from, while generated covers are on: the name,
@@ -37,10 +36,10 @@ export class BrowseEditing extends BrowseSorting {
 
   setEditing(on) {
     this.editing = !!on;
-    if (!on && this.bulkSelection) this.bulkSelection.clear();
+    if (!on && this.tickedPaths) this.tickedPaths.clear();
     this.render();
     if (!on) return;
-    const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-note-row .dr-edit-name');
+    const first = this.contentEl.querySelector('.dr-detail-title.dr-edit-name, .dr-track .dr-edit-name');
     if (first && !Platform.isMobile) first.focus();
   }
 
@@ -144,7 +143,7 @@ export class BrowseEditing extends BrowseSorting {
 
   /** A row being edited: a handle to drag, the name to change, move and delete. */
   editRow(list, file, index) {
-    const row = list.createDiv({ cls: 'dr-note-row is-editing' });
+    const row = list.createDiv({ cls: 'dr-track is-editing' });
     row.dataset.path = file.path;
     if (file.parent) row.dataset.folder = file.parent.path;
     this.tickBox(row, file, list);
@@ -153,8 +152,8 @@ export class BrowseEditing extends BrowseSorting {
     setIcon(grip, 'grip-vertical');
     asButton(grip, `Move “${file.basename}” — drag, or Alt+↑ and Alt+↓`);
 
-    row.createDiv({ cls: 'dr-note-row-num', text: String(index) });
-    const name = row.createEl('input', { cls: 'dr-note-row-name dr-edit-name', type: 'text' });
+    row.createDiv({ cls: 'dr-track-num', text: String(index) });
+    const name = row.createEl('input', { cls: 'dr-track-name dr-edit-name', type: 'text' });
     name.value = file.basename;
     name.dataset.editPath = file.path;
     name.setAttribute('aria-label', 'Note name');
@@ -177,15 +176,10 @@ export class BrowseEditing extends BrowseSorting {
 
   /* -- several notes at once, while editing ----------------------- */
 
-  /** What's ticked while editing: paths, and the last ticked, for Shift. */
-  bulk() {
-    if (!this.bulkSelection) this.bulkSelection = new BulkSelection();
-    return this.bulkSelection;
-  }
-
   /** The notes ticked while editing, by path. */
   ticked() {
-    return this.bulk().paths;
+    if (!this.tickedPaths) this.tickedPaths = new Set();
+    return this.tickedPaths;
   }
 
   /** A row's box to tick; Shift ticks every row from the last one ticked. */
@@ -196,96 +190,50 @@ export class BrowseEditing extends BrowseSorting {
     row.toggleClass('is-ticked', box.checked);
     box.addEventListener('click', (evt) => {
       evt.stopPropagation();
-      this.bulk().set(file.path, box.checked, { range: evt.shiftKey ? this.shownPaths() : null });
-      this.showTicks();
+      const ticked = this.ticked();
+      const rows = Array.from(list.querySelectorAll('.dr-track.is-editing'));
+      const paths = rows.map((r) => r.dataset.path);
+      const from = this.lastTick ? paths.indexOf(this.lastTick) : -1;
+      const to = paths.indexOf(file.path);
+      const run = evt.shiftKey && from !== -1 ? paths.slice(Math.min(from, to), Math.max(from, to) + 1) : [file.path];
+      run.forEach((p) => (box.checked ? ticked.add(p) : ticked.delete(p)));
+      this.lastTick = file.path;
+      rows.forEach((r) => {
+        const on = ticked.has(r.dataset.path);
+        r.toggleClass('is-ticked', on);
+        const b = r.querySelector('.dr-edit-tick');
+        if (b) b.checked = on;
+      });
+      this.renderBulkBar();
     });
   }
 
-  /** The notes' rows while editing, in the order they're shown, by path. */
-  shownPaths() {
-    return Array.from(this.contentEl.querySelectorAll('.dr-note-row.is-editing')).map((r) => r.dataset.path);
-  }
-
-  /** The rows' boxes and the tray brought in line with what's ticked. */
-  showTicks() {
-    this.contentEl.querySelectorAll('.dr-note-row.is-editing').forEach((r) => {
-      const on = this.bulk().has(r.dataset.path);
-      r.toggleClass('is-ticked', on);
-      const b = r.querySelector('.dr-edit-tick');
-      if (b) b.checked = on;
-    });
-    this.renderBulkBar();
-  }
-
-  /** Every note shown ticked: Select all, or Mod+A while editing. */
-  tickAllShown() {
-    this.shownPaths().forEach((p) => this.bulk().set(p, true));
-    this.showTicks();
-  }
-
-  /**
-   * At the foot of the notes while editing, floating while they scroll:
-   * the covers and count of what's ticked, Move and Properties, the rest
-   * under More (Delete last, apart), and ✕ to let go of it all. Nothing
-   * ticked, nothing shown. It slides in once, when the first is ticked.
-   */
+  /** Above the notes while editing: how many are ticked, and what can be done to them all. */
   renderBulkBar(root) {
-    if (root) {
-      this.bulkBar = root.createDiv({ cls: 'dr-bulk-bar', attr: { role: 'toolbar', 'aria-label': 'Selected notes' } });
-      if (this.bulkShown) this.bulkBar.addClass('is-shown');
-    }
+    if (root) this.bulkBar = root.createDiv({ cls: 'dr-bulk-bar' });
     const bar = this.bulkBar;
     if (!bar) return;
     bar.empty();
     const files = this.tickedFiles();
     bar.toggleClass('is-empty', !files.length);
-    bar.toggleClass('is-busy', !!this.bulkBusy);
-    if (!files.length) {
-      this.bulkShown = false;
-      bar.removeClass('is-shown');
-      return;
-    }
-    if (!this.bulkShown) bar.addClass('is-arriving');
-    this.bulkShown = true;
-    bar.addClass('is-shown');
-
-    const art = bar.createDiv({ cls: 'dr-bulk-art', attr: { 'aria-hidden': 'true' } });
-    files.slice(0, 3).forEach((f) => drawNoteArt(this.plugin, art.createDiv({ cls: 'dr-bulk-cover' }), f));
-    const shown = new Set(this.shownPaths());
-    const hidden = files.filter((f) => !shown.has(f.path)).length;
-    const count = bar.createDiv({ cls: 'dr-bulk-count', attr: { 'aria-live': 'polite' } });
-    count.createSpan({ text: files.length === 1 ? '1 note selected' : `${files.length} notes selected` });
-    if (hidden) count.createSpan({ cls: 'dr-bulk-hidden', text: ` · ${hidden} not shown` });
-
-    const button = (icon, label, run, cls, word = true) => {
+    if (!files.length) return;
+    bar.createSpan({ cls: 'dr-bulk-count', text: files.length === 1 ? '1 note selected' : `${files.length} notes selected` });
+    const button = (icon, label, run, cls) => {
       const el = bar.createDiv({ cls: `dr-bulk-action ${cls || ''}`.trim() });
       asButton(el, label);
-      if (this.bulkBusy) el.setAttribute('aria-disabled', 'true');
       setIcon(el.createSpan(), icon);
-      if (word) el.createSpan({ text: label });
-      onActivate(el, (evt) => !this.bulkBusy && run(evt));
-      return el;
+      el.createSpan({ text: label });
+      onActivate(el, run);
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
     button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
-    button('more-horizontal', 'More', (evt) => this.bulkMenu(evt), 'dr-bulk-more', false).setAttribute('aria-haspopup', 'menu');
-    button('x', 'Clear selection', () => {
-      this.bulk().clear();
-      this.showTicks();
-    }, 'dr-bulk-clear', false);
-  }
-
-  /** What's less often done to what's ticked: Copy as table, Select all, and, apart, Delete. */
-  bulkMenu(evt) {
-    const menu = new Menu();
     const clip = this.plugin.feature(PropertyClipboard);
-    if (clip)
-      menu.addItem((i) => i.setSection('action').setTitle('Copy as table').setIcon('table').onClick(() => clip.copyTable(this.tickedFiles())));
-    const shown = this.shownPaths();
-    if (shown.some((p) => !this.bulk().has(p)))
-      menu.addItem((i) => i.setSection('action').setTitle(`Select all ${shown.length}`).setIcon('check-check').onClick(() => this.tickAllShown()));
-    menu.addItem((i) => i.setSection('danger').setTitle('Delete…').setIcon('trash-2').setWarning(true).onClick(() => this.deleteTicked()));
-    showMenuAt(menu, evt);
+    if (clip) button('table', 'Copy as table', () => clip.copyTable(this.tickedFiles()));
+    button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
+    button('x', 'Clear', () => {
+      this.ticked().clear();
+      this.render();
+    });
   }
 
   /** The ticked notes still there. */
@@ -295,96 +243,67 @@ export class BrowseEditing extends BrowseSorting {
       .filter((f) => f instanceof TFile);
   }
 
-  /** While a move or a delete runs, the tray waits: nothing done twice. */
-  async bulkWhile(run) {
-    if (this.bulkBusy) return;
-    this.bulkBusy = true;
-    this.renderBulkBar();
-    try {
-      await run();
-    } finally {
-      this.bulkBusy = false;
-      this.render();
-    }
-  }
-
-  /**
-   * Every ticked note moved to a folder; one Undo puts them all back.
-   * Any that couldn't be moved stay ticked, and the message says how many.
-   */
+  /** Every ticked note moved to a folder; one Undo puts them all back. */
   async moveTicked(folder) {
-    await this.bulkWhile(async () => {
-      const moved = [];
-      const stuck = [];
-      for (const file of this.tickedFiles()) {
-        const from = file.path;
-        const current = file.parent ? file.parent.path : '/';
-        const order = (this.plugin.settings.collectionOrders || {})[current];
-        const kept = order ? JSON.parse(JSON.stringify(order)) : null;
-        if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
-        else stuck.push(from);
-      }
-      this.bulk().clear();
-      stuck.forEach((p) => this.bulk().set(p, true));
-      const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
-      const notes = (n) => (n === 1 ? '1 note' : `${n} notes`);
-      const left = stuck.length ? ` ${notes(stuck.length)} couldn't be moved, and ${stuck.length === 1 ? 'is' : 'are'} still selected.` : '';
-      if (!moved.length) {
-        if (stuck.length) new Notice(`Nothing moved to ${where}.${left}`);
-        return;
-      }
-      this.plugin.offerUndo(`Moved ${notes(moved.length)} to ${where}.${left}`, async () => {
-        for (const m of moved.slice().reverse()) await this.plugin.putBack(m.file, m.from, m.current, m.kept);
-      });
+    const moved = [];
+    for (const file of this.tickedFiles()) {
+      const from = file.path;
+      const current = file.parent ? file.parent.path : '/';
+      const order = (this.plugin.settings.albumOrders || {})[current];
+      const kept = order ? JSON.parse(JSON.stringify(order)) : null;
+      if (await this.plugin.moveFile(file, folder.path)) moved.push({ file, from, current, kept });
+    }
+    this.ticked().clear();
+    this.render();
+    if (!moved.length) return;
+    const where = folder.path === '/' ? this.app.vault.getName() : folder.name;
+    this.plugin.offerUndo(`Moved ${moved.length === 1 ? '1 note' : `${moved.length} notes`} to ${where}.`, async () => {
+      for (const m of moved.slice().reverse()) await this.plugin.putBack(m.file, m.from, m.current, m.kept);
     });
   }
 
-  /** Every ticked note to the trash, once asked; any that couldn't go stay ticked. */
+  /** Every ticked note to the trash, once asked. */
   deleteTicked() {
     const files = this.tickedFiles();
-    if (!files.length || this.bulkBusy) return;
+    if (!files.length) return;
     const what = files.length === 1 ? `“${files[0].basename}”` : `${files.length} notes`;
-    new ConfirmModal(this.app, `Delete ${what}?`, 'They go to the trash, where they can be got back.', 'Delete', () =>
-      this.bulkWhile(async () => {
-        const stuck = [];
-        for (const file of files) {
-          try {
-            await this.app.fileManager.trashFile(file);
-          } catch (err) {
-            console.error('Design Redux: could not delete', err);
-            stuck.push(file.path);
-          }
+    new ConfirmModal(this.app, `Delete ${what}?`, 'They go to the trash, where they can be got back.', 'Delete', async () => {
+      for (const file of files) {
+        try {
+          await this.app.fileManager.trashFile(file);
+        } catch (err) {
+          console.error('Design Redux: could not delete', err);
         }
-        this.bulk().clear();
-        stuck.forEach((p) => this.bulk().set(p, true));
-        if (stuck.length) new Notice(`${stuck.length === 1 ? '1 note' : `${stuck.length} notes`} couldn't be deleted, and ${stuck.length === 1 ? 'is' : 'are'} still selected.`);
-      }), { warning: true }).open();
+      }
+      this.ticked().clear();
+      this.render();
+    }, { warning: true }).open();
   }
 
   /** A subfolder's heading while editing: its name, and a way to delete it. */
-  editSectionHead(head, section, collection) {
+  editDiscHead(head, disc, album) {
     head.addClass('is-editing');
     const grip = head.createDiv({ cls: 'dr-edit-grip' });
     setIcon(grip, 'grip-vertical');
-    asButton(grip, `Move the folder “${section.folder.name}” — drag it onto another`);
-    this.dragSection(head, grip, section.folder, collection);
-    const name = head.createEl('input', { cls: 'dr-list-section-title dr-edit-name', type: 'text' });
-    name.value = section.folder.name;
-    name.dataset.editPath = section.folder.path;
+    asButton(grip, `Move the folder “${disc.folder.name}” — drag it onto another`);
+    this.dragDisc(head, grip, disc.folder, album);
+    const name = head.createEl('input', { cls: 'dr-disc-title dr-edit-name', type: 'text' });
+    name.value = disc.folder.name;
+    name.dataset.editPath = disc.folder.path;
     name.setAttribute('aria-label', 'Folder name');
-    this.editField(name, section.folder.name, (value) => this.renameEntry(section.folder, value));
+    this.editField(name, disc.folder.name, (value) => this.renameEntry(disc.folder, value));
     head.createSpan({
-      cls: 'dr-list-section-count',
-      text: section.files.length === 1 ? '1 note' : `${section.files.length} notes`,
+      cls: 'dr-disc-count',
+      text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes`,
     });
     const move = head.createDiv({ cls: 'clickable-icon dr-edit-tool' });
-    asButton(move, `Move the folder “${section.folder.name}” into another`);
+    asButton(move, `Move the folder “${disc.folder.name}” into another`);
     setIcon(move, 'folder-input');
-    onActivate(move, () => this.pickFolderHome(section.folder));
+    onActivate(move, () => this.pickFolderHome(disc.folder));
     const del = head.createDiv({ cls: 'clickable-icon dr-edit-tool mod-warning' });
-    asButton(del, `Delete the folder “${section.folder.name}”`);
+    asButton(del, `Delete the folder “${disc.folder.name}”`);
     setIcon(del, 'trash-2');
-    onActivate(del, () => this.deleteEntry(section.folder));
+    onActivate(del, () => this.deleteEntry(disc.folder));
   }
 
   /** Somewhere else for a folder: any folder but itself and those inside it. */
@@ -402,11 +321,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Drag a subfolder's heading onto another section's to put it inside that
-   * folder — or onto the collection's own heading to bring it back to the
+   * Drag a subfolder's heading onto another disc's to put it inside that
+   * folder — or onto the album's own heading to bring it back to the
    * top. The heading under the pointer lights up; Escape calls it off.
    */
-  dragSection(head, grip, folder, collection) {
+  dragDisc(head, grip, folder, album) {
     grip.addEventListener('pointerdown', (down) => {
       if (down.button !== undefined && down.button !== 0) return;
       down.preventDefault();
@@ -431,7 +350,7 @@ export class BrowseEditing extends BrowseSorting {
       const hover = (x, y) => {
         const doc = head.ownerDocument;
         const under = doc.elementFromPoint ? doc.elementFromPoint(x, y) : null;
-        const over = under && typeof under.closest === 'function' ? under.closest('.dr-list-section[data-folder]') : null;
+        const over = under && typeof under.closest === 'function' ? under.closest('.dr-disc[data-folder]') : null;
         mark(over && list.contains(over) && allowed(over.dataset.folder) ? over : null);
       };
       const scroller = edgeScroll(list, (y) => hover(lastX, y));
@@ -474,7 +393,7 @@ export class BrowseEditing extends BrowseSorting {
     });
   }
 
-  /** A note made in the collection, named where it's listed rather than opened. */
+  /** A note made in the album, named where it's listed rather than opened. */
   async editNewNote(folder) {
     try {
       const file = await this.app.vault.create(this.plugin.freeChildPath(folder, 'Untitled', 'md'), '');
@@ -492,7 +411,7 @@ export class BrowseEditing extends BrowseSorting {
     }
   }
 
-  /** A subfolder — a new section — named first, and shown even while empty. */
+  /** A subfolder — a new disc — named first, and shown even while empty. */
   editNewFolder(parent) {
     new NamePrompt(this.app, 'New folder', 'Folder name', async (name) => {
       const clean = name.replace(/[\\/:]/g, '').trim();
@@ -514,11 +433,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Put a note before or after another in its collection, and keep that
-   * order. The collection switches to it, as a playlist keeps the order you
+   * Put a note before or after another in its album, and keep that
+   * order. The album switches to it, as a playlist keeps the order you
    * drag its songs into.
    */
-  arrangeNote(path, targetPath, after) {
+  arrangeTrack(path, targetPath, after) {
     const file = this.app.vault.getFileByPath(path);
     const target = this.app.vault.getFileByPath(targetPath);
     if (!file || !target || !file.parent || file.parent !== target.parent) return false;
@@ -526,41 +445,41 @@ export class BrowseEditing extends BrowseSorting {
     const rest = names.filter((n) => n !== file.name);
     const at = rest.indexOf(target.name);
     const before = after ? rest[at + 1] : target.name;
-    this.plugin.orders.setCollection(file.parent, moveBefore(names, file.name, before === undefined ? null : before));
+    this.plugin.orders.setAlbum(file.parent, moveBefore(names, file.name, before === undefined ? null : before));
     this.plugin.refreshBrowse();
     return true;
   }
 
-  /** Save the order a section's rows are in now. */
+  /** Save the order a disc's rows are in now. */
   saveRowOrder(list, folderPath) {
     const folder = this.app.vault.getFolderByPath(folderPath);
     if (!folder) return;
-    const rows = Array.from(list.querySelectorAll('.dr-note-row[data-path]')).filter(
+    const rows = Array.from(list.querySelectorAll('.dr-track[data-path]')).filter(
       (r) => r.dataset.folder === folderPath
     );
     const shown = rows.map((r) => r.dataset.path.split('/').pop());
     // Notes not drawn (there are none while editing, but to be sure) keep their place after.
     const others = this.allNotesIn(folder).map((f) => f.name).filter((n) => shown.indexOf(n) === -1);
-    this.plugin.orders.setCollection(folder, shown.concat(others));
+    this.plugin.orders.setAlbum(folder, shown.concat(others));
     this.plugin.refreshBrowse();
   }
 
   /**
-   * Drag a row by its handle, to anywhere in the collection: among its own
-   * section's rows to put it in order, or into another section to move the
+   * Drag a row by its handle, to anywhere in the album: among its own
+   * disc's rows to put it in order, or into another disc to move the
    * note into that folder, at that place. Pointer events, so a finger
    * works as well as a mouse; nothing happens until it has moved a
    * little, and Escape puts the row back. Alt+arrows move it one place
-   * from the keyboard, over the edge of a section into the next.
+   * from the keyboard, over the edge of a disc into the next.
    */
   dragRow(row, grip, file) {
     const home = row.dataset.folder;
-    // Rows and section headings, top to bottom; a row belongs to the
+    // Rows and disc headings, top to bottom; a row belongs to the
     // heading above it.
-    const items = (list) => Array.from(list.querySelectorAll('.dr-note-row[data-path], .dr-list-section[data-folder]'));
-    const sectionAbove = (el) => {
+    const items = (list) => Array.from(list.querySelectorAll('.dr-track[data-path], .dr-disc[data-folder]'));
+    const discAbove = (el) => {
       let at = el.previousElementSibling;
-      while (at && !(at.matches('.dr-list-section[data-folder]'))) at = at.previousElementSibling;
+      while (at && !(at.matches('.dr-disc[data-folder]'))) at = at.previousElementSibling;
       return at;
     };
 
@@ -574,13 +493,13 @@ export class BrowseEditing extends BrowseSorting {
       const next = all[at + (up ? -1 : 1)];
       if (!next) return;
       if (up) {
-        // Over the collection's first heading there's nowhere to go.
-        if (next.matches('.dr-list-section') && all.indexOf(next) === 0) return;
+        // Over the album's first heading there's nowhere to go.
+        if (next.matches('.dr-disc') && all.indexOf(next) === 0) return;
         list.insertBefore(row, next);
       } else {
         list.insertBefore(row, next.nextSibling);
       }
-      this.commitRow(list, row, file, home, sectionAbove(row));
+      this.commitRow(list, row, file, home, discAbove(row));
     });
 
     grip.addEventListener('pointerdown', (down) => {
@@ -590,7 +509,7 @@ export class BrowseEditing extends BrowseSorting {
       const startY = down.clientY;
       const before = Array.from(list.children);
       let dragging = false;
-      // Near the collection's top or bottom edge, it scrolls, and the row follows.
+      // Near the album's top or bottom edge, it scrolls, and the row follows.
       const scroller = edgeScroll(list, (y) => place(y));
 
       const place = (y) => {
@@ -600,7 +519,7 @@ export class BrowseEditing extends BrowseSorting {
           const box = el.getBoundingClientRect();
           return y < box.top + box.height / 2;
         });
-        // Never above the first heading: a row needs a section to be in.
+        // Never above the first heading: a row needs a disc to be in.
         if (next === others[0]) {
           if (others[1] !== undefined && row.nextElementSibling !== others[1]) list.insertBefore(row, others[1]);
           else if (others[1] === undefined) list.appendChild(row);
@@ -609,9 +528,9 @@ export class BrowseEditing extends BrowseSorting {
         } else if (list.lastElementChild !== row) {
           list.appendChild(row);
         }
-        const section = sectionAbove(row);
-        list.querySelectorAll('.dr-list-section.is-drop-target').forEach((el) => el !== section && el.removeClass('is-drop-target'));
-        if (section && section.dataset.folder !== home) section.addClass('is-drop-target');
+        const disc = discAbove(row);
+        list.querySelectorAll('.dr-disc.is-drop-target').forEach((el) => el !== disc && el.removeClass('is-drop-target'));
+        if (disc && disc.dataset.folder !== home) disc.addClass('is-drop-target');
       };
       const move = (evt) => {
         if (!dragging) {
@@ -633,12 +552,12 @@ export class BrowseEditing extends BrowseSorting {
         if (!dragging) return;
         row.removeClass('is-dragging');
         list.removeClass('is-sorting');
-        list.querySelectorAll('.dr-list-section.is-drop-target').forEach((el) => el.removeClass('is-drop-target'));
+        list.querySelectorAll('.dr-disc.is-drop-target').forEach((el) => el.removeClass('is-drop-target'));
         if (!keep) {
           before.forEach((el) => list.appendChild(el));
           return;
         }
-        this.commitRow(list, row, file, home, sectionAbove(row));
+        this.commitRow(list, row, file, home, discAbove(row));
       };
       const up = () => finish(true);
       const cancel = () => finish(false);
@@ -656,11 +575,11 @@ export class BrowseEditing extends BrowseSorting {
   }
 
   /**
-   * Where a moved row landed, kept: the order of its section, and — if
-   * that's another section — the note moved into that folder first.
+   * Where a moved row landed, kept: the order of its disc, and — if
+   * that's another disc — the note moved into that folder first.
    */
-  async commitRow(list, row, file, home, section) {
-    const folder = section ? section.dataset.folder : home;
+  async commitRow(list, row, file, home, disc) {
+    const folder = disc ? disc.dataset.folder : home;
     if (folder !== home) {
       if (!(await this.plugin.moveFile(file, folder, { announce: true }))) {
         this.render();
@@ -670,7 +589,7 @@ export class BrowseEditing extends BrowseSorting {
       row.dataset.path = file.path;
     }
     this.saveRowOrder(list, folder);
-    const again = this.contentEl.querySelector(`.dr-note-row[data-path="${CSS.escape(file.path)}"] .dr-edit-grip`);
+    const again = this.contentEl.querySelector(`.dr-track[data-path="${CSS.escape(file.path)}"] .dr-edit-grip`);
     if (again) again.focus();
   }
 
@@ -683,7 +602,11 @@ export class BrowseEditing extends BrowseSorting {
 
   /** Move a pin one place, or to before another. */
   arrangePin(path, before) {
-    this.plugin.pins.move(path, before, this.pinnedInOrder().map((t) => t.path));
+    const paths = this.pinnedInOrder().map((t) => t.path);
+    this.plugin.orders.setPins(moveBefore(paths, path, before));
+    const settings = this.plugin.settings;
+    settings.keepOwnOrder = Object.assign({}, settings.keepOwnOrder, { pinned: true });
+    this.plugin.saveData(settings);
     this.plugin.refreshBrowse();
     const library = this.plugin.feature(Library);
     if (library) library.refreshViews();
@@ -694,9 +617,9 @@ export class BrowseEditing extends BrowseSorting {
     return this.mode === 'pinned' ? this.tileSteps(target) : null;
   }
 
-  /** A shelf's collections, in the order they were put in, or as sorted. */
+  /** A shelf's albums, in the order they were put in, or as sorted. */
   shelfFolders(shelf) {
-    return this.plugin.orders.arrangeCollection(shelf, this.visibleFolders(shelf), (list) => this.sortFolders(list));
+    return this.plugin.orders.arrangeAlbum(shelf, this.visibleFolders(shelf), (list) => this.sortFolders(list));
   }
 
   /** A folder of nothing but folders. */
@@ -706,7 +629,7 @@ export class BrowseEditing extends BrowseSorting {
 
   /**
    * Where tiles on screen can be put in order: pins in their own order,
-   * or the collections on a shelf, kept by name as a collection keeps its notes.
+   * or the albums on a shelf, kept by name as an album keeps its notes.
    */
   tileOrder() {
     if (this.mode === 'pinned') {
@@ -718,7 +641,7 @@ export class BrowseEditing extends BrowseSorting {
     return {
       paths,
       move: (path, before) => {
-        this.plugin.orders.setCollection(shelf, moveBefore(paths(), path, before).map((p) => p.split('/').pop()));
+        this.plugin.orders.setAlbum(shelf, moveBefore(paths(), path, before).map((p) => p.split('/').pop()));
         this.render();
       },
     };
@@ -739,11 +662,11 @@ export class BrowseEditing extends BrowseSorting {
 
   /**
    * Folder tiles in one grid, or grouped as the setting says: by kind of
-   * collection, or by the folder they're in. The grids, to arrange.
+   * album, or by the folder they're in. The grids, to arrange.
    */
   folderTiles(root, folders, subtitle) {
     const by = this.plugin.settings.tileGroups;
-    const structure = typeof CollectionStructure === 'function' ? this.plugin.feature(CollectionStructure) : null;
+    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
     const top = (f) => !f.parent || (f.parent.isRoot && f.parent.isRoot());
     const keyOf =
       by === 'kind' && structure && structure.enabled
@@ -771,7 +694,7 @@ export class BrowseEditing extends BrowseSorting {
     });
   }
 
-  /** Tiles that can be dragged into order, on desktop: pins, or a shelf's collections. */
+  /** Tiles that can be dragged into order, on desktop: pins, or a shelf's albums. */
   /** Tiles drawn a batch a frame, into a grid still on the page; those that can be arranged made draggable as they come. */
   drawLater(grid, rest, draw) {
     if (!rest.length) return;
@@ -849,7 +772,7 @@ export class BrowseEditing extends BrowseSorting {
 }
 
 export class RowValues extends BrowseEditing {
-  /** A row's value as a button: pick, set or tick it there, the collection not drawn again. */
+  /** A row's value as a button: pick, set or tick it there, the album not drawn again. */
   editableCell(cell, file, key) {
     cell.addClass('is-editable');
     asButton(cell, `Change ${key}`);
@@ -918,7 +841,7 @@ export class RowValues extends BrowseEditing {
       .map((g) => String(g.value));
   }
 
-  /** A value written through the notes service — one step of Undo — and shown in its cell, the collection as it is. */
+  /** A value written through the notes service — one step of Undo — and shown in its cell, the album as it is. */
   async writeRowValue(cell, file, key, value) {
     if (!this.quietChanges) this.quietChanges = new Set();
     this.quietChanges.add(file.path);
@@ -941,6 +864,5 @@ export class RowValues extends BrowseEditing {
     const text = value === null || value === undefined ? '' : Array.isArray(value) ? value.map((v) => plainValue(v)).join(', ') : plainValue(value);
     cell.setText(text);
     paintValue(cell, this.plugin, key, text);
-    markDue(cell, this.plugin, key, text);
   }
 }

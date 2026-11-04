@@ -2,13 +2,13 @@
 /* Choosing what goes in the list                                      */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Notice, Setting, TFolder } from 'obsidian';
+import { FuzzySuggestModal, Notice, Platform, Setting, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/030-helpers-art.js';
 import { SORTS } from '../core/040-helpers-sorting.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
-import { inspectorShowing } from '../core/076-selection.js';
+import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { Appearance } from '../core/085-appearance.js';
@@ -16,7 +16,7 @@ import { LibraryEditor } from './090-library-editor.js';
 import { LibraryView } from './100-library.js';
 import { homeShelves } from './109-home-shelves.js';
 import { BrowseView } from './120-browse-view.js';
-import { CollectionStructure } from './257-collection-structure.js';
+import { AlbumStructure } from './257-album-structure.js';
 
 export class LibraryItemPicker extends FuzzySuggestModal {
   constructor(app, onChoose) {
@@ -90,11 +90,6 @@ export class Library extends Feature {
         showIf: 'library',
       },
       {
-        key: 'hideRightSidebar',
-        name: 'Hide the right sidebar',
-        desc: 'Fold Obsidian’s right sidebar and hide its button. Properties float under the note’s button and sit in the library’s pane; the outline and footnotes open from the note.',
-      },
-      {
         key: 'hideEmptyFolders',
         name: 'Hide empty folders',
         desc: 'Leave out folders with no notes, counting subfolders.',
@@ -135,13 +130,13 @@ export class Library extends Feature {
         options: Object.fromEntries(SORTS),
       },
       {
-        key: 'collectionSortMemory',
+        key: 'albumSortMemory',
         showIf: 'library',
         name: 'Remember each collection’s sort',
         desc: 'A collection sorted from its filter button keeps that order.',
       },
       {
-        key: 'collectionColumns',
+        key: 'albumColumns',
         type: 'text',
         showIf: 'library',
         name: 'Collection columns',
@@ -152,19 +147,19 @@ export class Library extends Feature {
         suggestExtra: ['modified', 'created', 'folder'],
       },
       {
-        key: 'collectionExcerpts',
+        key: 'albumExcerpts',
         showIf: 'library',
         name: 'A line under each note',
         desc: 'In a collection, a short grey line under each title: the note’s description property, or its first sentence.',
       },
       {
-        key: 'collectionStillToWrite',
+        key: 'albumStillToWrite',
         showIf: 'library',
         name: 'Still to write',
         desc: 'At the end of a collection, greyed: what its notes link to that isn’t a note yet. Click one to write it there.',
       },
       {
-        key: 'collectionNestBy',
+        key: 'albumNestBy',
         type: 'text',
         showIf: 'library',
         name: 'Nest notes by',
@@ -173,7 +168,7 @@ export class Library extends Feature {
         suggest: 'properties',
       },
       {
-        key: 'noteLength',
+        key: 'trackLength',
         type: 'dropdown',
         showIf: 'library',
         name: 'Note length',
@@ -185,26 +180,35 @@ export class Library extends Feature {
         type: 'dropdown',
         segmented: true,
         name: 'Density',
-        desc: 'How much room everything gets — rows, the library, the strip, panels and windows: compact, standard or spacious.',
+        desc: 'How much room everything gets — covers, rows, the library, the strip, panels and windows: compact, standard or spacious.',
         options: GRID_DENSITIES,
+      },
+      {
+        key: 'libraryLayout',
+        type: 'dropdown',
+        segmented: true,
+        showIf: 'library',
+        name: 'Layout',
+        desc: 'Folders as covers or as lists. Notes are always lists.',
+        options: { auto: 'Covers', lists: 'Lists' },
       },
       {
         key: 'tileGroups',
         type: 'dropdown',
         showIf: 'library',
-        name: 'Group collections by',
-        desc: 'On screens of collections: by the kind of collection each is, or the folder each is in.',
+        name: 'Group covers by',
+        desc: 'On screens of collections: by the kind of collection each is, or the shelf — the folder — each is in.',
         options: TILE_GROUPS,
       },
       {
-        key: 'sectionNoteLimit',
+        key: 'discNoteLimit',
         type: 'number',
-        name: 'Notes per section',
-        desc: 'How many notes a subfolder’s section shows before Show all.',
+        name: 'Notes per disc',
+        desc: 'How many notes a disc shows before Show all.',
         showIf: 'library',
       },
       {
-        key: 'collectionNoteLimit',
+        key: 'albumNoteLimit',
         type: 'number',
         name: 'Notes per value',
         desc: 'How many notes each value shows on the Properties screen before Show all.',
@@ -223,7 +227,7 @@ export class Library extends Feature {
       {
         key: 'inspector',
         name: 'Inspector',
-        desc: 'The button by Sort and filter shows a pane along the page’s right edge: the picked note’s or collection’s properties, to read and change, with Open, Reveal in collection and More — without opening it.',
+        desc: 'The button by Sort and filter shows the inspector in the right sidebar: the picked note’s or collection’s properties, to read and change, with Open, Reveal in collection and More — without opening it.',
         showIf: 'library',
       },
       {
@@ -237,7 +241,7 @@ export class Library extends Feature {
       {
         key: 'homeShelves',
         type: 'custom',
-        name: 'Home lists',
+        name: 'Home shelves',
         showIf: 'library',
         render: (containerEl) => this.renderHomeShelves(containerEl),
       },
@@ -306,10 +310,10 @@ export class Library extends Feature {
       .map((f) => ({ kind: 'file', path: f.path }));
 
     // A few places first, as a music app's sidebar has: where to start,
-    // everything, the collections and what's pinned; then what you opened last;
+    // everything, the albums and what's pinned; then what you opened last;
     // the rest under More, folded until wanted.
     const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
-    const structure = this.plugin.feature(CollectionStructure);
+    const structure = this.plugin.feature(AlbumStructure);
     if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
     more.push({ kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
     ['library-check', 'inbox']
@@ -348,8 +352,10 @@ export class Library extends Feature {
         icon: 'panel-right',
         when: () => this.enabled && this.settings.inspector !== false,
         run: async () => {
-          this.settings.libraryPreview = !inspectorShowing(this.app);
-          await this.plugin.saveSettings();
+          if (inspectorShowing(this.app)) closeInspector(this.app);
+          else {
+            await openInspector(this.app);
+          }
           this.plugin.refreshBrowse();
         },
       },
@@ -404,7 +410,7 @@ export class Library extends Feature {
         id: 'new-note-here',
         name: 'New note in the current folder',
         icon: 'file-plus',
-        on: 'collection',
+        on: 'album',
         menu: false,
         run: (ctx) => this.plugin.newNote(ctx.folder),
       },
@@ -412,7 +418,7 @@ export class Library extends Feature {
         id: 'new-folder-here',
         name: 'New folder in the current folder',
         icon: 'folder-plus',
-        on: 'collection',
+        on: 'album',
         menu: false,
         run: (ctx) => this.plugin.newFolder(ctx.folder),
       },
@@ -540,7 +546,6 @@ export class Library extends Feature {
    */
   enable() {
     document.body.toggleClass('dr-single-area', singleAreaOn(this.settings));
-    this.followRightSidebar();
     const turnedOn = this.active === false;
     this.active = true;
     if (!turnedOn) return;
@@ -591,7 +596,6 @@ export class Library extends Feature {
    * the front, since there'd be no way to switch to it otherwise.
    */
   followSidebar() {
-    this.followRightSidebar();
     const collapsed = this.leftCollapsed();
     document.body.toggleClass('dr-left-collapsed', collapsed);
     if (this.wasCollapsed && !collapsed && this.enabled && singleAreaOn(this.settings)) {
@@ -601,11 +605,12 @@ export class Library extends Feature {
     liveViews(this.app, LIBRARY_VIEW, LibraryView).forEach((v) => v.syncChrome());
   }
 
-  /** The library back on the left, however it was moved or lost; the inspector's old tab gone. */
+  /** The library back on the left and the inspector on the right, however they were moved or lost. */
   async resetLayout() {
     const ws = this.app.workspace;
     [LIBRARY_VIEW, INSPECTOR_VIEW].forEach((type) => ws.getLeavesOfType(type).forEach((leaf) => leaf.detach()));
     await this.mount();
+    if (!Platform.isPhone && this.settings.inspector !== false) await openInspector(this.app);
     this.showLibraryTab();
   }
 
@@ -641,18 +646,9 @@ export class Library extends Feature {
     return this.browseMode({ mode: 'folder', path: '/' });
   }
 
-  /** Hidden, the right sidebar is kept folded, whatever opened it; its button goes with the body class. */
-  followRightSidebar() {
-    const hide = this.enabled !== false && !!this.settings.hideRightSidebar;
-    document.body.toggleClass('dr-no-right-sidebar', hide);
-    const split = this.app.workspace.rightSplit;
-    if (hide && split && !split.collapsed && typeof split.collapse === 'function') split.collapse();
-  }
-
   disable() {
     this.active = false;
     document.body.removeClass('dr-single-area');
-    document.body.removeClass('dr-no-right-sidebar');
 
     // Only when the user switches the feature off. On unload Obsidian
     // reopens these views itself, at the position the user left them.

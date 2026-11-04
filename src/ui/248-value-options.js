@@ -3,13 +3,12 @@
 /*                                                                    */
 /* A property's value painted as its options say — a tint of its      */
 /* colour, its icon before it — in the panel, on the note page, in     */
-/* collection rows, filters and the property's page; and the dialog that    */
+/* album rows, filters and the property's page; and the dialog that    */
 /* sets them, from a value's menu.                                     */
 /* ------------------------------------------------------------------ */
 
 import { Modal, setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/040-helpers-sorting.js';
-import { dateDueState, dueKeys } from '../core/045-helpers-properties.js';
 import { OPTION_COLOURS, optionFor, withOption } from '../core/088-property-options.js';
 
 /* A Lucide icon's name, as opposed to an emoji. */
@@ -45,20 +44,6 @@ export function paintValue(el, plugin, key, value) {
     putIcon(icon, option.icon);
   }
   return option;
-}
-
-const DUE_SAID = { overdue: 'Overdue', today: 'Due today', soon: 'Due soon', later: 'Due later' };
-
-/** A due date marked where it shows: overdue, today or soon, for the properties named as due dates. Its state, or null. */
-export function markDue(el, plugin, key, value) {
-  if (!el) return null;
-  el.removeClass('dr-due', 'is-overdue', 'is-today', 'is-soon', 'is-later');
-  if (!plugin || plugin.settings.propertyDueChips === false || !dueKeys(plugin.settings).some((k) => k.toLowerCase() === String(key).toLowerCase())) return null;
-  const state = dateDueState(Array.isArray(value) ? value[0] : value);
-  if (!state) return null;
-  el.addClass('dr-due', `is-${state}`);
-  el.setAttribute('title', DUE_SAID[state]);
-  return state;
 }
 
 const COLOUR_NAMES = { red: 'Red', orange: 'Orange', yellow: 'Yellow', green: 'Green', cyan: 'Cyan', blue: 'Blue', purple: 'Purple', pink: 'Pink' };
