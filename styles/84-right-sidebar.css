@@ -1,0 +1,428 @@
+/* The right sidebar ------------------------------------------------------
+ *
+ * One column on one left edge, in the interface's font. Space sets things
+ * apart, not lines or boxes: the only line is under the tabs. Labels and
+ * values read left to right, and only the one main action is a button.
+ * Only the docked panel: the sheet on a phone keeps its own shape.
+ */
+
+/* The tabs: flat, the one showing marked by a line beneath it. */
+body.dr-props-active .workspace-split.mod-right-split .workspace-tab-header-container {
+  border-bottom: 1px solid var(--dr-line);
+  background-color: transparent;
+}
+
+body.dr-props-active .workspace-split.mod-right-split .workspace-tab-header {
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: inset 0 0 0 transparent;
+}
+
+body.dr-props-active .workspace-split.mod-right-split .workspace-tab-header-inner {
+  border-radius: var(--dr-radius-sm);
+  background-color: transparent;
+}
+
+body.dr-props-active .workspace-split.mod-right-split .workspace-tab-header.is-active {
+  background-color: transparent;
+  box-shadow: inset 0 -2px 0 var(--text-accent);
+}
+
+body.dr-props-active .workspace-split.mod-right-split .workspace-tab-header.is-active .workspace-tab-header-inner-icon {
+  color: var(--text-normal);
+}
+
+.dr-panel-dock {
+  --dr-rail-edge: var(--dr-space-4);
+  --dr-rail-key: 88px;
+  font-family: var(--dr-font-ui);
+}
+
+.dr-panel-dock .view-content {
+  padding: var(--dr-space-3) var(--dr-rail-edge) var(--dr-space-5);
+  font-family: var(--dr-font-ui);
+}
+
+.dr-panel-dock :is(input, [contenteditable], .dr-empty, .dr-panel-dock-origin, .dr-panel-dock-empty),
+.dr-panel-dock input::placeholder,
+.dr-panel-dock [contenteditable]:empty::before {
+  font-family: var(--dr-font-ui);
+}
+
+/* Why it shows this: a small line first, on the same edge. */
+.dr-panel-dock .dr-panel-dock-origin {
+  padding: 0 0 var(--dr-space-2);
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-panel-dock .dr-panel-dock-empty {
+  padding: var(--dr-space-5) 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: left;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked {
+  padding: 0;
+}
+
+/* What it's about: a small cover, the name beside it, wrapping as it must. */
+.dr-panel-dock .dr-props-popup.is-docked > .dr-props-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--dr-space-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked > .dr-props-head .dr-props-art {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  border-radius: var(--dr-radius-md);
+  box-shadow: none;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked > .dr-props-head .dr-props-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked > .dr-props-head .dr-props-title {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
+  line-height: 1.3;
+  /* The whole name, however long: this is where it can be read. */
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked > .dr-props-head :is(.dr-props-lead, .dr-props-meta) {
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+/* What can be done with it: Open, the one button, and the rest a quiet icon. */
+.dr-panel-dock .dr-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  margin: var(--dr-space-3) 0 0;
+  padding: 0;
+  border: none;
+}
+
+.dr-panel-dock .dr-preview-actions .dr-detail-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-space-1);
+  height: var(--dr-control-size);
+  min-width: var(--dr-control-size);
+  padding: 0 var(--dr-space-1);
+  border: none;
+  border-radius: var(--dr-radius-sm);
+  background-color: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-medium, 500);
+}
+
+.dr-panel-dock .dr-preview-actions .dr-detail-action:first-child {
+  flex: 1 1 auto;
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.dr-panel-dock .dr-preview-actions .dr-detail-action:first-child .dr-icon-label {
+  display: inline;
+}
+
+.dr-panel-dock .dr-preview-actions .dr-detail-action:not(:first-child) .dr-icon-label {
+  display: none;
+}
+
+.dr-panel-dock .dr-preview-actions .dr-detail-action:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+@media (any-hover: hover) {
+  .dr-panel-dock .dr-preview-actions .dr-detail-action:hover {
+    background-color: var(--background-modifier-active-hover, var(--background-modifier-hover));
+    color: var(--text-normal);
+  }
+}
+
+/* A collection picked: the same shape as a note. */
+.dr-panel-dock .dr-inspector-brief {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  column-gap: var(--dr-space-3);
+  margin: 0;
+  padding: 0;
+  border: none;
+  text-align: left;
+}
+
+.dr-panel-dock .dr-inspector-brief > * {
+  grid-column: 1 / -1;
+}
+
+.dr-panel-dock .dr-inspector-brief > :is(.dr-preview-title, .dr-preview-lead) {
+  grid-column: 2;
+  margin: 0;
+}
+
+.dr-panel-dock .dr-inspector-brief > .dr-preview-art {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  border-radius: var(--dr-radius-md);
+  box-shadow: none;
+}
+
+.dr-panel-dock .dr-inspector-brief > .dr-preview-title {
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
+  line-height: 1.3;
+}
+
+.dr-panel-dock .dr-inspector-brief > .dr-preview-lead {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-panel-dock .dr-inspector-brief > .dr-preview-about {
+  margin-top: var(--dr-space-3);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+/* Sections: set apart by room alone. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-section,
+.dr-panel-dock .dr-props-popup.is-docked .dr-section + .dr-section {
+  margin: var(--dr-space-5) 0 0;
+  padding: 0;
+  border: none;
+}
+
+/* A section's name, the same for all of them. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-section .dr-props-head,
+.dr-panel-dock .dr-props-popup.is-docked .dr-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  min-height: 24px;
+  margin: 0 0 var(--dr-space-1);
+  padding: 0;
+  border: none;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-section .dr-props-toggle {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--dr-space-1);
+  min-width: 0;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-section .dr-props-title,
+.dr-panel-dock .dr-props-popup.is-docked .dr-section-title {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold, 600);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked :is(.dr-section-count, .dr-props-count) {
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal, 400);
+}
+
+/* Which way a section folds: after its name, so every name starts on the edge. */
+.dr-panel-dock .dr-props-popup.is-docked :is(.dr-section-chevron, .dr-props-chevron) {
+  display: inline-flex;
+  order: 1;
+  color: var(--text-faint);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-props-chevron {
+  opacity: 0;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-props-toggle:focus-visible .dr-props-chevron {
+  opacity: 1;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked :is(.dr-props-add, .dr-props-menu) {
+  color: var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  .dr-panel-dock .dr-props-popup.is-docked .dr-props-toggle:hover .dr-props-chevron {
+    opacity: 1;
+  }
+}
+
+/* Properties: a name, then its value beside it, both from the left. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-row:not(.is-secondary) {
+  display: grid;
+  grid-template-columns: var(--dr-rail-key) minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--dr-space-2);
+  min-height: 28px;
+  padding: 2px 0;
+  border: none;
+  border-radius: var(--dr-radius-sm);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-row + .dr-row {
+  border-top: none;
+}
+
+/* Dragged by its grip, in the margin. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-row .dr-row-grip {
+  top: var(--dr-space-1);
+  left: calc(var(--dr-rail-edge) * -1 + 2px);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-key {
+  justify-content: flex-start;
+  width: auto;
+  min-width: 0;
+  padding: 3px 0 0;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+  text-align: left;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-key .dr-key-name {
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+}
+
+/* The type icon, reached by keys to move a property or open its menu: in the
+   margin, so the names keep the edge. The pointer has the grip and the ••• for those. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-key {
+  position: relative;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-key .dr-key-icon {
+  position: absolute;
+  top: var(--dr-space-1);
+  left: calc(var(--dr-rail-edge) * -1);
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-rail-edge);
+  pointer-events: none;
+}
+
+@media (any-hover: hover) {
+  .dr-panel-dock .dr-props-popup.is-docked .dr-row:hover .dr-key .dr-key-icon:not(:focus-visible) {
+    opacity: 0;
+  }
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-key .dr-key-icon .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value {
+  min-width: 0;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  text-align: left;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value :is(input, [contenteditable]) {
+  padding-left: 0;
+  font-size: inherit;
+  text-align: left;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value input::placeholder,
+.dr-panel-dock .dr-props-popup.is-docked .dr-value [contenteditable]:empty::before {
+  color: var(--text-faint);
+}
+
+/* Values in a list: quiet tags, wrapping from the left. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-container {
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0;
+  gap: var(--dr-space-1);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-pill {
+  --pill-background: var(--background-modifier-hover);
+  --pill-color: var(--text-normal);
+  --pill-padding-x: var(--dr-space-1);
+  width: fit-content;
+  max-width: 100%;
+  padding: 1px var(--dr-space-1);
+  border-radius: var(--dr-radius-sm);
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-pill-content {
+  padding: 0;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-pill .internal-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Who mentions it: rows on the same edge, and None a word, not a gap. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-empty,
+.dr-panel-dock .dr-props-popup.is-docked .dr-mention {
+  margin-left: 0;
+  padding-left: 0;
+  text-align: left;
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-mention {
+  min-height: 26px;
+  padding-right: 0;
+  font-size: var(--font-ui-small);
+}
+
+.dr-panel-dock .dr-props-popup.is-docked .dr-mention-list {
+  max-height: none;
+}
+
+/* The group a list of mentions opens straight after the last: no second gap. */
+.dr-panel-dock .dr-props-popup.is-docked .dr-mention-group + .dr-mention-group {
+  margin-top: var(--dr-space-2);
+}
