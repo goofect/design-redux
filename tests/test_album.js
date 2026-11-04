@@ -1559,11 +1559,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'folder', path: 'IR' }, {});
     const menu = view.filterMenu();
     const titles = menu.items.map((i) => i.title);
-    assert.ok(titles.includes('View as list') && titles.includes('View as covers'));
+    assert.ok(titles.includes('View as list') && titles.includes('View as table') && !titles.includes('View as covers'));
     assert.strictEqual(menu.items.find((i) => i.title === 'View as list').checked, true);
-    menu.items.find((i) => i.title === 'View as covers').click();
+    menu.items.find((i) => i.title === 'View as table').click();
     await settle(0);
-    assert.deepStrictEqual(set, [['IR', 'covers']]);
+    assert.deepStrictEqual(set, [['IR', 'table']]);
     menu.items.find((i) => i.title === 'Display settings…').click();
     assert.deepStrictEqual(opened, ['albumColumns']);
 

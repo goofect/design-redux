@@ -446,14 +446,14 @@ export class BrowseSorting extends ItemView {
     return menu;
   }
 
-  /** An album shown as a list, covers or a table — as its folder note says, set from here. */
+  /** An album shown as a list or a table — as its folder note says, set from here. Covers are the folder's own menu's to set. */
   addViewItems(menu, redraw) {
     const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
     const folder = this.mode === 'folder' ? this.folder() : null;
     if (!structure || !structure.enabled || !folder || this.isShelf(folder)) return;
     const now = structure.info(folder).layout;
     menu.addSeparator();
-    ALBUM_LAYOUTS.forEach((l) =>
+    ALBUM_LAYOUTS.filter((l) => l.id !== 'covers').forEach((l) =>
       menu.addItem((item) =>
         item
           .setTitle(`View as ${l.label.toLowerCase()}`)
