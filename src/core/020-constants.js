@@ -181,6 +181,8 @@ export const DEFAULTS = {
   panelPlaces: false,
   // Off to begin with since 3.1: Obsidian's gear stays put; Settings is in the library.
   settingsInHeader: false,
+  // The sidebars pulled out and pushed in with a swipe, in place of their buttons.
+  swipeSidebars: true,
   coverProperty: 'cover',
   // {{folder}} stands for the folder's own name, which is the common
   // convention; a literal like "index" works too.

@@ -33,7 +33,7 @@ export const SETTINGS_TABS = [
         name: 'Context strip and modes',
         desc: 'Where you are and how far, with previous and next; one page; the sidebar header.',
         switch: 'contextStrip',
-        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'stripSide'],
+        keys: ['workspaceModes', 'onePage', 'stripPlace', 'stripDetail', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'swipeSidebars', 'stripSide'],
       },
     ],
   },

@@ -261,6 +261,15 @@ body.dr-left-collapsed .dr-strip-btn.dr-sidebar-toggle {
   display: flex;
 }
 
+/* Swiped instead: the sidebars' buttons go, Obsidian's and these, and the
+ * inspector's in the browse bar. Important, since the look's button rules
+ * come later. */
+body.dr-swipe-sidebars .sidebar-toggle-button,
+body.dr-swipe-sidebars .dr-sidebar-toggle,
+body.dr-swipe-sidebars .dr-preview-btn {
+  display: none !important;
+}
+
 /* The name prompt for a new folder. */
 .dr-name-input {
   width: 100%;

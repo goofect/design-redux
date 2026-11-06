@@ -29,6 +29,7 @@ import { RETIRED_VIEWS, RetiredView } from '../note/196-retired-views.js';
 import { OnePage } from '../tools/200-one-page.js';
 import { MenuFilter } from '../tools/210-menu-filter.js';
 import { SettingsButton } from '../tools/220-settings-button.js';
+import { SidebarSwipe } from '../tools/225-sidebar-swipe.js';
 import { NamePrompt } from '../ui/230-pickers.js';
 import { CoverImages } from '../ui/235-covers.js';
 import { CoverDrop } from '../ui/237-cover-drop.js';
@@ -86,6 +87,7 @@ export class DesignRedux extends Plugin {
       new OnePage(this),
       new MenuFilter(this),
       new SettingsButton(this),
+      new SidebarSwipe(this),
       new CoverImages(this),
       new CoverDrop(this),
       new ImageRouter(this),

@@ -85,8 +85,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_sidebar_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files };\n');
-const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files } = require(tmp).__test;
+  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files, SidebarSwipe };\n');
+const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files, SidebarSwipe } = require(tmp).__test;
 
 /* -- a vault and a plugin ----------------------------------------- */
 
@@ -688,6 +688,41 @@ t('a name cut short shows in full under the pointer, only while it doesn’t fit
   point();
   assert.strictEqual(row.getAttribute('title'), 'Its own', 'a title of its own is left alone');
   box.remove();
+});
+
+/* -- the sidebars swiped -------------------------------------------- */
+
+t('a sideways swipe pulls the sidebars out and pushes them back in, but not over what scrolls sideways', () => {
+  const split = (collapsed) => {
+    const el = document.body.appendChild(document.createElement('div'));
+    return { collapsed, containerEl: el, expand() { this.collapsed = false; }, collapse() { this.collapsed = true; } };
+  };
+  const leftSplit = split(true);
+  const rightSplit = split(false);
+  const page = document.body.appendChild(document.createElement('div'));
+  const sw = Object.create(SidebarSwipe.prototype);
+  sw.plugin = { app: { workspace: { leftSplit, rightSplit, getLeavesOfType: () => [{}] } }, settings: { swipeSidebars: true } };
+  let now = 0;
+  const swipe = (target, dx) => {
+    now += 1000;
+    [0, 1, 2].forEach((i) => sw.onWheel({ target, deltaX: dx / 3, deltaY: 0, deltaMode: 0, timeStamp: now + i * 16 }));
+  };
+  swipe(page, -90); // fingers right, over the page: the left one out
+  assert.strictEqual(leftSplit.collapsed, false);
+  swipe(leftSplit.containerEl, 90); // fingers left, over it: back in
+  assert.strictEqual(leftSplit.collapsed, true);
+  swipe(rightSplit.containerEl, -90); // fingers right over the right one: back in
+  assert.strictEqual(rightSplit.collapsed, true);
+  swipe(page, 90); // fingers left over the page: the right one out
+  assert.strictEqual(rightSplit.collapsed, false);
+  swipe(page, 20); // too little
+  assert.strictEqual(leftSplit.collapsed, true);
+  const shelf = page.appendChild(document.createElement('div'));
+  shelf.style.overflowX = 'auto';
+  Object.defineProperties(shelf, { scrollWidth: { value: 900 }, clientWidth: { value: 300 } });
+  swipe(shelf, -90); // a shelf that scrolls keeps its swipe
+  assert.strictEqual(leftSplit.collapsed, true);
+  [leftSplit.containerEl, rightSplit.containerEl, page].forEach((el) => el.remove());
 });
 
 fs.unlinkSync(tmp);
