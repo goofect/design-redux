@@ -316,6 +316,7 @@ describe('Design Redux in Obsidian', function () {
         if (!out.rightOut) out.rightBlockedBy = blockers(t);
         return out;
       };
+      const was = { left: ws.leftSplit.collapsed, right: ws.rightSplit.collapsed };
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode({ mode: 'folder', path: 'Politics' });
       await pause(800);
@@ -324,10 +325,10 @@ describe('Design Redux in Obsidian', function () {
       await ws.getLeaf(false).openFile(note);
       await pause(800);
       const onNote = await round();
-      // Left as the tests after it expect: the album open, both sidebars out.
+      // Left as the tests after it expect: the album open, the sidebars as they were.
       await library.browseMode({ mode: 'folder', path: 'Politics' });
-      ws.leftSplit.expand();
-      ws.rightSplit.expand();
+      [[ws.leftSplit, was.left], [ws.rightSplit, was.right]].forEach(([split, collapsed]) => (collapsed ? split.collapse() : split.expand()));
+      await pause(400);
       return { album, note: onNote };
     });
     const all = { leftIn: true, leftOut: true, rightIn: true, rightOut: true };
