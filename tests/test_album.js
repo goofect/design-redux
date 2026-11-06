@@ -1832,7 +1832,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(kept);
   });
 
-  await t('inside an album: notes to start with, a list or covers, only Notes and Sources as tabs, and why it’s empty', async () => {
+  await t('inside an album: notes to start with, a list or covers, no tabs, and why it’s empty', async () => {
     const { v, plugin, app, view } = setup();
     const note = v.file('IR/IR.md');
     const fm = { album: 'project', featured: ['[[Balance]]'], includes: '[[Gone]]' };
@@ -1888,14 +1888,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!view.contentEl.querySelector('.dr-album-panels'), 'just its notes');
     assert.ok(!text('.dr-detail-meta')[0].includes('sub-collection'));
     assert.deepStrictEqual(text('.dr-detail-title'), ['IR'], 'a folder’s page keeps its title');
-    // Sources alone keep a tab, beside the notes.
+    // A source among them: still just its notes, no tabs.
     fms.set(v.vault.getFileByPath('IR/Extra 1.md'), { author: 'Waltz' });
     view.render();
-    const tabs = () => text('.dr-panel-tab').map((t) => t.replace(/\d+$/, ''));
-    assert.deepStrictEqual(tabs(), ['Notes', 'Sources']);
-    assert.ok(view.contentEl.querySelector('.dr-panel-tab.is-active[data-panel="notes"]'), 'it opens to its notes');
-    click(view.contentEl.querySelector('.dr-panel-tab[data-panel="sources"]'));
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelectorAll('.dr-album-panel .dr-track[data-path]')).map((r) => r.dataset.path), ['IR/Extra 1.md']);
+    assert.ok(!view.contentEl.querySelector('.dr-album-panels, .dr-panel-tab'), 'no Sources tab');
     // Empty, and why.
     v.folder('Plans');
     const plans = v.file('Plans/Plans.md');

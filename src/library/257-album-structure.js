@@ -20,7 +20,7 @@
 import { Notice, Setting, TFile } from 'obsidian';
 import { ALBUM_TYPES } from '../core/020-constants.js';
 import { menuGroup } from '../core/030-helpers-art.js';
-import { asButton, noteTags, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, onActivate } from '../core/040-helpers-sorting.js';
 import { fmGet, plainValue, rollupOf, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -48,10 +48,6 @@ export const ALBUM_LAYOUTS = [
   { id: 'covers', label: 'Covers', icon: 'layout-grid' },
   { id: 'table', label: 'Table', icon: 'table' },
 ];
-
-/* What makes a note a source: properties it has, or its type or tags. */
-export const SOURCE_KEYS = ['author', 'authors', 'url', 'source', 'isbn', 'doi', 'publisher'];
-export const SOURCE_KINDS = ['source', 'book', 'article', 'paper', 'reading'];
 
 /* What counts as finished, for a project's notes. */
 export const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
@@ -435,17 +431,6 @@ export class AlbumStructure extends Feature {
     const kept = list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), from) !== file);
     if (kept.length === list.length) kept.push(`[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`);
     return this.setProperty(folder, ALBUM_KEYS.featured, kept);
-  }
-
-  /** Notes that are sources: books, articles — anything with an author, a link or a source of its own. */
-  sources(files) {
-    return files.filter((f) => {
-      const cache = this.app.metadataCache.getFileCache(f);
-      const fm = (cache && cache.frontmatter) || {};
-      if (SOURCE_KEYS.some((k) => valueList(fmGet(fm, k)).length)) return true;
-      if (valueList(fmGet(fm, 'type')).some((v) => SOURCE_KINDS.indexOf(v.toLowerCase()) !== -1)) return true;
-      return noteTags(cache).some((t) => SOURCE_KINDS.indexOf(t) !== -1);
-    });
   }
 
   /** On a note's menu: kept at the top of its album, or not. */

@@ -332,51 +332,6 @@
   margin-top: 0;
 }
 
-/* An album's panels: tabs in a quiet row, the chosen one underlined. */
-.dr-album-panels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--dr-space-1) calc(var(--dr-u) * 5);
-  margin: var(--dr-space-1) 0 calc(var(--dr-u) * 4.5);
-  border-bottom: 1px solid var(--background-modifier-border);
-}
-
-.dr-panel-tab {
-  display: inline-flex;
-  align-items: baseline;
-  gap: calc(var(--dr-u) * 1.5);
-  padding: calc(var(--dr-u) * 1.5) 0 var(--dr-space-2);
-  margin-bottom: -1px;
-  border-bottom: 2px solid transparent;
-  font-size: var(--font-ui-small);
-  font-weight: var(--font-semibold, 600);
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.dr-panel-tab.is-active {
-  color: var(--text-normal);
-  border-bottom-color: var(--text-accent);
-}
-
-.dr-panel-tab:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
-  border-radius: var(--dr-radius-sm);
-}
-
-.dr-panel-count {
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-normal, 400);
-  color: var(--text-faint);
-}
-
-@media (any-hover: hover) {
-  .dr-panel-tab:hover {
-    color: var(--text-normal);
-  }
-}
-
 /* Notes linked to but not written: a name, and where it's linked from. */
 
 /* The library report, and the inbox: quiet rows to go through. */
@@ -605,8 +560,7 @@
 .dr-lib-row,
 .dr-report-row,
 .dr-inbox-row,
-.dr-tree-row,
-.dr-panel-tab {
+.dr-tree-row {
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease);
 }
 

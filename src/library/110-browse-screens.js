@@ -95,25 +95,10 @@ export class FolderScreen extends BrowseScreen {
       if (!view.editing) view.renderAlbumEnd(el, folder, all);
       if (!view.editing) view.renderAlbumFoot(el, all, { count: discs.length > 1 });
     };
-    const panels = about ? this.panels(folder, about, all, drawNotes) : [];
-    if (panels.length > 1) this.renderPanels(root, folder, about, panels);
-    else drawNotes(root);
+    drawNotes(root);
     if (view.editing) return;
     if (about && about.related.length) view.shelf(root, 'Related collections', about.related);
     view.renderMoreIn(root, folder);
-  }
-
-  /**
-   * What an album can show, one at a time: its notes and, where it has
-   * any, its sources.
-   */
-  panels(folder, about, all, drawNotes) {
-    const view = this.view;
-    const structure = this.plugin.feature(AlbumStructure);
-    const out = [{ id: 'notes', label: 'Notes', count: all.length, draw: drawNotes }];
-    const sources = structure.sources(all);
-    if (sources.length) out.push({ id: 'sources', label: 'Sources', count: sources.length, draw: (el) => view.renderDiscs(el, [{ title: 'Sources', folder: null, files: sources }], null) });
-    return out;
   }
 
   /** The album's notes as a table — a row each, the columns set for tables, no row of column names — under a heading for each disc. */
@@ -156,52 +141,6 @@ export class FolderScreen extends BrowseScreen {
       onContextMenu(row, (evt) => view.folderMenu(evt, f, view.folderCover(f)));
       if (depth < 4) this.renderTree(list, view.sortFolders(view.visibleFolders(f)), depth + 1);
     });
-  }
-
-  /** Tabs over the panel shown: as last chosen here, or its notes. */
-  renderPanels(root, folder, about, panels) {
-    const view = this.view;
-    if (!view.albumPanels) view.albumPanels = new Map();
-    const strip = root.createDiv({ cls: 'dr-album-panels' });
-    strip.setAttribute('role', 'tablist');
-    const body = root.createDiv({ cls: 'dr-album-panel' });
-    body.setAttribute('role', 'tabpanel');
-    const show = (id) => {
-      strip.querySelectorAll('.dr-panel-tab').forEach((tab) => {
-        const on = tab.dataset.panel === id;
-        tab.toggleClass('is-active', on);
-        tab.setAttribute('aria-selected', String(on));
-        tab.setAttribute('tabindex', on ? '0' : '-1');
-      });
-      body.empty();
-      panels.find((p) => p.id === id).draw(body);
-    };
-    panels.forEach((p) => {
-      const tab = strip.createDiv({ cls: 'dr-panel-tab' });
-      tab.dataset.panel = p.id;
-      tab.setAttribute('role', 'tab');
-      tab.createSpan({ text: p.label });
-      if (p.count) tab.createSpan({ cls: 'dr-panel-count', text: String(p.count) });
-      onActivate(tab, () => {
-        // Chosen here: kept while the album's open in this tab.
-        view.albumPanels.set(folder.path, p.id);
-        show(p.id);
-      });
-    });
-    // Left and right step between the tabs.
-    strip.addEventListener('keydown', (evt) => {
-      if (evt.key !== 'ArrowLeft' && evt.key !== 'ArrowRight') return;
-      const tabs = Array.from(strip.querySelectorAll('.dr-panel-tab'));
-      const at = tabs.indexOf(evt.target.closest('.dr-panel-tab'));
-      const next = tabs[(at + (evt.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
-      if (!next) return;
-      evt.preventDefault();
-      next.focus();
-      next.click();
-    });
-    const has = (id) => panels.some((p) => p.id === id);
-    const kept = view.albumPanels.get(folder.path);
-    show(has(kept) ? kept : 'notes');
   }
 
   /** Why an album shows nothing: Find or a filter, or nothing put in it yet. */
