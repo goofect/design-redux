@@ -8,6 +8,8 @@
 .dr-browse .view-content {
   padding: var(--dr-space-4) calc(var(--dr-u) * 5) calc(var(--dr-u) * 10);
   overflow-y: auto;
+  /* The header's glow reaches past the sides: the page doesn't move sideways for it. */
+  overflow-x: hidden;
 }
 
 .dr-detail-bar {

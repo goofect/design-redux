@@ -5,9 +5,10 @@
 /* the left and right sidebars out and push them back in, so their     */
 /* buttons go. What's under the hand says which: over a sidebar, it    */
 /* goes back in; over the page, a swipe right brings the left one out  */
-/* (or puts the right one away), a swipe left the right one. Anything  */
-/* that scrolls or pans sideways itself keeps its swipe. The phone and */
-/* tablet app swipe their drawers already; there only the buttons go.  */
+/* (or puts the right one away), a swipe left the right one. What     */
+/* can still scroll that way, or pans itself, keeps its swipe. The     */
+/* phone and tablet app swipe their drawers already; there only the    */
+/* buttons go.                                                         */
 /* ------------------------------------------------------------------ */
 
 import { Platform } from 'obsidian';
@@ -65,7 +66,7 @@ export class SidebarSwipe extends Feature {
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
     let g = this.wheel;
     if (!g || e.timeStamp - g.last > WHEEL_GAP) {
-      g = this.wheel = { x: 0, y: 0, done: !this.swipeable(e.target), target: e.target };
+      g = this.wheel = { x: 0, y: 0, done: this.ownSwipe(e.target), scrollers: this.scrollers(e.target), target: e.target };
     }
     g.last = e.timeStamp;
     g.x += e.deltaX * unit;
@@ -73,6 +74,7 @@ export class SidebarSwipe extends Feature {
     if (g.done || Math.abs(g.x) < WHEEL_PULL || Math.abs(g.x) < Math.abs(g.y) * 2) return;
     g.done = true;
     // Fingers moving right scroll the page left: deltaX below zero.
+    if (this.canScroll(g.scrollers, g.x < 0)) return;
     this.swipe(g.x < 0, g.target);
   }
 
@@ -82,7 +84,7 @@ export class SidebarSwipe extends Feature {
       return;
     }
     const t = e.touches[0];
-    this.touch = { x: t.clientX, y: t.clientY, at: e.timeStamp, target: e.target };
+    this.touch = { x: t.clientX, y: t.clientY, at: e.timeStamp, target: e.target, scrollers: this.scrollers(e.target) };
   }
 
   onTouchEnd(e) {
@@ -94,21 +96,42 @@ export class SidebarSwipe extends Feature {
     const dx = t.clientX - g.x;
     const dy = t.clientY - g.y;
     if (Math.abs(dx) < TOUCH_PULL || Math.abs(dx) < Math.abs(dy) * 2) return;
-    if (!this.swipeable(g.target)) return;
+    if (this.ownSwipe(g.target) || this.canScroll(g.scrollers, dx > 0)) return;
     this.swipe(dx > 0, g.target);
   }
 
-  /** Not when what's under the hand scrolls or pans sideways itself. */
-  swipeable(target) {
-    let el = target && target.nodeType === 1 ? target : target && target.parentElement;
-    if (!el || (el.closest && el.closest(OWN_SWIPE))) return false;
+  static element(target) {
+    return target && target.nodeType === 1 ? target : target && target.parentElement;
+  }
+
+  /** A canvas, the graph, a menu or a dialog: what pans or drags sideways itself. */
+  ownSwipe(target) {
+    const el = SidebarSwipe.element(target);
+    return !el || !!(el.closest && el.closest(OWN_SWIPE));
+  }
+
+  /** What under the hand scrolls sideways, and where each stood as the gesture began. */
+  scrollers(target) {
+    const out = [];
+    let el = SidebarSwipe.element(target);
+    if (!el) return out;
     const win = el.ownerDocument.defaultView;
     for (; el && el !== el.ownerDocument.body; el = el.parentElement) {
-      if (el.scrollWidth <= el.clientWidth + 1) continue;
+      const room = el.scrollWidth - el.clientWidth;
+      if (room <= 1) continue;
       const overflow = win.getComputedStyle(el).overflowX;
-      if (overflow === 'auto' || overflow === 'scroll') return false;
+      if (overflow === 'auto' || overflow === 'scroll') out.push({ at: Math.abs(el.scrollLeft), room });
     }
-    return true;
+    return out;
+  }
+
+  /**
+   * Whether any of them had room left to scroll the way the fingers go:
+   * a swipe right scrolls toward its start, a swipe left toward its end.
+   * At its end already, the swipe is the sidebar's.
+   */
+  canScroll(scrollers, toRight) {
+    return scrollers.some((s) => (toRight ? s.at > 1 : s.at < s.room - 1));
   }
 
   /** A swipe, toward the right or the left, begun over target. */

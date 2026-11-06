@@ -692,7 +692,7 @@ t('a name cut short shows in full under the pointer, only while it doesn’t fit
 
 /* -- the sidebars swiped -------------------------------------------- */
 
-t('a sideways swipe pulls the sidebars out and pushes them back in, but not over what scrolls sideways', () => {
+t('a sideways swipe pulls the sidebars out and pushes them back in, but not over what can still scroll that way', () => {
   const split = (collapsed) => {
     const el = document.body.appendChild(document.createElement('div'));
     return { collapsed, containerEl: el, expand() { this.collapsed = false; }, collapse() { this.collapsed = true; } };
@@ -720,8 +720,12 @@ t('a sideways swipe pulls the sidebars out and pushes them back in, but not over
   const shelf = page.appendChild(document.createElement('div'));
   shelf.style.overflowX = 'auto';
   Object.defineProperties(shelf, { scrollWidth: { value: 900 }, clientWidth: { value: 300 } });
-  swipe(shelf, -90); // a shelf that scrolls keeps its swipe
+  shelf.scrollLeft = 100;
+  swipe(shelf, -90); // a shelf with room to scroll back keeps its swipe
   assert.strictEqual(leftSplit.collapsed, true);
+  shelf.scrollLeft = 0;
+  swipe(shelf, -90); // at its start already: the sidebar's
+  assert.strictEqual(leftSplit.collapsed, false);
   [leftSplit.containerEl, rightSplit.containerEl, page].forEach((el) => el.remove());
 });
 

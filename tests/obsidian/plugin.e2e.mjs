@@ -269,6 +269,67 @@ describe('Design Redux in Obsidian', function () {
     await clickText('.dr-detail-action', 'Done');
   });
 
+  it('swipes the sidebars in and back out, over an album and over a note', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const ws = app.workspace;
+      const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+      let at = performance.now();
+      // A two-finger swipe: a few sideways wheel events, a gesture of their own.
+      const swipe = async (el, dx) => {
+        await pause(400);
+        const box = el.getBoundingClientRect();
+        const target = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) || el;
+        for (let i = 0; i < 6; i++) {
+          target.dispatchEvent(new WheelEvent('wheel', { deltaX: dx / 6, deltaY: 0, bubbles: true, cancelable: true }));
+          await pause(16);
+        }
+        await pause(400);
+        return target;
+      };
+      // What under the hand scrolls sideways, should a swipe be refused.
+      const blockers = (el) => {
+        const out = [];
+        for (; el && el !== document.body; el = el.parentElement) {
+          if (el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(el).overflowX)) {
+            const edge = el.getBoundingClientRect().left + el.clientWidth + 1;
+            const wide = Array.from(el.querySelectorAll('*')).filter((c) => c.getBoundingClientRect().right > edge && c.parentElement.getBoundingClientRect().right <= edge).slice(0, 4).map((c) => `${c.tagName}.${c.className} ${Math.round(c.getBoundingClientRect().right - edge)}`);
+            out.push(`${el.className} ${el.scrollWidth}>${el.clientWidth}: ${wide.join(' | ')}`);
+          }
+        }
+        return out;
+      };
+      const page = () => ws.rootSplit.containerEl.querySelector('.workspace-leaf.mod-active .view-content') || ws.rootSplit.containerEl;
+      const round = async () => {
+        const out = {};
+        if (ws.leftSplit.collapsed) ws.leftSplit.expand();
+        if (ws.rightSplit.collapsed) ws.rightSplit.expand();
+        await pause(400);
+        await swipe(ws.leftSplit.containerEl, 120);
+        out.leftIn = ws.leftSplit.collapsed;
+        let t = await swipe(page(), -120);
+        out.leftOut = !ws.leftSplit.collapsed;
+        if (!out.leftOut) out.leftBlockedBy = blockers(t);
+        await swipe(ws.rightSplit.containerEl, -120);
+        out.rightIn = ws.rightSplit.collapsed;
+        t = await swipe(page(), 120);
+        out.rightOut = !ws.rightSplit.collapsed;
+        if (!out.rightOut) out.rightBlockedBy = blockers(t);
+        return out;
+      };
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      await pause(800);
+      const album = await round();
+      const note = app.vault.getMarkdownFiles()[0];
+      await ws.getLeaf(false).openFile(note);
+      await pause(800);
+      const onNote = await round();
+      return { album, note: onNote };
+    });
+    const all = { leftIn: true, leftOut: true, rightIn: true, rightOut: true };
+    expect(result).toEqual({ album: all, note: all });
+  });
+
   it('holds the left panel and the album page still while nothing changes', async function () {
     // Watched for three seconds with an album open and nothing touched: the
     // left panel's classes, the page's, and anything redrawn on either side.
