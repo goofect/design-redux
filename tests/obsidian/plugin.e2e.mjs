@@ -317,22 +317,22 @@ describe('Design Redux in Obsidian', function () {
         return out;
       };
       const was = { left: ws.leftSplit.collapsed, right: ws.rightSplit.collapsed };
-      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
-      await library.browseMode({ mode: 'folder', path: 'Politics' });
-      await pause(800);
+      // Over the album the tests before left open, then over a note in a tab of its own.
+      const albumLeaf = ws.activeLeaf;
       const album = await round();
-      const note = app.vault.getMarkdownFiles()[0];
-      await ws.getLeaf(false).openFile(note);
+      const noteLeaf = ws.getLeaf('tab');
+      await noteLeaf.openFile(app.vault.getMarkdownFiles()[0]);
       await pause(800);
       const onNote = await round();
-      // Left as the tests after it expect: the album open, the sidebars as they were.
-      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      // Left as the tests after it expect: the album's tab in front, the sidebars as they were.
+      noteLeaf.detach();
+      ws.setActiveLeaf(albumLeaf, { focus: true });
       [[ws.leftSplit, was.left], [ws.rightSplit, was.right]].forEach(([split, collapsed]) => (collapsed ? split.collapse() : split.expand()));
-      await pause(400);
       return { album, note: onNote };
     });
     const all = { leftIn: true, leftOut: true, rightIn: true, rightOut: true };
     expect(result).toEqual({ album: all, note: all });
+    await browser.$('.workspace-leaf.mod-active .dr-detail').waitForDisplayed({ timeout: 5000 });
   });
 
   it('holds the left panel and the album page still while nothing changes', async function () {
