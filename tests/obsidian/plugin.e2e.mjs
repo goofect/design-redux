@@ -324,6 +324,10 @@ describe('Design Redux in Obsidian', function () {
       await ws.getLeaf(false).openFile(note);
       await pause(800);
       const onNote = await round();
+      // Left as the tests after it expect: the album open, both sidebars out.
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      ws.leftSplit.expand();
+      ws.rightSplit.expand();
       return { album, note: onNote };
     });
     const all = { leftIn: true, leftOut: true, rightIn: true, rightOut: true };
