@@ -495,8 +495,11 @@ suite('Design Redux in Obsidian: the library', function () {
     await browser.executeObsidian(async ({ plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode({ mode: 'home' });
+      // The library in front in the left sidebar, for the picture: Home and the sidebar beside it.
+      await library.reveal();
     });
     await browser.$('.dr-shelf-row .dr-card').waitForExist({ timeout: 10000 });
+    await browser.$('.dr-library .dr-lib-row').waitForDisplayed({ timeout: 10000 });
     await shot('home');
   });
 

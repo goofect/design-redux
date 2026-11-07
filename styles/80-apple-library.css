@@ -2,38 +2,36 @@
  * Apple look: the library and albums
  * ==================================================================== */
 
-/* The sidebar: 36px rows, a 28px cover, a hairline between groups, counts muted at the end. */
-body.dr-look-apple .dr-lib-row {
-  font-size: var(--dr-type-subhead);
+/* The sidebar, quiet and slim: 13px labels, a 22px cover, counts faint at the end, groups
+   set apart by space alone. A phone keeps its finger-sized rows (28-touch-and-phone). */
+body.dr-look-apple:not(.is-mobile) .dr-lib-row {
+  font-size: var(--dr-type-footnote);
 }
 
-body.dr-look-apple .dr-lib-icon.has-art {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+body.dr-look-apple:not(.is-mobile) .dr-lib-icon.has-art {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
 }
 
 body.dr-look-apple .dr-lib-count {
   margin-left: auto;
   padding-left: 8px;
-  color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  color: var(--text-faint);
+  font-size: var(--dr-type-caption);
   font-variant-numeric: tabular-nums;
 }
 
 body.dr-look-apple .dr-lib-group {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 0.5px solid var(--dr-separator);
-  color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  margin-top: 16px;
+  color: var(--text-faint);
+  font-size: var(--dr-type-caption);
   font-weight: 600;
 }
 
 body.dr-look-apple .view-content > .dr-lib-group:first-child {
   margin-top: 0;
-  border-top: none;
 }
 
 /* Home and every screen: a large title; shelves titled at 22px, their tiles in a row that scrolls sideways. */
