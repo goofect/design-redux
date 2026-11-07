@@ -43,7 +43,7 @@ import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
 import { NotePages } from '../note/267-pages.js';
-import { MarkedLists } from '../note/270-lists.js';
+import { MarkedLists } from '../note/273-lists-feature.js';
 import { Scripts } from '../note/280-scripts.js';
 import { Footnotes } from '../note/285-footnotes.js';
 import { BulkEdits } from '../tools/291-bulk-changes.js';

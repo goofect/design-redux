@@ -54,8 +54,9 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 - **Pairs of pieces that use each other:** none, down from 21.
 - **Helpers by concern:** covers and art (`030`), the page and its history (`034`), menus
   and touch (`036`), sorting (`040`), controls: buttons, keys, focus (`042`).
-- **The largest pieces now:** `122-browse-editing` (868 lines), `270-lists` (865),
-  `120-browse-view` (857), `032-drawn-covers` (777). Split by what they hold: the graph's
+- **The largest pieces now:** `122-browse-editing` (868 lines), `120-browse-view` (857),
+  `032-drawn-covers` (777). Lettered and roman lists are four pieces: how a marker is read
+  (`270`), the editor (`271`), reading view (`272`) and the feature (`273`). Split by what they hold: the graph's
   routing plan (`261`) from its drawing (`262`); renaming and merging properties (`308`)
   from adding and removing them (`301`); the bulk engine and the panel's properties each
   written in two parts, plans (`290`) and changes (`291`), rows (`160`) and edits
