@@ -31,3 +31,13 @@ ci-output
 
 # What tests/map.js keeps by content hash, and task checkpoints
 .claude-cache
+
+# The graphify knowledge graph, built locally (/graphify .)
+graphify-out
+
+# Personal Claude Code settings; the shared ones are .claude/settings.json
+.claude/settings.local.json
+
+# Secrets and local environment
+.env
+.env.*
