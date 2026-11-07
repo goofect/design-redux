@@ -327,6 +327,20 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
 (async () => {
   /* -- adding ----------------------------------------------------------- */
 
+  await t('the bulk engine’s and the properties panel’s parts each write a method once', () => {
+    for (const [cls, root] of [[R.BulkEdits, 'Object'], [R.PropertiesSection, 'PanelSection']]) {
+      const seen = new Map();
+      for (let proto = cls.prototype; proto && proto.constructor.name !== root; proto = Object.getPrototypeOf(proto)) {
+        Object.getOwnPropertyNames(proto).forEach((name) => {
+          if (name === 'constructor') return;
+          assert.ok(!seen.has(name), `${name} is written in ${seen.get(name)} and ${proto.constructor.name}`);
+          seen.set(name, proto.constructor.name);
+        });
+      }
+      assert.ok(new Set(seen.values()).size === 2, `${cls.name} in two parts`);
+    }
+  });
+
   await t('adding keeps a value a note has, unless asked to replace it', () => {
     const fm = { Status: 'draft', domain: '' };
     assert.strictEqual(R.addPropertiesTo(fm, [{ key: 'status', value: 'done' }, { key: 'domain', value: 'Law' }], false), true);

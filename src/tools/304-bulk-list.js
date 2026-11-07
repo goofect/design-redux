@@ -15,9 +15,10 @@ import { noteProps } from '../core/073-notes.js';
 import { propertyType } from './288-bulk-values.js';
 import { renamePropertyInPlace } from './290-bulk-engine.js';
 import { BulkModal, whereHolds, whereReady } from './300-bulk-dialogs.js';
-import { AddPropertiesModal, FolderDefaultsModal, MergePropertiesModal, RemovePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
+import { AddPropertiesModal, FolderDefaultsModal, RemovePropertiesModal } from './301-bulk-properties.js';
 import { ChangeTypeModal, MissingPropertyModal } from './303-bulk-types.js';
 import { CleanUpValuesModal, SchemaCheckModal } from './305-bulk-schema.js';
+import { MergePropertiesModal, RenamePropertyModal } from './308-bulk-rename-merge.js';
 
 /**
  * Each property in some notes, as a note's properties would be listed:

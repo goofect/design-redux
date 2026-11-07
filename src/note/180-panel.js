@@ -16,7 +16,7 @@ import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { openInspector } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';
 import { originLabel } from '../core/084-workspace-coordinator.js';
-import { PropertiesSection } from './160-panel-properties.js';
+import { PropertiesSection } from './161-panel-property-edits.js';
 import { MentionsSection } from './170-panel-native.js';
 import { inspectableOf } from './178-inspectables.js';
 import { PanelDockView } from './179-panel-dock.js';

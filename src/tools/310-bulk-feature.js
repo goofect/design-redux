@@ -4,11 +4,12 @@ import { bulkCount } from '../core/047-helpers-text.js';
 import { movedPath } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';
 import { keyLike } from './288-bulk-values.js';
-import { DEFAULTS_DELAY, MergePropertiesModal, RenamePropertyModal } from './301-bulk-properties.js';
+import { DEFAULTS_DELAY } from './301-bulk-properties.js';
 import { MergeValuesModal, RenameTagModal, RenameValueModal } from './302-bulk-tags-values.js';
 import { ChangeTypeModal } from './303-bulk-types.js';
 import { PropertyToolsModal } from './304-bulk-list.js';
 import { CleanUpValuesModal } from './305-bulk-schema.js';
+import { MergePropertiesModal, RenamePropertyModal } from './308-bulk-rename-merge.js';
 
 export class BulkEditing extends Feature {
   actions() {

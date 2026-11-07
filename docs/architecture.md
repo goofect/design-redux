@@ -54,9 +54,12 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 - **Pairs of pieces that use each other:** none, down from 21.
 - **Helpers by concern:** covers and art (`030`), the page and its history (`034`), menus
   and touch (`036`), sorting (`040`), controls: buttons, keys, focus (`042`).
-- **The largest pieces now:** `290-bulk-engine` (1,605 lines), `120-browse-view` (1,173),
-  `110-browse-screens` (1,045), `285-footnotes` (994), `301-bulk-properties` (969),
-  `262-graph-routes` (964).
+- **The largest pieces now:** `122-browse-editing` (868 lines), `270-lists` (865),
+  `120-browse-view` (857), `032-drawn-covers` (777). Split by what they hold: the graph's
+  routing plan (`261`) from its drawing (`262`); renaming and merging properties (`308`)
+  from adding and removing them (`301`); the bulk engine and the panel's properties each
+  written in two parts, plans (`290`) and changes (`291`), rows (`160`) and edits
+  (`161`).
 
 ## 1. The architecture at M0
 

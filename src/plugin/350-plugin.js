@@ -46,7 +46,7 @@ import { NotePages } from '../note/267-pages.js';
 import { MarkedLists } from '../note/270-lists.js';
 import { Scripts } from '../note/280-scripts.js';
 import { Footnotes } from '../note/285-footnotes.js';
-import { BulkEdits } from '../tools/290-bulk-engine.js';
+import { BulkEdits } from '../tools/291-bulk-changes.js';
 import { PropertySchemas } from '../tools/305-bulk-schema.js';
 import { PropertyHistory } from '../tools/306-bulk-history.js';
 import { PropertyRules } from '../tools/307-bulk-rules.js';
