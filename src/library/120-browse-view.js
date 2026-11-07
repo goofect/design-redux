@@ -18,9 +18,9 @@ import { ask } from '../core/081-capabilities.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
-import { BrowseTable } from './127-browse-table.js';
+import { BrowseFilters } from './128-browse-filters.js';
 
-export class BrowseView extends BrowseTable {
+export class BrowseView extends BrowseFilters {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;

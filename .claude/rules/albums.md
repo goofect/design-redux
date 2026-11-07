@@ -21,12 +21,11 @@ paths:
 - A screen is a class in `BROWSE_SCREENS`, reached with
   `view.navigate({ mode, property })`; an album's page is its notes, with
   no tabs.
-- The browse view is `BrowseView` (120) with its parts in 121 (sorting and
-  filters), 122 (editing, and the cells of a row edited in place), 123 (rows, shelves,
+- The browse view is `BrowseView` (120) with its parts in 121 (sorting), 122 (editing, and the cells of a row edited in place), 123 (rows, shelves,
   cards), 124 (what it draws of a pick into the inspector), 125 (an album's page),
-  126 (arranging: discs, tracks, pins and tiles in your own order) and 127 (an
-  album as a table: columns, header, groups by a property), chained by `extends`:
-  BrowseView extends 127, which extends 126, down to 121 over `ItemView`.
+  126 (arranging: discs, tracks, pins and tiles in your own order), 127 (an
+  album as a table: columns, header, groups by a property) and 128 (filters and
+  Find), chained by `extends`: BrowseView extends 128, which extends 127, down to 121 over `ItemView`.
   The library and its albums are one area for the layer check.
 - `tests/test_album.js`: `setup()` gives a vault whose files really move; its
   `plugin.moveFile` returns true, not the old path, and `processFrontMatter`
