@@ -39,3 +39,28 @@ module.exports.__test = ((names) => new Proxy({}, {
     fs.unlinkSync(tmp);
   }
 };
+
+/**
+ * Obsidian's additions to elements, as the suites stand them in: createEl
+ * (with cls, text and type), createDiv, createSpan, the class helpers,
+ * empty and setText. A suite adds what it needs beyond these (isShown).
+ */
+exports.elementHelpers = (P) => {
+  const apply = (el, o) => {
+    if (!o) return el;
+    if (typeof o === 'string') { el.className = o; return el; }
+    if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
+    if (o.text !== undefined) el.textContent = o.text;
+    if (o.type) el.setAttribute('type', o.type);
+    return el;
+  };
+  P.createEl = function (tag, o) { return apply(this.appendChild(this.ownerDocument.createElement(tag)), o); };
+  P.createDiv = function (o) { return this.createEl('div', o); };
+  P.createSpan = function (o) { return this.createEl('span', o); };
+  P.addClass = function (...c) { this.classList.add(...c); };
+  P.removeClass = function (...c) { this.classList.remove(...c); };
+  P.toggleClass = function (c, on) { this.classList.toggle(c, !!on); };
+  P.hasClass = function (c) { return this.classList.contains(c); };
+  P.empty = function () { while (this.firstChild) this.removeChild(this.firstChild); };
+  P.setText = function (t) { this.textContent = t; };
+};

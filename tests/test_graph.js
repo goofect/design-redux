@@ -4,7 +4,7 @@
 const path = require('path');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
-const { loadMain } = require('./harness');
+const { elementHelpers, loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -18,23 +18,7 @@ global.navigator = dom.window.navigator;
 global.CSS = { escape: (s) => s };
 
 const P = dom.window.HTMLElement.prototype;
-const apply = (el, o) => {
-  if (!o) return el;
-  if (typeof o === 'string') { el.className = o; return el; }
-  if (o.cls) el.className = Array.isArray(o.cls) ? o.cls.join(' ') : o.cls;
-  if (o.text !== undefined) el.textContent = o.text;
-  if (o.type) el.setAttribute('type', o.type);
-  return el;
-};
-P.createEl = function (tag, o) { return apply(this.appendChild(document.createElement(tag)), o); };
-P.createDiv = function (o) { return this.createEl('div', o); };
-P.createSpan = function (o) { return this.createEl('span', o); };
-P.addClass = function (...c) { this.classList.add(...c); };
-P.removeClass = function (...c) { this.classList.remove(...c); };
-P.toggleClass = function (c, on) { this.classList.toggle(c, !!on); };
-P.hasClass = function (c) { return this.classList.contains(c); };
-P.empty = function () { while (this.firstChild) this.removeChild(this.firstChild); };
-P.setText = function (t) { this.textContent = t; };
+elementHelpers(P);
 
 const obsidian = new Proxy({
   setIcon: (el, name) => { el.dataset.icon = name; },
