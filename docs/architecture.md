@@ -9,9 +9,9 @@ each milestone did.
 
 ## 0. Where it stands
 
-Canvas maps were retired in 3.0 (`docs/plans/canvas-retirement.md`): the canvas area is
-gone, maps are mind maps, and `core/079` keeps only the asks of a plain canvas. The source
-folders are the four places of the reform — library, note, maps, tools — with core and ui below
+Canvas maps were retired in 3.0, and mind maps since: the canvas area is
+gone, and `core/079` keeps only the asks of a plain canvas. The source
+folders are the three places of the reform — library, note, tools — with core and ui below
 them; what follows about canvas pieces and the old folders is the record from before.
 
 ```text

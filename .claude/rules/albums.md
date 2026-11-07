@@ -19,8 +19,8 @@ paths:
   move with `plugin.moveFile` / `plugin.putBack`, which keep links and number
   a name that's taken.
 - A screen is a class in `BROWSE_SCREENS`, reached with
-  `view.navigate({ mode, property })`; an album's panels are entries in
-  `FolderScreen.panels`, shown as tabs only when there's more than one.
+  `view.navigate({ mode, property })`; an album's page is its notes, with
+  no tabs.
 - The browse view is `BrowseView` (120) with its parts in 121 (sorting and
   filters), 122 (editing, pins in your own order), 123 (rows, shelves,
   cards), 124 (what it draws of a pick into the inspector) and 125 (an album's page), chained by `extends`: BrowseView extends 125, which extends 124, down to 121 over `ItemView`.

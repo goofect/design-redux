@@ -11,7 +11,6 @@ import { asButton, onActivate, relativeDay, roveFocus } from '../core/040-helper
 import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
-import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { RowValues } from './122-browse-editing.js';
 import { paintValue } from '../ui/248-value-options.js';
@@ -359,19 +358,6 @@ export class BrowseRows extends RowValues {
   /** Short, in the spirit of a track length: a glance, not a date. */
   relative(mtime) {
     return relativeDay(mtime);
-  }
-
-  /** A note's property values, flattened for matching against. */
-  propertyText(file) {
-    const fm = noteProps(this.app, file);
-    return Object.keys(fm)
-      .filter((k) => k !== 'position')
-      .map((k) => {
-        const v = fm[k];
-        return Array.isArray(v) ? v.join(' ') : String(v === null ? '' : v);
-      })
-      .join(' ')
-      .toLowerCase();
   }
 
   matches(name) {

@@ -54,13 +54,6 @@ export function editorContext(editor, view, from) {
   return { file: view && view.file, editor, cm, view, from };
 }
 
-/** For a canvas's own menu: the canvas these cards are on. */
-export function canvasMenuContext(nodes) {
-  const first = nodes && nodes[0];
-  const view = first && first.canvas && first.canvas.view;
-  return view && view.canvas && view.file ? canvasContext(view, nodes, 'canvas') : null;
-}
-
 export const ACTION_CONTEXTS = {
   app: () => ({ from: 'palette' }),
   note: (app) => activeNoteContext(app),

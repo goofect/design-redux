@@ -479,6 +479,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   await t('1.x settings open on 2.0 with nothing lost: kept as they were, a backup first, retired ones dropped', async () => {
     const saved = {
       settingsVersion: 3,
+      settingsLevel: 'all',
+      libraryPreview: true,
       coverFallback: 'art',
       albumColumns: 'status, modified',
       canvasLegends: { 'Map.canvas': { labels: { 1: 'Cases' } } },
@@ -500,11 +502,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 26);
+    assert.strictEqual(s.settingsVersion, 27);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 26, brought up from \d+; steps [\d, ]+26$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 27, brought up from \d+; steps [\d, ]+27$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
+    assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.strictEqual(s.notePageTint, false);

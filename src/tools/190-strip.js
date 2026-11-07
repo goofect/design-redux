@@ -409,13 +409,6 @@ export class ContextStrip extends Feature {
     return out;
   }
 
-  /** An action by its id run where it applies now. */
-  runAction(id) {
-    const action = this.findAction(id);
-    const ctx = action && actionContext(this.app, action);
-    if (ctx && applies(action, ctx)) action.run(Object.assign(ctx, { from: 'strip' }));
-  }
-
   /** An action by its id, from whichever feature defines it; which feature that is, remembered. */
   findAction(id) {
     if (!this.actionHomes) this.actionHomes = new Map();

@@ -261,6 +261,14 @@ export const SETTINGS_MIGRATIONS = [
       if (Array.isArray(saved.smartAlbumList)) saved.smartAlbumList = saved.smartAlbumList.filter((a) => !(a && a.prop && a.prop.due));
     },
   },
+  {
+    // Two settings nothing read any more.
+    to: 27,
+    run(saved) {
+      delete saved.settingsLevel;
+      delete saved.libraryPreview;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

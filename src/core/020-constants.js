@@ -135,8 +135,6 @@ export const DEFAULTS = {
   searchNoteText: true,
   // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
   propertiesSort: 'name',
-  // Settings shown: 'basic', the everyday ones, or 'all'.
-  settingsLevel: 'basic',
   // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
   libraryLayout: 'auto',
   recentSearches: [],
@@ -149,7 +147,6 @@ export const DEFAULTS = {
   artworkSize: '',
   iconMode: 'auto',
   inspectorClick: 'shown',
-  libraryPreview: false,
   // [{ title, items: [{ kind, id | path }] }] — empty means "derive a
   // starting layout from the vault the first time it's shown".
   librarySections: [],
@@ -241,7 +238,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 26,
+  settingsVersion: 27,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},
