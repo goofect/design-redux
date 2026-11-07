@@ -7,7 +7,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
-import { byName } from '../core/030-helpers-art.js';
+import { byName } from '../core/040-sorting.js';
 import { parseDateInput, typeInfoOf } from '../core/045-helpers-properties.js';
 import { bulkCount, renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { noteProps, sameValue } from '../core/073-notes.js';

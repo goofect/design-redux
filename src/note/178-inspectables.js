@@ -11,9 +11,8 @@
 
 import { parseYaml, setIcon, stringifyYaml } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
-import { drawNoteArt, leadProperty } from '../core/030-helpers-art.js';
-import { relativeDay } from '../core/040-helpers-sorting.js';
-import { plainMarkdownLine } from '../core/047-helpers-text.js';
+import { drawNoteArt, leadProperty } from '../core/030-art.js';
+import { plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
 import { requestCanvasSave } from '../core/079-canvas-adapter.js';
 import { sameTarget } from '../core/084-workspace-coordinator.js';
 

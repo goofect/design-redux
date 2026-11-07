@@ -9,7 +9,7 @@
 
 import { Menu } from 'obsidian';
 import { HIDDEN_MENU_ITEMS, ONE_PAGE_MENU_ITEMS } from '../core/020-constants.js';
-import { around } from '../core/030-helpers-art.js';
+import { around } from '../core/034-pages.js';
 import { Feature } from '../core/080-feature.js';
 
 export class MenuFilter extends Feature {

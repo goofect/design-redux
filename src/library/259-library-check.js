@@ -18,14 +18,14 @@
 
 import { setIcon, TFile, TFolder } from 'obsidian';
 import { ALBUM_TYPES } from '../core/020-constants.js';
-import { byName } from '../core/030-helpers-art.js';
-import { asButton, noteTags, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
-import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { byName } from '../core/040-sorting.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
+import { fmGet, noteTags, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { Library } from './130-browse-filters.js';
+import { Library } from './130-library-feature.js';
 import { FolderPicker } from '../ui/230-pickers.js';
 import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
 

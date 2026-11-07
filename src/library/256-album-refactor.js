@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
-import { byName } from '../core/030-helpers-art.js';
+import { byName } from '../core/040-sorting.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { addActionItems } from '../core/078-actions.js';

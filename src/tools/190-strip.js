@@ -8,9 +8,13 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
-import { albumNeighbours, canStep, drawFolderArt, drawNoteArt, isBrowseView, leadProperty, pageFile, pageLeaf, showMenuAt, showTargetMenu, step, valueText } from '../core/030-helpers-art.js';
-import { asButton, onActivate, relativeDay } from '../core/040-helpers-sorting.js';
+import { drawFolderArt, drawNoteArt, leadProperty, valueText } from '../core/030-art.js';
+import { canStep, isBrowseView, pageFile, pageLeaf, step } from '../core/034-pages.js';
+import { showMenuAt, showTargetMenu } from '../core/036-menus.js';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
+import { relativeDay } from '../core/047-helpers-text.js';
+import { albumNeighbours } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, applies } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';

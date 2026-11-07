@@ -7,11 +7,11 @@
 
 import { AbstractInputSuggest, Notice, Platform, PluginSettingTab, setIcon, Setting, TFolder } from 'obsidian';
 import { DEFAULTS } from '../core/020-constants.js';
-import { byName } from '../core/030-helpers-art.js';
 import { normalHex } from '../core/031-colours.js';
-import { roveFocus } from '../core/040-helpers-sorting.js';
+import { byName } from '../core/040-sorting.js';
+import { roveFocus } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
-import { Library } from '../library/130-browse-filters.js';
+import { Library } from '../library/130-library-feature.js';
 import { drSegmented, isAppleLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
 

@@ -6,8 +6,8 @@
 
 import { Menu, Notice, setIcon, TFolder } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { composing, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { showMenuAt } from '../core/036-menus.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames, propertyValues } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { schemaWithDefaults } from '../core/086-property-schema.js';

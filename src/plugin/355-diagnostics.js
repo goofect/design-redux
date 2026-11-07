@@ -8,7 +8,7 @@
 
 import { AbstractInputSuggest, apiVersion, Menu, Notice, Platform, setIcon, Setting } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
-import { canNest } from '../core/030-helpers-art.js';
+import { canNest } from '../core/036-menus.js';
 import { Feature } from '../core/080-feature.js';
 
 /**

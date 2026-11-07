@@ -9,11 +9,13 @@
 
 import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { fillArt, noteCoverSrc, onContextMenu, pageLeaf, showTargetMenu } from '../core/030-helpers-art.js';
-import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { fillArt, noteCoverSrc } from '../core/030-art.js';
+import { pageLeaf } from '../core/034-pages.js';
+import { onContextMenu, showTargetMenu } from '../core/036-menus.js';
+import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';
-import { Library } from './130-browse-filters.js';
+import { Library } from './130-library-feature.js';
 import { isAppleLook } from '../ui/229-components.js';
 import { SmartAlbums } from './258-smart-albums.js';
 

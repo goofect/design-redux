@@ -10,13 +10,12 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
-import { noteCoverSrc } from '../core/030-helpers-art.js';
-import { relativeDay } from '../core/040-helpers-sorting.js';
+import { noteCoverSrc } from '../core/030-art.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
-import { noteOpening } from '../core/047-helpers-text.js';
+import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { Library } from './130-browse-filters.js';
+import { Library } from './130-library-feature.js';
 import { paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */

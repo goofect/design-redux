@@ -19,7 +19,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { findSubmenu } from '../core/030-helpers-art.js';
+import { findSubmenu } from '../core/036-menus.js';
 import { activeEditorView } from '../core/050-helpers-dom.js';
 import { actionsOn, addActionEntries, editorContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';

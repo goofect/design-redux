@@ -14,7 +14,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile, TFolder } from 'obsidian';
-import { countFilesIn } from './040-helpers-sorting.js';
+import { countFilesIn } from './040-sorting.js';
 
 export class LibraryIndex {
   constructor(plugin) {

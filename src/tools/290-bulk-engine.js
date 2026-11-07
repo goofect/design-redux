@@ -9,8 +9,8 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile, TFolder } from 'obsidian';
-import { byName } from '../core/030-helpers-art.js';
-import { noteTags } from '../core/040-helpers-sorting.js';
+import { byName } from '../core/040-sorting.js';
+import { noteTags } from '../core/045-helpers-properties.js';
 import { bulkCount, tagUnder } from '../core/047-helpers-text.js';
 import { noteProps, sameValue } from '../core/073-notes.js';
 import { checkNote, fixFor, schemaFor } from '../core/086-property-schema.js';

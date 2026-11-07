@@ -7,8 +7,10 @@
 
 import { Menu, Notice, setIcon, TFolder } from 'obsidian';
 import { TAG_KEYS, TYPE_ICONS } from '../core/020-constants.js';
-import { drawFolderArt, drawNoteArt, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, collapseSearches, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { drawFolderArt, drawNoteArt } from '../core/030-art.js';
+import { onContextMenu, showMenuAt } from '../core/036-menus.js';
+import { collapseSearches } from '../core/040-sorting.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { rankNote, searchWords, textExcerpt } from '../core/048-search-rank.js';
 import { noteProps } from '../core/073-notes.js';

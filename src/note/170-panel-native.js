@@ -7,7 +7,7 @@
 /* its property block while the panel holds it.                        */
 
 import { setIcon } from 'obsidian';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { noteProps } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';
 

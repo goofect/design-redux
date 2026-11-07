@@ -9,8 +9,8 @@
 
 import { Menu, normalizePath, Notice, Platform, setIcon } from 'obsidian';
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { composing, menuGroup } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { menuGroup } from '../core/036-menus.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { fmGet, knownPropertyNames, typeInfoOf } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { PanelSection } from '../core/082-panel-section.js';

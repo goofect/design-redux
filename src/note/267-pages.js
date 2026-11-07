@@ -14,8 +14,8 @@
 import { StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 import { Menu, Notice, setIcon, TFile } from 'obsidian';
-import { showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { showMenuAt } from '../core/036-menus.js';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
 import { bodyStart, hiddenRanges, nameFromText, newPageName, openPage, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from '../core/090-pages.js';

@@ -1,7 +1,7 @@
 /* Classes stable enough to anchor a dropped icon to. */
 
 import { editorLivePreviewField, MarkdownView, setIcon } from 'obsidian';
-import { composing } from './030-helpers-art.js';
+import { composing } from './042-controls.js';
 
 export const HEADER_ANCHORS = [
   'workspace-tab-header-container-inner',

@@ -8,8 +8,9 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, setIcon, TFile, TFolder } from 'obsidian';
-import { blankLook, drawFolderArt, onContextMenu } from '../core/030-helpers-art.js';
-import { asButton, iconWord, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { blankLook, drawFolderArt } from '../core/030-art.js';
+import { onContextMenu } from '../core/036-menus.js';
+import { asButton, iconWord, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { AlbumStructure } from './257-album-structure.js';

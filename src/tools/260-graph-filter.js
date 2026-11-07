@@ -12,8 +12,7 @@
 
 import { setIcon } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
-import { composing } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames, propertyValues } from '../core/045-helpers-properties.js';
 import { attachSuggest } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';

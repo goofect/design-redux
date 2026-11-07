@@ -4,7 +4,7 @@
 
 import { normalizePath, Notice, Plugin, TFolder } from 'obsidian';
 import { BROWSE_VIEW, DEFAULTS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { liveViews } from '../core/030-helpers-art.js';
+import { liveViews } from '../core/034-pages.js';
 import { propertyLabel } from '../core/045-helpers-properties.js';
 import { Pins } from '../core/060-pins.js';
 import { Lengths } from '../core/065-lengths.js';
@@ -18,7 +18,7 @@ import { Appearance } from '../core/085-appearance.js';
 import { ListKeys } from '../note/105-list-keys.js';
 import { SidebarDrop } from '../library/107-sidebar-drop.js';
 import { BrowseView } from '../library/120-browse-view.js';
-import { Library } from '../library/130-browse-filters.js';
+import { Library } from '../library/130-library-feature.js';
 import { ActionsMenu } from '../tools/140-actions-menu.js';
 import { NotePage } from '../library/140-note-page.js';
 import { PropertyLinks } from '../note/165-panel-references.js';

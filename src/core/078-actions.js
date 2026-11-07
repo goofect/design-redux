@@ -27,7 +27,8 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { isBrowseView, menuGroup, pageFolder, pageLeaf } from './030-helpers-art.js';
+import { isBrowseView, pageFolder, pageLeaf } from './034-pages.js';
+import { menuGroup } from './036-menus.js';
 import { pickedOnCanvas } from './079-canvas-adapter.js';
 
 /** The note a command acts on: the one open. */

@@ -11,7 +11,9 @@
 
 import { Menu } from 'obsidian';
 import { LIBRARY_VIEW } from '../core/020-constants.js';
-import { byName, liveViews, showMenuAt } from '../core/030-helpers-art.js';
+import { liveViews } from '../core/034-pages.js';
+import { showMenuAt } from '../core/036-menus.js';
+import { byName } from '../core/040-sorting.js';
 import { fmGet, plainValue } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -19,7 +21,7 @@ import { Feature } from '../core/080-feature.js';
 import { LibraryView } from './100-library.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { BrowseView } from './120-browse-view.js';
-import { Library } from './130-browse-filters.js';
+import { Library } from './130-library-feature.js';
 import { ComparePicker, NamePrompt } from '../ui/230-pickers.js';
 
 export class SmartScreen extends BrowseScreen {

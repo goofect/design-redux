@@ -12,7 +12,7 @@
 /* ------------------------------------------------------------------ */
 
 import { setIcon } from 'obsidian';
-import { asButton, onActivate } from './040-helpers-sorting.js';
+import { asButton, onActivate } from './042-controls.js';
 
 export class PanelSection {
   constructor(panel) {

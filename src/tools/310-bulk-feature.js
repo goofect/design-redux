@@ -1,5 +1,5 @@
 import { TFile, TFolder } from 'obsidian';
-import { pageFolder } from '../core/030-helpers-art.js';
+import { pageFolder } from '../core/034-pages.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { movedPath } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';

@@ -7,10 +7,11 @@
 /* arrangement outlives the files being tidied.                        */
 /* ------------------------------------------------------------------ */
 
-import { TFolder } from 'obsidian';
+import { TFile, TFolder } from 'obsidian';
 import { LIBRARY_MORE } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
+import { sortByOrder } from './040-sorting.js';
 import { schemasFromDefaults } from './086-property-schema.js';
 
 /**
@@ -514,3 +515,23 @@ export class Orders {
   }
 }
 
+/**
+ * The notes of the album a file is in, in the album's order — its own
+ * arrangement if it has one on, otherwise the shared order. The folder
+ * note stands for the album, so it isn't one of them.
+ */
+export function albumSequence(plugin, file) {
+  const folder = file && file.parent;
+  if (!folder) return [];
+  const files = (folder.children || []).filter((c) => c instanceof TFile && !plugin.isFolderNote(c));
+  const sort = plugin.settings.defaultSort || 'name';
+  return plugin.orders.arrangeAlbum(folder, files, (list) => sortByOrder(list, sort));
+}
+
+/** The note before and after one in its album. */
+export function albumNeighbours(plugin, file) {
+  const list = albumSequence(plugin, file);
+  const at = list.indexOf(file);
+  if (at === -1) return { previous: null, next: null, index: -1, total: list.length };
+  return { previous: list[at - 1] || null, next: list[at + 1] || null, index: at, total: list.length };
+}

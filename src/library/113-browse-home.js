@@ -4,8 +4,9 @@
 /* The home screen: its shelves, and the order they are shown in.     */
 /* ------------------------------------------------------------------ */
 
-import { drawNoteArt, onContextMenu } from '../core/030-helpers-art.js';
-import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { drawNoteArt } from '../core/030-art.js';
+import { onContextMenu } from '../core/036-menus.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { homeShelves } from './109-home-shelves.js';

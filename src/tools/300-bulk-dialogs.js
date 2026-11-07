@@ -5,8 +5,7 @@
  */
 
 import { Modal, setIcon, TFile, TFolder } from 'obsidian';
-import { composing } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { plainValue, valueList } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { attachSuggest } from '../core/050-helpers-dom.js';

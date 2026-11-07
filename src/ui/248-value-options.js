@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Modal, setIcon } from 'obsidian';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { OPTION_COLOURS, optionFor, withOption } from '../core/088-property-options.js';
 
 /* A Lucide icon's name, as opposed to an emoji. */

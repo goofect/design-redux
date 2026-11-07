@@ -6,10 +6,12 @@
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon, TFolder } from 'obsidian';
-import { blankLook, byName, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc, onContextMenu } from '../core/030-helpers-art.js';
-import { asButton, onActivate, relativeDay, roveFocus } from '../core/040-helpers-sorting.js';
+import { blankLook, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty, noteCoverSrc } from '../core/030-art.js';
+import { onContextMenu } from '../core/036-menus.js';
+import { byName } from '../core/040-sorting.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
-import { noteOpening, plainMarkdownLine } from '../core/047-helpers-text.js';
+import { noteOpening, plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { RowValues } from './122-browse-editing.js';

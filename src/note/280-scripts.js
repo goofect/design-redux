@@ -14,7 +14,7 @@ import { syntaxTree } from '@codemirror/language';
 import { EditorSelection, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin } from '@codemirror/view';
 import { Platform } from 'obsidian';
-import { findSubmenu } from '../core/030-helpers-art.js';
+import { findSubmenu } from '../core/036-menus.js';
 import { activeEditorView, rerenderReading, scriptLivePreview } from '../core/050-helpers-dom.js';
 import { addActionEntries, editorContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';

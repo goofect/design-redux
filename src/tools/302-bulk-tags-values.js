@@ -4,8 +4,7 @@
 /* Everywhere they appear, in properties and in text.                 */
 /* ------------------------------------------------------------------ */
 
-import { vaultTags } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames, propertyValues } from '../core/045-helpers-properties.js';
+import { knownPropertyNames, propertyValues, vaultTags } from '../core/045-helpers-properties.js';
 import { bulkCount, renameTagText } from '../core/047-helpers-text.js';
 import { tagNameProblem } from './288-bulk-values.js';
 import { bulkNotice, bulkTail, nameList, notesChanged } from './290-bulk-engine.js';

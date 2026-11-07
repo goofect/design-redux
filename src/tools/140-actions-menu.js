@@ -8,10 +8,10 @@
 
 import { Menu, Notice } from 'obsidian';
 import { NAV_BUTTONS, RIBBON_ACTIONS, TAB_HEADER } from '../core/020-constants.js';
-import { iconNameOf } from '../core/030-helpers-art.js';
-import { makeTrigger } from '../core/040-helpers-sorting.js';
+import { makeTrigger } from '../core/042-controls.js';
 import { makeHeaderDraggable, parkAt, placeInHeader, settleHeader, unpark } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
+
 
 export class ActionsMenu extends Feature {
   constructor(plugin) {
@@ -150,3 +150,10 @@ export class ActionsMenu extends Feature {
 ActionsMenu.settingKey = 'navDropdown';
 ActionsMenu.desktopOnly = true;
 
+/** Recover a lucide icon name from a button's inline svg. */
+export function iconNameOf(btn) {
+  const svg = btn.querySelector('svg');
+  if (!svg) return null;
+  const cls = Array.from(svg.classList).find((c) => c !== 'svg-icon');
+  return cls ? cls.replace(/^lucide-/, '') : null;
+}

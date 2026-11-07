@@ -8,8 +8,11 @@
 
 import { Menu, Notice, Scope, setIcon, TFile, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, LIBRARY_HOVER_SOURCE, TAG_KEYS } from '../core/020-constants.js';
-import { blankLook, byName, canStep, fillArt, leafHistory, onContextMenu, showMenuAt, showTargetMenu, step } from '../core/030-helpers-art.js';
-import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus, TABLE_SORTS } from '../core/040-helpers-sorting.js';
+import { blankLook, fillArt } from '../core/030-art.js';
+import { canStep, leafHistory, step } from '../core/034-pages.js';
+import { onContextMenu, showMenuAt, showTargetMenu } from '../core/036-menus.js';
+import { byName, TABLE_SORTS } from '../core/040-sorting.js';
+import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus } from '../core/042-controls.js';
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';

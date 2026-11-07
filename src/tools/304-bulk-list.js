@@ -6,8 +6,9 @@
 
 import { Menu, Modal, setIcon, TFolder } from 'obsidian';
 import { TYPE_ICONS } from '../core/020-constants.js';
-import { byName, composing, onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { onContextMenu, showMenuAt } from '../core/036-menus.js';
+import { byName } from '../core/040-sorting.js';
+import { asButton, composing, onActivate, roveFocus } from '../core/042-controls.js';
 import { plainValue } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';

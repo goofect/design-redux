@@ -7,9 +7,11 @@
 
 import { ItemView, Menu, setIcon } from 'obsidian';
 import { BROWSE_VIEW, TILE_GROUPS } from '../core/020-constants.js';
-import { byName, composing, liveViews, showMenuAt, sortByOrder } from '../core/030-helpers-art.js';
-import { asButton, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, noteTags, onActivate, OWN_ORDER, propertyFilterLabel, SORTS, TABLE_SORTS, vaultTags } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames, plainValue, propertyValues } from '../core/045-helpers-properties.js';
+import { liveViews } from '../core/034-pages.js';
+import { showMenuAt } from '../core/036-menus.js';
+import { byName, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, OWN_ORDER, propertyFilterLabel, sortByOrder, SORTS, TABLE_SORTS } from '../core/040-sorting.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
+import { knownPropertyNames, noteTags, plainValue, propertyValues, vaultTags } from '../core/045-helpers-properties.js';
 import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseView } from './120-browse-view.js';

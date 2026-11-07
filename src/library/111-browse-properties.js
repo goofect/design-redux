@@ -7,8 +7,8 @@
 
 import { Menu, setIcon } from 'obsidian';
 import { BROWSE_VIEW, TAG_KEYS, TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { onContextMenu, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { onContextMenu, showMenuAt } from '../core/036-menus.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { typeOfProperty } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';

@@ -9,10 +9,10 @@
 
 import { FuzzySuggestModal, Modal, setIcon, TFolder } from 'obsidian';
 import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
-import { blankLook, composing, COVER_SWATCHES, fallbackTint, fillArt, paintTint } from '../core/030-helpers-art.js';
+import { blankLook, COVER_SWATCHES, fallbackTint, fillArt, paintTint } from '../core/030-art.js';
 import { normalHex } from '../core/031-colours.js';
 import { COVER_DESIGNS, coverDesignById, drawnArt, namedCoverDesign } from '../core/032-drawn-covers.js';
-import { iconForFile, roveFocus } from '../core/040-helpers-sorting.js';
+import { composing, iconForFile, roveFocus } from '../core/042-controls.js';
 
 export class ImagePicker extends FuzzySuggestModal {
   constructor(app, onChoose) {

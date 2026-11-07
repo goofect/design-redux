@@ -5,8 +5,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { composing } from '../core/030-helpers-art.js';
-import { onActivate } from '../core/040-helpers-sorting.js';
+import { composing, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { isBlank, LIST_TYPES, parseTypedValue, propertyType } from './288-bulk-values.js';

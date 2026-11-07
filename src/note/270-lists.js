@@ -18,7 +18,7 @@
 import { syntaxTree } from '@codemirror/language';
 import { Prec, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, keymap, ViewPlugin } from '@codemirror/view';
-import { findSubmenu } from '../core/030-helpers-art.js';
+import { findSubmenu } from '../core/036-menus.js';
 import { rerenderReading } from '../core/050-helpers-dom.js';
 import { addActionEntries, editorContext } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';

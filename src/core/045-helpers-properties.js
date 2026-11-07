@@ -270,3 +270,38 @@ export function typeOfProperty(app, key) {
     return 'text';
   }
 }
+
+/* -- filters ---------------------------------------------------------- */
+
+/** A note's tags, lower case and without the #, from its text and its properties. */
+export function noteTags(cache) {
+  if (!cache) return [];
+  const out = new Set();
+  (cache.tags || []).forEach((t) => {
+    const tag = String(t.tag || '').replace(/^#/, '').trim().toLowerCase();
+    if (tag) out.add(tag);
+  });
+  const fm = cache.frontmatter || {};
+  ['tags', 'tag'].forEach((key) => {
+    const raw = fm[key];
+    const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/[,\s]+/) : [];
+    list.forEach((t) => {
+      const tag = String(t).replace(/^#/, '').trim().toLowerCase();
+      if (tag) out.add(tag);
+    });
+  });
+  return Array.from(out);
+}
+
+/** Every tag in the vault with how many notes carry it, most used first. */
+export function vaultTags(app) {
+  const counts = new Map();
+  app.vault.getMarkdownFiles().forEach((file) => {
+    noteTags(app.metadataCache.getFileCache(file)).forEach((tag) =>
+      counts.set(tag, (counts.get(tag) || 0) + 1)
+    );
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([tag, count]) => ({ tag, count }));
+}

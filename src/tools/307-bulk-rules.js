@@ -11,8 +11,8 @@
 /* ------------------------------------------------------------------ */
 
 import { Modal, Notice, setIcon, TFile } from 'obsidian';
-import { asButton, noteTags, onActivate } from '../core/040-helpers-sorting.js';
-import { parseDateInput } from '../core/045-helpers-properties.js';
+import { asButton, onActivate } from '../core/042-controls.js';
+import { noteTags, parseDateInput } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
 import { Feature } from '../core/080-feature.js';

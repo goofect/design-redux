@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
-import { listKeys } from '../core/040-helpers-sorting.js';
+import { listKeys } from '../core/042-controls.js';
 import { Feature } from '../core/080-feature.js';
 
 /* Previews from the lists, which need no key held to show. */

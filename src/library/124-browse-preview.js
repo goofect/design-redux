@@ -10,8 +10,8 @@
 /* ------------------------------------------------------------------ */
 
 import { Platform, setIcon } from 'obsidian';
-import { albumKindOf, drawFolderArt } from '../core/030-helpers-art.js';
-import { asButton, iconWord, onActivate } from '../core/040-helpers-sorting.js';
+import { albumKindOf, drawFolderArt } from '../core/030-art.js';
+import { asButton, iconWord, onActivate } from '../core/042-controls.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { BrowseRows } from './123-browse-rows.js';
 import { AlbumStructure } from './257-album-structure.js';

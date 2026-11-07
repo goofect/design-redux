@@ -6,14 +6,16 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, normalizePath, Notice, Platform, setIcon, TFile } from 'obsidian';
-import { byName, composing, coverGen, showMenuAt } from '../core/030-helpers-art.js';
-import { asButton, edgeScroll, onActivate, roveFocus } from '../core/040-helpers-sorting.js';
+import { coverGen } from '../core/030-art.js';
+import { showMenuAt } from '../core/036-menus.js';
+import { byName } from '../core/040-sorting.js';
+import { asButton, composing, edgeScroll, onActivate, roveFocus } from '../core/042-controls.js';
 import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
 import { schemaFor } from '../core/086-property-schema.js';
 import { BrowseSorting } from './121-browse-sorting.js';
-import { Library } from './130-browse-filters.js';
+import { Library } from './130-library-feature.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { paintValue } from '../ui/248-value-options.js';
 import { PropertyClipboard } from '../ui/250-property-clipboard.js';

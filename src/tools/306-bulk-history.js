@@ -8,7 +8,7 @@
 /* back for that one value, the rest left as they are.                 */
 /* ------------------------------------------------------------------ */
 
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { diffProps, historyOf, withEntry } from '../core/089-property-history.js';

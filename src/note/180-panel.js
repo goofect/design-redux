@@ -11,7 +11,7 @@
 
 import { MarkdownView, Notice, Platform, Setting } from 'obsidian';
 import { INSPECTOR_VIEW } from '../core/020-constants.js';
-import { makeTrigger } from '../core/040-helpers-sorting.js';
+import { makeTrigger } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { openInspector } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';

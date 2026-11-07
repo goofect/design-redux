@@ -8,8 +8,8 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView } from 'obsidian';
-import { albumNeighbours } from '../core/030-helpers-art.js';
-import { makeTrigger } from '../core/040-helpers-sorting.js';
+import { makeTrigger } from '../core/042-controls.js';
+import { albumNeighbours } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';
 
 export class HeaderSkip extends Feature {

@@ -8,8 +8,7 @@
 import { RangeSetBuilder, StateField } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 import { ItemView, MarkdownRenderer, MarkdownView, Notice, Platform, setIcon } from 'obsidian';
-import { composing } from '../core/030-helpers-art.js';
-import { asButton, onActivate } from '../core/040-helpers-sorting.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { applyFootnoteChanges, footnoteBody, planFootnotes, scanFootnotes, trailingFootnotes } from './283-footnote-text.js';
 
