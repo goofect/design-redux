@@ -273,17 +273,17 @@ describe('Design Redux in Obsidian', function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const ws = app.workspace;
       const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-      let at = performance.now();
-      // A two-finger swipe: a few sideways wheel events, a gesture of their own.
-      const swipe = async (el, dx) => {
-        await pause(400);
+      const until = async (done) => {
+        for (let i = 0; i < 50 && !done(); i++) await pause(30);
+      };
+      // A two-finger swipe: a few sideways wheel events, after the pause that ends the one before;
+      // then until it's done what it should, or long enough to say it hasn't.
+      const swipe = async (el, dx, done) => {
+        await pause(300);
         const box = el.getBoundingClientRect();
         const target = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) || el;
-        for (let i = 0; i < 6; i++) {
-          target.dispatchEvent(new WheelEvent('wheel', { deltaX: dx / 6, deltaY: 0, bubbles: true, cancelable: true }));
-          await pause(16);
-        }
-        await pause(400);
+        for (let i = 0; i < 6; i++) target.dispatchEvent(new WheelEvent('wheel', { deltaX: dx / 6, deltaY: 0, bubbles: true, cancelable: true }));
+        await until(done);
         return target;
       };
       // What under the hand scrolls sideways, should a swipe be refused.
@@ -303,15 +303,14 @@ describe('Design Redux in Obsidian', function () {
         const out = {};
         if (ws.leftSplit.collapsed) ws.leftSplit.expand();
         if (ws.rightSplit.collapsed) ws.rightSplit.expand();
-        await pause(400);
-        await swipe(ws.leftSplit.containerEl, 120);
+        await swipe(ws.leftSplit.containerEl, 120, () => ws.leftSplit.collapsed);
         out.leftIn = ws.leftSplit.collapsed;
-        let t = await swipe(page(), -120);
+        let t = await swipe(page(), -120, () => !ws.leftSplit.collapsed);
         out.leftOut = !ws.leftSplit.collapsed;
         if (!out.leftOut) out.leftBlockedBy = blockers(t);
-        await swipe(ws.rightSplit.containerEl, -120);
+        await swipe(ws.rightSplit.containerEl, -120, () => ws.rightSplit.collapsed);
         out.rightIn = ws.rightSplit.collapsed;
-        t = await swipe(page(), 120);
+        t = await swipe(page(), 120, () => !ws.rightSplit.collapsed);
         out.rightOut = !ws.rightSplit.collapsed;
         if (!out.rightOut) out.rightBlockedBy = blockers(t);
         return out;
@@ -322,7 +321,7 @@ describe('Design Redux in Obsidian', function () {
       const album = await round();
       const noteLeaf = ws.getLeaf('tab');
       await noteLeaf.openFile(app.vault.getMarkdownFiles()[0]);
-      await pause(800);
+      await until(() => ws.activeLeaf === noteLeaf);
       const onNote = await round();
       // Left as the tests after it expect: the album's tab in front, the sidebars as they were.
       noteLeaf.detach();

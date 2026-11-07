@@ -132,24 +132,20 @@ export class ContextStrip extends Feature {
   }
 
   register() {
-    this.plugin.registerEvent(
-      this.app.workspace.on('file-open', () => this.update())
-    );
-    this.plugin.registerEvent(
-      this.app.workspace.on('active-leaf-change', () => this.update())
-    );
+    // Opening a note fires the first three together: drawn once for them.
+    const queue = () => this.queueUpdate();
+    this.plugin.registerEvent(this.app.workspace.on('file-open', queue));
+    this.plugin.registerEvent(this.app.workspace.on('active-leaf-change', queue));
     // Moving between browse screens changes neither the file nor the
     // leaf, so neither event above covers it.
-    this.plugin.registerEvent(
-      this.app.workspace.on('layout-change', () => this.update())
-    );
+    this.plugin.registerEvent(this.app.workspace.on('layout-change', queue));
     this.plugin.registerEvent(
       this.app.metadataCache.on('changed', (file) => {
-        if (file === this.app.workspace.getActiveFile()) this.update();
+        if (file === this.app.workspace.getActiveFile()) queue();
       })
     );
     // Moving notes around an album moves its neighbours.
-    this.plugin.registerEvent(this.app.vault.on('rename', () => this.update()));
+    this.plugin.registerEvent(this.app.vault.on('rename', queue));
     // What's due to be revisited changed.
     // A window made narrow or wide again: what the strip has room for.
     this.plugin.registerDomEvent(window, 'resize', () => {
@@ -264,6 +260,8 @@ export class ContextStrip extends Feature {
   }
 
   disable() {
+    if (this.frame) window.cancelAnimationFrame(this.frame);
+    this.frame = 0;
     document.body.removeClass('dr-strip-active');
     document.body.removeClass('dr-strip-side');
     document.body.style.removeProperty('--dr-strip-h');
@@ -274,6 +272,16 @@ export class ContextStrip extends Feature {
 
   sync() {
     this.update();
+  }
+
+  /** Drawn on the next frame, once however many events ask before it. */
+  queueUpdate() {
+    if (this.frame || typeof window === 'undefined') return;
+    if (typeof window.requestAnimationFrame !== 'function') return this.update();
+    this.frame = window.requestAnimationFrame(() => {
+      this.frame = 0;
+      if (this.enabled) this.update();
+    });
   }
 
   /**

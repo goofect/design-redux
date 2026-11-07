@@ -690,6 +690,29 @@ t('a name cut short shows in full under the pointer, only while it doesn’t fit
   box.remove();
 });
 
+t('the strip is drawn once for the events opening a note fires together', () => {
+  const { cs } = strip(browsePage('search'));
+  const handlers = {};
+  cs.app.workspace.on = (type, fn) => ((handlers[type] = handlers[type] || []).push(fn), {});
+  cs.app.metadataCache = { on: () => ({}) };
+  cs.app.vault = Object.assign(cs.app.vault || {}, { on: () => ({}) });
+  cs.plugin.registerEvent = () => {};
+  cs.plugin.registerDomEvent = () => {};
+  cs.plugin.settings = Object.assign(cs.plugin.settings || {}, { contextStrip: true });
+  const frames = [];
+  const raf = window.requestAnimationFrame;
+  window.requestAnimationFrame = (fn) => frames.push(fn);
+  let drawn = 0;
+  cs.update = () => drawn++;
+  cs.register();
+  ['file-open', 'active-leaf-change', 'layout-change'].forEach((type) => (handlers[type] || []).forEach((fn) => fn()));
+  assert.strictEqual(frames.length, 1, 'one frame asked for');
+  frames.shift()();
+  assert.strictEqual(drawn, 1);
+  window.requestAnimationFrame = raf;
+  cs.el.remove();
+});
+
 /* -- the sidebars swiped -------------------------------------------- */
 
 t('a sideways swipe pulls the sidebars out and pushes them back in, but not over what can still scroll that way', () => {
