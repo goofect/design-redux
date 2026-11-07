@@ -90,7 +90,7 @@ function makePlugin({ onePage = true, singleArea = true, rootLeaves = 1, pageTyp
   const library = Object.create(Library.prototype);
   library.plugin = plugin;
   plugin.feature = (Ctor) => (Ctor === Library ? library : null);
-  plugin.featureNamed = (name) => (name === 'Library' ? library : null);
+  plugin.capability = (name) => (name === 'library' ? library : null);
   return { plugin, workspace, page, calls };
 }
 

@@ -381,9 +381,9 @@ export class DesignRedux extends Plugin {
     return (this.features || []).find((f) => f instanceof Ctor) || null;
   }
 
-  /** One feature by its class's name, for a feature that mustn't import the one it asks for (that would cross the places). */
-  featureNamed(name) {
-    return (this.features || []).find((f) => f.constructor.name === name) || null;
+  /** The feature offering a capability (core/081): what features ask each other for, rather than each other's class. */
+  capability(name) {
+    return (this.features || []).find((f) => (f.constructor.offers || []).indexOf(name) !== -1) || null;
   }
 
   /** A throw in one feature must not leave the others half set up. */

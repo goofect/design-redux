@@ -15,7 +15,7 @@ import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js'
 import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { Library } from './130-library-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
@@ -235,7 +235,7 @@ export class NotePage extends Feature {
         el.setAttribute('role', 'link');
         el.setAttribute('tabindex', '0');
         const go = () => {
-          const library = this.plugin.feature(Library);
+          const library = ask(this.plugin, 'library');
           if (library) library.browseMode({ mode: 'folder', path: album.path });
         };
         el.addEventListener('click', go);
@@ -273,7 +273,7 @@ export class NotePage extends Feature {
     if (s.album) {
       head.setAttribute('role', 'link');
       head.addEventListener('click', () => {
-        const library = this.plugin.feature(Library);
+        const library = ask(this.plugin, 'library');
         if (library) library.browseMode({ mode: 'folder', path: s.album.path });
       });
     }

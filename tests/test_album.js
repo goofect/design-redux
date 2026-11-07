@@ -204,8 +204,8 @@ function setup() {
     folderNote: () => null,
     folderCoverSrc: () => null,
     feature: () => null,
-    // By name, as the plugin's: through feature(), so a test's own override still answers.
-    featureNamed(n) { return this.feature(R[n] || { name: n }); },
+    // A capability (core/081), as the plugin's: through the class offering it and feature(), so a test's own override still answers.
+    capability(n) { const C = Object.values(R).find((c) => typeof c === 'function' && (c.offers || []).indexOf(n) !== -1); return C ? this.feature(C) : null; },
     refreshBrowse: () => views.forEach((view) => view.render()),
     moveFile: async (file, folderPath) => {
       await v.fileManager.renameFile(file, `${folderPath === '/' ? '' : folderPath + '/'}${file.name}`);
@@ -538,10 +538,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-track[data-path="IR/Balance.md"]').classList.contains('is-ticked'));
     // Properties…: the property tools over the notes ticked.
     const opened = [];
-    const feature = plugin.feature;
-    plugin.feature = (C) => (C && C.name === 'BulkEditing' ? { openTools: (targets, tab) => opened.push([targets.map((f) => f.basename).sort(), tab]) } : feature.call(plugin, C));
+    const capability = plugin.capability;
+    plugin.capability = (n) => (n === 'propertyTools' ? { openTools: (targets, tab) => opened.push([targets.map((f) => f.basename).sort(), tab]) } : capability.call(plugin, n));
     Array.from(bar().querySelectorAll('.dr-bulk-action')).find((b) => b.textContent === 'Properties…').click();
-    plugin.feature = feature;
+    plugin.capability = capability;
     assert.deepStrictEqual(opened, [[['Anarchy', 'Balance', 'Cooperation'], null]]);
     await view.moveTicked(v.vault.getAbstractFileByPath('IR/Theories'));
     ['Anarchy', 'Balance', 'Cooperation'].forEach((n) => assert.ok(v.vault.getAbstractFileByPath(`IR/Theories/${n}.md`), `${n} moved`));
@@ -998,7 +998,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
         fileManager: { getAvailablePathForAttachment: async (name, from) => `Attachments/${name}` },
       },
       ensureFolderNote: async () => note,
-      feature: () => ({ setCover: async (file, value) => set.push([file.path, value]), linkTo: (img) => `[[${img.name}]]` }),
+      capability: (n) => (n === 'covers' ? { setCover: async (file, value) => set.push([file.path, value]), linkTo: (img) => `[[${img.name}]]` } : null),
     };
     const drop = new R.CoverDrop(plugin);
     const art = document.body.createDiv();

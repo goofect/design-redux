@@ -452,7 +452,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       value: null,
       groupsByProperty: () => [],
       navigate() {},
-      plugin: { settings: {}, feature: () => null, featureNamed(n) { return this.feature({ name: n }); }, },
+      plugin: { settings: {}, feature: () => null, capability(n) { return this.feature({ name: n }); }, },
       propFilters: () => [],
     };
     const screen = new T.PropertiesScreen(view);
@@ -474,7 +474,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const plugin = {
       settings: { librarySections: [{ title: '', items: [{ kind: 'builtin', id: 'folders' }] }] },
       feature: () => ({ browseMode() {} }),
-      featureNamed(n) { return this.feature({ name: n }); },
+      capability(n) { return this.feature({ name: n }); },
       pins: { has: () => false, files: () => [], folders: () => [], all: () => [] },
     };
     const app = {
@@ -503,7 +503,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const plugin = {
       settings: { pinsExpanded: false, librarySections: [{ title: '', items: [{ kind: 'builtin', id: 'bookmarks' }] }] },
       feature: () => ({ browseMode() { throw new Error('navigated'); } }),
-      featureNamed(n) { return this.feature({ name: n }); },
+      capability(n) { return this.feature({ name: n }); },
       pins: { has: () => false, files: () => [], folders: () => [], all: () => [] },
       saveData() {},
     };
@@ -537,7 +537,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       isFolderNote: () => false,
       folderCoverSrc: () => null,
       feature: () => null,
-      featureNamed(n) { return this.feature({ name: n }); },
+      capability(n) { return this.feature({ name: n }); },
       registerEvent() {},
       registerDomEvent: (el, type, fn) => el.addEventListener(type, fn),
       register() {},

@@ -91,7 +91,12 @@ Coffee N' Christmas.
   (a method on the plugin), never patches a class.
 - Features tell each other through workspace events where they can
   (`design-redux:renamed`, `design-redux:property-renamed`,
-  `design-redux:panel-changed`).
+  `design-redux:panel-changed`). Where one needs another's work, it asks
+  for a capability, `ask(plugin, 'albums')` (core/081: `CAPABILITIES` lists
+  them, a feature offers one with `X.offers = ['albums']`), never imports
+  the other's class; a view is found by its type (`liveViews`,
+  `activeViewOfType`, `isBrowseView`). A new capability goes on the list;
+  `tests/test_lifecycle.js` checks each has one feature offering it.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel

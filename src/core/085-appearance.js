@@ -101,3 +101,5 @@ export class Appearance extends Feature {
     new Notice(message);
   }
 }
+
+Appearance.offers = ['look'];

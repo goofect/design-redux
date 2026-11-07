@@ -44,13 +44,16 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
   - make an element act as a button: `asButton`;
   - follow a change made by hand on a canvas: `afterCanvasChange`, `glideAndSettle`,
     `saveCanvas`.
-- **Features tell each other through workspace events** where they can. A feature in
-  another place is asked for by name, `plugin.featureNamed('X')` (a lifecycle test checks
-  every name is a feature), and the bulk engine's notice, result tail and rename-in-place
-  are its own methods (`plugin.bulk.notify`, `.tail`, `.renameInPlace`), so no place
-  imports another's.
-- **Pairs of pieces that use each other:** 3, down from 21, all in the library, each a
-  feature and the view it draws or asks after.
+- **Features tell each other through workspace events** where they can. Where one needs
+  another's work it asks for a capability, `ask(plugin, 'albums')`: `core/081` lists the
+  eleven, each feature says what it offers (`X.offers`), and a lifecycle test checks each
+  has one feature offering it and each asked for is listed. So no feature imports
+  another's class; views are found by their type. The bulk engine's notice, result tail
+  and rename-in-place are its own methods (`plugin.bulk.notify`, `.tail`,
+  `.renameInPlace`).
+- **Pairs of pieces that use each other:** none, down from 21.
+- **Helpers by concern:** covers and art (`030`), the page and its history (`034`), menus
+  and touch (`036`), sorting (`040`), controls: buttons, keys, focus (`042`).
 - **The largest pieces now:** `290-bulk-engine` (1,605 lines), `120-browse-view` (1,173),
   `110-browse-screens` (1,045), `285-footnotes` (994), `301-bulk-properties` (969),
   `262-graph-routes` (964).

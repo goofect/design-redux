@@ -522,3 +522,5 @@ export class PropertyClipboard extends Feature {
     }).open();
   }
 }
+
+PropertyClipboard.offers = ['clipboard'];

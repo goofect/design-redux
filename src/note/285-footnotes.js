@@ -246,3 +246,4 @@ export class Footnotes extends Feature {
 }
 
 Footnotes.settingKey = 'footnotes';
+Footnotes.offers = ['footnotes'];

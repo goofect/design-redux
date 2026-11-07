@@ -24,10 +24,10 @@ import { fmGet, noteTags, plainValue, valueList } from '../core/045-helpers-prop
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { Library } from './130-library-feature.js';
 import { FolderPicker } from '../ui/230-pickers.js';
-import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
+import { ALBUM_KEYS } from './257-album-structure.js';
 
 export const LIBRARY_DEEP = 5;
 
@@ -59,7 +59,7 @@ export class ReportScreen extends BrowseScreen {
 
   render(root) {
     const view = this.view;
-    const check = this.plugin.feature(LibraryCheck);
+    const check = ask(this.plugin, 'libraryCheck');
     view.renderTitleBar(root, this.title());
     if (!check || !check.enabled) {
       root.createDiv({ cls: 'dr-empty', text: 'Looking the library over is switched off in settings.' });
@@ -133,7 +133,7 @@ export class InboxScreen extends BrowseScreen {
 
   render(root) {
     const view = this.view;
-    const check = this.plugin.feature(LibraryCheck);
+    const check = ask(this.plugin, 'libraryCheck');
     view.renderTitleBar(root, this.title());
     const notes = check && check.enabled ? check.unclassified().filter((f) => view.matches(f.basename)) : [];
     if (!view.inboxPicked) view.inboxPicked = new Set();
@@ -163,7 +163,7 @@ export class InboxScreen extends BrowseScreen {
     placed.toggleClass('is-disabled', !chosen().some((f) => suggested.has(f)));
     const show = view.action(bar, 'link', 'Show in a collection…', () => check.showIn(chosen(), () => picked.clear()));
     [move, show].forEach((b) => b.toggleClass('is-disabled', !picked.size));
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     if (!structure || !structure.enabled) show.remove();
     bar.createSpan({ cls: 'dr-inbox-count', text: picked.size ? `${picked.size} picked` : '' });
 
@@ -249,7 +249,7 @@ export class LibraryCheck extends Feature {
   }
 
   open(mode) {
-    const library = this.plugin.feature(Library);
+    const library = ask(this.plugin, 'library');
     if (library) library.browseMode({ mode });
   }
 
@@ -271,7 +271,7 @@ export class LibraryCheck extends Feature {
 
   /** Notes in no album: at the top of the vault, taken in by none; not the home note. */
   unclassified() {
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const included = new Set();
     if (structure && structure.enabled) this.folders().forEach((f) => structure.info(f).includes.forEach((t) => included.add(t)));
     const home = String(this.settings.homePath || '');
@@ -299,7 +299,7 @@ export class LibraryCheck extends Feature {
 
   /** What there is to look at: [{ target, problem, kind, section }]. */
   problems() {
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const shows = !!(structure && structure.enabled);
     const out = [];
     const add = (section, target, kind, problem) => out.push({ section, target, kind, problem });
@@ -433,7 +433,7 @@ export class LibraryCheck extends Feature {
   /** An album opened; a note in no album, to the inbox; anything else, opened. */
   goTo(p) {
     if (p.target instanceof TFolder) {
-      const library = this.plugin.feature(Library);
+      const library = ask(this.plugin, 'library');
       if (library) library.browseMode({ mode: 'folder', path: p.target.path });
       return;
     }
@@ -446,7 +446,7 @@ export class LibraryCheck extends Feature {
    * naming it. Those with nothing to go on are left out.
    */
   suggestions(notes) {
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const albumOf = new Map();
     this.folders().forEach((f) => {
       (f.children || []).forEach((c) => this.isNote(c) && albumOf.set(c.path, f));
@@ -527,7 +527,7 @@ export class LibraryCheck extends Feature {
 
   /** The notes listed in an album's includes, where they are, as one step of Undo. */
   async showFilesIn(files, folder) {
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     if (!files.length || !structure || !structure.enabled) return false;
     {
       const note = this.plugin.folderNote(folder);
@@ -547,3 +547,4 @@ export class LibraryCheck extends Feature {
 }
 
 LibraryCheck.settingKey = 'libraryCheck';
+LibraryCheck.offers = ['libraryCheck'];

@@ -621,17 +621,22 @@ const update = process.argv.includes('--update');
     });
   });
 
-  await t('every feature asked for by name (featureNamed) is one the plugin has', () => {
-    const have = new Set(plugin.features.map((f) => f.constructor.name));
+  await t('capabilities: each on the list offered by one feature, each offered on the list, each asked for on it', () => {
+    const list = fs.readFileSync(path.join(__dirname, '..', 'src', 'core', '081-capabilities.js'), 'utf8');
+    const listed = [...list.slice(list.indexOf('CAPABILITIES = {'), list.indexOf('};', list.indexOf('CAPABILITIES = {'))).matchAll(/^  ([A-Za-z]+):/gm)].map((m) => m[1]);
+    assert.ok(listed.length > 5, 'the list is read');
+    const offered = plugin.features.flatMap((f) => (f.constructor.offers || []).map((n) => [n, f.constructor.name]));
+    listed.forEach((n) => assert.strictEqual(offered.filter(([o]) => o === n).length, 1, `one feature offers ${n}`));
+    assert.deepStrictEqual(offered.filter(([n]) => listed.indexOf(n) === -1), [], 'offered but not on the list');
     const asked = new Set();
     const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
       const p = path.join(dir, e.name);
       if (e.isDirectory()) return walk(p);
-      for (const m of fs.readFileSync(p, 'utf8').matchAll(/featureNamed\('([A-Za-z0-9_]+)'\)/g)) asked.add(m[1]);
+      for (const m of fs.readFileSync(p, 'utf8').matchAll(/\bask\([^,()]+, '([A-Za-z]+)'\)/g)) asked.add(m[1]);
     });
     walk(path.join(__dirname, '..', 'src'));
-    assert.ok(asked.size > 0, 'some are asked for');
-    assert.deepStrictEqual([...asked].filter((n) => !have.has(n)), [], 'names no feature has: a typo, or a class renamed');
+    assert.ok(asked.size > 5, 'some are asked for');
+    assert.deepStrictEqual([...asked].filter((n) => listed.indexOf(n) === -1), [], 'asked for but not on the list: a typo, or one taken off');
   });
 
   await t('command ids, setting keys and view types are kept: hotkeys, saved settings and saved tabs hang on them', () => {

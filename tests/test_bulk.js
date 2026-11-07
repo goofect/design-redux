@@ -295,7 +295,7 @@ function makePlugin(vault) {
     folderNote: (folder) => vault.app.vault.getFileByPath(`${folder.path}/${folder.name}.md`),
     features: [],
     feature(C) { return this.features.find((f) => f instanceof C) || null; },
-    featureNamed(n) { return this.features.find((f) => f.constructor.name === n) || null; },
+    capability(n) { return this.features.find((f) => (f.constructor.offers || []).indexOf(n) !== -1) || null; },
   };
   plugin.bulk = new R.BulkEdits(plugin);
   plugin.notes = new R.Notes(plugin);

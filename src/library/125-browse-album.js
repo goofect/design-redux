@@ -12,10 +12,10 @@ import { onContextMenu } from '../core/036-menus.js';
 import { byName } from '../core/040-sorting.js';
 import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { nestByProperty } from '../core/045-helpers-properties.js';
+import { ask } from '../core/081-capabilities.js';
 import { ROOT_MODES } from './119-browse-registry.js';
 import { BrowsePreview } from './124-browse-preview.js';
 import { drIconButton, drMenu, isAppleLook } from '../ui/229-components.js';
-import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseAlbum extends BrowsePreview {
   /** Title and search, for the screens with no folder behind them. */
@@ -385,7 +385,7 @@ export class BrowseAlbum extends BrowsePreview {
 
     const info = head.createDiv({ cls: 'dr-detail-info' });
     // Above the title, small: what kind of album it is, and the way down to it.
-    const structure = folder ? this.plugin.feature(AlbumStructure) : null;
+    const structure = folder ? ask(this.plugin, 'albums') : null;
     const about = structure ? structure.info(folder) : null;
     const trail = structure && structure.enabled ? structure.trail(folder) : [];
     // The vault itself is the library, at the top of everything.

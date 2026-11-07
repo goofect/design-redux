@@ -11,7 +11,7 @@ import { normalHex } from '../core/031-colours.js';
 import { byName } from '../core/040-sorting.js';
 import { roveFocus } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
-import { Library } from '../library/130-library-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { drSegmented, isAppleLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
 
@@ -396,7 +396,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     const layoutBtn = tools.createEl('button', { text: 'Reset layout' });
     layoutBtn.setAttribute('aria-label', 'Put the library and inspector back in place');
     layoutBtn.addEventListener('click', () => {
-      const library = this.plugin.feature(Library);
+      const library = ask(this.plugin, 'library');
       if (library && library.enabled) library.resetLayout();
     });
   }

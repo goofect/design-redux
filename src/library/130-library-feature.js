@@ -10,12 +10,11 @@ import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { Appearance } from '../core/085-appearance.js';
+import { ask } from '../core/081-capabilities.js';
 import { LibraryEditor } from './090-library-editor.js';
 import { LibraryView } from './100-library.js';
 import { homeShelves } from './109-home-shelves.js';
 import { BrowseView } from './120-browse-view.js';
-import { AlbumStructure } from './257-album-structure.js';
 
 /**
  * The folder a tab's path names at `index`, of `count` shown: one name a folder, outermost first.
@@ -266,7 +265,7 @@ export class Library extends Feature {
     // everything, the albums and what's pinned; then what you opened last;
     // the rest under More, folded until wanted.
     const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
     more.push({ kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
     ['library-check', 'inbox']
@@ -337,7 +336,7 @@ export class Library extends Feature {
           this.settings.gridDensity = keys[(now + 1) % keys.length];
           this.plugin.saveData(this.settings);
           this.plugin.refreshBrowse();
-          const appearance = this.plugin.feature(Appearance);
+          const appearance = ask(this.plugin, 'look');
           if (appearance) appearance.apply();
           new Notice(`Density: ${GRID_DENSITIES[this.settings.gridDensity].toLowerCase()}`);
         },
@@ -612,4 +611,5 @@ export class Library extends Feature {
 }
 
 Library.settingKey = 'library';
+Library.offers = ['library'];
 

@@ -279,3 +279,4 @@ export class BulkEditing extends Feature {
   }
 }
 
+BulkEditing.offers = ['propertyTools'];

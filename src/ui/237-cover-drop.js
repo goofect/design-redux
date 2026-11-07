@@ -12,7 +12,7 @@
 import { Notice, TFile } from 'obsidian';
 import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
 import { Feature } from '../core/080-feature.js';
-import { CoverImages } from './235-covers.js';
+import { ask } from '../core/081-capabilities.js';
 
 export const COVER_TARGETS = '[data-cover-folder], [data-cover-note]';
 
@@ -131,7 +131,7 @@ export class CoverDrop extends Feature {
   async setCover(target, image) {
     try {
       const note = await this.coverNote(target);
-      const covers = this.plugin.feature(CoverImages);
+      const covers = ask(this.plugin, 'covers');
       if (!note || !covers) return;
       await covers.setCover(note, covers.linkTo(image, note));
     } catch (err) {

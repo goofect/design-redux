@@ -140,7 +140,7 @@ const plugin = {
   folderNote: () => null,
   folderCoverSrc: () => null,
   feature: () => null,
-  featureNamed(n) { return this.feature({ name: n }); },
+  capability(n) { return this.feature({ name: n }); },
   propertyLabel: (k) => k,
 };
 const app = {

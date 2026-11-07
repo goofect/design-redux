@@ -16,10 +16,19 @@ import { BROWSE_VIEW } from './020-constants.js';
  * getLeavesOfType has to be checked before its methods are used.
  */
 export function liveViews(app, type, ctor) {
+  // Without the class, by the view's type: so a view can be found by what imports neither.
+  const live = (view) => (ctor ? view instanceof ctor : !!view && typeof view.getViewType === 'function' && view.getViewType() === type);
   return app.workspace
     .getLeavesOfType(type)
-    .filter((leaf) => !leaf.isDeferred && leaf.view instanceof ctor)
+    .filter((leaf) => !leaf.isDeferred && live(leaf.view))
     .map((leaf) => leaf.view);
+}
+
+/** The view of the tab in use, if it's of this type: getActiveViewOfType, by type rather than class. */
+export function activeViewOfType(app, type) {
+  const leaf = app.workspace.activeLeaf;
+  const view = leaf && leaf.view;
+  return view && typeof view.getViewType === 'function' && view.getViewType() === type ? view : null;
 }
 
 /* -- the page and its history --------------------------------------- */

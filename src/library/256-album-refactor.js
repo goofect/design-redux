@@ -15,8 +15,9 @@ import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js'
 import { libraryIndex } from '../core/077-library-index.js';
 import { addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { FolderPicker, NamePrompt } from '../ui/230-pickers.js';
-import { ALBUM_KEYS, AlbumStructure } from './257-album-structure.js';
+import { ALBUM_KEYS } from './257-album-structure.js';
 
 /** What's about to happen, to agree to or not. */
 export class RefactorPreview extends Modal {
@@ -242,7 +243,7 @@ export class AlbumRefactor extends Feature {
     const taken = (name) => !!this.app.vault.getAbstractFileByPath(this.pathIn(target, name));
     const lines = [`${notes.length} ${notes.length === 1 ? 'note moves' : 'notes move'} from “${folder.name}” into “${target.name}”.`];
     if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-collection moves' : 'sub-collections move'} too.`);
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const fm = this.frontmatter(note);
     const carried = mergedKeys().filter((k) => valueList(fmGet(fm, k)).length);
     if (carried.length) lines.push(`Its ${carried.join(', ')} join ${target.name}’s.`);

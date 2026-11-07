@@ -118,3 +118,4 @@ export class AlbumProperty extends Feature {
 }
 
 AlbumProperty.settingKey = 'propertyForAlbum';
+AlbumProperty.offers = ['albumProperty'];

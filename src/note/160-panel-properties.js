@@ -13,6 +13,7 @@ import { menuGroup } from '../core/036-menus.js';
 import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { fmGet, knownPropertyNames, typeInfoOf } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
+import { ask } from '../core/081-capabilities.js';
 import { PanelSection } from '../core/082-panel-section.js';
 import { optionFor } from '../core/088-property-options.js';
 import { LinkNotePicker, NamePrompt } from '../ui/230-pickers.js';
@@ -794,7 +795,7 @@ export class PropertiesSection extends PanelSection {
    */
   findEntries(key) {
     const out = { values: [], all: null };
-    const library = this.plugin.featureNamed ? this.plugin.featureNamed('Library') : null;
+    const library = ask(this.plugin, 'library');
     if (!library || !library.enabled) return out;
     // The Properties screen knows a property by Obsidian's key for it, in lower case.
     const open = (value) => library.browseMode({ mode: 'properties', property: String(key).toLowerCase(), value: value || null });
@@ -817,9 +818,9 @@ export class PropertiesSection extends PanelSection {
    */
   manageEntries(key) {
     const out = [];
-    const bulk = this.plugin.featureNamed ? this.plugin.featureNamed('BulkEditing') : null;
+    const bulk = ask(this.plugin, 'propertyTools');
     if (bulk) out.push(['Rename everywhere…', `Rename ${key} everywhere…`, 'pencil', () => bulk.openRenameProperty(key)]);
-    const album = this.plugin.featureNamed ? this.plugin.featureNamed('AlbumProperty') : null;
+    const album = ask(this.plugin, 'albumProperty');
     const file = this.file;
     if (album && album.enabled && file && album.albumNotes(file).length) {
       out.push([`Apply to ${album.albumName(file)}…`, `Apply ${key} to all of ${album.albumName(file)}…`, 'layers', () => album.apply(file, key)]);

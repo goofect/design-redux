@@ -10,23 +10,21 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu } from 'obsidian';
-import { LIBRARY_VIEW } from '../core/020-constants.js';
-import { liveViews } from '../core/034-pages.js';
+import { BROWSE_VIEW, LIBRARY_VIEW } from '../core/020-constants.js';
+import { activeViewOfType, liveViews } from '../core/034-pages.js';
 import { showMenuAt } from '../core/036-menus.js';
 import { byName } from '../core/040-sorting.js';
 import { fmGet, plainValue } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { LibraryView } from './100-library.js';
+import { ask } from '../core/081-capabilities.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { BrowseView } from './120-browse-view.js';
-import { Library } from './130-library-feature.js';
 import { ComparePicker, NamePrompt } from '../ui/230-pickers.js';
 
 export class SmartScreen extends BrowseScreen {
   get smart() {
-    const smart = this.plugin.feature(SmartAlbums);
+    const smart = ask(this.plugin, 'savedViews');
     return smart && smart.enabled ? smart : null;
   }
 
@@ -115,10 +113,10 @@ export class SmartAlbums extends Feature {
         name: 'Keep these filters as a saved view…',
         icon: 'sparkles',
         when: () => {
-          const view = this.enabled ? this.app.workspace.getActiveViewOfType(BrowseView) : null;
+          const view = this.enabled ? activeViewOfType(this.app, BROWSE_VIEW) : null;
           return !!view && view.hasFilters();
         },
-        run: () => this.askName(this.app.workspace.getActiveViewOfType(BrowseView)),
+        run: () => this.askName(activeViewOfType(this.app, BROWSE_VIEW)),
       },
     ];
   }
@@ -192,7 +190,7 @@ export class SmartAlbums extends Feature {
     // full save re-runs every feature.
     this.plugin.saveData(this.settings);
     if (typeof this.app.workspace.getLeavesOfType === 'function') {
-      liveViews(this.app, LIBRARY_VIEW, LibraryView).forEach((v) => v.render());
+      liveViews(this.app, LIBRARY_VIEW).forEach((v) => v.render());
     }
   }
 
@@ -266,7 +264,7 @@ export class SmartAlbums extends Feature {
 
   choose() {
     const items = this.list().map((a) => ({ label: a.name, note: '', a }));
-    new ComparePicker(this.app, items, 'Which saved view?', (item) => this.plugin.feature(Library).browseMode({ mode: 'smart', property: item.a.id })).open();
+    new ComparePicker(this.app, items, 'Which saved view?', (item) => ask(this.plugin, 'library').browseMode({ mode: 'smart', property: item.a.id })).open();
   }
 
   menu(evt, view, album) {
@@ -309,3 +307,4 @@ export class SmartAlbums extends Feature {
 }
 
 SmartAlbums.settingKey = 'smartAlbums';
+SmartAlbums.offers = ['savedViews'];

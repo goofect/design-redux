@@ -16,6 +16,7 @@ import { asButton, fullNameOnHover, iconWord, onActivate, roveFocus } from '../c
 import { fmGet, plainValue, propertyCounter } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ACTION_CONTEXTS } from '../core/078-actions.js';
+import { ask } from '../core/081-capabilities.js';
 import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
@@ -108,7 +109,7 @@ export class BrowseView extends BrowseAlbum {
     }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
-    const strip = typeof this.plugin.featureNamed === 'function' ? this.plugin.featureNamed('ContextStrip') : null;
+    const strip = ask(this.plugin, 'strip');
     if (strip && strip.enabled) strip.update();
     return super.setState(state, result);
   }
@@ -584,7 +585,7 @@ export class BrowseView extends BrowseAlbum {
 
   /** The property tools over some notes — those picked, found or in a saved view — rather than folders. */
   propertyToolsFor(files) {
-    const bulk = this.plugin.featureNamed('BulkEditing');
+    const bulk = ask(this.plugin, 'propertyTools');
     if (bulk && files.length) bulk.openTools(files.slice(), null);
   }
 
@@ -672,7 +673,7 @@ export class BrowseView extends BrowseAlbum {
     });
     // A value can be renamed everywhere it's used; under tags, each
     // value is a tag, renamed in notes' text as well.
-    const bulk = this.plugin.featureNamed('BulkEditing');
+    const bulk = ask(this.plugin, 'propertyTools');
     if (bulk && this.property) {
       onContextMenu(head, (evt) => {
         evt.preventDefault();

@@ -237,3 +237,4 @@ export class CoverImages extends Feature {
   }
 }
 
+CoverImages.offers = ['covers'];

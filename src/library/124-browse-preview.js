@@ -13,8 +13,8 @@ import { Platform, setIcon } from 'obsidian';
 import { albumKindOf, drawFolderArt } from '../core/030-art.js';
 import { asButton, iconWord, onActivate } from '../core/042-controls.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
+import { ask } from '../core/081-capabilities.js';
 import { BrowseRows } from './123-browse-rows.js';
-import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowsePreview extends BrowseRows {
   /** The inspector's offered and in sight, and there's room: not on a phone. */
@@ -103,7 +103,7 @@ export class BrowsePreview extends BrowseRows {
     el.createDiv({ cls: 'dr-preview-title', text: root ? this.app.vault.getName() : folder.name });
     const kind = albumKindOf(this.plugin, folder);
     el.createDiv({ cls: 'dr-preview-lead', text: kind ? kind.label : 'Collection' });
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = ask(this.plugin, 'albums');
     const about = structure && structure.enabled ? structure.info(folder).description : '';
     if (about) el.createDiv({ cls: 'dr-preview-about', text: about });
     const parent = folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent : null;

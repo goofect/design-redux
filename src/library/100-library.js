@@ -10,14 +10,12 @@
 import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
 import { fillArt, noteCoverSrc } from '../core/030-art.js';
-import { pageLeaf } from '../core/034-pages.js';
+import { isBrowseView, pageLeaf } from '../core/034-pages.js';
 import { onContextMenu, showTargetMenu } from '../core/036-menus.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { BrowseView } from './120-browse-view.js';
-import { Library } from './130-library-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { isAppleLook } from '../ui/229-components.js';
-import { SmartAlbums } from './258-smart-albums.js';
 
 export class LibraryView extends ItemView {
   constructor(leaf, plugin) {
@@ -226,7 +224,7 @@ export class LibraryView extends ItemView {
         return;
       }
       if (id === 'smart') {
-        const smart = this.plugin.feature(SmartAlbums);
+        const smart = ask(this.plugin, 'savedViews');
         if (smart) smart.renderRows(this, list);
         return;
       }
@@ -338,7 +336,7 @@ export class LibraryView extends ItemView {
   }
 
   browseMode(state) {
-    const library = this.plugin.feature(Library);
+    const library = ask(this.plugin, 'library');
     return library ? library.browseMode(state) : null;
   }
 
@@ -426,7 +424,7 @@ export class LibraryView extends ItemView {
     const view = leaf && !leaf.isDeferred ? leaf.view : null;
     const byPath = (p) => (p ? rows.find((el) => el.dataset.path === p) : null);
 
-    if (view instanceof BrowseView) {
+    if (isBrowseView(view)) {
       if (view.mode === 'folder') return byPath(view.path) || null;
       const screen = view.mode === 'property' ? 'properties' : view.mode;
       const exact =

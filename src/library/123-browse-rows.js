@@ -14,9 +14,9 @@ import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { ask } from '../core/081-capabilities.js';
 import { RowValues } from './122-browse-editing.js';
 import { paintValue } from '../ui/248-value-options.js';
-import { AlbumStructure } from './257-album-structure.js';
 
 export class BrowseRows extends RowValues {
   /* -- the list --------------------------------------------------- */
@@ -438,7 +438,7 @@ export class BrowseRows extends RowValues {
     const card = this.card(grid, folder.name, subtitle || this.countLabel(folder));
     card.dataset.path = folder.path;
     // What kind of album, small above its name.
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const kind = structure ? structure.info(folder).label : '';
     if (kind) {
       const label = card.ownerDocument.createElement('div');

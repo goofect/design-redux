@@ -15,6 +15,7 @@ import { Notice } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
 import { around, pageLeaf, singleAreaOn } from '../core/034-pages.js';
 import { Feature } from '../core/080-feature.js';
+import { ask } from '../core/081-capabilities.js';
 
 export class OnePage extends Feature {
   constructor(plugin) {
@@ -72,7 +73,7 @@ export class OnePage extends Feature {
    */
   fillEmpty() {
     if (this.filling) return;
-    const library = this.plugin.featureNamed('Library');
+    const library = ask(this.plugin, 'library');
     if (!library || !library.enabled) return;
 
     const leaf = pageLeaf(this.app);

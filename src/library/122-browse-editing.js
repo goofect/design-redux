@@ -13,13 +13,11 @@ import { asButton, composing, edgeScroll, onActivate, roveFocus } from '../core/
 import { fmGet, plainValue, typeOfProperty } from '../core/045-helpers-properties.js';
 import { moveBefore } from '../core/070-orders.js';
 import { noteProps } from '../core/073-notes.js';
+import { ask } from '../core/081-capabilities.js';
 import { schemaFor } from '../core/086-property-schema.js';
 import { BrowseSorting } from './121-browse-sorting.js';
-import { Library } from './130-library-feature.js';
 import { ConfirmModal, FolderPicker, NamePrompt } from '../ui/230-pickers.js';
 import { paintValue } from '../ui/248-value-options.js';
-import { PropertyClipboard } from '../ui/250-property-clipboard.js';
-import { AlbumStructure } from './257-album-structure.js';
 
 /* A shelf's tiles drawn at once, and then a frame at a time. */
 export const TILES_AT_ONCE = 60;
@@ -229,7 +227,7 @@ export class BrowseEditing extends BrowseSorting {
     };
     button('folder-input', 'Move to…', () => new FolderPicker(this.app, (folder) => this.moveTicked(folder)).open());
     button('list', 'Properties…', () => this.propertyToolsFor(this.tickedFiles()));
-    const clip = this.plugin.feature(PropertyClipboard);
+    const clip = ask(this.plugin, 'clipboard');
     if (clip) button('table', 'Copy as table', () => clip.copyTable(this.tickedFiles()));
     button('trash-2', 'Delete', () => this.deleteTicked(), 'mod-warning');
     button('x', 'Clear', () => {
@@ -610,7 +608,7 @@ export class BrowseEditing extends BrowseSorting {
     settings.keepOwnOrder = Object.assign({}, settings.keepOwnOrder, { pinned: true });
     this.plugin.saveData(settings);
     this.plugin.refreshBrowse();
-    const library = this.plugin.feature(Library);
+    const library = ask(this.plugin, 'library');
     if (library) library.refreshViews();
   }
 
@@ -668,7 +666,7 @@ export class BrowseEditing extends BrowseSorting {
    */
   folderTiles(root, folders, subtitle) {
     const by = this.plugin.settings.tileGroups;
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = ask(this.plugin, 'albums');
     const top = (f) => !f.parent || (f.parent.isRoot && f.parent.isRoot());
     const keyOf =
       by === 'kind' && structure && structure.enabled

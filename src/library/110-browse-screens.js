@@ -12,9 +12,8 @@ import { blankLook, drawFolderArt } from '../core/030-art.js';
 import { onContextMenu } from '../core/036-menus.js';
 import { asButton, iconWord, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { ask } from '../core/081-capabilities.js';
 import { BrowseScreen } from './108-browse-screen.js';
-import { AlbumStructure } from './257-album-structure.js';
-import { SmartAlbums } from './258-smart-albums.js';
 
 /* -- a folder, as an album ------------------------------------------ */
 
@@ -44,7 +43,7 @@ export class FolderScreen extends BrowseScreen {
       view.renderPlainHeader(root, folder);
       // In the order they were put in, where they have been.
       const folders = view.shelfFolders(folder).filter((c) => view.folderInFilter(c)).filter((c) => view.matches(c.name));
-      const structure = this.plugin.feature(AlbumStructure);
+      const structure = ask(this.plugin, 'albums');
       const shows = !!(structure && structure.enabled);
       if (shows) structure.renderCollectionHead(root, folder, view, subfolders.length);
       if (!folders.length) {
@@ -61,7 +60,7 @@ export class FolderScreen extends BrowseScreen {
     const discs = view.discsOf(folder, view.notesIn(folder));
     // What the folder note says belongs too: albums, as tiles; notes kept
     // elsewhere, as a disc of their own. Shown here, not moved.
-    const structure = view.editing ? null : this.plugin.feature(AlbumStructure);
+    const structure = view.editing ? null : ask(this.plugin, 'albums');
     const about = structure ? structure.info(folder) : null;
     const kept = discs.reduce((acc, d) => acc.concat(d.files), []);
     const elsewhere = about ? structure.included(folder, kept).filter((f) => view.inFilter(f) && view.matches(f.basename)) : [];
@@ -123,7 +122,7 @@ export class FolderScreen extends BrowseScreen {
   /** A collection's albums as a tree: each, with its kind and size, and the albums inside it beneath. */
   renderTree(root, folders, depth) {
     const view = this.view;
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const list = depth ? root : root.createDiv({ cls: 'dr-tree' });
     if (!depth) roveFocus(list, '.dr-tree-row');
     folders.forEach((f) => {
@@ -277,7 +276,7 @@ export function folderRows(view, root, folders) {
     drawFolderArt(view.plugin, row.createDiv({ cls: 'dr-search-prop-art' }), folder);
     const text = row.createDiv({ cls: 'dr-search-prop-text' });
     text.createDiv({ cls: 'dr-search-prop-title', text: folder.name });
-    const structure = view.plugin.feature(AlbumStructure);
+    const structure = ask(view.plugin, 'albums');
     const rolled = structure ? structure.rollupText(structure.rollup(structure.notesUnder(folder))) : '';
     text.createDiv({ cls: 'dr-search-prop-sub', text: rolled ? `${view.countLabel(folder)}  ·  ${rolled}` : view.countLabel(folder) });
     view.pickOrOpen(row, { folder }, () => view.openFolder(folder), false);
@@ -391,11 +390,11 @@ export class CollectionScreen extends BrowseScreen {
 export function collectionTiles(view) {
   const plugin = view.plugin;
   const items = [];
-  const smart = plugin.feature(SmartAlbums);
+  const smart = ask(plugin, 'savedViews');
   if (smart && smart.enabled) {
     smart.list().filter((album) => view.matches(album.name)).forEach((album) => items.push({ draw: (row) => view.smartCard(row, album) }));
   }
-  const structure = plugin.feature(AlbumStructure);
+  const structure = ask(plugin, 'albums');
   if (structure && structure.enabled) {
     structure.gathering().filter((f) => view.folderInFilter(f) && view.matches(f.name)).forEach((f) => items.push(f));
   }
@@ -436,7 +435,7 @@ export class SubjectsScreen extends BrowseScreen {
   render(root) {
     const view = this.view;
     view.renderTitleBar(root, this.title());
-    const structure = this.plugin.feature(AlbumStructure);
+    const structure = ask(this.plugin, 'albums');
     const subjects = structure && structure.enabled
       ? view.sortFolders(structure.ofKind('subject').filter((f) => view.folderInFilter(f) && view.matches(f.name)))
       : [];

@@ -18,16 +18,16 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, Setting, TFile } from 'obsidian';
-import { ALBUM_TYPES } from '../core/020-constants.js';
+import { ALBUM_TYPES, BROWSE_VIEW } from '../core/020-constants.js';
+import { activeViewOfType } from '../core/034-pages.js';
 import { menuGroup } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet, plainValue, rollupOf, valueList } from '../core/045-helpers-properties.js';
 import { noteProps } from '../core/073-notes.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
+import { ask } from '../core/081-capabilities.js';
 import { PanelSection } from '../core/082-panel-section.js';
-import { BrowseView } from './120-browse-view.js';
-import { Library } from './130-library-feature.js';
 import { ComparePicker, FolderPicker } from '../ui/230-pickers.js';
 
 /* The folder note properties an album is read from; each can be given another name in settings, so none has to clash with your own. */
@@ -75,7 +75,7 @@ export class PlacesSection extends PanelSection {
       row.createSpan({ cls: 'dr-mention-name', text: a.folder.name });
       if (!a.own) row.createSpan({ cls: 'dr-mention-count', text: 'includes it' });
       onActivate(row, () => {
-        const library = this.plugin.feature(Library);
+        const library = ask(this.plugin, 'library');
         if (library) library.browseMode({ mode: 'folder', path: a.folder.path });
         this.panel.close();
       });
@@ -147,7 +147,7 @@ export class AlbumStructure extends Feature {
 
   /** The album on screen in the browse view, or the open note's folder. */
   currentFolder() {
-    const view = this.app.workspace.getActiveViewOfType(BrowseView);
+    const view = activeViewOfType(this.app, BROWSE_VIEW);
     if (view && view.mode === 'folder') {
       const folder = view.folder();
       return folder && !(folder.isRoot && folder.isRoot()) ? folder : null;
@@ -497,3 +497,4 @@ export class AlbumStructure extends Feature {
 }
 
 AlbumStructure.settingKey = 'albumStructure';
+AlbumStructure.offers = ['albums'];

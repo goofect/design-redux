@@ -14,11 +14,11 @@ import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames, noteTags, plainValue, propertyValues, vaultTags } from '../core/045-helpers-properties.js';
 import { renameTagText, tagUnder } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
+import { ask } from '../core/081-capabilities.js';
 import { BrowseView } from './120-browse-view.js';
 import { ChoicePicker, FolderPicker } from '../ui/230-pickers.js';
 import { paintValue } from '../ui/248-value-options.js';
-import { ALBUM_LAYOUTS, AlbumStructure } from './257-album-structure.js';
-import { SmartAlbums } from './258-smart-albums.js';
+import { ALBUM_LAYOUTS } from './257-album-structure.js';
 
 export class BrowseSorting extends ItemView {
   /** A property, tag or value renamed by the bulk tools: what this screen shows and filters by follows. */
@@ -165,7 +165,7 @@ export class BrowseSorting extends ItemView {
       });
     }
     const smart = this.mode === 'smart' ? this.smartAlbum() : null;
-    if (smart && key !== 'own') this.plugin.feature(SmartAlbums).change(smart, { sort: key });
+    if (smart && key !== 'own') ask(this.plugin, 'savedViews').change(smart, { sort: key });
     else if (key !== 'own') {
       const folder = this.mode === 'folder' ? this.folder() : null;
       // An album's order is its own, kept by its path; other screens share one.
@@ -212,7 +212,7 @@ export class BrowseSorting extends ItemView {
 
   /** The smart album on screen, if it's one. */
   smartAlbum() {
-    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+    const smart = ask(this.plugin, 'savedViews');
     return smart && smart.enabled ? smart.byId(this.property) : null;
   }
 
@@ -347,7 +347,7 @@ export class BrowseSorting extends ItemView {
     // Covers on a screen of albums, grouped.
     if (this.mode === 'folders' || (this.mode === 'folder' && this.isShelf(this.folder()))) {
       menu.addSeparator();
-      const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+      const structure = ask(this.plugin, 'albums');
       const by = this.plugin.settings.tileGroups || '';
       Object.keys(TILE_GROUPS)
         .filter((key) => (key !== 'kind' || (structure && structure.enabled)) && (key !== 'collection' || this.mode === 'folders'))
@@ -423,7 +423,7 @@ export class BrowseSorting extends ItemView {
       () => this.pickDate(), () => (this.filterDate = null)
     );
 
-    const smart = typeof SmartAlbums === 'function' ? this.plugin.feature(SmartAlbums) : null;
+    const smart = ask(this.plugin, 'savedViews');
     if (smart) smart.addFilterItems(menu, this);
 
     if (this.hasFilters()) {
@@ -450,7 +450,7 @@ export class BrowseSorting extends ItemView {
 
   /** An album shown as a list or a table — as its folder note says, set from here. Covers are the folder's own menu's to set. */
   addViewItems(menu, redraw) {
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = ask(this.plugin, 'albums');
     const folder = this.mode === 'folder' ? this.folder() : null;
     if (!structure || !structure.enabled || !folder || this.isShelf(folder)) return;
     const now = structure.info(folder).layout;
