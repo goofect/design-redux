@@ -195,7 +195,9 @@ export function unpark() {
  * be clipped by its overflow box.
  */
 export function attachSuggest(field, input, opts) {
-  const list = document.body.createDiv({ cls: 'dr-suggest' });
+  // On the field's own body: a graph or a dialog in a window of its own gets its list there.
+  const list = (input.ownerDocument || document).body.createDiv({ cls: 'dr-suggest' });
+  const view = list.ownerDocument.defaultView || window;
   let items = [];
   let active = -1;
 
@@ -209,12 +211,12 @@ export function attachSuggest(field, input, opts) {
   const place = () => {
     const r = input.getBoundingClientRect();
     const width = Math.max(r.width, 180);
-    const below = window.innerHeight - r.bottom;
-    list.style.left = `${Math.min(r.left, window.innerWidth - width - 8)}px`;
+    const below = view.innerHeight - r.bottom;
+    list.style.left = `${Math.min(r.left, view.innerWidth - width - 8)}px`;
     list.style.width = `${width}px`;
     if (below < 190 && r.top > below) {
       list.style.top = '';
-      list.style.bottom = `${window.innerHeight - r.top + 4}px`;
+      list.style.bottom = `${view.innerHeight - r.top + 4}px`;
     } else {
       list.style.bottom = '';
       list.style.top = `${r.bottom + 4}px`;

@@ -25,6 +25,8 @@ export class BrowseArranging extends BrowseAlbum {
    */
   dragDisc(head, grip, folder, album) {
     grip.addEventListener('pointerdown', (down) => {
+      // The window it was pressed in: a view in a window of its own hears its own pointer.
+      const win = down.view || grip.ownerDocument.defaultView;
       if (down.button !== undefined && down.button !== 0) return;
       down.preventDefault();
       const list = head.parentElement;
@@ -65,10 +67,10 @@ export class BrowseArranging extends BrowseAlbum {
         scroller.at(evt.clientY);
       };
       const finish = (keep) => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', cancel);
-        window.removeEventListener('keydown', escape, true);
+        win.removeEventListener('pointermove', move);
+        win.removeEventListener('pointerup', up);
+        win.removeEventListener('pointercancel', cancel);
+        win.removeEventListener('keydown', escape, true);
         scroller.stop();
         const chosen = target;
         mark(null);
@@ -84,10 +86,10 @@ export class BrowseArranging extends BrowseAlbum {
         evt.stopPropagation();
         finish(false);
       };
-      window.addEventListener('pointermove', move, { passive: false });
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', cancel);
-      window.addEventListener('keydown', escape, true);
+      win.addEventListener('pointermove', move, { passive: false });
+      win.addEventListener('pointerup', up);
+      win.addEventListener('pointercancel', cancel);
+      win.addEventListener('keydown', escape, true);
     });
   }
 
@@ -162,6 +164,8 @@ export class BrowseArranging extends BrowseAlbum {
     });
 
     grip.addEventListener('pointerdown', (down) => {
+      // The window it was pressed in: a view in a window of its own hears its own pointer.
+      const win = down.view || grip.ownerDocument.defaultView;
       if (down.button !== undefined && down.button !== 0) return;
       down.preventDefault();
       const list = row.parentElement;
@@ -203,10 +207,10 @@ export class BrowseArranging extends BrowseAlbum {
         scroller.at(evt.clientY);
       };
       const finish = (keep) => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', cancel);
-        window.removeEventListener('keydown', escape, true);
+        win.removeEventListener('pointermove', move);
+        win.removeEventListener('pointerup', up);
+        win.removeEventListener('pointercancel', cancel);
+        win.removeEventListener('keydown', escape, true);
         scroller.stop();
         if (!dragging) return;
         row.removeClass('is-dragging');
@@ -226,10 +230,10 @@ export class BrowseArranging extends BrowseAlbum {
         evt.stopPropagation();
         finish(false);
       };
-      window.addEventListener('pointermove', move, { passive: false });
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', cancel);
-      window.addEventListener('keydown', escape, true);
+      win.addEventListener('pointermove', move, { passive: false });
+      win.addEventListener('pointerup', up);
+      win.addEventListener('pointercancel', cancel);
+      win.addEventListener('keydown', escape, true);
     });
   }
 

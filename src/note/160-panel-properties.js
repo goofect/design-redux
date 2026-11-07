@@ -374,6 +374,8 @@ export class PropertyRows extends PanelSection {
    */
   makeDraggable(list, row, handle) {
     handle.addEventListener('pointerdown', (down) => {
+      // The window it was pressed in: a view in a window of its own hears its own pointer.
+      const win = down.view || handle.ownerDocument.defaultView;
       if (down.button !== undefined && down.button !== 0) return;
       const startY = down.clientY;
       const before = this.orderIn(list);
@@ -416,10 +418,10 @@ export class PropertyRows extends PanelSection {
       };
 
       const finish = (keep) => {
-        window.removeEventListener('pointermove', move);
-        window.removeEventListener('pointerup', up);
-        window.removeEventListener('pointercancel', cancel);
-        window.removeEventListener('keydown', escape, true);
+        win.removeEventListener('pointermove', move);
+        win.removeEventListener('pointerup', up);
+        win.removeEventListener('pointercancel', cancel);
+        win.removeEventListener('keydown', escape, true);
         if (!dragging) return;
         row.removeClass('is-dragging');
         list.removeClass('is-sorting');
@@ -446,10 +448,10 @@ export class PropertyRows extends PanelSection {
         finish(false);
       };
 
-      window.addEventListener('pointermove', move, { passive: false });
-      window.addEventListener('pointerup', up);
-      window.addEventListener('pointercancel', cancel);
-      window.addEventListener('keydown', escape, true);
+      win.addEventListener('pointermove', move, { passive: false });
+      win.addEventListener('pointerup', up);
+      win.addEventListener('pointercancel', cancel);
+      win.addEventListener('keydown', escape, true);
     });
   }
 
