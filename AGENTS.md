@@ -44,8 +44,11 @@ Coffee N' Christmas.
   --update`, `node tests/map.js --check --update`. Never drop a command id or a
   setting key without a migration.
 - `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
-  wdio-obsidian-service), run by GitHub Actions on the oldest supported version
-  and the latest.
+  wdio-obsidian-service): a spec per area (`app`, `library`, `note`, `tools`),
+  each in an Obsidian of its own, its tests wrapped by `suite()` in
+  `helpers.mjs`, which puts the spec's starting state back before each one.
+  GitHub Actions runs them in a job for the oldest supported version and one
+  for the latest, beside the simulation suites.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
   the browse view, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing

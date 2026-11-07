@@ -1,11 +1,13 @@
-# On every push: the simulation tests, then the plugin inside the real Obsidian
-# (oldest supported version and latest). Results, screenshots and a
-# compatibility report go to the ci-results branch, where they can be read
-# without opening Actions. On the default branch, if the simulation tests pass
-# and src/ or styles/ changed since the last release, main.js and styles.css are built and
-# a new release is published for BRAT: the patch version goes up by one.
-# A commit on the default branch with a "Release-As: X.Y.Z" line releases
-# that version instead (for a minor or major step), even with no change to src/.
+# On every push, three jobs at once: the simulation tests, and the plugin inside
+# the real Obsidian, a job for the oldest supported version and one for the
+# latest. Then the results (summary, test output, timings, screenshots, a
+# compatibility report, and the screenshots compared with main's last) go to
+# the ci-results branch, where they can be read without opening Actions. On
+# the default branch, once the simulation tests pass and src/ or styles/
+# changed since the last release, main.js and styles.css are built and a new
+# release is published for BRAT: the patch version goes up by one. A commit on
+# the default branch with a "Release-As: X.Y.Z" line releases that version
+# instead (for a minor or major step), even with no change to src/.
 name: Test and release
 
 # Not on pull requests: a branch's own push already runs it. Not for changes
@@ -21,38 +23,52 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_name != github.event.repository.default_branch }}
 
+# bash with pipefail, so a failure piped through tee still fails the step.
+defaults:
+  run:
+    shell: bash
+
 jobs:
-  test:
+  simulation:
     runs-on: ubuntu-latest
-    # bash with pipefail, so a failure piped through tee still fails the step.
-    defaults:
-      run:
-        shell: bash
-    permissions:
-      contents: write
-    outputs:
-      unit: ${{ steps.unit.outcome }}
-      obsidian: ${{ steps.obsidian.outcome }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - run: npm ci
-
-      # Built once; both test runs use this main.js.
       - name: Build
         run: node build.mjs
-
       - name: Simulation tests
-        id: unit
-        continue-on-error: true
         run: |
           mkdir -p ci-output
           node tests/run.js 2>&1 | tee ci-output/simulation-tests.txt
+      - name: Keep the output for the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: part-simulation
+          path: ci-output
+          retention-days: 1
+
+  obsidian:
+    # Each version on a runner of its own: two Obsidians on one machine slow
+    # each other, and one failing doesn't stop the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [oldest, latest]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build
+        run: node build.mjs
 
       # Saved once a week, not on every run: the downloads rarely change, and
       # saving takes as long as restoring. A new Obsidian release mid-week is
@@ -60,13 +76,12 @@ jobs:
       - name: Week
         id: week
         run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
-
       - name: Cache Obsidian downloads
         uses: actions/cache@v4
         with:
           path: .obsidian-cache
-          key: obsidian-${{ runner.os }}-${{ steps.week.outputs.week }}
-          restore-keys: obsidian-${{ runner.os }}-
+          key: obsidian-${{ runner.os }}-${{ matrix.version }}-${{ steps.week.outputs.week }}
+          restore-keys: obsidian-${{ runner.os }}-${{ matrix.version }}-
 
       - name: Virtual display
         run: |
@@ -79,29 +94,59 @@ jobs:
           sleep 1
           herbstluftwm &
 
+      # Each spec in tests/obsidian/ in an Obsidian of its own, one after another.
       - name: Tests in Obsidian
-        id: obsidian
-        continue-on-error: true
         env:
-          WDIO_MAX_INSTANCES: 2
-        run: npx wdio run ./wdio.conf.mjs 2>&1 | tee ci-output/obsidian-tests.txt
+          WDIO_VERSION: ${{ matrix.version }}
+        run: |
+          mkdir -p ci-output
+          npx wdio run ./wdio.conf.mjs 2>&1 | tee "ci-output/obsidian-tests-${{ matrix.version }}.txt"
+      - name: Keep the output for the results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: part-obsidian-${{ matrix.version }}
+          path: ci-output
+          retention-days: 1
+
+  results:
+    needs: [simulation, obsidian]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Gather the jobs' output
+        uses: actions/download-artifact@v4
+        with:
+          pattern: part-*
+          path: ci-output
+          merge-multiple: true
 
       - name: Publish results to the ci-results branch
-        if: always()
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ci-output
+          # Both versions' Obsidian output, oldest first, as one file.
+          cat ci-output/obsidian-tests-oldest.txt ci-output/obsidian-tests-latest.txt > ci-output/obsidian-tests.txt 2>/dev/null || true
+          rm -f ci-output/obsidian-tests-oldest.txt ci-output/obsidian-tests-latest.txt
           {
             echo "commit: $GITHUB_SHA"
             echo "branch: $GITHUB_REF_NAME"
-            echo "simulation tests: ${{ steps.unit.outcome }}"
-            echo "obsidian tests: ${{ steps.obsidian.outcome }}"
+            echo "simulation tests: ${{ needs.simulation.result }}"
+            echo "obsidian tests: ${{ needs.obsidian.result }}"
             echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } > ci-output/summary.txt
-          # The UI snapshots compared with main's last (the ci-snapshots
+          # The screenshots compared with main's last (the ci-snapshots
           # branch): snapshots/diff/summary.txt, and a picture of each change.
-          if [ -d ci-output/snapshots ]; then
+          mkdir -p ci-output/snapshots
+          find ci-output -maxdepth 1 -name '*.png' ! -name '*-FAILED-*' -exec cp {} ci-output/snapshots/ \;
+          if [ -n "$(ls ci-output/snapshots)" ]; then
             mkdir -p /tmp/snapshots-main
             if git fetch -q origin ci-snapshots 2>/dev/null; then
               git archive FETCH_HEAD | tar -x -C /tmp/snapshots-main
@@ -114,6 +159,8 @@ jobs:
                 && git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -q -m "Snapshots for ${GITHUB_SHA::7}" \
                 && git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-snapshots) || true
             fi
+            # The pictures are already beside them; only what changed is kept twice.
+            find ci-output/snapshots -maxdepth 1 -name '*.png' -delete
           fi
           cd ci-output
           git init -q
@@ -131,7 +178,6 @@ jobs:
 
       # The same results kept with the run itself, for two weeks.
       - name: Keep results with the run
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ci-output
@@ -140,15 +186,15 @@ jobs:
           if-no-files-found: ignore
 
       - name: Fail if any tests failed
-        if: steps.unit.outcome != 'success' || steps.obsidian.outcome != 'success'
+        if: needs.simulation.result != 'success' || needs.obsidian.result != 'success'
         run: exit 1
 
   release:
-    needs: test
-    # Gated on the simulation tests for now; the Obsidian run is reported but
-    # doesn't block until it has proven reliable.
+    # Gated on the simulation tests, and so not waiting for Obsidian's: the
+    # Obsidian run is reported but doesn't block until it has proven reliable.
+    needs: simulation
     if: >-
-      always() && needs.test.outputs.unit == 'success' &&
+      always() && needs.simulation.result == 'success' &&
       github.event_name == 'push' &&
       github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
