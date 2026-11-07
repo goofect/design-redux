@@ -3,12 +3,11 @@
 /*                                                                     */
 /* Two fingers sideways on a trackpad, or one on a touch screen, pull  */
 /* the left and right sidebars out and push them back in, so their     */
-/* buttons go. What's under the hand says which: over a sidebar, it    */
-/* goes back in; over the page, a swipe right brings the left one out  */
-/* (or puts the right one away), a swipe left the right one. What     */
-/* can still scroll that way, or pans itself, keeps its swipe. The     */
-/* phone and tablet app swipe their drawers already; there only the    */
-/* buttons go.                                                         */
+/* buttons go. The half of the window the pointer is in says which:    */
+/* away from that sidebar's edge brings it out, toward it puts it      */
+/* away. Anywhere, over anything: a sideways swipe is always the       */
+/* sidebars', never a scroll or a pan. The phone and tablet app swipe  */
+/* their drawers already; there only the buttons go.                   */
 /* ------------------------------------------------------------------ */
 
 import { Platform } from 'obsidian';
@@ -22,9 +21,6 @@ const WHEEL_GAP = 250;
 const TOUCH_PULL = 60;
 const TOUCH_TIME = 700;
 
-// What pans or drags sideways itself: a canvas, the graph, menus and dialogs.
-const OWN_SWIPE = '.canvas-wrapper, canvas, .modal-container, .menu, .suggestion-container, .prompt';
-
 export class SidebarSwipe extends Feature {
   constructor(plugin) {
     super(plugin);
@@ -37,7 +33,7 @@ export class SidebarSwipe extends Feature {
       {
         key: 'swipeSidebars',
         name: 'Swipe the sidebars',
-        desc: 'Two fingers sideways on the trackpad pull the left and right sidebars out and push them back in, so their buttons go.',
+        desc: 'Two fingers sideways on the trackpad pull out and push in the sidebar on the pointer’s side, so their buttons go. Sideways scrolling gives way to it.',
       },
     ];
   }
@@ -45,7 +41,8 @@ export class SidebarSwipe extends Feature {
   register() {
     if (Platform.isMobile) return;
     const doc = document;
-    this.plugin.registerDomEvent(doc, 'wheel', (e) => this.onWheel(e), { passive: true });
+    // Not passive, and first: a sideways swipe is kept from whatever is under it.
+    this.plugin.registerDomEvent(doc, 'wheel', (e) => this.onWheel(e), { passive: false, capture: true });
     this.plugin.registerDomEvent(doc, 'touchstart', (e) => this.onTouchStart(e), { passive: true });
     this.plugin.registerDomEvent(doc, 'touchend', (e) => this.onTouchEnd(e), { passive: true });
   }
@@ -60,22 +57,30 @@ export class SidebarSwipe extends Feature {
     this.touch = null;
   }
 
-  /** One gesture's sideways scroll, added up until it's far enough, then acted on once. */
+  /**
+   * One gesture's sideways scroll, added up until it's far enough, then
+   * acted on once. Its sideways part goes no further, so nothing under it
+   * scrolls or pans that way; pinching (Ctrl) and Shift with a mouse
+   * wheel are left alone.
+   */
   onWheel(e) {
-    if (!this.enabled || e.ctrlKey) return;
+    if (!this.enabled || e.ctrlKey || e.shiftKey) return;
     const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+    const dx = e.deltaX * unit;
+    const dy = e.deltaY * unit;
     let g = this.wheel;
-    if (!g || e.timeStamp - g.last > WHEEL_GAP) {
-      g = this.wheel = { x: 0, y: 0, done: this.ownSwipe(e.target), scrollers: this.scrollers(e.target), target: e.target };
-    }
+    if (!g || e.timeStamp - g.last > WHEEL_GAP) g = this.wheel = { x: 0, y: 0, done: false, at: e.clientX };
     g.last = e.timeStamp;
-    g.x += e.deltaX * unit;
-    g.y += e.deltaY * unit;
+    g.x += dx;
+    g.y += dy;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (g.done || Math.abs(g.x) < WHEEL_PULL || Math.abs(g.x) < Math.abs(g.y) * 2) return;
     g.done = true;
     // Fingers moving right scroll the page left: deltaX below zero.
-    if (this.canScroll(g.scrollers, g.x < 0)) return;
-    this.swipe(g.x < 0, g.target);
+    this.swipe(g.x < 0, g.at, e.view || window);
   }
 
   onTouchStart(e) {
@@ -84,7 +89,7 @@ export class SidebarSwipe extends Feature {
       return;
     }
     const t = e.touches[0];
-    this.touch = { x: t.clientX, y: t.clientY, at: e.timeStamp, target: e.target, scrollers: this.scrollers(e.target) };
+    this.touch = { x: t.clientX, y: t.clientY, at: e.timeStamp };
   }
 
   onTouchEnd(e) {
@@ -96,58 +101,22 @@ export class SidebarSwipe extends Feature {
     const dx = t.clientX - g.x;
     const dy = t.clientY - g.y;
     if (Math.abs(dx) < TOUCH_PULL || Math.abs(dx) < Math.abs(dy) * 2) return;
-    if (this.ownSwipe(g.target) || this.canScroll(g.scrollers, dx > 0)) return;
-    this.swipe(dx > 0, g.target);
-  }
-
-  static element(target) {
-    return target && target.nodeType === 1 ? target : target && target.parentElement;
-  }
-
-  /** A canvas, the graph, a menu or a dialog: what pans or drags sideways itself. */
-  ownSwipe(target) {
-    const el = SidebarSwipe.element(target);
-    return !el || !!(el.closest && el.closest(OWN_SWIPE));
-  }
-
-  /** What under the hand scrolls sideways, and where each stood as the gesture began. */
-  scrollers(target) {
-    const out = [];
-    let el = SidebarSwipe.element(target);
-    if (!el) return out;
-    const win = el.ownerDocument.defaultView;
-    for (; el && el !== el.ownerDocument.body; el = el.parentElement) {
-      const room = el.scrollWidth - el.clientWidth;
-      if (room <= 1) continue;
-      const overflow = win.getComputedStyle(el).overflowX;
-      if (overflow === 'auto' || overflow === 'scroll') out.push({ at: Math.abs(el.scrollLeft), room });
-    }
-    return out;
+    this.swipe(dx > 0, g.x, e.view || window);
   }
 
   /**
-   * Whether any of them had room left to scroll the way the fingers go:
-   * a swipe right scrolls toward its start, a swipe left toward its end.
-   * At its end already, the swipe is the sidebar's.
+   * A swipe, toward the right or the left, begun at x across the window:
+   * the sidebar on that half comes out going away from its edge, and goes
+   * back in going toward it.
    */
-  canScroll(scrollers, toRight) {
-    return scrollers.some((s) => (toRight ? s.at > 1 : s.at < s.room - 1));
-  }
-
-  /** A swipe, toward the right or the left, begun over target. */
-  swipe(toRight, target) {
+  swipe(toRight, x, win) {
     const ws = this.app.workspace;
-    const left = ws.leftSplit;
-    const right = ws.rightSplit;
-    const over = (split) => !!(split && split.containerEl && split.containerEl.contains(target));
-    const out = (split) => !!(split && !split.collapsed);
-    const near = toRight ? right : left;
-    const far = toRight ? left : right;
-    // Over a sidebar that's out: it goes back in toward its own edge, or stays.
-    if (over(near) && out(near)) return this.pushIn(near);
-    if (over(far)) return;
-    if (far && far.collapsed) return this.pullOut(far);
-    if (out(near)) this.pushIn(near);
+    const onLeft = x < (win.innerWidth || 0) / 2;
+    const split = onLeft ? ws.leftSplit : ws.rightSplit;
+    if (!split) return;
+    const inward = onLeft ? !toRight : toRight;
+    if (inward && !split.collapsed) this.pushIn(split);
+    else if (!inward && split.collapsed) this.pullOut(split);
   }
 
   pushIn(split) {

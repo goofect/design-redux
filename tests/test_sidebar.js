@@ -715,41 +715,42 @@ t('the strip is drawn once for the events opening a note fires together', () => 
 
 /* -- the sidebars swiped -------------------------------------------- */
 
-t('a sideways swipe pulls the sidebars out and pushes them back in, but not over what can still scroll that way', () => {
-  const split = (collapsed) => {
-    const el = document.body.appendChild(document.createElement('div'));
-    return { collapsed, containerEl: el, expand() { this.collapsed = false; }, collapse() { this.collapsed = true; } };
-  };
+t('a sideways swipe moves the sidebar on the pointer’s side, over anything, and nothing under it scrolls', () => {
+  const split = (collapsed) => ({ collapsed, expand() { this.collapsed = false; }, collapse() { this.collapsed = true; } });
   const leftSplit = split(true);
   const rightSplit = split(false);
-  const page = document.body.appendChild(document.createElement('div'));
   const sw = Object.create(SidebarSwipe.prototype);
   sw.plugin = { app: { workspace: { leftSplit, rightSplit, getLeavesOfType: () => [{}] } }, settings: { swipeSidebars: true } };
+  const left = 100;
+  const right = window.innerWidth - 100;
   let now = 0;
-  const swipe = (target, dx) => {
+  let stopped = 0;
+  const swipe = (clientX, dx, more = {}) => {
     now += 1000;
-    [0, 1, 2].forEach((i) => sw.onWheel({ target, deltaX: dx / 3, deltaY: 0, deltaMode: 0, timeStamp: now + i * 16 }));
+    [0, 1, 2].forEach((i) => sw.onWheel(Object.assign({ clientX, deltaX: dx / 3, deltaY: 0, deltaMode: 0, timeStamp: now + i * 16, view: window, preventDefault() { stopped++; }, stopPropagation() {} }, more)));
   };
-  swipe(page, -90); // fingers right, over the page: the left one out
+  swipe(left, -90); // fingers right on the left half: the left one out
   assert.strictEqual(leftSplit.collapsed, false);
-  swipe(leftSplit.containerEl, 90); // fingers left, over it: back in
+  assert.strictEqual(stopped, 3, 'what’s under it doesn’t scroll sideways');
+  swipe(left, -90); // out already: stays
+  assert.strictEqual(leftSplit.collapsed, false);
+  swipe(left, 90); // toward its edge: back in
   assert.strictEqual(leftSplit.collapsed, true);
-  swipe(rightSplit.containerEl, -90); // fingers right over the right one: back in
+  assert.strictEqual(rightSplit.collapsed, false, 'the other side is left alone');
+  swipe(right, -90); // fingers right on the right half: the right one in
   assert.strictEqual(rightSplit.collapsed, true);
-  swipe(page, 90); // fingers left over the page: the right one out
+  swipe(right, 90); // and out again
   assert.strictEqual(rightSplit.collapsed, false);
-  swipe(page, 20); // too little
+  swipe(left, -20); // too little
   assert.strictEqual(leftSplit.collapsed, true);
-  const shelf = page.appendChild(document.createElement('div'));
-  shelf.style.overflowX = 'auto';
-  Object.defineProperties(shelf, { scrollWidth: { value: 900 }, clientWidth: { value: 300 } });
-  shelf.scrollLeft = 100;
-  swipe(shelf, -90); // a shelf with room to scroll back keeps its swipe
+  stopped = 0;
+  swipe(left, -90, { shiftKey: true }); // Shift with a mouse wheel scrolls as it did
+  swipe(left, -90, { ctrlKey: true }); // and a pinch zooms
   assert.strictEqual(leftSplit.collapsed, true);
-  shelf.scrollLeft = 0;
-  swipe(shelf, -90); // at its start already: the sidebar's
-  assert.strictEqual(leftSplit.collapsed, false);
-  [leftSplit.containerEl, rightSplit.containerEl, page].forEach((el) => el.remove());
+  assert.strictEqual(stopped, 0);
+  now += 1000;
+  sw.onWheel({ clientX: left, deltaX: 2, deltaY: 40, deltaMode: 0, timeStamp: now, view: window, preventDefault() { stopped++; }, stopPropagation() {} });
+  assert.strictEqual(stopped, 0, 'scrolling down is left alone');
 });
 
 fs.unlinkSync(tmp);

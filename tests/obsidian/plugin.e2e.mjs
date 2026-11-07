@@ -269,50 +269,42 @@ describe('Design Redux in Obsidian', function () {
     await clickText('.dr-detail-action', 'Done');
   });
 
-  it('swipes the sidebars in and back out, over an album and over a note', async function () {
+  it('swipes the sidebar on the pointer’s side in and back out, over an album and over a note', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const ws = app.workspace;
       const pause = (ms) => new Promise((r) => setTimeout(r, ms));
       const until = async (done) => {
         for (let i = 0; i < 50 && !done(); i++) await pause(30);
       };
-      // A two-finger swipe: a few sideways wheel events, after the pause that ends the one before;
-      // then until it's done what it should, or long enough to say it hasn't.
-      const swipe = async (el, dx, done) => {
+      // A two-finger swipe at x across the window: a few sideways wheel events, after the pause
+      // that ends the one before; then until it's done what it should, or long enough to say it
+      // hasn't. Whether what's under it was kept from scrolling, too.
+      const swipe = async (x, dx, done) => {
         await pause(300);
-        const box = el.getBoundingClientRect();
-        const target = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2) || el;
-        for (let i = 0; i < 6; i++) target.dispatchEvent(new WheelEvent('wheel', { deltaX: dx / 6, deltaY: 0, bubbles: true, cancelable: true }));
-        await until(done);
-        return target;
-      };
-      // What under the hand scrolls sideways, should a swipe be refused.
-      const blockers = (el) => {
-        const out = [];
-        for (; el && el !== document.body; el = el.parentElement) {
-          if (el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(el).overflowX)) {
-            const edge = el.getBoundingClientRect().left + el.clientWidth + 1;
-            const wide = Array.from(el.querySelectorAll('*')).filter((c) => c.getBoundingClientRect().right > edge && c.parentElement.getBoundingClientRect().right <= edge).slice(0, 4).map((c) => `${c.tagName}.${c.className} ${Math.round(c.getBoundingClientRect().right - edge)}`);
-            out.push(`${el.className} ${el.scrollWidth}>${el.clientWidth}: ${wide.join(' | ')}`);
-          }
+        const target = document.elementFromPoint(x, window.innerHeight / 2) || document.body;
+        let kept = true;
+        for (let i = 0; i < 6; i++) {
+          const e = new WheelEvent('wheel', { deltaX: dx / 6, deltaY: 0, clientX: x, clientY: window.innerHeight / 2, bubbles: true, cancelable: true, view: window });
+          target.dispatchEvent(e);
+          kept = kept && e.defaultPrevented;
         }
-        return out;
+        await until(done);
+        return kept;
       };
-      const page = () => ws.rootSplit.containerEl.querySelector('.workspace-leaf.mod-active .view-content') || ws.rootSplit.containerEl;
       const round = async () => {
-        const out = {};
         if (ws.leftSplit.collapsed) ws.leftSplit.expand();
         if (ws.rightSplit.collapsed) ws.rightSplit.expand();
-        await swipe(ws.leftSplit.containerEl, 120, () => ws.leftSplit.collapsed);
-        out.leftIn = ws.leftSplit.collapsed;
-        let t = await swipe(page(), -120, () => !ws.leftSplit.collapsed);
+        const left = window.innerWidth * 0.25;
+        const right = window.innerWidth * 0.75;
+        const out = {};
+        out.kept = await swipe(left, 120, () => ws.leftSplit.collapsed);
+        out.leftIn = ws.leftSplit.collapsed && !ws.rightSplit.collapsed;
+        await swipe(left, -120, () => !ws.leftSplit.collapsed);
         out.leftOut = !ws.leftSplit.collapsed;
-        if (!out.leftOut) out.leftBlockedBy = blockers(t);
-        await swipe(ws.rightSplit.containerEl, -120, () => ws.rightSplit.collapsed);
-        out.rightIn = ws.rightSplit.collapsed;
-        t = await swipe(page(), 120, () => !ws.rightSplit.collapsed);
+        await swipe(right, -120, () => ws.rightSplit.collapsed);
+        out.rightIn = ws.rightSplit.collapsed && !ws.leftSplit.collapsed;
+        await swipe(right, 120, () => !ws.rightSplit.collapsed);
         out.rightOut = !ws.rightSplit.collapsed;
-        if (!out.rightOut) out.rightBlockedBy = blockers(t);
         return out;
       };
       const was = { left: ws.leftSplit.collapsed, right: ws.rightSplit.collapsed };
@@ -329,7 +321,7 @@ describe('Design Redux in Obsidian', function () {
       [[ws.leftSplit, was.left], [ws.rightSplit, was.right]].forEach(([split, collapsed]) => (collapsed ? split.collapse() : split.expand()));
       return { album, note: onNote };
     });
-    const all = { leftIn: true, leftOut: true, rightIn: true, rightOut: true };
+    const all = { kept: true, leftIn: true, leftOut: true, rightIn: true, rightOut: true };
     expect(result).toEqual({ album: all, note: all });
     await browser.$('.workspace-leaf.mod-active .dr-detail').waitForDisplayed({ timeout: 5000 });
   });
