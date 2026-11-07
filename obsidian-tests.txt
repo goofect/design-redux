@@ -1,0 +1,124 @@
+
+Execution of 1 workers started at 2026-11-07T18:03:45.575Z
+
+[0-0] RUNNING in chrome(150.0.7871.250) - file:///tests/obsidian/app.e2e.mjs
+[0-0] PASSED in chrome(150.0.7871.250) - file:///tests/obsidian/app.e2e.mjs
+
+ "obsidian" Reporter:
+------------------------------------------------------------------
+Running: obsidian v1.15.0 (installer: v1.15.0, platform: linux)
+Session ID: 2cf09524f1d2bbb59efa9458db5478c8
+
+» tests/obsidian/app.e2e.mjs
+Design Redux in Obsidian: the app
+   ✓ loads, with its features running
+   ✓ shows one settings gear, in the sidebar header
+   ✓ keeps the actions and settings icons beside the sidebar’s tabs as the sidebar is made wider and narrower
+   ✓ finds the unofficial parts of Obsidian it relies on
+   ✓ draws its settings as four places and a look, by what they’re for
+   ✓ keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text
+   ✓ keeps the ribbon’s buttons out of sight while they’re in the menu
+   ✓ groups its right-click entries, with New canvas under New
+   ✓ draws the shared components to their measures, in light and dark
+   ✓ draws the right sidebar on one edge, in one font, with no boxes or lines between its parts
+   ✓ reports what works on this version, and copies diagnostics
+   ✓ logged no errors of its own along the way
+
+12 passing (15.3s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:17  
+
+
+Execution of 1 workers started at 2026-11-07T18:03:48.483Z
+
+[0-0] RUNNING in chrome(150.0.7871.250) - file:///tests/obsidian/library.e2e.mjs
+[0-0] 2026-11-07T18:03:52.872Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-11-07T18:03:52.894Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] PASSED in chrome(150.0.7871.250) - file:///tests/obsidian/library.e2e.mjs
+
+ "obsidian" Reporter:
+------------------------------------------------------------------
+Running: obsidian v1.15.0 (installer: v1.15.0, platform: linux)
+Session ID: c2e3b91e39cd8a6c83cf214b413624b4
+
+» tests/obsidian/library.e2e.mjs
+Design Redux in Obsidian: the library
+   ✓ opens a folder as an album, with an Edit mode
+   ✓ swipes the sidebar on the pointer’s side in and back out, over an album and over a note
+   ✓ holds the left panel and the album page still while nothing changes
+   ✓ renames a folder in Edit mode, and one press of Done finishes
+   ✓ searches: words from a note show their passage; the note named for the query comes first, and Enter opens it
+   ✓ shows a note picked in an album in the inspector, and opens it on a double click
+   ✓ times a shelf of 50 and of 500 albums, and the sidebar beside them
+   ✓ times what an edit costs, in a note of an album of 500
+   ✓ opens a folder in a note’s path at the top as its collection in the library
+   ✓ offers Undo after a move, and it puts the note back
+   ✓ puts « » either side of the note in the strip
+   ✓ draws Home with its shelves
+   ✓ lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays
+   ✓ logged no errors of its own along the way
+
+14 passing (22.3s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:25  
+
+
+Execution of 1 workers started at 2026-11-07T18:03:50.623Z
+
+[0-0] RUNNING in chrome(150.0.7871.250) - file:///tests/obsidian/note.e2e.mjs
+[0-0] PASSED in chrome(150.0.7871.250) - file:///tests/obsidian/note.e2e.mjs
+
+ "obsidian" Reporter:
+------------------------------------------------------------------
+Running: obsidian v1.15.0 (installer: v1.15.0, platform: linux)
+Session ID: 65aa0a14ad863ba47a2e31b2e80a847d
+
+» tests/obsidian/note.e2e.mjs
+Design Redux in Obsidian: notes
+   ✓ shows one page of a note with pages, in editing and in reading view
+   ✓ draws the page control as a segmented control, in light and dark
+   ✓ adds a page to a plain note in one step and names it where it stands
+   ✓ gives notes an Apple-style look in type and spacing only, keeps room under them for the strip, and keeps the header in order
+   ✓ opens a note with its album above its title, a grey line under it, and shelves at its end, editing and reading
+   ✓ adds a footnote in place from a box at the cursor, keeping numbers in order
+   ✓ keeps citations off the page and lists them in a Footnotes view
+   ✓ shows a note's properties as a light inspector: the main ones, + to add, a five-entry menu per row
+   ✓ logged no errors of its own along the way
+
+9 passing (26s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:28  
+
+
+Execution of 1 workers started at 2026-11-07T18:03:45.930Z
+
+[0-0] RUNNING in chrome(150.0.7871.250) - file:///tests/obsidian/tools.e2e.mjs
+[0-0] 2026-11-07T18:03:58.695Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-11-07T18:03:58.709Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-11-07T18:04:04.928Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] 2026-11-07T18:04:04.940Z WARN webdriver: Request encountered a stale element - terminating request
+[0-0] PASSED in chrome(150.0.7871.250) - file:///tests/obsidian/tools.e2e.mjs
+
+ "obsidian" Reporter:
+------------------------------------------------------------------
+Running: obsidian v1.15.0 (installer: v1.15.0, platform: linux)
+Session ID: 3388cfac1aae277371062380ded61f7b
+
+» tests/obsidian/tools.e2e.mjs
+Design Redux in Obsidian: property tools and the graph
+   ✓ opens the Properties window as a list of properties, each tool a sheet over it
+   ✓ draws graph links through the notes between, and lights the routes on hover
+   ✓ renames and merges properties from Edit on the Properties screen
+   ✓ writes a property the same way in every note, where Obsidian lists it one way and notes another
+   ✓ routes graph links by a property where notes name what they sit under
+   ✓ sets a property by a rule when a note is moved into a folder, once, with Undo
+   ✓ logged no errors of its own along the way
+
+7 passing (27.7s)
+
+
+Spec Files:	 1 passed, 1 total (100% completed) in 00:00:30  
+

@@ -1,0 +1,11 @@
+{
+  "canvasOn": true,
+  "corePlugins": true,
+  "editorSuggestList": true,
+  "inputSuggest": true,
+  "menuItems": true,
+  "modalKeys": true,
+  "propertyTypes": true,
+  "settingsWindow": true,
+  "submenus": true
+}
