@@ -17,8 +17,6 @@ import { ARTWORK_SIZES } from '../core/085-appearance.js';
 import { FolderScreen } from './110-browse-screens.js';
 import { BROWSE_SCREENS } from './119-browse-registry.js';
 import { BrowseAlbum } from './125-browse-album.js';
-import { ContextStrip } from '../tools/190-strip.js';
-import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class BrowseView extends BrowseAlbum {
   constructor(leaf, plugin) {
@@ -107,7 +105,7 @@ export class BrowseView extends BrowseAlbum {
     }
     // A move within the same tab changes neither the leaf nor the file,
     // so nothing else tells the strip it's on another screen now.
-    const strip = typeof this.plugin.feature === 'function' ? this.plugin.feature(ContextStrip) : null;
+    const strip = typeof this.plugin.featureNamed === 'function' ? this.plugin.featureNamed('ContextStrip') : null;
     if (strip && strip.enabled) strip.update();
     return super.setState(state, result);
   }
@@ -583,7 +581,7 @@ export class BrowseView extends BrowseAlbum {
 
   /** The property tools over some notes — those picked, found or in a saved view — rather than folders. */
   propertyToolsFor(files) {
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     if (bulk && files.length) bulk.openTools(files.slice(), null);
   }
 
@@ -671,7 +669,7 @@ export class BrowseView extends BrowseAlbum {
     });
     // A value can be renamed everywhere it's used; under tags, each
     // value is a tag, renamed in notes' text as well.
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     if (bulk && this.property) {
       onContextMenu(head, (evt) => {
         evt.preventDefault();

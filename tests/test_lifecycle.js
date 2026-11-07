@@ -621,6 +621,19 @@ const update = process.argv.includes('--update');
     });
   });
 
+  await t('every feature asked for by name (featureNamed) is one the plugin has', () => {
+    const have = new Set(plugin.features.map((f) => f.constructor.name));
+    const asked = new Set();
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) return walk(p);
+      for (const m of fs.readFileSync(p, 'utf8').matchAll(/featureNamed\('([A-Za-z0-9_]+)'\)/g)) asked.add(m[1]);
+    });
+    walk(path.join(__dirname, '..', 'src'));
+    assert.ok(asked.size > 0, 'some are asked for');
+    assert.deepStrictEqual([...asked].filter((n) => !have.has(n)), [], 'names no feature has: a typo, or a class renamed');
+  });
+
   await t('command ids, setting keys and view types are kept: hotkeys, saved settings and saved tabs hang on them', () => {
     // The ids a load adds, from the features themselves.
     const ids = [];

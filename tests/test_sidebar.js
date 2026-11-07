@@ -150,6 +150,7 @@ function setup({ page, pinsExpanded = false, pinned = [] } = {}) {
     propertyLabel: (k) => k.charAt(0).toUpperCase() + k.slice(1),
     folderCoverSrc: (f) => (f.name === 'Books Folder' ? 'app://books.jpg' : null),
     feature: () => null,
+    featureNamed(n) { return this.feature({ name: n }); },
     refreshBrowse() {},
     newNote: (f) => created.push(['note', f.path]),
     newFolder: (f) => created.push(['folder', f.path]),

@@ -97,8 +97,8 @@ Module._load = function (req, ...rest) {
 };
 const tmp = path.join(__dirname, '_filters_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, noteTags, dateFloor, Orders };\n');
-const { BrowseView, noteTags, dateFloor, Orders } = require(tmp).__test;
+  '\nmodule.exports.__test = { BrowseView, noteTags, dateFloor, Orders, BulkEdits };\n');
+const { BrowseView, noteTags, dateFloor, Orders, BulkEdits } = require(tmp).__test;
 fs.unlinkSync(tmp);
 
 /* -- a vault -------------------------------------------------------------- */
@@ -140,6 +140,7 @@ const plugin = {
   folderNote: () => null,
   folderCoverSrc: () => null,
   feature: () => null,
+  featureNamed(n) { return this.feature({ name: n }); },
   propertyLabel: (k) => k,
 };
 const app = {
@@ -745,7 +746,9 @@ t('Properties, in Edit: names to change, circles to pick, and Merge for two or m
     openRenameProperty: (from, to) => opened.push(['rename', from, to]),
   };
   plugin.feature = () => tools;
+  // The engine's own rename-in-place, over these stand-ins.
   plugin.bulk = {
+    renameInPlace(from, to, opts) { return BulkEdits.prototype.renameInPlace.call(this, from, to, opts); },
     last: null,
     planPropertyRename: () => ({ conflicts: clash ? [files[0]] : [], merged: [], total: 1 }),
     renameProperty: async (from, to) => {

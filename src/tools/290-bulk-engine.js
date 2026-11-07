@@ -33,6 +33,21 @@ export class BulkEdits {
     this.baseCache = null;
   }
 
+  /** What a finished change did, with Undo while it's still the last one: for callers outside the tools, which don't import them. */
+  notify(message, record) {
+    return bulkNotice(this, message, record);
+  }
+
+  /** The ends of a result message: notes left alone, and notes that failed. */
+  tail(record) {
+    return bulkTail(record);
+  }
+
+  /** A property renamed everywhere from a name typed into a list (see renamePropertyInPlace). */
+  renameInPlace(from, to, opts) {
+    return renamePropertyInPlace(this, from, to, opts);
+  }
+
   get app() {
     return this.plugin.app;
   }

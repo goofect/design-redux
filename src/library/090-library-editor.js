@@ -6,9 +6,56 @@
 /* feature stays about behaviour.                                      */
 /* ------------------------------------------------------------------ */
 
-import { setIcon, Setting, TFolder } from 'obsidian';
+import { FuzzySuggestModal, setIcon, Setting, TFolder } from 'obsidian';
 import { LIBRARY_BUILTINS } from '../core/020-constants.js';
-import { LibraryItemPicker } from './130-browse-filters.js';
+import { knownPropertyNames } from '../core/045-helpers-properties.js';
+
+/** Choosing what goes in the list: a destination, a folder, a base or a note. */
+export class LibraryItemPicker extends FuzzySuggestModal {
+  constructor(app, onChoose) {
+    super(app);
+    this.onChooseItem_ = onChoose;
+    this.setPlaceholder('Add a destination, folder, base or note');
+  }
+
+  getItems() {
+    const items = Object.keys(LIBRARY_BUILTINS).map((id) => ({
+      kind: 'builtin',
+      id: id,
+      text: LIBRARY_BUILTINS[id].label,
+    }));
+
+    const walk = (folder) => {
+      (folder.children || []).forEach((child) => {
+        if (child instanceof TFolder) {
+          items.push({ kind: 'folder', path: child.path, text: child.path + '/' });
+          walk(child);
+        }
+      });
+    };
+    walk(this.app.vault.getRoot());
+
+    this.app.vault.getFiles().forEach((f) => {
+      if (f.extension !== 'base' && f.extension !== 'canvas' && f.extension !== 'md') return;
+      items.push({ kind: 'file', path: f.path, text: f.path });
+    });
+
+    // A property, opening the Properties screen at its values.
+    knownPropertyNames(this.app).forEach((name) =>
+      items.push({ kind: 'property', key: name.toLowerCase(), text: `By ${name}` })
+    );
+
+    return items;
+  }
+
+  getItemText(item) {
+    return item.text;
+  }
+
+  onChooseItem(item) {
+    this.onChooseItem_(item);
+  }
+}
 
 export class LibraryEditor {
   constructor(library) {

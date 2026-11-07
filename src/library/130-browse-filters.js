@@ -1,12 +1,11 @@
 /* ------------------------------------------------------------------ */
-/* Choosing what goes in the list                                      */
+/* The library: the feature                                            */
 /* ------------------------------------------------------------------ */
 
-import { FuzzySuggestModal, Notice, Platform, Setting, TFolder } from 'obsidian';
+import { Notice, Platform, Setting, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/030-helpers-art.js';
 import { SORTS } from '../core/040-helpers-sorting.js';
-import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
@@ -17,52 +16,6 @@ import { LibraryView } from './100-library.js';
 import { homeShelves } from './109-home-shelves.js';
 import { BrowseView } from './120-browse-view.js';
 import { AlbumStructure } from './257-album-structure.js';
-
-export class LibraryItemPicker extends FuzzySuggestModal {
-  constructor(app, onChoose) {
-    super(app);
-    this.onChooseItem_ = onChoose;
-    this.setPlaceholder('Add a destination, folder, base or note');
-  }
-
-  getItems() {
-    const items = Object.keys(LIBRARY_BUILTINS).map((id) => ({
-      kind: 'builtin',
-      id: id,
-      text: LIBRARY_BUILTINS[id].label,
-    }));
-
-    const walk = (folder) => {
-      (folder.children || []).forEach((child) => {
-        if (child instanceof TFolder) {
-          items.push({ kind: 'folder', path: child.path, text: child.path + '/' });
-          walk(child);
-        }
-      });
-    };
-    walk(this.app.vault.getRoot());
-
-    this.app.vault.getFiles().forEach((f) => {
-      if (f.extension !== 'base' && f.extension !== 'canvas' && f.extension !== 'md') return;
-      items.push({ kind: 'file', path: f.path, text: f.path });
-    });
-
-    // A property, opening the Properties screen at its values.
-    knownPropertyNames(this.app).forEach((name) =>
-      items.push({ kind: 'property', key: name.toLowerCase(), text: `By ${name}` })
-    );
-
-    return items;
-  }
-
-  getItemText(item) {
-    return item.text;
-  }
-
-  onChooseItem(item) {
-    this.onChooseItem_(item);
-  }
-}
 
 /**
  * The folder a tab's path names at `index`, of `count` shown: one name a folder, outermost first.

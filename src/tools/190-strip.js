@@ -15,9 +15,6 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, applies } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
-import { Library } from '../library/130-browse-filters.js';
-import { AlbumStructure } from '../library/257-album-structure.js';
-import { Footnotes } from '../note/285-footnotes.js';
 
 /*
  * The note header's own reading toggle and More, which the strip
@@ -450,7 +447,7 @@ export class ContextStrip extends Feature {
     if (browse.mode === 'inbox') return 'Notes in no collection';
     if (!folder || (folder.isRoot && folder.isRoot())) return vault;
     const n = libraryIndex(this.plugin).count(folder);
-    const structure = typeof AlbumStructure === 'function' ? this.plugin.feature(AlbumStructure) : null;
+    const structure = this.plugin.featureNamed('AlbumStructure');
     const kind = structure ? structure.info(folder).label : '';
     return [n === 1 ? '1 item' : `${n} items`, kind || (folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent.name : '')].filter(Boolean).join(' · ');
   }
@@ -513,7 +510,7 @@ export class ContextStrip extends Feature {
     // bar goes to the album.
     onActivate(now, () => {
       if (!file.parent) return;
-      const library = this.plugin.feature(Library);
+      const library = this.plugin.featureNamed('Library');
       if (library) library.browseMode({ mode: 'folder', path: file.parent.path });
     });
     this.skipButton(center, near, 'next');
@@ -584,7 +581,7 @@ export class ContextStrip extends Feature {
     if (file.extension === 'canvas') specs.push(...this.contextSpecs('canvas'));
 
     // The note's footnotes, kept off the page, a press away.
-    const footnotes = typeof Footnotes === 'function' ? this.plugin.feature(Footnotes) : null;
+    const footnotes = this.plugin.featureNamed('Footnotes');
     if (footnotes && footnotes.aside && footnotes.countIn(file) > 0) {
       specs.push({ icon: 'file-signature', label: `Footnotes (${footnotes.countIn(file)})`, role: 'footnotes', run: () => footnotes.showView() });
     }

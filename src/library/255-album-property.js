@@ -10,7 +10,6 @@ import { FuzzySuggestModal, Notice, TFile } from 'obsidian';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction } from '../ui/230-pickers.js';
-import { bulkNotice, bulkTail } from '../tools/290-bulk-engine.js';
 
 export class AlbumProperty extends Feature {
   settingsSchema() {
@@ -113,7 +112,7 @@ export class AlbumProperty extends Feature {
     }
     const record = await bulk.addProperties(notes, props, true);
     if (!record) return null;
-    bulkNotice(bulk, `Set “${key}” on ${bulkCount(record.files.length, 'note')} in ${name}.${bulkTail(record)}`, record);
+    bulk.notify(`Set “${key}” on ${bulkCount(record.files.length, 'note')} in ${name}.${bulk.tail(record)}`, record);
     return record;
   }
 }

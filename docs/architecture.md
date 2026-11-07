@@ -33,8 +33,8 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
 ```
 
 - **The rules, checked on every `npm test`:**
-  - **Layers:** a piece uses its own area and those below. 17 known crossings remain, and
-    the list in `tests/snapshots/layers.json` only shrinks. From 88 at M0.
+  - **Layers:** a piece uses its own area and those below. No known crossings remain (88 at
+    M0); `tests/snapshots/layers.json` is empty, and a new one fails the build.
   - **Lifecycle:** no leftovers after switching off or unloading, and no command id or
     setting key lost.
   - **Note text:** what the plugin writes into notes, byte for byte.
@@ -44,9 +44,13 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
   - make an element act as a button: `asButton`;
   - follow a change made by hand on a canvas: `afterCanvasChange`, `glideAndSettle`,
     `saveCanvas`.
-- **Features tell each other through workspace events** where they can. Elsewhere they ask
-  through `plugin.feature(X)`; those are the crossings left.
-- **Pairs of pieces that use each other:** 11, down from 21.
+- **Features tell each other through workspace events** where they can. A feature in
+  another place is asked for by name, `plugin.featureNamed('X')` (a lifecycle test checks
+  every name is a feature), and the bulk engine's notice, result tail and rename-in-place
+  are its own methods (`plugin.bulk.notify`, `.tail`, `.renameInPlace`), so no place
+  imports another's.
+- **Pairs of pieces that use each other:** 3, down from 21, all in the library, each a
+  feature and the view it draws or asks after.
 - **The largest pieces now:** `290-bulk-engine` (1,605 lines), `120-browse-view` (1,173),
   `110-browse-screens` (1,045), `285-footnotes` (994), `301-bulk-properties` (969),
   `262-graph-routes` (964).

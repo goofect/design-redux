@@ -204,7 +204,8 @@ function setup() {
     folderNote: () => null,
     folderCoverSrc: () => null,
     feature: () => null,
-    featureNamed: () => null,
+    // By name, as the plugin's: through feature(), so a test's own override still answers.
+    featureNamed(n) { return this.feature(R[n] || { name: n }); },
     refreshBrowse: () => views.forEach((view) => view.render()),
     moveFile: async (file, folderPath) => {
       await v.fileManager.renameFile(file, `${folderPath === '/' ? '' : folderPath + '/'}${file.name}`);

@@ -16,8 +16,6 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { BrowseScreen } from './108-browse-screen.js';
 import { copyText, EMPTY_VALUE, valueArt } from './110-browse-screens.js';
 import { paintValue, ValueOptionModal, valueOptionsOn } from '../ui/248-value-options.js';
-import { renamePropertyInPlace } from '../tools/290-bulk-engine.js';
-import { BulkEditing } from '../tools/310-bulk-feature.js';
 
 export class PropertiesScreen extends BrowseScreen {
   title() {
@@ -159,7 +157,7 @@ export class PropertiesScreen extends BrowseScreen {
 
   renderInspector(detail, prop, groups) {
     const facts = this.inspect(prop.key);
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     const root = this.app.vault.getRoot();
     const box = detail.createDiv({ cls: 'dr-prop-facts' });
     const fact = (label, text, fix) => {
@@ -247,7 +245,7 @@ export class PropertiesScreen extends BrowseScreen {
   /** In Edit: the values as a list to pick from, and Merge for two or more. */
   renderValuePicks(detail, prop, groups) {
     const view = this.view;
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     const isTags = TAG_KEYS.indexOf(String(prop.key).toLowerCase()) !== -1;
     if (!view.valuePicks || view.valuePicks.key !== prop.key) view.valuePicks = { key: prop.key, set: new Set() };
     const picks = view.valuePicks.set;
@@ -386,7 +384,7 @@ export class PropertiesScreen extends BrowseScreen {
     const view = this.view;
     evt.preventDefault();
     const menu = new Menu();
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     const state = { mode: 'properties', property: prop.key, value };
     const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
     add('Open', 'book-open', 'open', () => view.navigate(Object.assign({ keepFilters: true }, state)));
@@ -419,7 +417,7 @@ export class PropertiesScreen extends BrowseScreen {
   editButton(root, any, onProperty) {
     const view = this.view;
     const bar = root.querySelector('.dr-detail-bar');
-    if (!bar || (!any && !view.editing) || !this.plugin.feature(BulkEditing)) return;
+    if (!bar || (!any && !view.editing) || !this.plugin.featureNamed('BulkEditing')) return;
     const button = bar.createEl('button', {
       cls: `dr-bar-edit${view.editing ? ' is-done' : ''}`,
       text: view.editing ? 'Done' : 'Edit',
@@ -469,7 +467,7 @@ export class PropertiesScreen extends BrowseScreen {
     };
     merge.addEventListener('click', () => {
       if (picks.size < 2) return;
-      const tools = this.plugin.feature(BulkEditing);
+      const tools = this.plugin.featureNamed('BulkEditing');
       if (tools) tools.openMerge(props.filter((p) => picks.has(p.name)).map((p) => p.name));
     });
 
@@ -552,9 +550,9 @@ export class PropertiesScreen extends BrowseScreen {
    */
   async renameProperty(from, to) {
     const view = this.view;
-    const tools = this.plugin.feature(BulkEditing);
+    const tools = this.plugin.featureNamed('BulkEditing');
     if (!tools || !this.plugin.bulk) return;
-    await renamePropertyInPlace(this.plugin.bulk, from, to, {
+    await this.plugin.bulk.renameInPlace(from, to, {
       redraw: () => view.render(),
       review: () => {
         view.render();
@@ -572,7 +570,7 @@ export class PropertiesScreen extends BrowseScreen {
     const name = prop.name;
     const add = (title, icon, section, run) => menu.addItem((item) => item.setTitle(title).setIcon(icon).setSection(section).onClick(run));
     add('View values', 'layout-grid', 'open', () => view.navigate({ mode: 'properties', property: prop.key, value: null, keepFilters: true }));
-    const bulk = this.plugin.feature(BulkEditing);
+    const bulk = this.plugin.featureNamed('BulkEditing');
     if (bulk) {
       const root = this.app.vault.getRoot();
       add('Rename property…', 'pencil', 'action', () => bulk.openRenameProperty(name));
