@@ -377,6 +377,49 @@ suite('Design Redux in Obsidian: the library', function () {
     }, made);
   });
 
+  it('times what an edit costs, in a note of an album of 500', async function () {
+    // A baseline, not a check: what runs while a note in a big album is written in.
+    this.timeout(300000);
+    const root = 'Bench edit';
+    await browser.executeObsidian(async ({ app }, root) => {
+      if (!app.vault.getFolderByPath(root)) await app.vault.createFolder(root);
+      for (let i = 0; i < 500; i++) {
+        const p = `${root}/Note ${i}.md`;
+        if (!app.vault.getFileByPath(p)) await app.vault.create(p, `---\nstatus: open\ntags: [bench]\n---\nA note, linking [[Note ${(i + 1) % 500}]].\n`);
+      }
+    }, root);
+    await obsidianPage.openFile(`${root}/Note 0.md`);
+    await browser.$(ACTIVE + '.markdown-source-view').waitForExist({ timeout: 10000 });
+    const times = await browser.executeObsidian(async ({ app, plugins }, root) => {
+      await new Promise((r) => setTimeout(r, 1500));
+      const find = (name) => plugins.designRedux.features.find((f) => f.constructor.name === name);
+      // Once to warm up, then the middle of five.
+      const time = (fn) => {
+        fn();
+        const runs = [];
+        for (let i = 0; i < 5; i++) {
+          const started = performance.now();
+          fn();
+          runs.push(performance.now() - started);
+        }
+        return Math.round(runs.sort((a, b) => a - b)[2] * 10) / 10;
+      };
+      const other = app.vault.getFileByPath(`${root}/Note 7.md`);
+      const cache = app.metadataCache;
+      return {
+        changed: time(() => cache.trigger('changed', other, '', cache.getFileCache(other))),
+        notePage: time(() => find('NotePage').sync()),
+        pages: time(() => find('NotePages').sync()),
+        strip: time(() => find('ContextStrip').update()),
+      };
+    }, root);
+    perf.push(`perf: an edit in an album of 500: its handlers ${times.changed} ms, the note page ${times.notePage} ms, pages ${times.pages} ms, the strip ${times.strip} ms`);
+    await browser.executeObsidian(async ({ app }, root) => {
+      const folder = app.vault.getFolderByPath(root);
+      if (folder) await app.vault.delete(folder, true);
+    }, root);
+  });
+
   it('opens a folder in a note’s path at the top as its collection in the library', async function () {
     await obsidianPage.openFile('Politics/Deterrence.md');
     const crumb = await browser.$(ACTIVE + '.view-header-title-parent .view-header-breadcrumb');
