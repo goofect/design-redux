@@ -1049,8 +1049,10 @@ describe('Design Redux in Obsidian', function () {
       const page = app.workspace.activeLeaf;
       const el = () => page.view.containerEl;
       const row = () => el().querySelector('.dr-track[data-path="Politics/Anarchy.md"]');
-      await until(() => !!row() && !!el().querySelector('.dr-preview-btn'));
-      el().querySelector('.dr-preview-btn').click();
+      await until(() => !!row());
+      // Shown by its command, and only if it isn't already: the command, like the button it
+      // stands for, shows or hides, and a test before may have left it showing.
+      if (!page.view.previewOn()) app.commands.executeCommandById('design-redux:open-inspector');
       const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
       // In sight, not only open: until then a click opens rather than picks.
       await until(() => !!dock() && !!row() && page.view.previewOn());
@@ -1097,10 +1099,16 @@ describe('Design Redux in Obsidian', function () {
         await library.browseMode({ mode: 'folder', path: root });
         if (typeof library.reveal === 'function') await library.reveal();
         const leaf = app.workspace.getLeavesOfType('design-redux-browse').find((l) => l.view && l.view.path === root);
+        // Once to warm up, then the middle of five: one slow frame on a busy machine moves it no more.
         const time = (fn) => {
-          const started = performance.now();
           fn();
-          return Math.round(performance.now() - started);
+          const runs = [];
+          for (let i = 0; i < 5; i++) {
+            const started = performance.now();
+            fn();
+            runs.push(performance.now() - started);
+          }
+          return Math.round(runs.sort((a, b) => a - b)[2]);
         };
         const shelf = leaf ? time(() => leaf.view.render()) : null;
         const side = app.workspace.getLeavesOfType('design-redux-library')[0];
