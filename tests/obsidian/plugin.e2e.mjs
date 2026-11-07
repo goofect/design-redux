@@ -276,11 +276,10 @@ describe('Design Redux in Obsidian', function () {
       const until = async (done) => {
         for (let i = 0; i < 50 && !done(); i++) await pause(30);
       };
-      // A two-finger swipe at x across the window: a few sideways wheel events, after the pause
-      // that ends the one before; then until it's done what it should, or long enough to say it
-      // hasn't. Whether what's under it was kept from scrolling, too.
+      // A two-finger swipe at x across the window: a few sideways wheel events, straight after
+      // the one before; then until it's done what it should, or long enough to say it hasn't.
+      // Whether what's under it was kept from scrolling, too.
       const swipe = async (x, dx, done) => {
-        await pause(300);
         const target = document.elementFromPoint(x, window.innerHeight / 2) || document.body;
         let kept = true;
         for (let i = 0; i < 6; i++) {

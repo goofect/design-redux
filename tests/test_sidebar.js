@@ -751,6 +751,19 @@ t('a sideways swipe moves the sidebar on the pointer’s side, over anything, an
   now += 1000;
   sw.onWheel({ clientX: left, deltaX: 2, deltaY: 40, deltaMode: 0, timeStamp: now, view: window, preventDefault() { stopped++; }, stopPropagation() {} });
   assert.strictEqual(stopped, 0, 'scrolling down is left alone');
+
+  // Back to back, with no pause between: out, a long way on and the coast after, then straight back.
+  const ev = (dx, at) => sw.onWheel({ clientX: left, deltaX: dx, deltaY: 0, deltaMode: 0, timeStamp: at, view: window, preventDefault() {}, stopPropagation() {} });
+  now += 1000;
+  let at = now;
+  [-30, -30, -30].forEach((dx) => ev(dx, (at += 16)));
+  assert.strictEqual(leftSplit.collapsed, false, 'out');
+  [-30, -30, -30, -20, -10, -5, -2, -1].forEach((dx) => ev(dx, (at += 16)));
+  assert.strictEqual(leftSplit.collapsed, false, 'going on, and the coast, leave it out');
+  [30, 30, 30].forEach((dx) => ev(dx, (at += 16)));
+  assert.strictEqual(leftSplit.collapsed, true, 'straight back: in, with no wait');
+  [-30, -30, -30].forEach((dx) => ev(dx, (at += 16)));
+  assert.strictEqual(leftSplit.collapsed, false, 'and out again');
 });
 
 fs.unlinkSync(tmp);

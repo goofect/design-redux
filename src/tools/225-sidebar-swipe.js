@@ -15,9 +15,11 @@ import { INSPECTOR_VIEW } from '../core/020-constants.js';
 import { openInspector } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';
 
-// How far sideways, in pixels, makes a swipe, and how long a pause ends one.
+// How far sideways, in pixels, makes a swipe, how long a pause ends one,
+// and how far back the other way turns it into another.
 const WHEEL_PULL = 60;
 const WHEEL_GAP = 250;
+const WHEEL_TURN = 2;
 const TOUCH_PULL = 60;
 const TOUCH_TIME = 700;
 
@@ -58,10 +60,12 @@ export class SidebarSwipe extends Feature {
   }
 
   /**
-   * One gesture's sideways scroll, added up until it's far enough, then
-   * acted on once. Its sideways part goes no further, so nothing under it
-   * scrolls or pans that way; pinching (Ctrl) and Shift with a mouse
-   * wheel are left alone.
+   * A swipe's sideways scroll, added up until it's far enough, then acted
+   * on and counted afresh: going on the same way, or the trackpad coasting
+   * after, only asks for what's done already, so nothing waits for it to
+   * stop, and a swipe straight back is a swipe of its own. Its sideways
+   * part goes no further, so nothing under it scrolls or pans that way;
+   * pinching (Ctrl) and Shift with a mouse wheel are left alone.
    */
   onWheel(e) {
     if (!this.enabled || e.ctrlKey || e.shiftKey) return;
@@ -69,7 +73,11 @@ export class SidebarSwipe extends Feature {
     const dx = e.deltaX * unit;
     const dy = e.deltaY * unit;
     let g = this.wheel;
-    if (!g || e.timeStamp - g.last > WHEEL_GAP) g = this.wheel = { x: 0, y: 0, done: false, at: e.clientX };
+    const win = e.view || window;
+    const half = (x) => x < (win.innerWidth || 0) / 2;
+    // A pause, the fingers turning back, or the pointer on the other half starts another.
+    const turned = g && Math.abs(dx) >= WHEEL_TURN && g.x && Math.sign(dx) !== Math.sign(g.x);
+    if (!g || e.timeStamp - g.last > WHEEL_GAP || turned || half(e.clientX) !== half(g.at)) g = this.wheel = { x: 0, y: 0, at: e.clientX };
     g.last = e.timeStamp;
     g.x += dx;
     g.y += dy;
@@ -77,10 +85,12 @@ export class SidebarSwipe extends Feature {
       e.preventDefault();
       e.stopPropagation();
     }
-    if (g.done || Math.abs(g.x) < WHEEL_PULL || Math.abs(g.x) < Math.abs(g.y) * 2) return;
-    g.done = true;
+    if (Math.abs(g.x) < WHEEL_PULL || Math.abs(g.x) < Math.abs(g.y) * 2) return;
     // Fingers moving right scroll the page left: deltaX below zero.
-    this.swipe(g.x < 0, g.at, e.view || window);
+    const toRight = g.x < 0;
+    g.x = 0;
+    g.y = 0;
+    this.swipe(toRight, g.at, win);
   }
 
   onTouchStart(e) {
@@ -124,11 +134,17 @@ export class SidebarSwipe extends Feature {
     this.changed(split);
   }
 
-  /** The right one brings the inspector with it when there's none in it yet. */
+  /** The right one brings the inspector with it when there's none in it yet: once, however many swipes ask meanwhile. */
   async pullOut(split) {
     const ws = this.app.workspace;
     if (split === ws.rightSplit && this.settings.inspector !== false && !ws.getLeavesOfType(INSPECTOR_VIEW).length) {
-      await openInspector(this.app);
+      if (this.opening) return;
+      this.opening = true;
+      try {
+        await openInspector(this.app);
+      } finally {
+        this.opening = false;
+      }
     } else {
       split.expand();
     }
