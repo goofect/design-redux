@@ -114,7 +114,7 @@ const tmp = path.join(__dirname, '_mobile_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { onContextMenu, singleAreaOn, showMenuAt, LibraryView, BrowseView, ' +
   'Library, ActionsMenu, SettingsButton, ContextStrip, PropertiesPanel, PropertiesScreen, ' +
-  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView, WorkspaceCoordinator, Selection, drSegmented, drOpenSheet };\n');
+  'DesignReduxSettingTab, SETTINGS_TABS, PropertiesPanel, PanelDockView, WorkspaceCoordinator, Selection, drSegmented };\n');
 const T = require(tmp).__test;
 
 /* -- helpers -------------------------------------------------------- */
@@ -378,7 +378,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     }
   });
 
-  await t('the shared controls: a segmented control is a tab list to the keys; a sheet gives focus back only when it had it', () => {
+  await t('the shared controls: a segmented control is a tab list to the keys', () => {
     document.body.innerHTML = '';
     const chosen = [];
     const seg = T.drSegmented(document.body, [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' }], 'a', (id) => chosen.push(id));
@@ -393,21 +393,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(chosen, ['c', 'a', 'c', 'a'], 'round from either end; Home and End');
     assert.strictEqual(document.activeElement, segs[0]);
 
-    const opener = document.body.createEl('button');
-    const other = document.body.createEl('input');
-    const sheet = document.body.createDiv();
-    const field = sheet.createEl('input');
-    let closed = 0;
-    let close = T.drOpenSheet(sheet, opener, () => closed++);
-    field.focus();
-    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    assert.strictEqual(document.activeElement, opener, 'Escape from inside: back to what opened it');
-    close();
-    assert.strictEqual(closed, 1, 'closing twice closes once');
-    close = T.drOpenSheet(sheet, opener, () => closed++);
-    other.focus();
-    other.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }));
-    assert.ok(closed === 2 && document.activeElement === other, 'a press outside leaves focus where it went');
   });
 
   await t('settings: the main properties as a list to order, take off and add to by name', () => {

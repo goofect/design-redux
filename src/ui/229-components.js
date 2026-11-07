@@ -1,11 +1,11 @@
 /* ------------------------------------------------------------------ */
-/* Components: nine shared pieces                                      */
+/* Components: the shared pieces drawn in code                         */
 /*                                                                     */
-/* The Apple look's pieces, each one helper here and one block in      */
-/* styles.css, so a button on the strip, in the panel and in the       */
-/* browse view is the same button: icon button, text button, segmented */
-/* control, row, tile, chip, menu, sheet, and (in CSS) toggle and      */
-/* field. Every one is reachable by keyboard and named for a reader.   */
+/* The Apple look's pieces that need more than a class, each one       */
+/* helper here and one block in styles.css, so a button on the strip,  */
+/* in the panel and in the browse view is the same button: icon        */
+/* button, segmented control, menu and a sheet's opening. Every one is */
+/* reachable by keyboard and named for a reader.                       */
 /* ------------------------------------------------------------------ */
 
 import { Menu, setIcon } from 'obsidian';
@@ -22,17 +22,6 @@ export function drIconButton(parent, icon, label, run) {
   const el = parent.createDiv({ cls: 'dr-icon-button clickable-icon' });
   asButton(el, label);
   setIcon(el, icon);
-  if (run) onActivate(el, run);
-  return el;
-}
-
-/** A text button: filled in the accent for the one main action, plain accent text otherwise. */
-export function drTextButton(parent, label, run, opts = {}) {
-  const el = parent.createDiv({ cls: 'dr-text-button' });
-  if (opts.primary) el.addClass('is-primary');
-  asButton(el, label);
-  if (opts.icon) setIcon(el.createSpan({ cls: 'dr-text-button-icon' }), opts.icon);
-  el.createSpan({ text: label });
   if (run) onActivate(el, run);
   return el;
 }
@@ -78,43 +67,6 @@ export function drSegmented(parent, items, value, onChange) {
     next.focus();
   });
   choose(value, false);
-  return el;
-}
-
-/** A list row: an optional cover, a title and one muted line, a value or chevron at the end. */
-export function drRow(parent, opts) {
-  const el = parent.createDiv({ cls: 'dr-list-row' });
-  if (opts.cover) opts.cover(el.createDiv({ cls: 'dr-list-row-cover' }));
-  const text = el.createDiv({ cls: 'dr-list-row-text' });
-  text.createDiv({ cls: 'dr-list-row-title', text: opts.title });
-  if (opts.line) text.createDiv({ cls: 'dr-list-row-line', text: opts.line });
-  if (opts.end) el.createDiv({ cls: 'dr-list-row-end', text: opts.end });
-  else if (opts.run) setIcon(el.createDiv({ cls: 'dr-list-row-end' }), 'chevron-right');
-  if (opts.run) {
-    asButton(el, opts.title);
-    onActivate(el, opts.run);
-  }
-  return el;
-}
-
-/** A tile: a square cover, the title and one muted line below. */
-export function drTile(parent, opts) {
-  const el = parent.createDiv({ cls: 'dr-tile' });
-  const art = el.createDiv({ cls: 'dr-tile-art' });
-  if (opts.cover) opts.cover(art);
-  el.createDiv({ cls: 'dr-tile-title', text: opts.title });
-  if (opts.line) el.createDiv({ cls: 'dr-tile-line', text: opts.line });
-  if (opts.run) {
-    asButton(el, opts.title);
-    onActivate(el, opts.run);
-  }
-  return el;
-}
-
-/** A chip: a tag or token in a muted capsule. */
-export function drChip(parent, text, opts = {}) {
-  const el = parent.createSpan({ cls: 'dr-chip', text });
-  if (opts.label) el.setAttribute('aria-label', opts.label);
   return el;
 }
 
@@ -168,37 +120,4 @@ export function drSheetIn(el, anchor) {
   // Restarted, so it opens each time it's shown.
   void el.offsetWidth;
   el.addClass('dr-sheet-open');
-}
-
-/**
- * A sheet or popover shown: it opens from where it was pressed, and goes
- * on a press outside it or on Escape. Focus goes back to what opened it if
- * it was in the sheet — not when the press outside put it somewhere else.
- * Closing twice closes once.
- */
-export function drOpenSheet(el, anchor, onClose) {
-  drSheetIn(el, anchor);
-  const doc = el.ownerDocument;
-  let open = true;
-  const close = () => {
-    if (!open) return;
-    open = false;
-    const inside = el.contains(doc.activeElement);
-    doc.removeEventListener('keydown', onKey, true);
-    doc.removeEventListener('pointerdown', onDown, true);
-    if (onClose) onClose();
-    if (inside && anchor && typeof anchor.focus === 'function') anchor.focus();
-  };
-  const onKey = (evt) => {
-    if (evt.key === 'Escape') {
-      evt.stopPropagation();
-      close();
-    }
-  };
-  const onDown = (evt) => {
-    if (!el.contains(evt.target) && !(anchor && anchor.contains && anchor.contains(evt.target))) close();
-  };
-  doc.addEventListener('keydown', onKey, true);
-  doc.addEventListener('pointerdown', onDown, true);
-  return close;
 }

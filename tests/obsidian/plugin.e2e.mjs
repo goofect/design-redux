@@ -825,22 +825,18 @@ describe('Design Redux in Obsidian', function () {
     expect(ok).toEqual({ count: 3, equal: true, faces: [true, true], thumb: true, aligned: true });
   });
 
-  it('draws the nine components to their measures, in light and dark', async function () {
+  it('draws the shared components to their measures, in light and dark', async function () {
     const measure = () =>
       browser.executeObsidian(async ({ app }) => {
         await new Promise((r) => setTimeout(r, 400));
         const box = document.body.createDiv({ cls: 'dr-settings dr-component-probe' });
         const icon = box.createDiv({ cls: 'dr-icon-button' });
-        const main = box.createDiv({ cls: 'dr-text-button is-primary', text: 'Open' });
-        const plain = box.createDiv({ cls: 'dr-text-button', text: 'Edit' });
+        const main = box.createDiv({ cls: 'dr-detail-action is-primary', text: 'Open' });
+        const plain = box.createDiv({ cls: 'dr-detail-action', text: 'Edit' });
         const seg = box.createDiv({ cls: 'dr-segmented' });
         seg.createDiv({ cls: 'dr-segment is-active', text: 'One' });
         seg.createDiv({ cls: 'dr-segment', text: 'Two' });
-        const list = box.createDiv();
-        const row = list.createDiv({ cls: 'dr-list-row' });
-        row.createDiv({ cls: 'dr-list-row-cover' });
-        row.createDiv({ cls: 'dr-list-row-text', text: 'A note' });
-        const art = box.createDiv({ cls: 'dr-tile' }).createDiv({ cls: 'dr-tile-art' });
+        const art = box.createDiv({ cls: 'dr-card' }).createDiv({ cls: 'dr-card-art' });
         const chip = box.createSpan({ cls: 'dr-chip', text: 'tag' });
         const sheet = box.createDiv({ cls: 'dr-sheet', text: 'Sheet' });
         const toggle = box.createDiv({ cls: 'checkbox-container' });
@@ -851,7 +847,6 @@ describe('Design Redux in Obsidian', function () {
           main: cs(main).backgroundColor !== 'rgba(0, 0, 0, 0)' && main.offsetHeight,
           plain: [cs(plain).backgroundColor, cs(plain).color === cs(document.body).getPropertyValue('--text-accent') || cs(plain).color !== cs(document.body).color],
           segmented: seg.offsetHeight,
-          row: [row.offsetHeight >= 44, row.querySelector('.dr-list-row-cover').offsetWidth],
           tile: [cs(art).boxShadow, cs(art).borderTopWidth],
           chip: [chip.offsetHeight, cs(chip).borderTopWidth, cs(chip).fontSize],
           sheet: [cs(sheet).borderTopLeftRadius, cs(sheet).boxShadow !== 'none'],
@@ -867,7 +862,6 @@ describe('Design Redux in Obsidian', function () {
       main: 32,
       plain: ['rgba(0, 0, 0, 0)', true],
       segmented: 32,
-      row: [true, 36],
       tile: ['none', '0px'],
       chip: [24, '0px', '13px'],
       sheet: ['12px', true],
