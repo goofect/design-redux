@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Modal, Notice, TFile } from 'obsidian';
-import { pageFolder } from '../core/034-pages.js';
+import { pageFolder } from '../core/034-tabs.js';
 import { plainValue, valueList } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
 import { ComparePicker, NamePrompt } from './230-pickers.js';

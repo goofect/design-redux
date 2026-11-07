@@ -10,7 +10,7 @@
 import { ItemView, Platform, setIcon, TFile, TFolder } from 'obsidian';
 import { BUILTIN_SCREENS, LIBRARY_BUILTINS, LIBRARY_VIEW } from '../core/020-constants.js';
 import { fillArt, noteCoverSrc } from '../core/030-art.js';
-import { isBrowseView, pageLeaf } from '../core/034-pages.js';
+import { isBrowseView, pageLeaf } from '../core/034-tabs.js';
 import { onContextMenu, showTargetMenu } from '../core/036-menus.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';

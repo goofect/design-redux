@@ -85,7 +85,7 @@ Coffee N' Christmas.
   and links stay as they are; read it rather than walking the vault.
 - A large class can be written in parts, chained by `extends`: each part
   extends the one before it, and the class extends the last (BrowseView in
-  120 over 121–125; BulkEdits in 291 over 290's BulkPlans; PropertiesSection
+  120 over 121–127; BulkEdits in 291 over 290's BulkPlans; PropertiesSection
   in 161 over 160's PropertyRows). A part's methods are the class's;
   a test refuses a name written in two parts, so none quietly replaces
   another. A lower area that needs a higher one's work asks the plugin

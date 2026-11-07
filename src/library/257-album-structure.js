@@ -19,7 +19,7 @@
 
 import { Notice, Setting, TFile } from 'obsidian';
 import { ALBUM_TYPES, BROWSE_VIEW } from '../core/020-constants.js';
-import { activeViewOfType } from '../core/034-pages.js';
+import { activeViewOfType } from '../core/034-tabs.js';
 import { menuGroup } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet, plainValue, rollupOf, valueList } from '../core/045-helpers-properties.js';

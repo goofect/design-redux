@@ -13,7 +13,7 @@
 
 import { Modal, Notice, setIcon } from 'obsidian';
 import { TYPE_LABELS } from '../core/020-constants.js';
-import { pageFolder } from '../core/034-pages.js';
+import { pageFolder } from '../core/034-tabs.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';

@@ -4,7 +4,7 @@
 
 import { Notice, Platform, Setting, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
-import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/034-pages.js';
+import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/034-tabs.js';
 import { SORTS } from '../core/040-sorting.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';

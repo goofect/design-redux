@@ -1,7 +1,7 @@
 import { Notice, TFile, TFolder } from 'obsidian';
 import { IMAGE_EXTENSIONS } from '../core/020-constants.js';
 import { firstImageFile, noteCoverSrc } from '../core/030-art.js';
-import { isBrowseView, pageLeaf } from '../core/034-pages.js';
+import { isBrowseView, pageLeaf } from '../core/034-tabs.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
 import { CoverColorModal, FolderPicker, ImagePicker } from './230-pickers.js';

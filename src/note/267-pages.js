@@ -18,8 +18,8 @@ import { showMenuAt } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
-import { bodyStart, hiddenRanges, nameFromText, newPageName, openPage, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from '../core/090-pages.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
+import { bodyStart, hiddenRanges, nameFromText, newPageName, openPage, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
 export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'image', 'list', 'book-open', 'quote', 'link', 'star', 'lightbulb', 'calendar'];

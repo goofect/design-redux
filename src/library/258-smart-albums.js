@@ -11,7 +11,7 @@
 
 import { Menu } from 'obsidian';
 import { BROWSE_VIEW, LIBRARY_VIEW } from '../core/020-constants.js';
-import { activeViewOfType, liveViews } from '../core/034-pages.js';
+import { activeViewOfType, liveViews } from '../core/034-tabs.js';
 import { showMenuAt } from '../core/036-menus.js';
 import { byName } from '../core/040-sorting.js';
 import { fmGet, plainValue } from '../core/045-helpers-properties.js';

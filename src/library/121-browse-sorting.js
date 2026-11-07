@@ -7,7 +7,7 @@
 
 import { ItemView, Menu, setIcon } from 'obsidian';
 import { BROWSE_VIEW, TILE_GROUPS } from '../core/020-constants.js';
-import { liveViews } from '../core/034-pages.js';
+import { liveViews } from '../core/034-tabs.js';
 import { showMenuAt } from '../core/036-menus.js';
 import { byName, collapseSearches, DATE_RANGES, dateFilterLabel, dateFloor, OWN_ORDER, propertyFilterLabel, sortByOrder, SORTS, TABLE_SORTS } from '../core/040-sorting.js';
 import { asButton, composing, onActivate } from '../core/042-controls.js';

@@ -9,7 +9,7 @@
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
 import { drawFolderArt, drawNoteArt, leadProperty, valueText } from '../core/030-art.js';
-import { canStep, isBrowseView, pageFile, pageLeaf, step } from '../core/034-pages.js';
+import { canStep, isBrowseView, pageFile, pageLeaf, step } from '../core/034-tabs.js';
 import { showMenuAt, showTargetMenu } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';

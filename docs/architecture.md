@@ -15,21 +15,22 @@ folders are the three places of the reform — library, note, tools — with cor
 them; what follows about canvas pieces and the old folders is the record from before.
 
 ```text
-esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.0, phase 1)
+esbuild bundles src/main.js → main.js; 109 ES modules in a folder per area
 
- src/core/     constants; helpers (art, colours 031, properties 045, text 047,      19 modules  4,622 lines
-               sorting, DOM); services: Pins, Orders, Notes 073, Files 074,
-               Selection 076; actions 078; Feature 080; appearance
- src/ui/       pickers, covers, cover drop, image routing, property clipboard        5 modules  1,286
- src/library/  sidebar, browse view 120 (+121–124), screens, filters; and the        (the library place)
-               album features, note page, library check
- src/note/     properties panel (160–180), reading outline, marked lists, scripts,    (the note place)
-               footnotes, quiet links 263–266
- src/maps/     mind maps: view, editor, layouts, views, import/export, history        (the maps place)
- src/tree/     the map's tree, pure: model, layouts, conversions                      (below every place)
- src/tools/    actions menu, strip, one page, modes, graph filter and routes, bulk    (the tools place)
-               engine, dialogs, schema, rules
- src/plugin/   the plugin (lifecycle, settings, features, delegates), settings      2 modules  1,076
+ src/core/     constants; helpers by concern (art 030, colours 031, tabs 034,         30 modules  5,964 lines
+               menus 036, sorting 040, controls 042, properties 045, text 047,
+               DOM 050); services: Pins, Orders, Notes 073, Files 074, Selection
+               076, library index 077; actions 078; Feature 080; capabilities
+               081; coordinator 084; appearance; the property schema and rules
+ src/ui/       pickers, covers, cover drop, image routing, property clipboard        7 modules  1,757
+ src/library/  sidebar, browse view 120 (+121–127), screens, the library feature;  25 modules  8,938
+               the album features, note page, library check
+ src/note/     properties panel and inspector (160–180), pages (266 text, 267),     19 modules  5,415
+               marked lists (270–273), scripts, footnotes (283–285)
+ src/tools/    actions menu, strip, one page, sidebar swipe, graph filter and        24 modules  8,152
+               routes, bulk engine, dialogs, schema, rules
+ src/plugin/   the plugin (lifecycle, features), diagnostics, settings layout       4 modules  1,418
+               357 and tab 360
 ```
 
 - **The rules, checked on every `npm test`:**
@@ -52,10 +53,14 @@ esbuild bundles src/main.js → main.js; 103 ES modules in a folder per area (2.
   and rename-in-place are its own methods (`plugin.bulk.notify`, `.tail`,
   `.renameInPlace`).
 - **Pairs of pieces that use each other:** none, down from 21.
-- **Helpers by concern:** covers and art (`030`), the page and its history (`034`), menus
+- **Helpers by concern:** covers and art (`030`), the tab and its history (`034-tabs`), menus
   and touch (`036`), sorting (`040`), controls: buttons, keys, focus (`042`).
-- **The largest pieces now:** `122-browse-editing` (868 lines), `120-browse-view` (857),
-  `032-drawn-covers` (777). Lettered and roman lists are four pieces: how a marker is read
+- **The largest pieces now:** `032-drawn-covers` (777 lines, mostly the drawings' data),
+  `190-strip` (706), `121-browse-sorting` (675), `130-library-feature` (615: its settings
+  are a third), `120-browse-view` (611). The browse view's arranging (`126`) and its table
+  (`127`) are parts of their own; the settings tab draws (`360`) what the layout says
+  (`357`); a note's pages keep their text (`266`) beside the feature (`267`), as lists and
+  footnotes do, not in core. Lettered and roman lists are four pieces: how a marker is read
   (`270`), the editor (`271`), reading view (`272`) and the feature (`273`). Split by what they hold: the graph's
   routing plan (`261`) from its drawing (`262`); renaming and merging properties (`308`)
   from adding and removing them (`301`); the bulk engine and the panel's properties each

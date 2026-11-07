@@ -27,7 +27,7 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { isBrowseView, pageFolder, pageLeaf } from './034-pages.js';
+import { isBrowseView, pageFolder, pageLeaf } from './034-tabs.js';
 import { menuGroup } from './036-menus.js';
 import { pickedOnCanvas } from './079-canvas-adapter.js';
 

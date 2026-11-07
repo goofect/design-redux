@@ -13,7 +13,7 @@
 
 import { Notice } from 'obsidian';
 import { BROWSE_VIEW } from '../core/020-constants.js';
-import { around, pageLeaf, singleAreaOn } from '../core/034-pages.js';
+import { around, pageLeaf, singleAreaOn } from '../core/034-tabs.js';
 import { Feature } from '../core/080-feature.js';
 import { ask } from '../core/081-capabilities.js';
 

@@ -4,7 +4,7 @@
 
 import { normalizePath, Notice, Plugin, TFolder } from 'obsidian';
 import { BROWSE_VIEW, DEFAULTS, LIBRARY_VIEW } from '../core/020-constants.js';
-import { liveViews } from '../core/034-pages.js';
+import { liveViews } from '../core/034-tabs.js';
 import { propertyLabel } from '../core/045-helpers-properties.js';
 import { Pins } from '../core/060-pins.js';
 import { Lengths } from '../core/065-lengths.js';
