@@ -39,6 +39,49 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(await gears()).toEqual(['header']);
   });
 
+  it('keeps the actions and settings icons beside the sidebar’s tabs as the sidebar is made wider and narrower', async function () {
+    const measure = (width) => browser.executeObsidian(async ({ app }, width) => {
+      app.workspace.leftSplit.expand();
+      app.workspace.leftSplit.setSize(width);
+      await new Promise((r) => setTimeout(r, 300));
+      const header = document.querySelector('.workspace-split.mod-left-split .workspace-tab-header-container');
+      const at = (el) => (el ? Math.round(el.getBoundingClientRect().left - header.getBoundingClientRect().left) : null);
+      const tabs = Array.from(header.querySelectorAll('.workspace-tab-header-container-inner .workspace-tab-header')).filter((el) => el.offsetParent !== null);
+      return {
+        width: Math.round(header.getBoundingClientRect().width),
+        tabs: tabs.map(at),
+        actions: at(header.querySelector('.dr-trigger')),
+        settings: at(header.querySelector('.dr-settings-moved')),
+        row: Array.from(header.children).map((el) => `${el.className.split(' ')[0]}@${at(el)}`).join(' '),
+      };
+    }, width);
+    // Each icon keeps its distance from the tabs: it moves as they do.
+    const gap = (m, key) => m[key] - m.tabs[m.tabs.length - 1];
+    const besideTabs = async (why) => {
+      const narrow = await measure(240);
+      const wide = await measure(420);
+      expect([why, gap(wide, 'actions'), gap(wide, 'settings')]).toEqual([why, gap(narrow, 'actions'), gap(narrow, 'settings')]);
+      expect(gap(narrow, 'actions')).toBeLessThan(80);
+    };
+    await besideTabs('as Obsidian draws the row');
+    // A theme that stretches the tabs' row to fill the header.
+    await browser.executeObsidian(() => {
+      const style = document.head.createEl('style', { attr: { id: 'dr-test-theme' } });
+      style.textContent = '.mod-left-split .workspace-tab-header-container-inner { flex-grow: 1; }';
+    });
+    await besideTabs('with a theme stretching the tabs');
+    await browser.executeObsidian(() => document.getElementById('dr-test-theme').remove());
+    // Saved as following the spacer, or the list at the row's end: put back beside the tabs.
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      plugin.settings.headerOrder = { actions: 'workspace-tab-header-spacer', settings: 'workspace-tab-header-tab-list' };
+      await app.workspace.changeLayout(app.workspace.getLayout());
+    });
+    await readUntil(() => browser.executeObsidian(() => !!document.querySelector('.mod-left-split .workspace-tab-header-container .dr-settings-moved')), Boolean);
+    await besideTabs('saved past the spacer');
+    await browser.executeObsidian(({ app }) => app.workspace.leftSplit.setSize(300));
+  });
+
   it('finds the unofficial parts of Obsidian it relies on', async function () {
     const compat = await browser.executeObsidian(({ app, obsidian }) => {
       const has = (fn) => {

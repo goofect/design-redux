@@ -78,6 +78,14 @@ body {
   height: var(--icon-s, 16px);
 }
 
+/* While the icons follow the tabs, the tabs' row hugs its tabs — whatever
+   a theme gives it — so the icons stay beside them as the sidebar is
+   made wider or narrower, rather than riding its edge. */
+.workspace-split.mod-left-split .workspace-tab-header-container:has(> .dr-trigger, > .dr-settings-moved) > .workspace-tab-header-container-inner {
+  flex-grow: 0;
+  width: auto;
+}
+
 /* Parked button rows ---------------------------------------------------
  *
  * The real buttons stay where Obsidian put them so their click handlers

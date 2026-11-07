@@ -28,11 +28,21 @@ export function placeInHeader(header, el, anchor, fallback) {
     return;
   }
   const target = anchor && header.querySelector(`.${anchor}`);
-  if (target && target !== el && !target.contains(el)) {
-    target.insertAdjacentElement('afterend', el);
-    return;
+  if (target && target !== el && !target.contains(el)) target.insertAdjacentElement('afterend', el);
+  else fallback();
+  besideTabs(header, el);
+}
+
+/**
+ * An icon stays beside the tabs, never past the spacer that fills the
+ * rest of the row: there it would ride the sidebar's edge as the sidebar
+ * is resized, away from the tabs it goes with.
+ */
+export function besideTabs(header, el) {
+  const spacer = header.querySelector(':scope > .workspace-tab-header-spacer');
+  if (spacer && el.parentElement === header && spacer.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING) {
+    header.insertBefore(el, spacer);
   }
-  fallback();
 }
 
 /**
@@ -132,6 +142,7 @@ export function makeHeaderDraggable(el, key, plugin) {
     const before = nearest(evt);
     if (before) header.insertBefore(moving, before);
     else header.appendChild(moving);
+    besideTabs(header, moving);
 
     // Stored by what it now follows, so the position survives a rebuild.
     const previous = moving.previousElementSibling;
