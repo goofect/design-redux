@@ -85,8 +85,7 @@
 }
 
 /* A hairline between the note and what can be done to it, rather than boxes round the buttons. */
-.dr-strip-center + .dr-strip-actions,
-.dr-strip-now.is-screen + .dr-strip-actions {
+.dr-strip-center + .dr-strip-actions {
   padding-left: var(--dr-space-2);
   border-left: 1px solid var(--background-modifier-border);
 }

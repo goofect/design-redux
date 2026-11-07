@@ -8,14 +8,13 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
-import { drawFolderArt, drawNoteArt, leadProperty, valueText } from '../core/030-art.js';
+import { drawNoteArt, leadProperty, valueText } from '../core/030-art.js';
 import { canStep, isBrowseView, pageFile, pageLeaf, step } from '../core/034-tabs.js';
-import { showMenuAt, showTargetMenu } from '../core/036-menus.js';
+import { showMenuAt } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { relativeDay } from '../core/047-helpers-text.js';
 import { albumNeighbours } from '../core/070-orders.js';
-import { libraryIndex } from '../core/077-library-index.js';
 import { actionContext, applies } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
@@ -67,8 +66,6 @@ export const STRIP_ACTIONS = {
   note: [['add-page', 'Add a page', true, 'plus']],
   canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true], ['present-map', 'Present', true]],
 };
-
-export const STRIP_SCREEN_ICONS = { smart: 'sparkles', 'library-check': 'stethoscope', inbox: 'inbox', home: 'home', search: 'search', folders: 'folder', notes: 'file-text', properties: 'tags', pinned: 'pin', recents: 'clock' };
 
 export class ContextStrip extends Feature {
   constructor(plugin) {
@@ -328,65 +325,18 @@ export class ContextStrip extends Feature {
     this.narrow = this.isNarrow();
     this.el.toggleClass('is-narrow', this.narrow);
     this.el.toggleClass('is-sheet', this.narrow);
-    // Up whenever there's a page at all — including an empty one, since
-    // the strip is also where a closed sidebar comes back from.
-    this.el.toggleClass('is-empty', !view);
-    if (!view) {
+    // Up only on a note: a library screen, the graph or an empty page
+    // has nothing for it to say, and the room it took goes back.
+    this.el.toggleClass('is-empty', !file);
+    if (!file) {
       this.fitPadding();
       return;
     }
 
     this.renderNav(this.el);
-    if (file) {
-      this.renderNow(this.el, file, view);
-      this.renderActions(this.el, file, leaf);
-    } else {
-      this.renderScreen(this.el, view);
-    }
+    this.renderNow(this.el, file, view);
+    this.renderActions(this.el, file, leaf);
     this.fitPadding();
-  }
-
-  /**
-   * Anything that isn't a note: a browse screen, graph view, an empty
-   * page. A folder screen gets the folder's menu, so making something
-   * in it is a click away.
-   */
-  renderScreen(strip, view) {
-    const browse = isBrowseView(view) ? view : null;
-    const now = strip.createDiv({ cls: 'dr-strip-now is-screen' });
-    const art = now.createDiv({ cls: 'dr-strip-art is-blank' });
-    const icon = browse
-      ? 'library'
-      : (typeof view.getIcon === 'function' && view.getIcon()) || 'layout';
-    setIcon(art.createSpan({ cls: 'dr-card-glyph' }), icon);
-
-    const title =
-      (typeof view.getDisplayText === 'function' && view.getDisplayText()) ||
-      'Nothing open';
-    const text = now.createDiv({ cls: 'dr-strip-text' });
-    text.createDiv({ cls: 'dr-strip-title', text: title });
-    const folder = browse && browse.mode === 'folder' ? browse.folder() : null;
-    text.createDiv({ cls: 'dr-strip-sub', text: this.screenLine(browse, folder) });
-    // An album shows its cover, as a note does; other screens their own sign.
-    if (folder && !(folder.isRoot && folder.isRoot())) {
-      art.empty();
-      art.removeClass('is-blank');
-      drawFolderArt(this.plugin, art, folder);
-    } else if (browse && STRIP_SCREEN_ICONS[browse.mode]) {
-      art.empty();
-      setIcon(art.createSpan({ cls: 'dr-card-glyph' }), STRIP_SCREEN_ICONS[browse.mode]);
-    }
-    if (!folder) return;
-    const actions = strip.createDiv({ cls: 'dr-strip-actions' });
-    const specs = this.contextSpecs('album');
-    if (typeof browse.filterMenu === 'function') specs.push({ icon: 'arrow-up-down', label: 'Sort and filter', role: 'sort', run: (evt) => showMenuAt(browse.filterMenu(), evt) });
-    specs.push({
-      icon: 'ellipsis',
-      label: 'More',
-      role: 'more',
-      run: (evt) => showTargetMenu(this.plugin, evt, folder, { here: true, source: 'design-redux-strip', redraw: () => browse.render() }),
-    });
-    specs.forEach((spec) => this.stripButton(actions, spec));
   }
 
   /** Narrow enough that the strip's secondary buttons go into More. Not on a phone, whose strip is its own. */
@@ -441,20 +391,6 @@ export class ContextStrip extends Feature {
     if (spec.active) el.addClass('is-active');
     onActivate(el, spec.run);
     return el;
-  }
-
-  /** The line under a screen's name: what an album holds and what it is; otherwise the vault. */
-  screenLine(browse, folder) {
-    const vault = this.app.vault.getName();
-    if (!browse) return vault;
-    if (browse.mode === 'smart') return 'Saved view';
-    if (browse.mode === 'library-check') return 'What to look at';
-    if (browse.mode === 'inbox') return 'Notes in no collection';
-    if (!folder || (folder.isRoot && folder.isRoot())) return vault;
-    const n = libraryIndex(this.plugin).count(folder);
-    const structure = ask(this.plugin, 'albums');
-    const kind = structure ? structure.info(folder).label : '';
-    return [n === 1 ? '1 item' : `${n} items`, kind || (folder.parent && !(folder.parent.isRoot && folder.parent.isRoot()) ? folder.parent.name : '')].filter(Boolean).join(' · ');
   }
 
   renderNav(strip) {
