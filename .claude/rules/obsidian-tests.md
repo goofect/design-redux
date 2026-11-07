@@ -19,7 +19,9 @@ paths:
   `waitUntil`), not a fixed pause. Each test's time is in
   `ci-output/<version>-timings.txt`, joined from each spec's (`parts.mjs`).
 - The latest Obsidian only: no older version is tested. One at a time
-  (`maxInstances` 1): two at once crash each other.
+  (`maxInstances` 1): two at once crash each other. CI gives each spec a job
+  of its own (`WDIO_KEEP_PARTS`; the results job joins their parts), so a new
+  spec file goes in the workflow's `spec` list too.
 - They run in a sandbox too wherever GitHub's release downloads are reachable
   (that's where Obsidian comes from): under `xvfb-run -a`. With no window
   manager there, a few pointer tests behave differently than in CI.
