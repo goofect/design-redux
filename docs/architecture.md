@@ -287,7 +287,7 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 
 - **Every commit:** `npm test`, all 18 suites. Changed pieces must keep their suites. A moved
   name must stay exported to the suites that import it, since tests read names from `main.js`.
-- **After each push:** CI runs every test on the oldest and latest Obsidian (`tests/ci.sh`).
+- **After each push:** CI runs every test on the latest Obsidian (`tests/ci.sh`).
 - **New in M1:**
   - **Lifecycle:** build the plugin in jsdom, run register, refresh twice, then unload. Assert
     no `dr-` body classes, no `[class*="dr-"]` elements outside views, and no live
@@ -316,8 +316,8 @@ commit must keep behaviour (the one intended change is in M3) and can be reverte
 | A suite imports a name that moved or was renamed | M2–M4 | names stay the same; suites run on every commit |
 | Undo changes behaviour | M3 | deliberate, tested: restore only what's unchanged, say what was skipped |
 | A frontmatter write changes formatting | M3 | data-preservation fixtures |
-| Canvas internals differ between Obsidian versions | M6 | both versions in CI; the adapter keeps the guards |
-| A refactor ships a release with a regression | all | small commits, CI on both versions before release, revertable |
+| Canvas internals differ between Obsidian versions | M6 | the latest in CI; the adapter keeps the guards |
+| A refactor ships a release with a regression | all | small commits, CI on the latest Obsidian, revertable |
 | Command ids or setting keys change | all | never renamed; the lifecycle test lists command ids against a snapshot |
 | The refactor grows features | all | new ideas go in a list, not in refactor commits |
 

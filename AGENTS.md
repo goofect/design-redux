@@ -47,8 +47,8 @@ Coffee N' Christmas.
   wdio-obsidian-service): a spec per area (`app`, `library`, `note`, `tools`),
   each in an Obsidian of its own, its tests wrapped by `suite()` in
   `helpers.mjs`, which puts the spec's starting state back before each one.
-  GitHub Actions runs them in a job for the oldest supported version and one
-  for the latest, beside the simulation suites.
+  GitHub Actions runs them on the latest Obsidian (the only version that
+  matters), beside the simulation suites.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
   the browse view, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
@@ -136,9 +136,9 @@ Coffee N' Christmas.
   suites the change touches (`node tests/run.js qol album`: a line per suite,
   details only on failure); before pushing, all of them (`npm test`, ~10 s,
   a few at once). A real-Obsidian test only for what can't be checked
-  otherwise: `tests/e2e.sh "test name"` (latest version only, prints just the
-  outcome; the full log is `logs/e2e.log`). CI runs everything on both
-  versions after the push; fix what it finds.
+  otherwise: `tests/e2e.sh "test name"` (prints just the outcome; the full
+  log is `logs/e2e.log`). CI runs everything after the push; fix what it
+  finds.
 - Before pushing, fetch and rebase: the release workflow commits version bumps
   to the default branch.
 - After pushing, run `tests/ci.sh` once (with a long timeout): it waits for

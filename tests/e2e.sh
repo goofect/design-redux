@@ -6,7 +6,7 @@
 [ -n "$1" ] || { echo 'usage: tests/e2e.sh "test name"'; exit 2; }
 mkdir -p logs
 node build.mjs >/dev/null || exit 1
-WDIO_VERSION=latest xvfb-run -a npx wdio run ./wdio.conf.mjs --mochaOpts.grep "$1" > logs/e2e.log 2>&1
+xvfb-run -a npx wdio run ./wdio.conf.mjs --mochaOpts.grep "$1" > logs/e2e.log 2>&1
 status=$?
 grep -E '[0-9]+ (passing|failing|pending)|Spec Files' logs/e2e.log | tail -n 4
 if [ $status -ne 0 ]; then

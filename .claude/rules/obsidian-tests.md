@@ -18,8 +18,8 @@ paths:
   never `getLeavesOfType(...)[0]`. Wait for a condition (`readUntil`,
   `waitUntil`), not a fixed pause. Each test's time is in
   `ci-output/<version>-timings.txt`, joined from each spec's (`parts.mjs`).
-- One Obsidian at a time (`maxInstances` 1): two of the same version at once
-  crash each other. CI runs each version in a job of its own.
+- The latest Obsidian only: no older version is tested. One at a time
+  (`maxInstances` 1): two at once crash each other.
 - They run in a sandbox too wherever GitHub's release downloads are reachable
   (that's where Obsidian comes from): under `xvfb-run -a`. With no window
   manager there, a few pointer tests behave differently than in CI.

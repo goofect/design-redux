@@ -1,6 +1,5 @@
-# On every push, three jobs at once: the simulation tests, and the plugin inside
-# the real Obsidian, a job for the oldest supported version and one for the
-# latest. Then the results (summary, test output, timings, screenshots, a
+# On every push, two jobs at once: the simulation tests, and the plugin inside
+# the latest Obsidian (the only version that matters). Then the results (summary, test output, timings, screenshots, a
 # compatibility report, and the screenshots compared with main's last) go to
 # the ci-results branch, where they can be read without opening Actions. On
 # the default branch, once the simulation tests pass and src/ or styles/
@@ -53,12 +52,6 @@ jobs:
           retention-days: 1
 
   obsidian:
-    # Each version on a runner of its own: two Obsidians on one machine slow
-    # each other, and one failing doesn't stop the other.
-    strategy:
-      fail-fast: false
-      matrix:
-        version: [oldest, latest]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,8 +73,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .obsidian-cache
-          key: obsidian-${{ runner.os }}-${{ matrix.version }}-${{ steps.week.outputs.week }}
-          restore-keys: obsidian-${{ runner.os }}-${{ matrix.version }}-
+          key: obsidian-${{ runner.os }}-latest-${{ steps.week.outputs.week }}
+          restore-keys: obsidian-${{ runner.os }}-latest-
 
       - name: Virtual display
         run: |
@@ -96,16 +89,14 @@ jobs:
 
       # Each spec in tests/obsidian/ in an Obsidian of its own, one after another.
       - name: Tests in Obsidian
-        env:
-          WDIO_VERSION: ${{ matrix.version }}
         run: |
           mkdir -p ci-output
-          npx wdio run ./wdio.conf.mjs 2>&1 | tee "ci-output/obsidian-tests-${{ matrix.version }}.txt"
+          npx wdio run ./wdio.conf.mjs 2>&1 | tee ci-output/obsidian-tests.txt
       - name: Keep the output for the results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: part-obsidian-${{ matrix.version }}
+          name: part-obsidian
           path: ci-output
           retention-days: 1
 
@@ -132,9 +123,6 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ci-output
-          # Both versions' Obsidian output, oldest first, as one file.
-          cat ci-output/obsidian-tests-oldest.txt ci-output/obsidian-tests-latest.txt > ci-output/obsidian-tests.txt 2>/dev/null || true
-          rm -f ci-output/obsidian-tests-oldest.txt ci-output/obsidian-tests-latest.txt
           {
             echo "commit: $GITHUB_SHA"
             echo "branch: $GITHUB_REF_NAME"

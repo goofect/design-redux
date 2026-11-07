@@ -23,14 +23,12 @@ export { OUT };
 export let version = 'unknown';
 
 // Screenshots are kept few, to keep the runs and the ci-results branch
-// small: these, on the latest Obsidian only (not the oldest, the first
-// entry in wdio.conf.mjs), plus any test that fails, on either.
-export const OLDEST = '1.7.7';
+// small: these, plus any test that fails.
 const SHOTS = ['right-sidebar-dark', 'right-sidebar-light', 'page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit'];
 
 export async function shot(name) {
   const failed = name.startsWith('FAILED-');
-  if (!failed && (version === OLDEST || SHOTS.indexOf(name) === -1)) return;
+  if (!failed && SHOTS.indexOf(name) === -1) return;
   fs.mkdirSync(OUT, { recursive: true });
   await browser.pause(400);
   await browser.saveScreenshot(path.join(OUT, `${version}-${name}.png`));
