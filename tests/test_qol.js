@@ -100,7 +100,7 @@ const tmp = path.join(__dirname, '_qol_under_test.js');
 fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
   '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
   'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, LOOK_KEYS, featureKeys, parsePages, hiddenRanges, nameFromText, uniqueName, withPageAdded, withPageRenamed, withPageRemoved, withPageMoved, newPageName, openPage, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS };\n');
+  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, LOOK_KEYS, featureKeys, parsePages, hiddenRanges, nameFromText, uniqueName, withPageAdded, withPageRenamed, withPageRemoved, withPageMoved, newPageName, openPage, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS, attachSuggest };\n');
 const R = require(tmp).__test;
 fs.unlinkSync(tmp);
 
@@ -659,6 +659,25 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     key(document.activeElement, 'r');
     assert.strictEqual(focusedName(), 'Contract', 'no jumping when off');
     el.remove();
+  });
+
+  await t('a suggest list takes what it suggests once while its field is in use, and afresh after', () => {
+    const box = document.body.createDiv();
+    const input = box.createEl('input');
+    let asked = 0;
+    const list = R.attachSuggest(box, input, { source: () => (asked++, ['alpha', 'alpine', 'beta']), onSelect() {} });
+    ['a', 'al', 'alp'].forEach((v) => {
+      input.value = v;
+      input.dispatchEvent(new window.Event('input'));
+    });
+    assert.strictEqual(asked, 1, 'once for three keys');
+    assert.deepStrictEqual(Array.from(list.querySelectorAll('.dr-suggest-item')).map((e) => e.textContent), ['alpha', 'alpine']);
+    input.dispatchEvent(new window.Event('blur'));
+    input.value = 'b';
+    input.dispatchEvent(new window.Event('input'));
+    assert.strictEqual(asked, 2, 'afresh once the field was left');
+    list.remove();
+    box.remove();
   });
 
   console.log(`\n${passed} passed`);

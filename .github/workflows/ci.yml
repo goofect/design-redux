@@ -82,16 +82,17 @@ jobs:
           key: obsidian-${{ runner.os }}-latest-${{ steps.week.outputs.week }}
           restore-keys: obsidian-${{ runner.os }}-latest-
 
+      # The runner's own Xvfb, installed only if an image ever lacks it; no
+      # window manager: the tests pass without one, as they do locally.
       - name: Virtual display
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/*.list
-          sudo apt-get update -q
-          sudo apt-get install -q -y herbstluftwm dzen2 x11-xserver-utils
+          if ! command -v Xvfb >/dev/null; then
+            sudo apt-get update -q && sudo apt-get install -q -y xvfb
+          fi
           export DISPLAY=:99
           echo "DISPLAY=$DISPLAY" >> "$GITHUB_ENV"
           Xvfb $DISPLAY -screen 0 1280x1024x24 +extension GLX -noreset &
           sleep 1
-          herbstluftwm &
 
       # Each spec in tests/obsidian/ in an Obsidian of its own, one after another.
       # Its timings and errors kept as parts, joined with the other specs' in the results.

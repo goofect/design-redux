@@ -217,11 +217,14 @@ export function attachSuggest(field, input, opts) {
     });
   };
 
+  // What it suggests from, taken once while the field is in use: a source
+  // can walk every note, and typing would otherwise walk them each key.
+  let pool = null;
   const show = () => {
     // A list field suggests for the item being typed, not the whole line.
     const q = (opts.query ? opts.query() : input.value).trim().toLowerCase();
-    items = opts
-      .source()
+    if (!pool) pool = opts.source();
+    items = pool
       .filter((t) => t.toLowerCase().includes(q) && t.toLowerCase() !== q)
       .slice(0, 8);
 
@@ -254,7 +257,11 @@ export function attachSuggest(field, input, opts) {
     if (pressed) show();
     pressed = false;
   });
-  input.addEventListener('blur', () => window.setTimeout(hide, 120));
+  input.addEventListener('blur', () => {
+    // Taken afresh next time: what the other fields say may have changed.
+    pool = null;
+    window.setTimeout(hide, 120);
+  });
 
   input.addEventListener('keydown', (evt) => {
     if (!list.hasClass('is-open')) {

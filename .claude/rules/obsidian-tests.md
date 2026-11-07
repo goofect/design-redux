@@ -23,5 +23,5 @@ paths:
   of its own (`WDIO_KEEP_PARTS`; the results job joins their parts), so a new
   spec file goes in the workflow's `spec` list too.
 - They run in a sandbox too wherever GitHub's release downloads are reachable
-  (that's where Obsidian comes from): under `xvfb-run -a`. With no window
-  manager there, a few pointer tests behave differently than in CI.
+  (that's where Obsidian comes from): under `xvfb-run -a`, with no window
+  manager, as in CI.
