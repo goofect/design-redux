@@ -1,5 +1,6 @@
-# On every push, two jobs at once: the simulation tests, and the plugin inside
-# the latest Obsidian (the only version that matters). Then the results (summary, test output, timings, screenshots, a
+# On every push, at once: the simulation tests, and the plugin inside the latest
+# Obsidian (the only version that matters), a job for each spec in
+# tests/obsidian/. Then the results (summary, test output, timings, screenshots, a
 # compatibility report, and the screenshots compared with main's last) go to
 # the ci-results branch, where they can be read without opening Actions. On
 # the default branch, once the simulation tests pass and src/ or styles/
@@ -52,6 +53,11 @@ jobs:
           retention-days: 1
 
   obsidian:
+    # A spec a runner: they run side by side, and one failing doesn't stop the rest.
+    strategy:
+      fail-fast: false
+      matrix:
+        spec: [app, library, note, tools]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,15 +94,18 @@ jobs:
           herbstluftwm &
 
       # Each spec in tests/obsidian/ in an Obsidian of its own, one after another.
+      # Its timings and errors kept as parts, joined with the other specs' in the results.
       - name: Tests in Obsidian
+        env:
+          WDIO_KEEP_PARTS: 1
         run: |
           mkdir -p ci-output
-          npx wdio run ./wdio.conf.mjs 2>&1 | tee ci-output/obsidian-tests.txt
+          npx wdio run ./wdio.conf.mjs --spec "tests/obsidian/${{ matrix.spec }}.e2e.mjs" 2>&1 | tee "ci-output/obsidian-tests-${{ matrix.spec }}.txt"
       - name: Keep the output for the results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: part-obsidian
+          name: part-obsidian-${{ matrix.spec }}
           path: ci-output
           retention-days: 1
 
@@ -123,6 +132,10 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p ci-output
+          # The specs' output as one file, and their timings and errors joined.
+          cat ci-output/obsidian-tests-*.txt > ci-output/obsidian-tests.txt 2>/dev/null || true
+          rm -f ci-output/obsidian-tests-*.txt
+          node -e "import('./tests/obsidian/parts.mjs').then((m) => m.joinParts())"
           {
             echo "commit: $GITHUB_SHA"
             echo "branch: $GITHUB_REF_NAME"

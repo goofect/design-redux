@@ -34,8 +34,9 @@ export const config = {
     timeout: 60000,
   },
   logLevel: 'warn',
-  // Each spec's timings and errors, joined per version into the files tests/ci.sh reads.
+  // Each spec's timings and errors, joined per version into the files tests/ci.sh reads;
+  // in CI, where each spec has a job of its own, by the results job once all are in.
   onComplete() {
-    joinParts();
+    if (!process.env.WDIO_KEEP_PARTS) joinParts();
   },
 };
