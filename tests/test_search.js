@@ -1,11 +1,10 @@
 // Types into the real search screen, letter by letter, in jsdom, and
 // checks what's kept: the field itself, the focus, and which searches
 // are saved.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -57,14 +56,7 @@ const obsidian = new Proxy({
   Notice: class {},
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_search_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, collapseSearches };\n');
-const { BrowseView, collapseSearches } = require(tmp).__test;
+const { BrowseView, collapseSearches } = loadMain(obsidian, 'search');
 
 /* -- a vault ------------------------------------------------------ */
 
@@ -230,10 +222,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(shown, ['liberal inter', 'realism']);
   });
 
-  fs.unlinkSync(tmp);
   console.log(`\n${passed} passed`);
 })().catch((err) => {
-  try { fs.unlinkSync(tmp); } catch (e) {}
   console.error(err);
   process.exit(1);
 });

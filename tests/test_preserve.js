@@ -1,21 +1,11 @@
 // What the plugin writes into notes' text, byte for byte: renaming tags —
 // against a note made to be awkward (Unicode, CRLF, code, maths, comments, footnotes,
 // links in properties). Only what's meant changes; the rest is the same.
-const fs = require('fs');
-const path = require('path');
-const Module = require('module');
 const assert = require('assert');
+const { loadMain } = require('./harness');
 
 const obsidian = new Proxy({ Platform: { isMobile: false }, setIcon: () => {} }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_preserve_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { tagSpots, renameTagsAt };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'preserve');
 
 /**
  * The note, as pieces: plain text, a quiet link Obsidian found ({ link,

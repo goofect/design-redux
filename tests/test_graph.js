@@ -1,11 +1,10 @@
 // Property filters in the graph, against the real main.js: a graph
 // view's settings panel in Obsidian's markup, with a search field that
 // records what the graph is told.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -41,15 +40,7 @@ const obsidian = new Proxy({
   setIcon: (el, name) => { el.dataset.icon = name; },
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_graph_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { GraphPropertyFilter, graphClause, graphTerm, searchWithout, propertyValues };\n');
-const G = require(tmp).__test;
-fs.unlinkSync(tmp);
+const G = loadMain(obsidian, 'graph');
 
 /* -- a vault and a graph --------------------------------------------- */
 

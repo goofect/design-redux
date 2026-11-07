@@ -3,9 +3,9 @@
 // decorations in Live Preview and source mode, and reading view.
 const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -48,15 +48,7 @@ const obsidian = new Proxy({
   Platform: { isMobile: false },
   editorLivePreviewField: livePreview,
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_scripts_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { scriptSpans, toggleScript, scriptAt, scriptEditorExtension, renderScripts, Scripts, DEFAULTS };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'scripts');
 
 let passed = 0;
 const t = (name, fn) => { fn(); passed++; console.log('  ok  ' + name); };

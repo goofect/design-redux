@@ -4,10 +4,10 @@
 // are found in the text with their positions, and every write is seen.
 const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const yaml = require('js-yaml');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -116,22 +116,7 @@ const obsidian = new Proxy({
   parseYaml: (text) => yaml.load(text, SCHEMA),
   stringifyYaml: (obj) => yaml.dump(obj, { lineWidth: -1 }),
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_bulk_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { inspectableOf, cardFrontmatter, PropertyToolsModal, BulkEdits, BulkEditing, AddPropertiesModal, RenamePropertyModal, RenameTagModal, renamedText, ' +
-  'addPropertiesTo, renamePropertyIn, mergeValues, renameTagText, renameTagsValue, renameTagIn, tagNameProblem, ' +
-  'propertyNameProblem, renameInExpression, renameInBase, renameInBaseText, renameInBaseBlocks, parseTypedValue, ' +
-  'renamePropertyInSettings, renameInNameList, PropertiesSection, DEFAULTS, renameValueIn, removePropertiesFrom, ' +
-  'convertValue, parseDateText, RenameValueModal, RemovePropertiesModal, ChangeTypeModal, MissingPropertyModal, ' +
-  'FolderDefaultsModal, propertiesIn, MergePropertiesModal, MergeValuesModal, mergePropertiesIn, PropertyListTool, propertyOverview, AlbumProperty, ' +
-  'propertyPastePlan, joinedValues, PropertyPasteModal, PropertyClipboard, whereHolds, Notes, Library, propertyPresentation, ' +
-  'widgetsTakeEntry, typeInfoOf, schemaFor, checkNote, fixFor, schemasFromDefaults, nearDuplicates, optionFor, withOption, SETTINGS_MIGRATIONS, SchemaSection, SchemaModal, PropertySchemas, schemaWithDefaults, ValueOptionModal, SchemaCheckModal, CleanUpValuesModal, PropertyHistory, HistorySection, diffProps, withEntry, historyOf, parseDateInput, PropertyRules, RulesModal, tidyRule, ruleFires, planRules, parseSetLines, namedBy, LinkNotePicker, propertiesTable, parseTable, tablePlan, TablePasteModal, panelViewFolder };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'bulk');
 
 /* -- a vault, simulated with real text --------------------------------- */
 

@@ -2,11 +2,9 @@
 // letters and numerals, Enter in
 // a real CodeMirror state, the editor's decorations in a real
 // EditorView, and the reading-view conversion in jsdom.
-const fs = require('fs');
-const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 const virtualConsole = dom.virtualConsole;
@@ -29,16 +27,7 @@ const obsidian = new Proxy({
   Notice: class {},
   Platform: { isMobile: false, isPhone: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_lists_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { toRoman, fromRoman, toAlpha, fromAlpha, parseListItem, ' +
-  'listEnter, renderLists, listEditorExtensions, MarkedLists, LIST_KINDS, relistLines, relistSelection, arrangeListEntries };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'lists');
 const { EditorState } = require('@codemirror/state');
 const { EditorView } = require('@codemirror/view');
 

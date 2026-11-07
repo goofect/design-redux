@@ -1,11 +1,10 @@
 // Back and forward on a folder page, against the real main.js: they
 // move through the folders — up to the one it's in, down again — while
 // every other screen's pair, and the strip's, keep to the history.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -62,15 +61,7 @@ const obsidian = new Proxy({
   Notice: class {},
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_foldernav_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, ContextStrip, Orders };\n');
-const { BrowseView, Orders } = require(tmp).__test;
-fs.unlinkSync(tmp);
+const { BrowseView, Orders } = loadMain(obsidian, 'foldernav');
 
 /* -- a vault ------------------------------------------------------------ */
 

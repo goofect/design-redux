@@ -1,11 +1,10 @@
 // Rearranging properties in the panel, against the real main.js: drag
 // by the type icon, Alt+arrows, Move up / Move down, and the order
 // written back to the note's frontmatter.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -57,15 +56,7 @@ const obsidian = new Proxy({
   Platform,
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const notices = [];
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_reorder_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { PropertiesSection, Notes };\n');
-const { PropertiesSection, Notes } = require(tmp).__test;
-fs.unlinkSync(tmp);
+const { PropertiesSection, Notes } = loadMain(obsidian, 'reorder');
 
 /* -- a note and a panel -------------------------------------------------- */
 

@@ -3,9 +3,9 @@
 // word counts and goals, ordinals as you type, and default hotkeys.
 const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -92,17 +92,7 @@ const obsidian = new Proxy({
   Platform: platform,
   editorLivePreviewField: livePreview,
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_qol_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { fillArt, initialsOf, nameHue, roveFocus, gridColumns, BrowseView, Orders, Pins, ' +
-  'showTargetMenu, ContextStrip, ordinalSuffix, ordinalBefore, ' +
-  'ordinalInput, Scripts, scriptHotkeys, DEFAULTS, SETTINGS_TABS, LOOK_KEYS, featureKeys, parsePages, hiddenRanges, nameFromText, uniqueName, withPageAdded, withPageRenamed, withPageRemoved, withPageMoved, newPageName, openPage, listKeys, ListKeys, coverTint, coverGen, DesignRedux, blankLook, SETTINGS_MIGRATIONS, attachSuggest };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'qol');
 
 let passed = 0;
 const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + name); };

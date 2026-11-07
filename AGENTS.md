@@ -36,7 +36,9 @@ Coffee N' Christmas.
 - `docs/architecture.md` — the architecture audit and the refactor roadmap
   (milestones M0–M8): read it before moving code between pieces.
 - `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
-  in for). `npm test`, or `node tests/run.js qol album` for just some.
+  in for). `npm test`, or `node tests/run.js qol album` for just some. Each
+  loads the built bundle with `loadMain(obsidian)` (`tests/harness.js`): every
+  name `main.js` declares can be read from what it returns, no list to keep.
 - `tests/test_lifecycle.js` checks command ids, setting keys and view types against
   `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
   the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`

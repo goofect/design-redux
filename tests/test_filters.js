@@ -1,11 +1,10 @@
 // The library's filter button, against the real main.js: tag, property
 // and date filters alongside the folder one, through the menu, the
 // pickers and the chips, on the screens they narrow.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -91,15 +90,7 @@ const obsidian = new Proxy({
   Notice: class {},
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_filters_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { BrowseView, noteTags, dateFloor, Orders, BulkEdits };\n');
-const { BrowseView, noteTags, dateFloor, Orders, BulkEdits } = require(tmp).__test;
-fs.unlinkSync(tmp);
+const { BrowseView, noteTags, dateFloor, Orders, BulkEdits } = loadMain(obsidian, 'filters');
 
 /* -- a vault -------------------------------------------------------------- */
 

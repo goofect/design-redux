@@ -1,11 +1,10 @@
 // Renders the real LibraryView into jsdom, with Obsidian's element
 // helpers stubbed, and checks the parts of the sidebar that carry logic:
 // which single row is highlighted, the disclosure, and the panel class.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>');
 global.window = dom.window;
@@ -79,14 +78,7 @@ const obsidian = new Proxy({
   normalizePath: (p) => p.replace(/\/+/g, '/').replace(/^\/|\/$/g, ''),
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_sidebar_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, BUILTIN_SCREENS, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files, SidebarSwipe };\n');
-const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files, SidebarSwipe } = require(tmp).__test;
+const { fullNameOnHover, LibraryView, BrowseView, Library, ContextStrip, DesignRedux, SidebarDrop, clearSidebarChrome, showTargetMenu, pageFolder, headerDuplicates, Files, SidebarSwipe } = loadMain(obsidian, 'sidebar');
 
 /* -- a vault and a plugin ----------------------------------------- */
 
@@ -767,5 +759,4 @@ t('a sideways swipe moves the sidebar on the pointer’s side, over anything, an
   assert.strictEqual(leftSplit.collapsed, false, 'and out again');
 });
 
-fs.unlinkSync(tmp);
 console.log(`\n${passed} passed`);

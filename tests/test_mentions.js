@@ -1,11 +1,10 @@
 // Mentions in the properties panel, against the real main.js: linked
 // mentions without the note's own links to itself, and unlinked
 // mentions searched from note text the way Obsidian finds them.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -35,15 +34,7 @@ const obsidian = new Proxy({
   setIcon: (el, name) => { el.dataset.icon = name; },
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_mentions_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { MentionsSection, unlinkedMentions, mentionNames };\n');
-const M = require(tmp).__test;
-fs.unlinkSync(tmp);
+const M = loadMain(obsidian, 'mentions');
 
 /* -- a vault like the one in the screenshot ---------------------------- */
 

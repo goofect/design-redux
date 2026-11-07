@@ -1,11 +1,10 @@
 // Footnotes in place, against the real main.js: what's read as a
 // footnote, the changes that add, change, remove and tidy them (kept in
 // order), and the box on a real CodeMirror editor.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -60,15 +59,7 @@ const obsidian = new Proxy({
   Notice: class { constructor(m) { notices.push(m); } },
   Platform: { isMobile: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_footnotes_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { scanFootnotes, planFootnotes, applyFootnoteChanges, footnoteBody, footnoteAt, Footnotes, DEFAULTS, footnoteDefRanges, footnoteHider, FootnotesView };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'footnotes');
 
 let passed = 0;
 // One after another, waiting for any that take a moment.

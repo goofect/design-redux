@@ -2,11 +2,10 @@
 // mode (rename, move, delete, add, arrange), the strip's skip buttons,
 // arrangements that follow renames and deletions, each note's length,
 // and the Home screen.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 dom.virtualConsole.removeAllListeners('jsdomError');
@@ -116,15 +115,7 @@ const obsidian = new Proxy({
   Platform: { isMobile: false, isPhone: false },
   normalizePath: (p) => p.replace(/\/+/g, '/').replace(/^\//, ''),
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_album_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { ALBUM_LAYOUTS, BrowseView, ContextStrip, Orders, DEFAULTS, albumNeighbours, albumSequence, arrange, moveBefore, DesignRedux, Lengths, countWords, readingTime, drawFolderArt, noteCoverSrc, CoverDrop, stripDetail, SETTINGS_TABS, AlbumStructure, SmartAlbums, LibraryCheck, drawNoteArt, AlbumRefactor, Appearance, actionCommands, addActionItems, placedName, homeOf, menuActions, featurePlace, iconWord, Notes, Files, PlacesSection, homeShelves, Library, Selection, LibraryIndex, NotePage, SETTINGS_MIGRATIONS, rankNote, textExcerpt, TEXT_PAUSE, bodyWords, ImageRouter, crumbFolderPath, HeaderSkip, LOOKS, settingsLine };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'album');
 
 /* -- a vault whose files really move ------------------------------------ */
 

@@ -3,11 +3,10 @@
 // it's given — against a stand-in drawn the way Obsidian's graph draws:
 // a note is lit when the hovered one is among its links, a line when the
 // hovered note is at one end.
-const fs = require('fs');
 const path = require('path');
-const Module = require('module');
 const assert = require('assert');
 const { JSDOM } = require('jsdom');
+const { loadMain } = require('./harness');
 
 const dom = new JSDOM('<!doctype html><body></body>', { pretendToBeVisual: true });
 global.window = dom.window;
@@ -40,15 +39,7 @@ class Setting {
 }
 
 const obsidian = new Proxy({ Setting, Platform: { isMobile: false } }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
-const origLoad = Module._load;
-Module._load = function (req, ...rest) {
-  return req === 'obsidian' ? obsidian : origLoad.call(this, req, ...rest);
-};
-const tmp = path.join(__dirname, '_routes_under_test.js');
-fs.writeFileSync(tmp, fs.readFileSync(path.join(__dirname, '..', 'main.js'), 'utf8') +
-  '\nmodule.exports.__test = { routeGraph, routeLight, routeLines, linkStats, linkWeights, routeKey, GraphRoutes, routedNodeRender, routedLinkRender };\n');
-const R = require(tmp).__test;
-fs.unlinkSync(tmp);
+const R = loadMain(obsidian, 'routes');
 
 let passed = 0;
 const test = (name, fn) => {
