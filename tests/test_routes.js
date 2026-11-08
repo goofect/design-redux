@@ -466,6 +466,57 @@ test('a local graph draws only the neighbour lines a route runs along', () => {
   feature.disable();
 });
 
+test('lines run broad to narrow, so arrows point down; notes nothing tells apart keep theirs', () => {
+  const drawn = { a: { type: '', links: { b: true } }, b: { type: '', links: {} }, e: { type: '', links: { f: true } }, f: { type: '', links: {} } };
+  const rank = new Map([['b', 0], ['a', 1], ['f', 2], ['e', 3]]);
+  const out = R.broadFirst(drawn, rank, (x, y) => x !== 'e' && y !== 'e');
+  assert.deepStrictEqual([Object.keys(out.a.links), Object.keys(out.b.links)], [[], ['a']], 'b is broader: the line runs from it');
+  assert.deepStrictEqual([Object.keys(out.e.links), Object.keys(out.f.links)], [['f'], []], 'not told apart: as it ran');
+  assert.deepStrictEqual(Object.keys(drawn.a.links), ['b'], 'the graph’s own data untouched');
+});
+
+test('a vault whose notes link up to what they sit under is drawn broad to narrow', () => {
+  const up = { [M]: { [W]: 1 }, [I]: { [M]: 1, [W]: 1 }, [C]: { [M]: 1, [W]: 1 } };
+  const g = makeGraph('graph', () => ({ nodes: graphData(up) }));
+  const feature = makeFeature(() => [g.leaf], up);
+  feature.settings.graphRouting.graph = true;
+  feature.enable();
+  const from = (a, b) => g.renderer.links.some((l) => l.source.id === a && l.target.id === b);
+  assert.ok(!linkBetween(g, W, I) && !linkBetween(g, W, C), 'routed');
+  assert.deepStrictEqual([from(W, M), from(M, I), from(M, C)], [true, true, true], 'each line from the broader note');
+  feature.disable();
+  feature.settings.graphRouting.graph = false;
+});
+
+test('a button in the graph’s header turns routes on and off, lit while on', () => {
+  require('./harness').elementHelpers(window.HTMLElement.prototype);
+  const g = makeGraph('graph', () => ({ nodes: graphData(vault) }));
+  const actions = g.leaf.view.containerEl.appendChild(document.createElement('div'));
+  g.leaf.view.addAction = (icon, title, run) => {
+    const el = actions.appendChild(document.createElement('a'));
+    el.className = 'clickable-icon view-action';
+    el.dataset.icon = icon;
+    el.setAttribute('aria-label', title);
+    el.addEventListener('click', run);
+    return el;
+  };
+  const feature = makeFeature(() => [g.leaf], vault);
+  feature.enable();
+  feature.sync();
+  const buttons = actions.querySelectorAll('.dr-graph-route-action');
+  assert.strictEqual(buttons.length, 1, 'one button, however often synced');
+  const button = buttons[0];
+  assert.ok(!button.classList.contains('is-active') && linkBetween(g, W, I));
+  button.click();
+  assert.ok(button.classList.contains('is-active') && feature.settings.graphRouting.graph === true);
+  assert.ok(!linkBetween(g, W, I), 'on: routed');
+  assert.strictEqual(g.rows.querySelector('.dr-graph-routes').drToggle.getValue(), true, 'the Display switch follows');
+  button.click();
+  assert.ok(!button.classList.contains('is-active') && linkBetween(g, W, I), 'off again');
+  feature.disable();
+  assert.ok(!actions.querySelector('.dr-graph-route-action'), 'gone when the feature is off');
+});
+
 test('a graph drawn differently is left alone', () => {
   const leaf = { view: { getViewType: () => 'graph', containerEl: document.createElement('div'), renderer: {} } };
   const feature = makeFeature(() => [leaf], vault);

@@ -35,7 +35,7 @@ import { Setting } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
-import { hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
+import { broadFirst, hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
 
 /* -- drawing: what the graph's notes and lines do when one is hovered - */
 
@@ -227,7 +227,8 @@ export class GraphRoutes extends Feature {
     this.graphs.clear();
     this.app.workspace.iterateAllLeaves((leaf) => {
       const graph = this.graphOf(leaf);
-      if (graph) graph.view.containerEl.querySelectorAll('.dr-graph-routes').forEach((el) => el.remove());
+      if (graph) graph.view.containerEl.querySelectorAll('.dr-graph-routes, .dr-graph-route-action').forEach((el) => el.remove());
+      if (graph) delete graph.view.drRouteAction;
       const shown = graph && this.displayChildren(graph);
       if (shown) shown.querySelectorAll('.dr-graph-routes').forEach((el) => el.remove());
     });
@@ -267,9 +268,26 @@ export class GraphRoutes extends Feature {
     const graph = this.graphOf(leaf);
     if (!graph) return;
     this.placeSwitch(graph);
+    this.placeAction(graph);
     const on = this.isOn(graph.type);
     if (on && !graph.renderer.drRoutes) this.patch(graph);
     else if (!on && graph.renderer.drRoutes) this.unpatch(graph.renderer);
+  }
+
+  /** A button in the graph's own header, lit while it's on: routes on and off in one click. */
+  placeAction(graph) {
+    const view = graph.view;
+    let button = view.drRouteAction;
+    if (!button || !button.isConnected) {
+      if (typeof view.addAction !== 'function') return;
+      button = view.addAction('route', 'Links through notes between', () => this.setOn(graph.type, !this.isOn(graph.type)));
+      if (!button) return;
+      button.addClass('dr-graph-route-action');
+      view.drRouteAction = button;
+    }
+    const on = this.isOn(graph.type);
+    button.toggleClass('is-active', on);
+    button.setAttribute('aria-pressed', String(on));
   }
 
   /**
@@ -320,8 +338,7 @@ export class GraphRoutes extends Feature {
       });
     setting.settingEl.drToggle = made;
     graph.renderer.drRouteToggle = made;
-    const tip =
-      'Where notes link one to the next, each narrower, draw a link from the first to the last through them rather than straight across.';
+    const tip = 'Draw links through the notes between, broad to narrow. With Arrows on, they point down.';
     if (typeof setting.setTooltip === 'function') setting.setTooltip(tip);
     else setting.settingEl.setAttribute('aria-label', tip);
 
@@ -462,6 +479,9 @@ export class GraphRoutes extends Feature {
         if (plan.kept.get(to)) plan.kept.get(to).delete(from);
       });
     }
+
+    // Each line from the broader note to the narrower: the graph's arrows point down.
+    if (plan.apart) plan.nodes = broadFirst(plan.nodes, plan.rank, plan.apart);
 
     plan.data = Object.assign({}, data, {
       nodes: plan.nodes,

@@ -302,7 +302,35 @@ export function routeGraph(nodes, stats, parents) {
     });
   });
 
-  return finishRoutes(nodes, near, hidden, rank, routes);
+  // How two notes are told apart goes with the plan: the lines turned broad-first ask it.
+  return Object.assign(finishRoutes(nodes, near, hidden, rank, routes), { apart });
+}
+
+/**
+ * The lines to draw, each running from the broader note to the narrower,
+ * so the graph's arrows point down the routes. A line between notes
+ * nothing tells apart keeps the way it ran. `drawn` isn't changed.
+ */
+export function broadFirst(drawn, rank, apart) {
+  const out = Object.assign({}, drawn);
+  const copied = new Set();
+  const own = (id) => {
+    if (!copied.has(id)) {
+      out[id] = Object.assign({}, out[id], { links: Object.assign({}, out[id].links || {}) });
+      copied.add(id);
+    }
+    return out[id].links;
+  };
+  Object.keys(drawn).forEach((from) => {
+    const links = drawn[from] && drawn[from].links;
+    if (!links || !rank.has(from)) return;
+    Object.keys(links).forEach((to) => {
+      if (!rank.has(to) || !out[to] || rank.get(to) >= rank.get(from) || !apart(from, to)) return;
+      delete own(from)[to];
+      own(to)[from] = links[to];
+    });
+  });
+  return out;
 }
 
 /** The lines kept, and the graph's data without the ones left out. */
