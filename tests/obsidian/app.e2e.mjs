@@ -122,7 +122,7 @@ suite('Design Redux in Obsidian: the app', function () {
     for (const [part, ok] of Object.entries(compat)) expect([part, ok]).toEqual([part, true]);
   });
 
-  it('draws its settings as four places and a look, by what they’re for', async function () {
+  it('draws its settings on one page, a section for each place, by what they’re for', async function () {
     await browser.executeObsidian(({ app }) => {
       app.setting.open();
       app.setting.openTabById('design-redux');
@@ -137,11 +137,13 @@ suite('Design Redux in Obsidian: the app', function () {
         sameWindow: doc === document,
         title: doc ? doc.title : null,
         tabs: doc ? doc.querySelectorAll('.dr-settings .dr-set-tab').length : 0,
+        sections: doc ? Array.from(doc.querySelectorAll('.dr-settings .dr-set-pane:not(.is-hidden) .dr-set-pane-title')).map((t) => t.textContent) : [],
       };
     });
     fs.mkdirSync(OUT, { recursive: true });
     fs.writeFileSync(path.join(OUT, `${version}-settings-facts.json`), JSON.stringify(where, null, 2));
-    expect(where.tabs).toBe(6);
+    expect(where.tabs).toBe(0);
+    expect(where.sections).toEqual(['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Advanced']);
 
     // A screenshot from whichever window they're in.
     const main = await browser.getWindowHandle();
@@ -153,10 +155,10 @@ suite('Design Redux in Obsidian: the app', function () {
       }
     }
     await shot('settings-appearance');
-    await clickText('.dr-settings .dr-set-tab', 'Library');
+    await browser.execute(() => document.getElementById('dr-set-library').scrollIntoView());
     await shot('settings-library');
 
-    // Searching shows the matching rows from every tab, named as ever, and nothing else.
+    // Searching shows the matching rows from every section, named as ever, and nothing else.
     const found = await browser.execute(() => {
       const input = document.querySelector('.dr-settings .dr-set-search input');
       input.value = 'cover';

@@ -1,54 +1,5 @@
 /* Settings ------------------------------------------------------------------ */
 
-/* Four tabs along the top: words, with a line under the one open. */
-.dr-set-tabs {
-  display: flex;
-  gap: calc(var(--dr-u) * 5);
-  margin-bottom: calc(var(--dr-u) * 5);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--dr-line);
-  scrollbar-width: none;
-}
-
-.dr-set-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.dr-set-tabs .dr-set-tab {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  height: auto;
-  margin-bottom: -1px;
-  padding: var(--dr-space-2) 2px var(--dr-space-2);
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  background: none;
-  box-shadow: none;
-  color: var(--text-muted);
-  font-size: var(--font-ui-small);
-  cursor: pointer;
-}
-
-@media (any-hover: hover) {
-  .dr-set-tabs .dr-set-tab:hover {
-    background: none;
-    color: var(--text-normal);
-  }
-}
-
-.dr-set-tabs .dr-set-tab.is-active {
-  border-bottom-color: var(--text-normal);
-  color: var(--text-normal);
-}
-
-.dr-set-tabs .dr-set-tab:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
-  border-radius: var(--dr-radius-sm);
-}
-
 .dr-set-pane.is-hidden {
   display: none;
 }
@@ -59,6 +10,20 @@
 
 .dr-set-pane > .setting-item-heading:first-child {
   margin-top: 0;
+}
+
+/* One page: each category under its name, set apart by space. */
+.dr-set-pane + .dr-set-pane {
+  margin-top: calc(var(--dr-u) * 7);
+}
+
+.dr-settings .dr-set-pane-title {
+  margin: 0 0 var(--dr-space-2);
+  padding: 0;
+  border: none;
+  color: var(--text-normal);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold, 600);
 }
 
 /* Settings that only apply while another is on sit beneath it, indented. */

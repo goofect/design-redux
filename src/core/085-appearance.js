@@ -11,11 +11,11 @@
 import { Notice } from 'obsidian';
 import { Feature } from './080-feature.js';
 
-export const LOOKS = { apple: 'Apple: the system font, grouped lists, quiet controls', theme: 'The theme’s', editorial: 'Editorial: monochrome, flat, fine lines' };
+export const LOOKS = { apple: 'Apple', theme: 'Your theme’s', editorial: 'Editorial' };
 export const LOOK_SCOPES = { window: 'The whole window', plugin: 'Design Redux only' };
 export const ARTWORK_SIZES = { '': 'As the density', small: 'Small', medium: 'Medium', large: 'Large' };
 
-export const ICON_MODES = { auto: 'Icons with words, the words dropping where it’s narrow', icons: 'Icons only', words: 'Words only' };
+export const ICON_MODES = { auto: 'Icons and words', icons: 'Icons only', words: 'Words only' };
 
 export class Appearance extends Feature {
   settingsSchema() {

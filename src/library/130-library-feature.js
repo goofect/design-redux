@@ -187,7 +187,7 @@ export class Library extends Feature {
         type: 'dropdown',
         name: 'A single click in the library',
         desc: 'While the inspector shows, a click picks and a double-click opens.',
-        options: { shown: 'Picks while the inspector shows', never: 'Always opens' },
+        options: { shown: 'Picks', never: 'Opens' },
         showIf: 'inspector',
       },
       {

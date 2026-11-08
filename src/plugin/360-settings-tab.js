@@ -12,12 +12,11 @@ import { AbstractInputSuggest, Notice, Platform, PluginSettingTab, setIcon, Sett
 import { DEFAULTS } from '../core/020-constants.js';
 import { normalHex } from '../core/031-colours.js';
 import { byName } from '../core/040-sorting.js';
-import { roveFocus } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { ask } from '../core/081-capabilities.js';
 import { drSegmented, isAppleLook } from '../ui/229-components.js';
 import { confirmAction } from '../ui/230-pickers.js';
-import { featureKeys, FORMER_TABS, LOOK_KEYS, SETTING_PRESETS, SETTINGS_TABS } from './357-settings-layout.js';
+import { FORMER_TABS, LOOK_KEYS, SETTING_PRESETS, SETTINGS_TABS } from './357-settings-layout.js';
 
 /**
  * Suggestions under a settings field: notes, folders, or property names
@@ -79,7 +78,6 @@ export class DesignReduxSettingTab extends PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
-    this.tab = SETTINGS_TABS[0].id;
     /** The feature whose gear is open — one at a time; kept while the page redraws. */
     this.gear = null;
   }
@@ -140,39 +138,15 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     // The look leads Appearance, as plain rows above its features.
     const appearance = tabs.find((t) => t.spec.id === 'appearance');
     if (appearance) appearance.features.unshift(look.features[0]);
-    const bar = containerEl.createDiv({ cls: 'dr-set-tabs' });
-    bar.setAttribute('role', 'tablist');
-    roveFocus(bar, '.dr-set-tab');
-    const panes = [];
-
+    // One page: each category a section under its name, one after another.
     tabs.forEach(({ spec, features }) => {
-      const on = spec.id === this.tab;
-      const button = bar.createEl('button', { cls: 'dr-set-tab' });
-      button.setAttribute('role', 'tab');
-      button.setAttribute('aria-selected', String(on));
-      button.id = `dr-set-tab-${spec.id}`;
-      button.toggleClass('is-active', on);
-      button.setText(spec.title);
-
       const pane = containerEl.createDiv({ cls: 'dr-set-pane' });
-      pane.setAttribute('role', 'tabpanel');
-      pane.setAttribute('aria-labelledby', button.id);
       pane.dataset.tab = spec.id;
-      pane.toggleClass('is-hidden', !on);
-      panes.push(pane);
-      // Named over its rows while searching, when every tab's are shown at once.
-      pane.createDiv({ cls: 'dr-set-pane-title', text: spec.title });
+      const title = pane.createEl('h2', { cls: 'dr-set-pane-title', text: spec.title });
+      title.id = `dr-set-${spec.id}`;
+      pane.setAttribute('role', 'group');
+      pane.setAttribute('aria-labelledby', title.id);
       this.renderPane(pane, spec, features);
-
-      button.addEventListener('click', () => {
-        this.tab = spec.id;
-        bar.querySelectorAll('.dr-set-tab').forEach((b) => {
-          const active = b === button;
-          b.toggleClass('is-active', active);
-          b.setAttribute('aria-selected', String(active));
-        });
-        panes.forEach((p) => p.toggleClass('is-hidden', p !== pane));
-      });
     });
 
     containerEl.createDiv({ cls: 'dr-set-nothing', text: 'No settings match.' });
@@ -186,12 +160,8 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     if (typeof super.hide === 'function') super.hide();
   }
 
-  /** Opened next at one setting: its tab, and its row scrolled to and marked. */
+  /** Opened next at one setting: its row scrolled to and marked. */
   reveal(key) {
-    const spec = SETTINGS_TABS.find((tab) => tab.features.some((feature) => featureKeys(feature).indexOf(key) !== -1));
-    if (spec) this.tab = spec.id;
-    // The look's rows lead Appearance.
-    else if (LOOK_KEYS.indexOf(key) !== -1) this.tab = 'appearance';
     // One behind a gear opens that gear.
     SETTINGS_TABS.forEach((tab) => tab.features.forEach((feature) => {
       if ((feature.keys || []).indexOf(key) !== -1) this.gear = feature.id;
@@ -294,7 +264,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
         block.toggleClass('dr-set-unmatched', !shown);
         if (shown) paneAny = true;
       });
-      pane.toggleClass('is-hidden', on ? !paneAny : !pane.dataset.always && pane.dataset.tab !== this.tab);
+      pane.toggleClass('is-hidden', on && !paneAny);
       if (paneAny) any = true;
     });
     containerEl.toggleClass('dr-set-none', on && !any);

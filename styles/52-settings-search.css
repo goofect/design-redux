@@ -70,26 +70,9 @@
   display: none;
 }
 
-/* While searching: every tab's matches at once, each under its tab's name. */
-.dr-set-pane-title,
+/* While searching: the sections with a match, each under its name. */
 .dr-set-nothing {
   display: none;
-}
-
-.dr-settings.is-searching .dr-set-tabs {
-  display: none;
-}
-
-.dr-settings.is-searching .dr-set-pane-title {
-  display: block;
-  margin: calc(var(--dr-u) * 4.5) 0 var(--dr-space-1);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold, 600);
-}
-
-.dr-settings.is-searching .dr-set-pane:first-of-type .dr-set-pane-title {
-  margin-top: 0;
 }
 
 .dr-settings .dr-set-unmatched {

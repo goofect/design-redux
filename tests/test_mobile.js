@@ -264,13 +264,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(tab.containerEl.querySelector('.dr-settings-note'));
     phone(false);
 
-    // Opened at one setting, from where it shows: its tab, its row marked.
+    // Opened at one setting: its row marked, on the one page.
     tab.query = 'single';
     tab.reveal('contextStrip');
     tab.display();
     const row = Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === 'contextStrip');
     assert.ok(row && row.classList.contains('is-revealed'));
-    assert.strictEqual(tab.tab, T.SETTINGS_TABS.find((s) => s.features.some((f) => f.switch === 'contextStrip' || f.keys.includes('contextStrip'))).id);
     assert.strictEqual(tab.query, '', 'a search left in the field would hide it');
   });
 
@@ -285,10 +284,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       { key: 'graphRoutes', name: 'Graph routes' },
     ] }];
     const tab = new T.DesignReduxSettingTab(p.app, p);
-    tab.tab = 'general';
     tab.display();
     const row = (key) => Array.from(tab.containerEl.querySelectorAll('[data-dr-key]')).find((e) => e.dataset.drKey === key);
-    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-tab')).map((b) => b.textContent), ['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Advanced'], 'by category, not by part of the code');
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.dr-set-pane-title')).map((b) => b.textContent), ['General', 'Appearance', 'Library', 'Notes', 'Inspector', 'Advanced'], 'one page, by category, not by part of the code');
+    assert.strictEqual(tab.containerEl.querySelectorAll('.dr-set-tab, .dr-set-pane.is-hidden').length, 0, 'no tabs: every section shows');
     assert.ok(row('contextStrip').closest('.dr-set-feature'), 'the switch is the feature’s own row');
     const more = row('stripDetail').closest('.dr-set-more');
     assert.ok(more && more.classList.contains('is-off') && !more.classList.contains('is-open'), 'a feature that is off has its options out of sight');
@@ -338,7 +337,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     document.body.classList.add('dr-look-apple');
     try {
       const tab = new T.DesignReduxSettingTab(p.app, p);
-      tab.tab = 'library';
       tab.gear = 'library';
       tab.display();
       const seg = tab.containerEl.querySelector('.dr-segmented');
