@@ -9,7 +9,7 @@
 
 import { MarkdownView, Menu, Platform, setIcon, TFile } from 'obsidian';
 import { drawNoteArt, leadProperty, valueText } from '../core/030-art.js';
-import { canStep, isBrowseView, pageFile, pageLeaf, step } from '../core/034-tabs.js';
+import { isBrowseView, pageFile, pageLeaf } from '../core/034-tabs.js';
 import { showMenuAt } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
@@ -297,15 +297,7 @@ export class ContextStrip extends Feature {
     });
   }
 
-  canGo(dir) {
-    return canStep(pageLeaf(this.app), dir);
-  }
 
-  go(dir) {
-    step(pageLeaf(this.app), dir);
-    // The stacks have moved, so the buttons need re-reading.
-    window.setTimeout(() => this.update(), 50);
-  }
 
   /**
    * Describes the page, not whatever has focus: getActiveFile and
@@ -402,22 +394,7 @@ export class ContextStrip extends Feature {
     asButton(toggle);
     setIcon(toggle, 'panel-left');
     onActivate(toggle, () => this.app.workspace.leftSplit.expand());
-
-    [
-      ['chevron-left', 'Back', 'back'],
-      ['chevron-right', 'Forward', 'forward'],
-    ].forEach(([icon, label, dir]) => {
-      // Back and forward through what was open: there when wanted, quiet otherwise.
-      const el = nav.createDiv({ cls: 'clickable-icon dr-strip-btn is-secondary' });
-      el.setAttribute('aria-label', label);
-      setIcon(el, icon);
-      if (!this.canGo(dir)) {
-        el.addClass('is-disabled');
-        return;
-      }
-      asButton(el);
-      onActivate(el, () => this.go(dir));
-    });
+    // Back and forward stay where Obsidian puts them, at the page's top left.
   }
 
   /** The note itself: cover, name, and one property beneath it — for a canvas, how many cards. */

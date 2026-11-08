@@ -96,6 +96,39 @@ suite('Design Redux in Obsidian: the app', function () {
     await browser.executeObsidian(({ app }) => app.workspace.leftSplit.setSize(300));
   });
 
+  it('keeps back and forward at the top left of every page, the strip on or off', async function () {
+    const look = (where) => browser.executeObsidian(async (_, where) => {
+      await new Promise((r) => setTimeout(r, 400));
+      const leaf = document.querySelector('.workspace-split.mod-root .workspace-leaf.mod-active');
+      // A note's are Obsidian's own, in its header; a library page's lead its bar.
+      const nav = leaf && (leaf.querySelector('.dr-detail-bar .dr-browse-up:not(.dr-sidebar-toggle)') || leaf.querySelector('.view-header-nav-buttons'));
+      const page = leaf && leaf.getBoundingClientRect();
+      const r = nav && nav.getBoundingClientRect();
+      const shown = !!nav && r.width > 0 && getComputedStyle(nav).display !== 'none';
+      return {
+        where,
+        shown,
+        topLeft: shown && r.left - page.left < 60 && r.top - page.top < 60,
+        pairs: leaf ? Array.from(leaf.querySelectorAll('.view-header-nav-buttons')).filter((n) => n.getBoundingClientRect().width > 0).length : 0,
+        stripArrows: document.querySelectorAll('.dr-strip .dr-strip-nav .dr-strip-btn:not(.dr-sidebar-toggle)').length,
+      };
+    }, where);
+    const seen = [];
+    await browser.executeObsidian(async ({ app }) => app.workspace.getLeaf(false).openFile(app.vault.getAbstractFileByPath('Politics/Anarchy.md')));
+    seen.push(await look('note'));
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      plugins.designRedux.settings.contextStrip = true;
+      await plugins.designRedux.saveSettings();
+    });
+    seen.push(await look('note, strip on'));
+    await openAlbum('Politics');
+    seen.push(await look('album'));
+    console.log('nav', JSON.stringify(seen));
+    seen.forEach((s) => expect([s.where, s.shown, s.topLeft, s.stripArrows]).toEqual([s.where, true, true, 0]));
+    // One pair on a library page: its own, Obsidian's hidden.
+    expect(seen[2].pairs).toBe(0);
+  });
+
   it('finds the unofficial parts of Obsidian it relies on', async function () {
     const compat = await browser.executeObsidian(({ app, obsidian }) => {
       const has = (fn) => {

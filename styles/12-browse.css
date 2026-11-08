@@ -1412,3 +1412,8 @@
   font-weight: var(--font-normal, 400);
 }
 
+
+/* The browse view's own back and forward lead its bar, at the page's top left; Obsidian's in its header above would be a second pair. */
+.workspace-leaf-content[data-type="design-redux-browse"] .view-header-nav-buttons {
+  display: none;
+}
