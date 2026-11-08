@@ -60,17 +60,31 @@ suite('Design Redux in Obsidian: the app', function () {
     const besideTabs = async (why) => {
       const narrow = await measure(240);
       const wide = await measure(420);
-      expect([why, gap(wide, 'actions'), gap(wide, 'settings')]).toEqual([why, gap(narrow, 'actions'), gap(narrow, 'settings')]);
-      expect(gap(narrow, 'actions')).toBeLessThan(80);
+      const result = [why, gap(narrow, 'actions'), gap(wide, 'actions'), gap(narrow, 'settings'), gap(wide, 'settings')];
+      console.log('header', JSON.stringify(result));
+      expect(result).toEqual([why, result[1], result[1], result[3], result[3]]);
+      expect([why, gap(narrow, 'actions') < 80]).toEqual([why, true]);
     };
     await besideTabs('as Obsidian draws the row');
-    // A theme that stretches the tabs' row to fill the header.
-    await browser.executeObsidian(() => {
-      const style = document.head.createEl('style', { attr: { id: 'dr-test-theme' } });
-      style.textContent = '.mod-left-split .workspace-tab-header-container-inner { flex-grow: 1; }';
-    });
-    await besideTabs('with a theme stretching the tabs');
-    await browser.executeObsidian(() => document.getElementById('dr-test-theme').remove());
+    // The ways a theme lays out that row, each as a theme would write it.
+    const themes = {
+      'stretching the tabs’ row': '.mod-left-split .workspace-tab-header-container-inner { flex-grow: 1; }',
+      'stretching it, firmly': '.mod-left-split .workspace-tab-header-container-inner { flex: 1 1 auto !important; width: 100% !important; }',
+      'stretching each tab': '.mod-left-split .workspace-tab-header-container-inner { flex-grow: 1 !important; } .mod-left-split .workspace-tab-header { flex-grow: 1; }',
+      'pushing what follows the tabs away': '.mod-left-split .workspace-tab-header-container-inner { margin-right: auto; }',
+      'spreading the row, no spacer': '.mod-left-split .workspace-tab-header-container { justify-content: space-between; } .mod-left-split .workspace-tab-header-spacer { display: none; }',
+      'icons pushed to the end': '.mod-left-split .workspace-tab-header-container > .clickable-icon { margin-left: auto; }',
+    };
+    const failed = [];
+    for (const [why, css] of Object.entries(themes)) {
+      await browser.executeObsidian((_, css) => {
+        const style = document.head.createEl('style', { attr: { id: 'dr-test-theme' } });
+        style.textContent = css;
+      }, css);
+      try { await besideTabs(why); } catch (e) { failed.push(why); }
+      await browser.executeObsidian(() => document.getElementById('dr-test-theme').remove());
+    }
+    expect(failed).toEqual([]);
     // Saved as following the spacer, or the list at the row's end: put back beside the tabs.
     await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;

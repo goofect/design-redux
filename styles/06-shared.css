@@ -78,12 +78,17 @@ body {
   height: var(--icon-s, 16px);
 }
 
-/* While the icons follow the tabs, the tabs' row hugs its tabs — whatever
-   a theme gives it — so the icons stay beside them as the sidebar is
-   made wider or narrower, rather than riding its edge. */
+/* While the icons follow the tabs, the tabs' row hugs its tabs and the row
+   packs from the start, so the icons stay beside the tabs as the sidebar is
+   made wider or narrower rather than riding its edge. A theme may stretch
+   the tabs' row, each tab or the whole row, and firmly: this outranks it. */
+.workspace-split.mod-left-split .workspace-tab-header-container:has(> .dr-trigger, > .dr-settings-moved) {
+  justify-content: flex-start !important;
+}
+
 .workspace-split.mod-left-split .workspace-tab-header-container:has(> .dr-trigger, > .dr-settings-moved) > .workspace-tab-header-container-inner {
-  flex-grow: 0;
-  width: auto;
+  flex: 0 1 auto !important;
+  width: auto !important;
 }
 
 /* Parked button rows ---------------------------------------------------

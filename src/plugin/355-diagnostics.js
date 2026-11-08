@@ -7,7 +7,7 @@
 /* ------------------------------------------------------------------ */
 
 import { AbstractInputSuggest, apiVersion, Menu, Notice, Platform, setIcon, Setting } from 'obsidian';
-import { GRAPH_TYPES } from '../core/020-constants.js';
+import { GRAPH_TYPES, TAB_HEADER } from '../core/020-constants.js';
 import { canNest } from '../core/036-menus.js';
 import { Feature } from '../core/080-feature.js';
 
@@ -162,6 +162,8 @@ export class Diagnostics extends Feature {
       'Compatibility:',
       ...compatibility(this.app).map((p) => `  ${p.ok === null ? '·' : p.ok ? '✓' : '✗'} ${p.what}`),
       '',
+      ...headerLayout(this.app),
+      '',
       `Recent errors: ${(plugin.errors || []).length ? '' : 'none'}`,
       ...(plugin.errors || []).map((e) => `  ${e}`),
     ];
@@ -190,3 +192,22 @@ export function settingsLine(plugin) {
   return `Settings: version ${version}, brought up from ${m.from}${ran}${failed}`;
 }
 
+/**
+ * The left sidebar's header row as it's laid out: the theme, and each part's
+ * place, width and flex — what decides whether the actions and settings icons
+ * stay beside the tabs as the sidebar is resized.
+ */
+export function headerLayout(app) {
+  const header = document.querySelector(TAB_HEADER);
+  const theme = (app.customCss && app.customCss.theme) || 'default';
+  if (!header) return [`Sidebar header (theme ${theme}): not found`];
+  const left = header.getBoundingClientRect().left;
+  const name = (el) => (String(el.className).match(/workspace-tab-header-[\w-]+|dr-[\w-]+|sidebar-toggle-button/) || [el.tagName.toLowerCase()])[0];
+  const part = (el) => {
+    const c = window.getComputedStyle(el);
+    const extra = [c.marginLeft !== '0px' && `margin-left ${c.marginLeft}`, c.order !== '0' && `order ${c.order}`, c.position !== 'static' && c.position].filter(Boolean);
+    return `  ${name(el)}: at ${Math.round(el.getBoundingClientRect().left - left)}, ${el.offsetWidth}px, ${c.display}, flex ${c.flexGrow} ${c.flexShrink} ${c.flexBasis}${extra.length ? ', ' + extra.join(', ') : ''}`;
+  };
+  const c = window.getComputedStyle(header);
+  return [`Sidebar header (theme ${theme}): ${header.offsetWidth}px, ${c.display}, justify ${c.justifyContent}`, ...Array.from(header.children).map(part)];
+}
