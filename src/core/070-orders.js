@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile, TFolder } from 'obsidian';
-import { LIBRARY_MORE } from './020-constants.js';
+import { LIBRARY_MORE, libraryLayout } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
 import { sortByOrder } from './040-sorting.js';
@@ -268,6 +268,34 @@ export const SETTINGS_MIGRATIONS = [
     run(saved) {
       delete saved.settingsLevel;
       delete saved.libraryPreview;
+    },
+  },
+  {
+    // The sidebar laid out as a music app's (LIBRARY_LAYOUT): places to start,
+    // Library, Tools, Views with the bases, then Folders; More is gone. Only a
+    // sidebar still in the plugin's own sections is laid out again, keeping
+    // what it held; one arranged by hand keeps its shape.
+    to: 28,
+    run(saved) {
+      const secs = saved.librarySections;
+      if (!Array.isArray(secs) || !secs.length) return;
+      const stock = ['', 'Recent', 'More', 'Folders', 'Bases'];
+      if (!secs.every((s) => s && stock.indexOf(s.title || '') !== -1)) return;
+      const items = (s) => (Array.isArray(s.items) ? s.items : []);
+      const titled = (t) => [].concat(...secs.filter((s) => (s.title || '') === t).map(items));
+      const all = [].concat(...secs.map(items)).filter(Boolean);
+      const has = all.filter((i) => i.kind === 'builtin').map((i) => (i.id === 'all' ? 'notes' : i.id));
+      if (has.indexOf('random') === -1) has.push('random');
+      const folders = titled('Folders');
+      const bases = titled('Bases');
+      const others = all.filter((i) => i.kind !== 'builtin' && folders.indexOf(i) === -1 && bases.indexOf(i) === -1);
+      const out = libraryLayout(has, folders, bases);
+      if (others.length) {
+        const library = out.find((s) => s.title === 'Library');
+        if (library) library.items.push(...others);
+        else out.push({ title: 'Library', items: others });
+      }
+      saved.librarySections = out;
     },
   },
 ];

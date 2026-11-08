@@ -200,7 +200,29 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 27);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 28);
+    // Step 28: a sidebar in the plugin's own sections is laid out as a music app's; one arranged by hand keeps its shape.
+    const layout = R.SETTINGS_MIGRATIONS.find((m) => m.to === 28);
+    const built = (id) => ({ kind: 'builtin', id });
+    const stock = { librarySections: [
+      { title: '', items: [built('search'), built('home'), built('notes'), built('folders'), built('bookmarks')] },
+      { title: 'Recent', items: [built('recents')] },
+      { title: 'More', folded: true, items: [built('collections'), built('smart'), built('properties'), built('added'), built('graph'), built('settings')] },
+      { title: 'Folders', items: [{ kind: 'folder', path: 'IR' }] },
+      { title: 'Bases', items: [{ kind: 'file', path: 'Reading.base' }] },
+    ] };
+    layout.run(stock);
+    assert.deepStrictEqual(stock.librarySections.map((s) => [s.title, s.items.map((i) => i.id || i.path)]), [
+      ['', ['search', 'home', 'random']],
+      ['Library', ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties']],
+      ['Tools', ['graph', 'settings']],
+      ['Views', ['collections', 'smart', 'Reading.base']],
+      ['Folders', ['IR']],
+    ]);
+    const mine = { librarySections: [{ title: 'Yours', items: [built('bookmarks'), { kind: 'folder', path: 'IR' }] }] };
+    const before = JSON.stringify(mine);
+    layout.run(mine);
+    assert.strictEqual(JSON.stringify(mine), before);
     // Step 14: the Apple redesign is a Look; the theme's look with Apple notes becomes it, and the old switch goes.
     const step = R.SETTINGS_MIGRATIONS.find((m) => m.to === 14);
     const a = { look: 'theme' }; step.run(a);

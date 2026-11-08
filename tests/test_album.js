@@ -478,10 +478,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 27);
+    assert.strictEqual(s.settingsVersion, 28);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 27, brought up from \d+; steps [\d, ]+27$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 28, brought up from \d+; steps [\d, ]+28$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
@@ -1613,14 +1613,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'subjects' }, {});
     assert.deepStrictEqual(titles(), ['Law']);
     const library = new R.Library(plugin);
+    plugin.settings.libraryCheck = false;
     const sections = library.defaultSections();
-    // A few places first, then Recent, then the rest under More, folded.
-    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Recent', 'More']);
-    assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home', 'notes', 'folders', 'bookmarks']);
-    assert.strictEqual(sections[2].folded, true);
+    // As a music app's sidebar: places to start, the Library, Tools, Views; nothing folded away.
+    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 4), ['', 'Library', 'Tools', 'Views']);
+    assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home', 'random']);
+    assert.deepStrictEqual(sections[1].items.map((i) => i.id), ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects'], 'Subjects offered once there is one');
+    assert.ok(sections.every((s) => typeof s.folded !== 'boolean'));
     plugin.settings.libraryCheck = true;
-    assert.deepStrictEqual(library.defaultSections()[2].items.map((i) => i.id).slice(-3), ['library-check', 'inbox', 'settings'], 'the tools last, those switched on, then Settings');
-    assert.ok(sections[2].items.some((i) => i.id === 'subjects'), 'Subjects offered once there is one');
+    const checked = library.defaultSections();
+    assert.deepStrictEqual(checked[0].items.map((i) => i.id), ['search', 'home', 'inbox', 'random'], 'the Inbox where the library check is on');
+    assert.deepStrictEqual(checked[2].items.map((i) => i.id), ['graph', 'library-check', 'settings']);
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

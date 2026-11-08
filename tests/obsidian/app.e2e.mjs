@@ -250,8 +250,8 @@ suite('Design Redux in Obsidian: the app', function () {
     check(dark, 'dark');
     expect(dark.dark).toBe(true);
     expect(dark.rows.length).toBeGreaterThan(0);
-    // The library's rows a little slimmer than the density's own.
-    expect(dark.rows[0][0]).toBe(26);
+    // The library's rows as a music app's sidebar has them: 32px at the standard density.
+    expect(dark.rows[0][0]).toBe(32);
     const editorial = await measure('obsidian', 'editorial', 'standard');
     check(editorial, 'editorial, dark');
     await shot('album-editorial');
@@ -263,7 +263,7 @@ suite('Design Redux in Obsidian: the app', function () {
     // Density: rows a unit tighter or looser.
     const compact = await measure('obsidian', 'theme', 'compact');
     const spacious = await measure('obsidian', 'theme', 'large');
-    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([22, 30]);
+    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
     check(compact, 'compact');
     check(spacious, 'spacious');
     // Back as it was, for the tests after.

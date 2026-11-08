@@ -206,7 +206,7 @@ t('Search screen highlights Search, and only Search', () => {
 });
 
 t('each library screen highlights its own entry', () => {
-  const cases = { home: 'Home', recents: 'Recently opened', properties: 'Properties',
+  const cases = { home: 'Home', recents: 'Recently Opened', properties: 'Properties',
     folders: 'Collections', notes: 'All Notes' };
   Object.entries(cases).forEach(([mode, label]) =>
     assert.deepStrictEqual(active(setup({ page: browsePage(mode) }).view), [label], mode));

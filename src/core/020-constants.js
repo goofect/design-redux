@@ -28,23 +28,48 @@ export const LIBRARY_BUILTINS = {
   home: { label: 'Home', icon: 'home' },
   graph: { label: 'Graph', icon: 'git-fork' },
   bookmarks: { label: 'Pinned', icon: 'pin' },
-  recents: { label: 'Recently opened', icon: 'clock' },
-  added: { label: 'Recently added', icon: 'calendar-plus' },
+  recents: { label: 'Recently Opened', icon: 'clock' },
+  added: { label: 'Recently Added', icon: 'calendar-plus' },
   subjects: { label: 'Subjects', icon: 'book' },
-  collections: { label: 'Views', icon: 'library' },
+  collections: { label: 'All Views', icon: 'library' },
   properties: { label: 'Properties', icon: 'tags' },
   folders: { label: 'Collections', icon: 'folder' },
   notes: { label: 'All Notes', icon: 'file-text' },
-  random: { label: 'Random note', icon: 'dice' },
+  random: { label: 'Random Note', icon: 'dice' },
   // The plugin's own settings, from the library rather than a gear moved into Obsidian's header.
   settings: { label: 'Settings', icon: 'settings' },
   smart: { label: 'Saved views', icon: 'sparkles' },
   inbox: { label: 'Inbox', icon: 'inbox' },
-  'library-check': { label: 'Library check', icon: 'stethoscope', needs: 'libraryCheck' },
+  'library-check': { label: 'Library Check', icon: 'stethoscope', needs: 'libraryCheck' },
 };
 
 /* The library's places that wait under More, so the first few stand out. */
 export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', 'added', 'graph', 'random', 'inbox', 'library-check', 'settings'];
+
+/*
+ * The library's sidebar, laid out as a music app's: places to start (Search,
+ * Home, Inbox, Random as a music app's Search, Home, New, Radio); the Library
+ * (Pins, what was added and opened, Collections, All Notes, Properties); Tools
+ * where a store would be; and Views, as its playlists, the bases among them.
+ */
+export const LIBRARY_LAYOUT = [
+  { title: '', ids: ['search', 'home', 'inbox', 'random'] },
+  { title: 'Library', ids: ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects'] },
+  { title: 'Tools', ids: ['graph', 'library-check', 'settings'] },
+  { title: 'Views', ids: ['collections', 'smart'] },
+];
+
+/** The sidebar's sections: the built-in places it has, as LIBRARY_LAYOUT orders them, bases with the views, then the folders. */
+export function libraryLayout(has, folders = [], bases = []) {
+  const sections = LIBRARY_LAYOUT.map((s) => ({
+    title: s.title,
+    items: s.ids.filter((id) => has.indexOf(id) !== -1).map((id) => ({ kind: 'builtin', id })),
+  }));
+  sections[sections.length - 1].items.push(...bases);
+  const out = sections.filter((s) => s.items.length);
+  if (folders.length) out.push({ title: 'Folders', items: folders });
+  return out;
+}
 
 /* How large covers are on screens of tiles. */
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
@@ -238,7 +263,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 27,
+  settingsVersion: 28,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

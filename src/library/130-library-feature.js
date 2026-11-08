@@ -3,7 +3,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice, Platform, Setting, TFolder } from 'obsidian';
-import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, TILE_GROUPS } from '../core/020-constants.js';
+import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, libraryLayout, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/034-tabs.js';
 import { SORTS } from '../core/040-sorting.js';
 import { LENGTH_STYLES } from '../core/065-lengths.js';
@@ -261,35 +261,16 @@ export class Library extends Feature {
       .sort((a, b) => a.basename.localeCompare(b.basename))
       .map((f) => ({ kind: 'file', path: f.path }));
 
-    // A few places first, as a music app's sidebar has: where to start,
-    // everything, the albums and what's pinned; then what you opened last;
-    // the rest under More, folded until wanted.
-    const more = [{ kind: 'builtin', id: 'collections' }, { kind: 'builtin', id: 'smart' }, { kind: 'builtin', id: 'properties' }];
+    // As a music app's sidebar: the places LIBRARY_LAYOUT names, those
+    // this vault has — the library check's where it's on, Subjects where
+    // there are subjects.
     const structure = ask(this.plugin, 'albums');
-    if (structure && structure.enabled && structure.ofKind('subject').length) more.push({ kind: 'builtin', id: 'subjects' });
-    more.push({ kind: 'builtin', id: 'added' }, { kind: 'builtin', id: 'graph' });
-    ['library-check', 'inbox']
-      .filter((id) => this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'])
-      .forEach((id) => more.push({ kind: 'builtin', id }));
-    more.push({ kind: 'builtin', id: 'settings' });
-
-    const sections = [
-      {
-        title: '',
-        items: [
-          { kind: 'builtin', id: 'search' },
-          { kind: 'builtin', id: 'home' },
-          { kind: 'builtin', id: 'notes' },
-          { kind: 'builtin', id: 'folders' },
-          { kind: 'builtin', id: 'bookmarks' },
-        ],
-      },
-      { title: 'Recent', items: [{ kind: 'builtin', id: 'recents' }] },
-      { title: 'More', folded: true, items: more },
-    ];
-    if (folders.length) sections.push({ title: 'Folders', items: folders });
-    if (bases.length) sections.push({ title: 'Bases', items: bases });
-    return sections;
+    const has = Object.keys(LIBRARY_BUILTINS).filter((id) => {
+      if (id === 'inbox' || id === 'library-check') return !!this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'];
+      if (id === 'subjects') return !!(structure && structure.enabled && structure.ofKind('subject').length);
+      return true;
+    });
+    return libraryLayout(has, folders, bases);
   }
 
   refreshViews() {

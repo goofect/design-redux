@@ -1,29 +1,40 @@
 /* Library sidebar ----------------------------------------------------------
  *
- * Quiet and slim: rows a little under the density's own height, grey
- * icons with the accent only where you are, one soft block marking it,
- * small grey section labels set apart by space rather than lines, and a
- * gutter left of every icon holding a disclosure chevron where there's
- * something to open out — kept even where empty, so all the icons line up.
+ * As a music app's sidebar: rows 32px tall (28 compact, 36 spacious), every
+ * icon in the accent, labels at 13px; where you are, a rounded grey block
+ * inset from the edges, its label bold; small grey section labels set a
+ * little left of the icons, in line with the chevron that opens Pins. A
+ * gutter left of every icon holds that chevron where there's something to
+ * open out, kept even where empty, so all the icons line up.
  */
 
 .dr-library {
-  --dr-lib-row-height: calc(var(--dr-row-height) - 6px);
+  --dr-lib-row-height: 32px;
+  --dr-lib-pick: color-mix(in srgb, var(--text-normal) 13%, transparent);
+  --dr-lib-hover: color-mix(in srgb, var(--text-normal) 6%, transparent);
+}
+
+body.dr-density-compact .dr-library {
+  --dr-lib-row-height: 28px;
+}
+
+body.dr-density-spacious .dr-library {
+  --dr-lib-row-height: 36px;
 }
 
 .dr-library .view-content {
-  padding: calc(var(--dr-u) * 1.5) var(--dr-space-2) var(--dr-space-3);
+  padding: calc(var(--dr-u) * 1.5) 10px var(--dr-space-3);
 }
 
 .dr-lib-group {
-  margin-top: calc(var(--dr-u) * 4.5);
-  padding: 0 calc(var(--dr-u) * 2.5) var(--dr-space-1);
-  color: var(--text-muted);
-  font-size: var(--font-ui-smaller);
-  font-weight: var(--font-medium, 500);
+  margin-top: 18px;
+  padding: 0 6px 4px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
 }
 
-/* More, and any section that folds: its heading opens and closes it. */
+/* A section that folds (one set up by hand): its heading opens and closes it. */
 .dr-lib-fold {
   display: flex;
   align-items: center;
@@ -68,30 +79,25 @@
   display: flex;
   align-items: center;
   gap: var(--dr-space-2);
-  min-height: var(--dr-lib-row-height, var(--dr-row-height));
-  padding: 0 calc(var(--dr-u) * 2.5) 0 var(--dr-space-1);
+  min-height: var(--dr-lib-row-height);
+  padding: 0 var(--dr-space-2) 0 0;
   line-height: var(--dr-line-label);
-  border-radius: var(--dr-radius-md);
+  border-radius: 7px;
   color: var(--text-normal);
-  font-size: var(--font-ui-small);
+  font-size: 13px;
   cursor: pointer;
   user-select: none;
 }
 
-/* The icons grey, the labels plain; where you are, a soft block with its
-   icon in the accent. */
 @media (any-hover: hover) {
   .dr-lib-row:hover {
-    background-color: var(--dr-hover);
+    background-color: var(--dr-lib-hover);
   }
 }
 
 .dr-lib-row.is-active {
-  background-color: var(--dr-hover);
-}
-
-.dr-lib-row.is-active .dr-lib-icon {
-  color: var(--text-accent);
+  background-color: var(--dr-lib-pick);
+  font-weight: 600;
 }
 
 .dr-lib-row:focus-visible {
@@ -99,16 +105,16 @@
   box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
 }
 
-/* Pins opened out sit one gutter in. */
+/* Pins opened out sit one step in. */
 .dr-lib-row.is-nested {
-  padding-left: calc(var(--dr-u) * 5.5);
+  padding-left: 16px;
 }
 
 .dr-lib-disclosure {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 14px;
+  flex: 0 0 12px;
   height: 20px;
   border-radius: var(--dr-radius-sm);
   color: var(--text-muted);
@@ -134,21 +140,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  color: var(--text-muted);
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--text-accent);
 }
 
 .dr-lib-icon .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
 }
 
 /* Artwork, as a playlist with a cover shows it. */
 .dr-lib-icon.has-art {
   overflow: hidden;
-  border-radius: var(--dr-radius-sm);
+  border-radius: 4px;
   background-color: var(--background-modifier-hover);
 }
 
@@ -169,8 +175,8 @@
 }
 
 .dr-lib-icon .dr-card-glyph .svg-icon {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
 }
 
 .dr-lib-label {
@@ -182,7 +188,7 @@
 }
 
 .dr-lib-empty {
-  padding: var(--dr-space-1) calc(var(--dr-u) * 2.5) calc(var(--dr-u) * 1.5) calc(var(--dr-u) * 12.5);
+  padding: var(--dr-space-1) var(--dr-space-2) calc(var(--dr-u) * 1.5) 58px;
   color: var(--text-faint);
   font-size: var(--font-ui-smaller);
 }
