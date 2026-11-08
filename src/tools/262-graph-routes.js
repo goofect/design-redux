@@ -35,7 +35,7 @@ import { Setting } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
-import { broadFirst, graphSignature, hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routedCount, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
+import { broadFirst, graphSignature, hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
 
 /* -- drawing: what the graph's notes and lines do when one is hovered - */
 
@@ -136,23 +136,6 @@ export class GraphRoutes extends Feature {
     }
   }
 
-  /** Under the switch: how many lines the graph now draws through notes between. */
-  showCount(renderer, plan) {
-    const found = renderer.drRouteRow;
-    if (!found) return;
-    let line = found.querySelector('.dr-graph-routes-count');
-    const n = plan ? plan.count : 0;
-    if (!plan) {
-      if (line) line.remove();
-      return;
-    }
-    if (!line) {
-      const info = found.querySelector('.setting-item-info') || found;
-      line = info.appendChild(found.ownerDocument.createElement('div'));
-      line.className = 'setting-item-description dr-graph-routes-count';
-    }
-    line.textContent = n === 0 ? 'No lines to route here' : n === 1 ? '1 line through notes between' : `${n} lines through notes between`;
-  }
 
   settingsSchema() {
     return [
@@ -366,8 +349,6 @@ export class GraphRoutes extends Feature {
       });
     setting.settingEl.drToggle = made;
     graph.renderer.drRouteToggle = made;
-    graph.renderer.drRouteRow = setting.settingEl;
-    if (graph.renderer.drRoutes) this.showCount(graph.renderer, graph.renderer.drRoutes.plan);
     const tip = 'Draw links through the notes between, broad to narrow. With Arrows on, they point down.';
     if (typeof setting.setTooltip === 'function') setting.setTooltip(tip);
     else setting.settingEl.setAttribute('aria-label', tip);
@@ -419,7 +400,6 @@ export class GraphRoutes extends Feature {
       state.plan = plan;
       const result = original.call(this, fed);
       feature.wrapParts(renderer);
-      feature.showCount(renderer, plan);
       return result;
     };
     Object.defineProperty(renderer, 'drRoutes', { value: state, configurable: true, writable: true });
@@ -431,7 +411,6 @@ export class GraphRoutes extends Feature {
   unpatch(renderer) {
     const state = renderer.drRoutes;
     if (!state) return;
-    this.showCount(renderer, null);
     state.off = true;
     state.plan = null;
     if (renderer.setData === state.routed) {
@@ -525,7 +504,6 @@ export class GraphRoutes extends Feature {
     // Each line from the broader note to the narrower: the graph's arrows point down.
     if (plan.apart) plan.nodes = broadFirst(plan.nodes, plan.rank, plan.apart);
 
-    plan.count = routedCount(plan, data.nodes);
     plan.weights = data.weights || linkWeights(data.nodes);
     plan.data = Object.assign({}, data, { nodes: plan.nodes, weights: plan.weights });
     return plan;

@@ -553,15 +553,3 @@ export function graphSignature(nodes) {
   });
   return `${Object.keys(nodes).length}:${count}:${h}`;
 }
-
-/** How many of the graph's own lines (`nodes`) a plan draws through notes between instead. */
-export function routedCount(plan, nodes) {
-  let n = 0;
-  const has = (a, b) => !!nodes[a] && hasOwn(nodes[a].links || {}, b);
-  if (plan && plan.hidden) {
-    plan.hidden.forEach((set, a) => set.forEach((b) => {
-      if (a < b && (has(a, b) || has(b, a))) n++;
-    }));
-  }
-  return n;
-}

@@ -539,24 +539,6 @@ test('a plan is worked out once while nothing changes, and again when the vault 
   feature.settings.graphRouting.graph = false;
 });
 
-test('under the switch, how many lines go through notes between; gone when off', () => {
-  const g = makeGraph('graph', () => ({ nodes: graphData(vault) }));
-  const feature = makeFeature(() => [g.leaf], vault);
-  feature.enable();
-  const count = () => {
-    const el = g.rows.querySelector('.dr-graph-routes .dr-graph-routes-count');
-    return el ? el.textContent : null;
-  };
-  assert.strictEqual(count(), null, 'off: nothing');
-  g.rows.querySelector('.dr-graph-routes').drToggle.click();
-  assert.strictEqual(count(), '2 lines through notes between', 'Westminster–Individual and Westminster–Collective');
-  g.rows.querySelector('.dr-graph-routes').drToggle.click();
-  assert.strictEqual(count(), null);
-  feature.disable();
-  feature.settings.graphRouting.graph = false;
-  assert.strictEqual(R.routedCount({ hidden: new Map([['a', new Set(['b'])], ['b', new Set(['a'])]]) }, { a: { links: {} }, b: { links: {} } }), 0, 'a line the graph never drew isn’t counted');
-});
-
 test('a graph drawn differently is left alone', () => {
   const leaf = { view: { getViewType: () => 'graph', containerEl: document.createElement('div'), renderer: {} } };
   const feature = makeFeature(() => [leaf], vault);
