@@ -517,6 +517,46 @@ test('a button in the graph’s header turns routes on and off, lit while on', (
   assert.ok(!actions.querySelector('.dr-graph-route-action'), 'gone when the feature is off');
 });
 
+test('a plan is worked out once while nothing changes, and again when the vault or the graph does', () => {
+  let data = graphData(vault);
+  const g = makeGraph('graph', () => ({ nodes: data }));
+  const feature = makeFeature(() => [g.leaf], vault);
+  feature.settings.graphRouting.graph = true;
+  feature.enable();
+  const state = () => g.renderer.drRoutes;
+  const planned = state().planned;
+  g.engine.render();
+  g.engine.render();
+  assert.strictEqual(state().planned, planned, 'drawn again with the same notes and lines: the same plan');
+  assert.ok(!linkBetween(g, W, I), 'and still routed');
+  feature.vaultTick++;
+  g.engine.render();
+  assert.strictEqual(state().planned, planned + 1, 'the vault changed: worked out again');
+  data = graphData(Object.assign({}, vault, { [I]: { [C]: 1 } }));
+  g.engine.render();
+  assert.strictEqual(state().planned, planned + 2, 'a line more: worked out again');
+  feature.disable();
+  feature.settings.graphRouting.graph = false;
+});
+
+test('under the switch, how many lines go through notes between; gone when off', () => {
+  const g = makeGraph('graph', () => ({ nodes: graphData(vault) }));
+  const feature = makeFeature(() => [g.leaf], vault);
+  feature.enable();
+  const count = () => {
+    const el = g.rows.querySelector('.dr-graph-routes .dr-graph-routes-count');
+    return el ? el.textContent : null;
+  };
+  assert.strictEqual(count(), null, 'off: nothing');
+  g.rows.querySelector('.dr-graph-routes').drToggle.click();
+  assert.strictEqual(count(), '2 lines through notes between', 'Westminster–Individual and Westminster–Collective');
+  g.rows.querySelector('.dr-graph-routes').drToggle.click();
+  assert.strictEqual(count(), null);
+  feature.disable();
+  feature.settings.graphRouting.graph = false;
+  assert.strictEqual(R.routedCount({ hidden: new Map([['a', new Set(['b'])], ['b', new Set(['a'])]]) }, { a: { links: {} }, b: { links: {} } }), 0, 'a line the graph never drew isn’t counted');
+});
+
 test('a graph drawn differently is left alone', () => {
   const leaf = { view: { getViewType: () => 'graph', containerEl: document.createElement('div'), renderer: {} } };
   const feature = makeFeature(() => [leaf], vault);

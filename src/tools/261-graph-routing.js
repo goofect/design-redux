@@ -530,3 +530,38 @@ export function linkWeights(nodes) {
   });
   return weights;
 }
+
+/**
+ * A fingerprint of the graph's notes and their lines: the same for the same
+ * data, so a plan worked out once is used again while nothing has changed.
+ */
+export function graphSignature(nodes) {
+  let h = 0;
+  let count = 0;
+  const mix = (text) => {
+    for (let i = 0; i < text.length; i++) h = (Math.imul(h, 31) + text.charCodeAt(i)) | 0;
+  };
+  Object.keys(nodes).forEach((id) => {
+    const node = nodes[id] || {};
+    mix(id);
+    mix(String(node.type || ''));
+    Object.keys(node.links || {}).forEach((to) => {
+      mix(to);
+      count++;
+    });
+    mix('|');
+  });
+  return `${Object.keys(nodes).length}:${count}:${h}`;
+}
+
+/** How many of the graph's own lines (`nodes`) a plan draws through notes between instead. */
+export function routedCount(plan, nodes) {
+  let n = 0;
+  const has = (a, b) => !!nodes[a] && hasOwn(nodes[a].links || {}, b);
+  if (plan && plan.hidden) {
+    plan.hidden.forEach((set, a) => set.forEach((b) => {
+      if (a < b && (has(a, b) || has(b, a))) n++;
+    }));
+  }
+  return n;
+}

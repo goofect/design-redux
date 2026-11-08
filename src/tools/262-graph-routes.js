@@ -35,7 +35,7 @@ import { Setting } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { fmGet, parentLinkpaths } from '../core/045-helpers-properties.js';
 import { Feature } from '../core/080-feature.js';
-import { broadFirst, hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
+import { broadFirst, graphSignature, hasOwn, isRoutedNode, linkStats, linkWeights, ROUTE_SEP, routedCount, routeGraph, routeKey, routeLight, routeLines } from './261-graph-routing.js';
 
 /* -- drawing: what the graph's notes and lines do when one is hovered - */
 
@@ -123,6 +123,35 @@ export class GraphRoutes extends Feature {
     super(plugin);
     this.graphs = new Set();
     this.watched = new Map();
+    // Moves on whenever the vault's links may have: a plan kept from before is then worked out again.
+    this.vaultTick = 0;
+  }
+
+  register() {
+    const mc = this.app.metadataCache;
+    if (mc && typeof mc.on === 'function') {
+      const tick = () => this.vaultTick++;
+      this.plugin.registerEvent(mc.on('resolved', tick));
+      this.plugin.registerEvent(mc.on('changed', tick));
+    }
+  }
+
+  /** Under the switch: how many lines the graph now draws through notes between. */
+  showCount(renderer, plan) {
+    const found = renderer.drRouteRow;
+    if (!found) return;
+    let line = found.querySelector('.dr-graph-routes-count');
+    const n = plan ? plan.count : 0;
+    if (!plan) {
+      if (line) line.remove();
+      return;
+    }
+    if (!line) {
+      const info = found.querySelector('.setting-item-info') || found;
+      line = info.appendChild(found.ownerDocument.createElement('div'));
+      line.className = 'setting-item-description dr-graph-routes-count';
+    }
+    line.textContent = n === 0 ? 'No lines to route here' : n === 1 ? '1 line through notes between' : `${n} lines through notes between`;
   }
 
   settingsSchema() {
@@ -174,13 +203,12 @@ export class GraphRoutes extends Feature {
   }
 
   enable() {
-    this.sync();
     // A different property to go by: graphs drawn by the old one, again.
     const by = (this.settings.graphRouteProperty || '').trim().toLowerCase();
-    if (this.routedBy !== undefined && this.routedBy !== by) {
-      this.graphs.forEach((renderer) => renderer.drRoutes && this.redraw(renderer.drRoutes.engine));
-    }
+    const changed = this.routedBy !== undefined && this.routedBy !== by;
     this.routedBy = by;
+    this.sync();
+    if (changed) this.graphs.forEach((renderer) => renderer.drRoutes && this.redraw(renderer.drRoutes.engine));
   }
 
   /**
@@ -338,6 +366,8 @@ export class GraphRoutes extends Feature {
       });
     setting.settingEl.drToggle = made;
     graph.renderer.drRouteToggle = made;
+    graph.renderer.drRouteRow = setting.settingEl;
+    if (graph.renderer.drRoutes) this.showCount(graph.renderer, graph.renderer.drRoutes.plan);
     const tip = 'Draw links through the notes between, broad to narrow. With Arrows on, they point down.';
     if (typeof setting.setTooltip === 'function') setting.setTooltip(tip);
     else setting.settingEl.setAttribute('aria-label', tip);
@@ -369,7 +399,17 @@ export class GraphRoutes extends Feature {
       let fed = data;
       let plan = null;
       try {
-        plan = feature.plan(data, type);
+        // The same notes and lines, and nothing in the vault changed since: the last plan holds.
+        const key = data && data.nodes ? `${feature.vaultTick}/${feature.routedBy}/${graphSignature(data.nodes)}` : null;
+        if (key && key === state.key && state.lastPlan) {
+          plan = state.lastPlan;
+          plan.data = Object.assign({}, data, { nodes: plan.nodes, weights: data.weights || plan.weights });
+        } else {
+          plan = feature.plan(data, type);
+          state.key = plan ? key : null;
+          state.lastPlan = plan;
+          state.planned = (state.planned || 0) + 1;
+        }
         if (plan) fed = plan.data;
       } catch (err) {
         console.error('Design Redux: could not work out links through notes between', err);
@@ -379,6 +419,7 @@ export class GraphRoutes extends Feature {
       state.plan = plan;
       const result = original.call(this, fed);
       feature.wrapParts(renderer);
+      feature.showCount(renderer, plan);
       return result;
     };
     Object.defineProperty(renderer, 'drRoutes', { value: state, configurable: true, writable: true });
@@ -390,6 +431,7 @@ export class GraphRoutes extends Feature {
   unpatch(renderer) {
     const state = renderer.drRoutes;
     if (!state) return;
+    this.showCount(renderer, null);
     state.off = true;
     state.plan = null;
     if (renderer.setData === state.routed) {
@@ -483,10 +525,9 @@ export class GraphRoutes extends Feature {
     // Each line from the broader note to the narrower: the graph's arrows point down.
     if (plan.apart) plan.nodes = broadFirst(plan.nodes, plan.rank, plan.apart);
 
-    plan.data = Object.assign({}, data, {
-      nodes: plan.nodes,
-      weights: data.weights || linkWeights(data.nodes),
-    });
+    plan.count = routedCount(plan, data.nodes);
+    plan.weights = data.weights || linkWeights(data.nodes);
+    plan.data = Object.assign({}, data, { nodes: plan.nodes, weights: plan.weights });
     return plan;
   }
 }

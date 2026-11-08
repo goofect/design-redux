@@ -123,9 +123,10 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
         saved: !!app.plugins.plugins['design-redux'].settings.graphRouting.graph,
         straight: [has(W, I), has(W, C)],
         routed: [has(W, M), has(M, I), has(M, C)],
+        count: (row.querySelector('.dr-graph-routes-count') || {}).textContent || null,
       };
     }, [W, M, I, C]);
-    expect(drawn).toEqual({ saved: true, straight: [false, false], routed: [true, true, true] });
+    expect(drawn).toEqual({ saved: true, straight: [false, false], routed: [true, true, true], count: '2 lines through notes between' });
 
     // Hovered, as the pointer would: Obsidian's own drawing fades what's
     // not linked to 0.2 and brings what is up to full.
