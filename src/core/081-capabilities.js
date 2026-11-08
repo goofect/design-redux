@@ -14,7 +14,7 @@ export const CAPABILITIES = {
   albums: 'An album’s structure: its kind, trail and rollups, and the notes it gathers (AlbumStructure).',
   albumProperty: 'The property that puts a note in an album: its name, and setting it on an album’s notes (AlbumProperty).',
   clipboard: 'Properties copied and pasted between notes, and an album’s as a table (PropertyClipboard).',
-  covers: 'A cover set on a note or folder, and the link an image is given (CoverImages).',
+  covers: 'A cover set on a note, or on a folder by its path, and the link an image is given (CoverImages).',
   footnotes: 'A note’s footnotes counted, and the Footnotes view shown (Footnotes).',
   library: 'The library: a screen of the browse view opened, and the sidebar redrawn or put back (Library).',
   libraryCheck: 'What the library check finds: notes in no collection (LibraryCheck).',

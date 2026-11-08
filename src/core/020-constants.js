@@ -238,6 +238,8 @@ export const DEFAULTS = {
   generatedCoverColor: '#fa2d48',
   // { path: '#rrggbb' | 'accent' } — a colour chosen for one album or note.
   coverColors: {},
+  // A folder's cover, by the folder's path: the image's path. No folder note needed.
+  folderCovers: {},
   // { path: designId } — a drawn cover's design, picked for one album or note.
   coverDesigns: {},
   // { folderPath: [{ key, value, type }] } — given to notes made there.

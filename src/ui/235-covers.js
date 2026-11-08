@@ -13,7 +13,7 @@ export class CoverImages extends Feature {
         key: 'folderNoteName',
         type: 'text',
         name: 'Folder note name',
-        desc: 'The note that gives a folder its cover. {{folder}} is the folder’s name.',
+        desc: 'The note that stands for a folder. {{folder}} is the folder’s name.',
         placeholder: '{{folder}}',
         fallback: '{{folder}}',
       },
@@ -167,25 +167,42 @@ export class CoverImages extends Feature {
   /* -- a folder's artwork; covers set and cleared (the plugin asks these for its callers) -- */
 
   /**
-   * Artwork for a folder, which has no properties of its own: its
-   * folder note's cover (or first image, where the setting has it), then
-   * an image called "cover" inside it. Shared
-   * by the browse view and the sidebar, so a folder looks the same in
-   * both.
+   * Artwork for a folder: the image set for it (kept by the folder's path,
+   * no note needed); else its folder note's cover, where it has one; else
+   * an image called "cover" or "folder" inside it; else, where the setting
+   * has it, the first image inside it. Shared by the browse view and the
+   * sidebar, so a folder looks the same in both.
    */
   folderCoverSrc(folder) {
+    const image = this.folderImage(folder);
+    if (image) return this.app.vault.getResourcePath(image);
     const note = this.plugin.folderNote(folder);
     if (note) {
       const src = noteCoverSrc(this.plugin, note);
       if (src) return src;
     }
-    const named = (folder.children || []).find(
-      (c) =>
-        c instanceof TFile &&
-        ['cover', '_cover', 'folder'].indexOf(c.basename.toLowerCase()) !== -1 &&
-        IMAGE_EXTENSIONS.indexOf(c.extension.toLowerCase()) !== -1
-    );
-    return named ? this.app.vault.getResourcePath(named) : null;
+    const images = (folder.children || []).filter((c) => c instanceof TFile && IMAGE_EXTENSIONS.indexOf(c.extension.toLowerCase()) !== -1);
+    const named = images.find((c) => ['cover', '_cover', 'folder'].indexOf(c.basename.toLowerCase()) !== -1);
+    if (named) return this.app.vault.getResourcePath(named);
+    if (!this.settings.coverFromFirstImage || !images.length) return null;
+    const first = images.slice().sort((x, y) => x.name.localeCompare(y.name))[0];
+    return this.app.vault.getResourcePath(first);
+  }
+
+  /** The image set as a folder's cover, where it's still there. */
+  folderImage(folder) {
+    const path = (this.settings.folderCovers || {})[folder.path];
+    const file = path ? this.app.vault.getFileByPath(path) : null;
+    return file && IMAGE_EXTENSIONS.indexOf(file.extension.toLowerCase()) !== -1 ? file : null;
+  }
+
+  /** A folder's cover, set to an image in the vault: kept by the folder's path, no note made. */
+  async setFolderImage(folder, image) {
+    if (!this.settings.folderCovers) this.settings.folderCovers = {};
+    this.settings.folderCovers[folder.path] = image.path;
+    await this.plugin.saveData(this.settings);
+    this.plugin.refreshBrowse();
+    new Notice(`Cover set for ${folder.name}.`);
   }
 
   /** Ask for an image and record it on the note itself. */
@@ -215,10 +232,7 @@ export class CoverImages extends Feature {
   setFolderCover(folder, after) {
     new ImagePicker(this.app, async (image) => {
       try {
-        const note = await this.plugin.ensureFolderNote(folder);
-        const covers = this;
-        await covers.setCover(note, covers.linkTo(image, note));
-        // The view redraws itself once the cache catches up.
+        await this.setFolderImage(folder, image);
         if (after) after();
       } catch (err) {
         console.error('Design Redux: could not set the folder cover', err);
@@ -227,11 +241,17 @@ export class CoverImages extends Feature {
     }).open();
   }
 
+  /** A folder's cover taken off: the image set for it, and a cover on its folder note from before. */
   async clearFolderCover(folder, after) {
+    const covers = this.settings.folderCovers || {};
+    if (covers[folder.path]) {
+      delete covers[folder.path];
+      await this.plugin.saveData(this.settings);
+    }
     const note = this.plugin.folderNote(folder);
-    if (!note) return;
     const key = this.settings.coverProperty || 'cover';
-    if (!(await this.plugin.notes.write(note, (fm) => delete fm[key], { failure: false }))) return;
+    const cache = note && this.app.metadataCache.getFileCache(note);
+    if (cache && fmGet(cache.frontmatter, key) !== undefined) await this.plugin.notes.write(note, (fm) => delete fm[key], { failure: false });
     this.plugin.refreshBrowse();
     if (after) after();
   }

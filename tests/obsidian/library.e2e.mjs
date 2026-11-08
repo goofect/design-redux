@@ -491,6 +491,34 @@ suite('Design Redux in Obsidian: the library', function () {
     expect(facts.metadataContainers.map((m) => m[1])).toEqual(['none']);
   });
 
+  it('shows the image set as a folder’s cover, with no folder note made', async function () {
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      // A real 1×1 PNG, so the page has a picture to load.
+      const png = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='), (c) => c.charCodeAt(0));
+      if (!app.vault.getAbstractFileByPath('Pictures')) await app.vault.createFolder('Pictures');
+      const image = await app.vault.createBinary('Pictures/cover-test.png', png.buffer);
+      const covers = plugins.designRedux.capability('covers');
+      await covers.setFolderImage(app.vault.getFolderByPath('Politics'), image);
+    });
+    await openAlbum('Politics');
+    const seen = await readUntil(
+      () => browser.executeObsidian(({ app }) => {
+        const img = document.querySelector('.workspace-leaf.mod-active .dr-detail-art img');
+        return {
+          image: !!img && img.src.includes('cover-test') && img.complete && img.naturalWidth > 0,
+          noFolderNote: !app.vault.getAbstractFileByPath('Politics/Politics.md'),
+        };
+      }),
+      (r) => r.image
+    );
+    expect(seen).toEqual({ image: true, noFolderNote: true });
+    await browser.executeObsidian(async ({ app, plugins }) => {
+      await plugins.designRedux.capability('covers').clearFolderCover(app.vault.getFolderByPath('Politics'));
+      const folder = app.vault.getAbstractFileByPath('Pictures');
+      if (folder) await app.vault.delete(folder, true);
+    });
+  });
+
   it('draws Home with its shelves', async function () {
     await browser.executeObsidian(async ({ plugins }) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');

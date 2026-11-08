@@ -100,25 +100,30 @@ export class CoverDrop extends Feature {
     if (image) await this.setCover(target, image);
   }
 
-  /** The note or folder note a cover belongs to — made for a folder that has none. */
-  async coverNote(target) {
-    if (target.dataset.coverNote) {
-      const file = this.app.vault.getFileByPath(target.dataset.coverNote);
-      return file && file.extension === 'md' ? file : null;
-    }
-    const folder = this.app.vault.getFolderByPath(target.dataset.coverFolder || '');
-    return folder ? this.plugin.ensureFolderNote(folder) : null;
+  /** The note a cover belongs to, or null for a folder's. */
+  coverNote(target) {
+    if (!target.dataset.coverNote) return null;
+    const file = this.app.vault.getFileByPath(target.dataset.coverNote);
+    return file && file.extension === 'md' ? file : null;
+  }
+
+  /** The folder a cover belongs to, or null for a note's. */
+  coverFolder(target) {
+    return target.dataset.coverNote ? null : this.app.vault.getFolderByPath(target.dataset.coverFolder || '');
   }
 
   /** An image from outside, saved where Obsidian puts attachments for the note. */
   async saveImage(blob, target) {
     try {
-      const note = await this.coverNote(target);
+      const note = this.coverNote(target);
+      const folder = this.coverFolder(target);
       const name = blob.name && /\.[a-z0-9]+$/i.test(blob.name) ? blob.name : `Cover.${(blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')}`;
       const fm = this.app.fileManager;
+      // Where Obsidian puts attachments for a note there: for a folder, as for a note inside it.
+      const from = note ? note.path : folder && !(folder.isRoot && folder.isRoot()) ? `${folder.path}/${folder.name}.md` : '';
       const path =
         fm && typeof fm.getAvailablePathForAttachment === 'function'
-          ? await fm.getAvailablePathForAttachment(name, note ? note.path : '')
+          ? await fm.getAvailablePathForAttachment(name, from)
           : name;
       return await this.app.vault.createBinary(path, await blob.arrayBuffer());
     } catch (err) {
@@ -130,10 +135,15 @@ export class CoverDrop extends Feature {
 
   async setCover(target, image) {
     try {
-      const note = await this.coverNote(target);
       const covers = ask(this.plugin, 'covers');
-      if (!note || !covers) return;
-      await covers.setCover(note, covers.linkTo(image, note));
+      if (!covers) return;
+      const folder = this.coverFolder(target);
+      if (folder) {
+        await covers.setFolderImage(folder, image);
+        return;
+      }
+      const note = this.coverNote(target);
+      if (note) await covers.setCover(note, covers.linkTo(image, note));
     } catch (err) {
       console.error('Design Redux: could not set the cover', err);
       new Notice('Could not set the cover.');

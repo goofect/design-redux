@@ -943,10 +943,43 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://own.png');
   });
 
-  await t("an image dropped on an album's cover becomes its folder note's cover; one from outside is saved first", async () => {
+  await t('a folder takes the image set for it, kept by its path with no note; it follows renames and goes with deletes', async () => {
+    const { v, plugin, app } = setup();
+    app.vault.getResourcePath = (f) => `app://${f.path}`;
+    plugin.folderNote = () => null;
+    plugin.refreshBrowse = () => {};
+    plugin.saveData = async () => {};
+    plugin.ensureFolderNote = async () => { throw new Error('no folder note is made'); };
+    const covers = new R.CoverImages(plugin);
+    const ir = () => app.vault.getFolderByPath('IR') || app.vault.getFolderByPath('Relations');
+    v.folder('Pictures');
+    const pic = v.file('Pictures/view.png');
+    v.file('IR/zebra.png');
+    v.file('IR/apple.png');
+    plugin.settings.coverFromFirstImage = false;
+    assert.strictEqual(covers.folderCoverSrc(ir()), null, 'no cover yet: nothing');
+    plugin.settings.coverFromFirstImage = true;
+    assert.strictEqual(covers.folderCoverSrc(ir()), 'app://IR/apple.png', 'the first image in it, where the setting has it');
+    v.file('IR/cover.jpg');
+    assert.strictEqual(covers.folderCoverSrc(ir()), 'app://IR/cover.jpg', 'one called cover before that');
+    await covers.setFolderImage(ir(), pic);
+    assert.deepStrictEqual(plugin.settings.folderCovers, { IR: 'Pictures/view.png' });
+    assert.strictEqual(covers.folderCoverSrc(ir()), 'app://Pictures/view.png', 'the one set comes first');
+    await app.fileManager.renameFile(pic, 'Pictures/vista.png');
+    assert.strictEqual(covers.folderCoverSrc(ir()), 'app://Pictures/vista.png', 'the image renamed: followed');
+    await app.fileManager.renameFile(ir(), 'Relations');
+    assert.deepStrictEqual(plugin.settings.folderCovers, { Relations: 'Pictures/vista.png' }, 'the folder renamed: followed');
+    await app.fileManager.trashFile(app.vault.getFileByPath('Pictures/vista.png'));
+    assert.deepStrictEqual(plugin.settings.folderCovers, {}, 'the image gone: the cover goes');
+    await covers.setFolderImage(ir(), v.file('Pictures/other.png'));
+    await covers.clearFolderCover(ir());
+    assert.deepStrictEqual(plugin.settings.folderCovers, {}, 'removed');
+  });
+
+  await t("an image dropped on an album's cover becomes its cover, no folder note made; one from outside is saved first", async () => {
     const image = new TFile('Pictures/view.png');
-    const note = new TFile('Law/Law.md');
     const set = [];
+    const froms = [];
     const saved = [];
     const plugin = {
       settings: { coverDrop: true },
@@ -956,10 +989,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
           getFolderByPath: (p) => (p === 'Law' ? new TFolder('Law') : null),
           createBinary: async (p) => { saved.push(p); return new TFile(p); },
         },
-        fileManager: { getAvailablePathForAttachment: async (name, from) => `Attachments/${name}` },
+        fileManager: { getAvailablePathForAttachment: async (name, from) => { froms.push(from); return `Attachments/${name}`; } },
       },
-      ensureFolderNote: async () => note,
-      capability: (n) => (n === 'covers' ? { setCover: async (file, value) => set.push([file.path, value]), linkTo: (img) => `[[${img.name}]]` } : null),
+      ensureFolderNote: async () => { throw new Error('no folder note is made'); },
+      capability: (n) => (n === 'covers' ? { setFolderImage: async (folder, img) => set.push([folder.path, img.path]) } : null),
     };
     const drop = new R.CoverDrop(plugin);
     const art = document.body.createDiv();
@@ -968,13 +1001,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const fromVault = event([]);
     await drop.onDrop(fromVault);
     assert.ok(fromVault.prevented);
-    assert.deepStrictEqual(set, [['Law/Law.md', '[[view.png]]']]);
+    assert.deepStrictEqual(set, [['Law', 'Pictures/view.png']]);
     // From outside the vault: saved as an attachment, then linked.
     plugin.app.dragManager = { draggable: null };
     const blob = { name: 'photo.jpg', type: 'image/jpeg', arrayBuffer: async () => new ArrayBuffer(4) };
     await drop.onDrop(event([blob]));
     assert.deepStrictEqual(saved, ['Attachments/photo.jpg']);
-    assert.deepStrictEqual(set[1], ['Law/Law.md', '[[photo.jpg]]']);
+    assert.deepStrictEqual(set[1], ['Law', 'Attachments/photo.jpg']);
+    assert.deepStrictEqual(froms, ['Law/Law.md'], 'saved where attachments go for a note in the folder');
     // Not an image, or switched off: left alone.
     const text = event([{ name: 'notes.txt', type: 'text/plain' }]);
     await drop.onDrop(text);

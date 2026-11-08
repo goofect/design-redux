@@ -58,7 +58,7 @@ export const UNRENAMED_KEYS = {
 };
 
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['folderCovers', 'coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -462,6 +462,15 @@ export class Orders {
   /** A file or folder renamed or moved: every arrangement naming it follows. */
   followRename(file, oldPath) {
     let changed = false;
+    // A folder's cover is an image by its path: the image moved, the cover follows it.
+    const covers = this.settings.folderCovers || {};
+    Object.keys(covers).forEach((p) => {
+      const moved = movedPath(covers[p], oldPath, file.path);
+      if (moved !== covers[p]) {
+        covers[p] = moved;
+        changed = true;
+      }
+    });
     // Colours and legends are kept by path — its own, and for a folder,
     // everything in it.
     PATH_KEYED.forEach((key) => {
@@ -508,6 +517,14 @@ export class Orders {
   /** A file or folder deleted: it leaves whatever arrangement named it. */
   followDelete(file) {
     let changed = false;
+    // The image a folder's cover was, gone: the folder has none.
+    const covers = this.settings.folderCovers || {};
+    Object.keys(covers).forEach((p) => {
+      if (covers[p] === file.path || String(covers[p]).startsWith(file.path + '/')) {
+        delete covers[p];
+        changed = true;
+      }
+    });
     PATH_KEYED.forEach((key) => {
       const kept = this.settings[key] || {};
       Object.keys(kept).forEach((p) => {
