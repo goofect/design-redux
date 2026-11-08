@@ -404,19 +404,19 @@ suite('Design Redux in Obsidian: notes', function () {
     await obsidianPage.openFile('Inspector note.md');
     await browser.executeObsidianCommand('design-redux:open-properties');
     await browser.$('.dr-props-popup.is-open .dr-props-head').waitForExist({ timeout: 5000 });
-    // Docked in the right sidebar, it stays while another note opens, and follows it.
+    // A popup above its button, not the right sidebar; it stays while another note opens, and follows it.
     await obsidianPage.openFile('Politics/Balance of power.md');
     const followed = await browser.executeObsidian(async ({ app }) => {
       const until = async (ok, ms = 5000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
-      const leaf = app.workspace.getLeavesOfType('design-redux-properties')[0];
-      const title = () => { const t = leaf && leaf.view.containerEl.querySelector('.dr-props-popup.is-open .dr-props-title'); return t ? t.textContent : ''; };
+      const pop = () => document.querySelector('.dr-props-popup.is-open');
+      const title = () => { const t = pop() && pop().querySelector('.dr-props-title'); return t ? t.textContent : ''; };
       await until(() => title() === 'Balance of power');
-      return { right: !!leaf && leaf.getRoot() === app.workspace.rightSplit, title: title() };
+      return { popup: !!pop() && pop().parentElement === document.body && !pop().classList.contains('is-docked'), docked: app.workspace.getLeavesOfType('design-redux-properties').length, title: title() };
     });
-    expect(followed).toEqual({ right: true, title: 'Balance of power' });
+    expect(followed).toEqual({ popup: true, docked: 0, title: 'Balance of power' });
     await obsidianPage.openFile('Inspector note.md');
     await browser.waitUntil(() => browser.execute(() => {
-      const t = document.querySelector('.dr-panel-dock .dr-props-popup.is-open .dr-props-title');
+      const t = document.querySelector('.dr-props-popup.is-open .dr-props-title');
       return !!t && t.textContent === 'Inspector note';
     }), { timeout: 5000 });
     await browser.waitUntil(() => browser.execute(() => document.querySelectorAll('.dr-props-popup.is-open .dr-row').length === 6), { timeout: 5000 });
@@ -442,7 +442,7 @@ suite('Design Redux in Obsidian: notes', function () {
     expect(look.rowHeight).toBeGreaterThanOrEqual(28);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);
-    // Docked: no box, no lines between rows, the value from the left.
+    // A popup: its rows grouped in a rounded box with hairlines between, the value to the right.
     const group = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
       const rows = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
@@ -454,7 +454,7 @@ suite('Design Redux in Obsidian: notes', function () {
         right: field ? getComputedStyle(field).textAlign : 'right',
       };
     });
-    expect(group).toEqual({ radius: '0px', hairline: false, boxed: false, right: 'left' });
+    expect(group).toEqual({ radius: '10px', hairline: true, boxed: false, right: 'right' });
     await shot('properties-inspector');
 
     // + : the search, with the cursor in it.

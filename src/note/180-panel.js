@@ -13,7 +13,6 @@ import { MarkdownView, Notice, Platform, Setting } from 'obsidian';
 import { INSPECTOR_VIEW } from '../core/020-constants.js';
 import { makeTrigger } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
-import { openInspector } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';
 import { originLabel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './161-panel-property-edits.js';
@@ -22,7 +21,7 @@ import { inspectableOf } from './178-inspectables.js';
 import { PanelDockView } from './179-panel-dock.js';
 import { drSheetIn } from '../ui/229-components.js';
 
-const EMPTY_TEXT = 'Open or pick a note to see its properties.';
+const EMPTY_TEXT = 'Pick a note or collection in the library to see it here.';
 const OFF_TEXT = 'Turn on “Properties button” in settings to see properties here.';
 
 export class PropertiesPanel extends Feature {
@@ -204,20 +203,20 @@ export class PropertiesPanel extends Feature {
   register() {
     this.plugin.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {
-        if (this.enabled && !this.dockView) this.follow(leaf);
+        if (this.enabled && !this.docked) this.follow(leaf);
       })
     );
     this.plugin.registerEvent(
       this.app.workspace.on('file-open', (file) => {
         // Fires when a leaf loads a different file, which
         // active-leaf-change does not cover. Docked, the coordinator follows.
-        if (!this.isOpen() || this.dockView || !file || file === this.file) return;
+        if (!this.isOpen() || this.docked || !file || file === this.file) return;
         const leaf = this.app.workspace.activeLeaf;
         if (leaf && leaf.view instanceof MarkdownView) this.follow(leaf, true);
         else this.close();
       })
     );
-    // Docked, it draws what the coordinator says the inspector is about: the note worked in, a pick, a card, a map.
+    // Docked, it draws what the coordinator says the inspector is about: what's picked in the library.
     this.plugin.register(this.plugin.coordinator.onChange((snap) => this.showSnapshot(snap)));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
     // A collection's details changed (kept by the plugin, not in a note): drawn again.
@@ -246,7 +245,7 @@ export class PropertiesPanel extends Feature {
       this.plugin.registerEvent(this.app.vault.on(type, edited))
     );
     this.plugin.registerDomEvent(document, 'keydown', (evt) => {
-      if (evt.key === 'Escape' && this.isOpen() && !this.dockView) this.close();
+      if (evt.key === 'Escape' && this.isOpen() && !this.docked) this.close();
     });
 
     /*
@@ -259,7 +258,7 @@ export class PropertiesPanel extends Feature {
      * any of them looks outside without being outside.
      */
     this.plugin.registerDomEvent(document, 'pointerdown', (evt) => {
-      if (!this.isOpen() || this.dockView) return;
+      if (!this.isOpen() || this.docked) return;
       // Any element — an icon is SVG, not HTML — and from any window.
       const el = evt.target;
       if (!el || el.nodeType !== 1 || typeof el.closest !== 'function') return;
@@ -283,6 +282,7 @@ export class PropertiesPanel extends Feature {
     document.body.toggleClass('dr-mentions-active', !!this.settings.showMentions);
     if (!this.popupEl || !this.popupEl.isConnected) {
       this.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
+      this.floating = false;
       if (this.dockView) this.dock(this.dockView);
     }
     this.sync();
@@ -354,21 +354,15 @@ export class PropertiesPanel extends Feature {
       return;
     }
     if (!target) return;
-    // On a computer it docks, as an inspector; on a phone it's a sheet.
-    if (!this.dockView && !Platform.isPhone) {
-      openInspector(this.app).then(() => this.showAsked(leaf, target));
-      return;
-    }
-    if (this.dockView) {
-      this.app.workspace.revealLeaf(this.dockView.leaf);
-      this.showAsked(leaf, target);
-      return;
-    }
-    if (this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
+    // Above the button that asked, on a computer as on a phone (a sheet there). The
+    // inspector in the right sidebar is the library's: while it's open, the panel is
+    // borrowed from it for as long as this shows, and given back on closing.
+    if (!this.docked && this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
       this.close();
       return;
     }
-    this.close();
+    if (this.docked) this.float();
+    else this.close();
     this.open(leaf, trigger, target);
   }
 
@@ -391,7 +385,7 @@ export class PropertiesPanel extends Feature {
     this.leaf = leaf;
     this.point(target);
     this.mount();
-    if (this.dockView) {
+    if (this.docked) {
       this.popupEl.addClass('is-open');
       this.dockView.showEmpty('');
       this.dockView.showOrigin(originLabel(this.plugin.coordinator.originOf(leaf, target)), this.pinned);
@@ -431,7 +425,7 @@ export class PropertiesPanel extends Feature {
 
   /** Switching notes moves the panel rather than closing it. */
   follow(leaf, force) {
-    if (this.dockView || !this.isOpen()) return;
+    if (this.docked || !this.isOpen()) return;
     if (!force && this.leaf === leaf) return;
 
     if (!leaf || !(leaf.view instanceof MarkdownView) || !leaf.view.file) {
@@ -524,10 +518,41 @@ export class PropertiesPanel extends Feature {
       this.trigger.focus();
     }
     this.trigger = null;
+    if (this.floating) {
+      this.unfloat();
+      return;
+    }
     if (this.dockView) {
       this.dockView.showEmpty(EMPTY_TEXT);
       this.dockView.showOrigin('', this.pinned);
     }
+  }
+
+  /** Docked in the inspector and not lent out as a popup. */
+  get docked() {
+    return !!this.dockView && !this.floating;
+  }
+
+  /** Lent out of the inspector, to show above a button: the inspector says where it's gone. */
+  float() {
+    if (!this.dockView || this.floating || !this.popupEl) return;
+    this.close();
+    this.floating = true;
+    this.popupEl.removeClass('is-docked');
+    document.body.appendChild(this.popupEl);
+    this.dockView.showEmpty('Shown above the note for now.');
+    this.dockView.showOrigin('', this.pinned);
+  }
+
+  /** Back in the inspector, showing what's picked again. */
+  unfloat() {
+    if (!this.floating) return;
+    this.floating = false;
+    if (!this.dockView || !this.popupEl) return;
+    this.popupEl.style.left = this.popupEl.style.top = this.popupEl.style.bottom = '';
+    this.popupEl.addClass('is-docked');
+    this.dockView.contentEl.appendChild(this.popupEl);
+    this.showSnapshot(this.plugin.coordinator.snapshot());
   }
 
   /** A file or folder deleted: if it's what's shown, it's let go of. (Docked, the coordinator lets go, pinned or not.) */
@@ -547,7 +572,7 @@ export class PropertiesPanel extends Feature {
 
   /** Docked, it draws the coordinator's snapshot: nothing to show, it shows that. */
   showSnapshot(snap) {
-    if (!this.dockView || !this.popupEl) return;
+    if (!this.docked || !this.popupEl) return;
     if (!snap.target) {
       if (this.isOpen()) this.close();
       else this.dockView.showOrigin('', false);
@@ -557,35 +582,31 @@ export class PropertiesPanel extends Feature {
     this.dockView.showOrigin(originLabel(snap.origin), snap.pinned);
   }
 
-  /** Asked for outright, from the Properties button: shown, and the coordinator told. */
-  showAsked(leaf, target) {
-    if (!this.dockView) return;
-    this.plugin.coordinator.show(leaf, target);
-    this.showSnapshot(this.plugin.coordinator.snapshot());
-  }
-
-  /** Into the sidebar view: shown there from now on, starting with the note last worked in. */
+  /** Into the sidebar view: shown there from now on, starting with what's picked. */
   dock(view) {
     this.dockView = view;
     if (!this.popupEl) {
       view.showEmpty(OFF_TEXT);
       return;
     }
+    this.floating = false;
     this.close();
     this.popupEl.style.left = this.popupEl.style.top = this.popupEl.style.bottom = '';
     this.popupEl.addClass('is-docked');
     view.contentEl.appendChild(this.popupEl);
-    const ws = this.app.workspace;
-    this.showSnapshot(this.plugin.coordinator.look(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf));
+    this.showSnapshot(this.plugin.coordinator.snapshot());
   }
 
   /** The sidebar view closed: a popup again. */
   undock(view) {
     if (this.dockView !== view) return;
-    this.close();
+    // Lent out as a popup: it stays where it is, a popup now.
+    const lent = this.floating;
+    this.floating = false;
+    if (!lent) this.close();
     this.dockView = null;
     this.plugin.coordinator.pin(false);
-    if (this.popupEl) {
+    if (this.popupEl && !lent) {
       this.popupEl.removeClass('is-docked');
       document.body.appendChild(this.popupEl);
     }

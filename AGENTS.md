@@ -103,11 +103,12 @@ Coffee N' Christmas.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
 - A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
   instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited: on a computer, docked in the right sidebar as
-  the inspector (179, `INSPECTOR_VIEW`); on a phone, a sheet. What the
-  inspector is about is `plugin.coordinator`'s to say (084): the tab worked
-  in, a pick, a canvas card, and the pin, kept as a snapshot
-  `{ target, leaf, origin, pinned }` the docked panel draws.
+  is where a note is edited: it pops up above the button that asked (the
+  note's header, the strip); on a phone, a sheet. The right sidebar's
+  inspector (179, `INSPECTOR_VIEW`) is the library's: it shows what's picked
+  there, as `plugin.coordinator` says (084: the pick and the pin, kept as a
+  snapshot `{ target, leaf, origin, pinned }`). While it's open, a popup
+  borrows the panel from it and gives it back on closing (`float`/`unfloat`).
 - What's picked is `plugin.selection` (076), apart from what's open. In the
   browse view, rows and tiles go through `pickOrOpen`. While the inspector
   shows (`inspectorShowing`), a click picks and a double click or Enter

@@ -579,14 +579,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     phone(false);
   });
 
-  await t('docked in the sidebar, the panel stays open and follows the note and what the library picks', async () => {
+  await t('the inspector in the right sidebar shows what the library picks; a note’s Properties button pops up above itself, borrowing the panel', async () => {
     document.body.innerHTML = '';
     const a = new TFile('Theories/Realism.md');
     const b = new TFile('Theories/Liberalism.md');
     const c = new TFile('Theories/Deterrence.md');
     const noteLeaf = { view: new MarkdownView(a) };
     const panel = Object.create(T.PropertiesPanel.prototype);
-    Object.assign(panel, { sections: [], dockView: null, fitted: new WeakMap() });
+    Object.assign(panel, { sections: [], dockView: null, fitted: new WeakMap(), floating: false });
     panel.popupEl = document.body.createDiv({ cls: 'dr-props-popup' });
     // A note drawn as its path; an album, as the panel draws it.
     panel.mount = function () {
@@ -594,43 +594,22 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
       this.popupEl.empty();
       this.popupEl.createDiv({ text: this.file.path });
     };
-    // Pressed on a computer, the Properties button docks it in the right sidebar.
-    const tabs = [];
-    const sidebarLeaf = {
-      setViewState: async () => {
-        sidebarLeaf.view = new T.PanelDockView(sidebarLeaf, panel);
-        tabs.push(sidebarLeaf);
-        await sidebarLeaf.view.onOpen();
-      },
-    };
+    const sidebarLeaf = {};
     panel.plugin = {
-      app: {
-        workspace: {
-          getMostRecentLeaf: () => noteLeaf,
-          revealLeaf() {},
-          getRightLeaf: () => sidebarLeaf,
-          getLeavesOfType: (type) => (type === 'design-redux-properties' ? tabs : []),
-        },
-      },
+      app: { workspace: { getMostRecentLeaf: () => noteLeaf, revealLeaf() {}, getRightLeaf: () => sidebarLeaf, getLeavesOfType: () => [] } },
       folderNote: () => null,
     };
-    // What it's about is the coordinator's to say; the panel draws it.
     panel.plugin.selection = new T.Selection(panel.plugin);
     const coordinator = (panel.plugin.coordinator = new T.WorkspaceCoordinator(panel.plugin));
     panel.plugin.register = () => {};
     panel.plugin.selection.onChange((item) => coordinator.pick(item));
     coordinator.onChange((snap) => panel.showSnapshot(snap));
-    panel.toggle(noteLeaf, null);
-    await new Promise((r) => setTimeout(r));
+    // The inspector opened (from the library): nothing picked yet, so it says what it's for.
+    sidebarLeaf.view = new T.PanelDockView(sidebarLeaf, panel);
+    await sidebarLeaf.view.onOpen();
     const view = sidebarLeaf.view;
     assert.ok(view.contentEl.contains(panel.popupEl), 'in the sidebar');
-    assert.ok(panel.isOpen() && panel.popupEl.textContent === a.path, 'the note last worked in');
-    // Another note opens: it follows; the sidebar's own leaf and an empty pane leave it be.
-    coordinator.look({ view: new MarkdownView(b) });
-    assert.strictEqual(panel.popupEl.textContent, b.path);
-    coordinator.look(view.leaf);
-    coordinator.look({ view: {} });
-    assert.strictEqual(panel.popupEl.textContent, b.path);
+    assert.ok(!panel.isOpen() && view.contentEl.textContent.includes('Pick a note or collection'), 'not the open note');
     // Picked in the library, without opening.
     panel.plugin.selection.set({ file: c });
     assert.strictEqual(panel.popupEl.textContent, c.path);
@@ -638,25 +617,32 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const album = new TFolder('Theories');
     panel.plugin.selection.set({ folder: album });
     assert.strictEqual(panel.popupEl.querySelector('.dr-inspector-brief').textContent, 'Theories');
-    // Why it shows it, above it; pinned, it stays while notes open and picks change; unpinned, it catches up.
-    const origin = () => view.contentEl.querySelector('.dr-panel-dock-origin').textContent;
-    // The note open, then picked: drawn again, as a pick.
-    coordinator.look({ view: new MarkdownView(b) });
-    let mounts = 0;
-    const mount = panel.mount;
-    panel.mount = function () { mounts++; mount.call(this); };
+    panel.plugin.selection.set({ file: c });
+    // A note's Properties button: above the button, lent out of the inspector, and given back on closing.
+    const button = document.body.createDiv();
+    button.getBoundingClientRect = () => ({ left: 300, top: 40, bottom: 64, width: 24, height: 24 });
+    panel.toggle(noteLeaf, button);
+    assert.ok(panel.popupEl.parentElement === document.body && panel.isOpen() && !panel.popupEl.hasClass('is-docked'), 'a popup');
+    assert.strictEqual(panel.popupEl.textContent, a.path, 'the note, not the pick');
+    assert.ok(view.contentEl.textContent.includes('Shown above the note'), 'the inspector says where it went');
     panel.plugin.selection.set({ file: b });
-    assert.ok(mounts === 1 && panel.picked, 'redrawn as picked');
-    panel.mount = mount;
+    assert.strictEqual(panel.popupEl.textContent, a.path, 'a pick meanwhile leaves the popup be');
+    panel.toggle(noteLeaf, button);
+    assert.ok(view.contentEl.contains(panel.popupEl) && panel.popupEl.textContent === b.path, 'closed: back in the inspector, with what’s picked now');
+    // Why it shows it, above it; pinned, it stays while picks change; unpinned, it catches up.
+    const origin = () => view.contentEl.querySelector('.dr-panel-dock-origin').textContent;
     assert.strictEqual(origin(), 'Picked in the library');
     panel.togglePin();
     assert.strictEqual(origin(), 'Pinned · Picked in the library');
-    coordinator.look({ view: new MarkdownView(c) });
     panel.plugin.selection.set({ file: a });
-    assert.strictEqual(panel.popupEl.textContent, b.path, 'pinned: neither the open note nor a pick moves it');
+    assert.strictEqual(panel.popupEl.textContent, b.path, 'pinned: a pick doesn’t move it');
     panel.togglePin();
-    assert.ok(panel.popupEl.textContent === a.path && origin() === 'The open note', 'unpinned: the note last worked in');
+    assert.strictEqual(panel.popupEl.textContent, a.path, 'unpinned: what’s picked now');
+    // Nothing picked: nothing shown.
+    panel.plugin.selection.clear();
+    assert.ok(!panel.isOpen());
     // Deleted, it's let go of, pinned or not.
+    panel.plugin.selection.set({ file: a });
     panel.togglePin();
     coordinator.forget(a);
     assert.ok(!panel.isOpen() && !panel.pinned && origin() === '');

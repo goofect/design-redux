@@ -92,7 +92,7 @@ export const SETTINGS_TABS = [
         id: 'properties',
         icon: 'list',
         name: 'Properties panel',
-        desc: 'Where a note is edited: its properties and places.',
+        desc: 'A note’s properties above its button; what the library picks, in the right sidebar.',
         switch: 'propertiesDropdown',
         keys: ['hideNativeProperties', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyDueChips', 'propertyRulesOn', 'showMentions', 'panelPlaces', 'panelGroupList', 'propertyHistoryLimit', 'propertyDueKeys', 'propertyRulesDryRun'],
       },

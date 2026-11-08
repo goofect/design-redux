@@ -1,17 +1,17 @@
 /* ------------------------------------------------------------------ */
 /* The workspace coordinator                                          */
 /*                                                                    */
-/* What the inspector is about, decided in one place. What's open in  */
-/* a tab, what's picked in the library, a card on a canvas: each can  */
-/* say what to show, and the pin says whether any of                  */
-/* them may. The coordinator keeps the answer as a snapshot —          */
+/* What the inspector is about, decided in one place: what's picked   */
+/* in the library, a note or a collection, and the pin, which keeps   */
+/* what's shown while other things are picked. A tab's note isn't     */
+/* followed: its properties pop up from its own button (targetOf says */
+/* what that's about). The answer is kept as a snapshot —             */
 /* { target, leaf, origin, pinned } — and tells whoever listens when  */
 /* it changes; they draw from it. One for the whole plugin, on        */
 /* `plugin.coordinator`.                                              */
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { INSPECTOR_VIEW } from './020-constants.js';
 import { cardElement, pickedOnCanvas } from './079-canvas-adapter.js';
 
 /** Why the inspector shows `target`, in a few words. */
@@ -44,36 +44,11 @@ export class WorkspaceCoordinator {
     return Object.assign({}, this.state);
   }
 
-  /** The events it follows: tabs, notes opening, picks, canvases, deletes. Once, at load. */
+  /** The events it follows: picks and deletes. Once, at load. */
   listen() {
     const plugin = this.plugin;
-    const ws = this.app.workspace;
-    plugin.registerEvent(ws.on('active-leaf-change', (leaf) => this.look(leaf)));
-    // A tab that loads another note: active-leaf-change doesn't cover it.
-    plugin.registerEvent(ws.on('file-open', () => this.look(ws.activeLeaf)));
     plugin.register(plugin.selection.onChange((item) => this.pick(item)));
     plugin.registerEvent(this.app.vault.on('delete', (file) => this.forget(file)));
-    // A card picked on a canvas says nothing, so a click or a key there is looked at once it's done.
-    const onCanvas = (evt) => {
-      if (!this.listeners.size) return;
-      const leaf = ws.activeLeaf;
-      const view = leaf && !leaf.isDeferred ? leaf.view : null;
-      const el = evt.target;
-      if (!view || !view.canvas || !el || el.nodeType !== 1 || !view.containerEl.contains(el)) return;
-      window.setTimeout(() => this.look(leaf), 0);
-    };
-    const listenIn = (doc) => {
-      plugin.registerDomEvent(doc, 'pointerup', onCanvas);
-      plugin.registerDomEvent(doc, 'keyup', onCanvas);
-    };
-    listenIn(document);
-    // A canvas in a window of its own is listened to there.
-    plugin.registerEvent(
-      ws.on('window-open', (workspaceWindow, win) => {
-        const doc = (win && win.document) || (workspaceWindow && workspaceWindow.doc);
-        if (doc && doc !== document) listenIn(doc);
-      })
-    );
   }
 
   /**
@@ -111,38 +86,28 @@ export class WorkspaceCoordinator {
     return 'note';
   }
 
-  /**
-   * A tab worked in: what it's about, unless pinned. The inspector's own
-   * tab, and a tab with nothing to show, leave it as it was. The snapshot.
-   */
-  look(leaf) {
-    if (this.state.pinned || !leaf || this.isInspector(leaf)) return this.snapshot();
-    const target = this.targetOf(leaf);
-    if (target && !target.none) this.show(leaf, target);
-    return this.snapshot();
-  }
-
   /** Picked in the library, without opening: a note or an album. */
   pick(item) {
-    if (this.state.pinned || !item) return;
+    if (this.state.pinned) return;
+    if (!item) {
+      this.set({ target: null, leaf: null, origin: '', pinned: false });
+      return;
+    }
     if (item.file instanceof TFile && item.file.extension === 'md') this.show(null, { file: item.file, picked: true });
     else if (item.folder) this.show(null, { folder: item.folder });
   }
 
-  /** Asked for outright — the Properties button — so shown, pinned or not. */
+  /** Shown, pinned or not. */
   show(leaf, target) {
     this.set({ target, leaf, origin: this.originOf(leaf, target), pinned: this.state.pinned });
   }
 
-  /** Pinned, it keeps what it shows; unpinned, it catches up with the tab last worked in. */
+  /** Pinned, it keeps what it shows; unpinned, it catches up with what's picked now. */
   pin(on) {
     const pinned = !!on && !!this.state.target;
     if (pinned === this.state.pinned) return;
     this.set(Object.assign({}, this.state, { pinned }));
-    if (!pinned) {
-      const ws = this.app.workspace;
-      this.look(typeof ws.getMostRecentLeaf === 'function' ? ws.getMostRecentLeaf() : ws.activeLeaf);
-    }
+    if (!pinned) this.pick(this.plugin.selection.get());
   }
 
   /** A deleted file or folder it shows is let go of, pinned or not. */
@@ -150,10 +115,6 @@ export class WorkspaceCoordinator {
     const target = this.state.target;
     if (!file || !target || (target.file !== file && target.folder !== file)) return;
     this.set({ target: null, leaf: null, origin: '', pinned: false });
-  }
-
-  isInspector(leaf) {
-    return !!leaf.view && typeof leaf.view.getViewType === 'function' && leaf.view.getViewType() === INSPECTOR_VIEW;
   }
 
   set(next) {

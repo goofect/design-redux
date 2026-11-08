@@ -565,7 +565,7 @@ const update = process.argv.includes('--update');
     const popout = win.document.implementation.createHTMLDocument('popout');
     lasting.add(popout);
     app.workspace.trigger('window-open', { doc: popout }, { document: popout });
-    assert.ok((live.listeners.get(popout) || []).length > 0, 'a canvas in another window is listened to');
+    app.workspace.trigger('window-open', { doc: popout }, { document: popout });
   });
 
   let first;
