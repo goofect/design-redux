@@ -450,7 +450,8 @@ export class PropertiesPanel extends Feature {
       el.removeClass('is-active');
       el.setAttribute('aria-expanded', 'false');
     });
-    this.trigger = trigger;
+    this.trigger = trigger || null;
+    if (!trigger) return;
     trigger.addClass('is-active');
     trigger.setAttribute('aria-expanded', 'true');
   }
@@ -461,10 +462,20 @@ export class PropertiesPanel extends Feature {
    * from the stylesheet.
    */
   place(trigger) {
-    let r = trigger.getBoundingClientRect();
-    if (!r.width && !r.height && this.anchor && this.anchor.isConnected) {
-      r = this.anchor.getBoundingClientRect();
-    }
+    // Against what asked; else what stands for it — the strip's button, the note's header
+    // actions — when asked from elsewhere, such as a command; else the window's top right.
+    const seen = (el) => {
+      if (!el || !el.isConnected || typeof el.getBoundingClientRect !== 'function') return null;
+      const b = el.getBoundingClientRect();
+      return b.width || b.height ? b : null;
+    };
+    const page = this.leaf && this.leaf.view && this.leaf.view.containerEl;
+    const r =
+      seen(trigger) ||
+      seen(this.anchor) ||
+      seen(document.querySelector('.dr-strip-btn[data-action="properties"]')) ||
+      seen(page && page.querySelector('.view-header .view-actions')) ||
+      { left: window.innerWidth, top: 40, bottom: 40, width: 0, height: 0 };
     const el = this.popupEl;
     el.style.left = Platform.isPhone
       ? '8px'

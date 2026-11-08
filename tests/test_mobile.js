@@ -577,6 +577,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     panel.place(hidden);
     assert.strictEqual(panel.popupEl.style.left, '8px', 'not across the phone');
     phone(false);
+    // Asked for by a command, with no button to sit against: placed all the same.
+    panel.anchor = null;
+    panel.place(undefined);
+    assert.ok(panel.popupEl.style.top || panel.popupEl.style.bottom, 'placed');
+    panel.setTrigger(undefined);
+    assert.strictEqual(panel.trigger, null);
   });
 
   await t('the inspector in the right sidebar shows what the library picks; a note’s Properties button pops up above itself, borrowing the panel', async () => {
