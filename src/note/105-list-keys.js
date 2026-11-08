@@ -26,7 +26,7 @@ export class ListKeys extends Feature {
       {
         key: 'typeToJump',
         name: 'Type to jump',
-        desc: 'In lists, type a name to jump to it. Space previews the note; Enter opens it.',
+        desc: 'Type to jump in lists. Space previews, Enter opens.',
       },
     ];
   }

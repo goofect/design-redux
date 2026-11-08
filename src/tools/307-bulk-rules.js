@@ -57,13 +57,13 @@ export class PropertyRules extends Feature {
       {
         key: 'propertyRulesOn',
         name: 'Property rules',
-        desc: 'When a note comes into a folder, gets a tag or has a property set to a value, set other properties — only where they’re empty, unless a rule says to replace them. Set them up with Property rules….',
+        desc: 'Set properties when a note joins a folder, gets a tag or a value.',
       },
       {
         key: 'propertyRulesDryRun',
         showIf: 'propertyRulesOn',
         name: 'Dry run',
-        desc: 'A rule that would fire says what it would set, and sets nothing. Switch it off to let the rules write.',
+        desc: 'Show what rules would set, without writing anything.',
       },
     ];
   }

@@ -17,7 +17,7 @@ export class SidebarDrop extends Feature {
       {
         key: 'sidebarDrop',
         name: 'Drag to move',
-        desc: 'Drag a note onto a folder in the library or file list to move it, with Undo.',
+        desc: 'Drag a note onto a folder to move it.',
       },
     ];
   }

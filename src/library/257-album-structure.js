@@ -108,7 +108,7 @@ export class AlbumStructure extends Feature {
       {
         key: 'panelPlaces',
         name: 'Where a note is kept, in the note panel',
-        desc: 'Below a note’s properties: the collection it’s in, the collections that include it from elsewhere, and the canvases it’s on.',
+        desc: 'Below a note’s properties: its collections and canvases.',
         showIf: 'albumStructure',
       },
       {
@@ -121,19 +121,19 @@ export class AlbumStructure extends Feature {
       {
         key: 'albumStructure',
         name: 'Collections say what they are',
-        desc: 'A folder note’s collection, description, includes, related, featured and layout properties: its kind above its title, what it’s for, notes from elsewhere shown in it, collections beside it, notes to start with, and whether it opens as a list, covers, an overview or its map. A collection’s page shows the way down to it.',
+        desc: 'Read a collection’s kind, description and layout from its folder note.',
       },
       {
         key: 'albumRollups',
         name: 'What a collection comes to',
-        desc: 'Under a collection’s title, and beside it where collections are listed as rows: how many of its notes are done, and the span of a date property’s dates.',
+        desc: 'How many notes are done, and the span of dates, under a collection’s title.',
       },
       {
         key: 'rollupDateKey',
         type: 'text',
         showIf: 'albumRollups',
         name: 'Date property for the span',
-        desc: 'Its earliest and latest dates among the collection’s notes; left empty, none.',
+        desc: 'The date property whose earliest and latest dates show.',
       },
     ];
   }
@@ -209,7 +209,7 @@ export class AlbumStructure extends Feature {
     const names = Object.assign({}, this.settings.albumKeyNames || {});
     new Setting(block)
       .setName('Collection property names')
-      .setDesc('The folder note properties a collection is read from. Give any another name where it would clash with one of yours; the usual name is used where left empty.')
+      .setDesc('The properties collections are read from. Rename any that clash with yours.')
       .setHeading();
     Object.keys(ALBUM_KEY_DEFAULTS).forEach((k) => {
       new Setting(block).setName(ALBUM_KEY_LABELS[k]).addText((t) =>
@@ -224,7 +224,7 @@ export class AlbumStructure extends Feature {
       );
     });
     new Setting(block)
-      .setDesc('Values written under other names before stay there until carried over.')
+      .setDesc('Old values stay under their old names until carried over.')
       .addButton((b) => b.setButtonText('Carry values over to these names').onClick(() => this.carryKeys()));
     return block;
   }

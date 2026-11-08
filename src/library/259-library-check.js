@@ -211,20 +211,20 @@ export class LibraryCheck extends Feature {
       {
         key: 'libraryCheck',
         name: 'Look the library over',
-        desc: 'A report of the library’s hierarchy, duplicates and overlaps, and coverage and balance: things to look at, not rules. Nothing is changed.',
+        desc: 'A report on duplicates, overlaps and balance. Changes nothing.',
       },
       {
         key: 'libraryInbox',
         showIf: 'libraryCheck',
         name: 'Inbox',
-        desc: 'The notes in no collection, in one place, to be moved into collections or shown in them a few at a time. Add it to the library from its layout, or open it from the report.',
+        desc: 'Notes in no collection, gathered in one place.',
       },
       {
         key: 'thinNoteWords',
         type: 'number',
         showIf: 'libraryCheck',
         name: 'Thin notes: fewer words than',
-        desc: 'Notes with fewer words of their own — properties, headings and embeds aside — are listed in the report and underlined in lists. 0 turns it off.',
+        desc: 'Notes under this many words are flagged as thin. 0 turns it off.',
       },
     ];
   }

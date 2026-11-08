@@ -22,7 +22,7 @@ export class CoverDrop extends Feature {
       {
         key: 'coverDrop',
         name: 'Drop to set a cover',
-        desc: 'Drag an image onto a cover to use it. Images from outside the vault are saved first.',
+        desc: 'Drag an image onto a cover to use it.',
       },
     ];
   }

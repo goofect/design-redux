@@ -12,7 +12,7 @@ export class ImageRouter extends Feature {
       {
         key: 'routeImages',
         name: 'Collect new images',
-        desc: 'Move images added to the vault into one folder, updating their links.',
+        desc: 'Move images added to the vault into one folder.',
       },
       {
         key: 'imageFolder',

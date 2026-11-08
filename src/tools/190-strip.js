@@ -78,7 +78,7 @@ export class ContextStrip extends Feature {
       {
         key: 'contextStrip',
         name: 'Context strip',
-        desc: 'A bar along the bottom with the current note, its cover and actions.',
+        desc: 'A bar along the bottom with the note, its cover and actions.',
       },
       {
         key: 'stripPlace',
@@ -90,7 +90,7 @@ export class ContextStrip extends Feature {
         key: 'stripDetail',
         type: 'text',
         name: 'Detail line',
-        desc: 'What shows beside that: properties, modified, created or folder, separated by commas. Empty for automatic; none for nothing.',
+        desc: 'What shows beside it, separated by commas. Empty for automatic.',
         placeholder: 'domain, status',
         fallback: '',
         showIf: 'contextStrip',
@@ -101,7 +101,7 @@ export class ContextStrip extends Feature {
         key: 'stripSide',
         type: 'dropdown',
         name: 'Where it sits',
-        desc: 'Along the bottom, or as a slim rail at the side with only the cover, previous, next and more — for narrow windows and split panes.',
+        desc: 'Along the bottom, or a slim rail at the side for narrow windows.',
         options: { bottom: 'Along the bottom', side: 'A rail at the side' },
         showIf: 'contextStrip',
       },

@@ -80,7 +80,7 @@ export class PropertyHistory extends Feature {
         key: 'propertyHistoryLimit',
         type: 'dropdown',
         name: 'Property history',
-        desc: 'The last changes made here to each note’s properties — in the note panel, newest first, each with Put back. How many to keep for each note; kept with the plugin’s settings.',
+        desc: 'Recent property changes to keep per note, each with Put back.',
         options: { 0: 'None', 10: 'The last 10', 20: 'The last 20', 50: 'The last 50' },
       },
     ];

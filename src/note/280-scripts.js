@@ -405,21 +405,21 @@ export class Scripts extends Feature {
       {
         key: 'scripts',
         name: 'Show raised and lowered text',
-        desc: 'Draw x^2^ and H~2~O as superscript and subscript, editing and reading.',
+        desc: 'Show x^2^ and H~2~O as superscript and subscript.',
       },
       {
         key: 'scriptSyntax',
         type: 'dropdown',
         showIf: 'scripts',
         name: 'Syntax',
-        desc: 'What the Superscript and Subscript commands write. Text with spaces always gets tags.',
+        desc: 'What the Superscript and Subscript commands write.',
         options: { short: 'x^2^ and H~2~O', html: '<sup> and <sub> tags' },
       },
       {
         key: 'autoOrdinals',
         showIf: 'scripts',
         name: 'Raise ordinals',
-        desc: 'Raise the ending of 1st, 2nd or 3rd as you type. Undo puts it back.',
+        desc: 'Raise the ending of 1st, 2nd and 3rd as you type.',
       },
     ];
   }

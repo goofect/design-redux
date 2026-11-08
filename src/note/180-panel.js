@@ -46,19 +46,19 @@ export class PropertiesPanel extends Feature {
       {
         key: 'propertiesDropdown',
         name: 'Properties button',
-        desc: 'A button in each note’s header that shows its properties in the inspector, or as a sheet on a phone.',
+        desc: 'A button in each note’s header that shows its properties.',
       },
       {
         key: 'hideNativeProperties',
         name: 'Hide the note’s own properties',
-        desc: 'Obsidian’s properties block at the top of a note, hidden while the panel shows them.',
+        desc: 'Hide Obsidian’s properties block while the panel shows them.',
         showIf: 'propertiesDropdown',
       },
       {
         key: 'panelPropertiesView',
         type: 'dropdown',
         name: 'Properties shown',
-        desc: 'The main ones, with the rest a press away, or all of them.',
+        desc: 'The main properties, or all of them.',
         options: { compact: 'The main ones', all: 'All' },
         showIf: 'propertiesDropdown',
       },
@@ -73,7 +73,7 @@ export class PropertiesPanel extends Feature {
         key: 'panelPropertyGroups',
         type: 'dropdown',
         name: 'Group properties',
-        desc: 'Under the groups below — only how they show; the note is left as it is. Properties no group names go under Other.',
+        desc: 'Group properties as below. Others go under Other.',
         options: { off: 'No', on: 'Yes' },
         showIf: 'propertiesDropdown',
       },
@@ -87,7 +87,7 @@ export class PropertiesPanel extends Feature {
       {
         key: 'showMentions',
         name: 'Mentions',
-        desc: 'Below the properties, list notes that link to or name this one.',
+        desc: 'Notes that link to or mention this one.',
         showIf: 'propertiesDropdown',
       },
     ];
@@ -117,7 +117,7 @@ export class PropertiesPanel extends Feature {
         this.plugin.saveSettings();
         draw();
       };
-      new Setting(block).setName('Main properties').setDesc('What a note shows first — and alone, while only the main ones show — in this order.').setHeading();
+      new Setting(block).setName('Main properties').setDesc('The properties shown first, in this order.').setHeading();
       names.forEach((name, i) => {
         const row = new Setting(block).setName(name).setClass('dr-main-prop');
         row.addExtraButton((b) => b.setIcon('arrow-up').setTooltip('Move up').setDisabled(i === 0).onClick(() => i > 0 && (names.splice(i - 1, 0, names.splice(i, 1)[0]), save())));

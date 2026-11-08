@@ -32,13 +32,13 @@ export class Footnotes extends Feature {
       {
         key: 'footnotes',
         name: 'Footnote box',
-        desc: 'Add footnote opens a box at the cursor; the citation goes to the end of the note.',
+        desc: 'Add a footnote from a box at the cursor.',
       },
       {
         key: 'footnotesAside',
         showIf: 'footnotes',
         name: 'Footnotes view',
-        desc: 'Hide the citations at the end of a note and list them in a sidebar view.',
+        desc: 'Hide citations at a note’s end and list them in a side view.',
       },
       {
         key: 'footnoteOrder',

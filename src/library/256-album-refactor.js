@@ -108,7 +108,7 @@ export class AlbumRefactor extends Feature {
       {
         key: 'albumRefactor',
         name: 'Reorganise collections safely',
-        desc: 'A folder’s menu can rename a collection, move it into another folder, merge it into another or split notes off it — each shown before it’s done, with links kept and one Undo.',
+        desc: 'Rename, move, merge or split a collection from its folder’s menu.',
       },
     ];
   }

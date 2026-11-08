@@ -144,7 +144,7 @@ export class MarkedLists extends Feature {
       {
         key: 'letterLists',
         name: 'Alphabetical lists',
-        desc: 'Lines starting a., b) or (c) become a list, continued when you press Enter.',
+        desc: 'Lines starting a., b) or (c) continue as a list.',
       },
       {
         key: 'romanLists',

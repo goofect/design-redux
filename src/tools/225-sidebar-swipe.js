@@ -35,7 +35,7 @@ export class SidebarSwipe extends Feature {
       {
         key: 'swipeSidebars',
         name: 'Swipe the sidebars',
-        desc: 'Two fingers sideways on the trackpad pull out and push in the sidebar on the pointer’s side, so their buttons go. Sideways scrolling gives way to it.',
+        desc: 'Swipe sideways with two fingers to open or close the sidebar on that side.',
       },
     ];
   }

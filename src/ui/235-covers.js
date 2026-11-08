@@ -13,7 +13,7 @@ export class CoverImages extends Feature {
         key: 'folderNoteName',
         type: 'text',
         name: 'Folder note name',
-        desc: 'The note that stands for a folder and gives it a cover. {{folder}} is the folder’s name.',
+        desc: 'The note that gives a folder its cover. {{folder}} is the folder’s name.',
         placeholder: '{{folder}}',
         fallback: '{{folder}}',
       },
@@ -26,7 +26,7 @@ export class CoverImages extends Feature {
         key: 'coverProperty',
         type: 'text',
         name: 'Cover property',
-        desc: 'The property that holds a note’s cover image. Match it to your bases’ card image.',
+        desc: 'The property holding a note’s cover image.',
         placeholder: 'cover',
         fallback: 'cover',
         suggest: 'property',
@@ -34,18 +34,18 @@ export class CoverImages extends Feature {
       {
         key: 'coverFromFolder',
         name: 'Folder cover for notes',
-        desc: 'A note without a cover uses its folder’s, as a song uses its collection’s.',
+        desc: 'A note without a cover uses its folder’s.',
       },
       {
         key: 'coverFromFirstImage',
         name: 'First image as cover',
-        desc: 'A note without a cover uses its first image; a folder, its folder note’s.',
+        desc: 'A note without a cover uses its first image.',
       },
       {
         key: 'coverFallback',
         type: 'dropdown',
         name: 'When there’s no cover',
-        desc: 'What shows instead. To give one item its own, right-click it and choose Cover.',
+        desc: 'What shows instead. Right-click an item and choose Cover to set one.',
         options: {
           art: 'A drawn cover',
           title: 'Its name as a title',
@@ -62,13 +62,13 @@ export class CoverImages extends Feature {
         type: 'color',
         showIf: (settings) => settings.coverFallback === 'custom',
         name: 'Cover colour',
-        desc: 'For generated covers without a colour of their own.',
+        desc: 'For made covers without a colour of their own.',
         parent: 'coverFallback',
       },
       {
         key: 'coverPrint',
         name: 'Print collections’ names on their covers',
-        desc: 'A collection without a picture has its kind, its name and the shelf it’s in printed along the foot of its cover, in the same places on every collection.',
+        desc: 'Print a collection’s kind and name on covers without a picture.',
       },
     ];
   }

@@ -35,24 +35,24 @@ export class NotePage extends Feature {
       {
         key: 'notePage',
         name: 'The note page',
-        desc: 'Above a note’s title, its collection; under it, one grey line — what it hangs from, its length, when it was edited.',
+        desc: 'The collection above a note’s title, and a line of details below.',
       },
       {
         key: 'notePageTint',
         name: 'A tint from the cover',
-        desc: 'Behind a note’s title, a soft glow of its cover, or its collection’s. A note with neither stays plain.',
+        desc: 'A soft glow of the cover behind a note’s title.',
         showIf: 'notePage',
       },
       {
         key: 'notePageChips',
         name: 'Properties as chips',
-        desc: 'A note’s properties as quiet chips under its title, the full block a click away.',
+        desc: 'Properties as chips under a note’s title.',
         showIf: 'notePage',
       },
       {
         key: 'notePageShelves',
         name: 'Shelves at the end',
-        desc: 'At a note’s end: what it links to, where it’s mentioned, and more in its collection.',
+        desc: 'Links, mentions and more from its collection, at a note’s end.',
         showIf: 'notePage',
       },
     ];

@@ -140,7 +140,7 @@ export class Diagnostics extends Feature {
     });
     new Setting(containerEl)
       .setName('Diagnostics')
-      .setDesc('Versions, what’s switched on, and any recent errors, to paste into a bug report.')
+      .setDesc('Versions, settings and recent errors, for a bug report.')
       .addButton((button) => button.setButtonText('Copy diagnostics').onClick(() => this.copy()));
   }
 

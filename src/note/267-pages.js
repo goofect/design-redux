@@ -65,7 +65,7 @@ export class NotePages extends Feature {
       {
         key: 'notePages',
         name: 'Pages',
-        desc: 'A note with %%page: Name%% lines in it is several pages, one open at a time, switched by a small control under its title. A note with one page looks as it does now.',
+        desc: 'Split a note into pages with %%page: Name%% lines.',
       },
     ];
   }

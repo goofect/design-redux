@@ -421,7 +421,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
 
   /** Minimal, Standard or Everything: flips the switches, nothing else, and each can be changed after. */
   drawPresets(host) {
-    const setting = new Setting(host).setName('Preset').setDesc('Turn the features on or off in one go: Minimal, Standard or Everything. It only flips the switches.');
+    const setting = new Setting(host).setName('Preset').setDesc('Turn features on or off in one go.');
     setting.addDropdown((d) => {
       d.addOption('', 'Choose…');
       Object.keys(SETTING_PRESETS).forEach((id) => d.addOption(id, SETTING_PRESETS[id].name));

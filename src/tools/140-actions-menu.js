@@ -24,7 +24,7 @@ export class ActionsMenu extends Feature {
       {
         key: 'navDropdown',
         name: 'Actions menu',
-        desc: 'Replace the file explorer’s buttons with a menu in the sidebar header.',
+        desc: 'A menu in the sidebar header in place of the file explorer’s buttons.',
       },
       {
         key: 'ribbonInMenu',

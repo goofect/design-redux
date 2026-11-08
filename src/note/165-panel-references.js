@@ -57,7 +57,7 @@ export class PropertyLinks extends Feature {
       {
         key: 'propertyLinks',
         name: 'Notes linked from properties',
-        desc: 'In the note panel, the notes that name this one in a property, by the property — named as parent by, as related by. And on a property’s menu there, Link a note…, to pick a note or make one.',
+        desc: 'Notes that point to this one through a property, like parent or related.',
       },
     ];
   }

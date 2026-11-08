@@ -94,7 +94,7 @@ export class SmartAlbums extends Feature {
       {
         key: 'smartAlbums',
         name: 'Saved views',
-        desc: 'The filter button keeps its filters, order and grouping as a collection, listed in the library. The notes stay where they are.',
+        desc: 'Save a filter as a view in the library.',
       },
     ];
   }

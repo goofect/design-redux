@@ -130,14 +130,14 @@ export class GraphRoutes extends Feature {
       {
         key: 'graphRoutes',
         name: 'Links through concepts',
-        desc: 'A Display switch that draws links through the notes in between, not straight across.',
+        desc: 'Draw graph links through the notes in between.',
       },
       {
         key: 'graphRouteProperty',
         type: 'text',
         showIf: 'graphRoutes',
         name: 'Parent property',
-        desc: 'The property naming a note’s parent, as parent: [[Topic]]. Links follow it where it’s set.',
+        desc: 'The property naming a note’s parent, like parent: [[Topic]].',
         placeholder: 'parent',
         fallback: '',
         suggest: 'property',
