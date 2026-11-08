@@ -103,13 +103,13 @@ body.dr-look-apple .dr-disc-title {
   font-weight: 600;
 }
 
-/* The grid: 16px apart, what's picked ringed softly in the accent. */
+/* The grid: 16px apart, what's picked lifted a little. */
 body.dr-look-apple .dr-grid {
   gap: 16px;
 }
 
 body.dr-look-apple .dr-card.is-selected .dr-card-art {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 55%, transparent);
+  box-shadow: var(--dr-shadow-md);
 }
 
 body.dr-look-apple :is(.dr-track, .dr-tr).is-selected {

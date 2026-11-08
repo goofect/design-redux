@@ -92,8 +92,13 @@
   background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
 }
 
+/* A picked cover: lifted a little, its title bold; no ring round it. */
 .dr-card.is-selected .dr-card-art {
-  box-shadow: 0 0 0 2px var(--interactive-accent), var(--dr-shadow-sm);
+  box-shadow: var(--dr-shadow-md);
+}
+
+.dr-card.is-selected .dr-card-title {
+  font-weight: var(--font-semibold, 600);
 }
 
 /* A setting opened to from where it shows: marked a moment. */
