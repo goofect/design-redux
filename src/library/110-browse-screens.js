@@ -155,9 +155,13 @@ export class FolderScreen extends BrowseScreen {
     const names = about.missing.map((m) => `“${m.name}”`).join(', ');
     const note = root.createDiv({ cls: 'dr-album-notice' });
     setIcon(note.createSpan({ cls: 'dr-album-notice-icon' }), 'link-2-off');
-    note.createSpan({ text: `${about.missing.length === 1 ? 'A link in its properties leads' : 'Links in its properties lead'} nowhere: ${names}` });
-    asButton(note, 'Open the folder note to fix it');
-    onActivate(note, () => this.app.workspace.getLeaf(false).openFile(about.note));
+    const albums = ask(this.plugin, 'albums');
+    const folder = this.view.folder ? this.view.folder() : null;
+    // Kept by the plugin: taken off its lists. Said by a folder note from before: that note, to fix.
+    const drop = about.kept || !about.note;
+    note.createSpan({ text: `${about.missing.length === 1 ? 'Something it lists leads' : 'Things it lists lead'} nowhere: ${names}` });
+    asButton(note, drop ? 'Take them off its lists' : 'Open the folder note to fix it');
+    onActivate(note, () => (drop ? albums && folder && albums.dropMissing(folder) : this.app.workspace.getLeaf(false).openFile(about.note)));
   }
 
   /** The album's notes as covers, under a heading for each disc. */

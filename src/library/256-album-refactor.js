@@ -11,7 +11,7 @@
 
 import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
 import { byName } from '../core/040-sorting.js';
-import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
+import { fmGet } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
@@ -100,7 +100,6 @@ export class SplitChooser extends Modal {
 }
 
 /* What merging carries from one album's folder note to the other's. */
-export const mergedKeys = () => [ALBUM_KEYS.includes, ALBUM_KEYS.related, ALBUM_KEYS.featured];
 
 export class AlbumRefactor extends Feature {
   settingsSchema() {
@@ -244,8 +243,8 @@ export class AlbumRefactor extends Feature {
     const lines = [`${notes.length} ${notes.length === 1 ? 'note moves' : 'notes move'} from “${folder.name}” into “${target.name}”.`];
     if (subs.length) lines.push(`${subs.length} ${subs.length === 1 ? 'sub-collection moves' : 'sub-collections move'} too.`);
     const structure = ask(this.plugin, 'albums');
-    const fm = this.frontmatter(note);
-    const carried = mergedKeys().filter((k) => valueList(fmGet(fm, k)).length);
+    const data = structure ? structure.dataOf(folder) : {};
+    const carried = ['includes', 'related', 'featured'].filter((k) => (data[k] || []).length).map((k) => ALBUM_KEYS[k]);
     if (carried.length) lines.push(`Its ${carried.join(', ')} join ${target.name}’s.`);
     if (note) lines.push(`Its folder note moves into ${target.name} as “${folder.name}.md”, a note like the rest, with what it says kept.`);
     lines.push(`The empty folder “${folder.name}” is removed.`);
@@ -318,28 +317,11 @@ export class AlbumRefactor extends Feature {
   async merge(folder, target, note, children, structure) {
     const from = folder.path;
     const theirs = this.frontmatter(note);
-    const targetNote = this.plugin.folderNote(target);
-    const before = this.frontmatter(targetNote);
-    const carried = mergedKeys().filter((k) => valueList(fmGet(theirs, k)).length);
-    const description = valueList(fmGet(theirs, ALBUM_KEYS.description)).join(' ');
     const ownKind = {};
     // What changed in notes' properties, undone the notes way: what's edited since is kept.
     const records = [];
-    if (structure && (carried.length || (description && !valueList(fmGet(before, ALBUM_KEYS.description)).length))) {
-      const into = targetNote || (await this.plugin.ensureFolderNote(target));
-      records.push(await this.change(into, (fm) => {
-        carried.forEach((k) => {
-          const merged = valueList(fmGet(fm, k));
-          valueList(fmGet(theirs, k)).forEach((v) => {
-            // Not the album it's going into, nor one already listed.
-            if (plainValue(v) === target.name || merged.some((m) => plainValue(m) === plainValue(v))) return;
-            merged.push(v);
-          });
-          fm[k] = merged;
-        });
-        if (description && !valueList(fmGet(fm, ALBUM_KEYS.description)).length) fm[ALBUM_KEYS.description] = description;
-      }));
-    }
+    // What it lists joins the other's, kept by the plugin: no folder note is made.
+    const unjoin = structure && typeof structure.mergeInto === 'function' ? await structure.mergeInto(folder, target) : null;
     // Its note, a note like the rest now: no longer saying what kind of album it is.
     if (note) {
       [ALBUM_KEYS.type, ALBUM_KEYS.layout].forEach((k) => {
@@ -357,6 +339,7 @@ export class AlbumRefactor extends Feature {
       if (!this.app.vault.getAbstractFileByPath(from)) await this.app.vault.createFolder(from);
       for (const [entry, was] of moved.slice().reverse()) await this.plugin.putBack(entry, was);
       await this.plugin.notes.undo(records.slice().reverse());
+      if (unjoin) await unjoin();
     };
   }
 

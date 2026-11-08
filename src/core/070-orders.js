@@ -58,7 +58,7 @@ export const UNRENAMED_KEYS = {
 };
 
 /* Settings kept by a file or folder's path, which follow it when it moves. */
-export const PATH_KEYED = ['folderCovers', 'coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['albums', 'folderCovers', 'coverColors', 'coverDesigns', 'albumSorts', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /*
  * Changes to how settings are saved, in order. When a setting is renamed
@@ -471,6 +471,19 @@ export class Orders {
         changed = true;
       }
     });
+    // What a collection lists, by path: a note or folder moved, the list follows it.
+    const albums = this.settings.albums || {};
+    Object.keys(albums).forEach((p) => {
+      ['includes', 'related', 'featured'].forEach((field) => {
+        const list = albums[p] && albums[p][field];
+        if (!Array.isArray(list)) return;
+        const moved = list.map((x) => movedPath(x, oldPath, file.path));
+        if (moved.some((x, i) => x !== list[i])) {
+          albums[p][field] = moved;
+          changed = true;
+        }
+      });
+    });
     // Colours and legends are kept by path — its own, and for a folder,
     // everything in it.
     PATH_KEYED.forEach((key) => {
@@ -518,12 +531,24 @@ export class Orders {
   followDelete(file) {
     let changed = false;
     // The image a folder's cover was, gone: the folder has none.
+    const gone = (x) => x === file.path || String(x).startsWith(file.path + '/');
     const covers = this.settings.folderCovers || {};
     Object.keys(covers).forEach((p) => {
-      if (covers[p] === file.path || String(covers[p]).startsWith(file.path + '/')) {
+      if (gone(covers[p])) {
         delete covers[p];
         changed = true;
       }
+    });
+    // A note or folder a collection lists, gone: off the list.
+    const albums = this.settings.albums || {};
+    Object.keys(albums).forEach((p) => {
+      ['includes', 'related', 'featured'].forEach((field) => {
+        const list = albums[p] && albums[p][field];
+        if (!Array.isArray(list) || !list.some(gone)) return;
+        albums[p][field] = list.filter((x) => !gone(x));
+        if (!albums[p][field].length) delete albums[p][field];
+        changed = true;
+      });
     });
     PATH_KEYED.forEach((key) => {
       const kept = this.settings[key] || {};

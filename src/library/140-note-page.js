@@ -61,7 +61,7 @@ export class NotePage extends Feature {
   register() {
     const queue = () => this.queue();
     const ws = this.app.workspace;
-    ['layout-change', 'active-leaf-change', 'file-open'].forEach((type) => this.plugin.registerEvent(ws.on(type, queue)));
+    ['layout-change', 'active-leaf-change', 'file-open', 'design-redux:albums-changed'].forEach((type) => this.plugin.registerEvent(ws.on(type, queue)));
     this.plugin.registerEvent(this.app.metadataCache.on('changed', queue));
     this.plugin.registerEvent(this.app.metadataCache.on('resolved', queue));
   }

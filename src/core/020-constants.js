@@ -240,6 +240,8 @@ export const DEFAULTS = {
   coverColors: {},
   // A folder's cover, by the folder's path: the image's path. No folder note needed.
   folderCovers: {},
+  // A collection's details, by the folder's path: { type, description, includes, related, featured, layout }, the lists as paths.
+  albums: {},
   // { path: designId } — a drawn cover's design, picked for one album or note.
   coverDesigns: {},
   // { folderPath: [{ key, value, type }] } — given to notes made there.

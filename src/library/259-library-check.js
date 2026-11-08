@@ -530,15 +530,14 @@ export class LibraryCheck extends Feature {
     const structure = ask(this.plugin, 'albums');
     if (!files.length || !structure || !structure.enabled) return false;
     {
-      const note = this.plugin.folderNote(folder);
-      const before = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes));
-      const from = note ? note.path : `${folder.path}/x.md`;
+      const kept = structure.kept[folder.path];
+      const before = kept ? Object.assign({}, kept) : null;
       const have = structure.info(folder).includes;
-      const added = files.filter((f) => have.indexOf(f) === -1).map((f) => `[[${this.app.metadataCache.fileToLinktext(f, from, true)}]]`);
-      if (!added.length || !(await structure.setProperty(folder, ALBUM_KEYS.includes, before.concat(added)))) return false;
+      const added = files.filter((f) => have.indexOf(f) === -1).map((f) => f.path);
+      if (!added.length || !(await structure.setField(folder, 'includes', structure.listOf(folder, 'includes').concat(added)))) return false;
       this.plugin.refreshBrowse();
       this.plugin.offerUndo(`${added.length} ${added.length === 1 ? 'note shows' : 'notes show'} in ${folder.name} now, where ${added.length === 1 ? 'it is' : 'they are'}.`, async () => {
-        await structure.setProperty(folder, ALBUM_KEYS.includes, before);
+        await structure.restore(folder, before);
         this.plugin.refreshBrowse();
       });
       return true;

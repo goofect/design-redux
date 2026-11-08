@@ -220,6 +220,8 @@ export class PropertiesPanel extends Feature {
     // Docked, it draws what the coordinator says the inspector is about: the note worked in, a pick, a card, a map.
     this.plugin.register(this.plugin.coordinator.onChange((snap) => this.showSnapshot(snap)));
     this.plugin.registerEvent(this.app.workspace.on('design-redux:open-panel', (leaf, anchor) => this.enabled && this.toggleFrom(leaf, anchor)));
+    // A collection's details changed (kept by the plugin, not in a note): drawn again.
+    this.plugin.registerEvent(this.app.workspace.on('design-redux:albums-changed', () => this.redraw()));
     this.plugin.registerEvent(
       this.app.workspace.on('design-redux:panel-changed', (file) => {
         if (this.isOpen() && file === this.file) this.sections.forEach((sec) => sec.refresh(file));

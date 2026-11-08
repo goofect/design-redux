@@ -9,11 +9,12 @@
 /* popup or dock, where it sits, what it follows.                     */
 /* ------------------------------------------------------------------ */
 
-import { parseYaml, setIcon, stringifyYaml } from 'obsidian';
-import { BROWSE_VIEW } from '../core/020-constants.js';
+import { parseYaml, setIcon, Setting, stringifyYaml } from 'obsidian';
+import { ALBUM_TYPES, BROWSE_VIEW } from '../core/020-constants.js';
 import { drawNoteArt, leadProperty } from '../core/030-art.js';
 import { plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
 import { requestCanvasSave } from '../core/079-canvas-adapter.js';
+import { ask } from '../core/081-capabilities.js';
 import { sameTarget } from '../core/084-workspace-coordinator.js';
 
 /** A text card's properties — written at its top between --- lines — and the rest: { data, body }; data null where they can't be read. */
@@ -168,7 +169,33 @@ class FolderInspectable extends Inspectable {
     const view = libraryPage(this.plugin.app);
     if (view) view.previewAlbum(brief, folder);
     else brief.createDiv({ cls: 'dr-preview-title', text: folder.name });
+    const albums = ask(this.plugin, 'albums');
+    if (albums && albums.enabled && !(folder.isRoot && folder.isRoot())) this.drawDetails(el, folder, albums);
     return super.draw(panel, el);
+  }
+
+  /** What the collection is, kept by the plugin (no folder note needed): its kind, what it's for, how it opens. */
+  drawDetails(el, folder, albums) {
+    const info = albums.info(folder);
+    const box = el.createDiv({ cls: 'dr-album-details' });
+    new Setting(box).setName('Kind').addDropdown((d) => {
+      d.addOption('', 'None');
+      ALBUM_TYPES.forEach((t) => d.addOption(t.id, t.label));
+      if (info.type && !ALBUM_TYPES.some((t) => t.id === info.type)) d.addOption(info.type, info.label);
+      d.setValue(info.type).onChange((v) => albums.setType(folder, v));
+    });
+    new Setting(box).setName('Description').addTextArea((t) => {
+      t.setPlaceholder('What it’s for').setValue(info.description);
+      t.inputEl.rows = 2;
+      t.inputEl.addEventListener('blur', () => {
+        const v = t.getValue().trim();
+        if (v !== info.description) albums.setField(folder, 'description', v);
+      });
+    });
+    new Setting(box).setName('Opens as').addDropdown((d) => {
+      albums.layouts().forEach((l) => d.addOption(l.id, l.label));
+      d.setValue(info.layout).onChange((v) => albums.setLayout(folder, v));
+    });
   }
 }
 

@@ -13,7 +13,7 @@ export class CoverImages extends Feature {
         key: 'folderNoteName',
         type: 'text',
         name: 'Folder note name',
-        desc: 'The note that stands for a folder. {{folder}} is the folder’s name.',
+        desc: 'Folder notes from before are found by this name. {{folder}} is the folder’s name.',
         placeholder: '{{folder}}',
         fallback: '{{folder}}',
       },

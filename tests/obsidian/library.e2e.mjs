@@ -290,6 +290,37 @@ suite('Design Redux in Obsidian: the library', function () {
     expect(opened).toBe('Politics/Deterrence.md');
   });
 
+  it('says what a collection is from the inspector, with no folder note made', async function () {
+    const result = await browser.executeObsidian(async ({ app, plugins }) => {
+      const plugin = plugins.designRedux;
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); return ok(); };
+      const library = plugin.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode({ mode: 'folder', path: 'Politics' });
+      const page = app.workspace.activeLeaf;
+      await until(() => !!page.view.containerEl.querySelector('.dr-detail'));
+      if (!page.view.previewOn()) app.commands.executeCommandById('design-redux:open-inspector');
+      const dock = () => app.workspace.getLeavesOfType('design-redux-properties')[0];
+      await until(() => !!dock() && page.view.previewOn());
+      plugin.selection.set({ folder: app.vault.getFolderByPath('Politics') });
+      const details = () => dock() && dock().view.containerEl.querySelector('.dr-album-details');
+      await until(() => !!details());
+      const kind = details().querySelector('select');
+      kind.value = 'subject';
+      kind.dispatchEvent(new Event('change', { bubbles: true }));
+      await until(() => (page.view.containerEl.querySelector('.dr-detail-kind') || {}).textContent === 'Subject');
+      const result = {
+        rows: Array.from(details().querySelectorAll('.setting-item-name')).map((n) => n.textContent),
+        kind: (page.view.containerEl.querySelector('.dr-detail-kind') || {}).textContent || null,
+        kept: (plugin.settings.albums.Politics || {}).type || null,
+        noFolderNote: !app.vault.getAbstractFileByPath('Politics/Politics.md'),
+      };
+      app.workspace.detachLeavesOfType('design-redux-properties');
+      plugin.selection.clear();
+      return result;
+    });
+    expect(result).toEqual({ rows: ['Kind', 'Description', 'Opens as'], kind: 'Subject', kept: 'subject', noFolderNote: true });
+  });
+
   it('shows a note picked in an album in the inspector, and opens it on a double click', async function () {
     const result = await browser.executeObsidian(async ({ app, plugins }) => {
       const plugin = plugins.designRedux;

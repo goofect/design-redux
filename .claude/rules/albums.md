@@ -8,11 +8,14 @@ paths:
 
 # Albums, the library and the browse view
 
-- An album's data lives in its folder note's properties, read by name from
-  `ALBUM_KEYS` (the names can be changed in settings: never write `'album'`,
-  `'includes'` and so on as strings). Nothing album-shaped goes in settings
-  but per-path view preferences, which go in `PATH_KEYED` so they follow
-  renames.
+- An album's details (kind, description, includes, related, featured, layout)
+  are kept by the plugin in `settings.albums`, by the folder's path, the lists
+  as paths (`AlbumStructure.setField`, read with `info()`); folder covers in
+  `settings.folderCovers`. Both are `PATH_KEYED`, and `Orders` follows the
+  paths inside them through renames and deletes. No folder note is ever made.
+  A folder note from before is still read (by the names in `ALBUM_KEYS`; never
+  write `'album'`, `'includes'` and so on as strings) until the first change
+  carries what it says over; it's left as it is.
 - Album and shelf orders are kept by name per folder (`Orders`, `albumOrders`):
   a shelf's albums and an album's notes share that one list.
 - Anything that changes files is one step of Undo (`plugin.offerUndo`); files

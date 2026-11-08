@@ -943,6 +943,42 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(R.noteCoverSrc(plugin, note), 'app://own.png');
   });
 
+  await t('a collection with no folder note says what it is, kept by the plugin; what it lists follows renames and deletes', async () => {
+    const { v, plugin, app, view } = setup();
+    plugin.folderNote = () => null;
+    plugin.ensureFolderNote = async () => { throw new Error('no folder note is made'); };
+    plugin.saveData = async () => {};
+    const structure = new R.AlbumStructure(plugin);
+    structure.enabled = true;
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    v.folder('Elsewhere');
+    const sov = v.file('Elsewhere/Sovereignty.md');
+    const ir = () => app.vault.getFolderByPath('IR') || app.vault.getFolderByPath('Relations');
+    await structure.setType(ir(), 'project');
+    await structure.setField(ir(), 'description', 'How states deal with each other.');
+    await structure.setLayout(ir(), 'covers');
+    await structure.include(ir(), sov);
+    let info = structure.info(ir());
+    assert.deepStrictEqual([info.type, info.description, info.layout, info.includes], ['project', 'How states deal with each other.', 'covers', [sov]]);
+    assert.ok(info.kept && !info.note);
+    assert.deepStrictEqual(structure.gathering(), [ir()], 'found as a collection that takes notes in, with no note');
+    assert.deepStrictEqual(structure.ofKind('project'), [ir()]);
+    view.render();
+    await app.fileManager.renameFile(sov, 'Elsewhere/Sovereignty and power.md');
+    assert.deepStrictEqual(plugin.settings.albums.IR.includes, ['Elsewhere/Sovereignty and power.md'], 'the note renamed: followed');
+    await app.fileManager.renameFile(ir(), 'Relations');
+    assert.ok(plugin.settings.albums.Relations && !plugin.settings.albums.IR, 'the folder renamed: followed');
+    await app.fileManager.trashFile(app.vault.getFileByPath('Elsewhere/Sovereignty and power.md'));
+    assert.ok(!('includes' in plugin.settings.albums.Relations), 'the note gone: off the list');
+    info = structure.info(ir());
+    assert.strictEqual(info.type, 'project', 'the rest kept');
+    // A name that leads nowhere, kept by the plugin: taken off from the notice.
+    plugin.settings.albums.Relations.related = ['Nowhere'];
+    assert.deepStrictEqual(structure.info(ir()).missing.map((m) => m.name), ['Nowhere']);
+    await structure.dropMissing(ir());
+    assert.ok(!('related' in plugin.settings.albums.Relations));
+  });
+
   await t('a folder takes the image set for it, kept by its path with no note; it follows renames and goes with deletes', async () => {
     const { v, plugin, app } = setup();
     app.vault.getResourcePath = (f) => `app://${f.path}`;
@@ -1708,13 +1744,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); written = [file, fm]; };
     fms.set(law, {});
     assert.strictEqual(await structure.include(v.vault.getFolderByPath('Law'), sov), true);
-    assert.deepStrictEqual([written[0], written[1].includes], [law, ['[[Sovereignty]]']]);
+    assert.deepStrictEqual(plugin.settings.albums.Law, { includes: ['Elsewhere/Sovereignty.md'] }, 'kept by the plugin, by path');
+    assert.strictEqual(written, null, 'no note written');
     assert.strictEqual(await structure.include(v.vault.getFolderByPath('IR'), sov), false, 'there already');
-    // Kind set and taken away from the menu's way in.
+    // Kind set and taken away from the menu's way in: what the folder note said carried over first, the note left as it was.
     await structure.setType(v.vault.getFolderByPath('IR'), 'subject');
-    assert.strictEqual(written[1].album, 'subject');
+    assert.strictEqual(plugin.settings.albums.IR.type, 'subject');
+    assert.strictEqual(plugin.settings.albums.IR.description, 'How states deal with each other.');
+    assert.deepStrictEqual(plugin.settings.albums.IR.related, ['Treaties'], 'a folder note stands for its folder');
+    assert.strictEqual(fms.get(note).album, 'Project', 'the note untouched');
     await structure.setType(v.vault.getFolderByPath('IR'), '');
-    assert.ok(!('album' in written[1]));
+    assert.ok(!('type' in plugin.settings.albums.IR));
+    assert.strictEqual(written, null);
     // Switched off: nothing of it shows.
     plugin.settings.albumStructure = false;
     Object.assign(view, { path: 'IR' });
@@ -1859,26 +1900,29 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const items = [];
     structure.addFileItems({ addItem: (fn) => { const item = {}; ['setSection', 'setIcon'].forEach((m) => (item[m] = () => item)); item.setTitle = (x) => { item.title = x; return item; }; item.onClick = (f) => { item.run = f; return item; }; fn(item); items.push(item); } }, v.vault.getFileByPath('IR/Balance.md'), (i) => i, () => {});
     assert.deepStrictEqual(items.map((i) => i.title), ['Don’t keep at the top of IR']);
+    // Kept by the plugin from here on: what the note said carried over, the note left as it was.
+    const kept = () => plugin.settings.albums.IR;
     await structure.toggleFeatured(v.vault.getFolderByPath('IR'), v.vault.getFileByPath('IR/Balance.md'));
-    assert.ok(!('featured' in written), 'an empty list is taken away');
+    assert.ok(!('featured' in kept()), 'an empty list is taken away');
+    assert.strictEqual(kept().type, 'project');
     await structure.toggleFeatured(v.vault.getFolderByPath('IR'), v.vault.getFileByPath('IR/Anarchy.md'));
-    assert.deepStrictEqual(written.featured, ['[[Balance]]', '[[Anarchy]]']);
+    assert.deepStrictEqual(kept().featured, ['IR/Anarchy.md']);
+    assert.strictEqual(written, null, 'no note written');
     // As covers: a heading and tiles for each disc.
-    fm.layout = 'covers';
+    await structure.setLayout(v.vault.getFolderByPath('IR'), 'covers');
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-track[data-path]'));
     assert.deepStrictEqual(text('.dr-covers-head .dr-disc-title'), ['IR', 'Theories']);
     assert.ok(view.contentEl.querySelector('.dr-grid .dr-card[data-path="IR/Anarchy.md"]'));
     // Overview and map have gone: a folder note that still says so opens as a list, as asked for nothing.
     ['overview', 'map'].forEach((layout) => {
-      fm.layout = layout;
+      kept().layout = layout;
       view.render();
       assert.ok(view.contentEl.querySelector('.dr-track[data-path]'), `${layout} opens as a list`);
       assert.ok(!view.contentEl.querySelector('.dr-album-lead'));
     });
     await structure.setLayout(v.vault.getFolderByPath('IR'), 'list');
-    assert.ok(!('layout' in written), 'a list is how it opens anyway');
-    delete fm.layout;
+    assert.ok(!('layout' in kept()), 'a list is how it opens anyway');
     assert.deepStrictEqual(R.ALBUM_LAYOUTS.map((l) => l.id), ['list', 'covers', 'table']);
     // A long album with links out, a map and folders inside: no tabs for any of it, and no word of its sub-collections.
     for (let i = 0; i < 10; i++) v.file(`IR/Extra ${i}.md`);
@@ -2080,12 +2124,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.ensureFolderNote = async () => irNote;
     app.fileManager.processFrontMatter = async (file, fn) => { const fm = Object.assign({}, fms.get(file)); fn(fm); fms.set(file, fm); };
     assert.strictEqual(await check.showFilesIn([one, two], ir), true);
-    assert.deepStrictEqual(fms.get(irNote).includes, ['[[Loose one]]', '[[Loose two]]']);
+    assert.deepStrictEqual(plugin.settings.albums.IR.includes, ['Loose one.md', 'Loose two.md'], 'kept by the plugin, by path');
+    assert.deepStrictEqual(fms.get(irNote), {}, 'the folder note untouched');
     view.render();
     assert.deepStrictEqual(rows(), [], 'shown in a collection: in one');
     assert.strictEqual(one.path, 'Loose one.md', 'left where it is');
     await undo();
-    assert.ok(!('includes' in fms.get(irNote)));
+    assert.ok(!plugin.settings.albums.IR, 'put back as it was');
   });
 
   await t('reorganising albums: rename, move, merge and split, each shown first, done as shown, and undone in one step', async () => {
@@ -2148,23 +2193,25 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const theoriesNote = v.file('IR/Theories/Theories.md');
     fms.set(lawNote, { description: 'Rules.', related: ['[[Courts]]'] });
     fms.set(theoriesNote, { album: 'subject', description: 'Ideas.', related: ['[[Courts]]', '[[Power]]'], includes: ['[[Law]]', '[[Anarchy]]'] });
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    app.metadataCache.getFirstLinkpathDest = (name) => v.vault.getMarkdownFiles().find((f) => f.basename === name) || null;
     plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
     assert.ok(plan.warnings.some((w) => w.includes('“Realism.md” is in both')));
     assert.ok(plan.lines.some((l) => l.includes('Its includes, related join Law’s')), plan.lines.join(' | '));
-    const structure = new R.AlbumStructure(plugin);
-    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
-    plan = refactor.planMerge(folder('IR/Theories'), folder('Law'));
     await refactor.perform(plan);
     assert.ok(!folder('IR/Theories'), 'the empty folder is gone');
     assert.ok(file('Law/Realism 1.md') && file('Law/Liberalism.md') && file('Law/Theories.md'));
-    assert.deepStrictEqual(fms.get(lawNote).related, ['[[Courts]]', '[[Power]]']);
-    assert.deepStrictEqual(fms.get(lawNote).includes, ['[[Anarchy]]'], 'not the collection it went into');
-    assert.strictEqual(fms.get(lawNote).description, 'Rules.', 'its own description kept');
+    const law = () => plugin.settings.albums.Law;
+    assert.deepStrictEqual(law().related, ['Courts', 'Power'], 'joined, kept by the plugin');
+    assert.deepStrictEqual(law().includes, ['IR/Anarchy.md'], 'not the collection it went into');
+    assert.strictEqual(law().description, 'Rules.', 'its own description kept');
+    assert.deepStrictEqual(fms.get(lawNote), { description: 'Rules.', related: ['[[Courts]]'] }, 'Law’s folder note untouched');
     assert.ok(!('album' in fms.get(theoriesNote)), 'a note like the rest: not saying it’s a collection');
     await undo();
     assert.ok(file('IR/Theories/Realism.md') && file('IR/Theories/Liberalism.md') && file('IR/Theories/Theories.md'));
     assert.ok(file('Law/Realism.md') && !file('Law/Realism 1.md'));
-    assert.deepStrictEqual(fms.get(lawNote), { description: 'Rules.', related: ['[[Courts]]'] });
+    assert.ok(!plugin.settings.albums.Law, 'put back as it was');
     assert.strictEqual(fms.get(theoriesNote).album, 'subject');
     // Split notes off into a new album beside it, and back.
     plan = refactor.planSplit(folder('IR'), [], 'Security');

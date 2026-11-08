@@ -2,9 +2,10 @@
 /* What an album is                                                    */
 /*                                                                     */
 /* A folder is where notes are kept; an album can also say what it is  */
-/* and what belongs to it, wherever that's kept. All in the folder     */
-/* note's own properties, so it's plain to read and stays put with the */
-/* plugin off:                                                         */
+/* and what belongs to it, wherever that's kept. The plugin keeps it,  */
+/* by the folder's path (settings.albums), so no folder note is needed; */
+/* a folder note from before is read until the first change carries    */
+/* what it says over:                                                  */
 /*   album: subject, project, reference or index — shown at its head, */
 /*     and each changes the album a little: progress for a project,    */
 /*     an index's albums as tiles;                                     */
@@ -121,7 +122,7 @@ export class AlbumStructure extends Feature {
       {
         key: 'albumStructure',
         name: 'Collections say what they are',
-        desc: 'Read a collection’s kind, description and layout from its folder note.',
+        desc: 'Collections say their kind, what they’re for and what they take in.',
       },
       {
         key: 'albumRollups',
@@ -161,41 +162,95 @@ export class AlbumStructure extends Feature {
     return file && file.extension === 'md' ? file : null;
   }
 
-  /** What a folder note says of its album: { type, label, description, includes, related, note }. */
+  /** What the plugin keeps of each collection, by its folder's path. */
+  get kept() {
+    if (!this.settings.albums || typeof this.settings.albums !== 'object') this.settings.albums = {};
+    return this.settings.albums;
+  }
+
+  /**
+   * What a folder note from before says of its album, as the plugin keeps
+   * it: { type, description, includes, related, featured, layout }, the
+   * lists as paths (a folder note standing for its folder), a name that
+   * leads nowhere kept as it's written.
+   */
+  fromNote(note) {
+    if (!note) return null;
+    const fm = noteProps(this.app, note);
+    const out = {};
+    const one = (key) => String(valueList(fmGet(fm, key))[0] || '').toLowerCase();
+    if (one(ALBUM_KEYS.type)) out.type = one(ALBUM_KEYS.type);
+    const description = valueList(fmGet(fm, ALBUM_KEYS.description)).join(' ');
+    if (description) out.description = description;
+    ['includes', 'related', 'featured'].forEach((field) => {
+      const list = valueList(fmGet(fm, ALBUM_KEYS[field])).map((v) => {
+        const file = this.app.metadataCache.getFirstLinkpathDest(plainValue(v), note.path);
+        const target = file && this.plugin.isFolderNote(file) && file.parent ? file.parent : file;
+        return target ? target.path : plainValue(v);
+      });
+      if (list.length) out[field] = list;
+    });
+    if (one(ALBUM_KEYS.layout)) out.layout = one(ALBUM_KEYS.layout);
+    return Object.keys(out).length ? out : null;
+  }
+
+  /** A collection's details: what the plugin keeps, else what its folder note says, else nothing. */
+  dataOf(folder, note) {
+    const kept = this.kept[folder.path];
+    if (kept) return kept;
+    return this.fromNote(note === undefined ? this.plugin.folderNote(folder) : note) || {};
+  }
+
+  /** What's known of an album: { type, label, description, includes, related, featured, layout, missing, note }. */
   info(folder) {
     const empty = { type: '', label: '', description: '', includes: [], related: [], featured: [], layout: 'list', layoutGiven: false, missing: [], note: null };
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot())) return empty;
     const note = this.plugin.folderNote(folder);
-    if (!note) return empty;
-    const fm = noteProps(this.app, note);
-    const type = String(valueList(fmGet(fm, ALBUM_KEYS.type))[0] || '').toLowerCase();
+    const data = this.dataOf(folder, note);
+    if (!Object.keys(data).length) return Object.assign({}, empty, { note });
+    const type = String(data.type || '').toLowerCase();
     const known = ALBUM_TYPES.find((t) => t.id === type);
     const missing = [];
-    const links = (key) => {
+    const links = (field) => {
       const out = [];
-      valueList(fmGet(fm, key)).forEach((v) => {
-        const file = this.app.metadataCache.getFirstLinkpathDest(plainValue(v), note.path);
-        if (!file) missing.push({ key, name: plainValue(v) });
-        // A folder note stands for its folder.
-        const target = file && this.plugin.isFolderNote(file) && file.parent ? file.parent : file;
-        if (target && target !== folder && target !== note && out.indexOf(target) === -1) out.push(target);
+      (Array.isArray(data[field]) ? data[field] : []).forEach((p) => {
+        const target = this.app.vault.getAbstractFileByPath(p);
+        if (!target) {
+          missing.push({ key: ALBUM_KEYS[field], name: String(p).split('/').pop().replace(/\.md$/i, '') });
+          return;
+        }
+        if (target !== folder && target !== note && out.indexOf(target) === -1) out.push(target);
       });
       return out;
     };
+    const layout = ALBUM_LAYOUTS.find((l) => l.id === String(data.layout || '').toLowerCase());
     return {
       type,
       label: known ? known.label : type ? type.charAt(0).toUpperCase() + type.slice(1) : '',
-      description: valueList(fmGet(fm, ALBUM_KEYS.description)).join(' '),
-      includes: links(ALBUM_KEYS.includes),
-      related: links(ALBUM_KEYS.related),
-      featured: links(ALBUM_KEYS.featured).filter((t) => t instanceof TFile),
-      layout: (ALBUM_LAYOUTS.find((l) => l.id === String(valueList(fmGet(fm, ALBUM_KEYS.layout))[0] || '').toLowerCase()) || ALBUM_LAYOUTS[0]).id,
+      description: String(data.description || ''),
+      includes: links('includes'),
+      related: links('related'),
+      featured: links('featured').filter((t) => t instanceof TFile),
+      layout: (layout || ALBUM_LAYOUTS[0]).id,
       // Whether it says, rather than opening as albums usually do.
-      layoutGiven: !!ALBUM_LAYOUTS.find((l) => l.id === String(valueList(fmGet(fm, ALBUM_KEYS.layout))[0] || '').toLowerCase()),
+      layoutGiven: !!layout,
       // Names its includes, related and featured give that lead nowhere.
       missing,
       note,
+      // Whether the plugin keeps it, rather than a folder note from before saying it.
+      kept: !!this.kept[folder.path],
     };
+  }
+
+  /** Every folder with something said of it: what the plugin keeps, and folder notes from before. */
+  described() {
+    const out = new Set();
+    Object.keys(this.kept).forEach((p) => {
+      const f = this.app.vault.getFolderByPath(p);
+      if (f) out.add(f);
+    });
+    libraryIndex(this.plugin).folderNotes().forEach(({ folder }) => out.add(folder));
+    return Array.from(out);
   }
 
   /**
@@ -209,7 +264,7 @@ export class AlbumStructure extends Feature {
     const names = Object.assign({}, this.settings.albumKeyNames || {});
     new Setting(block)
       .setName('Collection property names')
-      .setDesc('The properties collections are read from. Rename any that clash with yours.')
+      .setDesc('The properties folder notes from before are read from.')
       .setHeading();
     Object.keys(ALBUM_KEY_DEFAULTS).forEach((k) => {
       new Setting(block).setName(ALBUM_KEY_LABELS[k]).addText((t) =>
@@ -283,18 +338,14 @@ export class AlbumStructure extends Feature {
 
   /** The albums that gather notes from elsewhere: those whose folder note names some under includes, by name. */
   gathering() {
-    return libraryIndex(this.plugin)
-      .folderNotes()
-      .filter(({ note }) => valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes)).length)
-      .map(({ folder }) => folder)
+    return this.described()
+      .filter((folder) => (this.dataOf(folder).includes || []).length)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /** The albums of one kind ('subject' and so on), by name. */
   ofKind(type) {
-    return libraryIndex(this.plugin)
-      .folderNotes()
-      .map(({ folder }) => folder)
+    return this.described()
       .filter((folder) => this.info(folder).type === type)
       .sort((a, b) => a.name.localeCompare(b.name));
   }
@@ -361,30 +412,102 @@ export class AlbumStructure extends Feature {
     return { done, total: notes.length, word: 'done' };
   }
 
-  /** One of the folder note's properties set — the note made if there's none — or, given '', removed. */
-  async setProperty(folder, key, value) {
-    let note;
-    try {
-      note = await this.plugin.ensureFolderNote(folder);
-    } catch (err) {
-      console.error('Design Redux: could not make the folder note', err);
-      new Notice('Could not change the collection.');
-      return false;
+  /**
+   * One of a collection's details (type, description, includes, related,
+   * featured, layout) set, or, given '', removed: kept by the plugin, by the
+   * folder's path. No folder note is made; one from before has what it says
+   * carried over first, and is left as it is.
+   */
+  async setField(folder, field, value) {
+    if (!folder || (folder.isRoot && folder.isRoot())) return false;
+    const note = this.plugin.folderNote(folder);
+    const entry = Object.assign({}, this.dataOf(folder, note));
+    if (value === '' || value === null || value === undefined || (Array.isArray(value) && !value.length)) delete entry[field];
+    else entry[field] = value;
+    // Kept even when empty while a folder note is there: it stands in front of what the note says.
+    if (Object.keys(entry).length || note) this.kept[folder.path] = entry;
+    else delete this.kept[folder.path];
+    await this.plugin.saveData(this.settings);
+    this.changed();
+    return true;
+  }
+
+  /** A collection's details as they were, put back: for an Undo. */
+  async restore(folder, data) {
+    if (data) this.kept[folder.path] = data;
+    else delete this.kept[folder.path];
+    await this.plugin.saveData(this.settings);
+    this.changed();
+  }
+
+  /** Whatever shows collections drawn again. */
+  changed() {
+    if (typeof this.plugin.refreshBrowse === 'function') this.plugin.refreshBrowse();
+    const library = ask(this.plugin, 'library');
+    if (library && typeof library.refreshViews === 'function') library.refreshViews();
+    this.app.workspace.trigger('design-redux:albums-changed');
+  }
+
+  /**
+   * One collection's lists and description joined into another's, as a
+   * merge does (not the one it goes into, nor one listed already): an Undo
+   * for it, or null when there was nothing to join.
+   */
+  async mergeInto(folder, target) {
+    const theirs = this.dataOf(folder);
+    const before = { from: this.kept[folder.path], into: this.kept[target.path] };
+    const ours = Object.assign({}, this.dataOf(target));
+    let joined = false;
+    ['includes', 'related', 'featured'].forEach((field) => {
+      const list = Array.isArray(ours[field]) ? ours[field].slice() : [];
+      (theirs[field] || []).forEach((p) => {
+        if (p === target.path || list.indexOf(p) !== -1) return;
+        list.push(p);
+        joined = true;
+      });
+      if (list.length) ours[field] = list;
+    });
+    if (theirs.description && !ours.description) {
+      ours.description = theirs.description;
+      joined = true;
     }
-    const record = await this.plugin.notes.write(
-      note,
-      (fm) => {
-        const name = Object.keys(fm).find((k) => k.toLowerCase() === key.toLowerCase()) || key;
-        if (value === '' || value === null || (Array.isArray(value) && !value.length)) delete fm[name];
-        else fm[name] = value;
-      },
-      { failure: 'Could not change the collection.' }
-    );
-    return !!record;
+    if (!joined) return null;
+    this.kept[target.path] = ours;
+    await this.plugin.saveData(this.settings);
+    this.changed();
+    return async () => {
+      if (before.into) this.kept[target.path] = before.into;
+      else delete this.kept[target.path];
+      if (before.from) this.kept[folder.path] = before.from;
+      await this.plugin.saveData(this.settings);
+      this.changed();
+    };
+  }
+
+  /** What a collection lists that leads nowhere, taken off its lists. */
+  async dropMissing(folder) {
+    const data = this.dataOf(folder);
+    for (const field of ['includes', 'related', 'featured']) {
+      const list = data[field];
+      if (!Array.isArray(list)) continue;
+      const there = list.filter((p) => this.app.vault.getAbstractFileByPath(p));
+      if (there.length !== list.length) await this.setField(folder, field, there);
+    }
+  }
+
+  /** The ways a collection can open: [{ id, label, icon }]. */
+  layouts() {
+    return ALBUM_LAYOUTS;
+  }
+
+  /** What a collection's lists say, by path: for adding to one. */
+  listOf(folder, field) {
+    const list = this.dataOf(folder)[field];
+    return Array.isArray(list) ? list.slice() : [];
   }
 
   setType(folder, type) {
-    return this.setProperty(folder, ALBUM_KEYS.type, type || '');
+    return this.setField(folder, 'type', type || '');
   }
 
   chooseType(folder) {
@@ -406,31 +529,25 @@ export class AlbumStructure extends Feature {
   }
 
   async include(folder, file) {
-    const note = this.plugin.folderNote(folder);
-    const from = note ? note.path : `${folder.path}/x.md`;
-    const link = `[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`;
-    const list = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.includes));
     if (this.info(folder).includes.indexOf(file) !== -1) {
       new Notice(`${file.basename} is in ${folder.name} already.`);
       return false;
     }
-    const ok = await this.setProperty(folder, ALBUM_KEYS.includes, list.concat(link));
+    const ok = await this.setField(folder, 'includes', this.listOf(folder, 'includes').concat(file.path));
     if (ok) new Notice(`${file.basename} shows in ${folder.name} now, and stays where it is.`);
     return ok;
   }
 
   setLayout(folder, layout) {
-    return this.setProperty(folder, ALBUM_KEYS.layout, layout === 'list' ? '' : layout);
+    return this.setField(folder, 'layout', layout === 'list' ? '' : layout);
   }
 
   /** A note kept at the top of an album, or no longer: in its featured, by link. */
   async toggleFeatured(folder, file) {
-    const note = this.plugin.folderNote(folder);
-    const list = valueList(fmGet(noteProps(this.app, note), ALBUM_KEYS.featured));
-    const from = note ? note.path : `${folder.path}/x.md`;
-    const kept = list.filter((v) => this.app.metadataCache.getFirstLinkpathDest(plainValue(v), from) !== file);
-    if (kept.length === list.length) kept.push(`[[${this.app.metadataCache.fileToLinktext(file, from, true)}]]`);
-    return this.setProperty(folder, ALBUM_KEYS.featured, kept);
+    const list = this.listOf(folder, 'featured');
+    const kept = list.filter((p) => p !== file.path);
+    if (kept.length === list.length) kept.push(file.path);
+    return this.setField(folder, 'featured', kept);
   }
 
   /** On a note's menu: kept at the top of its album, or not. */

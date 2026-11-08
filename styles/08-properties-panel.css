@@ -835,3 +835,15 @@ body.is-mobile .dr-props-popup .dr-row-more {
   }
 }
 
+
+/* A picked collection's details in the inspector, kept by the plugin: kind, what it's for, how it opens. */
+.dr-album-details .setting-item {
+  padding: var(--dr-space-1) 0;
+  border-top: none;
+}
+
+.dr-album-details textarea {
+  width: 100%;
+  min-height: 0;
+  resize: vertical;
+}
