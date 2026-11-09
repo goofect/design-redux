@@ -19,7 +19,7 @@ import { getAllTags, TFile } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, inputSignature, KIND_KEYS, parseColour, spaceSignature } from './263-graph-space.js';
+import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, hexColour, inputSignature, KIND_KEYS, parseColour, spaceSignature } from './263-graph-space.js';
 import { layoutOptions, LayoutRunner, startPositions } from './264-graph-layout.js';
 import { parseQuery, queryNeedsProps, queryNeedsText } from './277-graph-query.js';
 import { fitView, placeNames, projectInto } from './265-graph-camera.js';
@@ -151,10 +151,12 @@ export class Graph3DView extends Graph3DHud {
     const index = libraryIndex(this.feature.plugin);
     const meta = this.app.metadataCache;
     const o = this.options;
-    const query = parseQuery(o.search);
-    const needText = queryNeedsText(query);
-    const needProps = queryNeedsProps(query);
-    const wantTags = o.tags || o.colourBy === 'tag' || !!query;
+    // What the filter and the colour groups ask of each note: its text, its properties.
+    const queries = [parseQuery(o.search)].concat((o.colorGroups || []).map((g) => parseQuery(g && g.query)));
+    const query = queries[0];
+    const needText = queries.some(queryNeedsText);
+    const needProps = queries.some(queryNeedsProps);
+    const wantTags = o.tags || o.colourBy === 'tag' || queries.some(Boolean);
     const unresolved = (o.missing && meta.unresolvedLinks) || {};
     const markdown = index.markdown();
     const notes = markdown.map((f) => {
@@ -342,8 +344,18 @@ export class Graph3DView extends Graph3DHud {
   restyle() {
     const nodes = this.graph.nodes;
     const n = nodes.length;
-    const groups = (this.groups = this.options.colourBy === 'none' ? [] : colourGroups(nodes, Infinity));
-    const colours = groups.map((g) => groupColour(g.slot, this.theme.dark));
+    const groups = (this.groups = colourGroups(nodes, Infinity));
+    // A colour group's colour is its own; the rest, hues apart, in turn.
+    let hue = 0;
+    const own = this.options.colorGroups || [];
+    const colours = groups.map((g) => {
+      const mine = g.key.startsWith('g:') && own[+g.key.slice(2)];
+      if (mine) {
+        const rgb = parseColour(mine.color);
+        return { css: hexColour(rgb), rgb };
+      }
+      return groupColour(hue++, this.theme.dark);
+    });
     this.palette = { css: this.kinds.css.concat(colours.map((c) => c.css)), rgb: this.kinds.rgb.concat(colours.map((c) => c.rgb)) };
     this.slotOf = new Map(groups.map((g) => [g.key, GRAPH_3D_SLOT.first + g.slot]));
     const kinds = { [KIND_KEYS.tag]: GRAPH_3D_SLOT.tag, [KIND_KEYS.file]: GRAPH_3D_SLOT.file, [KIND_KEYS.missing]: GRAPH_3D_SLOT.missing };

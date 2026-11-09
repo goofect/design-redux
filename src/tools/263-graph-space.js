@@ -36,6 +36,7 @@ export const GRAPH_3D_DEFAULTS = {
   hubs: true, // the biggest notes named, with nothing picked
   links: true,
   folds: {}, // the settings' sections folded, by name
+  colorGroups: [], // as the graph's own: [{ query, color: '#rrggbb' }], the first a note matches colouring it
   scene: 'night', // drawn on a night sky, as the graphify page is; 'theme': on the theme's background
 };
 
@@ -174,7 +175,28 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
       if (h !== undefined) names.set(n.key, nodes[h].name);
     });
   }
+  // Colour groups, as the graph's own: a note (or file) takes the colour of the first whose query it
+  // matches; while there are any, the notes in none are drawn plain, so the groups stand out.
+  const queries = (opts.colorGroups || []).map((g) => parseQuery(g && g.query));
+  if (queries.some(Boolean)) {
+    nodes.forEach((n) => {
+      if (n.kind === 'note') n.key = '';
+    });
+    all.forEach((n, i) => {
+      if (index[i] < 0 || (n.kind !== 'note' && n.kind !== 'file')) return;
+      const k = queries.findIndex((q) => q && matchQuery(q, n.seen));
+      if (k < 0) return;
+      const key = `g:${k}`;
+      nodes[index[i]].key = key;
+      names.set(key, opts.colorGroups[k].query);
+    });
+  }
   return { nodes, links: Int32Array.from(kept), root: from >= 0 ? index[from] : -1, names };
+}
+
+/** A group's colour as a colour picker wants it: #rrggbb. */
+export function hexColour(rgb) {
+  return `#${rgb.map((c) => Math.round(Math.max(0, Math.min(1, c)) * 255).toString(16).padStart(2, '0')).join('')}`;
 }
 
 /**
@@ -340,7 +362,7 @@ export function inputSignature(notes, files, opts, root) {
     }
   };
   const o = opts || {};
-  mix(JSON.stringify([o.search, o.tags, o.attachments, o.missing, o.orphans, o.local, o.depth, o.colourBy, o.hidden, root || '']));
+  mix(JSON.stringify([o.search, o.tags, o.attachments, o.missing, o.orphans, o.local, o.depth, o.colourBy, o.hidden, (o.colorGroups || []).map((g) => [g.query, g.color]), root || '']));
   notes.forEach((n) => {
     mix(n.path);
     mix('\u0001');

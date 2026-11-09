@@ -14,12 +14,12 @@
 /* ------------------------------------------------------------------ */
 
 import { Setting, setIcon } from 'obsidian';
-import { GRAPH_3D_DEFAULTS } from './263-graph-space.js';
+import { GRAPH_3D_DEFAULTS, groupColour, hexColour } from './263-graph-space.js';
 import { layoutOptions } from './264-graph-layout.js';
 import { Graph3DInput } from './269-graph-3d-input.js';
 
 /** What changes which notes are drawn, or their colours: the graph is worked out again. */
-const GRAPH_3D_FILTERS = ['search', 'tags', 'attachments', 'missing', 'orphans', 'local', 'depth', 'colourBy', 'hidden'];
+const GRAPH_3D_FILTERS = ['colorGroups', 'search', 'tags', 'attachments', 'missing', 'orphans', 'local', 'depth', 'colourBy', 'hidden'];
 const GRAPH_3D_FORCES = ['repel', 'linkLength', 'centre'];
 const GRAPH_3D_LOOKS = ['nodeSize', 'lines', 'names'];
 
@@ -157,17 +157,18 @@ export class Graph3DPanel extends Graph3DInput {
     );
     toggle(filters, 'orphans', 'Orphans', 'Show notes linked to nothing');
 
+    // Groups, as the graph's own: a query and a colour each, and New group.
     const groups = section('color-groups', 'Groups');
-    new Setting(groups).setName('Colour by').addDropdown((d) => {
-      this.controls.colourBy = d;
-      d.addOption('community', 'Community')
-        .addOption('folder', 'Top folder')
-        .addOption('tag', 'First tag')
-        .addOption('none', 'Nothing')
-        .setValue(this.options.colourBy)
-        .onChange((v) => this.setOption('colourBy', v));
+    this.groupRows = groups.createDiv({ cls: 'graph-color-groups-container' });
+    const add = groups.createDiv({ cls: 'graph-color-button-container' }).createEl('button', { text: 'New group' });
+    this.registerDomEvent(add, 'click', () => {
+      const list = this.options.colorGroups || [];
+      this.setOption('colorGroups', list.concat([{ query: '', color: hexColour(groupColour(list.length, true).rgb) }]));
+      this.renderColorGroups();
+      const inputs = this.groupRows.querySelectorAll('input[type="text"]');
+      if (inputs.length) inputs[inputs.length - 1].focus();
     });
-    toggle(groups, 'group', 'Pull each together', 'Each group’s notes drawn to a place of their own');
+    this.renderColorGroups();
 
     const display = section('display', 'Display');
     slider(display, 'nodeSize', 'Node size', 0.4, 2.5, 0.1);
@@ -178,6 +179,37 @@ export class Graph3DPanel extends Graph3DInput {
     slider(forces, 'centre', 'Centre force', 0, 4, 0.1);
     slider(forces, 'repel', 'Repel force', 0.2, 4, 0.1);
     slider(forces, 'linkLength', 'Link distance', 0.3, 3, 0.1);
+  }
+
+  /** The colour groups, a row each: the query (applied as typing pauses), the colour, and Delete group. */
+  renderColorGroups() {
+    const box = this.groupRows;
+    if (!box) return;
+    box.empty();
+    const change = (k, part) => this.setOption('colorGroups', (this.options.colorGroups || []).map((g, i) => (i === k ? Object.assign({}, g, part) : g)));
+    (this.options.colorGroups || []).forEach((g, k) => {
+      const row = box.createDiv({ cls: 'graph-color-group' });
+      const query = row.createEl('input', { type: 'text' });
+      query.spellcheck = false;
+      query.placeholder = 'Enter query...';
+      query.value = g.query || '';
+      let typing = 0;
+      this.registerDomEvent(query, 'input', () => {
+        if (typing) this.host().clearTimeout(typing);
+        typing = this.host().setTimeout(() => change(k, { query: query.value }), 400);
+      });
+      const colour = row.createEl('input', { type: 'color' });
+      colour.value = g.color || '#888888';
+      colour.setAttribute('aria-label', 'Click to change colour');
+      this.registerDomEvent(colour, 'input', () => change(k, { color: colour.value }));
+      const remove = row.createDiv({ cls: 'clickable-icon' });
+      remove.setAttribute('aria-label', 'Delete group');
+      setIcon(remove, 'x');
+      this.registerDomEvent(remove, 'click', () => {
+        this.setOption('colorGroups', (this.options.colorGroups || []).filter((_, i) => i !== k));
+        this.renderColorGroups();
+      });
+    });
   }
 
   /** One setting changed, from the panel, the side or a menu, and what follows from it. */
@@ -224,6 +256,7 @@ export class Graph3DPanel extends Graph3DInput {
       const c = this.controls[key];
       if (c && typeof c.setValue === 'function') c.setValue(this.options[key]);
     });
+    this.renderColorGroups();
     Object.keys(this.folds || {}).forEach((id) => this.folds[id](!!(this.options.folds && this.options.folds[id])));
     if (this.panel) this.togglePanel(this.options.panel);
   }

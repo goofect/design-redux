@@ -586,7 +586,7 @@ test('settings: a search narrows the graph; colouring by tag recolours without l
   view.controls.search.change('');
   flush();
   const sign = view.sign;
-  view.controls.colourBy.change('tag');
+  view.setOption('colourBy', 'tag');
   flush();
   assert.strictEqual(view.sign, sign, 'same notes and links');
   assert.strictEqual(view.graph.nodes[view.at.get('Work/Plan.md')].key, '#project');
@@ -1067,6 +1067,47 @@ test('the view reads notes’ text for a search that needs it, once, and keeps i
   assert.deepStrictEqual(view.graph.nodes.map((n) => n.id), ['Ideas.md'], 'found by its text');
   view.build();
   assert.strictEqual(read.length, 4, 'not read again while unchanged');
+});
+
+/* -- colour groups, as the graph's own ------------------------------------ */
+
+test('colour groups: a note takes the first group it matches; while there are any, the rest are plain', () => {
+  const groups = [{ query: 'path:work', color: '#ff0000' }, { query: 'tag:#project', color: '#00ff00' }, { query: 'ideas', color: '#0000ff' }];
+  const g = G.buildSpace(VAULT(), FILES, opts({ colorGroups: groups }));
+  const key = (id) => g.nodes.find((n) => n.id === id).key;
+  assert.strictEqual(key('Work/Plan.md'), 'g:0', 'the first that matches, though the second does too');
+  assert.strictEqual(key('Ideas.md'), 'g:2');
+  assert.strictEqual(key('Home/List.md'), '', 'in none: plain');
+  assert.strictEqual(G.groupName(g, 'g:0'), 'path:work');
+  const none = G.buildSpace(VAULT(), FILES, opts({ colorGroups: [{ query: '', color: '#ff0000' }] }));
+  assert.ok(none.nodes.some((n) => n.key.startsWith('c:')), 'a group with no query yet changes nothing');
+});
+
+test('the Groups section: New group adds a row; its query, as typing pauses, colours what it matches in its colour; Delete group takes it away', () => {
+  const { view } = openView(PATHS, LINKS());
+  frames(3000);
+  const rows = () => [...view.groupRows.querySelectorAll('.graph-color-group')];
+  assert.strictEqual(rows().length, 0);
+  view.panel.querySelector('.graph-color-button-container button').click();
+  assert.strictEqual(rows().length, 1);
+  const [query, colour] = rows()[0].querySelectorAll('input');
+  assert.deepStrictEqual([query.type, query.placeholder, colour.type], ['text', 'Enter query...', 'color']);
+  query.value = 'path:work';
+  query.dispatchEvent(new win.Event('input'));
+  flush();
+  flush();
+  colour.value = '#ff0000';
+  colour.dispatchEvent(new win.Event('input'));
+  flush();
+  const plan = view.at.get('Work/Plan.md');
+  assert.strictEqual(view.graph.nodes[plan].key, 'g:0');
+  assert.strictEqual(view.palette.css[view.slots[plan]], '#ff0000');
+  assert.strictEqual(view.graph.nodes[view.at.get('Ideas.md')].key, '', 'the rest plain');
+  rows()[0].querySelector('[aria-label="Delete group"]').click();
+  flush();
+  assert.strictEqual(rows().length, 0);
+  assert.deepStrictEqual(view.options.colorGroups, []);
+  assert.ok(view.graph.nodes[plan].key.startsWith('c:'), 'no groups: the communities’ colours again');
 });
 
 console.log(`${passed} passed`);

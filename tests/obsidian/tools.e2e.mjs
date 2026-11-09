@@ -463,7 +463,9 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
       };
       click();
       const picked = view.picked === i && !view.detail.hidden && view.detail.querySelector('.dr-graph3d-name').textContent === view.graph.nodes[i].name;
-      // Seen with its settings open, the note picked and its links lit.
+      // Seen with its settings open, a colour group in them, the note picked and its links lit.
+      view.setOption('colorGroups', [{ query: 'path:Space', color: '#e0b84f' }]);
+      view.renderColorGroups();
       view.togglePanel(true);
       return {
         renderer: view.renderer.kind === (webgl ? 'webgl' : 'canvas'),
