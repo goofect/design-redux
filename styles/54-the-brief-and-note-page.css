@@ -284,8 +284,8 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
 }
 
 
-/* At a note's end, before the shelves: the notes either side of it in its album, as rows — a cover
-   mark where there is one, Previous or Next above the title, the opening line under it. */
+/* At a note's end, before the shelves: the notes either side of it in its album, as rows — Previous
+   or Next above the title, the opening line under it. */
 .dr-note-next {
   display: flex;
   flex-wrap: wrap;
@@ -346,29 +346,6 @@ body.dr-glass:not(.dr-look-editorial) .canvas-controls .canvas-control-group {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* A cover as a mark: a small square at the start of a step or a tile, only where the note has one. */
-.dr-note-mark {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  overflow: hidden;
-  border-radius: var(--radius-s);
-  background: var(--background-modifier-hover);
-}
-
-.dr-note-mark img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-note-tile .dr-note-mark {
-  width: 28px;
-  height: 28px;
-  margin-bottom: var(--size-4-2);
 }
 
 @media (any-hover: hover) {

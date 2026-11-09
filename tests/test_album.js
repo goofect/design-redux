@@ -360,7 +360,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const steps = Array.from(next.querySelectorAll('.dr-note-step'));
     assert.deepStrictEqual(steps.map((st) => [st.className, st.querySelector('.dr-note-step-label').textContent, st.querySelector('.dr-note-step-title').textContent]), [['dr-note-step is-next', 'Next', 'Balance']]);
     assert.strictEqual(steps[0].getAttribute('aria-label'), 'Next in IR: Balance');
-    assert.strictEqual(!!steps[0].querySelector('.dr-note-mark'), !!R.noteCoverSrc(plugin, v.vault.getAbstractFileByPath('IR/Balance.md')), 'a cover mark only where the note has a cover');
     const shelves = sizer.querySelector('.dr-note-shelves');
     assert.strictEqual(shelves.previousElementSibling, next, 'after the step, before the backlinks');
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);

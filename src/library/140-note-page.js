@@ -273,13 +273,12 @@ export class NotePage extends Feature {
     });
   }
 
-  /** A step through the album: the note before or after, as a row — its cover if it has one, Previous or Next, its title, its opening line. */
+  /** A step through the album: the note before or after, as a row — Previous or Next, its title, its opening line. */
   step(el, dir, file, album) {
     const row = el.createDiv({ cls: `dr-note-step is-${dir}` });
     row.setAttribute('role', 'link');
     row.setAttribute('tabindex', '0');
     row.setAttribute('aria-label', `${dir === 'next' ? 'Next' : 'Previous'} in ${album.name}: ${file.basename}`);
-    this.mark(row, file);
     const text = row.createDiv({ cls: 'dr-note-step-text' });
     text.createDiv({ cls: 'dr-note-step-label', text: dir === 'next' ? 'Next' : 'Previous' });
     text.createDiv({ cls: 'dr-note-step-title', text: file.basename });
@@ -287,17 +286,6 @@ export class NotePage extends Feature {
     const open = () => this.app.workspace.getLeaf(false).openFile(file);
     row.addEventListener('click', open);
     row.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
-  }
-
-  /** A note's cover as a small mark at the start of a row or tile, where it has one. */
-  mark(el, file) {
-    const src = noteCoverSrc(this.plugin, file);
-    if (!src) return;
-    const art = el.createDiv({ cls: 'dr-note-mark' });
-    const img = art.createEl('img');
-    img.setAttribute('src', src);
-    img.setAttribute('alt', '');
-    el.addClass('has-mark');
   }
 
   /** A shelf: its title, and a row of notes, each its title and opening line. */
@@ -316,7 +304,6 @@ export class NotePage extends Feature {
       const tile = row.createDiv({ cls: 'dr-note-tile' });
       tile.setAttribute('role', 'link');
       tile.setAttribute('tabindex', '0');
-      this.mark(tile, f);
       tile.createDiv({ cls: 'dr-note-tile-title', text: f.basename });
       const line = tile.createDiv({ cls: 'dr-note-tile-line' });
       this.opening(f, line);
