@@ -17,6 +17,8 @@ import { Setting, setIcon } from 'obsidian';
 import { GRAPH_3D_DEFAULTS, groupColour, hexColour } from './263-graph-space.js';
 import { layoutOptions } from './264-graph-layout.js';
 import { Graph3DInput } from './269-graph-3d-input.js';
+import { libraryIndex } from '../core/077-library-index.js';
+import { queryTokenAt, queryValue } from './277-graph-query.js';
 
 /** What changes which notes are drawn, or their colours: the graph is worked out again. */
 const GRAPH_3D_FILTERS = ['colorGroups', 'search', 'tags', 'attachments', 'missing', 'orphans', 'local', 'depth', 'colourBy', 'hidden'];
@@ -183,10 +185,11 @@ export class Graph3DPanel extends Graph3DInput {
     this.renderColorGroups();
 
     const display = section('display', 'Display');
+    // First, as the graph's own puts its toggles before its sliders (its CSS hides the name of the section's last row, where it keeps Animate).
+    toggle(display, 'spin', 'Spin', 'Turn the graph slowly round');
     slider(display, 'nodeSize', 'Node size', 0.4, 2.5, 0.1);
     slider(display, 'names', 'Names', 0, 1, 0.05);
     slider(display, 'lines', 'Links', 0.05, 1, 0.05);
-    toggle(display, 'spin', 'Spin', 'Turn the graph slowly round');
 
     const forces = section('forces', 'Forces');
     slider(forces, 'centre', 'Centre force', 0, 4, 0.1);
@@ -234,59 +237,68 @@ export class Graph3DPanel extends Graph3DInput {
    */
   searchOptions(input) {
     const doc = input.ownerDocument;
+    const win = doc.defaultView || window;
     let pop = null;
-    let at = 1;
-    const rows = () => (pop ? [...pop.querySelectorAll('.search-suggest-item:not(.mod-group)')] : []);
-    const mark = () => rows().forEach((r, k) => r.toggleClass('is-selected', k === at - 1));
+    let at = 0;
+    let shown = [];
     const close = () => {
       if (pop) pop.remove();
       pop = null;
+      shown = [];
     };
-    const put = (op) => {
-      const start = input.selectionStart === null || input.selectionStart === undefined ? input.value.length : input.selectionStart;
-      const end = input.selectionEnd === null || input.selectionEnd === undefined ? start : input.selectionEnd;
-      const text = op === '[property]' ? '[]' : op;
-      input.value = input.value.slice(0, start) + text + input.value.slice(end);
-      const caret = start + (op === '[property]' ? 1 : text.length);
-      if (input.setSelectionRange) input.setSelectionRange(caret, caret);
+    const caret = () => (input.selectionStart === null || input.selectionStart === undefined ? input.value.length : input.selectionStart);
+    const mark = () => (pop ? [...pop.querySelectorAll('.search-suggest-item:not(.mod-group)')] : []).forEach((r, k) => r.toggleClass('is-selected', k === at));
+    // A pick: its text in place of what was typed of it, the caret after it (or where it says).
+    const put = (pick) => {
+      const end = caret();
+      const rest = input.value.slice(end);
+      input.value = input.value.slice(0, pick.start) + pick.text + rest;
+      const to = pick.start + (pick.caret === undefined ? pick.text.length : pick.caret);
+      if (input.setSelectionRange) input.setSelectionRange(to, to);
       close();
       input.focus();
-      input.dispatchEvent(new (doc.defaultView || window).Event('input', { bubbles: true }));
+      input.dispatchEvent(new win.Event('input', { bubbles: true }));
     };
     const open = () => {
-      const caret = input.selectionStart === null || input.selectionStart === undefined ? input.value.length : input.selectionStart;
-      const before = input.value.slice(0, caret);
-      if (before && !/\s$/.test(before)) return close();
-      if (pop) return;
+      const token = queryTokenAt(input.value.slice(0, caret()));
+      const picks = token ? this.searchPicks(token) : [];
+      if (!picks.length) return close();
+      if (pop) pop.remove();
       pop = doc.body.createDiv({ cls: 'suggestion-container mod-search-suggestion' });
       const list = pop.createDiv({ cls: 'suggestion' });
-      const head = list.createDiv({ cls: 'suggestion-item mod-complex search-suggest-item mod-group' });
-      head.createDiv({ cls: 'suggestion-content' }).createDiv({ cls: 'suggestion-title list-item-part mod-extended' }).createSpan({ text: 'Search options' });
-      const more = head.createDiv({ cls: 'suggestion-aux' }).createDiv({ cls: 'list-item-part search-suggest-icon clickable-icon' });
-      more.setAttribute('aria-label', 'Read more');
-      setIcon(more, 'info');
-      more.addEventListener('click', () => (doc.defaultView || window).open('https://help.obsidian.md/Plugins/Search'));
-      GRAPH_3D_SEARCH_OPTIONS.forEach(([op, what], k) => {
+      if (token.kind === 'options') {
+        const head = list.createDiv({ cls: 'suggestion-item mod-complex search-suggest-item mod-group' });
+        head.createDiv({ cls: 'suggestion-content' }).createDiv({ cls: 'suggestion-title list-item-part mod-extended' }).createSpan({ text: 'Search options' });
+        const more = head.createDiv({ cls: 'suggestion-aux' }).createDiv({ cls: 'list-item-part search-suggest-icon clickable-icon' });
+        more.setAttribute('aria-label', 'Read more');
+        setIcon(more, 'info');
+        more.addEventListener('click', () => win.open('https://help.obsidian.md/Plugins/Search'));
+      }
+      shown = picks;
+      picks.forEach((pick, k) => {
         const row = list.createDiv({ cls: 'suggestion-item mod-complex search-suggest-item' });
         const title = row.createDiv({ cls: 'suggestion-content' }).createDiv({ cls: 'suggestion-title' });
-        title.createSpan({ text: op });
-        title.createSpan({ cls: 'search-suggest-info-text', text: what });
+        title.createSpan({ text: pick.label });
+        if (pick.info) title.createSpan({ cls: 'search-suggest-info-text', text: pick.info });
         row.createDiv({ cls: 'suggestion-aux' });
         row.addEventListener('mousemove', () => {
-          at = k + 1;
+          at = k;
           mark();
         });
-        row.addEventListener('click', () => put(op));
+        row.addEventListener('click', () => put(pick));
       });
       // Clicking in it mustn't take the focus from the box.
       pop.addEventListener('mousedown', (e) => e.preventDefault());
       const r = input.getBoundingClientRect();
-      pop.style.width = '300px';
+      const width = token.kind === 'options' ? 300 : 350;
+      pop.style.width = `${width}px`;
+      pop.style.maxHeight = `${Math.max(160, Math.round((win.innerHeight || 800) - r.bottom - 16))}px`;
+      pop.style.overflowY = 'auto';
       // Under the box, as Obsidian puts it — but kept inside the window, where the box sits at its edge.
-      const room = (doc.defaultView || window).innerWidth || 0;
-      pop.style.left = `${Math.round(room ? Math.max(4, Math.min(r.left, room - 300 - 8)) : r.left)}px`;
+      const room = win.innerWidth || 0;
+      pop.style.left = `${Math.round(room ? Math.max(4, Math.min(r.left, room - width - 8)) : r.left)}px`;
       pop.style.top = `${Math.round(r.bottom + 4)}px`;
-      at = 1;
+      at = 0;
       mark();
     };
     this.registerDomEvent(input, 'focus', open);
@@ -294,21 +306,61 @@ export class Graph3DPanel extends Graph3DInput {
     this.registerDomEvent(input, 'input', open);
     this.registerDomEvent(input, 'blur', close);
     this.registerDomEvent(input, 'keydown', (e) => {
-      if (!pop) return;
-      const n = GRAPH_3D_SEARCH_OPTIONS.length;
+      if (!pop || !shown.length) return;
+      const n = shown.length;
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         e.preventDefault();
-        at = ((at - 1 + (e.key === 'ArrowDown' ? 1 : -1) + n) % n) + 1;
+        at = (at + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
         mark();
-      } else if (e.key === 'Enter') {
+        const row = pop.querySelectorAll('.search-suggest-item:not(.mod-group)')[at];
+        if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
+      } else if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault();
-        put(GRAPH_3D_SEARCH_OPTIONS[at - 1][0]);
+        put(shown[at]);
       } else if (e.key === 'Escape') {
         e.preventDefault();
         close();
       }
     });
     this.register(close);
+  }
+
+  /**
+   * What the search box offers for what's being typed: the operators; a
+   * path:'s folders (the top ones first), a file:'s notes, a tag:'s tags,
+   * a [property]'s names — those holding what's typed so far, up to fifty.
+   * Each { label, info?, start, text, caret? }.
+   */
+  searchPicks(token) {
+    if (token.kind === 'options') {
+      return GRAPH_3D_SEARCH_OPTIONS.map(([op, info]) => ({ label: op, info, start: token.start, text: op === '[property]' ? '[]' : op, caret: op === '[property]' ? 1 : undefined }));
+    }
+    const index = libraryIndex(this.feature.plugin);
+    const meta = this.app.metadataCache;
+    let values = [];
+    if (token.kind === 'path') {
+      values = index.folders().map((f) => f.path).filter(Boolean).sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b));
+    } else if (token.kind === 'file') {
+      values = [...new Set(index.markdown().map((f) => f.basename))].sort((a, b) => a.localeCompare(b));
+    } else if (token.kind === 'tag') {
+      values = Object.keys(typeof meta.getTags === 'function' ? meta.getTags() || {} : {}).sort((a, b) => a.localeCompare(b));
+    } else if (token.kind === 'property') {
+      const names = new Set();
+      index.markdown().forEach((f) => {
+        const cache = meta.getFileCache(f);
+        Object.keys((cache && cache.frontmatter) || {}).forEach((k) => names.add(k));
+      });
+      values = [...names].sort((a, b) => a.localeCompare(b));
+    }
+    const want = token.partial.toLowerCase().replace(/^#/, '');
+    return values
+      .filter((v) => !want || v.toLowerCase().replace(/^#/, '').includes(want))
+      .slice(0, 50)
+      .map((v) => {
+        if (token.kind === 'property') return { label: v, start: token.start, text: `${v}:` };
+        const text = `${queryValue(v)} `;
+        return { label: v, start: token.start, text };
+      });
   }
 
   /** One setting changed, from the panel, the side or a menu, and what follows from it. */

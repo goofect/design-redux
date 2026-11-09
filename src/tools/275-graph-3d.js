@@ -58,7 +58,7 @@ export class Graph3DView extends Graph3DHud {
     this.makeRenderer();
     this.overlay = this.stage.createEl('canvas', { cls: 'dr-graph3d-overlay' });
     this.overlay.setAttribute('tabindex', '0');
-    this.overlay.setAttribute('aria-label', 'Notes and their links, in 3D');
+    // No aria-label: Obsidian shows one as a tip, and on a canvas the size of the tab it sat at the bottom, saying nothing new.
     this.ink = this.overlay.getContext('2d');
     this.buildHud();
     this.addAction('git-fork', 'Show in 2D', () => this.feature.flip(this.leaf)).addClass('dr-graph3d-switch');

@@ -1179,4 +1179,43 @@ test('a Spin toggle in Display turns the graph slowly round, and the shut settin
   assert.strictEqual(view.camera.yaw, still);
 });
 
+test('what’s being typed at the caret: the operators, or a path:, file:, tag: value, or a property’s name', () => {
+  assert.deepStrictEqual(G.queryTokenAt(''), { kind: 'options', start: 0, partial: '' });
+  assert.deepStrictEqual(G.queryTokenAt('plan '), { kind: 'options', start: 5, partial: '' });
+  assert.deepStrictEqual(G.queryTokenAt('path:'), { kind: 'path', start: 5, partial: '' });
+  assert.deepStrictEqual(G.queryTokenAt('x path:"Concepts F'), { kind: 'path', start: 7, partial: 'Concepts F' });
+  assert.deepStrictEqual(G.queryTokenAt('-tag:#pro'), { kind: 'tag', start: 5, partial: '#pro' });
+  assert.deepStrictEqual(G.queryTokenAt('[sta'), { kind: 'property', start: 1, partial: 'sta' });
+  assert.strictEqual(G.queryTokenAt('plan'), null, 'a word under way: nothing to offer');
+  assert.strictEqual(G.queryValue('Concepts Folder'), '"Concepts Folder"');
+  assert.strictEqual(G.queryValue('Hub'), 'Hub');
+});
+
+test('after an operator, the box offers its values, as Obsidian’s does: picked, put in quoted where they have spaces', () => {
+  const { view, app } = openView(PATHS.concat(['Work/Big plan.md']), LINKS());
+  app.metadataCache.getTags = () => ({ '#project': 2, '#draft': 1 });
+  const input = view.controls.search.inputEl;
+  const pop = () => document.querySelector('.suggestion-container.mod-search-suggestion');
+  const labels = () => [...pop().querySelectorAll('.search-suggest-item:not(.mod-group) .suggestion-title span:first-child')].map((e) => e.textContent);
+  const type = (text) => {
+    input.value = text;
+    input.setSelectionRange(text.length, text.length);
+    input.dispatchEvent(new win.Event('input'));
+  };
+  type('file:');
+  assert.deepStrictEqual(labels(), ['Big plan', 'Ideas', 'List', 'Notes', 'Plan']);
+  assert.strictEqual(pop().querySelector('.mod-group'), null, 'no Search options heading over values');
+  type('file:pla');
+  assert.deepStrictEqual(labels(), ['Big plan', 'Plan']);
+  input.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter' }));
+  assert.strictEqual(input.value, 'file:"Big plan" ');
+  assert.ok(pop(), 'after the space it put, the operators again');
+  type('tag:#pro');
+  assert.deepStrictEqual(labels(), ['#project']);
+  pop().querySelector('.search-suggest-item').dispatchEvent(new win.MouseEvent('click'));
+  assert.strictEqual(input.value, 'tag:#project ');
+  input.dispatchEvent(new win.Event('blur'));
+  assert.strictEqual(pop(), null);
+});
+
 console.log(`${passed} passed`);

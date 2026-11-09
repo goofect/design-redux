@@ -198,3 +198,23 @@ export function matchQuery(tree, item) {
   }
   return false;
 }
+
+/**
+ * What's being typed where the caret is, as the search box's suggestions
+ * need it: 'options' (nothing yet, or just after a space: the operators),
+ * a value for path:, file: or tag:, or a property's name after [ — with
+ * where that value starts and what of it there is so far — or null.
+ */
+export function queryTokenAt(before) {
+  if (!before || /\s$/.test(before)) return { kind: 'options', start: before ? before.length : 0, partial: '' };
+  const op = /(?:^|[\s(-])(path|file|tag):("?)([^"]*)$/i.exec(before);
+  if (op && (op[2] || !/\s/.test(op[3]))) return { kind: op[1].toLowerCase(), start: before.length - op[2].length - op[3].length, partial: op[3] };
+  const prop = /\[([^\]:]*)$/.exec(before);
+  if (prop) return { kind: 'property', start: before.length - prop[1].length, partial: prop[1] };
+  return null;
+}
+
+/** A value as the search reads it: in quotes when it has a space in it. */
+export function queryValue(value) {
+  return /[\s()]/.test(value) ? `"${value}"` : value;
+}
