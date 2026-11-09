@@ -110,6 +110,7 @@ export const DEFAULTS = {
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.
   notePageShelves: true,
+  notePageNext: true,
   // At an album's end, greyed: the notes its notes link to that aren't written yet.
   albumStillToWrite: true,
   // The property naming a note's parent, to nest an album's notes by; empty for a flat list.

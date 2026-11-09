@@ -228,6 +228,8 @@ suite('Design Redux in Obsidian: notes', function () {
           above: !!album && !!title && album.nextElementSibling === title,
           meta: meta ? meta.textContent : null,
           shelves: Array.from(root.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent),
+          steps: Array.from(root.querySelectorAll('.dr-note-step')).map((st) => [st.querySelector('.dr-note-step-label').textContent, st.querySelector('.dr-note-step-title').textContent]),
+          stepsBeforeShelves: !!root.querySelector('.dr-note-next + .dr-note-shelves'),
         };
       });
     // The link shelves come once Obsidian has the links: all three, not the first drawn.
@@ -237,6 +239,12 @@ suite('Design Redux in Obsidian: notes', function () {
     expect(now.above).toBe(true);
     expect(now.meta.startsWith('Under Judicial review')).toBe(true);
     expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›', 'More in Page album ›']);
+    // Second of two in its album: its place in the grey line, and the note before it as a step at its end.
+    expect(now.meta).toContain('2 of 2');
+    expect(now.steps).toEqual([['Previous', 'Judicial review']]);
+    expect(now.stepsBeforeShelves).toBe(true);
+    await browser.executeObsidian(({ app }) => app.workspace.activeLeaf.view.contentEl.querySelector('.cm-scroller').scrollTo(0, 10000));
+    await shot('note-next');
     // Reading: the same.
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;
@@ -246,6 +254,7 @@ suite('Design Redux in Obsidian: notes', function () {
     now = await look();
     expect(now.album).toBe('Page album');
     expect(now.shelves.length).toBe(3);
+    expect(now.steps).toEqual([['Previous', 'Judicial review']]);
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;
       await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source' }) });

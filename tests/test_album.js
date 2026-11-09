@@ -351,24 +351,39 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(album.nextElementSibling, title, 'above the title');
     const meta = title.nextElementSibling;
     assert.ok(meta.classList.contains('dr-note-meta'));
-    assert.ok(/^Under Balance {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
+    assert.ok(/^Under Balance {2}· {2}1 of 4 {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
     const chips = Array.from(sizer.querySelectorAll('.dr-note-chip')).map((c) => c.textContent);
     assert.deepStrictEqual(chips, ['draft', 'law'], 'its parent and cover said elsewhere; nothing more beside them');
     assert.ok(containerEl.classList.contains('dr-props-as-chips'));
+    // First of four in IR: nothing before it, Balance next, as a row before the shelves.
+    const next = sizer.querySelector('.dr-note-next');
+    assert.strictEqual(next.previousElementSibling, content, 'after the text');
+    const steps = Array.from(next.querySelectorAll('.dr-note-step'));
+    assert.deepStrictEqual(steps.map((st) => [st.className, st.querySelector('.dr-note-step-label').textContent, st.querySelector('.dr-note-step-title').textContent]), [['dr-note-step is-next', 'Next', 'Balance']]);
+    assert.strictEqual(steps[0].getAttribute('aria-label'), 'Next in IR: Balance');
+    assert.strictEqual(!!steps[0].querySelector('.dr-note-mark'), !!R.noteCoverSrc(plugin, v.vault.getAbstractFileByPath('IR/Balance.md')), 'a cover mark only where the note has a cover');
     const shelves = sizer.querySelector('.dr-note-shelves');
-    assert.strictEqual(shelves.previousElementSibling, content, 'after the text, before the backlinks');
+    assert.strictEqual(shelves.previousElementSibling, next, 'after the step, before the backlinks');
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf')[1].querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent), ['Cooperation']);
     await settle();
     assert.strictEqual(shelves.querySelector('.dr-note-tile-line').textContent, 'Balance begins here.');
+    assert.strictEqual(steps[0].querySelector('.dr-note-step-line').textContent, 'Balance begins here.');
     // Drawn again with nothing changed: the same elements.
     page.draw(view);
     assert.strictEqual(sizer.querySelector('.dr-note-shelves'), shelves);
+    assert.strictEqual(sizer.querySelector('.dr-note-next'), next);
     assert.strictEqual(sizer.querySelector('.dr-note-album'), album);
+    // The steps switched off: the row goes, and the place leaves the grey line.
+    plugin.settings.notePageNext = false;
+    page.draw(view);
+    assert.ok(!sizer.querySelector('.dr-note-next'));
+    assert.ok(!/1 of 4/.test(sizer.querySelector('.dr-note-meta').textContent));
+    plugin.settings.notePageNext = true;
     // Off: all of it gone.
     plugin.settings.notePage = false;
     page.draw(view);
-    assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-shelves'));
+    assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-next, .dr-note-shelves'));
     assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
   });
 

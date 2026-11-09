@@ -65,7 +65,7 @@ export const SETTINGS_TABS = [
         name: 'Note page',
         desc: 'A note’s collection, details, property chips and shelves.',
         switch: 'notePage',
-        keys: ['notePageShelves', 'notePageChips'],
+        keys: ['notePageShelves', 'notePageNext', 'notePageChips'],
       },
       {
         id: 'writing',
@@ -143,7 +143,7 @@ export const SETTING_PRESETS = {
 export const FORMER_TABS = {
   Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
   Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'trackLength', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'thinNoteWords', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
-  Notes: ['notePage', 'notePageChips', 'notePageShelves', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
+  Notes: ['notePage', 'notePageChips', 'notePageShelves', 'notePageNext', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
   Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],
   Advanced: ['compatibility'],
   // 3.0's last tab, before the tabs went by task.

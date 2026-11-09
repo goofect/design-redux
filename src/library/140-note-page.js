@@ -4,15 +4,17 @@
 /* A note opens with its album above its title, in the accent colour,  */
 /* and one grey line beneath it: what it hangs from, how long it is,    */
 /* when it was last edited. Its properties can sit there as quiet       */
-/* chips, the full block a click away. At its end come shelves: what    */
-/* it links to, where it's mentioned, and more in its album. In both    */
-/* reading and editing views; the text itself is left alone.           */
+/* chips, the full block a click away. At its end, the notes before and */
+/* after it in its album, then shelves: what it links to, where it's    */
+/* mentioned, and more in its album. In both reading and editing views;  */
+/* the text itself is left alone.                                      */
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
 import { noteCoverSrc } from '../core/030-art.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
+import { albumNeighbours } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { ask } from '../core/081-capabilities.js';
@@ -41,6 +43,12 @@ export class NotePage extends Feature {
         key: 'notePageChips',
         name: 'Properties as chips',
         desc: 'Properties as chips under a note’s title.',
+        showIf: 'notePage',
+      },
+      {
+        key: 'notePageNext',
+        name: 'Next in the collection',
+        desc: 'The notes before and after this one in its collection, at its end, and its place in the line of details.',
         showIf: 'notePage',
       },
       {
@@ -93,7 +101,7 @@ export class NotePage extends Feature {
 
   /** What this adds to a view, taken away. */
   clear(view) {
-    view.containerEl.querySelectorAll('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
+    view.containerEl.querySelectorAll('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-next, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.removeClass('dr-props-as-chips');
   }
 
@@ -123,13 +131,20 @@ export class NotePage extends Feature {
     return own === file ? null : folder;
   }
 
-  /** The one grey line: what the note hangs from, its length, when it was edited. */
-  metaLine(file) {
+  /** The notes before and after this one in its album, when that's asked for; otherwise none. */
+  neighbours(file, album) {
+    if (!album || this.settings.notePageNext === false) return { previous: null, next: null, index: -1, total: 0 };
+    return albumNeighbours(this.plugin, file);
+  }
+
+  /** The one grey line: what the note hangs from, where it sits in its album, its length, when it was edited. */
+  metaLine(file, near) {
     const parts = [];
     const key = String(this.settings.albumNestBy || '').trim();
     const cache = this.app.metadataCache.getFileCache(file);
     const parent = key ? valueList(cache ? fmGet(cache.frontmatter, key) : undefined)[0] : null;
     if (parent) parts.push(`Under ${plainValue(parent)}`);
+    if (near && near.index >= 0 && near.total > 1) parts.push(`${near.index + 1} of ${near.total}`);
     const lengths = this.plugin.lengths;
     const length = lengths ? lengths.label(file, this.settings.trackLength === 'words' ? 'words' : 'time') : '';
     if (length) parts.push(length);
@@ -200,7 +215,8 @@ export class NotePage extends Feature {
     const file = view.file;
     const on = this.enabled;
     const album = on ? this.albumOf(file) : null;
-    const meta = on ? this.metaLine(file) : '';
+    const near = on ? this.neighbours(file, album) : { previous: null, next: null };
+    const meta = on ? this.metaLine(file, near) : '';
     const chips = on && this.settings.notePageChips ? this.chips(file) : [];
     const shelves = on && this.settings.notePageShelves ? this.shelves(file) : [];
     view.containerEl.toggleClass('dr-props-as-chips', chips.length > 0);
@@ -234,13 +250,43 @@ export class NotePage extends Feature {
       // The grey line: a hairline closing the header, under the chips; the page control sits right under it.
       const last = ['dr-note-chips', 'dr-note-meta'].map((c) => place.head.querySelector(`:scope > .${c}`)).find(Boolean) || title;
       this.put(place.head, 'dr-note-rule', last ? 'rule' : '', last ? last.nextSibling : null, () => {});
-      // At the end, the shelves.
-      const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => f.path).join(',')}`).join('|');
+      // At the end: the notes either side of this one in its album, then the shelves.
       const before = place.after ? place.after.nextSibling : place.first ? place.end.firstChild : null;
       // Drawn before the view had its footer: moved there now it has.
-      place.root.querySelectorAll('.dr-note-shelves').forEach((el) => el.parentElement !== place.end && el.remove());
-      this.put(place.end, 'dr-note-shelves', shelfKey, before, (el) => shelves.forEach((s) => this.shelf(el, s)));
+      place.root.querySelectorAll('.dr-note-next, .dr-note-shelves').forEach((el) => el.parentElement !== place.end && el.remove());
+      const steps = [near.previous && ['previous', near.previous], near.next && ['next', near.next]].filter(Boolean);
+      const stepKey = steps.map(([dir, f]) => `${dir}:${f.path}`).join('|');
+      const next = this.put(place.end, 'dr-note-next', stepKey, before, (el) => steps.forEach(([dir, f]) => this.step(el, dir, f, album)));
+      const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => f.path).join(',')}`).join('|');
+      this.put(place.end, 'dr-note-shelves', shelfKey, next ? next.nextSibling : before, (el) => shelves.forEach((s) => this.shelf(el, s)));
     });
+  }
+
+  /** A step through the album: the note before or after, as a row — its cover if it has one, Previous or Next, its title, its opening line. */
+  step(el, dir, file, album) {
+    const row = el.createDiv({ cls: `dr-note-step is-${dir}` });
+    row.setAttribute('role', 'link');
+    row.setAttribute('tabindex', '0');
+    row.setAttribute('aria-label', `${dir === 'next' ? 'Next' : 'Previous'} in ${album.name}: ${file.basename}`);
+    this.mark(row, file);
+    const text = row.createDiv({ cls: 'dr-note-step-text' });
+    text.createDiv({ cls: 'dr-note-step-label', text: dir === 'next' ? 'Next' : 'Previous' });
+    text.createDiv({ cls: 'dr-note-step-title', text: file.basename });
+    this.opening(file, text.createDiv({ cls: 'dr-note-step-line' }));
+    const open = () => this.app.workspace.getLeaf(false).openFile(file);
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
+  }
+
+  /** A note's cover as a small mark at the start of a row or tile, where it has one. */
+  mark(el, file) {
+    const src = noteCoverSrc(this.plugin, file);
+    if (!src) return;
+    const art = el.createDiv({ cls: 'dr-note-mark' });
+    const img = art.createEl('img');
+    img.setAttribute('src', src);
+    img.setAttribute('alt', '');
+    el.addClass('has-mark');
   }
 
   /** A shelf: its title, and a row of notes, each its title and opening line. */
@@ -259,6 +305,7 @@ export class NotePage extends Feature {
       const tile = row.createDiv({ cls: 'dr-note-tile' });
       tile.setAttribute('role', 'link');
       tile.setAttribute('tabindex', '0');
+      this.mark(tile, f);
       tile.createDiv({ cls: 'dr-note-tile-title', text: f.basename });
       const line = tile.createDiv({ cls: 'dr-note-tile-line' });
       this.opening(f, line);
