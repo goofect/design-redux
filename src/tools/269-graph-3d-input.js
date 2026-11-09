@@ -245,7 +245,6 @@ export class Graph3DInput extends ItemView {
     else if (e.key === 'Enter' && this.picked >= 0) this.openNode(this.picked, e.ctrlKey || e.metaKey ? 'tab' : false);
     else if (e.key === 'Escape' && (this.picked >= 0 || this.focusKey)) this.clearFocus();
     else if (e.key === 'f' && !e.ctrlKey && !e.metaKey) this.fit();
-    else if (e.key === '/') this.openFind();
     else return;
     e.preventDefault();
     this.touched = true;

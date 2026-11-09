@@ -29,74 +29,12 @@ export class Graph3DHud extends Graph3DPanel {
   buildHud() {
     const hud = (this.hud = this.contentEl.createDiv({ cls: 'dr-graph3d-hud' }));
 
-    const find = hud.createDiv({ cls: 'dr-graph3d-pane dr-graph3d-find' });
-    this.stats = find.createDiv({ cls: 'dr-graph3d-stats' });
-    find.createDiv({
-      cls: 'dr-graph3d-hint',
-      text: Platform.isMobile ? 'Drag to turn, pinch to zoom. Tap a note to trace its links.' : 'Drag to turn, scroll to zoom. Click a note to trace its links; Esc clears.',
-    });
-    const box = find.createDiv({ cls: 'dr-graph3d-search' });
-    const input = (this.findInput = box.createEl('input', { cls: 'dr-graph3d-input', type: 'search' }));
-    input.setAttribute('placeholder', 'Find a note');
-    input.setAttribute('aria-label', 'Find a note');
-    input.setAttribute('autocomplete', 'off');
-    input.setAttribute('spellcheck', 'false');
-    input.setAttribute('role', 'combobox');
-    input.setAttribute('aria-expanded', 'false');
-    const results = (this.results = box.createEl('ul', { cls: 'dr-graph3d-results' }));
-    results.setAttribute('role', 'listbox');
-    results.hidden = true;
-    this.registerDomEvent(input, 'input', () => this.findMatches());
-    this.registerDomEvent(input, 'keydown', (e) => this.findKey(e));
-    this.registerDomEvent(input, 'blur', () => this.host().setTimeout(() => this.closeFind(), 150));
-    this.registerDomEvent(results, 'mousedown', (e) => e.preventDefault());
-    this.registerDomEvent(results, 'click', (e) => {
-      const li = e.target.closest('[data-k]');
-      if (li) this.pickMatch(+li.dataset.k);
-    });
-    const toggle = (this.groupsToggle = find.createEl('button', { cls: 'dr-graph3d-chip dr-graph3d-groups-toggle' }));
-    toggle.setAttribute('aria-expanded', 'false');
-    this.registerDomEvent(toggle, 'click', () => {
-      const open = !hud.hasClass('is-groups-open');
-      hud.toggleClass('is-groups-open', open);
-      toggle.setAttribute('aria-expanded', String(open));
-    });
-
-    const groups = (this.groupsPane = hud.createDiv({ cls: 'dr-graph3d-pane dr-graph3d-groups' }));
-    const head = groups.createDiv({ cls: 'dr-graph3d-pane-head' });
-    this.groupsTitle = head.createDiv({ cls: 'dr-graph3d-title' });
-    this.groupsCount = head.createSpan({ cls: 'dr-graph3d-count' });
-    this.groupFilter = groups.createEl('input', { cls: 'dr-graph3d-input', type: 'search' });
-    this.groupFilter.setAttribute('placeholder', 'Filter');
-    this.groupFilter.setAttribute('aria-label', 'Filter the list');
-    this.groupList = groups.createEl('ol', { cls: 'dr-graph3d-group-list' });
-    this.registerDomEvent(this.groupFilter, 'input', () => this.renderGroups());
-    this.registerDomEvent(this.groupList, 'click', (e) => {
-      const b = e.target.closest('[data-group]');
-      if (b) this.focusGroup(b.dataset.group);
-    });
-
+    // What's picked, at the right; the settings, Obsidian's graph's own box, in the corner beside it.
     const right = (this.right = hud.createDiv({ cls: 'dr-graph3d-right' }));
-    this.buildPanel(right);
     this.detail = right.createDiv({ cls: 'dr-graph3d-pane dr-graph3d-detail' });
     this.detail.hidden = true;
     this.registerDomEvent(this.detail, 'click', (e) => this.detailClick(e));
-
-    const side = hud.createDiv({ cls: 'dr-graph3d-side' });
-    this.sideButtons = {};
-    const button = (key, icon, label, run) => {
-      const b = side.createEl('button', { cls: 'clickable-icon dr-graph3d-side-button' });
-      b.setAttribute('aria-label', label);
-      setIcon(b, icon);
-      this.registerDomEvent(b, 'click', run);
-      this.sideButtons[key] = b;
-    };
-    button('panel', 'settings', 'Graph settings', () => this.togglePanel());
-    button('fit', 'scan', 'Fit every note in view', () => this.fit());
-    button('group', 'boxes', 'Group by community', () => this.setOption('group', !this.options.group));
-    button('hubs', 'type', 'Name the biggest notes', () => this.setOption('hubs', !this.options.hubs));
-    button('links', 'waypoints', 'Show links', () => this.setOption('links', !this.options.links));
-    button('spin', 'rotate-3d', 'Turn slowly', () => this.setOption('spin', !this.options.spin));
+    this.buildPanel(hud);
 
     this.tip = this.contentEl.createDiv({ cls: 'dr-graph3d-tip' });
     this.tip.hidden = true;
@@ -121,26 +59,17 @@ export class Graph3DHud extends Graph3DPanel {
     const noun = GRAPH_3D_NOUNS[this.options.colourBy];
     b.group.setAttribute('aria-label', noun ? `Group by ${noun[0]}` : 'Group by colour (nothing to group by)');
     b.group.toggleClass('is-disabled', !noun);
+    b.panel.setAttribute('aria-expanded', String(!!this.options.panel));
     if (this.right) this.right.toggleClass('is-settings', !!this.options.panel);
   }
 
   /* -- how much is drawn ---------------------------------------------- */
 
+  /** Nothing drawn: why, and what to do about it, in the middle of the view. */
   renderStats() {
-    if (!this.stats) return;
+    if (!this.empty) return;
     const nodes = this.graph.nodes;
     this.statsHot = !!(this.runner && this.runner.hot);
-    const groups = this.groups ? this.groups.length : 0;
-    const noun = GRAPH_3D_NOUNS[this.options.colourBy];
-    if (this.statsHot && nodes.length > 1) {
-      this.stats.setText(`Laying out ${nodes.length.toLocaleString()} notes…`);
-    } else {
-      const notes = nodes.filter((n) => n.kind === 'note').length;
-      const rest = nodes.length - notes;
-      const root = this.graph.root >= 0 ? nodes[this.graph.root].name : '';
-      const parts = [`${notes.toLocaleString()} ${notes === 1 ? 'note' : 'notes'}`, rest ? `${rest.toLocaleString()} more` : '', `${(this.graph.links.length / 2).toLocaleString()} links`, noun && groups ? `${groups.toLocaleString()} ${groups === 1 ? noun[0] : noun[1]}` : ''];
-      this.stats.setText(parts.filter(Boolean).join(' · ') + (root ? ` around ${root}` : ''));
-    }
     const empty = this.empty;
     empty.hidden = nodes.length > 0;
     if (!empty.hidden) {
@@ -149,38 +78,6 @@ export class Graph3DHud extends Graph3DPanel {
       empty.createDiv({ cls: 'dr-graph3d-title', text: o.local && !this.root && !this.openPath() ? 'Open a note to see what’s around it' : o.search ? `Nothing matches “${o.search}”` : 'No notes yet' });
       empty.createDiv({ cls: 'dr-graph3d-hint', text: o.search || o.local || o.hidden.length ? 'Change what’s shown in Graph settings.' : 'Notes and their links appear here as you write them.' });
     }
-  }
-
-  /* -- the communities (or folders, or tags) --------------------------- */
-
-  renderGroups() {
-    const pane = this.groupsPane;
-    if (!pane) return;
-    const noun = GRAPH_3D_NOUNS[this.options.colourBy];
-    const groups = this.groups || [];
-    pane.toggleClass('is-none', !noun || !groups.length);
-    this.groupsToggle.setText(noun ? noun[1].charAt(0).toUpperCase() + noun[1].slice(1) : '');
-    this.groupsToggle.toggleClass('is-none', !noun || !groups.length);
-    if (!noun) return;
-    this.groupsTitle.setText(noun[1].charAt(0).toUpperCase() + noun[1].slice(1));
-    this.groupsCount.setText(groups.length.toLocaleString());
-    const f = this.groupFilter.value.trim().toLowerCase();
-    const list = this.groupList;
-    list.empty();
-    let shown = 0;
-    groups.forEach((g) => {
-      const name = groupName(this.graph, g.key);
-      if (f && !name.toLowerCase().includes(f)) return;
-      shown++;
-      const b = list.createEl('li').createEl('button', { cls: 'dr-graph3d-group' });
-      b.dataset.group = g.key;
-      b.setAttribute('aria-pressed', String(this.focusKey === g.key));
-      b.toggleClass('is-active', this.focusKey === g.key);
-      b.createSpan({ cls: 'dr-graph3d-dot' }).style.setProperty('--dr-graph3d-dot', this.groupCss(g.key));
-      b.createSpan({ cls: 'dr-graph3d-group-name', text: name });
-      b.createSpan({ cls: 'dr-graph3d-count', text: g.count.toLocaleString() });
-    });
-    if (!shown) list.createEl('li', { cls: 'dr-graph3d-none', text: `No ${noun[0]} matches that.` });
   }
 
   groupCss(key) {
@@ -198,7 +95,7 @@ export class Graph3DHud extends Graph3DPanel {
     this.picked = -1;
     this.lightChanged();
     this.renderDetail();
-    this.renderGroups();
+    this.renderGroupList();
     const members = [];
     this.graph.nodes.forEach((n, i) => n.key === key && members.push(i));
     const aim = fitView(this.camera, this.runner.positions, this.graph.nodes.length, this.w || 1, this.h || 1, members);
@@ -213,77 +110,7 @@ export class Graph3DHud extends Graph3DPanel {
     const had = this.focusKey;
     this.focusKey = null;
     this.pick(-1);
-    if (had) this.renderGroups();
-  }
-
-  /* -- finding a note ------------------------------------------------ */
-
-  findMatches() {
-    const q = this.findInput.value.trim().toLowerCase();
-    if (!q) {
-      this.closeFind();
-      return;
-    }
-    const nodes = this.graph.nodes;
-    const hits = [];
-    nodes.forEach((n, i) => {
-      const name = n.name.toLowerCase();
-      const rank = name.startsWith(q) ? 0 : name.includes(q) ? 1 : n.path.toLowerCase().includes(q) ? 2 : -1;
-      if (rank >= 0) hits.push([rank, i]);
-    });
-    hits.sort((a, b) => a[0] - b[0] || nodes[b[1]].degree - nodes[a[1]].degree || nodes[a[1]].name.localeCompare(nodes[b[1]].name));
-    this.matches = hits.slice(0, 8).map((h) => h[1]);
-    this.activeMatch = this.matches.length ? 0 : -1;
-    const list = this.results;
-    list.empty();
-    if (!this.matches.length) list.createEl('li', { cls: 'dr-graph3d-none', text: 'Nothing matches. Try part of a name or a path.' });
-    this.matches.forEach((i, k) => {
-      const n = nodes[i];
-      const li = list.createEl('li', { cls: 'dr-graph3d-result' });
-      li.dataset.k = String(k);
-      li.setAttribute('role', 'option');
-      li.setAttribute('aria-selected', String(k === this.activeMatch));
-      li.createSpan({ cls: 'dr-graph3d-dot' }).style.setProperty('--dr-graph3d-dot', this.groupCss(n.key));
-      li.createSpan({ cls: 'dr-graph3d-result-name', text: n.name });
-      li.createSpan({ cls: 'dr-graph3d-result-path', text: n.path || { tag: 'Tag', missing: 'Not written yet' }[n.kind] || '' });
-    });
-    list.hidden = false;
-    this.findInput.setAttribute('aria-expanded', 'true');
-  }
-
-  findKey(e) {
-    const n = this.matches ? this.matches.length : 0;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (!n) return;
-      this.activeMatch = (this.activeMatch + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
-      this.results.querySelectorAll('.dr-graph3d-result').forEach((li, k) => li.setAttribute('aria-selected', String(k === this.activeMatch)));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      this.pickMatch(Math.max(0, this.activeMatch));
-    } else if (e.key === 'Escape') {
-      this.closeFind();
-      this.findInput.blur();
-    }
-  }
-
-  pickMatch(k) {
-    const i = this.matches ? this.matches[k] : undefined;
-    if (i === undefined) return;
-    this.closeFind();
-    this.findInput.blur();
-    this.pick(i, true);
-  }
-
-  closeFind() {
-    if (!this.results) return;
-    this.results.hidden = true;
-    this.findInput.setAttribute('aria-expanded', 'false');
-  }
-
-  openFind() {
-    this.findInput.focus();
-    this.findInput.select();
+    if (had) this.renderGroupList();
   }
 
   /* -- what's picked --------------------------------------------------- */

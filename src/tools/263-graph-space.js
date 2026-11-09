@@ -33,6 +33,7 @@ export const GRAPH_3D_DEFAULTS = {
   group: false, // each colour's notes pulled to a place of their own
   hubs: true, // the biggest notes named, with nothing picked
   links: true,
+  folds: {}, // the settings' sections folded, by name
   scene: 'night', // drawn on a night sky, as the graphify page is; 'theme': on the theme's background
 };
 
@@ -177,35 +178,113 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
  * Communities, by label propagation: each note takes the label most of
  * its links have — a hub's counting for less — till none changes. The
  * most linked go first and ties go to the lower label, so the same
- * graph gives the same communities. Gives each note's label.
+ * graph gives the same communities. Propagation leaves a sparse vault in
+ * crumbs (thousands of twos and threes), so then each community smaller
+ * than about √n⁄2 notes joins a neighbour, the smallest first: the one
+ * it links to most for its size, as modularity would have it (links to
+ * a big community count for less, so hubs don't swallow the vault); a
+ * cluster linked to nothing else stays its own. Flat arrays
+ * throughout: a pass costs a look at each link. Gives each note's label.
  */
 export function findCommunities(nodes) {
   const n = nodes.length;
   const label = new Int32Array(n);
-  for (let i = 0; i < n; i++) label[i] = i;
-  const order = nodes.map((_, i) => i).sort((a, b) => nodes[b].degree - nodes[a].degree || a - b);
+  if (!n) return label;
+  // The links as one flat list, each note's a run of it.
+  const start = new Int32Array(n + 1);
+  for (let i = 0; i < n; i++) start[i + 1] = start[i] + nodes[i].near.length;
+  const near = new Int32Array(start[n]);
+  const weight = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    near.set(nodes[i].near, start[i]);
+    weight[i] = 1 / Math.sqrt(Math.max(1, nodes[i].degree));
+    label[i] = i;
+  }
+  const order = Int32Array.from(nodes.keys()).sort((a, b) => nodes[b].degree - nodes[a].degree || a - b);
+  // Each label's weight among a note's links, and which labels were touched, to clear after.
+  const sum = new Float64Array(n);
+  const touched = new Int32Array(n);
   for (let round = 0; round < 30; round++) {
     let changed = 0;
-    order.forEach((i) => {
-      const near = nodes[i].near;
-      if (!near.length) return;
-      const weight = new Map();
-      near.forEach((j) => weight.set(label[j], (weight.get(label[j]) || 0) + 1 / Math.sqrt(nodes[j].degree)));
+    for (let k = 0; k < n; k++) {
+      const i = order[k];
+      if (start[i] === start[i + 1]) continue;
+      let t = 0;
+      for (let e = start[i]; e < start[i + 1]; e++) {
+        const j = near[e];
+        const l = label[j];
+        if (sum[l] === 0) touched[t++] = l;
+        sum[l] += weight[j];
+      }
       let best = label[i];
-      let most = weight.get(best) || 0;
-      weight.forEach((w, l) => {
+      let most = sum[best];
+      for (let q = 0; q < t; q++) {
+        const l = touched[q];
+        const w = sum[l];
         if (w > most + 1e-9 || (Math.abs(w - most) <= 1e-9 && l < best)) {
           best = l;
           most = w;
         }
-      });
+      }
+      for (let q = 0; q < t; q++) sum[touched[q]] = 0;
       if (best !== label[i]) {
         label[i] = best;
         changed++;
       }
-    });
+    }
     if (!changed) break;
   }
+
+  // The crumbs joined up. Members kept as chains (first, next, last) so a merge is a splice.
+  const smallest = Math.max(4, Math.round(Math.sqrt(n) / 2));
+  const size = new Int32Array(n);
+  const total = new Float64Array(n);
+  const twice = Math.max(1, start[n]);
+  const first = new Int32Array(n).fill(-1);
+  const last = new Int32Array(n).fill(-1);
+  const next = new Int32Array(n).fill(-1);
+  for (let i = 0; i < n; i++) {
+    const l = label[i];
+    size[l]++;
+    total[l] += start[i + 1] - start[i];
+    if (first[l] < 0) first[l] = i;
+    else next[last[l]] = i;
+    last[l] = i;
+  }
+  const small = [];
+  for (let l = 0; l < n; l++) if (size[l] && size[l] < smallest) small.push(l);
+  small.sort((a, b) => size[a] - size[b] || a - b);
+  const links = new Float64Array(n);
+  small.forEach((l) => {
+    if (!size[l] || size[l] >= smallest) return;
+    let t = 0;
+    for (let i = first[l]; i >= 0; i = next[i]) {
+      for (let e = start[i]; e < start[i + 1]; e++) {
+        const m = label[near[e]];
+        if (m === l) continue;
+        if (links[m] === 0) touched[t++] = m;
+        links[m]++;
+      }
+    }
+    let to = -1;
+    let gain = -Infinity;
+    for (let q = 0; q < t; q++) {
+      const m = touched[q];
+      const g = links[m] - (total[l] * total[m]) / twice;
+      if (g > gain + 1e-9 || (Math.abs(g - gain) <= 1e-9 && m < to)) {
+        to = m;
+        gain = g;
+      }
+    }
+    for (let q = 0; q < t; q++) links[touched[q]] = 0;
+    if (to < 0) return;
+    for (let i = first[l]; i >= 0; i = next[i]) label[i] = to;
+    next[last[to]] = first[l];
+    last[to] = last[l];
+    size[to] += size[l];
+    total[to] += total[l];
+    size[l] = 0;
+  });
   return label;
 }
 
@@ -246,6 +325,30 @@ export function filtersFromGraph(o) {
   if (typeof o.showOrphans === 'boolean') out.orphans = o.showOrphans;
   if (typeof o.localJumps === 'number' && o.localJumps > 0) out.depth = Math.min(5, Math.round(o.localJumps));
   return out;
+}
+
+/** What a graph is worked out from, as a short mark: the same notes, links, tags and settings give the same mark, so a rebuild can be skipped. */
+export function inputSignature(notes, files, opts, root) {
+  let h = 2166136261;
+  const mix = (s) => {
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+  };
+  const o = opts || {};
+  mix(JSON.stringify([o.search, o.tags, o.attachments, o.missing, o.orphans, o.local, o.depth, o.colourBy, o.hidden, root || '']));
+  notes.forEach((n) => {
+    mix(n.path);
+    mix('\u0001');
+    for (const to in n.links || {}) mix(to);
+    mix('\u0002');
+    for (const name in n.missing || {}) mix(name);
+    mix('\u0003');
+    (n.tags || []).forEach(mix);
+  });
+  files.forEach((f) => mix(f.path));
+  return `${notes.length}:${files.length}:${h >>> 0}`;
 }
 
 /** A short mark of which notes there are and how they link: the same while neither changes. */

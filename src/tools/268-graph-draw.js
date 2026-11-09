@@ -113,9 +113,9 @@ function glLocations(gl, prog, attributes, uniforms) {
   return loc;
 }
 
-/** Each note's colour and presence (1 as it is, less as it's dimmed), four numbers a note. */
-function nodeColours(count, slots, presence, palette) {
-  const out = new Float32Array(count * 4);
+/** Each note's colour and presence (1 as it is, less as it's dimmed), four numbers a note: into out, kept from call to call when it's big enough. */
+function nodeColours(count, slots, presence, palette, out) {
+  if (!out || out.length !== count * 4) out = new Float32Array(count * 4);
   for (let i = 0; i < count; i++) {
     const c = palette[slots[i]] || palette[0];
     out[i * 4] = c[0];
@@ -218,7 +218,9 @@ export class GLRenderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf.size);
     gl.bufferData(gl.ARRAY_BUFFER, sizes, gl.DYNAMIC_DRAW);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf.colour);
-    gl.bufferData(gl.ARRAY_BUFFER, nodeColours(this.count, slots, presence, palette), gl.DYNAMIC_DRAW);
+    // The colours worked out into the same array each time: a hover changes them, and shouldn't make garbage.
+    this.colourData = nodeColours(this.count, slots, presence, palette, this.colourData);
+    gl.bufferData(gl.ARRAY_BUFFER, this.colourData, gl.DYNAMIC_DRAW);
   }
 
   /** The links lit, as index pairs: drawn over the rest in the accent colour. */

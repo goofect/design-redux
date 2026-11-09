@@ -217,12 +217,12 @@ body.is-mobile .dr-chip-clear {
  *
  * The vault's notes in 3D (263–276). The graph is drawn on one canvas, and
  * the rings and names on another over it, which takes the pointer: a drag
- * turns the graph, so the page mustn't scroll under it. Over both float
- * panes of glass, as on the graph's own page: at the top left how much is
- * drawn and a box to find a note, under it the communities; on the right
- * what's picked, or the settings; and down the right edge the controls, a
- * column of icons like the graph's gear. A tip by the pointer names the
- * note under it. The layout narrows to one column on a phone or a slim pane.
+ * turns the graph, so the page mustn't scroll under it. In the corner, the
+ * settings, built in the graph's own markup (.graph-controls and its
+ * folding sections), so Obsidian and the theme dress them as they dress
+ * the graph's: shut, a column of buttons; open, the box. Beside them, a
+ * pane of glass with what's picked. A tip by the pointer names the note
+ * under it. On a phone or a slim pane, what's picked is a sheet at the foot.
  */
 
 .dr-graph3d.view-content {
@@ -274,21 +274,16 @@ body.is-mobile .dr-chip-clear {
   box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
-/* The panes: a grid over the graph, which takes the pointer only where a pane is. */
+/* Over the graph: taking the pointer only where something is. */
 .dr-graph3d-hud {
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 300px) auto;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--dr-space-2) var(--dr-space-3);
-  padding: var(--dr-space-3);
   pointer-events: none;
 }
 
 .dr-graph3d-pane,
-.dr-graph3d-side {
+.dr-graph3d .graph-controls {
   pointer-events: auto;
 }
 
@@ -358,10 +353,6 @@ body.is-mobile .dr-chip-clear {
   background-color: var(--dr-graph3d-dot, var(--graph-node));
 }
 
-.dr-graph3d .dr-graph3d-input {
-  width: 100%;
-}
-
 .dr-graph3d .dr-graph3d-close {
   margin-right: calc(var(--dr-space-1) * -1);
   padding: var(--dr-space-1);
@@ -369,7 +360,6 @@ body.is-mobile .dr-chip-clear {
 
 /* Buttons the panes draw plainly, as rows and links rather than Obsidian's raised buttons. */
 .dr-graph3d button.dr-graph3d-chip,
-.dr-graph3d button.dr-graph3d-group,
 .dr-graph3d button.dr-graph3d-step,
 .dr-graph3d button.dr-graph3d-link,
 .dr-graph3d button.dr-graph3d-more {
@@ -383,7 +373,7 @@ body.is-mobile .dr-chip-clear {
   cursor: var(--cursor);
 }
 
-/* A chip: a folder shown or hidden, Copy link, the communities on a phone. */
+/* A chip: a folder shown or hidden, Copy link. */
 .dr-graph3d button.dr-graph3d-chip {
   display: inline-flex;
   align-items: center;
@@ -402,153 +392,21 @@ body.is-mobile .dr-chip-clear {
   color: var(--text-normal);
 }
 
-/* Top left: how much is drawn, and a box to find a note. Above the pane under it, so its matches drop over the list. */
-.dr-graph3d-find {
-  position: relative;
-  z-index: 2;
-  grid-column: 1;
-  grid-row: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--dr-space-2);
-}
-
-.dr-graph3d-stats {
-  font-weight: var(--font-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
-.dr-graph3d-search {
-  position: relative;
-}
-
-.dr-graph3d-results {
-  position: absolute;
-  top: calc(100% + var(--dr-space-1));
-  left: 0;
-  right: 0;
-  z-index: 2;
-  max-height: 50vh;
-  overflow-y: auto;
-  margin: 0;
-  padding: var(--dr-space-1);
-  list-style: none;
-  background-color: var(--background-primary);
-  border: 1px solid var(--dr-line);
-  border-radius: var(--dr-radius-md);
-  box-shadow: var(--dr-shadow-md);
-}
-
-.dr-graph3d-result {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  column-gap: var(--dr-space-2);
-  padding: var(--dr-space-1) var(--dr-space-2);
-  border-radius: var(--dr-r);
-  cursor: var(--cursor);
-}
-
-.dr-graph3d-result .dr-graph3d-dot {
-  grid-row: span 2;
-}
-
-.dr-graph3d-result[aria-selected="true"] {
-  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
-}
-
-.dr-graph3d-result-name,
-.dr-graph3d-group-name,
-.dr-graph3d-step-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-graph3d-result-path,
-.dr-graph3d-step-path {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-monospace);
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.dr-graph3d-none {
-  padding: var(--dr-space-2);
-  list-style: none;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-/* The communities only show from this chip on a phone. */
-.dr-graph3d button.dr-graph3d-groups-toggle {
-  display: none;
-}
-
-/* Under it, the communities (or folders, or tags): each a colour, a name and a count. */
-.dr-graph3d-groups {
-  grid-column: 1;
-  grid-row: 2;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  gap: var(--dr-space-2);
-  max-height: 100%;
-  min-height: 0;
-  padding: var(--dr-space-3) var(--dr-space-2) var(--dr-space-2);
-}
-
-.dr-graph3d-groups > .dr-graph3d-pane-head,
-.dr-graph3d .dr-graph3d-groups > .dr-graph3d-input {
-  box-sizing: border-box;
-  width: auto;
-  margin: 0 var(--dr-space-1);
-}
-
-.dr-graph3d-groups.is-none {
-  display: none;
-}
-
-.dr-graph3d-group-list {
-  min-height: 0;
-  overflow-y: auto;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dr-graph3d button.dr-graph3d-group {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: var(--dr-space-2);
-  width: 100%;
-  padding: var(--dr-space-1) var(--dr-space-2);
-  border-radius: var(--dr-r);
-  text-align: left;
-}
-
-.dr-graph3d-group-name {
-  flex: 1 1 auto;
-}
-
-.dr-graph3d button.dr-graph3d-group.is-active {
-  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
-}
-
-/* On the right: what's picked, or the settings while they're open. */
+/* What's picked: beside the settings, at the top right — left of their
+   buttons while they're shut, left of the box while it's open. */
 .dr-graph3d-right {
-  grid-column: 3;
-  grid-row: 1 / 3;
+  position: absolute;
+  top: var(--size-4-3);
+  right: calc(var(--size-4-3) * 2 + var(--dr-graph3d-controls, 36px));
+  width: min(300px, calc(100% - var(--size-4-3) * 3 - var(--dr-graph3d-controls, 36px)));
+  max-height: calc(100% - var(--size-4-3) * 2);
   display: flex;
   flex-direction: column;
-  gap: var(--dr-space-2);
-  min-height: 0;
   pointer-events: none;
+}
+
+.dr-graph3d-right.is-settings {
+  --dr-graph3d-controls: 240px;
 }
 
 .dr-graph3d-right > .dr-graph3d-pane {
@@ -557,7 +415,7 @@ body.is-mobile .dr-chip-clear {
   overflow-y: auto;
 }
 
-.dr-graph3d-right.is-settings > .dr-graph3d-detail {
+.dr-graph3d-detail {
   display: none;
 }
 
@@ -668,77 +526,97 @@ body.is-mobile .dr-chip-clear {
   overflow-wrap: anywhere;
 }
 
-/* The settings: Obsidian's rows, made compact to fit the pane. */
-.dr-graph3d-settings {
-  padding-top: var(--dr-space-2);
+/* The settings: the graph's own box, which Obsidian dresses. What it
+   leaves to the graph's view is set here: where the box sits, its folds,
+   the buttons it shows shut (the gear and the wand, and ours under them),
+   and what the 3D graph adds — the folders and the groups. */
+.dr-graph3d .graph-controls {
+  position: absolute;
+  top: var(--size-4-3);
+  right: var(--size-4-3);
+  max-height: calc(100% - var(--size-4-3) * 2);
+  overflow-y: auto;
 }
 
-.dr-graph3d-section {
-  padding-top: var(--dr-space-3);
+.dr-graph3d .graph-controls.is-close {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--size-2-1);
+  overflow: visible;
 }
 
-.dr-graph3d .dr-graph3d-settings .setting-item {
-  padding: var(--dr-space-1) 0;
-  border-top: none;
-  background: none;
-  gap: var(--dr-space-2);
-}
-
-.dr-graph3d .dr-graph3d-settings .setting-item-name {
-  font-size: var(--font-ui-small);
-}
-
-.dr-graph3d .dr-graph3d-settings .setting-item-description {
-  padding-top: 0;
-  font-size: var(--font-ui-smaller);
-}
-
-.dr-graph3d .dr-graph3d-filter .setting-item-info {
+.dr-graph3d .graph-controls:not(.is-close) .graph-controls-button.mod-more {
   display: none;
 }
 
-.dr-graph3d .dr-graph3d-filter .setting-item-control,
-.dr-graph3d .dr-graph3d-filter .search-input-container {
-  flex: 1 1 auto;
-  width: 100%;
+.dr-graph3d .graph-controls.is-close .graph-controls-button.mod-more {
+  display: flex;
+}
+
+.dr-graph3d .graph-controls-button.is-active {
+  color: var(--interactive-accent);
+}
+
+.dr-graph3d .graph-controls-button.is-disabled {
+  opacity: 0.4;
+}
+
+.dr-graph3d .graph-control-section.is-collapsed > .tree-item-children {
+  display: none;
+}
+
+.dr-graph3d .graph-control-section .collapse-icon.is-collapsed svg.svg-icon {
+  transform: rotate(-90deg);
+}
+
+.dr-graph3d-subhead {
+  padding-top: var(--size-4-2);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
 }
 
 .dr-graph3d-folders {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--dr-space-1);
-  padding: var(--dr-space-1) 0;
+  gap: var(--size-2-2);
+  padding: var(--size-4-1) 0 var(--size-4-2);
 }
 
-/* Down the right edge, the controls: icons standing on the graph, as its gear does. */
-.dr-graph3d-side {
-  grid-column: 4;
-  grid-row: 1 / 3;
-  align-self: start;
+/* The groups, as the graph lists its own: a colour, a name, a count; a click lights one. */
+.dr-graph3d-group-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--dr-space-1);
+  max-height: 240px;
+  overflow-y: auto;
+  padding-bottom: var(--size-4-2);
 }
 
-.dr-graph3d .dr-graph3d-side-button {
-  display: flex;
+.dr-graph3d-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: center;
-  width: calc(var(--dr-u) * 8);
-  height: calc(var(--dr-u) * 8);
-  padding: 0;
-  border-radius: var(--dr-radius-md);
-  color: var(--icon-color);
+  gap: var(--size-4-2);
+  padding: var(--size-2-2) var(--size-2-3);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  cursor: var(--cursor);
 }
 
-.dr-graph3d .dr-graph3d-side-button.is-active {
+.dr-graph3d-group.is-active {
   background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
-  color: var(--interactive-accent);
 }
 
-.dr-graph3d .dr-graph3d-side-button.is-disabled {
-  opacity: 0.4;
+.dr-graph3d-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-graph3d-none {
+  padding: var(--size-2-2) 0;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
 }
 
 /* The note under the pointer, by it: moved there by the code, never in the way. */
@@ -770,7 +648,7 @@ body.is-mobile .dr-chip-clear {
   overflow-wrap: anywhere;
 }
 
-/* Nothing to draw: why, in the middle, under the panes. */
+/* Nothing to draw: why, in the middle, under the settings and what's picked. */
 .dr-graph3d-empty {
   position: absolute;
   inset: 0;
@@ -786,8 +664,8 @@ body.is-mobile .dr-chip-clear {
 }
 
 /* The night scene: the graph on near-black whatever the theme, as the
-   graphify page has it. What stands right on it — the controls down the
-   edge, the empty message — is light; Obsidian's colour for text on the
+   graphify page has it. What stands right on it — the settings' buttons
+   while they're shut, the empty message — is light; Obsidian's colour for text on the
    accent is light in light and dark themes alike, so it's the one used.
    The panes stay the theme's glass, more solid, with a faint light edge so
    they don't sink into the dark. */
@@ -803,11 +681,11 @@ body.is-mobile .dr-chip-clear {
   box-shadow: var(--dr-shadow-md);
 }
 
-.dr-graph3d.is-scene-night .dr-graph3d-side-button {
+.dr-graph3d.is-scene-night .graph-controls.is-close .graph-controls-button {
   color: var(--dr-graph3d-on-scene-muted);
 }
 
-.dr-graph3d.is-scene-night .dr-graph3d-side-button.is-active {
+.dr-graph3d.is-scene-night .graph-controls.is-close .graph-controls-button.is-active {
   background-color: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
   color: color-mix(in srgb, var(--interactive-accent) 55%, var(--dr-graph3d-on-scene));
 }
@@ -826,9 +704,12 @@ body.is-mobile .dr-chip-clear {
   box-shadow: var(--dr-shadow-md);
 }
 
+.dr-graph3d.is-scene-night .graph-controls:not(.is-close) {
+  border-color: color-mix(in srgb, var(--text-on-accent) 16%, var(--background-modifier-border));
+}
+
 @media (any-hover: hover) {
-  .dr-graph3d-result:hover,
-  .dr-graph3d button.dr-graph3d-group:hover,
+  .dr-graph3d-group:hover,
   .dr-graph3d button.dr-graph3d-step:hover {
     background-color: var(--dr-hover);
   }
@@ -846,75 +727,32 @@ body.is-mobile .dr-chip-clear {
     text-decoration: underline;
   }
 
-  .dr-graph3d .dr-graph3d-side-button:hover {
-    background-color: var(--dr-hover);
-    color: var(--icon-color-hover);
-  }
-
-  .dr-graph3d.is-scene-night .dr-graph3d-side-button:hover {
+  .dr-graph3d.is-scene-night .graph-controls.is-close .graph-controls-button:hover {
     background-color: var(--dr-graph3d-on-scene-wash);
     color: var(--dr-graph3d-on-scene);
   }
 }
 
-/* A tab of middling width: narrower panes, so more of the graph shows between them. */
+/* A tab of middling width: what's picked gives way while the settings are open. */
 @container (max-width: 960px) {
-  .dr-graph3d-hud {
-    grid-template-columns: minmax(0, 220px) minmax(0, 1fr) minmax(0, 250px) auto;
-    gap: var(--dr-space-2);
-    padding: var(--dr-space-2);
+  .dr-graph3d-right.is-settings {
+    display: none;
   }
 }
 
-/* A phone, or a slim pane: one column. Find at the top, the communities
-   under it when asked for, the controls beside them, what's picked a
-   sheet at the bottom. */
+/* A phone, or a slim pane: what's picked is a sheet at the foot, and gives
+   way while the settings are open. */
 @container (max-width: 700px) {
-  .dr-graph3d-hud {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto minmax(0, 1fr) auto;
-    gap: var(--dr-space-2);
-    padding: var(--dr-space-2);
-  }
-
-  .dr-graph3d-find {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .dr-graph3d-find .dr-graph3d-hint {
-    display: none;
-  }
-
-  .dr-graph3d button.dr-graph3d-groups-toggle {
-    display: inline-flex;
-    align-self: flex-start;
-  }
-
-  .dr-graph3d button.dr-graph3d-groups-toggle.is-none {
-    display: none;
-  }
-
-  .dr-graph3d-groups {
-    display: none;
-    grid-column: 1;
-    grid-row: 2;
-    max-height: 40vh;
-  }
-
-  .dr-graph3d-hud.is-groups-open .dr-graph3d-groups:not(.is-none) {
-    display: flex;
-  }
-
-  .dr-graph3d-side {
-    grid-column: 2;
-    grid-row: 1 / 3;
-  }
-
   .dr-graph3d-right {
-    grid-column: 1 / -1;
-    grid-row: 4;
-    align-self: end;
-    max-height: 45vh;
+    top: auto;
+    right: var(--size-4-2);
+    bottom: var(--size-4-2);
+    left: var(--size-4-2);
+    width: auto;
+    max-height: 45%;
+  }
+
+  .dr-graph3d-right.is-settings {
+    display: none;
   }
 }

@@ -19,7 +19,7 @@ import { getAllTags, TFile } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, KIND_KEYS, parseColour, spaceSignature, topFolder } from './263-graph-space.js';
+import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, inputSignature, KIND_KEYS, parseColour, spaceSignature, topFolder } from './263-graph-space.js';
 import { layoutOptions, LayoutRunner, startPositions } from './264-graph-layout.js';
 import { fitView, placeNames, projectInto } from './265-graph-camera.js';
 import { CanvasRenderer, drawOverlay, GLRenderer } from './268-graph-draw.js';
@@ -127,6 +127,8 @@ export class Graph3DView extends Graph3DHud {
       this.touched = true;
     }
     if (typeof s.root === 'string') this.root = s.root;
+    // Settings back from the tab's state: the next build works everything out again, sizes and colours too.
+    this.input = null;
     if (this.runner) {
       this.syncControls();
       this.runner.setForces(layoutOptions(this.options), 0);
@@ -167,11 +169,16 @@ export class Graph3DView extends Graph3DHud {
     this.buildTimer = 0;
     if (!this.runner) return;
     const { notes, files } = this.collect();
+    const root = this.options.local ? this.root || this.openPath() : '';
     const counts = new Map();
     notes.forEach((n) => counts.set(topFolder(n.path), (counts.get(topFolder(n.path)) || 0) + 1));
     this.folderCounts = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
     this.renderFolders(this.folderCounts);
-    const graph = buildSpace(notes, files, this.options, this.options.local ? this.root || this.openPath() : '');
+    // Obsidian says links were resolved after every edit; most edits change none. Nothing to work out then.
+    const input = inputSignature(notes, files, this.options, root);
+    if (input === this.input) return;
+    this.input = input;
+    const graph = buildSpace(notes, files, this.options, root);
     const sign = spaceSignature(graph);
     if (sign === this.sign) {
       graph.nodes.forEach((n, i) => (this.graph.nodes[i].key = n.key));
@@ -317,12 +324,28 @@ export class Graph3DView extends Graph3DHud {
       this.sizes[i] = 3 * Math.cbrt(1 + 1.25 * Math.sqrt(node.degree)) * k * (node.kind === 'note' ? 1 : 0.8);
     });
     this.hubOrder = nodes.map((_, i) => i).sort((a, b) => nodes[b].degree - nodes[a].degree || (nodes[a].name < nodes[b].name ? -1 : 1));
-    this.renderGroups();
+    // The list of groups is a row each: drawn again only when the groups (or their colours) are not as they were.
+    const list = `${this.options.colourBy}|${this.theme.dark}|${groups.map((g) => `${g.key}:${g.count}`).join(',')}`;
+    if (list !== this.listMark) {
+      this.listMark = list;
+      this.renderGroupList();
+    }
+    this.litMark = null;
     this.lightChanged();
   }
 
   /** The note whose links are lit (the one pointed at, else the one picked) and those it links to; null for none. */
   lit() {
+    // Asked for each frame: worked out again only when what's pointed at or picked changes.
+    const mark = `${this.hover}|${this.picked}|${this.focusKey}|${this.sign}`;
+    if (mark !== this.litMark) {
+      this.litMark = mark;
+      this.litSet = this.findLit();
+    }
+    return this.litSet;
+  }
+
+  findLit() {
     const nodes = this.graph.nodes;
     const focus = this.hover >= 0 ? this.hover : this.picked;
     if (focus >= 0 && nodes[focus]) {
@@ -344,8 +367,15 @@ export class Graph3DView extends Graph3DHud {
     if (!this.renderer || !this.slots) return;
     const n = this.graph.nodes.length;
     const lit = this.lit();
-    const presence = new Float32Array(n).fill(lit ? 0.22 : 1);
-    const slots = this.slots.slice();
+    // The same two arrays each time: a hover changes them, and shouldn't make garbage.
+    if (!this.presence || this.presence.length !== n) {
+      this.presence = new Float32Array(n);
+      this.litSlots = new Uint16Array(n);
+    }
+    const presence = this.presence;
+    presence.fill(lit ? 0.22 : 1);
+    const slots = this.litSlots;
+    slots.set(this.slots);
     const pairs = [];
     if (lit) {
       lit.forEach((i) => (presence[i] = 1));
@@ -388,12 +418,10 @@ export class Graph3DView extends Graph3DHud {
 
   /** A note picked (and, fly, the camera turned to it), or none: -1. */
   pick(i, fly) {
-    const had = this.focusKey;
     this.picked = i;
     if (i >= 0) this.focusKey = null;
     this.lightChanged();
     this.renderDetail();
-    if (had && !this.focusKey) this.renderGroups();
     if (fly && i >= 0) this.centreOn(i);
   }
 
@@ -527,10 +555,13 @@ export class Graph3DView extends Graph3DHud {
     if (this.picked >= 0) always.add(this.picked);
     if (open >= 0) always.add(open);
     const order = [...always];
-    const seen = new Set(always);
+    // Which notes are in the order already: a flag a note, kept from frame to frame and cleared after.
+    if (!this.named || this.named.length !== n) this.named = new Uint8Array(n);
+    const seen = this.named;
+    order.forEach((i) => (seen[i] = 1));
     if (lit) {
-      [...lit].filter((i) => !seen.has(i)).sort((a, b) => nodes[b].degree - nodes[a].degree).forEach((i) => {
-        seen.add(i);
+      [...lit].filter((i) => !seen[i]).sort((a, b) => nodes[b].degree - nodes[a].degree).forEach((i) => {
+        seen[i] = 1;
         order.push(i);
       });
     }
@@ -541,8 +572,8 @@ export class Graph3DView extends Graph3DHud {
       let named = 0;
       for (const i of this.hubOrder || []) {
         if (named >= most) break;
-        if (!spots.scale[i] || seen.has(i)) continue;
-        seen.add(i);
+        if (!spots.scale[i] || seen[i]) continue;
+        seen[i] = 1;
         order.push(i);
         named++;
       }
@@ -550,7 +581,7 @@ export class Graph3DView extends Graph3DHud {
       const big = [];
       for (let i = 0; i < n; i++) {
         const s = spots.scale[i];
-        if (s && !seen.has(i) && this.sizes[i] * s >= smallest) big.push(i);
+        if (s && !seen[i] && this.sizes[i] * s >= smallest) big.push(i);
       }
       big.sort((a, b) => this.sizes[b] * spots.scale[b] - this.sizes[a] * spots.scale[a]);
       for (let k = 0; k < big.length && k < most; k++) order.push(big[k]);
@@ -567,6 +598,7 @@ export class Graph3DView extends Graph3DHud {
       return w;
     };
     const radius = (i) => Math.max(this.sizes[i] * spots.scale[i], 1.2);
+    order.forEach((i) => (seen[i] = 0));
     const names = placeNames(order, spots, width, radius, this.lineHeight, this.w, this.h, always);
     const span = Math.max(spots.far - spots.near, 1);
     const rings = [];

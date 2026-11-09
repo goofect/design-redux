@@ -508,13 +508,11 @@ test('it opens on the vault’s notes, draws each on a 2D canvas where there’s
   const { view } = openView(PATHS, LINKS());
   assert.strictEqual(view.renderer.kind, 'canvas');
   assert.strictEqual(view.graph.nodes.length, 4);
-  assert.match(view.stats.textContent, /Laying out 4 notes/);
   frames(1);
   assert.ok(drawn.arcs >= 4 + 1, `every note drawn, and a ring round the open one (${drawn.arcs} arcs)`);
   frames(3000);
   assert.ok(!view.runner.hot && frame === null, 'the layout settles and the drawing stops');
   for (let i = 0; i < 4; i++) assert.ok(view.spots.scale[i] && view.spots.x[i] >= 0 && view.spots.x[i] <= 800 && view.spots.y[i] >= 0 && view.spots.y[i] <= 600, 'the camera kept them in view');
-  assert.match(view.stats.textContent, /^4 notes · 3 links · \d communit/);
   assert.ok(view.empty.hidden);
 });
 
@@ -792,46 +790,6 @@ function hudView(state) {
   return v;
 }
 
-test('the find box: names first, then paths; Enter picks the first, and the camera flies to it', () => {
-  const { view } = hudView();
-  view.findInput.value = 'b';
-  view.findMatches();
-  const names = [...view.results.querySelectorAll('.dr-graph3d-result-name')].map((e) => e.textContent);
-  assert.deepStrictEqual(names.slice(0, 4).sort(), ['B0', 'B1', 'B2', 'B3']);
-  assert.ok(!view.results.hidden);
-  view.findKey({ key: 'Enter', preventDefault() {} });
-  assert.strictEqual(view.graph.nodes[view.picked].name, names[0]);
-  assert.ok(view.results.hidden);
-  const at = view.picked * 3;
-  assert.deepStrictEqual([view.easing.target.x, view.easing.target.y, view.easing.target.z], [view.runner.positions[at], view.runner.positions[at + 1], view.runner.positions[at + 2]]);
-  view.findInput.value = 'zzz';
-  view.findMatches();
-  assert.match(view.results.textContent, /Nothing matches/);
-});
-
-test('the communities list: each a colour and a count; one clicked lights its notes and the camera takes them in; clicked again, let go', () => {
-  const { view } = hudView();
-  const rows = [...view.groupList.querySelectorAll('.dr-graph3d-group')];
-  assert.strictEqual(rows.length, 2);
-  assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-graph3d-count').textContent), ['4', '4']);
-  assert.match(view.groupsTitle.textContent, /Communities/);
-  rows[0].click();
-  const key = rows[0].dataset.group;
-  assert.strictEqual(view.focusKey, key);
-  assert.strictEqual(view.lit().size, 4);
-  assert.strictEqual(view.lit().focus, -1);
-  assert.strictEqual(view.renderer.lit.length / 2, 6, 'the six links inside it lit');
-  assert.match(view.detail.textContent, /Community/);
-  assert.match(view.detail.textContent, /Links inside6/);
-  assert.ok(view.easing);
-  view.groupList.querySelector(`[data-group="${key}"]`).click();
-  assert.strictEqual(view.focusKey, null);
-  assert.ok(view.detail.hidden);
-  view.groupFilter.value = 'zz';
-  view.renderGroups();
-  assert.match(view.groupList.textContent, /No community matches/);
-});
-
 test('what’s picked: its links, the ways they run, each a step to that note; Open, Copy link', () => {
   const { view, opened } = hudView();
   view.pick(view.at.get('B/B0.md'));
@@ -854,7 +812,7 @@ test('what’s picked: its links, the ways they run, each a step to that note; O
 test('the side: settings, links, names, grouping, each a button lit while on', () => {
   const { view } = hudView();
   const side = (key) => view.sideButtons[key];
-  assert.deepStrictEqual([...view.hud.querySelectorAll('.dr-graph3d-side-button')].map((b) => b.dataset.icon), ['settings', 'scan', 'boxes', 'type', 'waypoints', 'rotate-3d']);
+  assert.deepStrictEqual([...view.hud.querySelectorAll('.dr-graph3d-side-button')].map((b) => b.dataset.icon), ['settings', 'rotate-3d', 'scan', 'boxes', 'type', 'waypoints']);
   side('panel').click();
   assert.ok(!view.panel.hidden && view.right.hasClass('is-settings') && side('panel').hasClass('is-active'));
   side('panel').click();
@@ -901,6 +859,131 @@ test('the tip names what’s under the pointer: name, where, community and links
   assert.match(view.tip.textContent, /^A0A\/A0\.mdA0 · 4 links$/);
   view.left();
   assert.ok(view.tip.hidden);
+});
+
+/* -- what keeps it quick ------------------------------------------------- */
+
+function sparseVault(n, seed) {
+  // Power-law-ish, as vaults are: a few hubs, many notes linked to one or two.
+  let s = seed;
+  const r = () => ((s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  const notes = [];
+  for (let i = 0; i < n; i++) notes.push(note(`F/n${i}.md`));
+  for (let i = 0; i < n; i++) {
+    const k = 1 + Math.floor(-Math.log(1 - r() * 0.999) * 1.5);
+    for (let j = 0; j < k; j++) {
+      const t = Math.floor(Math.pow(r(), 2.2) * n);
+      if (t !== i) notes[i].links[`F/n${t}.md`] = 1;
+    }
+  }
+  return notes;
+}
+
+test('a sparse vault’s communities: no crumbs, none swallowing the rest', () => {
+  const g = G.buildSpace(sparseVault(1000, 7), [], opts({ colourBy: 'community' }));
+  const groups = G.colourGroups(g.nodes, Infinity);
+  const smallest = Math.round(Math.sqrt(1000) / 2);
+  assert.ok(groups.length >= 10 && groups.length <= 100, `${groups.length} communities`);
+  assert.ok(groups[0].count < 1000 * 0.25, `the biggest has ${groups[0].count}`);
+  assert.ok(groups.every((x) => x.count >= smallest), 'each at least √n⁄2 notes');
+});
+
+test('the input mark: the same notes, links, tags and settings, the same mark; any of them changed, another', () => {
+  const mark = (v, o, root) => G.inputSignature(v, FILES, opts(o), root);
+  const a = mark(VAULT(), {});
+  assert.strictEqual(mark(VAULT(), {}), a);
+  const linked = VAULT();
+  linked[4].links = { 'Ideas.md': 1 };
+  assert.notStrictEqual(mark(linked, {}), a);
+  const tagged = VAULT();
+  tagged[3].tags = ['#new'];
+  assert.notStrictEqual(mark(tagged, {}), a);
+  assert.notStrictEqual(mark(VAULT(), { colourBy: 'tag' }), a);
+  assert.notStrictEqual(mark(VAULT(), { hidden: ['Work'] }), a);
+  assert.notStrictEqual(mark(VAULT(), { local: true }, 'Ideas.md'), mark(VAULT(), { local: true }, 'Home/List.md'));
+});
+
+test('links resolved but nothing changed: the graph isn’t worked out again, nor its list redrawn', () => {
+  const { view, app } = openView(PATHS, LINKS());
+  frames(3000);
+  let restyled = 0;
+  let listed = 0;
+  const restyle = view.restyle.bind(view);
+  const list = view.renderGroupList.bind(view);
+  view.restyle = () => { restyled++; restyle(); };
+  view.renderGroupList = () => { listed++; list(); };
+  view.build();
+  view.build();
+  assert.deepStrictEqual([restyled, listed], [0, 0]);
+  app.metadataCache.resolvedLinks = Object.assign(LINKS(), { 'Ideas.md': { 'Work/Notes.md': 1 } });
+  view.build();
+  assert.strictEqual(restyled, 1, 'a link changed: worked out again');
+  const before = listed;
+  view.controls.nodeSize.change(1.5);
+  assert.strictEqual(restyled, 2, 'sizes changed: restyled');
+  assert.strictEqual(listed, before, 'the groups didn’t: the list stays as it was');
+});
+
+test('the layout cools faster once the notes barely move: fewer steps, as calm', () => {
+  const g = G.buildSpace(sparseVault(600, 3), [], opts());
+  const r = new G.LayoutRunner(win, () => {});
+  r.load(g.nodes.length, g.links, G.startPositions(g.nodes, null).pos, 1);
+  while (r.hot) r.pump(1e9);
+  assert.ok(r.steps < 230, `${r.steps} steps (252 without)`);
+  const k = G.layoutKernel();
+  k.load(g.nodes.length, g.links, r.positions);
+  assert.ok(k.step(G.LAYOUT.cold, G.layoutOptions()) < 0.05, 'and as still at the end');
+});
+
+test('pushing in the tree’s order gives the same layout as one note after another would', () => {
+  // Two notes far from the rest and from each other: each pushed only by the clump, the same either way.
+  const g = twoClusters();
+  const a = G.layoutKernel();
+  a.load(g.nodes.length, g.links, G.startPositions(g.nodes, null).pos);
+  const o = G.layoutOptions();
+  for (let s = 0; s < 5; s++) a.step(0.8, o);
+  const p = a.positions();
+  // Brute force: every pair, nothing taken as a clump (theta 0).
+  const b = G.layoutKernel();
+  b.load(g.nodes.length, g.links, G.startPositions(g.nodes, null).pos);
+  const exact = Object.assign({}, o, { theta: 0 });
+  for (let s = 0; s < 5; s++) b.step(0.8, exact);
+  const q = b.positions();
+  let off = 0;
+  for (let k = 0; k < p.length; k++) off = Math.max(off, Math.abs(p[k] - q[k]));
+  assert.ok(off < 2, `within ${off.toFixed(3)} of the exact sums`);
+});
+
+test('a hover reuses its arrays: nothing new made each time the pointer moves on', () => {
+  const calls = [];
+  gl = fakeGL(calls);
+  try {
+    const { view } = openView(PATHS, LINKS());
+    frames(3000);
+    view.hover = 0;
+    view.lightChanged();
+    const presence = view.presence;
+    const colours = view.renderer.colourData;
+    const lit = view.lit();
+    assert.strictEqual(view.lit(), lit, 'what’s lit, worked out once a change');
+    view.hover = 1;
+    view.lightChanged();
+    assert.strictEqual(view.presence, presence);
+    assert.strictEqual(view.renderer.colourData, colours);
+    assert.notStrictEqual(view.lit(), lit, 'and again when it changes');
+    view.onClose();
+  } finally {
+    gl = null;
+  }
+});
+
+test('settings back from the tab’s state reach the drawing, though the vault is as it was', () => {
+  const { view } = openView(PATHS, LINKS());
+  frames(3000);
+  const size = view.sizes[0];
+  view.setState({ options: Object.assign({}, view.options, { nodeSize: 2 }) }, {});
+  flush();
+  assert.ok(Math.abs(view.sizes[0] - size * 2) < 1e-4, `note size applied (${size} → ${view.sizes[0]})`);
 });
 
 console.log(`${passed} passed`);
