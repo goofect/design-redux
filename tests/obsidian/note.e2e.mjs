@@ -232,13 +232,14 @@ suite('Design Redux in Obsidian: notes', function () {
           stepsBeforeShelves: !!root.querySelector('.dr-note-next + .dr-note-shelves'),
         };
       });
-    // The link shelves come once Obsidian has the links: all three, not the first drawn.
-    await browser.waitUntil(async () => (await look()).shelves.length >= 3, { timeout: 5000, timeoutMsg: 'the note page was never drawn with its shelves' });
+    // The link shelves come once Obsidian has the links: both, not the first drawn. More in the album
+    // has nothing: its one other note is the step before this one.
+    await browser.waitUntil(async () => (await look()).shelves.length >= 2, { timeout: 5000, timeoutMsg: 'the note page was never drawn with its shelves' });
     let now = await look();
     expect(now.album).toBe('Page album');
     expect(now.above).toBe(true);
     expect(now.meta.startsWith('Under Judicial review')).toBe(true);
-    expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›', 'More in Page album ›']);
+    expect(now.shelves).toEqual(['Linked from here ›', 'Mentioned in ›']);
     // Second of two in its album: its place in the grey line, and the note before it as a step at its end.
     expect(now.meta).toContain('2 of 2');
     expect(now.steps).toEqual([['Previous', 'Judicial review']]);
@@ -253,7 +254,7 @@ suite('Design Redux in Obsidian: notes', function () {
     await browser.waitUntil(async () => (await look()).shelves.length > 0, { timeout: 5000, timeoutMsg: 'not drawn in reading view' });
     now = await look();
     expect(now.album).toBe('Page album');
-    expect(now.shelves.length).toBe(3);
+    expect(now.shelves.length).toBe(2);
     expect(now.steps).toEqual([['Previous', 'Judicial review']]);
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;

@@ -365,6 +365,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(shelves.previousElementSibling, next, 'after the step, before the backlinks');
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);
     assert.deepStrictEqual(Array.from(shelves.querySelectorAll('.dr-note-shelf')[1].querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent), ['Cooperation']);
+    const more = Array.from(shelves.querySelectorAll('.dr-note-shelf')[2].querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent);
+    assert.ok(more.length && !more.includes('Balance') && !more.includes('Anarchy'), `More in IR leaves out the step and the note itself: ${more}`);
+    assert.deepStrictEqual(page.actions().map((a) => a.id), ['previous-in-album', 'next-in-album']);
     await settle();
     assert.strictEqual(shelves.querySelector('.dr-note-tile-line').textContent, 'Balance begins here.');
     assert.strictEqual(steps[0].querySelector('.dr-note-step-line').textContent, 'Balance begins here.');
@@ -888,7 +891,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(next.getAttribute('aria-label'), 'Next: Cooperation');
     click(next);
     assert.strictEqual(leaf.view.file.basename, 'Cooperation');
-    const cmds = Object.fromEntries(strip.commands().map((c) => [c.id, c]));
+    // The step commands are the note page's now, there with the strip off.
+    plugin.settings.notePage = true;
+    const cmds = Object.fromEntries(new R.NotePage(plugin).commands().map((c) => [c.id, c]));
+    assert.deepStrictEqual(strip.commands(), [], 'none of the strip’s own');
     assert.strictEqual(cmds['next-in-album'].check(), true);
     cmds['next-in-album'].run();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');

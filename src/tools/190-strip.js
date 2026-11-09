@@ -108,17 +108,6 @@ export class ContextStrip extends Feature {
     ];
   }
 
-  actions() {
-    const step = (ctx, dir) => {
-      const near = albumNeighbours(this.plugin, ctx.file);
-      return near && near[dir];
-    };
-    return [
-      { id: 'previous-in-album', name: 'Previous note in collection', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: () => this.skip('previous') },
-      { id: 'next-in-album', name: 'Next note in collection', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: () => this.skip('next') },
-    ];
-  }
-
   /** The note before or after this one in its album, opened in the same page. */
   skip(dir) {
     const file = pageFile(this.app);

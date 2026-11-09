@@ -12,6 +12,7 @@
 
 import { TFile } from 'obsidian';
 import { noteCoverSrc } from '../core/030-art.js';
+import { pageLeaf } from '../core/034-tabs.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
 import { albumNeighbours } from '../core/070-orders.js';
@@ -57,6 +58,20 @@ export class NotePage extends Feature {
         desc: 'Links, mentions and more from its collection, at a note’s end.',
         showIf: 'notePage',
       },
+    ];
+  }
+
+  /** The way through a collection from the keyboard: the note before or after this one, opened in its place. */
+  actions() {
+    const step = (ctx, dir) => (ctx.file ? this.neighbours(ctx.file, this.albumOf(ctx.file))[dir] : null);
+    const go = (ctx, dir) => {
+      const target = step(ctx, dir);
+      const leaf = pageLeaf(this.app);
+      if (target && leaf) leaf.openFile(target);
+    };
+    return [
+      { id: 'previous-in-album', name: 'Previous note in collection', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: (ctx) => go(ctx, 'previous') },
+      { id: 'next-in-album', name: 'Next note in collection', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: (ctx) => go(ctx, 'next') },
     ];
   }
 
@@ -160,8 +175,8 @@ export class NotePage extends Feature {
       .filter((c) => c.text);
   }
 
-  /** The shelves at a note's end: [{ title, files }], the empty left out. */
-  shelves(file) {
+  /** The shelves at a note's end: [{ title, files }], the empty left out; the steps either side aren't listed again. */
+  shelves(file, near) {
     const index = libraryIndex(this.plugin);
     const vault = this.app.vault;
     const notes = (paths) =>
@@ -177,7 +192,7 @@ export class NotePage extends Feature {
     if (album) {
       const more = index
         .notes()
-        .filter((f) => f.parent === album && f !== file)
+        .filter((f) => f.parent === album && f !== file && f !== near.previous && f !== near.next)
         .sort((a, b) => b.stat.mtime - a.stat.mtime)
         .slice(0, NOTE_SHELF_SIZE);
       out.push({ title: `More in ${album.name}`, files: more, album });
@@ -214,7 +229,7 @@ export class NotePage extends Feature {
     const near = on ? this.neighbours(file, album) : { previous: null, next: null };
     const meta = on ? this.metaLine(file, near) : '';
     const chips = on && this.settings.notePageChips ? this.chips(file) : [];
-    const shelves = on && this.settings.notePageShelves ? this.shelves(file) : [];
+    const shelves = on && this.settings.notePageShelves ? this.shelves(file, near) : [];
     view.containerEl.toggleClass('dr-props-as-chips', chips.length > 0);
     this.places(view).forEach((place) => {
       const title = place.title;
