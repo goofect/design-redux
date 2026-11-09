@@ -163,10 +163,10 @@ test('a link counts once either way, a note’s link to itself not at all; attac
   assert.strictEqual(all.nodes.find((n) => n.id === '#project').degree, 2);
 });
 
-test('a search keeps the notes it matches, every word, and the tags of those it keeps; orphans can be left out', () => {
-  const g = G.buildSpace(VAULT(), FILES, opts({ search: 'work', tags: true }));
+test('a search keeps the notes it matches, and the tags of those it keeps; orphans can be left out', () => {
+  const g = G.buildSpace(VAULT(), FILES, opts({ search: 'path:work', tags: true }));
   assert.deepStrictEqual(ids(g), ['#draft', '#project', 'Work/Notes.md', 'Work/Plan.md']);
-  assert.deepStrictEqual(ids(G.buildSpace(VAULT(), FILES, opts({ search: 'work draft' }))), ['Work/Notes.md'], 'every word must match: name, path or tag');
+  assert.deepStrictEqual(ids(G.buildSpace(VAULT(), FILES, opts({ search: 'path:work tag:#draft' }))), ['Work/Notes.md'], 'every term must match');
   assert.deepStrictEqual(ids(G.buildSpace(VAULT(), FILES, opts({ orphans: false }))), ['Home/List.md', 'Ideas.md', 'Work/Notes.md', 'Work/Plan.md']);
 });
 
@@ -580,7 +580,7 @@ test('settings: a search narrows the graph; colouring by tag recolours without l
   const { view } = openView(PATHS, LINKS());
   frames(3000);
   const where = view.positionsById();
-  view.controls.search.change('work');
+  view.controls.search.change('path:work');
   flush();
   assert.deepStrictEqual(view.graph.nodes.map((n) => n.id).sort(), ['Work/Notes.md', 'Work/Plan.md']);
   view.controls.search.change('');
@@ -649,7 +649,7 @@ test('the view on WebGL: draws through it, the same notes', () => {
 
 test('what a 2D graph shows comes over to the 3D graph, as far as it can be read', () => {
   assert.deepStrictEqual(G.filtersFromGraph({ search: 'plan ', showTags: true, showAttachments: false, hideUnresolved: true, showOrphans: false, localJumps: 9 }), { search: 'plan', tags: true, attachments: false, missing: false, orphans: false, depth: 5 });
-  assert.deepStrictEqual(G.filtersFromGraph({ search: 'path:Work -tag:#x', localJumps: 0 }), {}, 'a query in Obsidian’s own terms stays behind');
+  assert.deepStrictEqual(G.filtersFromGraph({ search: 'path:Work -tag:#x', localJumps: 0 }), { search: 'path:Work -tag:#x' }, 'a query in Obsidian’s own terms comes over as it is');
   assert.deepStrictEqual(G.filtersFromGraph(null), {});
 });
 
@@ -688,7 +688,7 @@ test('a graph tab gets Show in 3D in its header, once; it turns that tab into th
   const to3d = local.states[0];
   assert.strictEqual(to3d.type, G.GRAPH_3D_VIEW);
   assert.deepStrictEqual([to3d.state.options.local, to3d.state.options.tags, to3d.state.options.depth, to3d.state.root], [true, true, 3, 'Ideas.md']);
-  assert.ok(!('search' in to3d.state.options));
+  assert.strictEqual(to3d.state.options.search, 'path:x');
   v.app.workspace.activeLeaf = whole;
   const cmd = f.actions().find((a) => a.id === 'toggle-graph-3d');
   assert.ok(cmd.when());
@@ -889,25 +889,20 @@ test('the input mark: the same notes, links, tags and settings, the same mark; a
   assert.notStrictEqual(mark(VAULT(), { local: true }, 'Ideas.md'), mark(VAULT(), { local: true }, 'Home/List.md'));
 });
 
-test('links resolved but nothing changed: the graph isn’t worked out again, nor its list redrawn', () => {
+test('links resolved but nothing changed: the graph isn’t worked out again', () => {
   const { view, app } = openView(PATHS, LINKS());
   frames(3000);
   let restyled = 0;
-  let listed = 0;
   const restyle = view.restyle.bind(view);
-  const list = view.renderGroupList.bind(view);
   view.restyle = () => { restyled++; restyle(); };
-  view.renderGroupList = () => { listed++; list(); };
   view.build();
   view.build();
-  assert.deepStrictEqual([restyled, listed], [0, 0]);
+  assert.strictEqual(restyled, 0);
   app.metadataCache.resolvedLinks = Object.assign(LINKS(), { 'Ideas.md': { 'Work/Notes.md': 1 } });
   view.build();
   assert.strictEqual(restyled, 1, 'a link changed: worked out again');
-  const before = listed;
   view.controls.nodeSize.change(1.5);
   assert.strictEqual(restyled, 2, 'sizes changed: restyled');
-  assert.strictEqual(listed, before, 'the groups didn’t: the list stays as it was');
 });
 
 test('the layout cools faster once the notes barely move: fewer steps, as calm', () => {
@@ -985,6 +980,93 @@ test('links in their notes’ colours: on a 2D canvas, each in the colour of the
   r.draw({ w: 100, h: 100, dpr: 1, near: 100, far: 101, spots, groundCss: 'black', lineCss: 'grey', accentCss: 'accent', paletteCss, lineStrength: 0.5 });
   assert.ok(strokes.includes('red') && strokes.includes('blue'), `strokes in ${strokes.join(', ')}`);
   assert.ok(!strokes.includes('grey'), 'none in the plain line colour');
+});
+
+test('a note held, even still, keeps the layout warm: its neighbours follow it; let go, it cools', () => {
+  const { view } = openView(PATHS, LINKS());
+  frames(3000);
+  const i = view.at.get('Ideas.md');
+  const j = view.at.get('Home/List.md');
+  const pos = () => view.runner.positions;
+  const dist = (a, b) => Math.hypot(pos()[a * 3] - pos()[b * 3], pos()[a * 3 + 1] - pos()[b * 3 + 1], pos()[a * 3 + 2] - pos()[b * 3 + 2]);
+  const x = view.spots.x[i];
+  const y = view.spots.y[i];
+  view.down({ pointerId: 1, offsetX: x, offsetY: y, button: 0, pointerType: 'mouse' });
+  view.move({ pointerId: 1, offsetX: x + 30, offsetY: y });
+  view.move({ pointerId: 1, offsetX: x + 260, offsetY: y });
+  const far = dist(i, j);
+  frames(200); // the pointer held still
+  assert.ok(view.runner.alpha >= 0.3 - 1e-9, `still warm: ${view.runner.alpha.toFixed(3)}`);
+  assert.ok(dist(i, j) < far * 0.8, `the neighbour came after it (${far.toFixed(0)} → ${dist(i, j).toFixed(0)})`);
+  view.up({ pointerId: 1, offsetX: x + 260, offsetY: y }, false);
+  frames(3000);
+  assert.ok(!view.runner.hot, 'let go, it settles');
+});
+
+test('a stronger repel force spreads a settled graph, to be seen', () => {
+  const { view } = openView(PATHS, LINKS());
+  frames(3000);
+  const spread = () => {
+    const p = view.runner.positions;
+    let s = 0;
+    for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) s += Math.hypot(p[a * 3] - p[b * 3], p[a * 3 + 1] - p[b * 3 + 1], p[a * 3 + 2] - p[b * 3 + 2]);
+    return s;
+  };
+  const before = spread();
+  view.controls.repel.change(4);
+  frames(3000);
+  assert.ok(spread() > before * 1.3, `spread ${before.toFixed(0)} → ${spread().toFixed(0)}`);
+});
+
+/* -- the search, as Obsidian's ------------------------------------------- */
+
+const item = (o) => Object.assign({ name: '', path: '', tags: [], text: null, props: null }, o);
+const finds = (q, it) => G.matchQuery(G.parseQuery(q), item(it));
+
+test('search: words all match, in the name or the text; "phrases"; - leaves out; OR; (groups)', () => {
+  const plan = { name: 'Project plan', path: 'Work/Project plan.md', text: 'Budget for the spring launch.' };
+  assert.ok(finds('plan', plan) && finds('PLAN budget', plan), 'name and text, any case');
+  assert.ok(!finds('plan winter', plan), 'every word');
+  assert.ok(finds('"spring launch"', plan) && !finds('"launch spring"', plan));
+  assert.ok(!finds('plan -budget', plan) && finds('plan -winter', plan));
+  assert.ok(finds('winter OR spring', plan) && !finds('winter OR autumn', plan));
+  assert.ok(finds('(winter OR spring) budget', plan) && !finds('(winter OR spring) -budget', plan));
+  assert.ok(!finds('work', plan), 'a word alone doesn’t look at the path, as in Obsidian');
+  assert.strictEqual(G.parseQuery('   '), null);
+});
+
+test('search: file:, path:, content:, tag: with nested tags, [property] and [property:value], /regex/, an operator over a group', () => {
+  const n = { name: 'Plan', path: 'Work/2026/Plan.md', tags: ['#project/alpha', '#draft'], text: 'Due in May.', props: { status: 'Active', owners: ['Ana', 'Ben'] } };
+  assert.ok(finds('file:pla', n) && !finds('file:work', n));
+  assert.ok(finds('path:work/2026', n) && !finds('path:home', n));
+  assert.ok(finds('content:may', n) && finds('line:"due in"', n) && !finds('content:plan', n));
+  assert.ok(finds('tag:#project', n) && finds('tag:project/alpha', n) && !finds('tag:#proj', n), 'a tag and the tags under it, whole');
+  assert.ok(finds('[status]', n) && finds('[status:active]', n) && finds('[owners:ben]', n) && !finds('[status:done]', n) && !finds('[due]', n));
+  assert.ok(finds('/^pl.n$/', n) && finds('path:/\\d{4}/', n) && !finds('/^x/', n));
+  assert.ok(finds('path:(home OR 2026)', n) && !finds('path:(home OR 2025)', n));
+  assert.ok(finds('-tag:#done', n) && !finds('-tag:#draft', n));
+});
+
+test('search: what needs a note’s text, or its properties, says so', () => {
+  assert.ok(G.queryNeedsText(G.parseQuery('plan')) && G.queryNeedsText(G.parseQuery('content:x')));
+  assert.ok(!G.queryNeedsText(G.parseQuery('path:x tag:#y file:z')));
+  assert.ok(G.queryNeedsProps(G.parseQuery('[status:x]')) && !G.queryNeedsProps(G.parseQuery('plan')));
+});
+
+test('the view reads notes’ text for a search that needs it, once, and keeps it', () => {
+  const { view, feature, app } = openView(PATHS, LINKS());
+  frames(3000);
+  const read = [];
+  app.vault.cachedRead = (f) => { read.push(f.path); return Promise.resolve(f.path === 'Ideas.md' ? 'A spring garden.' : ''); };
+  view.controls.search.change('garden');
+  flush();
+  assert.strictEqual(read.length, 4, 'every note read once');
+  feature.texts.set('Ideas.md', { mtime: 0, text: 'A spring garden.' });
+  view.textsRead = 1;
+  view.build();
+  assert.deepStrictEqual(view.graph.nodes.map((n) => n.id), ['Ideas.md'], 'found by its text');
+  view.build();
+  assert.strictEqual(read.length, 4, 'not read again while unchanged');
 });
 
 console.log(`${passed} passed`);

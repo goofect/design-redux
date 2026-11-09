@@ -329,24 +329,30 @@ export function layoutKernel() {
   }
 
   /** The heat after a step that moved the notes this far, on average: it cools, faster once they're barely moving. */
-  function cool(alpha, moved, o) {
-    return alpha * (1 - (moved < o.length * o.still ? o.cool * 4 : o.cool));
+  // Faster once the notes are barely moving — but not just after it's warmed by a hand (a force changed,
+  // a note dragged: gentle, steps of it), when the few notes that move would pass for none and it would
+  // stop before they'd gone anywhere.
+  function cool(alpha, moved, o, gentle) {
+    return alpha * (1 - (!gentle && moved < o.length * o.still ? o.cool * 4 : o.cool));
   }
 
   return { load, step, fix, release, anchor, cool, positions: () => pos };
 }
+
+/** How many steps after a hand warms the layout it cools at its own pace, whatever the notes do. */
+const GRAPH_3D_GENTLE = 150;
 
 /** The worker's code: the kernel, stepping in batches of a dozen milliseconds, sending positions after each. */
 function layoutWorkerSource() {
   // Each line indented: the code is text here, and nothing in it is this module's.
   return [
     `  const kernel = (${layoutKernel.toString()})();`,
-    '  let alpha = 0, opts = null, gen = 0, timer = 0;',
+    '  let alpha = 0, opts = null, gen = 0, timer = 0, floor = 0, gentle = 0;',
     '  const run = () => {',
     '    timer = 0;',
     '    if (!opts || alpha < opts.cold) return;',
     '    const start = Date.now();',
-    '    do { alpha = kernel.cool(alpha, kernel.step(alpha, opts), opts); } while (Date.now() - start < 12 && alpha >= opts.cold);',
+    '    do { alpha = Math.max(floor, kernel.cool(alpha, kernel.step(alpha, opts), opts, gentle > 0)); if (gentle > 0) gentle--; } while (Date.now() - start < 12 && alpha >= opts.cold);',
     '    const pos = Float32Array.from(kernel.positions());',
     "    self.postMessage({ type: 'positions', gen, pos, alpha }, [pos.buffer]);",
     '    if (alpha >= opts.cold) timer = setTimeout(run, 0);',
@@ -357,6 +363,8 @@ function layoutWorkerSource() {
     "    if (m.type === 'load') { gen = m.gen; kernel.load(m.count, m.links, m.pos); alpha = m.alpha; }",
     "    else if (m.type === 'fix') kernel.fix(m.i, m.x, m.y, m.z);",
     "    else if (m.type === 'release') kernel.release(m.i);",
+    "    else if (m.type === 'floor') floor = m.floor;",
+    "    if (m.gentle) gentle = m.gentle;",
     "    else if (m.type === 'anchor') kernel.anchor(m.anchors);",
     "    if (m.type !== 'load' && typeof m.alpha === 'number') alpha = Math.max(alpha, m.alpha);",
     '    if (!timer) timer = setTimeout(run, 0);',
@@ -431,7 +439,9 @@ export class LayoutRunner {
   setForces(opts, alpha) {
     this.opts = opts;
     this.alpha = Math.max(this.alpha, alpha);
-    if (this.worker) this.worker.postMessage({ type: 'opts', opts, alpha });
+    const gentle = alpha > 0 ? GRAPH_3D_GENTLE : 0;
+    if (gentle) this.gentle = gentle;
+    if (this.worker) this.worker.postMessage({ type: 'opts', opts, alpha, gentle });
   }
 
   /** A note held where the pointer has it, till released. */
@@ -442,7 +452,8 @@ export class LayoutRunner {
     this.positions[i * 3 + 2] = z;
     this.version++;
     this.alpha = Math.max(this.alpha, 0.3);
-    if (this.worker) this.worker.postMessage({ type: 'fix', i, x, y, z, alpha: 0.3 });
+    this.gentle = GRAPH_3D_GENTLE;
+    if (this.worker) this.worker.postMessage({ type: 'fix', i, x, y, z, alpha: 0.3, gentle: GRAPH_3D_GENTLE });
     else this.kernel.fix(i, x, y, z);
   }
 
@@ -459,12 +470,24 @@ export class LayoutRunner {
     else this.kernel.anchor(anchors);
   }
 
+  /**
+   * While a note is held, the layout stays warm — the heat never falls
+   * below floor — so the notes round it keep following it, as on
+   * Obsidian's graph; let go (0), it cools as before.
+   */
+  setFloor(floor) {
+    this.floor = floor;
+    this.alpha = Math.max(this.alpha, floor);
+    if (this.worker) this.worker.postMessage({ type: 'floor', floor, alpha: floor });
+  }
+
   /** Here, not in a worker: steps for up to budget milliseconds. Whether it moved. */
   pump(budget) {
     if (this.worker || !this.hot || !this.count) return false;
     const start = Date.now();
     do {
-      this.alpha = this.kernel.cool(this.alpha, this.kernel.step(this.alpha, this.opts), this.opts);
+      this.alpha = Math.max(this.floor || 0, this.kernel.cool(this.alpha, this.kernel.step(this.alpha, this.opts), this.opts, this.gentle > 0));
+      if (this.gentle > 0) this.gentle--;
       this.steps++;
     } while (Date.now() - start < budget && this.hot);
     this.positions.set(this.kernel.positions());

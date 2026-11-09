@@ -205,6 +205,8 @@ export class Graph3DInput extends ItemView {
   hold(i) {
     this.held = i;
     this.overlay.toggleClass('is-holding', true);
+    this.runner.setFloor(0.3);
+    this.draw();
   }
 
   /** The held note moved with the pointer, across the screen at its depth. */
@@ -221,6 +223,7 @@ export class Graph3DInput extends ItemView {
   letGo() {
     if (this.held < 0) return;
     this.runner.release(this.held);
+    this.runner.setFloor(0);
     this.held = -1;
     this.overlay.toggleClass('is-holding', false);
   }

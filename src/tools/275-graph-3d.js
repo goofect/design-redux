@@ -21,6 +21,7 @@ import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, inputSignature, KIND_KEYS, parseColour, spaceSignature } from './263-graph-space.js';
 import { layoutOptions, LayoutRunner, startPositions } from './264-graph-layout.js';
+import { parseQuery, queryNeedsProps, queryNeedsText } from './277-graph-query.js';
 import { fitView, placeNames, projectInto } from './265-graph-camera.js';
 import { CanvasRenderer, drawOverlay, GLRenderer } from './268-graph-draw.js';
 import { GRAPH_3D_VIEW } from './269-graph-3d-input.js';
@@ -150,18 +151,52 @@ export class Graph3DView extends Graph3DHud {
     const index = libraryIndex(this.feature.plugin);
     const meta = this.app.metadataCache;
     const o = this.options;
-    const wantTags = o.tags || o.colourBy === 'tag' || !!o.search;
+    const query = parseQuery(o.search);
+    const needText = queryNeedsText(query);
+    const needProps = queryNeedsProps(query);
+    const wantTags = o.tags || o.colourBy === 'tag' || !!query;
     const unresolved = (o.missing && meta.unresolvedLinks) || {};
-    const notes = index.markdown().map((f) => {
+    const markdown = index.markdown();
+    const notes = markdown.map((f) => {
       let tags = [];
-      if (wantTags && typeof getAllTags === 'function') {
-        const cache = meta.getFileCache(f);
-        tags = cache ? [...new Set((getAllTags(cache) || []).map((t) => t.toLowerCase()))] : [];
-      }
-      return { path: f.path, name: f.basename, tags, links: index.outgoing(f), missing: unresolved[f.path] || null };
+      const cache = wantTags || needProps ? meta.getFileCache(f) : null;
+      if (wantTags && cache && typeof getAllTags === 'function') tags = [...new Set((getAllTags(cache) || []).map((t) => t.toLowerCase()))];
+      const note = { path: f.path, name: f.basename, tags, links: index.outgoing(f), missing: unresolved[f.path] || null };
+      if (needProps) note.props = (cache && cache.frontmatter) || null;
+      if (needText) note.text = this.textOf(f);
+      return note;
     });
+    if (needText) this.readTexts(markdown);
     const files = o.attachments ? index.files().filter((f) => f.extension !== 'md').map((f) => ({ path: f.path, name: f.name })) : [];
     return { notes, files };
+  }
+
+  /** A note's text as last read for a search; null if it hasn't been. Changed since, it's read again (readTexts), and meanwhile the old text stands. */
+  textOf(file) {
+    const kept = this.feature.texts.get(file.path);
+    return kept ? kept.text : null;
+  }
+
+  /** The notes' text read, those not read or changed since, a batch at a time; then the graph worked out again. */
+  readTexts(files) {
+    if (this.reading || typeof this.app.vault.cachedRead !== 'function') return;
+    const texts = this.feature.texts;
+    const mtime = (f) => (f.stat ? f.stat.mtime : 0);
+    const stale = files.filter((f) => {
+      const kept = texts.get(f.path);
+      return !kept || kept.mtime !== mtime(f);
+    });
+    if (!stale.length) return;
+    this.reading = (async () => {
+      for (let k = 0; k < stale.length; k += 50) {
+        const batch = stale.slice(k, k + 50);
+        const read = await Promise.all(batch.map((f) => this.app.vault.cachedRead(f).catch(() => '')));
+        batch.forEach((f, j) => texts.set(f.path, { mtime: mtime(f), text: read[j] }));
+      }
+      this.reading = null;
+      this.textsRead = (this.textsRead || 0) + 1;
+      if (this.runner) this.queueBuild(0);
+    })();
   }
 
   /** The graph worked out again; laid out again only where its notes or links changed. */
@@ -171,7 +206,8 @@ export class Graph3DView extends Graph3DHud {
     const { notes, files } = this.collect();
     const root = this.options.local ? this.root || this.openPath() : '';
     // Obsidian says links were resolved after every edit; most edits change none. Nothing to work out then.
-    const input = inputSignature(notes, files, this.options, root);
+    // (Notes' text, read for a search, counts by how many times it's been read.)
+    const input = inputSignature(notes, files, this.options, `${root}|${this.textsRead || 0}`);
     if (input === this.input) return;
     this.input = input;
     const graph = buildSpace(notes, files, this.options, root);
@@ -320,12 +356,6 @@ export class Graph3DView extends Graph3DHud {
       this.sizes[i] = 3 * Math.cbrt(1 + 1.25 * Math.sqrt(node.degree)) * k * (node.kind === 'note' ? 1 : 0.8);
     });
     this.hubOrder = nodes.map((_, i) => i).sort((a, b) => nodes[b].degree - nodes[a].degree || (nodes[a].name < nodes[b].name ? -1 : 1));
-    // The list of groups is a row each: drawn again only when the groups (or their colours) are not as they were.
-    const list = `${this.options.colourBy}|${this.theme.dark}|${groups.map((g) => `${g.key}:${g.count}`).join(',')}`;
-    if (list !== this.listMark) {
-      this.listMark = list;
-      this.renderGroupList();
-    }
     this.litMark = null;
     this.lightChanged();
   }
@@ -629,6 +659,8 @@ export class Graph3D extends Feature {
     super(plugin);
     // Where notes were the last time a 3D graph drew them, by id: a tab opened again starts there.
     this.positions = new Map();
+    // Notes' text as read for a search, by path, with when they were last changed: { mtime, text }.
+    this.texts = new Map();
     // How the last 3D graph was set, and turned: the next starts so.
     this.lastOptions = null;
     this.lastCamera = null;

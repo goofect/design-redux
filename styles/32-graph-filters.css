@@ -570,42 +570,6 @@ body.is-mobile .dr-chip-clear {
   transform: rotate(-90deg);
 }
 
-/* The groups, as the graph lists its own: a colour, a name, a count; a click lights one. */
-.dr-graph3d-group-list {
-  display: flex;
-  flex-direction: column;
-  max-height: 240px;
-  overflow-y: auto;
-  padding-bottom: var(--size-4-2);
-}
-
-.dr-graph3d-group {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--size-4-2);
-  padding: var(--size-2-2) var(--size-2-3);
-  border-radius: var(--radius-s);
-  font-size: var(--font-ui-small);
-  cursor: var(--cursor);
-}
-
-.dr-graph3d-group.is-active {
-  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
-}
-
-.dr-graph3d-group-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dr-graph3d-none {
-  padding: var(--size-2-2) 0;
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
 /* The note under the pointer, by it: moved there by the code, never in the way. */
 .dr-graph3d-tip {
   position: absolute;
@@ -696,7 +660,6 @@ body.is-mobile .dr-chip-clear {
 }
 
 @media (any-hover: hover) {
-  .dr-graph3d-group:hover,
   .dr-graph3d button.dr-graph3d-step:hover {
     background-color: var(--dr-hover);
   }

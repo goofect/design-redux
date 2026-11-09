@@ -18,6 +18,8 @@ export const config = {
     {
       browserName: 'obsidian',
       browserVersion: 'latest',
+      // A container's /dev/shm is often 64 MB: canvases fill it and Chrome kills the tab. Shared memory in /tmp instead.
+      'goog:chromeOptions': { args: ['--disable-dev-shm-usage'] },
       'wdio:obsidianOptions': {
         installerVersion: 'latest',
         plugins: ['.'],

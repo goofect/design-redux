@@ -90,7 +90,6 @@ export class Graph3DHud extends Graph3DPanel {
     this.picked = -1;
     this.lightChanged();
     this.renderDetail();
-    this.renderGroupList();
     const members = [];
     this.graph.nodes.forEach((n, i) => n.key === key && members.push(i));
     const aim = fitView(this.camera, this.runner.positions, this.graph.nodes.length, this.w || 1, this.h || 1, members);
@@ -102,10 +101,8 @@ export class Graph3DHud extends Graph3DPanel {
   }
 
   clearFocus() {
-    const had = this.focusKey;
     this.focusKey = null;
     this.pick(-1);
-    if (had) this.renderGroupList();
   }
 
   /* -- what's picked --------------------------------------------------- */

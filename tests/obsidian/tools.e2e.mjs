@@ -521,4 +521,37 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
     });
     expect(out).toEqual({ to3d: 'Show in 3D', in3d: 'design-redux-graph-3d', drawn: true, to2d: 'Show in 2D', back: 'graph', same: true });
   });
+
+  it('filters the 3D graph as Obsidian’s search does: words in the text, path:, tag:, -leaving out', async function () {
+    const out = await browser.executeObsidian(async ({ app }) => {
+      const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
+      if (!app.vault.getAbstractFileByPath('Garden')) await app.vault.createFolder('Garden');
+      await app.vault.create('Garden/Roses.md', 'Prune in March. #flower/red');
+      await app.vault.create('Garden/Tulips.md', 'Plant bulbs in autumn. #flower');
+      await app.vault.create('Garden/Shed.md', 'Tools and a mower.');
+      await until(() => (app.metadataCache.getCache('Garden/Shed.md') || null) !== null);
+      app.commands.executeCommandById('design-redux:open-graph-3d');
+      await until(() => app.workspace.activeLeaf && app.workspace.activeLeaf.view.getViewType() === 'design-redux-graph-3d');
+      const view = app.workspace.activeLeaf.view;
+      // Its first build comes once the tab's saved settings are in (setState): set the search after.
+      await until(() => !!view.input);
+      // What the graph shows for a query, once it's what's wanted (or after 8 seconds, whatever it is).
+      const shown = async (q, want) => {
+        view.setOption('search', q);
+        const ids = () => view.graph.nodes.map((n) => n.id).sort().join(',');
+        await until(() => ids() === want);
+        return ids();
+      };
+      const result = {
+        text: await shown('bulbs', 'Garden/Tulips.md'),
+        path: await shown('path:garden -mower', 'Garden/Roses.md,Garden/Tulips.md'),
+        tag: await shown('tag:#flower', 'Garden/Roses.md,Garden/Tulips.md'),
+        nested: await shown('tag:#flower/red', 'Garden/Roses.md'),
+      };
+      const folder = app.vault.getAbstractFileByPath('Garden');
+      if (folder) await app.vault.delete(folder, true);
+      return result;
+    });
+    expect(out).toEqual({ text: 'Garden/Tulips.md', path: 'Garden/Roses.md,Garden/Tulips.md', tag: 'Garden/Roses.md,Garden/Tulips.md', nested: 'Garden/Roses.md' });
+  });
 });

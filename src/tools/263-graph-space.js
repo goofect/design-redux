@@ -1,4 +1,6 @@
 /* ------------------------------------------------------------------ */
+
+import { matchQuery, parseQuery } from './277-graph-query.js';
 /* The graph in three dimensions: what's drawn                        */
 /*                                                                    */
 /* The notes the 3D graph (269–275) shows and the links between them, */
@@ -65,16 +67,17 @@ function colourKey(note, by) {
 export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
   const all = [];
   const at = new Map();
-  const add = (id, kind, name, path, key, hay) => {
+  // Each with what the search looks at: name, path, tags, and a note's text and properties as read.
+  const add = (id, kind, name, path, key, seen) => {
     if (at.has(id)) return at.get(id);
     at.set(id, all.length);
-    all.push({ id, kind, name, path, key, hay });
+    all.push({ id, kind, name, path, key, seen });
     return all.length - 1;
   };
   const hidden = new Set(opts.hidden || []);
   notes = notes.filter((n) => !hidden.has(topFolder(n.path)));
-  notes.forEach((n) => add(n.path, 'note', n.name, n.path, colourKey(n, opts.colourBy), `${n.name} ${n.path} ${(n.tags || []).join(' ')}`.toLowerCase()));
-  if (opts.attachments) files.forEach((f) => !hidden.has(topFolder(f.path)) && add(f.path, 'file', f.name, f.path, KIND_KEYS.file, `${f.name} ${f.path}`.toLowerCase()));
+  notes.forEach((n) => add(n.path, 'note', n.name, n.path, colourKey(n, opts.colourBy), { name: n.name, path: n.path, tags: n.tags || [], text: typeof n.text === 'string' ? n.text : null, props: n.props || null }));
+  if (opts.attachments) files.forEach((f) => !hidden.has(topFolder(f.path)) && add(f.path, 'file', f.name, f.path, KIND_KEYS.file, { name: f.name, path: f.path, tags: [], text: null, props: null }));
 
   const pairs = [];
   const seen = new Set();
@@ -91,8 +94,8 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
       const b = at.get(to);
       if (b !== undefined) link(a, b);
     });
-    if (opts.missing) Object.keys(n.missing || {}).forEach((name) => link(a, add(`missing:${name}`, 'missing', name, '', KIND_KEYS.missing, name.toLowerCase())));
-    if (opts.tags) (n.tags || []).forEach((tag) => link(a, add(tag, 'tag', tag, '', KIND_KEYS.tag, tag.toLowerCase())));
+    if (opts.missing) Object.keys(n.missing || {}).forEach((name) => link(a, add(`missing:${name}`, 'missing', name, '', KIND_KEYS.missing, { name, path: '', tags: [], text: null, props: null })));
+    if (opts.tags) (n.tags || []).forEach((tag) => link(a, add(tag, 'tag', tag, '', KIND_KEYS.tag, { name: tag, path: '', tags: [tag], text: null, props: null })));
   });
 
   const near = all.map(() => []);
@@ -101,12 +104,12 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
     near[pairs[k + 1]].push(pairs[k]);
   }
 
-  // A search keeps the notes and files it matches; a tag or a missing
-  // note stays if it matches, or a note kept links to it.
+  // A search, as Obsidian's, keeps the notes and files it matches; a
+  // tag or a missing note stays if it matches, or a note kept links to it.
   let keep = all.map(() => true);
-  const words = String(opts.search || '').toLowerCase().split(/\s+/).filter(Boolean);
-  if (words.length) {
-    const matches = all.map((n) => words.every((w) => n.hay.includes(w)));
+  const query = parseQuery(opts.search);
+  if (query) {
+    const matches = all.map((n) => matchQuery(query, n.seen));
     keep = all.map((n, i) => matches[i] || ((n.kind === 'tag' || n.kind === 'missing') && near[i].some((j) => matches[j] && all[j].kind === 'note')));
   }
 
@@ -312,13 +315,13 @@ export function groupColour(rank, dark) {
 
 /**
  * What a 2D graph's options say, as the 3D graph's settings: what it can
- * read of them (they're Obsidian's own, so each is checked). A search
- * comes over only when it's plain words, as the 3D graph's search is.
+ * read of them (they're Obsidian's own, so each is checked). The search
+ * comes over as it is: the 3D graph's takes what Obsidian's does.
  */
 export function filtersFromGraph(o) {
   const out = {};
   if (!o || typeof o !== 'object') return out;
-  if (typeof o.search === 'string' && /^[^:"()\-]*$/.test(o.search)) out.search = o.search.trim();
+  if (typeof o.search === 'string') out.search = o.search.trim();
   if (typeof o.showTags === 'boolean') out.tags = o.showTags;
   if (typeof o.showAttachments === 'boolean') out.attachments = o.showAttachments;
   if (typeof o.hideUnresolved === 'boolean') out.missing = !o.hideUnresolved;

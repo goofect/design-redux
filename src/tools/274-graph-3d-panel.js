@@ -14,7 +14,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Setting, setIcon } from 'obsidian';
-import { GRAPH_3D_DEFAULTS, groupName } from './263-graph-space.js';
+import { GRAPH_3D_DEFAULTS } from './263-graph-space.js';
 import { layoutOptions } from './264-graph-layout.js';
 import { Graph3DInput } from './269-graph-3d-input.js';
 
@@ -168,11 +168,6 @@ export class Graph3DPanel extends Graph3DInput {
         .onChange((v) => this.setOption('colourBy', v));
     });
     toggle(groups, 'group', 'Pull each together', 'Each group’s notes drawn to a place of their own');
-    this.groupBox = groups.createDiv({ cls: 'dr-graph3d-group-list' });
-    this.registerDomEvent(this.groupBox, 'click', (e) => {
-      const row = e.target.closest('[data-group]');
-      if (row) this.focusGroup(row.dataset.group);
-    });
 
     const display = section('display', 'Display');
     slider(display, 'nodeSize', 'Node size', 0.4, 2.5, 0.1);
@@ -185,29 +180,6 @@ export class Graph3DPanel extends Graph3DInput {
     slider(forces, 'linkLength', 'Link distance', 0.3, 3, 0.1);
   }
 
-  /** The groups the colours go by, each its colour, name and count; a click lights it. Called once the colours are worked out. */
-  renderGroupList() {
-    const box = this.groupBox;
-    if (!box) return;
-    box.empty();
-    const groups = this.options.colourBy === 'none' ? [] : this.groups || [];
-    if (!groups.length) {
-      box.createDiv({ cls: 'dr-graph3d-none', text: this.options.colourBy === 'none' ? 'Notes aren’t coloured by anything.' : 'No groups yet.' });
-      return;
-    }
-    groups.forEach((g) => {
-      const row = box.createDiv({ cls: 'dr-graph3d-group' });
-      row.dataset.group = g.key;
-      row.setAttribute('role', 'button');
-      row.setAttribute('tabindex', '0');
-      row.toggleClass('is-active', this.focusKey === g.key);
-      row.setAttribute('aria-pressed', String(this.focusKey === g.key));
-      row.createSpan({ cls: 'dr-graph3d-dot' }).style.setProperty('--dr-graph3d-dot', this.groupCss(g.key));
-      row.createSpan({ cls: 'dr-graph3d-group-name', text: groupName(this.graph, g.key) });
-      row.createSpan({ cls: 'dr-graph3d-count', text: g.count.toLocaleString() });
-    });
-  }
-
   /** One setting changed, from the panel, the side or a menu, and what follows from it. */
   setOption(key, value) {
     if (this.options[key] === value) return;
@@ -217,7 +189,7 @@ export class Graph3DPanel extends Graph3DInput {
       this.fitAfterBuild = true;
     }
     if (GRAPH_3D_FILTERS.includes(key)) this.queueBuild(key === 'search' ? 250 : 0);
-    else if (GRAPH_3D_FORCES.includes(key)) this.runner.setForces(layoutOptions(this.options), 0.3);
+    else if (GRAPH_3D_FORCES.includes(key)) this.runner.setForces(layoutOptions(this.options), 0.6);
     else if (GRAPH_3D_LOOKS.includes(key)) this.restyle();
     if (key === 'group') this.regroup();
     if (key === 'scene') {
