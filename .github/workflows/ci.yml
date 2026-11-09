@@ -13,6 +13,8 @@ name: Test and release
 # Not on pull requests: a branch's own push already runs it. Not for changes
 # to the docs, agent notes or agent tools alone. A newer push to a branch cancels its run still going,
 # except on the default branch, where each run may release.
+# An empty commit doesn't start it (paths-ignore skips a push with no files
+# changed): to run it again, re-run it from Actions or dispatch it.
 on:
   push:
     branches-ignore: [ci-results, ci-snapshots]
