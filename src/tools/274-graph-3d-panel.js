@@ -51,10 +51,6 @@ export class Graph3DPanel extends Graph3DInput {
     button('mod-close', 'x', 'Close', () => this.togglePanel(false));
     button('mod-open dr-graph3d-side-button', 'settings', 'Open graph settings', () => this.togglePanel(), 'panel');
     button('mod-animate dr-graph3d-side-button', 'rotate-3d', 'Turn slowly', () => this.setOption('spin', !this.options.spin), 'spin');
-    button('mod-more dr-graph3d-side-button', 'scan', 'Fit every note in view', () => this.fit(), 'fit');
-    button('mod-more dr-graph3d-side-button', 'boxes', 'Group by community', () => this.setOption('group', !this.options.group), 'group');
-    button('mod-more dr-graph3d-side-button', 'type', 'Name the biggest notes', () => this.setOption('hubs', !this.options.hubs), 'hubs');
-    button('mod-more dr-graph3d-side-button', 'waypoints', 'Show links', () => this.setOption('links', !this.options.links), 'links');
     button('mod-reset', 'rotate-ccw', 'Restore default settings', () => this.restoreDefaults());
 
     const panel = (this.panel = box.createDiv({ cls: 'dr-graph3d-sections' }));
@@ -160,10 +156,6 @@ export class Graph3DPanel extends Graph3DInput {
       'When on, links to notes not written yet aren’t shown'
     );
     toggle(filters, 'orphans', 'Orphans', 'Show notes linked to nothing');
-    toggle(filters, 'local', 'Only what’s around a note', 'The open note, or one chosen from its menu');
-    slider(filters, 'depth', 'Steps out', 1, 5, 1);
-    filters.createDiv({ cls: 'dr-graph3d-subhead', text: 'Folders' });
-    this.folderBox = filters.createDiv({ cls: 'dr-graph3d-folders' });
 
     const groups = section('color-groups', 'Groups');
     new Setting(groups).setName('Colour by').addDropdown((d) => {
@@ -183,47 +175,14 @@ export class Graph3DPanel extends Graph3DInput {
     });
 
     const display = section('display', 'Display');
-    new Setting(display).setName('Background').addDropdown((d) => {
-      this.controls.scene = d;
-      d.addOption('night', 'Night sky')
-        .addOption('theme', 'The theme’s')
-        .setValue(this.options.scene)
-        .onChange((v) => this.setOption('scene', v));
-    });
-    toggle(display, 'hubs', 'Hub names', 'Name the most-linked notes with nothing picked');
-    slider(display, 'names', 'Names', 0, 1, 0.05);
     slider(display, 'nodeSize', 'Node size', 0.4, 2.5, 0.1);
-    toggle(display, 'links', 'Links');
-    slider(display, 'lines', 'Link strength', 0.05, 1, 0.05);
-    toggle(display, 'follow', 'Follow the open note', 'Turn to each note as it’s opened');
-    toggle(display, 'spin', 'Turn slowly');
+    slider(display, 'names', 'Names', 0, 1, 0.05);
+    slider(display, 'lines', 'Links', 0.05, 1, 0.05);
 
     const forces = section('forces', 'Forces');
     slider(forces, 'centre', 'Centre force', 0, 4, 0.1);
     slider(forces, 'repel', 'Repel force', 0.2, 4, 0.1);
     slider(forces, 'linkLength', 'Link distance', 0.3, 3, 0.1);
-  }
-
-  /** The top folders, each a chip that shows or hides its notes: the biggest first. counts: [[folder, notes]]. */
-  renderFolders(counts) {
-    const box = this.folderBox;
-    if (!box) return;
-    box.empty();
-    const hidden = new Set(this.options.hidden);
-    counts.forEach(([folder, count]) => {
-      const chip = box.createEl('button', { cls: 'dr-graph3d-chip' });
-      chip.createSpan({ text: folder || 'Vault' });
-      chip.createSpan({ cls: 'dr-graph3d-count', text: count.toLocaleString() });
-      const on = !hidden.has(folder);
-      chip.toggleClass('is-active', on);
-      chip.setAttribute('aria-pressed', String(on));
-      chip.addEventListener('click', () => {
-        const now = new Set(this.options.hidden);
-        if (now.has(folder)) now.delete(folder);
-        else if (counts.length - now.size > 1) now.add(folder);
-        this.setOption('hidden', [...now]);
-      });
-    });
   }
 
   /** The groups the colours go by, each its colour, name and count; a click lights it. Called once the colours are worked out. */
@@ -266,7 +225,6 @@ export class Graph3DPanel extends Graph3DInput {
       this.restyle();
     }
     if (key === 'follow' && value) this.centreOn(this.current());
-    if (key === 'hidden' && this.folderCounts) this.renderFolders(this.folderCounts);
     const control = this.controls && this.controls[key];
     if (control && typeof control.getValue === 'function' && control.getValue() !== value) control.setValue(value);
     this.syncSide();
@@ -296,7 +254,6 @@ export class Graph3DPanel extends Graph3DInput {
     });
     Object.keys(this.folds || {}).forEach((id) => this.folds[id](!!(this.options.folds && this.options.folds[id])));
     if (this.panel) this.togglePanel(this.options.panel);
-    if (this.folderCounts) this.renderFolders(this.folderCounts);
   }
 
   saveLater() {

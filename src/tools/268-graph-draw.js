@@ -64,14 +64,17 @@ const NODE_FS = `
 
 const LINE_VS = `
   attribute vec3 a_pos;
+  attribute vec4 a_colour;
   uniform mat4 u_matrix;
   uniform vec3 u_eye;
   uniform vec3 u_ahead;
   uniform vec3 u_fog;
   varying float v_fog;
+  varying vec4 v_colour;
   void main() {
     float depth = dot(a_pos - u_eye, u_ahead);
     gl_Position = u_matrix * vec4(a_pos, 1.0);
+    v_colour = a_colour;
     v_fog = 1.0 - min(1.0, u_fog.z + 0.1) * clamp((depth - u_fog.x) / max(u_fog.y - u_fog.x, 1.0), 0.0, 1.0);
   }`;
 
@@ -80,10 +83,18 @@ const LINE_FS = `
   uniform vec3 u_ground;
   uniform vec3 u_colour;
   uniform float u_strength;
+  uniform float u_tint;
   varying float v_fog;
+  varying vec4 v_colour;
   void main() {
-    gl_FragColor = vec4(mix(u_ground, u_colour, u_strength * v_fog), 1.0);
+    // A link in its notes' colours, one end's fading into the other's; dimmed with them.
+    vec3 c = mix(u_colour, v_colour.rgb, u_tint);
+    float s = u_strength * mix(1.0, v_colour.a, u_tint);
+    gl_FragColor = vec4(mix(u_ground, c, s * v_fog), 1.0);
   }`;
+
+/** How much a link takes its notes' colours, against the plain line colour: most of the way, as on the graphify page. */
+const GRAPH_3D_LINK_TINT = 0.85;
 
 function glProgram(gl, vs, fs) {
   const shader = (type, src) => {
@@ -173,7 +184,7 @@ export class GLRenderer {
     this.maxPoint = range && range[1] ? range[1] : 64;
     this.loc = {
       node: glLocations(gl, this.nodeProg, ['a_pos', 'a_size', 'a_colour'], ['u_matrix', 'u_eye', 'u_ahead', 'u_focal', 'u_fog', 'u_maxPoint', 'u_ground']),
-      line: glLocations(gl, this.lineProg, ['a_pos'], ['u_matrix', 'u_eye', 'u_ahead', 'u_fog', 'u_ground', 'u_colour', 'u_strength']),
+      line: glLocations(gl, this.lineProg, ['a_pos', 'a_colour'], ['u_matrix', 'u_eye', 'u_ahead', 'u_fog', 'u_ground', 'u_colour', 'u_strength', 'u_tint']),
     };
     this.saved = this.saved || {};
     return true;
@@ -278,20 +289,24 @@ export class GLRenderer {
     gl.useProgram(this.lineProg);
     common(L);
     attr(this.buf.pos, L.a_pos, 3);
+    attr(this.buf.colour, L.a_colour, 4);
     gl.depthMask(false);
     // Links off: none drawn but the lit ones, which show what's picked.
     if (this.lineCount && f.lineStrength > 0) {
       gl.uniform3f(L.u_colour, f.line[0], f.line[1], f.line[2]);
       gl.uniform1f(L.u_strength, f.lineStrength);
+      gl.uniform1f(L.u_tint, GRAPH_3D_LINK_TINT);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buf.index);
       gl.drawElements(gl.LINES, this.lineCount, this.indexType, 0);
     }
     if (this.litCount) {
       gl.uniform3f(L.u_colour, f.accent[0], f.accent[1], f.accent[2]);
       gl.uniform1f(L.u_strength, 1);
+      gl.uniform1f(L.u_tint, 0);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buf.lit);
       gl.drawElements(gl.LINES, this.litCount, this.indexType, 0);
     }
+    if (L.a_colour >= 0) gl.disableVertexAttribArray(L.a_colour);
     gl.depthMask(true);
   }
 
@@ -365,13 +380,20 @@ export class CanvasRenderer {
     };
     // Links off: none drawn but the lit ones, which show what's picked.
     if (f.lineStrength > 0) {
-      const bands = [[], [], [], []];
+      // A path a depth band and colour: each link in the colour of the note it starts from.
+      const bands = [new Map(), new Map(), new Map(), new Map()];
       for (let k = 0; k < this.links.length; k += 2) {
         const a = this.links[k];
         const b = this.links[k + 1];
-        if (spots.scale[a] && spots.scale[b]) bands[band((spots.depth[a] + spots.depth[b]) / 2)].push(a, b);
+        if (!spots.scale[a] || !spots.scale[b]) continue;
+        const groups = bands[band((spots.depth[a] + spots.depth[b]) / 2)];
+        const key = this.slots[a] * 2 + (this.presence[a] < 1 ? 1 : 0);
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(a, b);
       }
-      bands.forEach((pairs, i) => stroke(pairs, f.lineCss, 1, f.lineStrength * (1 - i * 0.22)));
+      bands.forEach((groups, i) =>
+        groups.forEach((pairs, key) => stroke(pairs, f.paletteCss[key >> 1] || f.lineCss, 1, f.lineStrength * (1 - i * 0.22) * (key % 2 ? this.presence[pairs[0]] : 1)))
+      );
     }
     const lit = [];
     for (let k = 0; k < this.lit.length; k += 2) if (spots.scale[this.lit[k]] && spots.scale[this.lit[k + 1]]) lit.push(this.lit[k], this.lit[k + 1]);

@@ -570,19 +570,6 @@ body.is-mobile .dr-chip-clear {
   transform: rotate(-90deg);
 }
 
-.dr-graph3d-subhead {
-  padding-top: var(--size-4-2);
-  font-size: var(--font-ui-smaller);
-  color: var(--text-muted);
-}
-
-.dr-graph3d-folders {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--size-2-2);
-  padding: var(--size-4-1) 0 var(--size-4-2);
-}
-
 /* The groups, as the graph lists its own: a colour, a name, a count; a click lights one. */
 .dr-graph3d-group-list {
   display: flex;

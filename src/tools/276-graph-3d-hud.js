@@ -48,18 +48,13 @@ export class Graph3DHud extends Graph3DPanel {
     const b = this.sideButtons;
     if (!b) return;
     const set = (key, on) => {
+      if (!b[key]) return;
       b[key].toggleClass('is-active', on);
       b[key].setAttribute('aria-pressed', String(on));
     };
     set('panel', !!this.options.panel);
-    set('group', !!this.options.group);
-    set('hubs', !!this.options.hubs);
-    set('links', !!this.options.links);
     set('spin', !!this.options.spin);
-    const noun = GRAPH_3D_NOUNS[this.options.colourBy];
-    b.group.setAttribute('aria-label', noun ? `Group by ${noun[0]}` : 'Group by colour (nothing to group by)');
-    b.group.toggleClass('is-disabled', !noun);
-    b.panel.setAttribute('aria-expanded', String(!!this.options.panel));
+    if (b.panel) b.panel.setAttribute('aria-expanded', String(!!this.options.panel));
     if (this.right) this.right.toggleClass('is-settings', !!this.options.panel);
   }
 

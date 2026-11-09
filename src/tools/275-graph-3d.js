@@ -19,7 +19,7 @@ import { getAllTags, TFile } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, inputSignature, KIND_KEYS, parseColour, spaceSignature, topFolder } from './263-graph-space.js';
+import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, inputSignature, KIND_KEYS, parseColour, spaceSignature } from './263-graph-space.js';
 import { layoutOptions, LayoutRunner, startPositions } from './264-graph-layout.js';
 import { fitView, placeNames, projectInto } from './265-graph-camera.js';
 import { CanvasRenderer, drawOverlay, GLRenderer } from './268-graph-draw.js';
@@ -170,10 +170,6 @@ export class Graph3DView extends Graph3DHud {
     if (!this.runner) return;
     const { notes, files } = this.collect();
     const root = this.options.local ? this.root || this.openPath() : '';
-    const counts = new Map();
-    notes.forEach((n) => counts.set(topFolder(n.path), (counts.get(topFolder(n.path)) || 0) + 1));
-    this.folderCounts = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-    this.renderFolders(this.folderCounts);
     // Obsidian says links were resolved after every edit; most edits change none. Nothing to work out then.
     const input = inputSignature(notes, files, this.options, root);
     if (input === this.input) return;

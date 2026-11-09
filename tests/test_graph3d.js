@@ -809,45 +809,31 @@ test('what’s picked: its links, the ways they run, each a step to that note; O
   assert.ok(view.detail.hidden);
 });
 
-test('the side: settings, links, names, grouping, each a button lit while on', () => {
+test('shut, the settings are a gear and the turn, as the graph’s own; links, names and grouping still answer their settings', () => {
   const { view } = hudView();
   const side = (key) => view.sideButtons[key];
-  assert.deepStrictEqual([...view.hud.querySelectorAll('.dr-graph3d-side-button')].map((b) => b.dataset.icon), ['settings', 'rotate-3d', 'scan', 'boxes', 'type', 'waypoints']);
+  assert.deepStrictEqual([...view.hud.querySelectorAll('.dr-graph3d-side-button')].map((b) => b.dataset.icon), ['settings', 'rotate-3d']);
   side('panel').click();
-  assert.ok(!view.panel.hidden && view.right.hasClass('is-settings') && side('panel').hasClass('is-active'));
+  assert.ok(!view.panel.hidden && side('panel').hasClass('is-active'));
   side('panel').click();
   assert.ok(view.panel.hidden);
+  side('spin').click();
+  assert.ok(view.options.spin && side('spin').hasClass('is-active'));
+  side('spin').click();
   let strength = null;
   const draw = view.renderer.draw.bind(view.renderer);
   view.renderer.draw = (f) => { strength = f.lineStrength; draw(f); };
-  side('links').click();
+  view.setOption('links', false);
   frames(1);
   assert.strictEqual(strength, 0);
-  assert.strictEqual(side('links').getAttribute('aria-pressed'), 'false');
   view.app.workspace.active = null;
-  side('hubs').click();
+  view.controls.names.change(0);
   frames(1);
-  assert.deepStrictEqual(drawn.names, [], 'nothing picked, the open note not drawn: no names');
-  side('group').click();
+  assert.deepStrictEqual(drawn.names, [], 'nothing picked, names at nothing: no names');
+  view.setOption('group', true);
   assert.ok(view.runner.anchors && view.runner.hot, 'pulled apart by community');
-  assert.strictEqual(side('group').getAttribute('aria-label'), 'Group by community');
-  side('group').click();
+  view.setOption('group', false);
   assert.strictEqual(view.runner.anchors, null);
-});
-
-test('folders: a chip each, the biggest first; one hidden takes its notes out; the last one shown stays', () => {
-  const { view } = hudView();
-  const chips = () => [...view.folderBox.querySelectorAll('.dr-graph3d-chip')];
-  assert.deepStrictEqual(chips().map((c) => c.firstChild.textContent), ['A', 'B', 'Vault']);
-  chips()[0].click();
-  flush();
-  assert.ok(view.graph.nodes.every((n) => !n.id.startsWith('A/')));
-  assert.ok(!chips()[0].hasClass('is-active'));
-  chips()[1].click();
-  flush();
-  chips()[2].click();
-  flush();
-  assert.deepStrictEqual(view.options.hidden.sort(), ['A', 'B'], 'the last folder shown can’t be hidden');
 });
 
 test('the tip names what’s under the pointer: name, where, community and links', () => {
@@ -984,6 +970,21 @@ test('settings back from the tab’s state reach the drawing, though the vault i
   view.setState({ options: Object.assign({}, view.options, { nodeSize: 2 }) }, {});
   flush();
   assert.ok(Math.abs(view.sizes[0] - size * 2) < 1e-4, `note size applied (${size} → ${view.sizes[0]})`);
+});
+
+test('links in their notes’ colours: on a 2D canvas, each in the colour of the note it starts from', () => {
+  const canvas = document.createElement('canvas');
+  const strokes = [];
+  const ctx = Object.assign(ink(), { stroke() { strokes.push(this.strokeStyle); } });
+  canvas.getContext = () => ctx;
+  const r = new G.CanvasRenderer(canvas);
+  r.setGraph(3, Int32Array.from([0, 1, 2, 1]));
+  r.setStyle(new Float32Array([3, 3, 3]), Uint16Array.from([5, 6, 7]), new Float32Array([1, 1, 1]), []);
+  const spots = { n: 3, x: Float32Array.from([10, 50, 90]), y: Float32Array.from([10, 50, 90]), depth: Float32Array.from([100, 100, 100]), scale: Float32Array.from([1, 1, 1]) };
+  const paletteCss = ['grey', 'accent', 't', 'f', 'm', 'red', 'green', 'blue'];
+  r.draw({ w: 100, h: 100, dpr: 1, near: 100, far: 101, spots, groundCss: 'black', lineCss: 'grey', accentCss: 'accent', paletteCss, lineStrength: 0.5 });
+  assert.ok(strokes.includes('red') && strokes.includes('blue'), `strokes in ${strokes.join(', ')}`);
+  assert.ok(!strokes.includes('grey'), 'none in the plain line colour');
 });
 
 console.log(`${passed} passed`);
