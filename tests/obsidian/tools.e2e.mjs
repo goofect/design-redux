@@ -160,36 +160,34 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
     expect(lit.fromCollective.notes.map(full)).toEqual([true, true, false]);
     expect(lit.fromCollective.lines.map((a) => a !== null && a > 0.5)).toEqual([true, false]);
 
-    // The graph's header shows it on; and a local graph of Westminster, turned on from its own header, is routed too.
-    const local = await browser.executeObsidian(async ({ app }, names) => {
+    // No routes button in the graph's header; and a local graph of Westminster, turned on by the command, is routed too.
+    const local = await browser.executeObsidian(async ({ app, plugins }, names) => {
       const [W, M, I, C] = names;
       const until = async (ok, ms = 8000) => { const end = Date.now() + ms; while (!(await ok()) && Date.now() < end) await new Promise((r) => setTimeout(r, 50)); };
       const graphLeaf = app.workspace.getLeavesOfType('graph')[0];
-      const button = graphLeaf.view.containerEl.querySelector('.view-actions .dr-graph-route-action');
-      const lit = !!button && button.classList.contains('is-active');
+      const noButton = !graphLeaf.view.containerEl.querySelector('.view-actions [aria-label="Links through notes between"]');
       const side = app.workspace.getLeaf('split');
       await side.setViewState({ type: 'localgraph', state: { file: W } });
       const r = () => side.view.renderer;
       const has = (a, b) => r().links.some((l) => (l.source.id === a && l.target.id === b) || (l.source.id === b && l.target.id === a));
-      await until(() => r() && r().links.length > 0 && side.view.containerEl.querySelector('.dr-graph-route-action'));
-      const localButton = side.view.containerEl.querySelector('.dr-graph-route-action');
+      await until(() => r() && r().links.length > 0);
       const before = [has(W, I), has(W, C)];
-      localButton.click();
+      app.workspace.setActiveLeaf(side, { focus: true });
+      app.commands.executeCommandById('design-redux:toggle-graph-routes');
       await until(() => !has(W, I) && has(M, I));
       const result = {
-        lit,
-        localButton: !!localButton,
+        noButton,
         before,
         routed: [has(W, M), has(M, I), has(M, C)],
         straight: [has(W, I), has(W, C)],
-        localOn: localButton.classList.contains('is-active'),
+        localOn: plugins.designRedux.settings.graphRouting.localgraph === true,
       };
-      localButton.click();
+      app.commands.executeCommandById('design-redux:toggle-graph-routes');
       side.detach();
       app.workspace.setActiveLeaf(graphLeaf, { focus: true });
       return result;
     }, [W, M, I, C]);
-    expect(local).toEqual({ lit: true, localButton: true, before: [true, true], routed: [true, true, true], straight: [false, false], localOn: true });
+    expect(local).toEqual({ noButton: true, before: [true, true], routed: [true, true, true], straight: [false, false], localOn: true });
 
     // Off again, from the command: every line straight across.
     const off = await browser.executeObsidian(async ({ app }, names) => {

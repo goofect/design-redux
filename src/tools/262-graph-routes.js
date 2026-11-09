@@ -238,8 +238,7 @@ export class GraphRoutes extends Feature {
     this.graphs.clear();
     this.app.workspace.iterateAllLeaves((leaf) => {
       const graph = this.graphOf(leaf);
-      if (graph) graph.view.containerEl.querySelectorAll('.dr-graph-routes, .dr-graph-route-action').forEach((el) => el.remove());
-      if (graph) delete graph.view.drRouteAction;
+      if (graph) graph.view.containerEl.querySelectorAll('.dr-graph-routes').forEach((el) => el.remove());
       const shown = graph && this.displayChildren(graph);
       if (shown) shown.querySelectorAll('.dr-graph-routes').forEach((el) => el.remove());
     });
@@ -279,26 +278,9 @@ export class GraphRoutes extends Feature {
     const graph = this.graphOf(leaf);
     if (!graph) return;
     this.placeSwitch(graph);
-    this.placeAction(graph);
     const on = this.isOn(graph.type);
     if (on && !graph.renderer.drRoutes) this.patch(graph);
     else if (!on && graph.renderer.drRoutes) this.unpatch(graph.renderer);
-  }
-
-  /** A button in the graph's own header, lit while it's on: routes on and off in one click. */
-  placeAction(graph) {
-    const view = graph.view;
-    let button = view.drRouteAction;
-    if (!button || !button.isConnected) {
-      if (typeof view.addAction !== 'function') return;
-      button = view.addAction('route', 'Links through notes between', () => this.setOn(graph.type, !this.isOn(graph.type)));
-      if (!button) return;
-      button.addClass('dr-graph-route-action');
-      view.drRouteAction = button;
-    }
-    const on = this.isOn(graph.type);
-    button.toggleClass('is-active', on);
-    button.setAttribute('aria-pressed', String(on));
   }
 
   /**

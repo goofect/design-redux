@@ -208,11 +208,6 @@ body.is-mobile .dr-chip-clear {
 }
 
 
-/* Links through notes between: the button in the graph's header, lit while it's on. */
-.view-action.dr-graph-route-action.is-active {
-  color: var(--text-accent);
-}
-
 /* 3D graph ----------------------------------------------------------------------
  *
  * The vault's notes in 3D (263–276). The graph is drawn on one canvas, and

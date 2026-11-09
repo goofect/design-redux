@@ -488,7 +488,7 @@ test('a vault whose notes link up to what they sit under is drawn broad to narro
   feature.settings.graphRouting.graph = false;
 });
 
-test('a button in the graph’s header turns routes on and off, lit while on', () => {
+test('no routes button in the graph’s header: its Display switch turns them on and off', () => {
   require('./harness').elementHelpers(window.HTMLElement.prototype);
   const g = makeGraph('graph', () => ({ nodes: graphData(vault) }));
   const actions = g.leaf.view.containerEl.appendChild(document.createElement('div'));
@@ -503,18 +503,14 @@ test('a button in the graph’s header turns routes on and off, lit while on', (
   const feature = makeFeature(() => [g.leaf], vault);
   feature.enable();
   feature.sync();
-  const buttons = actions.querySelectorAll('.dr-graph-route-action');
-  assert.strictEqual(buttons.length, 1, 'one button, however often synced');
-  const button = buttons[0];
-  assert.ok(!button.classList.contains('is-active') && linkBetween(g, W, I));
-  button.click();
-  assert.ok(button.classList.contains('is-active') && feature.settings.graphRouting.graph === true);
-  assert.ok(!linkBetween(g, W, I), 'on: routed');
-  assert.strictEqual(g.rows.querySelector('.dr-graph-routes').drToggle.getValue(), true, 'the Display switch follows');
-  button.click();
-  assert.ok(!button.classList.contains('is-active') && linkBetween(g, W, I), 'off again');
+  assert.strictEqual(actions.querySelectorAll('[data-icon="route"]').length, 0, 'the header has no routes button');
+  const toggle = g.rows.querySelector('.dr-graph-routes').drToggle;
+  assert.ok(linkBetween(g, W, I));
+  toggle.click();
+  assert.ok(feature.settings.graphRouting.graph === true && !linkBetween(g, W, I), 'on, from Display: routed');
+  toggle.click();
+  assert.ok(linkBetween(g, W, I), 'off again');
   feature.disable();
-  assert.ok(!actions.querySelector('.dr-graph-route-action'), 'gone when the feature is off');
 });
 
 test('a plan is worked out once while nothing changes, and again when the vault or the graph does', () => {
