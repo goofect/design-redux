@@ -159,7 +159,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 
   await t('a cover can be drawn for its name, the default, or the name set as a title; older settings move on, a choice made stays', () => {
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'art' }, 'Realism'), { art: 'Realism' });
-    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art', coverDesigns: { 'IR/Realism.md': 'pines' } }, 'Realism', 'IR/Realism.md'), { art: 'Realism', design: 'pines' });
+    assert.deepStrictEqual(R.blankLook({ coverFallback: 'art', coverDesigns: { 'IR/Realism.md': 'woods' } }, 'Realism', 'IR/Realism.md'), { art: 'Realism', design: 'woods' });
     const drawn = document.createElement('div');
     R.fillArt(drawn, null, 'file-text', null, { art: 'Balance of power' });
     const again = document.createElement('div');
@@ -168,8 +168,11 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(drawn.innerHTML, again.innerHTML, 'the same name, the same cover');
     assert.ok(!drawn.querySelector('.dr-card-glyph'));
     const picked = document.createElement('div');
-    R.fillArt(picked, null, 'file-text', { name: 'Balance of power', tint: '#30a46c' }, { art: 'Balance of power', design: 'pines' });
-    assert.strictEqual(picked.dataset.design, 'pines');
+    R.fillArt(picked, null, 'file-text', { name: 'Balance of power', tint: '#30a46c' }, { art: 'Balance of power', design: 'woods' });
+    assert.strictEqual(picked.dataset.design, 'woods');
+    const retired = document.createElement('div');
+    R.fillArt(retired, null, 'file-text', null, { art: 'Balance of power', design: 'pines' });
+    assert.strictEqual(retired.dataset.design, drawn.dataset.design, "a design that's gone: the name's own instead");
     assert.ok(/hsl\(151/.test(picked.style.backgroundImage), 'drawn in the colour chosen for it');
 
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'title' }, 'Realism'), { title: 'Realism' });
