@@ -427,9 +427,6 @@ export class BrowseAlbum extends BrowsePreview {
     const files = spec.files || [];
     const notes = files.every((f) => f.extension === 'md');
     const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
-    // How long the album is, as an album gives its running time.
-    const length = this.totalLength(files);
-    if (length) meta.push(length);
     const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
     if (newest) meta.push(`Updated ${this.relative(newest)}`);
     const progress = about ? structure.progress(about, files) : null;

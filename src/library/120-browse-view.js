@@ -40,8 +40,6 @@ export class BrowseView extends BrowseFilters {
     this.columnSort = null;
     // Folder paths, or property values, whose full list is showing.
     this.expanded = new Set();
-    // Notes a drawing found with no length yet, counted once it's done.
-    this.toMeasure = [];
     // Filters, each narrowing every screen until cleared: notes under
     // one folder, with one tag, with a property value, from a period.
     this.clearFilters();
@@ -457,7 +455,6 @@ export class BrowseView extends BrowseFilters {
         text: 'This screen could not be drawn. See the console for details.',
       });
     }
-    this.measureLater();
     // The tab's name follows the screen's — as when the folder shown is
     // renamed, which Obsidian doesn't tell the tab about.
     const title = this.getDisplayText();

@@ -333,7 +333,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { parent: '[[Balance]]', status: 'draft', cover: 'https://example.com/a.png', tags: ['#law'] } : {} });
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
-    plugin.lengths = { label: () => '3 min read', measure: async () => false };
     Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
     // A note's view as Obsidian lays it out, editing.
     const containerEl = document.createElement('div');
@@ -351,7 +350,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(album.nextElementSibling, title, 'above the title');
     const meta = title.nextElementSibling;
     assert.ok(meta.classList.contains('dr-note-meta'));
-    assert.ok(/^Under Balance {2}· {2}1 of 4 {2}· {2}3 min read {2}· {2}Edited /.test(meta.textContent), meta.textContent);
+    assert.ok(/^Under Balance {2}· {2}1 of 4 {2}· {2}Edited /.test(meta.textContent), meta.textContent);
     const chips = Array.from(sizer.querySelectorAll('.dr-note-chip')).map((c) => c.textContent);
     assert.deepStrictEqual(chips, ['draft', 'law'], 'its parent and cover said elsewhere; nothing more beside them');
     assert.ok(containerEl.classList.contains('dr-props-as-chips'));
@@ -406,7 +405,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('classic' in R.LOOKS));
   });
 
-  await t('a library that notices notes too thin to be much use', async () => {
+  await t('progress rings are gone: no ring on a cover, and their setting migrated away', async () => {
     const { v, plugin, app } = setup();
     plugin.saveData = () => {};
     const f = (p) => v.vault.getAbstractFileByPath(p);
@@ -417,21 +416,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const saved = { albumProgressRing: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 26).run(saved);
     assert.ok(!('albumProgressRing' in saved) && !('albumProgressRing' in R.DEFAULTS));
-
-    // Thin notes: words of their own, properties, headings and embeds aside.
-    assert.strictEqual(R.bodyWords('---\ntags: a b c\n---\n# A long heading here\nOne two three ![[Big note]] four ![pic](x.png)\n## More\n'), 4);
-    plugin.lengths = new R.Lengths(plugin);
-    const texts = { Anarchy: '# Anarchy\n' + 'word '.repeat(80), Balance: '---\nsummary: many words in the properties here\n---\n# Balance\nJust a few words.\n![[Anarchy]]', Cooperation: 'word '.repeat(59), Deterrence: 'word '.repeat(60) };
-    app.vault.cachedRead = async (file) => texts[file.basename] || 'word '.repeat(100);
-    f('IR/Cooperation.md').stat.ctime = 5;
-    f('IR/Balance.md').stat.ctime = 3;
-    const check = new R.LibraryCheck(plugin);
-    const thin = await check.thinNotes();
-    assert.deepStrictEqual(thin.map((t) => `${t.file.basename} ${t.words}`), ['Cooperation 59', 'Balance 4'], 'under 60, the newest first');
-    plugin.settings.thinNoteWords = 0;
-    assert.deepStrictEqual(await check.thinNotes(), [], '0 turns it off');
-    plugin.settings.thinNoteWords = 60;
-    assert.ok(plugin.lengths.thin(f('IR/Balance.md'), 60) && !plugin.lengths.thin(f('IR/Deterrence.md'), 60));
   });
 
   await t('images added go to the image folder once a note links them: names with spaces, any case; a folder made if missing; one gone first left alone', async () => {
@@ -491,10 +475,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 29);
+    assert.strictEqual(s.settingsVersion, 30);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 29, brought up from \d+; steps [\d, ]+29$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 30, brought up from \d+; steps [\d, ]+30$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
@@ -1170,23 +1154,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     leafEl.remove();
   });
 
-  /* -- lengths, Home ------------------------------------------------------- */
+  /* -- Home ----------------------------------------------------------------- */
 
   const f = (app, p) => app.vault.getFileByPath(p);
-  await t("rows end with each note's length once counted, and the header gives the total", async () => {
-    assert.strictEqual(R.countWords('---\ntitle: x\n---\n# Heading\n\n- one two\n'), 3);
-    assert.strictEqual(R.readingTime(230 * 65), '1 hr 5 min');
-    const { view, plugin, app } = setup();
-    plugin.lengths = new R.Lengths(plugin);
-    const words = { Anarchy: 460, Balance: 1150, Cooperation: 30 };
-    app.vault.cachedRead = async (file) => 'word '.repeat(words[file.basename] || 0);
-    view.render();
-    await settle(120);
-    const lengths = Array.from(view.contentEl.querySelectorAll('.dr-track[data-folder="IR"] .dr-track-length')).map((e) => e.textContent);
-    assert.deepStrictEqual(lengths, ['2 min', '5 min', '<1 min', '']);
-    assert.ok(view.contentEl.querySelector('.dr-detail-meta').textContent.includes('7 min read'));
-  });
-
   await t('the note last opened keeps its number and colour in the list, with no mark', () => {
     const { view, plugin, app } = setup();
     plugin.recentFiles = () => [f(app, 'IR/Cooperation.md')];

@@ -104,8 +104,6 @@ export const DEFAULTS = {
   notePage: true,
   // Menus, suggestions and the canvas's bar and controls as frosted glass.
   glassPanels: false,
-  // Notes with fewer words of their own than this are thin; 0 for no check.
-  thinNoteWords: 60,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.
@@ -117,7 +115,6 @@ export const DEFAULTS = {
   albumNestBy: 'parent',
   // What an album row ends with, where a track's length would be:
   // 'time' to read it, 'words', or 'none'.
-  trackLength: 'time',
   defaultSort: 'name',
   // Recently opened and Pinned have an order of their own, kept until
   // another is chosen there.
@@ -266,7 +263,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 29,
+  settingsVersion: 30,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

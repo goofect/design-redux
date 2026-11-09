@@ -111,10 +111,7 @@ export class HomeScreen extends BrowseScreen {
       const text = body.createDiv({ cls: 'dr-pick-text' });
       text.createDiv({ cls: 'dr-pick-title', text: file.basename });
       const where = file.parent && !(file.parent.isRoot && file.parent.isRoot()) ? file.parent.name : '';
-      // Its length as the setting writes it, everywhere a length is shown.
-      const length = view.lengthStyle() ? view.lengthLabel(file) : '';
-      const sub = [where, length].filter(Boolean).join('  ·  ');
-      if (sub) text.createDiv({ cls: 'dr-pick-sub', text: sub });
+      if (where) text.createDiv({ cls: 'dr-pick-sub', text: where });
 
       onActivate(card, (evt) => view.openFile(file, evt));
       onContextMenu(card, (evt) => view.fileMenu(evt, file));

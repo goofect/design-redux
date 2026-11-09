@@ -203,7 +203,12 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 29);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 30);
+    // Step 30: lengths are gone, and their settings with them.
+    const s29 = { trackLength: 'words', noteLength: 'time', thinNoteWords: 60, notePage: true };
+    R.SETTINGS_MIGRATIONS.find((m) => m.to === 30).run(s29);
+    assert.deepStrictEqual(s29, { notePage: true });
+    assert.ok(!('trackLength' in R.DEFAULTS) && !('thinNoteWords' in R.DEFAULTS));
     // Step 28: a sidebar in the plugin's own sections is laid out as a music app's; one arranged by hand keeps its shape.
     const layout = R.SETTINGS_MIGRATIONS.find((m) => m.to === 28);
     const built = (id) => ({ kind: 'builtin', id });
@@ -255,7 +260,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     // Step 25: a vault back from the plain names and the one Clear look; what it had set stays.
     const s25 = { look: 'clear', motion: 'off', hideRightSidebar: true, pinsLarge: true, showCovers: false, collectionColumns: 'status', smartCollectionList: [{ id: 'a' }], noteLength: 'words', notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 25).run(s25);
-    assert.deepStrictEqual(s25, { notePage: true, albumColumns: 'status', smartAlbumList: [{ id: 'a' }], trackLength: 'words' });
+    // noteLength is no longer renamed to trackLength: step 29 drops both.
+    assert.deepStrictEqual(s25, { notePage: true, albumColumns: 'status', smartAlbumList: [{ id: 'a' }], noteLength: 'words' });
     const apple = { look: 'apple', albumColumns: 'status' };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 25).run(apple);
     assert.deepStrictEqual(apple, { look: 'apple', albumColumns: 'status' }, 'a vault on 3.0.25 keeps what it has');

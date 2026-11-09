@@ -45,7 +45,6 @@ export const UNRENAMED_KEYS = {
   collectionExcerpts: 'albumExcerpts',
   collectionStillToWrite: 'albumStillToWrite',
   collectionNestBy: 'albumNestBy',
-  noteLength: 'trackLength',
   collectionSortMemory: 'albumSortMemory',
   collectionStructure: 'albumStructure',
   collectionKeyNames: 'albumKeyNames',
@@ -303,6 +302,16 @@ export const SETTINGS_MIGRATIONS = [
     to: 29,
     run(saved) {
       delete saved.notePageTint;
+    },
+  },
+  {
+    // Lengths are gone: no reading time or word count at a row's end, on the
+    // note page's grey line or in the inspector, and no thin notes in the check.
+    to: 30,
+    run(saved) {
+      delete saved.trackLength;
+      delete saved.noteLength;
+      delete saved.thinNoteWords;
     },
   },
 ];

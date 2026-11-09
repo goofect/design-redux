@@ -2,8 +2,8 @@
 /* The note page: the note first                                       */
 /*                                                                     */
 /* A note opens with its album above its title, in the accent colour,  */
-/* and one grey line beneath it: what it hangs from, how long it is,    */
-/* when it was last edited. Its properties can sit there as quiet       */
+/* and one grey line beneath it: what it hangs from, where it sits in   */
+/* its album, when it was last edited. Its properties can sit there as quiet       */
 /* chips, the full block a click away. At its end, the notes before and */
 /* after it in its album, then shelves: what it links to, where it's    */
 /* mentioned, and more in its album. In both reading and editing views;  */
@@ -137,7 +137,7 @@ export class NotePage extends Feature {
     return albumNeighbours(this.plugin, file);
   }
 
-  /** The one grey line: what the note hangs from, where it sits in its album, its length, when it was edited. */
+  /** The one grey line: what the note hangs from, where it sits in its album, when it was edited. */
   metaLine(file, near) {
     const parts = [];
     const key = String(this.settings.albumNestBy || '').trim();
@@ -145,10 +145,6 @@ export class NotePage extends Feature {
     const parent = key ? valueList(cache ? fmGet(cache.frontmatter, key) : undefined)[0] : null;
     if (parent) parts.push(`Under ${plainValue(parent)}`);
     if (near && near.index >= 0 && near.total > 1) parts.push(`${near.index + 1} of ${near.total}`);
-    const lengths = this.plugin.lengths;
-    const length = lengths ? lengths.label(file, this.settings.trackLength === 'words' ? 'words' : 'time') : '';
-    if (length) parts.push(length);
-    else if (lengths && typeof lengths.measure === 'function') lengths.measure([file]).then((fresh) => fresh && this.queue());
     if (file.stat && file.stat.mtime) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
     return parts.join('  ·  ');
   }

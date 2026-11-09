@@ -7,7 +7,6 @@ import { BROWSE_VIEW, DEFAULTS, LIBRARY_VIEW } from '../core/020-constants.js';
 import { liveViews } from '../core/034-tabs.js';
 import { propertyLabel } from '../core/045-helpers-properties.js';
 import { Pins } from '../core/060-pins.js';
-import { Lengths } from '../core/065-lengths.js';
 import { Orders, PATH_KEYED, SETTINGS_MIGRATIONS } from '../core/070-orders.js';
 import { Notes } from '../core/073-notes.js';
 import { Files } from '../core/074-files.js';
@@ -42,9 +41,9 @@ import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
-import { Graph3D } from '../tools/275-graph-3d.js';
 import { NotePages } from '../note/267-pages.js';
 import { MarkedLists } from '../note/273-lists-feature.js';
+import { Graph3D } from '../tools/275-graph-3d.js';
 import { Scripts } from '../note/280-scripts.js';
 import { Footnotes } from '../note/285-footnotes.js';
 import { BulkEdits } from '../tools/291-bulk-changes.js';
@@ -71,7 +70,6 @@ export class DesignRedux extends Plugin {
     // What every screen reads of the vault, kept while files and links stay as they are.
     this.libraryIndex = new LibraryIndex(this);
     this.libraryIndex.listen();
-    this.lengths = new Lengths(this);
     this.bulk = new BulkEdits(this);
     RETIRED_VIEWS.forEach((type) => this.registerView(type, (leaf) => new RetiredView(leaf, type)));
 

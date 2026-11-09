@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Browse view: the list, shelves and cards                           */
 /*                                                                    */
-/* Rows of notes with their lengths and marks, shelves of albums, and */
+/* Rows of notes with their marks, shelves of albums, and              */
 /* cards. A part of BrowseView (see 120).                             */
 /* ------------------------------------------------------------------ */
 
@@ -12,7 +12,6 @@ import { byName } from '../core/040-sorting.js';
 import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { noteOpening, plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
-import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ask } from '../core/081-capabilities.js';
 import { RowValues } from './122-browse-editing.js';
@@ -99,18 +98,6 @@ export class BrowseRows extends RowValues {
       // A property's value changed where it's shown.
       if (this.plugin.settings.propertyInlineEdit && file.extension === 'md' && !this.isTimeColumn(key) && key !== 'folder') this.editableCell(cell, file, key);
     });
-
-    // Its length, where a track's would be: the last column, lined up.
-    const style = this.lengthStyle();
-    if (style) {
-      const length = row.createDiv({ cls: 'dr-track-length', text: this.lengthLabel(file) });
-      if (style === 'words') length.addClass('is-words');
-      // Too thin to be much use yet: underlined, as the library check lists it.
-      if (this.plugin.lengths.thin(file, this.plugin.settings.thinNoteWords)) {
-        length.addClass('is-thin');
-        length.setAttribute('aria-label', `Thin: ${this.plugin.lengths.bodyWords(file)} words of its own`);
-      }
-    }
 
     const more = row.createDiv({ cls: 'clickable-icon dr-track-more' });
     more.setAttribute('aria-label', 'More');
@@ -212,39 +199,10 @@ export class BrowseRows extends RowValues {
     return this.valueOf(file, key);
   }
 
-  /* -- lengths, marks -------------------------------------------- */
-
-  /** How lengths are written here — 'time' or 'words' — or null for none. */
-  lengthStyle() {
-    const style = this.plugin.settings.trackLength;
-    if (!this.plugin.lengths || !LENGTH_STYLES[style] || style === 'none') return null;
-    return style;
-  }
-
-  /** A note's length for its row. One not yet counted is counted once the page is drawn. */
-  lengthLabel(file) {
-    const lengths = this.plugin.lengths;
-    if (lengths.measurable(file) && lengths.words(file) === null) this.toMeasure.push(file);
-    return lengths.label(file, this.lengthStyle());
-  }
-
-  /**
-   * An album's length, all its notes together. Not for a very large
-   * one — the vault's root holds every note — which would mean reading
-   * the whole vault to write one line.
-   */
-  totalLength(files) {
-    const style = this.lengthStyle();
-    if (!style || files.length > 400) return '';
-    const total = this.plugin.lengths.total(files, style);
-    if (total !== null) return total;
-    files.forEach((f) => this.toMeasure.push(f));
-    return '';
-  }
+  /* -- marks ------------------------------------------------------ */
 
   /** What one drawing works out once, forgotten before the next. */
   beginDrawing() {
-    this.toMeasure = [];
     this.pinMemo = null;
   }
 
@@ -315,9 +273,7 @@ export class BrowseRows extends RowValues {
     }
     // The count, where the header's isn't the whole of it: an album with discs.
     if (opts.count === false) return;
-    const count = files.length === 1 ? '1 note' : `${files.length} notes`;
-    const length = this.totalLength(files);
-    foot.createDiv({ text: length ? `${count}, ${length.replace(/ read$/, '')}` : count });
+    foot.createDiv({ text: files.length === 1 ? '1 note' : `${files.length} notes` });
   }
 
   /**
@@ -332,19 +288,6 @@ export class BrowseRows extends RowValues {
     if (!others.length) return;
     const top = !!(parent.isRoot && parent.isRoot());
     this.shelf(root, top ? 'More folders' : `More in ${parent.name}`, others, { head: () => this.openFolder(parent) });
-  }
-
-  /** Count what the drawing found uncounted, and draw again once it's known. */
-  measureLater() {
-    const files = this.toMeasure || [];
-    this.toMeasure = [];
-    if (!files.length || !this.plugin.lengths) return;
-    this.plugin.lengths.measure(files).then(
-      (changed) => {
-        if (changed) this.queueRender();
-      },
-      (err) => console.error('Design Redux: could not count words', err)
-    );
   }
 
   /** Whether a note is pinned. The pins are gathered once per drawing. */

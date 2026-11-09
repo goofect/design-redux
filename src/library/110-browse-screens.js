@@ -10,7 +10,7 @@
 import { Notice, setIcon, TFile, TFolder } from 'obsidian';
 import { blankLook, drawFolderArt } from '../core/030-art.js';
 import { onContextMenu } from '../core/036-menus.js';
-import { asButton, iconWord, onActivate, roveFocus } from '../core/042-controls.js';
+import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ask } from '../core/081-capabilities.js';
 import { BrowseScreen } from './108-browse-screen.js';
@@ -245,9 +245,6 @@ export class NotesScreen extends BrowseScreen {
     const head = table.createDiv({ cls: 'dr-tr dr-th' });
     view.headerCell(head, 'title', 'Title', 'dr-td-title');
     columns.forEach((key) => view.headerCell(head, key, view.columnLabel(key)));
-    if (view.lengthStyle()) {
-      iconWord(head.createDiv({ cls: 'dr-td dr-td-length' }), 'clock', view.lengthStyle() === 'words' ? 'Words' : 'Length');
-    }
     view.headerCell(head, 'modified', 'Modified', 'dr-td-time');
 
     // Hundreds of rows are drawn at once; thousands wait to be asked for.

@@ -72,25 +72,13 @@ export function drawNoteHead(plugin, parentEl, file) {
   return head;
 }
 
-/** "Folder · 4 min read · Edited Yesterday". The length arrives once it's counted. */
+/** "Folder · Edited Yesterday". */
 export function fillNoteMeta(plugin, meta, file) {
   const parts = [];
   const folder = file.parent;
   if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
-  const style = plugin.settings.trackLength;
-  const lengths = plugin.lengths;
-  const counts = !!lengths && style !== 'none';
-  const length = counts ? lengths.label(file, style === 'words' ? 'words' : 'time') : '';
-  if (length) parts.push(style === 'words' ? length : `${length} read`);
   if (file.stat) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
   meta.setText(parts.join('  ·  '));
-  if (!counts || lengths.words(file) !== null) return;
-  lengths.measure([file]).then(
-    (changed) => {
-      if (changed && meta.isConnected) fillNoteMeta(plugin, meta, file);
-    },
-    () => {}
-  );
 }
 
 /** A page of the library — the one last worked in — to draw what it picked. */

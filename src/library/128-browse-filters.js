@@ -430,7 +430,6 @@ export class BrowseFilters extends BrowseTable {
       this.render();
       return;
     }
-    this.measureLater();
 
     const fresh = Array.from(scratch.children);
     if (fresh[0] && fresh[0].classList.contains('dr-detail-bar')) fresh.shift();

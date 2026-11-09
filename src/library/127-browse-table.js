@@ -36,7 +36,6 @@ export class BrowseTable extends BrowseArranging {
     columns.forEach((key) =>
       row.createDiv({ cls: 'dr-td', text: this.valueOf(file, key) })
     );
-    if (this.lengthStyle()) row.createDiv({ cls: 'dr-td dr-td-length', text: this.lengthLabel(file) });
     row.createDiv({
       cls: 'dr-td dr-td-time',
       text: this.relative(file.stat.mtime),

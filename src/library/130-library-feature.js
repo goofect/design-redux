@@ -6,7 +6,6 @@ import { Notice, Platform, Setting, TFolder } from 'obsidian';
 import { BROWSE_VIEW, GRID_DENSITIES, INSPECTOR_VIEW, LIBRARY_BUILTINS, LIBRARY_HOVER_SOURCE, LIBRARY_VIEW, libraryLayout, TILE_GROUPS } from '../core/020-constants.js';
 import { canStep, clearSidebarChrome, liveViews, pageLeaf, singleAreaOn, step } from '../core/034-tabs.js';
 import { SORTS } from '../core/040-sorting.js';
-import { LENGTH_STYLES } from '../core/065-lengths.js';
 import { closeInspector, inspectorShowing, openInspector } from '../core/076-selection.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
@@ -118,14 +117,6 @@ export class Library extends Feature {
         desc: 'The property naming a note’s parent, to nest it. Empty for a flat list.',
         placeholder: 'parent',
         suggest: 'properties',
-      },
-      {
-        key: 'trackLength',
-        type: 'dropdown',
-        showIf: 'library',
-        name: 'Note length',
-        desc: 'Shown at the end of each row.',
-        options: LENGTH_STYLES,
       },
       {
         key: 'gridDensity',

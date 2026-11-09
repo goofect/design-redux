@@ -407,20 +407,6 @@ body.is-phone .dr-album-foot {
   margin-left: calc(var(--dr-u) * 10);
 }
 
-/* -- the Notes table's lengths -- */
-
-.dr-td-length {
-  flex: 0 0 90px;
-  justify-content: flex-end;
-  text-align: right;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-body.is-phone .dr-td-length {
-  display: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .dr-card-buttons,
   .dr-detail-action {

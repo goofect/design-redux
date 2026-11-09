@@ -768,22 +768,6 @@
   font-size: var(--font-ui-small);
 }
 
-/* How long the note is: the row's last column, a fixed width so the
-   lengths line up down the list. */
-
-.dr-track-length {
-  flex: 0 0 4.6em;
-  text-align: right;
-  white-space: nowrap;
-  color: var(--text-faint);
-  font-size: var(--font-ui-small);
-  font-variant-numeric: tabular-nums;
-}
-
-.dr-track-length.is-words {
-  flex-basis: 7em;
-}
-
 /* Pinned, beside the title. */
 
 .dr-track-name.has-mark {
