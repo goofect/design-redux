@@ -17,7 +17,7 @@ export const GRAPH_3D_DEFAULTS = {
   search: '',
   tags: false,
   attachments: false,
-  missing: false,
+  missing: true, // as the graph's own starts: Existing files only off, notes not written yet shown
   orphans: true,
   local: false,
   depth: 2,

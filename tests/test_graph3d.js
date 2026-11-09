@@ -130,7 +130,8 @@ const test = (name, fn) => {
 };
 
 const note = (path, links = {}, tags = [], missing = null) => ({ path, name: path.split('/').pop().replace(/\.md$/, ''), links, tags, missing });
-const opts = (o) => Object.assign({}, G.GRAPH_3D_DEFAULTS, o);
+// What these tests take for granted: notes not written yet left out, unless a test asks for them.
+const opts = (o) => Object.assign({}, G.GRAPH_3D_DEFAULTS, { missing: false }, o);
 const ids = (g) => g.nodes.map((n) => n.id).sort();
 const pairs = (g) => {
   const out = [];
@@ -1108,6 +1109,14 @@ test('the Groups section: New group adds a row; its query, as typing pauses, col
   assert.strictEqual(rows().length, 0);
   assert.deepStrictEqual(view.options.colorGroups, []);
   assert.ok(view.graph.nodes[plan].key.startsWith('c:'), 'no groups: the communities’ colours again');
+});
+
+test('the filters start as the graph’s own: notes not written yet shown (Existing files only off), orphans shown', () => {
+  assert.strictEqual(G.GRAPH_3D_DEFAULTS.missing, true);
+  assert.strictEqual(G.GRAPH_3D_DEFAULTS.orphans, true);
+  assert.deepStrictEqual([G.GRAPH_3D_DEFAULTS.tags, G.GRAPH_3D_DEFAULTS.attachments], [false, false]);
+  const { view } = openView(PATHS, LINKS());
+  assert.strictEqual(view.controls.missing.getValue(), true, 'the Existing files only toggle reads off');
 });
 
 console.log(`${passed} passed`);

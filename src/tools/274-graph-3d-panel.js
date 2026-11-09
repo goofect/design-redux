@@ -138,11 +138,12 @@ export class Graph3DPanel extends Graph3DInput {
     const filters = section('filter', 'Filters');
     new Setting(filters).setClass('mod-search-setting').addSearch((s) => {
       this.controls.search = s;
+      if (s.clearButtonEl) s.clearButtonEl.setAttribute('aria-label', 'Clear search');
       s.setPlaceholder('Search files...')
         .setValue(this.options.search)
         .onChange((v) => this.setOption('search', v));
     });
-    toggle(filters, 'tags', 'Tags', 'Tags are linked to the notes that have them');
+    toggle(filters, 'tags', 'Tags', 'Tags are linked to the files that contain them');
     toggle(filters, 'attachments', 'Attachments', 'Show attachments');
     // Obsidian asks the other way round: shown, notes not written yet are left out.
     tip(
@@ -153,9 +154,9 @@ export class Graph3DPanel extends Graph3DInput {
           t.setValue(!this.options.missing).onChange((v) => this.setOption('missing', !v));
           this.controls.missing = { getValue: () => !t.getValue(), setValue: (v) => t.setValue(!v) };
         }),
-      'When on, links to notes not written yet aren’t shown'
+      'When enabled, links to nonexistent files are not shown'
     );
-    toggle(filters, 'orphans', 'Orphans', 'Show notes linked to nothing');
+    toggle(filters, 'orphans', 'Orphans', 'Show files that are not linked to any other file');
 
     // Groups, as the graph's own: a query and a colour each, and New group.
     const groups = section('color-groups', 'Groups');
