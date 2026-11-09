@@ -34,6 +34,7 @@ export class Graph3DInput extends ItemView {
     this.picked = -1;
     this.held = -1;
     this.root = '';
+    this.focusKey = null;
     this.pointers = new Map();
     this.press = null;
     this.pinch = null;
@@ -74,6 +75,7 @@ export class Graph3DInput extends ItemView {
     }
     this.pointers.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
     this.pinch = null;
+    this.showTip(-1);
     if (this.pointers.size > 1) {
       if (this.press) this.press.moved = true;
       this.letGo();
@@ -159,11 +161,12 @@ export class Graph3DInput extends ItemView {
     if (i < 0) this.pick(-1);
     else if (press.mod) this.openNode(i, 'tab');
     else if (i === this.picked) this.openNode(i, false);
-    else this.pick(i);
+    else this.pick(i, true);
   }
 
   left() {
     this.pointer = null;
+    this.showTip(-1);
     if (this.hover >= 0 && !this.pointers.size) {
       this.hover = -1;
       this.overlay.toggleClass('is-pointing', false);
@@ -181,11 +184,13 @@ export class Graph3DInput extends ItemView {
     const p = this.pointer;
     if (!p || this.pointers.size) return;
     const i = this.pointAt(p.x, p.y, 4);
-    if (i === this.hover) return;
-    this.hover = i;
-    this.overlay.toggleClass('is-pointing', i >= 0);
-    this.lightChanged();
-    if (i >= 0) this.preview(i, p.evt);
+    if (i !== this.hover) {
+      this.hover = i;
+      this.overlay.toggleClass('is-pointing', i >= 0);
+      this.lightChanged();
+      if (i >= 0) this.preview(i, p.evt);
+    }
+    this.showTip(i, p.x, p.y);
   }
 
   /** A note's preview, as for a link: Obsidian shows it when Ctrl or Cmd is held (or as its settings say). */
@@ -238,9 +243,9 @@ export class Graph3DInput extends ItemView {
     else if (e.key === '+' || e.key === '=') this.camera.zoom(0.85);
     else if (e.key === '-') this.camera.zoom(1 / 0.85);
     else if (e.key === 'Enter' && this.picked >= 0) this.openNode(this.picked, e.ctrlKey || e.metaKey ? 'tab' : false);
-    else if (e.key === 'Escape' && this.picked >= 0) this.pick(-1);
+    else if (e.key === 'Escape' && (this.picked >= 0 || this.focusKey)) this.clearFocus();
     else if (e.key === 'f' && !e.ctrlKey && !e.metaKey) this.fit();
-    else if (e.key === '/') this.openSearch();
+    else if (e.key === '/') this.openFind();
     else return;
     e.preventDefault();
     this.touched = true;

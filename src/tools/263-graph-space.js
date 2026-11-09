@@ -19,7 +19,7 @@ export const GRAPH_3D_DEFAULTS = {
   orphans: true,
   local: false,
   depth: 2,
-  colourBy: 'folder',
+  colourBy: 'community',
   nodeSize: 1,
   names: 0.5,
   lines: 0.5,
@@ -29,13 +29,18 @@ export const GRAPH_3D_DEFAULTS = {
   follow: false,
   spin: false,
   panel: false,
+  hidden: [], // top folders not drawn ('' for the notes at the vault's root)
+  group: false, // each colour's notes pulled to a place of their own
+  hubs: true, // the biggest notes named, with nothing picked
+  links: true,
+  scene: 'night', // drawn on a night sky, as the graphify page is; 'theme': on the theme's background
 };
 
 /** The colour keys that aren't a folder's or a tag's: each kind has the theme's colour for it. A space starts each, as no folder's or tag's can. */
 export const KIND_KEYS = { tag: ' tag', file: ' file', missing: ' missing' };
 const KIND_KEY_SET = new Set(Object.values(KIND_KEYS));
 
-const topFolder = (path) => {
+export const topFolder = (path) => {
   const cut = path.indexOf('/');
   return cut > 0 ? path.slice(0, cut) : '';
 };
@@ -65,8 +70,10 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
     all.push({ id, kind, name, path, key, hay });
     return all.length - 1;
   };
+  const hidden = new Set(opts.hidden || []);
+  notes = notes.filter((n) => !hidden.has(topFolder(n.path)));
   notes.forEach((n) => add(n.path, 'note', n.name, n.path, colourKey(n, opts.colourBy), `${n.name} ${n.path} ${(n.tags || []).join(' ')}`.toLowerCase()));
-  if (opts.attachments) files.forEach((f) => add(f.path, 'file', f.name, f.path, KIND_KEYS.file, `${f.name} ${f.path}`.toLowerCase()));
+  if (opts.attachments) files.forEach((f) => !hidden.has(topFolder(f.path)) && add(f.path, 'file', f.name, f.path, KIND_KEYS.file, `${f.name} ${f.path}`.toLowerCase()));
 
   const pairs = [];
   const seen = new Set();
@@ -146,7 +153,82 @@ export function buildSpace(notes, files, opts = GRAPH_3D_DEFAULTS, root = '') {
     nodes[a].near.push(b);
     nodes[b].near.push(a);
   }
-  return { nodes, links: Int32Array.from(kept), root: from >= 0 ? index[from] : -1 };
+  const names = new Map();
+  if (opts.colourBy === 'community') {
+    // Each community goes by its most-linked note: its key, and its name.
+    const label = findCommunities(nodes);
+    const hub = new Map();
+    nodes.forEach((n, i) => {
+      if (!n.degree) return;
+      const h = hub.get(label[i]);
+      if (h === undefined || n.degree > nodes[h].degree || (n.degree === nodes[h].degree && n.name < nodes[h].name)) hub.set(label[i], i);
+    });
+    nodes.forEach((n, i) => {
+      if (n.kind !== 'note') return;
+      const h = n.degree ? hub.get(label[i]) : undefined;
+      n.key = h === undefined ? '' : `c:${nodes[h].id}`;
+      if (h !== undefined) names.set(n.key, nodes[h].name);
+    });
+  }
+  return { nodes, links: Int32Array.from(kept), root: from >= 0 ? index[from] : -1, names };
+}
+
+/**
+ * Communities, by label propagation: each note takes the label most of
+ * its links have — a hub's counting for less — till none changes. The
+ * most linked go first and ties go to the lower label, so the same
+ * graph gives the same communities. Gives each note's label.
+ */
+export function findCommunities(nodes) {
+  const n = nodes.length;
+  const label = new Int32Array(n);
+  for (let i = 0; i < n; i++) label[i] = i;
+  const order = nodes.map((_, i) => i).sort((a, b) => nodes[b].degree - nodes[a].degree || a - b);
+  for (let round = 0; round < 30; round++) {
+    let changed = 0;
+    order.forEach((i) => {
+      const near = nodes[i].near;
+      if (!near.length) return;
+      const weight = new Map();
+      near.forEach((j) => weight.set(label[j], (weight.get(label[j]) || 0) + 1 / Math.sqrt(nodes[j].degree)));
+      let best = label[i];
+      let most = weight.get(best) || 0;
+      weight.forEach((w, l) => {
+        if (w > most + 1e-9 || (Math.abs(w - most) <= 1e-9 && l < best)) {
+          best = l;
+          most = w;
+        }
+      });
+      if (best !== label[i]) {
+        label[i] = best;
+        changed++;
+      }
+    });
+    if (!changed) break;
+  }
+  return label;
+}
+
+/** What a colour key is called: a community by its note, the vault's root notes as the vault, a folder or tag as itself. */
+export function groupName(graph, key) {
+  if (graph.names && graph.names.has(key)) return graph.names.get(key);
+  return key || 'Vault';
+}
+
+/**
+ * A group's colour, the rank-th of as many as there are: hues a golden
+ * angle apart, so neighbours in the list never look alike; brighter on a
+ * dark background. Gives { css, rgb }.
+ */
+export function groupColour(rank, dark) {
+  const h = (rank * 137.508 + 205) % 360;
+  const s = dark ? 0.68 : 0.6;
+  const l = dark ? 0.62 : 0.45;
+  const k = (m) => (m + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (m) => l - a * Math.max(-1, Math.min(k(m) - 3, Math.min(9 - k(m), 1)));
+  const rgb = [f(0), f(8), f(4)];
+  return { css: `rgb(${rgb.map((c) => Math.round(c * 255)).join(', ')})`, rgb };
 }
 
 /**

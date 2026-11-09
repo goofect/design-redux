@@ -2,76 +2,88 @@
 /* The graph in three dimensions: drawing                             */
 /*                                                                    */
 /* WebGL where there is some, as Obsidian's own graph has: each note  */
-/* a round point, shaded like a ball, the far ones sunk into the      */
-/* background; the links as lines from one buffer of positions, which */
-/* the layout fills once a step; what's behind hidden by depth. Where */
-/* WebGL can't be had, the same on a 2D canvas, a path per depth band */
-/* and colour rather than one per note. Over either, on a canvas of   */
-/* its own, the rings round the open and picked notes, and the names. */
+/* a ball lit from the upper left — a soft light, a small shine, its  */
+/* edge a little darker — the far ones sunk into the background; the  */
+/* links as thin lines from one buffer of positions, which the layout */
+/* fills once a step, fading as they go back; what's behind hidden by */
+/* depth. Where WebGL can't be had, the same on a 2D canvas, a path  */
+/* per depth band and colour rather than one per note, with a shade   */
+/* and a shine laid over each band. Over either, on a canvas of its   */
+/* own, a glow round the note in focus, rings round the open and      */
+/* picked notes, and the names, each on a soft haze of the background.*/
 /* ------------------------------------------------------------------ */
 
 import { cameraMatrix } from './265-graph-camera.js';
 
 const NODE_VS = `
-attribute vec3 a_pos;
-attribute float a_size;
-attribute vec4 a_colour;
-uniform mat4 u_matrix;
-uniform vec3 u_eye;
-uniform vec3 u_ahead;
-uniform float u_focal;
-uniform vec2 u_fog;
-uniform float u_maxPoint;
-varying vec4 v_colour;
-varying float v_fog;
-varying float v_px;
-void main() {
-  float depth = dot(a_pos - u_eye, u_ahead);
-  gl_Position = u_matrix * vec4(a_pos, 1.0);
-  float px = clamp(a_size * 2.0 * u_focal / max(depth, 1.0), 2.0, u_maxPoint);
-  gl_PointSize = px;
-  v_px = px;
-  v_fog = 1.0 - 0.65 * clamp((depth - u_fog.x) / max(u_fog.y - u_fog.x, 1.0), 0.0, 1.0);
-  v_colour = a_colour;
-}`;
+  attribute vec3 a_pos;
+  attribute float a_size;
+  attribute vec4 a_colour;
+  uniform mat4 u_matrix;
+  uniform vec3 u_eye;
+  uniform vec3 u_ahead;
+  uniform float u_focal;
+  uniform vec3 u_fog;
+  uniform float u_maxPoint;
+  varying vec4 v_colour;
+  varying float v_fog;
+  varying float v_px;
+  void main() {
+    float depth = dot(a_pos - u_eye, u_ahead);
+    gl_Position = u_matrix * vec4(a_pos, 1.0);
+    float px = clamp(a_size * 2.0 * u_focal / max(depth, 1.0), 2.0, u_maxPoint);
+    gl_PointSize = px;
+    v_px = px;
+    v_fog = 1.0 - u_fog.z * clamp((depth - u_fog.x) / max(u_fog.y - u_fog.x, 1.0), 0.0, 1.0);
+    v_colour = a_colour;
+  }`;
 
+// A ball: the point's square read as a sphere's face (y up), lit from the
+// upper left and in front — ambient, diffuse, a Blinn shine — its rim a
+// little darker, then sunk into the background by the fog and the dimming.
 const NODE_FS = `
-precision mediump float;
-uniform vec3 u_ground;
-varying vec4 v_colour;
-varying float v_fog;
-varying float v_px;
-void main() {
-  vec2 p = gl_PointCoord * 2.0 - 1.0;
-  float r2 = dot(p, p);
-  if (r2 > 1.0) discard;
-  float shade = 0.8 + 0.2 * sqrt(1.0 - r2);
-  float edge = 1.0 - smoothstep(1.0 - 4.0 / v_px, 1.0, r2);
-  gl_FragColor = vec4(mix(u_ground, v_colour.rgb * shade, v_fog * v_colour.a * edge), 1.0);
-}`;
+  precision mediump float;
+  uniform vec3 u_ground;
+  varying vec4 v_colour;
+  varying float v_fog;
+  varying float v_px;
+  const vec3 LIGHT = vec3(-0.42, 0.55, 0.72);
+  void main() {
+    vec2 p = gl_PointCoord * 2.0 - 1.0;
+    float r2 = dot(p, p);
+    if (r2 > 1.0) discard;
+    vec3 n = vec3(p.x, -p.y, sqrt(1.0 - r2));
+    vec3 l = normalize(LIGHT);
+    float diffuse = max(dot(n, l), 0.0);
+    float shine = pow(max(dot(n, normalize(l + vec3(0.0, 0.0, 1.0))), 0.0), 28.0);
+    float rim = smoothstep(0.55, 1.0, r2);
+    vec3 lit = v_colour.rgb * (0.5 + 0.6 * diffuse) * (1.0 - 0.18 * rim) + vec3(0.22 * shine);
+    float edge = 1.0 - smoothstep(1.0 - 3.0 / v_px, 1.0, r2);
+    gl_FragColor = vec4(mix(u_ground, clamp(lit, 0.0, 1.0), v_fog * v_colour.a * edge), 1.0);
+  }`;
 
 const LINE_VS = `
-attribute vec3 a_pos;
-uniform mat4 u_matrix;
-uniform vec3 u_eye;
-uniform vec3 u_ahead;
-uniform vec2 u_fog;
-varying float v_fog;
-void main() {
-  float depth = dot(a_pos - u_eye, u_ahead);
-  gl_Position = u_matrix * vec4(a_pos, 1.0);
-  v_fog = 1.0 - 0.7 * clamp((depth - u_fog.x) / max(u_fog.y - u_fog.x, 1.0), 0.0, 1.0);
-}`;
+  attribute vec3 a_pos;
+  uniform mat4 u_matrix;
+  uniform vec3 u_eye;
+  uniform vec3 u_ahead;
+  uniform vec3 u_fog;
+  varying float v_fog;
+  void main() {
+    float depth = dot(a_pos - u_eye, u_ahead);
+    gl_Position = u_matrix * vec4(a_pos, 1.0);
+    v_fog = 1.0 - min(1.0, u_fog.z + 0.1) * clamp((depth - u_fog.x) / max(u_fog.y - u_fog.x, 1.0), 0.0, 1.0);
+  }`;
 
 const LINE_FS = `
-precision mediump float;
-uniform vec3 u_ground;
-uniform vec3 u_colour;
-uniform float u_strength;
-varying float v_fog;
-void main() {
-  gl_FragColor = vec4(mix(u_ground, u_colour, u_strength * v_fog), 1.0);
-}`;
+  precision mediump float;
+  uniform vec3 u_ground;
+  uniform vec3 u_colour;
+  uniform float u_strength;
+  varying float v_fog;
+  void main() {
+    gl_FragColor = vec4(mix(u_ground, u_colour, u_strength * v_fog), 1.0);
+  }`;
 
 function glProgram(gl, vs, fs) {
   const shader = (type, src) => {
@@ -242,7 +254,8 @@ export class GLRenderer {
       gl.uniformMatrix4fv(L.u_matrix, false, matrix);
       gl.uniform3f(L.u_eye, eye.x, eye.y, eye.z);
       gl.uniform3f(L.u_ahead, ahead.x, ahead.y, ahead.z);
-      gl.uniform2f(L.u_fog, f.near, f.far);
+      // How far the far notes sink into the background: the view says (f.fog), else most of the way.
+      gl.uniform3f(L.u_fog, f.near, f.far, f.fog === undefined ? 0.65 : f.fog);
       gl.uniform3f(L.u_ground, f.ground[0], f.ground[1], f.ground[2]);
     };
 
@@ -264,7 +277,8 @@ export class GLRenderer {
     common(L);
     attr(this.buf.pos, L.a_pos, 3);
     gl.depthMask(false);
-    if (this.lineCount) {
+    // Links off: none drawn but the lit ones, which show what's picked.
+    if (this.lineCount && f.lineStrength > 0) {
       gl.uniform3f(L.u_colour, f.line[0], f.line[1], f.line[2]);
       gl.uniform1f(L.u_strength, f.lineStrength);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.buf.index);
@@ -288,7 +302,12 @@ export class GLRenderer {
   }
 }
 
-/** The same on a 2D canvas: far bands first, a path per band and colour. */
+/**
+ * The same on a 2D canvas: far bands first, a path per band and colour;
+ * then, over each band's bigger notes, one path of shade (the side away
+ * from the light) and one of shine — a few dozen fills a frame, however
+ * many notes.
+ */
 export class CanvasRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -342,18 +361,22 @@ export class CanvasRenderer {
       }
       ctx.stroke();
     };
-    const bands = [[], [], [], []];
-    for (let k = 0; k < this.links.length; k += 2) {
-      const a = this.links[k];
-      const b = this.links[k + 1];
-      if (spots.scale[a] && spots.scale[b]) bands[band((spots.depth[a] + spots.depth[b]) / 2)].push(a, b);
+    // Links off: none drawn but the lit ones, which show what's picked.
+    if (f.lineStrength > 0) {
+      const bands = [[], [], [], []];
+      for (let k = 0; k < this.links.length; k += 2) {
+        const a = this.links[k];
+        const b = this.links[k + 1];
+        if (spots.scale[a] && spots.scale[b]) bands[band((spots.depth[a] + spots.depth[b]) / 2)].push(a, b);
+      }
+      bands.forEach((pairs, i) => stroke(pairs, f.lineCss, 1, f.lineStrength * (1 - i * 0.22)));
     }
-    bands.forEach((pairs, i) => stroke(pairs, f.lineCss, 1, f.lineStrength * (1 - i * 0.2)));
     const lit = [];
     for (let k = 0; k < this.lit.length; k += 2) if (spots.scale[this.lit[k]] && spots.scale[this.lit[k + 1]]) lit.push(this.lit[k], this.lit[k + 1]);
     stroke(lit, f.accentCss, 1.5, 0.9);
 
     const byBand = [new Map(), new Map(), new Map(), new Map()];
+    const shaded = [[], [], [], []];
     for (let i = 0; i < this.count; i++) {
       const s = spots.scale[i];
       if (!s) continue;
@@ -361,23 +384,42 @@ export class CanvasRenderer {
       const x = spots.x[i];
       const y = spots.y[i];
       if (x < -r || y < -r || x > w + r || y > h + r || r > Math.max(w, h)) continue;
-      const groups = byBand[band(spots.depth[i])];
+      const b = band(spots.depth[i]);
+      const groups = byBand[b];
       const key = this.slots[i] * 2 + (this.presence[i] < 1 ? 1 : 0);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(i);
+      // Too small to show a light, or dimmed: left flat.
+      if (r >= 3 && this.presence[i] >= 1) shaded[b].push(i);
     }
-    for (let b = 3; b >= 0; b--) {
-      byBand[b].forEach((list, key) => {
-        ctx.globalAlpha = (1 - 0.65 * (b / 3)) * (key % 2 ? this.presence[list[0]] : 1);
-        ctx.fillStyle = f.paletteCss[key >> 1] || f.paletteCss[0];
-        ctx.beginPath();
-        list.forEach((i) => {
-          const r = Math.max(this.sizes[i] * spots.scale[i], 1.2);
-          ctx.moveTo(spots.x[i] + r, spots.y[i]);
-          ctx.arc(spots.x[i], spots.y[i], r, 0, Math.PI * 2);
-        });
-        ctx.fill();
+    // Discs, each its own offset and size of the note: one path for all of a band's.
+    const discs = (list, dx, dy, k) => {
+      ctx.beginPath();
+      list.forEach((i) => {
+        const r = Math.max(this.sizes[i] * spots.scale[i], 1.2);
+        const x = spots.x[i] + r * dx;
+        const y = spots.y[i] + r * dy;
+        ctx.moveTo(x + r * k, y);
+        ctx.arc(x, y, r * k, 0, Math.PI * 2);
       });
+      ctx.fill();
+    };
+    for (let b = 3; b >= 0; b--) {
+      const fog = 1 - (f.fog === undefined ? 0.65 : f.fog) * (b / 3);
+      byBand[b].forEach((list, key) => {
+        ctx.globalAlpha = fog * (key % 2 ? this.presence[list[0]] : 1);
+        ctx.fillStyle = f.paletteCss[key >> 1] || f.paletteCss[0];
+        discs(list, 0, 0, 1);
+      });
+      if (!shaded[b].length) continue;
+      // The side away from the light: all but a crescent at the upper left, a little darker.
+      ctx.globalAlpha = 0.14 * fog;
+      ctx.fillStyle = '#000000';
+      discs(shaded[b], 0.1, 0.1, 0.88);
+      // The shine, up and to the left.
+      ctx.globalAlpha = 0.3 * fog;
+      ctx.fillStyle = '#ffffff';
+      discs(shaded[b], -0.32, -0.34, 0.34);
     }
     ctx.globalAlpha = 1;
   }
@@ -386,8 +428,10 @@ export class CanvasRenderer {
 }
 
 /**
- * Over the graph: rings round the open note and the picked one, and the
- * names, each with a band of the background behind it to read on.
+ * Over the graph: a glow round the note in focus, rings round the open
+ * note and the picked one — each on a band of the background, so it
+ * reads on light and dark alike — and the names, each on a soft haze of
+ * the background (a wide faint stroke under a narrow one).
  *   o: { w, h, dpr, spots, radius(i), rings: [{ i, width }], names:
  *        [{ i, x, y }], text(i), alpha(i), focus, font, accent, text, ground }
  */
@@ -395,13 +439,33 @@ export function drawOverlay(ctx, o) {
   ctx.setTransform(o.dpr, 0, 0, o.dpr, 0, 0);
   ctx.clearRect(0, 0, o.w, o.h);
   const { spots } = o;
-  ctx.strokeStyle = o.accent;
+  const TAU = Math.PI * 2;
+  if (o.focus >= 0 && spots.scale[o.focus]) {
+    // The glow: three rings of the accent outside the note, each fainter, so it never covers the ball.
+    const x = spots.x[o.focus];
+    const y = spots.y[o.focus];
+    const r = o.radius(o.focus);
+    ctx.fillStyle = o.accent;
+    [[2, 5, 0.3], [5, 9, 0.16], [9, 14, 0.07]].forEach(([from, to, alpha]) => {
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(x, y, r + to, 0, TAU);
+      ctx.arc(x, y, r + from, 0, TAU, true);
+      ctx.fill();
+    });
+  }
   o.rings.forEach(({ i, width }) => {
     if (!spots.scale[i]) return;
-    ctx.globalAlpha = 1;
-    ctx.lineWidth = width;
+    const at = o.radius(i) + 2 + width;
     ctx.beginPath();
-    ctx.arc(spots.x[i], spots.y[i], o.radius(i) + 2 + width, 0, Math.PI * 2);
+    ctx.arc(spots.x[i], spots.y[i], at, 0, TAU);
+    ctx.globalAlpha = 0.85;
+    ctx.strokeStyle = o.ground;
+    ctx.lineWidth = width + 3;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = o.accent;
+    ctx.lineWidth = width;
     ctx.stroke();
   });
   if (o.names.length) {
@@ -409,12 +473,17 @@ export function drawOverlay(ctx, o) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = o.ground;
     o.names.forEach(({ i, x, y }) => {
       const t = o.text(i);
-      ctx.globalAlpha = o.alpha(i);
-      ctx.strokeStyle = o.ground;
+      const alpha = o.alpha(i);
+      ctx.globalAlpha = alpha * 0.35;
+      ctx.lineWidth = 6;
       ctx.strokeText(t, x, y);
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.lineWidth = 2.5;
+      ctx.strokeText(t, x, y);
+      ctx.globalAlpha = alpha;
       ctx.fillStyle = i === o.focus ? o.accent : o.textColour;
       ctx.fillText(t, x, y);
     });

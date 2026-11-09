@@ -23,13 +23,14 @@ export const LAYOUT = {
   theta: 0.9, // how far off a clump of notes is taken as one
   cool: 0.0228, // how fast the layout calms down
   cold: 0.003, // calm enough to stop
+  group: 0.07, // the pull of a note's anchor, while grouping is on
 };
 
 /** The forces, as a view's sliders scale them. */
 export function layoutOptions(scale) {
   const s = scale || {};
   const by = (k) => (typeof s[k] === 'number' ? s[k] : 1);
-  return Object.assign({}, LAYOUT, { repel: LAYOUT.repel * by('repel'), length: LAYOUT.length * by('linkLength'), gravity: LAYOUT.gravity * by('centre') });
+  return Object.assign({}, LAYOUT, { repel: LAYOUT.repel * by('repel'), length: LAYOUT.length * by('linkLength'), gravity: LAYOUT.gravity * by('centre'), group: s.group ? LAYOUT.group : 0 });
 }
 
 /**
@@ -83,6 +84,8 @@ export function layoutKernel() {
   let deg = new Float64Array(0);
   let links = new Int32Array(0);
   let fixed = new Uint8Array(0);
+  // Where each note is pulled to while grouping (NaN: nowhere); null when not grouping.
+  let anchors = null;
   // The tree: a box per index, eight children made at once, side by side.
   let cap = 0;
   let used = 0;
@@ -248,6 +251,10 @@ export function layoutKernel() {
       vel[pa + 1] += dy * l * (1 - toB);
       vel[pa + 2] += dz * l * (1 - toB);
     }
+    if (anchors && o.group > 0) {
+      const k = o.group * alpha;
+      for (let p = 0; p < n * 3; p++) if (anchors[p] === anchors[p]) vel[p] += (anchors[p] - pos[p]) * k;
+    }
     const pull = o.gravity * alpha;
     const keep = 1 - o.friction;
     let moved = 0;
@@ -278,7 +285,12 @@ export function layoutKernel() {
     links = Int32Array.from(pairs);
     fixed = new Uint8Array(n);
     deg = new Float64Array(n);
+    anchors = null;
     for (let k = 0; k < links.length; k++) deg[links[k]]++;
+  }
+
+  function anchor(list) {
+    anchors = list && list.length === n * 3 ? Float64Array.from(list) : null;
   }
 
   function fix(i, x, y, z) {
@@ -293,7 +305,7 @@ export function layoutKernel() {
     if (i >= 0 && i < n) fixed[i] = 0;
   }
 
-  return { load, step, fix, release, positions: () => pos };
+  return { load, step, fix, release, anchor, positions: () => pos };
 }
 
 /** The worker's code: the kernel, stepping in batches of a dozen milliseconds, sending positions after each. */
@@ -317,6 +329,7 @@ function layoutWorkerSource() {
     "    if (m.type === 'load') { gen = m.gen; kernel.load(m.count, m.links, m.pos); alpha = m.alpha; }",
     "    else if (m.type === 'fix') kernel.fix(m.i, m.x, m.y, m.z);",
     "    else if (m.type === 'release') kernel.release(m.i);",
+    "    else if (m.type === 'anchor') kernel.anchor(m.anchors);",
     "    if (m.type !== 'load' && typeof m.alpha === 'number') alpha = Math.max(alpha, m.alpha);",
     '    if (!timer) timer = setTimeout(run, 0);',
     '  };',
@@ -366,6 +379,7 @@ export class LayoutRunner {
     this.worker = null;
     if (!this.kernel) this.kernel = layoutKernel();
     if (this.count) this.kernel.load(this.count, this.links, this.positions);
+    if (this.anchors) this.kernel.anchor(this.anchors);
   }
 
   load(count, links, start, alpha) {
@@ -375,6 +389,7 @@ export class LayoutRunner {
     this.alpha = alpha;
     this.gen++;
     this.version++;
+    this.anchors = null;
     if (this.worker) this.worker.postMessage({ type: 'load', gen: this.gen, count, links, pos: start, opts: this.opts, alpha });
     else this.kernel.load(count, links, start);
   }
@@ -405,6 +420,14 @@ export class LayoutRunner {
   release(i) {
     if (this.worker) this.worker.postMessage({ type: 'release', i });
     else this.kernel.release(i);
+  }
+
+  /** Where each note is pulled to while grouping (x y z a note, NaN for none), or null; warmed so it shows. */
+  setAnchors(anchors, alpha) {
+    this.anchors = anchors;
+    this.alpha = Math.max(this.alpha, alpha || 0);
+    if (this.worker) this.worker.postMessage({ type: 'anchor', anchors, alpha: alpha || 0 });
+    else this.kernel.anchor(anchors);
   }
 
   /** Here, not in a worker: steps for up to budget milliseconds. Whether it moved. */

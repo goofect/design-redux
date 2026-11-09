@@ -15,24 +15,21 @@
 /* opened again; what the tab is set to is kept with the workspace.   */
 /* ------------------------------------------------------------------ */
 
-import { getAllTags, Platform, TFile } from 'obsidian';
+import { getAllTags, TFile } from 'obsidian';
 import { GRAPH_TYPES } from '../core/020-constants.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
-import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, KIND_KEYS, parseColour, spaceSignature } from './263-graph-space.js';
+import { buildSpace, colourGroups, filtersFromGraph, GRAPH_3D_DEFAULTS, groupColour, KIND_KEYS, parseColour, spaceSignature, topFolder } from './263-graph-space.js';
 import { layoutOptions, LayoutRunner, startPositions } from './264-graph-layout.js';
 import { fitView, placeNames, projectInto } from './265-graph-camera.js';
 import { CanvasRenderer, drawOverlay, GLRenderer } from './268-graph-draw.js';
 import { GRAPH_3D_VIEW } from './269-graph-3d-input.js';
-import { Graph3DPanel } from './274-graph-3d-panel.js';
+import { Graph3DHud } from './276-graph-3d-hud.js';
 
-/** The theme's colours a folder's (or tag's) notes take, in turn: the commonest first. */
-const GRAPH_3D_COLOURS = ['--color-blue', '--color-orange', '--color-green', '--color-purple', '--color-red', '--color-cyan', '--color-yellow', '--color-pink'];
-
-/** Where each colour sits in the palette: the kinds first, then the folders'. */
+/** Where each colour sits in the palette: the kinds first, then each community's (folder's, tag's). */
 const GRAPH_3D_SLOT = { node: 0, focus: 1, tag: 2, file: 3, missing: 4, first: 5 };
 
-export class Graph3DView extends Graph3DPanel {
+export class Graph3DView extends Graph3DHud {
   getViewType() {
     return GRAPH_3D_VIEW;
   }
@@ -43,14 +40,6 @@ export class Graph3DView extends Graph3DPanel {
 
   getIcon() {
     return 'rotate-3d';
-  }
-
-  get folderColours() {
-    return GRAPH_3D_COLOURS.length;
-  }
-
-  get firstSlot() {
-    return GRAPH_3D_SLOT.first;
   }
 
   /** The window the view is in: the main one, or a popout's. */
@@ -70,14 +59,7 @@ export class Graph3DView extends Graph3DPanel {
     this.overlay.setAttribute('tabindex', '0');
     this.overlay.setAttribute('aria-label', 'Notes and their links, in 3D');
     this.ink = this.overlay.getContext('2d');
-    this.caption = el.createDiv({ cls: 'dr-graph3d-caption' });
-    this.caption.setAttribute('aria-live', 'polite');
-    this.buildPanel();
-    this.panelButton = this.addAction('sliders-horizontal', 'Graph settings', () => this.togglePanel());
-    this.panelButton.addClass('dr-graph3d-settings');
-    this.addAction('scan', 'Fit every note in view', () => this.fit());
-    this.spinButton = this.addAction('rotate-3d', 'Turn slowly', () => this.setOption('spin', !this.options.spin));
-    this.spinButton.addClass('dr-graph3d-spin');
+    this.buildHud();
     this.addAction('git-fork', 'Show in 2D', () => this.feature.flip(this.leaf)).addClass('dr-graph3d-switch');
     this.runner = new LayoutRunner(win, () => this.draw());
     this.runner.setForces(layoutOptions(this.options), 0);
@@ -185,12 +167,17 @@ export class Graph3DView extends Graph3DPanel {
     this.buildTimer = 0;
     if (!this.runner) return;
     const { notes, files } = this.collect();
+    const counts = new Map();
+    notes.forEach((n) => counts.set(topFolder(n.path), (counts.get(topFolder(n.path)) || 0) + 1));
+    this.folderCounts = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    this.renderFolders(this.folderCounts);
     const graph = buildSpace(notes, files, this.options, this.options.local ? this.root || this.openPath() : '');
     const sign = spaceSignature(graph);
     if (sign === this.sign) {
       graph.nodes.forEach((n, i) => (this.graph.nodes[i].key = n.key));
       this.graph.root = graph.root;
-      this.restyle();
+      this.graph.names = graph.names;
+      this.settled();
       return;
     }
     const before = this.positionsById();
@@ -207,11 +194,49 @@ export class Graph3DView extends Graph3DPanel {
     this.renderer.setGraph(graph.nodes.length, graph.links);
     this.uploaded = -1;
     if (share < 0.6 && !this.cameraKept) this.touched = false;
-    this.restyle();
+    this.settled();
     if (this.fitAfterBuild) {
       this.fitAfterBuild = false;
       this.fit(true);
     }
+  }
+
+  /** The graph worked out: its colours, its grouping, what's said of it, and what's picked if it's still there. */
+  settled() {
+    if (this.focusKey && !this.graph.nodes.some((n) => n.key === this.focusKey)) this.focusKey = null;
+    this.restyle();
+    if (this.options.group) this.regroup();
+    this.renderStats();
+    this.renderDetail();
+  }
+
+  /** Grouping on: each community's notes pulled to a place of their own, round a sphere; off, let go. */
+  regroup() {
+    if (!this.runner) return;
+    this.runner.setForces(layoutOptions(this.options), 0);
+    const groups = this.groups || [];
+    if (!this.options.group || !groups.length) {
+      this.runner.setAnchors(null, 0.3);
+      this.draw();
+      return;
+    }
+    const nodes = this.graph.nodes;
+    const radius = 9.5 * Math.sqrt(Math.max(nodes.length, 1));
+    const place = new Map();
+    groups.forEach((g, k) => {
+      const y = 1 - ((k + 0.5) / groups.length) * 2;
+      const r = Math.sqrt(Math.max(0, 1 - y * y));
+      const t = k * 2.399963;
+      place.set(g.key, [Math.cos(t) * r * radius, y * radius, Math.sin(t) * r * radius]);
+    });
+    const anchors = new Float64Array(nodes.length * 3).fill(NaN);
+    nodes.forEach((n, i) => {
+      const a = place.get(n.key);
+      if (a) anchors.set(a, i * 3);
+    });
+    this.runner.setAnchors(anchors, 0.6);
+    if (!this.cameraKept) this.touched = false;
+    this.draw();
   }
 
   /** Where every note drawn is, by id, over where notes were the last time any 3D graph had them. */
@@ -238,55 +263,83 @@ export class Graph3DView extends Graph3DPanel {
       probe.fillStyle = s;
       return probe.fillStyle;
     };
-    const node = v('--graph-node', v('--text-muted', '#888888'));
+    // The night sky is the scene's own, as the graphify page draws it: the same in any theme. The accent stays the theme's.
+    const night = this.options.scene !== 'theme';
+    this.contentEl.toggleClass('is-scene-night', night);
+    const node = night ? '#8b93a7' : v('--graph-node', v('--text-muted', '#888888'));
     const focus = v('--graph-node-focused', v('--interactive-accent', '#7b6cd9'));
-    const list = [node, focus, v('--graph-node-tag', v('--color-green', '#3a9a5b')), v('--graph-node-attachment', v('--color-yellow', '#c99a1f')), v('--graph-node-unresolved', v('--text-faint', '#aaaaaa'))].concat(GRAPH_3D_COLOURS.map((name) => v(name, node)));
-    const ground = v('--background-primary', '#ffffff');
-    const line = v('--graph-line', v('--background-modifier-border', '#888888'));
+    const list = [
+      node,
+      focus,
+      night ? '#5fd38d' : v('--graph-node-tag', v('--color-green', '#3a9a5b')),
+      night ? '#e2b84f' : v('--graph-node-attachment', v('--color-yellow', '#c99a1f')),
+      night ? '#6b7385' : v('--graph-node-unresolved', v('--text-faint', '#aaaaaa')),
+    ];
+    const ground = night ? '#0b0d14' : v('--background-primary', '#ffffff');
+    const line = night ? '#a5b4d7' : v('--graph-line', v('--background-modifier-border', '#888888'));
     const size = parseFloat(v('--font-ui-smaller', '12px')) || 12;
-    this.palette = { css: list, rgb: list.map((c) => parseColour(c, normalize)) };
+    this.kinds = { css: list, rgb: list.map((c) => parseColour(c, normalize)) };
+    this.palette = { css: list.slice(), rgb: this.kinds.rgb.slice() };
+    const groundRgb = parseColour(ground, normalize);
     this.theme = {
+      dark: 0.2126 * groundRgb[0] + 0.7152 * groundRgb[1] + 0.0722 * groundRgb[2] < 0.5,
       ground,
       groundRgb: parseColour(ground, normalize),
       line,
       lineRgb: parseColour(line, normalize),
       accent: focus,
       accentRgb: parseColour(focus, normalize),
-      text: v('--graph-text', v('--text-normal', '#222222')),
+      text: night ? '#e7eaf1' : v('--graph-text', v('--text-normal', '#222222')),
+      // On the night sky the far notes stay nearly as bright, and the links are faint, as on the graphify page.
+      fog: night ? 0.3 : 0.6,
+      lineScale: night ? 0.45 : 1,
       font: `${size}px ${v('--font-interface', css.fontFamily || 'sans-serif')}`,
     };
     this.lineHeight = Math.round(size * 1.3);
     this.widths = new Map();
   }
 
-  /** Sizes and colours, from the graph and the settings; and what's lit. */
+  /** Sizes and colours, from the graph and the settings — a colour a community, hues apart — and what's lit. */
   restyle() {
     const nodes = this.graph.nodes;
     const n = nodes.length;
-    const groups = colourGroups(nodes, GRAPH_3D_COLOURS.length);
-    const slotOf = new Map(groups.map((g) => [g.key, GRAPH_3D_SLOT.first + g.slot]));
+    const groups = (this.groups = this.options.colourBy === 'none' ? [] : colourGroups(nodes, Infinity));
+    const colours = groups.map((g) => groupColour(g.slot, this.theme.dark));
+    this.palette = { css: this.kinds.css.concat(colours.map((c) => c.css)), rgb: this.kinds.rgb.concat(colours.map((c) => c.rgb)) };
+    this.slotOf = new Map(groups.map((g) => [g.key, GRAPH_3D_SLOT.first + g.slot]));
     const kinds = { [KIND_KEYS.tag]: GRAPH_3D_SLOT.tag, [KIND_KEYS.file]: GRAPH_3D_SLOT.file, [KIND_KEYS.missing]: GRAPH_3D_SLOT.missing };
-    this.slots = new Uint8Array(n);
+    this.slots = new Uint16Array(n);
     this.sizes = new Float32Array(n);
     const k = this.options.nodeSize;
     nodes.forEach((node, i) => {
-      this.slots[i] = node.key in kinds ? kinds[node.key] : slotOf.has(node.key) ? slotOf.get(node.key) : GRAPH_3D_SLOT.node;
-      this.sizes[i] = (2.4 + Math.sqrt(node.degree) * 0.9) * k * (node.kind === 'note' ? 1 : 0.8);
+      this.slots[i] = node.key in kinds ? kinds[node.key] : this.slotOf.has(node.key) ? this.slotOf.get(node.key) : GRAPH_3D_SLOT.node;
+      // As the graphify page sizes them: the cube root of 1 + 1.25 √links, so hubs stand out and leaves stay small.
+      this.sizes[i] = 3 * Math.cbrt(1 + 1.25 * Math.sqrt(node.degree)) * k * (node.kind === 'note' ? 1 : 0.8);
     });
-    this.renderLegend(groups);
+    this.hubOrder = nodes.map((_, i) => i).sort((a, b) => nodes[b].degree - nodes[a].degree || (nodes[a].name < nodes[b].name ? -1 : 1));
+    this.renderGroups();
     this.lightChanged();
   }
 
   /** The note whose links are lit (the one pointed at, else the one picked) and those it links to; null for none. */
   lit() {
+    const nodes = this.graph.nodes;
     const focus = this.hover >= 0 ? this.hover : this.picked;
-    if (focus < 0 || !this.graph.nodes[focus]) return null;
-    const set = new Set([focus].concat(this.graph.nodes[focus].near));
-    set.focus = focus;
+    if (focus >= 0 && nodes[focus]) {
+      const set = new Set([focus].concat(nodes[focus].near));
+      set.focus = focus;
+      return set;
+    }
+    if (!this.focusKey) return null;
+    // A community (folder, tag) picked: its notes, and no one note among them.
+    const set = new Set();
+    nodes.forEach((n, i) => n.key === this.focusKey && set.add(i));
+    if (!set.size) return null;
+    set.focus = -1;
     return set;
   }
 
-  /** What's lit changed: the rest dimmed, its links drawn in the accent colour, the caption told. */
+  /** What's lit changed: the rest dimmed, its links drawn in the accent colour. */
   lightChanged() {
     if (!this.renderer || !this.slots) return;
     const n = this.graph.nodes.length;
@@ -296,13 +349,17 @@ export class Graph3DView extends Graph3DPanel {
     const pairs = [];
     if (lit) {
       lit.forEach((i) => (presence[i] = 1));
-      slots[lit.focus] = GRAPH_3D_SLOT.focus;
-      this.graph.nodes[lit.focus].near.forEach((j) => pairs.push(lit.focus, j));
+      if (lit.focus >= 0) {
+        slots[lit.focus] = GRAPH_3D_SLOT.focus;
+        this.graph.nodes[lit.focus].near.forEach((j) => pairs.push(lit.focus, j));
+      } else {
+        const links = this.graph.links;
+        for (let k = 0; k < links.length; k += 2) if (lit.has(links[k]) && lit.has(links[k + 1])) pairs.push(links[k], links[k + 1]);
+      }
     }
     if (this.picked >= 0 && this.picked < n) slots[this.picked] = GRAPH_3D_SLOT.focus;
     this.renderer.setStyle(this.sizes, slots, presence, this.palette.rgb);
     this.renderer.setLit(Int32Array.from(pairs));
-    this.setCaption();
     this.draw();
   }
 
@@ -329,9 +386,15 @@ export class Graph3DView extends Graph3DPanel {
     this.draw();
   }
 
-  pick(i) {
+  /** A note picked (and, fly, the camera turned to it), or none: -1. */
+  pick(i, fly) {
+    const had = this.focusKey;
     this.picked = i;
+    if (i >= 0) this.focusKey = null;
     this.lightChanged();
+    this.renderDetail();
+    if (had && !this.focusKey) this.renderGroups();
+    if (fly && i >= 0) this.centreOn(i);
   }
 
   /** What's around one note (or tag) only, a few steps out. */
@@ -340,39 +403,6 @@ export class Graph3DView extends Graph3DPanel {
     this.fitAfterBuild = true;
     if (this.options.local) this.queueBuild(0);
     else this.setOption('local', true);
-  }
-
-  setCaption() {
-    const cap = this.caption;
-    if (!cap) return;
-    cap.empty();
-    const nodes = this.graph.nodes;
-    const lit = this.lit();
-    const i = lit ? lit.focus : -1;
-    const line = (cls, text) => cap.createDiv({ cls, text });
-    if (i >= 0) {
-      const n = nodes[i];
-      const folder = n.path && n.path.includes('/') ? n.path.slice(0, n.path.lastIndexOf('/')) : n.path ? 'Vault' : '';
-      const kind = { note: '', file: 'Attachment', tag: 'Tag', missing: 'Not written yet' }[n.kind];
-      const tap = Platform.isMobile ? 'Tap' : 'Click';
-      const next = { note: 'open it', file: 'open it', tag: 'see what’s around it', missing: 'write it' }[n.kind];
-      line('dr-graph3d-name', n.name);
-      line('dr-graph3d-meta', [kind, folder, `${n.degree} ${n.degree === 1 ? 'link' : 'links'}`, i === this.picked ? `${tap} again to ${next}` : ''].filter(Boolean).join(' · '));
-      return;
-    }
-    if (!nodes.length) {
-      const o = this.options;
-      if (o.local && !this.root && !this.openPath()) line('dr-graph3d-name', 'Open a note to see what’s around it');
-      else if (o.search) line('dr-graph3d-name', `Nothing matches “${o.search}”`);
-      else line('dr-graph3d-name', 'No notes yet');
-      line('dr-graph3d-meta', o.search || o.local ? 'Change what’s shown in Graph settings.' : 'Notes and their links appear here as you write them.');
-      return;
-    }
-    const notes = nodes.filter((n) => n.kind === 'note').length;
-    const rest = nodes.length - notes;
-    const root = this.graph.root >= 0 ? nodes[this.graph.root].name : '';
-    line('dr-graph3d-name', [`${notes.toLocaleString()} ${notes === 1 ? 'note' : 'notes'}`, rest ? `${rest.toLocaleString()} more` : '', `${(this.graph.links.length / 2).toLocaleString()} links`].filter(Boolean).join(' · ') + (root ? ` around ${root}` : ''));
-    line('dr-graph3d-meta', Platform.isMobile ? 'Drag to turn · Pinch to zoom · Two fingers to move' : 'Drag to turn · Scroll to zoom · Shift-drag to move');
   }
 
   /* -- the loop: layout, camera, a frame --------------------------- */
@@ -392,6 +422,7 @@ export class Graph3DView extends Graph3DPanel {
     let again = false;
     if (this.runner.pump(this.still ? 30 : 8)) again = true;
     if (this.runner.hot && !this.touched && Date.now() - (this.lastFit || 0) > 120) this.fit(true);
+    if (this.statsHot !== this.runner.hot) this.renderStats();
     if (this.options.spin && this.held < 0) {
       this.camera.yaw += 0.0025;
       again = true;
@@ -420,12 +451,16 @@ export class Graph3DView extends Graph3DPanel {
     this.draw();
   }
 
-  /** The camera turned to one note, and brought a little nearer. */
+  /** The camera turned to one note, and brought a little nearer: in the middle of what the panes leave of the view. */
   centreOn(i) {
     if (i < 0 || i >= this.graph.nodes.length) return;
     const pos = this.runner.positions;
     this.touched = true;
-    this.easing = { target: { x: pos[i * 3], y: pos[i * 3 + 1], z: pos[i * 3 + 2] }, distance: Math.min(this.camera.distance, 240) };
+    const distance = Math.min(this.camera.distance, 240);
+    const open = this.right && ((this.detail && !this.detail.hidden) || (this.panel && !this.panel.hidden));
+    const shift = open ? ((this.right.offsetWidth / 2) * distance) / this.camera.focal(this.h || 1) : 0;
+    const { right } = this.camera.frame();
+    this.easing = { target: { x: pos[i * 3] + right.x * shift, y: pos[i * 3 + 1] + right.y * shift, z: pos[i * 3 + 2] + right.z * shift }, distance };
     this.draw();
   }
 
@@ -469,7 +504,8 @@ export class Graph3DView extends Graph3DPanel {
       accent: t.accentRgb,
       accentCss: t.accent,
       paletteCss: this.palette.css,
-      lineStrength: (lit ? 0.35 : 1) * this.options.lines,
+      lineStrength: this.options.links ? (lit ? 0.35 : 1) * this.options.lines * t.lineScale : 0,
+      fog: t.fog,
     });
     this.drawNames(spots, lit);
   }
@@ -487,7 +523,7 @@ export class Graph3DView extends Graph3DPanel {
     const n = nodes.length;
     const open = this.current();
     const always = new Set();
-    if (lit) always.add(lit.focus);
+    if (lit && lit.focus >= 0) always.add(lit.focus);
     if (this.picked >= 0) always.add(this.picked);
     if (open >= 0) always.add(open);
     const order = [...always];
@@ -498,16 +534,25 @@ export class Graph3DView extends Graph3DPanel {
         order.push(i);
       });
     }
-    const want = this.options.names;
+    const want = this.options.hubs ? this.options.names : 0;
     if (want > 0) {
-      const smallest = 14 - 12 * want;
+      // The hubs, the most linked first, as the graphify page names them; then what's drawn big, near the camera.
+      const most = Math.round(6 + 44 * want);
+      let named = 0;
+      for (const i of this.hubOrder || []) {
+        if (named >= most) break;
+        if (!spots.scale[i] || seen.has(i)) continue;
+        seen.add(i);
+        order.push(i);
+        named++;
+      }
+      const smallest = 16 - 8 * want;
       const big = [];
       for (let i = 0; i < n; i++) {
         const s = spots.scale[i];
         if (s && !seen.has(i) && this.sizes[i] * s >= smallest) big.push(i);
       }
       big.sort((a, b) => this.sizes[b] * spots.scale[b] - this.sizes[a] * spots.scale[a]);
-      const most = Math.round(20 + 280 * want);
       for (let k = 0; k < big.length && k < most; k++) order.push(big[k]);
     }
     const t = this.theme;

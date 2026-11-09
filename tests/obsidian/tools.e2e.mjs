@@ -462,7 +462,7 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
         view.overlay.dispatchEvent(new PointerEvent('pointerup', at));
       };
       click();
-      const picked = view.picked === i && view.caption.textContent.includes('again to open');
+      const picked = view.picked === i && !view.detail.hidden && view.detail.querySelector('.dr-graph3d-name').textContent === view.graph.nodes[i].name;
       // Seen with its settings open, the note picked and its links lit.
       view.togglePanel(true);
       return {
@@ -480,6 +480,10 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
     out.opened = await browser.executeObsidian(async ({ app }) => {
       const view = app.workspace.activeLeaf.view;
       view.togglePanel(false);
+      // Picked, the camera flew to it: clicked again once it's there.
+      const settle = Date.now() + 5000;
+      while (view.easing && Date.now() < settle) await new Promise((r) => setTimeout(r, 50));
+      view.renderFrame();
       const i = view.picked;
       const path = view.graph.nodes[i].path;
       const rect = view.overlay.getBoundingClientRect();

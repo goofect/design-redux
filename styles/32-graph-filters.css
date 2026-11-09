@@ -215,17 +215,26 @@ body.is-mobile .dr-chip-clear {
 
 /* 3D graph ----------------------------------------------------------------------
  *
- * The vault's notes in 3D (263–275): the graph drawn on one canvas and the
- * rings and names on another over it, which takes the pointer (a drag
- * turns the graph, so the page mustn't scroll under it); a caption in the
- * corner naming what's pointed at; and the settings panel, floating at
- * the top right as the graph's own does.
+ * The vault's notes in 3D (263–276). The graph is drawn on one canvas, and
+ * the rings and names on another over it, which takes the pointer: a drag
+ * turns the graph, so the page mustn't scroll under it. Over both float
+ * panes of glass, as on the graph's own page: at the top left how much is
+ * drawn and a box to find a note, under it the communities; on the right
+ * what's picked, or the settings; and down the right edge the controls, a
+ * column of icons like the graph's gear. A tip by the pointer names the
+ * note under it. The layout narrows to one column on a phone or a slim pane.
  */
 
 .dr-graph3d.view-content {
   position: relative;
   padding: 0;
   overflow: hidden;
+  container-type: inline-size;
+}
+
+/* The panes set display: what's hidden stays hidden. */
+.dr-graph3d [hidden] {
+  display: none !important;
 }
 
 .dr-graph3d-stage {
@@ -265,109 +274,647 @@ body.is-mobile .dr-chip-clear {
   box-shadow: inset 0 0 0 2px var(--interactive-accent);
 }
 
-.dr-graph3d-caption {
+/* The panes: a grid over the graph, which takes the pointer only where a pane is. */
+.dr-graph3d-hud {
   position: absolute;
-  left: var(--dr-space-3);
-  bottom: var(--dr-space-3);
-  max-width: calc(100% - var(--dr-space-3) * 2);
-  padding: var(--dr-space-2) var(--dr-space-3);
-  border-radius: var(--dr-radius-sm);
-  background: var(--background-primary);
-  box-shadow: var(--dr-shadow-sm);
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 300px) auto;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--dr-space-2) var(--dr-space-3);
+  padding: var(--dr-space-3);
   pointer-events: none;
 }
 
-.dr-graph3d-name {
-  font-weight: var(--font-semibold);
+.dr-graph3d-pane,
+.dr-graph3d-side {
+  pointer-events: auto;
+}
+
+.dr-graph3d-pane {
+  box-sizing: border-box;
+  padding: var(--dr-space-3);
+  background-color: var(--dr-float-bg);
+  backdrop-filter: blur(var(--dr-glass-blur));
+  -webkit-backdrop-filter: blur(var(--dr-glass-blur));
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-lg);
+  box-shadow: var(--dr-shadow-sm);
+  font-size: var(--font-ui-small);
   color: var(--text-normal);
-  overflow-wrap: anywhere;
 }
 
-.dr-graph3d-meta {
+.dr-graph3d-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dr-space-2);
+}
+
+.dr-graph3d-title {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-semibold);
+  line-height: var(--line-height-tight);
+}
+
+/* Small capitals over a part: a pane's kind, a list's name. */
+.dr-graph3d-eyebrow,
+.dr-graph3d-heading {
   font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text-muted);
-  overflow-wrap: anywhere;
-}
-
-.dr-graph3d-panel {
-  position: absolute;
-  top: var(--dr-space-3);
-  right: var(--dr-space-3);
-  width: min(300px, calc(100% - var(--dr-space-3) * 2));
-  max-height: calc(100% - var(--dr-space-3) * 2);
-  overflow-y: auto;
-  padding: var(--dr-space-1) var(--dr-space-3) var(--dr-space-3);
-  border: 1px solid var(--background-modifier-border);
-  border-radius: var(--radius-m, 8px);
-  background: var(--background-primary);
-  box-shadow: var(--dr-shadow-md);
 }
 
 .dr-graph3d-heading {
-  padding: var(--dr-space-3) 0 var(--dr-space-1);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--dr-space-2);
+  margin-bottom: var(--dr-space-1);
+}
+
+.dr-graph3d-hint {
   font-size: var(--font-ui-smaller);
-  font-weight: var(--font-semibold);
+  line-height: var(--line-height-normal);
   color: var(--text-muted);
 }
 
-.dr-graph3d-panel .setting-item {
-  padding: var(--dr-space-1) 0;
-  border-top: none;
-}
-
-.dr-graph3d-panel .setting-item-description {
+.dr-graph3d-count {
+  flex: none;
   font-size: var(--font-ui-smaller);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
 }
 
-.dr-graph3d-search .setting-item-info {
-  display: none;
+/* A community's colour, or a folder's or a tag's: set on each by the code. */
+.dr-graph3d-dot {
+  flex: none;
+  width: calc(var(--dr-u) * 2);
+  height: calc(var(--dr-u) * 2);
+  border-radius: 50%;
+  background-color: var(--dr-graph3d-dot, var(--graph-node));
 }
 
-.dr-graph3d-search .setting-item-control,
-.dr-graph3d-search .search-input-container {
-  flex: 1 1 auto;
+.dr-graph3d .dr-graph3d-input {
   width: 100%;
 }
 
-.dr-graph3d-legend {
+.dr-graph3d .dr-graph3d-close {
+  margin-right: calc(var(--dr-space-1) * -1);
+  padding: var(--dr-space-1);
+}
+
+/* Buttons the panes draw plainly, as rows and links rather than Obsidian's raised buttons. */
+.dr-graph3d button.dr-graph3d-chip,
+.dr-graph3d button.dr-graph3d-group,
+.dr-graph3d button.dr-graph3d-step,
+.dr-graph3d button.dr-graph3d-link,
+.dr-graph3d button.dr-graph3d-more {
+  height: auto;
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+  font-size: inherit;
+  font-weight: normal;
+  color: var(--text-normal);
+  cursor: var(--cursor);
+}
+
+/* A chip: a folder shown or hidden, Copy link, the communities on a phone. */
+.dr-graph3d button.dr-graph3d-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-pill);
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dr-graph3d button.dr-graph3d-chip.is-active {
+  border-color: var(--interactive-accent);
+  background-color: color-mix(in srgb, var(--interactive-accent) 14%, transparent);
+  color: var(--text-normal);
+}
+
+/* Top left: how much is drawn, and a box to find a note. Above the pane under it, so its matches drop over the list. */
+.dr-graph3d-find {
+  position: relative;
+  z-index: 2;
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--dr-space-1);
-  padding: var(--dr-space-1) 0;
-}
-
-.dr-graph3d-key {
-  display: flex;
-  align-items: center;
   gap: var(--dr-space-2);
-  font-size: var(--font-ui-smaller);
 }
 
-.dr-graph3d-dot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--dr-graph3d-dot, var(--graph-node));
+.dr-graph3d-stats {
+  font-weight: var(--font-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
-.dr-graph3d-key-name {
-  flex: 1 1 auto;
+.dr-graph3d-search {
+  position: relative;
+}
+
+.dr-graph3d-results {
+  position: absolute;
+  top: calc(100% + var(--dr-space-1));
+  left: 0;
+  right: 0;
+  z-index: 2;
+  max-height: 50vh;
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--dr-space-1);
+  list-style: none;
+  background-color: var(--background-primary);
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-md);
+  box-shadow: var(--dr-shadow-md);
+}
+
+.dr-graph3d-result {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--dr-space-2);
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-r);
+  cursor: var(--cursor);
+}
+
+.dr-graph3d-result .dr-graph3d-dot {
+  grid-row: span 2;
+}
+
+.dr-graph3d-result[aria-selected="true"] {
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+}
+
+.dr-graph3d-result-name,
+.dr-graph3d-group-name,
+.dr-graph3d-step-name {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.dr-graph3d-key-count,
-.dr-graph3d-key-more {
+.dr-graph3d-result-path,
+.dr-graph3d-step-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
+}
+
+.dr-graph3d-none {
+  padding: var(--dr-space-2);
+  list-style: none;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+}
+
+/* The communities only show from this chip on a phone. */
+.dr-graph3d button.dr-graph3d-groups-toggle {
+  display: none;
+}
+
+/* Under it, the communities (or folders, or tags): each a colour, a name and a count. */
+.dr-graph3d-groups {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+  max-height: 100%;
+  min-height: 0;
+  padding: var(--dr-space-3) var(--dr-space-2) var(--dr-space-2);
+}
+
+.dr-graph3d-groups > .dr-graph3d-pane-head,
+.dr-graph3d .dr-graph3d-groups > .dr-graph3d-input {
+  box-sizing: border-box;
+  width: auto;
+  margin: 0 var(--dr-space-1);
+}
+
+.dr-graph3d-groups.is-none {
+  display: none;
+}
+
+.dr-graph3d-group-list {
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-graph3d button.dr-graph3d-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--dr-space-2);
+  width: 100%;
+  padding: var(--dr-space-1) var(--dr-space-2);
+  border-radius: var(--dr-r);
+  text-align: left;
+}
+
+.dr-graph3d-group-name {
+  flex: 1 1 auto;
+}
+
+.dr-graph3d button.dr-graph3d-group.is-active {
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+}
+
+/* On the right: what's picked, or the settings while they're open. */
+.dr-graph3d-right {
+  grid-column: 3;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-2);
+  min-height: 0;
+  pointer-events: none;
+}
+
+.dr-graph3d-right > .dr-graph3d-pane {
+  max-height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dr-graph3d-right.is-settings > .dr-graph3d-detail {
+  display: none;
+}
+
+.dr-graph3d-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-3);
+}
+
+.dr-graph3d-name {
+  margin-top: calc(var(--dr-space-2) * -1);
+  font-size: var(--font-ui-large);
+  font-weight: var(--font-bold);
+  line-height: var(--line-height-tight);
+  overflow-wrap: anywhere;
+}
+
+.dr-graph3d-path {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  min-width: 0;
+}
+
+.dr-graph3d-path code {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.dr-graph3d-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--dr-space-1) var(--dr-space-3);
+  margin: 0;
+}
+
+.dr-graph3d-facts dt {
+  color: var(--text-muted);
+}
+
+.dr-graph3d-facts dd {
+  min-width: 0;
+  margin: 0;
   font-variant-numeric: tabular-nums;
 }
 
-/* The 3D graph's header buttons that stay on: lit while they are. */
-.view-action.dr-graph3d-spin.is-active,
-.view-action.dr-graph3d-settings.is-active {
+.dr-graph3d button.dr-graph3d-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  max-width: 100%;
+  padding: 0;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: var(--dr-line);
+  text-underline-offset: 3px;
+}
+
+.dr-graph3d-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-space-2);
+}
+
+.dr-graph3d-actions .dr-graph3d-hint {
+  flex-basis: 100%;
+}
+
+.dr-graph3d-rel ul,
+.dr-graph3d-folder-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dr-graph3d button.dr-graph3d-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--dr-space-2);
+  width: 100%;
+  padding: var(--dr-space-1);
+  border-radius: var(--dr-r);
+  text-align: left;
+}
+
+.dr-graph3d-step-path {
+  max-width: 9em;
+}
+
+.dr-graph3d button.dr-graph3d-more {
+  padding: var(--dr-space-1);
+  font-size: var(--font-ui-smaller);
   color: var(--text-accent);
+}
+
+.dr-graph3d-folder-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--dr-space-2);
+  padding: calc(var(--dr-u) / 2) 0;
+  overflow-wrap: anywhere;
+}
+
+/* The settings: Obsidian's rows, made compact to fit the pane. */
+.dr-graph3d-settings {
+  padding-top: var(--dr-space-2);
+}
+
+.dr-graph3d-section {
+  padding-top: var(--dr-space-3);
+}
+
+.dr-graph3d .dr-graph3d-settings .setting-item {
+  padding: var(--dr-space-1) 0;
+  border-top: none;
+  background: none;
+  gap: var(--dr-space-2);
+}
+
+.dr-graph3d .dr-graph3d-settings .setting-item-name {
+  font-size: var(--font-ui-small);
+}
+
+.dr-graph3d .dr-graph3d-settings .setting-item-description {
+  padding-top: 0;
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-graph3d .dr-graph3d-filter .setting-item-info {
+  display: none;
+}
+
+.dr-graph3d .dr-graph3d-filter .setting-item-control,
+.dr-graph3d .dr-graph3d-filter .search-input-container {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.dr-graph3d-folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) 0;
+}
+
+/* Down the right edge, the controls: icons standing on the graph, as its gear does. */
+.dr-graph3d-side {
+  grid-column: 4;
+  grid-row: 1 / 3;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--dr-space-1);
+}
+
+.dr-graph3d .dr-graph3d-side-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--dr-u) * 8);
+  height: calc(var(--dr-u) * 8);
+  padding: 0;
+  border-radius: var(--dr-radius-md);
+  color: var(--icon-color);
+}
+
+.dr-graph3d .dr-graph3d-side-button.is-active {
+  background-color: color-mix(in srgb, var(--interactive-accent) 16%, transparent);
+  color: var(--interactive-accent);
+}
+
+.dr-graph3d .dr-graph3d-side-button.is-disabled {
+  opacity: 0.4;
+}
+
+/* The note under the pointer, by it: moved there by the code, never in the way. */
+.dr-graph3d-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  max-width: 280px;
+  padding: var(--dr-space-1) var(--dr-space-2);
+  background-color: var(--background-primary);
+  border: 1px solid var(--dr-line);
+  border-radius: var(--dr-radius-md);
+  box-shadow: var(--dr-shadow-sm);
+  font-size: var(--font-ui-smaller);
+  pointer-events: none;
+}
+
+.dr-graph3d-tip-name {
+  font-size: var(--font-ui-small);
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.dr-graph3d-tip-meta {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Nothing to draw: why, in the middle, under the panes. */
+.dr-graph3d-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-6);
+  text-align: center;
+  pointer-events: none;
+}
+
+/* The night scene: the graph on near-black whatever the theme, as the
+   graphify page has it. What stands right on it — the controls down the
+   edge, the empty message — is light; Obsidian's colour for text on the
+   accent is light in light and dark themes alike, so it's the one used.
+   The panes stay the theme's glass, more solid, with a faint light edge so
+   they don't sink into the dark. */
+.dr-graph3d.is-scene-night {
+  --dr-graph3d-on-scene: var(--text-on-accent);
+  --dr-graph3d-on-scene-muted: color-mix(in srgb, var(--text-on-accent) 64%, transparent);
+  --dr-graph3d-on-scene-wash: color-mix(in srgb, var(--text-on-accent) 12%, transparent);
+  --dr-float-bg: color-mix(in srgb, var(--background-primary) 95%, transparent);
+}
+
+.dr-graph3d.is-scene-night .dr-graph3d-pane {
+  border-color: color-mix(in srgb, var(--text-on-accent) 16%, var(--dr-line));
+  box-shadow: var(--dr-shadow-md);
+}
+
+.dr-graph3d.is-scene-night .dr-graph3d-side-button {
+  color: var(--dr-graph3d-on-scene-muted);
+}
+
+.dr-graph3d.is-scene-night .dr-graph3d-side-button.is-active {
+  background-color: color-mix(in srgb, var(--interactive-accent) 30%, transparent);
+  color: color-mix(in srgb, var(--interactive-accent) 55%, var(--dr-graph3d-on-scene));
+}
+
+.dr-graph3d.is-scene-night .dr-graph3d-empty .dr-graph3d-title {
+  color: var(--dr-graph3d-on-scene);
+}
+
+.dr-graph3d.is-scene-night .dr-graph3d-empty .dr-graph3d-hint {
+  color: var(--dr-graph3d-on-scene-muted);
+}
+
+/* The tip keeps its card, edged so it lifts off the dark. */
+.dr-graph3d.is-scene-night .dr-graph3d-tip {
+  border-color: color-mix(in srgb, var(--text-on-accent) 22%, var(--dr-line));
+  box-shadow: var(--dr-shadow-md);
+}
+
+@media (any-hover: hover) {
+  .dr-graph3d-result:hover,
+  .dr-graph3d button.dr-graph3d-group:hover,
+  .dr-graph3d button.dr-graph3d-step:hover {
+    background-color: var(--dr-hover);
+  }
+
+  .dr-graph3d button.dr-graph3d-chip:hover {
+    border-color: var(--text-faint);
+    color: var(--text-normal);
+  }
+
+  .dr-graph3d button.dr-graph3d-link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .dr-graph3d button.dr-graph3d-more:hover {
+    text-decoration: underline;
+  }
+
+  .dr-graph3d .dr-graph3d-side-button:hover {
+    background-color: var(--dr-hover);
+    color: var(--icon-color-hover);
+  }
+
+  .dr-graph3d.is-scene-night .dr-graph3d-side-button:hover {
+    background-color: var(--dr-graph3d-on-scene-wash);
+    color: var(--dr-graph3d-on-scene);
+  }
+}
+
+/* A tab of middling width: narrower panes, so more of the graph shows between them. */
+@container (max-width: 960px) {
+  .dr-graph3d-hud {
+    grid-template-columns: minmax(0, 220px) minmax(0, 1fr) minmax(0, 250px) auto;
+    gap: var(--dr-space-2);
+    padding: var(--dr-space-2);
+  }
+}
+
+/* A phone, or a slim pane: one column. Find at the top, the communities
+   under it when asked for, the controls beside them, what's picked a
+   sheet at the bottom. */
+@container (max-width: 700px) {
+  .dr-graph3d-hud {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    gap: var(--dr-space-2);
+    padding: var(--dr-space-2);
+  }
+
+  .dr-graph3d-find {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .dr-graph3d-find .dr-graph3d-hint {
+    display: none;
+  }
+
+  .dr-graph3d button.dr-graph3d-groups-toggle {
+    display: inline-flex;
+    align-self: flex-start;
+  }
+
+  .dr-graph3d button.dr-graph3d-groups-toggle.is-none {
+    display: none;
+  }
+
+  .dr-graph3d-groups {
+    display: none;
+    grid-column: 1;
+    grid-row: 2;
+    max-height: 40vh;
+  }
+
+  .dr-graph3d-hud.is-groups-open .dr-graph3d-groups:not(.is-none) {
+    display: flex;
+  }
+
+  .dr-graph3d-side {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+
+  .dr-graph3d-right {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    align-self: end;
+    max-height: 45vh;
+  }
 }

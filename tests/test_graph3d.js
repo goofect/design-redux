@@ -111,7 +111,10 @@ class Menu {
   showAtPosition() { this.shown = true; }
 }
 const getAllTags = (cache) => cache.tags || null;
-const obsidian = new Proxy({ ItemView, TFile, Setting, Menu, getAllTags, Platform: { isMobile: false } }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
+const setIcon = (el, name) => el.setAttribute('data-icon', name);
+let copied = null;
+Object.defineProperty(win.navigator, 'clipboard', { value: { writeText: (t) => { copied = t; return Promise.resolve(); } }, configurable: true });
+const obsidian = new Proxy({ ItemView, TFile, Setting, Menu, getAllTags, setIcon, Platform: { isMobile: false } }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const G = loadMain(obsidian, 'graph3d');
 
 let passed = 0;
@@ -178,7 +181,7 @@ test('what’s around a note: as many steps out as asked, the note itself marked
 
 test('colours go by top folder or first tag, the commonest first; a tag called #tag is a tag like any other', () => {
   const vault = VAULT().concat([note('Work/Third.md', {}, ['#tag'])]);
-  const byFolder = G.buildSpace(vault, FILES, opts({ attachments: true }));
+  const byFolder = G.buildSpace(vault, FILES, opts({ attachments: true, colourBy: 'folder' }));
   assert.deepStrictEqual(G.colourGroups(byFolder.nodes, 8).map((g) => [g.key, g.count, g.slot]), [['Work', 3, 0], ['Home', 1, 1]]);
   const byTag = G.buildSpace(vault, FILES, opts({ colourBy: 'tag', tags: true }));
   assert.deepStrictEqual(G.colourGroups(byTag.nodes, 8).map((g) => g.key), ['#project', '#tag']);
@@ -466,6 +469,7 @@ function vault(paths, links) {
       iterateAllLeaves: (fn) => app.workspace.leaves.forEach(fn),
     },
   };
+  app.fileManager = { generateMarkdownLink: (f) => `[[${f.basename}]]` };
   const plugin = { app, isFolderNote: () => false, registerView: (type, make) => (plugin.views[type] = make), views: {} };
   return { app, plugin, files, opened, triggered };
 }
@@ -504,13 +508,14 @@ test('it opens on the vault’s notes, draws each on a 2D canvas where there’s
   const { view } = openView(PATHS, LINKS());
   assert.strictEqual(view.renderer.kind, 'canvas');
   assert.strictEqual(view.graph.nodes.length, 4);
-  assert.match(view.caption.textContent, /4 notes · 3 links/);
+  assert.match(view.stats.textContent, /Laying out 4 notes/);
   frames(1);
-  assert.strictEqual(drawn.arcs, 4 + 1, 'four notes, and a ring round the open one');
+  assert.ok(drawn.arcs >= 4 + 1, `every note drawn, and a ring round the open one (${drawn.arcs} arcs)`);
   frames(3000);
   assert.ok(!view.runner.hot && frame === null, 'the layout settles and the drawing stops');
   for (let i = 0; i < 4; i++) assert.ok(view.spots.scale[i] && view.spots.x[i] >= 0 && view.spots.x[i] <= 800 && view.spots.y[i] >= 0 && view.spots.y[i] <= 600, 'the camera kept them in view');
-  assert.deepStrictEqual([...view.legend.querySelectorAll('.dr-graph3d-key-name')].map((e) => e.textContent), ['Work', 'Home']);
+  assert.match(view.stats.textContent, /^4 notes · 3 links · \d communit/);
+  assert.ok(view.empty.hidden);
 });
 
 test('a click picks a note and lights its links; a click on it again opens it, Ctrl-click in a new tab', () => {
@@ -519,7 +524,10 @@ test('a click picks a note and lights its links; a click on it again opens it, C
   const i = view.at.get('Ideas.md');
   clickAt(view, i);
   assert.strictEqual(view.picked, i);
-  assert.match(view.caption.textContent, /Ideas.*2 links.*Click again to open it/);
+  assert.ok(!view.detail.hidden);
+  assert.strictEqual(view.detail.querySelector('.dr-graph3d-name').textContent, 'Ideas');
+  assert.match(view.detail.textContent, /click it again/);
+  assert.ok(view.easing, 'the camera turns to it');
   assert.deepStrictEqual([...view.lit()].sort(), [i, view.at.get('Work/Plan.md'), view.at.get('Home/List.md')].sort());
   assert.strictEqual(view.renderer.lit.length, 4, 'its two links lit');
   assert.deepStrictEqual(opened, []);
@@ -711,6 +719,188 @@ test('the 3D graph’s Show in 2D turns its tab back: the local graph of the not
   feature.flip(back);
   assert.strictEqual(back.states[0].state.options.names, 0.8, 'the 3D graph comes back set as it was');
   assert.ok(back.states[0].state.camera, 'and turned as it was');
+});
+
+/* -- communities, folders, the HUD ---------------------------------------- */
+
+function bridged() {
+  // Two tight groups of four, one link between them.
+  const notes = [];
+  ['A', 'B'].forEach((side) => {
+    for (let i = 0; i < 4; i++) {
+      const links = {};
+      for (let j = 0; j < i; j++) links[`${side}/${side}${j}.md`] = 1;
+      if (side === 'B' && i === 0) links['A/A0.md'] = 1;
+      notes.push(note(`${side}/${side}${i}.md`, links));
+    }
+  });
+  notes.push(note('Alone.md'));
+  return notes;
+}
+
+test('communities: notes tightly linked share one, named by its most-linked note; a note linked to nothing has none', () => {
+  const g = G.buildSpace(bridged(), [], opts({ colourBy: 'community' }));
+  const key = (id) => g.nodes.find((n) => n.id === id).key;
+  assert.strictEqual(key('A/A1.md'), key('A/A3.md'));
+  assert.strictEqual(key('B/B1.md'), key('B/B3.md'));
+  assert.notStrictEqual(key('A/A1.md'), key('B/B1.md'));
+  assert.strictEqual(key('Alone.md'), '');
+  assert.strictEqual(G.groupName(g, key('A/A1.md')), 'A0', 'A0 has the most links, the bridge among them');
+  assert.strictEqual(G.groupName(g, ''), 'Vault');
+  const again = G.buildSpace(bridged(), [], opts({ colourBy: 'community' }));
+  assert.deepStrictEqual(again.nodes.map((n) => n.key), g.nodes.map((n) => n.key), 'the same graph, the same communities');
+});
+
+test('a top folder hidden leaves its notes and their tags out', () => {
+  const g = G.buildSpace(VAULT(), FILES, opts({ hidden: ['Work'], tags: true }));
+  assert.deepStrictEqual(ids(g), ['Home/List.md', 'Ideas.md', 'Lonely.md']);
+  assert.deepStrictEqual(ids(G.buildSpace(VAULT(), FILES, opts({ hidden: [''] }))), ['Home/List.md', 'Work/Notes.md', 'Work/Plan.md'], "'' is the vault's root");
+});
+
+test('each community its own hue, a golden angle on; brighter on a dark background', () => {
+  const hues = [0, 1, 2, 3].map((k) => G.groupColour(k, false).css);
+  assert.strictEqual(new Set(hues).size, 4);
+  const lum = (c) => 0.2126 * c.rgb[0] + 0.7152 * c.rgb[1] + 0.0722 * c.rgb[2];
+  assert.ok(lum(G.groupColour(2, true)) > lum(G.groupColour(2, false)));
+  assert.match(G.groupColour(0, true).css, /^rgb\(\d+, \d+, \d+\)$/);
+});
+
+test('grouping pulls each community to its anchor', () => {
+  const g = G.buildSpace(bridged(), [], opts());
+  const k = G.layoutKernel();
+  k.load(g.nodes.length, g.links, G.startPositions(g.nodes, null).pos);
+  const anchors = new Float64Array(g.nodes.length * 3).fill(NaN);
+  g.nodes.forEach((n, i) => {
+    if (n.id.startsWith('A/')) anchors.set([300, 0, 0], i * 3);
+    if (n.id.startsWith('B/')) anchors.set([-300, 0, 0], i * 3);
+  });
+  k.anchor(anchors);
+  const o = G.layoutOptions({ group: true });
+  let a = 1;
+  while (a >= o.cold) { k.step(a, o); a *= 1 - o.cool; }
+  const p = k.positions();
+  const mean = (prefix) => g.nodes.reduce((s, n, i) => (n.id.startsWith(prefix) ? s + p[i * 3] / 4 : s), 0);
+  assert.ok(mean('A/') > 150 && mean('B/') < -150, `A at ${mean('A/').toFixed(0)}, B at ${mean('B/').toFixed(0)}`);
+});
+
+function hudView(state) {
+  const paths = bridged().map((n) => n.path);
+  const links = {};
+  bridged().forEach((n) => (links[n.path] = n.links));
+  const v = openView(paths, links, state);
+  frames(3000);
+  return v;
+}
+
+test('the find box: names first, then paths; Enter picks the first, and the camera flies to it', () => {
+  const { view } = hudView();
+  view.findInput.value = 'b';
+  view.findMatches();
+  const names = [...view.results.querySelectorAll('.dr-graph3d-result-name')].map((e) => e.textContent);
+  assert.deepStrictEqual(names.slice(0, 4).sort(), ['B0', 'B1', 'B2', 'B3']);
+  assert.ok(!view.results.hidden);
+  view.findKey({ key: 'Enter', preventDefault() {} });
+  assert.strictEqual(view.graph.nodes[view.picked].name, names[0]);
+  assert.ok(view.results.hidden);
+  const at = view.picked * 3;
+  assert.deepStrictEqual([view.easing.target.x, view.easing.target.y, view.easing.target.z], [view.runner.positions[at], view.runner.positions[at + 1], view.runner.positions[at + 2]]);
+  view.findInput.value = 'zzz';
+  view.findMatches();
+  assert.match(view.results.textContent, /Nothing matches/);
+});
+
+test('the communities list: each a colour and a count; one clicked lights its notes and the camera takes them in; clicked again, let go', () => {
+  const { view } = hudView();
+  const rows = [...view.groupList.querySelectorAll('.dr-graph3d-group')];
+  assert.strictEqual(rows.length, 2);
+  assert.deepStrictEqual(rows.map((r) => r.querySelector('.dr-graph3d-count').textContent), ['4', '4']);
+  assert.match(view.groupsTitle.textContent, /Communities/);
+  rows[0].click();
+  const key = rows[0].dataset.group;
+  assert.strictEqual(view.focusKey, key);
+  assert.strictEqual(view.lit().size, 4);
+  assert.strictEqual(view.lit().focus, -1);
+  assert.strictEqual(view.renderer.lit.length / 2, 6, 'the six links inside it lit');
+  assert.match(view.detail.textContent, /Community/);
+  assert.match(view.detail.textContent, /Links inside6/);
+  assert.ok(view.easing);
+  view.groupList.querySelector(`[data-group="${key}"]`).click();
+  assert.strictEqual(view.focusKey, null);
+  assert.ok(view.detail.hidden);
+  view.groupFilter.value = 'zz';
+  view.renderGroups();
+  assert.match(view.groupList.textContent, /No community matches/);
+});
+
+test('what’s picked: its links, the ways they run, each a step to that note; Open, Copy link', () => {
+  const { view, opened } = hudView();
+  view.pick(view.at.get('B/B0.md'));
+  const sections = [...view.detail.querySelectorAll('.dr-graph3d-rel')].map((s) => [s.querySelector('.dr-graph3d-heading').firstChild.textContent, [...s.querySelectorAll('.dr-graph3d-step-name')].map((e) => e.textContent).sort()]);
+  assert.deepStrictEqual(sections, [['Links to', ['A0']], ['Linked from', ['B1', 'B2', 'B3']]]);
+  view.detail.querySelector('.dr-graph3d-step').click();
+  assert.strictEqual(view.graph.nodes[view.picked].id, 'A/A0.md');
+  view.detail.querySelector('[data-act="open"]').click();
+  assert.deepStrictEqual(opened.pop(), ['A/A0.md', false]);
+  view.detail.querySelector('[data-act="tab"]').click();
+  assert.deepStrictEqual(opened.pop(), ['A/A0.md', 'tab']);
+  view.detail.querySelector('[data-act="copy"]').click();
+  assert.strictEqual(copied, '[[A0]]');
+  view.detail.querySelector('[data-group]').click();
+  assert.ok(view.focusKey, 'its community, a click away');
+  view.detail.querySelector('[data-act="close"]').click();
+  assert.ok(view.detail.hidden);
+});
+
+test('the side: settings, links, names, grouping, each a button lit while on', () => {
+  const { view } = hudView();
+  const side = (key) => view.sideButtons[key];
+  assert.deepStrictEqual([...view.hud.querySelectorAll('.dr-graph3d-side-button')].map((b) => b.dataset.icon), ['settings', 'scan', 'boxes', 'type', 'waypoints', 'rotate-3d']);
+  side('panel').click();
+  assert.ok(!view.panel.hidden && view.right.hasClass('is-settings') && side('panel').hasClass('is-active'));
+  side('panel').click();
+  assert.ok(view.panel.hidden);
+  let strength = null;
+  const draw = view.renderer.draw.bind(view.renderer);
+  view.renderer.draw = (f) => { strength = f.lineStrength; draw(f); };
+  side('links').click();
+  frames(1);
+  assert.strictEqual(strength, 0);
+  assert.strictEqual(side('links').getAttribute('aria-pressed'), 'false');
+  view.app.workspace.active = null;
+  side('hubs').click();
+  frames(1);
+  assert.deepStrictEqual(drawn.names, [], 'nothing picked, the open note not drawn: no names');
+  side('group').click();
+  assert.ok(view.runner.anchors && view.runner.hot, 'pulled apart by community');
+  assert.strictEqual(side('group').getAttribute('aria-label'), 'Group by community');
+  side('group').click();
+  assert.strictEqual(view.runner.anchors, null);
+});
+
+test('folders: a chip each, the biggest first; one hidden takes its notes out; the last one shown stays', () => {
+  const { view } = hudView();
+  const chips = () => [...view.folderBox.querySelectorAll('.dr-graph3d-chip')];
+  assert.deepStrictEqual(chips().map((c) => c.firstChild.textContent), ['A', 'B', 'Vault']);
+  chips()[0].click();
+  flush();
+  assert.ok(view.graph.nodes.every((n) => !n.id.startsWith('A/')));
+  assert.ok(!chips()[0].hasClass('is-active'));
+  chips()[1].click();
+  flush();
+  chips()[2].click();
+  flush();
+  assert.deepStrictEqual(view.options.hidden.sort(), ['A', 'B'], 'the last folder shown can’t be hidden');
+});
+
+test('the tip names what’s under the pointer: name, where, community and links', () => {
+  const { view } = hudView();
+  const i = view.at.get('A/A0.md');
+  view.pointer = { x: view.spots.x[i], y: view.spots.y[i], evt: {} };
+  view.updateHover();
+  assert.ok(!view.tip.hidden);
+  assert.match(view.tip.textContent, /^A0A\/A0\.mdA0 · 4 links$/);
+  view.left();
+  assert.ok(view.tip.hidden);
 });
 
 console.log(`${passed} passed`);
