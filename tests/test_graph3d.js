@@ -79,6 +79,7 @@ class ItemView {
     return b;
   }
   registerEvent() {}
+  register(fn) { (this.cleanups = this.cleanups || []).push(fn); }
   registerDomEvent(el, type, cb, opts) { el.addEventListener(type, cb, opts); }
 }
 // Settings rows: each control keeps its value and what it calls on a change.
@@ -93,7 +94,14 @@ class Setting {
     return this;
   }
   addToggle(cb) { return this.control(cb); }
-  addSearch(cb) { return this.control(cb, { setPlaceholder() { return this; }, inputEl: document.createElement('input') }); }
+  addSearch(cb) {
+    const inputEl = document.createElement('input');
+    let control = null;
+    // As Obsidian's: what's typed in the box reaches onChange.
+    this.control((c) => { control = c; cb(c); }, { setPlaceholder() { return this; }, inputEl });
+    inputEl.addEventListener('input', () => { control.value = inputEl.value; if (control.cb) control.cb(inputEl.value); });
+    return this;
+  }
   addSlider(cb) { return this.control(cb, { setLimits() { return this; }, setDynamicTooltip() { return this; } }); }
   addDropdown(cb) { return this.control(cb, { addOption() { return this; } }); }
   addButton(cb) { return this.control(cb, { setButtonText() { return this; }, onClick(fn) { this.cb = fn; return this; } }); }
@@ -1117,6 +1125,41 @@ test('the filters start as the graph’s own: notes not written yet shown (Exist
   assert.deepStrictEqual([G.GRAPH_3D_DEFAULTS.tags, G.GRAPH_3D_DEFAULTS.attachments], [false, false]);
   const { view } = openView(PATHS, LINKS());
   assert.strictEqual(view.controls.missing.getValue(), true, 'the Existing files only toggle reads off');
+});
+
+test('search options, as Obsidian’s: open in an empty box or after a space, picked by arrows and Enter or a click, put in where the caret is', () => {
+  const { view } = openView(PATHS, LINKS());
+  const input = view.controls.search.inputEl;
+  const pop = () => document.querySelector('.suggestion-container.mod-search-suggestion');
+  input.dispatchEvent(new win.Event('focus'));
+  assert.ok(pop(), 'opens in an empty box');
+  assert.deepStrictEqual([...pop().querySelectorAll('.search-suggest-item:not(.mod-group) .suggestion-title span:first-child')].map((e) => e.textContent), ['path:', 'file:', 'tag:', 'line:', 'section:', '[property]']);
+  assert.match(pop().querySelector('.mod-group').textContent, /Search options/);
+  assert.ok(pop().querySelector('.search-suggest-item.is-selected').textContent.startsWith('path:'));
+  input.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  input.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'ArrowDown' }));
+  input.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Enter' }));
+  assert.strictEqual(input.value, 'tag:');
+  assert.strictEqual(pop(), null, 'gone once picked');
+  assert.strictEqual(view.options.search, 'tag:', 'and the search has it');
+  input.value = 'tag:#a ';
+  input.setSelectionRange(7, 7);
+  input.dispatchEvent(new win.Event('input'));
+  assert.ok(pop(), 'after a space, again');
+  [...pop().querySelectorAll('.search-suggest-item')].pop().dispatchEvent(new win.MouseEvent('click'));
+  assert.strictEqual(input.value, 'tag:#a []');
+  assert.strictEqual(input.selectionStart, 8, 'the caret inside the brackets');
+  input.value = 'tag:#ab';
+  input.dispatchEvent(new win.Event('input'));
+  assert.strictEqual(pop(), null, 'typing on: gone');
+  input.dispatchEvent(new win.Event('focus'));
+  input.dispatchEvent(new win.Event('blur'));
+  assert.strictEqual(pop(), null);
+  view.panel.querySelector('.graph-color-button-container button').click();
+  const query = view.groupRows.querySelector('input[type="text"]');
+  query.dispatchEvent(new win.Event('focus'));
+  assert.ok(pop(), 'a group’s query has them too');
+  query.dispatchEvent(new win.Event('blur'));
 });
 
 console.log(`${passed} passed`);

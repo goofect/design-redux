@@ -20,6 +20,16 @@ import { Graph3DInput } from './269-graph-3d-input.js';
 
 /** What changes which notes are drawn, or their colours: the graph is worked out again. */
 const GRAPH_3D_FILTERS = ['colorGroups', 'search', 'tags', 'attachments', 'missing', 'orphans', 'local', 'depth', 'colourBy', 'hidden'];
+/** What Obsidian's search offers as its box opens, and what each does: as the graph's own lists them. */
+const GRAPH_3D_SEARCH_OPTIONS = [
+  ['path:', 'match path of the file'],
+  ['file:', 'match file name'],
+  ['tag:', 'search for tags'],
+  ['line:', 'search keywords on same line'],
+  ['section:', 'search keywords under same heading'],
+  ['[property]', 'match property'],
+];
+
 const GRAPH_3D_FORCES = ['repel', 'linkLength', 'centre'];
 const GRAPH_3D_LOOKS = ['nodeSize', 'lines', 'names'];
 
@@ -142,6 +152,7 @@ export class Graph3DPanel extends Graph3DInput {
       s.setPlaceholder('Search files...')
         .setValue(this.options.search)
         .onChange((v) => this.setOption('search', v));
+      if (s.inputEl) this.searchOptions(s.inputEl);
     });
     toggle(filters, 'tags', 'Tags', 'Tags are linked to the files that contain them');
     toggle(filters, 'attachments', 'Attachments', 'Show attachments');
@@ -194,6 +205,7 @@ export class Graph3DPanel extends Graph3DInput {
       query.spellcheck = false;
       query.placeholder = 'Enter query...';
       query.value = g.query || '';
+      this.searchOptions(query);
       let typing = 0;
       this.registerDomEvent(query, 'input', () => {
         if (typing) this.host().clearTimeout(typing);
@@ -211,6 +223,91 @@ export class Graph3DPanel extends Graph3DInput {
         this.renderColorGroups();
       });
     });
+  }
+
+  /**
+   * Search options, as Obsidian's search box has them: opened in the box
+   * while it's empty or just after a space, a row an operator, picked by
+   * a click or the arrows and Enter, put in where the caret is; gone as
+   * the typing goes on, on Escape, or when the box is left.
+   */
+  searchOptions(input) {
+    const doc = input.ownerDocument;
+    let pop = null;
+    let at = 1;
+    const rows = () => (pop ? [...pop.querySelectorAll('.search-suggest-item:not(.mod-group)')] : []);
+    const mark = () => rows().forEach((r, k) => r.toggleClass('is-selected', k === at - 1));
+    const close = () => {
+      if (pop) pop.remove();
+      pop = null;
+    };
+    const put = (op) => {
+      const start = input.selectionStart === null || input.selectionStart === undefined ? input.value.length : input.selectionStart;
+      const end = input.selectionEnd === null || input.selectionEnd === undefined ? start : input.selectionEnd;
+      const text = op === '[property]' ? '[]' : op;
+      input.value = input.value.slice(0, start) + text + input.value.slice(end);
+      const caret = start + (op === '[property]' ? 1 : text.length);
+      if (input.setSelectionRange) input.setSelectionRange(caret, caret);
+      close();
+      input.focus();
+      input.dispatchEvent(new (doc.defaultView || window).Event('input', { bubbles: true }));
+    };
+    const open = () => {
+      const caret = input.selectionStart === null || input.selectionStart === undefined ? input.value.length : input.selectionStart;
+      const before = input.value.slice(0, caret);
+      if (before && !/\s$/.test(before)) return close();
+      if (pop) return;
+      pop = doc.body.createDiv({ cls: 'suggestion-container mod-search-suggestion' });
+      const list = pop.createDiv({ cls: 'suggestion' });
+      const head = list.createDiv({ cls: 'suggestion-item mod-complex search-suggest-item mod-group' });
+      head.createDiv({ cls: 'suggestion-content' }).createDiv({ cls: 'suggestion-title list-item-part mod-extended' }).createSpan({ text: 'Search options' });
+      const more = head.createDiv({ cls: 'suggestion-aux' }).createDiv({ cls: 'list-item-part search-suggest-icon clickable-icon' });
+      more.setAttribute('aria-label', 'Read more');
+      setIcon(more, 'info');
+      more.addEventListener('click', () => (doc.defaultView || window).open('https://help.obsidian.md/Plugins/Search'));
+      GRAPH_3D_SEARCH_OPTIONS.forEach(([op, what], k) => {
+        const row = list.createDiv({ cls: 'suggestion-item mod-complex search-suggest-item' });
+        const title = row.createDiv({ cls: 'suggestion-content' }).createDiv({ cls: 'suggestion-title' });
+        title.createSpan({ text: op });
+        title.createSpan({ cls: 'search-suggest-info-text', text: what });
+        row.createDiv({ cls: 'suggestion-aux' });
+        row.addEventListener('mousemove', () => {
+          at = k + 1;
+          mark();
+        });
+        row.addEventListener('click', () => put(op));
+      });
+      // Clicking in it mustn't take the focus from the box.
+      pop.addEventListener('mousedown', (e) => e.preventDefault());
+      const r = input.getBoundingClientRect();
+      pop.style.width = '300px';
+      // Under the box, as Obsidian puts it — but kept inside the window, where the box sits at its edge.
+      const room = (doc.defaultView || window).innerWidth || 0;
+      pop.style.left = `${Math.round(room ? Math.max(4, Math.min(r.left, room - 300 - 8)) : r.left)}px`;
+      pop.style.top = `${Math.round(r.bottom + 4)}px`;
+      at = 1;
+      mark();
+    };
+    this.registerDomEvent(input, 'focus', open);
+    this.registerDomEvent(input, 'click', open);
+    this.registerDomEvent(input, 'input', open);
+    this.registerDomEvent(input, 'blur', close);
+    this.registerDomEvent(input, 'keydown', (e) => {
+      if (!pop) return;
+      const n = GRAPH_3D_SEARCH_OPTIONS.length;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        at = ((at - 1 + (e.key === 'ArrowDown' ? 1 : -1) + n) % n) + 1;
+        mark();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        put(GRAPH_3D_SEARCH_OPTIONS[at - 1][0]);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+    });
+    this.register(close);
   }
 
   /** One setting changed, from the panel, the side or a menu, and what follows from it. */
