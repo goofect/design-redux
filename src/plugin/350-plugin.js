@@ -42,6 +42,7 @@ import { SmartAlbums } from '../library/258-smart-albums.js';
 import { LibraryCheck } from '../library/259-library-check.js';
 import { GraphPropertyFilter } from '../tools/260-graph-filter.js';
 import { GraphRoutes } from '../tools/262-graph-routes.js';
+import { Graph3D } from '../tools/275-graph-3d.js';
 import { NotePages } from '../note/267-pages.js';
 import { MarkedLists } from '../note/273-lists-feature.js';
 import { Scripts } from '../note/280-scripts.js';
@@ -102,6 +103,7 @@ export class DesignRedux extends Plugin {
       new Footnotes(this),
       new GraphPropertyFilter(this),
       new GraphRoutes(this),
+      new Graph3D(this),
       new NotePages(this),
       new Diagnostics(this),
       new BulkEditing(this),

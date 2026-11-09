@@ -24,7 +24,7 @@ export let version = 'unknown';
 
 // Screenshots are kept few, to keep the runs and the ci-results branch
 // small: these, plus any test that fails.
-const SHOTS = ['right-sidebar-dark', 'right-sidebar-light', 'page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit'];
+const SHOTS = ['right-sidebar-dark', 'right-sidebar-light', 'page-control-light', 'page-control-dark', 'album', 'album-editorial', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'graph-3d'];
 
 export async function shot(name) {
   const failed = name.startsWith('FAILED-');

@@ -212,3 +212,162 @@ body.is-mobile .dr-chip-clear {
 .view-action.dr-graph-route-action.is-active {
   color: var(--text-accent);
 }
+
+/* 3D graph ----------------------------------------------------------------------
+ *
+ * The vault's notes in 3D (263–275): the graph drawn on one canvas and the
+ * rings and names on another over it, which takes the pointer (a drag
+ * turns the graph, so the page mustn't scroll under it); a caption in the
+ * corner naming what's pointed at; and the settings panel, floating at
+ * the top right as the graph's own does.
+ */
+
+.dr-graph3d.view-content {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.dr-graph3d-stage {
+  position: absolute;
+  inset: 0;
+}
+
+.dr-graph3d-canvas,
+.dr-graph3d-overlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dr-graph3d-canvas {
+  pointer-events: none;
+}
+
+.dr-graph3d-overlay {
+  touch-action: none;
+  outline: none;
+  cursor: grab;
+}
+
+.dr-graph3d-overlay:active,
+.dr-graph3d-overlay.is-holding {
+  cursor: grabbing;
+}
+
+.dr-graph3d-overlay.is-pointing {
+  cursor: pointer;
+}
+
+.dr-graph3d-overlay:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--interactive-accent);
+}
+
+.dr-graph3d-caption {
+  position: absolute;
+  left: var(--dr-space-3);
+  bottom: var(--dr-space-3);
+  max-width: calc(100% - var(--dr-space-3) * 2);
+  padding: var(--dr-space-2) var(--dr-space-3);
+  border-radius: var(--dr-radius-sm);
+  background: var(--background-primary);
+  box-shadow: var(--dr-shadow-sm);
+  pointer-events: none;
+}
+
+.dr-graph3d-name {
+  font-weight: var(--font-semibold);
+  color: var(--text-normal);
+  overflow-wrap: anywhere;
+}
+
+.dr-graph3d-meta {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.dr-graph3d-panel {
+  position: absolute;
+  top: var(--dr-space-3);
+  right: var(--dr-space-3);
+  width: min(300px, calc(100% - var(--dr-space-3) * 2));
+  max-height: calc(100% - var(--dr-space-3) * 2);
+  overflow-y: auto;
+  padding: var(--dr-space-1) var(--dr-space-3) var(--dr-space-3);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: var(--radius-m, 8px);
+  background: var(--background-primary);
+  box-shadow: var(--dr-shadow-md);
+}
+
+.dr-graph3d-heading {
+  padding: var(--dr-space-3) 0 var(--dr-space-1);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  color: var(--text-muted);
+}
+
+.dr-graph3d-panel .setting-item {
+  padding: var(--dr-space-1) 0;
+  border-top: none;
+}
+
+.dr-graph3d-panel .setting-item-description {
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-graph3d-search .setting-item-info {
+  display: none;
+}
+
+.dr-graph3d-search .setting-item-control,
+.dr-graph3d-search .search-input-container {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+.dr-graph3d-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dr-space-1);
+  padding: var(--dr-space-1) 0;
+}
+
+.dr-graph3d-key {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-space-2);
+  font-size: var(--font-ui-smaller);
+}
+
+.dr-graph3d-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dr-graph3d-dot, var(--graph-node));
+}
+
+.dr-graph3d-key-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-graph3d-key-count,
+.dr-graph3d-key-more {
+  font-size: var(--font-ui-smaller);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The 3D graph's header buttons that stay on: lit while they are. */
+.view-action.dr-graph3d-spin.is-active,
+.view-action.dr-graph3d-settings.is-active {
+  color: var(--text-accent);
+}

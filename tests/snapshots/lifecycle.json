@@ -34,6 +34,8 @@
   "next-in-album",
   "next-page",
   "open-actions",
+  "open-graph-3d",
+  "open-graph-3d-local",
   "open-inspector",
   "open-library",
   "open-properties",
@@ -65,6 +67,7 @@
   "superscript",
   "switch-look",
   "tidy-footnotes",
+  "toggle-graph-3d",
   "toggle-graph-routes",
   "undo-bulk-change"
  ],
@@ -191,6 +194,7 @@
  "views": [
   "design-redux-browse",
   "design-redux-footnotes",
+  "design-redux-graph-3d",
   "design-redux-library",
   "design-redux-mindmap",
   "design-redux-outline",
