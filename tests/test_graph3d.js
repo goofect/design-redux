@@ -1162,4 +1162,21 @@ test('search options, as Obsidian’s: open in an empty box or after a space, pi
   query.dispatchEvent(new win.Event('blur'));
 });
 
+test('a Spin toggle in Display turns the graph slowly round, and the shut settings’ spin button follows it', () => {
+  const { view } = openView(PATHS, LINKS());
+  frames(3000);
+  const row = [...view.panel.querySelectorAll('.setting-item')].find((r) => r.dataset.name === 'Spin');
+  assert.ok(row, 'a Spin row in the settings');
+  const yaw = view.camera.yaw;
+  view.controls.spin.change(true);
+  assert.ok(view.options.spin && view.sideButtons.spin.hasClass('is-active'));
+  frames(10);
+  assert.ok(view.camera.yaw > yaw, 'it turns');
+  view.sideButtons.spin.click();
+  assert.strictEqual(view.controls.spin.getValue(), false, 'the button turns it off, and the toggle shows it');
+  const still = view.camera.yaw;
+  frames(10);
+  assert.strictEqual(view.camera.yaw, still);
+});
+
 console.log(`${passed} passed`);

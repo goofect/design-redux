@@ -186,6 +186,7 @@ export class Graph3DPanel extends Graph3DInput {
     slider(display, 'nodeSize', 'Node size', 0.4, 2.5, 0.1);
     slider(display, 'names', 'Names', 0, 1, 0.05);
     slider(display, 'lines', 'Links', 0.05, 1, 0.05);
+    toggle(display, 'spin', 'Spin', 'Turn the graph slowly round');
 
     const forces = section('forces', 'Forces');
     slider(forces, 'centre', 'Centre force', 0, 4, 0.1);
