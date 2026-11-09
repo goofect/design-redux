@@ -334,7 +334,6 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
     plugin.lengths = { label: () => '3 min read', measure: async () => false };
-    plugin.settings.notePageTint = true;
     Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
     // A note's view as Obsidian lays it out, editing.
     const containerEl = document.createElement('div');
@@ -348,8 +347,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     page.draw(view);
     const album = sizer.querySelector('.dr-note-album');
     assert.strictEqual(album.textContent, 'IR');
-    assert.strictEqual(sizer.querySelector('.dr-note-glow img').getAttribute('src'), 'https://example.com/a.png', 'a glow of its cover');
-    assert.ok(sizer.classList.contains('dr-has-glow'));
+    assert.ok(!sizer.querySelector('.dr-note-glow') && !sizer.classList.contains('dr-has-glow'), 'no tint from a cover');
     assert.strictEqual(album.nextElementSibling, title, 'above the title');
     const meta = title.nextElementSibling;
     assert.ok(meta.classList.contains('dr-note-meta'));
@@ -478,15 +476,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 28);
+    assert.strictEqual(s.settingsVersion, 29);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 28, brought up from \d+; steps [\d, ]+28$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 29, brought up from \d+; steps [\d, ]+29$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
     assert.strictEqual(s.glassPanels, false, 'the quieter look');
-    assert.strictEqual(s.notePageTint, false);
+    assert.ok(!('notePageTint' in s), 'the tint from a cover let go at step 29');
     assert.ok(!('upNext' in s), 'a retired setting dropped');
     assert.ok(written && !('upNext' in written), 'and written back without it');
     assert.deepStrictEqual(backups.map((b) => b[0]), ['.obsidian/plugins/design-redux/data.before-v4.json']);

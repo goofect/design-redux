@@ -38,12 +38,6 @@ export class NotePage extends Feature {
         desc: 'The collection above a note’s title, and a line of details below.',
       },
       {
-        key: 'notePageTint',
-        name: 'A tint from the cover',
-        desc: 'A soft glow of the cover behind a note’s title.',
-        showIf: 'notePage',
-      },
-      {
         key: 'notePageChips',
         name: 'Properties as chips',
         desc: 'Properties as chips under a note’s title.',
@@ -99,8 +93,7 @@ export class NotePage extends Feature {
 
   /** What this adds to a view, taken away. */
   clear(view) {
-    view.containerEl.querySelectorAll('.dr-note-glow, .dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
-    view.containerEl.querySelectorAll('.dr-has-glow').forEach((el) => el.removeClass('dr-has-glow'));
+    view.containerEl.querySelectorAll('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-rule, .dr-note-shelves').forEach((el) => el.remove());
     view.containerEl.removeClass('dr-props-as-chips');
   }
 
@@ -128,13 +121,6 @@ export class NotePage extends Feature {
     if (!folder || !folder.parent || folder.path === '/') return null;
     const own = typeof this.plugin.folderNote === 'function' ? this.plugin.folderNote(folder) : null;
     return own === file ? null : folder;
-  }
-
-  /** The picture a note's page takes its tint from: its own cover, else its album's; or null. */
-  tintSource(file, album) {
-    const own = noteCoverSrc(this.plugin, file);
-    if (own) return own;
-    return album && typeof this.plugin.folderCoverSrc === 'function' ? this.plugin.folderCoverSrc(album) || null : null;
   }
 
   /** The one grey line: what the note hangs from, its length, when it was edited. */
@@ -217,18 +203,9 @@ export class NotePage extends Feature {
     const meta = on ? this.metaLine(file) : '';
     const chips = on && this.settings.notePageChips ? this.chips(file) : [];
     const shelves = on && this.settings.notePageShelves ? this.shelves(file) : [];
-    const glow = on && this.settings.notePageTint !== false ? this.tintSource(file, album) : null;
     view.containerEl.toggleClass('dr-props-as-chips', chips.length > 0);
     this.places(view).forEach((place) => {
       const title = place.title;
-      // Behind the header, a soft glow of the note's cover, or its album's; without one, nothing.
-      place.head.toggleClass('dr-has-glow', !!glow);
-      this.put(place.head, 'dr-note-glow', glow || '', place.head.firstChild, (el) => {
-        const img = el.ownerDocument.createElement('img');
-        img.setAttribute('src', glow);
-        img.setAttribute('alt', '');
-        el.appendChild(img);
-      });
       // Above the title: its album, a step to it.
       this.put(place.head, 'dr-note-album', album ? album.path : '', title || place.head.firstChild, (el) => {
         el.setText(album.name);

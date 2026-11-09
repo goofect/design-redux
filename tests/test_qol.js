@@ -203,7 +203,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 28);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 29);
     // Step 28: a sidebar in the plugin's own sections is laid out as a music app's; one arranged by hand keeps its shape.
     const layout = R.SETTINGS_MIGRATIONS.find((m) => m.to === 28);
     const built = (id) => ({ kind: 'builtin', id });

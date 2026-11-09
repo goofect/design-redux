@@ -106,8 +106,6 @@ export const DEFAULTS = {
   glassPanels: false,
   // Notes with fewer words of their own than this are thin; 0 for no check.
   thinNoteWords: 60,
-  // A soft glow of a note's cover, or its album's, behind its title.
-  notePageTint: false,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.
@@ -267,7 +265,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 28,
+  settingsVersion: 29,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

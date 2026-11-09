@@ -298,6 +298,13 @@ export const SETTINGS_MIGRATIONS = [
       saved.librarySections = out;
     },
   },
+  {
+    // The note page's tint from a cover goes: notes have no covers.
+    to: 29,
+    run(saved) {
+      delete saved.notePageTint;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */
