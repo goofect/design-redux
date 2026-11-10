@@ -46,6 +46,13 @@ export function paintValue(el, plugin, key, value) {
   return option;
 }
 
+/** What `paintValue` would paint a value with, as a short string: empty for nothing, so a drawing can tell when to paint again. */
+export function paintedAs(plugin, key, value) {
+  if (!valueOptionsOn(plugin) || Array.isArray(value)) return '';
+  const option = optionFor(plugin.settings.propertyOptions, key, value);
+  return option ? `${option.color || ''}/${option.icon || ''}` : '';
+}
+
 const COLOUR_NAMES = { red: 'Red', orange: 'Orange', yellow: 'Yellow', green: 'Green', cyan: 'Cyan', blue: 'Blue', purple: 'Purple', pink: 'Pink' };
 
 /** A value's colour and icon, set: a swatch for each colour, an icon by name or emoji, and Clear. */
@@ -105,7 +112,9 @@ export class ValueOptionModal extends Modal {
   async save(option) {
     const settings = this.plugin.settings;
     settings.propertyOptions = withOption(settings.propertyOptions, this.key, this.value, option);
-    await this.plugin.saveData(settings);
+    // Saved as any setting is, so what else shows values (a note's page, its chips) is drawn again too.
+    if (typeof this.plugin.saveSettings === 'function') await this.plugin.saveSettings();
+    else await this.plugin.saveData(settings);
     this.close();
     if (typeof this.plugin.refreshBrowse === 'function') this.plugin.refreshBrowse();
     if (this.then) this.then();

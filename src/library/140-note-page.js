@@ -18,7 +18,7 @@ import { albumNeighbours, stepInAlbum } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { ask } from '../core/081-capabilities.js';
-import { paintValue } from '../ui/248-value-options.js';
+import { paintedAs, paintValue } from '../ui/248-value-options.js';
 
 /* How many notes a shelf at a note's end shows. */
 export const NOTE_SHELF_SIZE = 10;
@@ -312,7 +312,9 @@ export class NotePage extends Feature {
       // Under it, the one grey line, then the chips.
       const after = title ? title.nextSibling : place.head.firstChild;
       const line = this.put(place.head, 'dr-note-meta', meta, after, (el) => el.setText(meta));
-      const chipKey = chips.map((c) => `${c.key}=${c.text}`).join('|');
+      // With each chip, what it's painted with: a value's colour or icon changed, the chips are made again.
+      const painted = (c) => (c.raw !== null && typeof c.raw !== 'object' ? paintedAs(this.plugin, c.key, String(c.raw)) : '');
+      const chipKey = chips.map((c) => `${c.key}=${c.text}~${painted(c)}`).join('|');
       this.put(place.head, 'dr-note-chips', chipKey, line ? line.nextSibling : after, (el) => {
         chips.forEach((c) => {
           const chip = el.createSpan({ cls: 'dr-note-chip', text: c.text });

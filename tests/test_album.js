@@ -422,6 +422,42 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     containerEl.remove();
   });
 
+  await t('a value’s colour changed: the note page’s chip is painted again once settings are saved', async () => {
+    const { v, plugin, app } = setup();
+    const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { status: 'draft' } : {} });
+    Object.assign(plugin.settings, { notePage: true, notePageChips: true, propertyOptions: { status: { draft: { color: 'green' } } } });
+    const containerEl = document.body.createDiv();
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
+    const view = { containerEl, file };
+    app.workspace.getLeavesOfType = (type) => (type === 'markdown' ? [{ isDeferred: false, view }] : []);
+    const page = new R.NotePage(plugin);
+    plugin.feature = (C) => (C === R.NotePage ? page : null);
+    page.draw(view);
+    const chip = () => sizer.querySelector('.dr-note-chip');
+    assert.strictEqual(chip().dataset.drColor, 'green');
+    page.draw(view);
+    const first = chip();
+    assert.strictEqual(chip(), first, 'nothing changed: the same chip');
+    plugin.settings.propertyOptions = { status: { draft: { color: 'red', icon: 'star' } } };
+    // A settings save enables each feature again, and the page is drawn on the next frame.
+    page.enable();
+    await settle(40);
+    assert.notStrictEqual(chip(), first, 'made again');
+    assert.strictEqual(chip().dataset.drColor, 'red');
+    assert.ok(chip().querySelector('.dr-value-icon'), 'with its icon');
+    // The dialog that sets a value's colour saves as any setting is: that save is what enables the features again.
+    let saved = 0;
+    plugin.saveSettings = async () => saved++;
+    await new R.ValueOptionModal(plugin, 'status', 'draft').save({ color: 'blue' });
+    assert.strictEqual(saved, 1);
+    plugin.settings.propertyOptions = {};
+    page.draw(view);
+    assert.ok(!chip().classList.contains('dr-value-painted'), 'cleared: plain again');
+    containerEl.remove();
+  });
+
   await t('a note’s page is drawn again only when a note it could show changes: itself, its album’s, one linked either way', async () => {
     const { v, plugin, app } = setup();
     const on = {};
