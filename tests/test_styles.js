@@ -90,4 +90,26 @@ t('with reduced motion, every rule that sets the durations sets them to nothing'
   assert.deepStrictEqual(open, [], 'durations reduced motion leaves running: ' + open.join(', '));
 });
 
+t('every :hover is inside @media (any-hover: hover): a touch screen would keep it stuck on', () => {
+  const dir = path.join(__dirname, '..', 'styles');
+  const bad = [];
+  fs.readdirSync(dir).filter((f) => f.endsWith('.css')).sort().forEach((f) => {
+    const text = fs.readFileSync(path.join(dir, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, ' '));
+    const stack = [];
+    let start = 0;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (c === '{') {
+        const prelude = text.slice(start, i).trim();
+        const line = text.slice(0, start + text.slice(start, i).search(/\S/)).split('\n').length;
+        if (/:hover/.test(prelude) && !prelude.startsWith('@') && !stack.some((p) => /^@media\b[^{]*\(\s*any-hover\s*:\s*hover\s*\)/.test(p)))
+          bad.push(`styles/${f}:${line}`);
+        stack.push(prelude);
+        start = i + 1;
+      } else if (c === '}') { stack.pop(); start = i + 1; } else if (c === ';') start = i + 1;
+    }
+  });
+  assert.deepStrictEqual(bad, [], 'hover styles only inside @media (any-hover: hover) (AGENTS.md): ' + bad.join(', '));
+});
+
 console.log(`\n${passed} passed`);

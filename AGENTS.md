@@ -45,14 +45,14 @@ Coffee N' Christmas.
   shows them). After a deliberate change: `node tests/test_lifecycle.js
   --update`, `node tests/map.js --check --update`. Never drop a command id or a
   setting key without a migration.
-- `tests/obsidian/` — tests inside the real Obsidian (`wdio.conf.mjs`,
-  wdio-obsidian-service): a spec per area (`app`, `library`, `note`, `tools`),
+- `tests/obsidian/` — tests inside the real Obsidian (wdio-obsidian-service,
+  `wdio.conf.mjs` at the root): a spec per area (`app`, `library`, `note`, `tools`),
   each in an Obsidian of its own, its tests wrapped by `suite()` in
   `helpers.mjs`, which puts the spec's starting state back before each one.
   GitHub Actions runs them on the latest Obsidian (the only version that
   matters), beside the simulation suites.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
-  the browse view, real-Obsidian tests). Claude Code loads one
+  the browse view, opening notes and redrawing, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
   that area. `.claude/skills/diagnose-tests` says how to read a failure.
 
@@ -79,7 +79,8 @@ Coffee N' Christmas.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties — read with `noteProps(app, file)`, write with
   `plugin.notes.write(file, change, { undo })`, whose Undo keeps what was edited
-  since; never `processFrontMatter` directly. `plugin.files` makes, moves and puts
+  since; new code never calls `processFrontMatter` (the bulk edits and the
+  property clipboard still do, with their own history). `plugin.files` makes, moves and puts
   back files and folder notes (the plugin's `moveFile` and so on pass to it).
   `libraryIndex(plugin)` (077) is what screens read of the vault — `notes()`,
   `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
@@ -125,17 +126,14 @@ Coffee N' Christmas.
 
 ## Rules that have bitten before
 
-- No regex lookbehind (`(?<=`, `(?<!`): it breaks Obsidian on iOS before 16.4.
-- Hover styles only inside `@media (any-hover: hover)`.
-- Don't give a `Modal` subclass a field called `scope`: Obsidian uses it for the
-  dialog's keys.
-- Obsidian 1.13 opens Settings in a window of its own: settings code must use the
-  tab's own elements (`containerEl.ownerDocument`), never the main `document`.
+- Checked by `tests/test_scripts.js`: no regex lookbehind (iOS before 16.4),
+  no `scope` field on a `Modal`, settings code uses `containerEl.ownerDocument`
+  (Settings opens in a window of its own), `processFrontMatter` only where
+  allowed; by `tests/test_styles.js`: hover only inside `@media (any-hover: hover)`.
 - Menu entries need a section (`setSection('action')` etc.), or Obsidian sorts
   them after its own.
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
-- The canvas adapter has notes of its own in `.claude/rules/`.
 
 ## Working here
 

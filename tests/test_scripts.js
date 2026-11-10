@@ -301,4 +301,82 @@ t('no lookbehind anywhere: iPhones before iOS 16.4 would fail to load the plugin
   assert.ok(!/\(\?<[!=]/.test(src), 'a regex uses lookbehind');
 });
 
+/* -- rules that have bitten before, read from src/ ------------------------ */
+
+const acorn = require('acorn');
+const SRC = path.join(__dirname, '..', 'src');
+// Every module, as `area/NNN-name.js`, its text with comments blanked (lines kept) and its tree.
+const modules = fs.readdirSync(SRC).filter((d) => fs.statSync(path.join(SRC, d)).isDirectory()).sort()
+  .flatMap((d) => fs.readdirSync(path.join(SRC, d)).filter((f) => f.endsWith('.js')).sort().map((f) => {
+    const text = fs.readFileSync(path.join(SRC, d, f), 'utf8');
+    const comments = [];
+    const ast = acorn.parse(text, { ecmaVersion: 'latest', sourceType: 'module', locations: true, onComment: comments });
+    let code = text;
+    comments.forEach((c) => { code = code.slice(0, c.start) + text.slice(c.start, c.end).replace(/[^\n]/g, ' ') + code.slice(c.end); });
+    return { name: `${d}/${f}`, code, ast };
+  }));
+const hits = (re, only = () => true) => modules.filter((m) => only(m.name)).flatMap((m) =>
+  m.code.split('\n').flatMap((line, i) => (re.test(line) ? [{ name: m.name, at: `src/${m.name}:${i + 1}`, line: line.trim() }] : [])));
+const walk = (node, fn) => {
+  if (!node || typeof node.type !== 'string') return;
+  fn(node);
+  Object.keys(node).forEach((k) => {
+    const v = node[k];
+    if (Array.isArray(v)) v.forEach((n) => walk(n, fn)); else if (v && typeof v.type === 'string') walk(v, fn);
+  });
+};
+
+t('no Modal subclass has a field called scope: Obsidian keeps the dialog\'s keys there', () => {
+  const classes = [];
+  modules.forEach((m) => walk(m.ast, (n) => {
+    if ((n.type === 'ClassDeclaration' || n.type === 'ClassExpression') && n.id && n.superClass && n.superClass.type === 'Identifier')
+      classes.push({ name: n.id.name, base: n.superClass.name, node: n, file: m.name });
+  }));
+  // A class over a dialog, however many parts down, is a dialog.
+  const modal = new Set(['Modal', 'SuggestModal', 'FuzzySuggestModal']);
+  for (let grew = true; grew;) {
+    grew = false;
+    classes.forEach((c) => { if (modal.has(c.base) && !modal.has(c.name)) { modal.add(c.name); grew = true; } });
+  }
+  const bad = [];
+  classes.filter((c) => modal.has(c.name)).forEach((c) => walk(c.node.body, (n) => {
+    const named = (k) => k && (k.name === 'scope' || k.value === 'scope');
+    const field = n.type === 'PropertyDefinition' && !n.static && named(n.key);
+    const set = n.type === 'AssignmentExpression' && n.left.type === 'MemberExpression' && n.left.object.type === 'ThisExpression' && named(n.left.property);
+    if (field || set) bad.push(`src/${c.file}:${n.loc.start.line} (${c.name})`);
+  }));
+  assert.ok(classes.some((c) => c.name === 'BrowseView'), 'the check no longer sees the classes');
+  assert.deepStrictEqual(bad, [], "don't give a Modal subclass a field called scope (AGENTS.md): " + bad.join(', '));
+});
+
+t('settings code uses its own window\'s document: Obsidian 1.13 opens Settings in a window of its own', () => {
+  // The one use allowed: telling the settings window's page apart from the main one,
+  // so the look is put on a page Appearance doesn't reach.
+  const allowed = [['plugin/360-settings-tab.js', 'page !== document.body']];
+  const bad = hits(/(^|[^.\w$])document\b/, (name) => /^plugin\/3[56]\d-.*settings/.test(name))
+    .filter((h) => !allowed.some(([file, text]) => h.name === file && h.line.includes(text)));
+  assert.deepStrictEqual(bad.map((h) => h.at), [], 'settings code must use containerEl.ownerDocument, never the main document (AGENTS.md): ' + bad.map((h) => h.at).join(', '));
+});
+
+t('properties are written through plugin.notes.write: processFrontMatter only in core/073 and the known exceptions', () => {
+  // The bulk edits and the property clipboard keep their own Undo and history (docs/architecture.md).
+  const allowed = ['core/073-notes.js', 'tools/291-bulk-changes.js', 'tools/307-bulk-rules.js', 'ui/250-property-clipboard.js'];
+  const bad = hits(/\bprocessFrontMatter\b/).filter((h) => !allowed.includes(h.name));
+  assert.deepStrictEqual(bad.map((h) => h.at), [], 'a note\'s properties are written with plugin.notes.write, not processFrontMatter (AGENTS.md): ' + bad.map((h) => h.at).join(', '));
+});
+
+t('notes open in the page through openInPage / stepInAlbum (core/070), which keep a pinned tab', () => {
+  // The direct uses there were when the rule came in, by file; move one onto openInPage and lower its count.
+  const allowed = {
+    'core/070-orders.js': 1, 'core/074-files.js': 2, 'library/100-library.js': 1, 'library/110-browse-screens.js': 1,
+    'library/125-browse-album.js': 2, 'library/130-library-feature.js': 2, 'library/259-library-check.js': 1,
+    'tools/300-bulk-dialogs.js': 1, 'tools/303-bulk-types.js': 1,
+  };
+  const counts = {};
+  const found = hits(/\bgetLeaf\(\s*false\s*\)/);
+  found.forEach((h) => (counts[h.name] = (counts[h.name] || 0) + 1));
+  const bad = found.filter((h) => counts[h.name] > (allowed[h.name] || 0)).map((h) => h.at);
+  assert.deepStrictEqual(bad, [], 'a new getLeaf(false): open a note with openInPage(plugin, file, leaf) or stepInAlbum (.claude/rules/navigation.md): ' + bad.join(', '));
+});
+
 console.log(`\n${passed} passed`);
