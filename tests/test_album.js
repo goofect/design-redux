@@ -2670,7 +2670,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
   });
 
   await t('the inbox suggests where a note belongs, by its links and tags, and puts the picked there in one step', async () => {
-    const { v, plugin, app } = setup();
+    const { v, plugin, app, view } = setup();
     v.folder('Law');
     v.file('Law/Treaty.md');
     const linky = v.file('Linky.md');
@@ -2689,6 +2689,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(found.get(linky).path, 'IR', 'most linked');
     assert.strictEqual(found.get(tagged).path, 'Law', 'a tag naming it');
     assert.ok(!found.has(lost), 'nothing to go on: no guess');
+    // A row is a Tab stop, and its checkbox; its name and its suggestion aren't. Enter opens its note.
+    Object.assign(view, { mode: 'inbox', path: '/' });
+    view.render();
+    const row = view.contentEl.querySelector('.dr-inbox-row[data-path="Linky.md"]');
+    assert.ok(row.querySelector('.dr-inbox-suggest'), 'its suggestion is shown');
+    const stops = [row, ...row.querySelectorAll('*')].filter((el) => el.tabIndex >= 0).map((el) => el.tagName.toLowerCase());
+    assert.deepStrictEqual(stops, ['div', 'input'], 'Tab stops in an inbox row');
+    const opened = [];
+    view.openFile = (f) => opened.push(f.path);
+    key(row, 'Enter');
+    assert.deepStrictEqual(opened, ['Linky.md']);
     assert.strictEqual(await check.moveEach([[linky, found.get(linky)], [tagged, found.get(tagged)]]), true);
     assert.deepStrictEqual([linky.path, tagged.path], ['IR/Linky.md', 'Law/Tagged.md']);
     await undo();

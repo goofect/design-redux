@@ -163,23 +163,25 @@ export class InboxScreen extends BrowseScreen {
         view.render();
       });
       const name = row.createSpan({ cls: 'dr-inbox-name', text: file.basename });
-      asButton(name);
+      // Not Tab stops of their own: the row is one, and Enter on it opens the note.
+      asButton(name).setAttribute('tabindex', '-1');
       onActivate(name, (evt) => view.openFile(file, evt));
       const home = suggested.get(file);
       if (home) {
         const chip = row.createSpan({ cls: 'dr-inbox-suggest', text: `→ ${home.name}` });
-        asButton(chip, `Move into ${home.name}, where it seems to belong`);
+        asButton(chip, `Move into ${home.name}, where it seems to belong`).setAttribute('tabindex', '-1');
         onActivate(chip, (evt) => {
           evt.stopPropagation();
           check.moveEach([[file, home]]);
         });
       }
       row.createSpan({ cls: 'dr-inbox-when', text: view.relative(file.stat.mtime) });
-      // Space picks the row, as a checkbox would.
+      // Space picks the row, as a checkbox would; Enter opens its note.
       row.addEventListener('keydown', (evt) => {
-        if (evt.key !== ' ' || evt.target !== row) return;
+        if ((evt.key !== ' ' && evt.key !== 'Enter') || evt.target !== row) return;
         evt.preventDefault();
-        box.click();
+        if (evt.key === 'Enter') view.openFile(file, evt);
+        else box.click();
       });
     });
   }

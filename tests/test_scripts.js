@@ -353,7 +353,39 @@ t('settings code uses its own window\'s document: Obsidian 1.13 opens Settings i
   // The one use allowed: telling the settings window's page apart from the main one,
   // so the look is put on a page Appearance doesn't reach.
   const allowed = [['plugin/360-settings-tab.js', 'page !== document.body']];
-  const bad = hits(/(^|[^.\w$])document\b/, (name) => /^plugin\/3[56]\d-.*settings/.test(name))
+  // Settings rows a feature draws itself, `render: (el) => this.m(el)` in its schema: the method
+  // it names, or `this.f().m(el)` where f() returns `new C(...)`, C's method. Their lines are settings code too.
+  const methodsOf = (ast) => {
+    const found = {};
+    walk(ast, (n) => {
+      if (n.type === 'ClassDeclaration' && n.id) n.body.body.forEach((m) => {
+        if (m.type === 'MethodDefinition' && m.key.name) (found[n.id.name] = found[n.id.name] || {})[m.key.name] = m;
+      });
+    });
+    return found;
+  };
+  const classes = {};
+  modules.forEach((m) => Object.entries(methodsOf(m.ast)).forEach(([c, ms]) => (classes[c] = { file: m.name, methods: ms })));
+  const drawn = {};
+  const add = (file, node) => { if (node) (drawn[file] = drawn[file] || []).push([node.loc.start.line, node.loc.end.line]); };
+  modules.forEach((m) => walk(m.ast, (n) => {
+    if (n.type !== 'Property' || !n.key || n.key.name !== 'render' || n.value.type !== 'ArrowFunctionExpression') return;
+    const call = n.value.body;
+    if (call.type !== 'CallExpression' || call.callee.type !== 'MemberExpression') return;
+    const own = Object.values(classes).find((c) => c.file === m.name && Object.values(c.methods).some((d) => d.start <= n.start && n.end <= d.end));
+    const { object, property } = call.callee;
+    if (object.type === 'ThisExpression' && own) add(m.name, own.methods[property.name]);
+    if (object.type === 'CallExpression' && object.callee.type === 'MemberExpression' && object.callee.object.type === 'ThisExpression' && own) {
+      let made = null;
+      walk(own.methods[object.callee.property.name], (r) => { if (r.type === 'NewExpression' && r.callee.type === 'Identifier') made = r.callee.name; });
+      const c = made && classes[made];
+      if (c) add(c.file, c.methods[property.name]);
+    }
+  }));
+  assert.ok(Object.keys(drawn).length >= 3, 'the check no longer finds the rows features draw');
+  const inDrawn = (h) => (drawn[h.name] || []).some(([a, b]) => { const line = Number(h.at.split(':').pop()); return line >= a && line <= b; });
+  const bad = hits(/(^|[^.\w$])document\b/, (name) => /^plugin\/3[56]\d-.*settings/.test(name) || !!drawn[name])
+    .filter((h) => /^plugin\/3[56]\d-.*settings/.test(h.name) || inDrawn(h))
     .filter((h) => !allowed.some(([file, text]) => h.name === file && h.line.includes(text)));
   assert.deepStrictEqual(bad.map((h) => h.at), [], 'settings code must use containerEl.ownerDocument, never the main document (AGENTS.md): ' + bad.map((h) => h.at).join(', '));
 });
@@ -381,10 +413,10 @@ t('notes open in the page through openInPage / stepInAlbum (core/070), which kee
     'tools/300-bulk-dialogs.js': 1, 'tools/303-bulk-types.js': 1,
   };
   const counts = {};
-  const found = hits(/\bgetLeaf\(\s*false\s*\)/);
+  const found = hits(/\bgetLeaf\(\s*(false\s*)?\)/);
   found.forEach((h) => (counts[h.name] = (counts[h.name] || 0) + 1));
   const bad = found.filter((h) => counts[h.name] > (allowed[h.name] || 0)).map((h) => h.at);
-  assert.deepStrictEqual(bad, [], 'a new getLeaf(false): open a note with openInPage(plugin, file, leaf) or stepInAlbum (.claude/rules/navigation.md): ' + bad.join(', '));
+  assert.deepStrictEqual(bad, [], 'a new getLeaf(false) or getLeaf(): open a note with openInPage(plugin, file, leaf) or stepInAlbum (.claude/rules/navigation.md): ' + bad.join(', '));
 });
 
 console.log(`\n${passed} passed`);

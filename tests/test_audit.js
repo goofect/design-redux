@@ -74,6 +74,8 @@ const obsidian = new Proxy({
   Platform: { isMobile: false, isPhone: false },
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 const R = loadMain(obsidian, 'audit');
+// What Obsidian's menu shows with, as the harness has it (it checks sections there).
+const loadedShow = Menu.prototype.showAtPosition;
 const { EditorState } = require('@codemirror/state');
 
 let passed = 0;
@@ -272,7 +274,7 @@ function panelFor(initial) {
     assert.deepStrictEqual(shown.pop(), ['Open in new tab'], 'one page off keeps the open items');
 
     filter.disable();
-    assert.strictEqual(Menu.prototype.showAtPosition, originalShow, 'not put back');
+    assert.strictEqual(Menu.prototype.showAtPosition, loadedShow, 'not put back');
     const after = new Menu();
     after.items = [entry('Rename property')];
     after.showAtPosition({ x: 0, y: 0 });

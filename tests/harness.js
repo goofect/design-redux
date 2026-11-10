@@ -11,8 +11,19 @@ let hooked = null;
  * suite's Menu stand-in, whatever it is, refuses an entry without
  * `setSection` on a menu that's Obsidian's: one the suite made and handed
  * over, as a 'file-menu' or 'editor-menu' is. A menu main.js makes, and a
- * submenu, hold only the plugin's entries, in its own order.
+ * submenu, may hold only the plugin's entries, in its own order; one that
+ * mixes entries with a section and without is refused when it's shown.
+ * A refusal thrown in a click handler is swallowed by jsdom, so it's also
+ * printed and fails the suite as it exits.
  */
+const refusals = [];
+function refused(message) {
+  if (!refusals.length) process.on('exit', () => { process.exitCode = 1; });
+  refusals.push(message);
+  console.error(`menu: ${message}`);
+  return new Error(message);
+}
+
 function sectionedMenus(obsidian) {
   const Menu = obsidian && 'Menu' in obsidian ? obsidian.Menu : null;
   const proto = Menu && Menu.prototype;
@@ -33,11 +44,25 @@ function sectionedMenus(obsidian) {
         if (typeof setSection === 'function') item.setSection = function () { sectioned = true; return setSection.apply(this, arguments); };
         if (typeof setSubmenu === 'function') item.setSubmenu = function () { return made(setSubmenu.apply(this, arguments)); };
         const out = cb(item);
-        if (theirs && !sectioned) throw new Error(`menu entry "${title}" has no section: give it setSection('action') or another (AGENTS.md)`);
+        if (theirs && !sectioned) throw refused(`menu entry "${title}" has no section: give it setSection('action') or another (AGENTS.md)`);
+        (this.drEntries || (this.drEntries = [])).push({ title, sectioned });
         return out;
       });
     };
     proto.addItem.drSectioned = true;
+    // A menu of ours that Obsidian's entries join too ('file-menu' triggered on it) has sections
+    // on some of its entries: then every one needs one. Told when it's shown.
+    ['showAtMouseEvent', 'showAtPosition'].forEach((name) => {
+      const show = proto[name];
+      if (typeof show !== 'function') return;
+      proto[name] = function () {
+        const entries = this.drEntries || [];
+        const bare = entries.filter((e) => !e.sectioned);
+        if (bare.length && bare.length < entries.length)
+          throw refused(`menu entries ${bare.map((e) => `"${e.title}"`).join(', ')} have no section, beside entries that have one (AGENTS.md)`);
+        return show.apply(this, arguments);
+      };
+    });
   }
   // The same class and prototype (what main.js patches on it lands on the suite's), marking what it makes.
   obsidian.Menu = new Proxy(Menu, {
