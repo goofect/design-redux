@@ -135,7 +135,7 @@ export const featureKeys = (feature) => (feature.switch ? [feature.switch] : [])
  */
 export const SETTING_PRESETS = {
   minimal: { name: 'Minimal', on: ['library', 'notePage'] },
-  // Without the strip, as a first install has it: « » sit in the note's header, Properties in the inspector.
+  // Without the strip, as a first install has it: Properties sit in the inspector.
   standard: { name: 'Standard', on: ['library', 'notePage', 'propertiesDropdown'] },
   everything: { name: 'Everything', on: null },
 };

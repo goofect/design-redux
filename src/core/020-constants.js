@@ -80,7 +80,7 @@ export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collecti
 export const DEFAULTS = {
   library: true,
   singleArea: false,
-  // Off to begin with since 3.1: « » sit in the note's header, Properties in the inspector.
+  // Off to begin with since 3.1: Properties sit in the inspector.
   contextStrip: false,
   // The strip says where the note falls in its album: "3 of 12".
   stripPlace: true,

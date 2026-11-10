@@ -1035,30 +1035,110 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
   });
 
-  await t('without the strip, « » sit in the note’s header, name where they go and open it there', () => {
-    const { plugin, app } = setup();
-    const file = app.vault.getFileByPath('IR/Balance.md');
-    const containerEl = document.body.createDiv();
-    containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' });
-    const leaf = { isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file }), openFile(f) { this.view.file = f; } };
-    app.workspace.iterateAllLeaves = (fn) => fn(leaf);
+  /** A tab, as Obsidian's: opening a note takes a moment, then tells (file-open), and the header follows. */
+  const skipTabs = (plugin, app, n = 1) => {
+    const leaves = [];
+    const on = {};
+    plugin.registerEvent = () => {};
+    app.workspace.on = (name, fn) => { (on[name] = on[name] || []).push(fn); return {}; };
+    app.workspace.iterateAllLeaves = (fn) => leaves.forEach(fn);
     // Obsidian's own, which the buttons are made with.
     if (typeof global.createDiv !== 'function') global.createDiv = (o) => { const el = document.createElement('div').createDiv(o); el.remove(); return el; };
     const skip = new R.HeaderSkip(plugin);
-    const labels = () => Array.from(containerEl.querySelectorAll('.dr-header-skip-btn')).map((b) => b.getAttribute('aria-label'));
+    skip.register();
+    for (let i = 0; i < n; i++) {
+      const containerEl = document.body.createDiv();
+      containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' });
+      leaves.push({ isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file: null }), pinned: false,
+        getViewState() { return { pinned: this.pinned }; },
+        async openFile(f) { await null; this.view.file = f; (on['file-open'] || []).forEach((h) => h(f)); } });
+    }
+    const buttons = (leaf) => Array.from(leaf.containerEl.querySelectorAll('.dr-header-skip-btn'));
+    const labels = (leaf) => buttons(leaf).map((b) => b.getAttribute('aria-label'));
+    const hidden = (leaf) => leaf.containerEl.querySelector('.dr-header-skip').classList.contains('is-hidden');
+    const go = async (leaf, ...paths) => { for (const p of paths) await leaf.openFile(app.vault.getFileByPath(p)); };
+    const press = async (leaf, i) => { buttons(leaf)[i].click(); await settle(0); };
+    return { skip, leaves, on, buttons, labels, hidden, go, press };
+  };
+
+  await t('« » in the note’s header lead out of its folder and back, a tab’s own way, strip or not', async () => {
+    const { plugin, app } = setup();
+    const { skip, leaves: [leaf], buttons, labels, hidden, go, press } = skipTabs(plugin, app);
     plugin.settings.contextStrip = true;
+    await go(leaf, 'IR/Balance.md', 'IR/Cooperation.md');
+    assert.deepStrictEqual(labels(leaf), [], 'nothing outside the folder yet');
+    assert.ok(hidden(leaf));
+    // A in one folder, then B1, B2, B3 in another.
+    await go(leaf, 'IR/Theories/Realism.md', 'IR/Anarchy.md', 'IR/Balance.md', 'IR/Deterrence.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Realism'], 'shown with the strip on too');
+    buttons(leaf)[0].click();
+    // On its way, a sync (another tab, say) is no new step.
     skip.sync();
-    assert.deepStrictEqual(labels(), [], 'the strip has them');
-    plugin.settings.contextStrip = false;
+    assert.strictEqual(leaf.view.file.basename, 'Deterrence');
+    assert.deepStrictEqual(labels(leaf), ['Back to Cooperation', 'Forward to Deterrence'], 'drawn as where it’s going');
+    await settle(0);
+    assert.strictEqual(leaf.view.file.basename, 'Realism', 'back out, in this tab');
+    assert.deepStrictEqual(labels(leaf), ['Back to Cooperation', 'Forward to Deterrence'], 'and on out from there');
+    await press(leaf, 1);
+    assert.strictEqual(leaf.view.file.basename, 'Deterrence', 'forward to the note it left');
+    assert.deepStrictEqual(labels(leaf), ['Back to Realism'], 'the jump back is no new step');
+    await press(leaf, 0);
+    await go(leaf, 'IR/Theories/Liberalism.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Cooperation'], 'something else opened: no way forward');
     skip.sync();
-    assert.deepStrictEqual(labels(), ['Previous in collection: Anarchy', 'Next in collection: Cooperation']);
-    containerEl.querySelectorAll('.dr-header-skip-btn')[1].click();
-    assert.strictEqual(leaf.view.file.basename, 'Cooperation');
-    skip.sync();
-    assert.strictEqual(containerEl.querySelectorAll('.dr-header-skip').length, 1, 'one pair a tab');
+    assert.strictEqual(leaf.containerEl.querySelectorAll('.dr-header-skip').length, 1, 'one pair a tab');
+    // A pinned tab stays: where « goes opens in a new one.
+    const other = { opened: null, openFile(f) { this.opened = f; } };
+    app.workspace.getLeaf = () => other;
+    leaf.pinned = true;
+    await press(leaf, 0);
+    assert.strictEqual(other.opened.basename, 'Cooperation');
+    assert.strictEqual(leaf.view.file.basename, 'Liberalism');
+    assert.deepStrictEqual(labels(leaf), ['Back to Cooperation'], 'no way forward in a tab that stayed');
     skip.disable();
-    assert.ok(!containerEl.querySelector('.dr-header-skip'));
-    containerEl.remove();
+    assert.ok(!leaf.containerEl.querySelector('.dr-header-skip'));
+  });
+
+  await t('each tab keeps its own way out, and moving between them keeps the way forward', async () => {
+    const { plugin, app } = setup();
+    const { leaves: [one, two], on, labels, go, press } = skipTabs(plugin, app, 2);
+    await go(one, 'IR/Theories/Realism.md', 'IR/Anarchy.md');
+    await go(two, 'IR/Balance.md', 'IR/Theories/Liberalism.md');
+    assert.deepStrictEqual(labels(one), ['Back to Realism']);
+    assert.deepStrictEqual(labels(two), ['Back to Balance']);
+    await press(one, 0);
+    on['active-leaf-change'].forEach((h) => h(two));
+    await go(two, 'IR/Theories/Realism.md');
+    on['active-leaf-change'].forEach((h) => h(one));
+    assert.deepStrictEqual(labels(one), ['Forward to Anarchy'], 'the other tab’s opens are its own');
+    assert.deepStrictEqual(labels(two), ['Back to Balance']);
+  });
+
+  await t('« follows a rename, and leaves out a note that’s gone', async () => {
+    const { plugin, app } = setup();
+    const { leaves: [leaf], labels, hidden, go } = skipTabs(plugin, app);
+    await go(leaf, 'IR/Balance.md', 'IR/Theories/Realism.md', 'IR/Anarchy.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Realism']);
+    await app.fileManager.renameFile(app.vault.getFileByPath('IR/Theories/Realism.md'), 'IR/Theories/Neorealism.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Neorealism'], 'the label names it as it is now');
+    await app.fileManager.trashFile(app.vault.getFileByPath('IR/Theories/Neorealism.md'));
+    assert.deepStrictEqual(labels(leaf), [], 'the only note outside is gone: Balance is this one’s folder');
+    assert.ok(hidden(leaf));
+  });
+
+  await t('a back out that lands elsewhere than a note doesn’t stop the tab’s history', async () => {
+    const { plugin, app } = setup();
+    const { skip, leaves: [leaf], labels, go, press } = skipTabs(plugin, app);
+    await go(leaf, 'IR/Theories/Realism.md', 'IR/Anarchy.md');
+    const note = leaf.view;
+    // The note opens in a view of another kind (a drawing's, say).
+    leaf.openFile = async function (f) { await null; this.view = { file: f }; skip.sync(); };
+    await press(leaf, 0);
+    assert.strictEqual(skip.histories.get(leaf).pending, null, 'the jump is over');
+    leaf.openFile = async function (f) { await null; this.view = note; note.file = f; skip.sync(); };
+    // Back to the note it left: a step of its own now, not the jump still on its way.
+    await go(leaf, 'IR/Anarchy.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Realism'], 'recorded again, and no way forward');
   });
 
   await t('a Next row, a shelf tile and the next-in-album command all open in the page', () => {

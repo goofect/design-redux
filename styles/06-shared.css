@@ -35,7 +35,7 @@ body {
   border-radius: var(--dr-radius-sm);
 }
 
-/* « » beside back and forward, without the strip. */
+/* « » beside back and forward: out of the note's folder and back. */
 .dr-header-skip {
   display: flex;
   align-items: center;

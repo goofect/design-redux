@@ -900,8 +900,8 @@ inspector, one selection.
 - `contextStrip` is off by default (step 16 keeps it on for an existing
   install that never said: `run(saved, was)` is told whether settings were
   saved before). The strip stays, as a choice.
-- What only the strip had, « » through the collection, sits in the note's
-  header beside back and forward while it's off (191 `HeaderSkip`).
+- « » in the note's header lead out of its folder and back, strip or not
+  (191 `HeaderSkip`).
   Properties is the header's button and the inspector.
 - The real-Obsidian suite puts the strip on in its `before`, to keep
   testing it.
