@@ -7,12 +7,13 @@
 /* arrangement outlives the files being tidied.                        */
 /* ------------------------------------------------------------------ */
 
-import { TFile, TFolder } from 'obsidian';
+import { Notice, TFile, TFolder } from 'obsidian';
 import { LIBRARY_MORE, libraryLayout } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
 import { pageLeaf } from './034-tabs.js';
 import { sortByOrder } from './040-sorting.js';
+import { libraryIndex } from './077-library-index.js';
 import { schemasFromDefaults } from './086-property-schema.js';
 
 /**
@@ -644,6 +645,34 @@ export function openInPage(plugin, file, leaf = pageLeaf(plugin.app)) {
   if (!file || !into) return false;
   into.openFile(file);
   return true;
+}
+
+/**
+ * A note picked at random, opened as `openInPage` does — what Obsidian's
+ * Random note core plugin offers, so only while that's on (assumed so if
+ * it can't be told); off, the user is told how to turn it on. Whether it went.
+ */
+export function openRandomNote(plugin) {
+  const plugins = plugin.app.internalPlugins;
+  let on = true;
+  try {
+    if (plugins && typeof plugins.getEnabledPluginById === 'function') on = !!plugins.getEnabledPluginById('random-note');
+  } catch (err) {
+    on = true;
+  }
+  if (!on) {
+    new Notice('Turn on the Random note core plugin (Settings → Core plugins) to open a random note.');
+    return false;
+  }
+  const current = plugin.app.workspace.getActiveFile();
+  const all = libraryIndex(plugin).markdown();
+  // Another note than the one open, so a pick is always seen to happen.
+  const others = all.length > 1 ? all.filter((f) => f !== current) : all;
+  if (!others.length) {
+    new Notice('No notes to pick from.');
+    return false;
+  }
+  return openInPage(plugin, others[Math.floor(Math.random() * others.length)]);
 }
 
 /** One step through an album: the note before or after a file, opened as `openInPage` does. Whether it went. */

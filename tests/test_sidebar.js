@@ -55,10 +55,11 @@ class Menu {
   titles() { return this.items.map((i) => i.title); }
 }
 class Modal { constructor(app) { this.app = app; } open() {} close() {} }
+const notices = [];
 const obsidian = new Proxy({
   ItemView, TFile, TFolder, TAbstractFile, MarkdownView, Component, Menu, Modal,
   setIcon: (el, name) => { el.dataset.icon = name; },
-  Notice: class {},
+  Notice: class { constructor(m) { notices.push(m); } },
   normalizePath: (p) => p.replace(/\/+/g, '/').replace(/^\/|\/$/g, ''),
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
 
@@ -731,6 +732,34 @@ t('a sideways swipe moves the sidebar on the pointer’s side, over anything, an
   assert.strictEqual(leftSplit.collapsed, true, 'straight back: in, with no wait');
   [-30, -30, -30].forEach((dx) => ev(dx, (at += 16)));
   assert.strictEqual(leftSplit.collapsed, false, 'and out again');
+});
+
+t('Random Note opens a note picked at random in the page, a new tab when it’s pinned, and says so when the core plugin is off', () => {
+  const opened = [];
+  const leaf = (name, pinned) => ({ name, getRoot: () => app.workspace.rootSplit, getViewState: () => ({ type: 'markdown', pinned }), openFile: (f) => opened.push([name, f.path]) });
+  const { view, app } = setup({ page: notePage('Home.md') });
+  view.plugin.settings.librarySections[0].items.push({ kind: 'builtin', id: 'random' });
+  view.render();
+  let on = true;
+  app.internalPlugins = { getEnabledPluginById: (id) => (id === 'random-note' && on ? {} : null) };
+  app.vault.getMarkdownFiles = () => Object.values(files);
+  app.workspace.getActiveFile = () => files['Home.md'];
+  app.workspace.getLeaf = () => leaf('new tab', false);
+  const click = () => Array.from(view.contentEl.querySelectorAll('.dr-lib-row')).find((el) => el.textContent.trim() === 'Random Note').click();
+
+  app.workspace.activeLeaf = leaf('page', false);
+  click();
+  assert.deepStrictEqual(opened.pop(), ['page', 'Concepts Folder/Logic.md'], 'in the page, and not the note already open');
+
+  app.workspace.activeLeaf = leaf('page', true);
+  click();
+  assert.deepStrictEqual(opened.pop(), ['new tab', 'Concepts Folder/Logic.md'], 'a pinned page keeps its note');
+
+  on = false;
+  notices.length = 0;
+  click();
+  assert.strictEqual(opened.length, 0, 'nothing opened');
+  assert.ok(/Turn on the Random note core plugin/.test(notices[0] || ''), 'told why: ' + notices[0]);
 });
 
 console.log(`\n${passed} passed`);

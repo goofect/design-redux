@@ -330,6 +330,47 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(seen.visible).toEqual([]);
   });
 
+  it('opens a random note from the library’s row and from the ribbon’s button in the menu', async function () {
+    const wasOn = await browser.executeObsidian(async ({ app }) => {
+      const core = app.internalPlugins.getPluginById('random-note');
+      const was = !!core.enabled;
+      if (!was) await core.enable(true);
+      return was;
+    });
+    const opened = () => browser.executeObsidian(({ app }) => {
+      // The page's leaf: revealing the library may have left the sidebar the active one.
+      const leaf = app.workspace.getMostRecentLeaf();
+      const view = leaf && leaf.view;
+      return view && view.file ? view.file.path : null;
+    });
+    // Each way in, from an album, where no note is open; nothing thrown until both are tried.
+    const tryFrom = async (click) => {
+      await openAlbum('Politics');
+      const found = await browser.executeObsidian(click);
+      return found ? readUntil(opened, Boolean, 4000) : 'no button';
+    };
+    try {
+      const got = {
+        commands: await browser.executeObsidian(({ app }) => Object.keys(app.commands.commands).filter((id) => id.includes('random'))),
+        row: await tryFrom(async ({ plugins }) => {
+          await plugins.designRedux.features.find((f) => f.constructor.name === 'Library').reveal();
+          const label = Array.from(document.querySelectorAll('.dr-library .dr-lib-label')).find((el) => el.textContent.trim() === 'Random Note');
+          const row = label && label.closest('.dr-lib-row');
+          if (row) row.click();
+          return !!row;
+        }),
+        ribbon: await tryFrom(() => {
+          const btn = Array.from(document.querySelectorAll('.side-dock-ribbon-action')).find((b) => /random/i.test(b.getAttribute('aria-label') || ''));
+          if (btn) btn.click();
+          return !!btn;
+        }),
+      };
+      expect(got).toEqual({ commands: got.commands, row: expect.stringMatching(/\.md$/), ribbon: expect.stringMatching(/\.md$/) });
+    } finally {
+      if (!wasOn) await browser.executeObsidian(async ({ app }) => app.internalPlugins.getPluginById('random-note').disable(true));
+    }
+  });
+
   it('groups its right-click entries, with New canvas under New', async function () {
     await openAlbum('Politics');
     const disc = await browser.$(ACTIVE + '.dr-disc[data-folder="Politics/Theories"]');

@@ -13,6 +13,7 @@ import { fillArt, noteCoverSrc } from '../core/030-art.js';
 import { isBrowseView, pageLeaf } from '../core/034-tabs.js';
 import { onContextMenu, showTargetMenu } from '../core/036-menus.js';
 import { asButton, fullNameOnHover, iconForFile, onActivate, roveFocus } from '../core/042-controls.js';
+import { openRandomNote } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ask } from '../core/081-capabilities.js';
 import { isAppleLook } from '../ui/229-components.js';
@@ -331,7 +332,7 @@ export class LibraryView extends ItemView {
       return;
     }
     if (id === 'graph') this.app.commands.executeCommandById('graph:open');
-    if (id === 'random') this.app.commands.executeCommandById('random-note:open');
+    if (id === 'random') openRandomNote(this.plugin);
     if (id === 'settings') this.plugin.openSettingsAt();
   }
 
