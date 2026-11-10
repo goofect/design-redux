@@ -632,13 +632,22 @@ export function albumNeighbours(plugin, file) {
 }
 
 /**
- * One step through an album: the note before or after a file, opened in
- * the page (or in the leaf given, a tab's own header asking for itself).
+ * A note opened in the page (or in the leaf given, a tab's own header
+ * asking for itself) — unless that tab is pinned: then where Obsidian
+ * would open it, a new tab, since replacing a pinned one is wrong.
  * Whether it went.
  */
-export function stepInAlbum(plugin, file, dir, leaf = pageLeaf(plugin.app)) {
-  const target = file ? albumNeighbours(plugin, file)[dir] : null;
-  if (!target || !leaf) return false;
-  leaf.openFile(target);
+export function openInPage(plugin, file, leaf = pageLeaf(plugin.app)) {
+  const ws = plugin.app.workspace;
+  const state = leaf && typeof leaf.getViewState === 'function' ? leaf.getViewState() : null;
+  const into = state && state.pinned && typeof ws.getLeaf === 'function' ? ws.getLeaf(false) : leaf;
+  if (!file || !into) return false;
+  into.openFile(file);
   return true;
+}
+
+/** One step through an album: the note before or after a file, opened as `openInPage` does. Whether it went. */
+export function stepInAlbum(plugin, file, dir, leaf) {
+  const target = file ? albumNeighbours(plugin, file)[dir] : null;
+  return !!target && openInPage(plugin, target, leaf);
 }

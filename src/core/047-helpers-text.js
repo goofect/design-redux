@@ -1,9 +1,9 @@
 /* ------------------------------------------------------------------ */
 
-import { fmGet } from './045-helpers-properties.js';
-
 /* Words: counts, names, a line of markdown as plain text               */
 /* ------------------------------------------------------------------ */
+
+import { fmGet } from './045-helpers-properties.js';
 
 /** A count with its noun: "1 note", "3 notes". */
 export const bulkCount = (n, one, many) => `${n} ${n === 1 ? one : many || one + 's'}`;

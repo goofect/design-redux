@@ -422,7 +422,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     containerEl.remove();
   });
 
-  await t('a value’s colour changed: the note page’s chip is painted again once settings are saved', async () => {
+  await t('a value’s colour changed: the note page’s chip is painted again', async () => {
     const { v, plugin, app } = setup();
     const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
     app.metadataCache.getFileCache = (f) => ({ frontmatter: f === file ? { status: 'draft' } : {} });
@@ -440,18 +440,18 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     page.draw(view);
     const first = chip();
     assert.strictEqual(chip(), first, 'nothing changed: the same chip');
-    plugin.settings.propertyOptions = { status: { draft: { color: 'red', icon: 'star' } } };
-    // A settings save enables each feature again, and the page is drawn on the next frame.
-    page.enable();
+    // Set in the dialog: saved, and each feature drawn again on the next frame, as the plugin's own queueSync does.
+    plugin.queueSync = () => R.DesignRedux.prototype.queueSync.call(plugin);
+    plugin.each = (fn) => fn(page);
+    plugin.saveData = async () => {};
+    let browsed = 0;
+    plugin.refreshBrowse = () => browsed++;
+    await new R.ValueOptionModal(plugin, 'status', 'draft').save({ color: 'red', icon: 'star' });
     await settle(40);
     assert.notStrictEqual(chip(), first, 'made again');
     assert.strictEqual(chip().dataset.drColor, 'red');
     assert.ok(chip().querySelector('.dr-value-icon'), 'with its icon');
-    // The dialog that sets a value's colour saves as any setting is: that save is what enables the features again.
-    let saved = 0;
-    plugin.saveSettings = async () => saved++;
-    await new R.ValueOptionModal(plugin, 'status', 'draft').save({ color: 'blue' });
-    assert.strictEqual(saved, 1);
+    assert.strictEqual(browsed, 1, 'the browse view drawn again as before');
     plugin.settings.propertyOptions = {};
     page.draw(view);
     assert.ok(!chip().classList.contains('dr-value-painted'), 'cleared: plain again');
@@ -1091,6 +1091,16 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(R.stepInAlbum(plugin, leaf.view.file, 'next'), true);
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.strictEqual(R.stepInAlbum(plugin, leaf.view.file, 'next'), false, 'none past the last');
+    // The page pinned: not replaced — a row, a tile and the command open where Obsidian would, a new tab.
+    leaf.view.file = file;
+    leaf.getViewState = () => ({ type: 'markdown', pinned: true });
+    const opened = [];
+    other.openFile = (f) => opened.push(f.basename);
+    click(sizer.querySelector('.dr-note-step.is-next'));
+    click(tile);
+    cmds['next-in-album'].run();
+    assert.deepStrictEqual(opened, ['Cooperation', name, 'Cooperation']);
+    assert.strictEqual(leaf.view.file, file, 'the pinned tab keeps its note');
   });
 
   await t("the strip's skip buttons name where they go and open it in the page", () => {

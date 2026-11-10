@@ -112,11 +112,11 @@ export class ValueOptionModal extends Modal {
   async save(option) {
     const settings = this.plugin.settings;
     settings.propertyOptions = withOption(settings.propertyOptions, this.key, this.value, option);
-    // Saved as any setting is, so what else shows values (a note's page, its chips) is drawn again too.
-    if (typeof this.plugin.saveSettings === 'function') await this.plugin.saveSettings();
-    else await this.plugin.saveData(settings);
+    await this.plugin.saveData(settings);
     this.close();
     if (typeof this.plugin.refreshBrowse === 'function') this.plugin.refreshBrowse();
+    // What else shows values — a note's page, its chips — drawn again on the next frame.
+    if (typeof this.plugin.queueSync === 'function') this.plugin.queueSync();
     if (this.then) this.then();
   }
 
