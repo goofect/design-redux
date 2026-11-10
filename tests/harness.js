@@ -7,6 +7,46 @@ const Module = require('module');
 let hooked = null;
 
 /**
+ * Menu entries need a section, or Obsidian sorts them after its own. The
+ * suite's Menu stand-in, whatever it is, refuses an entry without
+ * `setSection` on a menu that's Obsidian's: one the suite made and handed
+ * over, as a 'file-menu' or 'editor-menu' is. A menu main.js makes, and a
+ * submenu, hold only the plugin's entries, in its own order.
+ */
+function sectionedMenus(obsidian) {
+  const Menu = obsidian && 'Menu' in obsidian ? obsidian.Menu : null;
+  const proto = Menu && Menu.prototype;
+  if (!proto || typeof proto.addItem !== 'function' || Menu.drMade) return;
+  const made = (menu) => {
+    if (menu && typeof menu === 'object') menu.drMade = true;
+    return menu;
+  };
+  if (!proto.addItem.drSectioned) {
+    const addItem = proto.addItem;
+    proto.addItem = function (cb) {
+      const theirs = !this.drMade;
+      return addItem.call(this, (item) => {
+        let title = '';
+        let sectioned = false;
+        const { setTitle, setSection, setSubmenu } = item;
+        if (typeof setTitle === 'function') item.setTitle = function (t) { title = t; return setTitle.apply(this, arguments); };
+        if (typeof setSection === 'function') item.setSection = function () { sectioned = true; return setSection.apply(this, arguments); };
+        if (typeof setSubmenu === 'function') item.setSubmenu = function () { return made(setSubmenu.apply(this, arguments)); };
+        const out = cb(item);
+        if (theirs && !sectioned) throw new Error(`menu entry "${title}" has no section: give it setSection('action') or another (AGENTS.md)`);
+        return out;
+      });
+    };
+    proto.addItem.drSectioned = true;
+  }
+  // The same class and prototype (what main.js patches on it lands on the suite's), marking what it makes.
+  obsidian.Menu = new Proxy(Menu, {
+    construct: (target, args, newTarget) => made(Reflect.construct(target, args, newTarget)),
+    get: (target, k, receiver) => (k === 'drMade' ? true : Reflect.get(target, k, receiver)),
+  });
+}
+
+/**
  * Loads the built main.js with `obsidian` (the suite's stand-in) given for
  * require('obsidian'), and returns what it declares: `R.BrowseView`,
  * `const { Orders } = …`. A name main.js doesn't declare reads as undefined.
@@ -19,6 +59,7 @@ exports.loadMain = (obsidian, tag = 'suite') => {
     };
   }
   hooked = obsidian;
+  sectionedMenus(obsidian);
   const tmp = path.join(__dirname, `_${tag}_under_test.js`);
   // The bundle's names are its module scope's, so an eval there reads any of them;
   // its top-level declarations (at the line's start) say which there are, so the

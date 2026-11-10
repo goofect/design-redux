@@ -131,7 +131,7 @@ Coffee N' Christmas.
   (Settings opens in a window of its own), `processFrontMatter` only where
   allowed; by `tests/test_styles.js`: hover only inside `@media (any-hover: hover)`.
 - Menu entries need a section (`setSection('action')` etc.), or Obsidian sorts
-  them after its own.
+  them after its own (the suites' Menu refuses one without, `tests/harness.js`).
 - Newer Obsidian outranks plain rules on some of its own blocks (the note's
   properties): hiding them needs `!important`.
 

@@ -2464,7 +2464,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const file = (p) => v.vault.getFileByPath(p);
     // Written once: the album's menu and the palette, which offers them only for the album on screen.
     const menu = new Menu();
-    refactor.addFolderItems(menu, folder('IR'), (item) => item);
+    refactor.addFolderItems(menu, folder('IR'), (item, name) => item.setSection(name));
     assert.deepStrictEqual(menu.items.map((i) => i.title), ['Reorganise: Rename…', 'Reorganise: Move into…', 'Reorganise: Merge into…', 'Reorganise: Split notes off…', 'Delete folder…']);
     const rename = refactor.commands().find((c) => c.id === 'album-rename');
     plugin.app.workspace.getActiveViewOfType = () => null;
@@ -2535,7 +2535,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const refactor = new R.AlbumRefactor(plugin);
     plugin.feature = (C) => (C === R.AlbumRefactor ? refactor : null);
     const folder = (p) => v.vault.getFolderByPath(p);
-    const menuOf = (target) => { const m = new Menu(); plugin.addAlbumMenuItems(m, target, (item) => item, () => {}); return m.items.map((i) => i.title); };
+    const menuOf = (target) => { const m = new Menu(); plugin.addAlbumMenuItems(m, target, (item, name) => item.setSection(name), () => {}); return m.items.map((i) => i.title); };
     assert.ok(menuOf(folder('IR')).includes('Delete folder…'), menuOf(folder('IR')).join(' | '));
     assert.ok(!menuOf(v.vault.getRoot()).includes('Delete folder…'), 'never the vault’s root');
     modals.length = 0;
