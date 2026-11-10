@@ -371,6 +371,40 @@ suite('Design Redux in Obsidian: the app', function () {
     }
   });
 
+  it('shows a page in the web viewer, in tabs or on one page', async function () {
+    // A page served here, so no network is needed.
+    const http = await import('http');
+    const server = http.createServer((req, res) => res.end('<html><head><title>Red</title></head><body style="margin:0;background:red">hello</body></html>'));
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const url = `http://127.0.0.1:${server.address().port}/`;
+    const open = (set) => browser.executeObsidian(async ({ app, plugins }, set, url) => {
+      Object.assign(plugins.designRedux.settings, set);
+      await plugins.designRedux.saveSettings();
+      const core = app.internalPlugins.getPluginById('webviewer');
+      if (!core) return 'no web viewer';
+      if (!core.enabled) await core.enable();
+      await app.workspace.getLeaf('tab').setViewState({ type: 'webviewer', active: true, state: { url, navigate: true } });
+      let title = null;
+      let el = null;
+      for (let i = 0; i < 80 && !title; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        el = app.workspace.activeLeaf.view.contentEl.querySelector('webview, iframe');
+        try { title = el && el.executeJavaScript && (await el.executeJavaScript('document.readyState === "complete" && document.title')); } catch (e) { /* not loaded yet */ }
+      }
+      if (!el) return 'no webview';
+      const r = el.getBoundingClientRect();
+      const mid = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return { title, sized: r.width > 100 && r.height > 100, shown: getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility === 'visible', onTop: mid === el };
+    }, set, url);
+    try {
+      for (const set of [{}, { onePage: true, singleArea: true }]) {
+        expect([set, await open(set)]).toEqual([set, { title: 'Red', sized: true, shown: true, onTop: true }]);
+      }
+    } finally {
+      server.close();
+    }
+  });
+
   it('groups its right-click entries, with New canvas under New', async function () {
     await openAlbum('Politics');
     const disc = await browser.$(ACTIVE + '.dr-disc[data-folder="Politics/Theories"]');
