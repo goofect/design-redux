@@ -334,8 +334,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     app.metadataCache.resolvedLinks = { 'IR/Anarchy.md': { 'IR/Balance.md': 1 }, 'IR/Cooperation.md': { 'IR/Anarchy.md': 2 } };
     v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
     Object.assign(plugin.settings, { notePage: true, notePageChips: true, notePageShelves: true, albumNestBy: 'parent' });
-    // A note's view as Obsidian lays it out, editing.
-    const containerEl = document.createElement('div');
+    // A note's view as Obsidian lays it out, editing, on the page.
+    const containerEl = document.body.createDiv();
     const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
     const title = sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
     sizer.createDiv({ cls: 'metadata-container' });
@@ -386,6 +386,40 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     page.draw(view);
     assert.ok(!sizer.querySelector('.dr-note-album, .dr-note-meta, .dr-note-chips, .dr-note-next, .dr-note-shelves'));
     assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
+    containerEl.remove();
+  });
+
+  await t('a note’s line is its description when it has one, on the note page’s step as on a row; read later, only while it’s on the page', async () => {
+    const { v, plugin, app, view } = setup();
+    const file = v.vault.getAbstractFileByPath('IR/Anarchy.md');
+    const balance = v.vault.getAbstractFileByPath('IR/Balance.md');
+    app.metadataCache.getFileCache = (f) => ({ frontmatter: f === balance ? { description: 'The **balance** of power.' } : {} });
+    v.vault.cachedRead = async (f) => `${f.basename} begins here. More.`;
+    Object.assign(plugin.settings, { notePage: true });
+    const containerEl = document.body.createDiv();
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
+    sizer.createDiv({ cls: 'cm-contentContainer' });
+    new R.NotePage(plugin).draw({ containerEl, file });
+    await settle();
+    assert.strictEqual(sizer.querySelector('.dr-note-step.is-next .dr-note-step-line').textContent, 'The balance of power.');
+    const row = document.body.createDiv();
+    view.showExcerpt(row, balance);
+    assert.strictEqual(row.dataset.excerpt, 'The balance of power.', 'a row in the browse view');
+    view.showExcerpt(row, file);
+    await settle();
+    assert.strictEqual(row.dataset.excerpt, 'Anarchy begins here.');
+    // Gone from the page before the read came back: nothing written to it.
+    plugin.excerpts.clear();
+    const gone = document.createElement('div');
+    R.noteExcerpt(plugin, file, (text) => gone.setText(text), gone);
+    await settle();
+    assert.strictEqual(gone.textContent, '');
+    assert.strictEqual(plugin.excerpts.get(`${file.path}|${file.stat ? file.stat.mtime : 0}`), 'Anarchy begins here.', 'kept for the next');
+    R.noteExcerpt(plugin, { path: 'a.pdf', extension: 'pdf' }, (text) => gone.setText(text || 'none'));
+    assert.strictEqual(gone.textContent, 'none', 'not a note: no line');
+    row.remove();
+    containerEl.remove();
   });
 
   await t('a note’s page is drawn again only when a note it could show changes: itself, its album’s, one linked either way', async () => {
@@ -404,7 +438,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const stray = v.file('Elsewhere/Stray.md');
     const at = (p) => v.vault.getAbstractFileByPath(p);
     const file = at('IR/Anarchy.md');
-    const containerEl = document.createElement('div');
+    // On the page: a line read later is written only while its place is.
+    const containerEl = document.body.createDiv();
     const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
     sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
     sizer.createDiv({ cls: 'cm-contentContainer' });
@@ -470,6 +505,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(await count(() => (on.changed(at('IR/Cooperation.md')), on.changed(at('IR/Balance.md')))), [1, 1]);
     assert.strictEqual(line('dr-note-tile-line', 'Cooperation').textContent, 'Cooperation says something new.');
     assert.strictEqual(line('dr-note-step-line', 'Balance').textContent, 'Balance says something new.');
+    containerEl.remove();
   });
 
   await t('an album put in an order of its own: the note page’s steps and its “More in” follow', async () => {

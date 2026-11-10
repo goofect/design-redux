@@ -10,8 +10,7 @@ import { blankLook, coverGen, drawFolderArt, drawNoteArt, fillArt, leadProperty,
 import { onContextMenu } from '../core/036-menus.js';
 import { byName } from '../core/040-sorting.js';
 import { asButton, onActivate, roveFocus } from '../core/042-controls.js';
-import { fmGet } from '../core/045-helpers-properties.js';
-import { noteOpening, plainMarkdownLine, relativeDay } from '../core/047-helpers-text.js';
+import { noteExcerpt, relativeDay } from '../core/047-helpers-text.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { ask } from '../core/081-capabilities.js';
 import { RowValues } from './122-browse-editing.js';
@@ -121,24 +120,7 @@ export class BrowseRows extends RowValues {
       else delete el.dataset.excerpt;
       el.toggleClass('has-excerpt', !!text);
     };
-    // Only a note has text to read a line from: a PDF or an image would be its bytes.
-    if (!file || file.extension !== 'md') return put('');
-    const cache = this.app.metadataCache.getFileCache(file);
-    const said = cache ? fmGet(cache.frontmatter, 'description') : null;
-    if (typeof said === 'string' && said.trim()) return put(plainMarkdownLine(said));
-    const store = this.plugin.excerpts || (this.plugin.excerpts = new Map());
-    const key = `${file.path}|${file.stat ? file.stat.mtime : 0}`;
-    if (store.has(key)) return put(store.get(key));
-    if (!this.app.vault || typeof this.app.vault.cachedRead !== 'function') return;
-    this.app.vault
-      .cachedRead(file)
-      .then((text) => {
-        if (store.size > 4000) store.clear();
-        const line = noteOpening(text);
-        store.set(key, line);
-        if (el.isConnected) put(line);
-      })
-      .catch(() => {});
+    noteExcerpt(this.plugin, file, put, el);
   }
 
   /**

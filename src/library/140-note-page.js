@@ -13,7 +13,7 @@
 import { TFile } from 'obsidian';
 import { pageLeaf } from '../core/034-tabs.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
-import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
+import { noteExcerpt, relativeDay } from '../core/047-helpers-text.js';
 import { albumNeighbours, stepInAlbum } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
@@ -380,22 +380,9 @@ export class NotePage extends Feature {
     });
   }
 
-  /** A note's opening line into an element, read once per change of the note. */
+  /** A note's line into an element: its description, or its opening line. */
   opening(file, el) {
-    // Only a note has an opening line: a PDF or an image would be its bytes.
-    if (!file || file.extension !== 'md') return;
-    const store = this.plugin.excerpts || (this.plugin.excerpts = new Map());
-    const key = `${file.path}|${file.stat ? file.stat.mtime : 0}`;
-    if (store.has(key)) return el.setText(store.get(key));
-    if (typeof this.app.vault.cachedRead !== 'function') return;
-    this.app.vault
-      .cachedRead(file)
-      .then((text) => {
-        if (store.size > 4000) store.clear();
-        store.set(key, noteOpening(text));
-        el.setText(store.get(key));
-      })
-      .catch(() => {});
+    noteExcerpt(this.plugin, file, (text) => el.setText(text), el);
   }
 }
 

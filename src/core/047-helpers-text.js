@@ -1,5 +1,7 @@
 /* ------------------------------------------------------------------ */
 
+import { fmGet } from './045-helpers-properties.js';
+
 /* Words: counts, names, a line of markdown as plain text               */
 /* ------------------------------------------------------------------ */
 
@@ -44,6 +46,34 @@ export function noteOpening(text, max = 140) {
   const m = /^(.+?[.!?])(\s|$)/.exec(para);
   const first = m ? m[1] : para;
   return first.length > max ? `${first.slice(0, max - 1).trimEnd()}…` : first;
+}
+
+/**
+ * A note's line to show under its title, handed to `put`: its description
+ * if it has one, otherwise its opening — read once per change of the note,
+ * kept on the plugin for every screen. Read later, it's handed over only
+ * while `el` is still on the page. Only a note has one: a PDF or an image
+ * would be its bytes.
+ */
+export function noteExcerpt(plugin, file, put, el) {
+  if (!file || file.extension !== 'md') return put('');
+  const app = plugin.app;
+  const cache = app.metadataCache.getFileCache(file);
+  const said = cache ? fmGet(cache.frontmatter, 'description') : null;
+  if (typeof said === 'string' && said.trim()) return put(plainMarkdownLine(said));
+  const store = plugin.excerpts || (plugin.excerpts = new Map());
+  const key = `${file.path}|${file.stat ? file.stat.mtime : 0}`;
+  if (store.has(key)) return put(store.get(key));
+  if (!app.vault || typeof app.vault.cachedRead !== 'function') return;
+  app.vault
+    .cachedRead(file)
+    .then((text) => {
+      if (store.size > 4000) store.clear();
+      const line = noteOpening(text);
+      store.set(key, line);
+      if (!el || el.isConnected) put(line);
+    })
+    .catch(() => {});
 }
 
 /** Whether a tag is `from` or nested beneath it, ignoring case and #. */
