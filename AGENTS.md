@@ -52,7 +52,7 @@ Coffee N' Christmas.
   GitHub Actions runs them on the latest Obsidian (the only version that
   matters), beside the simulation suites.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
-  the browse view, opening notes and redrawing, real-Obsidian tests). Claude Code loads one
+  the browse view, the panel and the inspector, opening notes and redrawing, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
   that area. `.claude/skills/diagnose-tests` says how to read a failure;
   `.claude/skills/build-review`, how to build a change with agents and review it.
@@ -103,20 +103,8 @@ Coffee N' Christmas.
   `activeViewOfType`, `isBrowseView`). A new capability goes on the list;
   `tests/test_lifecycle.js` checks each has one feature offering it.
 - An element that acts as a button: `asButton(el, label)` and `onActivate`.
-- A feature adds to the note panel with `panelSections(panel)`: `PanelSection`
-  instances (082), drawn between the properties and the mentions. The panel
-  is where a note is edited: it pops up above the button that asked (the
-  note's header, the strip); on a phone, a sheet. The right sidebar's
-  inspector (179, `INSPECTOR_VIEW`) is the library's: it shows what's picked
-  there, as `plugin.coordinator` says (084: the pick and the pin, kept as a
-  snapshot `{ target, leaf, origin, pinned }`). While it's open, a popup
-  borrows the panel from it and gives it back on closing (`float`/`unfloat`).
-- What's picked is `plugin.selection` (076), apart from what's open. In the
-  browse view, rows and tiles go through `pickOrOpen`. While the inspector
-  shows (`inspectorShowing`), a click picks and a double click or Enter
-  opens. The browse view (124) draws what the library knows of a pick into
-  the inspector: an album in brief, and a picked note's Open / Reveal in
-  collection / More.
+- The note panel, the inspector, the pick (`plugin.selection`) and
+  `panelSections`: `.claude/rules/panel.md`.
 - Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
   `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
   checks, with a fallback. A plain canvas's go through the adapter (`core/079`:
