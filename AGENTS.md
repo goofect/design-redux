@@ -164,6 +164,7 @@ Coffee N' Christmas.
     file only when the change needs it. Soft limits, widened when correctness
     needs it: a first read of 100–200 lines, then only the direct callers and
     callees; passing tests as a summary, a failure as its own lines.
+    `tests/map.js` first; graphify (`graphify-out/`) only when the author asks for it.
   - A long task: keep a short checkpoint in `.claude-cache/checkpoint.md` —
     objective, files, constraints, changes, tests, what's left, the next
     step; conclusions, not transcripts — at the turn between phases, and read
