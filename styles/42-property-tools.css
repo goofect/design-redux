@@ -331,13 +331,13 @@ body.dr-strip-flat .dr-strip {
   opacity: 0.75;
 }
 
-/* -- round buttons on a tile's cover -- */
+/* -- the round More button on a tile's cover -- */
 
 .dr-card-buttons {
   position: absolute;
   inset: auto 8px 8px 8px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   pointer-events: none;
   opacity: 0;
   transition: opacity var(--dr-dur-fast) var(--dr-ease);
@@ -356,10 +356,6 @@ body.dr-strip-flat .dr-strip {
   color: #fff;
   cursor: pointer;
   pointer-events: auto;
-}
-
-.dr-card-button.is-more {
-  margin-left: auto;
 }
 
 .dr-card-button .svg-icon {

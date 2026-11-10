@@ -1627,7 +1627,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
     // An album: what kind, what it holds, where it is.
     await view.setState({ mode: 'folders' }, {});
-    click(view.contentEl.querySelector('.dr-card[data-path="IR"]'));
+    const tile = view.contentEl.querySelector('.dr-card[data-path="IR"]');
+    assert.deepStrictEqual(Array.from(tile.querySelectorAll('.dr-card-button')).map((b) => b.getAttribute('aria-label')), ['More'], 'no Open the first note on an album tile');
+    click(tile);
     assert.strictEqual(plugin.selection.get().folder.path, 'IR');
     el = document.createElement('div');
     view.previewAlbum(el, app.vault.getFolderByPath('IR'));

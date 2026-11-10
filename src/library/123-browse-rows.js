@@ -372,13 +372,8 @@ export class BrowseRows extends RowValues {
     }
     const src = this.folderCover(folder);
     drawFolderArt(this.plugin, card.querySelector('.dr-card-art'), folder);
-    // On the cover, when pointed at: straight into its first note, and
-    // its menu — as a tile offers Play and More.
-    this.cardButtons(card, () => {
-      const first = this.notesIn(folder)[0] || this.allNotesIn(folder)[0];
-      if (first) this.openFile(first);
-      else this.openFolder(folder);
-    }, (evt) => this.folderMenu(evt, folder, src));
+    // On the cover, when pointed at: its menu, as a tile offers More.
+    this.cardButtons(card, (evt) => this.folderMenu(evt, folder, src));
 
     this.pickOrOpen(card, { folder }, () => this.openFolder(folder));
     onContextMenu(card, (evt) => this.folderMenu(evt, folder, src));
@@ -394,18 +389,17 @@ export class BrowseRows extends RowValues {
     card.dataset.path = file.path;
     const art = card.querySelector('.dr-card-art');
     drawNoteArt(this.plugin, art, file);
-    this.cardButtons(card, null, (evt) => this.fileMenu(evt, file));
+    this.cardButtons(card, (evt) => this.fileMenu(evt, file));
 
     this.pickOrOpen(card, { file }, (evt) => this.openFile(file, evt));
     onContextMenu(card, (evt) => this.fileMenu(evt, file));
   }
 
   /**
-   * Round buttons over a tile's cover, shown when it's pointed at: one
-   * to open straight away where there's something to open, and More.
-   * Their clicks are theirs, not the tile's.
+   * A round More button over a tile's cover, shown when it's pointed at.
+   * Its clicks are its own, not the tile's.
    */
-  cardButtons(card, open, menu) {
+  cardButtons(card, menu) {
     const art = card.querySelector('.dr-card-art');
     if (!art) return;
     const bar = art.createDiv({ cls: 'dr-card-buttons' });
@@ -420,7 +414,6 @@ export class BrowseRows extends RowValues {
         run(evt);
       });
     };
-    if (open) button('book-open', 'Open the first note', open, 'is-open');
     if (menu) button('ellipsis', 'More', menu, 'is-more');
   }
 
