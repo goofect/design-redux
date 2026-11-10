@@ -408,6 +408,7 @@ export class Orders {
     if (!saved || saved.on === on) return;
     saved.on = on;
     this.save();
+    this.albumChanged();
   }
 
   /** Save an album's arrangement, by file name, and use it. */
@@ -416,6 +417,13 @@ export class Orders {
       [folder.path]: { names: names.slice(), on: true },
     });
     this.save();
+    this.albumChanged();
+  }
+
+  /** An album's order changed: what shows it (a note's steps, its shelves) is told. */
+  albumChanged() {
+    const ws = this.plugin.app && this.plugin.app.workspace;
+    if (ws && typeof ws.trigger === 'function') ws.trigger('design-redux:albums-changed');
   }
 
   arrangeAlbum(folder, files, fallback) {

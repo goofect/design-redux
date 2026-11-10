@@ -388,6 +388,124 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!containerEl.classList.contains('dr-props-as-chips'));
   });
 
+  await t('a note’s page is drawn again only when a note it could show changes: itself, its album’s, one linked either way', async () => {
+    const { v, plugin, app } = setup();
+    const on = {};
+    app.metadataCache.on = (type, fn) => ((on[type] = fn), {});
+    app.workspace.on = (type, fn) => ((on[type] = fn), {});
+    app.workspace.trigger = (type) => on[type] && on[type]();
+    plugin.registerEvent = () => {};
+    const links = { 'IR/Anarchy.md': { 'IR/Theories/Realism.md': 1 } };
+    app.metadataCache.resolvedLinks = links;
+    let text = 'begins here.';
+    v.vault.cachedRead = async (f) => `${f.basename} ${text}`;
+    Object.assign(plugin.settings, { notePage: true, notePageShelves: true });
+    v.folder('Elsewhere');
+    const stray = v.file('Elsewhere/Stray.md');
+    const at = (p) => v.vault.getAbstractFileByPath(p);
+    const file = at('IR/Anarchy.md');
+    const containerEl = document.createElement('div');
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
+    sizer.createDiv({ cls: 'cm-contentContainer' });
+    const view = { containerEl, file };
+    app.workspace.getLeavesOfType = (type) => (type === 'markdown' ? [{ view }] : []);
+    // What the shelves read: the vault's notes, through the index.
+    let scans = 0;
+    const markdown = app.vault.getMarkdownFiles.bind(app.vault);
+    app.vault.getMarkdownFiles = () => (scans++, markdown());
+    const page = new R.NotePage(plugin);
+    let draws = 0;
+    const draw = page.draw.bind(page);
+    page.draw = (x) => (draws++, draw(x));
+    page.register();
+    page.enable();
+    await settle(40);
+    assert.strictEqual(draws, 1);
+    assert.ok(scans > 0);
+    const heads = () => Array.from(sizer.querySelectorAll('.dr-note-shelf-head')).map((h) => h.textContent);
+    const tiles = (head) => {
+      const shelf = Array.from(sizer.querySelectorAll('.dr-note-shelf')).find((x) => x.querySelector('.dr-note-shelf-head').textContent === head);
+      return shelf ? Array.from(shelf.querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent) : [];
+    };
+    const steps = () => Array.from(sizer.querySelectorAll('.dr-note-step')).map((st) => `${st.querySelector('.dr-note-step-label').textContent} ${st.querySelector('.dr-note-step-title').textContent}`);
+    assert.deepStrictEqual(heads(), ['Linked from here ›', 'More in IR ›']);
+    assert.deepStrictEqual(steps(), ['Next Balance']);
+    assert.deepStrictEqual(tiles('More in IR ›'), ['Deterrence', 'Cooperation']);
+    const count = async (fire) => {
+      draws = 0;
+      scans = 0;
+      fire();
+      await settle(40);
+      return [draws, scans];
+    };
+    // The vault's first load resolved: everything, worked out anew; once.
+    assert.deepStrictEqual(await count(() => on.resolved()), [1, 1]);
+    const shelves = sizer.querySelector('.dr-note-shelves');
+    // A note in another folder, linked neither way: nothing drawn, nothing read.
+    assert.deepStrictEqual(await count(() => (on.changed(stray), on.resolve(stray), on.resolved())), [0, 0]);
+    assert.strictEqual(sizer.querySelector('.dr-note-shelves'), shelves);
+    // Drawn again as a tab switch draws it: the shelves kept, the vault not read again.
+    assert.deepStrictEqual(await count(() => page.sync()), [1, 0]);
+    assert.strictEqual(sizer.querySelector('.dr-note-shelves'), shelves);
+    // One it links to, in another folder: drawn again, its shelves worked out anew.
+    assert.deepStrictEqual(await count(() => on.changed(at('IR/Theories/Realism.md'))), [1, 1]);
+    // One that links to it once edited: seen as its links resolve.
+    const liberalism = at('IR/Theories/Liberalism.md');
+    assert.deepStrictEqual(await count(() => on.changed(liberalism)), [0, 0]);
+    links['IR/Theories/Liberalism.md'] = { 'IR/Anarchy.md': 1 };
+    assert.deepStrictEqual(await count(() => on.resolve(liberalism)), [1, 1]);
+    assert.deepStrictEqual(heads(), ['Linked from here ›', 'Mentioned in ›', 'More in IR ›']);
+    // And the link taken out again: it was on the shelves, so drawn again without it.
+    delete links['IR/Theories/Liberalism.md'];
+    assert.deepStrictEqual(await count(() => on.resolve(liberalism)), [1, 1]);
+    assert.deepStrictEqual(heads(), ['Linked from here ›', 'More in IR ›']);
+    // Ones in its album, edited: drawn again, the opening lines of its tile and its step fresh.
+    const line = (cls, name) => Array.from(sizer.querySelectorAll(`.${cls}`)).find((x) => x.textContent.indexOf(name) !== -1);
+    assert.strictEqual(line('dr-note-tile-line', 'Cooperation').textContent, 'Cooperation begins here.');
+    assert.strictEqual(line('dr-note-step-line', 'Balance').textContent, 'Balance begins here.');
+    text = 'says something new.';
+    at('IR/Cooperation.md').stat.mtime += 1000;
+    at('IR/Balance.md').stat.mtime += 1000;
+    assert.deepStrictEqual(await count(() => (on.changed(at('IR/Cooperation.md')), on.changed(at('IR/Balance.md')))), [1, 1]);
+    assert.strictEqual(line('dr-note-tile-line', 'Cooperation').textContent, 'Cooperation says something new.');
+    assert.strictEqual(line('dr-note-step-line', 'Balance').textContent, 'Balance says something new.');
+  });
+
+  await t('an album put in an order of its own: the note page’s steps and its “More in” follow', async () => {
+    const { plugin, app, ir } = setup();
+    const on = {};
+    app.metadataCache.on = () => ({});
+    app.workspace.on = (type, fn) => ((on[type] = fn), {});
+    app.workspace.trigger = (type) => on[type] && on[type]();
+    plugin.registerEvent = () => {};
+    app.metadataCache.resolvedLinks = {};
+    Object.assign(plugin.settings, { notePage: true, notePageShelves: true });
+    const file = app.vault.getAbstractFileByPath('IR/Anarchy.md');
+    const containerEl = document.createElement('div');
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    sizer.createDiv({ cls: 'inline-title', text: 'Anarchy' });
+    sizer.createDiv({ cls: 'cm-contentContainer' });
+    const view = { containerEl, file };
+    app.workspace.getLeavesOfType = (type) => (type === 'markdown' ? [{ view }] : []);
+    const page = new R.NotePage(plugin);
+    page.register();
+    page.enable();
+    await settle(40);
+    const steps = () => Array.from(sizer.querySelectorAll('.dr-note-step-title')).map((x) => x.textContent);
+    const more = () => Array.from(sizer.querySelectorAll('.dr-note-tile-title')).map((x) => x.textContent);
+    assert.deepStrictEqual([steps(), more()], [['Balance'], ['Deterrence', 'Cooperation']]);
+    // Arranged in the browse view: told, and drawn again.
+    plugin.orders.setAlbum(ir, ['Cooperation.md', 'Anarchy.md', 'Balance.md', 'Deterrence.md']);
+    await settle(40);
+    assert.deepStrictEqual([steps(), more()], [['Cooperation', 'Balance'], ['Deterrence']]);
+    assert.ok(/2 of 4/.test(sizer.querySelector('.dr-note-meta').textContent));
+    // Even untold, its shelves aren't served stale once the steps either side move.
+    plugin.settings.albumOrders = { IR: { names: ['Anarchy.md', 'Deterrence.md', 'Balance.md', 'Cooperation.md'], on: true } };
+    page.sync();
+    assert.deepStrictEqual([steps(), more()], [['Deterrence'], ['Cooperation', 'Balance']]);
+  });
+
   await t('glass is a class on the page, as set, and gone when switched off', () => {
     const { plugin } = setup();
     const look = new R.Appearance(plugin);
