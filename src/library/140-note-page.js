@@ -14,7 +14,7 @@ import { TFile } from 'obsidian';
 import { pageLeaf } from '../core/034-tabs.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteOpening, relativeDay } from '../core/047-helpers-text.js';
-import { albumNeighbours } from '../core/070-orders.js';
+import { albumNeighbours, stepInAlbum } from '../core/070-orders.js';
 import { libraryIndex } from '../core/077-library-index.js';
 import { Feature } from '../core/080-feature.js';
 import { ask } from '../core/081-capabilities.js';
@@ -69,11 +69,7 @@ export class NotePage extends Feature {
   /** The way through a collection from the keyboard: the note before or after this one, opened in its place. */
   actions() {
     const step = (ctx, dir) => (ctx.file ? this.neighbours(ctx.file, this.albumOf(ctx.file))[dir] : null);
-    const go = (ctx, dir) => {
-      const target = step(ctx, dir);
-      const leaf = pageLeaf(this.app);
-      if (target && leaf) leaf.openFile(target);
-    };
+    const go = (ctx, dir) => step(ctx, dir) && stepInAlbum(this.plugin, ctx.file, dir);
     return [
       { id: 'previous-in-album', name: 'Previous note in collection', icon: 'chevrons-left', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'previous'), run: (ctx) => go(ctx, 'previous') },
       { id: 'next-in-album', name: 'Next note in collection', icon: 'chevrons-right', on: 'file', menu: false, when: (ctx) => !!step(ctx, 'next'), run: (ctx) => go(ctx, 'next') },
@@ -335,14 +331,14 @@ export class NotePage extends Feature {
       place.root.querySelectorAll('.dr-note-next, .dr-note-shelves').forEach((el) => el.parentElement !== place.end && el.remove());
       const steps = [near.previous && ['previous', near.previous], near.next && ['next', near.next]].filter(Boolean);
       const stepKey = steps.map(([dir, f]) => `${dir}:${f.path}@${f.stat ? f.stat.mtime : 0}`).join('|');
-      const next = this.put(place.end, 'dr-note-next', stepKey, before, (el) => steps.forEach(([dir, f]) => this.step(el, dir, f, album)));
+      const next = this.put(place.end, 'dr-note-next', stepKey, before, (el) => steps.forEach(([dir, f]) => this.step(el, dir, f, album, file)));
       const shelfKey = shelves.map((s) => `${s.title}:${s.files.map((f) => `${f.path}@${f.stat ? f.stat.mtime : 0}`).join(',')}`).join('|');
       this.put(place.end, 'dr-note-shelves', shelfKey, next ? next.nextSibling : before, (el) => shelves.forEach((s) => this.shelf(el, s)));
     });
   }
 
   /** A step through the album: the note before or after, as a row — Previous or Next, its title, its opening line. */
-  step(el, dir, file, album) {
+  step(el, dir, file, album, from) {
     const row = el.createDiv({ cls: `dr-note-step is-${dir}` });
     row.setAttribute('role', 'link');
     row.setAttribute('tabindex', '0');
@@ -351,7 +347,7 @@ export class NotePage extends Feature {
     text.createDiv({ cls: 'dr-note-step-label', text: dir === 'next' ? 'Next' : 'Previous' });
     text.createDiv({ cls: 'dr-note-step-title', text: file.basename });
     this.opening(file, text.createDiv({ cls: 'dr-note-step-line' }));
-    const open = () => this.app.workspace.getLeaf(false).openFile(file);
+    const open = () => stepInAlbum(this.plugin, from, dir);
     row.addEventListener('click', open);
     row.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
   }
@@ -375,7 +371,10 @@ export class NotePage extends Feature {
       tile.createDiv({ cls: 'dr-note-tile-title', text: f.basename });
       const line = tile.createDiv({ cls: 'dr-note-tile-line' });
       this.opening(f, line);
-      const open = () => this.app.workspace.getLeaf(false).openFile(f);
+      const open = () => {
+        const leaf = pageLeaf(this.app);
+        if (leaf) leaf.openFile(f);
+      };
       tile.addEventListener('click', open);
       tile.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
     });

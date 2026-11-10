@@ -11,6 +11,7 @@ import { TFile, TFolder } from 'obsidian';
 import { LIBRARY_MORE, libraryLayout } from './020-constants.js';
 import { normalHex } from './031-colours.js';
 import { coverDesignById } from './032-drawn-covers.js';
+import { pageLeaf } from './034-tabs.js';
 import { sortByOrder } from './040-sorting.js';
 import { schemasFromDefaults } from './086-property-schema.js';
 
@@ -628,4 +629,16 @@ export function albumNeighbours(plugin, file) {
   const at = list.indexOf(file);
   if (at === -1) return { previous: null, next: null, index: -1, total: list.length };
   return { previous: list[at - 1] || null, next: list[at + 1] || null, index: at, total: list.length };
+}
+
+/**
+ * One step through an album: the note before or after a file, opened in
+ * the page (or in the leaf given, a tab's own header asking for itself).
+ * Whether it went.
+ */
+export function stepInAlbum(plugin, file, dir, leaf = pageLeaf(plugin.app)) {
+  const target = file ? albumNeighbours(plugin, file)[dir] : null;
+  if (!target || !leaf) return false;
+  leaf.openFile(target);
+  return true;
 }

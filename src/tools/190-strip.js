@@ -14,7 +14,7 @@ import { showMenuAt } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { relativeDay } from '../core/047-helpers-text.js';
-import { albumNeighbours } from '../core/070-orders.js';
+import { albumNeighbours, stepInAlbum } from '../core/070-orders.js';
 import { actionContext, applies } from '../core/078-actions.js';
 import { cardCount } from '../core/079-canvas-adapter.js';
 import { Feature } from '../core/080-feature.js';
@@ -110,13 +110,7 @@ export class ContextStrip extends Feature {
 
   /** The note before or after this one in its album, opened in the same page. */
   skip(dir) {
-    const file = pageFile(this.app);
-    if (!file) return false;
-    const target = albumNeighbours(this.plugin, file)[dir];
-    const leaf = pageLeaf(this.app);
-    if (!target || !leaf) return false;
-    leaf.openFile(target);
-    return true;
+    return stepInAlbum(this.plugin, pageFile(this.app), dir);
   }
 
   register() {

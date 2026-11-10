@@ -989,6 +989,38 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     containerEl.remove();
   });
 
+  await t('a Next row, a shelf tile and the next-in-album command all open in the page', () => {
+    const { plugin, app } = setup();
+    const file = app.vault.getFileByPath('IR/Balance.md');
+    const leaf = { isDeferred: false, view: Object.assign(new MarkdownView(), { file }), openFile(f) { this.view.file = f; } };
+    const other = { openFile() { throw new Error('opened beside the page'); } };
+    app.workspace.rootSplit = {};
+    app.workspace.getMostRecentLeaf = () => leaf;
+    app.workspace.getLeaf = () => other;
+    app.metadataCache.getFileCache = () => ({ frontmatter: {} });
+    Object.assign(plugin.settings, { notePage: true, notePageShelves: true });
+    const containerEl = document.createElement('div');
+    const sizer = containerEl.createDiv({ cls: 'markdown-source-view' }).createDiv({ cls: 'cm-sizer' });
+    sizer.createDiv({ cls: 'inline-title', text: 'Balance' });
+    sizer.createDiv({ cls: 'cm-contentContainer' });
+    const page = new R.NotePage(plugin);
+    page.draw({ containerEl, file });
+    click(sizer.querySelector('.dr-note-step.is-next'));
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation', 'the row opens in the page');
+    leaf.view.file = file;
+    const tile = sizer.querySelector('.dr-note-tile');
+    const name = tile.querySelector('.dr-note-tile-title').textContent;
+    click(tile);
+    assert.strictEqual(leaf.view.file.basename, name, 'the tile opens in the page');
+    leaf.view.file = file;
+    const cmds = Object.fromEntries(page.commands().map((c) => [c.id, c]));
+    cmds['next-in-album'].run();
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation', 'the command opens in the same page');
+    assert.strictEqual(R.stepInAlbum(plugin, leaf.view.file, 'next'), true);
+    assert.strictEqual(leaf.view.file.basename, 'Deterrence');
+    assert.strictEqual(R.stepInAlbum(plugin, leaf.view.file, 'next'), false, 'none past the last');
+  });
+
   await t("the strip's skip buttons name where they go and open it in the page", () => {
     const { plugin, app } = setup();
     const file = app.vault.getFileByPath('IR/Balance.md');

@@ -9,7 +9,7 @@
 
 import { MarkdownView } from 'obsidian';
 import { makeTrigger } from '../core/042-controls.js';
-import { albumNeighbours } from '../core/070-orders.js';
+import { albumNeighbours, stepInAlbum } from '../core/070-orders.js';
 import { Feature } from '../core/080-feature.js';
 
 export class HeaderSkip extends Feature {
@@ -68,7 +68,7 @@ export class HeaderSkip extends Feature {
     ].forEach(([dir, icon, label]) => {
       const target = near && near[dir];
       if (!target) return;
-      box.appendChild(makeTrigger('dr-header-skip-btn', `${label}: ${target.basename}`, icon, () => leaf.openFile(target)));
+      box.appendChild(makeTrigger('dr-header-skip-btn', `${label}: ${target.basename}`, icon, () => stepInAlbum(this.plugin, file, dir, leaf)));
     });
     box.toggleClass('is-hidden', !box.childElementCount);
   }
