@@ -54,7 +54,8 @@ Coffee N' Christmas.
 - `.claude/rules/` — notes for one area each (the canvas adapter, albums and
   the browse view, opening notes and redrawing, real-Obsidian tests). Claude Code loads one
   when a file of its area is opened; other agents: read it before changing
-  that area. `.claude/skills/diagnose-tests` says how to read a failure.
+  that area. `.claude/skills/diagnose-tests` says how to read a failure;
+  `.claude/skills/build-review`, how to build a change with agents and review it.
 
 ## How the code is laid out
 
