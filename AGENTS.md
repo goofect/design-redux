@@ -139,6 +139,8 @@ Coffee N' Christmas.
 
 - Make the smallest complete change: no rewriting files or touching unrelated
   code. Report changed files and tests run, briefly.
+- A new worktree may start from origin's main, not the current branch: check
+  `git log -1` before editing.
 - Test lightly, the author wants it quick: while working, run the simulation
   suites the change touches (`node tests/run.js qol album`: a line per suite,
   details only on failure); before pushing, all of them (`npm test`, ~10 s,
