@@ -28,7 +28,9 @@ paths:
   then `plugin.queueSync()` (and `refreshBrowse()` if the browse view shows
   it). `saveSettings()` refreshes every feature and the browse views, so keep
   it for real settings changes.
-- The header's « » (tools/191) lead out of the note's folder and back, each
-  tab with its own short history (not Obsidian's), whether the strip is up or
-  not. Previous and next inside the folder are the strip's, the note page's
-  and the commands'.
+- A note header's own ← → (tools/191, Obsidian's buttons, taken by a
+  capture-phase click only while there's a way out) lead out of the note's
+  folder and back, each tab with its own short history (not Obsidian's),
+  whether the strip is up or not; otherwise, and for the keys and commands,
+  they're Obsidian's one step. Previous and next inside the folder are the
+  strip's, the note page's and the commands'.

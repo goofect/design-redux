@@ -1035,68 +1035,118 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Deterrence', 'Cooperation', 'Balance', 'Anarchy']);
   });
 
-  /** A tab, as Obsidian's: opening a note takes a moment, then tells (file-open), and the header follows. */
+  /**
+   * A tab, as Obsidian's: opening a note takes a moment, then tells (file-open), and the header follows.
+   * Its header has Obsidian's ← → (their own labels, and a click handler of their own, which counts).
+   */
   const skipTabs = (plugin, app, n = 1) => {
     const leaves = [];
     const on = {};
     plugin.registerEvent = () => {};
     app.workspace.on = (name, fn) => { (on[name] = on[name] || []).push(fn); return {}; };
     app.workspace.iterateAllLeaves = (fn) => leaves.forEach(fn);
-    // Obsidian's own, which the buttons are made with.
-    if (typeof global.createDiv !== 'function') global.createDiv = (o) => { const el = document.createElement('div').createDiv(o); el.remove(); return el; };
     const skip = new R.HeaderSkip(plugin);
     skip.register();
+    const OWN = ['Navigate back', 'Navigate forward'];
     for (let i = 0; i < n; i++) {
       const containerEl = document.body.createDiv();
-      containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' });
-      leaves.push({ isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file: null }), pinned: false,
+      const nav = containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-left' }).createDiv({ cls: 'view-header-nav-buttons' });
+      const leaf = { isDeferred: false, containerEl, view: Object.assign(new MarkdownView(), { file: null }), pinned: false, obsidian: [],
         getViewState() { return { pinned: this.pinned }; },
-        async openFile(f) { await null; this.view.file = f; (on['file-open'] || []).forEach((h) => h(f)); } });
+        async openFile(f) { await null; this.view.file = f; (on['file-open'] || []).forEach((h) => h(f)); } };
+      OWN.forEach((label, k) => {
+        const b = nav.createEl('button', { cls: 'clickable-icon' });
+        b.setAttribute('aria-label', label);
+        b.setAttribute('aria-disabled', 'true');
+        b.addEventListener('click', () => leaf.obsidian.push(k ? 'forward' : 'back'));
+      });
+      leaves.push(leaf);
     }
-    const buttons = (leaf) => Array.from(leaf.containerEl.querySelectorAll('.dr-header-skip-btn'));
-    const labels = (leaf) => buttons(leaf).map((b) => b.getAttribute('aria-label'));
-    const hidden = (leaf) => leaf.containerEl.querySelector('.dr-header-skip').classList.contains('is-hidden');
+    const arrows = (leaf) => Array.from(leaf.containerEl.querySelectorAll('.view-header-nav-buttons button'));
+    // What the arrows say of their own: Obsidian's labels left out.
+    const labels = (leaf) => arrows(leaf).map((b) => b.getAttribute('aria-label')).filter((l) => !OWN.includes(l));
     const go = async (leaf, ...paths) => { for (const p of paths) await leaf.openFile(app.vault.getFileByPath(p)); };
-    const press = async (leaf, i) => { buttons(leaf)[i].click(); await settle(0); };
-    return { skip, leaves, on, buttons, labels, hidden, go, press };
+    const press = async (leaf, i) => { click(arrows(leaf)[i]); await settle(0); };
+    return { skip, leaves, on, arrows, labels, go, press, OWN };
   };
 
-  await t('« » in the note’s header lead out of its folder and back, a tab’s own way, strip or not', async () => {
+  await t('the note header’s ← → lead out of its folder and back, a tab’s own way, strip or not', async () => {
     const { plugin, app } = setup();
-    const { skip, leaves: [leaf], buttons, labels, hidden, go, press } = skipTabs(plugin, app);
+    const { skip, leaves: [leaf], arrows, labels, go, press, OWN } = skipTabs(plugin, app);
     plugin.settings.contextStrip = true;
     await go(leaf, 'IR/Balance.md', 'IR/Cooperation.md');
     assert.deepStrictEqual(labels(leaf), [], 'nothing outside the folder yet');
-    assert.ok(hidden(leaf));
+    // Nothing to jump to: ← is Obsidian's, its label and its click.
+    await press(leaf, 0);
+    assert.deepStrictEqual(leaf.obsidian, ['back'], 'Obsidian’s own back ran');
+    assert.strictEqual(arrows(leaf)[0].getAttribute('aria-label'), OWN[0]);
+    leaf.obsidian.length = 0;
     // A in one folder, then B1, B2, B3 in another.
     await go(leaf, 'IR/Theories/Realism.md', 'IR/Anarchy.md', 'IR/Balance.md', 'IR/Deterrence.md');
     assert.deepStrictEqual(labels(leaf), ['Back to Realism'], 'shown with the strip on too');
-    buttons(leaf)[0].click();
+    assert.strictEqual(arrows(leaf)[0].getAttribute('aria-disabled'), 'false', 'not greyed while it leads somewhere');
+    click(arrows(leaf)[0]);
     // On its way, a sync (another tab, say) is no new step.
     skip.sync();
     assert.strictEqual(leaf.view.file.basename, 'Deterrence');
     assert.deepStrictEqual(labels(leaf), ['Back to Cooperation', 'Forward to Deterrence'], 'drawn as where it’s going');
     await settle(0);
     assert.strictEqual(leaf.view.file.basename, 'Realism', 'back out, in this tab');
+    assert.deepStrictEqual(leaf.obsidian, [], 'Obsidian’s back didn’t run too');
     assert.deepStrictEqual(labels(leaf), ['Back to Cooperation', 'Forward to Deterrence'], 'and on out from there');
     await press(leaf, 1);
     assert.strictEqual(leaf.view.file.basename, 'Deterrence', 'forward to the note it left');
+    assert.deepStrictEqual(leaf.obsidian, [], 'Obsidian’s forward didn’t run');
     assert.deepStrictEqual(labels(leaf), ['Back to Realism'], 'the jump back is no new step');
+    assert.strictEqual(arrows(leaf)[1].getAttribute('aria-label'), OWN[1], '→ is Obsidian’s again');
+    assert.strictEqual(arrows(leaf)[1].getAttribute('aria-disabled'), 'true', 'and greyed as it was');
+    await press(leaf, 1);
+    assert.deepStrictEqual(leaf.obsidian, ['forward'], 'nothing of ours: Obsidian’s forward');
+    leaf.obsidian.length = 0;
     await press(leaf, 0);
     await go(leaf, 'IR/Theories/Liberalism.md');
     assert.deepStrictEqual(labels(leaf), ['Back to Cooperation'], 'something else opened: no way forward');
     skip.sync();
-    assert.strictEqual(leaf.containerEl.querySelectorAll('.dr-header-skip').length, 1, 'one pair a tab');
-    // A pinned tab stays: where « goes opens in a new one.
+    skip.sync();
+    await press(leaf, 0);
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation', 'one listener, however many syncs: one jump');
+    await go(leaf, 'IR/Theories/Liberalism.md');
+    // A pinned tab stays: where ← goes opens in a new one.
     const other = { opened: null, openFile(f) { this.opened = f; } };
     app.workspace.getLeaf = () => other;
     leaf.pinned = true;
     await press(leaf, 0);
     assert.strictEqual(other.opened.basename, 'Cooperation');
     assert.strictEqual(leaf.view.file.basename, 'Liberalism');
+    assert.deepStrictEqual(leaf.obsidian, [], 'Obsidian’s back didn’t run in the pinned tab');
     assert.deepStrictEqual(labels(leaf), ['Back to Cooperation'], 'no way forward in a tab that stayed');
     skip.disable();
-    assert.ok(!leaf.containerEl.querySelector('.dr-header-skip'));
+    assert.deepStrictEqual(arrows(leaf).map((b) => b.getAttribute('aria-label')), OWN, 'Obsidian’s labels back');
+    other.opened = null;
+    await press(leaf, 0);
+    assert.deepStrictEqual(leaf.obsidian, ['back'], 'and its own click');
+    assert.strictEqual(other.opened, null);
+  });
+
+  await t('the header’s arrows are left alone in a view that isn’t a note’s', async () => {
+    const { plugin, app } = setup();
+    const { skip, leaves: [leaf], arrows, labels, go, press, OWN } = skipTabs(plugin, app);
+    await go(leaf, 'IR/Theories/Realism.md', 'IR/Anarchy.md');
+    assert.deepStrictEqual(labels(leaf), ['Back to Realism']);
+    // The tab shows something else now (the library, say): Obsidian's again.
+    leaf.view = { file: null };
+    skip.sync();
+    assert.deepStrictEqual(arrows(leaf).map((b) => b.getAttribute('aria-label')), OWN);
+    await press(leaf, 0);
+    assert.deepStrictEqual(leaf.obsidian, ['back']);
+    // Never a note's to begin with: nothing added.
+    const fresh = { isDeferred: false, containerEl: document.body.createDiv(), view: { file: app.vault.getFileByPath('IR/Anarchy.md') } };
+    fresh.containerEl.createDiv({ cls: 'view-header' }).createDiv({ cls: 'view-header-nav-buttons' }).append(document.createElement('button'), document.createElement('button'));
+    app.workspace.iterateAllLeaves = (fn) => [fresh].forEach(fn);
+    const before = fresh.containerEl.innerHTML;
+    skip.sync();
+    assert.strictEqual(fresh.containerEl.innerHTML, before);
+    assert.strictEqual(skip.fitted.get(fresh), undefined);
   });
 
   await t('each tab keeps its own way out, and moving between them keeps the way forward', async () => {
@@ -1114,16 +1164,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(labels(two), ['Back to Balance']);
   });
 
-  await t('« follows a rename, and leaves out a note that’s gone', async () => {
+  await t('← follows a rename, and leaves out a note that’s gone', async () => {
     const { plugin, app } = setup();
-    const { leaves: [leaf], labels, hidden, go } = skipTabs(plugin, app);
+    const { leaves: [leaf], labels, go } = skipTabs(plugin, app);
     await go(leaf, 'IR/Balance.md', 'IR/Theories/Realism.md', 'IR/Anarchy.md');
     assert.deepStrictEqual(labels(leaf), ['Back to Realism']);
     await app.fileManager.renameFile(app.vault.getFileByPath('IR/Theories/Realism.md'), 'IR/Theories/Neorealism.md');
     assert.deepStrictEqual(labels(leaf), ['Back to Neorealism'], 'the label names it as it is now');
     await app.fileManager.trashFile(app.vault.getFileByPath('IR/Theories/Neorealism.md'));
     assert.deepStrictEqual(labels(leaf), [], 'the only note outside is gone: Balance is this one’s folder');
-    assert.ok(hidden(leaf));
   });
 
   await t('a back out that lands elsewhere than a note doesn’t stop the tab’s history', async () => {
