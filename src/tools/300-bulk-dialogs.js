@@ -325,9 +325,7 @@ export class BulkModal extends Modal {
     notes.slice(0, shown).forEach((file) => {
       const wrap = list.createSpan({ cls: 'dr-bulk-note-wrap' });
       const link = wrap.createSpan({ cls: 'dr-bulk-note', text: file.basename });
-      link.setAttribute('role', 'link');
-      link.setAttribute('tabindex', '0');
-      link.setAttribute('aria-label', `Open ${file.path}`);
+      asButton(link, `Open ${file.path}`);
       onActivate(link, () => {
         this.close();
         this.app.workspace.getLeaf(false).openFile(file);

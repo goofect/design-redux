@@ -330,8 +330,7 @@ export class BrowseRows extends RowValues {
     const arrows = head.createDiv({ cls: 'dr-shelf-arrows' });
     const button = (icon, label, dir) => {
       const el = arrows.createDiv({ cls: 'clickable-icon dr-shelf-arrow' });
-      el.setAttribute('aria-label', label);
-      el.setAttribute('role', 'button');
+      asButton(el, label);
       el.setAttribute('tabindex', '-1');
       setIcon(el, icon);
       onActivate(el, () => {
@@ -412,11 +411,10 @@ export class BrowseRows extends RowValues {
     const bar = art.createDiv({ cls: 'dr-card-buttons' });
     const button = (icon, label, run, cls) => {
       const el = bar.createDiv({ cls: `dr-card-button ${cls}` });
-      el.setAttribute('role', 'button');
+      asButton(el, label);
       el.setAttribute('tabindex', '-1');
-      el.setAttribute('aria-label', label);
       setIcon(el, icon);
-      el.addEventListener('click', (evt) => {
+      onActivate(el, (evt) => {
         evt.stopPropagation();
         evt.preventDefault();
         run(evt);

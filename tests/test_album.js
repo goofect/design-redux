@@ -1160,6 +1160,12 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     click(sizer.querySelector('.dr-note-step.is-next'));
     assert.strictEqual(leaf.view.file.basename, 'Cooperation', 'the row opens in the page');
     leaf.view.file = file;
+    // A button to the keyboard too: Space opens it as Enter does.
+    const row = sizer.querySelector('.dr-note-step.is-next');
+    assert.deepStrictEqual([row.getAttribute('role'), row.getAttribute('tabindex')], ['button', '0']);
+    key(row, ' ');
+    assert.strictEqual(leaf.view.file.basename, 'Cooperation', 'Space opens the row');
+    leaf.view.file = file;
     const tile = sizer.querySelector('.dr-note-tile');
     const name = tile.querySelector('.dr-note-tile-title').textContent;
     click(tile);

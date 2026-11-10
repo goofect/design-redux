@@ -149,7 +149,7 @@
   color: var(--text-normal);
 }
 
-.dr-note-shelf-head[role='link'] {
+.dr-note-shelf-head[role='button'] {
   cursor: pointer;
 }
 
@@ -194,7 +194,7 @@
   }
 
   .dr-note-album:hover,
-  .dr-note-shelf-head[role='link']:hover {
+  .dr-note-shelf-head[role='button']:hover {
     text-decoration: underline;
   }
 }

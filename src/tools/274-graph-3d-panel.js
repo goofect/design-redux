@@ -13,11 +13,12 @@
 /* here is the tab's: it's kept with the workspace.                   */
 /* ------------------------------------------------------------------ */
 
-import { Setting, setIcon } from 'obsidian';
+import { setIcon, Setting } from 'obsidian';
+import { asButton, onActivate } from '../core/042-controls.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { GRAPH_3D_DEFAULTS, groupColour, hexColour } from './263-graph-space.js';
 import { layoutOptions } from './264-graph-layout.js';
 import { Graph3DInput } from './269-graph-3d-input.js';
-import { libraryIndex } from '../core/077-library-index.js';
 import { queryTokenAt, queryValue } from './277-graph-query.js';
 
 /** What changes which notes are drawn, or their colours: the graph is worked out again. */
@@ -46,16 +47,9 @@ export class Graph3DPanel extends Graph3DInput {
     this.sideButtons = {};
     const button = (cls, icon, label, run, key) => {
       const b = box.createDiv({ cls: `clickable-icon graph-controls-button ${cls}` });
-      b.setAttribute('aria-label', label);
-      b.setAttribute('role', 'button');
-      b.setAttribute('tabindex', '0');
+      asButton(b, label);
       setIcon(b, icon);
-      b.addEventListener('click', run);
-      b.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        run();
-      });
+      onActivate(b, () => run());
       if (key) this.sideButtons[key] = b;
       return b;
     };
@@ -74,8 +68,7 @@ export class Graph3DPanel extends Graph3DInput {
     const section = (id, title) => {
       const s = panel.createDiv({ cls: `tree-item graph-control-section mod-${id}` });
       const head = s.createDiv({ cls: 'tree-item-self mod-collapsible' });
-      head.setAttribute('role', 'button');
-      head.setAttribute('tabindex', '0');
+      asButton(head);
       const icon = head.createDiv({ cls: 'tree-item-icon collapse-icon' });
       setIcon(icon, 'right-triangle');
       head.createDiv({ cls: 'tree-item-inner' }).createEl('header', { cls: 'graph-control-section-header', text: title });
@@ -93,12 +86,7 @@ export class Graph3DPanel extends Graph3DInput {
         fold(folds[id]);
         this.saveLater();
       };
-      head.addEventListener('click', flip);
-      head.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ' ') return;
-        e.preventDefault();
-        flip();
-      });
+      onActivate(head, () => flip());
       fold(!!(this.options.folds && this.options.folds[id]));
       return body;
     };

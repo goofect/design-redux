@@ -116,14 +116,13 @@ export class AddPropertiesModal extends BulkModal {
       typeBtn.empty();
       setIcon(typeBtn, TYPE_ICONS[row.type] || 'text');
       typeBtn.toggleClass('is-locked', row.locked);
-      typeBtn.setAttribute(
-        'aria-label',
+      asButton(
+        typeBtn,
         row.locked
           ? `${TYPE_LABELS[row.type] || 'Text'}, as it is in the rest of the vault`
           : `${TYPE_LABELS[row.type] || 'Text'} — choose the type`
       );
-      typeBtn.setAttribute('role', 'button');
-      typeBtn.setAttribute('tabindex', row.locked ? '-1' : '0');
+      if (row.locked) typeBtn.setAttribute('tabindex', '-1');
     };
     const setType = (type, locked) => {
       const was = row.type;

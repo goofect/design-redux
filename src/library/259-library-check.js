@@ -163,13 +163,12 @@ export class InboxScreen extends BrowseScreen {
         view.render();
       });
       const name = row.createSpan({ cls: 'dr-inbox-name', text: file.basename });
-      name.setAttribute('role', 'button');
+      asButton(name);
       onActivate(name, (evt) => view.openFile(file, evt));
       const home = suggested.get(file);
       if (home) {
         const chip = row.createSpan({ cls: 'dr-inbox-suggest', text: `→ ${home.name}` });
-        chip.setAttribute('role', 'button');
-        chip.setAttribute('aria-label', `Move into ${home.name}, where it seems to belong`);
+        asButton(chip, `Move into ${home.name}, where it seems to belong`);
         onActivate(chip, (evt) => {
           evt.stopPropagation();
           check.moveEach([[file, home]]);

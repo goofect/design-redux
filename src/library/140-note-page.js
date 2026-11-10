@@ -11,6 +11,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
+import { asButton, onActivate } from '../core/042-controls.js';
 import { fmGet, plainValue, valueList } from '../core/045-helpers-properties.js';
 import { noteExcerpt, relativeDay } from '../core/047-helpers-text.js';
 import { albumNeighbours, openInPage } from '../core/070-orders.js';
@@ -302,14 +303,11 @@ export class NotePage extends Feature {
       // Above the title: its album, a step to it.
       this.put(place.head, 'dr-note-album', album ? album.path : '', title || place.head.firstChild, (el) => {
         el.setText(album.name);
-        el.setAttribute('role', 'link');
-        el.setAttribute('tabindex', '0');
-        const go = () => {
+        asButton(el);
+        onActivate(el, () => {
           const library = ask(this.plugin, 'library');
           if (library) library.browseMode({ mode: 'folder', path: album.path });
-        };
-        el.addEventListener('click', go);
-        el.addEventListener('keydown', (evt) => evt.key === 'Enter' && go());
+        });
       });
       // Under it, the one grey line, then the chips.
       const after = title ? title.nextSibling : place.head.firstChild;
@@ -344,16 +342,12 @@ export class NotePage extends Feature {
   /** A step through the album: the note before or after, as a row — Previous or Next, its title, its opening line. */
   step(el, dir, file, album) {
     const row = el.createDiv({ cls: `dr-note-step is-${dir}` });
-    row.setAttribute('role', 'link');
-    row.setAttribute('tabindex', '0');
-    row.setAttribute('aria-label', `${dir === 'next' ? 'Next' : 'Previous'} in ${album.name}: ${file.basename}`);
+    asButton(row, `${dir === 'next' ? 'Next' : 'Previous'} in ${album.name}: ${file.basename}`);
     const text = row.createDiv({ cls: 'dr-note-step-text' });
     text.createDiv({ cls: 'dr-note-step-label', text: dir === 'next' ? 'Next' : 'Previous' });
     text.createDiv({ cls: 'dr-note-step-title', text: file.basename });
     this.opening(file, text.createDiv({ cls: 'dr-note-step-line' }));
-    const open = () => openInPage(this.plugin, file);
-    row.addEventListener('click', open);
-    row.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
+    onActivate(row, () => openInPage(this.plugin, file));
   }
 
   /** A shelf: its title, and a row of notes, each its title and opening line. */
@@ -361,8 +355,8 @@ export class NotePage extends Feature {
     const box = el.createDiv({ cls: 'dr-note-shelf' });
     const head = box.createDiv({ cls: 'dr-note-shelf-head', text: `${s.title} ›` });
     if (s.album) {
-      head.setAttribute('role', 'link');
-      head.addEventListener('click', () => {
+      asButton(head);
+      onActivate(head, () => {
         const library = ask(this.plugin, 'library');
         if (library) library.browseMode({ mode: 'folder', path: s.album.path });
       });
@@ -370,14 +364,11 @@ export class NotePage extends Feature {
     const row = box.createDiv({ cls: 'dr-note-shelf-row' });
     s.files.forEach((f) => {
       const tile = row.createDiv({ cls: 'dr-note-tile' });
-      tile.setAttribute('role', 'link');
-      tile.setAttribute('tabindex', '0');
+      asButton(tile);
       tile.createDiv({ cls: 'dr-note-tile-title', text: f.basename });
       const line = tile.createDiv({ cls: 'dr-note-tile-line' });
       this.opening(f, line);
-      const open = () => openInPage(this.plugin, f);
-      tile.addEventListener('click', open);
-      tile.addEventListener('keydown', (evt) => evt.key === 'Enter' && open());
+      onActivate(tile, () => openInPage(this.plugin, f));
     });
   }
 

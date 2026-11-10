@@ -365,6 +365,14 @@ t('properties are written through plugin.notes.write: processFrontMatter only in
   assert.deepStrictEqual(bad.map((h) => h.at), [], 'a note\'s properties are written with plugin.notes.write, not processFrontMatter (AGENTS.md): ' + bad.map((h) => h.at).join(', '));
 });
 
+t('an element that acts as a button is made with asButton and onActivate (core/042), not by hand', () => {
+  // A role kept by hand on purpose goes here, by file and the line's text, with why.
+  const allowed = [];
+  const bad = hits(/role['"]?\s*[:,]\s*['"](link|button)['"]/, (name) => name !== 'core/042-controls.js')
+    .filter((h) => !allowed.some(([file, text]) => h.name === file && h.line.includes(text)));
+  assert.deepStrictEqual(bad.map((h) => h.at), [], 'an element that acts as a button: asButton(el, label) and onActivate (AGENTS.md): ' + bad.map((h) => h.at).join(', '));
+});
+
 t('notes open in the page through openInPage / stepInAlbum (core/070), which keep a pinned tab', () => {
   // The direct uses there were when the rule came in, by file; move one onto openInPage and lower its count.
   const allowed = {

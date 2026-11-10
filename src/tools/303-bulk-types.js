@@ -5,7 +5,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TYPE_ICONS, TYPE_LABELS } from '../core/020-constants.js';
-import { composing, onActivate } from '../core/042-controls.js';
+import { asButton, composing, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { isBlank, LIST_TYPES, parseTypedValue, propertyType } from './288-bulk-values.js';
@@ -165,8 +165,7 @@ export class MissingPropertyModal extends BulkModal {
     shown.forEach((file) => {
       const row = this.listEl.createDiv({ cls: 'dr-bulk-missing-row' });
       const name = row.createSpan({ cls: 'dr-bulk-note', text: file.basename });
-      name.setAttribute('role', 'link');
-      name.setAttribute('tabindex', '0');
+      asButton(name);
       onActivate(name, () => {
         this.close();
         this.app.workspace.getLeaf(false).openFile(file);
