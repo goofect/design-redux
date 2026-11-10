@@ -13,7 +13,7 @@ import { Modal, Notice, Setting, TFile, TFolder } from 'obsidian';
 import { byName } from '../core/040-sorting.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { libraryIndex } from '../core/077-library-index.js';
-import { addActionItems } from '../core/078-actions.js';
+import { addActionEntries, addActionItems } from '../core/078-actions.js';
 import { Feature } from '../core/080-feature.js';
 import { ask } from '../core/081-capabilities.js';
 import { FolderPicker, NamePrompt } from '../ui/230-pickers.js';
@@ -99,6 +99,52 @@ export class SplitChooser extends Modal {
   }
 }
 
+/**
+ * A folder about to be deleted: named, with what it holds and where it
+ * goes, Cancel focused — so Enter or a stray tap keeps it.
+ */
+export class DeleteFolderConfirm extends Modal {
+  constructor(app, folder, lines, onConfirm) {
+    super(app);
+    this.folder = folder;
+    this.lines = lines;
+    this.onConfirm = onConfirm;
+  }
+
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass('dr-refactor');
+    if (this.titleEl) this.titleEl.setText(`Delete ${this.folder.name}?`);
+    const list = contentEl.createEl('ul', { cls: 'dr-refactor-effects' });
+    this.lines.forEach((line) => list.createEl('li', { text: line }));
+    let cancel = null;
+    new Setting(contentEl)
+      .addButton((b) => {
+        b.setButtonText('Delete');
+        if (typeof b.setWarning === 'function') b.setWarning();
+        b.onClick(() => {
+          this.close();
+          this.onConfirm();
+        });
+      })
+      .addButton((b) => {
+        cancel = b.buttonEl;
+        b.setButtonText('Cancel').onClick(() => this.close());
+      });
+    if (!cancel) return;
+    cancel.focus();
+    // Obsidian may move focus as the dialog settles: put it back, in the dialog's own window.
+    const doc = this.containerEl && this.containerEl.ownerDocument;
+    const win = doc && doc.defaultView;
+    if (win) win.setTimeout(() => cancel.isConnected && cancel.focus(), 0);
+  }
+
+  onClose() {
+    this.contentEl.empty();
+  }
+}
+
 /* What merging carries from one album's folder note to the other's. */
 
 export class AlbumRefactor extends Feature {
@@ -107,12 +153,12 @@ export class AlbumRefactor extends Feature {
       {
         key: 'albumRefactor',
         name: 'Reorganise collections safely',
-        desc: 'Rename, move, merge or split a collection from its folder’s menu.',
+        desc: 'Rename, move, merge, split or delete a collection from its folder’s menu.',
       },
     ];
   }
 
-  /** On the album's menu as Reorganise; from the palette, for the album open. */
+  /** On the album's menu as Reorganise, and Delete apart; from the palette, for the album open. */
   actions() {
     const when = (ctx) => this.enabled && !(ctx.folder.isRoot && ctx.folder.isRoot());
     const act = (id, name, menu, icon, run) => ({ id, name, menu, icon, on: 'browse', when, run: (ctx) => run(ctx.folder) });
@@ -121,11 +167,21 @@ export class AlbumRefactor extends Feature {
       act('album-move', 'Move this collection into another folder…', 'Move into…', 'folder-input', (f) => this.askMove(f)),
       act('album-merge', 'Merge this collection into another…', 'Merge into…', 'merge', (f) => this.askMerge(f)),
       act('album-split', 'Split notes off this collection into a new one…', 'Split notes off…', 'split', (f) => this.askSplit(f)),
+      Object.assign(act('album-delete', 'Delete this collection’s folder…', 'Delete folder…', 'trash-2', (f) => this.askDelete(f)), { danger: true }),
     ];
   }
 
+  /** Reorganise as one group; Delete apart, at the menu's end in red, as Obsidian's own. */
   addFolderItems(menu, folder, sectioned) {
-    if (folder) addActionItems(menu, this.actions(), { folder, from: 'menu' }, 'Reorganise', 'folder-tree', sectioned);
+    if (!folder) return;
+    const ctx = { folder, from: 'menu' };
+    const all = this.actions();
+    addActionItems(menu, all.filter((a) => !a.danger), ctx, 'Reorganise', 'folder-tree', sectioned);
+    addActionEntries(menu, all.filter((a) => a.danger), ctx, (item) => {
+      if (typeof item.setWarning === 'function') item.setWarning(true);
+      if (typeof item.setSection === 'function') item.setSection('danger');
+      return item;
+    });
   }
 
   /* -- what each would do ------------------------------------------ */
@@ -385,6 +441,49 @@ export class AlbumRefactor extends Feature {
   askMerge(folder) {
     if (!folder) return;
     new FolderPicker(this.app, (target) => this.preview(this.planMerge(folder, target)), { placeholder: `Merge ${folder.name} into…`, skip: (f) => f === folder }).open();
+  }
+
+  /** What deleting a folder would take, and what it'd leave a setting without. */
+  deleteLines(folder) {
+    const n = libraryIndex(this.plugin).count(folder);
+    const held = n
+      ? `It holds ${n} file${n === 1 ? '' : 's'}, at any depth, and they go with it.`
+      : (folder.children || []).length
+        ? 'It holds no files, only empty folders, and they go with it.'
+        : 'It’s empty.';
+    const lines = [held];
+    const home = String(this.settings.homePath || '');
+    if (home && home.startsWith(folder.path + '/') && this.app.vault.getFileByPath(home)) {
+      lines.push(`Your Home note, ${home}, is in it: Home won’t have it to show until you choose another in Settings.`);
+    }
+    lines.push('The folder and its files go to your trash, as your Deleted files setting says.');
+    lines.push('Its collection details (description, cover, order) are removed and won’t come back with it.');
+    return lines;
+  }
+
+  askDelete(folder) {
+    if (!folder || (folder.isRoot && folder.isRoot())) return;
+    new DeleteFolderConfirm(this.app, folder, this.deleteLines(folder), () => this.trashFolder(folder)).open();
+  }
+
+  /**
+   * Into the trash Obsidian's setting picks, never deleted outright; the
+   * vault's delete event clears what was kept by its path, and redraws.
+   * Only the folder that was asked about: one made since at its path is left.
+   */
+  async trashFolder(folder) {
+    if (!folder || (folder.isRoot && folder.isRoot())) return false;
+    if (this.app.vault.getAbstractFileByPath(folder.path) !== folder) return false;
+    try {
+      const fm = this.app.fileManager;
+      if (fm && typeof fm.trashFile === 'function') await fm.trashFile(folder);
+      else await this.app.vault.trash(folder, true);
+    } catch (err) {
+      console.error('Design Redux: could not delete a folder', err);
+      new Notice(`Could not delete ${folder.name}.`);
+      return false;
+    }
+    return true;
   }
 
   askSplit(folder) {

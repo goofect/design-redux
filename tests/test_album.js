@@ -2379,7 +2379,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     // Written once: the album's menu and the palette, which offers them only for the album on screen.
     const menu = new Menu();
     refactor.addFolderItems(menu, folder('IR'), (item) => item);
-    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Reorganise: Rename…', 'Reorganise: Move into…', 'Reorganise: Merge into…', 'Reorganise: Split notes off…']);
+    assert.deepStrictEqual(menu.items.map((i) => i.title), ['Reorganise: Rename…', 'Reorganise: Move into…', 'Reorganise: Merge into…', 'Reorganise: Split notes off…', 'Delete folder…']);
     const rename = refactor.commands().find((c) => c.id === 'album-rename');
     plugin.app.workspace.getActiveViewOfType = () => null;
     assert.strictEqual(rename.check(), false, 'no collection on screen');
@@ -2442,6 +2442,80 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(file('Security/Anarchy.md') && file('Security/Deterrence.md') && file('IR/Balance.md'));
     await undo();
     assert.ok(file('IR/Anarchy.md') && !folder('Security'), 'the new collection gone again');
+  });
+
+  await t('deleting a folder: on its menu but not the root’s, asked first with Cancel focused, to the trash, its settings gone with it', async () => {
+    const { v, plugin, app, view } = setup();
+    const refactor = new R.AlbumRefactor(plugin);
+    plugin.feature = (C) => (C === R.AlbumRefactor ? refactor : null);
+    const folder = (p) => v.vault.getFolderByPath(p);
+    const menuOf = (target) => { const m = new Menu(); plugin.addAlbumMenuItems(m, target, (item) => item, () => {}); return m.items.map((i) => i.title); };
+    assert.ok(menuOf(folder('IR')).includes('Delete folder…'), menuOf(folder('IR')).join(' | '));
+    assert.ok(!menuOf(v.vault.getRoot()).includes('Delete folder…'), 'never the vault’s root');
+    modals.length = 0;
+    refactor.askDelete(v.vault.getRoot());
+    assert.strictEqual(modals.length, 0, 'nothing asked for the root');
+    // Kept by its path, and by the paths of what's inside it.
+    Object.assign(plugin.settings, {
+      albums: { IR: { type: 'collection' }, 'IR/Theories': { description: 'Schools.' }, Law: { includes: ['IR/Anarchy.md', 'Law/x.md'] } },
+      folderCovers: { IR: 'IR/cover.png', 'IR/Theories': 'x.png' },
+      coverColors: { 'IR/Anarchy.md': 3 },
+      albumOrders: { IR: { names: ['Balance.md'], on: true }, 'IR/Theories': { names: ['Realism.md'], on: true } },
+      homePath: 'IR/Anarchy.md',
+    });
+    let trashed = [];
+    const realTrash = app.fileManager.trashFile;
+    app.fileManager.trashFile = async (entry) => { trashed.push(entry.path); await realTrash(entry); };
+    const open = () => { modals.length = 0; refactor.askDelete(folder('IR')); return modals[0]; };
+    const button = (m, text) => Array.from(m.contentEl.querySelectorAll('button')).find((b) => b.textContent === text);
+    let m = open();
+    const text = m.contentEl.textContent;
+    assert.ok(m.titleEl.textContent.includes('IR'), 'names the folder');
+    assert.ok(text.includes('6 files'), text);
+    assert.ok(text.includes('Deleted files setting'), text);
+    assert.ok(text.includes('won’t come back with it'), 'says its details don’t come back from the trash');
+    assert.ok(!text.includes('got back'), text);
+    assert.ok(text.includes('Home note'), 'says Home loses its note');
+    assert.strictEqual(document.activeElement, button(m, 'Cancel'), 'Cancel focused');
+    button(m, 'Cancel').click();
+    await settle();
+    assert.deepStrictEqual(trashed, [], 'Cancel deletes nothing');
+    assert.ok(folder('IR') && plugin.settings.albums.IR);
+    assert.ok(names(view).length, 'the album on screen');
+    m = open();
+    button(m, 'Delete').click();
+    await settle();
+    assert.deepStrictEqual(trashed, ['IR'], 'through Obsidian’s trash');
+    assert.ok(!folder('IR'));
+    assert.deepStrictEqual(names(view), [], 'redrawn on the vault’s delete');
+    assert.deepStrictEqual(Object.keys(plugin.settings.albums), ['Law']);
+    assert.deepStrictEqual(plugin.settings.albums.Law.includes, ['Law/x.md']);
+    assert.deepStrictEqual(plugin.settings.folderCovers, {});
+    assert.deepStrictEqual(plugin.settings.coverColors, {});
+    assert.deepStrictEqual(plugin.settings.albumOrders, {});
+    // Only empty folders inside: said so, not "empty".
+    const hollow = v.folder('Hollow');
+    v.folder('Hollow/Inner');
+    assert.ok(refactor.deleteLines(hollow)[0].includes('only empty folders'), refactor.deleteLines(hollow)[0]);
+    // Gone while the dialog was open, and another made at its path: that one is left alone.
+    const stale = v.folder('Stale');
+    modals.length = 0;
+    refactor.askDelete(stale);
+    m = modals[0];
+    await realTrash(stale);
+    const fresh = v.folder('Stale');
+    trashed = [];
+    button(m, 'Delete').click();
+    await settle();
+    assert.deepStrictEqual(trashed, [], 'the new folder at its path isn’t trashed');
+    assert.strictEqual(folder('Stale'), fresh);
+    // Where there's no trashFile, the vault's own trash, as Obsidian's setting says: never deleted outright.
+    delete app.fileManager.trashFile;
+    trashed = [];
+    app.vault.trash = async (entry, system) => trashed.push([entry.path, system]);
+    await refactor.trashFolder(v.folder('Law'));
+    assert.deepStrictEqual(trashed, [['Law', true]]);
+    modals.length = 0;
   });
 
   await t('levels and views: a collection says so and can open as a tree; an album as a table; covers numbered; property names of your own', async () => {
