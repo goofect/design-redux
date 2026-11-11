@@ -142,15 +142,32 @@ export function withPageAdded(text, name) {
   return `${text.slice(0, start)}${pageMarker(first)}${eol}${text.slice(start)}${tail}${eol}${pageMarker(name)}${eol}`;
 }
 
+/** The text with each marker naming its page as it's shown: a second "A" written "A 2", so a change to one page leaves the others' names as they were. */
+export function withNamesWritten(text) {
+  let out = text;
+  parsePages(text)
+    .reverse()
+    .forEach((p) => {
+      const m = PAGE_MARKER.exec(out.slice(p.marker[0], p.marker[1]).replace(/\r$/, ''));
+      if (m && (m[1] || 'Untitled') !== p.name) out = remarked(out, p, p.name);
+    });
+  return out;
+}
+
+/** The text with a page's marker naming it `name` (its line ending kept). */
+const remarked = (text, p, name) => text.slice(0, p.marker[0]) + pageMarker(name) + (text.slice(p.marker[0], p.marker[1]).endsWith('\r') ? '\r' : '') + text.slice(p.marker[1]);
+
 /** The text with a page renamed. */
 export function withPageRenamed(text, from, to) {
+  text = withNamesWritten(text);
   const page = parsePages(text).find((p) => p.name === from);
   if (!page) return text;
-  return text.slice(0, page.marker[0]) + pageMarker(to) + text.slice(page.marker[1]);
+  return remarked(text, page, to);
 }
 
 /** The text with a page and its marker taken away. One page left, its marker goes too: the note is one plain page. */
 export function withPageRemoved(text, name) {
+  text = withNamesWritten(text);
   const pages = parsePages(text);
   const i = pages.findIndex((p) => p.name === name);
   if (i === -1) return text;
@@ -166,6 +183,7 @@ export function withPageRemoved(text, name) {
 
 /** The text with a page moved a step: -1 earlier, 1 later. */
 export function withPageMoved(text, name, step) {
+  text = withNamesWritten(text);
   const pages = parsePages(text);
   const i = pages.findIndex((p) => p.name === name);
   const j = i + step;

@@ -23,7 +23,7 @@ const P = dom.window.HTMLElement.prototype;
 elementHelpers(P);
 P.isShown = function () { return true; };
 
-const { EditorState, StateField } = require('@codemirror/state');
+const { EditorSelection, EditorState, StateField } = require('@codemirror/state');
 const { EditorView } = require('@codemirror/view');
 const { markdown } = require('@codemirror/lang-markdown');
 const { undo, history } = (() => {
@@ -577,7 +577,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const parent = document.body.appendChild(document.createElement('div'));
     const heard = [];
     const ext = R.pagesExtension((view, name) => heard.push(name));
-    const v = new EditorView({ parent, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), ext, history ? history() : []] }) });
+    const v = new EditorView({ parent, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), EditorState.allowMultipleSelections.of(true), ext, history ? history() : []] }) });
     if (open) v.dispatch({ effects: R.setOpenPage.of(open) });
     const field = () => v.state.field(ext[0]);
     const hidden = () => {
@@ -683,6 +683,82 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const m = e.field().pages[1].marker[0] + 2;
     e.v.dispatch({ selection: { anchor: m } });
     assert.deepStrictEqual(e.hidden(), R.hiddenRanges(e.v.state.doc.toString(), e.field().open, [m]));
+  });
+
+  await t('pages: several cursors keep to the page shown; a selection of the whole note with no user event takes just the page', () => {
+    const doc = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
+    const e = paged(doc, 'A');
+    const at = (w) => doc.indexOf(w) + 1;
+    // Add the next occurrence (search-tagged): the main cursor on B opens B; the one left on A goes.
+    e.v.dispatch({ selection: EditorSelection.create([EditorSelection.cursor(at('alpha')), EditorSelection.cursor(at('beta'))], 1), userEvent: 'select.search' });
+    assert.strictEqual(e.field().open, 'B');
+    assert.deepStrictEqual(e.v.state.selection.ranges.map((r) => r.head), [at('beta')]);
+    // A range across pages beside one on the page: the first kept to the page, the second as it was.
+    e.v.dispatch({ selection: EditorSelection.create([EditorSelection.range(at('alpha'), at('gamma')), EditorSelection.cursor(at('beta') + 2)], 1) });
+    assert.strictEqual(e.field().open, 'B');
+    const b = e.field().pages[1];
+    e.v.state.selection.ranges.forEach((r) => assert.ok(r.from >= b.from && r.to <= b.to, 'on B: ' + JSON.stringify(r)));
+    // A vim V G d: the whole note, no user event: kept to B, and deleting it leaves A and C.
+    e.v.dispatch({ selection: { anchor: 0, head: doc.length } });
+    assert.strictEqual(e.field().open, 'B');
+    assert.deepStrictEqual([e.v.state.selection.main.from, e.v.state.selection.main.to], [b.from, b.to]);
+    e.v.dispatch(e.v.state.replaceSelection(''));
+    const left = e.v.state.doc.toString();
+    assert.ok(left.includes('alpha') && left.includes('gamma') && !left.includes('beta'), left);
+    assert.deepStrictEqual(R.parsePages(left).map((p) => p.name), ['A', 'B', 'C']);
+  });
+
+  // The feature drawn into a stand-in note view, on the real editor.
+  const pagedNote = (doc, open) => {
+    const settings = { notePages: true, pagesOpen: { 'n.md': open } };
+    const leaves = [];
+    const plugin = { settings, app: { workspace: { getLeavesOfType: () => leaves } }, notes: { get: () => ({}) }, saveSettings: async () => {} };
+    const f = new R.NotePages(plugin);
+    f.extensions = [R.pagesExtension((cm, name) => f.follow(cm, name))];
+    const parent = document.body.appendChild(document.createElement('div'));
+    const v = new EditorView({ parent, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), f.extensions] }) });
+    const view = { file: new TFile('n.md'), containerEl: document.body.appendChild(document.createElement('div')), editor: { cm: v, getValue: () => v.state.doc.toString() } };
+    leaves.push({ view });
+    const go = (name) => {
+      settings.pagesOpen['n.md'] = name;
+      f.draw(view);
+    };
+    f.draw(view);
+    return { f, v, view, go, field: () => v.state.field(f.extensions[0][0]) };
+  };
+  const later = (ms) => new Promise((done) => setTimeout(done, ms));
+
+  await t('pages: a page keeps its cursor while another is open, and a quick second step is not undone by the first', async () => {
+    const doc = '%%page: A%%\nalpha alpha\n%%page: B%%\nbeta beta\n%%page: C%%\ngamma\n';
+    const n = pagedNote(doc, 'A');
+    const mid = doc.indexOf('alpha') + 7;
+    n.v.dispatch({ selection: { anchor: mid }, userEvent: 'select.pointer' });
+    n.go('B');
+    await later(80);
+    n.go('A');
+    await later(80);
+    assert.strictEqual(n.field().open, 'A');
+    assert.strictEqual(n.v.state.selection.main.head, mid, 'back where it was on A');
+    // B has a place of its own now; two steps at once: B, then C straight away.
+    n.v.dispatch({ selection: { anchor: doc.indexOf('beta') + 6 } });
+    await later(20);
+    n.go('A');
+    await later(80);
+    n.go('B');
+    n.go('C');
+    await later(80);
+    assert.strictEqual(n.field().open, 'C', "B's late restore didn't open B again");
+    assert.strictEqual(R.pageAt(n.field().pages, n.v.state.selection.main.head), 2);
+  });
+
+  await t('pages: with two pages of one name, a change to one writes the names as shown, so the other keeps its own', () => {
+    const text = '%%page: A%%\none\n%%page: A%%\ntwo\n%%page: B%%\nthree\n';
+    assert.deepStrictEqual(R.parsePages(R.withPageRemoved(text, 'A')).map((p) => p.name), ['A 2', 'B']);
+    assert.deepStrictEqual(R.parsePages(R.withPageRenamed(text, 'A', 'Z')).map((p) => p.name), ['Z', 'A 2', 'B']);
+    const moved = R.withPageMoved(text, 'A', 1);
+    assert.deepStrictEqual(R.parsePages(moved).map((p) => p.name), ['A 2', 'A', 'B']);
+    assert.ok(moved.indexOf('two') < moved.indexOf('one'));
+    assert.strictEqual(R.withNamesWritten('%%page: A%%\r\nx\r\n%%page: A%%\r\ny\r\n'), '%%page: A%%\r\nx\r\n%%page: A 2%%\r\ny\r\n');
   });
 
   await t('pages: taking a page from two leaves a plain note, no marker', () => {

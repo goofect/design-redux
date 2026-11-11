@@ -96,9 +96,10 @@ export function pagesExtension(onFollow) {
       if (!pages.length && !value.pages.length && open === value.open && live === value.live) return value;
       // The cursor put on another page, not by hand: that page opens.
       let followed = false;
+      // A range across pages doesn't: it's kept to the page shown.
       if (live && pages.length && tr.selection && !chosen && !byHand(tr)) {
         const at = pageAt(pages, tr.state.selection.main.head);
-        if (at !== -1 && pages[at] !== openPage(pages, open)) {
+        if (at !== -1 && at === pageAt(pages, tr.state.selection.main.anchor) && pages[at] !== openPage(pages, open)) {
           open = pages[at].name;
           followed = true;
         }
@@ -113,30 +114,41 @@ export function pagesExtension(onFollow) {
     },
     provide: (f) => EditorView.decorations.from(f, (v) => v.deco),
   });
-  // What a page's choice and a hand's selection need of the selection, before it's made.
+  // The selection kept to the page shown, before it's made: a page chosen takes the cursor to it;
+  // a range across pages (select all, a vim motion) keeps to this one; one wholly on another
+  // page goes, but the main cursor, kept to this page.
   const keep = EditorState.transactionFilter.of((tr) => {
     const chose = tr.effects.find((e) => e.is(setOpenPage));
-    if (tr.docChanged || (!chose && !(tr.selection && byHand(tr))) || !scriptLivePreview(tr.startState)) return tr;
-    const value = tr.startState.field(field, false);
-    const pages = value ? value.pages : [];
-    if (!pages.length) return tr;
-    const page = openPage(pages, chose ? chose.value : value.open);
+    if ((!chose && !tr.selection) || !scriptLivePreview(tr.startState)) return tr;
+    const before = tr.startState.field(field, false);
+    if (!before || !before.pages.length) return tr;
+    if (chose && !tr.docChanged) {
+      const page = openPage(before.pages, chose.value);
+      const sel = tr.selection || tr.startState.selection;
+      if (pageAt(before.pages, sel.main.head) !== before.pages.indexOf(page)) return [tr, { selection: { anchor: page.from }, sequential: true }];
+    }
+    const value = tr.state.field(field, false);
+    if (!value || !value.pages.length) return tr;
+    const pages = value.pages;
+    const page = openPage(pages, value.open);
     const shown = pages.indexOf(page);
-    const sel = tr.selection || tr.startState.selection;
-    // A page chosen: the cursor goes to it, if it's elsewhere.
-    if (chose) return pageAt(pages, sel.main.head) === shown ? tr : [tr, { selection: { anchor: page.from }, sequential: true }];
-    // By hand: kept to the page; a range across pages (select all) is the page's text.
+    const on = (pos) => [shown, -1].includes(pageAt(pages, pos));
     const clamp = (pos) => Math.max(page.from, Math.min(page.to, pos));
+    const sel = tr.state.selection;
+    const ranges = [];
+    let main = 0;
     let changed = false;
-    const ranges = sel.ranges.map((r) => {
-      const a = pageAt(pages, r.anchor);
-      const h = pageAt(pages, r.head);
-      const fine = r.empty ? h === shown || h === -1 : a === h && (h === shown || h === -1);
-      if (fine) return r;
-      changed = true;
-      return EditorSelection.range(clamp(r.anchor), clamp(r.head));
+    sel.ranges.forEach((r, i) => {
+      const across = pageAt(pages, r.anchor) !== pageAt(pages, r.head);
+      const mine = i === sel.mainIndex;
+      if (mine) main = ranges.length;
+      if (!across && on(r.head)) ranges.push(r);
+      else {
+        changed = true;
+        if (across || mine) ranges.push(EditorSelection.range(clamp(r.anchor), clamp(r.head)));
+      }
     });
-    return changed ? [tr, { selection: EditorSelection.create(ranges, sel.mainIndex), sequential: true }] : tr;
+    return changed ? [tr, { selection: EditorSelection.create(ranges, main), sequential: true }] : tr;
   });
   const follow = EditorView.updateListener.of((update) => {
     const now = update.state.field(field, false);
@@ -283,6 +295,18 @@ export class NotePages extends Feature {
     }
     const open = this.openName(file, pages);
     view.containerEl.addClass('dr-has-pages');
+    // A page just chosen: the one before is put away with its scroll and cursor, this one's put back —
+    // kept before the editor is told, which takes the cursor to the page chosen.
+    if (this.shown.get(view) !== open) {
+      const before = this.shown.get(view);
+      if (before !== undefined) this.keepPlace(view, before);
+      this.shown.set(view, open);
+      if (before !== undefined) {
+        view.containerEl.addClass('dr-page-fade');
+        window.setTimeout(() => view.containerEl.removeClass('dr-page-fade'), 160);
+        window.setTimeout(() => this.restorePlace(view, open), 60);
+      }
+    }
     // The editor shows the page that's open.
     const cm = view.editor && view.editor.cm;
     if (cm && typeof cm.dispatch === 'function' && cm.state && cm.state.field) {
@@ -319,17 +343,6 @@ export class NotePages extends Feature {
       else place.head.appendChild(bar);
       this.drawBar(bar, file, pages, open);
     });
-    // A page just chosen: the one before is put away with its scroll and cursor, this one's put back.
-    if (this.shown.get(view) !== open) {
-      const before = this.shown.get(view);
-      if (before !== undefined) this.keepPlace(view, before);
-      this.shown.set(view, open);
-      if (before !== undefined) {
-        view.containerEl.addClass('dr-page-fade');
-        window.setTimeout(() => view.containerEl.removeClass('dr-page-fade'), 160);
-        window.setTimeout(() => this.restorePlace(view, open), 60);
-      }
-    }
   }
 
   /** The editor's cursor went to another page (undo, search, a link): that page is the one open now. */
@@ -354,6 +367,8 @@ export class NotePages extends Feature {
   }
 
   restorePlace(view, name) {
+    // Another page chosen since: this one's place is for later.
+    if (this.shown.get(view) !== name) return;
     const place = this.places_.get(`${view.file.path}|${name}`);
     const scroller = this.scroller(view);
     if (scroller) scroller.scrollTop = place ? place.top : 0;
