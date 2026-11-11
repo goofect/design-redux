@@ -3,7 +3,7 @@
 # tests/obsidian/. Then the results (summary, test output, timings, screenshots, a
 # compatibility report, and the screenshots compared with main's last) go to
 # the ci-results branch, where they can be read without opening Actions. On
-# the default branch, once the simulation tests pass and src/ or styles/
+# the default branch, once the simulation tests and the tests in Obsidian pass and src/ or styles/
 # changed since the last release, main.js and styles.css are built and a new
 # release is published for BRAT: the patch version goes up by one. A commit on
 # the default branch with a "Release-As: X.Y.Z" line releases that version
@@ -194,11 +194,12 @@ jobs:
         run: exit 1
 
   release:
-    # Gated on the simulation tests, and so not waiting for Obsidian's: the
-    # Obsidian run is reported but doesn't block until it has proven reliable.
-    needs: simulation
+    # Gated on both the simulation tests and the tests in Obsidian: a release
+    # never goes out with either failing. A failure that's only timing holds the
+    # release back until the failed job is run again from the Actions page.
+    needs: [simulation, obsidian]
     if: >-
-      always() && needs.simulation.result == 'success' &&
+      always() && needs.simulation.result == 'success' && needs.obsidian.result == 'success' &&
       github.event_name == 'push' &&
       github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
