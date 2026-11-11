@@ -422,6 +422,16 @@ export class Orders {
     this.albumChanged();
   }
 
+  /** Forget an album's arrangement: it goes back to the shared order. */
+  clearAlbum(folder) {
+    if (!this.album(folder)) return;
+    const kept = Object.assign({}, this.settings.albumOrders);
+    delete kept[folder.path];
+    this.settings.albumOrders = kept;
+    this.save();
+    this.albumChanged();
+  }
+
   /** An album's order changed: what shows it (a note's steps, its shelves) is told. */
   albumChanged() {
     const ws = this.plugin.app && this.plugin.app.workspace;

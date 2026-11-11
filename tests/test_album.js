@@ -2913,6 +2913,46 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual(structure.info(v.vault.getFolderByPath('IR')).featured, [anarchy]);
   });
 
+  await t('the sort a collection is in now, kept as its own order from the sort menu, and forgotten; each with an Undo', () => {
+    const { view, plugin, app, ir } = setup();
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    const titles = () => view.filterMenu().items.map((i) => i.title);
+    const choose = (title) => view.filterMenu().items.find((i) => i.title === title).click();
+    app.vault.getFileByPath('IR/Balance.md').stat.ctime = 30;
+    assert.ok(titles().includes('Use this as the collection order') && !titles().includes('Forget collection order'), titles().join(' | '));
+    view.setSort('created');
+    view.render();
+    const shown = names(view);
+    assert.deepStrictEqual(shown, ['Balance', 'Deterrence', 'Cooperation', 'Anarchy']);
+    choose('Use this as the collection order');
+    assert.deepStrictEqual(plugin.orders.album(ir).names, shown.map((n) => `${n}.md`));
+    assert.strictEqual(plugin.orders.albumOn(ir), true);
+    // Previous and next follow it, whatever the shared sort says.
+    plugin.settings.albumSorts = {};
+    plugin.settings.defaultSort = 'name';
+    const anarchy = app.vault.getFileByPath('IR/Anarchy.md');
+    assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), shown);
+    assert.strictEqual(R.albumNeighbours(plugin, anarchy).previous.basename, 'Cooperation');
+    assert.strictEqual(R.albumNeighbours(plugin, app.vault.getFileByPath('IR/Balance.md')).next.basename, 'Deterrence');
+    assert.ok(!titles().includes('Use this as the collection order'), 'not while its own order is the one showing');
+    undo();
+    assert.strictEqual(plugin.orders.album(ir), null, 'Undo: no order of its own again');
+    // Forget: only once it has one; Undo puts it back as it was.
+    view.arrangeTrack('IR/Deterrence.md', 'IR/Anarchy.md', false);
+    const kept = plugin.orders.album(ir).names.slice();
+    choose('Forget collection order');
+    assert.strictEqual(plugin.orders.album(ir), null);
+    assert.ok(!titles().includes('Forget collection order'));
+    assert.deepStrictEqual(R.albumSequence(plugin, anarchy).map((f) => f.basename), ['Anarchy', 'Balance', 'Cooperation', 'Deterrence']);
+    undo();
+    assert.deepStrictEqual(plugin.orders.album(ir).names, kept);
+    assert.strictEqual(R.albumNeighbours(plugin, anarchy).previous.basename, 'Deterrence');
+    // A shelf of albums has no notes to put in order.
+    Object.assign(view, { path: '/' });
+    assert.ok(!titles().some((tt) => /collection order/.test(tt)));
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {

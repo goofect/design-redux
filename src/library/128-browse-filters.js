@@ -159,6 +159,7 @@ export class BrowseFilters extends BrowseTable {
           })
       )
     );
+    this.addOrderItems(menu, current);
 
     // Covers on a screen of albums, grouped.
     if (this.mode === 'folders' || (this.mode === 'folder' && this.isShelf(this.folder()))) {
@@ -265,6 +266,44 @@ export class BrowseFilters extends BrowseTable {
   }
 
   /** An album shown as a list or a table — as its folder note says, set from here. Covers are the folder's own menu's to set. */
+  /**
+   * On a collection: keep the order it's sorted in now as its own, or
+   * forget its own. One Undo puts back what it had, or that it had none.
+   */
+  addOrderItems(menu, current) {
+    const folder = this.mode === 'folder' ? this.folder() : null;
+    if (!folder || (folder.isRoot && folder.isRoot()) || this.isShelf(folder)) return;
+    const orders = this.plugin.orders;
+    const was = orders.album(folder);
+    const before = was ? { names: was.names.slice(), on: was.on } : null;
+    const putBack = () => {
+      if (!before) orders.clearAlbum(folder);
+      else {
+        orders.setAlbum(folder, before.names);
+        if (before.on === false) orders.setAlbumOn(folder, false);
+      }
+      this.plugin.refreshBrowse();
+    };
+    const item = (title, icon, run, message) =>
+      menu.addItem((i) =>
+        i
+          .setTitle(title)
+          .setIcon(icon)
+          .onClick(() => {
+            run();
+            this.plugin.refreshBrowse();
+            this.plugin.offerUndo(message, putBack);
+          })
+      );
+    if (current !== 'own') {
+      item('Use this as the collection order', 'list-ordered', () =>
+        orders.setAlbum(folder, this.sortFiles(this.allNotesIn(folder)).map((f) => f.name)),
+        `${folder.name} keeps this order now.`
+      );
+    }
+    if (was) item('Forget collection order', 'list-x', () => orders.clearAlbum(folder), `${folder.name}’s own order forgotten.`);
+  }
+
   addViewItems(menu, redraw) {
     const structure = ask(this.plugin, 'albums');
     const folder = this.mode === 'folder' ? this.folder() : null;
