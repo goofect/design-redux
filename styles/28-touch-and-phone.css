@@ -56,7 +56,8 @@ body.is-mobile .dr-cat {
 }
 
 body.is-mobile .dr-browse-up,
-body.is-mobile .dr-filter-btn {
+body.is-mobile .dr-filter-btn,
+body.is-mobile .dr-bar-icon {
   width: var(--dr-control-size);
   height: var(--dr-control-size);
 }
@@ -149,13 +150,17 @@ body.is-phone .dr-browse-title {
   font-weight: var(--font-semibold, 600);
 }
 
-body.is-phone .dr-browse-search,
-body.is-phone .dr-filter-btn + .dr-browse-search {
+body.is-phone .dr-browse-search {
   order: 1;
   flex: 1 1 100%;
   min-width: 0;
   margin-left: 0;
   padding: var(--dr-space-2) var(--dr-space-3);
+}
+
+/* Find takes a row of its own below; the icons after it keep to the right of the first. */
+body.is-phone .dr-browse-search + * {
+  margin-left: auto;
 }
 
 /* 16px, below which iOS zooms the page into a field being typed in. */

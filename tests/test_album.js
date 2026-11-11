@@ -31,7 +31,8 @@ class Menu {
   constructor() { this.items = []; }
   addItem(cb) {
     const item = { title: '', disabled: false };
-    ['setIcon', 'setChecked', 'setSection', 'setWarning'].forEach((m) => (item[m] = () => item));
+    ['setIcon', 'setChecked', 'setWarning'].forEach((m) => (item[m] = () => item));
+    item.setSection = (v) => { item.section = v; return item; };
     item.setTitle = (v) => { item.title = v; return item; };
     item.setChecked = (v) => { item.checked = v; return item; };
     item.setDisabled = (v) => { item.disabled = v; return item; };
@@ -237,6 +238,7 @@ const click = (el) => el.dispatchEvent(new window.MouseEvent('click', { bubbles:
 const key = (el, k, extra = {}) => el.dispatchEvent(new window.KeyboardEvent('keydown', Object.assign({ key: k, bubbles: true, cancelable: true }, extra)));
 const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 const action = (view, label) => Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).find((a) => a.textContent === label);
+const barIcon = (view, label) => view.contentEl.querySelector(`.dr-detail-bar [aria-label="${label}"]`);
 
 const HOME_OFF = ['picks', 'continue', 'added', 'collections', 'pinned', 'rediscover'];
 let passed = 0;
@@ -300,13 +302,14 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.albumExcerpts = false;
     view.render();
     assert.strictEqual(line('Anarchy'), undefined);
-    // An album of its own notes alone: one count, under its title — no heading for them, no count at the foot.
+    // An album of its own notes alone: no heading for them; its count is under Options, not under its title or at its foot.
     Object.assign(view, { path: 'IR/Theories' });
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-disc'));
     assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 2);
-    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-album-foot div')).some((d) => /notes?\b/.test(d.textContent)));
-    assert.ok(/2 notes/.test(view.contentEl.querySelector('.dr-detail-meta').textContent));
+    assert.ok(!view.contentEl.querySelector('.dr-album-foot, .dr-detail-meta'));
+    click(barIcon(view, 'Options'));
+    assert.ok(menus[menus.length - 1].items.some((i) => i.title === '2 notes' && i.disabled));
   });
 
   await t('an album ends with what its notes link to that isn’t written yet, greyed — a click writes it there — and a New note row', () => {
@@ -794,7 +797,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
 
   await t('Edit turns names into fields; a note is renamed where it stands, links and all', async () => {
     const { view, app } = setup();
-    click(action(view, 'Edit'));
+    click(barIcon(view, 'Edit'));
     assert.ok(view.editing);
     const title = view.contentEl.querySelector('.dr-detail-title.dr-edit-name');
     assert.strictEqual(title.value, 'IR');
@@ -892,7 +895,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(view.contentEl.querySelector('.dr-disc[data-folder="IR/Empty"]'));
     click(action(view, 'Done'));
     assert.strictEqual(view.editing, false);
-    assert.ok(action(view, 'Edit'));
+    assert.ok(!barIcon(view, 'Edit').classList.contains('is-active'));
   });
 
   await t('a row dragged by its handle, or moved with Alt+arrows, saves the new order', () => {
@@ -1482,25 +1485,64 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     strip.skip('next');
     assert.strictEqual(leaf.view.file.basename, 'Cooperation');
     view.render();
-    const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-action')).map((b) => b.textContent);
-    assert.ok(actions.includes('Random') && !actions.includes('Shuffle'), actions.join(', '));
+    click(barIcon(view, 'Options'));
+    const actions = menus[menus.length - 1].items.map((i) => i.title);
+    assert.ok(actions.includes('Random note') && !actions.includes('Shuffle'), actions.join(', '));
     assert.strictEqual(R.DEFAULTS.upNext, undefined, 'the setting is retired');
     strip.el.remove();
   });
 
-  await t('the Apple look: an album page has one filled Open, Edit in plain text, Random under an icon-only More', async () => {
-    const { view } = setup();
-    document.body.addClass('dr-look-apple');
-    try {
-      view.render();
-      const actions = Array.from(view.contentEl.querySelectorAll('.dr-detail-actions > *'));
-      assert.deepStrictEqual(actions.map((b) => b.textContent), ['Open', 'Edit', '']);
-      assert.strictEqual(view.contentEl.querySelectorAll('.dr-detail-actions .is-primary').length, 1);
-      const more = view.contentEl.querySelector('.dr-detail-more');
-      assert.strictEqual(more.getAttribute('aria-label'), 'More');
-    } finally {
-      document.body.removeClass('dr-look-apple');
+  await t('an album page: no Open; its kind and description under the title; Edit, Sort and filter, Options after Find; Options holds the folder’s menu and its statistics', async () => {
+    const { plugin, view } = setup();
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    plugin.settings.albums = { IR: { type: 'subject', description: 'States and power.' } };
+    for (const apple of [false, true]) {
+      document.body.toggleClass('dr-look-apple', apple);
+      try {
+        view.render();
+        assert.ok(!view.contentEl.querySelector('.dr-detail-actions, .dr-detail-more, .dr-detail-meta, .dr-album-foot'), 'no buttons, count line or foot');
+        assert.ok(!action(view, 'Open'));
+        const info = Array.from(view.contentEl.querySelector('.dr-detail-info').children).map((el) => el.className);
+        assert.deepStrictEqual(info, ['dr-detail-title', 'dr-detail-kind', 'dr-detail-desc']);
+        assert.strictEqual(view.contentEl.querySelector('.dr-detail-kind').textContent, 'Subject');
+        assert.ok(view.contentEl.querySelector('.dr-new-note-row'), 'the New note row stays');
+        // The bar: back and forward, Find, then the three icons.
+        const bar = Array.from(view.contentEl.querySelector('.dr-detail-bar').children);
+        const find = bar.findIndex((el) => el.classList.contains('dr-browse-search'));
+        const icons = bar.slice(find + 1).map((el) => el.getAttribute('aria-label')).filter((l) => ['Edit', 'Sort and filter', 'Options'].includes(l));
+        assert.deepStrictEqual(icons, ['Edit', 'Sort and filter', 'Options']);
+        assert.ok(bar.slice(0, find).some((el) => el.classList.contains('dr-browse-up')));
+        bar.slice(find + 1, find + 4).forEach((el) => assert.strictEqual(el.getAttribute('role'), 'button'));
+      } finally {
+        document.body.removeClass('dr-look-apple');
+      }
     }
+    // Edit starts editing, and ends it.
+    click(barIcon(view, 'Edit'));
+    assert.ok(view.editing && barIcon(view, 'Edit').classList.contains('is-active'));
+    assert.ok(action(view, 'Done') && action(view, 'New note') && action(view, 'New folder'), 'what editing offers stays in the header');
+    click(barIcon(view, 'Edit'));
+    assert.strictEqual(view.editing, false);
+    // Sort and filter: its menu, of orders.
+    const before = menus.length;
+    click(barIcon(view, 'Sort and filter'));
+    assert.strictEqual(menus.length, before + 1);
+    assert.ok(menus[menus.length - 1].items.some((i) => i.checked));
+    // Options: the folder's own menu first, then its statistics, greyed, in a section of their own.
+    click(barIcon(view, 'Options'));
+    const items = menus[menus.length - 1].items;
+    assert.ok(items.every((i) => i.section), 'every entry in a section');
+    const titles = items.map((i) => i.title);
+    ['New note', 'Collection: Subject', 'Layout: List', 'Set cover image', 'Pin', 'Random note'].forEach((x) => assert.ok(titles.includes(x), x));
+    const stats = items.filter((i) => i.section === 'info');
+    assert.ok(stats.length >= 3 && stats.every((i) => i.disabled && !i.click), stats.map((i) => i.title).join(', '));
+    assert.ok(/^\d+ notes$/.test(stats[0].title), stats[0].title);
+    assert.ok(stats.some((i) => /^Started /.test(i.title)) && stats.some((i) => /^Updated /.test(i.title)));
+    // Not an album's page: Sort and filter alone.
+    Object.assign(view, { mode: 'folders' });
+    view.render();
+    assert.ok(barIcon(view, 'Sort and filter') && !barIcon(view, 'Edit') && !barIcon(view, 'Options'));
   });
 
   await t("a folder in a tab's path opens its collection in the library, not the file explorer", async () => {
@@ -2074,7 +2116,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     view.render();
     assert.deepStrictEqual(text('.dr-detail-kind'), ['Project']);
     assert.deepStrictEqual(text('.dr-detail-desc'), ['How states deal with each other.']);
-    assert.ok(text('.dr-detail-meta')[0].includes('1 of 7 done'), text('.dr-detail-meta')[0]);
+    assert.ok(text('.dr-detail-props')[0].includes('1 of 7 done'), text('.dr-detail-props')[0]);
     assert.ok(text('.dr-disc-title').includes('From elsewhere'));
     assert.ok(view.contentEl.querySelector('.dr-track[data-path="Elsewhere/Sovereignty.md"]'), 'shown in the collection, not moved');
     assert.strictEqual(sov.parent.path, 'Elsewhere');
@@ -2289,7 +2331,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     fms.set(v.vault.getFileByPath('IR/Extra 2.md'), { status: 'Open' });
     view.render();
     assert.ok(!view.contentEl.querySelector('.dr-album-panels'), 'just its notes');
-    assert.ok(!text('.dr-detail-meta')[0].includes('sub-collection'));
+    assert.ok(!(text('.dr-detail-props')[0] || '').includes('sub-collection'));
     assert.deepStrictEqual(text('.dr-detail-title'), ['IR'], 'a folder’s page keeps its title');
     // A source among them: still just its notes, no tabs.
     fms.set(v.vault.getFileByPath('IR/Extra 1.md'), { author: 'Waltz' });
@@ -2872,7 +2914,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
     const fms = { Anarchy: { status: 'Done', due: '2026-03-03' }, Balance: { done: true, due: '2026-04-12' }, Cooperation: { status: 'Doing', due: '2026-03-20' } };
     app.metadataCache.getFileCache = (f) => ({ frontmatter: fms[f.basename] || {} });
-    const meta = () => view.contentEl.querySelector('.dr-detail-meta').textContent;
+    const meta = () => (view.contentEl.querySelector('.dr-detail-props') || {}).textContent || '';
     view.render();
     assert.ok(!/done/.test(meta()), 'off by default');
     Object.assign(plugin.settings, { albumRollups: true, rollupDateKey: 'due' });

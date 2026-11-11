@@ -29,10 +29,10 @@ body.dr-look-apple .dr-shelf-row {
   gap: 16px;
 }
 
-/* The album page: the cover at most 240px, one muted line, Open filled and More as an icon. */
+/* The album page: the cover at most 0.65 of 260px as it comes, the lines under the title muted. */
 body.dr-look-apple .dr-detail-art {
-  width: min(var(--dr-album-art-size, 240px), 240px);
-  height: min(var(--dr-album-art-size, 240px), 240px);
+  width: calc(min(var(--dr-album-art-size, 260px), 260px) * var(--dr-detail-art-scale));
+  height: calc(min(var(--dr-album-art-size, 260px), 260px) * var(--dr-detail-art-scale));
   box-shadow: var(--dr-shadow-sm);
 }
 
@@ -42,7 +42,8 @@ body.dr-look-apple .dr-detail-title {
   letter-spacing: -0.01em;
 }
 
-body.dr-look-apple .dr-detail-meta {
+body.dr-look-apple .dr-detail-meta,
+body.dr-look-apple .dr-detail-props {
   color: var(--text-muted);
   font-size: var(--dr-type-footnote);
 }

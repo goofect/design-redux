@@ -343,9 +343,11 @@ export class BrowseAlbum extends BrowsePreview {
   /* -- the album header ------------------------------------------ */
 
   /**
-   * Large art, a title block and two actions. Shared by folders and by
-   * the collections — recents and pins — which have no folder behind
-   * them but read the same way.
+   * The cover, and beside it, from the top: the title, its kind, what its
+   * notes come to, its description. Shared by folders and by the
+   * collections — recents, pins, a property's value — which have no
+   * folder behind them: they keep their count line and a Random. A
+   * folder's own counts and ways in are under Options in the bar.
    */
   renderAlbumHead(root, spec) {
     const head = root.createDiv({ cls: 'dr-detail' });
@@ -379,24 +381,19 @@ export class BrowseAlbum extends BrowsePreview {
     }
 
     const info = head.createDiv({ cls: 'dr-detail-info' });
-    // Above the title, small: what kind of album it is, and the way down to it.
+    // Above the title, small: the way down to it.
     const structure = folder ? ask(this.plugin, 'albums') : null;
     const about = structure ? structure.info(folder) : null;
     const trail = structure && structure.enabled ? structure.trail(folder) : [];
-    // The vault itself is the library, at the top of everything.
-    const level = about && about.label ? about.label : structure && structure.enabled && folder.isRoot && folder.isRoot() ? 'Library' : '';
-    if (level || trail.length) {
+    if (trail.length) {
       const kicker = info.createDiv({ cls: 'dr-detail-kicker' });
-      if (level) kicker.createSpan({ cls: 'dr-detail-kind', text: level });
-      if (trail.length) {
-        const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
-        trail.forEach((f, i) => {
-          if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
-          const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
-          asButton(crumb);
-          onActivate(crumb, () => this.openFolder(f));
-        });
-      }
+      const crumbs = kicker.createEl('nav', { cls: 'dr-crumbs', attr: { 'aria-label': 'Where this collection is' } });
+      trail.forEach((f, i) => {
+        if (i) crumbs.createSpan({ cls: 'dr-crumb-sep', text: '›' });
+        const crumb = crumbs.createSpan({ cls: 'dr-crumb', text: f.name });
+        asButton(crumb);
+        onActivate(crumb, () => this.openFolder(f));
+      });
     }
     if (editing && folder.path !== '/') {
       const title = info.createEl('input', { cls: 'dr-detail-title dr-edit-name', type: 'text' });
@@ -407,9 +404,12 @@ export class BrowseAlbum extends BrowsePreview {
     } else {
       info.createDiv({ cls: 'dr-detail-title', text: spec.title });
     }
-    // The accented line under the title, as the artist is: the folder
-    // note's own lead property, or else the folder this one is in —
-    // which it opens, as the artist's name does.
+    // Under the title, muted: what kind of album it is. The vault itself is the library, at the top of everything.
+    const kind = about && about.label ? about.label : structure && structure.enabled && folder.isRoot && folder.isRoot() ? 'Library' : '';
+    if (kind) info.createDiv({ cls: 'dr-detail-kind', text: kind });
+    // The accented line, as the artist is: the folder note's own lead
+    // property, or else the folder this one is in — which it opens, as
+    // the artist's name does.
     const parent = folder && folder.parent && !(folder.isRoot && folder.isRoot()) ? folder.parent : null;
     if (spec.sub) {
       info.createDiv({ cls: 'dr-detail-sub', text: spec.sub });
@@ -420,50 +420,112 @@ export class BrowseAlbum extends BrowsePreview {
     }
 
     const files = spec.files || [];
-    const notes = files.every((f) => f.extension === 'md');
-    const meta = [files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`];
-    const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
-    if (newest) meta.push(`Updated ${this.relative(newest)}`);
-    const progress = about ? structure.progress(about, files) : null;
-    if (progress) meta.push(`${progress.done} of ${progress.total} ${progress.word}`);
-    // What its notes come to, as settings ask: the done count unless progress has said it, a date property's span.
-    const rolled = folder && structure ? structure.rollupText(structure.rollup(files), !progress) : '';
-    if (rolled) meta.push(rolled);
-    info.createDiv({ cls: 'dr-detail-meta', text: meta.join('  ·  ') });
+    // A folder's: what its notes come to. A collection's: its count line, as before.
+    const props = folder ? this.albumRollups(folder, files) : [];
+    if (props.length) info.createDiv({ cls: 'dr-detail-props', text: props.join('  ·  ') });
+    if (!folder) info.createDiv({ cls: 'dr-detail-meta', text: this.albumStats(files).map((s) => s[1]).join('  ·  ') });
     if (about && about.description) info.createDiv({ cls: 'dr-detail-desc', text: about.description });
 
-    const actions = info.createDiv({ cls: 'dr-detail-actions' });
     if (editing) {
+      const actions = info.createDiv({ cls: 'dr-detail-actions' });
       this.action(actions, 'check', 'Done', () => this.setEditing(false)).addClass('is-primary');
       this.action(actions, 'file-plus', 'New note', () => this.editNewNote(folder));
       this.action(actions, 'folder-plus', 'New folder', () => this.editNewFolder(folder));
       return;
     }
-    // Open leads, filled, as Play does.
-    this.action(actions, 'book-open', 'Open', () => {
-      if (files[0]) this.app.workspace.getLeaf(false).openFile(files[0]);
-    }).addClass('is-primary');
-    const random = () => {
-      if (!files.length) return;
-      const pick = files[Math.floor(Math.random() * files.length)];
-      this.app.workspace.getLeaf(false).openFile(pick);
-    };
-    // The Apple look: one filled button, Edit in plain text, the rest under an icon-only More.
+    if (folder) return;
+    const actions = info.createDiv({ cls: 'dr-detail-actions' });
+    // The Apple look: Random under an icon-only More.
     if (isAppleLook()) {
-      if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
-      const more = [{ title: 'Random', icon: 'shuffle', run: random }];
+      const more = [{ title: 'Random', icon: 'shuffle', run: () => this.openRandom(files) }];
       drIconButton(actions, 'more-horizontal', 'More', (evt) => drMenu(evt, more)).addClass('dr-detail-more');
       return;
     }
-    this.action(actions, 'shuffle', 'Random', random);
-    if (folder) this.action(actions, 'pencil', 'Edit', () => this.setEditing(true));
+    this.action(actions, 'shuffle', 'Random', () => this.openRandom(files));
+  }
+
+  /** One of these notes, any of them. */
+  openRandom(files) {
+    if (!files.length) return;
+    const pick = files[Math.floor(Math.random() * files.length)];
+    this.app.workspace.getLeaf(false).openFile(pick);
+  }
+
+  /** What a folder's notes come to, as settings ask: how many done, a date property's span. [text] */
+  albumRollups(folder, files) {
+    const structure = ask(this.plugin, 'albums');
+    if (!structure) return [];
+    const out = [];
+    const progress = structure.progress(structure.info(folder), files);
+    if (progress) out.push(`${progress.done} of ${progress.total} ${progress.word}`);
+    // The done count unless progress has said it.
+    const rolled = structure.rollupText(structure.rollup(files), !progress);
+    if (rolled) out.push(rolled);
+    return out;
+  }
+
+  /** What there is to say of some notes: [[icon, text]] — how many, when started (if asked), when last changed. */
+  albumStats(files, opts = {}) {
+    const notes = files.every((f) => f.extension === 'md');
+    const out = [['files', files.length === 1 ? (notes ? '1 note' : '1 item') : `${files.length} ${notes ? 'notes' : 'items'}`]];
+    const first = files.reduce((t, f) => Math.min(t, f.stat.ctime || Infinity), Infinity);
+    if (opts.started && Number.isFinite(first) && first > 0) {
+      out.push(['calendar-plus', `Started ${new Date(first).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}`]);
+    }
+    const newest = files.reduce((t, f) => Math.max(t, f.stat.mtime), 0);
+    if (newest) out.push(['clock', `Updated ${this.relative(newest)}`]);
+    return out;
+  }
+
+  /** In the bar of an album's page: Edit, which starts and ends editing. */
+  renderEditIcon(bar) {
+    const btn = bar.createDiv({ cls: 'clickable-icon dr-bar-icon dr-edit-btn' });
+    asButton(btn, 'Edit');
+    setIcon(btn, 'pencil');
+    btn.toggleClass('is-active', !!this.editing);
+    onActivate(btn, () => this.setEditing(!this.editing));
+  }
+
+  /** In the bar of an album's page: Options, the folder's menu and what's known of it. */
+  renderOptionsIcon(bar, folder) {
+    const btn = bar.createDiv({ cls: 'clickable-icon dr-bar-icon dr-options-btn' });
+    asButton(btn, 'Options');
+    setIcon(btn, 'sliders-horizontal');
+    onActivate(btn, (evt) => this.albumOptions(evt, folder));
+  }
+
+  /**
+   * The folder's own menu — what its cover's menu offers — with a random
+   * note, then, greyed, what's known of it: how many notes, when started
+   * and last changed, what they come to. The notes are the ones last
+   * drawn on its page.
+   */
+  albumOptions(evt, folder) {
+    const files = this.headFiles && this.headFiles.folder === folder ? this.headFiles.files : [];
+    this.folderMenu(evt, folder, this.folderCover(folder), {
+      here: true,
+      extra: (menu, sectioned) => {
+        if (files.length) {
+          menu.addItem((item) => sectioned(item, 'open').setTitle('Random note').setIcon('shuffle').onClick(() => this.openRandom(files)));
+        }
+        const facts = this.albumStats(files, { started: true }).concat(this.albumRollups(folder, files).map((t) => ['circle-check', t]));
+        facts.forEach(([icon, text]) =>
+          menu.addItem((item) => {
+            sectioned(item, 'info').setTitle(text).setIcon(icon);
+            if (typeof item.setDisabled === 'function') item.setDisabled(true);
+          })
+        );
+      },
+    });
   }
 
   renderHeader(root, folder, files) {
+    // The notes as drawn — discs concatenated, each sorted — for Options to count.
+    this.headFiles = { folder, files };
     const bar = root.createDiv({ cls: 'dr-detail-bar' });
     this.renderSidebarToggle(bar);
     this.renderNav(bar);
-    this.renderSearchField(bar);
+    this.renderSearchField(bar, { album: folder });
     this.renderFilterChips(root);
 
     const note = this.plugin.folderNote(folder);
@@ -475,9 +537,7 @@ export class BrowseAlbum extends BrowsePreview {
       glyph: 'folder',
       genName: this.genName(this.getDisplayText(), folder.path),
       folder: folder,
-      // files is in display order — discs concatenated, each sorted —
-      // so Open lands on the first row you see. The folder note stands
-      // for the folder rather than being part of its contents.
+      // The folder note stands for the folder rather than being part of its contents.
       files: files,
       onArtMenu: (evt) => this.folderMenu(evt, folder, src, { here: true }),
     });

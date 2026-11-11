@@ -28,7 +28,7 @@ suite('Design Redux in Obsidian: the library', function () {
       };
     });
     expect(look).toEqual({ named: true, tabs: [], corner: '0px', shadow: 'none', margin: '0px' });
-    await clickText('.dr-detail-action', 'Edit');
+    await browser.$(ACTIVE + '.dr-detail-bar [aria-label="Edit"]').click();
     await browser.$('.dr-edit-grip').waitForExist({ timeout: 5000 });
     await shot('album-edit');
     await clickText('.dr-detail-action', 'Done');
@@ -161,7 +161,7 @@ suite('Design Redux in Obsidian: the library', function () {
       await library.browseMode({ mode: 'folder', path: 'Renaming' });
     });
     await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
-    await clickText('.dr-detail-action', 'Edit');
+    await browser.$(ACTIVE + '.dr-detail-bar [aria-label="Edit"]').click();
     const title = await browser.$('.dr-detail-title.dr-edit-name');
     await title.waitForExist({ timeout: 5000 });
     await title.click();
@@ -562,7 +562,7 @@ suite('Design Redux in Obsidian: the library', function () {
     await shot('home');
   });
 
-  it('lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with one filled button, a header that stays', async function () {
+  it('lays out the library the Apple way: shelf titles at 22px, covers 16px apart, an album with its icons after Find, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
         const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -578,17 +578,23 @@ suite('Design Redux in Obsidian: the library', function () {
     });
     expect(home).toEqual({ shelf: '22px', gap: '16px', scrolls: 'auto' });
     await browse({ mode: 'folder', path: 'Politics' });
-    await browser.$(ACTIVE + '.dr-detail-actions').waitForExist({ timeout: 10000 });
+    await browser.$(ACTIVE + '.dr-options-btn').waitForExist({ timeout: 10000 });
     const album = await read(() => {
       const page = document.querySelector('.workspace-leaf.mod-active .dr-browse');
-      const more = page.querySelector('.dr-detail-more');
+      const bar = Array.from(page.querySelector('.dr-detail-bar').children);
+      const find = bar.findIndex((el) => el.classList.contains('dr-browse-search'));
       return {
-        art: page.querySelector('.dr-detail-art').offsetWidth <= 240,
-        filled: page.querySelectorAll('.dr-detail-actions .is-primary').length,
-        more: more ? [more.getAttribute('aria-label'), more.offsetWidth, more.textContent] : null,
+        art: page.querySelector('.dr-detail-art').offsetWidth <= 180,
+        buttons: page.querySelectorAll('.dr-detail-actions, .dr-detail-more').length,
+        icons: bar.slice(find + 1, find + 4).map((el) => [el.getAttribute('aria-label'), el.offsetWidth, el.textContent]),
       };
     });
-    expect(album).toEqual({ art: true, filled: 1, more: ['More', 32, ''] });
+    expect(album).toEqual({ art: true, buttons: 0, icons: [['Edit', 32, ''], ['Sort and filter', 32, ''], ['Options', 32, '']] });
+    // Options: the folder's menu, then what's known of it.
+    await browser.$(ACTIVE + '.dr-options-btn').click();
+    const options = await readUntil(menuTitles, (t) => t.length > 0);
+    expect([options.find((t) => /^\d+ notes?$/.test(t)) || options.join(' / '), options.includes('Pin')]).toEqual([expect.stringMatching(/^\d+ notes?$/), true]);
+    await closeMenus();
     await browse({ mode: 'notes' });
     const head = await readUntil(
       () => read(() => {

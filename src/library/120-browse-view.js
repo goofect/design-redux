@@ -526,6 +526,7 @@ export class BrowseView extends BrowseFilters {
       here: !!(opts && opts.here),
       redraw: () => this.render(),
       arrange: this.tileSteps(folder),
+      extra: opts && opts.extra,
     });
   }
 

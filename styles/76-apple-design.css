@@ -199,6 +199,7 @@ body.dr-look-apple :is(.dr-card, .dr-track, .dr-tr, .dr-lib-row, .dr-split-row):
 /* -- Toolbar buttons: borderless symbols that take a soft fill when pointed at or pressed. */
 body.dr-look-apple .dr-browse-up,
 body.dr-look-apple .dr-filter-btn,
+body.dr-look-apple .dr-bar-icon,
 body.dr-look-apple .dr-preview-btn {
   border: none;
   border-radius: 6px;
@@ -210,6 +211,7 @@ body.dr-look-apple .dr-preview-btn {
 
 body.dr-look-apple .dr-browse-up:active,
 body.dr-look-apple .dr-filter-btn:active,
+body.dr-look-apple .dr-bar-icon:active,
 body.dr-look-apple .dr-preview-btn:active {
   transform: scale(0.97);
   background-color: var(--dr-fill-strong);
@@ -218,6 +220,7 @@ body.dr-look-apple .dr-preview-btn:active {
 @media (any-hover: hover) {
   body.dr-look-apple .dr-browse-up:not(.is-disabled):hover,
   body.dr-look-apple .dr-filter-btn:hover,
+  body.dr-look-apple .dr-bar-icon:hover,
   body.dr-look-apple .dr-preview-btn:hover {
     border: none;
     background-color: var(--dr-fill);

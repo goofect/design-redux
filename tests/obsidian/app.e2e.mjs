@@ -273,7 +273,7 @@ suite('Design Redux in Obsidian: the app', function () {
         buttons: Array.from(document.querySelectorAll('.dr-strip .dr-strip-btn:not(.is-secondary)')).filter(shown).map((b) => [b.offsetWidth, b.offsetHeight]),
         rows: Array.from(document.querySelectorAll('.dr-library .dr-lib-row')).filter(shown).map((r) => [Math.round(parseFloat(getComputedStyle(r).minHeight)), r.offsetHeight]),
         title: contrast(page.querySelector('.dr-detail-title')),
-        meta: contrast(page.querySelector('.dr-detail-meta')),
+        meta: contrast(page.querySelector('.dr-detail-meta, .dr-detail-props')),
       };
     }, theme, look, density);
     const check = (m, label) => {

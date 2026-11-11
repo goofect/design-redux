@@ -7,7 +7,7 @@
 
 /* 1. Icon button — a toolbar button: 32px, a symbol alone with its name as the tooltip, a soft
    circle when pointed at, 0.97 when pressed. */
-body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold) {
+body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-bar-icon, .dr-preview-btn, .dr-track-fold) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -22,19 +22,19 @@ body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter
   transition: background-color var(--dr-dur-fast) var(--dr-ease), color var(--dr-dur-fast) var(--dr-ease), opacity var(--dr-dur-base) var(--dr-ease), width var(--dr-dur-base) var(--dr-ease-move), transform var(--dr-dur-press) var(--dr-ease-move);
 }
 
-body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold) .svg-icon {
+body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-bar-icon, .dr-preview-btn, .dr-track-fold) .svg-icon {
   width: var(--dr-control-icon);
   height: var(--dr-control-icon);
   stroke-width: 1.75px;
 }
 
-body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold):active {
+body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-bar-icon, .dr-preview-btn, .dr-track-fold):active {
   transform: scale(0.97);
   background-color: var(--dr-fill-strong);
 }
 
 @media (any-hover: hover) {
-  body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-preview-btn, .dr-track-fold):not(.is-disabled):hover {
+  body.dr-look-apple :is(.dr-icon-button, .dr-strip-btn, .dr-browse-up, .dr-filter-btn, .dr-bar-icon, .dr-preview-btn, .dr-track-fold):not(.is-disabled):hover {
     background-color: var(--dr-fill);
     color: var(--text-normal);
   }

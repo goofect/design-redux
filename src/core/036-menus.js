@@ -283,7 +283,12 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
 
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.
+  // What the caller adds of its own (an album's Options: a random note, the statistics).
+  const extra = () => {
+    if (typeof opts.extra === 'function') opts.extra(menu, sectioned);
+  };
   if (isFolder && target.isRoot && target.isRoot()) {
+    extra();
     showMenuAt(menu, evt);
     return;
   }
@@ -354,5 +359,6 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
 
   // Obsidian's own entries, and whatever other plugins add.
   app.workspace.trigger('file-menu', menu, target, opts.source || BROWSE_VIEW);
+  extra();
   showMenuAt(menu, evt);
 }

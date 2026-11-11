@@ -93,7 +93,6 @@ export class FolderScreen extends BrowseScreen {
       else if (about && about.layout === 'table') this.renderTable(el, discs, folder);
       else view.renderDiscs(el, discs, folder);
       if (!view.editing) view.renderAlbumEnd(el, folder, all);
-      if (!view.editing) view.renderAlbumFoot(el, all, { count: discs.length > 1 });
     };
     drawNotes(root);
     if (view.editing) return;

@@ -1,7 +1,7 @@
 /* Browse ----------------------------------------------------------------
  *
- * A folder as an album page: large art, a title block, two actions,
- * then the notes as a numbered list. Subfolders keep the grid, since
+ * A folder as an album page: its cover and, from the top beside it, a
+ * title block; its icons in the bar above; then the notes as a numbered list. Subfolders keep the grid, since
  * a collection of collections reads better as tiles.
  */
 
@@ -84,11 +84,14 @@
 
 /* -- the title block ---------------------------------------------------- */
 
+/* The cover, smaller than the tiles' page-wide sizes suggest: 0.65 of the
+   album cover size (170px as it comes), scaled with Cover size. */
 .dr-detail {
+  --dr-detail-art-scale: 0.65;
   position: relative;
   isolation: isolate;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: calc(var(--dr-u) * 7.5);
   margin-bottom: calc(var(--dr-u) * 7.5);
 }
@@ -96,8 +99,8 @@
 .dr-detail-art {
   position: relative;
   flex: 0 0 auto;
-  width: var(--dr-album-art-size, 260px);
-  height: var(--dr-album-art-size, 260px);
+  width: calc(var(--dr-album-art-size, 260px) * var(--dr-detail-art-scale));
+  height: calc(var(--dr-album-art-size, 260px) * var(--dr-detail-art-scale));
   overflow: hidden;
   border-radius: var(--dr-cover-radius, var(--radius-l, 10px));
   background-color: var(--background-secondary);
@@ -121,9 +124,16 @@
 .dr-detail-info {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: flex-start;
   min-width: 0;
-  padding-bottom: var(--dr-space-1);
+}
+
+/* Under the title, muted: the album's kind. */
+.dr-detail-info > .dr-detail-kind {
+  margin-top: var(--dr-space-1);
+  font-size: var(--font-ui-medium);
+  font-weight: var(--dr-ui-weight);
+  color: var(--text-muted);
 }
 
 .dr-detail-title {
@@ -163,7 +173,8 @@
 }
 
 /* Quiet and small, as the genre and year are under an album's title. */
-.dr-detail-meta {
+.dr-detail-meta,
+.dr-detail-props {
   margin-top: var(--dr-space-2);
   font-size: var(--dr-ui-size);
   font-weight: var(--dr-ui-weight);
@@ -995,6 +1006,14 @@
   --dr-tile-size: 120px;
 }
 
+.dr-browse[data-dr-art="small"] .dr-detail {
+  --dr-detail-art-scale: 0.5;
+}
+
+.dr-browse[data-dr-art="large"] .dr-detail {
+  --dr-detail-art-scale: 0.85;
+}
+
 .dr-browse[data-dr-art="medium"] {
   --dr-tile-size: 170px;
 }
@@ -1289,37 +1308,35 @@
   opacity: 0.8;
 }
 
-/* Filter button -----------------------------------------------------------
+/* Filter button, and the album page's Edit and Options beside it ------------
  *
- * Round, beside the search field, as in the reference. It takes the
+ * Round, after the search field, as in the reference. It takes the
  * accent when a sort or folder filter is in effect, so a filtered screen
  * never looks like the whole of something.
  */
 
-.dr-filter-btn {
+.dr-filter-btn,
+.dr-bar-icon {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   width: var(--dr-control-size);
   height: var(--dr-control-size);
-  margin-left: auto;
   padding: 0;
   border-radius: var(--dr-radius-pill);
   background-color: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
 }
 
-.dr-filter-btn + .dr-browse-search {
-  margin-left: var(--dr-space-2);
-}
-
-.dr-filter-btn.is-active {
+.dr-filter-btn.is-active,
+.dr-bar-icon.is-active {
   color: var(--text-accent);
   border-color: var(--text-accent);
 }
 
-.dr-filter-btn .svg-icon {
+.dr-filter-btn .svg-icon,
+.dr-bar-icon .svg-icon {
   width: 15px;
   height: 15px;
 }

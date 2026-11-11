@@ -127,12 +127,11 @@ export class BrowseFilters extends BrowseTable {
 
   renderFilterButton(bar) {
     const btn = bar.createDiv({ cls: 'clickable-icon dr-filter-btn' });
-    btn.setAttribute('aria-label', 'Sort, filter and view');
     setIcon(btn, 'list-filter');
     const usual = this.ownOrderLabel() ? 'own' : 'name';
     if (this.hasFilters() || this.currentSort() !== usual) btn.addClass('is-active');
 
-    asButton(btn);
+    asButton(btn, 'Sort and filter');
     onActivate(btn, (evt) => showMenuAt(this.filterMenu(), evt));
   }
 
@@ -476,10 +475,13 @@ export class BrowseFilters extends BrowseTable {
     fresh.forEach((el) => root.appendChild(el));
   }
 
-  renderSearchField(bar) {
-    this.renderFilterButton(bar);
-    this.renderPreviewToggle(bar);
-
+  /**
+   * Find, then the screen's icons after it: on an album's page Edit,
+   * Sort and filter and Options (`album`, its folder); elsewhere Sort and
+   * filter alone. The inspector's toggle ends the bar, as the sidebar's
+   * begins it.
+   */
+  renderSearchField(bar, opts = {}) {
     const search = bar.createDiv({ cls: 'dr-browse-search' });
     setIcon(search.createSpan({ cls: 'dr-browse-search-icon' }), 'search');
 
@@ -516,5 +518,10 @@ export class BrowseFilters extends BrowseTable {
       window.clearTimeout(this.findTimer);
       this.findTimer = window.setTimeout(() => this.renderBelowBar(), 90);
     });
+
+    if (opts.album) this.renderEditIcon(bar);
+    this.renderFilterButton(bar);
+    if (opts.album) this.renderOptionsIcon(bar, opts.album);
+    this.renderPreviewToggle(bar);
   }
 }
