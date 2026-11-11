@@ -10,12 +10,17 @@ suite('Design Redux in Obsidian: notes', function () {
   it('shows one page of a note with pages, in editing and in reading view', async function () {
     const result = await browser.executeObsidian(async ({ app }) => {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      // Waits for what's needed rather than a fixed time: a slow start draws the control late.
+      const until = async (ok, ms = 10000) => {
+        for (const end = Date.now() + ms; Date.now() < end && !ok(); ) await wait(100);
+        await wait(300);
+      };
       const old = app.vault.getFileByPath('Pages note.md');
       if (old) await app.vault.delete(old);
       const file = await app.vault.create('Pages note.md', '---\ntype: test\n---\n%%page: Overview%%\nAlpha text\n\n%%page: Sources%%\nBeta text\n');
       const leaf = app.workspace.getLeaf(true);
       await leaf.openFile(file, { state: { mode: 'source', source: false } });
-      await wait(1500);
+      await until(() => leaf.view.containerEl.querySelectorAll('.markdown-source-view .dr-pages-capsule .dr-page-tab').length === 2);
       const root = leaf.view.containerEl;
       const content = () => leaf.view.contentEl.querySelector('.cm-content').textContent;
       const tabEls = () => Array.from(root.querySelectorAll('.markdown-source-view .dr-page-tab'));
@@ -28,12 +33,16 @@ suite('Design Redux in Obsidian: notes', function () {
         firstLine: lines()[0],
       };
       tabEls()[1].click();
-      await wait(1000);
+      await until(() => {
+        const open = root.querySelector('.markdown-source-view .dr-page-tab.is-open .dr-page-name');
+        return open && open.textContent === 'Sources';
+      });
+      await wait(700);
       first.widthClosed = tabEls()[0].offsetWidth;
       first.slide = getComputedStyle(root.querySelector('.markdown-source-view .dr-pages-pill')).transitionDuration;
       const second = { firstLine: lines()[0], text: content(), open: root.querySelector('.markdown-source-view .dr-page-tab.is-open .dr-page-name').textContent };
       await leaf.setViewState({ type: 'markdown', state: { file: file.path, mode: 'preview' }, active: true });
-      await wait(1800);
+      await until(() => !!leaf.view.containerEl.querySelector('.markdown-preview-sizer [data-dr-line].dr-page-off'));
       const reading = Array.from(leaf.view.containerEl.querySelectorAll('.markdown-preview-sizer [data-dr-line]')).map((el) => [el.textContent.trim(), el.classList.contains('dr-page-off'), el.offsetHeight]);
       leaf.detach();
       await app.vault.delete(file);
