@@ -64,7 +64,6 @@ export const STRIP_NARROW = 480;
 export const STRIP_ACTIONS = {
   album: [['new-note-here', 'New note', false, 'file-plus']],
   note: [['add-page', 'Add a page', true, 'plus']],
-  canvas: [['canvas-tools', 'Canvas tools', false], ['canvas-quick-add', 'Add or connect a card', false], ['canvas-layout-choose', 'Lay out…', true], ['find-canvas-card', 'Find a card', true], ['present-map', 'Present', true]],
 };
 
 export class ContextStrip extends Feature {
