@@ -751,6 +751,157 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(R.pageAt(n.field().pages, n.v.state.selection.main.head), 2);
   });
 
+  // Views of notes, each with an editor (or only its text) and a reading view's sizer, the
+  // plugin's events and post-processor heard as Obsidian would send them.
+  const pagedViews = () => {
+    const settings = { notePages: true, pagesOpen: {} };
+    const leaves = [];
+    const on = {};
+    const hear = (kind) => (type, fn) => ((on[`${kind}:${type}`] = fn), {});
+    const post = [];
+    const app = { workspace: { getLeavesOfType: () => leaves, on: hear('ws') }, vault: { on: hear('vault') }, metadataCache: { on: hear('meta') } };
+    const plugin = { settings, app, notes: { get: () => ({}) }, saveSettings: async () => {}, registerEvent() {}, registerEditorExtension() {}, registerMarkdownPostProcessor: (fn) => post.push(fn) };
+    const f = new R.NotePages(plugin);
+    f.registerTypes();
+    f.register();
+    f.extensions = [R.pagesExtension((cm, name) => f.follow(cm, name))];
+    const open = (path, doc, { editor = true } = {}) => {
+      const containerEl = document.body.appendChild(document.createElement('div'));
+      const source = containerEl.createDiv({ cls: 'markdown-source-view' });
+      const preview = containerEl.createDiv({ cls: 'markdown-preview-view' });
+      const sizer = preview.createDiv({ cls: 'markdown-preview-sizer' });
+      Object.defineProperty(preview, 'clientHeight', { value: 100 });
+      Object.defineProperty(preview, 'scrollTop', { value: 0, writable: true });
+      const v = editor ? new EditorView({ parent: source, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), f.extensions] }) }) : null;
+      let text = doc;
+      const view = { file: new TFile(path), containerEl, editor: v ? { cm: v, getValue: () => v.state.doc.toString() } : { getValue: () => text } };
+      leaves.push({ view });
+      return { view, v, preview, sizer, setText: (t) => (text = t) };
+    };
+    const render = (path, el, line) => post.forEach((fn) => fn(el, { sourcePath: path, getSectionInfo: () => ({ lineStart: line }) }));
+    return { f, settings, on, open, render };
+  };
+
+  await t("pages: a change to another note draws none of this note's views, and a draw with nothing new reads nothing", async () => {
+    const n = pagedViews();
+    n.settings.pagesOpen['n.md'] = 'A';
+    const a = n.open('n.md', PAGED);
+    const b = n.open('m.md', PAGED, { editor: false });
+    n.f.sync();
+    let drawn = [];
+    const draw = n.f.draw.bind(n.f);
+    n.f.draw = (view) => (drawn.push(view.file.path), draw(view));
+    n.on['vault:modify'](new TFile('other.md'));
+    n.on['meta:changed'](new TFile('other.md'));
+    await later(50);
+    assert.deepStrictEqual(drawn, [], 'another note changed: nothing drawn');
+    n.on['vault:modify'](a.view.file);
+    await later(50);
+    assert.deepStrictEqual(drawn, ['n.md'], 'this note changed: only its view');
+    // Drawn again with nothing new: nothing read, nothing drawn.
+    const count = () => [R.pageStats.parses, R.pageStats.draws];
+    let before = count();
+    n.f.sync();
+    assert.deepStrictEqual(count(), before, 'the same text: no parse, no draw');
+    // Typed into: drawn again from the editor's own record, still unread.
+    a.v.dispatch({ changes: { from: PAGED.indexOf('alpha'), insert: 'x' } });
+    before = count();
+    n.f.draw(a.view);
+    assert.deepStrictEqual(count(), [before[0], before[1] + 1]);
+    // A view with no editor of ours: its text read again only when it's changed.
+    b.setText(PAGED + 'more\n');
+    before = count();
+    n.f.draw(b.view);
+    n.f.draw(b.view);
+    assert.deepStrictEqual(count(), [before[0] + 1, before[1] + 1]);
+  });
+
+  await t('pages: reading view hides each block as it comes, with no full draw; an embed inside keeps its own lines', async () => {
+    const lines = ['Intro', '%%page: A%%'];
+    for (let i = 0; i < 23; i++) lines.push(`a${i}`);
+    lines.push('%%page: B%%');
+    for (let i = 0; i < 24; i++) lines.push(`b${i}`);
+    const doc = lines.join('\n') + '\n';
+    const n = pagedViews();
+    n.settings.pagesOpen['r.md'] = 'A';
+    const r = n.open('r.md', doc);
+    n.f.sync();
+    let syncs = 0;
+    const sync = n.f.sync.bind(n.f);
+    n.f.sync = (paths) => (syncs++, sync(paths));
+    const blocks = lines.map((_, i) => {
+      const el = r.sizer.createDiv();
+      n.render('r.md', el, i);
+      return el;
+    });
+    await later(50);
+    assert.strictEqual(blocks.length, 50);
+    assert.strictEqual(syncs, 0, 'no full draw as blocks come');
+    blocks.forEach((el, i) => assert.strictEqual(el.classList.contains('dr-page-off'), i >= 25, `line ${i}`));
+    // An embed, its lines its own note's: line 3 is on A here, hidden once B is open — not in the embed.
+    const inner = r.sizer.createDiv({ cls: 'internal-embed markdown-embed' }).createDiv({ cls: 'markdown-embed-content' }).createDiv({ cls: 'markdown-preview-view' }).createDiv({ cls: 'markdown-preview-sizer' }).createDiv();
+    n.render('r.md', inner, 3);
+    n.settings.pagesOpen['r.md'] = 'B';
+    n.f.sync();
+    assert.ok(blocks[3].classList.contains('dr-page-off') && !blocks[30].classList.contains('dr-page-off'));
+    assert.ok(!inner.classList.contains('dr-page-off'), "the embed's block shows");
+    n.render('r.md', inner, 3);
+    assert.ok(!inner.classList.contains('dr-page-off'), 'and still, rendered again');
+  });
+
+  await t("pages: a tab reused for another paged note doesn't take the first one's place; two panes of a note keep their own", async () => {
+    const n = pagedViews();
+    n.settings.pagesOpen = { 'n.md': 'A', 'm.md': 'X' };
+    const a = n.open('n.md', PAGED);
+    n.f.sync();
+    a.preview.scrollTop = 120;
+    // The tab opens another note, which Obsidian scrolls to a heading in it.
+    const other = '%%page: X%%\nx\n%%page: Y%%\ny\n';
+    a.view.file = new TFile('m.md');
+    a.v.dispatch({ changes: { from: 0, to: a.v.state.doc.length, insert: other } });
+    n.f.sync();
+    a.preview.scrollTop = 300;
+    await later(80);
+    assert.strictEqual(a.preview.scrollTop, 300, 'left where Obsidian put it');
+    // Two panes of one note: each its own cursor on A, through B and back.
+    const doc = '%%page: A%%\nalpha alpha\n%%page: B%%\nbeta beta\n';
+    const p1 = n.open('two.md', doc);
+    const p2 = n.open('two.md', doc);
+    n.settings.pagesOpen['two.md'] = 'A';
+    n.f.sync();
+    p1.v.dispatch({ selection: { anchor: doc.indexOf('alpha') + 2 }, userEvent: 'select.pointer' });
+    p2.v.dispatch({ selection: { anchor: doc.indexOf('alpha') + 8 }, userEvent: 'select.pointer' });
+    n.settings.pagesOpen['two.md'] = 'B';
+    n.f.sync();
+    await later(80);
+    n.settings.pagesOpen['two.md'] = 'A';
+    n.f.sync();
+    await later(80);
+    assert.deepStrictEqual([p1.v.state.selection.main.head, p2.v.state.selection.main.head], [doc.indexOf('alpha') + 2, doc.indexOf('alpha') + 8]);
+  });
+
+  await t("pages: measuring the control again (a resize) scrolls only the control, sideways, never the note", () => {
+    const n = pagedViews();
+    n.settings.pagesOpen['n.md'] = 'A';
+    const a = n.open('n.md', PAGED);
+    n.f.sync();
+    const bar = a.view.containerEl.querySelector('.dr-pages');
+    const capsule = bar.querySelector('.dr-pages-capsule');
+    Object.defineProperty(capsule, 'clientWidth', { value: 100 });
+    Object.defineProperty(capsule, 'scrollLeft', { value: 0, writable: true });
+    let scrolled = 0;
+    bar.querySelectorAll('.dr-page-tab').forEach((tab, i) => {
+      Object.defineProperty(tab, 'offsetWidth', { value: 40 });
+      Object.defineProperty(tab, 'offsetLeft', { value: i * 200 });
+      tab.scrollIntoView = () => scrolled++;
+    });
+    a.preview.scrollTop = 500;
+    n.f.select(bar, 'B', false);
+    assert.strictEqual(scrolled, 0, 'nothing scrolled into view');
+    assert.strictEqual(a.preview.scrollTop, 500);
+    assert.strictEqual(capsule.scrollLeft, 140, "the control scrolled to show B's tab");
+  });
+
   await t('pages: with two pages of one name, a change to one writes the names as shown, so the other keeps its own', () => {
     const text = '%%page: A%%\none\n%%page: A%%\ntwo\n%%page: B%%\nthree\n';
     assert.deepStrictEqual(R.parsePages(R.withPageRemoved(text, 'A')).map((p) => p.name), ['A 2', 'B']);

@@ -37,8 +37,8 @@ export const pageMarker = (name) => `%%page: ${cleanPageName(name)}%%`;
 /** The note's own line ending, so what's added matches it. */
 const eolOf = (text) => (text.includes('\r\n') ? '\r\n' : '\n');
 
-/** How many times a note's text has been read for its pages (the editor keeps this near zero as you type). */
-export const pageStats = { parses: 0 };
+/** How many times a note's text has been read for its pages (the editor keeps this near zero as you type), and a view drawn whole. */
+export const pageStats = { parses: 0, draws: 0 };
 
 /** Where a note's body begins: after its properties block. */
 export function bodyStart(text) {
@@ -47,8 +47,9 @@ export function bodyStart(text) {
 }
 
 /**
- * A note's pages: [{ name, marker: [from, to], from, to }] — the marker's own range, and the
- * page's text from after it to the next marker. Text before the first marker belongs to the
+ * A note's pages: [{ name, marker: [from, to], from, to, line, lines }] — the marker's own range,
+ * the page's text from after it to the next marker, the marker's line and the lines the page
+ * runs over (from its preface, to the next marker's line). Text before the first marker belongs to the
  * first page (its `preface`). No markers, no pages. Names are unique: a second marker of the
  * same name is that name 2, 3…, as a new page would be.
  */
@@ -58,6 +59,8 @@ export function parsePages(text) {
   const found = [];
   let fence = null;
   let pos = start;
+  const startLine = text.slice(0, start).split('\n').length - 1;
+  let n = startLine;
   const lines = text.slice(start).split('\n');
   for (const raw of lines) {
     const line = raw.replace(/\r$/, '');
@@ -67,8 +70,9 @@ export function parsePages(text) {
       else if (f[1][0] === fence) fence = null;
     }
     const m = !fence && !f ? PAGE_MARKER.exec(line) : null;
-    if (m) found.push({ name: m[1] || 'Untitled', marker: [pos, pos + raw.length] });
+    if (m) found.push({ name: m[1] || 'Untitled', marker: [pos, pos + raw.length], line: n });
     pos += raw.length + 1;
+    n++;
   }
   const names = found.map((f) => f.name);
   const taken = [];
@@ -76,17 +80,38 @@ export function parsePages(text) {
     if (taken.includes(f.name)) f.name = uniqueName(f.name, names.concat(taken));
     taken.push(f.name);
   });
-  return pageLayout(found, start, text.length);
+  return pageLayout(found, start, text.length, startLine);
 }
 
-/** Where each page's text runs, from its marker ([{ name, marker }], in order), where the body starts and how long the note is. */
-export function pageLayout(found, start, length) {
-  const pages = found.map((f) => ({ name: f.name, marker: [f.marker[0], f.marker[1]], from: Math.min(f.marker[1] + 1, length), to: length }));
+/** Where each page's text runs, from its marker ([{ name, marker, line }], in order), where the body starts and how long the note is, and the body's first line. */
+export function pageLayout(found, start, length, startLine = 0) {
+  const pages = found.map((f) => ({ name: f.name, marker: [f.marker[0], f.marker[1]], from: Math.min(f.marker[1] + 1, length), to: length, line: f.line, lines: [f.line, Infinity] }));
   pages.forEach((p, i) => {
-    if (i + 1 < pages.length) p.to = Math.max(p.from, pages[i + 1].marker[0] - 1);
+    if (i + 1 < pages.length) {
+      p.to = Math.max(p.from, pages[i + 1].marker[0] - 1);
+      p.lines[1] = pages[i + 1].line;
+    }
   });
-  if (pages.length && start < pages[0].marker[0]) pages[0].preface = [start, pages[0].marker[0]];
+  if (pages.length && start < pages[0].marker[0]) {
+    pages[0].preface = [start, pages[0].marker[0]];
+    pages[0].lines[0] = startLine;
+  }
   return pages;
+}
+
+/** Which page a line is on, by index (-1 before the first): a binary search, the pages being in order. */
+export function pageOfLine(pages, line) {
+  let lo = 0;
+  let hi = pages.length - 1;
+  let at = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (pages[mid].lines[0] <= line) {
+      at = mid;
+      lo = mid + 1;
+    } else hi = mid - 1;
+  }
+  return at !== -1 && line < pages[at].lines[1] ? at : -1;
 }
 
 /** The page open: the one named if it's there, else the first. */

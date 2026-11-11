@@ -19,7 +19,7 @@ import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
-import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageLayout, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
+import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageLayout, pageOfLine, pageStats, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
 export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'image', 'list', 'book-open', 'quote', 'link', 'star', 'lightbulb', 'calendar'];
@@ -88,8 +88,18 @@ export function pagesExtension(onFollow) {
           read = true;
         } else if (pages.length) {
           const map = (pos) => tr.changes.mapPos(pos);
+          const doc = tr.state.doc;
+          const lineOf = (pos) => doc.lineAt(pos).number - 1;
           start = tr.changes.mapPos(start, -1);
-          pages = pageLayout(pages.map((p) => ({ name: p.name, marker: [map(p.marker[0]), map(p.marker[1])] })), start, tr.state.doc.length);
+          pages = pageLayout(
+            pages.map((p) => {
+              const at = map(p.marker[0]);
+              return { name: p.name, marker: [at, map(p.marker[1])], line: lineOf(at) };
+            }),
+            start,
+            doc.length,
+            lineOf(start),
+          );
         }
       }
       // A plain note: nothing more to do.
@@ -157,12 +167,28 @@ export function pagesExtension(onFollow) {
   return [field, keep, follow];
 }
 
+/** A sizer the note's own text is laid in, not one of an embed's inside it. */
+const ownSizer = (sizer) => !sizer.parentElement || !sizer.parentElement.closest('.cm-sizer, .markdown-preview-sizer, .embedded-backlinks');
+
+/** A block of the note's own, in reading view: straight in its own sizer, not in an embed or a hover preview. */
+const topBlock = (el) => {
+  const sizer = el.parentElement;
+  return !!sizer && sizer.matches('.markdown-preview-sizer') && ownSizer(sizer) && !sizer.closest('.hover-popover');
+};
+
 export class NotePages extends Feature {
   constructor(plugin) {
     super(plugin);
-    /** Which page each view is showing, and where each page was left: scroll and cursor. */
+    /** Which page each view is showing (of which note), and where each page was left in each view: scroll and cursor. */
     this.shown = new WeakMap();
-    this.places_ = new Map();
+    this.places_ = new WeakMap();
+    /** What each view was last drawn from, so a draw with nothing new does nothing. */
+    this.drawn = new WeakMap();
+    /** Each note's pages, with the lines they run over, as last drawn: reading view's blocks are hidden by them as they come. */
+    this.lines_ = new Map();
+    /** The notes to draw at the next frame; all of them when `pendingAll`. */
+    this.pending = new Set();
+    this.pendingAll = false;
   }
 
   settingsSchema() {
@@ -189,10 +215,13 @@ export class NotePages extends Feature {
     this.plugin.registerMarkdownPostProcessor((el, ctx) => {
       if (!this.enabled) return;
       const info = typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(el) : null;
-      if (info) {
-        el.dataset.drLine = String(info.lineStart);
-        this.queue();
-      }
+      if (!info) return;
+      el.dataset.drLine = String(info.lineStart);
+      // Hidden or not straight away, by the note's pages as last drawn; drawn whole only when
+      // they're not known, or the note has changed since.
+      const known = this.lines_.get(ctx.sourcePath);
+      if (known && (!el.parentElement || topBlock(el))) this.hideBlock(el, known.pages, this.openName(known.file, known.pages));
+      if (!known || (known.file.stat && known.file.stat.mtime !== known.mtime)) this.queue(ctx.sourcePath);
     });
   }
 
@@ -200,8 +229,9 @@ export class NotePages extends Feature {
     const queue = () => this.queue();
     const ws = this.app.workspace;
     ['layout-change', 'active-leaf-change', 'file-open'].forEach((type) => this.plugin.registerEvent(ws.on(type, queue)));
-    this.plugin.registerEvent(this.app.metadataCache.on('changed', queue));
-    this.plugin.registerEvent(this.app.vault.on('modify', (file) => file instanceof TFile && queue()));
+    // A note changed: only the views showing it.
+    this.plugin.registerEvent(this.app.metadataCache.on('changed', (file) => this.queue(file && file.path)));
+    this.plugin.registerEvent(this.app.vault.on('modify', (file) => file instanceof TFile && this.queue(file.path)));
   }
 
   enable() {
@@ -215,6 +245,9 @@ export class NotePages extends Feature {
   disable() {
     if (this.frame) window.cancelAnimationFrame(this.frame);
     this.frame = 0;
+    this.pending.clear();
+    this.pendingAll = false;
+    this.lines_.clear();
     if (this.extensions && this.extensions.length) {
       this.extensions.length = 0;
       this.app.workspace.updateOptions();
@@ -222,16 +255,23 @@ export class NotePages extends Feature {
     this.views().forEach((view) => this.clear(view));
   }
 
-  queue() {
-    if (this.frame || typeof window === 'undefined') return;
+  /** A draw at the next frame: of the views showing the note at `path`, else of every view. */
+  queue(path) {
+    if (typeof window === 'undefined') return;
+    if (typeof path === 'string') this.pending.add(path);
+    else this.pendingAll = true;
+    if (this.frame) return;
     this.frame = window.requestAnimationFrame(() => {
       this.frame = 0;
-      if (this.enabled) this.sync();
+      const paths = this.pendingAll ? null : new Set(this.pending);
+      this.pending.clear();
+      this.pendingAll = false;
+      if (this.enabled) this.sync(paths);
     });
   }
 
-  sync() {
-    this.views().forEach((view) => this.draw(view));
+  sync(paths) {
+    this.views().forEach((view) => (!paths || paths.has(view.file.path)) && this.draw(view));
   }
 
   views() {
@@ -245,6 +285,7 @@ export class NotePages extends Feature {
     view.containerEl.querySelectorAll('.dr-pages').forEach((el) => el.remove());
     view.containerEl.querySelectorAll('.dr-page-off').forEach((el) => el.removeClass('dr-page-off'));
     view.containerEl.removeClass('dr-has-pages');
+    this.drawn.delete(view);
   }
 
   /** The note's text as the view holds it, else as Obsidian has it cached. */
@@ -253,9 +294,48 @@ export class NotePages extends Feature {
     return typeof view.data === 'string' ? view.data : '';
   }
 
+  /** The editor's own record of the pages, kept as you type: none if it isn't ours (yet). */
+  editorPages(view) {
+    const cm = view.editor && view.editor.cm;
+    const field = this.extensions && this.extensions[0] && this.extensions[0][0];
+    if (!field || !cm || !cm.state || typeof cm.state.field !== 'function') return null;
+    try {
+      const now = cm.state.field(field, false);
+      return now ? { pages: now.pages, sig: cm.state.doc } : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /** A view's pages, and what they were read from: the editor's record, else its text — read again only when it's changed since the view was drawn. */
+  pagesOf(view) {
+    const kept = this.editorPages(view);
+    if (kept) return kept;
+    const text = this.textOf(view);
+    const last = this.drawn.get(view);
+    if (last && last.sig === text) return { pages: last.pages || [], sig: text };
+    return { pages: parsePages(text), sig: text };
+  }
+
   hasPages(file) {
     const view = this.views().find((v) => v.file === file);
-    return !!view && parsePages(this.textOf(view)).length > 1;
+    return !!view && this.pagesOf(view).pages.length > 1;
+  }
+
+  /** The page a view shows of the note it has now: none for a note new to it. */
+  shownIn(view) {
+    const s = this.shown.get(view);
+    return s && s.path === view.file.path ? s.name : undefined;
+  }
+
+  setShown(view, name) {
+    this.shown.set(view, { path: view.file.path, name });
+  }
+
+  /** A block of reading view hidden when it's on a page other than the open one. */
+  hideBlock(el, pages, open) {
+    const at = pageOfLine(pages, parseInt(el.dataset.drLine, 10));
+    el.toggleClass('dr-page-off', at !== -1 && pages[at].name !== open);
   }
 
   /** The name of the page open in a note: the last one chosen, else the first. */
@@ -274,7 +354,7 @@ export class NotePages extends Feature {
   /** The sizers a note's view lays its text in, with where the control goes in each. */
   places(view) {
     const out = [];
-    const own = (sizer) => !sizer.parentElement || !sizer.parentElement.closest('.cm-sizer, .markdown-preview-sizer, .embedded-backlinks');
+    const own = ownSizer;
     view.containerEl.querySelectorAll('.markdown-source-view .cm-sizer').forEach((sizer) => own(sizer) && out.push({ head: sizer, before: sizer.querySelector(':scope > .cm-contentContainer') }));
     view.containerEl.querySelectorAll('.markdown-preview-view .markdown-preview-sizer').forEach((sizer) => {
       if (!own(sizer)) return;
@@ -286,21 +366,31 @@ export class NotePages extends Feature {
 
   draw(view) {
     const file = view.file;
-    const text = this.textOf(view);
-    const pages = parsePages(text);
-    const many = pages.length > 1 || (pages.length === 1 && false);
-    if (!many) {
+    const last = this.drawn.get(view);
+    const { pages, sig } = this.pagesOf(view);
+    const mtime = file.stat ? file.stat.mtime : 0;
+    if (pages.length < 2) {
+      this.lines_.set(file.path, { file, mtime, pages: [] });
+      if (last && last.plain && last.sig === sig && last.path === file.path) return;
       this.clear(view);
+      this.drawn.set(view, { plain: true, sig, pages, path: file.path });
       return;
     }
     const open = this.openName(file, pages);
+    // Nothing new since the view was last drawn — its text, the page open, the control in place: nothing to do.
+    const places = this.places(view);
+    if (last && !last.plain && last.sig === sig && last.path === file.path && last.open === open && last.mtime === mtime && places.every((p) => p.head.querySelector(':scope > .dr-pages'))) return;
+    pageStats.draws++;
+    this.drawn.set(view, { sig, pages, path: file.path, open, mtime });
+    this.lines_.set(file.path, { file, mtime, pages });
     view.containerEl.addClass('dr-has-pages');
     // A page just chosen: the one before is put away with its scroll and cursor, this one's put back —
-    // kept before the editor is told, which takes the cursor to the page chosen.
-    if (this.shown.get(view) !== open) {
-      const before = this.shown.get(view);
+    // kept before the editor is told, which takes the cursor to the page chosen. A note new to the
+    // view starts fresh: nothing of the note before is kept for it, nor put back.
+    if (this.shownIn(view) !== open) {
+      const before = this.shownIn(view);
       if (before !== undefined) this.keepPlace(view, before);
-      this.shown.set(view, open);
+      this.setShown(view, open);
       if (before !== undefined) {
         view.containerEl.addClass('dr-page-fade');
         window.setTimeout(() => view.containerEl.removeClass('dr-page-fade'), 160);
@@ -318,18 +408,19 @@ export class NotePages extends Feature {
         /* an editor that isn't ours yet */
       }
     }
-    // Reading view hides the blocks of other pages.
-    const spans = pages.map((p, i) => ({ name: p.name, first: p.preface ? p.preface[0] : p.marker[0], last: i + 1 < pages.length ? pages[i + 1].marker[0] : text.length }));
-    const startLines = (at) => text.slice(0, at).split('\n').length - 1;
-    const bounds = spans.map((s) => ({ name: s.name, from: startLines(s.first), to: startLines(s.last) }));
-    view.containerEl.querySelectorAll('.markdown-preview-sizer [data-dr-line]').forEach((el) => {
-      const line = parseInt(el.dataset.drLine, 10);
-      const page = bounds.find((b) => line >= b.from && line < b.to);
-      el.toggleClass('dr-page-off', !!page && page.name !== open);
+    // Reading view hides the blocks of other pages: the note's own, not an embed's, whose lines are its own note's.
+    view.containerEl.querySelectorAll('.markdown-preview-view .markdown-preview-sizer').forEach((sizer) => {
+      if (ownSizer(sizer)) sizer.querySelectorAll(':scope > [data-dr-line]').forEach((el) => this.hideBlock(el, pages, open));
     });
+    view.containerEl.querySelectorAll('.dr-page-off').forEach((el) => !topBlock(el) && el.removeClass('dr-page-off'));
     // What the control is made of, apart from which page is open: that only slides the pill.
-    const struct = `${file.path}|${pages.map((p) => `${p.name}:${this.look(file, p.name).icon}:${this.look(file, p.name).color}`).join(',')}`;
-    this.places(view).forEach((place) => {
+    const struct = `${file.path}|${pages
+      .map((p) => {
+        const look = this.look(file, p.name);
+        return `${p.name}:${look.icon}:${look.color}`;
+      })
+      .join(',')}`;
+    places.forEach((place) => {
       let bar = place.head.querySelector(':scope > .dr-pages');
       if (bar && bar.dataset.struct === struct) {
         if (bar.dataset.open !== open) this.select(bar, open, true);
@@ -349,7 +440,7 @@ export class NotePages extends Feature {
   follow(cm, name) {
     const view = this.views().find((v) => v.editor && v.editor.cm === cm);
     if (!view || !name) return;
-    this.shown.set(view, name);
+    this.setShown(view, name);
     this.open(view.file, name);
   }
 
@@ -363,13 +454,14 @@ export class NotePages extends Feature {
     const scroller = this.scroller(view);
     const cm = view.editor && view.editor.cm;
     const head = cm && cm.state ? cm.state.selection.main.head : null;
-    this.places_.set(`${view.file.path}|${name}`, { top: scroller ? scroller.scrollTop : 0, head });
+    if (!this.places_.has(view)) this.places_.set(view, new Map());
+    this.places_.get(view).set(`${view.file.path}|${name}`, { top: scroller ? scroller.scrollTop : 0, head });
   }
 
   restorePlace(view, name) {
-    // Another page chosen since: this one's place is for later.
-    if (this.shown.get(view) !== name) return;
-    const place = this.places_.get(`${view.file.path}|${name}`);
+    // Another page chosen since, or another note: this one's place is for later.
+    if (this.shownIn(view) !== name) return;
+    const place = (this.places_.get(view) || new Map()).get(`${view.file.path}|${name}`);
     const scroller = this.scroller(view);
     if (scroller) scroller.scrollTop = place ? place.top : 0;
     const cm = view.editor && view.editor.cm;
@@ -411,7 +503,11 @@ export class NotePages extends Feature {
     pill.toggleClass('is-sliding', !!slide);
     pill.style.setProperty('--dr-pill-x', `${target.offsetLeft}px`);
     pill.style.setProperty('--dr-pill-w', `${target.offsetWidth}px`);
-    if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    // The control alone scrolls, sideways, to show the page: never the note (this runs on every resize too).
+    const left = target.offsetLeft;
+    const right = left + target.offsetWidth;
+    if (left < capsule.scrollLeft) capsule.scrollLeft = left;
+    else if (right > capsule.scrollLeft + capsule.clientWidth) capsule.scrollLeft = right - capsule.clientWidth;
   }
 
   drawBar(bar, file, pages, open) {
@@ -464,16 +560,15 @@ export class NotePages extends Feature {
     asButton(add, 'Add a page');
     setIcon(add, 'plus');
     onActivate(add, () => this.add(file));
-    // Laid out first, so the pill has somewhere to start from; measured again when its size
-    // changes — shown at last, or its pages' words in a font that arrived late.
-    window.requestAnimationFrame(() => this.select(bar, open, false));
+    // Measured once laid out — the observer's first call — and again when its size changes:
+    // shown at last, or its pages' words in a font that arrived late.
     if (typeof ResizeObserver === 'function') {
       const watch = new ResizeObserver(() => {
         if (!capsule.isConnected) return watch.disconnect();
         this.select(bar, bar.dataset.open, false);
       });
       watch.observe(capsule);
-    }
+    } else window.requestAnimationFrame(() => this.select(bar, open, false));
   }
 
   /** A page opened, and remembered for the note. */
@@ -488,7 +583,7 @@ export class NotePages extends Feature {
   step(file, by) {
     const view = this.views().find((v) => v.file === file);
     if (!view) return;
-    const pages = parsePages(this.textOf(view));
+    const { pages } = this.pagesOf(view);
     if (pages.length < 2) return;
     const at = pages.findIndex((p) => p.name === this.openName(file, pages));
     this.open(file, pages[(at + by + pages.length) % pages.length].name);
