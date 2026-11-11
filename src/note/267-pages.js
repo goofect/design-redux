@@ -11,7 +11,7 @@
 /* page. Pages are added, renamed, moved and removed from the control.  */
 /* ------------------------------------------------------------------ */
 
-import { StateEffect, StateField } from '@codemirror/state';
+import { EditorSelection, EditorState, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 import { Menu, Notice, setIcon, TFile } from 'obsidian';
 import { showMenuAt } from '../core/036-menus.js';
@@ -19,7 +19,7 @@ import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
-import { bodyStart, hiddenRanges, nameFromText, newPageName, openPage, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
+import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageLayout, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
 export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'image', 'list', 'book-open', 'quote', 'link', 'star', 'lightbulb', 'calendar'];
@@ -30,26 +30,119 @@ export const PAGE_COLORS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 
 /** Tells an editor which page is open. */
 export const setOpenPage = StateEffect.define();
 
-/** Which page an editor shows, and the other pages' text out of sight (in Live Preview). */
-export function pagesExtension() {
-  const build = (state, open) => {
-    if (!scriptLivePreview(state)) return Decoration.none;
+/** A line the pages hang on: a marker, a code fence (a marker in one doesn't count), the properties' edge. */
+const structural = (text) => text.includes('%%page') || /^ {0,3}(`{3,}|~{3,})/.test(text) || text.startsWith('---');
+
+/** Does a change touch, before or after, a line the pages hang on? Only then is the note read again. */
+function touchesPages(tr) {
+  let hit = false;
+  const lines = (doc, from, to) => {
+    for (let n = doc.lineAt(from).number, last = doc.lineAt(to).number; n <= last && !hit; n++) hit = structural(doc.line(n).text);
+  };
+  tr.changes.iterChangedRanges((fromA, toA, fromB, toB) => {
+    if (!hit) lines(tr.startState.doc, fromA, toA);
+    if (!hit) lines(tr.state.doc, fromB, toB);
+  });
+  return hit;
+}
+
+/** A selection made by hand — a click, a drag, the arrow keys, select all — rather than by undo, search or a link. */
+const byHand = (tr) => {
+  const event = tr.annotation(Transaction.userEvent);
+  return event === 'select' || event === 'select.pointer';
+};
+
+/**
+ * Which page an editor shows, and the other pages' text out of sight (in Live Preview). One rule
+ * keeps what's edited in sight: the cursor's page is the page shown. A cursor moved by hand stays
+ * on the page (select all takes just the page); one put elsewhere — by undo, search, a link, a
+ * jump — opens the page it's on, and `onFollow(view, name)` hears of it. The note is read again
+ * only when a change touches a marker or a fence; otherwise what's known is moved along.
+ */
+export function pagesExtension(onFollow) {
+  const scan = (state) => {
     const text = state.doc.toString();
-    const ranges = hiddenRanges(text, open, state.selection.ranges.map((r) => r.head));
-    if (!ranges.length) return Decoration.none;
-    return Decoration.set(ranges.map(([from, to]) => Decoration.replace({ block: true }).range(from, to)), true);
+    return { pages: parsePages(text), start: bodyStart(text) };
+  };
+  const marksOf = (pages, sel) => pages.map((p, i) => (sel.ranges.some((r) => onMarker(p, r.head)) ? i : '')).join(',');
+  const decorate = (state, pages, open) => {
+    const ranges = hiddenOf(pages, open, state.selection.ranges.map((r) => r.head), state.doc.length);
+    return ranges.length ? Decoration.set(ranges.map(([from, to]) => Decoration.replace({ block: true }).range(from, to)), true) : Decoration.none;
   };
   const field = StateField.define({
-    create: (state) => ({ open: null, deco: build(state, null) }),
+    create(state) {
+      const { pages, start } = scan(state);
+      const live = scriptLivePreview(state);
+      return { open: null, pages, start, live, marks: marksOf(pages, state.selection), deco: live ? decorate(state, pages, null) : Decoration.none, followed: false };
+    },
     update(value, tr) {
       let open = value.open;
-      tr.effects.forEach((e) => e.is(setOpenPage) && (open = e.value));
-      if (!tr.docChanged && !tr.selection && open === value.open && scriptLivePreview(tr.startState) === scriptLivePreview(tr.state)) return value;
-      return { open, deco: build(tr.state, open) };
+      let chosen = false;
+      tr.effects.forEach((e) => e.is(setOpenPage) && ((open = e.value), (chosen = true)));
+      const live = scriptLivePreview(tr.state);
+      let { pages, start } = value;
+      let read = false;
+      if (tr.docChanged) {
+        if (touchesPages(tr)) {
+          ({ pages, start } = scan(tr.state));
+          read = true;
+        } else if (pages.length) {
+          const map = (pos) => tr.changes.mapPos(pos);
+          start = tr.changes.mapPos(start, -1);
+          pages = pageLayout(pages.map((p) => ({ name: p.name, marker: [map(p.marker[0]), map(p.marker[1])] })), start, tr.state.doc.length);
+        }
+      }
+      // A plain note: nothing more to do.
+      if (!pages.length && !value.pages.length && open === value.open && live === value.live) return value;
+      // The cursor put on another page, not by hand: that page opens.
+      let followed = false;
+      if (live && pages.length && tr.selection && !chosen && !byHand(tr)) {
+        const at = pageAt(pages, tr.state.selection.main.head);
+        if (at !== -1 && pages[at] !== openPage(pages, open)) {
+          open = pages[at].name;
+          followed = true;
+        }
+      }
+      const marks = pages.length ? marksOf(pages, tr.state.selection) : '';
+      let deco = value.deco;
+      if (!live || !pages.length) deco = Decoration.none;
+      else if (read || open !== value.open || live !== value.live || marks !== value.marks) deco = decorate(tr.state, pages, open);
+      else if (tr.docChanged) deco = deco.map(tr.changes);
+      else if (pages === value.pages) return value;
+      return { open, pages, start, live, marks, deco, followed };
     },
     provide: (f) => EditorView.decorations.from(f, (v) => v.deco),
   });
-  return [field];
+  // What a page's choice and a hand's selection need of the selection, before it's made.
+  const keep = EditorState.transactionFilter.of((tr) => {
+    const chose = tr.effects.find((e) => e.is(setOpenPage));
+    if (tr.docChanged || (!chose && !(tr.selection && byHand(tr))) || !scriptLivePreview(tr.startState)) return tr;
+    const value = tr.startState.field(field, false);
+    const pages = value ? value.pages : [];
+    if (!pages.length) return tr;
+    const page = openPage(pages, chose ? chose.value : value.open);
+    const shown = pages.indexOf(page);
+    const sel = tr.selection || tr.startState.selection;
+    // A page chosen: the cursor goes to it, if it's elsewhere.
+    if (chose) return pageAt(pages, sel.main.head) === shown ? tr : [tr, { selection: { anchor: page.from }, sequential: true }];
+    // By hand: kept to the page; a range across pages (select all) is the page's text.
+    const clamp = (pos) => Math.max(page.from, Math.min(page.to, pos));
+    let changed = false;
+    const ranges = sel.ranges.map((r) => {
+      const a = pageAt(pages, r.anchor);
+      const h = pageAt(pages, r.head);
+      const fine = r.empty ? h === shown || h === -1 : a === h && (h === shown || h === -1);
+      if (fine) return r;
+      changed = true;
+      return EditorSelection.range(clamp(r.anchor), clamp(r.head));
+    });
+    return changed ? [tr, { selection: EditorSelection.create(ranges, sel.mainIndex), sequential: true }] : tr;
+  });
+  const follow = EditorView.updateListener.of((update) => {
+    const now = update.state.field(field, false);
+    if (now && now.followed && now !== update.startState.field(field, false) && typeof onFollow === 'function') onFollow(update.view, now.open);
+  });
+  return [field, keep, follow];
 }
 
 export class NotePages extends Feature {
@@ -101,7 +194,7 @@ export class NotePages extends Feature {
 
   enable() {
     if (this.extensions && !this.extensions.length) {
-      this.extensions.push(pagesExtension());
+      this.extensions.push(pagesExtension((cm, name) => this.follow(cm, name)));
       this.app.workspace.updateOptions();
     }
     this.queue();
@@ -239,6 +332,14 @@ export class NotePages extends Feature {
     }
   }
 
+  /** The editor's cursor went to another page (undo, search, a link): that page is the one open now. */
+  follow(cm, name) {
+    const view = this.views().find((v) => v.editor && v.editor.cm === cm);
+    if (!view || !name) return;
+    this.shown.set(view, name);
+    this.open(view.file, name);
+  }
+
   /** The scrolling element the note shows in: reading view's, or the editor's. */
   scroller(view) {
     return Array.from(view.containerEl.querySelectorAll('.markdown-preview-view, .cm-scroller')).find((el) => el.clientHeight > 0) || null;
@@ -257,7 +358,11 @@ export class NotePages extends Feature {
     const scroller = this.scroller(view);
     if (scroller) scroller.scrollTop = place ? place.top : 0;
     const cm = view.editor && view.editor.cm;
-    if (place && place.head !== null && cm && cm.state && place.head <= cm.state.doc.length) {
+    // Put back only if it's still on this page: the text may have changed since.
+    const field = this.extensions && this.extensions[0] && this.extensions[0][0];
+    const now = field && cm && cm.state ? cm.state.field(field, false) : null;
+    const onPage = (head) => !now || !now.pages.length || now.pages[pageAt(now.pages, head)] === openPage(now.pages, name);
+    if (place && place.head !== null && cm && cm.state && place.head <= cm.state.doc.length && onPage(place.head)) {
       try {
         cm.dispatch({ selection: { anchor: place.head } });
       } catch (err) {
@@ -443,7 +548,9 @@ export class NotePages extends Feature {
   }
 
   async renameTo(file, name, next) {
-    if (!next || next === name) return;
+    if (!next) return;
+    next = cleanPageName(next);
+    if (next === name) return;
     const pages = parsePages(await this.app.vault.read(file));
     if (pages.some((p) => p.name === next)) {
       new Notice('A page of that name is there already.');

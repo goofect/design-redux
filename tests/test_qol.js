@@ -572,6 +572,141 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok('pagesOpen' in R.DEFAULTS && 'notePages' in R.DEFAULTS);
   });
 
+  // An editor with pages, in Live Preview, the page open told as the plugin tells it.
+  const paged = (doc, open) => {
+    const parent = document.body.appendChild(document.createElement('div'));
+    const heard = [];
+    const ext = R.pagesExtension((view, name) => heard.push(name));
+    const v = new EditorView({ parent, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), ext, history ? history() : []] }) });
+    if (open) v.dispatch({ effects: R.setOpenPage.of(open) });
+    const field = () => v.state.field(ext[0]);
+    const hidden = () => {
+      const out = [];
+      field().deco.between(0, v.state.doc.length, (a, b) => { out.push([a, b]); });
+      return out.sort((x, y) => x[0] - y[0]);
+    };
+    const type = (ch) => {
+      const at = v.state.selection.main.head;
+      v.dispatch({ changes: { from: at, insert: ch }, selection: { anchor: at + ch.length }, userEvent: 'input.type' });
+    };
+    return { v, heard, field, hidden, type };
+  };
+  const PAGED = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n';
+
+  await t('pages: the cursor put on a hidden page (undo, a jump) opens it; by hand it stays on the page, and select all takes just the page', () => {
+    const e = paged(PAGED, 'B');
+    const pages = R.parsePages(PAGED);
+    assert.strictEqual(R.pageAt(pages, e.v.state.selection.main.head), 1, 'choosing a page takes the cursor to it');
+    e.type('x');
+    e.v.dispatch({ effects: R.setOpenPage.of('A') });
+    assert.strictEqual(e.field().open, 'A');
+    if (undo) {
+      undo(e.v);
+      assert.strictEqual(e.v.state.doc.toString(), PAGED);
+      assert.strictEqual(e.field().open, 'B', 'undo went to page B: B opens');
+      assert.deepStrictEqual(e.heard, ['B'], 'and the plugin hears of it');
+    }
+    // A jump (a link, a stale place): no user event.
+    e.v.dispatch({ selection: { anchor: PAGED.indexOf('alpha') + 2 } });
+    assert.strictEqual(e.field().open, 'A');
+    assert.deepStrictEqual(e.hidden(), R.hiddenRanges(PAGED, 'A', [e.v.state.selection.main.head]));
+    // By hand: a click at the end of the note, Ctrl+End, select all.
+    const a = pages[0];
+    e.v.dispatch({ selection: { anchor: PAGED.length }, userEvent: 'select.pointer' });
+    assert.strictEqual(e.v.state.selection.main.head, a.to, 'kept to the page');
+    assert.strictEqual(e.field().open, 'A');
+    e.v.dispatch({ selection: { anchor: 0, head: PAGED.length }, userEvent: 'select' });
+    assert.deepStrictEqual([e.v.state.selection.main.from, e.v.state.selection.main.to], [a.from, a.to], 'select all is the page');
+    e.v.dispatch(e.v.state.replaceSelection(''));
+    assert.deepStrictEqual(R.parsePages(e.v.state.doc.toString()).map((p) => p.name), ['A', 'B'], 'Backspace after select all leaves the other pages');
+    assert.ok(e.v.state.doc.toString().includes('beta'));
+  });
+
+  await t('pages: a name with %% or a line break is cleaned before it goes in a marker', () => {
+    assert.strictEqual(R.pageMarker('a%%b\nc'), '%%page: a b c%%');
+    assert.strictEqual(R.cleanPageName(' %%\r\n '), 'Untitled', 'nothing left: the default');
+    const text = '%%page: A%%\nalpha\n%%page: B%%\nbeta\n';
+    const renamed = R.withPageRenamed(text, 'B', 'x%%\ny');
+    assert.deepStrictEqual(R.parsePages(renamed).map((p) => p.name), ['A', 'x y']);
+    assert.ok(renamed.endsWith('beta\n'), 'the rest of the note is as it was');
+    assert.deepStrictEqual(R.parsePages(R.withPageAdded(text, '%%\n')).map((p) => p.name), ['A', 'B', 'Untitled']);
+  });
+
+  await t('pages: two markers of one name are two pages, each reached by its own name', () => {
+    const text = '%%page: A%%\none\n%%page: A%%\ntwo\n%%page:%%\nthree\n%%page: Untitled%%\nfour\n';
+    const pages = R.parsePages(text);
+    assert.deepStrictEqual(pages.map((p) => p.name), ['A', 'A 2', 'Untitled', 'Untitled 2']);
+    assert.strictEqual(R.openPage(pages, 'A 2'), pages[1]);
+    const shown = (open) => {
+      const hide = R.hiddenRanges(text, open);
+      return ['one', 'two', 'three', 'four'].filter((w) => !hide.some(([a, b]) => text.indexOf(w) >= a && text.indexOf(w) < b));
+    };
+    assert.deepStrictEqual(shown('A 2'), ['two']);
+    assert.deepStrictEqual(shown('Untitled 2'), ['four']);
+    const gone = R.withPageRemoved(text, 'A 2');
+    assert.ok(gone.includes('one') && !gone.includes('two'));
+    assert.deepStrictEqual(R.parsePages(R.withPageRenamed(text, 'A 2', 'B')).map((p) => p.name), ['A', 'B', 'Untitled', 'Untitled 2']);
+  });
+
+  await t('pages: the text before the first marker stays first when pages move', () => {
+    const text = '---\nx: 1\n---\nIntro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n';
+    assert.strictEqual(R.withPageMoved(text, 'B', -1), '---\nx: 1\n---\nIntro\n%%page: B%%\nbeta\n\n%%page: A%%\nalpha\n');
+    assert.strictEqual(R.withPageMoved(text, 'A', 1), R.withPageMoved(text, 'B', -1));
+  });
+
+  await t('pages: as you type, the note is read again only when a marker or a fence is touched', () => {
+    const counts = {};
+    const run = (label, doc, open, at) => {
+      const e = paged(doc, open);
+      e.v.dispatch({ selection: { anchor: at } });
+      const before = R.pageStats.parses;
+      for (let i = 0; i < 100; i++) {
+        if (i % 10 === 9) e.v.dispatch({ selection: { anchor: e.v.state.selection.main.head - 1 }, userEvent: 'select' });
+        else e.type('x');
+      }
+      counts[label] = R.pageStats.parses - before;
+      return e;
+    };
+    run('plain', 'Just a note\nwith two lines\n', null, 4);
+    const e = run('marked', PAGED, 'A', PAGED.indexOf('alpha') + 2);
+    assert.deepStrictEqual(counts, { plain: 0, marked: 0 });
+    // What's hidden is still right, moved along with the text.
+    const doc = e.v.state.doc.toString();
+    assert.deepStrictEqual(e.hidden(), R.hiddenRanges(doc, 'A', [e.v.state.selection.main.head]));
+    assert.deepStrictEqual(e.field().pages, R.parsePages(doc));
+    // Writing a marker is read: a page more.
+    e.v.dispatch({ effects: R.setOpenPage.of('B') });
+    e.v.dispatch({ selection: { anchor: doc.length } });
+    '%%page: C%%\n'.split('').forEach((ch) => e.type(ch));
+    assert.deepStrictEqual(e.field().pages.map((p) => p.name), ['A', 'B', 'C']);
+    // The cursor on a marker shows it.
+    const m = e.field().pages[1].marker[0] + 2;
+    e.v.dispatch({ selection: { anchor: m } });
+    assert.deepStrictEqual(e.hidden(), R.hiddenRanges(e.v.state.doc.toString(), e.field().open, [m]));
+  });
+
+  await t('pages: taking a page from two leaves a plain note, no marker', () => {
+    const text = '%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n';
+    const one = R.withPageRemoved(text, 'B');
+    assert.ok(!one.includes('%%page') && one.includes('alpha'), one);
+    assert.strictEqual(R.withPageRemoved(text, 'A'), 'beta\n');
+  });
+
+  await t("pages: a CRLF note keeps its line endings; frontmatter markers don't count; a last marker with no newline does", () => {
+    const lone = (s) => /(^|[^\r])\n/.test(s);
+    const two = R.withPageAdded('Hello\r\n', 'Untitled 2');
+    assert.ok(!lone(two), JSON.stringify(two));
+    assert.deepStrictEqual(R.parsePages(two).map((p) => p.name), ['Untitled', 'Untitled 2']);
+    const three = R.withPageAdded(two + 'more', 'C');
+    assert.ok(!lone(three), JSON.stringify(three));
+    const moved = R.withPageMoved(three, 'C', -1);
+    assert.ok(!lone(moved), JSON.stringify(moved));
+    const text = '---\n%%page: X%%\n---\nbody\n%%page: A%%\na\n%%page: B%%';
+    const pages = R.parsePages(text);
+    assert.deepStrictEqual(pages.map((p) => p.name), ['A', 'B']);
+    assert.strictEqual(pages[1].from, text.length);
+  });
+
   await t('settings for things deleted while the plugin was off are let go; not while the vault is loading', () => {
     const existing = new Set(['A', 'A/n.md', 'Map.canvas']);
     const fake = {
