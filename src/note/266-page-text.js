@@ -225,3 +225,113 @@ export function withPageMoved(text, name, step) {
   const body = moved.join('').replace(/(\r?\n)+$/, eol);
   return head + body;
 }
+
+/** A text's lines, each with its own line ending: joined, they're the text again. */
+const linesOf = (text) => text.match(/[^\n]*\n|[^\n]+$/g) || [];
+
+/**
+ * What changed from text `a` to text `b`, by line: [{ at, old, now, pre, post }] — at line `at`
+ * of `b`, the lines `now` stand where `a` had `old`; `pre` and `post` are the lines of `b` either
+ * side (null at the start or end). Lines the same at both ends are set aside first, so a small
+ * change costs little; past `limit` steps the middle is taken as one change.
+ */
+export function pageHunks(a, b, limit = 2000) {
+  const A = linesOf(a);
+  const B = linesOf(b);
+  let head = 0;
+  while (head < A.length && head < B.length && A[head] === B[head]) head++;
+  let tail = 0;
+  while (tail < A.length - head && tail < B.length - head && A[A.length - 1 - tail] === B[B.length - 1 - tail]) tail++;
+  const xs = A.slice(head, A.length - tail);
+  const ys = B.slice(head, B.length - tail);
+  // Myers' diff of the middle: each step a line taken out of `a` or put in from `b`.
+  const n = xs.length;
+  const m = ys.length;
+  const off = n + m + 1;
+  let v = new Int32Array(2 * off + 1);
+  const trace = [];
+  let found = false;
+  for (let d = 0; d <= n + m && d <= limit && !found; d++) {
+    trace.push(v.slice());
+    for (let k = -d; k <= d; k += 2) {
+      let x = k === -d || (k !== d && v[off + k - 1] < v[off + k + 1]) ? v[off + k + 1] : v[off + k - 1] + 1;
+      let y = x - k;
+      while (x < n && y < m && xs[x] === ys[y]) {
+        x++;
+        y++;
+      }
+      v[off + k] = x;
+      if (x >= n && y >= m) {
+        found = true;
+        break;
+      }
+    }
+  }
+  // Each line of the middle: of `a` only ('-'), of `b` only ('+') or of both ('='), in order.
+  let ops = [];
+  if (!found) ops = xs.map(() => '-').concat(ys.map(() => '+'));
+  else {
+    let x = n;
+    let y = m;
+    for (let d = trace.length - 1; d >= 0; d--) {
+      v = trace[d];
+      const k = x - y;
+      const pk = k === -d || (k !== d && v[off + k - 1] < v[off + k + 1]) ? k + 1 : k - 1;
+      const px = v[off + pk];
+      const py = px - pk;
+      while (x > px && y > py) {
+        ops.push('=');
+        x--;
+        y--;
+      }
+      if (d > 0) ops.push(x === px ? '+' : '-');
+      x = px;
+      y = py;
+    }
+    ops.reverse();
+  }
+  const hunks = [];
+  let i = head;
+  let j = head;
+  let cur = null;
+  ops.forEach((op) => {
+    if (op === '=') {
+      cur = null;
+      i++;
+      j++;
+      return;
+    }
+    if (!cur) hunks.push((cur = { at: j, old: [], now: [] }));
+    if (op === '-') cur.old.push(A[i++]);
+    else cur.now.push(B[j++]);
+  });
+  hunks.forEach((h) => {
+    h.pre = h.at > 0 ? B[h.at - 1] : null;
+    h.post = h.at + h.now.length < B.length ? B[h.at + h.now.length] : null;
+  });
+  return hunks;
+}
+
+/**
+ * The text with the changes `hunks` (of `pageHunks`) put back: each found by its lines and the
+ * lines either side as the change left them, wherever the rest has moved. Null when any isn't
+ * there as it was: the text around it was edited since.
+ */
+export function withHunksUndone(text, hunks) {
+  const L = linesOf(text);
+  const at = [];
+  for (const h of hunks) {
+    const fits = (p) =>
+      (h.pre === null ? p === 0 : p > 0 && L[p - 1] === h.pre) &&
+      p + h.now.length <= L.length &&
+      h.now.every((line, k) => L[p + k] === line) &&
+      (h.post === null ? p + h.now.length === L.length : L[p + h.now.length] === h.post);
+    let best = -1;
+    for (let p = 0; p <= L.length; p++) if (fits(p) && (best === -1 || Math.abs(p - h.at) < Math.abs(best - h.at))) best = p;
+    if (best === -1) return null;
+    if (at.length && best < at[at.length - 1] + hunks[at.length - 1].now.length) return null;
+    at.push(best);
+  }
+  for (let k = hunks.length - 1; k >= 0; k--) L.splice(at[k], hunks[k].now.length, ...hunks[k].old);
+  return L.join('');
+}

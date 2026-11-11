@@ -32,6 +32,7 @@ const { undo, history } = (() => {
 
 const menus = [];
 const modals = [];
+const notices = [];
 class Menu {
   constructor() { this.items = []; }
   addItem(cb) {
@@ -72,7 +73,7 @@ const platform = { isMobile: false, isPhone: false, isMacOS: false };
 const obsidian = new Proxy({
   Menu, Modal, Component, ItemView, TFile, TFolder, TAbstractFile, MarkdownView,
   setIcon: (el, name) => { el.dataset.icon = name; },
-  Notice: class {},
+  Notice: class { constructor(m) { notices.push(m); } },
   Platform: platform,
   editorLivePreviewField: livePreview,
 }, { get: (t, k) => (k in t ? t[k] : (t[k] = class {})) });
@@ -712,7 +713,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   const pagedNote = (doc, open) => {
     const settings = { notePages: true, pagesOpen: { 'n.md': open } };
     const leaves = [];
-    const plugin = { settings, app: { workspace: { getLeavesOfType: () => leaves } }, notes: { get: () => ({}) }, saveSettings: async () => {} };
+    const saves = { data: 0, settings: 0 };
+    const plugin = { settings, app: { workspace: { getLeavesOfType: () => leaves } }, notes: { get: () => ({}) }, saveData: async () => saves.data++, saveSettings: async () => saves.settings++ };
     const f = new R.NotePages(plugin);
     f.extensions = [R.pagesExtension((cm, name) => f.follow(cm, name))];
     const parent = document.body.appendChild(document.createElement('div'));
@@ -724,7 +726,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       f.draw(view);
     };
     f.draw(view);
-    return { f, v, view, go, field: () => v.state.field(f.extensions[0][0]) };
+    return { f, v, view, go, saves, settings, field: () => v.state.field(f.extensions[0][0]) };
   };
   const later = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -761,7 +763,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const post = [];
     const app = { workspace: { getLeavesOfType: () => leaves, on: hear('ws') }, vault: { on: hear('vault') }, metadataCache: { on: hear('meta') } };
     const looks = {};
-    const plugin = { settings, app, notes: { get: (file, key) => (key === 'pages' ? looks[file.path] : undefined) }, saveSettings: async () => {}, registerEvent() {}, registerEditorExtension() {}, registerMarkdownPostProcessor: (fn) => post.push(fn) };
+    const plugin = { settings, app, notes: { get: (file, key) => (key === 'pages' ? looks[file.path] : undefined) }, saveData: async () => {}, saveSettings: async () => {}, registerEvent() {}, registerEditorExtension() {}, registerMarkdownPostProcessor: (fn) => post.push(fn) };
     const f = new R.NotePages(plugin);
     f.registerTypes();
     f.register();
@@ -1003,6 +1005,154 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const pages = R.parsePages(text);
     assert.deepStrictEqual(pages.map((p) => p.name), ['A', 'B']);
     assert.strictEqual(pages[1].from, text.length);
+  });
+
+  // A paged note on disk: its properties in a block written whole again on each change, as
+  // Obsidian does, read through the plugin's own notes; each Undo offered kept.
+  const pagedFile = (body, props = {}) => {
+    const file = new TFile('p.md');
+    const yaml = () => (Object.keys(props).length ? `---\n${Object.keys(props).map((k) => `${k}: ${JSON.stringify(props[k])}`).join('\n')}\n---\n` : '');
+    let text = yaml() + body;
+    const undos = [];
+    const saves = { data: 0, settings: 0 };
+    const app = {
+      workspace: { getLeavesOfType: () => [] },
+      vault: { process: async (f, fn) => void (text = fn(text)), read: async () => text },
+      fileManager: { processFrontMatter: async (f, fn) => { fn(props); text = yaml() + text.slice(R.bodyStart(text)); } },
+      metadataCache: { getFileCache: () => ({ frontmatter: props }) },
+    };
+    const plugin = { app, settings: { notePages: true, pagesOpen: {} }, saveData: async () => saves.data++, saveSettings: async () => saves.settings++, offerUndo: (message, fn) => undos.push({ message, fn }) };
+    plugin.notes = new R.Notes(plugin);
+    const f = new R.NotePages(plugin);
+    return {
+      f, file, undos, saves, props,
+      body: () => text.slice(R.bodyStart(text)),
+      edit: (fn) => (text = text.slice(0, R.bodyStart(text)) + fn(text.slice(R.bodyStart(text)))),
+      open: () => plugin.settings.pagesOpen['p.md'],
+      setOpen: (name) => (plugin.settings.pagesOpen['p.md'] = name),
+      undo: () => undos[undos.length - 1].fn(),
+      remove: async (name) => {
+        const going = f.remove(file, name);
+        await settle();
+        click(modals[modals.length - 1].contentEl.querySelector('.mod-cta'));
+        await going;
+      },
+    };
+  };
+
+  await t('pages: Undo of a rename or a removal is one step, putting back the text, the look and the page open, after edits elsewhere; edited around, nothing is put back and a notice says so', async () => {
+    const body = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
+    const n = pagedFile(body, { tags: ['x'], pages: { B: { icon: 'star' }, C: { color: 'red' } } });
+    n.setOpen('B');
+    await n.f.renameTo(n.file, 'B', 'Sources');
+    assert.deepStrictEqual(R.parsePages(n.body()).map((p) => p.name), ['A', 'Sources', 'C']);
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' }, Sources: { icon: 'star' } });
+    assert.strictEqual(n.open(), 'Sources');
+    assert.strictEqual(n.undos.length, 1, 'one Undo for the text, the look and the page open');
+    // Saved since, with more written elsewhere in the note.
+    n.edit((b) => b.replace('alpha\n', 'alpha\nmore\n'));
+    await n.undo();
+    const edited = body.replace('alpha\n', 'alpha\nmore\n');
+    assert.strictEqual(n.body(), edited);
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' }, B: { icon: 'star' } });
+    assert.strictEqual(n.open(), 'B');
+    // Removed, with its look; written elsewhere; Undo puts back the block, its marker and its look.
+    await n.remove('B');
+    assert.ok(!n.body().includes('beta') && !n.body().includes('%%page: B'));
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' } });
+    assert.strictEqual(n.open(), undefined, 'the page open was the one removed');
+    n.edit((b) => 'Intro, edited\n' + b.slice('Intro\n'.length));
+    await n.undo();
+    assert.strictEqual(n.body(), edited.replace('Intro\n', 'Intro, edited\n'));
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' }, B: { icon: 'star' } });
+    assert.strictEqual(n.open(), 'B');
+    // Removed, then written right where it was: nothing put back, and a notice.
+    await n.remove('C');
+    const left = n.body();
+    n.edit((b) => b + 'written after\n');
+    notices.length = 0;
+    await n.undo();
+    assert.strictEqual(n.body(), left + 'written after\n', 'newer text kept');
+    assert.deepStrictEqual(n.props.pages, { B: { icon: 'star' } }, 'the look not put back either');
+    assert.ok(notices.some((m) => /edited around the page/.test(m)), notices.join(' | '));
+  });
+
+  await t('pages: Undo of an added page takes out both its markers after edits elsewhere; removing the last marker drops the looks', async () => {
+    const n = pagedFile('# Plan\nHello\n\nmore\n');
+    await n.f.add(n.file);
+    assert.deepStrictEqual(R.parsePages(n.body()).map((p) => p.name), ['Plan', 'Untitled']);
+    assert.strictEqual(n.open(), 'Untitled');
+    n.edit((b) => b.replace('Hello', 'Hello there'));
+    await n.undo();
+    assert.strictEqual(n.body(), '# Plan\nHello there\n\nmore\n');
+    assert.strictEqual(n.open(), undefined);
+    // Two pages, each with a look: taking one out leaves a plain note, and no `pages` property.
+    const m = pagedFile('%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n', { pages: { A: { color: 'red' }, B: { icon: 'star' } } });
+    await m.remove('B');
+    assert.ok(!m.body().includes('%%page'));
+    assert.ok(!('pages' in m.props), JSON.stringify(m.props));
+    await m.undo();
+    assert.strictEqual(m.body(), '%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n');
+    assert.deepStrictEqual(m.props.pages, { A: { color: 'red' }, B: { icon: 'star' } });
+  });
+
+  await t("pages: a note's own `pages` property (a page count) is left alone, with a notice; the pages still work", async () => {
+    const n = pagedFile('%%page: A%%\nalpha\n%%page: B%%\nbeta\n', { pages: 320 });
+    notices.length = 0;
+    await n.f.setLook(n.file, 'A', (mine) => (mine.icon = 'star'));
+    assert.strictEqual(n.props.pages, 320);
+    assert.ok(notices.some((m) => /used for something else/.test(m)), notices.join(' | '));
+    await n.f.renameTo(n.file, 'A', 'Z');
+    assert.deepStrictEqual(R.parsePages(n.body()).map((p) => p.name), ['Z', 'B']);
+    assert.strictEqual(n.props.pages, 320);
+    assert.deepStrictEqual(n.f.look(n.file, 'Z'), { icon: '', color: '' });
+  });
+
+  await t('pages: switching page saves only the page open, a moment later, and never all the settings', async () => {
+    const doc = '%%page: A%%\nalpha\n%%page: B%%\nbeta\n%%page: C%%\ngamma\n';
+    const n = pagedNote(doc, 'A');
+    // The editor's cursor sent to page B (a jump): B opens.
+    n.v.dispatch({ selection: { anchor: doc.indexOf('beta') + 1 } });
+    assert.strictEqual(n.settings.pagesOpen['n.md'], 'B', 'the editor opened B');
+    n.f.open(n.view.file, 'C');
+    assert.strictEqual(n.settings.pagesOpen['n.md'], 'C');
+    await later(450);
+    assert.deepStrictEqual(n.saves, { data: 1, settings: 0 }, 'one quiet save for both switches');
+  });
+
+  await t('pages: the control is a tablist of tabs, the open one selected, worked by keys', async () => {
+    const n = pagedViews();
+    n.settings.pagesOpen['k.md'] = 'A';
+    const k = n.open('k.md', PAGED);
+    n.f.sync();
+    const capsule = k.view.containerEl.querySelector('.dr-pages-capsule');
+    assert.strictEqual(capsule.getAttribute('role'), 'tablist');
+    const tabs = () => [...capsule.querySelectorAll('.dr-page-tab')];
+    assert.deepStrictEqual(tabs().map((el) => [el.getAttribute('role'), el.getAttribute('aria-selected'), el.getAttribute('tabindex')]), [['tab', 'true', '0'], ['tab', 'false', '-1']]);
+    key(tabs()[1], 'Enter');
+    assert.strictEqual(n.settings.pagesOpen['k.md'], 'B');
+    await later(50);
+    assert.deepStrictEqual(tabs().map((el) => el.getAttribute('aria-selected')), ['false', 'true']);
+    key(tabs()[1], 'ArrowLeft');
+    assert.strictEqual(n.settings.pagesOpen['k.md'], 'A');
+  });
+
+  await t('pages: Icon and Colour work with no submenus, and None takes the look off', async () => {
+    const n = pagedFile('%%page: A%%\nalpha\n%%page: B%%\nbeta\n', { pages: { A: { icon: 'star', color: 'red' } } });
+    const choose = async (title, inner) => {
+      n.f.menu({ clientX: 5, clientY: 5 }, n.file, 'A', R.parsePages(n.body()));
+      const shown = menus.length;
+      menus[menus.length - 1].items.find((i) => i.title === title).click();
+      assert.strictEqual(menus.length, shown + 1, `${title} opens a menu of its own`);
+      menus[menus.length - 1].items.find((i) => i.title === inner).click();
+      await settle();
+    };
+    await choose('Icon', 'None');
+    assert.deepStrictEqual(n.props.pages, { A: { color: 'red' } });
+    await choose('Colour', 'blue');
+    assert.deepStrictEqual(n.props.pages, { A: { color: 'blue' } });
+    await choose('Colour', 'None');
+    assert.ok(!('pages' in n.props));
   });
 
   await t('settings for things deleted while the plugin was off are let go; not while the vault is loading', () => {

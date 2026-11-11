@@ -19,7 +19,7 @@ import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
-import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageLayout, pageOfLine, pageStats, parsePages, uniqueName, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
+import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageHunks, pageLayout, pageOfLine, pageStats, parsePages, uniqueName, withHunksUndone, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
 export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'image', 'list', 'book-open', 'quote', 'link', 'star', 'lightbulb', 'calendar'];
@@ -170,6 +170,14 @@ export function pagesExtension(onFollow) {
 /** A sizer the note's own text is laid in, not one of an embed's inside it. */
 const ownSizer = (sizer) => !sizer.parentElement || !sizer.parentElement.closest('.cm-sizer, .markdown-preview-sizer, .embedded-backlinks');
 
+const plainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** Whether a note's `pages` property holds pages' looks — { Name: { icon, color } } — and not something of the note's own (a book's page count). */
+const isPageLooks = (v) => plainObject(v) && Object.values(v).every((look) => plainObject(look) && Object.keys(look).every((k) => k === 'icon' || k === 'color'));
+
+/** The note's text after its properties: what a change to its pages changes, and its Undo puts back. */
+const bodyOf = (text) => text.slice(bodyStart(text));
+
 /** A block of the note's own, in reading view: straight in its own sizer, not in an embed or a hover preview. */
 const topBlock = (el) => {
   const sizer = el.parentElement;
@@ -271,6 +279,7 @@ export class NotePages extends Feature {
   }
 
   disable() {
+    this.saveOpen(true);
     if (this.frame) window.cancelAnimationFrame(this.frame);
     this.frame = 0;
     this.pending.clear();
@@ -378,7 +387,8 @@ export class NotePages extends Feature {
 
   /** A page's icon and colour, from the note's `pages` property. */
   look(file, name) {
-    const meta = (this.plugin.notes.get(file, 'pages') || {})[name];
+    const looks = this.plugin.notes.get(file, 'pages');
+    const meta = isPageLooks(looks) ? looks[name] : null;
     return { icon: (meta && meta.icon) || '', color: (meta && meta.color) || '' };
   }
 
@@ -543,17 +553,20 @@ export class NotePages extends Feature {
   }
 
   drawBar(bar, file, pages, open) {
-    bar.setAttribute('role', 'tablist');
+    bar.dataset.open = open;
     const capsule = bar.createDiv({ cls: 'dr-pages-capsule' });
+    capsule.setAttribute('role', 'tablist');
     capsule.createDiv({ cls: 'dr-pages-pill' });
     pages.forEach((p) => {
       const look = this.look(file, p.name);
       const tab = capsule.createDiv({ cls: 'dr-page-tab' });
       tab.dataset.page = p.name;
-      tab.setAttribute('role', 'tab');
-      tab.setAttribute('aria-label', p.name);
       if (look.color) tab.dataset.drColor = look.color;
+      // A segment acts as a button (its keys), and is a tab of the control: the one open is selected.
       asButton(tab, p.name);
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(p.name === open));
+      tab.setAttribute('tabindex', p.name === open ? '0' : '-1');
       // No icon until one is chosen: a control full of identical icons is clutter.
       if (look.icon) {
         tab.addClass('has-icon');
@@ -604,11 +617,31 @@ export class NotePages extends Feature {
   }
 
   /** A page opened, and remembered for the note. */
-  async open(file, name) {
-    if (!this.settings.pagesOpen) this.settings.pagesOpen = {};
-    this.settings.pagesOpen[file.path] = name;
-    await this.plugin.saveSettings();
+  open(file, name) {
+    this.setOpen(file, name);
     this.queue();
+  }
+
+  /** The page remembered as open in a note (undefined: none), saved quietly: a page switch redraws only its note's views. */
+  setOpen(file, name) {
+    if (!this.settings.pagesOpen) this.settings.pagesOpen = {};
+    if (this.settings.pagesOpen[file.path] === name) return;
+    if (name === undefined) delete this.settings.pagesOpen[file.path];
+    else this.settings.pagesOpen[file.path] = name;
+    this.saveOpen();
+  }
+
+  /** The page open in each note written to the plugin's data a moment after the last switch; with `now`, straight away if one is waiting. */
+  saveOpen(now) {
+    if (now && !this.saveTimer) return;
+    if (this.saveTimer) window.clearTimeout(this.saveTimer);
+    this.saveTimer = 0;
+    const save = () => {
+      this.saveTimer = 0;
+      this.plugin.saveData(this.settings);
+    };
+    if (now) save();
+    else this.saveTimer = window.setTimeout(save, 400);
   }
 
   /** The page a step away, wrapping at the ends. */
@@ -621,22 +654,78 @@ export class NotePages extends Feature {
     this.open(file, pages[(at + by + pages.length) % pages.length].name);
   }
 
-  /** The note's text changed by `change(text)`, with a step of Undo to put it back. */
-  async rewrite(file, change, message) {
+  /**
+   * The note's pages changed: its text by `edit(text)`, the looks in its `pages` property by
+   * `looks(looks, text)` (given the text as the change left it), and the page open in it by
+   * `open(was, text)`. One step of Undo puts back each, only where it's still as the change left
+   * it: the lines changed, found by the lines either side; the looks, key by key; the page open.
+   * The text around the change edited since, nothing is put back, and a notice says so.
+   */
+  async change(file, message, edit, looks, open) {
     let before = null;
     let after = null;
     await this.app.vault.process(file, (text) => {
       before = text;
-      after = change(text);
+      after = edit(text);
       return after;
     });
-    if (before !== after && typeof this.plugin.offerUndo === 'function') {
+    if (before === after) return this.queue();
+    const hunks = pageHunks(bodyOf(before), bodyOf(after));
+    const record = looks ? await this.writeLooks(file, (pages) => looks(pages, after)) : null;
+    const was = (this.settings.pagesOpen || {})[file.path];
+    const now = open ? open(was, after) : was;
+    this.setOpen(file, now);
+    if (typeof this.plugin.offerUndo === 'function') {
       this.plugin.offerUndo(message, async () => {
-        await this.app.vault.process(file, (text) => (text === after ? before : text));
+        let undone = false;
+        await this.app.vault.process(file, (text) => {
+          const body = withHunksUndone(bodyOf(text), hunks);
+          if (body === null) return text;
+          undone = true;
+          return text.slice(0, bodyStart(text)) + body;
+        });
+        if (!undone) {
+          new Notice('Nothing was undone: the note has been edited around the page since.');
+          return this.queue();
+        }
+        if (record) await this.plugin.notes.undo([record]);
+        if ((this.settings.pagesOpen || {})[file.path] === now) this.setOpen(file, was);
         this.queue();
       });
     }
     this.queue();
+  }
+
+  /**
+   * The looks in a note's `pages` property changed by `change(looks)`; the property goes when none
+   * is left. What changed comes back, or null: nothing to change, or the property is the note's
+   * own, not looks — then it's left alone, and with `refuse` a notice says so.
+   */
+  async writeLooks(file, change, opts = {}) {
+    const own = (v) => v !== undefined && v !== null && !isPageLooks(v);
+    const refused = () => {
+      if (opts.refuse) new Notice('This note’s “pages” property is used for something else, so its pages keep no icon or colour.');
+      return null;
+    };
+    const had = this.plugin.notes.get(file, 'pages');
+    if (own(had)) return refused();
+    if (!opts.refuse && !had) return null;
+    let theirs = false;
+    const record = await this.plugin.notes.write(
+      file,
+      (fm) => {
+        if (own(fm.pages)) {
+          theirs = true;
+          return;
+        }
+        const looks = Object.assign({}, fm.pages || {});
+        change(looks);
+        if (Object.keys(looks).length) fm.pages = looks;
+        else delete fm.pages;
+      },
+      opts.undo ? { undo: opts.undo, onUndo: () => this.queue() } : {}
+    );
+    return theirs ? refused() : record;
   }
 
   /** A page's name edited where it stands: Enter keeps it, Escape leaves it as it was. */
@@ -679,10 +768,9 @@ export class NotePages extends Feature {
     const pages = parsePages(text0);
     const body = text0.slice(bodyStart(text0));
     const name = pages.length ? newPageName(pages) : uniqueName('Untitled', [nameFromText(body)]);
-    await this.rewrite(file, (text) => withPageAdded(text, name), 'Page added.');
     // The new page opens with its name ready to type over, so naming it is the next keystroke.
     this.fresh = `${file.path}:${name}`;
-    await this.open(file, name);
+    await this.change(file, 'Page added.', (text) => withPageAdded(text, name), null, () => name);
   }
 
   rename(file, name) {
@@ -699,66 +787,95 @@ export class NotePages extends Feature {
       this.queue();
       return;
     }
-    await this.rewrite(file, (text) => withPageRenamed(text, name, next), 'Page renamed.');
     // Its look, and its place as the page last open, go with the name.
-    await this.plugin.notes.write(file, (fm) => {
-      if (fm.pages && fm.pages[name]) {
-        fm.pages[next] = fm.pages[name];
-        delete fm.pages[name];
-      }
-    });
-    if ((this.settings.pagesOpen || {})[file.path] === name) await this.open(file, next);
+    await this.change(
+      file,
+      'Page renamed.',
+      (text) => withPageRenamed(text, name, next),
+      (looks) => {
+        if (!looks[name]) return;
+        looks[next] = looks[name];
+        delete looks[name];
+      },
+      (was) => (was === name ? next : was)
+    );
   }
 
   setLook(file, name, change) {
-    return this.plugin.notes.write(file, (fm) => {
-      const pages = fm.pages && typeof fm.pages === 'object' ? fm.pages : {};
-      const mine = Object.assign({}, pages[name]);
-      change(mine);
-      if (!mine.icon && !mine.color) delete pages[name];
-      else pages[name] = mine;
-      if (Object.keys(pages).length) fm.pages = pages;
-      else delete fm.pages;
-    }, { undo: 'Page changed.', onUndo: () => this.queue() }).then(() => this.queue());
+    return this.writeLooks(
+      file,
+      (looks) => {
+        const mine = Object.assign({}, looks[name]);
+        change(mine);
+        if (!mine.icon) delete mine.icon;
+        if (!mine.color) delete mine.color;
+        if (!mine.icon && !mine.color) delete looks[name];
+        else looks[name] = mine;
+      },
+      { undo: 'Page changed.', refuse: true }
+    ).then(() => this.queue());
   }
 
   async remove(file, name) {
     const yes = await confirmAction(this.app, { title: 'Remove the page', text: `Take the page “${name}” out of this note, with what is on it?`, button: 'Remove it' });
     if (!yes) return;
-    await this.rewrite(file, (text) => withPageRemoved(text, name), 'Page removed.');
-    await this.plugin.notes.write(file, (fm) => {
-      if (fm.pages) {
-        delete fm.pages[name];
-        if (!Object.keys(fm.pages).length) delete fm.pages;
-      }
-    });
+    // The looks of pages no longer there go (the property too, when none is left), and the page open, if it was this one.
+    const left = (text) => {
+      const pages = parsePages(text);
+      return pages.length > 1 ? pages.map((p) => p.name) : [];
+    };
+    await this.change(
+      file,
+      'Page removed.',
+      (text) => withPageRemoved(text, name),
+      (looks, text) => {
+        const keep = left(text);
+        Object.keys(looks).forEach((k) => keep.indexOf(k) === -1 && delete looks[k]);
+      },
+      (was, text) => (left(text).indexOf(was) === -1 ? undefined : was)
+    );
   }
 
   menu(evt, file, name, pages) {
     const menu = new Menu();
-    const item = (title, icon, run, disabled) =>
-      menu.addItem((i) => {
-        i.setTitle(title).setIcon(icon).onClick(run);
+    const entry = (m, title, icon, run, disabled) =>
+      m.addItem((i) => {
+        i.setTitle(title).onClick(run);
+        if (icon) i.setIcon(icon);
         if (disabled && typeof i.setDisabled === 'function') i.setDisabled(true);
         if (typeof i.setSection === 'function') i.setSection('action');
       });
+    const item = (title, icon, run, disabled) => entry(menu, title, icon, run, disabled);
     item('Rename', 'pencil', () => this.rename(file, name));
+    // A choice of icon or colour: a submenu where Obsidian has them, else a menu of its own once the item is chosen.
     const sub = (title, icon, build) =>
       menu.addItem((i) => {
         i.setTitle(title).setIcon(icon);
         if (typeof i.setSection === 'function') i.setSection('action');
         const inner = typeof i.setSubmenu === 'function' ? i.setSubmenu() : null;
         if (inner) build(inner);
+        else
+          i.onClick(() => {
+            const own = new Menu();
+            build(own);
+            showMenuAt(own, evt);
+          });
       });
-    sub('Icon', 'smile', (m) => PAGE_ICONS.forEach((icon) => m.addItem((i) => i.setTitle(icon).setIcon(icon).onClick(() => this.setLook(file, name, (mine) => (mine.icon = icon))))));
-    sub('Colour', 'palette', (m) => PAGE_COLORS.forEach((color) => m.addItem((i) => i.setTitle(color).onClick(() => this.setLook(file, name, (mine) => (mine.color = color))))));
+    const look = this.look(file, name);
+    sub('Icon', 'smile', (m) => {
+      PAGE_ICONS.forEach((icon) => entry(m, icon, icon, () => this.setLook(file, name, (mine) => (mine.icon = icon))));
+      if (look.icon) entry(m, 'None', 'x', () => this.setLook(file, name, (mine) => delete mine.icon));
+    });
+    sub('Colour', 'palette', (m) => {
+      PAGE_COLORS.forEach((color) => entry(m, color, null, () => this.setLook(file, name, (mine) => (mine.color = color))));
+      if (look.color) entry(m, 'None', 'x', () => this.setLook(file, name, (mine) => delete mine.color));
+    });
     const at = pages.findIndex((p) => p.name === name);
-    item('Move left', 'arrow-left', () => this.rewrite(file, (t) => withPageMoved(t, name, -1), 'Page moved.'), at === 0);
-    item('Move right', 'arrow-right', () => this.rewrite(file, (t) => withPageMoved(t, name, 1), 'Page moved.'), at === pages.length - 1);
+    item('Move left', 'arrow-left', () => this.change(file, 'Page moved.', (t) => withPageMoved(t, name, -1)), at === 0);
+    item('Move right', 'arrow-right', () => this.change(file, 'Page moved.', (t) => withPageMoved(t, name, 1)), at === pages.length - 1);
     item('Remove', 'trash', () => this.remove(file, name));
     showMenuAt(menu, evt);
   }
 }
-
 
 NotePages.settingKey = 'notePages';
