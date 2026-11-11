@@ -477,12 +477,25 @@ export class BrowseAlbum extends BrowsePreview {
     return out;
   }
 
+  /** Every note of an album, Find and filters aside: its own, its subfolders', and those it shows from elsewhere. */
+  albumNotes(folder) {
+    const out = [];
+    const walk = (f) => {
+      this.allNotesIn(f).forEach((file) => out.push(file));
+      this.visibleFolders(f).forEach(walk);
+    };
+    walk(folder);
+    const structure = ask(this.plugin, 'albums');
+    return structure ? out.concat(structure.included(folder, out)) : out;
+  }
+
   /** In the bar of an album's page: Edit, which starts and ends editing. */
   renderEditIcon(bar) {
     const btn = bar.createDiv({ cls: 'clickable-icon dr-bar-icon dr-edit-btn' });
     asButton(btn, 'Edit');
     setIcon(btn, 'pencil');
     btn.toggleClass('is-active', !!this.editing);
+    btn.setAttribute('aria-pressed', String(!!this.editing));
     onActivate(btn, () => this.setEditing(!this.editing));
   }
 
@@ -497,18 +510,21 @@ export class BrowseAlbum extends BrowsePreview {
   /**
    * The folder's own menu — what its cover's menu offers — with a random
    * note, then, greyed, what's known of it: how many notes, when started
-   * and last changed, what they come to. The notes are the ones last
-   * drawn on its page.
+   * and last changed, what they come to — of the whole album, Find and
+   * filters aside; while they narrow it, how many are shown. Random picks
+   * among the notes last drawn on its page.
    */
   albumOptions(evt, folder) {
-    const files = this.headFiles && this.headFiles.folder === folder ? this.headFiles.files : [];
+    const shown = this.headFiles && this.headFiles.folder === folder ? this.headFiles.files : [];
+    const files = this.albumNotes(folder);
     this.folderMenu(evt, folder, this.folderCover(folder), {
       here: true,
       extra: (menu, sectioned) => {
-        if (files.length) {
-          menu.addItem((item) => sectioned(item, 'open').setTitle('Random note').setIcon('shuffle').onClick(() => this.openRandom(files)));
+        if (shown.length) {
+          menu.addItem((item) => sectioned(item, 'open').setTitle('Random note').setIcon('shuffle').onClick(() => this.openRandom(shown)));
         }
         const facts = this.albumStats(files, { started: true }).concat(this.albumRollups(folder, files).map((t) => ['circle-check', t]));
+        if (this.query.trim() || this.hasFilters()) facts.splice(1, 0, ['filter', `${shown.length} shown`]);
         facts.forEach(([icon, text]) =>
           menu.addItem((item) => {
             sectioned(item, 'info').setTitle(text).setIcon(icon);

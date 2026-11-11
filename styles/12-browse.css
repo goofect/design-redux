@@ -49,7 +49,9 @@
   gap: calc(var(--dr-u) * 1.5);
   margin-left: auto;
   padding: var(--dr-space-1) var(--dr-space-3);
-  min-width: 220px;
+  /* 220px where there's room; in a narrow pane Find gives way, so the icons after it keep to one row. */
+  flex: 0 1 220px;
+  min-width: 120px;
   background-color: var(--background-modifier-form-field);
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--dr-radius-pill);

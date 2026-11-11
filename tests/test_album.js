@@ -1521,9 +1521,11 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     // Edit starts editing, and ends it.
     click(barIcon(view, 'Edit'));
     assert.ok(view.editing && barIcon(view, 'Edit').classList.contains('is-active'));
+    assert.strictEqual(barIcon(view, 'Edit').getAttribute('aria-pressed'), 'true');
     assert.ok(action(view, 'Done') && action(view, 'New note') && action(view, 'New folder'), 'what editing offers stays in the header');
     click(barIcon(view, 'Edit'));
     assert.strictEqual(view.editing, false);
+    assert.strictEqual(barIcon(view, 'Edit').getAttribute('aria-pressed'), 'false');
     // Sort and filter: its menu, of orders.
     const before = menus.length;
     click(barIcon(view, 'Sort and filter'));
@@ -1539,6 +1541,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(stats.length >= 3 && stats.every((i) => i.disabled && !i.click), stats.map((i) => i.title).join(', '));
     assert.ok(/^\d+ notes$/.test(stats[0].title), stats[0].title);
     assert.ok(stats.some((i) => /^Started /.test(i.title)) && stats.some((i) => /^Updated /.test(i.title)));
+    assert.ok(!stats.some((i) => / shown$/.test(i.title)), 'nothing narrows it');
+    // Find narrows the page, not the album's count: how many are shown is a line of its own.
+    view.query = 'Anarchy';
+    view.render();
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-track').length, 1);
+    click(barIcon(view, 'Options'));
+    const narrowed = menus[menus.length - 1].items.filter((i) => i.section === 'info').map((i) => i.title);
+    assert.deepStrictEqual(narrowed.slice(0, 2), [stats[0].title, '1 shown']);
+    view.query = '';
     // Not an album's page: Sort and filter alone.
     Object.assign(view, { mode: 'folders' });
     view.render();
