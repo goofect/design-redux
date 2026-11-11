@@ -564,7 +564,9 @@ export class AlbumStructure extends Feature {
 
   /** On a note's menu: kept at the top of its album, or not; opened from an album it's only shown in, taken out of it. */
   addFileItems(menu, file, sectioned, redraw, album) {
-    if (this.enabled && album && file && file.parent !== album && this.listOf(album, 'includes').indexOf(file.path) !== -1) {
+    // Only where it lives outside the album: one in a disc of it shows there whatever its includes say.
+    const outside = album && file && !(album.isRoot && album.isRoot()) && !file.path.startsWith(`${album.path}/`);
+    if (this.enabled && outside && this.listOf(album, 'includes').indexOf(file.path) !== -1) {
       menu.addItem((item) =>
         sectioned(item, 'action')
           .setTitle(`Stop showing in ${album.name}`)

@@ -265,7 +265,6 @@ export class BrowseFilters extends BrowseTable {
     return menu;
   }
 
-  /** An album shown as a list or a table — as its folder note says, set from here. Covers are the folder's own menu's to set. */
   /**
    * On a collection: keep the order it's sorted in now as its own, or
    * forget its own. One Undo puts back what it had, or that it had none.
@@ -295,7 +294,7 @@ export class BrowseFilters extends BrowseTable {
             this.plugin.offerUndo(message, putBack);
           })
       );
-    if (current !== 'own') {
+    if (current !== 'own' && this.allNotesIn(folder).length) {
       item('Use this as the collection order', 'list-ordered', () =>
         orders.setAlbum(folder, this.sortFiles(this.allNotesIn(folder)).map((f) => f.name)),
         `${folder.name} keeps this order now.`
@@ -304,6 +303,7 @@ export class BrowseFilters extends BrowseTable {
     if (was) item('Forget collection order', 'list-x', () => orders.clearAlbum(folder), `${folder.name}’s own order forgotten.`);
   }
 
+  /** An album shown as a list or a table — as its folder note says, set from here. Covers are the folder's own menu's to set. */
   addViewItems(menu, redraw) {
     const structure = ask(this.plugin, 'albums');
     const folder = this.mode === 'folder' ? this.folder() : null;

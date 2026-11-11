@@ -2908,13 +2908,28 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(v.vault.getFileByPath('Elsewhere/Sovereignty.md'), 'the note stays where it is');
     await undo();
     assert.ok(structure.info(law).includes.indexOf(sov) !== -1, 'Undo puts it back');
+    // Among several, Undo puts it back in its place.
+    const a = v.file('Elsewhere/Accord.md');
+    const b = v.file('Elsewhere/Border.md');
+    await structure.include(law, a);
+    await structure.include(law, b);
+    plugin.settings.albums.Law.includes = ['Elsewhere/Accord.md', 'Elsewhere/Sovereignty.md', 'Elsewhere/Border.md'];
+    await stop(menuFrom('Law', sov)).click();
+    assert.deepStrictEqual(plugin.settings.albums.Law.includes, ['Elsewhere/Accord.md', 'Elsewhere/Border.md']);
+    await undo();
+    assert.deepStrictEqual(plugin.settings.albums.Law.includes, ['Elsewhere/Accord.md', 'Elsewhere/Sovereignty.md', 'Elsewhere/Border.md']);
+    // A note inside the album, in a disc of it: it shows there anyway, so nothing to stop.
+    v.folder('Law/Cases');
+    const x = v.file('Law/Cases/X.md');
+    await structure.include(law, x);
+    assert.ok(!menuFrom('Law', x).some((i) => /^Stop showing/.test(i.title)), 'not for a note in a disc of the album');
     // Keep at the top still works on a note living in the album.
     await own.find((i) => i.title === 'Keep at the top of IR').click();
     assert.deepStrictEqual(structure.info(v.vault.getFolderByPath('IR')).featured, [anarchy]);
   });
 
   await t('the sort a collection is in now, kept as its own order from the sort menu, and forgotten; each with an Undo', () => {
-    const { view, plugin, app, ir } = setup();
+    const { v, view, plugin, app, ir } = setup();
     let undo = null;
     plugin.offerUndo = (m, fn) => { undo = fn; };
     const titles = () => view.filterMenu().items.map((i) => i.title);
@@ -2938,9 +2953,17 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!titles().includes('Use this as the collection order'), 'not while its own order is the one showing');
     undo();
     assert.strictEqual(plugin.orders.album(ir), null, 'Undo: no order of its own again');
-    // Forget: only once it has one; Undo puts it back as it was.
+    // Kept over an order of its own that's off: Undo puts it back, still off.
     view.arrangeTrack('IR/Deterrence.md', 'IR/Anarchy.md', false);
     const kept = plugin.orders.album(ir).names.slice();
+    view.setSort('created');
+    assert.strictEqual(plugin.orders.albumOn(ir), false);
+    choose('Use this as the collection order');
+    assert.deepStrictEqual(plugin.orders.album(ir).names, shown.map((n) => `${n}.md`));
+    undo();
+    assert.deepStrictEqual(plugin.orders.album(ir), { names: kept, on: false });
+    plugin.orders.setAlbumOn(ir, true);
+    // Forget: only once it has one; Undo puts it back as it was.
     choose('Forget collection order');
     assert.strictEqual(plugin.orders.album(ir), null);
     assert.ok(!titles().includes('Forget collection order'));
@@ -2948,7 +2971,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     undo();
     assert.deepStrictEqual(plugin.orders.album(ir).names, kept);
     assert.strictEqual(R.albumNeighbours(plugin, anarchy).previous.basename, 'Deterrence');
-    // A shelf of albums has no notes to put in order.
+    // A folder with no notes, and a shelf of albums: no notes to put in order.
+    v.folder('IR/Empty');
+    Object.assign(view, { path: 'IR/Empty' });
+    assert.ok(!titles().some((tt) => /collection order/.test(tt)), titles().join(' | '));
     Object.assign(view, { path: '/' });
     assert.ok(!titles().some((tt) => /collection order/.test(tt)));
   });
