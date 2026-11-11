@@ -87,13 +87,11 @@ body.dr-look-apple :is(.dr-tr, .dr-track):last-child::after {
   display: none;
 }
 
-/* Groups as bars that fold: a muted fill, no rule under them. */
+/* Groups as headings that fold: no fill behind them, no rule under them. */
 body.dr-look-apple .dr-disc {
   margin-top: 16px;
   padding: 6px 12px;
   border-bottom: none;
-  border-radius: 8px;
-  background-color: var(--dr-fill);
   color: var(--text-muted);
   font-size: var(--dr-type-footnote);
 }
