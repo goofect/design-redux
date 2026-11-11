@@ -19,7 +19,7 @@ import { asButton, onActivate } from '../core/042-controls.js';
 import { scriptLivePreview } from '../core/050-helpers-dom.js';
 import { Feature } from '../core/080-feature.js';
 import { confirmAction, NamePrompt } from '../ui/230-pickers.js';
-import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageHunks, pageLayout, pageOfLine, pageStats, parsePages, uniqueName, withHunksUndone, withPageAdded, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
+import { bodyStart, cleanPageName, hiddenOf, nameFromText, newPageName, onMarker, openPage, pageAt, pageHunks, pageLayout, pageOfLine, pageStats, parsePages, uniqueName, withHunksUndone, withPageAdded, withPageMerged, withPageMoved, withPageRemoved, withPageRenamed } from './266-page-text.js';
 
 /** The icons a page can wear, from Obsidian's own set: a handful that read as kinds of page. */
 export const PAGE_ICONS = ['file-text', 'table', 'network', 'check-square', 'image', 'list', 'book-open', 'quote', 'link', 'star', 'lightbulb', 'calendar'];
@@ -171,6 +171,18 @@ export function pagesExtension(onFollow) {
 const ownSizer = (sizer) => !sizer.parentElement || !sizer.parentElement.closest('.cm-sizer, .markdown-preview-sizer, .embedded-backlinks');
 
 const plainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+
+/** The names of the pages a text has, none when it's one page: the looks and the page open kept are theirs. */
+const pagesLeft = (text) => {
+  const pages = parsePages(text);
+  return pages.length > 1 ? pages.map((p) => p.name) : [];
+};
+
+/** The looks of pages no longer there taken away. */
+const looksLeft = (looks, text) => {
+  const keep = pagesLeft(text);
+  Object.keys(looks).forEach((k) => keep.indexOf(k) === -1 && delete looks[k]);
+};
 
 /** Whether a note's `pages` property holds pages' looks — { Name: { icon, color } } — and not something of the note's own (a book's page count). */
 const isPageLooks = (v) => plainObject(v) && Object.values(v).every((look) => look === null || (plainObject(look) && Object.keys(look).every((k) => k === 'icon' || k === 'color')));
@@ -836,19 +848,23 @@ export class NotePages extends Feature {
     const yes = await confirmAction(this.app, { title: 'Remove the page', text: `Take the page “${name}” out of this note, with what is on it?`, button: 'Remove it' });
     if (!yes) return;
     // The looks of pages no longer there go (the property too, when none is left), and the page open, if it was this one.
-    const left = (text) => {
-      const pages = parsePages(text);
-      return pages.length > 1 ? pages.map((p) => p.name) : [];
-    };
     await this.change(
       file,
       'Page removed.',
       (text) => withPageRemoved(text, name),
-      (looks, text) => {
-        const keep = left(text);
-        Object.keys(looks).forEach((k) => keep.indexOf(k) === -1 && delete looks[k]);
-      },
-      (was, text) => (left(text).indexOf(was) === -1 ? undefined : was)
+      looksLeft,
+      (was, text) => (pagesLeft(text).indexOf(was) === -1 ? undefined : was)
+    );
+  }
+
+  /** A page's marker taken away, its text joining the page before, which is then the one open; its look goes. */
+  async merge(file, name, previous) {
+    await this.change(
+      file,
+      'Pages merged.',
+      (text) => withPageMerged(text, name),
+      looksLeft,
+      (was, text) => (pagesLeft(text).indexOf(previous) === -1 ? undefined : previous)
     );
   }
 
@@ -889,6 +905,7 @@ export class NotePages extends Feature {
     const at = pages.findIndex((p) => p.name === name);
     item('Move left', 'arrow-left', () => this.change(file, 'Page moved.', (t) => withPageMoved(t, name, -1)), at === 0);
     item('Move right', 'arrow-right', () => this.change(file, 'Page moved.', (t) => withPageMoved(t, name, 1)), at === pages.length - 1);
+    if (at > 0) item('Merge with previous page', 'merge', () => this.merge(file, name, pages[at - 1].name));
     item('Remove', 'trash', () => this.remove(file, name));
     showMenuAt(menu, evt);
   }

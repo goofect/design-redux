@@ -190,18 +190,31 @@ export function withPageRenamed(text, from, to) {
   return remarked(text, page, to);
 }
 
+/** The text with a page's marker line taken away, its text kept. */
+const unmark = (t, p) => t.slice(0, p.marker[0]) + t.slice(Math.min(p.marker[1] + 1, t.length));
+
 /** The text with a page and its marker taken away. One page left, its marker goes too: the note is one plain page. */
 export function withPageRemoved(text, name) {
   text = withNamesWritten(text);
   const pages = parsePages(text);
   const i = pages.findIndex((p) => p.name === name);
   if (i === -1) return text;
-  const unmark = (t, p) => t.slice(0, p.marker[0]) + t.slice(Math.min(p.marker[1] + 1, t.length));
   if (pages.length === 1) return unmark(text, pages[0]);
   const p = pages[i];
   const end = i + 1 < pages.length ? pages[i + 1].marker[0] : text.length;
   const begin = p.preface ? p.preface[0] : p.marker[0];
   const out = text.slice(0, begin) + text.slice(end);
+  const left = parsePages(out);
+  return left.length === 1 ? unmark(out, left[0]) : out;
+}
+
+/** The text with a page's marker taken away and its text kept, joining the page before it. One page left, its marker goes too. */
+export function withPageMerged(text, name) {
+  text = withNamesWritten(text);
+  const pages = parsePages(text);
+  const i = pages.findIndex((p) => p.name === name);
+  if (i < 1) return text;
+  const out = unmark(text, pages[i]);
   const left = parsePages(out);
   return left.length === 1 ? unmark(out, left[0]) : out;
 }

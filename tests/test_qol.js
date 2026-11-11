@@ -1072,6 +1072,36 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     };
   };
 
+  await t('pages: Merge with previous page keeps the text, in order, without the marker; the last two merged leave a plain note; Undo puts it back exactly', async () => {
+    assert.strictEqual(R.withPageMerged('%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n', 'B'), 'alpha\n\nbeta\n', 'one plain page, no markers');
+    assert.strictEqual(R.withPageMerged('%%page: A%%\r\nalpha\r\n%%page: B%%\r\nbeta\r\n', 'B'), 'alpha\r\nbeta\r\n', 'CRLF kept');
+    const text = '%%page: A%%\nalpha\n%%page: A%%\nbeta\n%%page: A%%\ngamma\n';
+    assert.strictEqual(R.withPageMerged(text, 'A'), text.replace('A%%\nbeta', 'A 2%%\nbeta').replace('A%%\ngamma', 'A 3%%\ngamma'), 'the first page: nothing to merge with');
+    assert.strictEqual(R.withPageMerged(text, 'A 2'), '%%page: A%%\nalpha\nbeta\n%%page: A 3%%\ngamma\n', 'names written as shown');
+    const body = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
+    const n = pagedFile(body, { pages: { B: { icon: 'star' }, C: { color: 'red' } } });
+    n.setOpen('B');
+    await n.f.merge(n.file, 'B', 'A');
+    const pages = R.parsePages(n.body());
+    assert.deepStrictEqual(pages.map((p) => p.name), ['A', 'C']);
+    assert.strictEqual(n.body().slice(pages[0].from, pages[0].to), 'alpha\n\nbeta\n');
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' } }, 'the merged page’s look goes');
+    assert.strictEqual(n.open(), 'A', 'the previous page open');
+    assert.strictEqual(n.undos.length, 1);
+    await n.undo();
+    assert.strictEqual(n.body(), body);
+    assert.deepStrictEqual(n.props.pages, { C: { color: 'red' }, B: { icon: 'star' } });
+    assert.strictEqual(n.open(), 'B');
+    // Not offered on the first page.
+    const titles = (name) => {
+      const before = menus.length;
+      n.f.menu({ clientX: 1, clientY: 1 }, n.file, name, R.parsePages(n.body()));
+      return menus.length > before ? menus[menus.length - 1].items.map((i) => i.title) : [];
+    };
+    assert.ok(!titles('A').includes('Merge with previous page'));
+    assert.ok(titles('B').includes('Merge with previous page'));
+  });
+
   await t('pages: Undo of a rename or a removal is one step, putting back the text, the look and the page open, after edits elsewhere; edited around, nothing is put back and a notice says so', async () => {
     const body = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
     const n = pagedFile(body, { tags: ['x'], pages: { B: { icon: 'star' }, C: { color: 'red' } } });
