@@ -205,10 +205,6 @@ body.dr-look-editorial.dr-look-scoped .dr-library {
   background-color: var(--background-secondary);
 }
 
-body.dr-look-editorial .dr-detail-glow {
-  display: none;
-}
-
 body.dr-look-editorial .is-generated,
 body.dr-look-editorial [class].is-blank.is-hued,
 body.dr-look-editorial .dr-cat {

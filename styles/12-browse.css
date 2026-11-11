@@ -8,7 +8,6 @@
 .dr-browse .view-content {
   padding: var(--dr-space-4) calc(var(--dr-u) * 5) calc(var(--dr-u) * 10);
   overflow-y: auto;
-  /* The header's glow reaches past the sides: the page doesn't move sideways for it. */
   overflow-x: hidden;
 }
 
@@ -92,44 +91,6 @@
   align-items: flex-end;
   gap: calc(var(--dr-u) * 7.5);
   margin-bottom: calc(var(--dr-u) * 7.5);
-}
-
-/* The artwork again, blurred to its colours and faded out downwards,
-   behind the header and the bar above it: the page takes on the album's
-   colour, as the reference's does. */
-.dr-detail-glow {
-  position: absolute;
-  z-index: -1;
-  top: -90px;
-  left: -40px;
-  right: -40px;
-  bottom: -40px;
-  overflow: hidden;
-  opacity: 0.45;
-  filter: blur(60px) saturate(1.5);
-  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
-  pointer-events: none;
-}
-
-.dr-detail-glow img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-detail-glow .dr-card-glyph,
-.dr-detail-glow .dr-gen-initials {
-  display: none;
-}
-
-/* A plain grey stand-in gives the page no colour to take on. */
-.dr-detail-glow.is-blank:not(.is-hued) {
-  display: none;
-}
-
-.theme-dark .dr-detail-glow {
-  opacity: 0.55;
 }
 
 .dr-detail-art {
