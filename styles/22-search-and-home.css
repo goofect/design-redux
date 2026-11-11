@@ -270,35 +270,6 @@
   box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
 }
 
-/* The cover again, blurred and darkened behind everything: the band under
-   the title takes on the cover's colours without anything measuring them. */
-.dr-pick-glow {
-  position: absolute;
-  inset: -30px;
-  display: none;
-  filter: blur(30px) saturate(1.5) brightness(0.72);
-}
-
-.dr-pick-body.is-lit .dr-pick-glow {
-  display: block;
-}
-
-/* A soft placeholder is pale; darkened further so white type stays readable on it. */
-.dr-pick-glow.is-blank {
-  filter: blur(30px) saturate(1.8) brightness(0.5);
-}
-
-.dr-pick-glow img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.dr-pick-glow .dr-gen-initials,
-.dr-pick-glow .dr-card-glyph {
-  display: none;
-}
-
 .dr-pick-art {
   position: relative;
   aspect-ratio: 1;
@@ -349,14 +320,6 @@
   white-space: nowrap;
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
-}
-
-.dr-pick-body.is-lit .dr-pick-title {
-  color: #fff;
-}
-
-.dr-pick-body.is-lit .dr-pick-sub {
-  color: rgba(255, 255, 255, 0.75);
 }
 
 @media (any-hover: hover) {
