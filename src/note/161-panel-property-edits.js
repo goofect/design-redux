@@ -13,7 +13,15 @@ import { composing } from '../core/042-controls.js';
 import { fmGet } from '../core/045-helpers-properties.js';
 import { noteProps, orderKeys } from '../core/073-notes.js';
 import { ask } from '../core/081-capabilities.js';
+import { asType, schemaFor } from '../core/086-property-schema.js';
 import { PropertyRows } from './160-panel-properties.js';
+
+/** What a property the folder's schema names starts as: its default in the schema's type, or empty. */
+function schemaDefault(entry) {
+  if (entry.default === undefined) return '';
+  const value = entry.type ? asType(entry.type, entry.default) : JSON.parse(JSON.stringify(entry.default));
+  return value === undefined ? '' : value;
+}
 
 export class PropertiesSection extends PropertyRows {
   /**
@@ -54,13 +62,16 @@ export class PropertiesSection extends PropertyRows {
     list.setAttribute('role', 'listbox');
 
     const have = Object.keys(this.frontmatter).map((k) => k.toLowerCase());
-    const known = this.knownProperties().filter((n) => have.indexOf(n.toLowerCase()) === -1);
+    // The folder's schema first: what it names that the note hasn't yet, each with its default.
+    const asked = schemaFor(this.settings.propertySchemas, this.file).filter((e) => have.indexOf(e.key.toLowerCase()) === -1);
+    const askedNames = asked.map((e) => e.key.toLowerCase());
+    const known = this.knownProperties().filter((n) => have.indexOf(n.toLowerCase()) === -1 && askedNames.indexOf(n.toLowerCase()) === -1);
     let items = [];
     let active = 0;
     const close = () => picker.remove();
-    const choose = (name) => {
+    const choose = (name, value) => {
       close();
-      this.commitAdd(name);
+      this.commitAdd(name, value);
     };
     const paint = () =>
       Array.from(list.querySelectorAll('.dr-add-item')).forEach((el, i) => {
@@ -72,13 +83,18 @@ export class PropertiesSection extends PropertyRows {
       const q = input.value.trim();
       drawnFor = q;
       const low = q.toLowerCase();
+      const own = asked.filter((e) => !low || e.key.toLowerCase().includes(low));
       const names = known.filter((n) => !low || n.toLowerCase().includes(low)).slice(0, 8);
-      const exact = known.concat(Object.keys(this.frontmatter)).some((n) => n.toLowerCase() === low);
-      items = names.map((n) => ({ name: n, label: n })).concat(q && !exact ? [{ name: q, label: `Create “${q}”`, create: true }] : !q ? [{ name: '', label: 'Create new property', create: true }] : []);
+      const exact = known.concat(Object.keys(this.frontmatter), asked.map((e) => e.key)).some((n) => n.toLowerCase() === low);
+      items = own
+        .map((e) => ({ name: e.key, label: e.key, value: schemaDefault(e) }))
+        .concat(names.map((n) => ({ name: n, label: n })))
+        .concat(q && !exact ? [{ name: q, label: `Create “${q}”`, create: true }] : !q ? [{ name: '', label: 'Create new property', create: true }] : []);
       active = Math.min(active, Math.max(0, items.length - 1));
       list.empty();
-      if (names.length) list.createDiv({ cls: 'dr-add-heading', text: low ? 'Properties' : 'Suggested' });
       items.forEach((item, i) => {
+        if (i === 0 && own.length) list.createDiv({ cls: 'dr-add-heading', text: 'This folder' });
+        if (i === own.length && names.length) list.createDiv({ cls: 'dr-add-heading', text: low ? 'Properties' : 'Suggested' });
         const el = list.createDiv({ cls: `dr-add-item${item.create ? ' is-create' : ''}` });
         el.setAttribute('role', 'option');
         if (item.create) setIcon(el.createSpan({ cls: 'dr-add-item-icon' }), 'plus');
@@ -106,7 +122,7 @@ export class PropertiesSection extends PropertyRows {
         input.focus();
         return;
       }
-      choose(item.name);
+      choose(item.name, item.value);
     };
     input.addEventListener('input', () => {
       active = 0;
@@ -131,8 +147,8 @@ export class PropertiesSection extends PropertyRows {
     input.focus();
   }
 
-  /** A property added by name: one the note already has is gone to instead of written over. */
-  commitAdd(name) {
+  /** A property added by name, with `value` or empty: one the note already has is gone to instead of written over. */
+  commitAdd(name, value = '') {
     const key = String(name || '').trim();
     if (!key) return;
     const have = Object.keys(this.frontmatter).find((k) => k !== 'position' && k.toLowerCase() === key.toLowerCase());
@@ -146,7 +162,7 @@ export class PropertiesSection extends PropertyRows {
     // Shown, whatever the view, and its value is what's typed next.
     this.focusKey = key;
     if ((this.settings.panelPropertiesView || 'compact') === 'compact') this.settings.panelPropertiesView = 'all';
-    this.write(key, '', { onlyNew: true });
+    this.write(key, value, { onlyNew: true });
   }
 
   /**

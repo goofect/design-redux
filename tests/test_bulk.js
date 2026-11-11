@@ -1254,6 +1254,31 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     popupEl.remove();
   });
 
+  await t('adding a property: the folder’s schema first, under This folder, what the note has left out; chosen, its default in its type', async () => {
+    const v = makeVault({ 'D/a.md': note({ type: 'x', status: 'open' }), 'b.md': note({ status: 'draft', domain: 'Law' }) });
+    const { plugin } = makePlugin(v);
+    plugin.settings.propertySchemas = { D: [{ key: 'status', required: true }, { key: 'due', type: 'date', default: '2026-01-02' }, { key: 'pages', type: 'number' }] };
+    const popupEl = document.body.appendChild(document.createElement('div'));
+    const section = new R.PropertiesSection({ plugin, popupEl });
+    section.mount(popupEl, v.file('D/a.md'));
+    click(popupEl.querySelector('.dr-props-add'));
+    const items = () => Array.from(popupEl.querySelectorAll('.dr-add-item')).map((e) => e.textContent);
+    assert.deepStrictEqual(items(), ['due', 'pages', 'domain', 'Create new property'], 'the folder’s first; status, which the note has, not among them');
+    assert.deepStrictEqual(Array.from(popupEl.querySelectorAll('.dr-add-heading')).map((e) => e.textContent), ['This folder', 'Suggested']);
+    const input = popupEl.querySelector('.dr-add input');
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle(50);
+    assert.strictEqual(v.fm('D/a.md').due, '2026-01-02', 'a date, not empty');
+    click(popupEl.querySelector('.dr-props-add'));
+    assert.deepStrictEqual(items(), ['pages', 'domain', 'Create new property']);
+    const pick = popupEl.querySelector('.dr-add input');
+    pick.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle(50);
+    assert.strictEqual(v.fm('D/a.md').pages, '', 'no default: empty');
+    section.destroy();
+    popupEl.remove();
+  });
+
   await t('how a property shows: its group only as set — nothing guessed from its name — the main ones by name, and whether it names notes', () => {
     const s = { panelPrimaryProps: 'Type, status', panelGroupList: [{ title: 'Ties', keys: 'broader, related' }] };
     assert.deepStrictEqual(R.propertyPresentation('broader', 'Politics', 'text', s), { key: 'broader', group: 'Ties', primary: false, interaction: 'edit' });
