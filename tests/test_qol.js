@@ -1015,9 +1015,10 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     let text = yaml() + body;
     const undos = [];
     const saves = { data: 0, settings: 0 };
+    const gone = { yes: false };
     const app = {
       workspace: { getLeavesOfType: () => [] },
-      vault: { process: async (f, fn) => void (text = fn(text)), read: async () => text },
+      vault: { process: async (f, fn) => void (text = fn(text)), read: async () => text, getAbstractFileByPath: (p) => (p === file.path && !gone.yes ? file : null) },
       fileManager: { processFrontMatter: async (f, fn) => { fn(props); text = yaml() + text.slice(R.bodyStart(text)); } },
       metadataCache: { getFileCache: () => ({ frontmatter: props }) },
     };
@@ -1025,7 +1026,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     plugin.notes = new R.Notes(plugin);
     const f = new R.NotePages(plugin);
     return {
-      f, file, undos, saves, props,
+      f, file, undos, saves, props, gone,
       body: () => text.slice(R.bodyStart(text)),
       edit: (fn) => (text = text.slice(0, R.bodyStart(text)) + fn(text.slice(R.bodyStart(text)))),
       open: () => plugin.settings.pagesOpen['p.md'],
@@ -1153,6 +1154,65 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(n.props.pages, { A: { color: 'blue' } });
     await choose('Colour', 'None');
     assert.ok(!('pages' in n.props));
+  });
+
+  await t('pages: Undo clicked twice puts a page back once; a note gone since is left, with a notice; an empty look counts as one', async () => {
+    const body = '%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
+    const n = pagedFile(body);
+    await n.remove('B');
+    await Promise.all([n.undo(), n.undo()]);
+    await n.undo();
+    assert.strictEqual(n.body(), body);
+    assert.strictEqual(n.body().split('%%page: B%%').length, 2, 'B once');
+    await n.remove('C');
+    n.gone.yes = true;
+    notices.length = 0;
+    await n.undo();
+    assert.ok(notices.some((m) => /the note is gone/.test(m)), notices.join(' | '));
+    // `A:` with nothing after it is a page with no look yet, not a property of the note's own.
+    const m = pagedFile('%%page: A%%\na\n%%page: B%%\nb\n', { pages: { A: null } });
+    await m.f.setLook(m.file, 'B', (mine) => (mine.icon = 'star'));
+    assert.deepStrictEqual(m.props.pages, { A: null, B: { icon: 'star' } });
+  });
+
+  await t('pages: the page open, waiting to be saved, is saved when the feature is turned off', () => {
+    const n = pagedFile('%%page: A%%\na\n%%page: B%%\nb\n');
+    n.f.open(n.file, 'B');
+    assert.strictEqual(n.saves.data, 0, 'not straight away');
+    n.f.disable();
+    assert.deepStrictEqual(n.saves, { data: 1, settings: 0 });
+  });
+
+  await t('pages: the changes of a move in a long note are found quickly and in little memory, as small as they can be', () => {
+    // Fewest lines changed, by the slow way: the longest run of lines the two share.
+    const fewest = (a, b) => {
+      const A = a.split('\n');
+      const B = b.split('\n');
+      let row = new Array(B.length + 1).fill(0);
+      for (let i = 1; i <= A.length; i++) {
+        const next = [0];
+        for (let j = 1; j <= B.length; j++) next[j] = A[i - 1] === B[j - 1] ? row[j - 1] + 1 : Math.max(row[j], next[j - 1]);
+        row = next;
+      }
+      return A.length + B.length - 2 * row[B.length];
+    };
+    const changed = (h) => h.reduce((sum, x) => sum + x.old.length + x.now.length, 0);
+    const lines = (tag, count) => Array.from({ length: count }, (_, i) => `${tag} ${i % 7}`).join('\n') + '\n';
+    const small = `%%page: A%%\n${lines('a', 120)}\n%%page: B%%\n${lines('b', 40)}\n%%page: C%%\n${lines('a', 30)}`;
+    const smallMoved = R.withPageMoved(small, 'B', -1);
+    const h = R.pageHunks(small, smallMoved);
+    assert.strictEqual(changed(h), fewest(small, smallMoved));
+    assert.strictEqual(R.withHunksUndone(smallMoved, h), small);
+    // 6,000 lines, a short page and a long one swapped, then two long ones (past the step limit: one change).
+    [[10, 5990], [3000, 3000]].forEach(([x, y]) => {
+      const long = `%%page: A%%\n${lines('a', x)}\n%%page: B%%\n${lines('b', y)}`;
+      const moved = R.withPageMoved(long, 'B', -1);
+      const began = Date.now();
+      const hunks = R.pageHunks(long, moved);
+      assert.ok(Date.now() - began < 1500, `${Date.now() - began} ms`);
+      assert.strictEqual(R.withHunksUndone(moved, hunks), long);
+      if (x === 10) assert.ok(changed(hunks) <= 2 * (x + 3), String(changed(hunks)));
+    });
   });
 
   await t('settings for things deleted while the plugin was off are let go; not while the vault is loading', () => {

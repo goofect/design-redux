@@ -248,11 +248,12 @@ export function pageHunks(a, b, limit = 2000) {
   const n = xs.length;
   const m = ys.length;
   const off = n + m + 1;
-  let v = new Int32Array(2 * off + 1);
+  const v = new Int32Array(2 * off + 1);
   const trace = [];
   let found = false;
   for (let d = 0; d <= n + m && d <= limit && !found; d++) {
-    trace.push(v.slice());
+    // Only the band of diagonals step d can reach, so the record grows with the steps, not the note.
+    trace.push(v.slice(off - d, off + d + 1));
     for (let k = -d; k <= d; k += 2) {
       let x = k === -d || (k !== d && v[off + k - 1] < v[off + k + 1]) ? v[off + k + 1] : v[off + k - 1] + 1;
       let y = x - k;
@@ -274,10 +275,11 @@ export function pageHunks(a, b, limit = 2000) {
     let x = n;
     let y = m;
     for (let d = trace.length - 1; d >= 0; d--) {
-      v = trace[d];
+      const band = trace[d];
+      const at = (k) => band[k + d] || 0;
       const k = x - y;
-      const pk = k === -d || (k !== d && v[off + k - 1] < v[off + k + 1]) ? k + 1 : k - 1;
-      const px = v[off + pk];
+      const pk = k === -d || (k !== d && at(k - 1) < at(k + 1)) ? k + 1 : k - 1;
+      const px = at(pk);
       const py = px - pk;
       while (x > px && y > py) {
         ops.push('=');

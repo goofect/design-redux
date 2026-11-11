@@ -173,7 +173,7 @@ const ownSizer = (sizer) => !sizer.parentElement || !sizer.parentElement.closest
 const plainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
 
 /** Whether a note's `pages` property holds pages' looks — { Name: { icon, color } } — and not something of the note's own (a book's page count). */
-const isPageLooks = (v) => plainObject(v) && Object.values(v).every((look) => plainObject(look) && Object.keys(look).every((k) => k === 'icon' || k === 'color'));
+const isPageLooks = (v) => plainObject(v) && Object.values(v).every((look) => look === null || (plainObject(look) && Object.keys(look).every((k) => k === 'icon' || k === 'color')));
 
 /** The note's text after its properties: what a change to its pages changes, and its Undo puts back. */
 const bodyOf = (text) => text.slice(bodyStart(text));
@@ -676,14 +676,30 @@ export class NotePages extends Feature {
     const now = open ? open(was, after) : was;
     this.setOpen(file, now);
     if (typeof this.plugin.offerUndo === 'function') {
+      // Once only: a second click on Undo would find the place again and put the page back twice.
+      let done = false;
       this.plugin.offerUndo(message, async () => {
+        if (done) return;
+        done = true;
+        if (this.app.vault.getAbstractFileByPath(file.path) !== file) {
+          new Notice('Nothing was undone: the note is gone.');
+          return;
+        }
         let undone = false;
-        await this.app.vault.process(file, (text) => {
-          const body = withHunksUndone(bodyOf(text), hunks);
-          if (body === null) return text;
-          undone = true;
-          return text.slice(0, bodyStart(text)) + body;
-        });
+        try {
+          await this.app.vault.process(file, (text) => {
+            const body = withHunksUndone(bodyOf(text), hunks);
+            if (body === null) return text;
+            undone = true;
+            return text.slice(0, bodyStart(text)) + body;
+          });
+        } catch (err) {
+          // Not written: Undo can be tried again.
+          console.error('Design Redux: undoing a page change failed', err);
+          done = false;
+          new Notice('Could not undo the change to the page. Try again.');
+          return;
+        }
         if (!undone) {
           new Notice('Nothing was undone: the note has been edited around the page since.');
           return this.queue();
