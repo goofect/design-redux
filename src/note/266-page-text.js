@@ -129,7 +129,7 @@ export function pageAt(pages, pos) {
 }
 
 /** Is a cursor on a page's marker line (which shows it, to be edited)? */
-export const onMarker = (p, c) => c > p.marker[0] && c <= p.marker[1] + 1;
+export const onMarker = (p, c) => c > p.marker[0] && c <= p.marker[1];
 
 /** Every range of text out of sight while `open` is the page shown: other pages' text, and the markers (but a marker the cursor is on). */
 export function hiddenRanges(text, open, cursors = []) {

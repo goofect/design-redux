@@ -46,17 +46,6 @@ function touchesPages(tr) {
   return hit;
 }
 
-/**
- * Where the cursor goes when a page is chosen: in the page, but off the spot that shows its
- * marker (the very start of the page counts as on it, so the marker can be reached and edited) —
- * the end of the page's first line, or the start of its second when the first is blank.
- */
-function landing(doc, page) {
-  if (page.to <= page.from || !onMarker(page, page.from)) return page.from;
-  const line = doc.lineAt(Math.min(page.from, doc.length));
-  return Math.min(line.to > line.from ? line.to : line.to + 1, page.to);
-}
-
 /** A selection made by hand — a click, a drag, the arrow keys, select all — rather than by undo, search or a link. */
 const byHand = (tr) => {
   const event = tr.annotation(Transaction.userEvent);
@@ -146,7 +135,7 @@ export function pagesExtension(onFollow) {
     if (chose && !tr.docChanged) {
       const page = openPage(before.pages, chose.value);
       const sel = tr.selection || tr.startState.selection;
-      if (pageAt(before.pages, sel.main.head) !== before.pages.indexOf(page)) return [tr, { selection: { anchor: landing(tr.startState.doc, page) }, sequential: true }];
+      if (pageAt(before.pages, sel.main.head) !== before.pages.indexOf(page)) return [tr, { selection: { anchor: page.from }, sequential: true }];
     }
     const value = tr.state.field(field, false);
     if (!value || !value.pages.length) return tr;

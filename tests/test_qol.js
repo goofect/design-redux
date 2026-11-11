@@ -698,10 +698,23 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(e.field().open, 'B');
     assert.strictEqual(R.pageAt(e.field().pages, e.v.state.selection.main.head), 1, 'the cursor is on B');
     assert.strictEqual(markerShown('B'), false, "B's marker stays hidden");
-    // A page whose first line is blank: the cursor goes to its second.
+    // A page whose first line is blank.
     e.v.dispatch({ effects: R.setOpenPage.of('C') });
     assert.strictEqual(R.pageAt(e.field().pages, e.v.state.selection.main.head), 2, 'the cursor is on C');
     assert.strictEqual(markerShown('C'), false, "C's marker stays hidden");
+    // The cursor on the marker's own line still shows it.
+    const c = e.field().pages[2].marker[0] + 3;
+    e.v.dispatch({ selection: { anchor: c } });
+    assert.strictEqual(markerShown('C'), true, 'on its line, the marker shows');
+  });
+
+  await t('pages: a page just added, with nothing on it yet, keeps its marker out of sight', () => {
+    const doc = R.withPageAdded('%%page: A%%\nalpha\n', 'Untitled');
+    const e = paged(doc, 'A');
+    e.v.dispatch({ effects: R.setOpenPage.of('Untitled') });
+    const p = e.field().pages.find((x) => x.name === 'Untitled');
+    assert.strictEqual(p.to, p.from, 'the new page is empty');
+    assert.ok(e.hidden().some(([a, b]) => a === p.marker[0] && b >= p.marker[1]), "the new page's marker stays hidden");
   });
 
   await t('pages: several cursors keep to the page shown; a selection of the whole note with no user event takes just the page', () => {
