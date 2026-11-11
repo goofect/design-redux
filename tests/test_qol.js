@@ -686,6 +686,24 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(e.hidden(), R.hiddenRanges(e.v.state.doc.toString(), e.field().open, [m]));
   });
 
+  await t('pages: choosing a page takes the cursor onto it with its marker still out of sight', () => {
+    const doc = '%%page: A%%\nalpha\n\n%%page: B%%\nbeta text\n\n%%page: C%%\n\ngamma\n';
+    const e = paged(doc, 'A');
+    e.v.dispatch({ selection: { anchor: doc.indexOf('alpha') + 2 } });
+    const markerShown = (name) => {
+      const p = e.field().pages.find((x) => x.name === name);
+      return !e.hidden().some(([a, b]) => a === p.marker[0] && b >= p.marker[1]);
+    };
+    e.v.dispatch({ effects: R.setOpenPage.of('B') });
+    assert.strictEqual(e.field().open, 'B');
+    assert.strictEqual(R.pageAt(e.field().pages, e.v.state.selection.main.head), 1, 'the cursor is on B');
+    assert.strictEqual(markerShown('B'), false, "B's marker stays hidden");
+    // A page whose first line is blank: the cursor goes to its second.
+    e.v.dispatch({ effects: R.setOpenPage.of('C') });
+    assert.strictEqual(R.pageAt(e.field().pages, e.v.state.selection.main.head), 2, 'the cursor is on C');
+    assert.strictEqual(markerShown('C'), false, "C's marker stays hidden");
+  });
+
   await t('pages: several cursors keep to the page shown; a selection of the whole note with no user event takes just the page', () => {
     const doc = 'Intro\n%%page: A%%\nalpha\n\n%%page: B%%\nbeta\n\n%%page: C%%\ngamma\n';
     const e = paged(doc, 'A');
