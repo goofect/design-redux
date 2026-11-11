@@ -1940,6 +1940,51 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     ]);
   });
 
+  await t('Set… on an issue with no plain fix: a menu of the values allowed, otherwise a prompt; written in the schema’s type, one step of Undo', async () => {
+    const v = makeVault({ 'S/a.md': note({ title: 'A' }, 'Body\n'), 'S/b.md': note({ title: 'B' }) });
+    const { plugin } = makePlugin(v);
+    const undos = [];
+    plugin.offerUndo = (message, undo) => undos.push({ message, undo });
+    plugin.settings.propertySchemas = { S: [{ key: 'status', required: true, values: ['a', 'b'] }, { key: 'pages', type: 'number', required: true }] };
+    const feature = new R.PropertySchemas(plugin);
+    const show = (p) => {
+      const [sec] = feature.panelSections({ plugin });
+      sec.mount(document.body, v.file(p));
+      return sec;
+    };
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    let sec = show('S/a.md');
+    const sets = () => Array.from(sec.containerEl.querySelectorAll('.dr-schema-set'));
+    assert.strictEqual(sets().length, 2, 'Set… on each issue with no fix');
+    menus.length = 0;
+    click(sets()[0]);
+    assert.deepStrictEqual(menus[0].items.map((i) => [i.title, i.section]), [['a', 'action'], ['b', 'action']]);
+    menus[0].items[1].click();
+    await settle();
+    assert.deepStrictEqual(fmOf('S/a.md'), { title: 'A', status: 'b' });
+    assert.ok(v.text('S/a.md').endsWith('Body\n'));
+    sec = show('S/a.md');
+    assert.deepStrictEqual(Array.from(sec.containerEl.querySelectorAll('.dr-schema-key')).map((e) => e.textContent), ['pages'], 'the row set goes');
+    assert.strictEqual(undos.length, 1);
+    await undos[0].undo();
+    assert.deepStrictEqual(fmOf('S/a.md'), { title: 'A' }, 'Undo takes it off');
+    // No values: the prompt, its answer in the schema's type.
+    sec = show('S/b.md');
+    click(sets()[1]);
+    const bad = modals[modals.length - 1];
+    bad.contentEl.querySelector('input').value = 'many';
+    bad.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.strictEqual(fmOf('S/b.md').pages, undefined, 'an answer not of the type: nothing written');
+    click(sets()[1]);
+    const prompt = modals[modals.length - 1];
+    assert.ok(prompt instanceof R.NamePrompt);
+    prompt.contentEl.querySelector('input').value = '42';
+    prompt.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.strictEqual(fmOf('S/b.md').pages, 42, 'a number, not “42”');
+  });
+
   await t('a value’s colour and icon: a swatch, an icon by name, saved under the property; Clear takes them off', async () => {
     const v = makeVault({ 'a.md': '' });
     const { plugin } = makePlugin(v);

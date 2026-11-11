@@ -11,17 +11,19 @@
 /* Nothing shows when the note fits.                                   */
 /* ------------------------------------------------------------------ */
 
-import { Modal, Notice, setIcon } from 'obsidian';
+import { Menu, Modal, Notice, setIcon } from 'obsidian';
 import { TYPE_LABELS } from '../core/020-constants.js';
 import { pageFolder } from '../core/034-tabs.js';
+import { showMenuAt } from '../core/036-menus.js';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
 import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
-import { checkNote, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
+import { asType, checkNote, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
 import { nearDuplicates } from '../core/088-property-options.js';
+import { NamePrompt } from '../ui/230-pickers.js';
 import { parseTypedValue, propertyType } from './288-bulk-values.js';
 import { bulkNotice, bulkTail, notesChanged } from './290-bulk-engine.js';
 import { BulkModal } from './300-bulk-dialogs.js';
@@ -185,11 +187,39 @@ export class SchemaSection extends PanelSection {
       row.setAttribute('title', issue.reason);
       row.createSpan({ cls: 'dr-schema-key', text: issue.key });
       row.createSpan({ cls: 'dr-schema-reason', text: issue.reason });
-      if (!issue.fix) return;
+      if (!issue.fix) {
+        const set = row.createSpan({ cls: 'dr-schema-fix dr-schema-set', text: 'Set…' });
+        asButton(set, `Set “${issue.key}”`);
+        onActivate(set, (evt) => this.askValue(issue, evt));
+        return;
+      }
       const fix = row.createSpan({ cls: 'dr-schema-fix', text: 'Fix' });
       asButton(fix, `Set it to ${JSON.stringify(issue.fix.value)}`);
       onActivate(fix, () => this.fix([issue]));
     });
+  }
+
+  /** A value for an issue with no plain fix: one of the values allowed from a menu, otherwise typed; written in the schema's type. */
+  askValue(issue, evt) {
+    const file = this.file;
+    if (!file) return;
+    const want = issue.key.toLowerCase();
+    const entry = schemaFor(this.settings.propertySchemas, file).find((e) => e.key.toLowerCase() === want) || { key: issue.key };
+    const put = (raw) => {
+      const value = asType(entry.type, raw);
+      if (value === undefined) {
+        new Notice(`“${raw}” isn’t of the type “${issue.key}” takes here.`);
+        return;
+      }
+      this.fix([Object.assign({}, issue, { fix: { value } })]);
+    };
+    if (entry.values && entry.values.length) {
+      const menu = new Menu();
+      entry.values.forEach((v) => menu.addItem((item) => item.setTitle(v).setSection('action').onClick(() => put(v))));
+      showMenuAt(menu, evt);
+      return;
+    }
+    new NamePrompt(this.app, `Set “${issue.key}”`, entry.type ? TYPE_LABELS[entry.type] || entry.type : 'Value', put, { button: 'Set', numeric: entry.type === 'number' }).open();
   }
 
   /** Fixes written as one change to the note: one step of Undo. */
