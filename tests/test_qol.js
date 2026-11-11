@@ -158,6 +158,25 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok(view.contentEl.querySelectorAll('.dr-card-art.is-generated').length >= 2);
   });
 
+  await t('a new set of drawn covers takes over only its share of names; the rest keep the design they had', () => {
+    const sets = R.COVER_DESIGN_SETS;
+    const first = R.COVER_DESIGNS.findIndex((d) => d.id === 'openbook');
+    assert.ok(first >= sets[0], 'Subjects I is a set of its own, after the first');
+    const total = sets.reduce((sum, n) => sum + n, 0);
+    assert.strictEqual(total, R.COVER_DESIGNS.length);
+    const names = [...Array(200)].map((_, i) => `Folder ${i} ${['Notes', 'Reading', 'Projects', 'Archive'][i % 4]}`);
+    let moved = 0;
+    names.forEach((name) => {
+      const was = R.COVER_DESIGNS[R.coverSeed(name) % sets[0]];
+      const now = R.namedCoverDesign(name);
+      if (now === was) return;
+      moved++;
+      assert.ok(R.COVER_DESIGNS.indexOf(now) >= sets[0], `${name}: moved only to a newer set`);
+    });
+    const share = 1 - sets[0] / total;
+    assert.ok(Math.abs(moved / names.length - share) < 0.08, `${moved} of 200 moved, about ${Math.round(share * 200)} expected`);
+  });
+
   await t('a cover can be drawn for its name, the default, or the name set as a title; older settings move on, a choice made stays', () => {
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'art' }, 'Realism'), { art: 'Realism' });
     assert.deepStrictEqual(R.blankLook({ coverFallback: 'art', coverDesigns: { 'IR/Realism.md': 'woods' } }, 'Realism', 'IR/Realism.md'), { art: 'Realism', design: 'woods' });
