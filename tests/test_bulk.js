@@ -2010,6 +2010,46 @@ const lastNotice = () => notices.filter((n) => typeof n.message !== 'string').po
     assert.strictEqual(fmOf('S/b.md').pages, 42, 'a number, not “42”');
   });
 
+  await t('Set…: answered after the panel has closed, still written to its note; a list keeps its allowed values; a date typed as +3d; a checkbox from Yes or No', async () => {
+    const v = makeVault({ 'S/a.md': note({ tags: ['a', 'zzz', 'c'] }), 'S/b.md': note({ title: 'B' }) });
+    const { plugin } = makePlugin(v);
+    plugin.settings.propertySchemas = { S: [{ key: 'tags', type: 'tags', values: ['a', 'b', 'c'] }, { key: 'due', type: 'date', required: true }, { key: 'done', type: 'checkbox', required: true }, { key: 'kinds', type: 'multitext', required: true, values: ['x', 'y'] }] };
+    const feature = new R.PropertySchemas(plugin);
+    const show = (p) => {
+      const [sec] = feature.panelSections({ plugin });
+      sec.mount(document.body, v.file(p));
+      return sec;
+    };
+    const fmOf = (p) => { const o = Object.assign({}, v.fm(p)); delete o.position; return o; };
+    const setOf = (sec, key) => Array.from(sec.containerEl.querySelectorAll('.dr-schema-issue')).find((r) => r.querySelector('.dr-schema-key').textContent === key).querySelector('.dr-schema-set');
+    const choose = async (sec, key, title) => {
+      menus.length = 0;
+      click(setOf(sec, key));
+      menus[0].items.find((i) => i.title === title).click();
+      await settle();
+    };
+    // A list: what's not allowed gives way to the one chosen; what is stays.
+    let sec = show('S/a.md');
+    await choose(sec, 'tags', 'b');
+    assert.deepStrictEqual(fmOf('S/a.md').tags, ['a', 'b', 'c']);
+    // Missing, a list: the one chosen.
+    await choose(show('S/a.md'), 'kinds', 'y');
+    assert.deepStrictEqual(fmOf('S/a.md').kinds, ['y']);
+    // A checkbox: Yes or No, not a prompt.
+    await choose(show('S/a.md'), 'done', 'No');
+    assert.strictEqual(fmOf('S/a.md').done, false);
+    // The prompt answered after the panel has gone: written all the same, to the note it was asked of.
+    sec = show('S/b.md');
+    click(setOf(sec, 'due'));
+    const prompt = modals[modals.length - 1];
+    sec.destroy();
+    prompt.contentEl.querySelector('input').value = '+3d';
+    prompt.contentEl.querySelector('.mod-cta').click();
+    await settle();
+    assert.strictEqual(fmOf('S/b.md').due, R.parseDateInput('+3d'), 'a date, as the schema dialog reads it');
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(fmOf('S/b.md').due));
+  });
+
   await t('a value’s colour and icon: a swatch, an icon by name, saved under the property; Clear takes them off', async () => {
     const v = makeVault({ 'a.md': '' });
     const { plugin } = makePlugin(v);

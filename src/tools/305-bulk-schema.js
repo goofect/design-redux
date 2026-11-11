@@ -21,7 +21,7 @@ import { bulkCount } from '../core/047-helpers-text.js';
 import { noteProps } from '../core/073-notes.js';
 import { Feature } from '../core/080-feature.js';
 import { PanelSection } from '../core/082-panel-section.js';
-import { asType, checkNote, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
+import { asType, checkNote, emptyValue, fixFor, SCHEMA_TYPES, schemaFor, tidyEntry } from '../core/086-property-schema.js';
 import { nearDuplicates } from '../core/088-property-options.js';
 import { NamePrompt } from '../ui/230-pickers.js';
 import { parseTypedValue, propertyType } from './288-bulk-values.js';
@@ -205,21 +205,56 @@ export class SchemaSection extends PanelSection {
     if (!file) return;
     const want = issue.key.toLowerCase();
     const entry = schemaFor(this.settings.propertySchemas, file).find((e) => e.key.toLowerCase() === want) || { key: issue.key };
+    const allowed = (x) => !entry.values || !entry.values.length || entry.values.includes(String(x));
+    // Written to the note asked about, even if the panel has closed since (a prompt's click is outside it).
     const put = (raw) => {
-      const value = asType(entry.type, raw);
+      const typed = typeof raw === 'string' && (entry.type === 'date' || entry.type === 'datetime') ? parseTypedValue(entry.type, raw) : raw;
+      const value = asType(entry.type, typed);
       if (value === undefined) {
         new Notice(`“${raw}” isn’t of the type “${issue.key}” takes here.`);
-        return;
+        return null;
       }
-      this.fix([Object.assign({}, issue, { fix: { value } })]);
+      if (this.app.vault.getAbstractFileByPath(file.path) !== file) {
+        new Notice('Nothing was set: the note is gone.');
+        return null;
+      }
+      if (this.file === file) this.blurSection();
+      return this.plugin.notes.write(
+        file,
+        (fm) => {
+          const name = Object.keys(fm).find((k) => k.toLowerCase() === want) || issue.key;
+          if (!Array.isArray(value)) {
+            fm[name] = value;
+            return;
+          }
+          // A list keeps the values allowed; those that aren't give way to the one chosen.
+          const have = fm[name];
+          const items = emptyValue(have) ? [] : Array.isArray(have) ? have : asType(entry.type, have) || [have];
+          const out = [];
+          const add = (y) => {
+            if (!out.includes(y)) out.push(y);
+          };
+          items.forEach((x) => (allowed(x) ? add(x) : value.forEach(add)));
+          value.forEach(add);
+          fm[name] = out;
+        },
+        { undo: `Set “${issue.key}”.` }
+      );
     };
-    if (entry.values && entry.values.length) {
+    const choices = entry.values && entry.values.length ? entry.values.map((v) => [v, v]) : entry.type === 'checkbox' ? [['Yes', true], ['No', false]] : null;
+    if (choices) {
       const menu = new Menu();
-      entry.values.forEach((v) => menu.addItem((item) => item.setTitle(v).setSection('action').onClick(() => put(v))));
+      choices.forEach(([title, v]) => menu.addItem((item) => item.setTitle(title).setSection('action').onClick(() => put(v))));
       showMenuAt(menu, evt);
       return;
     }
     new NamePrompt(this.app, `Set “${issue.key}”`, entry.type ? TYPE_LABELS[entry.type] || entry.type : 'Value', put, { button: 'Set', numeric: entry.type === 'number' }).open();
+  }
+
+  /** Focus off the section, so the panel draws it again once Obsidian has read the change. */
+  blurSection() {
+    const doc = this.containerEl && this.containerEl.ownerDocument;
+    if (doc && doc.activeElement && this.containerEl.contains(doc.activeElement) && typeof doc.activeElement.blur === 'function') doc.activeElement.blur();
   }
 
   /** Fixes written as one change to the note: one step of Undo. */
@@ -227,9 +262,7 @@ export class SchemaSection extends PanelSection {
     const file = this.file;
     const changes = issues.map(fixFor).filter(Boolean);
     if (!file || !changes.length) return null;
-    // Focus off the section, so the panel draws it again once Obsidian has read the change.
-    const doc = this.containerEl.ownerDocument;
-    if (doc.activeElement && this.containerEl.contains(doc.activeElement) && typeof doc.activeElement.blur === 'function') doc.activeElement.blur();
+    this.blurSection();
     return this.plugin.notes.write(file, (fm) => changes.forEach((change) => change(fm)), { undo: issues.length === 1 ? `Fixed “${issues[0].key}”.` : `Fixed ${issues.length} properties.` });
   }
 }

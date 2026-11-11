@@ -19,7 +19,9 @@ import { PropertyRows } from './160-panel-properties.js';
 /** What a property the folder's schema names starts as: its default in the schema's type, or empty. */
 function schemaDefault(entry) {
   if (entry.default === undefined) return '';
-  const value = entry.type ? asType(entry.type, entry.default) : JSON.parse(JSON.stringify(entry.default));
+  // A copy: the settings' own list isn't shared into the note.
+  const own = JSON.parse(JSON.stringify(entry.default));
+  const value = entry.type ? asType(entry.type, own) : own;
   return value === undefined ? '' : value;
 }
 
