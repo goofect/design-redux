@@ -164,6 +164,9 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.ok(first >= sets[0], 'Subjects I is a set of its own, after the first');
     const total = sets.reduce((sum, n) => sum + n, 0);
     assert.strictEqual(total, R.COVER_DESIGNS.length);
+    assert.strictEqual(new Set(R.COVER_DESIGNS.map((d) => d.id)).size, R.COVER_DESIGNS.length, 'ids are unique');
+    assert.strictEqual(sets.length, 3, 'the first designs, Subjects I and Subjects II');
+    assert.strictEqual(R.COVER_DESIGNS.findIndex((d) => d.id === 'guitar'), sets[0] + sets[1], 'Subjects II starts its own set');
     const names = [...Array(200)].map((_, i) => `Folder ${i} ${['Notes', 'Reading', 'Projects', 'Archive'][i % 4]}`);
     let moved = 0;
     names.forEach((name) => {

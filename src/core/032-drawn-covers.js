@@ -1740,6 +1740,527 @@ export const COVER_DESIGNS = [
         ]);
     },
   },
+  // Subjects II.
+  {
+    id: 'guitar',
+    name: 'Guitar',
+    draw: (p, r) => {
+      const turn = `rotate(${coverRound(-28 - r() * 14)} 50 52)`;
+      return [
+        shapeRect(46.5, 10, 7, 40, p.b),
+        shapeRect(45, 5, 10, 11, p.b, 1, { rx: 2 }),
+        shapeCircle(50, 48, 13, p.a),
+        shapeCircle(50, 68, 18, p.a),
+        shapeCircle(50, 52, 5.5, p.bottom),
+        shapeRect(42, 71, 16, 3.5, p.b, 1, { rx: 1 }),
+        ...[48.6, 50, 51.4].map((x) => shapeLine(x, 8, x, 72, p.c, 0.4, 0.8)),
+      ].map((s) => coverTurn(s, turn));
+    },
+  },
+  {
+    id: 'palette',
+    name: 'Palette',
+    draw: (p, r) => {
+      const dabs = [[p.b, 1], [p.bottom, 1], [p.b, 0.55], [p.bottom, 0.55]];
+      const off = Math.floor(r() * 4);
+      return [
+        shapeEllipse(46, 54, 34, 25, p.a, 1, 'rotate(-14 46 54)'),
+        shapeEllipse(30, 64, 5, 4, p.bottom, 0.9),
+        ...[[30, 44], [44, 36], [60, 36], [70, 50]].map(([x, y], i) => shapeCircle(x, y, 5.5, dabs[(i + off) % 4][0], dabs[(i + off) % 4][1])),
+        shapeLine(60, 94, 84, 52, p.b, 3.4),
+        shapeLine(84, 52, 87.5, 46, p.c, 4),
+        shapeEllipse(90, 41.5, 2.6, 6, p.a, 1, 'rotate(30 90 41.5)'),
+      ];
+    },
+  },
+  {
+    id: 'lens',
+    name: 'Lens',
+    draw: (p, r) => [
+      shapeCircle(50, 50, 34, p.a),
+      Object.assign(shapeRing(50, 50, 31, p.bottom, 2, 0.5), { dash: '1 2' }),
+      shapeCircle(50, 50, 27, p.bottom),
+      shapeRing(50, 50, 24, p.c, 0.8, 0.3),
+      shapeCircle(50, 50, 20, p.b),
+      coverTurn(shapePath(coverHex(50, 50, 10), p.bottom), `rotate(${coverRound(r() * 60)} 50 50)`),
+      shapeEllipse(41, 41, 7, 3, p.c, 0.55, 'rotate(-45 41 41)'),
+      shapeCircle(60, 60, 2.4, p.c, 0.4),
+    ],
+  },
+  {
+    id: 'reel',
+    name: 'Film reel',
+    draw: (p, r) => {
+      const t = r() * 60;
+      const out = [
+        shapePath('M62 60C74 76 80 88 104 90', 'none', 1, { stroke: p.b, width: 10 }),
+        Object.assign(shapePath('M62 60C74 76 80 88 104 90', 'none', 0.8, { stroke: p.c, width: 2 }), { dash: '2 3' }),
+        shapeCircle(46, 44, 30, p.a),
+      ];
+      for (let i = 0; i < 6; i++) {
+        const a = ((t + i * 60) * Math.PI) / 180;
+        out.push(shapeCircle(coverRound(46 + 17 * Math.cos(a)), coverRound(44 + 17 * Math.sin(a)), 7, p.bottom));
+      }
+      return out.concat([shapeCircle(46, 44, 5, p.b), shapeCircle(46, 44, 2, p.bottom)]);
+    },
+  },
+  {
+    id: 'clapper',
+    name: 'Clapper',
+    draw: (p, r) => {
+      const stripes = (y) => [0, 1, 2, 3].map((k) => shapePath(`M${26 + k * 14} ${y}H${33 + k * 14}L${28 + k * 14} ${y + 8}H${21 + k * 14}Z`, p.bottom));
+      const open = `rotate(${coverRound(-10 - r() * 12)} 20 39)`;
+      return [
+        shapeRect(20, 48, 60, 36, p.a, 1, { rx: 2 }),
+        shapeLine(26, 60, 74, 60, p.bottom, 1, 0.3),
+        shapeLine(26, 72, 74, 72, p.bottom, 1, 0.3),
+        shapeRect(20, 40, 60, 8, p.c),
+        ...stripes(40),
+        ...[shapeRect(20, 30, 60, 8, p.c), ...stripes(30)].map((s) => coverTurn(s, open)),
+        shapeCircle(21, 39, 2.4, p.b),
+      ];
+    },
+  },
+  {
+    id: 'stockpot',
+    name: 'Stockpot',
+    draw: (p, r) => [
+      ...[38, 50, 62].map((x) => {
+        const dx = coverRound((r() - 0.5) * 4);
+        return shapePath(`M${x} 30C${x - 4 + dx} 25 ${x + 4 + dx} 20 ${x} 14`, 'none', 0.5, { stroke: p.c, width: 1.6 });
+      }),
+      shapeRect(14, 52, 10, 5, p.a, 1, { rx: 2 }),
+      shapeRect(76, 52, 10, 5, p.a, 1, { rx: 2 }),
+      shapeRect(22, 44, 56, 36, p.a, 1, { rx: 3 }),
+      shapeRect(22, 56, 56, 4, p.b, 0.85),
+      shapePath('M18 45Q50 30 82 45Z', p.b),
+      shapeCircle(50, 35, 3.5, p.b),
+      shapeLine(24, 88, 76, 88, p.c, 2, 0.6),
+      shapePath('M36 88Q38 82 40 88ZM48 88Q50 81 52 88ZM60 88Q62 82 64 88Z', p.b),
+    ],
+  },
+  {
+    id: 'loaf',
+    name: 'Bread',
+    draw: (p, r) => {
+      const tilt = coverRound(r() * 4);
+      const out = [
+        shapeRect(6, 72, 80, 8, p.b, 1, { rx: 3 }),
+        shapeRect(84, 74.5, 12, 3, p.b, 1, { rx: 1.5 }),
+        shapePath('M18 72C16 50 32 38 50 38S84 50 82 72Z', p.a),
+        shapeEllipse(42, 46, 12, 3, p.c, 0.2, 'rotate(-8 42 46)'),
+      ];
+      [32, 46, 60].forEach((x) => out.push(shapeLine(x, 60, x + 6 + tilt, 48, p.b, 3)));
+      for (let i = 0; i < 3; i++) out.push(shapeCircle(coverRound(16 + r() * 68), coverRound(14 + r() * 16), 1.2, p.c, 0.5));
+      return out;
+    },
+  },
+  {
+    id: 'teacup',
+    name: 'Teacup',
+    draw: (p, r) => {
+      const sway = coverRound((r() - 0.5) * 6);
+      return [
+        shapePath(`M44 36C40 30 ${48 + sway} 26 44 18`, 'none', 0.5, { stroke: p.c, width: 1.6 }),
+        shapePath(`M56 36C52 30 ${60 + sway} 26 56 20`, 'none', 0.4, { stroke: p.c, width: 1.6 }),
+        shapeEllipse(50, 78, 34, 6, p.b),
+        shapePath('M72 50C86 48 86 66 68 68', 'none', 1, { stroke: p.a, width: 4 }),
+        shapePath('M22 44H78C78 64 68 76 50 76S22 64 22 44Z', p.a),
+        shapeEllipse(50, 44, 28, 4, p.b, 0.7),
+        shapePath('M40 44Q28 40 17 52', 'none', 1, { stroke: p.c, width: 0.8 }),
+        shapeRect(12, 52, 9, 10, p.b, 1, { rx: 1 }),
+      ];
+    },
+  },
+  {
+    id: 'seedling',
+    name: 'Seedling',
+    draw: (p, r) => [
+      shapeCircle(coverRound(22 + r() * 56), 24, 9, p.c, 0.85),
+      shapePath('M50 74C50 64 49 56 50 48', 'none', 1, { stroke: p.a, width: 3 }),
+      shapePath('M50 54C40 55 31 49 28 40C38 38 47 44 50 54Z', p.a),
+      shapePath('M50 50C59 48 67 41 70 32C60 31 52 38 50 50Z', p.b),
+      shapePath(coverRidge(r, 72, 3, 3, true), p.b, 0.9),
+      shapePath(coverRidge(r, 84, 3, 4, true), p.bottom, 0.8),
+      ...[[30, 82], [64, 86], [46, 92]].map(([x, y]) => shapeEllipse(x, y, 2, 1.2, p.a, 0.5)),
+    ],
+  },
+  {
+    id: 'wateringcan',
+    name: 'Watering can',
+    draw: (p, r) => [
+      shapePath('M36 48C36 30 60 30 60 48', 'none', 1, { stroke: p.b, width: 4 }),
+      shapeLine(62, 70, 80, 44, p.a, 4),
+      shapeEllipse(81.5, 42, 6.5, 2.6, p.b, 1, 'rotate(35 81.5 42)'),
+      shapeRect(26, 46, 40, 34, p.a, 1, { rx: 4 }),
+      shapeRect(26, 56, 40, 4, p.b, 0.85),
+      ...[[86, 52], [91, 58], [85, 61]].map(([x, y]) => shapeEllipse(coverRound(x + r() * 3), coverRound(y + r() * 4), 1.2, 2.4, p.c, 0.8)),
+      shapeLine(10, 84, 90, 84, p.c, 1, 0.4),
+    ],
+  },
+  {
+    id: 'suitcase',
+    name: 'Suitcase',
+    draw: (p, r) => [
+      shapePath('M40 38V29H60V38', 'none', 1, { stroke: p.b, width: 4 }),
+      shapeRect(18, 36, 64, 46, p.a, 1, { rx: 5 }),
+      shapeRect(30, 36, 6, 46, p.b),
+      shapeRect(64, 36, 6, 46, p.b),
+      shapeCircle(coverRound(44 + r() * 12), coverRound(50 + r() * 6), 6, p.b, 0.6),
+      shapeRect(coverRound(41 + r() * 8), 64, 12, 8, p.bottom, 0.45, { transform: `rotate(${coverRound((r() - 0.5) * 20)} 50 68)` }),
+      shapeCircle(26, 86, 3.4, p.c),
+      shapeCircle(74, 86, 3.4, p.c),
+    ],
+  },
+  {
+    id: 'windrose',
+    name: 'Wind rose',
+    draw: (p, r) => {
+      const t = coverRound((r() - 0.5) * 24);
+      return [
+        shapeRing(50, 52, 37, p.c, 1, 0.4),
+        shapePath('M50 8L54 15H46Z', p.c),
+        shapeCircle(50, 52, 32, p.a),
+        shapeRing(50, 52, 27, p.bottom, 1, 0.35),
+        shapePath(coverStar(50, 52, 20, 5, 4, 45 + t), p.bottom, 0.5),
+        shapePath(coverStar(50, 52, 28, 6, 4, t), p.b),
+        shapeCircle(50, 52, 2.5, p.a),
+      ];
+    },
+  },
+  {
+    id: 'sailboat',
+    name: 'Sailboat',
+    draw: (p, r) => [
+      shapeCircle(coverRound(24 + r() * 52), 30, 12, p.c, 0.3),
+      shapeLine(50, 16, 50, 68, p.c, 1.4),
+      shapePath('M53 18Q70 40 78 62H53Z', p.a),
+      shapePath('M47 26Q34 46 26 62H47Z', p.b),
+      shapePath('M50 16L58 19L50 22Z', p.b),
+      shapePath('M24 66H78L70 76H32Z', p.a),
+      shapePath(coverWave(74, 2.5, 4, r()), p.b, 0.85),
+      shapePath(coverWave(84, 2, 5, r()), p.bottom, 0.7),
+    ],
+  },
+  {
+    id: 'anchor',
+    name: 'Anchor',
+    draw: (p, r) => [
+      shapePath(coverWave(90, 2, 4, r()), p.b, 0.5),
+      shapeRing(50, 21, 6, p.a, 4),
+      shapeRect(47, 27, 6, 52, p.a),
+      shapeRect(33, 35, 34, 6, p.a, 1, { rx: 3 }),
+      shapePath('M22 60C24 74 36 82 50 82S76 74 78 60', 'none', 1, { stroke: p.a, width: 6 }),
+      shapePath('M16 64L22 52L30 62Z', p.a),
+      shapePath('M84 64L78 52L70 62Z', p.a),
+      shapePath('M50 15C32 12 26 34 42 38S64 50 48 60S36 76 52 78', 'none', 0.9, { stroke: p.b, width: 2.2 }),
+    ],
+  },
+  {
+    id: 'tent',
+    name: 'Tent',
+    draw: (p, r) => {
+      const out = [shapeCircle(coverRound(70 + r() * 14), 20, 7, p.a, 0.9)];
+      for (let i = 0; i < 3; i++) out.push(shapeCircle(coverRound(10 + r() * 50), coverRound(10 + r() * 24), 0.9, p.c, 0.8));
+      return out.concat([
+        shapePath(coverPine(14, 76, 14, 30), p.c, 0.3),
+        shapePath(coverPine(86, 76, 12, 24), p.c, 0.3),
+        shapePath(coverRidge(r, 76, 2, 3, true), p.b),
+        shapeLine(46, 24, 53, 34, p.a, 1.6),
+        shapeLine(54, 24, 47, 34, p.a, 1.6),
+        shapePath('M22 78L50 30L78 78Z', p.a),
+        shapePath('M50 30L42 78H58Z', p.bottom, 0.55),
+        shapePath('M50 40L60 78H52Z', p.b),
+      ]);
+    },
+  },
+  {
+    id: 'ball',
+    name: 'Ball',
+    draw: (p, r) => {
+      const y = coverRound(42 + r() * 10);
+      const seam = (d) => shapePath(d, 'none', 0.7, { stroke: p.bottom, width: 1.6 });
+      return [
+        shapeRect(0, 80, 100, 20, p.b, 0.35),
+        shapeEllipse(52, 84, coverRound(14 + (y - 42)), 3, p.bottom, 0.6),
+        shapeLine(14, y - 6, 26, y - 6, p.c, 1.6, 0.5),
+        shapeLine(10, y + 4, 24, y + 4, p.c, 1.6, 0.35),
+        shapeCircle(52, y, 22, p.b),
+        seam(`M52 ${y - 22}V${y + 22}M30 ${y}H74`),
+        seam(`M37 ${y - 16}C45 ${y - 6} 45 ${y + 6} 37 ${y + 16}`),
+        seam(`M67 ${y - 16}C59 ${y - 6} 59 ${y + 6} 67 ${y + 16}`),
+      ];
+    },
+  },
+  {
+    id: 'house',
+    name: 'House',
+    draw: (p, r) => [
+      shapeCircle(coverRound(16 + r() * 18), 22, 8, p.c, 0.85),
+      shapePath('M66 28C62 22 70 18 66 12', 'none', 0.45, { stroke: p.c, width: 1.6 }),
+      shapeRect(62, 28, 8, 16, p.b),
+      shapePath('M20 52L50 26L80 52Z', p.b),
+      shapeRect(26, 50, 48, 36, p.a),
+      shapeRect(45, 64, 10, 22, p.b, 1, { rx: 1 }),
+      shapeRect(31, 58, 9, 9, p.bottom, 0.6),
+      shapeRect(60, 58, 9, 9, p.bottom, 0.6),
+      shapePath(coverRidge(r, 84, 2, 3, true), p.b, 0.8),
+    ],
+  },
+  {
+    id: 'diary',
+    name: 'Journal',
+    draw: (p, r) => {
+      const out = [
+        shapePath('M10 34Q30 29 50 35V84Q30 78 10 83ZM90 34Q70 29 50 35V84Q70 78 90 83Z', p.b),
+        shapePath('M14 30Q32 25 50 31V80Q32 74 14 79Z', p.a),
+        shapePath('M86 30Q68 25 50 31V80Q68 74 86 79Z', p.a),
+        shapeLine(50, 31, 50, 80, p.bottom, 1, 0.4),
+      ];
+      [40, 48, 56, 64].forEach((y) => out.push(shapeLine(19, y, coverRound(32 + r() * 13), y, p.bottom, 1.2, 0.35)));
+      [40, 48, 56].forEach((y) => out.push(shapeLine(55, y, coverRound(68 + r() * 13), y, p.bottom, 1.2, 0.35)));
+      out.push(shapePath('M53 80V93L56 90L59 93V80Z', p.c));
+      return out;
+    },
+  },
+  {
+    id: 'family',
+    name: 'Family',
+    draw: (p, r) => {
+      const [one, two] = r() < 0.5 ? [p.a, p.b] : [p.b, p.a];
+      const y = coverRound(44 - r() * 4);
+      return [
+        shapeLine(8, 85, 92, 85, p.c, 1, 0.4),
+        shapePath('M12 85C12 62 18 54 27 54S42 62 42 85Z', one),
+        shapeCircle(27, 40, 9, one),
+        shapePath('M60 85C60 66 65 59 73 59S86 66 86 85Z', two),
+        shapeCircle(73, 46, 8, two),
+        shapePath('M42 85C42 76 45 71 50 71S58 76 58 85Z', p.c),
+        shapeCircle(50, 62, 5.5, p.c),
+        shapePath(`M50 ${y + 4}L44 ${y - 2}C40 ${y - 6} 46 ${y - 11} 50 ${y - 6}C54 ${y - 11} 60 ${y - 6} 56 ${y - 2}Z`, p.b),
+      ];
+    },
+  },
+  {
+    id: 'cat',
+    name: 'Cat',
+    draw: (p, r) => {
+      const out = [shapeCircle(coverRound(40 + r() * 20), 40, 26, p.a)];
+      for (let i = 0; i < 2; i++) out.push(shapeCircle(coverRound(8 + r() * 84), coverRound(8 + r() * 14), 1, p.c, 0.8));
+      return out.concat([
+        shapeRect(0, 84, 100, 16, p.b),
+        shapePath('M60 82C76 84 80 70 72 62', 'none', 1, { stroke: p.bottom, width: 3.5 }),
+        shapeEllipse(50, 70, 13, 15, p.bottom),
+        shapeCircle(50, 49, 9, p.bottom),
+        shapePath('M42 46L43 35L49 41Z', p.bottom),
+        shapePath('M58 46L57 35L51 41Z', p.bottom),
+        shapeEllipse(46.5, 48, 1.2, 1.8, p.b),
+        shapeEllipse(53.5, 48, 1.2, 1.8, p.b),
+      ]);
+    },
+  },
+  {
+    id: 'bird',
+    name: 'Bird',
+    draw: (p, r) => {
+      const leaf = (x) => {
+        const y = coverRound(79 - x * 0.13);
+        return shapeEllipse(x, y, 3, 6, p.b, 0.9, `rotate(-30 ${x} ${y})`);
+      };
+      return [
+        shapeLine(4, 74, 96, 62, p.c, 2.6),
+        leaf(coverRound(14 + r() * 10)),
+        leaf(coverRound(80 + r() * 10)),
+        shapeLine(48, 63, 48, 68.3, p.c, 1.2),
+        shapeLine(54, 63, 54, 67.5, p.c, 1.2),
+        shapePath('M36 56L18 60L24 50Z', p.a),
+        shapeEllipse(50, 52, 17, 12, p.a),
+        shapeCircle(63, 41, 9, p.a),
+        shapePath('M38 48C46 45 56 49 58 56C50 61 40 59 36 54Z', p.b),
+        shapePath('M71 39L79 41L71 44Z', p.b),
+        shapeCircle(65, 39, 1.5, p.bottom),
+      ];
+    },
+  },
+  {
+    id: 'umbrella',
+    name: 'Umbrella',
+    draw: (p, r) => {
+      const out = [10, 24, 76, 90, 34, 66].map((x, i) => {
+        const y = coverRound(i < 4 ? 30 + r() * 50 : 4 + r() * 8);
+        return shapeLine(x, y, x - 2, y + 7, p.c, 1.2, 0.45);
+      });
+      return out.concat([
+        shapeLine(50, 52, 50, 80, p.a, 2.4),
+        shapePath('M50 80C50 88 40 88 40 82', 'none', 1, { stroke: p.a, width: 2.4 }),
+        shapeLine(50, 22, 50, 15, p.a, 2),
+        shapePath('M18 52A32 30 0 0 1 82 52Q74 46 66 52Q58 46 50 52Q42 46 34 52Q26 46 18 52Z', p.b),
+        shapePath('M50 22Q38 34 34 52M50 22Q62 34 66 52M50 22V52', 'none', 0.35, { stroke: p.bottom, width: 1 }),
+        shapeEllipse(46, 90, 22, 3, p.c, 0.25),
+      ]);
+    },
+  },
+  {
+    id: 'yarn',
+    name: 'Yarn',
+    draw: (p, r) => {
+      const t = coverRound(r() * 40);
+      const wind = (ry, deg) => Object.assign(shapeEllipse(46, 56, 25, ry, 'none', 1, `rotate(${deg + t} 46 56)`), { stroke: p.a, width: 1.4, opacity: 0.7 });
+      return [
+        shapeLine(22, 18, 50, 52, p.c, 2.2),
+        shapeLine(74, 18, 46, 52, p.c, 2.2),
+        shapeCircle(22, 18, 3, p.b),
+        shapeCircle(74, 18, 3, p.b),
+        shapePath('M66 70C80 74 74 88 92 88', 'none', 1, { stroke: p.b, width: 1.8 }),
+        shapeCircle(46, 56, 26, p.b),
+        wind(9, 20),
+        wind(14, -40),
+        wind(19, 80),
+      ];
+    },
+  },
+  {
+    id: 'saw',
+    name: 'Saw',
+    draw: (p, r) => {
+      const blade = [[34, 38], [90, 48]];
+      for (let i = 0; i <= 13; i++) {
+        const x = 90 - i * 4.3;
+        blade.push([x, 58 + (90 - x) * 0.1 + (i % 2 ? 3 : 0)]);
+      }
+      const turn = `rotate(${coverRound(-6 + r() * 8)} 50 50)`;
+      const out = [
+        shapeRect(6, 74, 88, 12, p.b, 0.85, { rx: 1 }),
+        shapeLine(12, 78, 60, 78, p.bottom, 1, 0.3),
+        shapeLine(30, 82, 88, 82, p.bottom, 1, 0.3),
+      ];
+      for (let i = 0; i < 3; i++) out.push(shapeCircle(coverRound(20 + r() * 60), coverRound(70 + r() * 3), 1, p.c, 0.6));
+      return out.concat([
+        shapePath(coverPoly(blade), p.a),
+        shapeRect(12, 32, 26, 36, p.b, 1, { rx: 7 }),
+        shapeRect(19, 40, 11, 19, p.bottom, 1, { rx: 5 }),
+        shapeCircle(35, 42, 1.4, p.c),
+        shapeCircle(35, 58, 1.4, p.c),
+      ].map((s) => coverTurn(s, turn)));
+    },
+  },
+  {
+    id: 'dice',
+    name: 'Dice',
+    draw: (p, r) => {
+      const faces = { 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]] };
+      const pips = (cx, cy, s, n, ink, turn) => faces[n].map(([u, v]) => coverTurn(shapeCircle(coverRound(cx + u * s * 0.27), coverRound(cy + v * s * 0.27), coverRound(s * 0.09), ink), turn));
+      const t1 = 'rotate(-14 36 50)';
+      const t2 = 'rotate(12 66 62)';
+      return [
+        shapeEllipse(52, 84, 34, 4, p.bottom, 0.5),
+        coverTurn(shapeRect(18, 32, 36, 36, p.a, 1, { rx: 6 }), t1),
+        ...pips(36, 50, 36, 2 + Math.floor(r() * 4), p.bottom, t1),
+        coverTurn(shapeRect(50, 46, 32, 32, p.b, 1, { rx: 5 }), t2),
+        ...pips(66, 62, 32, 2 + Math.floor(r() * 4), p.c, t2),
+      ];
+    },
+  },
+  {
+    id: 'chess',
+    name: 'Chess',
+    draw: (p, r) => {
+      const x = r() < 0.5 ? 22 : 78;
+      return [
+        shapeRect(0, 84, 100, 16, p.b),
+        ...[0, 40, 80].map((sx) => shapeRect(sx, 84, 20, 16, p.bottom, 0.35)),
+        shapePath(`M${x - 8} 84C${x - 6} 76 ${x - 3} 72 ${x - 3} 68H${x + 3}C${x + 3} 72 ${x + 6} 76 ${x + 8} 84Z`, p.c),
+        shapeCircle(x, 63, 5.5, p.c),
+        shapeRect(32, 78, 36, 7, p.a, 1, { rx: 2 }),
+        shapePath('M38 78C42 66 44 54 44 46H56C56 54 58 66 62 78Z', p.a),
+        shapePath('M40 42C38 32 44 26 50 26S62 32 60 42Z', p.a),
+        shapeRect(38, 42, 24, 5, p.b, 1, { rx: 2.5 }),
+        shapeRect(48, 13, 4, 13, p.a),
+        shapeRect(44, 16, 12, 4, p.a),
+      ];
+    },
+  },
+  {
+    id: 'dress',
+    name: 'Dress',
+    draw: (p, r) => {
+      const out = [
+        shapePath('M50 24V20C50 15 56 15 56 19', 'none', 1, { stroke: p.c, width: 1.6 }),
+        shapePath('M50 24L24 36H76Z', 'none', 1, { stroke: p.c, width: 1.6 }),
+        shapePath('M40 33L44 34Q50 39 56 34L60 33L63 52L82 88H18L37 52Z', p.a),
+        shapeRect(37, 50, 26, 4, p.b),
+      ];
+      for (let i = 0; i < 5; i++) out.push(shapeCircle(coverRound(36 + r() * 28), 60 + i * 5.5, 1.6, p.b, 0.8));
+      return out;
+    },
+  },
+  {
+    id: 'dumbbell',
+    name: 'Dumbbell',
+    draw: (p, r) => [
+      shapeEllipse(50, 80, 36, 4, p.bottom, 0.5),
+      ...[
+        shapeRect(16, 47, 68, 6, p.c, 1, { rx: 2 }),
+        Object.assign(shapeLine(40, 50, 60, 50, p.bottom, 6, 0.35), { dash: '1 1.5' }),
+        shapeRect(26, 30, 9, 40, p.a, 1, { rx: 2 }),
+        shapeRect(65, 30, 9, 40, p.a, 1, { rx: 2 }),
+        shapeRect(18, 36, 8, 28, p.b, 1, { rx: 2 }),
+        shapeRect(74, 36, 8, 28, p.b, 1, { rx: 2 }),
+      ].map((s) => coverTurn(s, `rotate(${coverRound(-14 + r() * 10)} 50 50)`)),
+    ],
+  },
+  {
+    id: 'gift',
+    name: 'Gift',
+    draw: (p, r) => {
+      const out = [];
+      for (let i = 0; i < 3; i++) out.push(shapePath(coverStar(coverRound(14 + r() * 72), coverRound(10 + r() * 16), 3.2, 1.2, 4), p.c, 0.8));
+      return out.concat([
+        shapeRect(24, 50, 52, 34, p.a),
+        shapeRect(20, 42, 60, 10, p.a, 1, { rx: 1 }),
+        shapeRect(24, 52, 52, 2.5, p.bottom, 0.3),
+        shapeRect(46, 42, 8, 42, p.b),
+        shapePath('M50 42C42 26 30 32 36 42Z', p.b),
+        shapePath('M50 42C58 26 70 32 64 42Z', p.b),
+        shapeCircle(50, 41, 3.4, p.b),
+      ]);
+    },
+  },
+  {
+    id: 'cake',
+    name: 'Cake',
+    draw: (p, r) => {
+      let drip = 'M22 56H78V62';
+      for (let x = 78; x > 22; x -= 8) drip += `Q${x - 4} ${coverRound(68 + r() * 4)} ${x - 8} 62`;
+      const out = [
+        shapeEllipse(50, 86, 36, 4, p.b, 0.6),
+        shapeRect(22, 56, 56, 28, p.a, 1, { rx: 2 }),
+        shapePath(`${drip}Z`, p.b),
+        shapeLine(24, 76, 76, 76, p.bottom, 1.2, 0.3),
+      ];
+      [36, 50, 64].forEach((x) => {
+        out.push(shapeRect(x - 2, 40, 4, 16, p.c, 1, { rx: 1 }));
+        out.push(shapeEllipse(x, coverRound(34 + r()), 2.4, 4.2, p.b, 1, `rotate(${coverRound((r() - 0.5) * 20)} ${x} 35)`));
+      });
+      return out;
+    },
+  },
+  {
+    id: 'bicycle',
+    name: 'Bicycle',
+    draw: (p, r) => [
+      shapeCircle(coverRound(30 + r() * 40), 30, 16, p.c, 0.15),
+      shapeLine(6, 81, 94, 81, p.c, 1, 0.4),
+      shapeRing(26, 64, 15, p.a, 3),
+      shapeRing(74, 64, 15, p.a, 3),
+      shapePath('M26 64L46 64L38 44ZM38 44L66 44L46 64M66 44L74 64', 'none', 1, { stroke: p.b, width: 2.8 }),
+      shapePath('M32 41H44', 'none', 1, { stroke: p.a, width: 3 }),
+      shapePath('M66 44L63 36H71', 'none', 1, { stroke: p.a, width: 2.4 }),
+      shapeCircle(26, 64, 2, p.a),
+      shapeCircle(74, 64, 2, p.a),
+      shapeCircle(46, 64, 3.6, p.a),
+    ],
+  },
 ];
 
 /** A number from a name, stable between runs, spread across its bits. */
@@ -1785,6 +2306,8 @@ export function splitCoverSet(sets, id) {
 
 // Subjects I: study and work, from Open book on.
 splitCoverSet(COVER_DESIGN_SETS, 'openbook');
+// Subjects II: life and making, from Guitar on.
+splitCoverSet(COVER_DESIGN_SETS, 'guitar');
 
 /** Bits of a seed stirred with a salt, for a second, unrelated choice from the same name. */
 export function stirSeed(seed, salt) {
