@@ -497,7 +497,8 @@ export class BrowseView extends BrowseFilters {
       showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), arrange: this.pinSteps(file), first });
       return;
     }
-    showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), first });
+    const album = this.mode === 'folder' ? this.folder() : null;
+    showTargetMenu(this.plugin, evt, file, { redraw: () => this.render(), first, album });
   }
 
   /** A note's own ways out of a list: a new tab, its album where that isn't here, and a link to paste. */

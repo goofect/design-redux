@@ -279,7 +279,7 @@ export function showTargetMenu(plugin, evt, target, opts = {}) {
   }
 
   // The album features' own entries, through the plugin: this helper is below them.
-  if (typeof plugin.addAlbumMenuItems === 'function') plugin.addAlbumMenuItems(menu, target, sectioned, redraw);
+  if (typeof plugin.addAlbumMenuItems === 'function') plugin.addAlbumMenuItems(menu, target, sectioned, redraw, opts.album);
 
   // The vault's root can hold new things but isn't a thing to cover,
   // pin, rename or delete.

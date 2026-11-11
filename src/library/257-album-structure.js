@@ -550,8 +550,30 @@ export class AlbumStructure extends Feature {
     return this.setField(folder, 'featured', kept);
   }
 
-  /** On a note's menu: kept at the top of its album, or not. */
-  addFileItems(menu, file, sectioned, redraw) {
+  /** A note shown in an album it doesn't live in, no longer: off its includes, with an Undo. */
+  async exclude(folder, file) {
+    const before = this.listOf(folder, 'includes');
+    const kept = before.filter((p) => p !== file.path);
+    if (kept.length === before.length) return false;
+    const ok = await this.setField(folder, 'includes', kept);
+    if (ok) {
+      this.plugin.offerUndo(`${file.basename} no longer shows in ${folder.name}.`, () => this.setField(folder, 'includes', before));
+    }
+    return ok;
+  }
+
+  /** On a note's menu: kept at the top of its album, or not; opened from an album it's only shown in, taken out of it. */
+  addFileItems(menu, file, sectioned, redraw, album) {
+    if (this.enabled && album && file && file.parent !== album && this.listOf(album, 'includes').indexOf(file.path) !== -1) {
+      menu.addItem((item) =>
+        sectioned(item, 'action')
+          .setTitle(`Stop showing in ${album.name}`)
+          .setIcon('minus-circle')
+          .onClick(async () => {
+            if (await this.exclude(album, file)) redraw();
+          })
+      );
+    }
     const folder = file && file.parent;
     if (!this.enabled || !folder || (folder.isRoot && folder.isRoot()) || this.plugin.isFolderNote(file)) return;
     const on = this.info(folder).featured.indexOf(file) !== -1;

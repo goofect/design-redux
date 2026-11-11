@@ -201,12 +201,12 @@ export class DesignRedux extends Plugin {
     return structure ? structure.info(folder) : null;
   }
 
-  /** The album features' entries on a folder's or a note's menu, in this order. */
-  addAlbumMenuItems(menu, target, sectioned, redraw) {
+  /** The album features' entries on a folder's or a note's menu, in this order; `album`, the one the menu was opened from. */
+  addAlbumMenuItems(menu, target, sectioned, redraw, album) {
     const isFolder = target instanceof TFolder;
     const structure = this.feature(AlbumStructure);
     if (structure && isFolder) structure.addFolderItems(menu, target, sectioned, redraw);
-    else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw);
+    else if (structure && target.extension === 'md') structure.addFileItems(menu, target, sectioned, redraw, album);
     const refactor = this.feature(AlbumRefactor);
     if (refactor && isFolder) refactor.addFolderItems(menu, target, sectioned);
   }

@@ -2882,6 +2882,37 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.strictEqual(structure.rollupText(structure.rollup(structure.notesUnder(v.vault.getAbstractFileByPath('IR')))), `2 of 6 done  ·  ${span}`);
   });
 
+  await t('a note shown in a collection it doesn’t live in: taken back out from its menu there, with an Undo', async () => {
+    const { v, plugin, view } = setup();
+    const structure = new R.AlbumStructure(plugin);
+    plugin.feature = (C) => (C === R.AlbumStructure ? structure : null);
+    let undo = null;
+    plugin.offerUndo = (m, fn) => { undo = fn; };
+    const law = v.folder('Law');
+    v.folder('Elsewhere');
+    const sov = v.file('Elsewhere/Sovereignty.md');
+    await structure.include(law, sov);
+    const evt = () => ({ preventDefault() {}, stopPropagation() {} });
+    const menuFrom = (path, file) => { Object.assign(view, { mode: 'folder', path }); view.fileMenu(evt(), file); return menus[menus.length - 1].items; };
+    const stop = (items) => items.find((i) => i.title === 'Stop showing in Law');
+    assert.ok(stop(menuFrom('Law', sov)), menuFrom('Law', sov).map((i) => i.title).join(' | '));
+    const anarchy = v.vault.getFileByPath('IR/Anarchy.md');
+    const own = menuFrom('IR', anarchy);
+    assert.ok(!own.some((i) => /^Stop showing/.test(i.title)), 'not for a note living in the album');
+    assert.ok(own.some((i) => i.title === 'Keep at the top of IR'), 'its own album’s entries still there');
+    Object.assign(view, { mode: 'recent', path: '' });
+    view.fileMenu(evt(), sov);
+    assert.ok(!stop(menus[menus.length - 1].items), 'not when the menu isn’t opened from an album');
+    await stop(menuFrom('Law', sov)).click();
+    assert.ok(structure.info(law).includes.indexOf(sov) === -1, 'taken out');
+    assert.ok(v.vault.getFileByPath('Elsewhere/Sovereignty.md'), 'the note stays where it is');
+    await undo();
+    assert.ok(structure.info(law).includes.indexOf(sov) !== -1, 'Undo puts it back');
+    // Keep at the top still works on a note living in the album.
+    await own.find((i) => i.title === 'Keep at the top of IR').click();
+    assert.deepStrictEqual(structure.info(v.vault.getFolderByPath('IR')).featured, [anarchy]);
+  });
+
   console.log(`\n${passed} passed`);
   process.exit(0);
 })().catch((err) => {
