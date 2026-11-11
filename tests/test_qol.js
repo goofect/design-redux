@@ -760,12 +760,13 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const hear = (kind) => (type, fn) => ((on[`${kind}:${type}`] = fn), {});
     const post = [];
     const app = { workspace: { getLeavesOfType: () => leaves, on: hear('ws') }, vault: { on: hear('vault') }, metadataCache: { on: hear('meta') } };
-    const plugin = { settings, app, notes: { get: () => ({}) }, saveSettings: async () => {}, registerEvent() {}, registerEditorExtension() {}, registerMarkdownPostProcessor: (fn) => post.push(fn) };
+    const looks = {};
+    const plugin = { settings, app, notes: { get: (file, key) => (key === 'pages' ? looks[file.path] : undefined) }, saveSettings: async () => {}, registerEvent() {}, registerEditorExtension() {}, registerMarkdownPostProcessor: (fn) => post.push(fn) };
     const f = new R.NotePages(plugin);
     f.registerTypes();
     f.register();
     f.extensions = [R.pagesExtension((cm, name) => f.follow(cm, name))];
-    const open = (path, doc, { editor = true } = {}) => {
+    const open = (path, doc, { editor = true, file = new TFile(path) } = {}) => {
       const containerEl = document.body.appendChild(document.createElement('div'));
       const source = containerEl.createDiv({ cls: 'markdown-source-view' });
       const preview = containerEl.createDiv({ cls: 'markdown-preview-view' });
@@ -774,12 +775,13 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
       Object.defineProperty(preview, 'scrollTop', { value: 0, writable: true });
       const v = editor ? new EditorView({ parent: source, state: EditorState.create({ doc, extensions: [markdown(), livePreview.init(() => true), f.extensions] }) }) : null;
       let text = doc;
-      const view = { file: new TFile(path), containerEl, editor: v ? { cm: v, getValue: () => v.state.doc.toString() } : { getValue: () => text } };
+      const view = { file, containerEl, editor: v ? { cm: v, getValue: () => v.state.doc.toString() } : { getValue: () => text } };
       leaves.push({ view });
       return { view, v, preview, sizer, setText: (t) => (text = t) };
     };
-    const render = (path, el, line) => post.forEach((fn) => fn(el, { sourcePath: path, getSectionInfo: () => ({ lineStart: line }) }));
-    return { f, settings, on, open, render };
+    const render = (path, el, line, containerEl) => post.forEach((fn) => fn(el, { sourcePath: path, containerEl, getSectionInfo: () => ({ lineStart: line }) }));
+    const close = (view) => leaves.splice(leaves.findIndex((l) => l.view === view), 1);
+    return { f, settings, on, open, render, close, looks };
   };
 
   await t("pages: a change to another note draws none of this note's views, and a draw with nothing new reads nothing", async () => {
@@ -838,15 +840,84 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(blocks.length, 50);
     assert.strictEqual(syncs, 0, 'no full draw as blocks come');
     blocks.forEach((el, i) => assert.strictEqual(el.classList.contains('dr-page-off'), i >= 25, `line ${i}`));
-    // An embed, its lines its own note's: line 3 is on A here, hidden once B is open — not in the embed.
-    const inner = r.sizer.createDiv({ cls: 'internal-embed markdown-embed' }).createDiv({ cls: 'markdown-embed-content' }).createDiv({ cls: 'markdown-preview-view' }).createDiv({ cls: 'markdown-preview-sizer' }).createDiv();
+    // An embed in the note, its lines its own note's: line 3 is on A here, hidden once B is open — not in the embed.
+    const embedSizer = () => r.sizer.createDiv({ cls: 'internal-embed markdown-embed' }).createDiv({ cls: 'markdown-embed-content' }).createDiv({ cls: 'markdown-preview-view' }).createDiv({ cls: 'markdown-preview-sizer' });
+    const inner = embedSizer().createDiv();
     n.render('r.md', inner, 3);
     n.settings.pagesOpen['r.md'] = 'B';
     n.f.sync();
     assert.ok(blocks[3].classList.contains('dr-page-off') && !blocks[30].classList.contains('dr-page-off'));
     assert.ok(!inner.classList.contains('dr-page-off'), "the embed's block shows");
-    n.render('r.md', inner, 3);
-    assert.ok(!inner.classList.contains('dr-page-off'), 'and still, rendered again');
+  });
+
+  await t('pages: a note shown elsewhere — embedded in another note, in a hover, laid nowhere yet — shows whole; its own view hides by its pages', async () => {
+    const lines = ['%%page: A%%', 'alpha', '## Heading', 'under it', '%%page: B%%', 'beta'];
+    const doc = lines.join('\n') + '\n';
+    const n = pagedViews();
+    n.settings.pagesOpen['a.md'] = 'B';
+    const a = n.open('a.md', doc);
+    const b = n.open('b.md', 'Text\n![[a#Heading]]\n');
+    n.f.sync();
+    // Rendered before it's put anywhere, as Obsidian does: in B's embed of A, in a hover, with nothing said.
+    const embed = b.sizer.createDiv({ cls: 'internal-embed markdown-embed' }).createDiv({ cls: 'markdown-embed-content' }).createDiv({ cls: 'markdown-preview-view' }).createDiv({ cls: 'markdown-preview-sizer' });
+    const hover = document.body.createDiv({ cls: 'popover hover-popover' }).createDiv({ cls: 'markdown-preview-view' }).createDiv({ cls: 'markdown-preview-sizer' });
+    const come = (where) => {
+      const el = document.createElement('div');
+      n.render('a.md', el, 3, where);
+      if (where) where.appendChild(el);
+      return el;
+    };
+    const shown = [come(embed), come(hover), come(undefined)];
+    await later(50);
+    shown.forEach((el, i) => assert.ok(!el.classList.contains('dr-page-off'), `shown whole: ${i}`));
+    // A's own view: hidden as it comes, said where; else once it's laid, by the view's own draw.
+    const said = come(a.sizer);
+    assert.ok(said.classList.contains('dr-page-off'), 'its own view, said: hidden straight away');
+    const unsaid = come(undefined);
+    a.sizer.appendChild(unsaid);
+    await later(50);
+    assert.ok(unsaid.classList.contains('dr-page-off'), 'its own view, unsaid: hidden once drawn');
+  });
+
+  await t("pages: a page's new icon or colour shows, though the note's change is heard before its properties'", async () => {
+    const n = pagedViews();
+    n.settings.pagesOpen['n.md'] = 'A';
+    const a = n.open('n.md', PAGED);
+    n.f.sync();
+    a.view.file.stat.mtime = 5;
+    n.on['vault:modify'](a.view.file);
+    await later(50);
+    n.looks['n.md'] = { B: { color: 'red' } };
+    n.on['meta:changed'](a.view.file);
+    await later(50);
+    const tab = a.view.containerEl.querySelector('.dr-page-tab[data-page="B"]');
+    assert.strictEqual(tab.dataset.drColor, 'red');
+  });
+
+  await t('pages: a note changed while closed hides nothing by its old pages till it is drawn again; renamed or deleted, its pages are forgotten', async () => {
+    const lines = ['%%page: A%%', 'alpha', '%%page: B%%', 'beta'];
+    const n = pagedViews();
+    n.settings.pagesOpen['c.md'] = 'A';
+    const c = n.open('c.md', lines.join('\n') + '\n');
+    n.f.sync();
+    n.close(c.view);
+    // Changed by sync while closed: B now has a line more above it, on A.
+    const now = ['%%page: A%%', 'alpha', 'more', '%%page: B%%', 'beta'].join('\n') + '\n';
+    c.view.file.stat.mtime = 9;
+    const again = n.open('c.md', now, { file: c.view.file });
+    const el = again.sizer.createDiv();
+    n.render('c.md', el, 2);
+    assert.ok(!el.classList.contains('dr-page-off'), "line 2 was B's, by the old pages: not hidden by them");
+    await later(50);
+    assert.ok(!el.classList.contains('dr-page-off'), "and drawn again, it's A's");
+    const late = again.sizer.createDiv();
+    n.render('c.md', late, 4);
+    assert.ok(late.classList.contains('dr-page-off'), "B's, by the new pages");
+    n.on['vault:rename'](c.view.file, 'c.md');
+    assert.ok(!n.f.lines_.has('c.md'));
+    n.f.sync();
+    n.on['vault:delete'](c.view.file);
+    assert.ok(!n.f.lines_.has('c.md'));
   });
 
   await t("pages: a tab reused for another paged note doesn't take the first one's place; two panes of a note keep their own", async () => {

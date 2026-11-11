@@ -189,6 +189,8 @@ export class NotePages extends Feature {
     /** The notes to draw at the next frame; all of them when `pendingAll`. */
     this.pending = new Set();
     this.pendingAll = false;
+    /** Notes with blocks that came before they were laid anywhere: their views are drawn whole once more. */
+    this.recheck = new Set();
   }
 
   settingsSchema() {
@@ -217,11 +219,20 @@ export class NotePages extends Feature {
       const info = typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(el) : null;
       if (!info) return;
       el.dataset.drLine = String(info.lineStart);
-      // Hidden or not straight away, by the note's pages as last drawn; drawn whole only when
-      // they're not known, or the note has changed since.
-      const known = this.lines_.get(ctx.sourcePath);
-      if (known && (!el.parentElement || topBlock(el))) this.hideBlock(el, known.pages, this.openName(known.file, known.pages));
-      if (!known || (known.file.stat && known.file.stat.mtime !== known.mtime)) this.queue(ctx.sourcePath);
+      // Hidden or not straight away, by the note's pages as last drawn — only a block of the note's
+      // own reading view: an embed, a hover, a canvas card or an export shows the note whole.
+      // The pages not known, or the note changed since: nothing hidden till it's drawn again.
+      const path = ctx.sourcePath;
+      const known = this.lines_.get(path);
+      const fresh = !!known && (!known.file.stat || known.file.stat.mtime === known.mtime);
+      const home = this.homeOf(el, ctx, path);
+      if (fresh && home === true) this.hideBlock(el, known.pages, this.openName(known.file, known.pages));
+      else if (fresh && home === null) {
+        // Not laid anywhere yet: the view's own draw sorts it once it is.
+        this.recheck.add(path);
+        this.queue(path);
+      }
+      if (!fresh) this.queue(path);
     });
   }
 
@@ -232,6 +243,23 @@ export class NotePages extends Feature {
     // A note changed: only the views showing it.
     this.plugin.registerEvent(this.app.metadataCache.on('changed', (file) => this.queue(file && file.path)));
     this.plugin.registerEvent(this.app.vault.on('modify', (file) => file instanceof TFile && this.queue(file.path)));
+    // What's kept of a note's pages goes with it.
+    this.plugin.registerEvent(this.app.vault.on('rename', (file, oldPath) => this.lines_.delete(oldPath)));
+    this.plugin.registerEvent(this.app.vault.on('delete', (file) => file && this.lines_.delete(file.path)));
+  }
+
+  /**
+   * Is a block reading view's of its own note, where its pages hide it? True: straight in the own
+   * sizer of a view of the note. False: anywhere else — an embed, a hover, a canvas card, an export.
+   * Null: not laid anywhere yet, and nothing says where it will be.
+   */
+  homeOf(el, ctx, path) {
+    const where = ctx && ctx.containerEl && typeof ctx.containerEl.closest === 'function' ? ctx.containerEl : null;
+    if (!el.parentElement && !where) return null;
+    let sizer = el.parentElement;
+    if (!sizer) sizer = where.matches('.markdown-preview-sizer') ? where : where.querySelector(':scope > .markdown-preview-sizer') || where.closest('.markdown-preview-sizer');
+    if (!sizer || !sizer.matches('.markdown-preview-sizer') || !ownSizer(sizer) || sizer.closest('.hover-popover, .markdown-embed')) return false;
+    return this.views().some((view) => view.file.path === path && view.containerEl.contains(sizer));
   }
 
   enable() {
@@ -248,6 +276,7 @@ export class NotePages extends Feature {
     this.pending.clear();
     this.pendingAll = false;
     this.lines_.clear();
+    this.recheck.clear();
     if (this.extensions && this.extensions.length) {
       this.extensions.length = 0;
       this.app.workspace.updateOptions();
@@ -267,6 +296,8 @@ export class NotePages extends Feature {
       this.pending.clear();
       this.pendingAll = false;
       if (this.enabled) this.sync(paths);
+      if (paths) paths.forEach((p) => this.recheck.delete(p));
+      else this.recheck.clear();
     });
   }
 
@@ -354,10 +385,9 @@ export class NotePages extends Feature {
   /** The sizers a note's view lays its text in, with where the control goes in each. */
   places(view) {
     const out = [];
-    const own = ownSizer;
-    view.containerEl.querySelectorAll('.markdown-source-view .cm-sizer').forEach((sizer) => own(sizer) && out.push({ head: sizer, before: sizer.querySelector(':scope > .cm-contentContainer') }));
+    view.containerEl.querySelectorAll('.markdown-source-view .cm-sizer').forEach((sizer) => ownSizer(sizer) && out.push({ head: sizer, before: sizer.querySelector(':scope > .cm-contentContainer') }));
     view.containerEl.querySelectorAll('.markdown-preview-view .markdown-preview-sizer').forEach((sizer) => {
-      if (!own(sizer)) return;
+      if (!ownSizer(sizer)) return;
       const head = sizer.querySelector(':scope > .mod-header') || sizer;
       out.push({ head, before: null });
     });
@@ -377,11 +407,20 @@ export class NotePages extends Feature {
       return;
     }
     const open = this.openName(file, pages);
-    // Nothing new since the view was last drawn — its text, the page open, the control in place: nothing to do.
+    // What the control is made of, apart from which page is open: that only slides the pill.
+    const struct = `${file.path}|${pages
+      .map((p) => {
+        const look = this.look(file, p.name);
+        return `${p.name}:${look.icon}:${look.color}`;
+      })
+      .join(',')}`;
+    // Nothing new since the view was last drawn — its text, the page open, the pages' looks, the
+    // control in place, no block waiting to be sorted: nothing to do.
     const places = this.places(view);
-    if (last && !last.plain && last.sig === sig && last.path === file.path && last.open === open && last.mtime === mtime && places.every((p) => p.head.querySelector(':scope > .dr-pages'))) return;
+    const same = last && !last.plain && last.sig === sig && last.path === file.path && last.open === open && last.mtime === mtime && last.struct === struct;
+    if (same && !this.recheck.has(file.path) && places.every((p) => p.head.querySelector(':scope > .dr-pages'))) return;
     pageStats.draws++;
-    this.drawn.set(view, { sig, pages, path: file.path, open, mtime });
+    this.drawn.set(view, { sig, pages, path: file.path, open, mtime, struct });
     this.lines_.set(file.path, { file, mtime, pages });
     view.containerEl.addClass('dr-has-pages');
     // A page just chosen: the one before is put away with its scroll and cursor, this one's put back —
@@ -413,13 +452,6 @@ export class NotePages extends Feature {
       if (ownSizer(sizer)) sizer.querySelectorAll(':scope > [data-dr-line]').forEach((el) => this.hideBlock(el, pages, open));
     });
     view.containerEl.querySelectorAll('.dr-page-off').forEach((el) => !topBlock(el) && el.removeClass('dr-page-off'));
-    // What the control is made of, apart from which page is open: that only slides the pill.
-    const struct = `${file.path}|${pages
-      .map((p) => {
-        const look = this.look(file, p.name);
-        return `${p.name}:${look.icon}:${look.color}`;
-      })
-      .join(',')}`;
     places.forEach((place) => {
       let bar = place.head.querySelector(':scope > .dr-pages');
       if (bar && bar.dataset.struct === struct) {
