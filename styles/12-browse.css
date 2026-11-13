@@ -1387,3 +1387,9 @@
 body:not(.is-mobile) .workspace-leaf-content[data-type="design-redux-browse"] .view-header {
   display: none;
 }
+
+/* Obsidian's notices come down at the top right, where that header was and the bar's buttons now
+   are: under the bar, while a library screen is the tab shown there. */
+body:not(.is-mobile):has(.workspace-split.mod-root .workspace-tabs.mod-top-right-space .workspace-tab-header.is-active[data-type="design-redux-browse"]) .notice-container {
+  top: calc(var(--header-height, 40px) + 56px);
+}
