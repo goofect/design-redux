@@ -48,7 +48,9 @@ export class PropertiesScreen extends BrowseScreen {
       return;
     }
 
-    const selected = props.find((p) => p.key === view.property) || null;
+    // With none chosen yet, the first is shown: a list beside an empty half says nothing.
+    const chosenHere = props.find((p) => p.key === view.property) || null;
+    const selected = chosenHere || props[0];
 
     const split = root.createDiv({ cls: 'dr-split' });
     const list = split.createDiv({ cls: 'dr-split-list' });
@@ -74,15 +76,10 @@ export class PropertiesScreen extends BrowseScreen {
       onContextMenu(row, (evt) => this.propertyMenu(evt, prop));
     });
 
-    if (!selected) {
-      detail.createDiv({ cls: 'dr-split-empty', text: 'Select a property' });
-      return;
-    }
-
     // On a phone there's room for the list or the page, not both, so
     // choosing a property swaps one for the other — the way an artist
     // opens from the Artists list — and back returns to the list.
-    split.addClass('has-selection');
+    if (chosenHere) split.addClass('has-selection');
     this.renderOverview(detail, selected);
   }
 
