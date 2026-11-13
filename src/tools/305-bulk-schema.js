@@ -424,7 +424,7 @@ export class PropertySchemas extends Feature {
       },
       {
         key: 'propertyInlineEdit',
-        name: 'Change values in album rows',
+        name: 'Change values in a collection’s rows',
         desc: 'Edit a property’s value right in a collection’s row.',
       },
       {

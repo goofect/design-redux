@@ -140,14 +140,14 @@ export class Library extends Feature {
         type: 'dropdown',
         showIf: 'library',
         name: 'Group covers by',
-        desc: 'Group collections by kind or by shelf.',
+        desc: 'Group collections by kind or by the folder they’re in.',
         options: TILE_GROUPS,
       },
       {
         key: 'discNoteLimit',
         type: 'number',
-        name: 'Notes per disc',
-        desc: 'How many notes a disc shows before Show all.',
+        name: 'Notes per group',
+        desc: 'How many notes each group in a collection shows before Show all.',
         showIf: 'library',
       },
       {

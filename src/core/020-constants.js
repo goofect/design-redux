@@ -75,7 +75,7 @@ export function libraryLayout(has, folders = [], bases = []) {
 export const GRID_DENSITIES = { compact: 'Compact', standard: 'Standard', large: 'Spacious' };
 
 /* How screens of albums group their covers. */
-export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collection: 'Shelf' };
+export const TILE_GROUPS = { '': 'Nothing', kind: 'Kind of collection', collection: 'Folder' };
 
 export const DEFAULTS = {
   library: true,
