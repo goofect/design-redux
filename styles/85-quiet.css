@@ -12,11 +12,12 @@
  */
 
 /* The bar: its first and last icons sit in 32px buttons; their glyphs keep to the page's edges. */
-body.dr-look-apple .dr-detail-bar > .dr-browse-up:first-child {
+body.dr-look-apple .dr-detail-bar > .dr-sidebar-toggle,
+body:not(.dr-left-collapsed).dr-look-apple .dr-detail-bar > .dr-sidebar-toggle + .dr-browse-up {
   margin-left: -8px;
 }
 
-body.dr-look-apple .dr-detail-bar > :is(.dr-bar-icon, .dr-filter-btn):last-child {
+body.dr-look-apple .dr-detail-bar :is(.dr-bar-icon, .dr-filter-btn):nth-last-child(1 of :is(.dr-bar-icon, .dr-filter-btn)) {
   margin-right: -8px;
 }
 
@@ -43,6 +44,11 @@ body.dr-look-apple .dr-track:not(.is-editing)::after {
 
 body.dr-look-apple :is(.dr-track, .dr-tr):is(.is-selected, :focus-visible)::after,
 body.dr-look-apple :is(.dr-track, .dr-tr):has(+ :is(.is-selected, :focus-visible))::after {
+  background-color: transparent;
+}
+
+/* None under a group's last row: the space before the next heading divides them. */
+body.dr-look-apple .dr-track:has(+ :not(.dr-track))::after {
   background-color: transparent;
 }
 
@@ -77,4 +83,16 @@ body.dr-look-apple .dr-lib-row .dr-lib-icon:not(.has-art) {
 
 body.dr-look-apple .dr-lib-row.is-active .dr-lib-icon:not(.has-art) {
   color: var(--text-accent);
+}
+
+/* In a narrow pane a row keeps its name and its date: a property cut down to two letters and
+   an ellipsis says nothing, and the inspector has it whole. */
+body.dr-look-apple .dr-browse .dr-tracks {
+  container-type: inline-size;
+}
+
+@container (max-width: 460px) {
+  body.dr-look-apple .dr-track .dr-track-sub {
+    display: none;
+  }
 }
