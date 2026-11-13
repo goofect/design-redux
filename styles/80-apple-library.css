@@ -8,11 +8,11 @@ body.dr-look-apple .dr-lib-count {
   margin-left: auto;
   padding-left: 8px;
   color: var(--text-faint);
-  font-size: var(--dr-type-caption);
+  font-size: var(--dr-type-callout);
   font-variant-numeric: tabular-nums;
 }
 
-/* Home and every screen: a large title; shelves titled at 22px, their tiles in a row that scrolls sideways. */
+/* Home and every screen: a large title; shelves titled at 17px, their tiles in a row that scrolls sideways. */
 body.dr-look-apple .dr-browse-title {
   font-size: var(--dr-type-large);
   font-weight: 700;
@@ -20,7 +20,7 @@ body.dr-look-apple .dr-browse-title {
 }
 
 body.dr-look-apple .dr-shelf-title {
-  font-size: 22px;
+  font-size: var(--dr-type-headline);
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -45,7 +45,7 @@ body.dr-look-apple .dr-detail-title {
 body.dr-look-apple .dr-detail-meta,
 body.dr-look-apple .dr-detail-props {
   color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  font-size: var(--dr-type-body);
 }
 
 body.dr-look-apple .dr-detail-actions {
@@ -61,7 +61,7 @@ body.dr-look-apple .dr-tr.dr-th {
   border-bottom: 0.5px solid var(--dr-separator);
   background-color: var(--background-primary);
   color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  font-size: var(--dr-type-body);
   font-weight: 600;
 }
 
@@ -94,12 +94,21 @@ body.dr-look-apple .dr-disc {
   padding: 6px 12px;
   border-bottom: none;
   color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  font-size: var(--dr-type-body);
 }
 
 body.dr-look-apple .dr-disc-title {
   color: var(--text-normal);
   font-weight: 600;
+}
+
+/* Home's large cards rest on the page, a hairline round them, where they stood above it. */
+body.dr-look-apple .dr-pick-body {
+  box-shadow: var(--dr-shadow-sm);
+}
+
+body.dr-look-apple .dr-pick:focus-visible .dr-pick-body {
+  box-shadow: var(--dr-focus-ring);
 }
 
 /* The grid: 16px apart, what's picked lifted a little. */
@@ -128,7 +137,7 @@ body.dr-look-apple .dr-preview-title {
 body.dr-look-apple .dr-preview-lead {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: var(--dr-type-footnote);
+  font-size: var(--dr-type-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

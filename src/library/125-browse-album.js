@@ -531,6 +531,15 @@ export class BrowseAlbum extends BrowsePreview {
             if (typeof item.setDisabled === 'function') item.setDisabled(true);
           })
         );
+        // The tab's own entries (split, a window of its own), which the header that's hidden held under More.
+        if (typeof this.onPaneMenu === 'function') {
+          menu.addItem((item) => {
+            sectioned(item, 'info').setTitle('Tab').setIcon('panel-top');
+            const sub = typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
+            if (sub) this.onPaneMenu(sub, 'more-options');
+            else if (typeof item.setDisabled === 'function') item.setDisabled(true);
+          });
+        }
       },
     });
   }

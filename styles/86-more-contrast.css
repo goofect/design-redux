@@ -1,0 +1,72 @@
+/* More contrast ---------------------------------------------------------
+ *
+ * Where the system asks for more contrast: lines and fills a firm step
+ * from the page instead of a faint one, secondary text nearer the text's
+ * own colour, nothing translucent, a solid focus ring, and what's chosen
+ * marked by an edge as well as its fill, so it never rests on a shade of
+ * grey alone. Last, after the looks whose tokens it restates.
+ */
+@media (prefers-contrast: more) {
+  body {
+    --dr-line: color-mix(in srgb, var(--text-normal) 45%, transparent);
+    --dr-hover: color-mix(in srgb, var(--text-normal) 14%, transparent);
+    --dr-press: color-mix(in srgb, var(--text-normal) 22%, transparent);
+    --dr-meta-color: color-mix(in srgb, var(--text-normal) 70%, var(--text-muted));
+    --dr-float-bg: var(--background-primary);
+    --dr-glass-blur: 0px;
+    --dr-glass-blur-soft: 0px;
+    --dr-lib-pick: color-mix(in srgb, var(--text-normal) 24%, transparent);
+    --dr-lib-hover: color-mix(in srgb, var(--text-normal) 12%, transparent);
+    --dr-chosen-edge: inset 0 0 0 1px var(--text-normal);
+    --dr-chosen-focus: inset 0 0 0 3px var(--text-normal);
+  }
+
+  body.dr-look-apple,
+  body.dr-look-apple.theme-dark {
+    --dr-fill: color-mix(in srgb, var(--text-normal) 16%, transparent);
+    --dr-fill-strong: color-mix(in srgb, var(--text-normal) 28%, transparent);
+    --dr-separator: color-mix(in srgb, var(--text-normal) 45%, transparent);
+    --dr-focus-ring: 0 0 0 2px var(--text-normal);
+    --dr-material: var(--background-primary);
+    --dr-material-filter: none;
+  }
+
+  /* What's chosen: an edge around its fill. */
+  :is(body, body.dr-look-apple) :is(.dr-lib-row.is-active, .dr-split-row.is-selected, .dr-plist-row.is-picked, .dr-segment.is-active, .dr-track.is-selected, .dr-tr.is-selected) {
+    box-shadow: var(--dr-chosen-edge);
+  }
+
+  :is(body, body.dr-look-apple) .dr-card.is-selected .dr-card-art {
+    box-shadow: 0 0 0 2px var(--text-normal);
+  }
+
+  /* And a ring on it under the keyboard too, where the Apple look leaves its own mark to say so. */
+  body.dr-look-apple :is(.dr-track, .dr-tr, .dr-lib-row, .dr-split-row):is(.is-selected, .is-active):focus-visible {
+    box-shadow: var(--dr-chosen-focus);
+  }
+
+  body.dr-look-apple .dr-card:is(.is-selected, .is-active):focus-visible {
+    box-shadow: var(--dr-focus-ring);
+  }
+}
+
+/* Forced colours (Windows' contrast themes) drop every shadow and fill, and with them the rings and
+   the marks drawn in them: an outline, in the system's own colour, takes their place. Important, to
+   outrank each control's own `outline: none`. */
+@media (forced-colors: active) {
+  [class^="dr-"]:focus-visible,
+  [class*=" dr-"]:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: -2px;
+  }
+
+  .dr-lib-row.is-active:not(:focus-visible),
+  .dr-split-row.is-selected:not(:focus-visible),
+  .dr-plist-row.is-picked:not(:focus-visible),
+  .dr-segment.is-active:not(:focus-visible),
+  :is(.dr-track, .dr-tr).is-selected:not(:focus-visible),
+  .dr-card.is-selected:not(:focus-visible) .dr-card-art {
+    outline: 1px solid Highlight;
+    outline-offset: -1px;
+  }
+}

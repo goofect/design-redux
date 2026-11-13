@@ -5,6 +5,11 @@ body.dr-strip-active .markdown-preview-view {
   padding-bottom: calc(var(--dr-strip-h, 0px) + 24px) !important;
 }
 
+/* With the strip up, previous and next are its two buttons: the note's foot doesn't say them again. */
+body.dr-strip-active .dr-note-next {
+  display: none;
+}
+
 .dr-strip.is-away {
   transform: translate(-50%, calc(100% + 48px));
 }

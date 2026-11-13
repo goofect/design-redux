@@ -254,9 +254,11 @@ export class Library extends Feature {
 
     // As a music app's sidebar: the places LIBRARY_LAYOUT names, those
     // this vault has — the library check's where it's on, Subjects where
-    // there are subjects.
+    // there are subjects. Not Settings, to begin with: Obsidian's gear is
+    // always in reach, and the row can be added in the sidebar's editor.
     const structure = ask(this.plugin, 'albums');
     const has = Object.keys(LIBRARY_BUILTINS).filter((id) => {
+      if (id === 'settings') return false;
       if (id === 'inbox' || id === 'library-check') return !!this.settings[LIBRARY_BUILTINS[id].needs || 'libraryCheck'];
       if (id === 'subjects') return !!(structure && structure.enabled && structure.ofKind('subject').length);
       return true;

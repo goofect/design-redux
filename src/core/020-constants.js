@@ -49,23 +49,23 @@ export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', '
 /*
  * The library's sidebar, laid out as a music app's: places to start (Search,
  * Home, Inbox, Random as a music app's Search, Home, New, Radio); the Library
- * (Pins, what was added and opened, Collections, All Notes, Properties); Tools
- * where a store would be; and Views, as its playlists, the bases among them.
+ * (Pins, what was added and opened, Collections, All Notes, Properties, then
+ * the views and the bases among them, where a section of their own was often
+ * a single row); and Tools where a store would be.
  */
 export const LIBRARY_LAYOUT = [
   { title: '', ids: ['search', 'home', 'inbox', 'random'] },
-  { title: 'Library', ids: ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects'] },
+  { title: 'Library', ids: ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects', 'collections', 'smart'] },
   { title: 'Tools', ids: ['graph', 'library-check', 'settings'] },
-  { title: 'Views', ids: ['collections', 'smart'] },
 ];
 
-/** The sidebar's sections: the built-in places it has, as LIBRARY_LAYOUT orders them, bases with the views, then the folders. */
+/** The sidebar's sections: the built-in places it has, as LIBRARY_LAYOUT orders them, bases after the views in the Library, then the folders. */
 export function libraryLayout(has, folders = [], bases = []) {
   const sections = LIBRARY_LAYOUT.map((s) => ({
     title: s.title,
     items: s.ids.filter((id) => has.indexOf(id) !== -1).map((id) => ({ kind: 'builtin', id })),
   }));
-  sections[sections.length - 1].items.push(...bases);
+  sections.find((s) => s.title === 'Library').items.push(...bases);
   const out = sections.filter((s) => s.items.length);
   if (folders.length) out.push({ title: 'Folders', items: folders });
   return out;

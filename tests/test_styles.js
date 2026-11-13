@@ -112,4 +112,57 @@ t('every :hover is inside @media (any-hover: hover): a touch screen would keep i
   assert.deepStrictEqual(bad, [], 'hover styles only inside @media (any-hover: hover) (AGENTS.md): ' + bad.join(', '));
 });
 
+t('a control that drops its focus outline gets a ring: a fill alone reads as the pointer’s', () => {
+  const ringed = new Set();
+  const bare = [];
+  const re = /([^{}]+)\{([^{}]*)\}/g;
+  let m;
+  const rules = [];
+  while ((m = re.exec(css))) {
+    const sels = m[1].split(',').map((s) => s.trim().split('\n').pop().trim()).filter((s) => /:focus-visible/.test(s) && !s.startsWith('@'));
+    if (sels.length) rules.push({ sels, body: m[2] });
+  }
+  rules.forEach((r) => { if (/box-shadow:\s*(?!none)|outline:\s*\d/.test(r.body)) r.sels.forEach((s) => ringed.add(s)); });
+  const has = (sel) => [...ringed].some((r) => r === sel || r.startsWith(sel + ' ') || r.endsWith(' ' + sel));
+  rules.forEach((r) => {
+    if (/outline:\s*none/.test(r.body) && !/box-shadow:\s*(?!none)/.test(r.body)) r.sels.forEach((s) => { if (!has(s)) bare.push(s); });
+  });
+  assert.deepStrictEqual(bare, [], 'focus shown by a fill or nothing — add it to the ring list in 06-shared.css: ' + bare.join(', '));
+});
+
+t('no scroll bar is taken away: a row that scrolls shows one, or fades at the edge it goes past', () => {
+  const hidden = (css.match(/[^{}]+\{[^{}]*scrollbar-width:\s*none[^{}]*\}/g) || []).map((r) => r.split('{')[0].trim().split('\n').pop().trim());
+  assert.deepStrictEqual(hidden, ['.dr-pages-capsule'], 'scroll bars hidden: ' + hidden.join(', '));
+  assert.ok(/\.dr-pages-capsule\s*\{[^{}]*animation-timeline:\s*scroll\(/.test(css), 'the page control’s edges fade where it scrolls');
+});
+
+t('with more contrast, every rule that sets a line or a focus ring sets it again', () => {
+  // A look that gives --dr-separator or --dr-focus-ring a value of its own would otherwise outrank the firmer one.
+  const start = css.indexOf('@media (prefers-contrast: more)');
+  assert.ok(start !== -1, 'no @media (prefers-contrast: more) block');
+  let depth = 0;
+  let end = start;
+  for (let i = start; i < css.length; i++) {
+    if (css[i] === '{') depth++;
+    else if (css[i] === '}' && --depth === 0) { end = i; break; }
+  }
+  const inside = css.slice(start, end);
+  const outside = css.slice(0, start) + css.slice(end);
+  const setters = (text, token) => {
+    const out = new Set();
+    const re = /([^{}]+)\{([^{}]*)\}/g;
+    let m;
+    while ((m = re.exec(text))) {
+      if (new RegExp(token + '\\s*:').test(m[2])) m[1].split(',').forEach((s) => out.add(s.trim().split('\n').pop().trim()));
+    }
+    return out;
+  };
+  ['--dr-line', '--dr-separator', '--dr-focus-ring', '--dr-material'].forEach((token) => {
+    const firm = setters(inside, token);
+    const open = [...setters(outside, token)].filter((sel) => !sel.startsWith('@') && !firm.has(sel));
+    assert.deepStrictEqual(open, [], `${token} set where more contrast doesn't set it again: ` + open.join(', '));
+  });
+  assert.ok(/@media \(forced-colors: active\)[\s\S]*:focus-visible[\s\S]*outline:\s*2px solid Highlight/.test(css), 'forced colours need an outline for keyboard focus: shadows are dropped there');
+});
+
 console.log(`\n${passed} passed`);

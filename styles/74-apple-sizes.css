@@ -1,7 +1,7 @@
 /* Sizes, Apple's: one scale for everything the plugin draws, in step with the page control.
-   Interface text in the system font at 13px (12px secondary, 11px captions), headings as large
-   titles (34px), titles (22px) and headlines (17px semibold); controls 28px with 16px symbols
-   (44px to hit on touch); sidebar rows 28px; the strip a mini player 48px high around a 36px cover.
+   The Mac's own text styles, not a phone's: interface text in the system font at 13px (body; 12px
+   secondary, 11px captions), a large title at 26px, titles at 22px and 17px; controls 32px with
+   16px symbols; sidebar rows 32px; the strip 48px high around a 36px cover.
    Every gap stays a multiple of 4px. Colours stay the theme's. */
 body.dr-look-apple {
   /* Motion, Apple's: press 100, fast 150, base 220, slow 320ms; one curve, no overshoot. */
@@ -12,27 +12,27 @@ body.dr-look-apple {
   --dr-ease-move: cubic-bezier(0.32, 0.72, 0, 1);
   /* Type: the system font, and Apple's scale. */
   --dr-font-ui: var(--dr-font-system);
-  --dr-type-large: 34px;
-  --dr-type-title: 28px;
+  --dr-type-large: 26px;
+  --dr-type-title: 22px;
   --dr-type-headline: 17px;
-  --dr-type-body: 17px;
-  --dr-type-callout: 16px;
-  --dr-type-subhead: 15px;
-  --dr-type-footnote: 13px;
-  --dr-type-caption: 12px;
+  --dr-type-title3: 15px;
+  --dr-type-body: 13px;
+  --dr-type-callout: 12px;
+  --dr-type-subhead: 11px;
   --dr-display-size: var(--dr-type-large);
   --dr-display-weight: 700;
   --dr-title-size: var(--dr-type-title);
   --dr-heading-size: var(--dr-type-headline);
-  --dr-ui-size: var(--dr-type-footnote);
+  --dr-ui-size: var(--dr-type-body);
   --dr-ui-weight: 500;
-  --dr-meta-size: var(--dr-type-caption);
+  --dr-meta-size: var(--dr-type-callout);
   --dr-line-display: 1.15;
   --dr-line-heading: 1.25;
-  /* Controls 32px with 16px symbols; rows 36px; 44px to hit on touch. */
+  /* Controls 32px with 16px symbols; rows 32px, a large sidebar's on a Mac (28 compact, 36 spacious);
+     44px to hit on touch. */
   --dr-control-size: 32px;
   --dr-control-icon: 16px;
-  --dr-row-height: 36px;
+  --dr-row-height: 32px;
   /* Two shadows over a hairline: resting and floating. */
   --dr-shadow-sm: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.12);
   --dr-shadow-md: 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.28);
@@ -68,13 +68,13 @@ body.dr-look-apple.theme-dark {
 }
 
 body.dr-look-apple.dr-density-compact {
-  --dr-row-height: 32px;
+  --dr-row-height: 28px;
   --dr-control-size: 28px;
   --dr-control-icon: 14px;
 }
 
 body.dr-look-apple.dr-density-spacious {
-  --dr-row-height: 40px;
+  --dr-row-height: 36px;
   --dr-control-size: 36px;
   --dr-control-icon: 18px;
 }

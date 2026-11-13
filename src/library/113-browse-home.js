@@ -55,16 +55,19 @@ export class HomeScreen extends BrowseScreen {
     // The shelves, in the order and as many as the settings say.
     const collections = collectionTiles(view);
     const shelf = (title, items, opts) => items.length > 0 && (view.shelf(root, title, items, opts), true);
+    const order = homeShelves(this.settings);
+    // The note shown large as Last opened isn't shown again, first, on the shelf of them.
+    const shown = order.some((s) => s.id === 'picks' && s.on) && picks.find((p) => p.caption === 'Last opened');
     const shelves = {
       picks: () => picks.length > 0 && (this.picks(root, picks), true),
-      recents: () => shelf('Recently opened', recents.slice(0, 12), { mode: 'recents' }),
+      recents: () => shelf('Recently opened', recents.filter((f) => !shown || f !== shown.file).slice(0, 12), { mode: 'recents' }),
       added: () => shelf('Recently added', added, { mode: 'added' }),
       collections: () => shelf('Your views', collections, { mode: 'collections' }),
       pinned: () => shelf('Pinned', pinned, { mode: 'pinned' }),
       rediscover: () => shelf('Rediscover', older.slice(1)),
       folders: () => shelf('Folders', folders, { mode: 'folders' }),
     };
-    const drawn = homeShelves(this.settings).filter((s) => s.on && shelves[s.id]()).length;
+    const drawn = order.filter((s) => s.on && shelves[s.id]()).length;
     if (!drawn) root.createDiv({ cls: 'dr-split-empty', text: 'Nothing here yet' });
   }
 

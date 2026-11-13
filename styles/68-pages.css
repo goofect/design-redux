@@ -50,6 +50,33 @@
   display: none;
 }
 
+/* No bar fits in a control this small (the arrow keys and the page chosen scroll it): where pages
+   go on past an edge, that edge fades, so it's plain there are more. Tied to how far it's
+   scrolled; with nothing to scroll, no fade at all. */
+@supports (animation-timeline: scroll()) {
+  .dr-pages-capsule {
+    animation: dr-pages-edges linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+@keyframes dr-pages-edges {
+  0% {
+    -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, black calc(100% - 28px), transparent);
+  }
+
+  2%, 98% {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, transparent, black 28px, black calc(100% - 28px), transparent);
+  }
+
+  100% {
+    -webkit-mask-image: linear-gradient(to right, transparent, black 28px);
+    mask-image: linear-gradient(to right, transparent, black 28px);
+  }
+}
+
 /* The thumb: raised, white in light themes, grey in dark. */
 .dr-pages-pill {
   position: absolute;

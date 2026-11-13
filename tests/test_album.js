@@ -1630,7 +1630,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     await view.setState({ mode: 'home' }, {});
     const text = (sel) => Array.from(view.contentEl.querySelectorAll(sel)).map((e) => e.textContent);
     assert.deepStrictEqual(text('.dr-pick-caption'), ['Last opened', 'Rediscover']);
-    assert.deepStrictEqual(text('.dr-shelf-title'), ['Recently opened', 'Recently added', 'Rediscover', 'Folders']);
+    // The note shown large isn't shown again on the shelf of them (as Rediscover's first isn't): the one recent is the card.
+    assert.deepStrictEqual(text('.dr-shelf-title'), ['Recently added', 'Rediscover', 'Folders']);
     click(view.contentEl.querySelector('.dr-pick[data-path="IR/Balance.md"]'));
     assert.strictEqual(opened[0].basename, 'Balance');
   });
@@ -2095,15 +2096,15 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const library = new R.Library(plugin);
     plugin.settings.libraryCheck = false;
     const sections = library.defaultSections();
-    // As a music app's sidebar: places to start, the Library, Tools, Views; nothing folded away.
-    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 4), ['', 'Library', 'Tools', 'Views']);
+    // As a music app's sidebar: places to start, the Library with the views in it, Tools; nothing folded away.
+    assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Tools']);
     assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home', 'random']);
-    assert.deepStrictEqual(sections[1].items.map((i) => i.id), ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects'], 'Subjects offered once there is one');
+    assert.deepStrictEqual(sections[1].items.map((i) => i.id), ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects', 'collections', 'smart'], 'Subjects offered once there is one; the views after them');
     assert.ok(sections.every((s) => typeof s.folded !== 'boolean'));
     plugin.settings.libraryCheck = true;
     const checked = library.defaultSections();
     assert.deepStrictEqual(checked[0].items.map((i) => i.id), ['search', 'home', 'inbox', 'random'], 'the Inbox where the library check is on');
-    assert.deepStrictEqual(checked[2].items.map((i) => i.id), ['graph', 'library-check', 'settings']);
+    assert.deepStrictEqual(checked[2].items.map((i) => i.id), ['graph', 'library-check'], 'Settings left to Obsidian’s own gear; the row can be added');
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

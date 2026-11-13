@@ -235,11 +235,22 @@
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: 4px;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
-.dr-picks::-webkit-scrollbar {
-  display: none;
+/* A shelf's scroll bar: there, thin, and unseen until the shelf is pointed at or the keyboard is
+   in it — so a row that goes on past the edge can be dragged along, and says so. */
+.dr-picks:focus-within,
+.dr-shelf-row:focus-within {
+  scrollbar-color: var(--scrollbar-thumb-bg, var(--background-modifier-border)) transparent;
+}
+
+@media (any-hover: hover) {
+  .dr-picks:hover,
+  .dr-shelf-row:hover {
+    scrollbar-color: var(--scrollbar-thumb-bg, var(--background-modifier-border)) transparent;
+  }
 }
 
 .dr-pick {
@@ -423,11 +434,8 @@
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: 4px;
-  scrollbar-width: none;
-}
-
-.dr-shelf-row::-webkit-scrollbar {
-  display: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
 .dr-shelf-row > .dr-card {

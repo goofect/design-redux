@@ -35,7 +35,7 @@ body.dr-look-apple .dr-props-popup .dr-key {
   justify-content: flex-start;
   padding-top: 0;
   color: var(--text-normal);
-  font-size: var(--dr-type-subhead);
+  font-size: var(--dr-type-body);
   text-align: left;
 }
 
@@ -45,7 +45,7 @@ body.dr-look-apple .dr-props-popup .dr-key .dr-key-name {
 
 body.dr-look-apple .dr-props-popup .dr-value {
   color: var(--text-muted);
-  font-size: var(--dr-type-subhead);
+  font-size: var(--dr-type-body);
   text-align: right;
 }
 

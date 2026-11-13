@@ -43,6 +43,31 @@ body {
   outline-offset: 1px;
 }
 
+/* Where a control trades that outline for a fill of its own, the fill alone reads as the pointer's:
+   a ring as well, so the keyboard's place is never told by a shade. Rows keep theirs inside their
+   edge, since the lists they're in clip; the rest wear it outside. The Apple look has its own. */
+.dr-track:focus-visible,
+.dr-end-row:focus-visible,
+.dr-tr:focus-visible,
+.dr-split-row:focus-visible,
+.dr-plist-row:focus-visible,
+.dr-fn-item:focus-visible,
+.dr-recent:focus-visible,
+.dr-section-head[role="button"]:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+.dr-mention:focus-visible,
+.dr-detail-action:focus-visible,
+.dr-strip-now:focus-visible,
+.dr-search-full:focus-visible,
+.dr-shelf-label.is-linked:focus-visible,
+.dr-search-clear:focus-visible,
+.dr-cat:focus-visible,
+.dr-gp-add:focus-visible {
+  box-shadow: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
 /* Obsidian's own header icons sit inside wrapper divs that size them;
    these are direct children of the flex row, so without this they
    stretch to its full height and their hover backdrop looks oversized. */

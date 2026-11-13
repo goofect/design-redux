@@ -134,13 +134,13 @@ body.dr-look-apple .dr-card-art {
 body.dr-look-apple .dr-card-title {
   margin-top: 8px;
   color: var(--text-normal);
-  font-size: var(--dr-type-footnote);
+  font-size: var(--dr-type-body);
   font-weight: 500;
 }
 
 body.dr-look-apple .dr-card-sub {
   color: var(--text-muted);
-  font-size: var(--dr-type-caption);
+  font-size: var(--dr-type-callout);
 }
 
 /* 5. Chip — a tag or token: a 24px capsule in a muted fill, 13px text, no border. */

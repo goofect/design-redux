@@ -1381,3 +1381,9 @@
 .workspace-leaf-content[data-type="design-redux-browse"] .view-header-nav-buttons {
   display: none;
 }
+
+/* And the header itself, on a computer: a second row for a name the screen's own title says and a
+   More whose entries the tab's menu has, and an album's Options. A phone's keeps its buttons. */
+body:not(.is-mobile) .workspace-leaf-content[data-type="design-redux-browse"] .view-header {
+  display: none;
+}

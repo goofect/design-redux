@@ -8,8 +8,8 @@ body.dr-note-apple .markdown-source-view,
 body.dr-note-apple .markdown-preview-view,
 body.dr-note-apple .markdown-rendered {
   --font-text: var(--dr-font-ui);
-  --font-text-size: 17px;
-  --line-height-normal: 1.5;
+  --font-text-size: 16px;
+  --line-height-normal: 1.6;
   --file-line-width: 680px;
   /* One face for the title, the headings and the text — the same as the rest of the interface. */
   --inline-title-font: var(--dr-font-display);
@@ -19,16 +19,16 @@ body.dr-note-apple .markdown-rendered {
   --h4-font: var(--dr-font-ui);
   --h5-font: var(--dr-font-ui);
   --h6-font: var(--dr-font-ui);
-  --inline-title-size: 34px;
+  --inline-title-size: 26px;
   --inline-title-line-height: 1.15;
   --inline-title-weight: 700;
-  --h1-size: 28px;
+  --h1-size: 22px;
   --h1-weight: 700;
-  --h2-size: 22px;
+  --h2-size: 19px;
   --h2-weight: 600;
-  --h3-size: 19px;
+  --h3-size: 17px;
   --h3-weight: 600;
-  --h4-size: 17px;
+  --h4-size: 15px;
   --h4-weight: 600;
   --heading-spacing: 24px;
   --p-spacing: 12px;
@@ -38,9 +38,9 @@ body.dr-note-apple .markdown-rendered {
 body.dr-note-apple .markdown-source-view .cm-content,
 body.dr-note-apple .markdown-preview-view {
   font-family: var(--font-text);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.6;
   /* Text drawn as Apple draws it: regular, smoothed in greyscale so it isn't heavier than it should
      be, and never with a faux bold or italic. */
   -webkit-font-smoothing: antialiased;
@@ -78,19 +78,19 @@ body.dr-note-apple .markdown-preview-view .markdown-preview-sizer {
   margin-right: auto;
 }
 
-/* A large title, as Apple's: the theme's own title rules give way. */
+/* A large title, as a Mac's (26px): the theme's own title rules give way. */
 body.dr-note-apple .inline-title {
   font-family: var(--dr-font-display) !important;
-  font-size: 34px !important;
+  font-size: 26px !important;
   line-height: 1.15 !important;
   font-weight: 700 !important;
   letter-spacing: -0.02em !important;
 }
 
-body.dr-note-apple .markdown-rendered h1 { font-size: 28px; font-weight: 700; }
-body.dr-note-apple .markdown-rendered h2 { font-size: 22px; font-weight: 600; }
-body.dr-note-apple .markdown-rendered h3 { font-size: 19px; font-weight: 600; }
-body.dr-note-apple .markdown-rendered h4 { font-size: 17px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h1 { font-size: 22px; font-weight: 700; }
+body.dr-note-apple .markdown-rendered h2 { font-size: 19px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h3 { font-size: 17px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h4 { font-size: 15px; font-weight: 600; }
 
 body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4, h5, h6),
 body.dr-note-apple .markdown-source-view .cm-header,

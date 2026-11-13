@@ -201,8 +201,8 @@ suite('Design Redux in Obsidian: notes', function () {
       return { apple, theme, without, room };
     });
     expect(result.apple.weights).toEqual(['p:400:antialiased', 'li:400:antialiased', '.inline-title:700:antialiased', 'h1:700:antialiased']);
-    expect(result.apple.title).toBe('34px|700');
-    expect(result.apple.body).toBe('17px|25.5px');
+    expect(result.apple.title).toBe('26px|700');
+    expect(result.apple.body).toBe('16px|25.6px');
     expect(result.apple.column).toBeLessThanOrEqual(680);
     expect(result.apple.rule).toBe('1px');
     expect(result.apple.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips', 'dr-note-rule']);

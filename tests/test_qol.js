@@ -245,9 +245,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     layout.run(stock);
     assert.deepStrictEqual(stock.librarySections.map((s) => [s.title, s.items.map((i) => i.id || i.path)]), [
       ['', ['search', 'home', 'random']],
-      ['Library', ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties']],
+      ['Library', ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'collections', 'smart', 'Reading.base']],
       ['Tools', ['graph', 'settings']],
-      ['Views', ['collections', 'smart', 'Reading.base']],
       ['Folders', ['IR']],
     ]);
     const mine = { librarySections: [{ title: 'Yours', items: [built('bookmarks'), { kind: 'folder', path: 'IR' }] }] };
