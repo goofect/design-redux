@@ -213,7 +213,7 @@ suite('Design Redux in Obsidian: the app', function () {
     await browser.pause(500);
   });
 
-  it('keeps to its design system in the dark theme, the light one and the editorial look: one control size, square covers, rows by density, readable text', async function () {
+  it('keeps to its design system in the dark theme and the light one: one control size, square covers, rows by density, readable text', async function () {
     const started = await browser.executeObsidian(({ app }) => (app.vault && typeof app.vault.getConfig === 'function' ? app.vault.getConfig('theme') : null) || 'moonstone');
     // The album page, the library beside it; covers are measured on the home screen's tiles.
     const covers = await browser.executeObsidian(async ({ plugins }) => {
@@ -287,10 +287,6 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(dark.rows.length).toBeGreaterThan(0);
     // The library's rows as a music app's sidebar has them: 32px at the standard density.
     expect(dark.rows[0][0]).toBe(32);
-    const editorial = await measure('obsidian', 'editorial', 'standard');
-    check(editorial, 'editorial, dark');
-    await shot('album-editorial');
-    check(await measure('moonstone', 'editorial', 'standard'), 'editorial, light');
     const light = await measure('moonstone', 'theme', 'standard');
     check(light, 'light');
     expect(light.dark).toBe(false);

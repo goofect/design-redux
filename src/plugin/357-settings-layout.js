@@ -122,7 +122,7 @@ export const SETTINGS_TABS = [
 ];
 
 /** The rows above every tab: how the plugin looks, wherever you are. */
-export const LOOK_KEYS = ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
+export const LOOK_KEYS = ['lookScope', 'glassPanels', 'gridDensity', 'artworkSize', 'iconMode'];
 
 /** Where each setting sat before the four places, so a search for the old tab's name still finds it. */
 /** Every key a feature's row holds: its switch, then what its gear opens. */
@@ -141,7 +141,7 @@ export const SETTING_PRESETS = {
 };
 
 export const FORMER_TABS = {
-  Appearance: ['look', 'lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
+  Appearance: ['lookScope', 'glassPanels', 'gridDensity', 'artworkSize'],
   Library: ['library', 'libraryLayout', 'homePath', 'homeShelves', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'librarySections', 'defaultSort', 'albumSortMemory', 'typeToJump', 'discNoteLimit', 'albumNoteLimit', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'tileGroups', 'tableColumns', 'categoryProperty', 'searchNoteText', 'albumStructure', 'albumKeyNames', 'albumRollups', 'rollupDateKey', 'smartAlbums', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'folderNoteName', 'hideFolderNotes', 'coverProperty', 'coverDrop', 'coverFromFirstImage', 'coverFromFolder', 'coverFallback', 'generatedCoverColor', 'coverPrint'],
   Notes: ['notePage', 'notePageChips', 'notePageShelves', 'notePageNext', 'letterLists', 'romanLists', 'scripts', 'scriptSyntax', 'autoOrdinals', 'propertiesDropdown', 'panelPropertiesView', 'panelPrimaryProps', 'panelPropertyGroups', 'panelGroupList', 'propertyForAlbum', 'propertySchemaMarks', 'propertyInspector', 'propertyInlineEdit', 'propertyLinks', 'propertyValueChips', 'propertyHistoryLimit', 'propertyDueChips', 'propertyDueKeys', 'propertyRulesOn', 'propertyRulesDryRun', 'showMentions', 'panelPlaces', 'footnotes', 'footnotesAside', 'footnoteOrder', 'routeImages', 'imageFolder'],
   Workspace: ['contextStrip', 'stripPlace', 'stripDetail', 'onePage', 'singleArea', 'navDropdown', 'ribbonInMenu', 'settingsInHeader', 'graphProperties', 'graphRoutes', 'graphRouteProperty'],

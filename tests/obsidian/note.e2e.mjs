@@ -149,7 +149,7 @@ suite('Design Redux in Obsidian: notes', function () {
       if (old) await app.vault.delete(old);
       const file = await app.vault.create('Look/Look note.md', '---\ntype: test\nstatus: draft\n---\n%%page: One%%\n# Heading\n\nBody words here.\n\n---\n\n- an item\n\n%%page: Two%%\nOther\n');
       mine.settings.notePageChips = true;
-      mine.settings.look = 'apple';
+      mine.settings.lookScope = 'window';
       await mine.saveSettings();
       const leaf = app.workspace.getLeaf(true);
       await leaf.openFile(file, { state: { mode: 'preview' } });
@@ -182,8 +182,8 @@ suite('Design Redux in Obsidian: notes', function () {
       };
       const strip = document.querySelector('.dr-strip');
       const room = { strip: strip ? strip.offsetHeight : 0, reading: parseFloat(getComputedStyle(root()).paddingBottom) };
-      // The theme's look: none of it applies, and it is as with the plugin off.
-      mine.settings.look = 'theme';
+      // On Design Redux only: none of it applies to a note, and it is as with the plugin off.
+      mine.settings.lookScope = 'plugin';
       await mine.saveSettings();
       await wait(600);
       const theme = { colours: colours(), type: typeOf() };
@@ -193,7 +193,7 @@ suite('Design Redux in Obsidian: notes', function () {
       await app.plugins.enablePlugin('design-redux');
       await wait(1500);
       const again = app.plugins.plugins['design-redux'];
-      again.settings.look = 'apple';
+      again.settings.lookScope = 'window';
       again.settings.notePageChips = false;
       await again.saveSettings();
       leaf.detach();

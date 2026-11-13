@@ -13,6 +13,7 @@ import { MarkdownView, Notice, Platform, Setting } from 'obsidian';
 import { INSPECTOR_VIEW } from '../core/020-constants.js';
 import { makeTrigger } from '../core/042-controls.js';
 import { knownPropertyNames } from '../core/045-helpers-properties.js';
+import { inspectorShowing } from '../core/076-selection.js';
 import { Feature } from '../core/080-feature.js';
 import { originLabel } from '../core/084-workspace-coordinator.js';
 import { PropertiesSection } from './161-panel-property-edits.js';
@@ -359,6 +360,12 @@ export class PropertiesPanel extends Feature {
     // borrowed from it for as long as this shows, and given back on closing.
     if (!this.docked && this.isOpen() && ((target.file && this.file === target.file) || (target.card && this.card === target.card))) {
       this.close();
+      return;
+    }
+    // In sight in the right sidebar, and not pinned to something else, the inspector is where the
+    // note shows: one place, not a popup beside it.
+    if (this.docked && !this.pinned && inspectorShowing(this.app)) {
+      this.plugin.coordinator.show(leaf, target);
       return;
     }
     if (this.docked) this.float();

@@ -316,6 +316,13 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.thinNoteWords;
     },
   },
+  {
+    // One look: the editorial one and the theme's own are gone, and the setting that chose among them.
+    to: 31,
+    run(saved) {
+      delete saved.look;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

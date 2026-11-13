@@ -597,7 +597,7 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const classic = { look: 'classic', notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 17).run(classic);
     assert.deepStrictEqual(classic, { look: 'theme', notePage: false, albumExcerpts: false, glassPanels: false });
-    assert.ok(!('classic' in R.LOOKS));
+    assert.ok(!('LOOKS' in R), 'and since, one look: none to list');
   });
 
   await t('progress rings are gone: no ring on a cover, and their setting migrated away', async () => {
@@ -670,10 +670,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 30);
+    assert.strictEqual(s.settingsVersion, 31);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 30, brought up from \d+; steps [\d, ]+30$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 31, brought up from \d+; steps [\d, ]+31$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
@@ -2834,8 +2834,8 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.feature = (C) => (C === R.Appearance ? look : null);
     const has = (c) => document.body.classList.contains(c);
     look.enable();
-    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious') && !has('dr-look-editorial'), 'standard');
-    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'Apple by default, on what the plugin draws; notes as the theme draws them');
+    assert.ok(!has('dr-density-compact') && !has('dr-density-spacious'), 'standard');
+    assert.ok(has('dr-look-apple') && !has('dr-note-apple'), 'the one look, on what the plugin draws; notes as the theme draws them');
     plugin.settings.lookScope = 'window';
     look.enable();
     assert.ok(has('dr-look-apple') && has('dr-note-apple'), 'the whole window, when asked');
@@ -2843,21 +2843,9 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     plugin.settings.gridDensity = 'large';
     look.enable();
     assert.ok(has('dr-density-spacious'));
-    const cmds = Object.fromEntries(look.commands().map((c) => [c.id, c]));
-    cmds['switch-look'].run();
-    await new Promise((r) => setTimeout(r, 0));
-    assert.strictEqual(plugin.settings.look, 'theme');
-    assert.ok(!has('dr-look-apple') && !has('dr-note-apple'), 'the theme’s look: none of it');
-    plugin.settings.look = 'editorial';
-    look.enable();
-    assert.ok(has('dr-look-editorial'));
-    // The editorial look on the whole window, or on Design Redux only.
-    assert.ok(!has('dr-look-scoped'));
-    plugin.settings.lookScope = 'plugin';
-    look.enable();
-    assert.ok(has('dr-look-editorial') && has('dr-look-scoped'));
+    assert.deepStrictEqual(look.commands(), [], 'one look: nothing to switch between');
     look.disable();
-    assert.ok(!has('dr-density-spacious') && !has('dr-look-editorial') && !has('dr-look-scoped') && !has('dr-look-apple'), 'nothing left behind');
+    assert.ok(!has('dr-density-spacious') && !has('dr-look-apple') && !has('dr-note-apple'), 'nothing left behind');
   });
 
   await t('covers sized on their own, apart from the density', () => {

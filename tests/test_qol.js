@@ -226,7 +226,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 30);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 31);
     // Step 30: lengths are gone, and their settings with them.
     const s29 = { trackLength: 'words', noteLength: 'time', thinNoteWords: 60, notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 30).run(s29);
@@ -261,7 +261,9 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.deepStrictEqual(b, { look: 'theme' }, 'whoever asked for the theme’s look keeps it');
     const c = { look: 'editorial', noteThemeLook: false }; step.run(c);
     assert.deepStrictEqual(c, { look: 'editorial' });
-    assert.strictEqual(R.DEFAULTS.look, 'apple');
+    const one = { look: 'editorial', lookScope: 'plugin' }; R.SETTINGS_MIGRATIONS.find((m) => m.to === 31).run(one);
+    assert.deepStrictEqual(one, { lookScope: 'plugin' }, 'one look: the setting that chose among three is gone');
+    assert.ok(!('look' in R.DEFAULTS));
     // Step 15: Apple's look covers notes too, whatever scope the editorial look was given.
     const scope = R.SETTINGS_MIGRATIONS.find((m) => m.to === 15);
     const d = { look: 'apple', lookScope: 'plugin' }; scope.run(d);

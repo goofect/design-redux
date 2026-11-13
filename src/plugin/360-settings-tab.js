@@ -118,7 +118,7 @@ export class DesignReduxSettingTab extends PluginSettingTab {
     containerEl.addClass('dr-settings');
     // Settings can open in a window of their own, whose page doesn't carry the look: told here.
     const page = containerEl.ownerDocument.body;
-    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-apple', this.settings.look === 'apple');
+    if (page && page !== document.body && typeof page.toggleClass === 'function') page.toggleClass('dr-look-apple', true);
     const rows = this.rows();
     const placed = new Set();
     const resolve = (feature) => {
