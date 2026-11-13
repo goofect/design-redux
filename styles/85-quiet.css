@@ -1,0 +1,80 @@
+/* Quiet ------------------------------------------------------------------
+ *
+ * What makes a screen look settled, after the parts that draw it: one left
+ * edge, rows that round under the pointer instead of banding the page, and
+ * colour kept for what's chosen.
+ *
+ * The edge: a screen's title, cover, headings, row numbers and the first
+ * icon of its bar all start on the same line. What takes a fill under the
+ * pointer (a row, a heading that opens, a shelf's title, a bar's icon) is
+ * drawn 8px wider than its words, so the fill has room and the words keep
+ * to the line.
+ */
+
+/* The bar: its first and last icons sit in 32px buttons; their glyphs keep to the page's edges. */
+body.dr-look-apple .dr-detail-bar > .dr-browse-up:first-child {
+  margin-left: -8px;
+}
+
+body.dr-look-apple .dr-detail-bar > :is(.dr-bar-icon, .dr-filter-btn):last-child {
+  margin-right: -8px;
+}
+
+/* An album's rows: rounded, a little wider than their words, the number on the edge. */
+body.dr-look-apple .dr-browse .dr-tracks :is(.dr-track, .dr-end-row) {
+  margin-inline: -8px;
+  border-radius: 8px;
+}
+
+body.dr-look-apple .dr-browse .dr-tracks .dr-track-num {
+  text-align: left;
+}
+
+body.dr-look-apple .dr-tr:not(.dr-th) {
+  border-radius: 8px;
+}
+
+/* The hairline between rows runs from the words to the words, and steps aside for a row that's
+   filled — chosen, under the keyboard or the pointer — and for the one above it. */
+body.dr-look-apple .dr-track:not(.is-editing)::after {
+  right: 8px;
+  left: 8px;
+}
+
+body.dr-look-apple :is(.dr-track, .dr-tr):is(.is-selected, :focus-visible)::after,
+body.dr-look-apple :is(.dr-track, .dr-tr):has(+ :is(.is-selected, :focus-visible))::after {
+  background-color: transparent;
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple :is(.dr-track, .dr-tr):hover::after,
+  body.dr-look-apple :is(.dr-track, .dr-tr):has(+ :is(.dr-track, .dr-tr):hover)::after {
+    background-color: transparent;
+  }
+}
+
+/* A group's heading: its words on the edge, as the rows under it. */
+body.dr-look-apple .dr-browse .dr-tracks .dr-disc {
+  margin-inline: -8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+
+/* Home: a card's caption and a shelf's title on the edge too. */
+body.dr-look-apple .dr-pick-caption {
+  margin-inline: 0;
+}
+
+body.dr-look-apple .dr-shelf-label {
+  margin-left: calc(var(--dr-space-1) * -1);
+}
+
+/* The sidebar: icons in the text's grey, so a dozen rows aren't a dozen spots of colour; the
+   accent is the chosen row's. Covers keep their own. */
+body.dr-look-apple .dr-lib-row .dr-lib-icon:not(.has-art) {
+  color: var(--text-muted);
+}
+
+body.dr-look-apple .dr-lib-row.is-active .dr-lib-icon:not(.has-art) {
+  color: var(--text-accent);
+}
