@@ -2098,13 +2098,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     const sections = library.defaultSections();
     // As a music app's sidebar: places to start, the Library with the views in it, Tools; nothing folded away.
     assert.deepStrictEqual(sections.map((s) => s.title).slice(0, 3), ['', 'Library', 'Tools']);
-    assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home', 'random']);
+    assert.deepStrictEqual(sections[0].items.map((i) => i.id), ['search', 'home']);
     assert.deepStrictEqual(sections[1].items.map((i) => i.id), ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects', 'collections', 'smart'], 'Subjects offered once there is one; the views after them');
     assert.ok(sections.every((s) => typeof s.folded !== 'boolean'));
     plugin.settings.libraryCheck = true;
     const checked = library.defaultSections();
-    assert.deepStrictEqual(checked[0].items.map((i) => i.id), ['search', 'home', 'inbox', 'random'], 'the Inbox where the library check is on');
-    assert.deepStrictEqual(checked[2].items.map((i) => i.id), ['graph', 'library-check'], 'Settings left to Obsidian’s own gear; the row can be added');
+    assert.deepStrictEqual(checked[0].items.map((i) => i.id), ['search', 'home', 'inbox'], 'the Inbox where the library check is on');
+    assert.deepStrictEqual(checked[2].items.map((i) => i.id), ['graph', 'library-check', 'random'], 'a random note among the tools; Settings left to Obsidian’s own gear');
   });
 
   await t('an album says what it is: its kind and the way down above its title, what it’s for, notes from elsewhere, albums in it and beside it', async () => {

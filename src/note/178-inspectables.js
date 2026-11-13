@@ -68,15 +68,16 @@ export function drawNoteHead(plugin, parentEl, file) {
   info.createDiv({ cls: 'dr-props-title', text: file.basename });
   const lead = leadProperty(plugin.app, file, false);
   if (lead) info.createDiv({ cls: 'dr-props-lead', text: lead });
-  fillNoteMeta(plugin, info.createDiv({ cls: 'dr-props-meta' }), file);
+  fillNoteMeta(plugin, info.createDiv({ cls: 'dr-props-meta' }), file, lead);
   return head;
 }
 
-/** "Folder · Edited Yesterday". */
-export function fillNoteMeta(plugin, meta, file) {
+/** "Folder · Edited Yesterday" — without the folder where the line above (`said`) is its name already. */
+export function fillNoteMeta(plugin, meta, file, said) {
   const parts = [];
   const folder = file.parent;
-  if (folder && !(folder.isRoot && folder.isRoot())) parts.push(folder.name);
+  const same = !!said && String(said).trim().toLowerCase() === String(folder ? folder.name : '').trim().toLowerCase();
+  if (folder && !(folder.isRoot && folder.isRoot()) && !same) parts.push(folder.name);
   if (file.stat) parts.push(`Edited ${relativeDay(file.stat.mtime)}`);
   meta.setText(parts.join('  ·  '));
 }

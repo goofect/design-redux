@@ -54,9 +54,9 @@ export const LIBRARY_MORE = ['collections', 'smart', 'properties', 'subjects', '
  * a single row); and Tools where a store would be.
  */
 export const LIBRARY_LAYOUT = [
-  { title: '', ids: ['search', 'home', 'inbox', 'random'] },
+  { title: '', ids: ['search', 'home', 'inbox'] },
   { title: 'Library', ids: ['bookmarks', 'added', 'recents', 'folders', 'notes', 'properties', 'subjects', 'collections', 'smart'] },
-  { title: 'Tools', ids: ['graph', 'library-check', 'settings'] },
+  { title: 'Tools', ids: ['graph', 'library-check', 'random', 'settings'] },
 ];
 
 /** The sidebar's sections: the built-in places it has, as LIBRARY_LAYOUT orders them, bases after the views in the Library, then the folders. */

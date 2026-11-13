@@ -501,4 +501,19 @@ suite('Design Redux in Obsidian: notes', function () {
       if (f) await app.vault.delete(f);
     });
   });
+
+  it('shows a note’s properties in the inspector while that’s in sight, not in a popup beside it', async function () {
+    const where = () => browser.execute(() => {
+      const pop = document.querySelector('.dr-props-popup.is-open');
+      return pop ? { docked: pop.classList.contains('is-docked'), right: !!pop.closest('.mod-right-split'), name: (pop.querySelector('.dr-props-title') || {}).textContent } : null;
+    });
+    await browser.executeObsidianCommand('design-redux:open-inspector');
+    await browser.waitUntil(() => browser.execute(() => !!document.querySelector('.mod-right-split .dr-props-popup.is-docked')), { timeout: 5000, timeoutMsg: 'the inspector never opened' });
+    await obsidianPage.openFile('Politics/Balance of power.md');
+    await browser.executeObsidianCommand('design-redux:open-properties');
+    await browser.waitUntil(async () => ((await where()) || {}).name === 'Balance of power', { timeout: 5000, timeoutMsg: 'the inspector never showed the note' });
+    expect(await where()).toEqual({ docked: true, right: true, name: 'Balance of power' });
+    expect(await browser.execute(() => document.querySelectorAll('.dr-props-popup').length)).toBe(1);
+    await browser.executeObsidianCommand('design-redux:open-inspector');
+  });
 });
