@@ -49,7 +49,7 @@ export const SETTINGS_TABS = [
         id: 'library',
         icon: 'library',
         name: 'Library',
-        desc: 'Folders as collections with covers, their notes in order, and a sidebar to browse them.',
+        desc: 'Folders as collections, their notes in order, and a sidebar to browse them.',
         switch: 'library',
         keys: ['libraryLayout', 'inspector', 'inspectorClick', 'hideEmptyFolders', 'sidebarDrop', 'defaultSort', 'albumSortMemory', 'typeToJump', 'searchNoteText', 'albumColumns', 'albumExcerpts', 'albumStillToWrite', 'albumNestBy', 'tileGroups', 'categoryProperty', 'smartAlbums', 'albumStructure', 'albumRollups', 'albumRecents', 'libraryCheck', 'libraryInbox', 'albumRefactor', 'hideFolderNotes', 'folderNoteName', 'librarySections', 'discNoteLimit', 'albumNoteLimit', 'tableColumns', 'albumKeyNames', 'rollupDateKey'],
       },
