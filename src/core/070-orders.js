@@ -330,6 +330,13 @@ export const SETTINGS_MIGRATIONS = [
       if (saved.libraryLayout === undefined || saved.libraryLayout === 'auto') saved.libraryLayout = 'lists';
     },
   },
+  {
+    // Glass is gone: nothing is translucent or blurred, so there's nothing for the setting to switch.
+    to: 33,
+    run(saved) {
+      delete saved.glassPanels;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

@@ -581,18 +581,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.deepStrictEqual([steps(), more()], [['Deterrence'], ['Cooperation', 'Balance']]);
   });
 
-  await t('glass is a class on the page, as set, and gone when switched off', () => {
-    const { plugin } = setup();
-    const look = new R.Appearance(plugin);
-    plugin.settings.glassPanels = true;
-    look.apply();
-    assert.ok(document.body.classList.contains('dr-glass'));
-    plugin.settings.glassPanels = false;
-    look.apply();
-    assert.ok(!document.body.classList.contains('dr-glass'));
-    plugin.settings.glassPanels = true;
-    look.apply(true);
-    assert.ok(!document.body.classList.contains('dr-glass'), 'the feature off');
+  await t('glass is gone, and classic before it: their settings are carried away', () => {
+    const gone = { glassPanels: true }; R.SETTINGS_MIGRATIONS.find((m) => m.to === 33).run(gone);
+    assert.deepStrictEqual(gone, {});
+    assert.ok(!('glassPanels' in R.DEFAULTS));
     // Classic is gone: whoever had it has the theme's look, without what it hid.
     const classic = { look: 'classic', notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 17).run(classic);
@@ -670,14 +662,13 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 32);
+    assert.strictEqual(s.settingsVersion, 33);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 32, brought up from \d+; steps [\d, ]+32$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 33, brought up from \d+; steps [\d, ]+33$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');
-    assert.strictEqual(s.glassPanels, false, 'the quieter look');
     assert.ok(!('notePageTint' in s), 'the tint from a cover let go at step 29');
     assert.ok(!('upNext' in s), 'a retired setting dropped');
     assert.ok(written && !('upNext' in written), 'and written back without it');

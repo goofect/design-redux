@@ -102,8 +102,6 @@ export const DEFAULTS = {
   albumExcerpts: true,
   // A note's album above its title, and one grey line under it.
   notePage: true,
-  // Menus, suggestions and the canvas's bar and controls as frosted glass.
-  glassPanels: false,
   // A note's properties as quiet chips under its title, the full block a click away.
   notePageChips: false,
   // Shelves at a note's end: linked from here, mentioned in, more in its album.
@@ -263,7 +261,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 32,
+  settingsVersion: 33,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

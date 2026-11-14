@@ -32,11 +32,6 @@ export class Appearance extends Feature {
         desc: 'A small cover or icon beside each name, in lists, the sidebar, the strip and the panel. Off, they are words alone; a grid of covers keeps its covers.',
       },
       {
-        key: 'glassPanels',
-        name: 'Glass',
-        desc: 'Menus and suggestions as frosted glass.',
-      },
-      {
         key: 'artworkSize',
         type: 'dropdown',
         name: 'Cover size',
@@ -71,7 +66,6 @@ export class Appearance extends Feature {
     const density = this.settings.gridDensity;
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
-    body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
     // Lists, not covers: Home's shelves, its large cards and an album's head draw as compact lists too.
     body.classList.toggle('dr-layout-lists', !off && this.settings.libraryLayout === 'lists');
     // Words alone, unless covers and icons are asked for.
