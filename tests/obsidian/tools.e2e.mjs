@@ -257,7 +257,8 @@ suite('Design Redux in Obsidian: property tools and the graph', function () {
     });
     await shot('properties-edit');
     const merge = await browser.$('.dr-prop-merge');
-    expect(await merge.getText()).toBe('Merge 2…');
+    // In capitals on the page, as every button's word is.
+    expect((await merge.getText()).toLowerCase()).toBe('merge 2…');
     await merge.click();
     const into = await browser.$('.dr-bulk-modal .dr-bulk-field input');
     await into.waitForExist({ timeout: 5000 });

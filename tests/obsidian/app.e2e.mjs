@@ -285,8 +285,8 @@ suite('Design Redux in Obsidian: the app', function () {
     check(dark, 'dark');
     expect(dark.dark).toBe(true);
     expect(dark.rows.length).toBeGreaterThan(0);
-    // The library's rows as a music app's sidebar has them: 32px at the standard density.
-    expect(dark.rows[0][0]).toBe(32);
+    // The library's rows: words alone, 26px.
+    expect(dark.rows[0][0]).toBe(26);
     const light = await measure('moonstone', 'theme', 'standard');
     check(light, 'light');
     expect(light.dark).toBe(false);
@@ -294,7 +294,7 @@ suite('Design Redux in Obsidian: the app', function () {
     // Density: rows a unit tighter or looser.
     const compact = await measure('obsidian', 'theme', 'compact');
     const spacious = await measure('obsidian', 'theme', 'large');
-    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([28, 36]);
+    expect([compact.rows[0][0], spacious.rows[0][0]]).toEqual([22, 30]);
     check(compact, 'compact');
     check(spacious, 'spacious');
     // Back as it was, for the tests after.
@@ -460,13 +460,13 @@ suite('Design Redux in Obsidian: the app', function () {
         return out;
       });
     const expected = {
-      icon: [32, 32, '50%'],
+      icon: [32, 32, '0px'],
       main: 32,
-      plain: ['rgba(0, 0, 0, 0)', true],
+      plain: ['rgba(0, 0, 0, 0)', false],
       segmented: 32,
       tile: ['none', '0px'],
       chip: [24, '0px', '13px'],
-      sheet: ['12px', true],
+      sheet: ['0px', true],
       toggle: [51, 31],
       field: [32, true, 'none'],
     };

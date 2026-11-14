@@ -124,7 +124,7 @@ body.dr-look-apple :is(.dr-browse-title, .dr-detail-title, .dr-shelf-title, .dr-
 
 /* The sidebar: words only, in capitals; what's chosen is heavier, with no bar behind it. */
 body.dr-look-apple .dr-library .dr-lib-row {
-  min-height: 26px;
+  min-height: calc(var(--dr-row-height) - 6px);
   color: var(--text-muted);
   font-size: var(--dr-caps-size);
   letter-spacing: var(--dr-caps-track);
@@ -213,4 +213,17 @@ body.dr-look-apple .dr-cat {
     background-color: transparent;
     box-shadow: inset 0 0 0 1px var(--text-normal);
   }
+}
+
+/* A sheet, a list of suggestions: flat, with the same edge. */
+body.dr-look-apple :is(.dr-sheet, .dr-suggest) {
+  box-shadow: 0 0 0 1px var(--text-normal);
+}
+
+/* The sidebar's section names: capitals too, a step fainter than the rows under them. */
+body.dr-look-apple .dr-library .dr-lib-group {
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
 }
