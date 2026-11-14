@@ -248,7 +248,8 @@ export const DEFAULTS = {
   propertyValueChips: true,
   // { notePath: [{ at, changes: { key: [before, after, how] } }] } — the last changes written to each note.
   propertyHistory: {},
-  propertyHistoryLimit: 20,
+  // None to begin with: a list of past changes on every note is more than a note's panel needs.
+  propertyHistoryLimit: 0,
   // [{ id, name, on, when: { kind, folder | tag | key, value }, set: [{ key, value }], replace }]
   propertyRules: [],
   propertyRulesOn: false,
@@ -261,7 +262,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 33,
+  settingsVersion: 34,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

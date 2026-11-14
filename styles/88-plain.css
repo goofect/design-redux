@@ -541,3 +541,48 @@ body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is
 body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) ~ .dr-album-end:not(:has(> .dr-disc)) > * {
   grid-column: 2;
 }
+
+/* The panel's rows, cleaned. A value of several is its words, popped up as in the inspector: no
+   block behind each. One handle to move a row by (the grip that shows at its edge), not two. A
+   label stands level with its first value. An empty value says nothing until its row is pointed
+   at or worked in. The Properties heading folds without an arrow, as the others do. */
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill {
+  --pill-background: transparent;
+  --pill-color: var(--text-normal);
+  --pill-padding-x: 0px;
+  padding: 0;
+  background-color: transparent;
+  font-size: 12px;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-key-icon {
+  display: none;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-row {
+  align-items: flex-start;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-key {
+  padding-top: 5px;
+}
+
+body.dr-look-apple .dr-props-popup .dr-row:not(:focus-within) .dr-value input::placeholder,
+body.dr-look-apple .dr-props-popup .dr-row:not(:focus-within) .dr-value [placeholder]:empty::before {
+  color: transparent;
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple .dr-props-popup .dr-row:hover .dr-value input::placeholder,
+  body.dr-look-apple .dr-props-popup .dr-row:hover .dr-value [placeholder]:empty::before {
+    color: var(--text-faint);
+  }
+}
+
+body.dr-look-apple .dr-props-popup .dr-props-chevron {
+  display: none;
+}
+
+body.dr-look-apple .dr-props-popup .dr-section-head {
+  padding-inline: 0;
+}

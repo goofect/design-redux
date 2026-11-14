@@ -337,6 +337,14 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.glassPanels;
     },
   },
+  {
+    // Property history is off: no list of past changes in a note's panel. What was kept stays kept,
+    // and shows again if the setting (Properties panel, Property history) is given a number.
+    to: 34,
+    run(saved) {
+      saved.propertyHistoryLimit = 0;
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

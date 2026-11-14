@@ -662,10 +662,10 @@ const t = async (name, fn) => { await fn(); passed++; console.log('  ok  ' + nam
     assert.ok(!('canvasLegends' in s), 'canvas maps’ settings let go at 3.0');
     assert.deepStrictEqual(s.homeShelves, saved.homeShelves);
     assert.deepStrictEqual(s.librarySections[0].items.map((i) => i.id || i.path), ['bookmarks', 'IR']);
-    assert.strictEqual(s.settingsVersion, 33);
+    assert.strictEqual(s.settingsVersion, 34);
     assert.strictEqual(s.contextStrip, true, 'an existing install keeps its strip');
     // The diagnostics say what loading did.
-    assert.match(R.settingsLine(ctx), /^Settings: version 33, brought up from \d+; steps [\d, ]+33$/);
+    assert.match(R.settingsLine(ctx), /^Settings: version 34, brought up from \d+; steps [\d, ]+34$/);
     assert.ok(!('panelRelationships' in s), 'Relationships have gone');
     assert.ok(!('settingsLevel' in s) && !('libraryPreview' in s), 'two settings nothing read let go at step 27');
     assert.strictEqual(s.panelPlaces, false, 'nor Kept in');

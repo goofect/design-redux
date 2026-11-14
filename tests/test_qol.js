@@ -227,7 +227,9 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 33);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 34);
+    const quiet = { propertyHistoryLimit: 20, propertyHistory: { 'a.md': [1] } }; R.SETTINGS_MIGRATIONS.find((m) => m.to === 34).run(quiet);
+    assert.deepStrictEqual(quiet, { propertyHistoryLimit: 0, propertyHistory: { 'a.md': [1] } }, 'history off, what was kept left alone');
     // Step 30: lengths are gone, and their settings with them.
     const s29 = { trackLength: 'words', noteLength: 'time', thinNoteWords: 60, notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 30).run(s29);
