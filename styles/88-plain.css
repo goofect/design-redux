@@ -450,3 +450,20 @@ body.dr-look-apple .dr-props-popup .dr-props-info .dr-props-title {
   font-size: 13px;
   font-weight: 600;
 }
+
+/* No rule anywhere in the panel, however a part drew its own (a border, a shadow, a painted hairline). */
+body.dr-look-apple .dr-props-popup:is(.is-docked, :not(.is-docked)) :is(.dr-section, .dr-props-head, .dr-rows, .dr-mention-group) {
+  border-top: none;
+  border-bottom: none;
+  background-image: none;
+  box-shadow: none;
+}
+
+/* In the inspector too, a value of several is its words, one to a line, with no block behind each. */
+body.dr-look-apple .dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-pill {
+  --pill-background: transparent;
+  --pill-padding-x: 0px;
+  padding: 0;
+  background-color: transparent;
+  font-size: 12px;
+}
