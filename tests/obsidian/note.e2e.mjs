@@ -547,6 +547,8 @@ suite('Design Redux in Obsidian: notes', function () {
     // Bone and charcoal, and square: the palette reaches what Obsidian draws through its own variables.
     expect(seen).toEqual({ ground: '#f4f1ea', text: 'rgb(43, 40, 35)', callout: '0px', code: '0px' });
     await shot('earth-reading');
+    await browser.execute(() => document.querySelector('.workspace-leaf.mod-active .markdown-preview-view table').scrollIntoView({ block: 'center' }));
+    await shot('earth-reading-mid');
     await browser.execute(() => { const v = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view'); v.scrollTop = v.scrollHeight; });
     await shot('earth-reading-end');
     await browser.executeObsidian(async ({ app }) => {

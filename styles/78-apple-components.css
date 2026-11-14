@@ -179,31 +179,31 @@ body.dr-look-apple .dr-sheet-open {
   animation: dr-sheet-in var(--dr-dur-slow) var(--dr-ease-move) both;
 }
 
-/* 7. Toggle and field — a 51 × 31 switch; a field 32px high with a hairline and no inner shadow. */
+/* 7. Toggle and field — a small square switch, 34 × 18; a field 32px high with a hairline and no inner shadow. */
 body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse) {
-  --toggle-width: 51px;
-  --toggle-thumb-width: 27px;
-  --toggle-thumb-height: 27px;
-  --toggle-radius: 15.5px;
-  --toggle-thumb-radius: 13.5px;
+  --toggle-width: 34px;
+  --toggle-thumb-width: 14px;
+  --toggle-thumb-height: 14px;
+  --toggle-radius: 0px;
+  --toggle-thumb-radius: 0px;
   --toggle-border-width: 2px;
   --input-height: 32px;
-  --input-radius: 8px;
+  --input-radius: 0px;
   --input-border-width: 0.5px;
   --input-shadow: none;
   --input-shadow-hover: none;
 }
 
 body.dr-look-apple :is(.dr-settings, .dr-props-popup, .dr-browse) .checkbox-container {
-  width: 51px;
-  height: 31px;
-  border-radius: 15.5px;
+  width: 34px;
+  height: 18px;
+  border-radius: 0;
 }
 
 body.dr-look-apple :is(.dr-settings, .dr-props-popup) :is(input[type='text'], input[type='number'], input[type='search'], select, .dropdown):not(.dr-row *) {
   height: 32px;
   border: 0.5px solid var(--dr-separator);
-  border-radius: 8px;
+  border-radius: 0;
   box-shadow: none;
 }
 

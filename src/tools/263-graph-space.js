@@ -37,7 +37,7 @@ export const GRAPH_3D_DEFAULTS = {
   links: true,
   folds: {}, // the settings' sections folded, by name
   colorGroups: [], // as the graph's own: [{ query, color: '#rrggbb' }], the first a note matches colouring it
-  scene: 'night', // drawn on a night sky, as the graphify page is; 'theme': on the theme's background
+  scene: 'theme', // on the page's own ground, in its colours; 'night': drawn on a night sky, as the graphify page is
 };
 
 /** The colour keys that aren't a folder's or a tag's: each kind has the theme's colour for it. A space starts each, as no folder's or tag's can. */

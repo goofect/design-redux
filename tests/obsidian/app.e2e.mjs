@@ -467,7 +467,7 @@ suite('Design Redux in Obsidian: the app', function () {
       tile: ['none', '0px'],
       chip: [24, '0px', '13px'],
       sheet: ['0px', true],
-      toggle: [51, 31],
+      toggle: [34, 18],
       field: [32, true, 'none'],
     };
     await browser.executeObsidian(({ app }) => app.changeTheme && app.changeTheme('moonstone'));
