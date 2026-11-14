@@ -593,6 +593,29 @@ suite('Design Redux in Obsidian: the library', function () {
       const cover = await browser.execute(() => Math.round(document.querySelector('.dr-detail-art').getBoundingClientRect().width));
       expect(cover).toBeLessThan(80);
       await shot('lists-album');
+      // The same folder as a table: its groups' names in the margin, a ledger.
+      const ledger = await browser.executeObsidian(async ({ app, plugins }) => {
+        const albums = plugins.designRedux.features.find((f) => f.constructor.name === 'AlbumStructure');
+        const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+        const folder = app.vault.getFolderByPath('Politics');
+        await albums.setField(folder, 'layout', 'table');
+        await library.browseMode({ mode: 'folder', path: 'Politics' });
+        await new Promise((r) => setTimeout(r, 400));
+        const page = document.querySelector('.workspace-leaf-content[data-type="design-redux-browse"]');
+        const holder = page.querySelector('.dr-ledger');
+        const head = holder && holder.querySelector('.dr-disc:not(.is-own)');
+        const table = head && head.nextElementSibling;
+        const out = holder && head && table
+          ? { grid: getComputedStyle(holder).display, beside: head.getBoundingClientRect().right <= table.getBoundingClientRect().left, level: Math.abs(head.getBoundingClientRect().top - table.getBoundingClientRect().top) < 14 }
+          : null;
+        return out;
+      });
+      expect(ledger).toEqual({ grid: 'grid', beside: true, level: true });
+      await shot('lists-album-table');
+      await browser.executeObsidian(async ({ app, plugins }) => {
+        const albums = plugins.designRedux.features.find((f) => f.constructor.name === 'AlbumStructure');
+        await albums.setField(app.vault.getFolderByPath('Politics'), 'layout', '');
+      });
       await open({ mode: 'folders' });
       await browser.$('.dr-folder-rows').waitForExist({ timeout: 10000 });
       await shot('lists-folders');

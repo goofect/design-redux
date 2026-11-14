@@ -104,8 +104,12 @@ export class FolderScreen extends BrowseScreen {
   renderTable(el, discs, album) {
     const view = this.view;
     const columns = view.tableColumns();
+    // Headings and their tables side by side in one holder, so a group's name can stand in the margin beside its rows.
+    el = el.createDiv({ cls: 'dr-ledger' });
     discs.forEach((disc) => {
       const head = el.createDiv({ cls: 'dr-disc dr-covers-head' });
+      // The album's own notes, headed by its name: the page's title says that name already.
+      if (album && disc.folder === album) head.addClass('is-own');
       head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
       if (disc.folder && disc.folder !== album) {
@@ -168,6 +172,7 @@ export class FolderScreen extends BrowseScreen {
     const view = this.view;
     discs.forEach((disc) => {
       const head = root.createDiv({ cls: 'dr-disc dr-covers-head' });
+      if (album && disc.folder === album) head.addClass('is-own');
       head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({ cls: 'dr-disc-count', text: disc.files.length === 1 ? '1 note' : `${disc.files.length} notes` });
       if (disc.folder && disc.folder !== album) {

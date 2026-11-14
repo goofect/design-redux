@@ -99,15 +99,10 @@ export function relativeDay(time) {
   const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   if (time >= midnight) return 'Today';
   if (time >= midnight - day) return 'Yesterday';
-  const days = Math.floor((midnight - time) / day) + 1;
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) {
-    const weeks = Math.round(days / 7);
-    return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
-  }
-  return new Date(time).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  // Then the date, one way for all of them — a column of dates reads down, where "4 weeks ago"
+  // beside "Oct 9" doesn't — and without the year while it's this one.
+  const then = new Date(time);
+  const options = { month: 'short', day: 'numeric' };
+  if (then.getFullYear() !== now.getFullYear()) options.year = 'numeric';
+  return then.toLocaleDateString(undefined, options);
 }

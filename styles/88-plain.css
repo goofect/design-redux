@@ -473,3 +473,60 @@ body.dr-look-apple .dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-sel
 body.dr-look-apple .dr-browse .dr-disc.is-own .dr-disc-title {
   visibility: hidden;
 }
+
+/* A folder with groups in it is a ledger: each group's name stands in the margin, once, beside its
+   notes, and the notes run down one column. No heading rows cut across the list, no rule under
+   each note, and the folder's own notes — named by the page's title already — have nothing in
+   the margin at all. Not while its notes are being arranged, when a heading is a field to type in. */
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) {
+  display: grid;
+  grid-template-columns: minmax(0, 0.28fr) minmax(0, 1fr);
+  column-gap: calc(var(--dr-u) * 6);
+  align-items: start;
+}
+
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > * {
+  grid-column: 2;
+}
+
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc {
+  display: block;
+  grid-column: 1;
+  margin: 0;
+  padding: 11px 0 0;
+}
+
+/* A new group starts a step down: its name and its first note together. */
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc:not(:first-child),
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc:not(:first-child) + * {
+  margin-top: calc(var(--dr-u) * 7);
+}
+
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc :is(.dr-disc-title, .dr-disc-count) {
+  display: block;
+  white-space: normal;
+}
+
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc .dr-disc-count {
+  margin-top: 2px;
+  color: var(--text-faint);
+}
+
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc.is-own {
+  visibility: hidden;
+}
+
+/* A table's own heading, where the folder has no groups: its name is the title above; the count stays. */
+body.dr-look-apple .dr-browse .dr-ledger > .dr-disc.is-own .dr-disc-title {
+  visibility: hidden;
+}
+
+/* No rule under a note in a folder's list or its table: the rows are close enough to read as one. */
+body.dr-look-apple .dr-browse .dr-tracks .dr-track::after,
+body.dr-look-apple .dr-browse .dr-ledger .dr-tr::after {
+  display: none;
+}
+
+body.dr-look-apple .dr-browse .dr-ledger .dr-table .dr-tr:not(.dr-th) {
+  min-height: 32px;
+}
