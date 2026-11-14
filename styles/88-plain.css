@@ -372,3 +372,81 @@ body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-row-more {
   margin: 0;
   transform: translateY(-50%);
 }
+
+/* The panel as a specification sheet: a label, its value beside it, and nothing else drawn — no
+   rule between its parts, no arrow on a heading, no value pushed to the far edge. A label is a
+   faint capital; a value is the words, as written. A part that's folded is fainter. */
+body.dr-look-apple .dr-props-popup .dr-section + .dr-section {
+  margin-top: calc(var(--dr-u) * 5);
+  padding-top: 0;
+  border-top: none;
+}
+
+body.dr-look-apple .dr-props-popup .dr-row {
+  min-height: 28px;
+}
+
+body.dr-look-apple .dr-props-popup .dr-key,
+body.dr-look-apple .dr-props-popup .dr-key .dr-key-name {
+  justify-content: flex-start;
+  color: var(--text-faint);
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-align: left;
+  text-transform: uppercase;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value,
+body.dr-look-apple .dr-props-popup .dr-value :is(input, [contenteditable]) {
+  color: var(--text-normal);
+  font-size: 12px;
+  text-align: left;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-container {
+  justify-content: flex-start;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value input::placeholder,
+body.dr-look-apple .dr-props-popup .dr-value [placeholder]:empty::before {
+  color: var(--text-faint);
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+body.dr-look-apple .dr-props-popup .dr-section-chevron {
+  display: none;
+}
+
+body.dr-look-apple .dr-props-popup .dr-section-head {
+  color: var(--text-normal);
+  font-weight: 600;
+}
+
+body.dr-look-apple .dr-props-popup .is-collapsed > .dr-section-head {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+body.dr-look-apple .dr-props-popup .dr-section-count {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+body.dr-look-apple .dr-props-popup .dr-mention {
+  margin-left: 0;
+  font-size: 12px;
+}
+
+body.dr-look-apple .dr-props-popup .dr-props-more {
+  color: var(--text-faint);
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+body.dr-look-apple .dr-props-popup .dr-props-info .dr-props-title {
+  font-size: 13px;
+  font-weight: 600;
+}

@@ -463,7 +463,7 @@ suite('Design Redux in Obsidian: notes', function () {
     expect(look.rowHeight).toBeGreaterThanOrEqual(28);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);
-    // A popup: plain rows, as the inspector's, no box round them or lines between, the value to the right.
+    // A popup: plain rows, as the inspector's, no box round them or lines between, the value beside its label.
     const group = await browser.execute(() => {
       const pop = document.querySelector('.dr-props-popup.is-open');
       const rows = Array.from(pop.querySelectorAll('.dr-row')).filter((r) => r.offsetParent !== null);
@@ -475,7 +475,7 @@ suite('Design Redux in Obsidian: notes', function () {
         right: field ? getComputedStyle(field).textAlign : 'right',
       };
     });
-    expect(group).toEqual({ radius: '0px', hairline: false, boxed: false, right: 'right' });
+    expect(group).toEqual({ radius: '0px', hairline: false, boxed: false, right: 'left' });
     await shot('properties-inspector');
 
     // + : the search, with the cursor in it.
