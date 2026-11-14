@@ -518,4 +518,55 @@ suite('Design Redux in Obsidian: notes', function () {
     expect(await browser.execute(() => document.querySelectorAll('.dr-props-popup').length)).toBe(1);
     await browser.executeObsidianCommand('design-redux:open-inspector');
   });
+
+  it('draws a note of every kind of thing in the look, read and edited, light and dark', async function () {
+    const path = 'Look/Everything.md';
+    await browser.executeObsidian(async ({ app }, path) => {
+      const text = [
+        '# Heading one', '', 'A paragraph with **bold**, *italic*, ==a highlight==, `inline code`, a [[Balance of power|link]], a [[Not written yet]] and an [outside link](https://example.com). #tag', '',
+        '## Heading two', '', '- A list', '  - nested', '  - again', '- [ ] To do', '- [x] Done', '', '1. First', '2. Second', '',
+        '### Heading three', '', '> A quotation, set apart.', '', '> [!note] A note', '> Said in a callout.', '', '> [!warning] A warning', '> Take care.', '', '> [!tip] A tip', '> Try this.', '',
+        '#### Heading four', '', '```js', 'const grounds = ["bone", "oat", "sand"];', 'function tone(name) { return name.length > 3 ? 1 : 0; } // a comment', '```', '',
+        '| Ground | Use | Value |', '| --- | --- | --- |', '| Bone | Page | 1 |', '| Oat | Sidebar | 2 |', '| Sand | Lines | 3 |', '', '---', '', 'The end.',
+      ].join('\n');
+      const old = app.vault.getFileByPath(path);
+      if (old) await app.vault.delete(old);
+      if (!app.vault.getFolderByPath('Look')) await app.vault.createFolder('Look');
+      const file = await app.vault.create(path, '---\nstatus: draft\ndomain: Look\n---\n' + text);
+      const leaf = app.workspace.getLeaf(false);
+      await leaf.openFile(file, { state: { mode: 'preview' } });
+    }, path);
+    await browser.$('.markdown-preview-view .callout').waitForExist({ timeout: 10000 });
+    const seen = await browser.execute(() => {
+      const cs = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el) : null; };
+      const page = cs('.markdown-preview-view');
+      const callout = cs('.markdown-preview-view .callout');
+      const code = cs('.markdown-preview-view pre');
+      return { ground: getComputedStyle(document.body).getPropertyValue('--background-primary').trim(), text: page.color, callout: callout.borderTopLeftRadius, code: code.borderTopLeftRadius };
+    });
+    // Bone and charcoal, and square: the palette reaches what Obsidian draws through its own variables.
+    expect(seen).toEqual({ ground: '#f4f1ea', text: 'rgb(43, 40, 35)', callout: '0px', code: '0px' });
+    await shot('earth-reading');
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source', source: false }) });
+    });
+    await browser.$('.markdown-source-view .cm-content').waitForExist({ timeout: 10000 });
+    await shot('earth-editing');
+    await browser.executeObsidian(async ({ app }) => {
+      const leaf = app.workspace.activeLeaf;
+      await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'preview' }) });
+      if (app.changeTheme) app.changeTheme('obsidian');
+    });
+    await browser.$('.markdown-preview-view .callout').waitForExist({ timeout: 10000 });
+    const dark = await browser.execute(() => getComputedStyle(document.body).getPropertyValue('--background-primary').trim());
+    await shot('earth-reading-dark');
+    await browser.executeObsidian(async ({ app }, path) => {
+      if (app.changeTheme) app.changeTheme('moonstone');
+      app.workspace.activeLeaf.detach();
+      const file = app.vault.getFileByPath(path);
+      if (file) await app.vault.delete(file);
+    }, path);
+    expect(dark).toBe('#1e1c19');
+  });
 });

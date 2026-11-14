@@ -24,7 +24,7 @@ export let version = 'unknown';
 
 // Screenshots are kept few, to keep the runs and the ci-results branch
 // small: these, plus any test that fails.
-const SHOTS = ['right-sidebar-dark', 'right-sidebar-light', 'page-control-light', 'page-control-dark', 'album', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'graph-3d', 'note-next', 'screen-notes', 'screen-folders', 'screen-properties', 'screen-search', 'screen-library-check', 'lists-home', 'lists-album', 'lists-folders'];
+const SHOTS = ['right-sidebar-dark', 'right-sidebar-light', 'page-control-light', 'page-control-dark', 'album', 'album-light', 'home', 'note-and-strip', 'graph-routes', 'footnote-box', 'properties-edit', 'properties-list', 'properties-sheet', 'footnotes-view', 'preview', 'settings-appearance', 'settings-library', 'menu', 'properties-inspector', 'undo-notice', 'album-edit', 'graph-3d', 'note-next', 'screen-notes', 'screen-folders', 'screen-properties', 'screen-search', 'screen-library-check', 'lists-home', 'lists-album', 'lists-folders', 'earth-reading', 'earth-editing', 'earth-reading-dark'];
 
 export async function shot(name) {
   const failed = name.startsWith('FAILED-');
