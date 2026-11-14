@@ -251,3 +251,9 @@ body.dr-look-apple .dr-cat-count {
     filter: none;
   }
 }
+
+/* The table's headings stand over their columns: the date's heading is measured with its padding
+   inside, which left the others 3px further out each. */
+body.dr-look-apple .dr-th .dr-td-time {
+  flex-basis: 122px;
+}
