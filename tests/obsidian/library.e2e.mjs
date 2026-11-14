@@ -562,6 +562,18 @@ suite('Design Redux in Obsidian: the library', function () {
     await shot('home');
   });
 
+  it('draws the other screens of the library: all notes, collections, properties, search and the check', async function () {
+    const open = (state) => browser.executeObsidian(async ({ plugins }, state) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode(state);
+    }, state);
+    for (const [mode, sel] of [['notes', '.dr-tr'], ['folders', '.dr-card'], ['properties', '.dr-split-row'], ['search', '.dr-browse-search input'], ['library-check', '.dr-browse']]) {
+      await open({ mode });
+      await browser.$(`.workspace-leaf-content[data-type="design-redux-browse"] ${sel}`).waitForExist({ timeout: 10000 });
+      await shot(`screen-${mode}`);
+    }
+  });
+
   it('lays out the library the Apple way: shelf titles at 17px, covers 16px apart, an album with its icons after Find, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
