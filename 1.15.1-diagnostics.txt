@@ -1,0 +1,25 @@
+Design Redux 3.1.78
+Obsidian 1.15.1 on desktop, Linux
+On: Appearance, Library, NotePage, ListKeys, SidebarDrop, ActionsMenu, PropertiesPanel, ContextStrip, HeaderSkip, MenuFilter, SettingsButton, SidebarSwipe, CoverImages, CoverDrop, PropertyClipboard, AlbumProperty, AlbumStructure, SmartAlbums, LibraryCheck, AlbumRefactor, MarkedLists, Scripts, Footnotes, GraphPropertyFilter, GraphRoutes, Graph3D, NotePages, Diagnostics, BulkEditing, PropertySchemas, PropertyHistory, PropertyLinks
+Off: OnePage, ImageRouter, PropertyRules
+Settings: version 32
+
+Compatibility:
+  ✓ Grouped right-click entries (New ▸, Cover ▸)
+  ✓ Taking unwanted entries out of menus
+  ✓ Suggestions in settings fields
+  ✓ Property names and types in the property tools
+  ✓ Dropping a note or image from the file list onto the library or a cover
+  ✓ Listing tags
+  ✓ Knowing whether Canvas is switched on
+  · Graph links through the notes between
+
+Sidebar header (theme default): 300px, flex, justify flex-start
+  workspace-tab-header-container-inner: at 8, 121px, flex, flex 0 1 auto
+  workspace-tab-header-new-tab: at 0, 0px, none, flex 0 1 auto, margin-left 8px
+  dr-trigger: at 129, 28px, flex, flex 0 0 auto
+  dr-settings-moved: at 157, 28px, flex, flex 0 0 auto
+  workspace-tab-header-spacer: at 185, 107px, flex, flex 1 1 auto
+  workspace-tab-header-tab-list: at 0, 0px, none, flex 0 1 auto
+
+Recent errors: none
