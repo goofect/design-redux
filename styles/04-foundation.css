@@ -21,7 +21,8 @@
  *   The right sidebar, after the Apple parts it overrides — the docked panel (178–180)
  *   Lists first — the layout a library starts with: Home, shelves and an album's head as compact lists; one column
  *   Quiet — one left edge, rounded rows, colour for what's chosen: after the parts it settles
- *   More contrast — the system's increased contrast and forced colours, last: it restates the looks' tokens
+ *   More contrast — the system's increased contrast and forced colours: it restates the looks' tokens
+ *   Plain — no colour, no corners, no shadows, small capitals for the interface's own words: last, it levels the rest
  * Each part uses the foundation's tokens; a value written out by hand is
  * a measure of that part's own (a cover's artwork, a canvas glyph).
  */

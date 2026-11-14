@@ -574,6 +574,8 @@ suite('Design Redux in Obsidian: the library', function () {
     }, state);
     await set('lists');
     try {
+      // The features take a saved setting up a moment after the save.
+      await browser.waitUntil(() => browser.execute(() => document.body.classList.contains('dr-layout-lists')), { timeout: 5000, timeoutMsg: 'the page never took the lists layout' });
       await open({ mode: 'home' });
       await browser.$('.dr-shelf-row .dr-card').waitForExist({ timeout: 10000 });
       const home = await browser.execute(() => {
@@ -609,7 +611,7 @@ suite('Design Redux in Obsidian: the library', function () {
     }
   });
 
-  it('lays out the library the Apple way: shelf titles at 17px, covers 16px apart, an album with its icons after Find, a header that stays', async function () {
+  it('lays out the library the Apple way: shelf titles in small capitals, covers 16px apart, an album with its icons after Find, a header that stays', async function () {
     const browse = (state) =>
       browser.executeObsidian(async ({ plugins }, state) => {
         const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
@@ -623,7 +625,7 @@ suite('Design Redux in Obsidian: the library', function () {
       const row = page.querySelector('.dr-shelf-row');
       return { shelf: getComputedStyle(page.querySelector('.dr-shelf-title')).fontSize, gap: getComputedStyle(row).columnGap, scrolls: getComputedStyle(row).overflowX };
     });
-    expect(home).toEqual({ shelf: '17px', gap: '16px', scrolls: 'auto' });
+    expect(home).toEqual({ shelf: '11px', gap: '16px', scrolls: 'auto' });
     await browse({ mode: 'folder', path: 'Politics' });
     await browser.$(ACTIVE + '.dr-options-btn').waitForExist({ timeout: 10000 });
     const album = await read(() => {

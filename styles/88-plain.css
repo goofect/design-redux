@@ -1,0 +1,216 @@
+/* Plain --------------------------------------------------------------------
+ *
+ * The look, reduced to what carries meaning. Taken from shop pages that
+ * show a list of things and nearly nothing else: no colour, no rounded
+ * corners, no shadows, no ornament, small capitals for everything that is
+ * the interface's own voice, and the words a person wrote left as written.
+ *
+ * So, on what Design Redux draws:
+ *   - Black on white (the theme's text on the theme's page). The accent is
+ *     gone: what was a block of it is the text's colour, inverted.
+ *   - Square: no radius anywhere, a cover included.
+ *   - Flat: nothing casts a shadow. What floats over the page (a popup,
+ *     the strip) is a sheet with a 1px edge.
+ *   - Labels, headings, buttons and the sidebar in small spaced capitals;
+ *     a screen's title is one of them, not a headline. Note and folder
+ *     names in lists keep their case: they're content.
+ *   - The sidebar is words only. What's chosen is said by weight.
+ * After every other part, which it levels.
+ */
+body.dr-look-apple {
+  --dr-radius-sm: 0px;
+  --dr-radius-md: 0px;
+  --dr-radius-lg: 0px;
+  --dr-radius-pill: 0px;
+  --dr-radius-cover: 0px;
+  --dr-cover-radius: 0px;
+  --dr-r: 0px;
+  --dr-shadow-sm: none;
+  --dr-shadow-md: none;
+  --dr-shadow-lg: none;
+  --dr-cover-edge: none;
+  --dr-thumb-shadow: none;
+  --dr-float-shadow: 0 0 0 1px var(--text-normal);
+  --dr-popover-shadow: 0 0 0 1px var(--text-normal);
+  --dr-focus-ring: 0 0 0 2px var(--text-normal);
+  --dr-glass-blur: 0px;
+  --dr-glass-blur-soft: 0px;
+  --dr-float-bg: var(--background-primary);
+  --dr-material: var(--background-primary);
+  --dr-material-filter: none;
+  --dr-caps-size: 11px;
+  --dr-caps-track: 0.08em;
+}
+
+body.dr-look-apple.theme-dark {
+  --dr-shadow-sm: none;
+  --dr-shadow-md: none;
+  --dr-popover-shadow: 0 0 0 1px var(--text-normal);
+}
+
+/* Square, whatever a part gave itself. */
+body.dr-look-apple [class^="dr-"],
+body.dr-look-apple [class*=" dr-"],
+body.dr-look-apple [class^="dr-"]::before,
+body.dr-look-apple [class*=" dr-"]::before,
+body.dr-look-apple [class^="dr-"]::after,
+body.dr-look-apple [class*=" dr-"]::after,
+body.dr-look-apple [class*="dr-"] :is(img, input, button, select, textarea) {
+  border-radius: 0 !important;
+}
+
+/* No accent on what the plugin draws: the text's colour stands in, and what sat on the accent
+   sits on it inverted. */
+body.dr-look-apple :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup, .dr-panel-dock, .dr-settings, .dr-pages, .dr-fn-view, .dr-suggest) {
+  --interactive-accent: var(--text-normal);
+  --interactive-accent-hover: var(--text-muted);
+  --text-accent: var(--text-normal);
+  --text-accent-hover: var(--text-muted);
+  --text-on-accent: var(--background-primary);
+  --text-selection: color-mix(in srgb, var(--text-normal) 18%, transparent);
+}
+
+/* What was told by the accent alone — a link in a line of facts, a property raised under a name —
+   is told by a line under it. */
+body.dr-look-apple :is(.dr-browse, .dr-props-popup, .dr-panel-dock) :is(a, .dr-prop-fact-fix, .dr-props-lead, .dr-detail-sub.is-link, .dr-mention) {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The interface's own voice: small spaced capitals. */
+body.dr-look-apple :is(
+  .dr-browse-title,
+  .dr-detail-title,
+  .dr-shelf-title,
+  .dr-search-section-title,
+  .dr-split-heading,
+  .dr-disc,
+  .dr-th,
+  .dr-pick-caption,
+  .dr-bar-edit,
+  .dr-detail-action,
+  .dr-prop-merge,
+  .dr-track-sub,
+  .dr-track-time,
+  .dr-td:not(.dr-td-title),
+  .dr-card-sub,
+  .dr-pick-sub,
+  .dr-split-count,
+  .dr-prop-page-meta,
+  .dr-detail-kind,
+  .dr-detail-meta,
+  .dr-note-meta,
+  .dr-note-shelf-head,
+  .dr-props-meta,
+  .dr-section-head,
+  .dr-strip-sub,
+  .dr-empty,
+  .dr-split-empty
+) {
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+/* A screen's title, an album's name, a shelf's: a label in the text's colour, semibold — the
+   page is its list, not its headline. */
+body.dr-look-apple :is(.dr-browse-title, .dr-detail-title, .dr-shelf-title, .dr-search-section-title, .dr-split-heading.dr-prop-page-title, .dr-disc-title) {
+  color: var(--text-normal);
+  font-size: var(--dr-caps-size);
+  font-weight: 600;
+  letter-spacing: var(--dr-caps-track);
+  line-height: 1.4;
+}
+
+/* The sidebar: words only, in capitals; what's chosen is heavier, with no bar behind it. */
+body.dr-look-apple .dr-library .dr-lib-row {
+  min-height: 26px;
+  color: var(--text-muted);
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+body.dr-look-apple .dr-library .dr-lib-row .dr-lib-icon:not(.has-art) {
+  display: none;
+}
+
+body.dr-look-apple .dr-library .dr-lib-row.is-active {
+  background-color: transparent;
+  color: var(--text-normal);
+  font-weight: 700;
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple .dr-library .dr-lib-row:hover {
+    background-color: transparent;
+    color: var(--text-normal);
+  }
+}
+
+/* Find: a line to write on, not a filled field. */
+body.dr-look-apple .dr-browse-search {
+  border-bottom: 1px solid var(--text-faint);
+  background-color: transparent;
+}
+
+body.dr-look-apple .dr-browse-search:focus-within {
+  border-bottom-color: var(--text-normal);
+  box-shadow: none;
+}
+
+body.dr-look-apple .dr-browse-search input::placeholder {
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+/* A word that's a button (Edit): the word. The one that finishes (Done) and the one that acts
+   (Merge) are the text's colour, inverted. */
+body.dr-look-apple .dr-bar-edit:not(.is-done) {
+  background-color: transparent;
+  color: var(--text-normal);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* What's chosen in a list: inverted — the one mark on the page. */
+body.dr-look-apple :is(.dr-track, .dr-tr, .dr-split-row).is-selected {
+  background-color: var(--text-normal);
+  color: var(--background-primary);
+}
+
+body.dr-look-apple :is(.dr-track, .dr-tr, .dr-split-row).is-selected :is(.dr-track-name, .dr-track-num, .dr-track-sub, .dr-track-time, .dr-td, .dr-split-name, .dr-split-count, .dr-split-thumb, .dr-track-name.has-excerpt)::after,
+body.dr-look-apple :is(.dr-track, .dr-tr, .dr-split-row).is-selected :is(.dr-track-name, .dr-track-num, .dr-track-sub, .dr-track-time, .dr-td, .dr-split-name, .dr-split-count, .dr-split-thumb, .svg-icon) {
+  color: var(--background-primary);
+}
+
+/* What floats is a sheet with an edge. */
+body.dr-look-apple .dr-strip,
+body.dr-look-apple .dr-props-popup:not(.is-docked) {
+  background-color: var(--background-primary);
+  box-shadow: 0 0 0 1px var(--text-normal);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Footnote numbers and settings tiles: an outline, nothing filled. */
+body.dr-look-apple .dr-fn-item .dr-fn-num,
+body.dr-look-apple .dr-settings .dr-set-feature-icon {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--text-faint);
+  color: var(--text-normal);
+}
+
+/* Search's categories: a bordered cell each. */
+body.dr-look-apple .dr-cat {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 1px var(--text-faint);
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple .dr-cat:hover {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px var(--text-normal);
+  }
+}
