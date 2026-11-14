@@ -156,6 +156,8 @@ export const DEFAULTS = {
   propertiesSort: 'name',
   // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
   libraryLayout: 'lists',
+  // Small covers and icons beside names — in lists, the sidebar, the strip and the panel. Off: words alone.
+  showArt: false,
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',

@@ -9,7 +9,9 @@
 import { setIcon } from 'obsidian';
 import { asButton, onActivate } from '../core/042-controls.js';
 import { noteProps } from '../core/073-notes.js';
+import { libraryIndex } from '../core/077-library-index.js';
 import { PanelSection } from '../core/082-panel-section.js';
+import { namedBy } from './165-panel-references.js';
 
 /**
  * Where a note is named but not linked: its name, or one of its
@@ -148,7 +150,14 @@ export class MentionsSection extends PanelSection {
   }
 
   render() {
-    this.renderGroup('linked', 'Linked mentions', () => this.backlinks());
+    // A note listed above as naming this one in a property (its parent, say) isn't listed again
+    // here as linking to it: that link is the property. With none left, there's no heading for none.
+    const named = new Set();
+    if (this.file && this.plugin.settings.propertyLinks !== false) {
+      namedBy(this.app, libraryIndex(this.plugin), this.file).forEach((files) => files.forEach((f) => named.add(f)));
+    }
+    const linked = this.backlinks().filter((item) => !named.has(item.file));
+    if (linked.length || !named.size) this.renderGroup('linked', 'Linked mentions', () => linked);
     this.renderGroup('unlinked', 'Unlinked mentions', null);
   }
 

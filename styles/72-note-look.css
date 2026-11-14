@@ -19,16 +19,16 @@ body.dr-note-apple .markdown-rendered {
   --h4-font: var(--dr-font-ui);
   --h5-font: var(--dr-font-ui);
   --h6-font: var(--dr-font-ui);
-  --inline-title-size: 26px;
+  --inline-title-size: 24px;
   --inline-title-line-height: 1.15;
-  --inline-title-weight: 700;
-  --h1-size: 22px;
-  --h1-weight: 700;
-  --h2-size: 19px;
+  --inline-title-weight: 600;
+  --h1-size: 20px;
+  --h1-weight: 600;
+  --h2-size: 17px;
   --h2-weight: 600;
-  --h3-size: 17px;
+  --h3-size: 15px;
   --h3-weight: 600;
-  --h4-size: 15px;
+  --h4-size: 12px;
   --h4-weight: 600;
   --heading-spacing: 24px;
   --p-spacing: 12px;
@@ -78,19 +78,27 @@ body.dr-note-apple .markdown-preview-view .markdown-preview-sizer {
   margin-right: auto;
 }
 
-/* A large title, as a Mac's (26px): the theme's own title rules give way. */
+/* The title: 24px, semibold — the largest thing on the page, and not loud. The theme's own title rules give way. */
 body.dr-note-apple .inline-title {
   font-family: var(--dr-font-display) !important;
-  font-size: 26px !important;
+  font-size: 24px !important;
   line-height: 1.15 !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   letter-spacing: -0.02em !important;
 }
 
-body.dr-note-apple .markdown-rendered h1 { font-size: 22px; font-weight: 700; }
-body.dr-note-apple .markdown-rendered h2 { font-size: 19px; font-weight: 600; }
-body.dr-note-apple .markdown-rendered h3 { font-size: 17px; font-weight: 600; }
-body.dr-note-apple .markdown-rendered h4 { font-size: 15px; font-weight: 600; }
+/* Headings step down by little, in one weight; the fourth and below are labels, in spaced capitals. */
+body.dr-note-apple .markdown-rendered h1 { font-size: 20px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h2 { font-size: 17px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered h3 { font-size: 15px; font-weight: 600; }
+body.dr-note-apple .markdown-rendered :is(h4, h5, h6),
+body.dr-note-apple .markdown-source-view :is(.HyperMD-header-4, .HyperMD-header-5, .HyperMD-header-6) {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 body.dr-note-apple .markdown-rendered :is(h1, h2, h3, h4, h5, h6),
 body.dr-note-apple .markdown-source-view .cm-header,

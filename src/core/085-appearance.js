@@ -27,6 +27,11 @@ export class Appearance extends Feature {
         options: LOOK_SCOPES,
       },
       {
+        key: 'showArt',
+        name: 'Covers and icons',
+        desc: 'A small cover or icon beside each name, in lists, the sidebar, the strip and the panel. Off, they are words alone; a grid of covers keeps its covers.',
+      },
+      {
         key: 'glassPanels',
         name: 'Glass',
         desc: 'Menus and suggestions as frosted glass.',
@@ -69,6 +74,8 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
     // Lists, not covers: Home's shelves, its large cards and an album's head draw as compact lists too.
     body.classList.toggle('dr-layout-lists', !off && this.settings.libraryLayout === 'lists');
+    // Words alone, unless covers and icons are asked for.
+    body.classList.toggle('dr-no-art', !off && this.settings.showArt !== true);
     // One look, the plugin's own (the class keeps the name it had while there were three).
     body.classList.toggle('dr-look-apple', !off);
     // Inside notes only where the look covers the whole window.

@@ -72,7 +72,7 @@ body.dr-look-apple :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup, .dr-
 
 /* What was told by the accent alone — a link in a line of facts, a property raised under a name —
    is told by a line under it. */
-body.dr-look-apple :is(.dr-browse, .dr-props-popup, .dr-panel-dock) :is(a, .dr-prop-fact-fix, .dr-props-lead, .dr-detail-sub.is-link, .dr-mention) {
+body.dr-look-apple :is(.dr-browse, .dr-props-popup, .dr-panel-dock) :is(a, .dr-prop-fact-fix, .dr-props-lead, .dr-detail-sub.is-link) {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -276,6 +276,73 @@ body.dr-look-apple .dr-search-prop-title {
 
 body.dr-look-apple .dr-search-prop-sub {
   font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}
+
+/* Words alone (Covers and icons, off): no small cover or icon beside a name — in a list, the
+   sidebar, the strip, the panel, an album's head. A grid of covers, chosen as the layout, is
+   still covers. A cover is still set from an item's menu. */
+body.dr-no-art :is(.dr-pick-art, .dr-search-prop-art, .dr-lib-icon, .dr-strip-art, .dr-props-art, .dr-split-thumb, .dr-detail-art) {
+  display: none;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > .dr-card-art {
+  display: none;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card {
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 40px;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > * {
+  grid-column: 1;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-pick {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 40px;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-pick-text {
+  grid-column: 1;
+}
+
+body.dr-no-art.dr-layout-lists .dr-browse .dr-pick-caption {
+  grid-column: 2;
+}
+
+body.dr-no-art .dr-search-prop {
+  min-height: 40px;
+}
+
+/* The panel, pared. A list of notes under a heading is plainly a list of links: no line under
+   each, and it starts under its heading, not halfway across. A value is its words, with no
+   block behind them, in the interface's face whatever the theme sets for notes. Its own
+   heading is a label like the rest. */
+body.dr-look-apple .dr-props-popup .dr-mention {
+  margin-left: calc(var(--dr-u) * 5);
+  padding: 2px 0;
+}
+
+body.dr-look-apple .dr-props-popup {
+  --pill-background: transparent;
+  --pill-background-hover: transparent;
+  --pill-border-width: 0px;
+  --pill-padding-x: 0px;
+  --pill-color: var(--text-normal);
+  --pill-color-hover: var(--text-muted);
+}
+
+body.dr-look-apple .dr-props-popup .dr-value,
+body.dr-look-apple .dr-props-popup .dr-value :is(input, textarea, [contenteditable], .metadata-input-longtext, .multi-select-input, .multi-select-pill) {
+  font-family: var(--dr-font-ui);
+}
+
+body.dr-look-apple .dr-props-popup :not(.dr-props-info) > .dr-props-title {
+  font-size: var(--dr-caps-size);
+  font-weight: 600;
   letter-spacing: var(--dr-caps-track);
   text-transform: uppercase;
 }

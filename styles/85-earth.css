@@ -121,6 +121,7 @@ body.dr-note-apple.theme-light {
   --color-pink: #a07a72;
   --text-selection: rgba(111, 116, 70, 0.22);
   --text-highlight-bg: rgba(168, 142, 62, 0.3);
+  --dr-callout-plain: 92, 85, 71;
 }
 
 body.dr-note-apple.theme-dark {
@@ -145,6 +146,7 @@ body.dr-note-apple.theme-dark {
   --color-pink: #c6a096;
   --text-selection: rgba(158, 163, 116, 0.25);
   --text-highlight-bg: rgba(201, 180, 110, 0.28);
+  --dr-callout-plain: 179, 171, 151;
 }
 
 /* And its materials, in either: square, flat, one face, lines where colour stood. */
@@ -257,6 +259,21 @@ body.dr-note-apple {
   --table-row-alt-background: transparent;
   --callout-border-width: 0px;
   --callout-padding: 12px 16px;
+  /* Callouts are one quiet block, told apart by their word and symbol; only what warns keeps a colour, rust. */
+  --callout-default: var(--dr-callout-plain);
+  --callout-info: var(--dr-callout-plain);
+  --callout-summary: var(--dr-callout-plain);
+  --callout-tip: var(--dr-callout-plain);
+  --callout-todo: var(--dr-callout-plain);
+  --callout-success: var(--dr-callout-plain);
+  --callout-question: var(--dr-callout-plain);
+  --callout-example: var(--dr-callout-plain);
+  --callout-quote: var(--dr-callout-plain);
+  --callout-important: var(--dr-callout-plain);
+  --callout-warning: var(--color-red-rgb);
+  --callout-fail: var(--color-red-rgb);
+  --callout-error: var(--color-red-rgb);
+  --callout-bug: var(--color-red-rgb);
 
   /* A note's properties: labels grey, no rule under them. */
   --metadata-label-text-color: var(--text-muted);
@@ -279,7 +296,6 @@ body.dr-note-apple {
 /* The covers the plugin makes where a note has none — drawn ones, coloured ones — are taken down
    to the same earth, so a list of them is one tone and not a dozen. A picture of your own keeps
    its colours. */
-body.dr-look-apple .is-drawn > .dr-drawn,
-body.dr-look-apple [class*="dr-"]:is(.is-generated, .is-hued):not(:has(img)) {
+body.dr-look-apple [class*="dr-"]:is(.is-drawn, .is-generated, .is-hued):not(:has(img)) {
   filter: grayscale(1) sepia(0.3) contrast(0.9);
 }

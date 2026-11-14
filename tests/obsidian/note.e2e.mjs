@@ -200,8 +200,8 @@ suite('Design Redux in Obsidian: notes', function () {
       await app.vault.delete(file);
       return { apple, theme, without, room };
     });
-    expect(result.apple.weights).toEqual(['p:400:antialiased', 'li:400:antialiased', '.inline-title:700:antialiased', 'h1:700:antialiased']);
-    expect(result.apple.title).toBe('26px|700');
+    expect(result.apple.weights).toEqual(['p:400:antialiased', 'li:400:antialiased', '.inline-title:600:antialiased', 'h1:600:antialiased']);
+    expect(result.apple.title).toBe('24px|600');
     expect(result.apple.body).toBe('16px|25.6px');
     expect(result.apple.column).toBeLessThanOrEqual(680);
     expect(result.apple.rule).toBe('1px');
@@ -547,6 +547,8 @@ suite('Design Redux in Obsidian: notes', function () {
     // Bone and charcoal, and square: the palette reaches what Obsidian draws through its own variables.
     expect(seen).toEqual({ ground: '#f4f1ea', text: 'rgb(43, 40, 35)', callout: '0px', code: '0px' });
     await shot('earth-reading');
+    await browser.execute(() => { const v = document.querySelector('.workspace-leaf.mod-active .markdown-preview-view'); v.scrollTop = v.scrollHeight; });
+    await shot('earth-reading-end');
     await browser.executeObsidian(async ({ app }) => {
       const leaf = app.workspace.activeLeaf;
       await leaf.setViewState({ type: 'markdown', state: Object.assign({}, leaf.getViewState().state, { mode: 'source', source: false }) });
