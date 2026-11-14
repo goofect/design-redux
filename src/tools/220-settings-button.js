@@ -34,6 +34,8 @@ export class SettingsButton extends Feature {
 
   disable() {
     document.body.removeClass('dr-settings-active');
+    window.clearTimeout(this.again);
+    this.again = 0;
     this.restore();
   }
 
@@ -64,7 +66,22 @@ export class SettingsButton extends Feature {
     if (this.el) this.gears().forEach((icon) => icon.addClass('dr-settings-spare'));
   }
 
+  /**
+   * The gear in the header, now, and looked at once more a moment after the
+   * last change: Obsidian can draw the sidebar's header again just after it
+   * says the layout changed (a layout loaded, a workspace switched), and
+   * says nothing more — the gear would be left where Obsidian keeps it.
+   */
   sync() {
+    this.place();
+    window.clearTimeout(this.again);
+    this.again = window.setTimeout(() => {
+      this.again = 0;
+      if (this.enabled) this.place();
+    }, 600);
+  }
+
+  place() {
     const header = document.querySelector(TAB_HEADER);
     if (!header) return;
     if (this.el && this.el.isConnected && header.contains(this.el)) return this.hideSpares();
