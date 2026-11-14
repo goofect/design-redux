@@ -675,3 +675,30 @@ body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-section:has(> .dr-props-n
 body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-section:has(> .dr-props-note-head:only-child) + .dr-section {
   margin-top: 0;
 }
+
+/* Under a note's title, a property is said as it is in the panel — its name, a faint capital, then
+   its value — on a line with the others, not as a block of its own with no name to it. */
+body.dr-look-apple .dr-note-chips {
+  gap: var(--dr-space-1) calc(var(--dr-u) * 6);
+  margin: calc(var(--dr-u) * 1.5) 0 0;
+}
+
+body.dr-look-apple .dr-note-chip {
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  height: auto;
+  padding: 0;
+  border: none;
+  background-color: transparent;
+  color: var(--text-normal);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+body.dr-look-apple .dr-note-chip::before {
+  content: attr(aria-label);
+  color: var(--text-faint);
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}

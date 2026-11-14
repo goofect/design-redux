@@ -536,10 +536,22 @@ suite('Design Redux in Obsidian: notes', function () {
       if (old) await app.vault.delete(old);
       if (!app.vault.getFolderByPath('Look')) await app.vault.createFolder('Look');
       const file = await app.vault.create(path, '---\nstatus: draft\ndomain: Look\n---\n' + text);
+      // Its properties under its title, to picture them in the look.
+      const mine = app.plugins.plugins['design-redux'];
+      mine.settings.notePageChips = true;
+      await mine.saveSettings();
       const leaf = app.workspace.getLeaf(false);
       await leaf.openFile(file, { state: { mode: 'preview' } });
     }, path);
     await browser.$('.markdown-preview-view .callout').waitForExist({ timeout: 10000 });
+    await browser.$('.markdown-preview-view .dr-note-chip').waitForExist({ timeout: 10000 });
+    const named = await browser.execute(() => {
+      const chip = document.querySelector('.markdown-preview-view .dr-note-chip');
+      return { name: getComputedStyle(chip, '::before').content, ground: getComputedStyle(chip).backgroundColor };
+    });
+    // A property under the title: its name before its value, and no block behind it.
+    expect(named.name.replace(/"/g, '').length).toBeGreaterThan(0);
+    expect(named.ground).toBe('rgba(0, 0, 0, 0)');
     const seen = await browser.execute(() => {
       const cs = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el) : null; };
       const page = cs('.markdown-preview-view');
@@ -573,6 +585,9 @@ suite('Design Redux in Obsidian: notes', function () {
       app.workspace.activeLeaf.detach();
       const file = app.vault.getFileByPath(path);
       if (file) await app.vault.delete(file);
+      const mine = app.plugins.plugins['design-redux'];
+      mine.settings.notePageChips = false;
+      await mine.saveSettings();
     }, path);
     expect(dark).toBe('#1e1c19');
   });
