@@ -280,6 +280,8 @@ export class BrowseAlbum extends BrowsePreview {
         this.renderLimited(list, disc.files, `disc:${disc.folder.path}`, 0);
         return;
       }
+      // The album's own notes, headed by its name: the page's title says that name already.
+      if (album && disc.folder === album) head.addClass('is-own');
       head.createSpan({ cls: 'dr-disc-title', text: disc.title });
       head.createSpan({
         cls: 'dr-disc-count',

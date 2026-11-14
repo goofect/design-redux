@@ -467,3 +467,9 @@ body.dr-look-apple .dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-sel
   background-color: transparent;
   font-size: 12px;
 }
+
+/* An album's own notes are headed by its name, right under its name: the count stays, the second
+   saying of the name doesn't. */
+body.dr-look-apple .dr-browse .dr-disc.is-own .dr-disc-title {
+  visibility: hidden;
+}
