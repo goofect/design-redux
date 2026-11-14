@@ -1,24 +1,19 @@
 /* ====================================================================
- * Apple look: the properties panel as a grouped list
- * A rounded group, the label at the left and the value at the right,
- * hairlines between, edited where it stands.
+ * The properties panel as a plain list
+ * The label at the left and the value at the right, edited where it
+ * stands; no box round the rows and no lines between them, popped up
+ * as in the inspector.
  * ==================================================================== */
 body.dr-look-apple .dr-props-popup .dr-rows {
   gap: 0;
-  padding: 0 12px;
-  border-radius: 10px;
-  background-color: var(--dr-group-bg);
+  padding: 0;
 }
 
 body.dr-look-apple .dr-props-popup .dr-row {
   align-items: center;
-  min-height: 40px;
-  padding: 4px 0;
+  min-height: 32px;
+  padding: 2px 0;
   border-radius: 0;
-}
-
-body.dr-look-apple .dr-props-popup .dr-row + .dr-row {
-  border-top: 0.5px solid var(--dr-separator);
 }
 
 body.dr-look-apple .dr-props-popup .dr-row:focus-within {

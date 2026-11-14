@@ -103,12 +103,29 @@ body.dr-look-apple .dr-disc-title {
   font-weight: 600;
 }
 
-/* Home's large cards rest on the page, a hairline round them, where they stood above it. */
+/* Home's large cards are a cover and two lines under it, as every other card is, only larger:
+   no box round them and nothing lifting them off the page. */
 body.dr-look-apple .dr-pick-body {
-  box-shadow: var(--dr-shadow-sm);
+  overflow: visible;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+body.dr-look-apple .dr-pick-art {
+  border-radius: var(--dr-radius-cover);
+}
+
+body.dr-look-apple .dr-pick-text {
+  min-height: 0;
+  padding: var(--dr-space-2) 0 0;
 }
 
 body.dr-look-apple .dr-pick:focus-visible .dr-pick-body {
+  box-shadow: none;
+}
+
+body.dr-look-apple .dr-pick:focus-visible .dr-pick-art {
   box-shadow: var(--dr-focus-ring);
 }
 
