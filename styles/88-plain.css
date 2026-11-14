@@ -663,3 +663,15 @@ body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is
   height: 0;
   overflow: visible;
 }
+
+/* Popped up over a note, the panel doesn't open by saying the note's name, its collection and when
+   it was edited: the page it's over says all three. It starts at its properties. (In the inspector,
+   beside the library, the name stays: there it says what's picked.) */
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-props-note-head,
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-section:has(> .dr-props-note-head:only-child) {
+  display: none;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-section:has(> .dr-props-note-head:only-child) + .dr-section {
+  margin-top: 0;
+}

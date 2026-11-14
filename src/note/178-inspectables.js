@@ -55,7 +55,7 @@ export function cardValue(typed, was) {
  * the inspector both open with it.
  */
 export function drawNoteHead(plugin, parentEl, file) {
-  const head = parentEl.createDiv({ cls: 'dr-props-head' });
+  const head = parentEl.createDiv({ cls: 'dr-props-head dr-props-note-head' });
   const art = head.createDiv({ cls: 'dr-props-art' });
   drawNoteArt(plugin, art, file);
   // An image dropped here — or pasted, once it's clicked — becomes the note's cover.
