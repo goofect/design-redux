@@ -227,3 +227,55 @@ body.dr-look-apple .dr-library .dr-lib-group {
   letter-spacing: var(--dr-caps-track);
   text-transform: uppercase;
 }
+
+/* Room. A screen starts lower, its bar stands clear of what's under it, and each group of rows
+   is set apart by space, not by a line. */
+body.dr-look-apple .dr-browse .view-content {
+  padding-top: calc(var(--dr-u) * 8);
+}
+
+body.dr-look-apple .dr-browse .dr-detail-bar {
+  margin-bottom: calc(var(--dr-u) * 8);
+}
+
+body.dr-look-apple .dr-browse .dr-tracks .dr-disc {
+  margin-top: calc(var(--dr-u) * 8);
+}
+
+body.dr-look-apple .dr-browse .dr-tracks > .dr-disc:first-child {
+  margin-top: var(--dr-space-1);
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-head {
+  margin-top: calc(var(--dr-u) * 10);
+}
+
+/* Collections as rows, and Search's rows: on the page's edge and the full column like every
+   other list, no rule under each, the count in capitals. */
+body.dr-look-apple .dr-search-props {
+  max-width: none;
+}
+
+body.dr-look-apple .dr-search-prop {
+  min-height: 48px;
+  margin-inline: -8px;
+  padding: 6px 8px;
+  border-bottom: none;
+  box-sizing: border-box;
+}
+
+body.dr-look-apple .dr-search-prop-art {
+  width: 36px;
+  height: 36px;
+}
+
+body.dr-look-apple .dr-search-prop-title {
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
+}
+
+body.dr-look-apple .dr-search-prop-sub {
+  font-size: var(--dr-caps-size);
+  letter-spacing: var(--dr-caps-track);
+  text-transform: uppercase;
+}

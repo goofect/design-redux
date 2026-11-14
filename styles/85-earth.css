@@ -275,3 +275,11 @@ body.dr-note-apple {
   --canvas-dot-pattern: var(--background-modifier-border);
   --canvas-card-label-color: var(--text-faint);
 }
+
+/* The covers the plugin makes where a note has none — drawn ones, coloured ones — are taken down
+   to the same earth, so a list of them is one tone and not a dozen. A picture of your own keeps
+   its colours. */
+body.dr-look-apple .is-drawn > .dr-drawn,
+body.dr-look-apple [class*="dr-"]:is(.is-generated, .is-hued):not(:has(img)) {
+  filter: grayscale(1) sepia(0.3) contrast(0.9);
+}
