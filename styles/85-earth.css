@@ -1,0 +1,277 @@
+/* Earth -----------------------------------------------------------------------
+ *
+ * The palette and the materials: bone, oat and sand under charcoal in light,
+ * the same tones turned over in dark. Matte: one flat ground a step apart
+ * for each layer, a hairline where two meet, nothing that glows or lifts.
+ * One plain face (Helvetica, or the system's nearest) for the interface.
+ *
+ * On the whole window where the look covers it (Look on: The whole window,
+ * body.dr-note-apple), through Obsidian's own variables, so its editor,
+ * tabs, file list, callouts, code, tables, graph, canvas and settings take
+ * it without a selector of theirs being named. Otherwise on what Design
+ * Redux draws alone. Before More contrast, which firms its lines.
+ */
+
+/* The plugin's own face and fills: warm, from the text's colour, not a system grey. */
+body.dr-look-apple,
+body.dr-look-apple.theme-dark {
+  --dr-font-system: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-font-display: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-fill: color-mix(in srgb, var(--text-normal) 7%, transparent);
+  --dr-fill-strong: color-mix(in srgb, var(--text-normal) 13%, transparent);
+  --dr-separator: var(--background-modifier-border);
+  --dr-group-bg: var(--background-secondary);
+}
+
+/* Light: bone, oat, sand; charcoal for words. */
+body.dr-note-apple.theme-light,
+body.dr-look-apple:not(.dr-note-apple).theme-light :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup, .dr-panel-dock, .dr-settings) {
+  --color-base-00: #f4f1ea;
+  --color-base-05: #efebe2;
+  --color-base-10: #eae5da;
+  --color-base-20: #e3ddd0;
+  --color-base-25: #dad3c4;
+  --color-base-30: #d6cfbf;
+  --color-base-35: #c6bda9;
+  --color-base-40: #afa592;
+  --color-base-50: #8e8573;
+  --color-base-60: #6f6757;
+  --color-base-70: #5c5547;
+  --color-base-100: #2b2823;
+  --background-primary: #f4f1ea;
+  --background-primary-alt: #efebe2;
+  --background-secondary: #eae5da;
+  --background-secondary-alt: #e3ddd0;
+  --background-modifier-border: #d6cfbf;
+  --background-modifier-border-hover: #c6bda9;
+  --background-modifier-border-focus: #a79d87;
+  --background-modifier-hover: rgba(43, 40, 35, 0.06);
+  --background-modifier-active-hover: rgba(43, 40, 35, 0.1);
+  --background-modifier-form-field: #f4f1ea;
+  --text-normal: #2b2823;
+  --text-muted: #5c5547;
+  --text-faint: #8e8573;
+  --interactive-normal: #efebe2;
+  --interactive-hover: #e3ddd0;
+}
+
+/* Dark: charcoal and umber; bone for words. */
+body.dr-note-apple.theme-dark,
+body.dr-look-apple:not(.dr-note-apple).theme-dark :is(.dr-browse, .dr-library, .dr-strip, .dr-props-popup, .dr-panel-dock, .dr-settings) {
+  --color-base-00: #1e1c19;
+  --color-base-05: #22201c;
+  --color-base-10: #26231f;
+  --color-base-20: #2c2924;
+  --color-base-25: #322f29;
+  --color-base-30: #3b372f;
+  --color-base-35: #4a4539;
+  --color-base-40: #5b5546;
+  --color-base-50: #7d7664;
+  --color-base-60: #9a927e;
+  --color-base-70: #b3ab97;
+  --color-base-100: #e6e0d2;
+  --background-primary: #1e1c19;
+  --background-primary-alt: #22201c;
+  --background-secondary: #26231f;
+  --background-secondary-alt: #2c2924;
+  --background-modifier-border: #3b372f;
+  --background-modifier-border-hover: #4a4539;
+  --background-modifier-border-focus: #6a6352;
+  --background-modifier-hover: rgba(230, 224, 210, 0.06);
+  --background-modifier-active-hover: rgba(230, 224, 210, 0.1);
+  --background-modifier-form-field: #22201c;
+  --text-normal: #e6e0d2;
+  --text-muted: #b3ab97;
+  --text-faint: #7d7664;
+  --interactive-normal: #2c2924;
+  --interactive-hover: #353128;
+}
+
+/* On Design Redux alone, its own views are painted with those grounds: the page behind them is the theme's. */
+body.dr-look-apple:not(.dr-note-apple) .dr-browse {
+  background-color: var(--background-primary);
+}
+
+body.dr-look-apple:not(.dr-note-apple) .dr-library {
+  background-color: var(--background-secondary);
+}
+
+/* The whole window. The colours a vault uses to tell things apart — callouts, tags, canvas cards,
+   code, graph groups — are the same eight, each taken down to an earth: rust, ochre, straw, olive,
+   sage, slate, taupe, clay. The accent is clay. */
+body.dr-note-apple.theme-light {
+  --accent-h: 22;
+  --accent-s: 30%;
+  --accent-l: 40%;
+  --color-red-rgb: 156, 79, 60;
+  --color-red: #9c4f3c;
+  --color-orange-rgb: 176, 122, 69;
+  --color-orange: #b07a45;
+  --color-yellow-rgb: 168, 142, 62;
+  --color-yellow: #a88e3e;
+  --color-green-rgb: 111, 116, 70;
+  --color-green: #6f7446;
+  --color-cyan-rgb: 96, 124, 112;
+  --color-cyan: #607c70;
+  --color-blue-rgb: 94, 110, 122;
+  --color-blue: #5e6e7a;
+  --color-purple-rgb: 122, 102, 114;
+  --color-purple: #7a6672;
+  --color-pink-rgb: 160, 122, 114;
+  --color-pink: #a07a72;
+  --text-selection: rgba(111, 116, 70, 0.22);
+  --text-highlight-bg: rgba(168, 142, 62, 0.3);
+}
+
+body.dr-note-apple.theme-dark {
+  --accent-h: 22;
+  --accent-s: 34%;
+  --accent-l: 62%;
+  --color-red-rgb: 196, 122, 100;
+  --color-red: #c47a64;
+  --color-orange-rgb: 204, 160, 110;
+  --color-orange: #cca06e;
+  --color-yellow-rgb: 201, 180, 110;
+  --color-yellow: #c9b46e;
+  --color-green-rgb: 158, 163, 116;
+  --color-green: #9ea374;
+  --color-cyan-rgb: 140, 168, 155;
+  --color-cyan: #8ca89b;
+  --color-blue-rgb: 140, 157, 170;
+  --color-blue: #8c9daa;
+  --color-purple-rgb: 170, 150, 162;
+  --color-purple: #aa96a2;
+  --color-pink-rgb: 198, 160, 150;
+  --color-pink: #c6a096;
+  --text-selection: rgba(158, 163, 116, 0.25);
+  --text-highlight-bg: rgba(201, 180, 110, 0.28);
+}
+
+/* And its materials, in either: square, flat, one face, lines where colour stood. */
+body.dr-note-apple {
+  /* Square. */
+  --radius-s: 0px;
+  --radius-m: 0px;
+  --radius-l: 0px;
+  --radius-xl: 0px;
+  --input-radius: 0px;
+  --button-radius: 0px;
+  --tab-curve: 0px;
+  --tab-radius: 0px;
+  --tab-radius-active: 0px;
+  --callout-radius: 0px;
+  --code-radius: 0px;
+  --checkbox-radius: 0px;
+  --modal-radius: 0px;
+  --tag-radius: 0px;
+  --clickable-icon-radius: 0px;
+  --toggle-radius: 0px;
+  --toggle-thumb-radius: 0px;
+  --slider-thumb-radius: 0px;
+  --scrollbar-radius: 0px;
+  --metadata-property-radius: 0px;
+
+  /* Flat: a hairline round what floats. */
+  --shadow-s: none;
+  --shadow-l: none;
+  --input-shadow: none;
+  --input-shadow-hover: none;
+  --modal-border-width: 1px;
+  --modal-border-color: var(--background-modifier-border-focus);
+
+  /* One face. A font chosen in Obsidian's settings still comes first. */
+  --font-interface-theme: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-text-theme: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-monospace-theme: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --bold-weight: 600;
+
+  /* The frame: title bar, tabs, ribbon and status bar are one ground; the open tab is the page's. */
+  --titlebar-background: var(--background-secondary);
+  --titlebar-background-focused: var(--background-secondary);
+  --tab-container-background: var(--background-secondary);
+  --tab-background-active: var(--background-primary);
+  --tab-outline-color: var(--background-modifier-border);
+  --tab-divider-color: var(--background-modifier-border);
+  --ribbon-background: var(--background-secondary);
+  --ribbon-background-collapsed: var(--background-primary);
+  --status-bar-background: var(--background-secondary);
+  --status-bar-border-color: var(--background-modifier-border);
+  --divider-color: var(--background-modifier-border);
+
+  /* The file list: grey until it's the one, then the text's colour and weight; no guide lines. */
+  --nav-item-color: var(--text-muted);
+  --nav-item-color-hover: var(--text-normal);
+  --nav-item-color-active: var(--text-normal);
+  --nav-item-background-hover: var(--background-modifier-hover);
+  --nav-item-background-active: var(--background-modifier-hover);
+  --nav-item-weight-active: 600;
+  --nav-indentation-guide-color: transparent;
+  --nav-collapse-icon-color: var(--text-faint);
+
+  /* Icons: thinner, and grey until used. */
+  --icon-color: var(--text-muted);
+  --icon-color-hover: var(--text-normal);
+  --icon-color-active: var(--text-normal);
+  --icon-color-focused: var(--text-normal);
+  --icon-stroke: 1.5px;
+
+  /* In a note. A link is the text's colour with a line under it; one to a note not yet written, grey. */
+  --link-color: var(--text-normal);
+  --link-color-hover: var(--text-muted);
+  --link-external-color: var(--text-normal);
+  --link-external-color-hover: var(--text-muted);
+  --link-decoration: underline;
+  --link-external-decoration: underline;
+  --link-decoration-thickness: 1px;
+  --link-unresolved-color: var(--text-muted);
+  --link-unresolved-opacity: 1;
+  --link-unresolved-decoration-color: var(--text-faint);
+  --list-marker-color: var(--text-faint);
+  --list-marker-color-collapsed: var(--text-normal);
+  --blockquote-border-thickness: 1px;
+  --blockquote-border-color: var(--text-faint);
+  --blockquote-color: var(--text-muted);
+  --hr-color: var(--background-modifier-border);
+  --hr-thickness: 1px;
+  --caret-color: var(--text-normal);
+  --checkbox-color: var(--text-normal);
+  --checkbox-color-hover: var(--text-muted);
+  --checkbox-border-color: var(--text-faint);
+  --checkbox-border-color-hover: var(--text-muted);
+  --checkbox-marker-color: var(--background-primary);
+  --tag-color: var(--text-muted);
+  --tag-color-hover: var(--text-normal);
+  --tag-background: var(--background-modifier-hover);
+  --tag-background-hover: var(--background-modifier-active-hover);
+  --tag-border-width: 0px;
+
+  /* Code on the sidebar's ground; a table of lines, its head told by weight, no striping; a callout a tinted block without an edge. */
+  --code-background: var(--background-secondary);
+  --code-normal: var(--text-normal);
+  --code-size: 0.875em;
+  --table-border-color: var(--background-modifier-border);
+  --table-header-background: transparent;
+  --table-header-background-hover: transparent;
+  --table-header-weight: 600;
+  --table-header-color: var(--text-muted);
+  --table-row-alt-background: transparent;
+  --callout-border-width: 0px;
+  --callout-padding: 12px 16px;
+
+  /* A note's properties: labels grey, no rule under them. */
+  --metadata-label-text-color: var(--text-muted);
+  --metadata-divider-width: 0px;
+  --metadata-input-background-active: var(--background-modifier-hover);
+
+  /* The graph and the canvas: grey lines and points on the page's ground; olive for tags, ochre for files. */
+  --graph-line: var(--background-modifier-border-hover);
+  --graph-node: var(--text-muted);
+  --graph-node-unresolved: var(--text-faint);
+  --graph-node-focused: var(--text-normal);
+  --graph-node-tag: var(--color-green);
+  --graph-node-attachment: var(--color-orange);
+  --graph-text: var(--text-muted);
+  --canvas-background: var(--background-primary);
+  --canvas-dot-pattern: var(--background-modifier-border);
+  --canvas-card-label-color: var(--text-faint);
+}

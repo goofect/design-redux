@@ -30,8 +30,8 @@ body.dr-look-apple {
   --dr-shadow-lg: none;
   --dr-cover-edge: none;
   --dr-thumb-shadow: none;
-  --dr-float-shadow: 0 0 0 1px var(--text-normal);
-  --dr-popover-shadow: 0 0 0 1px var(--text-normal);
+  --dr-float-shadow: 0 0 0 1px var(--background-modifier-border-focus);
+  --dr-popover-shadow: 0 0 0 1px var(--background-modifier-border-focus);
   --dr-focus-ring: 0 0 0 2px var(--text-normal);
   --dr-glass-blur: 0px;
   --dr-glass-blur-soft: 0px;
@@ -45,7 +45,7 @@ body.dr-look-apple {
 body.dr-look-apple.theme-dark {
   --dr-shadow-sm: none;
   --dr-shadow-md: none;
-  --dr-popover-shadow: 0 0 0 1px var(--text-normal);
+  --dr-popover-shadow: 0 0 0 1px var(--background-modifier-border-focus);
 }
 
 /* Square, whatever a part gave itself. */
@@ -189,7 +189,7 @@ body.dr-look-apple :is(.dr-track, .dr-tr, .dr-split-row).is-selected :is(.dr-tra
 body.dr-look-apple .dr-strip,
 body.dr-look-apple .dr-props-popup:not(.is-docked) {
   background-color: var(--background-primary);
-  box-shadow: 0 0 0 1px var(--text-normal);
+  box-shadow: 0 0 0 1px var(--background-modifier-border-focus);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
@@ -211,13 +211,13 @@ body.dr-look-apple .dr-cat {
 @media (any-hover: hover) {
   body.dr-look-apple .dr-cat:hover {
     background-color: transparent;
-    box-shadow: inset 0 0 0 1px var(--text-normal);
+    box-shadow: inset 0 0 0 1px var(--background-modifier-border-focus);
   }
 }
 
 /* A sheet, a list of suggestions: flat, with the same edge. */
 body.dr-look-apple :is(.dr-sheet, .dr-suggest) {
-  box-shadow: 0 0 0 1px var(--text-normal);
+  box-shadow: 0 0 0 1px var(--background-modifier-border-focus);
 }
 
 /* The sidebar's section names: capitals too, a step fainter than the rows under them. */
