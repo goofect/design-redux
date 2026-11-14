@@ -574,4 +574,34 @@ suite('Design Redux in Obsidian: notes', function () {
     }, path);
     expect(dark).toBe('#1e1c19');
   });
+
+  it('draws a canvas in the look: cards and their colours in the palette, on the page’s ground', async function () {
+    const path = 'Look/Board.canvas';
+    await browser.executeObsidian(async ({ app }, path) => {
+      const card = (id, text, x, y, color) => Object.assign({ id, type: 'text', text, x, y, width: 220, height: 90 }, color ? { color } : {});
+      const board = {
+        nodes: [card('a', 'Plain', 0, 0), card('b', 'One', 280, 0, '1'), card('c', 'Two', 560, 0, '2'), card('d', 'Three', 0, 150, '3'), card('e', 'Four', 280, 150, '4'), card('f', 'Five', 560, 150, '5'), card('g', 'Six', 280, 300, '6')],
+        edges: [{ id: 'x', fromNode: 'a', fromSide: 'right', toNode: 'b', toSide: 'left' }, { id: 'y', fromNode: 'e', fromSide: 'bottom', toNode: 'g', toSide: 'top', label: 'leads to' }],
+      };
+      const old = app.vault.getFileByPath(path);
+      if (old) await app.vault.delete(old);
+      if (!app.vault.getFolderByPath('Look')) await app.vault.createFolder('Look');
+      const file = await app.vault.create(path, JSON.stringify(board));
+      await app.workspace.getLeaf(false).openFile(file);
+    }, path);
+    await browser.$('.canvas-node').waitForExist({ timeout: 10000 });
+    await browser.executeObsidian(({ app }) => {
+      const canvas = app.workspace.activeLeaf.view.canvas;
+      if (canvas && typeof canvas.zoomToFit === 'function') canvas.zoomToFit();
+    });
+    await browser.pause(600);
+    const ground = await browser.execute(() => getComputedStyle(document.body).getPropertyValue('--canvas-background').trim());
+    await shot('earth-canvas');
+    await browser.executeObsidian(async ({ app }, path) => {
+      app.workspace.activeLeaf.detach();
+      const file = app.vault.getFileByPath(path);
+      if (file) await app.vault.delete(file);
+    }, path);
+    expect(ground.length).toBeGreaterThan(0);
+  });
 });
