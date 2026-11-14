@@ -508,7 +508,8 @@ suite('Design Redux in Obsidian: the app', function () {
       // Where its words start, not only its box.
       const left = (sel) => {
         const el = dock.querySelector(sel);
-        if (!el) return null;
+        // What isn't shown (a cover, with covers and icons off) has no edge to keep.
+        if (!el || el.offsetParent === null) return null;
         const range = document.createRange();
         range.selectNodeContents(el);
         const first = Array.from(range.getClientRects()).filter((r) => r.width > 0)[0] || el.getBoundingClientRect();
