@@ -567,7 +567,7 @@ suite('Design Redux in Obsidian: the library', function () {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
       await library.browseMode(state);
     }, state);
-    for (const [mode, sel] of [['notes', '.dr-tr'], ['folders', '.dr-card'], ['properties', '.dr-split-row'], ['search', '.dr-browse-search input'], ['library-check', '.dr-browse']]) {
+    for (const [mode, sel] of [['notes', '.dr-tr'], ['folders', '.dr-card'], ['properties', '.dr-split-row'], ['search', '.dr-browse-search input'], ['library-check', '.dr-detail-bar']]) {
       await open({ mode });
       await browser.$(`.workspace-leaf-content[data-type="design-redux-browse"] ${sel}`).waitForExist({ timeout: 10000 });
       await shot(`screen-${mode}`);

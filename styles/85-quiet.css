@@ -140,3 +140,114 @@ body.dr-look-apple .dr-fn-item.is-unused .dr-fn-num {
   font-weight: var(--font-semibold, 600);
   cursor: pointer;
 }
+
+/* Section headings and a property's facts keep to the edge: no 2px of their own. */
+body.dr-look-apple .dr-search-section {
+  padding: 0;
+}
+
+body.dr-look-apple .dr-prop-page-meta {
+  margin-inline: 0;
+}
+
+/* The notes table: rows of one line are 36px, their words on the page's edge, the hairline from
+   words to words. */
+body.dr-look-apple .dr-table .dr-tr {
+  margin-inline: -8px;
+}
+
+body.dr-look-apple .dr-table .dr-tr:not(.dr-th) {
+  min-height: 36px;
+}
+
+body.dr-look-apple .dr-tr:not(.dr-th)::after {
+  right: 8px;
+  left: 8px;
+}
+
+/* A list beside a page (Properties): rows the height of the table's, a small glyph where a 46px
+   disc stood, no lines between, and what's chosen filled in grey as the sidebar's row is — a
+   block of the accent is kept for a button. */
+body.dr-look-apple .dr-split-row {
+  gap: 10px;
+  min-height: 36px;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+body.dr-look-apple .dr-split-row + .dr-split-row::before {
+  display: none;
+}
+
+body.dr-look-apple .dr-split-row.is-selected {
+  background-color: var(--dr-fill-strong);
+  color: var(--text-normal);
+}
+
+body.dr-look-apple .dr-split-row.is-selected .dr-split-name {
+  font-weight: 600;
+}
+
+body.dr-look-apple .dr-split-row.is-selected .dr-split-count {
+  color: var(--text-muted);
+}
+
+body.dr-look-apple .dr-split-thumb {
+  flex-basis: 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+body.dr-look-apple .dr-split-thumb.is-blank {
+  flex-basis: 20px;
+  width: 20px;
+  height: 20px;
+  background-color: transparent;
+  color: var(--text-muted);
+}
+
+body.dr-look-apple .dr-split-thumb.is-blank .dr-card-glyph .svg-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Search's categories: a name and a count on a quiet tile, a few to a row. A block of colour
+   for each said nothing the name doesn't. */
+body.dr-look-apple .dr-cat-grid {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--dr-space-2);
+}
+
+body.dr-look-apple .dr-cat {
+  justify-content: center;
+  aspect-ratio: auto;
+  min-height: 56px;
+  padding: var(--dr-space-2) var(--dr-space-3);
+  border-radius: 10px;
+  background-color: var(--dr-fill);
+  background-image: none;
+  filter: none;
+}
+
+body.dr-look-apple .dr-cat-art {
+  display: none;
+}
+
+body.dr-look-apple .dr-cat-name,
+body.dr-look-apple .dr-cat-count {
+  color: var(--text-normal);
+  text-shadow: none;
+}
+
+body.dr-look-apple .dr-cat-count {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+@media (any-hover: hover) {
+  body.dr-look-apple .dr-cat:hover {
+    background-color: var(--dr-fill-strong);
+    filter: none;
+  }
+}
