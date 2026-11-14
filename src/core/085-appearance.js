@@ -67,6 +67,8 @@ export class Appearance extends Feature {
     body.classList.toggle('dr-density-compact', !off && density === 'compact');
     body.classList.toggle('dr-density-spacious', !off && density === 'large');
     body.classList.toggle('dr-glass', !off && this.settings.glassPanels !== false);
+    // Lists, not covers: Home's shelves, its large cards and an album's head draw as compact lists too.
+    body.classList.toggle('dr-layout-lists', !off && this.settings.libraryLayout === 'lists');
     // One look, the plugin's own (the class keeps the name it had while there were three).
     body.classList.toggle('dr-look-apple', !off);
     // Inside notes only where the look covers the whole window.

@@ -1,0 +1,199 @@
+/* Lists first -------------------------------------------------------------
+ *
+ * The layout a library starts with (Library, Layout: Lists): words before
+ * pictures. A note has no artwork of its own, so a wall of drawn covers
+ * shows less than a list does — fewer things to a screen, their names cut
+ * to two short lines. Here Home's shelves and its large cards are compact
+ * rows with a small cover, a shelf shows its first five and its title
+ * opens the rest, and an album's head is a small cover beside its name.
+ * Covers, chosen in settings, keeps the shelves and grids as they were.
+ *
+ * And for both: a library screen keeps to one column in a wide pane, as a
+ * note does, so a row's name and its date aren't a window apart.
+ */
+body.dr-look-apple .dr-browse .view-content {
+  padding-inline: max(calc(var(--dr-u) * 5), calc((100% - 760px) / 2));
+}
+
+/* A table, a list beside its page and a grid of covers use more of the width. */
+body.dr-look-apple .dr-browse .view-content:has(.dr-table, .dr-split, .dr-grid) {
+  padding-inline: max(calc(var(--dr-u) * 5), calc((100% - 1080px) / 2));
+}
+
+/* A shelf, as a list: each card a row — a small cover, its name, the line under it. */
+body.dr-layout-lists .dr-browse .dr-shelf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0 -8px var(--dr-space-2);
+  padding: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: var(--dr-space-3);
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > * {
+  grid-column: 2;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > .dr-card-art {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 36px;
+  margin: 0;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > .dr-card-title {
+  align-self: end;
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card:not(:has(.dr-card-sub)) > .dr-card-title {
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card > .dr-card-sub {
+  align-self: start;
+  margin-top: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row .dr-card-glyph .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card:focus-visible {
+  background-color: var(--dr-fill);
+}
+
+@media (any-hover: hover) {
+  body.dr-layout-lists .dr-browse .dr-shelf-row > .dr-card:hover {
+    background-color: var(--dr-fill);
+  }
+}
+
+/* A shelf whose title opens the whole of it shows its first five; nothing to scroll sideways. */
+body.dr-layout-lists .dr-browse .dr-shelf-head:has(.dr-shelf-more) + .dr-shelf-row > .dr-card:nth-child(n + 6) {
+  display: none;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-arrows {
+  display: none;
+}
+
+body.dr-layout-lists .dr-browse .dr-shelf-head {
+  margin: var(--dr-space-5) 0 var(--dr-space-1);
+}
+
+/* Home's large cards, as the first rows: the note, and at the row's end why it's there. */
+body.dr-layout-lists .dr-browse .dr-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: var(--dr-space-2) -8px 0;
+  padding: 0;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  column-gap: var(--dr-space-3);
+  align-items: center;
+  min-height: 48px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-body {
+  display: contents;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-art {
+  grid-column: 1;
+  grid-row: 1;
+  width: 36px;
+  border-radius: 6px;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-art .dr-card-glyph .svg-icon {
+  width: 18px;
+  height: 18px;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-text {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-title {
+  display: block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--font-ui-medium);
+  font-weight: var(--font-medium, 500);
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-sub {
+  margin-top: 0;
+}
+
+body.dr-layout-lists .dr-browse .dr-pick-caption {
+  grid-column: 3;
+  grid-row: 1;
+  margin: 0;
+  color: var(--text-faint);
+  font-weight: var(--font-normal, 400);
+}
+
+body.dr-layout-lists .dr-browse .dr-pick:focus-visible {
+  background-color: var(--dr-fill);
+}
+
+@media (any-hover: hover) {
+  body.dr-layout-lists .dr-browse .dr-pick:hover {
+    background-color: var(--dr-fill);
+  }
+
+  body.dr-layout-lists .dr-browse .dr-pick:hover .dr-pick-body {
+    filter: none;
+  }
+}
+
+/* An album's head: a small cover beside its name, on one line with it. */
+body.dr-layout-lists.dr-look-apple .dr-browse .dr-detail {
+  --dr-detail-art-scale: 0.25;
+  align-items: center;
+  gap: var(--dr-space-4);
+  margin-bottom: var(--dr-space-5);
+}
+
+body.dr-layout-lists .dr-browse .dr-detail-art {
+  border-radius: 8px;
+  box-shadow: none;
+}

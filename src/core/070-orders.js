@@ -323,6 +323,13 @@ export const SETTINGS_MIGRATIONS = [
       delete saved.look;
     },
   },
+  {
+    // Lists first: a library still on covers as it came is laid out as lists. Covers are one setting away (Library, Layout).
+    to: 32,
+    run(saved) {
+      if (saved.libraryLayout === undefined || saved.libraryLayout === 'auto') saved.libraryLayout = 'lists';
+    },
+  },
 ];
 
 /* The settings canvas maps had, dropped at step 13. */

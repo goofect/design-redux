@@ -155,7 +155,7 @@ export const DEFAULTS = {
   // The Properties screen's list: 'name', 'count' (notes using it) or 'type'.
   propertiesSort: 'name',
   // Covers or lists on the library's screens: 'auto', 'covers' or 'lists'.
-  libraryLayout: 'auto',
+  libraryLayout: 'lists',
   recentSearches: [],
   hideEmptyFolders: true,
   homePath: 'Home.md',
@@ -261,7 +261,7 @@ export const DEFAULTS = {
   albumRollups: false,
   rollupDateKey: '',
   // Which shape the saved settings are in; see SETTINGS_MIGRATIONS.
-  settingsVersion: 31,
+  settingsVersion: 32,
   graphProperties: true,
   // { graph | localgraph: { mode, rules, clause, open } }
   graphFilters: {},

@@ -120,7 +120,8 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
   const everything = [ir, books, a, b, c];
   const bookmarks = [{ type: 'file', path: 'IR/Anarchy.md' }, { type: 'folder', path: 'Books' }, { type: 'file', path: 'Books/Crisis.md' }];
   const plugin = {
-    settings: JSON.parse(JSON.stringify(R.DEFAULTS)),
+    // Covers, the layout these were written for; a library starts with lists.
+    settings: Object.assign(JSON.parse(JSON.stringify(R.DEFAULTS)), { libraryLayout: 'auto' }),
     saveData: async () => {},
     isFolderNote: () => false, folderHasNotes: () => true, recentFiles: () => [],
     folderNote: () => null, folderCoverSrc: () => null, feature: () => null,
@@ -226,7 +227,7 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     assert.strictEqual(run({ coverFallback: 'name' }), 'name');
     assert.strictEqual(run({ coverFallback: 'soft' }), 'soft');
     assert.strictEqual(R.DEFAULTS.coverFallback, 'art');
-    assert.strictEqual(R.DEFAULTS.settingsVersion, 31);
+    assert.strictEqual(R.DEFAULTS.settingsVersion, 32);
     // Step 30: lengths are gone, and their settings with them.
     const s29 = { trackLength: 'words', noteLength: 'time', thinNoteWords: 60, notePage: true };
     R.SETTINGS_MIGRATIONS.find((m) => m.to === 30).run(s29);
@@ -264,6 +265,13 @@ const settle = (ms = 10) => new Promise((r) => setTimeout(r, ms));
     const one = { look: 'editorial', lookScope: 'plugin' }; R.SETTINGS_MIGRATIONS.find((m) => m.to === 31).run(one);
     assert.deepStrictEqual(one, { lookScope: 'plugin' }, 'one look: the setting that chose among three is gone');
     assert.ok(!('look' in R.DEFAULTS));
+    // Step 32: lists first — a library on covers as it came is laid out as lists; one set to covers by name keeps them.
+    const lists = R.SETTINGS_MIGRATIONS.find((m) => m.to === 32);
+    const came = { libraryLayout: 'auto' }; lists.run(came);
+    const fresh = {}; lists.run(fresh);
+    const chose = { libraryLayout: 'covers' }; lists.run(chose);
+    assert.deepStrictEqual([came.libraryLayout, fresh.libraryLayout, chose.libraryLayout], ['lists', 'lists', 'covers']);
+    assert.strictEqual(R.DEFAULTS.libraryLayout, 'lists');
     // Step 15: Apple's look covers notes too, whatever scope the editorial look was given.
     const scope = R.SETTINGS_MIGRATIONS.find((m) => m.to === 15);
     const d = { look: 'apple', lookScope: 'plugin' }; scope.run(d);

@@ -132,8 +132,8 @@ export class Library extends Feature {
         segmented: true,
         showIf: 'library',
         name: 'Layout',
-        desc: 'Folders as covers or as lists. Notes are always lists.',
-        options: { auto: 'Covers', lists: 'Lists' },
+        desc: 'Lists: compact rows with a small cover, on Home and for folders. Covers: shelves and grids of large covers.',
+        options: { lists: 'Lists', auto: 'Covers' },
       },
       {
         key: 'tileGroups',

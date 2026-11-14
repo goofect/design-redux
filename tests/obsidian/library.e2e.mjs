@@ -562,6 +562,41 @@ suite('Design Redux in Obsidian: the library', function () {
     await shot('home');
   });
 
+  it('lays a library out as lists, as it starts: Home, an album and the collections in compact rows', async function () {
+    const set = (layout) => browser.executeObsidian(async ({ plugins }, layout) => {
+      plugins.designRedux.settings.libraryLayout = layout;
+      await plugins.designRedux.saveSettings();
+    }, layout);
+    const open = (state) => browser.executeObsidian(async ({ plugins }, state) => {
+      const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
+      await library.browseMode(state);
+      await library.reveal();
+    }, state);
+    await set('lists');
+    try {
+      await open({ mode: 'home' });
+      await browser.$('.dr-shelf-row .dr-card').waitForExist({ timeout: 10000 });
+      const home = await browser.execute(() => {
+        const row = document.querySelector('.dr-shelf-row');
+        const card = row.querySelector('.dr-card');
+        const art = card.querySelector('.dr-card-art');
+        return { lists: document.body.classList.contains('dr-layout-lists'), down: getComputedStyle(row).flexDirection, cover: Math.round(art.getBoundingClientRect().width), row: Math.round(card.getBoundingClientRect().height) };
+      });
+      expect(home).toEqual({ lists: true, down: 'column', cover: 36, row: 48 });
+      await shot('lists-home');
+      await open({ mode: 'folder', path: 'Politics' });
+      await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
+      const cover = await browser.execute(() => Math.round(document.querySelector('.dr-detail-art').getBoundingClientRect().width));
+      expect(cover).toBeLessThan(80);
+      await shot('lists-album');
+      await open({ mode: 'folders' });
+      await browser.$('.dr-folder-rows').waitForExist({ timeout: 10000 });
+      await shot('lists-folders');
+    } finally {
+      await set('auto');
+    }
+  });
+
   it('draws the other screens of the library: all notes, collections, properties, search and the check', async function () {
     const open = (state) => browser.executeObsidian(async ({ plugins }, state) => {
       const library = plugins.designRedux.features.find((f) => f.constructor.name === 'Library');
