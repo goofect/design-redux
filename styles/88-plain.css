@@ -635,10 +635,31 @@ body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill {
   width: auto;
 }
 
-body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill:has(+ .multi-select-pill)::after {
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill:has(+ .multi-select-pill) .multi-select-pill-content::after {
   content: ",";
+}
+
+/* A property's name is a field to type in, and a field is as wide as twenty letters until told
+   otherwise: here it is as wide as its word, so a value can follow it. */
+body.dr-look-apple .dr-props-popup:not(.is-docked) input.dr-key-name {
+  width: auto;
+  min-width: 2ch;
+  field-sizing: content;
 }
 
 body.dr-look-apple .dr-props-popup .dr-props-more .svg-icon {
   display: none;
+}
+
+/* In the inspector too, a property of several values says them in a row. */
+body.dr-look-apple .dr-panel-dock .dr-props-popup.is-docked .dr-value .multi-select-container {
+  flex-flow: row wrap;
+  gap: 0 var(--dr-space-1);
+}
+
+/* A group's name in a ledger's margin takes no height of its own: a long name, or its count under
+   it, doesn't push its first note's row taller than the rest. */
+body.dr-look-apple .dr-browse :is(.dr-tracks, .dr-ledger):has(> .dr-disc:not(.is-own)):not(:has(> .is-editing)) > .dr-disc {
+  height: 0;
+  overflow: visible;
 }
