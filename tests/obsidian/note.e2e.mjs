@@ -454,13 +454,15 @@ suite('Design Redux in Obsidian: notes', function () {
         // Its laid-out height: the popup may still be easing in, and a rectangle is measured scaled.
         rowHeight: row.offsetHeight,
         moreHidden: getComputedStyle(more).opacity === '0',
+        inLine: shown.length > 1 && Math.abs(shown[0].getBoundingClientRect().top - shown[1].getBoundingClientRect().top) < 4,
         widgets: shown.filter((r) => r.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value .multi-select-container')).length,
       };
     });
     expect(look.shown).toEqual(['type', 'domain', 'status']);
     expect(look.more).toBe('Show 3 more');
-    expect(look.labelShare).toBeGreaterThanOrEqual(30);
-    expect(look.labelShare).toBeLessThanOrEqual(45);
+    // In a line: a label is as wide as its word, with its value straight after it, and a second property beside the first.
+    expect(look.labelShare).toBeGreaterThan(0);
+    expect(look.inLine).toBe(true);
     expect(look.rowHeight).toBeGreaterThanOrEqual(28);
     expect(look.moreHidden).toBe(true);
     expect(look.widgets).toBe(3);

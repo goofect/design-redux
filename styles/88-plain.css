@@ -586,3 +586,59 @@ body.dr-look-apple .dr-props-popup .dr-props-chevron {
 body.dr-look-apple .dr-props-popup .dr-section-head {
   padding-inline: 0;
 }
+
+/* Properties in a line. A note's properties run on like the line on a label — NAME value, NAME
+   value — and wrap where the panel ends, where they stood one under another. A property of
+   several values says them in a row with commas, not a stack. Each is still edited where it
+   stands; a row's handle and its menu show in the gap beside it when it's pointed at. */
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-rows {
+  flex-flow: row wrap;
+  align-items: baseline;
+  gap: var(--dr-space-1) calc(var(--dr-u) * 6);
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-row {
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: var(--dr-space-2);
+  max-width: 100%;
+  min-height: 28px;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-key {
+  flex: 0 0 auto;
+  padding-top: 0;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-value {
+  flex: 0 1 auto;
+  width: auto;
+  min-width: calc(var(--dr-u) * 6);
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-value :is(input, .metadata-input-longtext) {
+  width: auto;
+  min-width: 2ch;
+  max-width: 100%;
+  field-sizing: content;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-container {
+  display: flex;
+  flex-flow: row wrap;
+  align-items: baseline;
+  width: auto;
+  gap: 0 var(--dr-space-1);
+}
+
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill {
+  width: auto;
+}
+
+body.dr-look-apple .dr-props-popup .dr-value .multi-select-pill:has(+ .multi-select-pill)::after {
+  content: ",";
+}
+
+body.dr-look-apple .dr-props-popup .dr-props-more .svg-icon {
+  display: none;
+}
