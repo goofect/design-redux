@@ -451,7 +451,8 @@ suite('Design Redux in Obsidian: notes', function () {
         shown: shown.map((r) => r.dataset.key),
         more: (pop.querySelector('.dr-props-more') || {}).textContent,
         labelShare: Math.round((key.getBoundingClientRect().width / row.getBoundingClientRect().width) * 100),
-        rowHeight: Math.round(row.getBoundingClientRect().height),
+        // Its laid-out height: the popup may still be easing in, and a rectangle is measured scaled.
+        rowHeight: row.offsetHeight,
         moreHidden: getComputedStyle(more).opacity === '0',
         widgets: shown.filter((r) => r.querySelector('.dr-value input, .dr-value [contenteditable], .dr-value .multi-select-container')).length,
       };
