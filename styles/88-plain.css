@@ -346,3 +346,29 @@ body.dr-look-apple .dr-props-popup :not(.dr-props-info) > .dr-props-title {
   letter-spacing: var(--dr-caps-track);
   text-transform: uppercase;
 }
+
+/* In the inspector everything keeps to its one edge, a list of notes too. */
+body.dr-look-apple .dr-props-popup.is-docked .dr-mention {
+  margin-left: 0;
+}
+
+/* A popup's rows start under its heading and end under its buttons: the handle and the menu a row
+   shows when pointed at wait in the margin either side, not in the row. */
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-row {
+  padding-inline: 0;
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-key-icon {
+  position: absolute;
+  top: 50%;
+  left: -14px;
+  transform: translateY(-50%);
+}
+
+body.dr-look-apple .dr-props-popup:not(.is-docked) .dr-row-more {
+  position: absolute;
+  top: 50%;
+  right: -16px;
+  margin: 0;
+  transform: translateY(-50%);
+}

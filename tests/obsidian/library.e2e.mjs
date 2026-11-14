@@ -585,7 +585,8 @@ suite('Design Redux in Obsidian: the library', function () {
         return { lists: document.body.classList.contains('dr-layout-lists'), down: getComputedStyle(row).flexDirection, cover: Math.round(art.getBoundingClientRect().width), row: Math.round(card.getBoundingClientRect().height) };
       });
       expect(home.row).toBeLessThan(60);
-      expect(Object.assign(home, { row: 0 })).toEqual({ lists: true, down: 'column', cover: 36, row: 0 });
+      // Words alone, as a library starts: no cover beside a name.
+      expect(Object.assign(home, { row: 0 })).toEqual({ lists: true, down: 'column', cover: 0, row: 0 });
       await shot('lists-home');
       await open({ mode: 'folder', path: 'Politics' });
       await browser.$('.dr-detail').waitForExist({ timeout: 10000 });
