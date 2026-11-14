@@ -87,7 +87,7 @@ suite('Design Redux in Obsidian: notes', function () {
       document.body.style.setProperty('--font-interface', 'Georgia, serif');
       document.body.style.setProperty('--inline-title-font', 'Georgia, serif');
       const title = root.querySelector('.markdown-source-view .inline-title');
-      const faces = [getComputedStyle(tabs[0]).fontFamily, title ? getComputedStyle(title).fontFamily : '-apple-system'].map((f) => f.startsWith('-apple-system'));
+      const faces = [getComputedStyle(tabs[0]).fontFamily, title ? getComputedStyle(title).fontFamily : '"Helvetica Neue"'].map((f) => /^"?Helvetica Neue/.test(f));
       document.body.style.removeProperty('--font-interface');
       document.body.style.removeProperty('--inline-title-font');
       // The open page always shows its thumb: the measured pill, or worn by the page itself.
@@ -206,7 +206,9 @@ suite('Design Redux in Obsidian: notes', function () {
     expect(result.apple.column).toBeLessThanOrEqual(680);
     expect(result.apple.rule).toBe('1px');
     expect(result.apple.order).toEqual(['dr-note-album', 'inline-title', 'dr-note-chips', 'dr-note-rule']);
-    expect(result.apple.colours).toEqual(result.theme.colours);
+    // On the whole window the look brings its own palette: charcoal on bone here, not the theme's black.
+    expect(result.apple.colours[0]).toBe('rgb(43, 40, 35)|rgba(0, 0, 0, 0)|rgb(43, 40, 35)');
+    expect(result.theme.colours[0]).not.toBe(result.apple.colours[0]);
     expect(result.apple.type).not.toEqual(result.theme.type);
     expect(result.theme.type).toEqual(result.without);
     expect(result.room.reading).toBeGreaterThanOrEqual(result.room.strip + 24);
