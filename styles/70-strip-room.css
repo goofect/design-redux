@@ -24,3 +24,9 @@ body.dr-strip-side .dr-strip.is-away {
   }
 }
 
+
+/* On a canvas the strip stands where the canvas keeps its own row of things to add: that row sits
+   above the strip, clear of it. */
+body.dr-strip-active:not(.dr-strip-side) .canvas-card-menu {
+  bottom: calc(var(--dr-strip-h, 0px) + var(--dr-space-3));
+}
