@@ -1,0 +1,95 @@
+/* ------------------------------------------------------------------ */
+/* Blocks: a head row, the strip, the say-so block (nothing here,      */
+/* working, something wrong), a sheet's own layout                     */
+/* ------------------------------------------------------------------ */
+
+/* ---- A head row: a label, and the few icon buttons a surface needs. Six units, a hairline under it. ---- */
+.dr-head {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-u);
+  flex: none;
+  height: calc(6 * var(--dr-u));
+  padding: 0 var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+}
+
+.dr-head > .dr-label {
+  flex: 1;
+}
+
+/* An icon button at either end sits a unit in, so its glyph lines up with the gutter. */
+.dr-head > .dr-icon-button:first-child {
+  margin-left: calc(-1 * var(--dr-u));
+}
+
+.dr-head > .dr-icon-button:last-child {
+  margin-right: calc(-1 * var(--dr-u));
+}
+
+/* ---- The strip: a bar across the foot of the note. What you are in, where you are in it, and on. ---- */
+.dr-strip {
+  --dr-glyph: calc(4 * var(--dr-u));
+  display: flex;
+  align-items: center;
+  gap: var(--dr-u);
+  height: calc(6 * var(--dr-u));
+  padding: 0 var(--dr-u) 0 var(--dr-gutter);
+  border-top: var(--dr-hair) solid var(--dr-ink);
+  background: var(--dr-bg);
+  color: var(--dr-ink);
+}
+
+.dr-strip-words {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  padding-left: var(--dr-u);
+}
+
+.dr-strip-place {
+  color: var(--dr-muted);
+}
+
+.dr-strip .dr-icon-button {
+  --dr-glyph: var(--dr-icon);
+}
+
+/* ---- The say-so block: what a surface shows in place of its contents. A glyph, a label, a line if it helps, one button at most. ---- */
+.dr-state {
+  --dr-glyph: var(--dr-object);
+  display: grid;
+  justify-items: center;
+  gap: var(--dr-u);
+  padding: calc(6 * var(--dr-u)) var(--dr-gutter);
+  color: var(--dr-muted);
+  text-align: center;
+}
+
+.dr-state > .dr-label {
+  margin-top: var(--dr-u);
+  color: var(--dr-ink);
+}
+
+.dr-state > .dr-button {
+  margin-top: var(--dr-u);
+}
+
+.dr-state.is-error > .dr-glyph {
+  color: var(--dr-error);
+}
+
+/* ---- A sheet: what the plugin puts inside one of Obsidian's modals. A title, the matter, the buttons at the foot. ---- */
+.dr-sheet {
+  display: grid;
+  gap: var(--dr-gutter);
+  color: var(--dr-ink);
+}
+
+.dr-sheet-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--dr-u);
+  padding-top: var(--dr-u);
+}

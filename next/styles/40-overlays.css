@@ -1,0 +1,83 @@
+/* ------------------------------------------------------------------ */
+/* Overlays, where variables don't reach: Obsidian's menu, its modal,  */
+/* its toggle                                                          */
+/*                                                                     */
+/* Selector map (Obsidian's own DOM; check after an update):           */
+/*   .menu  .menu-scroll  .menu-item  .menu-item.selected              */
+/*   .menu-item.is-disabled  .menu-item.is-label  .menu-item-icon      */
+/*   .menu-separator                                                   */
+/*   .modal  .modal-title  .modal-close-button                         */
+/*   .checkbox-container  .checkbox-container.is-enabled  its ::after  */
+/* Every rule is gated by the master switch and the overlays region.   */
+/* ------------------------------------------------------------------ */
+
+body.dr-active.dr-region-overlays {
+  --menu-padding: 0;
+  /* The toggle: two squares of two units, the ink one on the side that is true. */
+  --toggle-width: var(--dr-row);
+  --toggle-s-width: var(--dr-row);
+  --toggle-thumb-width: var(--dr-icon);
+  --toggle-s-thumb-width: var(--dr-icon);
+  --toggle-thumb-height: var(--dr-icon);
+  --toggle-s-thumb-height: var(--dr-icon);
+  --toggle-border-width: 0px;
+  --toggle-s-border-width: 0px;
+  --toggle-thumb-color: var(--dr-ink);
+}
+
+/* A menu's items are rows: four units, edge to edge, a hairline where the menu parts them. */
+body.dr-active.dr-region-overlays .menu-item {
+  min-height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  gap: var(--dr-u);
+}
+
+body.dr-active.dr-region-overlays .menu-item-icon {
+  color: inherit;
+}
+
+body.dr-active.dr-region-overlays .menu-separator {
+  margin: 0;
+}
+
+/* The item under the pointer or the arrow keys: clay, and a line round it so the fill isn't the only sign. */
+body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) {
+  background-color: var(--dr-clay);
+  color: var(--dr-on-clay);
+  outline: var(--dr-hair) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-hair));
+}
+
+/* A modal's title is the one larger size of its region. */
+body.dr-active.dr-region-overlays .modal-title {
+  font-size: var(--dr-title-size);
+  line-height: var(--dr-line-loose);
+  font-weight: 400;
+}
+
+/* The toggle: a bone track in a hairline, the ink square at its start; on, the track is clay and the square at its end.
+   The square stays ink in both: it is its place, read against the ground, that says which. */
+body.dr-active.dr-region-overlays .checkbox-container {
+  background-color: var(--dr-bg);
+  box-shadow: none;
+  outline: var(--dr-hair) solid var(--dr-ink);
+}
+
+body.dr-active.dr-region-overlays .checkbox-container.is-enabled {
+  background-color: var(--dr-clay);
+}
+
+body.dr-active.dr-region-overlays .checkbox-container:focus-visible,
+body.dr-active.dr-region-overlays .checkbox-container:focus-within {
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: var(--dr-ring);
+}
+
+body.dr-active.dr-region-overlays .checkbox-container.is-disabled {
+  outline-style: dashed;
+  outline-color: var(--dr-muted);
+}
+
+body.dr-active.dr-region-overlays .checkbox-container.is-disabled::after {
+  background-color: var(--dr-muted);
+}

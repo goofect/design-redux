@@ -1,0 +1,76 @@
+/* ------------------------------------------------------------------ */
+/* The library sidebar: one place, three levels of detail, and a       */
+/* folder picked                                                       */
+/*                                                                     */
+/* The head holds the word Library, search, and the zoom control. The  */
+/* body under it shows the same folders as objects, as shelves or as   */
+/* words. The sidebar is its own container: the grid's cells are cut   */
+/* from its width, whatever it is dragged to.                          */
+/* ------------------------------------------------------------------ */
+
+.dr-library {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.dr-library-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Objects: the grid, a gutter clear above and below. */
+.dr-library-body > .dr-grid {
+  padding: var(--dr-gutter) 0;
+}
+
+/* Shelves: a gutter over the first. */
+.dr-shelves {
+  padding-top: var(--dr-u);
+}
+
+/* Words: the outline ends on a hairline. */
+.dr-outline {
+  margin-bottom: calc(-1 * var(--dr-hair));
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+}
+
+/* ---- A folder picked: its glyph large, wide space round it, its name and counts, what can be done, then its notes. ---- */
+.dr-detail {
+  --dr-glyph: var(--dr-object-large);
+  display: grid;
+  justify-items: center;
+  padding: calc(6 * var(--dr-u)) var(--dr-gutter) calc(4 * var(--dr-u));
+  color: var(--dr-ink);
+  text-align: center;
+}
+
+.dr-detail-cover {
+  display: block;
+  max-width: var(--dr-glyph);
+  max-height: var(--dr-glyph);
+  object-fit: contain;
+}
+
+.dr-detail-name {
+  max-width: 100%;
+  margin-top: calc(3 * var(--dr-u));
+}
+
+.dr-detail-counts {
+  display: flex;
+  justify-content: center;
+  gap: var(--dr-gutter);
+  color: var(--dr-muted);
+}
+
+.dr-detail-actions {
+  --dr-glyph: var(--dr-icon);
+  display: flex;
+  justify-content: center;
+  gap: var(--dr-u);
+  margin-top: calc(3 * var(--dr-u));
+}

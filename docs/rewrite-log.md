@@ -168,3 +168,26 @@ Plus 178 distinct `icon: '…'` literals in `src/` overall (menus, buttons); the
 2. Cut or keep: NotePages, MarkedLists, Scripts, OnePage, MenuFilter, ImageRouter, Graph3D?
 3. Confirm cutting SettingsButton and SidebarSwipe (touch/desktop-only).
 4. Is `drawn-covers` (2,415 lines) to be replaced by the new glyph builder?
+
+## 5. Session 1: the design system
+
+Built: `docs/design-language.md`, 150 glyphs (`assets/icons/`), the glyph builder, the tokens and the variable map, the component styles, `docs/specimen.html` and its 20 approved screenshots. No plugin feature yet.
+
+Decisions
+- **Where the new files are.** The old build refuses any new file under `src/` or `styles/`, so the new tree's first files are staged in `next/` (`next/src/core/glyphs.js`, `next/styles/NN-name.css`). Session 2 moves the old tree to `legacy/` and `next/*` to the root; the tests and tools look in both places, so nothing else changes.
+- **Icon grammar.** A 24-unit canvas ruled every 1.5 units (sixteen steps: a pixel each at 16px). The bar is 3 units, over DESIGN's 2-unit floor. Square corners, 45° only, true circles only. Held on every file by `tests/test_glyphs.js`.
+- **The set.** 102 action glyphs and 48 object glyphs (six families of eight). `assets/icons/actions.json` gives each of the 70 commands its glyph, whatever is kept or cut.
+- **The builder.** A folder's glyph is scored from its path; siblings are settled together (none alike, families spread). The library is to store what the builder gave the first time it shows a folder (`folderGlyphs`, by path), so a folder made later never changes another's face.
+- **Palette.** DESIGN's six values pass unchanged. Clay on bone is 2.47:1, so clay is never the only sign of a state. Everything drawn on clay is `--dr-on-clay`: the dark scheme's ink on clay is 2.47.
+- **Semantic set.** Five earth tones (rust, ochre, moss, slate, plum), each with a soft form: ten values a scheme, onto which Obsidian's eight colour names map without two sharing one.
+- **Selected and open.** The mark is an 8px ink square (DESIGN's "small ink dot": a round one would need a radius): solid beside what is open, hollow beside what is selected. Open is also bold. A control without words wears an ink bar along its foot.
+- **Shelves.** The open note's bar has a clay fill behind it, as every other level has (DESIGN said ink alone).
+- **The folder picked.** Its buttons are the plain square icon buttons, not round ones: zero radius and one kind of control win.
+- **Gating.** The variable map and every rule on Obsidian's own DOM are gated by `body.dr-active` and a region. The plugin's own `dr-` classes are not: they match only what the plugin draws, and with the look off the tokens fall back to the theme's colours.
+- **Obsidian's own controls.** Toggle, menu and modal are Obsidian's, restyled (`40-overlays.css`); the plugin builds none.
+- **State is the ARIA attribute.** `aria-selected`, `aria-current`, `aria-pressed`, `aria-checked`, `aria-disabled`, `aria-busy`, `aria-invalid` are what the styles read.
+- **Screenshots** are `node tests/screenshots.js`, outside `npm test`: they need a browser and the images are this Mac's fonts.
+
+Open
+- Inside a folder, at the level of objects, every note is the same sheet and a long title is cut at the cell's width (the whole of it is the tooltip). Words may be the better level to open a folder at.
+- The keep, merge and cut marks of session 0 are still to come.

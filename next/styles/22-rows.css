@@ -1,0 +1,261 @@
+/* ------------------------------------------------------------------ */
+/* Rows: a note in a list, the outline, a panel row, a section's title */
+/*                                                                     */
+/* All keep to the same columns: a gutter of two units either side,    */
+/* a slot of three for a number or the mark, then the words.           */
+/* ------------------------------------------------------------------ */
+
+/* ---- A row: a slot for a number or the mark, the words, and what trails. Hairlines between rows. ---- */
+/* The line over the first row lies on the last pixel of what is above it, so the rows start on the unit (and a head row's own line is not doubled). */
+.dr-rows {
+  margin-top: calc(-1 * var(--dr-hair));
+  border-top: var(--dr-hair) solid var(--dr-ink);
+}
+
+.dr-row {
+  display: grid;
+  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
+  column-gap: var(--dr-u);
+  align-items: center;
+  min-height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+  cursor: pointer;
+}
+
+.dr-row:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+/* The slot: a number, right against the words; or a glyph. */
+.dr-slot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: var(--dr-line);
+  color: var(--dr-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-row-end {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-u);
+  color: var(--dr-muted);
+}
+
+/* Selected: clay, and the hollow mark where the number was. Open: clay, the solid mark, the words in bold. */
+.dr-row[aria-selected="true"],
+.dr-row[aria-current] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+}
+
+.dr-row[aria-selected="true"] > .dr-slot > *,
+.dr-row[aria-current] > .dr-slot > * {
+  display: none;
+}
+
+.dr-row[aria-selected="true"] > .dr-slot::before,
+.dr-row[aria-current] > .dr-slot::before {
+  content: "";
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+  border: var(--dr-ring) solid var(--dr-on-clay);
+}
+
+.dr-row[aria-current] > .dr-slot::before {
+  background: var(--dr-on-clay);
+}
+
+.dr-row[aria-current] > .dr-row-name {
+  font-weight: 600;
+}
+
+.dr-row[aria-selected="true"] > .dr-row-end,
+.dr-row[aria-current] > .dr-row-end,
+.dr-row[aria-selected="true"] > .dr-slot,
+.dr-row[aria-current] > .dr-slot {
+  color: inherit;
+}
+
+.dr-row[aria-selected="true"]:focus-visible,
+.dr-row[aria-current]:focus-visible {
+  outline-color: var(--dr-on-clay);
+}
+
+.dr-row[aria-disabled="true"] {
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+/* A note linked to but not written yet: a dashed line under its name. */
+.dr-row.is-missing > .dr-row-name {
+  color: var(--dr-muted);
+  text-decoration: underline dashed;
+  text-underline-offset: var(--dr-ring);
+}
+
+.dr-row.is-error > .dr-row-end {
+  color: var(--dr-error);
+}
+
+/* ---- The outline (words): rows without rules. Folders as labels, the open note's headings under it. ---- */
+.dr-outline .dr-row {
+  border-bottom: 0;
+}
+
+.dr-outline-folder {
+  display: grid;
+  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
+  column-gap: var(--dr-u);
+  align-items: center;
+  height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  border-top: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+  cursor: pointer;
+}
+
+/* The first folder sits under a head row's own hairline. */
+.dr-outline > .dr-outline-folder:first-child {
+  border-top: 0;
+}
+
+.dr-outline-folder:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+.dr-outline-folder > .dr-slot {
+  color: inherit;
+}
+
+.dr-outline-folder > .dr-row-end {
+  color: var(--dr-muted);
+}
+
+/* A heading or a page of the open note: set in two units under its name, and quieter. */
+.dr-row.is-child {
+  color: var(--dr-muted);
+}
+
+.dr-row.is-child > .dr-row-name {
+  padding-left: var(--dr-gutter);
+}
+
+/* The heading you are at: the mark and bold, on the ground. The clay stays with the note, so one fill still says where you are. */
+.dr-row.is-child[aria-current] {
+  background: none;
+  color: var(--dr-ink);
+}
+
+.dr-row.is-child[aria-current] > .dr-slot::before {
+  border-color: var(--dr-ink);
+  background: var(--dr-ink);
+}
+
+/* ---- A panel row: a property's name and its value. ---- */
+.dr-prop {
+  display: grid;
+  grid-template-columns: calc(12 * var(--dr-u)) minmax(0, 1fr) auto;
+  column-gap: var(--dr-u);
+  align-items: center;
+  min-height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+}
+
+.dr-prop > .dr-label {
+  color: var(--dr-muted);
+}
+
+.dr-prop:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+/* Selected: clay, and a line round it (a panel row has no slot for the mark). */
+.dr-prop[aria-selected="true"] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+  outline: var(--dr-hair) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-hair));
+}
+
+.dr-prop[aria-selected="true"] > .dr-label {
+  color: inherit;
+}
+
+.dr-prop[aria-disabled="true"],
+.dr-prop.is-empty > .dr-prop-value {
+  color: var(--dr-muted);
+}
+
+.dr-prop[aria-invalid="true"] > .dr-prop-value,
+.dr-prop[aria-invalid="true"] > .dr-glyph {
+  color: var(--dr-error);
+}
+
+/* A section's title, over its rows. */
+.dr-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dr-u);
+  height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+}
+
+.dr-section > .dr-icon-button:last-child {
+  margin-right: calc(-1 * var(--dr-u));
+}
+
+/* ---- Under a pointer that hovers: ash, the words on it ink. ---- */
+@media (any-hover: hover) {
+  .dr-row:hover,
+  .dr-outline-folder:hover,
+  .dr-prop[tabindex]:hover {
+    background: var(--dr-surface);
+  }
+
+  .dr-row:hover > .dr-slot,
+  .dr-row:hover > .dr-row-end,
+  .dr-row.is-child:hover,
+  .dr-row.is-missing:hover > .dr-row-name,
+  .dr-outline-folder:hover > .dr-row-end,
+  .dr-prop[tabindex]:hover > .dr-label {
+    color: var(--dr-ink);
+  }
+
+  .dr-row.is-child[aria-current]:hover {
+    background: var(--dr-surface);
+    color: var(--dr-ink);
+  }
+
+  /* What is picked or open keeps its clay under the pointer. */
+  .dr-row[aria-selected="true"]:hover,
+  .dr-row[aria-current]:not(.is-child):hover,
+  .dr-prop[aria-selected="true"]:hover {
+    background: var(--dr-clay);
+  }
+
+  .dr-row[aria-selected="true"]:hover > .dr-slot,
+  .dr-row[aria-current]:not(.is-child):hover > .dr-slot,
+  .dr-row[aria-selected="true"]:hover > .dr-row-end,
+  .dr-row[aria-current]:not(.is-child):hover > .dr-row-end,
+  .dr-prop[aria-selected="true"]:hover > .dr-label {
+    color: var(--dr-on-clay);
+  }
+
+  .dr-row[aria-disabled="true"]:hover {
+    background: none;
+  }
+
+  .dr-row[aria-disabled="true"]:hover > .dr-slot,
+  .dr-row[aria-disabled="true"]:hover > .dr-row-end {
+    color: var(--dr-muted);
+  }
+}

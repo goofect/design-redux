@@ -7,7 +7,9 @@
     "pretest": "node build.mjs",
     "test": "node tests/run.js",
     "pretest:obsidian": "node build.mjs",
-    "test:obsidian": "wdio run ./wdio.conf.mjs"
+    "test:obsidian": "wdio run ./wdio.conf.mjs",
+    "specimen": "node tools/specimen.mjs",
+    "screenshots": "node tests/screenshots.js"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -23,6 +25,7 @@
     "js-yaml": "^4.3.2",
     "jsdom": "^24.1.3",
     "obsidian": "^1.13.1",
+    "playwright": "^1.65.1",
     "wdio-obsidian-reporter": "^3.2.1",
     "wdio-obsidian-service": "^3.2.1",
     "webdriverio": "^9.32.0"

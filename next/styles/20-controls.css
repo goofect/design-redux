@@ -1,0 +1,328 @@
+/* ------------------------------------------------------------------ */
+/* Controls: icon button, text button, segments (the zoom control and  */
+/* tabs), field, chip. The toggle is Obsidian's own: 40-overlays.css.  */
+/*                                                                     */
+/* A control is four units high. Ash under the pointer; pressed, ash   */
+/* and an inner line; on or open, a clay fill and an ink bar along its */
+/* foot; disabled, quieter and, where it has a border, dashed.         */
+/* ------------------------------------------------------------------ */
+
+/* ---- Icon button: the plugin's controls are these. A square of four units, the glyph two. ---- */
+.dr-icon-button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--dr-row);
+  height: var(--dr-row);
+  color: var(--dr-ink);
+  cursor: pointer;
+}
+
+.dr-icon-button:active {
+  background: var(--dr-surface);
+  outline: var(--dr-hair) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-hair));
+}
+
+/* On (a pin that holds, a panel that is showing). */
+.dr-icon-button[aria-pressed="true"] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+  /* The bar is ink, not the clay's own dark: against the ground it reads as a thicker line in both schemes. */
+  border-bottom: var(--dr-ring) solid var(--dr-ink);
+  padding-top: var(--dr-ring);
+}
+
+.dr-icon-button[aria-disabled="true"] {
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+.dr-icon-button[aria-busy="true"] {
+  cursor: progress;
+}
+
+/* ---- Text button: only where a glyph would not say it (a confirmation, a first choice). ---- */
+.dr-button,
+button.dr-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-u);
+  flex: none;
+  height: var(--dr-row);
+  padding: 0 var(--dr-gutter);
+  border: var(--dr-hair) solid var(--dr-ink);
+  background: var(--dr-bg);
+  color: var(--dr-ink);
+  font-size: var(--dr-text-size);
+  line-height: var(--dr-line);
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.dr-button:active {
+  background: var(--dr-surface);
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+/* The one a sheet proposes: ink, the words in the ground's colour. */
+.dr-button.is-primary {
+  background: var(--dr-ink);
+  color: var(--dr-bg);
+}
+
+/* The one that destroys: its word and a rust line say so. */
+.dr-button.is-danger {
+  border-color: var(--dr-error);
+  color: var(--dr-error);
+}
+
+.dr-button[aria-disabled="true"],
+.dr-button:disabled {
+  border-style: dashed;
+  border-color: var(--dr-muted);
+  background: var(--dr-bg);
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+.dr-button[aria-busy="true"] {
+  cursor: progress;
+}
+
+/* ---- Segments: a row of choices in one hairline frame. The zoom control's are glyphs; tabs' are labels. ---- */
+.dr-segments {
+  display: inline-flex;
+  flex: none;
+  height: var(--dr-row);
+  /* The frame is drawn over the segments' own edges, so the control stays a whole number of units. */
+  outline: var(--dr-hair) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-hair));
+}
+
+.dr-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--dr-u);
+  min-width: var(--dr-row);
+  padding: 0 var(--dr-u);
+  color: var(--dr-ink);
+  cursor: pointer;
+}
+
+.dr-segment + .dr-segment {
+  border-left: var(--dr-hair) solid var(--dr-ink);
+}
+
+/* A glyph segment is four units with its dividing line inside it: three of them are twelve units, to the pixel. */
+.dr-segments:not(.dr-tabs) > .dr-segment {
+  width: var(--dr-row);
+  padding: 0;
+}
+
+.dr-segment:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+.dr-segment:active {
+  background: var(--dr-surface);
+}
+
+/* The level shown, the page open. */
+.dr-segment[aria-checked="true"],
+.dr-segment[aria-selected="true"] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+  border-bottom: var(--dr-ring) solid var(--dr-ink);
+  padding-top: var(--dr-ring);
+  font-weight: 700;
+}
+
+.dr-segment[aria-checked="true"]:focus-visible,
+.dr-segment[aria-selected="true"]:focus-visible {
+  outline-color: var(--dr-on-clay);
+}
+
+.dr-segment[aria-disabled="true"] {
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+/* Tabs: the page control. Text segments in the label voice; they scroll sideways when there are many. */
+.dr-tabs {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.dr-tabs > .dr-segment {
+  flex: none;
+  padding: 0 var(--dr-gutter);
+}
+
+/* ---- Field: a label over a square box. ---- */
+.dr-field {
+  display: grid;
+  gap: var(--dr-u);
+}
+
+.dr-field > .dr-label {
+  color: var(--dr-muted);
+}
+
+.dr-field-box {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-u);
+  height: var(--dr-row);
+  padding: 0 var(--dr-u);
+  border: var(--dr-hair) solid var(--dr-ink);
+  background: var(--dr-bg);
+  color: var(--dr-ink);
+}
+
+.dr-field-box:focus-within {
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: var(--dr-ring);
+}
+
+/* The input itself is bare inside its box: the box carries the border and the ring. */
+input.dr-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: var(--dr-line);
+}
+
+input.dr-input::placeholder {
+  color: var(--dr-muted);
+  opacity: 1;
+}
+
+.dr-field-note {
+  color: var(--dr-muted);
+}
+
+.dr-field[aria-disabled="true"] .dr-field-box {
+  border-style: dashed;
+  border-color: var(--dr-muted);
+  color: var(--dr-muted);
+}
+
+/* Wrong: a rust line, the alert glyph, and the reason in words under it. */
+.dr-field[aria-invalid="true"] .dr-field-box {
+  border-color: var(--dr-error);
+}
+
+.dr-field[aria-invalid="true"] .dr-field-box > .dr-glyph,
+.dr-field[aria-invalid="true"] .dr-field-note {
+  color: var(--dr-error);
+}
+
+/* ---- Chip: plain words in a hairline. A property under a note's title; a filter that can be on. ---- */
+.dr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--dr-u);
+  flex: none;
+  max-width: 100%;
+  height: var(--dr-line-loose);
+  padding: 0 var(--dr-u);
+  border: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-ink);
+  white-space: nowrap;
+}
+
+.dr-chip > .dr-label {
+  color: var(--dr-muted);
+}
+
+.dr-chip[role="button"],
+.dr-chip[role="checkbox"] {
+  cursor: pointer;
+}
+
+.dr-chip:active {
+  background: var(--dr-surface);
+}
+
+.dr-chip[aria-checked="true"] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+}
+
+.dr-chip[aria-checked="true"]::before {
+  content: "";
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+  background: currentColor;
+}
+
+.dr-chip[aria-checked="true"] > .dr-label,
+.dr-chip:active > .dr-label {
+  color: inherit;
+}
+
+.dr-chip[aria-disabled="true"] {
+  border-style: dashed;
+  border-color: var(--dr-muted);
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+.dr-chip[aria-invalid="true"] {
+  border-color: var(--dr-error);
+  color: var(--dr-error);
+}
+
+.dr-chip[aria-invalid="true"] > .dr-label {
+  color: inherit;
+}
+
+/* ---- Under a pointer that hovers: ash, and the words on it ink. ---- */
+@media (any-hover: hover) {
+  .dr-icon-button:hover,
+  .dr-button:hover,
+  .dr-segment:hover,
+  .dr-chip[role="button"]:hover,
+  .dr-chip[role="checkbox"]:hover {
+    background: var(--dr-surface);
+  }
+
+  .dr-chip[role="button"]:hover > .dr-label,
+  .dr-chip[role="checkbox"]:hover > .dr-label {
+    color: inherit;
+  }
+
+  /* What is on, open, primary or disabled keeps its own fill under the pointer. */
+  .dr-icon-button[aria-pressed="true"]:hover,
+  .dr-segment[aria-checked="true"]:hover,
+  .dr-segment[aria-selected="true"]:hover,
+  .dr-chip[aria-checked="true"]:hover {
+    background: var(--dr-clay);
+  }
+
+  .dr-button.is-primary:hover {
+    background: var(--dr-ink);
+    outline: var(--dr-hair) solid var(--dr-bg);
+    outline-offset: calc(-2 * var(--dr-ring));
+  }
+
+  .dr-icon-button[aria-disabled="true"]:hover,
+  .dr-segment[aria-disabled="true"]:hover,
+  .dr-button[aria-disabled="true"]:hover,
+  .dr-button:disabled:hover,
+  .dr-chip[aria-disabled="true"]:hover {
+    background: none;
+  }
+}
