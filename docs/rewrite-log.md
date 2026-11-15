@@ -191,3 +191,14 @@ Decisions
 Open
 - Inside a folder, at the level of objects, every note is the same sheet and a long title is cut at the cell's width (the whole of it is the tooltip). Words may be the better level to open a folder at.
 - The keep, merge and cut marks of session 0 are still to come.
+
+## 6. Session 2: skeleton, core, Obsidian's regions
+
+The owner's marks: keep pages in a note, footnotes, superscript and subscript, lettered and roman lists, the 3D graph, the menu filter, the image router. Cut: the one-page layout, the settings button in the header, sidebar swipe.
+
+- The old tree is in `legacy/` (source, styles, tests, build, tools, and the old `.claude` rules and skills). The staged files moved to `src/`, `styles/`.
+- Modules have plain names, no numbers; `build.mjs` holds the layers, the 400-line limit, unique exports, and bundles the glyphs as `dr:icons`. A module nothing imports is refused by `--strict` only, so work in hand still builds; the last session turns that on for good.
+- One stand-in for Obsidian for every suite (`tests/obsidian.js`), not one a suite as before.
+- Settings keep the old key names. 29 old keys are retired with a reason each (`core/migrate.js`), none renamed. `settingsVersion` 100 marks a file this plugin wrote. If the copy to `data.legacy.json` can't be written, the old file is left untouched.
+- A feature records what it adds (`this.add`, `this.listen`), so turning it off takes away exactly that.
+- The look's classes go on every window's body from `Appearance`; with `lookScope` at "plugin" (the old default) Obsidian's own regions stay off.

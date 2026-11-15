@@ -1,170 +1,98 @@
 # Design Redux
 
-An Obsidian plugin that makes the vault feel like Apple Music: folders open as
-albums, notes as tracks, with covers, a library sidebar, a context strip along
-the bottom, and property tools. Goes with the author's theme,
-Coffee N' Christmas.
+An Obsidian plugin that turns the vault into a library of objects: folders and
+notes as solid glyphs in a strict grid, seen at three levels of detail
+(objects, shelves, words), with a note page, a strip along the foot of the
+note, a properties panel and property tools. One look, raw and quiet, laid
+over Obsidian's own interface too. Desktop only.
+
+This is the rewrite (branch `rewrite`). `docs/REWRITE.md` says how the code is
+rebuilt and what must survive; `docs/DESIGN.md` what the look is;
+`docs/design-language.md` how the look is built (read it before drawing
+anything); `docs/rewrite-log.md` holds the decisions, a few lines each.
+`legacy/` is the old plugin: read it to learn what a feature did, with grep
+and narrow reads. Never build it, import it, or copy its styles.
 
 ## Files
 
-- `src/<area>/NNN-name.js` — the source, as ES modules in a folder per area
-  (core, ui, then the three places — library, note, tools — and
-  plugin). Each
-  imports what it uses and exports what it declares; `src/main.js` imports
-  the plugin, whose imports reach every module (the build refuses one
-  nothing imports), and exports it. After using a name from another module,
-  `node tests/map.js --fix-imports` writes the import lines. A new module goes in its area with a number
-  between its neighbours'. `obsidian` and `@codemirror/*` are imported as
-  usual and provided by Obsidian at runtime.
-- `main.js` — built, not committed. `npm run build` (tests build it first):
-  esbuild bundles `src/main.js` into it. Never edit it: edit `src/`. The build
-  refuses a name declared in two modules, a name used without importing it, a
-  use across the layers that isn't on the known list, a module that needs a
-  name as it loads from one that runs after it (a cycle runs from the module
-  `src/main.js` imports first), and a `main.js` that fails as it loads.
-- `styles/NN-name.css` — all styles, in parts the build joins, in order, into
-  `styles.css` (built, not committed; never edit it: edit `styles/`). The
-  order is the cascade: a new rule goes in the part it dresses, after what it
-  overrides. The map at the top of `04-foundation.css` says what each part is.
-- `manifest.json`, `versions.json` — **never edit versions by hand.** The release
-  workflow bumps the patch version itself; a commit with a `Release-As: X.Y.Z`
-  line releases that version instead (only when the author asks).
-- `README.md` — don't update unless asked.
-- `tools/` — `context-pack.mjs` (a task's context at once), `css-owners.mjs` (who
-  styles a class), `affected-tests.mjs` (the suites a change needs),
-  `eval-usage.mjs`, `snapshot-diff.mjs`. They work with `tests/map.js`.
-- `docs/architecture.md` — the architecture audit and the refactor roadmap
-  (milestones M0–M8): read it before moving code between pieces.
-- `tests/test_*.js` — simulation suites (jsdom + real CodeMirror, Obsidian stood
-  in for). `npm test`, or `node tests/run.js qol album` for just some. Each
-  loads the built bundle with `loadMain(obsidian)` (`tests/harness.js`): every
-  name `main.js` declares can be read from what it returns, no list to keep.
-- `tests/test_lifecycle.js` checks command ids, setting keys and view types against
-  `tests/snapshots/lifecycle.json`, and `tests/test_layers.js` checks uses across
-  the layers against `tests/snapshots/layers.json` (`node tests/map.js --areas`
-  shows them). After a deliberate change: `node tests/test_lifecycle.js
-  --update`, `node tests/map.js --check --update`. Never drop a command id or a
-  setting key without a migration.
-- `tests/obsidian/` — tests inside the real Obsidian (wdio-obsidian-service,
-  `wdio.conf.mjs` at the root): a spec per area (`app`, `library`, `note`, `tools`),
-  each in an Obsidian of its own, its tests wrapped by `suite()` in
-  `helpers.mjs`, which puts the spec's starting state back before each one.
-  GitHub Actions runs them on the latest Obsidian (the only version that
-  matters), beside the simulation suites.
-- `.claude/rules/` — notes for one area each (the canvas adapter, albums and
-  the browse view, the panel and the inspector, opening notes and redrawing, real-Obsidian tests). Claude Code loads one
-  when a file of its area is opened; other agents: read it before changing
-  that area. `.claude/skills/diagnose-tests` says how to read a failure;
-  `.claude/skills/build-review`, how to build a change with agents and review it.
+- `src/<area>/name.js` — the source, ES modules, a folder per area. Areas, in
+  layers: `core`, then `ui`, then the features by place (`library`, `note`,
+  `maps`, `tools`), then `plugin`. A module imports from its own area and
+  those below it; the features' areas don't import each other. No module is
+  over 400 lines. `src/main.js` exports the plugin.
+- `main.js`, `styles.css` — built, not committed: `npm run build`
+  (`build.mjs`; the tests build first). esbuild bundles `src/main.js`; the
+  glyphs under `assets/icons/` are bundled as the module `dr:icons`; the
+  parts of `styles/` are joined in name order. The build refuses a module
+  over 400 lines, one in no area, one nothing imports, an import up or across
+  the layers, and a name exported by two modules.
+- `styles/NN-name.css` — all styles. 00 tokens, 01 the map onto Obsidian's
+  variables, 10–29 the shared components, 30–39 the plugin's places, 40–59
+  Obsidian's own regions, 60+ features. The order is the cascade. The first
+  comment of each part says what it holds.
+- `assets/icons/actions/*.svg`, `assets/icons/objects/*.svg` — the plugin's
+  glyphs, one file each, held to the icon grammar by `tests/test_glyphs.js`.
+  A plugin control never shows one of Obsidian's icons.
+- `docs/specimen.html` — every glyph, component and screen, built by
+  `npm run specimen` from the same sources; `npm run screenshots` compares it
+  with the approved images. A new screen is added to it (`tools/specimen/`).
+- `tests/test_*.js` — simulation suites: jsdom, with Obsidian stood in for by
+  `tests/obsidian.js`. `npm test`, or `node tests/run.js settings library`.
+  `tests/harness.js` gives a suite the whole source as one object (`load()`)
+  and a vault to try it in (`world()`).
+- `manifest.json`, `versions.json` — never edit versions by hand. `README.md`
+  — don't update unless asked.
 
 ## How the code is laid out
 
-- Each feature is a `class X extends Feature` with `settingsSchema()`,
-  `actions()`, `register()` (events, once), `enable()` / `disable()` / `sync()`,
-  and `X.settingKey` naming the toggle that switches it on. `enable()` runs on
-  every settings save, so it must be safe to call repeatedly.
-- What a feature does is written once in `actions()` (`078-actions.js`): each
-  says what it acts on (`on`: app, note, file, editor, canvas, album, browse);
-  its commands come from them, and menus of that thing are built from the
-  same list (`addActionEntries`, `addActionItems`). Keep command ids: hotkeys
-  hang on them.
-- `DEFAULTS` holds every setting. Settings rows are placed by `SETTINGS_TABS`: one page, a section for each
-  category (General, Appearance — the look's rows first —, Library, Notes, Inspector, Advanced), in it one row a feature (its `switch` key, and in `keys` what its gear opens); a new
-  row's key must be added to one feature, and to none twice. The look rows are `LOOK_KEYS`.
-- Settings keyed by a file's path go in `PATH_KEYED`, so they follow renames and
-  deletes (see `Orders.followRename`).
-- Layers, by folder (`node tests/map.js --areas`): core, then shared UI (`ui`),
-  then the features by place (library and albums; note: panel, footnotes, scripts;
-  tools: bulk edits, strip, graph), then the plugin. A module imports from its own area and those below;
-  the build and `tests/test_layers.js` refuse a new import across.
+- A feature is a `class X extends Feature` (`core/feature.js`): `register()`
+  once, `enable()` and `disable()` safe to repeat, and everything it adds
+  goes through `this.add(...)` so `disable()` takes it all away. `X.key` is
+  the setting that turns it on. Features are listed once, in
+  `plugin/features.js`.
+- What a feature can do is written once, in `actions()`: `{ id, name, glyph,
+  on, when, run }`. `on` says what it acts on (app, note, file, editor,
+  folder). Commands and menu entries are both made from that list
+  (`core/actions.js`). Command ids are the old plugin's: hotkeys hang on
+  them, and `tests/test_contract.js` holds every kept id.
+- Settings: `core/settings.js` holds every key and its default. A key that
+  holds paths is in `PATH_KEYED`, so it follows renames and deletes. The old
+  plugin's `data.json` is converted once by `core/migrate.js` and kept whole
+  as `data.legacy.json`; every old key is read, migrated, or listed there as
+  retired. Never drop a key or a command id without that.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
-  properties — read with `noteProps(app, file)`, write with
-  `plugin.notes.write(file, change, { undo })`, whose Undo keeps what was edited
-  since; new code never calls `processFrontMatter` (the bulk edits and the
-  property clipboard still do, with their own history). `plugin.files` makes, moves and puts
-  back files and folder notes (the plugin's `moveFile` and so on pass to it).
-  `libraryIndex(plugin)` (077) is what screens read of the vault — `notes()`,
-  `markdown()`, `folders()`, `folderNotes()`, `count(folder)`,
-  `hasNotes(folder)`, `incoming(file)`, `outgoing(file)` — kept while files
-  and links stay as they are; read it rather than walking the vault.
-- A large class can be written in parts, chained by `extends`: each part
-  extends the one before it, and the class extends the last (BrowseView in
-  120 over 121–128; BulkEdits in 291 over 290's BulkPlans; PropertiesSection
-  in 161 over 160's PropertyRows). A part's methods are the class's;
-  a test refuses a name written in two parts, so none quietly replaces
-  another. A lower area that needs a higher one's work asks the plugin
-  (a method on the plugin), never patches a class.
-- Features tell each other through workspace events where they can
-  (`design-redux:renamed`, `design-redux:property-renamed`,
-  `design-redux:panel-changed`). Where one needs another's work, it asks
-  for a capability, `ask(plugin, 'albums')` (core/081: `CAPABILITIES` lists
-  them, a feature offers one with `X.offers = ['albums']`), never imports
-  the other's class; a view is found by its type (`liveViews`,
-  `activeViewOfType`, `isBrowseView`). A new capability goes on the list;
-  `tests/test_lifecycle.js` checks each has one feature offering it.
-- An element that acts as a button: `asButton(el, label)` and `onActivate`.
-- The note panel, the inspector, the pick (`plugin.selection`) and
-  `panelSections`: `.claude/rules/panel.md`.
-- Obsidian's unofficial internals (submenus, canvas internals, the graph's renderer, menu item lists,
-  `metadataTypeManager`, `internalPlugins`) are only touched behind `typeof`
-  checks, with a fallback. A plain canvas's go through the adapter (`core/079`:
-  `cardCount`, `pickedOnCanvas`,
-  `requestCanvasSave`, …); `tests/test_layers.js` refuses a new direct use
-  outside it, and after moving some onto it, `node tests/map.js --internals
-  --update`.
+  properties (`write(file, change)` returns an undo that keeps later edits);
+  `plugin.files` makes, moves and restores files and folder notes;
+  `plugin.index` is what screens read of the vault instead of walking it;
+  `plugin.selection` is the pick. Notes are never rewritten by an upgrade.
+- A screen is built only from the shared pieces in `src/ui/` (button, row,
+  cell, shelf, segments, table, field, sheet, say-so) and the plugin's
+  glyphs (`glyph(el, name)`). State is the element's ARIA attribute; the
+  styles read nothing else.
+- The look: `body.dr-active` and a `dr-region-<name>` class a region, added
+  to every window by `Appearance` and removed on unload. Rules on Obsidian's
+  own DOM are gated by both and listed in the selector map at the top of the
+  part they are in. The plugin's own `dr-` classes are not gated.
+- Obsidian's unofficial internals are only touched behind `typeof` checks,
+  with a fallback.
 
 ## Rules that have bitten before
 
-- Checked by `tests/test_scripts.js`: no regex lookbehind (iOS before 16.4),
-  no `scope` field on a `Modal`, settings code uses `containerEl.ownerDocument`
-  (Settings opens in a window of its own), `processFrontMatter` only where
-  allowed; by `tests/test_styles.js`: hover only inside `@media (any-hover: hover)`.
-- Menu entries need a section (`setSection('action')` etc.), or Obsidian sorts
-  them after its own (the suites' Menu refuses one without, `tests/harness.js`).
-- Newer Obsidian outranks plain rules on some of its own blocks (the note's
-  properties): hiding them needs `!important`.
+- No regex lookbehind. No `scope` field on a `Modal`. Settings code uses
+  `containerEl.ownerDocument` (Settings opens in a window of its own).
+- Menu entries need a section (`setSection('action')` and so on).
+- Hover styles only inside `@media (any-hover: hover)`. No `!important`, no
+  inline style but the geometry properties a script must set
+  (`--dr-size`, positions on a map), no `innerHTML`.
+- JS never moves, clones or removes Obsidian's own DOM nodes.
 
 ## Working here
 
-- Make the smallest complete change: no rewriting files or touching unrelated
-  code. Report changed files and tests run, briefly.
-- A new worktree may start from origin's main, not the current branch: check
-  `git log -1` before editing.
-- Test lightly, the author wants it quick: while working, run the simulation
-  suites the change touches (`node tests/run.js qol album`: a line per suite,
-  details only on failure); before pushing, all of them (`npm test`, ~10 s,
-  a few at once). A real-Obsidian test only for what can't be checked
-  otherwise: `tests/e2e.sh "test name"` (prints just the outcome; the full
-  log is `logs/e2e.log`). CI runs everything after the push; fix what it
-  finds.
-- Before pushing, fetch and rebase: the release workflow commits version bumps
-  to the default branch.
-- After pushing, run `tests/ci.sh` once (with a long timeout): it waits for
-  CI and prints how it went, whether it was released, and only the failing
-  lines. Don't check CI by hand in a loop.
-- Keep usage down, the author pays for it:
-  - No throwaway probe scripts in real Obsidian when a simulation or an
-    existing test can show it.
-  - Don't read a large `src/` file whole: grep, then read the lines needed.
-  - Look before reading, narrowest first: file names → `node tests/map.js
-    [words]` (pieces, their features and suites) → `--who NAME` or `--deps
-    PIECE` (where a name is declared and who uses it; `--who` gives the
-    lines) → grep and the few lines needed → a whole
-    file only when the change needs it. Soft limits, widened when correctness
-    needs it: a first read of 100–200 lines, then only the direct callers and
-    callees; passing tests as a summary, a failure as its own lines.
-    `tests/map.js` first; graphify (`graphify-out/`) only when the author asks for it.
-  - A long task: keep a short checkpoint in `.claude-cache/checkpoint.md` —
-    objective, files, constraints, changes, tests, what's left, the next
-    step; conclusions, not transcripts — at the turn between phases, and read
-    it after a compaction or in a new session. Unrelated work goes in a
-    session of its own.
-  - `node tests/tool-log.js` sums up the session (a hook logs each tool call:
-    file and size, not contents): repeat and broad reads, output size, and
-    tokens — input not served from the cache is the number to bring down.
-  - Long output goes through `tail`/`grep` or into a file, never in full.
-  - CI results (summary, test output, a few screenshots, a report of the
-    internals used) are on the `ci-results` branch; `tests/ci.sh` reads what
-    matters. Look at a screenshot only when a UI change can't be checked
-    otherwise.
-- Replies to the author: short, plain, no version-number bookkeeping.
+- The smallest complete change. Report changed files and tests run, briefly.
+- Commit locally; push only when the author asks. Before a push, fetch and
+  rebase.
+- Test lightly: the suites the change touches while working, `npm test` once
+  at the end, `npm run screenshots` when the look changed.
+- Keep usage down: grep before reading, read the lines needed, long output
+  through `tail`. A long task keeps `.claude-cache/checkpoint.md` current.
+- Replies to the author: short, plain.

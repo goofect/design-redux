@@ -1,7 +1,7 @@
 {
   "name": "design-redux",
   "private": true,
-  "description": "An Obsidian plugin: browse your vault as a library, folders as albums.",
+  "description": "An Obsidian plugin: the vault as a library of objects, at three levels of detail.",
   "scripts": {
     "build": "node build.mjs",
     "pretest": "node build.mjs",

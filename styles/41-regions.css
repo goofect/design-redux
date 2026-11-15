@@ -1,0 +1,67 @@
+/* ------------------------------------------------------------------ */
+/* Obsidian's regions, where variables don't reach                     */
+/*                                                                     */
+/* Selector map (Obsidian's own DOM; check after an update):           */
+/*   body::before  body::after          a theme's decoration           */
+/*   ::selection                        selected text                  */
+/*   button:not(.clickable-icon)  button.mod-cta  button.mod-warning   */
+/*   .suggestion-item.is-selected       the palette, suggesters        */
+/*   .callout                           callouts                       */
+/*   .markdown-rendered mark  .cm-s-obsidian span.cm-highlight         */
+/* Every rule is gated by the master switch and its region. The rest   */
+/* of each region comes from 01-obsidian-map.css.                      */
+/* ------------------------------------------------------------------ */
+
+/* A theme's own decoration on the body is switched off with the look on. */
+body.dr-active.dr-region-chrome::before,
+body.dr-active.dr-region-chrome::after {
+  content: none;
+}
+
+/* Selected text: clay, and the words the dark that reads on it in both schemes. */
+body.dr-active.dr-region-editor ::selection,
+body.dr-active.dr-region-overlays ::selection {
+  background-color: var(--dr-clay);
+  color: var(--dr-on-clay);
+}
+
+/* Buttons: square, a hairline. The one a dialog proposes is ink, not clay: clay is for where you are. */
+body.dr-active.dr-region-overlays button:not(.clickable-icon) {
+  border: var(--dr-hair) solid var(--dr-ink);
+  box-shadow: none;
+}
+
+body.dr-active.dr-region-overlays button.mod-cta {
+  --text-color: var(--dr-bg);
+  background-color: var(--dr-ink);
+  color: var(--dr-bg);
+}
+
+body.dr-active.dr-region-overlays button.mod-warning {
+  --text-color: var(--dr-error);
+  border-color: var(--dr-error);
+  background-color: var(--dr-bg);
+  color: var(--dr-error);
+}
+
+/* The item the arrow keys are on, in the palette and every suggester. */
+body.dr-active.dr-region-overlays .suggestion-item.is-selected {
+  background-color: var(--dr-clay);
+  color: var(--dr-on-clay);
+  outline: var(--dr-hair) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-hair));
+}
+
+/* Callouts: a hairline box, no tint; the kind is in its title. */
+body.dr-active.dr-region-editor .callout {
+  border: var(--dr-hair) solid var(--dr-ink);
+  background-color: transparent;
+}
+
+/* Highlights: ash under the words and an ink line, so it is told without hue. */
+body.dr-active.dr-region-editor .markdown-rendered mark,
+body.dr-active.dr-region-editor .cm-s-obsidian span.cm-highlight {
+  background-color: var(--dr-surface);
+  color: var(--dr-ink);
+  border-bottom: var(--dr-ring) solid var(--dr-ink);
+}
