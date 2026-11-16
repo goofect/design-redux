@@ -29,7 +29,7 @@ export class LibraryCheck extends Feature {
     add('Folders of one name', Array.from(byName.values()).filter((l) => l.length > 1).flat().map((f) => ({ name: f.path, folder: f })));
     add('Notes in no folder', index.notes(null).map((f) => ({ name: f.basename, file: f })));
     // A note's parent, by the property the vault nests by.
-    const key = settings.albumNestBy || 'parent';
+    const key = String(settings.graphRouteProperty || '').trim() || 'parent';
     const parentOf = (file) => {
       const first = valuesOf(notes.get(file, key))[0];
       return first ? app.metadataCache.getFirstLinkpathDest(linkTarget(first) || first, file.path) : null;
@@ -81,6 +81,13 @@ export class LibraryCheck extends Feature {
     const library = this.plugin.features.find((f) => typeof f.browse === 'function');
     const screen = views ? await views.screen() : library ? (await library.browse(null)).view.screen : null;
     if (screen) screen.setFilter({ loose: true }, 'Inbox');
+  }
+
+  settingsRows() {
+    return [
+      { key: 'graphRouteProperty', name: 'Parent property', desc: 'The property a note names its parent in.', type: 'text' },
+      { key: 'libraryInbox', name: 'The inbox', desc: 'Notes in no folder, to be put in one.', type: 'toggle' },
+    ];
   }
 
   actions() {

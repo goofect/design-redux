@@ -68,14 +68,15 @@ export function retype(value, type) {
   return undefined;
 }
 
-/** A tag renamed in a note's text: #old and #old/nested, not inside code or part of a longer tag. */
+/** A tag renamed in a note's text: #old and #old/nested; not in a code block or code span, nor part of a longer tag. */
 export function renameTagInText(text, from, to) {
   const esc = from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   let fence = false;
   return text.split('\n').map((line) => {
     if (/^ {0,3}(```|~~~)/.test(line)) { fence = !fence; return line; }
     if (fence) return line;
-    return line.replace(new RegExp(`(^|[^\\w/#])#${esc}(?=$|[^\\w/-]|/)`, 'gi'), `$1#${to}`);
+    // Inline code keeps what it says: only the parts between code spans are tags.
+    return line.split(/(`[^`]*`)/).map((part, i) => (i % 2 ? part : part.replace(new RegExp(`(^|[^\\w/#])#${esc}(?=$|[^\\w/-]|/)`, 'gi'), `$1#${to}`))).join('');
   }).join('\n');
 }
 

@@ -40,6 +40,13 @@ export function searchLibrary(plugin, query) {
   return out;
 }
 
+/** The values a property takes across the vault, most used first: [[value, count]]. */
+export function categoryValues(plugin, key) {
+  const counts = new Map();
+  plugin.index.markdown().forEach((f) => valuesOf(noteProps(plugin.app, f)[key]).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 30);
+}
+
 /** Keeps a search among the last few, newest first. */
 export function rememberSearch(plugin, query) {
   const q = query.trim();
@@ -56,10 +63,19 @@ export function drawSearch(screen, host) {
     clear(results);
     if (!query.trim()) {
       const recent = plugin.settings.recentSearches || [];
-      if (!recent.length) return void sayso(results, { glyph: 'search', label: 'Search the library', text: 'Folders and notes by name; notes by a heading or a property.' });
-      sectionTitle(results, { title: 'Recent' });
-      const list = rows(results);
-      recent.forEach((q) => row(list, { name: q, run: () => { input.drInput.value = q; screen.query = q; show(q); } }));
+      const key = String(plugin.settings.categoryProperty || '').trim();
+      const categories = key ? categoryValues(plugin, key) : [];
+      if (!recent.length && !categories.length) return void sayso(results, { glyph: 'search', label: 'Search the library', text: 'Folders and notes by name; notes by a heading or a property.' });
+      if (recent.length) {
+        sectionTitle(results, { title: 'Recent' });
+        const list = rows(results);
+        recent.forEach((q) => row(list, { name: q, run: () => { input.drInput.value = q; screen.query = q; show(q); } }));
+      }
+      if (categories.length) {
+        sectionTitle(results, { title: `By ${key}` });
+        const list = rows(results);
+        categories.forEach(([value, n]) => row(list, { name: value, end: String(n), run: () => screen.setFilter({ prop: `${key}=${value}` }, value) }));
+      }
       return;
     }
     const found = searchLibrary(plugin, query);

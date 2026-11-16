@@ -156,7 +156,7 @@ export class Covers extends Feature {
     return [
       { key: 'coverProperty', name: 'Cover property', desc: 'The property of a note that names its cover image.', type: 'text' },
       { key: 'coverDrop', name: 'Drop an image on a folder to set its cover', type: 'toggle' },
-      { key: 'imageFolder', name: 'Where dropped images are kept', type: 'text' },
+      { key: 'imageFolder', name: 'The images folder', desc: 'Where an image dropped on a folder, or pasted into a note with the image router on, is kept.', type: 'text' },
     ];
   }
 }

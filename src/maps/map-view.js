@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { ItemView, TFile, TFolder } from 'obsidian';
-import { asButton, clear, el, flag, glyph } from '../core/dom.js';
+import { clear, el, flag, glyph } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { counted } from '../core/text.js';
@@ -36,12 +36,26 @@ export class MapView extends ItemView {
 
   async setState(state) {
     this.rootPath = state && typeof state.root === 'string' ? state.root : '/';
-    if (this.contentEl.isConnected || this.root) this.build();
+    this.schedule();
   }
 
   async onOpen() {
     this.contentEl.classList.add('dr', 'dr-map');
-    this.build();
+    this.schedule();
+  }
+
+  /** Builds once the view is open and its state is known: Obsidian opens a view, then gives it its state. */
+  schedule() {
+    if (this.pending) return;
+    this.pending = window.setTimeout(() => {
+      this.pending = null;
+      if (this.leaf && this.contentEl.isConnected) this.build();
+    }, 0);
+  }
+
+  async onClose() {
+    if (this.pending) window.clearTimeout(this.pending);
+    this.pending = null;
   }
 
   /** Makes the tree for what the map is of, and draws it. */
@@ -103,7 +117,8 @@ export class MapView extends ItemView {
     box.dataset.id = node.id;
     box.dataset.path = node.path;
     if (node.tone) box.dataset.tone = node.tone;
-    asButton(box, null, () => this.pick(node, true));
+    // A press picks (a second folds); the keys are the tree's alone (onKey), so none is handled twice.
+    box.addEventListener('click', () => this.pick(node, true));
     box.setAttribute('role', 'treeitem');
     box.setAttribute('tabindex', node.id === this.picked ? '0' : '-1');
     if (node.children.length) box.setAttribute('aria-expanded', String(!node.folded));
@@ -184,7 +199,7 @@ export class Maps extends Feature {
 
   enable() {
     const ws = this.app.workspace;
-    this.listen(ws, 'design-redux:vault', () => ws.getLeavesOfType(MAP_VIEW).forEach((l) => l.view && l.view.root && l.view.build()));
+    this.listen(ws, 'design-redux:vault', () => ws.getLeavesOfType(MAP_VIEW).forEach((l) => l.view && l.view.root && l.view.schedule()));
     this.add(() => !this.plugin.unloading && ws.detachLeavesOfType(MAP_VIEW));
   }
 

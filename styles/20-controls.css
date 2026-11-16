@@ -326,3 +326,10 @@ input.dr-input::placeholder {
     background: none;
   }
 }
+
+/* ---- A chip whose value was given a tone: its line and its words in it. ---- */
+.dr-chip[data-tone="rust"] { border-color: var(--dr-rust); color: var(--dr-rust); }
+.dr-chip[data-tone="ochre"] { border-color: var(--dr-ochre); color: var(--dr-ochre); }
+.dr-chip[data-tone="moss"] { border-color: var(--dr-moss); color: var(--dr-moss); }
+.dr-chip[data-tone="slate"] { border-color: var(--dr-slate); color: var(--dr-slate); }
+.dr-chip[data-tone="plum"] { border-color: var(--dr-plum); color: var(--dr-plum); }

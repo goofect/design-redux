@@ -7,13 +7,16 @@
 /* [{ key, value }], replace }. Off until switched on, and then a dry  */
 /* run until that is switched off too: a rule that would fire says     */
 /* what it would set, and sets nothing. A rule's own writes fire no    */
-/* rule. History: each change to a note's properties kept by the       */
-/* note's path, the last so many, to be put back one value at a time.  */
+/* rule. A rule fires on a change — a note coming into the folder, a   */
+/* tag newly added, a value newly set — so an Undo, which is none of   */
+/* those, is not undone again. History: each change to a note's        */
+/* properties kept by the note's path, the last so many, to be put     */
+/* back one value at a time.                                           */
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { noteProps, propOf, sameValue, valuesOf } from '../core/notes.js';
+import { noteProps, propOf, sameValue, tagsOf, valuesOf } from '../core/notes.js';
 import { field } from '../ui/field.js';
 import { row, rows } from '../ui/row.js';
 import { Sheet } from '../ui/sheet.js';
@@ -26,14 +29,17 @@ export function ruleName(rule) {
   return `When a note ${what}, set ${(rule.set || []).map((s) => s.key).join(', ')}`;
 }
 
-/** Whether a rule's condition holds for a note. */
-export function ruleHolds(app, rule, file) {
+/** What a rule's condition is read from: a note's tags and properties, as they stand. */
+export function noteState(app, file) {
+  return { tags: tagsOf(app, file), props: noteProps(app, file) };
+}
+
+/** Whether a tag or property rule's condition holds for a note's state. A folder rule is a matter of where a note is, not what it holds. */
+export function ruleHolds(rule, state) {
   const w = rule.when || {};
-  const props = noteProps(app, file);
-  if (w.kind === 'folder') return file.path.startsWith(`${w.folder}/`);
-  if (w.kind === 'tag') return valuesOf(propOf(props, 'tags')).concat(valuesOf(propOf(props, 'tag'))).some((t) => t.replace(/^#/, '').toLowerCase() === w.tag);
+  if (w.kind === 'tag') return state.tags.some((t) => t === w.tag || t.startsWith(`${w.tag}/`));
   if (w.kind === 'property') {
-    const values = valuesOf(propOf(props, w.key));
+    const values = valuesOf(propOf(state.props, w.key));
     return w.value ? values.some((v) => v.toLowerCase() === String(w.value).toLowerCase()) : values.length > 0;
   }
   return false;
@@ -70,31 +76,54 @@ export function parseRule(text) {
 
 export class PropertyRules extends Feature {
   enable() {
-    const fire = (file) => file instanceof TFile && file.extension === 'md' && this.fire(file);
-    this.listen(this.app.workspace, 'design-redux:props', fire);
-    this.listen(this.app.workspace, 'design-redux:renamed', fire);
-    this.listen(this.app.vault, 'create', (file) => setTimeout(() => this.on && fire(file), 0));
+    this.seen = new Map(); // by path: the tags and properties last known, to tell what is new
+    this.quiet = new Set(); // paths whose next change is a rule's own write
+    this.plugin.index.markdown().forEach((f) => this.seen.set(f.path, noteState(this.app, f)));
+    const md = (file) => file instanceof TFile && file.extension === 'md';
+    this.listen(this.app.workspace, 'design-redux:props', (file) => md(file) && this.changed(file));
+    this.listen(this.app.workspace, 'design-redux:renamed', (file, oldPath) => md(file) && this.arrived(file, oldPath));
+    this.listen(this.app.vault, 'create', (file) => md(file) && setTimeout(() => this.on && this.arrived(file, null), 0));
   }
 
   list() {
-    return (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).filter((r) => r && r.when && Array.isArray(r.set));
+    return (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).filter((r) => r && r.when && Array.isArray(r.set) && r.on !== false);
   }
 
-  /** Fires every rule that holds for one note. Its own writes fire nothing. */
-  async fire(file) {
-    if (this.firing) return [];
-    const due = this.list().filter((r) => r.on !== false && ruleHolds(this.app, r, file)).map((r) => ({ rule: r, set: ruleWould(this.app, r, file) })).filter((d) => Object.keys(d.set).length);
+  /** A note's tags or properties changed: the tag and property rules whose condition has just come to hold. */
+  changed(file) {
+    const before = this.seen.get(file.path) || null;
+    const now = noteState(this.app, file);
+    this.seen.set(file.path, now);
+    if (this.quiet.delete(file.path)) return Promise.resolve([]);
+    return this.apply(file, this.list().filter((r) => r.when.kind !== 'folder' && ruleHolds(r, now) && !(before && ruleHolds(r, before))));
+  }
+
+  /** A note was made, or moved: the folder rules of a folder it has just come into, and for a new note the rest that hold. */
+  arrived(file, oldPath) {
+    const into = (path, r) => path.startsWith(`${r.when.folder}/`);
+    const due = this.list().filter((r) => r.when.kind === 'folder' && into(file.path, r) && !(oldPath && into(oldPath, r)));
+    if (oldPath) {
+      this.seen.set(file.path, this.seen.get(oldPath) || noteState(this.app, file));
+      this.seen.delete(oldPath);
+    } else {
+      const now = noteState(this.app, file);
+      this.seen.set(file.path, now);
+      due.push(...this.list().filter((r) => r.when.kind !== 'folder' && ruleHolds(r, now)));
+    }
+    return this.apply(file, due);
+  }
+
+  /** Sets what the due rules say, in one write and one Undo; in a dry run, says so and sets nothing. */
+  async apply(file, rules) {
+    const due = rules.map((rule) => ({ rule, set: ruleWould(this.app, rule, file) })).filter((d) => Object.keys(d.set).length);
     if (!due.length) return [];
     if (this.settings.propertyRulesDryRun !== false) {
       new Notice(`Dry run: ${due[0].rule.name || ruleName(due[0].rule)} would set ${Object.keys(due[0].set).join(', ')} on ${file.basename}.`);
       return due;
     }
-    this.firing = true;
-    try {
-      await this.plugin.notes.write(file, (fm) => due.forEach((d) => Object.assign(fm, d.set)), { undo: `A rule set ${due.flatMap((d) => Object.keys(d.set)).join(', ')} on ${file.basename}.` });
-    } finally {
-      this.firing = false;
-    }
+    this.quiet.add(file.path);
+    const record = await this.plugin.notes.write(file, (fm) => due.forEach((d) => Object.assign(fm, d.set)), { undo: `A rule set ${due.flatMap((d) => Object.keys(d.set)).join(', ')} on ${file.basename}.` });
+    if (!record) this.quiet.delete(file.path);
     return due;
   }
 
@@ -106,16 +135,16 @@ export class PropertyRules extends Feature {
       build: (matter) => {
         const draw = () => {
           while (matter.childNodes.length > 1) matter.removeChild(matter.lastChild);
-          const rules = this.list();
+          const rules = Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : [];
           if (!rules.length) sayso(matter, { glyph: 'rules', label: 'No rules yet' });
           else {
             const list = rows(matter);
-            rules.forEach((rule, i) => row(list, { number: i + 1, name: rule.name || ruleName(rule), end: rule.on === false ? 'off' : 'on', disabled: false, run: async () => { rule.on = rule.on === false; await this.plugin.saveSettings(); draw(); } }));
+            rules.forEach((rule, i) => row(list, { number: i + 1, name: rule.name || ruleName(rule), end: rule.on === false ? 'off' : 'on', run: async () => { rule.on = rule.on === false; await this.plugin.saveSettings(); draw(); } }));
           }
           const add = field(matter, { label: 'A new rule', placeholder: 'folder Logic -> status=draft', note: 'folder, tag or property; then ->; then what to set.', onEnter: async (v) => {
             const rule = parseRule(v);
             if (!rule) return void add.drSay('Write it as: folder Logic -> status=draft', true);
-            this.settings.propertyRules = this.list().concat(rule);
+            this.settings.propertyRules = (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).concat(rule);
             await this.plugin.saveSettings();
             draw();
           } });

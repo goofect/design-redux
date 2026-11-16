@@ -94,11 +94,11 @@ try {
 }
 const reached = new Set(Object.keys(result.metafile.inputs).map((f) => path.relative(src, path.resolve(root, f))));
 const lost = modules.filter((m) => !reached.has(m));
-// Refused with --strict (what a release is built with, and what tests/test_source.js asks for); told otherwise, so work in hand still builds.
+// A module nothing reaches is refused; `--loose` only tells it, for work in hand.
 if (lost.length) {
   const message = `nothing imports ${lost.map((m) => `src/${m}`).join(', ')}: a module is reached from src/main.js or it goes`;
-  if (process.argv.includes('--strict')) fail(message);
-  console.log(`build: (not strict) ${message}`);
+  if (!process.argv.includes('--loose')) fail(message);
+  console.log(`build: (loose) ${message}`);
 }
 
 const write = (file, text) => {

@@ -43,6 +43,31 @@ export function linkTarget(value) {
   return m ? m[1].trim() : null;
 }
 
+/** A note's tags, from its properties and its text, lower case, without the #. */
+export function tagsOf(app, file) {
+  const cache = app.metadataCache.getFileCache(file) || {};
+  const props = noteProps(app, file);
+  return valuesOf(propOf(props, 'tags')).concat(valuesOf(propOf(props, 'tag')), (cache.tags || []).map((t) => t.tag)).map((t) => String(t).replace(/^#/, '').toLowerCase());
+}
+
+/** The colours a value could be given in the old plugin, as the tone each is drawn in now. */
+export const OPTION_TONES = { red: 'rust', orange: 'ochre', yellow: 'ochre', green: 'moss', cyan: 'slate', blue: 'slate', purple: 'plum', pink: 'plum' };
+
+/**
+ * The tone a property's value was given (settings.propertyOptions, kept as
+ * { key: { value: { color } } } and matched whatever the case), or null.
+ */
+export function valueTone(settings, key, value) {
+  if (!settings || settings.propertyValueChips === false || value == null) return null;
+  const options = settings.propertyOptions || {};
+  const same = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
+  const k = Object.keys(options).find((x) => same(x, key));
+  const byValue = (k && options[k]) || {};
+  const v = Object.keys(byValue).find((x) => same(x, value));
+  const color = v && byValue[v] ? byValue[v].color : null;
+  return OPTION_TONES[color] || (['rust', 'ochre', 'moss', 'slate', 'plum'].includes(color) ? color : null);
+}
+
 /** A notice that offers to take something back. */
 export function offerUndo(plugin, message, run) {
   const doc = plugin.app.workspace.containerEl ? plugin.app.workspace.containerEl.ownerDocument : document;

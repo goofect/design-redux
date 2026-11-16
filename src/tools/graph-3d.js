@@ -38,12 +38,26 @@ export class Graph3DView extends ItemView {
   async setState(state) {
     const file = state && state.around ? this.app.vault.getAbstractFileByPath(state.around) : null;
     this.around = file instanceof TFile ? file : null;
-    if (this.canvas) this.build();
+    this.schedule();
   }
 
   async onOpen() {
     this.contentEl.classList.add('dr', 'dr-graph3d');
-    this.build();
+    this.schedule();
+  }
+
+  /** Lays the cloud out once the view is open and knows what it is of: a layout is the costly part, so never twice. */
+  schedule() {
+    if (this.pending) return;
+    this.pending = window.setTimeout(() => {
+      this.pending = null;
+      if (this.leaf && this.contentEl.isConnected) this.build();
+    }, 0);
+  }
+
+  async onClose() {
+    if (this.pending) window.clearTimeout(this.pending);
+    this.pending = null;
   }
 
   /** Gathers the notes, lays them out, and draws. */
@@ -191,7 +205,7 @@ export class Graph3D extends Feature {
 
   enable() {
     const ws = this.app.workspace;
-    const again = () => ws.getLeavesOfType(GRAPH_3D_VIEW).forEach((l) => l.view && l.view.canvas && l.view.build());
+    const again = () => ws.getLeavesOfType(GRAPH_3D_VIEW).forEach((l) => l.view && l.view.canvas && l.view.schedule());
     this.listen(ws, 'design-redux:links', again);
     this.listen(ws, 'file-open', () => ws.getLeavesOfType(GRAPH_3D_VIEW).forEach((l) => l.view && l.view.draw && l.view.draw()));
     this.add(() => !this.plugin.unloading && ws.detachLeavesOfType(GRAPH_3D_VIEW));

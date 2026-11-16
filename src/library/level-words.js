@@ -35,11 +35,23 @@ export function noteRows(screen, list, folder) {
   });
 }
 
+/** The notes a folder's notes link to that aren't written yet, by name. */
+export function stillToWrite(plugin, folder) {
+  const unresolved = plugin.app.metadataCache.unresolvedLinks || {};
+  const names = new Set();
+  plugin.index.notes(folder).forEach((note) => Object.keys(unresolved[note.path] || {}).forEach((name) => names.add(name)));
+  return Array.from(names).sort((a, b) => a.localeCompare(b));
+}
+
 export function drawWords(screen, host, folder) {
   const plugin = screen.plugin;
   const open = screen.openFile();
   const list = rows(host, { outline: true });
   noteRows(screen, list, folder);
+  if (folder.path !== '/' && plugin.settings.albumStillToWrite !== false) {
+    const from = plugin.index.notes(folder)[0];
+    stillToWrite(plugin, folder).forEach((name) => row(list, { name, missing: true, end: '—', run: () => plugin.app.workspace.openLinkText(name, from ? from.path : folder.path) }));
+  }
   shownFolders(plugin, folder).forEach((f) => {
     const key = f.path;
     const holdsOpen = !!open && open.parent === f;

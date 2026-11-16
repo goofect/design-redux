@@ -259,3 +259,14 @@
     color: var(--dr-muted);
   }
 }
+
+/* ---- A value given a tone, in a property's row. On clay it is the dark of clay, like everything there. ---- */
+.dr-prop-value[data-tone="rust"] { color: var(--dr-rust); }
+.dr-prop-value[data-tone="ochre"] { color: var(--dr-ochre); }
+.dr-prop-value[data-tone="moss"] { color: var(--dr-moss); }
+.dr-prop-value[data-tone="slate"] { color: var(--dr-slate); }
+.dr-prop-value[data-tone="plum"] { color: var(--dr-plum); }
+
+.dr-prop[aria-selected="true"] > .dr-prop-value[data-tone] {
+  color: inherit;
+}

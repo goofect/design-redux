@@ -22,6 +22,9 @@ export const ALBUM_KINDS = [
   { id: 'index', label: 'Index' },
 ];
 
+/** The statuses that mean a note is done. */
+export const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
+
 /** The folder-note properties a folder's structure is read from; a vault may have renamed them (settings.albumKeyNames). */
 export const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured' };
 
@@ -30,7 +33,7 @@ export class Albums extends Feature {
     this.plugin.gathering = (folder) => this.info(folder);
     this.plugin.describe = (folder) => {
       const info = this.info(folder);
-      return [info.label, info.description].filter(Boolean).join(' · ') || null;
+      return [info.label, info.description, this.progress(folder, info)].filter(Boolean).join(' · ') || null;
     };
     this.add(() => {
       delete this.plugin.gathering;
@@ -92,6 +95,30 @@ export class Albums extends Feature {
     };
   }
 
+  /** Whether a note is done: `done: true`, or a status that says so. */
+  isDone(file) {
+    if (this.plugin.notes.get(file, 'done') === true) return true;
+    return valuesOf(this.plugin.notes.get(file, 'status')).some((v) => DONE_VALUES.includes(v.toLowerCase()));
+  }
+
+  /** A project's "8 of 20 done"; with rollups on, any folder's, and the span of dates one property holds. */
+  progress(folder, info) {
+    const rollups = !!this.settings.albumRollups;
+    if (info.type !== 'project' && !rollups) return null;
+    const notes = this.plugin.index.notes(folder);
+    if (!notes.length) return null;
+    const parts = [];
+    const done = notes.filter((f) => this.isDone(f)).length;
+    if (info.type === 'project' || done) parts.push(`${done} of ${notes.length} done`);
+    const key = String(this.settings.rollupDateKey || '').trim();
+    if (rollups && key) {
+      const dates = notes.flatMap((f) => valuesOf(this.plugin.notes.get(f, key))).filter((v) => /^\d{4}-\d{2}-\d{2}/.test(v)).map((v) => v.slice(0, 10)).sort();
+      const day = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      if (dates.length) parts.push(dates[0] === dates[dates.length - 1] ? `${key} ${day(dates[0])}` : `${key} ${day(dates[0])} – ${day(dates[dates.length - 1])}`);
+    }
+    return parts.join(' · ') || null;
+  }
+
   /** Changes what a folder is. The first change carries over whatever its folder note said. */
   async change(folder, edit) {
     const albums = this.settings.albums || (this.settings.albums = {});
@@ -127,14 +154,20 @@ export class Albums extends Feature {
   }
 
   settingsRows() {
-    return Object.keys(ALBUM_KEY_DEFAULTS).map((field) => ({
+    return [
+      { key: 'albumRollups', name: 'Progress of every folder', desc: 'How many of a folder’s notes are done; a project shows it always.', type: 'toggle' },
+      { key: 'rollupDateKey', name: 'With the dates of', desc: 'A property holding dates; its first and last are shown beside the progress.', type: 'text' },
+      { key: 'albumStillToWrite', name: 'Notes still to write', desc: 'At a folder’s end, as words: what its notes link to that isn’t written yet.', type: 'toggle' },
+      { key: 'coverFromFolder', name: 'A note takes its folder’s cover', desc: 'Where it has none of its own.', type: 'toggle' },
+    ].concat(Object.keys(ALBUM_KEY_DEFAULTS).map((field) => ({
       name: `Folder note property: ${field}`,
       desc: `Read as “${ALBUM_KEY_DEFAULTS[field]}” unless named otherwise here.`,
       type: 'custom',
       get: () => (this.settings.albumKeyNames || {})[field] || '',
       set: (v) => { (this.settings.albumKeyNames || (this.settings.albumKeyNames = {}))[field] = v.trim(); },
       placeholder: ALBUM_KEY_DEFAULTS[field],
-    }));
+      group: 'Folder note properties',
+    })));
   }
 }
 Albums.key = 'albumStructure';

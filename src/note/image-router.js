@@ -37,12 +37,9 @@ export class ImageRouter extends Feature {
     }
   }
 
-  settingsRows() {
-    return [{ key: 'imageFolder', name: 'The images folder', type: 'text' }];
-  }
 }
 ImageRouter.key = 'routeImages';
 ImageRouter.title = 'Image router';
 ImageRouter.glyph = 'cover';
 ImageRouter.section = 'Notes';
-ImageRouter.about = 'Images pasted into a note are kept in one folder.';
+ImageRouter.about = 'Images pasted into a note are kept in the images folder (set under Covers).';

@@ -116,6 +116,7 @@ export class Library extends Feature {
       { key: 'typeToJump', name: 'Type to jump', desc: 'Typing the start of a name goes to it.', type: 'toggle' },
       { key: 'sidebarDrop', name: 'Drag onto a folder to move', type: 'toggle' },
       { key: 'searchNoteText', name: 'Search headings and properties', desc: 'As well as names.', type: 'toggle' },
+      { key: 'categoryProperty', name: 'Search by', desc: 'A property whose values are offered as filters before anything is typed.', type: 'text' },
     ];
   }
 }

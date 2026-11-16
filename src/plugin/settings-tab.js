@@ -52,7 +52,26 @@ export class SettingsTab extends PluginSettingTab {
     }
     if (F.key) row.addToggle((t) => t.setValue(!!this.plugin.settings[F.key]).onChange((v) => this.set(F.key, v)));
     root.appendChild(more);
-    rows.forEach((r) => this.settingRow(more, r));
+    // Rows of a group sit under one row of their own, behind a second gear.
+    const groups = new Map();
+    rows.forEach((r) => {
+      if (!r.group) return void this.settingRow(more, r);
+      if (!groups.has(r.group)) groups.set(r.group, []);
+      groups.get(r.group).push(r);
+    });
+    groups.forEach((list, name) => {
+      const id = `${F.name}:${name}`;
+      const inner = root.ownerDocument.createElement('div');
+      inner.className = 'dr-setting-more';
+      inner.hidden = !this.opened.has(id);
+      new Setting(more).setName(name).setDesc(`${list.length} settings.`).addExtraButton((b) => b.setIcon(iconId('gear')).setTooltip(`${F.title}: ${name.toLowerCase()}`).onClick(() => {
+        inner.hidden = !inner.hidden;
+        if (inner.hidden) this.opened.delete(id);
+        else this.opened.add(id);
+      }));
+      more.appendChild(inner);
+      list.forEach((r) => this.settingRow(inner, r));
+    });
   }
 
   settingRow(parent, r) {

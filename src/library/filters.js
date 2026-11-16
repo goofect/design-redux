@@ -8,20 +8,13 @@
 /* ------------------------------------------------------------------ */
 
 import { el } from '../core/dom.js';
-import { noteProps, propOf, valuesOf } from '../core/notes.js';
+import { noteProps, propOf, tagsOf, valuesOf } from '../core/notes.js';
 import { counted, readingMinutes } from '../core/text.js';
 import { chip } from '../ui/field.js';
 import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
 
 const DAYS = { week: 7, month: 31, year: 366 };
-
-/** A note's tags, from its properties and its text, without the #. */
-export function tagsOf(app, file) {
-  const cache = app.metadataCache.getFileCache(file) || {};
-  const props = noteProps(app, file);
-  return valuesOf(propOf(props, 'tags')).concat(valuesOf(propOf(props, 'tag')), (cache.tags || []).map((t) => t.tag)).map((t) => String(t).replace(/^#/, '').toLowerCase());
-}
 
 export const isFiltering = (f) => !!f && !!(f.folder || f.tag || f.prop || f.date || f.loose);
 

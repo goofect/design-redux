@@ -46,8 +46,16 @@ export function redundantLinks(links, depth = 4) {
 const GRAPH_TYPES = ['graph', 'localgraph'];
 
 export class GraphRoutes extends Feature {
-  get active() {
-    return (this.settings.graphRouting || {}).on !== false;
+  /** Whether a kind of graph ('graph', 'localgraph') leaves out the long lines: kept by kind, as the old plugin kept it, and off until turned on. */
+  active(type) {
+    return !!(this.settings.graphRouting || {})[type];
+  }
+
+  /** The kind of graph a command means: the one in the page, else the vault's. */
+  currentType() {
+    const view = this.app.workspace.activeLeaf && this.app.workspace.activeLeaf.view;
+    const type = view && typeof view.getViewType === 'function' ? view.getViewType() : '';
+    return GRAPH_TYPES.includes(type) ? type : 'graph';
   }
 
   enable() {
@@ -59,9 +67,10 @@ export class GraphRoutes extends Feature {
 
   /** Leaves out (or with `restore` puts back) the long lines in every graph that is open. Returns how many graphs it reached. */
   apply(restore) {
-    const gone = new Set(restore || !this.active ? [] : redundantLinks(this.app.metadataCache.resolvedLinks || {}).map(([a, b]) => `${a}\n${b}`));
+    const routes = redundantLinks(this.app.metadataCache.resolvedLinks || {}).map(([a, b]) => `${a}\n${b}`);
     let reached = 0;
     GRAPH_TYPES.forEach((type) => this.app.workspace.getLeavesOfType(type).forEach((leaf) => {
+      const gone = new Set(restore || !this.active(type) ? [] : routes);
       const renderer = leaf.view && leaf.view.renderer;
       if (!renderer || !Array.isArray(renderer.links)) return;
       reached++;
@@ -74,14 +83,14 @@ export class GraphRoutes extends Feature {
     return reached;
   }
 
-  async toggle() {
-    this.settings.graphRouting = Object.assign({}, this.settings.graphRouting, { on: !this.active });
+  async toggle(type = this.currentType()) {
+    this.settings.graphRouting = Object.assign({}, this.settings.graphRouting, { [type]: !this.active(type) });
     await this.plugin.saveSettings();
-    return this.active;
+    return this.active(type);
   }
 
   actions() {
-    return [{ id: 'toggle-graph-routes', name: 'Graph: links through notes between, on or off', glyph: 'route', checked: () => this.active, run: () => this.toggle() }];
+    return [{ id: 'toggle-graph-routes', name: 'Graph: links through notes between, on or off', glyph: 'route', checked: () => this.active(this.currentType()), run: () => this.toggle() }];
   }
 }
 GraphRoutes.key = 'graphRoutes';

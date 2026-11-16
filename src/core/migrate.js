@@ -40,6 +40,13 @@ export const RETIRED = {
   panelPlaces: 'the panel\'s Places section',
   propertyInspector: 'folded into the inspector setting',
   propertyInlineEdit: 'a value is always edited in place now',
+  homePath: 'the old home screen\'s note: the library\'s top level is home now',
+  albumColumns: 'the old album page\'s columns: a folder\'s table takes tableColumns',
+  notePageShelves: 'moved: what a note links to and where it is mentioned are in the panel',
+  notePageNext: 'moved: the notes before and after are the strip\'s',
+  inspectorClick: 'a click picks and a second opens, always',
+  hideNativeProperties: 'the look hides nothing of Obsidian\'s own (docs/DESIGN.md, Conflicts 1)',
+  propertiesSort: 'the old screen of every property',
 };
 
 /** Old keys that live on under another name. */

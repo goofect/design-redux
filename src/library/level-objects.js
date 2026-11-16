@@ -25,7 +25,7 @@ function cells(screen, host, entries, faces) {
     const n = isFolder ? plugin.index.count(entry) : null;
     cell(g, {
       glyph: isFolder ? faces[entry.path] : 'note',
-      cover: isFolder ? folderCover(plugin, entry) : noteCover(plugin, entry),
+      cover: isFolder ? folderCover(plugin, entry) : noteCover(plugin, entry) || (plugin.settings.coverFromFolder && entry.parent && entry.parent.path !== '/' ? folderCover(plugin, entry.parent) : null),
       name: isFolder ? entry.name : entry.basename,
       count: n,
       counted: isFolder ? counted(n, 'note') : null,

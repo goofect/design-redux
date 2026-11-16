@@ -45,13 +45,11 @@ export const DEFAULTS = {
   hideEmptyFolders: true,
   hideFolderNotes: true,
   folderNoteName: '{{folder}}',
-  homePath: 'Home.md',
   typeToJump: true,
   sidebarDrop: true,
   searchNoteText: true,
   recentSearches: [],
   tableColumns: 'domain, status',
-  albumColumns: 'domain, modified',
   categoryProperty: 'domain',
   navDropdown: true,
 
@@ -73,8 +71,6 @@ export const DEFAULTS = {
   // The note
   notePage: true,
   notePageChips: false,
-  notePageShelves: true,
-  notePageNext: true,
   notePages: true,
   pagesOpen: {}, // by note path: the page left open
   footnotes: true,
@@ -91,8 +87,6 @@ export const DEFAULTS = {
   // The panel
   propertiesDropdown: true,
   inspector: true,
-  inspectorClick: 'shown',
-  hideNativeProperties: false,
   panelPrimaryProps: 'type, domain, status',
   panelPropertyGroups: 'off',
   panelGroupList: [
@@ -102,7 +96,6 @@ export const DEFAULTS = {
   ],
   panelFoldedGroups: [],
   panelFolderViews: {},
-  propertiesSort: 'name',
   showMentions: true,
   propertyLinks: true,
 

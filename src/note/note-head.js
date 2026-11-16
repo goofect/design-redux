@@ -10,7 +10,7 @@
 import { MarkdownView, TFile } from 'obsidian';
 import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { propOf, valuesOf } from '../core/notes.js';
+import { propOf, valueTone, valuesOf } from '../core/notes.js';
 import { listOf } from '../core/text.js';
 import { chip } from '../ui/field.js';
 
@@ -72,7 +72,10 @@ export class NotePage extends Feature {
       const props = this.plugin.notes.props(file);
       listOf(this.settings.panelPrimaryProps).forEach((key) => {
         const values = valuesOf(propOf(props, key));
-        if (values.length) chip(chips, { name: key, value: values.join(', ') });
+        if (!values.length) return;
+        const tone = values.length === 1 ? valueTone(this.settings, key, values[0]) : null;
+        const c = chip(chips, { name: key, value: values.join(', ') });
+        if (tone) c.dataset.tone = tone;
       });
     }
     tidyNoteHead(view);

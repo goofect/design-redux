@@ -65,7 +65,7 @@ export class Appearance extends Feature {
       { key: 'look', name: 'Look', desc: 'Redux is the plugin’s look. Theme leaves the window to your theme; the plugin’s own surfaces then take its colours.', type: 'choice', options: { redux: 'Redux', theme: 'Theme' } },
       { key: 'lookScope', name: 'Where it applies', desc: 'The whole window, Obsidian’s own interface included, or only what the plugin draws.', type: 'choice', options: { window: 'The whole window', plugin: 'Only what the plugin draws' } },
       { key: 'alwaysShowLabels', name: 'Always show labels', desc: 'Names under the objects of a grid at rest, not only under the pointer.', type: 'toggle' },
-    ].concat(REGIONS.map((r) => ({ key: regionKey(r), name: `Region: ${r}`, desc: OBSIDIAN_REGIONS.includes(r) ? 'Obsidian’s own. Off, it keeps your theme.' : 'The plugin’s own.', type: 'toggle', behind: true })));
+    ].concat(REGIONS.map((r) => ({ key: regionKey(r), name: `Region: ${r}`, desc: OBSIDIAN_REGIONS.includes(r) ? 'Obsidian’s own. Off, it keeps your theme.' : 'The plugin’s own.', type: 'toggle', group: 'Regions' })));
   }
 }
 Appearance.title = 'Look';
