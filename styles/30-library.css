@@ -74,3 +74,58 @@
   gap: var(--dr-u);
   margin-top: calc(3 * var(--dr-u));
 }
+
+/* ---- The browse view: the screen, and the folder picked beside it. ---- */
+.dr-browse {
+  display: flex;
+  height: 100%;
+}
+
+.dr-browse-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.dr-browse-aside {
+  flex: none;
+  width: calc(40 * var(--dr-u));
+  border-left: var(--dr-hair) solid var(--dr-ink);
+  overflow-y: auto;
+}
+
+.dr-browse-aside[hidden] {
+  display: none;
+}
+
+.dr-library.is-wide .dr-library-body > .dr-grid {
+  padding: calc(4 * var(--dr-u)) 0;
+}
+
+/* ---- Search: its field under the head, what it finds under that. ---- */
+.dr-search {
+  padding: var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+}
+
+/* ---- Where a dragged note would land. ---- */
+.dr-library [data-drop] {
+  background: var(--dr-surface);
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+/* ---- The glyph picker: the set, six across, at four units. ---- */
+.dr-grid.dr-picker {
+  --dr-cell: calc(8 * var(--dr-u));
+  grid-template-columns: repeat(6, var(--dr-cell));
+}
+
+.dr-picker .dr-cell {
+  --dr-glyph: calc(4 * var(--dr-u));
+}
+
+.dr-detail-about {
+  max-width: 100%;
+  margin: var(--dr-u) 0 0;
+  color: var(--dr-muted);
+}

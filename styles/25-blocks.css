@@ -93,3 +93,12 @@
   gap: var(--dr-u);
   padding-top: var(--dr-u);
 }
+
+.dr-sheet-matter {
+  display: grid;
+  gap: var(--dr-gutter);
+}
+
+.dr-sheet-matter > p {
+  margin: 0;
+}

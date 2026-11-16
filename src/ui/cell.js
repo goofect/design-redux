@@ -43,7 +43,7 @@ export function cell(gridEl, opts) {
   if (opts.count != null) el(label, 'span', 'dr-cell-count', String(opts.count));
   if (opts.flag) glyph(el(node, 'span', 'dr-cell-flag'), 'alert');
   flag(node, 'aria-selected', opts.selected);
-  flag(node, 'aria-current', opts.current);
+  flag(node, 'aria-current', opts.current, opts.current === true ? 'true' : opts.current);
   flag(node, 'aria-disabled', opts.disabled);
   const off = () => node.getAttribute('aria-disabled') === 'true';
   node.addEventListener('click', (e) => {
