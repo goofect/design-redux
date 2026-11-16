@@ -130,7 +130,7 @@ export class Graph3DView extends ItemView {
       drag = null;
       if (!was || was.moved) return;
       const i = this.at(...point(e));
-      if (i >= 0 && i === this.picked) return void this.open(i);
+      if (i >= 0 && i === this.picked) return void this.openNote(i);
       this.picked = i;
       this.plugin.selection.pick(i >= 0 ? this.app.vault.getAbstractFileByPath(this.space.nodes[i].id) : null);
       this.draw();
@@ -143,14 +143,14 @@ export class Graph3DView extends ItemView {
       if (turn) { this.look.yaw += turn[0]; this.look.pitch = Math.max(-1.5, Math.min(1.5, this.look.pitch + turn[1])); }
       else if (e.key === '+' || e.key === '=') return void this.zoom(1.25);
       else if (e.key === '-') return void this.zoom(0.8);
-      else if (e.key === 'Enter' && this.picked >= 0) return void this.open(this.picked);
+      else if (e.key === 'Enter' && this.picked >= 0) return void this.openNote(this.picked);
       else return;
       e.preventDefault();
       this.draw();
     });
   }
 
-  open(i) {
+  openNote(i) {
     const file = this.app.vault.getAbstractFileByPath(this.space.nodes[i].id);
     if (file instanceof TFile) this.app.workspace.getLeaf('tab').openFile(file);
   }

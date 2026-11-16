@@ -247,3 +247,7 @@ Open, for session 5 (they need the real app):
 - Pages in reading view are hidden by a class on each rendered block; the graph's routes and filter reach Obsidian's graph through internals behind checks; the image router listens for editor-paste and editor-drop. Each wants one look in real Obsidian.
 - The migration test with the owner's own data.json, which has not been provided yet.
 - The real-Obsidian specs went to `legacy/tests/obsidian/`; `wdio.conf.mjs` and the CI workflow still look in `tests/obsidian/`, where session 5 writes new ones.
+
+## Session 5 (cutover)
+- Real Obsidian 1.15.1 (`tests/obsidian/`: `app`, `note`): the look on main and popout windows and gone on unload, theme mode, library and browse view, pages hidden in reading view, 3D graph, routes on the real graph, the map. It found a bug the simulation could not: `Graph3DView.open` and `MapView.open` overrode Obsidian's own `View.open`, so neither opened. Renamed `openNote` / `openNode`.
+- Not done: the migration on the owner's vault copy (the path was never given), and a real paste for the image router and the graph filter field.

@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        spec: [app, library, note, tools]
+        spec: [app, note]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

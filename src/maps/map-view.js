@@ -131,7 +131,7 @@ export class MapView extends ItemView {
       const count = el(box, 'span', 'dr-map-count dr-label', node.folded ? `+${node.children.length}` : '');
       if (node.folded) count.setAttribute('aria-label', `${counted(node.children.length, 'child', 'children')} folded`);
     }
-    box.addEventListener('dblclick', () => this.open(node));
+    box.addEventListener('dblclick', () => this.openNode(node));
   }
 
   /** Picks a node: a press on the one already picked folds or unfolds it. */
@@ -145,7 +145,7 @@ export class MapView extends ItemView {
     if (box) box.focus();
   }
 
-  open(node) {
+  openNode(node) {
     const entry = this.app.vault.getAbstractFileByPath(node.path);
     if (entry instanceof TFile) return this.app.workspace.getLeaf('tab').openFile(entry);
     const library = this.plugin.features.find((f) => typeof f.browse === 'function');
@@ -164,7 +164,7 @@ export class MapView extends ItemView {
     else if (e.key === 'ArrowUp') to = siblings[i - 1] || null;
     else if (e.key === 'ArrowDown') to = siblings[i + 1] || null;
     else if (e.key === ' ') { if (node.children.length) { node.folded = !node.folded; to = node; } }
-    else if (e.key === 'Enter') return void this.open(node);
+    else if (e.key === 'Enter') return void this.openNode(node);
     else return;
     e.preventDefault();
     if (to) this.pick(to, false);
