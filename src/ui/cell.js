@@ -39,7 +39,7 @@ export function cell(gridEl, opts) {
       if (!node.querySelector('.dr-cell-flag')) glyph(el(node, 'span', 'dr-cell-flag'), 'alert');
     });
   } else glyph(node, opts.glyph);
-  const label = el(node, 'span', 'dr-cell-label dr-label');
+  const label = el(node, 'span', 'dr-cell-label dr-small');
   el(label, 'span', 'dr-cell-name dr-clip', opts.name);
   if (opts.count != null) el(label, 'span', 'dr-cell-count', String(opts.count));
   if (opts.flag) glyph(el(node, 'span', 'dr-cell-flag'), 'alert');

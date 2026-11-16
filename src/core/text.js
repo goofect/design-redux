@@ -35,3 +35,10 @@ export const listOf = (text) => String(text || '').split(',').map((s) => s.trim(
 
 /** A two-digit number for a row: 01, 02, … 100. */
 export const rowNumber = (n) => String(n).padStart(2, '0');
+
+/** For a list of notes, each one's folder by name, only where the list mixes folders: where they all share one, it says nothing. */
+export function foldersIfMixed(files) {
+  const of = (f) => (f && f.parent && f.parent.path !== '/' ? f.parent.name : '');
+  const mixed = new Set(files.map(of)).size > 1;
+  return files.map((f) => (mixed ? of(f) : ''));
+}

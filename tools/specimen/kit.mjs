@@ -80,7 +80,7 @@ export function withHeldStates(css) {
 }
 
 /** A captioned example: what state it shows, and the thing itself. */
-export const shown = (caption, html, cls = '') => `<figure class="spec-shown ${cls}"><div class="spec-thing">${html}</div><figcaption class="dr-label dr-muted">${esc(caption)}</figcaption></figure>`;
+export const shown = (caption, html, cls = '') => `<figure class="spec-shown ${cls}"><div class="spec-thing">${html}</div><figcaption class="dr-small dr-muted">${esc(caption)}</figcaption></figure>`;
 /** A component: its name, a line on what it is for, and its states in a row. */
 export const component = (name, note, items) => `<div class="spec-component"><div class="spec-component-head"><span class="dr-label">${esc(name)}</span><span class="dr-text dr-muted">${esc(note)}</span></div><div class="spec-states">${items.join('')}</div></div>`;
 /** A section of the page; `id` names its screenshot. */

@@ -69,7 +69,7 @@ export class MapView extends ItemView {
   draw() {
     const host = clear(this.contentEl);
     const shown = shownNodes(this.root);
-    const head = headRow(host, { label: this.root.label, text: this.root.kind === 'note', muted: counted(shown.length, 'node'), buttons: [
+    const head = headRow(host, { label: this.root.label, text: true, muted: counted(shown.length, 'node'), buttons: [
       { glyph: 'fold', label: 'Fold all', run: () => { foldAll(this.root, true); this.draw(); } },
       { glyph: 'unfold', label: 'Unfold all', run: () => { foldAll(this.root, false); this.draw(); } },
       { glyph: 'fit', label: 'Fit', run: () => this.fit() },
@@ -128,7 +128,7 @@ export class MapView extends ItemView {
     glyph(box, node.kind === 'folder' ? (this.plugin.faceOf && node.path !== '/' && this.app.vault.getAbstractFileByPath(node.path) ? this.plugin.faceOf(this.app.vault.getAbstractFileByPath(node.path)) : 'folder') : 'note');
     el(box, 'span', 'dr-text dr-clip', node.label);
     if (node.children.length) {
-      const count = el(box, 'span', 'dr-map-count dr-label', node.folded ? `+${node.children.length}` : '');
+      const count = el(box, 'span', 'dr-map-count dr-small', node.folded ? `+${node.children.length}` : '');
       if (node.folded) count.setAttribute('aria-label', `${counted(node.children.length, 'child', 'children')} folded`);
     }
     box.addEventListener('dblclick', () => this.openNode(node));

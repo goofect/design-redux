@@ -78,7 +78,7 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     s.host.querySelector('[data-path="Logic"]').click();
     assert.strictEqual(s.at, 'Logic');
     assert.deepStrictEqual(paths(s.host, '.dr-cell'), ['Logic/Sets', 'Logic/Truth tables.md', 'Logic/Validity.md', 'Logic/Week 2.md', 'Logic/Week 10.md']);
-    assert.strictEqual(s.host.querySelector('.dr-head .dr-label').textContent, 'Logic');
+    assert.strictEqual(s.host.querySelector('.dr-head .dr-text').textContent, 'Logic', 'a folder\'s name in its head is not read as written');
     s.host.querySelector('.dr-head [aria-label="Back"]').click();
     assert.strictEqual(s.at, '/');
     s.forward();
@@ -114,7 +114,7 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     const s = sidebar(w);
     await w.app.workspace.getLeaf().openFile(w.file('Logic/Truth tables.md'));
     await s.setLevel('words');
-    const lines = Array.from(s.host.querySelectorAll('.dr-outline > *')).map((n) => `${n.className.includes('folder') ? 'F' : n.classList.contains('is-child') ? 'h' : 'n'}:${(n.querySelector('.dr-row-name, .dr-label.dr-clip') || {}).textContent}`);
+    const lines = Array.from(s.host.querySelectorAll('.dr-outline > *')).map((n) => `${n.className.includes('folder') ? 'F' : n.classList.contains('is-child') ? 'h' : 'n'}:${(n.querySelector('.dr-row-name, .dr-text.dr-clip') || {}).textContent}`);
     assert.deepStrictEqual(lines, ['n:Loose', 'F:Inbox', 'F:Logic', 'n:Truth tables', 'h:What a table shows', 'h:Building one', 'n:Validity', 'n:Week 2', 'n:Week 10', 'F:Reading']);
     const folderLine = (p) => s.host.querySelector(`.dr-outline-folder[data-path="${p}"]`);
     assert.deepStrictEqual([folderLine('Logic').getAttribute('aria-expanded'), folderLine('Inbox').getAttribute('aria-expanded')], ['true', 'false']);
@@ -122,7 +122,11 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     assert.ok(s.host.querySelector('[data-path="Inbox/Scrap.md"]'));
     folderLine('Logic').click();
     assert.ok(!s.host.querySelector('.dr-row[data-path="Logic/Validity.md"]'), 'a folder closed by hand stays closed');
-    assert.strictEqual(s.host.querySelector('.dr-row .dr-slot').textContent, '01');
+    // Numbers only where the order means something: the folder's own.
+    assert.ok(!s.host.querySelector('.dr-row .dr-slot'), 'notes numbered in an order that is not the folder\'s own');
+    w.plugin.settings.albumSorts = { Inbox: 'own' };
+    s.draw();
+    assert.strictEqual(s.host.querySelector('.dr-row[data-path^="Inbox/"] .dr-slot').textContent, '01');
   });
 
   await check('switching level keeps the folder, the pick and the open note, and the keyboard where it was', async () => {

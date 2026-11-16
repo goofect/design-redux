@@ -41,17 +41,21 @@ called done.
    the names to the pointer, the keyboard and the pick when turned off.
    Lists, tables, the note and anything that is reading show their words
    normally.
-4. **Labels are small and quiet.** Plugin-owned labels (object names,
-   counts, column headers, section titles) are set small, in capitals, with
-   wide tracking, in ink or muted. Reading text (notes, rows, menus) is
-   sentence case at normal size. Obsidian's own labels keep their case.
+4. **Labels are small and quiet.** Capitals for two things only: a
+   section's title and a property's name, set small with wide tracking, in
+   ink or muted. Everything else the plugin names (counts, lengths, column
+   heads, a field's name, captions) is small and in sentence case; the
+   person's own words (notes, folders, pages) are read as written. Numbers
+   only where the order means something. Reading text (notes, rows, menus)
+   is sentence case at normal size. Obsidian's own labels keep their case.
 5. **Icons are the controls.** Toolbars and actions are icon buttons, one
    size, one weight, square hit areas, ink on bone; the word is the
    tooltip and the `aria-label`. Text buttons appear only where an icon
    would be unclear (a destructive confirmation, a first-run choice).
-6. **One accent, used as a fill.** Clay marks what is selected or open, as
-   a flat fill behind an object or a row. Nothing else is colored except the
-   user's own semantic colors.
+6. **One accent, used as a fill.** Clay marks what is open, as a flat fill
+   behind an object or a row, its words bold; what is picked but not open is
+   the mark, an ink square at its left. One sign a state. Nothing else is
+   colored except the user's own semantic colors.
 7. **Zoom instead of navigation.** Collections are seen at three levels of
    detail in the same place (objects, shelves, words), switched by a
    three-part control, rather than by opening and closing pages.
@@ -309,9 +313,9 @@ exactly as it does without the plugin.
   - *Shelves:* each folder a row: its label and count above, and its notes
     as vertical bars standing on a hairline, one per note, bar height from
     the note's length, the open note in ink and the rest muted.
-  - *Words:* a plain outline: folder labels as small capitals, notes as
-    numbered sentence-case rows, the open note's pages or headings indented
-    under it, other folders collapsed to one line each.
+  - *Words:* a plain outline: folders by name, notes as rows (numbered only
+    in a folder's own order), the open note's pages or headings indented
+    under it, muted, with no mark; other folders collapsed to one line each.
   - The level, the open folder and the scroll position are kept per window.
 - **Folder glyphs (covers).** Every folder gets a solid glyph: one the user
   picked from the plugin's glyph set, or, by default, the one its name asks
@@ -321,7 +325,7 @@ exactly as it does without the plugin.
   on the ground with nothing around it. The old generated cover art is not
   used.
 - **A folder picked (detail).** The glyph large and centered with wide space
-  around it, the name and counts as small capitals under it, a row of
+  around it, the name and counts under it, a row of
   icon buttons (open, new note, pin, more), a hairline, then its notes as a
   list with no lines between rows, numbered only in the folder's own order.
   The open note is a clay fill.

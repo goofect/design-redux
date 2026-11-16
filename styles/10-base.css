@@ -34,7 +34,7 @@
   animation: none;
 }
 
-/* The label voice: object names, counts, column headers, section titles. */
+/* The label voice, the one in capitals: a section's title and a property's name, nothing else. */
 .dr-label {
   font-size: var(--dr-label-size);
   line-height: var(--dr-line);
@@ -44,7 +44,18 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The reading voice: anything that is read. One line in a row; looser when it runs on. */
+/* The small voice: what trails or counts (a length, a count, a folder at the end of a row), a field's name,
+   a caption. Sentence case, the label's size, no tracking. */
+.dr-small {
+  font-size: var(--dr-label-size);
+  line-height: var(--dr-line);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The reading voice: anything that is read, and the person's own words (a folder's name, a page's). One line in a row; looser when it runs on. */
 .dr-text {
   font-size: var(--dr-text-size);
   line-height: var(--dr-line);

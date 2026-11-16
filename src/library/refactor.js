@@ -97,8 +97,8 @@ export class AlbumRefactor extends Feature {
         text: 'Pick the notes to move into a new folder beside this one.',
         build: (matter) => {
           const list = rows(matter);
-          notes.forEach((note, i) => {
-            const r = row(list, { number: i + 1, name: note.basename, run: () => {
+          notes.forEach((note) => {
+            const r = row(list, { name: note.basename, run: () => {
               if (picked.has(note)) picked.delete(note); else picked.add(note);
               r.setAttribute('aria-selected', String(picked.has(note)));
             } });

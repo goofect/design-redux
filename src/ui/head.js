@@ -18,7 +18,7 @@ export function headRow(parent, opts) {
   const label = el(node, 'span', `${opts.text ? 'dr-text' : 'dr-label'} dr-clip`, opts.label);
   if (opts.muted) {
     label.appendChild(node.ownerDocument.createTextNode(' '));
-    el(label, 'span', 'dr-muted', opts.muted);
+    el(label, 'span', 'dr-small dr-muted', opts.muted);
   }
   (opts.buttons || []).forEach((b) => iconButton(node, b));
   return node;

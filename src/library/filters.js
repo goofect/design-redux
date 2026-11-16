@@ -9,7 +9,7 @@
 
 import { el, glyph } from '../core/dom.js';
 import { noteProps, propOf, tagsOf, valuesOf } from '../core/notes.js';
-import { counted, readingMinutes } from '../core/text.js';
+import { counted, foldersIfMixed, readingMinutes } from '../core/text.js';
 import { chip } from '../ui/field.js';
 import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
@@ -65,9 +65,11 @@ export function drawFiltered(screen, host) {
     glyph(c, 'close');
   });
   const notes = matchNotes(plugin, screen.filter);
-  el(bar, 'span', 'dr-label dr-muted', counted(notes.length, 'note'));
+  el(bar, 'span', 'dr-small dr-muted', counted(notes.length, 'note'));
   if (!notes.length) return void sayso(host, { glyph: 'filter', label: 'No note passes the filter', text: 'Take a part of it off above.' });
   const list = rows(host);
-  notes.forEach((note, i) => row(list, { number: i + 1, name: note.basename, end: note.parent && note.parent.path !== '/' ? note.parent.name : `${readingMinutes(plugin.index.words(note))} min`, path: note.path, current: note === open ? 'page' : false, run: (e) => screen.openNote(note, e) }));
+  // A note's folder trails it only where what passes mixes folders; otherwise its length does.
+  const folders = foldersIfMixed(notes);
+  notes.forEach((note, i) => row(list, { name: note.basename, end: folders[i] || `${readingMinutes(plugin.index.words(note))} min`, path: note.path, current: note === open ? 'page' : false, run: (e) => screen.openNote(note, e) }));
   screen.roving(list, '.dr-row', () => 1);
 }

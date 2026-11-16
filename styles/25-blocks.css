@@ -68,7 +68,7 @@
   text-align: center;
 }
 
-.dr-state > .dr-label {
+.dr-state > .dr-state-label {
   margin-top: var(--dr-u);
   color: var(--dr-ink);
 }

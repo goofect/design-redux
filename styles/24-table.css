@@ -46,9 +46,9 @@
 .dr-table th {
   font-size: var(--dr-label-size);
   line-height: var(--dr-line);
-  font-weight: 700;
-  letter-spacing: var(--dr-label-track);
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--dr-muted);
   cursor: pointer;
 }
 
@@ -76,39 +76,27 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dr-table tr[aria-selected="true"] > td,
+/* One sign a state. Open: a clay fill and the words bold. Selected but not open: the mark, an ink square at the left of the row. */
 .dr-table tr[aria-current] > td {
   background: var(--dr-clay);
   color: var(--dr-on-clay);
-}
-
-.dr-table tr[aria-current] > td {
   font-weight: 600;
 }
 
-.dr-table tr[aria-selected="true"] > .is-slot,
-.dr-table tr[aria-current] > .is-slot {
-  font-size: 0;
+.dr-table th:first-child,
+.dr-table td:first-child {
+  position: relative;
+  padding-left: var(--dr-gutter);
 }
 
-.dr-table tr[aria-selected="true"] > .is-slot::before,
-.dr-table tr[aria-current] > .is-slot::before {
+.dr-table tr[aria-selected="true"] > td:first-child::before {
   content: "";
-  display: inline-block;
+  position: absolute;
+  top: calc(50% - var(--dr-mark) / 2);
+  left: calc((var(--dr-gutter) - var(--dr-mark)) / 2);
   width: var(--dr-mark);
   height: var(--dr-mark);
-  border: var(--dr-ring) solid var(--dr-on-clay);
-  vertical-align: middle;
-}
-
-.dr-table tr[aria-current] > .is-slot::before {
-  background: var(--dr-on-clay);
-}
-
-/* A table that sits in its pane starts on the pane's gutter. */
-.dr-table.is-flush th:first-child,
-.dr-table.is-flush td:first-child {
-  padding-left: var(--dr-gutter);
+  background: var(--dr-ink);
 }
 
 .dr-table td:focus-visible,
@@ -137,13 +125,11 @@
     color: var(--dr-ink);
   }
 
-  /* What is picked or open keeps its clay under the pointer. */
-  .dr-table tbody tr[aria-selected="true"]:hover > td,
+  /* What is open keeps its clay under the pointer. */
   .dr-table tbody tr[aria-current]:hover > td {
     background: var(--dr-clay);
   }
 
-  .dr-table tbody tr[aria-selected="true"]:hover > .is-slot,
   .dr-table tbody tr[aria-current]:hover > .is-slot {
     color: var(--dr-on-clay);
   }

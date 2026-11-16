@@ -9,6 +9,7 @@
 import { TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { noteProps, valuesOf } from '../core/notes.js';
+import { foldersIfMixed } from '../core/text.js';
 import { field } from '../ui/field.js';
 import { row, rows, sectionTitle } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
@@ -89,10 +90,12 @@ export function drawSearch(screen, host) {
     };
     const done = () => rememberSearch(plugin, query);
     group('Folders', found.folders, (list, f) => row(list, { name: f.path, end: String(plugin.index.count(f)), path: f.path, run: () => { done(); screen.go(f); } }));
-    group('Notes', found.notes, (list, f, i) => row(list, { number: i + 1, name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', path: f.path, run: (e) => { done(); screen.openNote(f, e); } }));
-    group('In notes', found.inside, (list, hit, i) => row(list, { number: i + 1, name: hit.file.basename, end: hit.where, path: hit.file.path, run: (e) => { done(); screen.openNote(hit.file, e, hit.subpath); } }));
+    const folders = foldersIfMixed(found.notes);
+    group('Notes', found.notes, (list, f, i) => row(list, { name: f.basename, end: folders[i], path: f.path, run: (e) => { done(); screen.openNote(f, e); } }));
+    group('In notes', found.inside, (list, hit) => row(list, { name: hit.file.basename, end: hit.where, path: hit.file.path, run: (e) => { done(); screen.openNote(hit.file, e, hit.subpath); } }));
   };
-  const input = field(top, { label: 'Find', glyph: 'search', value: screen.query || '', placeholder: 'Notes and folders', onInput: (v) => { screen.query = v; show(v); }, onEnter: () => { const first = results.querySelector('.dr-row'); if (first) first.click(); } });
+  // No name over the field: its placeholder says what it is for.
+  const input = field(top, { glyph: 'search', value: screen.query || '', placeholder: 'Notes and folders', onInput: (v) => { screen.query = v; show(v); }, onEnter: () => { const first = results.querySelector('.dr-row'); if (first) first.click(); } });
   input.drInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') screen.search(null);
     if (e.key === 'ArrowDown') { const first = results.querySelector('.dr-row'); if (first) { e.preventDefault(); first.focus(); } }

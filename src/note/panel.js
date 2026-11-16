@@ -14,7 +14,7 @@ import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { valueTone, valuesOf } from '../core/notes.js';
-import { listOf } from '../core/text.js';
+import { foldersIfMixed, listOf } from '../core/text.js';
 import { propRow, row, rows, sectionTitle } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
@@ -263,9 +263,8 @@ export class Panel extends Feature {
     }
     // A note's folder trails it only where the list mixes folders; where they share one it says nothing.
     const notes = (files) => {
-      const folderOf = (f) => (f.parent && f.parent.path !== '/' ? f.parent.name : '');
-      const mixed = new Set(files.map(folderOf)).size > 1;
-      return files.map((f) => ({ name: f.basename, end: mixed ? folderOf(f) : '', file: f }));
+      const ends = foldersIfMixed(files);
+      return files.map((f, i) => ({ name: f.basename, end: ends[i], file: f }));
     };
     if (this.settings.showMentions !== false && incoming.length) out.push({ title: 'Mentioned in', items: notes(incoming) });
     const outgoing = index.outgoing(file).filter((f) => f.extension === 'md');

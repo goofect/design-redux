@@ -39,7 +39,7 @@ export function segments(parent, opts) {
     if (changed && opts.onChange) opts.onChange(id);
   };
   opts.options.forEach((option) => {
-    const node = el(group, 'div', `dr-segment${tabs ? ' dr-label' : ''}`);
+    const node = el(group, 'div', `dr-segment${tabs ? ' dr-text' : ''}`);
     node.setAttribute('role', tabs ? 'tab' : 'radio');
     if (option.label || option.glyph) node.setAttribute('aria-label', option.label || option.text);
     if (option.glyph) glyph(node, option.glyph);

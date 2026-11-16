@@ -99,7 +99,7 @@ export class NotePage extends Feature {
     noteHeads(view).forEach(({ folder, head }) => {
       clear(folder);
       if (parent) {
-        const label = el(folder, 'span', 'dr-label dr-note-folder', parent.name);
+        const label = el(folder, 'span', 'dr-small dr-note-folder', parent.name);
         asButton(label, `Open ${parent.name}`, () => {
           const library = this.plugin.features.find((f) => typeof f.browse === 'function');
           if (library) library.browse(parent);

@@ -61,7 +61,7 @@ export class LibraryCheck extends Feature {
         found.forEach((group) => {
           sectionTitle(matter, { title: `${group.title} · ${group.items.length}` });
           const list = rows(matter);
-          group.items.slice(0, 50).forEach((item, i) => row(list, { number: i + 1, name: item.name, end: item.end, run: () => {
+          group.items.slice(0, 50).forEach((item) => row(list, { name: item.name, end: item.end, run: () => {
             s.close();
             if (item.file) this.app.workspace.getLeaf(false).openFile(item.file);
             else if (item.folder && library) library.browse(item.folder);

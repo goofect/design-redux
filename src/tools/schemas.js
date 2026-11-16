@@ -103,7 +103,7 @@ export class PropertySchemas extends Feature {
         if (!found.length) return void sayso(matter, { glyph: 'check', label: 'Every note fits', text: Object.keys(this.settings.propertySchemas || {}).length ? '' : 'No folder has a schema yet.' });
         sectionTitle(matter, { title: counted(found.length, 'note') });
         const list = rows(matter);
-        found.slice(0, 100).forEach((x, i) => row(list, { number: i + 1, name: x.file.basename, error: true, endGlyph: 'alert', end: `${x.faults[0].key}: ${x.faults[0].fault}`.slice(0, 40), run: () => { s.close(); this.app.workspace.getLeaf(false).openFile(x.file); } }));
+        found.slice(0, 100).forEach((x) => row(list, { name: x.file.basename, error: true, endGlyph: 'alert', end: `${x.faults[0].key}: ${x.faults[0].fault}`.slice(0, 40), run: () => { s.close(); this.app.workspace.getLeaf(false).openFile(x.file); } }));
       },
       actions: [{ text: 'Close' }],
     });

@@ -137,6 +137,6 @@
   padding: var(--dr-u) var(--dr-gutter);
 }
 
-.dr-filter-bar > .dr-label {
+.dr-filter-bar > .dr-small {
   margin-left: var(--dr-u);
 }

@@ -126,7 +126,7 @@ const VAULT = {
     screen.back();
     assert.strictEqual(screen.filter, null);
     await views.open(w.plugin.settings.smartAlbumList[0]);
-    assert.strictEqual(screen.host.querySelector('.dr-head .dr-label').textContent, 'Drafts in Logic');
+    assert.strictEqual(screen.host.querySelector('.dr-head .dr-text').textContent, 'Drafts in Logic');
   });
 
   await check('the library check: what it finds, in a report that changes nothing; and the inbox', async () => {

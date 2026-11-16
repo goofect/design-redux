@@ -188,7 +188,7 @@ button.dr-button {
   gap: var(--dr-u);
 }
 
-.dr-field > .dr-label {
+.dr-field > .dr-small {
   color: var(--dr-muted);
 }
 
@@ -260,7 +260,7 @@ input.dr-input::placeholder {
   white-space: nowrap;
 }
 
-.dr-chip > .dr-label {
+.dr-chip > .dr-small {
   color: var(--dr-muted);
 }
 
@@ -278,8 +278,8 @@ input.dr-input::placeholder {
   color: var(--dr-on-clay);
 }
 
-.dr-chip[aria-checked="true"] > .dr-label,
-.dr-chip:active > .dr-label {
+.dr-chip[aria-checked="true"] > .dr-small,
+.dr-chip:active > .dr-small {
   color: inherit;
 }
 
@@ -292,7 +292,7 @@ input.dr-input::placeholder {
   color: var(--dr-error);
 }
 
-.dr-chip[aria-invalid="true"] > .dr-label {
+.dr-chip[aria-invalid="true"] > .dr-small {
   color: inherit;
 }
 
@@ -306,8 +306,8 @@ input.dr-input::placeholder {
     background: var(--dr-surface);
   }
 
-  .dr-chip[role="button"]:hover > .dr-label,
-  .dr-chip[role="checkbox"]:hover > .dr-label {
+  .dr-chip[role="button"]:hover > .dr-small,
+  .dr-chip[role="checkbox"]:hover > .dr-small {
     color: inherit;
   }
 

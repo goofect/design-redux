@@ -12,7 +12,7 @@ import { row, rows } from '../ui/row.js';
 import { rove } from '../ui/keys.js';
 import { folderCover, folderGlyph } from './faces.js';
 import { folderMenu, showMenu } from './menus.js';
-import { isPinned, listedNotes, togglePin } from './order.js';
+import { isPinned, listedNotes, sortOf, togglePin } from './order.js';
 
 /**
  * `hooks`: { open(folder): show it in the page, note(file, event): open a note }.
@@ -27,8 +27,8 @@ export function drawDetail(plugin, host, folder, hooks = {}) {
     img.alt = '';
     img.src = cover;
   } else glyph(top, folderGlyph(plugin, folder));
-  el(top, 'span', 'dr-detail-name dr-label dr-clip', folder.name);
-  const counts = el(top, 'span', 'dr-detail-counts dr-label');
+  el(top, 'span', 'dr-detail-name dr-text dr-clip', folder.name);
+  const counts = el(top, 'span', 'dr-detail-counts dr-small');
   const notes = listedNotes(plugin, folder);
   const subs = plugin.index.subfolders(folder);
   el(counts, 'span', '', counted(plugin.index.count(folder), 'note'));
@@ -42,7 +42,8 @@ export function drawDetail(plugin, host, folder, hooks = {}) {
   iconButton(actions, { glyph: 'more', label: 'More', run: (e) => showMenu(folderMenu(plugin, folder, null), e) });
   const open = plugin.app.workspace.getActiveFile();
   const list = rows(node);
-  notes.forEach((note, i) => row(list, { number: i + 1, name: note.basename, end: `${readingMinutes(plugin.index.words(note))} min`, path: note.path, current: note === open ? 'page' : false, run: (e) => hooks.note && hooks.note(note, e) }));
+  const own = sortOf(plugin, folder) === 'own';
+  notes.forEach((note, i) => row(list, { number: own ? i + 1 : null, name: note.basename, end: `${readingMinutes(plugin.index.words(note))} min`, path: note.path, current: note === open ? 'page' : false, run: (e) => hooks.note && hooks.note(note, e) }));
   if (notes.length) rove(list, '.dr-row', { jump: true });
   return node;
 }

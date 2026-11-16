@@ -16,8 +16,8 @@ export function shelf(parent, opts) {
   const head = el(node, 'div', 'dr-shelf-head');
   asButton(head, `${opts.name}, ${opts.count}`, opts.onHead);
   flag(head, 'aria-current', opts.current);
-  el(head, 'span', 'dr-label dr-clip', opts.name);
-  el(head, 'span', 'dr-shelf-count dr-label', String(opts.count));
+  el(head, 'span', 'dr-text dr-clip', opts.name);
+  el(head, 'span', 'dr-shelf-count dr-small', String(opts.count));
   const bars = el(node, 'div', 'dr-shelf-bars');
   bars.setAttribute('role', 'list');
   opts.notes.forEach((note, i) => {

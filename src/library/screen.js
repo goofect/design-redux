@@ -161,8 +161,11 @@ export class LibraryScreen {
     clear(host);
     const folder = this.folder();
     const inside = folder.path !== '/';
+    // Library and Search are the plugin's titles, in capitals; a folder's name or a filter's is the person's words, read as written.
+    const own = this.query === null && (this.filter || inside);
     const head = headRow(host, {
       label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : inside ? folder.name : 'Library',
+      text: !!own,
       back: inside || this.query !== null || this.filter || this.past.length ? () => this.back() : null,
       buttons: [{ glyph: 'search', label: 'Search', pressed: this.query !== null, run: () => this.search(this.query === null ? '' : null) }].concat(this.opts.buttons ? this.opts.buttons(this) : []),
     });

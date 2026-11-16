@@ -58,7 +58,7 @@ export class Strip extends Feature {
     if (folder && this.settings.stripPlace !== false && place[2]) where.push(`${place[2]} of ${place[3]}`);
     const detail = String(this.settings.stripDetail || '').trim();
     if (detail) where.push(...valuesOf(propOf(this.plugin.notes.props(file), detail)));
-    el(words, 'span', 'dr-strip-place dr-label dr-clip', where.join(' · ') || 'No folder');
+    el(words, 'span', 'dr-strip-place dr-small dr-clip', where.join(' · ') || 'No folder');
     const go = (to) => to && view.leaf.openFile(to);
     iconButton(bar, { glyph: 'previous-note', label: 'Previous note', disabled: !place[0], run: () => go(place[0]) });
     iconButton(bar, { glyph: 'next-note', label: 'Next note', disabled: !place[1], run: () => go(place[1]) });

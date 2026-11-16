@@ -70,27 +70,35 @@ the page tabs, and a hairline exactly as wide as the text. The order is folder,
 title, properties, pages, text. The strip is the exception: it spans the pane,
 with the sidebar's gutter, because it belongs to the pane and not to the text.
 
-## 2. Two voices
+## 2. Voices
 
-| | Label | Reading | Title |
-| --- | --- | --- | --- |
-| Class | `.dr-label` | `.dr-text` | `.dr-title` |
-| Size | 11px | 13px (`--font-ui-small`) | 20px (`--font-ui-large`) |
-| Line | 16px | 16px in a row; 24px running (`.is-running`) | 24px |
-| Tracking | 0.08em | 0 | 0 |
-| Case | capitals | sentence | sentence |
-| Weight | 500; 700 where it marks what is open, and in a table's header | 400; 600 where it marks what is open | 400 |
-| Figures | tabular | tabular where they are counted | — |
+| | Label | Small | Reading | Title |
+| --- | --- | --- | --- | --- |
+| Class | `.dr-label` | `.dr-small` | `.dr-text` | `.dr-title` |
+| Size | 11px | 11px | 13px (`--font-ui-small`) | 20px (`--font-ui-large`) |
+| Line | 16px | 16px | 16px in a row; 24px running (`.is-running`) | 24px |
+| Tracking | 0.08em | 0 | 0 | 0 |
+| Case | capitals | sentence | sentence, or as the person wrote it | sentence |
+| Weight | 500; 700 where it marks what is open | 400 | 400; 600 where it marks what is open | 400 |
+| Figures | tabular | tabular | tabular where they are counted | — |
 
-- **Label** is the plugin's own naming: an object's name and count, a column
-  head, a section's title, a tab, a property's name, a note's length. Ink, or
+- **Label**, the capitals, is for two things only: a section's title and a
+  property's name. So little is in capitals that what is stands out. Ink, or
   muted on the ground.
+- **Small** is what trails or counts (a note's length, a count, a folder's
+  name at the end of a row where the list mixes folders), a field's name, a
+  column's head, a caption. Muted on the ground.
 - **Reading** is anything that is read: a note's title in a row, a value, a
-  menu item, a sentence in a sheet. A note's name is the person's, so it is
-  never capitals.
+  menu item, a sentence in a sheet, and the person's own words wherever they
+  stand (a folder's name under its glyph or in a head row, a page's name on
+  its tab). The person's words are never capitals.
 - **Title**: at most one to a region (a sheet's title).
-- Bold marks only what is open, and a table's header. No italics outside the
-  note's own text. Obsidian's own labels keep their case.
+- A field's name goes where its placeholder says the same: the placeholder
+  names the input. A folder's name trails a note only where the list mixes
+  folders. Numbers stand only where the order means something: a folder's
+  notes in its own order (and a footnote's number).
+- Bold marks only what is open. No italics outside the note's own text.
+  Obsidian's own labels keep their case.
 - The family is `--font-interface` for both; in the note, the person's.
 
 ## 3. Colour
@@ -136,9 +144,11 @@ alone: an error has its glyph and its reason in words.
 
 ## 4. Selected and open
 
-Clay marks where you are. Because it is a fill, something that is not a fill
-always comes with it. Each component reads its state from the element's ARIA
-attribute, so what is drawn and what a screen reader hears cannot part ways.
+One sign a state. Clay, a fill, is where you are: what is open, with its
+words bold. The mark, an ink square, is what is picked but not open, and it
+comes with no fill. Nothing gets two signs for one state. Each component
+reads its state from the element's ARIA attribute, so what is drawn and what
+a screen reader hears cannot part ways.
 
 | State | Attribute | Drawn as | The sign that is not colour |
 | --- | --- | --- | --- |
@@ -146,20 +156,21 @@ attribute, so what is drawn and what a screen reader hears cannot part ways.
 | hover | `:hover`, where a pointer hovers | ash fill, words on it ink | the pointer itself; an object's name appears |
 | pressed | `:active` | ash fill | an inner ink line |
 | focus | `:focus-visible` | — | the ring: 2px ink, 2px clear; inside the edge on anything flush with its neighbours (a row, a cell, a segment), and on-clay where that is clay |
-| selected | `aria-selected="true"` | clay fill, on-clay words | a row: the hollow mark in the slot. A cell: its name and count appear. A panel row, a menu item: an ink line round it |
-| open | `aria-current` (a note, a folder, a heading); `aria-selected` on a tab; `aria-checked` on a level | clay fill, on-clay words | bold, and: a row, the solid mark in the slot; a cell, the mark in its corner; a control without words, an ink bar along its foot; a bar, the mark under the line |
-| on | `aria-pressed="true"`, `aria-checked="true"` | clay fill | the ink bar along the foot; a chip, the mark before its words; a toggle, the square's side |
+| selected (picked, not open) | `aria-selected="true"` | no fill | the mark, an ink square at the left: a row, a table row, a property in the gutter; a cell in its corner. A menu item, Obsidian's own: clay and a line round it |
+| open | `aria-current` (a note, a folder); `aria-selected` on a tab; `aria-checked` on a level | clay fill, on-clay words | its words bold; a level of the zoom control has no words, and is the clay square alone. A heading under the open note takes nothing |
+| on | `aria-pressed="true"`, `aria-checked="true"` | clay fill | — (a toggle: its knob's side) |
 | disabled | `aria-disabled="true"`, `:disabled` | muted | a dashed line where there is a border; no hover; a default cursor |
 | loading | `aria-busy="true"` | — | the glass (`wait`) and a word |
 | error | `aria-invalid="true"`, `.is-error` | rust line or words | the `alert` glyph and the reason in words |
 | empty | `.is-empty`, `:empty`, the say-so block | muted | a dash for a value; a shelf's bare line; the say-so block |
 
-**The mark** (`.dr-mark`) is one unit of ink, a square. Solid beside what is
-open, hollow beside what is selected. It is the only ornament the plugin has,
-and it always means the same thing.
+**The mark** (`.dr-mark`) is one unit of ink, a square, beside what is
+picked but not open; nothing else ever wears it. It is the only ornament the
+plugin has, and it always means the same thing. Where it stands in a row's
+gutter it is centred there, half a unit in: the one position off the unit.
 
-One fill a surface: where a note is open and a heading of it is current, the
-note keeps the clay and the heading takes the mark and bold on the ground.
+One fill a surface: where a note is open, the note has the clay; its headings
+under it are muted rows with no mark, the one you are at too.
 
 ## 5. Components
 
@@ -304,8 +315,8 @@ shape, square corners, no filter (`.dr-cell-cover`).
 | rest | glyph `ink` on `bg`, its name under it | — |
 | hover | fill `surface` | its count appears (and its name, with labels off) |
 | focus | ring inside the cell | the ring; its name and count appear |
-| selected | fill `clay`, glyph `on-clay` | its name and count stay |
-| open (`aria-current`) | fill `clay` | the mark in its corner; its name bold |
+| selected (picked) | no fill | the mark in its corner; its count by its name |
+| open (`aria-current`) | fill `clay`, glyph `on-clay` | its name bold |
 | labels off (`.dr-grid` without `.is-labelled`) | no words at rest; name and count with the pointer, the ring or the pick | — |
 | disabled | glyph `muted`, no hover | — |
 | error | `alert` glyph in its corner, `error` (`.dr-cell-flag`) | the glyph; the reason in its tooltip |
@@ -326,8 +337,9 @@ between a folder picked and its notes).
 | rest | name `ink`; number and end `muted` | — |
 | hover | fill `surface`; number and end `ink` | the pointer |
 | focus | ring inside the row | the ring |
-| selected | fill `clay`, all `on-clay` | the hollow mark where the number was |
-| open | fill `clay`, all `on-clay` | the solid mark where the number was; name bold |
+| selected | no fill | the mark at the left, in the gutter |
+| open | fill `clay`, all `on-clay` | name bold |
+| numbered (`.is-numbered`: a folder's own order, a footnote) | the number in the slot, `muted`, tabular | — |
 | disabled | all `muted`, no hover | — |
 | not written yet (`.is-missing`) | name `muted` | a dashed line under it |
 | error (`.is-error`) | end `error` | the `alert` glyph and a word |
@@ -366,8 +378,7 @@ note, its headings or pages (`.is-child`), set in two units, muted.
 | hover | fill `surface`, all `ink` | the pointer |
 | focus | ring inside the line | the ring |
 | note rows | as Row, without the hairline | as Row |
-| heading at rest | `muted` | — |
-| the heading you are at (`aria-current`) | `ink` on `bg`: the clay stays with the note | the solid mark in the slot; bold |
+| a heading of the open note | `muted` | none, the one you are at too (`aria-current` is still there for a reader) |
 | disabled, loading, error, empty | as Row | as Row |
 
 ### Panel row · `.dr-prop`, `.dr-section` · `22-rows.css`
@@ -384,7 +395,7 @@ button, and folded it is muted and counts what it holds.
 | rest | name `muted`, value `ink` | — |
 | hover | fill `surface`, name `ink` | the pointer |
 | focus | ring inside the row; editing, the ring is the field's | the ring |
-| selected | fill `clay`, all `on-clay` | an ink line round the row |
+| selected | no fill | the mark at the left, in the gutter |
 | empty (`.is-empty`) | value `muted` | a dash for the value |
 | a link | shown as the name of what it links to | — (edited as written) |
 | a value given a tone | value in the tone (`data-tone`) | the value's own words |
@@ -407,7 +418,7 @@ its history (a press puts one value back).
 A folder's notes at the window's width. Horizontal lines only: one under the
 header, one between groups where a table has them; no line between columns
 or rows, no zebra, cells of four units. Columns are as wide as what they hold
-(a long name is cut at 48 units). Heads are the label voice, bold; cells the
+(a long name is cut at 48 units). Heads are the small voice, muted; cells the
 reading voice; numbers right and tabular. A number column (the slot) only
 where the order means something: a folder in its own order, not re-sorted.
 
@@ -417,8 +428,8 @@ where the order means something: a folder in its own order, not re-sorted.
 | sorted column | — | `up` or `down` right beside its name, and `aria-sort` |
 | hover (a row, a head) | fill `surface` | the pointer |
 | focus (a cell, a head) | ring inside it | the ring |
-| selected (a row) | fill `clay`, `on-clay` | the hollow mark in the slot |
-| open (a row) | fill `clay`, `on-clay` | the solid mark in the slot; bold |
+| selected (a row) | no fill | the mark at the left of the row |
+| open (a row) | fill `clay`, `on-clay` | bold |
 | disabled (a row) | `muted` | — |
 | error (a cell) | words `error` | a wavy line under them |
 | empty, loading | one cell across the table holding the say-so block | its glyph and label |

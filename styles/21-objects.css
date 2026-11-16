@@ -90,37 +90,34 @@
   visibility: visible;
 }
 
-/* Picked: a clay fill behind the object, and its name. */
-.dr-cell[aria-selected="true"],
+/* One sign a state. Open in the page: a clay fill behind the object, its name bold. Picked but not open: the mark,
+   an ink square in its corner, and its count with its name; no fill. */
 .dr-cell[aria-current] {
   background: var(--dr-clay);
   color: var(--dr-on-clay);
 }
 
-.dr-cell[aria-selected="true"] .dr-cell-count,
 .dr-cell[aria-current] .dr-cell-count,
 .dr-cell:focus-visible .dr-cell-count {
   color: inherit;
 }
 
-.dr-cell[aria-selected="true"]:focus-visible,
 .dr-cell[aria-current]:focus-visible {
   outline-color: var(--dr-on-clay);
 }
 
-/* Open in the page: the mark in the cell's corner, and its name in bold. */
-.dr-cell[aria-current]::before {
+.dr-cell[aria-current] .dr-cell-name {
+  font-weight: 700;
+}
+
+.dr-cell[aria-selected="true"]:not([aria-current])::before {
   content: "";
   position: absolute;
   top: var(--dr-u);
   left: var(--dr-u);
   width: var(--dr-mark);
   height: var(--dr-mark);
-  background: currentColor;
-}
-
-.dr-cell[aria-current] .dr-cell-name {
-  font-weight: 700;
+  background: var(--dr-ink);
 }
 
 .dr-cell[aria-disabled="true"] {
@@ -155,13 +152,11 @@
     color: var(--dr-ink);
   }
 
-  /* What is picked or open keeps its clay under the pointer. */
-  .dr-cell[aria-selected="true"]:hover,
+  /* What is open keeps its clay under the pointer. */
   .dr-cell[aria-current]:hover {
     background: var(--dr-clay);
   }
 
-  .dr-cell[aria-selected="true"]:hover .dr-cell-count,
   .dr-cell[aria-current]:hover .dr-cell-count {
     color: var(--dr-on-clay);
   }
@@ -172,11 +167,11 @@
 }
 
 /* ---- A folder given a tone: its glyph in that tone, on the ground. On clay it is the dark of clay like everything else. ---- */
-.dr-cell[data-tone="rust"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-rust); }
-.dr-cell[data-tone="ochre"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-ochre); }
-.dr-cell[data-tone="moss"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-moss); }
-.dr-cell[data-tone="slate"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-slate); }
-.dr-cell[data-tone="plum"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-plum); }
+.dr-cell[data-tone="rust"]:not([aria-current]) { color: var(--dr-rust); }
+.dr-cell[data-tone="ochre"]:not([aria-current]) { color: var(--dr-ochre); }
+.dr-cell[data-tone="moss"]:not([aria-current]) { color: var(--dr-moss); }
+.dr-cell[data-tone="slate"]:not([aria-current]) { color: var(--dr-slate); }
+.dr-cell[data-tone="plum"]:not([aria-current]) { color: var(--dr-plum); }
 
 .dr-cell[data-tone] .dr-cell-label {
   color: var(--dr-ink);

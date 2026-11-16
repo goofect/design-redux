@@ -27,10 +27,10 @@ export function row(list, opts) {
   asButton(node, null, opts.run);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
-  if (numbered) el(el(node, 'span', 'dr-slot dr-label'), 'span', '', opts.number != null ? rowNumber(opts.number) : String(opts.slot));
+  if (numbered) el(el(node, 'span', 'dr-slot dr-small'), 'span', '', opts.number != null ? rowNumber(opts.number) : String(opts.slot));
   el(node, 'span', 'dr-row-name dr-text dr-clip', opts.name);
   if (opts.end != null || opts.endGlyph) {
-    const end = el(node, 'span', 'dr-row-end dr-label');
+    const end = el(node, 'span', 'dr-row-end dr-small');
     if (opts.endGlyph) glyph(end, opts.endGlyph);
     if (opts.end != null) el(end, 'span', '', opts.end);
   }
@@ -47,8 +47,8 @@ export function outlineFolder(list, opts) {
   node.setAttribute('aria-expanded', String(!!opts.open));
   if (opts.path != null) node.dataset.path = opts.path;
   glyph(el(node, 'span', 'dr-slot'), opts.open ? 'down' : 'next');
-  el(node, 'span', 'dr-label dr-clip', opts.name);
-  if (opts.count != null) el(node, 'span', 'dr-row-end dr-label', String(opts.count));
+  el(node, 'span', 'dr-text dr-clip', opts.name);
+  if (opts.count != null) el(node, 'span', 'dr-row-end dr-small', String(opts.count));
   return node;
 }
 

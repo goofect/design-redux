@@ -163,13 +163,16 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual(Array.from(plain.querySelectorAll('th')).map((h) => h.textContent), ['Name', 'Words']);
     assert.ok(!plain.querySelector('.is-slot'), 'a number column where no order was set');
     const empty = dr.table(root, { columns: cols, rows: [], empty: { label: 'No notes' } });
-    assert.ok(empty.querySelector('td[colspan="2"] .dr-state .dr-label').textContent === 'No notes');
+    assert.ok(empty.querySelector('td[colspan="2"] .dr-state .dr-state-label').textContent === 'No notes');
   });
 
   await check('field: empty, filled, wrong with its reason, loading, disabled; it tells what is typed', () => {
     const typed = [];
     const f = dr.field(fresh(), { label: 'Name', placeholder: 'Untitled', onInput: (v) => typed.push(v), onEnter: (v) => typed.push(`enter:${v}`) });
-    assert.deepStrictEqual([f.className, f.querySelector('.dr-label').textContent, f.drInput.placeholder, f.drInput.className], ['dr-field', 'Name', 'Untitled', 'dr-input']);
+    assert.deepStrictEqual([f.className, f.querySelector('.dr-small').textContent, f.drInput.placeholder, f.drInput.className], ['dr-field', 'Name', 'Untitled', 'dr-input']);
+    // No name over a field whose placeholder says what it is for: the placeholder names it.
+    const bare = dr.field(root, { placeholder: 'Notes and folders' });
+    assert.ok(!bare.querySelector('.dr-small') && bare.drInput.getAttribute('aria-label') === 'Notes and folders');
     f.drInput.value = 'Set 4';
     f.drInput.dispatchEvent(new window.Event('input', { bubbles: true }));
     key(f.drInput, 'Enter');
