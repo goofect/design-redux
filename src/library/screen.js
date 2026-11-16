@@ -18,6 +18,7 @@ import { drawObjects } from './level-objects.js';
 import { drawShelves } from './level-shelves.js';
 import { drawWords } from './level-words.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
+import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
 
 export const LEVELS = [
@@ -38,6 +39,8 @@ export class LibraryScreen {
     this.expanded = new Map(); // in words: the folders opened or closed by hand, by path
     this.scrolls = new Map();
     this.query = null;
+    this.filter = null;
+    this.filterName = null;
     this.pending = false;
     this.stops = [];
     host.classList.add('dr', 'dr-library');
@@ -82,8 +85,17 @@ export class LibraryScreen {
     this.draw();
   }
 
+  /** Shows the notes a filter lets through in place of the folder; null puts the folder back. */
+  setFilter(filter, name) {
+    this.filter = isFiltering(filter) ? filter : null;
+    this.filterName = this.filter ? name || null : null;
+    this.query = null;
+    this.draw();
+  }
+
   back() {
     if (this.query !== null) return void this.search(null);
+    if (this.filter) return void this.setFilter(null);
     if (this.past.length) {
       this.ahead.push(this.at);
       return this.go(this.app.vault.getAbstractFileByPath(this.past.pop()), true);
@@ -150,13 +162,14 @@ export class LibraryScreen {
     const folder = this.folder();
     const inside = folder.path !== '/';
     const head = headRow(host, {
-      label: this.query !== null ? 'Search' : inside ? folder.name : 'Library',
-      back: inside || this.query !== null || this.past.length ? () => this.back() : null,
+      label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : inside ? folder.name : 'Library',
+      back: inside || this.query !== null || this.filter || this.past.length ? () => this.back() : null,
       buttons: [{ glyph: 'search', label: 'Search', pressed: this.query !== null, run: () => this.search(this.query === null ? '' : null) }].concat(this.opts.buttons ? this.opts.buttons(this) : []),
     });
     segments(head, { label: 'Level of detail', options: LEVELS, value: this.level, onChange: (id) => this.setLevel(id) });
     this.body = el(host, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
+    else if (this.filter) drawFiltered(this, this.body);
     else if (this.level === 'shelves') drawShelves(this, this.body, folder);
     else if (this.level === 'words') (this.opts.words || drawWords)(this, this.body, folder);
     else drawObjects(this, this.body, folder);

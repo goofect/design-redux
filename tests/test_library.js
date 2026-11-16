@@ -211,7 +211,9 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     const cell = s.host.querySelector('[data-path="Logic"]');
     cell.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     const menu = obsidian.Menu.shown;
-    assert.deepStrictEqual(menu.titles(), ['Open', 'New note', 'New folder', 'Pin', 'Glyph…', 'Sort by', 'Rename…', 'Move to…', 'Delete folder']);
+    const base = ['Open', 'New note', 'New folder', 'Pin', 'Glyph…', 'Sort by', 'Rename…', 'Move to…', 'Delete folder'];
+    assert.deepStrictEqual(menu.titles().filter((t) => base.includes(t)), base);
+    ['Kind…', 'Merge into…', 'Split notes off…', 'Cover…', 'Tone…'].forEach((t) => assert.ok(menu.titles().includes(t), `the folder menu lacks ${t}`));
     await menu.click('Pin');
     assert.deepStrictEqual(w.plugin.settings.pinOrder, ['Logic']);
     await settle();

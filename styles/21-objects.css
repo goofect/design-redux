@@ -170,3 +170,14 @@
     background: none;
   }
 }
+
+/* ---- A folder given a tone: its glyph in that tone, on the ground. On clay it is the dark of clay like everything else. ---- */
+.dr-cell[data-tone="rust"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-rust); }
+.dr-cell[data-tone="ochre"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-ochre); }
+.dr-cell[data-tone="moss"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-moss); }
+.dr-cell[data-tone="slate"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-slate); }
+.dr-cell[data-tone="plum"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-plum); }
+
+.dr-cell[data-tone] .dr-cell-label {
+  color: var(--dr-ink);
+}

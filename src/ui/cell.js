@@ -27,6 +27,7 @@ export function cell(gridEl, opts) {
   asButton(node, said);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
+  if (opts.tone) node.dataset.tone = opts.tone;
   if (opts.cover) {
     const img = el(node, 'img', 'dr-cell-cover');
     img.alt = '';

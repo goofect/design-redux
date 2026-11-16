@@ -8,7 +8,7 @@ import { cell, grid } from '../ui/cell.js';
 import { sectionTitle } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
 import { folderCover, folderGlyphs, noteCover } from './faces.js';
-import { pins, sortedNotes } from './order.js';
+import { pins, listedNotes } from './order.js';
 
 /** The folders of `folder` that are shown: empty ones left out when that is the setting. */
 export function shownFolders(plugin, folder) {
@@ -30,6 +30,7 @@ function cells(screen, host, entries, faces) {
       count: n,
       counted: isFolder ? counted(n, 'note') : null,
       path: entry.path,
+      tone: isFolder && plugin.toneOf ? plugin.toneOf(entry) : null,
       selected: plugin.selection.is(entry),
       current: isFolder ? !!plugin.openFolder && plugin.openFolder.path === entry.path : open === entry ? 'page' : false,
       pick: () => screen.pick(entry),
@@ -46,7 +47,7 @@ function cells(screen, host, entries, faces) {
 export function drawObjects(screen, host, folder) {
   const plugin = screen.plugin;
   const folders = shownFolders(plugin, folder);
-  const notes = sortedNotes(plugin, folder);
+  const notes = listedNotes(plugin, folder);
   const pinned = folder.path === '/' ? pins(plugin) : [];
   if (pinned.length) {
     sectionTitle(host, { title: 'Pinned' });

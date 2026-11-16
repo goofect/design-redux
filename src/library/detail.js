@@ -12,7 +12,7 @@ import { row, rows } from '../ui/row.js';
 import { rove } from '../ui/keys.js';
 import { folderCover, folderGlyph } from './faces.js';
 import { folderMenu, showMenu } from './menus.js';
-import { isPinned, sortedNotes, togglePin } from './order.js';
+import { isPinned, listedNotes, togglePin } from './order.js';
 
 /**
  * `hooks`: { open(folder): show it in the page, note(file, event): open a note }.
@@ -29,7 +29,7 @@ export function drawDetail(plugin, host, folder, hooks = {}) {
   } else glyph(top, folderGlyph(plugin, folder));
   el(top, 'span', 'dr-detail-name dr-label dr-clip', folder.name);
   const counts = el(top, 'span', 'dr-detail-counts dr-label');
-  const notes = sortedNotes(plugin, folder);
+  const notes = listedNotes(plugin, folder);
   const subs = plugin.index.subfolders(folder);
   el(counts, 'span', '', counted(plugin.index.count(folder), 'note'));
   if (subs.length) el(counts, 'span', '', counted(subs.length, 'folder'));

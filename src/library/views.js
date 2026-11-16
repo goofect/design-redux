@@ -69,10 +69,10 @@ export class BrowseView extends ScreenView {
       place: 'browse',
       words: drawTable,
       onGo: (folder) => { this.plugin.openFolder = folder.path === '/' ? null : folder; },
-      buttons: (screen) => [
+      buttons: (screen) => (this.plugin.editFilter ? [{ glyph: 'filter', label: 'Filter', pressed: !!screen.filter, run: () => this.plugin.editFilter(screen) }] : []).concat([
         { glyph: 'note-new', label: 'New note', run: () => this.plugin.files.newNote(screen.folder()) },
         { glyph: 'more', label: 'More', run: (e) => (screen.folder().path === '/' ? null : showMenu(folderMenu(this.plugin, screen.folder(), null), e)), disabled: screen.folder().path === '/' },
-      ],
+      ]),
     });
   }
 

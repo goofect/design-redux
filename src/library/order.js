@@ -75,3 +75,17 @@ export function neighbours(plugin, file) {
   const at = list.indexOf(file);
   return at < 0 ? [null, null, 0, list.length] : [list[at - 1] || null, list[at + 1] || null, at + 1, list.length];
 }
+
+/**
+ * What a folder lists: the notes to start with first, then its own in its
+ * order, then the notes from elsewhere it takes in. Without the feature that
+ * knows what a folder gathers (`plugin.gathering`), just its own.
+ */
+export function listedNotes(plugin, folder) {
+  const own = sortedNotes(plugin, folder);
+  const info = typeof plugin.gathering === 'function' ? plugin.gathering(folder) : null;
+  if (!info) return own;
+  const first = info.featured.filter((f) => own.includes(f) || info.includes.includes(f));
+  const rest = own.concat(info.includes.filter((f) => f.extension === 'md' && !own.includes(f)));
+  return first.concat(rest.filter((f) => !first.includes(f)));
+}

@@ -10,13 +10,13 @@ import { readingMinutes } from '../core/text.js';
 import { outlineFolder, row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
 import { shownFolders } from './level-objects.js';
-import { sortedNotes } from './order.js';
+import { listedNotes } from './order.js';
 
 /** The rows of a folder's notes; under the open one, its headings (or whatever `plugin.partsOf` says a note is made of). */
 export function noteRows(screen, list, folder) {
   const plugin = screen.plugin;
   const open = screen.openFile();
-  sortedNotes(plugin, folder).forEach((note, i) => {
+  listedNotes(plugin, folder).forEach((note, i) => {
     row(list, {
       number: i + 1,
       name: note.basename,

@@ -7,14 +7,14 @@ import { el } from '../core/dom.js';
 import { shelf } from '../ui/shelf.js';
 import { sayso } from '../ui/state.js';
 import { shownFolders } from './level-objects.js';
-import { sortedNotes } from './order.js';
+import { listedNotes } from './order.js';
 
 export function drawShelves(screen, host, folder) {
   const plugin = screen.plugin;
   const open = screen.openFile();
   const list = el(host, 'div', 'dr-shelves');
   const one = (f, name) => {
-    const notes = sortedNotes(plugin, f);
+    const notes = listedNotes(plugin, f);
     shelf(list, {
       name,
       count: notes.length,

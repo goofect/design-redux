@@ -61,6 +61,7 @@ export class SettingsTab extends PluginSettingTab {
     if (r.type === 'toggle') row.addToggle((t) => t.setValue(!!settings[r.key]).onChange((v) => this.set(r.key, v)));
     else if (r.type === 'choice') row.addDropdown((d) => d.addOptions(r.options).setValue(String(settings[r.key])).onChange((v) => this.set(r.key, v)));
     else if (r.type === 'number') row.addText((t) => t.setValue(String(settings[r.key])).onChange((v) => { const n = Number(v); if (Number.isFinite(n)) this.set(r.key, n); }));
+    else if (r.type === 'custom') row.addText((t) => t.setPlaceholder(r.placeholder || '').setValue(String(r.get())).onChange(async (v) => { r.set(v); await this.plugin.saveSettings(); }));
     else if (r.type === 'action') row.addButton((b) => b.setButtonText(r.button || r.name).onClick(() => r.run()));
     else row.addText((t) => t.setPlaceholder(r.placeholder || '').setValue(String(settings[r.key] == null ? '' : settings[r.key])).onChange((v) => this.set(r.key, v)));
     return row;

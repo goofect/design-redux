@@ -7,7 +7,7 @@ import { noteProps, propOf, valuesOf } from '../core/notes.js';
 import { outlineFolder, rows } from '../ui/row.js';
 import { table } from '../ui/table.js';
 import { shownFolders } from './level-objects.js';
-import { sortedNotes } from './order.js';
+import { listedNotes } from './order.js';
 
 const title = (key) => key.charAt(0).toUpperCase() + key.slice(1);
 
@@ -29,7 +29,7 @@ export function drawTable(screen, host, folder) {
   }
   const columns = tableColumns(plugin);
   const sort = screen.tableSort;
-  let notes = sortedNotes(plugin, folder);
+  let notes = listedNotes(plugin, folder);
   const cellsOf = (note) => {
     const props = noteProps(plugin.app, note);
     const cells = { name: note.basename, words: plugin.index.words(note).toLocaleString() };

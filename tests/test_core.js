@@ -64,7 +64,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     const s = w.plugin.settings;
     Object.assign(s, { folderGlyphs: { School: 'tower', 'School/Logic': 'key' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
     await w.app.vault.rename(w.file('School'), 'University');
-    assert.deepStrictEqual(s.folderGlyphs, { University: 'tower', 'University/Logic': 'key' });
+    assert.deepStrictEqual([s.folderGlyphs.University, s.folderGlyphs['University/Logic'], s.folderGlyphs.School], ['tower', 'key', undefined]);
     assert.deepStrictEqual(s.folderCovers, { 'University/Logic': 'University/Logic/cover.png' });
     assert.deepStrictEqual(s.pinOrder, ['University/Logic/A.md']);
     assert.deepStrictEqual(s.albums.Other.includes, ['University/Logic/B.md']);
@@ -72,7 +72,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     await w.app.vault.rename(w.file('University/Logic/A.md'), 'University/Logic/Alpha.md');
     assert.deepStrictEqual(s.albumOrders['University/Logic'].names, ['B.md', 'Alpha.md']);
     await w.app.vault.delete(w.file('University/Logic'));
-    assert.deepStrictEqual(s.folderGlyphs, { University: 'tower' });
+    assert.deepStrictEqual([s.folderGlyphs.University, 'University/Logic' in s.folderGlyphs], ['tower', false]);
     assert.deepStrictEqual(s.folderCovers, {});
     assert.deepStrictEqual(s.pinOrder, []);
     assert.deepStrictEqual(s.albums.Other.includes, []);
