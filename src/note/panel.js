@@ -56,7 +56,7 @@ export class PanelView extends ItemView {
     this.feature.sections(subject).forEach((section) => {
       sectionTitle(host, { title: `${section.title} · ${section.items.length}` });
       const list = rows(host);
-      section.items.forEach((item, i) => row(list, { number: i + 1, name: item.name, end: item.end, run: () => this.app.workspace.getLeaf(false).openFile(item.file) }));
+      section.items.forEach((item, i) => row(list, { number: i + 1, name: item.name, end: item.end, run: () => (item.run ? item.run() : this.app.workspace.getLeaf(false).openFile(item.file)) }));
     });
   }
 
@@ -197,6 +197,9 @@ export class Panel extends Feature {
     if (this.settings.showMentions !== false && incoming.length) out.push({ title: 'Mentioned in', items: incoming.map((f) => ({ name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', file: f })) });
     const outgoing = index.outgoing(file).filter((f) => f.extension === 'md');
     if (outgoing.length) out.push({ title: 'Links to', items: outgoing.map((f) => ({ name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', file: f })) });
+    // Kept changes to its properties, newest first: a press puts that one value back.
+    const history = this.plugin.historyOf ? this.plugin.historyOf(file) : [];
+    if (history.length) out.push({ title: 'History', items: history.slice(0, 10).map((h) => ({ name: `${h.key}: ${valueText(h.was) || '—'} → ${valueText(h.now) || '—'}`, end: 'put back', file, run: () => this.plugin.putBackChange(file, h) })) });
     return out;
   }
 

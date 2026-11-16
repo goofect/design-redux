@@ -9,6 +9,7 @@
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { drawDetail } from './detail.js';
+import { folderGlyph } from './faces.js';
 import { neighbours } from './order.js';
 import { LEVELS } from './screen.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
@@ -33,6 +34,10 @@ export class Library extends Feature {
     // For the panel, which may not import the library: a folder picked, drawn.
     this.plugin.drawFolder = (host, folder) => drawDetail(this.plugin, host, folder, { open: (f) => this.browse(f), note: (file) => ws.getLeaf(false).openFile(file) });
     this.add(() => delete this.plugin.drawFolder);
+    // For the strip: where a note stands in its folder, and the folder's face.
+    this.plugin.placeOf = (file) => neighbours(this.plugin, file);
+    this.plugin.faceOf = (folder) => folderGlyph(this.plugin, folder);
+    this.add(() => { delete this.plugin.placeOf; delete this.plugin.faceOf; });
     if (!ws.getLeavesOfType(LIBRARY_VIEW).length) this.openSidebar(true);
   }
 

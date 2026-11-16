@@ -81,3 +81,8 @@ body.dr-active.dr-region-overlays .checkbox-container.is-disabled {
 body.dr-active.dr-region-overlays .checkbox-container.is-disabled::after {
   background-color: var(--dr-muted);
 }
+
+/* An entry of one of Obsidian's menus the menu filter marked as not wanted. The class is the plugin's own. */
+.dr-menu-hidden {
+  display: none;
+}
