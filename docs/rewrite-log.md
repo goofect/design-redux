@@ -246,3 +246,4 @@ Decisions:
 Open, for session 5 (they need the real app):
 - Pages in reading view are hidden by a class on each rendered block; the graph's routes and filter reach Obsidian's graph through internals behind checks; the image router listens for editor-paste and editor-drop. Each wants one look in real Obsidian.
 - The migration test with the owner's own data.json, which has not been provided yet.
+- The real-Obsidian specs went to `legacy/tests/obsidian/`; `wdio.conf.mjs` and the CI workflow still look in `tests/obsidian/`, where session 5 writes new ones.
