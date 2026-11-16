@@ -141,7 +141,7 @@ export class PropertyRules extends Feature {
             const list = rows(matter);
             rules.forEach((rule, i) => row(list, { number: i + 1, name: rule.name || ruleName(rule), end: rule.on === false ? 'off' : 'on', run: async () => { rule.on = rule.on === false; await this.plugin.saveSettings(); draw(); } }));
           }
-          const add = field(matter, { label: 'A new rule', placeholder: 'folder Logic -> status=draft', note: 'folder, tag or property; then ->; then what to set.', onEnter: async (v) => {
+          const add = field(matter, { label: 'A new rule', placeholder: 'folder Logic -> status=draft', note: 'Folder, tag or property; then ->; then what to set.', onEnter: async (v) => {
             const rule = parseRule(v);
             if (!rule) return void add.drSay('Write it as: folder Logic -> status=draft', true);
             this.settings.propertyRules = (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).concat(rule);

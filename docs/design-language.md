@@ -161,7 +161,9 @@ note keeps the clay and the heading takes the mark and bold on the ground.
 ## 5. Components
 
 Each is one set of `dr-` classes in one part of the stylesheet, shown in every
-state in the specimen. "—" means the state does not apply. Tokens are named
+state in the specimen; the screens built from them (the note, the panel,
+search, a filter, the map, the 3D graph, a sheet) are drawn in the specimen
+by the plugin itself, on a sample vault. "—" means the state does not apply. Tokens are named
 without their `--dr-` prefix. Every interactive one is reached with Tab or the
 arrow keys and wears the ring.
 
@@ -271,8 +273,13 @@ that can be on (`role="checkbox"`).
 | focus | ring `ink`, 2px clear | the ring |
 | on (`aria-checked`) | fill `clay`, words `on-clay` | the mark before its words |
 | disabled | border and words `muted` | border dashed |
-| error (`aria-invalid`) | border and words `error` | its place is beside the field or row that says why |
+| error (`aria-invalid`) | border and words `error` | its place is beside the field or row that says why; its `aria-label` says why |
+| takes itself off (a filter's part) | a `close` glyph after its words | the glyph; its `aria-label` says "Take off" |
+| a value given a tone (`data-tone`) | border and words in the tone | the words are the value itself; the tone is the person's own colour |
 | open, empty, loading | — | — |
+
+A filter's parts are plain chips that close, not chips "on": the one clay
+fill on a screen stays the mark of where you are.
 
 ### Object cell · `.dr-grid` > `.dr-cell` · `21-objects.css`
 
@@ -366,9 +373,17 @@ section needs.
 | focus | ring inside the row; editing, the ring is the field's | the ring |
 | selected | fill `clay`, all `on-clay` | an ink line round the row |
 | empty (`.is-empty`) | value `muted` | a dash for the value |
+| a link | shown as the name of what it links to | — (edited as written) |
+| a value given a tone | value in the tone (`data-tone`) | the value's own words |
 | error (`aria-invalid`) | value `error` | the `alert` glyph at the end |
 | disabled | all `muted` | no hover |
 | open, loading | — | — |
+
+The panel lists a note's properties as one section, or in the groups the
+person set (`panelGroupList`), each a section title with a `fold` button;
+a folded group's title counts what it holds. Under the properties, sections
+of rows: where the note is named in a property, where it is mentioned, what
+it links to, and its history (a press puts one value back).
 
 ### Table · `.dr-table` · `24-table.css`
 
@@ -448,6 +463,49 @@ a line of running text if it helps, and one text button at most.
 Six units, a hairline under it: a label, and the few icon buttons a surface
 needs. The library's holds the word Library, search, and the zoom control;
 inside a folder, a back button comes first and the label is the folder's.
+Where the head names a note (the panel, a map of a note, the 3D graph round
+a note) it is set in the reading voice (`text: true`): a note's name is the
+person's and is never capitals. A folder's name, an object's, stays a label.
+
+### Note head band · `.dr-note-head` · `31-note.css`
+
+The plugin's own band at the top of a note's pane, in the text's column:
+the folder as a label (a press opens it in the browse view), the note's
+main properties as chips (a value in its tone; one its folder's schema
+finds wrong, `aria-invalid`), the page tabs and a `plus` to add a page, and
+a hairline under it all. A part with nothing in it is not drawn; a band
+with nothing in it is taken away. Nothing of Obsidian's is moved.
+
+### Filter bar · `.dr-filter-bar` · `30-library.css`
+
+Under a head row, a unit of ground above and below: a filter's parts as
+chips that close, then how many notes pass, as a muted label. The rows of
+what passes follow without a second hairline.
+
+### Map · `.dr-map` > `.dr-map-node` · `60-tools.css`
+
+A tree laid out in columns, a level a column, a leaf a row; every link one
+path of ink hairlines, out of the parent, down, into the child. A node is a
+box of 22 units by 4 with a hairline, its glyph and its name.
+
+| State | Drawn with | Besides colour |
+| --- | --- | --- |
+| rest | `ink` on `bg`, border `hair` `ink` | — |
+| hover | fill `surface` | the pointer |
+| focus | ring `ink` | the ring; the arrow keys walk the tree, Space folds, Enter opens |
+| picked (`aria-selected`) | fill `clay`, `on-clay`, an inner ink line | the line |
+| open in the page (`aria-current`) | — | its name bold |
+| folded (`aria-expanded="false"`) | a count, `+3`, `muted` | the count |
+| a folder's tone (`data-tone`) | border `ring` in the tone | the line is twice as thick |
+
+### 3D graph · `.dr-graph3d` · `60-tools.css`
+
+Drawn on a canvas by the script, in the tokens' colours read from the
+page: links as `muted` hairlines, notes as `ink` squares as large as they
+are linked, the picked note and the open one in `clay` with an `ink` line
+round them and two units larger. The name of the note pointed at or picked
+stands in the corner in the reading voice. It opens fitted to its pane and
+moves only when it is turned, by the pointer or the arrow keys.
 
 ## 6. Icons
 

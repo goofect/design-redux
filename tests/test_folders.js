@@ -117,7 +117,7 @@ const VAULT = {
     const screen = await views.screen();
     screen.setFilter({ prop: 'status=draft', folder: 'Logic' });
     assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-rows .dr-row')).map((r) => r.dataset.path), ['Logic/Truth tables.md']);
-    assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-filter-bar .dr-chip')).map((c) => c.textContent), ['InLogic', 'Propertystatus=draft']);
+    assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-filter-bar .dr-chip')).map((c) => [c.textContent, c.getAttribute('role'), c.hasAttribute('aria-checked')]), [['InLogic', 'button', false], ['Propertystatus=draft', 'button', false]]);
     views.save();
     await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Drafts in Logic'; m.contentEl.querySelector('.is-primary').click(); });
     assert.deepStrictEqual(w.plugin.settings.smartAlbumList.map((v) => [v.name, v.prop, v.folder]), [['Drafts in Logic', 'status=draft', 'Logic']]);

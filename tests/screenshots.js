@@ -37,6 +37,7 @@ const SHARE = 0.0005;
     console.log('not ok  Playwright is not installed: npm i -D playwright && npx playwright install chromium');
     process.exit(1);
   }
+  execFileSync(process.execPath, [path.join(root, 'build.mjs')], { stdio: 'pipe' });
   execFileSync(process.execPath, [path.join(root, 'tools', 'specimen.mjs')], { stdio: 'pipe' });
   fs.rmSync(failed, { recursive: true, force: true });
   const browser = await chromium.launch();

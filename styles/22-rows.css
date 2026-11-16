@@ -201,12 +201,15 @@
 .dr-section {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--dr-u);
   height: var(--dr-row);
   padding: 0 var(--dr-gutter);
   border-bottom: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
+}
+
+.dr-section > .dr-label {
+  flex: 1;
 }
 
 .dr-section > .dr-icon-button:last-child {

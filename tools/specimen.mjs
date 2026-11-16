@@ -14,6 +14,7 @@ import path from 'node:path';
 import { root, builderFile, stylesheet, withHeldStates } from './specimen/kit.mjs';
 import { palette, glyphs, commandList } from './specimen/sections-system.mjs';
 import { controls, lists, blocks, library, browse } from './specimen/sections-parts.mjs';
+import { screens } from './specimen/sections-screens.mjs';
 import { folders, subfolders } from './specimen/data.mjs';
 
 // The builder is an ES module of the plugin's source; read as text, so Node needn't guess what kind of file it is.
@@ -25,7 +26,7 @@ const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'library', 
 
 // What Obsidian itself provides and the page lacks: its fonts and sizes, and the bare structure of the three pieces of its own that the look restyles.
 const STAND_INS = `
-body{--font-interface:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--font-ui-smaller:12px;--font-ui-small:13px;--font-ui-medium:15px;--font-ui-large:20px;--toggle-thumb-radius:0}
+body{--file-line-width:640px;--file-margins:32px;--font-text:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--font-interface:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;--font-ui-smaller:12px;--font-ui-small:13px;--font-ui-medium:15px;--font-ui-large:20px;--toggle-thumb-radius:0}
 .menu{display:flex;flex-direction:column;width:240px;border:var(--menu-border-width) solid var(--menu-border-color);background-color:var(--menu-background);overflow:hidden}
 .menu-scroll{display:flex;flex-direction:column;padding:var(--menu-padding)}
 .menu-item{display:flex;align-items:center;gap:8px;padding:4px 8px;font-size:var(--font-ui-small);white-space:nowrap}
@@ -89,6 +90,19 @@ h2,p,figure,pre{margin:0}
 .spec-browse{border:1px solid var(--dr-ink)}
 .spec-browse-grid{padding:32px 0}
 .spec-browse-foot{height:48px}
+.spec-screen{box-sizing:content-box;border:1px solid var(--dr-ink);overflow:hidden;position:relative;background:var(--dr-bg)}
+.spec-screen>.dr-library,.spec-screen>.dr-panel,.spec-screen>.dr-map{height:100%}
+.spec-screen .view-content{padding:0}
+.spec-screen.is-note>.spec-note{display:flex;flex-direction:column;height:100%}
+.spec-note-text{flex:1;width:100%;max-width:640px;margin:0 auto;padding:24px 32px;box-sizing:border-box;color:var(--dr-ink);font-family:var(--font-text);font-size:15px;line-height:24px}
+.spec-note-text h1{margin:0 0 16px;font-size:1.728em;line-height:1.2;font-weight:700}
+.spec-note-text p{margin:0 0 16px}
+.spec-graph{display:block}
+.spec-graph-links{fill:none;stroke:var(--dr-muted);stroke-width:1}
+.spec-graph .is-ink{fill:var(--dr-ink)}
+.spec-graph .is-clay{fill:var(--dr-clay)}
+.spec-graph-ring{fill:none;stroke:var(--dr-ink);stroke-width:1}
+.spec-graph-ring.is-picked{stroke-width:2}
 body.spec-shell>main,body.spec-framed>.spec-top-bar{display:none}
 .spec-frames{display:grid;grid-template-columns:1fr 1fr}
 .spec-frames iframe{display:block;width:100%;border:0}
@@ -122,7 +136,7 @@ const SCRIPT = `
 })();
 `;
 
-const sections = [palette(), glyphs(GLYPH_FAMILIES), commandList(), controls(), lists(faces), blocks(faces), library(faces, facesIn), browse(faces)].join('\n');
+const sections = [palette(), glyphs(GLYPH_FAMILIES), commandList(), controls(), lists(faces), blocks(faces), library(faces, facesIn), browse(faces), await screens()].join('\n');
 
 const html = `<!doctype html>
 <html lang="en">

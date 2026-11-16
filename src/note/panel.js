@@ -34,6 +34,12 @@ export function parseValue(text, was) {
 /** A value as the text it is edited as. */
 export const valueText = (value) => valuesOf(value).join(', ');
 
+/** A value as it is shown: a link as the name of what it links to. */
+export const valueShown = (value) => valuesOf(value).map((v) => {
+  const m = /^\s*\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]*))?\]\]\s*$/.exec(v);
+  return m ? (m[2] || m[1].split('/').pop()) : v;
+}).join(', ');
+
 export class PanelView extends ItemView {
   constructor(leaf, feature) {
     super(leaf);
@@ -51,7 +57,7 @@ export class PanelView extends ItemView {
     const subject = this.feature.subject();
     if (subject instanceof TFolder && plugin.drawFolder) return void plugin.drawFolder(host, subject);
     if (!(subject instanceof TFile) || subject.extension !== 'md') return void sayso(host, { glyph: 'properties', label: 'Nothing picked', text: 'A note’s properties show here, and a folder picked in the library.' });
-    headRow(host, { label: subject.basename, buttons: [{ glyph: 'more', label: 'More', run: (e) => this.feature.noteMenu(subject, e) }] });
+    headRow(host, { label: subject.basename, text: true, buttons: [{ glyph: 'more', label: 'More', run: (e) => this.feature.noteMenu(subject, e) }] });
     this.properties(host, subject);
     this.feature.sections(subject).forEach((section) => {
       sectionTitle(host, { title: `${section.title} · ${section.items.length}` });
@@ -95,7 +101,7 @@ export class PanelView extends ItemView {
   propertyRow(host, file, key, value) {
     const plugin = this.feature.plugin;
     const wrong = plugin.checkValue ? plugin.checkValue(file, key, value) : null;
-    const node = propRow(host, { name: key, value: valueText(value), invalid: wrong, run: () => this.edit(node, file, key, value) });
+    const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => this.edit(node, file, key, value) });
     node.dataset.key = key;
     const values = valuesOf(value);
     const tone = values.length === 1 ? valueTone(plugin.settings, key, values[0]) : null;

@@ -34,8 +34,8 @@ export function searchLibrary(plugin, query) {
     const heading = ((cache && cache.headings) || []).find((h) => h.heading.toLowerCase().includes(want));
     const props = noteProps(plugin.app, file);
     const key = heading ? null : Object.keys(props).find((k) => valuesOf(props[k]).some((v) => v.toLowerCase().includes(want)));
-    if (heading) out.inside.push({ file, where: heading.heading, subpath: `#${heading.heading}` });
-    else if (key) out.inside.push({ file, where: `${key}: ${valuesOf(props[key]).join(', ')}` });
+    if (heading) out.inside.push({ file, where: 'heading', subpath: `#${heading.heading}` });
+    else if (key) out.inside.push({ file, where: key });
   }
   return out;
 }
@@ -90,7 +90,7 @@ export function drawSearch(screen, host) {
     const done = () => rememberSearch(plugin, query);
     group('Folders', found.folders, (list, f) => row(list, { name: f.path, end: String(plugin.index.count(f)), path: f.path, run: () => { done(); screen.go(f); } }));
     group('Notes', found.notes, (list, f, i) => row(list, { number: i + 1, name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', path: f.path, run: (e) => { done(); screen.openNote(f, e); } }));
-    group('In notes', found.inside, (list, hit, i) => row(list, { number: i + 1, name: hit.file.basename, end: hit.where.slice(0, 28), path: hit.file.path, run: (e) => { done(); screen.openNote(hit.file, e, hit.subpath); } }));
+    group('In notes', found.inside, (list, hit, i) => row(list, { number: i + 1, name: hit.file.basename, end: hit.where, path: hit.file.path, run: (e) => { done(); screen.openNote(hit.file, e, hit.subpath); } }));
   };
   const input = field(top, { label: 'Find', glyph: 'search', value: screen.query || '', placeholder: 'Notes and folders', onInput: (v) => { screen.query = v; show(v); }, onEnter: () => { const first = results.querySelector('.dr-row'); if (first) first.click(); } });
   input.drInput.addEventListener('keydown', (e) => {

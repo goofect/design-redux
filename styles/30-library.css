@@ -129,3 +129,22 @@
   margin: var(--dr-u) 0 0;
   color: var(--dr-muted);
 }
+
+/* ---- A filter, as chips under the head row: a press on one takes it off. ---- */
+.dr-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-u);
+  padding: var(--dr-u) var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+}
+
+.dr-filter-bar > .dr-label {
+  margin-left: var(--dr-u);
+}
+
+.dr-filter-bar + .dr-rows {
+  margin-top: 0;
+  border-top: 0;
+}

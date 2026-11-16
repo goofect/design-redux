@@ -16,7 +16,7 @@ import { iconId } from '../core/icons.js';
 import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { sayso } from '../ui/state.js';
-import { graphSpace, layoutSpace, project } from './graph-space.js';
+import { fitZoom, graphSpace, layoutSpace, project } from './graph-space.js';
 
 export const GRAPH_3D_VIEW = 'design-redux-graph-3d';
 
@@ -65,8 +65,8 @@ export class Graph3DView extends ItemView {
     const host = clear(this.contentEl);
     this.space = graphSpace(this.plugin, this.around);
     const n = this.space.nodes.length;
-    headRow(host, { label: this.around ? this.around.basename : '3D graph', muted: `${counted(n, 'note')} · ${counted(this.space.links.length, 'link')}`, buttons: [
-      { glyph: 'fit', label: 'Fit', run: () => { this.look = { yaw: 0.6, pitch: 0.35, zoom: 1 }; this.draw(); } },
+    headRow(host, { label: this.around ? this.around.basename : '3D graph', text: !!this.around, muted: `${counted(n, 'note')} · ${counted(this.space.links.length, 'link')}`, buttons: [
+      { glyph: 'fit', label: 'Fit', run: () => { this.look = { yaw: 0.6, pitch: 0.35, zoom: fitZoom(this.pos, ...this.size()) }; this.draw(); } },
       { glyph: 'plus', label: 'Closer', run: () => this.zoom(1.25) },
       { glyph: 'minus', label: 'Further', run: () => this.zoom(0.8) },
     ] });
@@ -77,13 +77,14 @@ export class Graph3DView extends ItemView {
     this.canvas.setAttribute('tabindex', '0');
     this.canvas.setAttribute('role', 'img');
     this.canvas.setAttribute('aria-label', `A graph of ${counted(n, 'note')}. Arrow keys turn it; plus and minus come closer and go further.`);
-    this.name = el(box, 'div', 'dr-graph3d-name dr-label');
+    this.name = el(box, 'div', 'dr-graph3d-name dr-text');
+    this.look.zoom = fitZoom(this.pos, ...this.size());
     this.listen();
     this.draw();
   }
 
   zoom(by) {
-    this.look.zoom = Math.max(0.1, Math.min(12, this.look.zoom * by));
+    this.look.zoom = Math.max(0.02, Math.min(12, this.look.zoom * by));
     this.draw();
   }
 
@@ -103,7 +104,7 @@ export class Graph3DView extends ItemView {
   }
 
   half(i) {
-    return Math.max(2, Math.min(12, 2 + Math.sqrt(this.space.nodes[i].degree) * 1.5)) * Math.max(0.6, Math.min(2, this.look.zoom));
+    return Math.max(3, Math.min(12, 2 + Math.sqrt(this.space.nodes[i].degree) * 1.5) * Math.max(0.6, Math.min(2, this.look.zoom)));
   }
 
   listen() {
@@ -184,9 +185,10 @@ export class Graph3DView extends ItemView {
     // Far notes first, so near ones are drawn over them.
     const order = this.space.nodes.map((_, i) => i).sort((a, b) => this.screen[a * 3 + 2] - this.screen[b * 3 + 2]);
     order.forEach((i) => {
-      const half = this.half(i);
-      const [x, y] = [this.screen[i * 3], this.screen[i * 3 + 1]];
       const current = open && open.path === this.space.nodes[i].id;
+      // The picked note and the open one a little larger, so their clay is seen.
+      const half = this.half(i) + (current || i === this.picked ? 2 : 0);
+      const [x, y] = [this.screen[i * 3], this.screen[i * 3 + 1]];
       ctx.fillStyle = current || i === this.picked ? clay : ink;
       ctx.fillRect(Math.round(x - half), Math.round(y - half), Math.round(half * 2), Math.round(half * 2));
       if (current || i === this.picked || i === this.hover) {

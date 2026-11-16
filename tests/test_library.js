@@ -189,7 +189,7 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     const found = dr.searchLibrary(w.plugin, 'tab');
     assert.deepStrictEqual(found.notes.map((f) => f.path), ['Logic/Truth tables.md']);
     assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'miracles').inside.map((h) => [h.file.path, h.subpath]), [['Reading/Hume.md', '#Of miracles']]);
-    assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'epistem').inside.map((h) => h.where), ['domain: epistemology']);
+    assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'epistem').inside.map((h) => h.where), ['domain'], 'a hit says where, not the person\'s words');
     assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'log').folders.map((f) => f.path), ['Logic']);
     const s = sidebar(w);
     s.host.querySelector('[aria-label="Search"]').click();

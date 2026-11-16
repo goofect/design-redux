@@ -74,7 +74,9 @@ export class NotePage extends Feature {
         const values = valuesOf(propOf(props, key));
         if (!values.length) return;
         const tone = values.length === 1 ? valueTone(this.settings, key, values[0]) : null;
-        const c = chip(chips, { name: key, value: values.join(', ') });
+        const wrong = this.plugin.checkValue ? this.plugin.checkValue(file, key, propOf(props, key)) : null;
+        const c = chip(chips, { name: key, value: values.join(', '), invalid: !!wrong });
+        if (wrong) c.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
         if (tone) c.dataset.tone = tone;
       });
     }

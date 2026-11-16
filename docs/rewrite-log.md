@@ -202,3 +202,47 @@ The owner's marks: keep pages in a note, footnotes, superscript and subscript, l
 - Settings keep the old key names. 29 old keys are retired with a reason each (`core/migrate.js`), none renamed. `settingsVersion` 100 marks a file this plugin wrote. If the copy to `data.legacy.json` can't be written, the old file is left untouched.
 - A feature records what it adds (`this.add`, `this.listen`), so turning it off takes away exactly that.
 - The look's classes go on every window's body from `Appearance`; with `lookScope` at "plugin" (the old default) Obsidian's own regions stay off.
+
+## 7. Session 3: library and note
+
+Better than the old plugin, a line each:
+- One place at three levels (objects, shelves, words), in the sidebar and the page alike; switching level keeps the folder, the pick, the open note and where the keys were.
+- Every level from the keys: one Tab stop a list, the arrows by row and column, Home and End, a typed name jumps, Enter opens, Backspace comes out.
+- 2,000 notes: every level is drawn from the index, never by walking the vault, and fifty redraws asked in one turn are one (test_library).
+- A folder's glyph is given once and stored, so a folder made later never changes another's face; a rename keeps it.
+- What a folder is (kind, description, what it takes in) is kept by its path; a folder note is read, never written.
+- Merge and split say what will happen first (names taken get a number, links counted) and one Undo puts every file back.
+- Search answers from the index and Obsidian's cache alone: names, headings, property values; with nothing typed it offers the last searches and a property's values as filters.
+- Filters and saved views are one thing: a filter on the browse view, kept under a name; the inbox is the filter of loose notes.
+- Pages fold the other pages away inside the editor's own state, not by hiding its DOM; a plain note given a page keeps what it held as its first, named by its first heading.
+- The panel edits a value where it stands and keeps its kind (a list stays a list, a number a number); a link shows as its note's name; a schema's complaint is marked on the row and its chip.
+- Footnotes go in from a sheet at the cursor, numbered in reading order, named ones kept; Put in order rebuilds the list at the note's end.
+- A list marker is read by the one before it: i after h is a letter, after ii a numeral; a lone "a." isn't carried on.
+- The image router moves only an image that arrives just after a paste or a drop.
+
+Decisions:
+- Cut with the old screens: the home screen, its shelves and the screen of every property; the library's top level is home. Their settings are retired with reasons.
+- The note's head band and the strip are the plugin's own elements; nothing of Obsidian's is hidden (hideNativeProperties retired, as DESIGN.md says).
+- The note page's shelves (links, mentions) moved into the panel; its "next note" is the strip's.
+
+## 8. Session 4: tools and maps
+
+Better than the old plugin, a line each:
+- One bulk engine under every property tool: it says what would change, asks, and keeps one Undo that leaves later edits alone. Renaming a tag skips code blocks and code spans.
+- Rules fire on a change (a note coming into a folder, a tag newly added, a value newly set), so the Undo of a rule's write sticks and a rule's write fires no rule. A dry run first, as before.
+- Schemas are one line to write, checked in the panel and the note's band, with a report of every note that falls short.
+- History: each change kept by note, put back from the panel one value at a time.
+- The 3D graph is laid out once, the same on every run, opens fitted to its pane, and never moves by itself; the keys turn it.
+- Maps: one model (a tree) for a folder's map and a note's (its parents), laid out in one pass with no box on another; 500 nodes drawn at once; the toolbar is the plugin's glyphs; the keys walk the tree.
+- The menu filter marks the entries it leaves out with a class; nothing of Obsidian's is removed.
+- Diagnostics say nothing of the notes.
+
+Decisions:
+- Maps are new work. The old canvas extras were retired before the rewrite, so nothing needs the canvas adapter; the mindmap view type is now the map, the outline view type stays registered and closes itself.
+- New commands: open-map, open-map-here, open-map-note, panel-folder-properties.
+- Graph routes are kept by kind of graph and off until turned on, as before.
+- The contract (tests/test_contract.js): all 70 old commands, all 7 old views; 99 settings, every one read by some module, at most ten a feature; 36 old keys retired, each with a reason.
+
+Open, for session 5 (they need the real app):
+- Pages in reading view are hidden by a class on each rendered block; the graph's routes and filter reach Obsidian's graph through internals behind checks; the image router listens for editor-paste and editor-drop. Each wants one look in real Obsidian.
+- The migration test with the owner's own data.json, which has not been provided yet.

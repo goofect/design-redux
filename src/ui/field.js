@@ -17,6 +17,7 @@ export function field(parent, opts) {
   if (opts.glyph) glyph(box, opts.glyph);
   const input = el(box, 'input', 'dr-input');
   input.type = 'text';
+  input.defaultValue = opts.value || '';
   input.value = opts.value || '';
   if (opts.placeholder) input.placeholder = opts.placeholder;
   input.disabled = !!opts.disabled;

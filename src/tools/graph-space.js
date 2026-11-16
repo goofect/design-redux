@@ -93,6 +93,13 @@ export function layoutSpace(n, links, steps = 80) {
   return pos;
 }
 
+/** The zoom at which the whole cloud fits a w × h view, with a margin of three units. */
+export function fitZoom(pos, w, h) {
+  let r = 1;
+  for (let i = 0; i < pos.length; i += 3) r = Math.max(r, Math.hypot(pos[i], pos[i + 1], pos[i + 2]));
+  return Math.max(0.05, (Math.min(w, h) / 2 - 24) / r);
+}
+
 /** Where each note lands on a screen: a Float32Array of x, y, depth. `view` is { yaw, pitch, zoom, w, h }. */
 export function project(pos, view) {
   const n = pos.length / 3;

@@ -7,7 +7,7 @@
 /* a name, a filter is a saved view.                                   */
 /* ------------------------------------------------------------------ */
 
-import { el } from '../core/dom.js';
+import { el, glyph } from '../core/dom.js';
 import { noteProps, propOf, tagsOf, valuesOf } from '../core/notes.js';
 import { counted, readingMinutes } from '../core/text.js';
 import { chip } from '../ui/field.js';
@@ -54,11 +54,16 @@ export function drawFiltered(screen, host) {
   const plugin = screen.plugin;
   const open = screen.openFile();
   const bar = el(host, 'div', 'dr-filter-bar');
-  filterParts(screen.filter).forEach((p) => chip(bar, { name: p.name, value: p.text, checked: true, run: () => {
-    const next = Object.assign({}, screen.filter);
-    delete next[p.part];
-    screen.setFilter(isFiltering(next) ? next : null);
-  } }));
+  // Each part a plain chip with a close glyph: the one fill on the screen stays the open note's.
+  filterParts(screen.filter).forEach((p) => {
+    const c = chip(bar, { name: p.name, value: p.text, run: () => {
+      const next = Object.assign({}, screen.filter);
+      delete next[p.part];
+      screen.setFilter(isFiltering(next) ? next : null, screen.filterName);
+    } });
+    c.setAttribute('aria-label', `Take off: ${[p.name, p.text].filter(Boolean).join(' ')}`);
+    glyph(c, 'close');
+  });
   const notes = matchNotes(plugin, screen.filter);
   el(bar, 'span', 'dr-label dr-muted', counted(notes.length, 'note'));
   if (!notes.length) return void sayso(host, { glyph: 'filter', label: 'No note passes the filter', text: 'Take a part of it off above.' });

@@ -333,3 +333,8 @@ input.dr-input::placeholder {
 .dr-chip[data-tone="moss"] { border-color: var(--dr-moss); color: var(--dr-moss); }
 .dr-chip[data-tone="slate"] { border-color: var(--dr-slate); color: var(--dr-slate); }
 .dr-chip[data-tone="plum"] { border-color: var(--dr-plum); color: var(--dr-plum); }
+
+/* A chip that takes itself off: its close glyph after its words. */
+.dr-chip > .dr-glyph {
+  margin-right: calc(-1 * var(--dr-hair));
+}

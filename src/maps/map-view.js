@@ -69,7 +69,7 @@ export class MapView extends ItemView {
   draw() {
     const host = clear(this.contentEl);
     const shown = shownNodes(this.root);
-    const head = headRow(host, { label: this.root.label, muted: counted(shown.length, 'node'), buttons: [
+    const head = headRow(host, { label: this.root.label, text: this.root.kind === 'note', muted: counted(shown.length, 'node'), buttons: [
       { glyph: 'fold', label: 'Fold all', run: () => { foldAll(this.root, true); this.draw(); } },
       { glyph: 'unfold', label: 'Unfold all', run: () => { foldAll(this.root, false); this.draw(); } },
       { glyph: 'fit', label: 'Fit', run: () => this.fit() },

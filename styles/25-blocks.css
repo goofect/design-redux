@@ -15,7 +15,8 @@
   color: var(--dr-ink);
 }
 
-.dr-head > .dr-label {
+.dr-head > .dr-label,
+.dr-head > .dr-text {
   flex: 1;
 }
 
