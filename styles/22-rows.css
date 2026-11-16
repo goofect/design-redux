@@ -2,26 +2,26 @@
 /* Rows: a note in a list, the outline, a panel row, a section's title */
 /*                                                                     */
 /* All keep to the same columns: a gutter of two units either side,    */
-/* a slot of three for a number or the mark, then the words.           */
+/* a slot of three for a number or the mark, then the words. No rule   */
+/* between two rows of a group; a hairline between groups.             */
 /* ------------------------------------------------------------------ */
 
-/* ---- A row: a slot for a number or the mark, the words, and what trails. Hairlines between rows. ---- */
-/* The line over the first row lies on the last pixel of what is above it, so the rows start on the unit (and a head row's own line is not doubled). */
-.dr-rows {
-  margin-top: calc(-1 * var(--dr-hair));
-  border-top: var(--dr-hair) solid var(--dr-ink);
-}
-
+/* ---- A row: a slot for a number or the mark, the words, and what trails. Rows are parted by their
+   own height on the unit, never by a rule; a hairline parts groups only (a section's title, a folder). ---- */
 .dr-row {
   display: grid;
-  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--dr-u);
   align-items: center;
   min-height: var(--dr-row);
   padding: 0 var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
   cursor: pointer;
+}
+
+/* A numbered row (a folder's notes in its own order, a footnote) holds its number in the slot before its name. */
+.dr-row.is-numbered {
+  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
 }
 
 .dr-row:focus-visible {
@@ -101,11 +101,7 @@
   color: var(--dr-error);
 }
 
-/* ---- The outline (words): rows without rules. Folders as labels, the open note's headings under it. ---- */
-.dr-outline .dr-row {
-  border-bottom: 0;
-}
-
+/* ---- The outline (words): folders as labels, a hairline between them; the open note's headings under it. ---- */
 .dr-outline-folder {
   display: grid;
   grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
@@ -163,7 +159,6 @@
   align-items: center;
   min-height: var(--dr-row);
   padding: 0 var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
 }
 
@@ -197,15 +192,28 @@
   color: var(--dr-error);
 }
 
-/* A section's title, over its rows. */
+/* A section's title, over its rows: no rule under it. A group after another is parted from it by a hairline over its title. */
 .dr-section {
   display: flex;
   align-items: center;
   gap: var(--dr-u);
   height: var(--dr-row);
   padding: 0 var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
+}
+
+.dr-section:not(:first-child) {
+  margin-top: var(--dr-u);
+  border-top: var(--dr-hair) solid var(--dr-ink);
+}
+
+/* A title that folds its group is pressed itself: no arrow, no button. Folded, it is quieter and counts what it holds. */
+.dr-section > [aria-expanded] {
+  cursor: pointer;
+}
+
+.dr-section > [aria-expanded="false"] {
+  color: var(--dr-muted);
 }
 
 .dr-section > .dr-label {
@@ -222,6 +230,11 @@
   .dr-outline-folder:hover,
   .dr-prop[tabindex]:hover {
     background: var(--dr-surface);
+  }
+
+  .dr-section > [aria-expanded]:hover {
+    color: var(--dr-ink);
+    text-decoration: underline;
   }
 
   .dr-row:hover > .dr-slot,

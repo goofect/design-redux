@@ -60,6 +60,20 @@ function rules(css) {
     assert.deepStrictEqual(wrong, []);
   });
 
+  await check('no rule between two rows of a group: a row, a property, a list of rows draw no line; a hairline parts groups only', () => {
+    const lined = [];
+    styles.forEach((f) => rules(bare(fs.readFileSync(path.join(root, 'styles', f), 'utf8'))).forEach(([head, body]) => {
+      head.split(',').map((x) => x.trim()).forEach((one) => {
+        // What a rule styles is the last part of its selector.
+        const subject = one.split(/\s*[\s>+~]\s*/).pop();
+        // A list of rows may take a line over it where it follows another group (`.dr-detail + .dr-rows`).
+        const parted = /^\.dr-rows(?![\w-])/.test(subject) && /\+\s*\.dr-rows/.test(one);
+        if (/^\.dr-(row|prop|rows)(?![\w-])/.test(subject) && !parted && /(^|[;{\s])border(-top|-bottom)?\s*:/.test(body)) lined.push(`${f}: ${one}`);
+      });
+    }));
+    assert.deepStrictEqual(lined, []);
+  });
+
   await check('a part with rules on Obsidian\'s DOM opens with its selector map', () => {
     const wrong = styles.filter((f) => {
       const css = fs.readFileSync(path.join(root, 'styles', f), 'utf8');

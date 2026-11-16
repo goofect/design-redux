@@ -96,7 +96,9 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
   await check('row: numbered; selected, open, disabled, missing, wrong, a heading', () => {
     const list = dr.rows(fresh());
     const r = dr.row(list, { number: 5, name: 'Truth tables', end: '9 min', path: 'L/T.md' });
-    assert.deepStrictEqual([list.className, r.className, r.querySelector('.dr-slot').textContent, r.querySelector('.dr-row-name').textContent, r.querySelector('.dr-row-end').textContent], ['dr-rows', 'dr-row', '05', 'Truth tables', '9 min']);
+    assert.deepStrictEqual([list.className, r.className, r.querySelector('.dr-slot').textContent, r.querySelector('.dr-row-name').textContent, r.querySelector('.dr-row-end').textContent], ['dr-rows', 'dr-row is-numbered', '05', 'Truth tables', '9 min']);
+    // Without a number a row has no slot: it starts at the gutter.
+    assert.ok(!dr.row(list, { name: 'Unnumbered' }).querySelector('.dr-slot'), 'an unnumbered row keeps an empty slot');
     assert.strictEqual(dr.row(list, { number: 1, name: 'a', selected: true }).getAttribute('aria-selected'), 'true');
     assert.strictEqual(dr.row(list, { number: 1, name: 'a', current: 'page' }).getAttribute('aria-current'), 'page');
     assert.strictEqual(dr.row(list, { number: 1, name: 'a', disabled: true }).getAttribute('aria-disabled'), 'true');
@@ -104,7 +106,7 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     const bad = dr.row(list, { number: 1, name: 'a', error: true, end: 'unreadable', endGlyph: 'alert' });
     assert.ok(bad.classList.contains('is-error') && glyphOf(bad) === 'alert');
     const child = dr.row(dr.rows(root, { outline: true }), { name: 'A heading', child: true, current: 'location' });
-    assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline' && child.querySelector('.dr-slot'));
+    assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline' && !child.querySelector('.dr-slot'));
   });
 
   await check('outline folder: closed and open, by its chevron and aria-expanded', () => {
@@ -143,8 +145,8 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
   await check('table: one header, the sorted column says which way, rows carry their state, an empty one says so', () => {
     const sorts = [];
     const picked = [];
-    const cols = [{ id: 'name', name: 'Name' }, { id: 'words', name: 'Words', number: true, width: 72 }];
-    const t = dr.table(fresh(), { flush: true, columns: cols, sort: { id: 'name', down: false }, onSort: (id) => sorts.push(id), onRow: (r) => picked.push(r.path), rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 420 } }, { number: 2, path: 'b', cells: { name: 'B', words: 'many' }, current: true, invalid: ['words'] }, { number: 3, path: 'c', cells: { name: 'C' }, selected: true }, { number: 4, path: 'd', cells: { name: 'D' }, disabled: true }] });
+    const cols = [{ id: 'name', name: 'Name' }, { id: 'words', name: 'Words', number: true }];
+    const t = dr.table(fresh(), { flush: true, numbered: true, columns: cols, sort: { id: 'name', down: false }, onSort: (id) => sorts.push(id), onRow: (r) => picked.push(r.path), rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 420 } }, { number: 2, path: 'b', cells: { name: 'B', words: 'many' }, current: true, invalid: ['words'] }, { number: 3, path: 'c', cells: { name: 'C' }, selected: true }, { number: 4, path: 'd', cells: { name: 'D' }, disabled: true }] });
     assert.strictEqual(t.className, 'dr-table is-flush');
     const heads = Array.from(t.querySelectorAll('th'));
     assert.deepStrictEqual(heads.map((h) => h.getAttribute('aria-sort')), [null, 'ascending', null]);
@@ -156,8 +158,12 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual(trs.map((r) => [r.getAttribute('aria-current'), r.getAttribute('aria-selected'), r.getAttribute('aria-disabled')]), [[null, null, null], ['page', null, null], [null, 'true', null], [null, null, 'true']]);
     assert.strictEqual(trs[1].children[2].getAttribute('aria-invalid'), 'true');
     assert.strictEqual(trs[0].children[0].textContent, '01');
+    // No number column unless the order means something.
+    const plain = dr.table(root, { columns: cols, rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 1 } }] });
+    assert.deepStrictEqual(Array.from(plain.querySelectorAll('th')).map((h) => h.textContent), ['Name', 'Words']);
+    assert.ok(!plain.querySelector('.is-slot'), 'a number column where no order was set');
     const empty = dr.table(root, { columns: cols, rows: [], empty: { label: 'No notes' } });
-    assert.ok(empty.querySelector('td[colspan="3"] .dr-state .dr-label').textContent === 'No notes');
+    assert.ok(empty.querySelector('td[colspan="2"] .dr-state .dr-label').textContent === 'No notes');
   });
 
   await check('field: empty, filled, wrong with its reason, loading, disabled; it tells what is typed', () => {

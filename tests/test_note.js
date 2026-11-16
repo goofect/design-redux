@@ -95,7 +95,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual(order('.cm-sizer'), ['folder', 'title', 'properties', 'head', 'text']);
     const head = view.contentEl.querySelector('.dr-note-head');
     assert.strictEqual(view.contentEl.querySelector('.dr-note-folder').textContent, 'Logic');
-    assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-chip')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
+    // The properties as one line of name and value, no box.
+    assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-note-props > .dr-note-prop')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
+    assert.ok(!head.querySelector('.dr-chip'), 'a property drawn as a chip');
     w.plugin.settings.notePage = false;
     await w.plugin.saveSettings();
     assert.ok(!view.contentEl.querySelector('.dr-note-head'), 'the head was left behind');
@@ -129,12 +131,29 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([dr.parseValue('yes', true), dr.parseValue('x', 3), dr.parseValue('', ['a'])], [true, 'x', []]);
     await settle();
     const sections = Object.fromEntries(panel.sections(w.file('Logic/A.md')).map((s) => [s.title, s.items.map((i) => `${i.name}${i.end ? `:${i.end}` : ''}`)]));
-    assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B:Logic'] });
+    // A note's folder trails it only where the list mixes folders.
+    assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B'] });
+    // A sheet: no head naming the note again, no numbers, no fold buttons; the plus and the menu on the first title.
+    assert.ok(!view.contentEl.querySelector('.dr-head'), 'the panel names the note again');
+    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-slot')).some((x) => x.textContent), 'the panel numbers its rows');
+    assert.deepStrictEqual(Array.from(view.contentEl.querySelector('.dr-section').querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Add a property', 'More']);
     panel.addProperty(w.file('Logic/A.md'));
     await answer(w, 'course');
     assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
     await panel.propertyMenu(w.file('Logic/A.md'), 'course').click('Remove property');
     assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))));
+    // A group folds by a press on its title (no arrow, no button); folded, the title counts what it holds.
+    Object.assign(w.plugin.settings, { panelPropertyGroups: 'on', panelGroupList: [{ title: 'Main', keys: 'status, week' }], panelFoldedGroups: [] });
+    view.draw();
+    const title = () => Array.from(view.contentEl.querySelectorAll('.dr-section > .dr-label')).find((l) => l.textContent.startsWith('Main'));
+    assert.strictEqual(title().getAttribute('aria-expanded'), 'true');
+    title().click();
+    await settle();
+    assert.deepStrictEqual([title().textContent, title().getAttribute('aria-expanded')], ['Main · 2', 'false']);
+    assert.ok(!view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'a folded group still shows its rows');
+    title().click();
+    await settle();
+    assert.ok(view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'the group did not open again');
     w.plugin.selection.pick(w.file('Logic'));
     await settle();
     assert.strictEqual(view.contentEl.querySelector('.dr-detail-name').textContent, 'Logic', 'a folder picked is not shown in the panel');

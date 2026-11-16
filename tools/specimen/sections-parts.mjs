@@ -14,11 +14,11 @@ const input = (value, placeholder = '', a = {}) => `<input class="dr-input" type
 const chip = (key, value, a = {}) => `<span class="dr-chip ${a.class || ''}"${attrs({ ...a, class: false })}>${key ? `<span class="dr-label">${key}</span>` : ''}<span class="dr-text">${value}</span></span>`;
 
 export function controls() {
-  return section('controls', 'Controls', 'Each state names what carries it besides colour: ash is the pointer, an inner line is the press, the ring is the keyboard, a bar along the foot is on, a dashed line is disabled.', [
+  return section('controls', 'Controls', 'Bare: no frame, no line in any state but the focus ring. Ash is the pointer and the press, the ring is the keyboard, clay is on, muted words are disabled.', [
     component('Icon button', 'A control. Four units square, the glyph two; its word is its tooltip and its aria-label.', [
       shown('rest', iconButton('pin', 'Pin')), shown('hover · ash', iconButton('pin', 'Pin', { class: 'spec-hover' })),
-      shown('pressed · ash, inner line', iconButton('pin', 'Pin', { class: 'spec-active' })), shown('focus · ring', iconButton('pin', 'Pin', { class: 'spec-focus' })),
-      shown('on · clay, foot bar', iconButton('pin', 'Unpin', { 'aria-pressed': 'true' })), shown('disabled · quiet', iconButton('next-note', 'Next note', { 'aria-disabled': 'true' })),
+      shown('pressed · ash', iconButton('pin', 'Pin', { class: 'spec-active' })), shown('focus · ring', iconButton('pin', 'Pin', { class: 'spec-focus' })),
+      shown('on · clay', iconButton('pin', 'Unpin', { 'aria-pressed': 'true' })), shown('disabled · quiet', iconButton('next-note', 'Next note', { 'aria-disabled': 'true' })),
       shown('loading · the glass', iconButton('wait', 'Working', { 'aria-busy': 'true' })),
     ]),
     component('Text button', 'Only where a glyph would not say it: a confirmation, a first choice.', [
@@ -27,12 +27,12 @@ export function controls() {
       shown('destroys · rust line, its word', button('Delete folder', { class: 'is-danger' })), shown('disabled · dashed', button('Move', { 'aria-disabled': 'true' })),
       shown('loading', button(`${glyph('wait')}Moving…`, { 'aria-busy': 'true' })),
     ]),
-    component('Zoom control', 'Objects, shelves, words: the same place at three levels of detail.', [
+    component('Zoom control', 'Objects, shelves, words: the same place at three levels of detail. Three bare glyphs; the level shown on a clay square.', [
       shown('objects shown', zoom(0)), shown('shelves shown', zoom(1)), shown('words shown', zoom(2)),
       shown('hover on shelves', zoom(0, { 1: { class: 'spec-hover' } })), shown('focus on the level shown', zoom(1, { 1: { class: 'spec-focus' } })),
       shown('a level not to be had', zoom(0, { 2: { 'aria-disabled': 'true' } })),
     ]),
-    component('Tabs', "A note's pages. The label voice; the open page in clay, bold, with the foot bar. Many scroll a whole tab at a time, an ellipsis at the edge where more are.", [
+    component('Tabs', "A note's pages. Bare words; the open page on a clay fill, bold. Many scroll a whole tab at a time, an ellipsis at the edge where more are.", [
       shown('first page open', tabs(['Notes', 'Proofs', 'Exercises'], 0)), shown('hover on another', tabs(['Notes', 'Proofs', 'Exercises'], 0, { 2: { class: 'spec-hover' } })),
       shown('focus', tabs(['Notes', 'Proofs', 'Exercises'], 1, { 1: { class: 'spec-focus' } })), shown('one disabled', tabs(['Notes', 'Proofs', 'Locked'], 0, { 2: { 'aria-disabled': 'true' } })),
       // As the script leaves them at the start of the row: the tabs that fit whole, the next not drawn, the ellipsis at the edge.
@@ -49,10 +49,10 @@ export function controls() {
       shown('wrong · rust line, glyph, reason', field('Name', `${input('Logic/Week: 6')}${glyph('alert')}`, 'A name can’t hold a colon.', { 'aria-invalid': 'true' })),
       shown('disabled · dashed', field('Name', input('Truth tables', '', { disabled: true }), '', { 'aria-disabled': 'true' })),
     ]),
-    component('Chip', "Plain words in a hairline: a property under a note's title, or a filter that can be on.", [
-      shown('a property', chip('Status', 'Draft')), shown('a value alone', chip('', 'Logic')),
+    component('Chip', "Plain words, no box: a filter's part that takes itself off, or a filter that can be on.", [
+      shown('a filter’s part', `<span class="dr-chip" role="button" tabindex="0" aria-label="Take off: in Logic"><span class="dr-label">In</span><span class="dr-text">Logic</span>${glyph('close')}</span>`), shown('a value alone', chip('', 'Logic')),
       shown('a filter', chip('', 'Unread', { role: 'checkbox', tabindex: 0, 'aria-checked': 'false' })), shown('hover', chip('', 'Unread', { role: 'checkbox', class: 'spec-hover', 'aria-checked': 'false' })),
-      shown('focus', chip('', 'Unread', { role: 'checkbox', class: 'spec-focus', 'aria-checked': 'false' })), shown('on · clay, the mark', chip('', 'Unread', { role: 'checkbox', 'aria-checked': 'true' })),
+      shown('focus', chip('', 'Unread', { role: 'checkbox', class: 'spec-focus', 'aria-checked': 'false' })), shown('on · clay', chip('', 'Unread', { role: 'checkbox', 'aria-checked': 'true' })),
       shown('disabled', chip('Week', '6', { 'aria-disabled': 'true' })), shown('wrong', chip('Week', 'six', { 'aria-invalid': 'true' })),
     ]),
   ].join(''));
@@ -63,11 +63,11 @@ export function controls() {
 const face = (faces, f) => faces[f.path];
 export const cell = (faces, f, a = {}) => `<div class="dr-cell ${a.class || ''}" role="button" tabindex="0" aria-label="${esc(f.name)}, ${f.count} notes"${attrs({ ...a, class: false, inner: false })}>${a.inner || glyph(face(faces, f))}<span class="dr-cell-label dr-label"><span class="dr-cell-name dr-clip">${esc(f.name)}</span><span class="dr-cell-count">${f.count}</span></span></div>`;
 export const noteCell = (n, a = {}) => `<div class="dr-cell" role="button" tabindex="0" aria-label="${esc(n.title)}"${attrs(a)}>${glyph('note')}<span class="dr-cell-label dr-label"><span class="dr-cell-name dr-clip">${esc(n.title)}</span></span></div>`;
-export const row = (n, a = {}) => `<div class="dr-row ${a.class || ''}" role="button" tabindex="0"${attrs({ ...a, class: false, end: false })}><span class="dr-slot dr-label"><span>${pad(n.number)}</span></span><span class="dr-row-name dr-text dr-clip">${esc(n.title)}</span><span class="dr-row-end dr-label">${a.end || mins(n.words)}</span></div>`;
+export const row = (n, a = {}) => `<div class="dr-row${a.plain ? '' : ' is-numbered'} ${a.class || ''}" role="button" tabindex="0"${attrs({ ...a, class: false, end: false, plain: false })}>${a.plain ? '' : `<span class="dr-slot dr-label"><span>${pad(n.number)}</span></span>`}<span class="dr-row-name dr-text dr-clip">${esc(n.title)}</span><span class="dr-row-end dr-label">${a.end || mins(n.words)}</span></div>`;
 const bar = (s, a = {}) => `<span class="dr-bar ${a.class || ''}" style="--dr-size:${s}" role="button" tabindex="-1"${attrs({ ...a, class: false })}></span>`;
 export const shelf = (f, sizes, marks = {}, headAttrs = {}) => `<div class="dr-shelf"><div class="dr-shelf-head" role="button" tabindex="0"${attrs(headAttrs)}><span class="dr-label dr-clip">${esc(f.name)}</span><span class="dr-shelf-count dr-label">${f.count}</span></div><div class="dr-shelf-bars">${sizes.map((s, i) => bar(s, marks[i] || {})).join('')}</div></div>`;
 export const outlineFolder = (f, open) => `<div class="dr-outline-folder" role="button" tabindex="0" aria-expanded="${open}"><span class="dr-slot">${glyph(open ? 'down' : 'next')}</span><span class="dr-label dr-clip">${esc(f.name)}</span><span class="dr-row-end dr-label">${f.count}</span></div>`;
-const child = (text, a = {}) => `<div class="dr-row is-child" role="button" tabindex="-1"${attrs(a)}><span class="dr-slot"></span><span class="dr-row-name dr-text dr-clip">${esc(text)}</span></div>`;
+const child = (text, a = {}) => `<div class="dr-row is-child" role="button" tabindex="-1"${attrs(a)}><span class="dr-row-name dr-text dr-clip">${esc(text)}</span></div>`;
 const prop = (key, value, a = {}) => `<div class="dr-prop ${a.class || ''}" tabindex="0"${attrs({ ...a, class: false, end: false })}><span class="dr-label dr-clip">${key}</span><span class="dr-prop-value dr-text dr-clip">${value}</span>${a.end || ''}</div>`;
 const cover = (tone) => `<img class="dr-cell-cover" alt="" src="data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="60" height="80"><rect width="60" height="80" fill="${tone}"/><rect x="12" y="16" width="36" height="4" fill="#E9E6DF"/><rect x="12" y="26" width="24" height="4" fill="#E9E6DF"/></svg>`)}">`;
 
@@ -85,7 +85,7 @@ export function lists(faces) {
       shown("the person's own cover", box(cell(faces, f, { inner: cover('#8A3F2C') }))), shown('disabled · quiet', box(cell(faces, f, { 'aria-disabled': 'true' }))),
       shown('wrong · alert in the corner, the reason in its tooltip', box(cell(faces, f, { inner: `${glyph(face(faces, f))}<span class="dr-cell-flag">${glyph('alert')}</span>` }))),
     ]),
-    component('Row', 'A note in a list: its number in the slot, its name, what trails. Hairlines between.', [
+    component('Row', 'A note in a list: its number in the slot, its name, what trails. No line between rows: their height parts them.', [
       shown('rest', rows(row(n))), shown('hover · ash', rows(row(n, { class: 'spec-hover' }))), shown('focus · ring inside', rows(row(n, { class: 'spec-focus' }))),
       shown('selected · clay, hollow mark', rows(row(n, { 'aria-selected': 'true' }))), shown('open · clay, solid mark, bold', rows(row(n, { 'aria-current': 'page' }))),
       shown('disabled · quiet', rows(row(n, { 'aria-disabled': 'true' }))), shown('not written yet · dashed line', rows(row({ ...n, title: 'Modal logic' }, { class: 'is-missing', end: '—' }))),
@@ -102,8 +102,9 @@ export function lists(faces) {
       shown('a folder, closed', `<div class="dr-outline spec-rows">${outlineFolder(folders[0], false)}</div>`), shown('hover', `<div class="dr-outline spec-rows">${outlineFolder(folders[0], false).replace('dr-outline-folder', 'dr-outline-folder spec-hover')}</div>`),
       shown('a folder, open, its notes', `<div class="dr-outline spec-rows">${outlineFolder(f, true)}${row(logic[3])}${row(n, { 'aria-current': 'page' })}${child(headings[0])}${child(headings[1], { 'aria-current': 'location' })}${child(headings[2])}${row(logic[5])}</div>`),
     ]),
-    component('Panel row', "A property: its name in the label voice, its value in the reading voice. A section's title over its rows.", [
-      shown('a section', `<div class="spec-rows"><div class="dr-section"><span class="dr-label">Properties</span>${iconButton('plus', 'Add a property')}</div>${prop('Status', 'Draft')}${prop('Course', 'Logic')}</div>`),
+    component('Panel row', "A property: its name in the label voice, muted, its value beside it in the reading voice. A section's title over its rows, no line under it; a press on a group's title folds it.", [
+      shown('a section', `<div class="spec-rows"><div class="dr-section"><span class="dr-label" role="button" tabindex="0" aria-expanded="true">General</span>${iconButton('plus', 'Add a property')}${iconButton('more', 'More')}</div>${prop('Status', 'Draft')}${prop('Course', 'Logic')}</div>`),
+      shown('a group folded', `<div class="spec-rows"><div class="dr-section"><span class="dr-label" role="button" tabindex="0" aria-expanded="false">Relationships · 2</span></div></div>`),
       shown('hover', `<div class="spec-rows spec-top">${prop('Status', 'Draft', { class: 'spec-hover' })}</div>`), shown('focus', `<div class="spec-rows spec-top">${prop('Status', 'Draft', { class: 'spec-focus' })}</div>`),
       shown('selected', `<div class="spec-rows spec-top">${prop('Status', 'Draft', { 'aria-selected': 'true' })}</div>`), shown('no value · a dash', `<div class="spec-rows spec-top">${prop('Sources', '—', { class: 'is-empty' })}</div>`),
       shown('wrong · alert, rust words', `<div class="spec-rows spec-top">${prop('Week', 'six', { 'aria-invalid': 'true', end: glyph('alert') })}</div>`), shown('disabled', `<div class="spec-rows spec-top">${prop('Created', '3 October', { 'aria-disabled': 'true' })}</div>`),
@@ -113,8 +114,8 @@ export function lists(faces) {
 
 // ---- Table and blocks ----
 
-const table = (body, sorted = true) => `<table class="dr-table"><thead><tr><th class="is-slot" scope="col"><span class="dr-unseen">Number</span></th><th scope="col"${sorted ? ' aria-sort="ascending"' : ''}><span class="dr-th">Name${sorted ? glyph('up') : ''}</span></th><th scope="col" style="width:96px"><span class="dr-th">Status</span></th><th scope="col" class="is-number" style="width:72px">Words</th></tr></thead><tbody>${body}</tbody></table>`;
-const tr = (n, status, a = {}) => `<tr${attrs({ ...a, bad: false })}><td class="is-slot">${pad(n.number)}</td><td>${esc(n.title)}</td><td${a.bad ? ' aria-invalid="true"' : ''}>${status}</td><td class="is-number">${n.words.toLocaleString('en')}</td></tr>`;
+const table = (body, sorted = true) => `<table class="dr-table"><thead><tr><th scope="col"${sorted ? ' aria-sort="ascending"' : ''}><span class="dr-th"><span>Name</span>${sorted ? glyph('up') : ''}</span></th><th scope="col"><span class="dr-th"><span>Status</span></span></th><th scope="col" class="is-number"><span class="dr-th"><span>Words</span></span></th></tr></thead><tbody>${body}</tbody></table>`;
+const tr = (n, status, a = {}) => `<tr${attrs({ ...a, bad: false })}><td><span class="dr-cell-text">${esc(n.title)}</span></td><td${a.bad ? ' aria-invalid="true"' : ''}><span class="dr-cell-text">${status}</span></td><td class="is-number"><span class="dr-cell-text">${n.words.toLocaleString('en')}</span></td></tr>`;
 const menuItem = (g, title, cls = '', sub = false) => `<div class="menu-item ${cls}"><div class="menu-item-icon">${glyph(g)}</div><div class="menu-item-title">${title}</div>${sub ? `<div class="menu-item-icon">${glyph('next')}</div>` : ''}</div>`;
 const state = (g, label, text, extra = '', cls = '') => `<div class="dr-state ${cls}">${glyph(g)}<span class="dr-label">${label}</span>${text ? `<span class="dr-text is-running">${text}</span>` : ''}${extra}</div>`;
 export const strip = (f, n, faces, a = {}) => `<div class="dr-strip">${glyph(f ? face(faces, f) : 'note')}<div class="dr-strip-words"><span class="dr-strip-title dr-text dr-clip">${esc(n.title)}</span><span class="dr-strip-place dr-label dr-clip">${f ? `${esc(f.name)} · ${n.number} of ${f.count}` : 'No folder'}</span></div>${iconButton('previous-note', 'Previous note', a.first || !f ? { 'aria-disabled': 'true' } : {})}${iconButton('next-note', 'Next note', f ? {} : { 'aria-disabled': 'true' })}${iconButton('more', 'More')}</div>`;
@@ -124,9 +125,9 @@ export function blocks(faces) {
   const body = tr(logic[2], 'Done') + tr(logic[3], 'Done', { class: 'spec-hover' }) + tr(logic[4], 'Draft', { 'aria-current': 'page' }) + tr(logic[5], 'Draft', { 'aria-selected': 'true' }) + tr(logic[6], 'drafft', { bad: true }) + tr(logic[7], 'To write', { 'aria-disabled': 'true' });
   const sheet = (title, text, inner, actions) => `<div class="modal"><div class="modal-close-button">${iconButton('close', 'Close')}</div><div class="modal-title">${title}</div><div class="modal-content"><div class="dr dr-sheet"><p class="dr-text is-running">${text}</p>${inner}<div class="dr-sheet-actions">${actions}</div></div></div></div>`;
   return section('blocks', 'Table, strip, menu, sheet, say-so', 'The larger pieces, built from the ones above.', [
-    component('Table', 'An ink grid with one header for the whole of it; the arrow says how it is sorted. Rows: rest, hover, open, selected, a value that is wrong, disabled.', [
+    component('Table', 'A line under the header, none between columns or rows; columns as wide as what they hold; the arrow beside the name of the column it is sorted by. Numbers only where the folder has its own order. Rows: rest, hover, open, selected, a value that is wrong, disabled.', [
       shown('', `<div style="width:560px">${table(body)}</div>`),
-      shown('empty', `<div style="width:320px">${table(`<tr><td colspan="4">${state('empty', 'No notes', '').replace('dr-state', 'dr-state spec-tight')}</td></tr>`, false)}</div>`),
+      shown('empty', `<div style="width:320px">${table(`<tr><td colspan="3">${state('empty', 'No notes', '').replace('dr-state', 'dr-state spec-tight')}</td></tr>`, false)}</div>`),
     ]),
     component('Strip', 'Across the foot of the note: the folder, the note, its place, and on. Nothing floats, nothing waits for the pointer.', [
       shown('rest', `<div style="width:560px">${strip(f, logic[4], faces)}</div>`), shown('at the first note · back is quiet', `<div style="width:400px">${strip(f, logic[0], faces, { first: true })}</div>`),

@@ -8,21 +8,23 @@ import { rowNumber } from '../core/text.js';
 import { sayso } from './state.js';
 
 /**
- * { columns: [{ id, name, number, width (px) }], rows: [{ number, cells:
- * { id: text }, selected, current, disabled, invalid: [column ids], path }],
- * sort: { id, down }, onSort(id), onRow(row, event), flush, empty: { label } }.
+ * { columns: [{ id, name, number }], rows: [{ number, cells: { id: text },
+ * selected, current, disabled, invalid: [column ids], path }], numbered (the
+ * number column, only where the order means something), sort: { id, down },
+ * onSort(id), onRow(row, event), flush, empty: { label } }.
  */
 export function table(parent, opts) {
   const node = el(parent, 'table', `dr-table${opts.flush ? ' is-flush' : ''}`);
   const head = el(el(node, 'thead'), 'tr');
-  const first = el(head, 'th', 'is-slot');
-  first.setAttribute('scope', 'col');
-  el(first, 'span', 'dr-unseen', 'Number');
+  if (opts.numbered) {
+    const first = el(head, 'th', 'is-slot');
+    first.setAttribute('scope', 'col');
+    el(first, 'span', 'dr-unseen', 'Number');
+  }
   opts.columns.forEach((col) => {
     const th = el(head, 'th', col.number ? 'is-number' : '');
     th.setAttribute('scope', 'col');
     th.setAttribute('tabindex', '0');
-    if (col.width) th.setAttribute('width', String(col.width));
     const inner = el(th, 'span', 'dr-th');
     el(inner, 'span', '', col.name);
     if (opts.sort && opts.sort.id === col.id) {
@@ -34,7 +36,7 @@ export function table(parent, opts) {
   const body = el(node, 'tbody');
   if (!opts.rows.length) {
     const td = el(el(body, 'tr'), 'td');
-    td.setAttribute('colspan', String(opts.columns.length + 1));
+    td.setAttribute('colspan', String(opts.columns.length + (opts.numbered ? 1 : 0)));
     sayso(td, { glyph: 'empty', label: (opts.empty && opts.empty.label) || 'Nothing here' });
     return node;
   }
@@ -42,10 +44,11 @@ export function table(parent, opts) {
     const tr = el(body, 'tr');
     tr.setAttribute('tabindex', '0');
     if (r.path != null) tr.dataset.path = r.path;
-    el(tr, 'td', 'is-slot', r.number != null ? rowNumber(r.number) : '');
+    if (opts.numbered) el(tr, 'td', 'is-slot', r.number != null ? rowNumber(r.number) : '');
     opts.columns.forEach((col) => {
       const value = r.cells[col.id];
-      const td = el(tr, 'td', col.number ? 'is-number' : '', value == null ? '' : String(value));
+      const td = el(tr, 'td', col.number ? 'is-number' : '');
+      el(td, 'span', 'dr-cell-text', value == null ? '' : String(value));
       flag(td, 'aria-invalid', (r.invalid || []).includes(col.id));
     });
     flag(tr, 'aria-selected', r.selected);

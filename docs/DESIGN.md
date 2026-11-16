@@ -27,7 +27,9 @@ called done.
 1. **Objects, not chrome.** A folder or a note appears as an object: a solid
    glyph on the ground, centered in its grid cell, with nothing around it.
    No cards, panels, frames or backgrounds behind objects. The interface
-   around them is hairlines and a few icon buttons.
+   around them is a few bare icon buttons, and hairlines only where they
+   part one thing from another: one under a header, one between groups,
+   never round what already sits in a pane, never between two rows.
 2. **The grid is the structure.** An 8px base unit; every position, size
    and gap a multiple of it. Object cells are square and equal. Lists,
    tables and grids snap to the same columns. Empty space is used on purpose
@@ -319,14 +321,15 @@ exactly as it does without the plugin.
   on the ground with nothing around it. The old generated cover art is not
   used.
 - **A folder picked (detail).** The glyph large and centered with wide space
-  around it, the name and counts as small capitals under it, a row of round
-  icon buttons (open, new note, pin, more), then its notes as a numbered
-  list with hairlines between rows. The open note is marked by a small ink
-  dot and a clay fill.
+  around it, the name and counts as small capitals under it, a row of
+  icon buttons (open, new note, pin, more), a hairline, then its notes as a
+  list with no lines between rows, numbered only in the folder's own order.
+  The open note is a clay fill.
 - **Home and browse view:** the same object grid at window width, more
-  columns, the same zoom control; the notes table is a 1px ink grid with one
-  header for the whole table, small-capital headers, no zebra. The preview
-  is the folder-picked layout.
+  columns, the same zoom control; the notes table has one line under its
+  header and none between columns or rows, columns as wide as their
+  content, the sort mark beside the column's name, and a number column only
+  in the folder's own order. The preview is the folder-picked layout.
 - **Note page:** in the note's own column, wherever it is laid out (the
   editor, reading view), so it scrolls with the text: the folder as a label
   over the title; under the title (and under Obsidian's own properties, when
@@ -338,8 +341,10 @@ exactly as it does without the plugin.
   not a floating capsule: the folder glyph small, the title and place in the
   collection as text, previous, next and more as icon buttons. It never
   covers text and needs no hover to show its actions.
-- **Properties panel:** plain key and value rows with hairlines; section
-  titles as small-capital labels.
+- **Properties panel:** a specification sheet: a faint capital name, its
+  value beside it; no rules between its parts, no head repeating the note's
+  name, no arrows or fold buttons on its titles (a press on a group's title
+  folds it); mentions and links as plain rows without numbers.
 - **Mind maps:** nodes square with a 1px ink border on bone, links as plain
   ink lines, the selected node a clay fill; user branch colors kept as
   semantic colors; toolbar, minimap and legend follow the overlay rules and

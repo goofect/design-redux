@@ -2,9 +2,9 @@
 /* Controls: icon button, text button, segments (the zoom control and  */
 /* tabs), field, chip. The toggle is Obsidian's own: 40-overlays.css.  */
 /*                                                                     */
-/* A control is four units high. Ash under the pointer; pressed, ash   */
-/* and an inner line; on or open, a clay fill and an ink bar along its */
-/* foot; disabled, quieter and, where it has a border, dashed.         */
+/* A control is four units high and bare: no frame, no line in any    */
+/* state but the focus ring. Ash under the pointer and pressed; on or  */
+/* open, a clay fill; disabled, quieter.                               */
 /* ------------------------------------------------------------------ */
 
 /* ---- Icon button: the plugin's controls are these. A square of four units, the glyph two. ---- */
@@ -20,17 +20,12 @@
 
 .dr-icon-button:active {
   background: var(--dr-surface);
-  outline: var(--dr-hair) solid var(--dr-ink);
-  outline-offset: calc(-1 * var(--dr-hair));
 }
 
-/* On (a pin that holds, a panel that is showing). */
+/* On (a pin that holds, a panel that is showing): the clay square. */
 .dr-icon-button[aria-pressed="true"] {
   background: var(--dr-clay);
   color: var(--dr-on-clay);
-  /* The bar is ink, not the clay's own dark: against the ground it reads as a thicker line in both schemes. */
-  border-bottom: var(--dr-ring) solid var(--dr-ink);
-  padding-top: var(--dr-ring);
 }
 
 .dr-icon-button[aria-disabled="true"] {
@@ -93,14 +88,11 @@ button.dr-button {
   cursor: progress;
 }
 
-/* ---- Segments: a row of choices in one hairline frame. The zoom control's are glyphs; tabs' are labels. ---- */
+/* ---- Segments: a row of bare choices, no frame and no line between them. The zoom control's are glyphs; tabs' are words. ---- */
 .dr-segments {
   display: inline-flex;
   flex: none;
   height: var(--dr-row);
-  /* The frame is drawn over the segments' own edges, so the control stays a whole number of units. */
-  outline: var(--dr-hair) solid var(--dr-ink);
-  outline-offset: calc(-1 * var(--dr-hair));
 }
 
 .dr-segment {
@@ -114,11 +106,7 @@ button.dr-button {
   cursor: pointer;
 }
 
-.dr-segment + .dr-segment {
-  border-left: var(--dr-hair) solid var(--dr-ink);
-}
-
-/* A glyph segment is four units with its dividing line inside it: three of them are twelve units, to the pixel. */
+/* A glyph segment is four units square: three of them are twelve units, to the pixel. */
 .dr-segments:not(.dr-tabs) > .dr-segment {
   width: var(--dr-row);
   padding: 0;
@@ -132,13 +120,14 @@ button.dr-button {
   background: var(--dr-surface);
 }
 
-/* The level shown, the page open. */
+/* The level shown, the page open: on a clay square, nothing round it. */
 .dr-segment[aria-checked="true"],
 .dr-segment[aria-selected="true"] {
   background: var(--dr-clay);
   color: var(--dr-on-clay);
-  border-bottom: var(--dr-ring) solid var(--dr-ink);
-  padding-top: var(--dr-ring);
+}
+
+.dr-segment[aria-selected="true"] {
   font-weight: 700;
 }
 
@@ -165,7 +154,7 @@ button.dr-button {
 
 .dr-tabs > .dr-segment {
   flex: none;
-  padding: 0 var(--dr-gutter);
+  padding: 0 var(--dr-u);
   scroll-snap-align: start;
 }
 
@@ -258,7 +247,7 @@ input.dr-input::placeholder {
   color: var(--dr-error);
 }
 
-/* ---- Chip: plain words in a hairline. A property under a note's title; a filter that can be on. ---- */
+/* ---- Chip: plain words, no box. A filter's part (it closes) or a filter that can be on. ---- */
 .dr-chip {
   display: inline-flex;
   align-items: center;
@@ -267,7 +256,6 @@ input.dr-input::placeholder {
   max-width: 100%;
   height: var(--dr-line-loose);
   padding: 0 var(--dr-u);
-  border: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
   white-space: nowrap;
 }
@@ -290,27 +278,17 @@ input.dr-input::placeholder {
   color: var(--dr-on-clay);
 }
 
-.dr-chip[aria-checked="true"]::before {
-  content: "";
-  width: var(--dr-mark);
-  height: var(--dr-mark);
-  background: currentColor;
-}
-
 .dr-chip[aria-checked="true"] > .dr-label,
 .dr-chip:active > .dr-label {
   color: inherit;
 }
 
 .dr-chip[aria-disabled="true"] {
-  border-style: dashed;
-  border-color: var(--dr-muted);
   color: var(--dr-muted);
   cursor: default;
 }
 
 .dr-chip[aria-invalid="true"] {
-  border-color: var(--dr-error);
   color: var(--dr-error);
 }
 
@@ -356,12 +334,12 @@ input.dr-input::placeholder {
   }
 }
 
-/* ---- A chip whose value was given a tone: its line and its words in it. ---- */
-.dr-chip[data-tone="rust"] { border-color: var(--dr-rust); color: var(--dr-rust); }
-.dr-chip[data-tone="ochre"] { border-color: var(--dr-ochre); color: var(--dr-ochre); }
-.dr-chip[data-tone="moss"] { border-color: var(--dr-moss); color: var(--dr-moss); }
-.dr-chip[data-tone="slate"] { border-color: var(--dr-slate); color: var(--dr-slate); }
-.dr-chip[data-tone="plum"] { border-color: var(--dr-plum); color: var(--dr-plum); }
+/* ---- A chip whose value was given a tone: its words in it. ---- */
+.dr-chip[data-tone="rust"] { color: var(--dr-rust); }
+.dr-chip[data-tone="ochre"] { color: var(--dr-ochre); }
+.dr-chip[data-tone="moss"] { color: var(--dr-moss); }
+.dr-chip[data-tone="slate"] { color: var(--dr-slate); }
+.dr-chip[data-tone="plum"] { color: var(--dr-plum); }
 
 /* A chip that takes itself off: its close glyph after its words. */
 .dr-chip > .dr-glyph {

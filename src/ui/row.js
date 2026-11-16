@@ -16,16 +16,18 @@ export function rows(parent, opts = {}) {
 }
 
 /**
- * A row. { number, name, end (words), endGlyph, selected, current (true, or
- * 'page', 'location'), disabled, missing, error, child, run, path }.
+ * A row. { number, slot (other words for the slot, as a footnote's id), name,
+ * end (words), endGlyph, selected, current (true, or 'page', 'location'),
+ * disabled, missing, error, child, run, path }. Only a numbered row has the
+ * slot: numbers stand only where the order means something.
  */
 export function row(list, opts) {
-  const node = el(list, 'div', `dr-row${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
+  const numbered = opts.number != null || opts.slot != null;
+  const node = el(list, 'div', `dr-row${numbered ? ' is-numbered' : ''}${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
   asButton(node, null, opts.run);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
-  const slot = el(node, 'span', 'dr-slot dr-label');
-  if (opts.number != null) el(slot, 'span', '', rowNumber(opts.number));
+  if (numbered) el(el(node, 'span', 'dr-slot dr-label'), 'span', '', opts.number != null ? rowNumber(opts.number) : String(opts.slot));
   el(node, 'span', 'dr-row-name dr-text dr-clip', opts.name);
   if (opts.end != null || opts.endGlyph) {
     const end = el(node, 'span', 'dr-row-end dr-label');
@@ -67,10 +69,18 @@ export function propRow(parent, opts) {
   return node;
 }
 
-/** A section's title over its rows. { title, buttons: [what iconButton takes] }. */
+/**
+ * A section's title over its rows. { title, buttons: [what iconButton takes],
+ * fold: { open, run } }. A title that folds its group is pressed itself: no
+ * arrow and no button, its state in aria-expanded.
+ */
 export function sectionTitle(parent, opts) {
   const node = el(parent, 'div', 'dr-section');
-  el(node, 'span', 'dr-label', opts.title);
+  const label = el(node, 'span', 'dr-label', opts.title);
+  if (opts.fold) {
+    asButton(label, null, opts.fold.run);
+    label.setAttribute('aria-expanded', String(!!opts.fold.open));
+  }
   (opts.buttons || []).forEach((b) => iconButton(node, b));
   return node;
 }

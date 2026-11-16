@@ -1,15 +1,18 @@
 /* ------------------------------------------------------------------ */
 /* The table                                                           */
 /*                                                                     */
-/* An ink grid, one header for the whole of it, no zebra.              */
+/* Horizontal lines only: one under the header, one between groups.  */
+/* No line between columns or rows; columns as wide as their content; */
+/* the number column only where the folder has its own order.         */
 /* ------------------------------------------------------------------ */
 
-/* ---- The table: an ink grid, one header for the whole of it, no zebra. ---- */
+/* ---- The table: a line under the header, no grid, no zebra; columns as wide as what they hold. ---- */
 .dr-table {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   border-collapse: collapse;
   border-spacing: 0;
-  table-layout: fixed;
+  table-layout: auto;
   color: var(--dr-ink);
 }
 
@@ -17,12 +20,27 @@
 .dr-table td {
   height: var(--dr-row);
   padding: 0 var(--dr-u);
-  border: var(--dr-hair) solid var(--dr-ink);
+  border: 0;
   text-align: left;
   vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* A long name is cut, so one note can't push the other columns off. */
+.dr-table .dr-cell-text {
+  display: block;
+  max-width: calc(48 * var(--dr-u));
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.dr-table thead th {
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+}
+
+/* Groups, where a table has them, are parted by a line. */
+.dr-table tbody + tbody > tr:first-child > td {
+  border-top: var(--dr-hair) solid var(--dr-ink);
 }
 
 .dr-table th {
@@ -34,12 +52,15 @@
   cursor: pointer;
 }
 
-/* A header's own row of name and arrow; the arrow says which way the column is sorted. */
+/* A header's name, and the arrow right beside it saying which way the column is sorted. */
 .dr-th {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--dr-u);
+}
+
+.dr-table .is-number > .dr-th {
+  flex-direction: row-reverse;
 }
 
 .dr-table .is-number {
@@ -84,19 +105,10 @@
   background: var(--dr-on-clay);
 }
 
-/* A table that fills its pane from edge to edge leaves the pane's own lines to close it. */
+/* A table that sits in its pane starts on the pane's gutter. */
 .dr-table.is-flush th:first-child,
 .dr-table.is-flush td:first-child {
-  border-left: 0;
-}
-
-.dr-table.is-flush th:last-child,
-.dr-table.is-flush td:last-child {
-  border-right: 0;
-}
-
-.dr-table.is-flush th {
-  border-top: 0;
+  padding-left: var(--dr-gutter);
 }
 
 .dr-table td:focus-visible,

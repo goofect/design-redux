@@ -274,8 +274,15 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     assert.deepStrictEqual(leaf.getViewState().state, { at: 'Reading' });
     await view.screen.setLevel('words');
     const heads = Array.from(view.screen.host.querySelectorAll('th')).map((h) => h.textContent);
-    assert.deepStrictEqual(heads, ['Number', 'Name', 'Domain', 'Status', 'Words']);
-    assert.deepStrictEqual(Array.from(view.screen.host.querySelectorAll('tbody td')).map((t) => t.textContent), ['01', 'Hume', 'epistemology', 'draft', String(w.plugin.index.words(w.file('Reading/Hume.md')))]);
+    assert.deepStrictEqual(heads, ['Name', 'Domain', 'Status', 'Words'], 'a number column where the folder has no order of its own');
+    assert.deepStrictEqual(Array.from(view.screen.host.querySelectorAll('tbody td')).map((t) => t.textContent), ['Hume', 'epistemology', 'draft', String(w.plugin.index.words(w.file('Reading/Hume.md')))]);
+    // A folder in the person's own order is numbered.
+    w.plugin.settings.albumSorts = { Reading: 'own' };
+    view.screen.draw();
+    assert.strictEqual(view.screen.host.querySelector('th').textContent, 'Number');
+    assert.strictEqual(view.screen.host.querySelector('tbody td').textContent, '01');
+    w.plugin.settings.albumSorts = {};
+    view.screen.draw();
     view.screen.go(null);
     view.screen.host.querySelectorAll('th')[1].click();
     view.screen.host.querySelectorAll('th')[1].click();

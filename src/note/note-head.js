@@ -10,11 +10,10 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { asButton, clear, el } from '../core/dom.js';
+import { asButton, clear, el, glyph } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { propOf, valueTone, valuesOf } from '../core/notes.js';
 import { listOf } from '../core/text.js';
-import { chip } from '../ui/field.js';
 
 /** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
 function placesOf(view) {
@@ -50,7 +49,7 @@ export function noteHeads(view) {
     if (!head) {
       head = doc.createElement('div');
       head.className = 'dr dr-note-head';
-      ['dr-note-chips', 'dr-note-pages'].forEach((cls) => el(head, 'div', cls));
+      ['dr-note-props', 'dr-note-pages'].forEach((cls) => el(head, 'div', cls));
     }
     let after = title || folder;
     if (after.nextElementSibling && after.nextElementSibling !== head && after.nextElementSibling.classList.contains('metadata-container')) after = after.nextElementSibling;
@@ -82,7 +81,7 @@ export class NotePage extends Feature {
     this.add(() => noteViews(this.app).forEach((view) => {
       noteHeads(view).forEach(({ folder, head }) => {
         clear(folder);
-        clear(head.querySelector('.dr-note-chips'));
+        clear(head.querySelector('.dr-note-props'));
       });
       tidyNoteHeads(view);
     }));
@@ -106,16 +105,23 @@ export class NotePage extends Feature {
           if (library) library.browse(parent);
         });
       }
-      const chips = clear(head.querySelector('.dr-note-chips'));
+      // The properties: one line of name and value, a dot between, no box. A value its folder's schema finds wrong is in the error's tone with the alert glyph beside it.
+      const line = clear(head.querySelector('.dr-note-props'));
       if (!props) return;
       listOf(this.settings.panelPrimaryProps).forEach((key) => {
         const values = valuesOf(propOf(props, key));
         if (!values.length) return;
         const tone = values.length === 1 ? valueTone(this.settings, key, values[0]) : null;
         const wrong = this.plugin.checkValue ? this.plugin.checkValue(file, key, propOf(props, key)) : null;
-        const c = chip(chips, { name: key, value: values.join(', '), invalid: !!wrong });
-        if (wrong) c.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
-        if (tone) c.dataset.tone = tone;
+        const prop = el(line, 'span', 'dr-note-prop');
+        el(prop, 'span', 'dr-label', key);
+        const value = el(prop, 'span', 'dr-text', values.join(', '));
+        if (tone) value.dataset.tone = tone;
+        if (wrong) {
+          prop.setAttribute('aria-invalid', 'true');
+          prop.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
+          glyph(prop, 'alert');
+        }
       });
     });
     tidyNoteHeads(view);
@@ -123,7 +129,7 @@ export class NotePage extends Feature {
 
   settingsRows() {
     return [
-      { key: 'notePageChips', name: 'Properties as chips', desc: 'The note’s main properties under its folder.', type: 'toggle' },
+      { key: 'notePageChips', name: 'Properties under the title', desc: 'The note’s main properties on one line under its title: name and value.', type: 'toggle' },
       { key: 'panelPrimaryProps', name: 'Which properties', desc: 'By name, with commas between.', type: 'text' },
     ];
   }
@@ -132,4 +138,4 @@ NotePage.key = 'notePage';
 NotePage.title = 'Note page';
 NotePage.glyph = 'note';
 NotePage.section = 'Notes';
-NotePage.about = 'A note’s folder above it, and its main properties as chips.';
+NotePage.about = 'A note’s folder over its title, and its main properties on a line under it.';

@@ -32,10 +32,9 @@
   padding-top: var(--dr-u);
 }
 
-/* Words: the outline ends on a hairline. */
-.dr-outline {
-  margin-bottom: calc(-1 * var(--dr-hair));
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
+/* The notes of a folder picked: a group of their own under the folder, so a hairline parts them. */
+.dr-detail + .dr-rows {
+  border-top: var(--dr-hair) solid var(--dr-ink);
 }
 
 /* ---- A folder picked: its glyph large, wide space round it, its name and counts, what can be done, then its notes. ---- */
@@ -103,8 +102,7 @@
 
 /* ---- Search: its field under the head, what it finds under that. ---- */
 .dr-search {
-  padding: var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  padding: var(--dr-gutter) var(--dr-gutter) var(--dr-u);
 }
 
 /* ---- Where a dragged note would land. ---- */
@@ -137,14 +135,8 @@
   align-items: center;
   gap: var(--dr-u);
   padding: var(--dr-u) var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
 }
 
 .dr-filter-bar > .dr-label {
   margin-left: var(--dr-u);
-}
-
-.dr-filter-bar + .dr-rows {
-  margin-top: 0;
-  border-top: 0;
 }

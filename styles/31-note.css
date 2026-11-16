@@ -33,17 +33,61 @@
   cursor: pointer;
 }
 
-.dr-note-chips,
-.dr-note-pages {
+/* The properties: one line of name and value, a dot between them, no box. The name is the label voice, muted. */
+.dr-note-props {
+  --dr-glyph: var(--dr-icon);
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.dr-note-prop {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--dr-u);
+  white-space: nowrap;
+}
+
+.dr-note-prop > .dr-label,
+.dr-note-prop + .dr-note-prop::before {
+  color: var(--dr-muted);
+}
+
+.dr-note-prop + .dr-note-prop::before {
+  content: "·";
+  margin-left: var(--dr-u);
+}
+
+.dr-note-prop > .dr-glyph {
+  align-self: center;
+}
+
+/* Wrong, by its folder's schema: the value in the error's tone, the alert glyph beside it. */
+.dr-note-prop[aria-invalid="true"] > .dr-text,
+.dr-note-prop[aria-invalid="true"] > .dr-glyph {
+  color: var(--dr-error);
+}
+
+.dr-note-prop > .dr-text[data-tone="rust"] { color: var(--dr-rust); }
+.dr-note-prop > .dr-text[data-tone="ochre"] { color: var(--dr-ochre); }
+.dr-note-prop > .dr-text[data-tone="moss"] { color: var(--dr-moss); }
+.dr-note-prop > .dr-text[data-tone="slate"] { color: var(--dr-slate); }
+.dr-note-prop > .dr-text[data-tone="plum"] { color: var(--dr-plum); }
+
+.dr-note-pages {
+  display: flex;
   align-items: center;
   gap: var(--dr-u);
 }
 
-/* The page tabs and the plus on one line: the tabs give way and scroll. */
-.dr-note-pages {
-  flex-wrap: nowrap;
+/* ---- The panel: a sheet. A faint capital name, its value beside it; parts parted by space, never a rule. ---- */
+.dr-panel {
+  padding-top: var(--dr-u);
+}
+
+.dr-panel .dr-section:not(:first-child) {
+  margin-top: calc(3 * var(--dr-u));
+  border-top: 0;
 }
 
 .dr-note-pages > .dr-tabs {

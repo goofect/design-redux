@@ -7,15 +7,15 @@ import { noteProps, propOf, valuesOf } from '../core/notes.js';
 import { outlineFolder, rows } from '../ui/row.js';
 import { table } from '../ui/table.js';
 import { shownFolders } from './level-objects.js';
-import { listedNotes } from './order.js';
+import { listedNotes, sortOf } from './order.js';
 
 const title = (key) => key.charAt(0).toUpperCase() + key.slice(1);
 
 /** The table's columns: the note's name, the properties the person listed, its length. */
 export function tableColumns(plugin) {
   return [{ id: 'name', name: 'Name' }]
-    .concat(listOf(plugin.settings.tableColumns).map((key) => ({ id: `p:${key}`, name: title(key), width: 128 })))
-    .concat([{ id: 'words', name: 'Words', number: true, width: 80 }]);
+    .concat(listOf(plugin.settings.tableColumns).map((key) => ({ id: `p:${key}`, name: title(key) })))
+    .concat([{ id: 'words', name: 'Words', number: true }]);
 }
 
 export function drawTable(screen, host, folder) {
@@ -43,6 +43,8 @@ export function drawTable(screen, host, folder) {
   }
   const t = table(host, {
     flush: true,
+    // Numbers only where the order means something: the folder's own, and not re-sorted by a column.
+    numbered: !sort && sortOf(plugin, folder) === 'own',
     columns,
     sort: sort || null,
     onSort: (id) => {

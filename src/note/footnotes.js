@@ -49,8 +49,7 @@ export class FootnotesView extends ItemView {
     const list = rows(host);
     defs.forEach((d) => {
       const ref = refs.find((r) => r.id === d.id);
-      const r = row(list, { name: d.text || '(empty)', error: !ref, end: ref ? null : 'unused', run: () => ref && this.feature.jump(file, ref) });
-      r.querySelector('.dr-slot').textContent = d.id;
+      row(list, { slot: d.id, name: d.text || '(empty)', error: !ref, end: ref ? null : 'unused', run: () => ref && this.feature.jump(file, ref) });
     });
   }
 }

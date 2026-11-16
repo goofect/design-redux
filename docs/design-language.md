@@ -179,9 +179,9 @@ Its word is its `aria-label`, which Obsidian also shows as its tooltip.
 | --- | --- | --- |
 | rest | glyph `ink` on `bg` | — |
 | hover | fill `surface` | the pointer |
-| pressed | fill `surface` | inner line, `hair` `ink` |
-| focus | ring `ink`, 2px clear | the ring |
-| on (`aria-pressed`) | fill `clay`, glyph `on-clay` | bar along the foot, `ring` `ink` |
+| pressed | fill `surface` | the press itself |
+| focus | ring `ink`, 2px clear | the ring, the only line it ever has |
+| on (`aria-pressed`) | fill `clay`, glyph `on-clay` | the clay square: no bar, no border |
 | disabled | glyph `muted`, no hover | default cursor; the control stays in place |
 | loading (`aria-busy`) | the `wait` glyph | the glyph changes |
 | selected, open, empty, error | — | a button acts; it holds no state but on |
@@ -205,24 +205,24 @@ units high, two of padding either side, a hairline, the reading voice.
 
 ### Zoom control · `.dr-segments` > `.dr-segment[role=radio]` · `20-controls.css`
 
-Objects, shelves, words: three glyph segments of four units in one hairline
-frame. The frame is drawn over the segments' own edges, so the control is
-exactly twelve units wide. Arrow keys move between levels.
+Objects, shelves, words: three bare glyphs of four units, no frame and no
+line between them, so the control is exactly twelve units wide. The level
+shown stands on a clay square with no border. Arrow keys move between levels.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
-| rest | glyph `ink`, frame and dividers `hair` `ink` | — |
+| rest | glyph `ink` on `bg`, nothing round it | — |
 | hover | fill `surface` | the pointer |
 | pressed | fill `surface` | — (it becomes open at once) |
 | focus | ring inside the segment | the ring |
-| open (`aria-checked`) | fill `clay`, glyph `on-clay` | bar along the foot, `ring` `ink` |
+| open (`aria-checked`) | fill `clay`, glyph `on-clay` | the clay square, no border |
 | disabled | glyph `muted`, no hover | — |
 | selected, empty, loading, error | — | a level is open or it is not |
 
 ### Tabs · `.dr-segments.dr-tabs` > `.dr-segment[role=tab]` · `20-controls.css`
 
-A note's pages. The same frame; segments are words in the label voice, two
-units of padding either side. More tabs than fit scroll sideways, a whole tab
+A note's pages. Bare words, no frame and no line between them, a unit of
+padding either side. More tabs than fit scroll sideways, a whole tab
 at a time: a tab the edge would cut is not drawn (`is-cut`), and an ellipsis
 stands at that edge (`is-more-before`, `is-more-after`), so no word is ever
 cut in half. A fade would be a gradient, which the look refuses.
@@ -232,7 +232,7 @@ cut in half. A fade would be a gradient, which the look refuses.
 | rest | label `ink` | — |
 | hover | fill `surface` | the pointer |
 | focus | ring inside the tab (`on-clay` on the open one) | the ring |
-| open (`aria-selected`) | fill `clay`, label `on-clay` | bold (700), and the bar along the foot |
+| open (`aria-selected`) | fill `clay`, words `on-clay` | bold (700) |
 | disabled | label `muted` | no hover |
 | empty | a note with one page shows no tabs | — |
 | selected, loading, error | — | — |
@@ -268,20 +268,20 @@ the box carries the border and the ring, and may hold a glyph before or after.
 
 ### Chip · `.dr-chip` · `20-controls.css`
 
-Plain words in a hairline, three units high: a property under a note's title
-(its name in the label voice, its value in the reading voice), or a filter
-that can be on (`role="checkbox"`).
+Plain words, no box, three units high: a filter's part that takes itself off,
+or a filter that can be on (`role="checkbox"`). A property under a note's
+title is not a chip: it is the note head's line of name and value.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
-| rest | border `hair` `ink`; name `muted`, value `ink` | — |
+| rest | name `muted`, value `ink`, nothing round them | — |
 | hover (a filter) | fill `surface`, name `ink` | the pointer |
 | focus | ring `ink`, 2px clear | the ring |
-| on (`aria-checked`) | fill `clay`, words `on-clay` | the mark before its words |
-| disabled | border and words `muted` | border dashed |
-| error (`aria-invalid`) | border and words `error` | its place is beside the field or row that says why; its `aria-label` says why |
+| on (`aria-checked`) | fill `clay`, words `on-clay` | — |
+| disabled | words `muted` | no hover |
+| error (`aria-invalid`) | words `error` | its place is beside the field or row that says why; its `aria-label` says why |
 | takes itself off (a filter's part) | a `close` glyph after its words | the glyph; its `aria-label` says "Take off" |
-| a value given a tone (`data-tone`) | border and words in the tone | the words are the value itself; the tone is the person's own colour |
+| a value given a tone (`data-tone`) | words in the tone | the words are the value itself; the tone is the person's own colour |
 | open, empty, loading | — | — |
 
 A filter's parts are plain chips that close, not chips "on": the one clay
@@ -316,8 +316,10 @@ shape, square corners, no filter (`.dr-cell-cover`).
 
 A note in a list. Four units high: the slot (`.dr-slot`, its number, muted,
 tabular), its name (`.dr-row-name`, the reading voice), and what trails
-(`.dr-row-end`, the label voice, muted: its length). An ink hairline under
-each row, from edge to edge.
+(`.dr-row-end`, the label voice, muted: its length). No line between two rows:
+their height, on the unit, parts them. A hairline parts groups only (over a
+section's title that follows another group, between the outline's folders,
+between a folder picked and its notes).
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
@@ -370,10 +372,12 @@ note, its headings or pages (`.is-child`), set in two units, muted.
 
 ### Panel row · `.dr-prop`, `.dr-section` · `22-rows.css`
 
-A property: its name in the label voice (twelve units, muted), its value in
-the reading voice, a hairline under it. A section's title (`.dr-section`) is a
-row of four units in the label voice, with the one or two icon buttons the
-section needs.
+A property: its name in the label voice (twelve units, muted), its value
+beside it in the reading voice, no line under it. A section's title
+(`.dr-section`) is a row of four units in the label voice, no line under it,
+with the one or two bare icon buttons the section needs; a title that folds
+its group is pressed itself (`aria-expanded` on its label): no arrow, no
+button, and folded it is muted and counts what it holds.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
@@ -388,22 +392,29 @@ section needs.
 | disabled | all `muted` | no hover |
 | open, loading | — | — |
 
-The panel lists a note's properties as one section, or in the groups the
-person set (`panelGroupList`), each a section title with a `fold` button;
-a folded group's title counts what it holds. Under the properties, sections
-of rows: where the note is named in a property, where it is mentioned, what
-it links to, and its history (a press puts one value back).
+The panel is a sheet. It does not name the note again (its name is on the
+page beside it): it starts at its properties, as one section or in the
+groups the person set (`panelGroupList`), each title folding its group on a
+press, and its two bare buttons (add a property, the note's menu) at the end
+of its first title. Its parts are parted by space, never a rule. Under the
+properties, sections of plain rows, without numbers: where the note is
+named in a property (the property trails it), where it is mentioned, what it
+links to (a note's folder trails it only where the list mixes folders), and
+its history (a press puts one value back).
 
 ### Table · `.dr-table` · `24-table.css`
 
-A folder's notes at the window's width. An ink grid, one header for the whole
-table, no zebra, cells of four units. Heads are the label voice, bold; cells
-the reading voice; numbers right and tabular. The first column is the slot.
+A folder's notes at the window's width. Horizontal lines only: one under the
+header, one between groups where a table has them; no line between columns
+or rows, no zebra, cells of four units. Columns are as wide as what they hold
+(a long name is cut at 48 units). Heads are the label voice, bold; cells the
+reading voice; numbers right and tabular. A number column (the slot) only
+where the order means something: a folder in its own order, not re-sorted.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
-| rest | `ink` on `bg`, grid `hair` `ink` | — |
-| sorted column | — | `up` or `down` in its head, and `aria-sort` |
+| rest | `ink` on `bg`, a `hair` `ink` line under the header | — |
+| sorted column | — | `up` or `down` right beside its name, and `aria-sort` |
 | hover (a row, a head) | fill `surface` | the pointer |
 | focus (a cell, a head) | ring inside it | the ring |
 | selected (a row) | fill `clay`, `on-clay` | the hollow mark in the slot |
@@ -469,12 +480,12 @@ a line of running text if it helps, and one text button at most.
 
 ### Head row · `.dr-head` · `25-blocks.css`
 
-Six units, a hairline under it: a label, and the few icon buttons a surface
-needs. The library's holds the word Library, search, and the zoom control;
-inside a folder, a back button comes first and the label is the folder's.
-Where the head names a note (the panel, a map of a note, the 3D graph round
-a note) it is set in the reading voice (`text: true`): a note's name is the
-person's and is never capitals. A folder's name, an object's, stays a label.
+Six units, a hairline under it, the one line a header has: a label, and the
+few bare icon buttons a surface needs. The library's holds the word Library,
+search, and the zoom control; inside a folder, a back button comes first and
+the label is the folder's. Where the head names a note (a map of a note, the
+3D graph round a note) it is set in the reading voice (`text: true`): a
+note's name is the person's and is never capitals. The panel has no head.
 
 ### Note head · `.dr-note-place`, `.dr-note-head` · `31-note.css`
 
@@ -483,9 +494,11 @@ each place it is laid out (the editor's `.cm-sizer`, reading view's
 `.mod-header`), so they scroll with the text. Over the inline title, the
 folder as a label (`.dr-note-place`; a press opens it in the browse view).
 Under it, or under Obsidian's own properties where they follow the title,
-the head (`.dr-note-head`): the note's main properties as chips (a value in
-its tone; one its folder's schema finds wrong, `aria-invalid`), the page
-tabs and a `plus` to add a page, and a hairline under it all, with no
+the head (`.dr-note-head`): the note's main properties on one line
+(`.dr-note-props`) of name and value, `name value · name value`, the name
+muted in the label voice and nothing round them (a value in its tone; one
+its folder's schema finds wrong, `aria-invalid`, in the error's tone with
+the `alert` glyph beside it), the page tabs and a `plus` to add a page, and a hairline under it all, with no
 padding at its sides, so the line is exactly as wide as the text. A part
 with nothing in it is not drawn; a head with nothing in it is taken away.
 Nothing of Obsidian's is moved.
@@ -493,8 +506,8 @@ Nothing of Obsidian's is moved.
 ### Filter bar · `.dr-filter-bar` · `30-library.css`
 
 Under a head row, a unit of ground above and below: a filter's parts as
-chips that close, then how many notes pass, as a muted label. The rows of
-what passes follow without a second hairline.
+chips that close (plain words and a `close` glyph), then how many notes
+pass, as a muted label. No line of its own: the head's is the one line.
 
 ### Map · `.dr-map` > `.dr-map-node` · `60-tools.css`
 
@@ -632,6 +645,9 @@ theme and keep their structure.
 
 - **A card, a panel, a frame or a tint behind an object.** The ground is the
   only surface; an object that needs a box is not strong enough.
+- **A frame round what sits in a pane, a rule between two rows of a group, a
+  box round a control.** The pane is the frame. A line parts one thing from
+  another, or it is not drawn: one under a header, one between groups.
 - **A rounded corner, a shadow, a gradient, a blur.** Depth is a claim that
   one thing is above another. Nothing is.
 - **Movement.** A state is a fact, and a fact is shown at once. A spinner is

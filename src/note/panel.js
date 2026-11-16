@@ -15,7 +15,6 @@ import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { valueTone, valuesOf } from '../core/notes.js';
 import { listOf } from '../core/text.js';
-import { headRow } from '../ui/head.js';
 import { propRow, row, rows, sectionTitle } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
@@ -57,12 +56,12 @@ export class PanelView extends ItemView {
     const subject = this.feature.subject();
     if (subject instanceof TFolder && plugin.drawFolder) return void plugin.drawFolder(host, subject);
     if (!(subject instanceof TFile) || subject.extension !== 'md') return void sayso(host, { glyph: 'properties', label: 'Nothing picked', text: 'A note’s properties show here, and a folder picked in the library.' });
-    headRow(host, { label: subject.basename, text: true, buttons: [{ glyph: 'more', label: 'More', run: (e) => this.feature.noteMenu(subject, e) }] });
+    // A sheet: the note's name is on the page beside it, so the panel starts at its properties.
     this.properties(host, subject);
     this.feature.sections(subject).forEach((section) => {
-      sectionTitle(host, { title: `${section.title} · ${section.items.length}` });
+      sectionTitle(host, { title: section.title });
       const list = rows(host);
-      section.items.forEach((item, i) => row(list, { number: i + 1, name: item.name, end: item.end, run: () => (item.run ? item.run() : this.app.workspace.getLeaf(false).openFile(item.file)) }));
+      section.items.forEach((item) => row(list, { name: item.name, end: item.end, run: () => (item.run ? item.run() : this.app.workspace.getLeaf(false).openFile(item.file)) }));
     });
   }
 
@@ -74,25 +73,28 @@ export class PanelView extends ItemView {
     const find = (k) => all.find((p) => p.toLowerCase() === k.toLowerCase());
     const first = listOf(this.feature.primaryProps(file)).map(find).filter(Boolean);
     const keys = first.concat(all.filter((k) => !first.includes(k)));
-    const add = { glyph: 'plus', label: 'Add a property', run: () => this.feature.addProperty(file) };
+    // The panel's two buttons stand at the end of its first title: add a property, and the note's own menu.
+    const buttons = [
+      { glyph: 'plus', label: 'Add a property', run: () => this.feature.addProperty(file) },
+      { glyph: 'more', label: 'More', run: (e) => this.feature.noteMenu(file, e) },
+    ];
     if (!keys.length) {
-      sectionTitle(host, { title: 'Properties', buttons: [add] });
+      sectionTitle(host, { title: 'Properties', buttons });
       return void sayso(host, { glyph: 'properties', label: 'No properties', button: { text: 'Add a property', run: () => this.feature.addProperty(file) } });
     }
     const grouped = settings.panelPropertyGroups && settings.panelPropertyGroups !== 'off' && Array.isArray(settings.panelGroupList);
     if (!grouped) {
-      sectionTitle(host, { title: 'Properties', buttons: [add] });
+      sectionTitle(host, { title: 'Properties', buttons });
       return void keys.forEach((key) => this.propertyRow(host, file, key, props[key]));
     }
-    // In the groups the person set: each its title, foldable; what no group names, last, under Other.
+    // In the groups the person set: a press on a group's title folds it; what no group names, last, under Other.
     const used = new Set();
     const groups = settings.panelGroupList.map((g) => ({ title: String(g.title || ''), keys: listOf(g.keys).map(find).filter((k) => k && !used.has(k) && used.add(k)) }));
     groups.push({ title: 'Other', keys: keys.filter((k) => !used.has(k)) });
     const folded = Array.isArray(settings.panelFoldedGroups) ? settings.panelFoldedGroups : [];
     groups.filter((g) => g.keys.length).forEach((g, i) => {
       const shut = folded.includes(g.title);
-      const fold = { glyph: shut ? 'unfold' : 'fold', label: shut ? `Show ${g.title}` : `Fold ${g.title}`, pressed: shut, run: () => this.feature.foldGroup(g.title) };
-      sectionTitle(host, { title: shut ? `${g.title} · ${g.keys.length}` : g.title, buttons: i === 0 ? [fold, add] : [fold] });
+      sectionTitle(host, { title: shut ? `${g.title} · ${g.keys.length}` : g.title, fold: { open: !shut, run: () => this.feature.foldGroup(g.title) }, buttons: i === 0 ? buttons : [] });
       if (!shut) g.keys.forEach((key) => this.propertyRow(host, file, key, props[key]));
     });
   }
@@ -259,9 +261,15 @@ export class Panel extends Feature {
       });
       if (named.length) out.push({ title: 'Named in', items: named });
     }
-    if (this.settings.showMentions !== false && incoming.length) out.push({ title: 'Mentioned in', items: incoming.map((f) => ({ name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', file: f })) });
+    // A note's folder trails it only where the list mixes folders; where they share one it says nothing.
+    const notes = (files) => {
+      const folderOf = (f) => (f.parent && f.parent.path !== '/' ? f.parent.name : '');
+      const mixed = new Set(files.map(folderOf)).size > 1;
+      return files.map((f) => ({ name: f.basename, end: mixed ? folderOf(f) : '', file: f }));
+    };
+    if (this.settings.showMentions !== false && incoming.length) out.push({ title: 'Mentioned in', items: notes(incoming) });
     const outgoing = index.outgoing(file).filter((f) => f.extension === 'md');
-    if (outgoing.length) out.push({ title: 'Links to', items: outgoing.map((f) => ({ name: f.basename, end: f.parent && f.parent.path !== '/' ? f.parent.name : '', file: f })) });
+    if (outgoing.length) out.push({ title: 'Links to', items: notes(outgoing) });
     // Kept changes to its properties, newest first: a press puts that one value back.
     const history = this.plugin.historyOf ? this.plugin.historyOf(file) : [];
     if (history.length) out.push({ title: 'History', items: history.slice(0, 10).map((h) => ({ name: `${h.key}: ${valueText(h.was) || '—'} → ${valueText(h.now) || '—'}`, end: 'put back', file, run: () => this.plugin.putBackChange(file, h) })) });
