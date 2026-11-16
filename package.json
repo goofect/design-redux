@@ -4,7 +4,7 @@
   "description": "An Obsidian plugin: the vault as a library of objects, at three levels of detail.",
   "scripts": {
     "build": "node build.mjs",
-    "pretest": "node build.mjs",
+    "pretest": "node build.mjs && node tools/specimen.mjs",
     "test": "node tests/run.js",
     "pretest:obsidian": "node build.mjs",
     "test:obsidian": "wdio run ./wdio.conf.mjs",
