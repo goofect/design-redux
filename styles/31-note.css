@@ -1,0 +1,51 @@
+/* ------------------------------------------------------------------ */
+/* The note: its head band, and a page that is not the one open        */
+/*                                                                     */
+/* The band is the plugin's own element at the top of a note's pane:   */
+/* the folder as a label, the properties as chips, the page tabs, and  */
+/* a hairline under it all. It keeps to the text's own column.         */
+/* ------------------------------------------------------------------ */
+
+.dr-note-head {
+  display: grid;
+  gap: var(--dr-u);
+  width: 100%;
+  max-width: var(--file-line-width);
+  margin: 0 auto;
+  padding: var(--dr-gutter) var(--file-margins, var(--dr-gutter)) var(--dr-u);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
+}
+
+.dr-note-head > :empty {
+  display: none;
+}
+
+.dr-note-folder {
+  color: var(--dr-muted);
+  cursor: pointer;
+}
+
+.dr-note-chips,
+.dr-note-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-u);
+}
+
+.dr-note-pages > .dr-tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* A block of another page, in reading view. The class is the plugin's, put on the block as it is drawn. */
+.dr-page-hidden {
+  display: none;
+}
+
+@media (any-hover: hover) {
+  .dr-note-folder:hover {
+    color: var(--dr-ink);
+    text-decoration: underline;
+  }
+}

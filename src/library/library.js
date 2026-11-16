@@ -8,6 +8,7 @@
 
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
+import { drawDetail } from './detail.js';
 import { neighbours } from './order.js';
 import { LEVELS } from './screen.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
@@ -29,6 +30,9 @@ export class Library extends Feature {
       ws.detachLeavesOfType(LIBRARY_VIEW);
       ws.detachLeavesOfType(BROWSE_VIEW);
     });
+    // For the panel, which may not import the library: a folder picked, drawn.
+    this.plugin.drawFolder = (host, folder) => drawDetail(this.plugin, host, folder, { open: (f) => this.browse(f), note: (file) => ws.getLeaf(false).openFile(file) });
+    this.add(() => delete this.plugin.drawFolder);
     if (!ws.getLeavesOfType(LIBRARY_VIEW).length) this.openSidebar(true);
   }
 

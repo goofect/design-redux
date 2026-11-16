@@ -239,6 +239,7 @@ class WorkspaceLeaf {
   async openFile(file) {
     await this.setViewState({ type: file.extension === 'md' ? 'markdown' : file.extension, state: { file: file.path } });
     if (this.view) this.view.file = file;
+    this.workspace.lastFile = file;
     this.workspace.setActiveLeaf(this);
     this.workspace.trigger('file-open', file);
   }
@@ -257,7 +258,8 @@ class Workspace extends Events {
   detachLeavesOfType(type) { this.getLeavesOfType(type).forEach((l) => l.detach()); }
   async revealLeaf(leaf) { this.revealed = leaf; }
   setActiveLeaf(leaf) { this.activeLeaf = leaf; this.trigger('active-leaf-change', leaf); }
-  getActiveFile() { const v = this.activeLeaf && this.activeLeaf.view; return (v && v.file) || null; }
+  // As in the app: the file of the last pane that held one, whatever has the keyboard since.
+  getActiveFile() { const v = this.activeLeaf && this.activeLeaf.view; if (v && v.file) this.lastFile = v.file; return this.lastFile && this.app.vault.getAbstractFileByPath(this.lastFile.path) === this.lastFile ? this.lastFile : null; }
   getActiveViewOfType(Type) { const v = this.activeLeaf && this.activeLeaf.view; return v instanceof Type ? v : null; }
   async openLinkText(link, from) { const file = this.app.metadataCache.getFirstLinkpathDest(link, from) || (await this.app.vault.create(`${link}.md`, '')); await this.getLeaf().openFile(file); }
 }
