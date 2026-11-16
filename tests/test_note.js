@@ -48,9 +48,11 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const w = await world({ 'Logic/Paged.md': PAGED, 'Logic/Plain.md': 'x' });
     const view = await open(w, 'Logic/Paged.md');
     const pages = feature(w, 'NotePages');
-    const tabs = () => Array.from(view.contentEl.querySelectorAll('.dr-note-pages .dr-segment')).map((t) => `${t.textContent}${t.getAttribute('aria-selected') === 'true' ? '*' : ''}`);
+    const tabsIn = (sel) => Array.from(view.contentEl.querySelectorAll(`${sel} .dr-note-pages .dr-segment`)).map((t) => `${t.textContent}${t.getAttribute('aria-selected') === 'true' ? '*' : ''}`);
+    const tabs = () => tabsIn('.cm-sizer');
     assert.deepStrictEqual(tabs(), ['Notes*', 'Proofs', 'Notes 2']);
-    view.contentEl.querySelectorAll('.dr-note-pages .dr-segment')[1].click();
+    assert.deepStrictEqual(tabsIn('.mod-header'), tabs(), 'reading view has other tabs');
+    view.contentEl.querySelectorAll('.cm-sizer .dr-note-pages .dr-segment')[1].click();
     await settle();
     assert.deepStrictEqual(tabs(), ['Notes', 'Proofs*', 'Notes 2']);
     assert.strictEqual(w.plugin._data.pagesOpen['Logic/Paged.md'], 'Proofs');
@@ -73,14 +75,26 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.text('Logic/Plain.md'), 'x', 'a note without pages was written to');
   });
 
-  await check('the note\'s head: its folder as a label that opens it, its properties as chips; gone when the feature is off', async () => {
+  await check('the note\'s head: in the note\'s own column, folder over the title, properties and pages under it; gone when the feature is off', async () => {
     const w = await world({ 'Logic/A.md': '---\nstatus: draft\ndomain: [logic, proof]\n---\n', 'Loose.md': '' });
     w.plugin.settings.notePageChips = true;
     const view = await open(w, 'Logic/A.md');
     await w.plugin.saveSettings();
+    const names = { 'dr-note-place': 'folder', 'inline-title': 'title', 'dr-note-head': 'head', 'metadata-container': 'properties', 'cm-contentContainer': 'text' };
+    const order = (sel) => Array.from(view.contentEl.querySelector(sel).children).map((c) => names[Array.from(c.classList).find((k) => names[k])] || '?');
+    // Editing and reading alike, so it all scrolls with the text: folder, title, the head, then the text.
+    assert.deepStrictEqual(order('.cm-sizer'), ['folder', 'title', 'head', 'text']);
+    assert.deepStrictEqual(order('.mod-header'), ['folder', 'title', 'head']);
+    assert.ok(!Array.from(view.contentEl.children).some((c) => c.classList.contains('dr-note-head')), 'a head left at the top of the pane');
+    // Obsidian's own properties under the title come before the head, so the pages stay right over the text.
+    const sizer = view.contentEl.querySelector('.cm-sizer');
+    const props = sizer.ownerDocument.createElement('div');
+    props.className = 'metadata-container';
+    sizer.insertBefore(props, sizer.querySelector('.inline-title').nextSibling);
+    feature(w, 'NotePage').draw(view);
+    assert.deepStrictEqual(order('.cm-sizer'), ['folder', 'title', 'properties', 'head', 'text']);
     const head = view.contentEl.querySelector('.dr-note-head');
-    assert.strictEqual(view.contentEl.firstChild, head);
-    assert.strictEqual(head.querySelector('.dr-note-folder').textContent, 'Logic');
+    assert.strictEqual(view.contentEl.querySelector('.dr-note-folder').textContent, 'Logic');
     assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-chip')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
     w.plugin.settings.notePage = false;
     await w.plugin.saveSettings();

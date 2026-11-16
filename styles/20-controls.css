@@ -152,16 +152,45 @@ button.dr-button {
   cursor: default;
 }
 
-/* Tabs: the page control. Text segments in the label voice; they scroll sideways when there are many. */
+/* Tabs: the page control. Many scroll sideways, a whole tab at a time; a tab the edge would cut is not
+   drawn, and an ellipsis stands at that edge, so no word is cut in half (the script sets the classes). */
 .dr-tabs {
   display: flex;
   max-width: 100%;
   overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--dr-row);
+  scrollbar-width: none;
 }
 
 .dr-tabs > .dr-segment {
   flex: none;
   padding: 0 var(--dr-gutter);
+  scroll-snap-align: start;
+}
+
+.dr-tabs > .dr-segment.is-cut {
+  visibility: hidden;
+}
+
+.dr-tabs.is-more-before::before,
+.dr-tabs.is-more-after::after {
+  content: "…";
+  position: sticky;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--dr-row);
+  background: var(--dr-bg);
+  color: var(--dr-muted);
+}
+
+.dr-tabs.is-more-before::before {
+  left: 0;
+}
+
+.dr-tabs.is-more-after::after {
+  right: 0;
 }
 
 /* ---- Field: a label over a square box. ---- */

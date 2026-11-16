@@ -73,9 +73,10 @@ export async function screens() {
   await feature('NotePages').open(tt, 'Proofs');
   await settle(6);
   const note = leaf.view.contentEl;
-  const head = note.querySelector('.dr-note-head').outerHTML;
+  // The editor's column as the plugin left it (folder, title, the head) with the open page's text in it, and the strip at the foot.
+  const sizer = note.querySelector('.cm-sizer').outerHTML.replace('<div class="cm-content"></div>', '<div class="cm-content"><p>A proof that the table and the rules agree: whatever the rules let you write from some premises, every row of the table that makes the premises true makes it true as well.</p><p>The other way round needs more, and it is the next chapter’s.</p></div>');
   const strip = note.querySelector('.dr-strip').outerHTML;
-  const page = `<div class="spec-note">${head}<div class="spec-note-text"><h1>Proofs</h1><p>A proof that the table and the rules agree: whatever the rules let you write from some premises, every row of the table that makes the premises true makes it true as well.</p><p>The other way round needs more, and it is the next chapter’s.</p></div>${strip}</div>`;
+  const page = `<div class="spec-note"><div class="spec-note-text">${sizer}</div>${strip}</div>`;
 
   // The panel beside it.
   const panelLeaf = await feature('Panel').reveal();
@@ -125,7 +126,7 @@ export async function screens() {
   const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-label dr-clip">3D graph <span class="dr-muted">${n} notes · ${links.length} links</span></span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return `<rect class="${mark ? 'is-clay' : 'is-ink'}" x="${x}" y="${y}" width="${s}" height="${s}"/>${mark ? `<rect class="spec-graph-ring${i === picked ? ' is-picked' : ''}" x="${x + 0.5}" y="${y + 0.5}" width="${s - 1}" height="${s - 1}"/>` : ''}`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
 
   w.plugin.unload();
-  return section('screens-note', 'The note, and the panel beside it', 'Drawn by the plugin itself on a sample vault. The note’s head band: its folder, its properties as chips (a value in its tone, one its folder’s schema finds wrong), its pages; the strip at its foot. The panel: properties in groups, the wrong one marked, then where the note is named, mentioned and what it links to, and its history.',
+  return section('screens-note', 'The note, and the panel beside it', 'Drawn by the plugin itself on a sample vault. Round the note’s title, in its own column: its folder over it; under it its properties as chips (a value in its tone, one its folder’s schema finds wrong) and its pages; then the text; the strip at its foot. The panel: properties in groups, the wrong one marked, then where the note is named, mentioned and what it links to, and its history.',
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel)}</div>`)
     + section('screens-library', 'Search, and a filter', 'The library’s search with nothing typed (the last searches, then a property’s values, each a filter) and with something; the browse view with a filter on, its parts as chips that take themselves off.',
       `<div class="spec-states is-close">${frame('search, nothing typed', 320, 520, searchEmpty)}${frame('search: “tab”', 320, 520, searchFound)}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)

@@ -12,7 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
 const esbuild = require('esbuild');
-const { lintGlyph } = require('./glyph-lint.js');
+const lint = require('./glyph-lint.js');
+const { lintGlyph } = lint;
 
 const root = path.join(__dirname, '..');
 const icons = path.join(root, 'assets', 'icons');
@@ -91,9 +92,38 @@ check('every command has a glyph, and the list names only commands and glyphs th
   assert.deepStrictEqual(Object.keys(uses).filter((id) => !sets.actions.includes(uses[id])), [], 'commands naming a glyph that is not drawn');
 });
 
+// ---- Objects are things, never a control or a sign ----
+
+/** Forms an object glyph may not take: each reads as something to do or a state (close, add, locked, stop, a box to tick, a tag), or is a sign every interface uses. */
+const FORBIDDEN_FORMS = ['saltire', 'x', 'cross', 'plus', 'minus', 'check', 'tick', 'lock', 'padlock', 'hash', 'frame', 'checkbox', 'square', 'stop', 'octagon',
+  'disc', 'dot', 'ring', 'target', 'diamond', 'arrow', 'chevron', 'play', 'pause', 'star', 'heart', 'bell', 'flag', 'pin', 'place', 'gear', 'eye', 'magnifier',
+  'trash', 'pencil', 'cloud', 'camera', 'home', 'house', 'alert', 'warning', 'info', 'question', 'bookmark', 'tag', 'clock', 'mail', 'user', 'power'];
+
+check('no object glyph takes a form that reads as an action or a sign', () => {
+  assert.deepStrictEqual(sets.objects.filter((n) => FORBIDDEN_FORMS.includes(n)), []);
+});
+
+check("no object glyph's outline is close to an action glyph's, at any size", () => {
+  // Compared as forms (each scaled to its own box), outline with its holes filled and ink alike. Removed for this: disc, ring, square, frame, diamond, star at 1.00, octagon 0.92, camera 0.90.
+  const form = (kind, name) => {
+    const ink = lint.inkOf(fs.readFileSync(path.join(icons, kind, `${name}.svg`), 'utf8'));
+    return { ink: lint.formOf(ink), outline: lint.formOf(lint.outlineOf(ink)) };
+  };
+  const actions = sets.actions.map((name) => [name, form('actions', name)]);
+  const close = [];
+  sets.objects.forEach((name) => {
+    const o = form('objects', name);
+    actions.forEach(([a, f]) => {
+      const [outline, ink] = [lint.likeness(o.outline, f.outline), lint.likeness(o.ink, f.ink)];
+      if (outline >= 0.9 || ink >= 0.88) close.push(`${name} ~ ${a} (outline ${outline.toFixed(2)}, ink ${ink.toFixed(2)})`);
+    });
+  });
+  assert.deepStrictEqual(close, []);
+});
+
 // ---- The builder ----
 
-const { GLYPHS, GLYPH_FAMILIES, glyphFor, glyphsAmong, glyphsRenamed, glyphsRemoved, glyphFamily, hashText, isGlyph } = load(builderFile);
+const { GLYPHS, GLYPH_FAMILIES, glyphFor, glyphMeant, glyphsAmong, glyphsRenamed, glyphsRemoved, glyphFamily, hashText, isGlyph } = load(builderFile);
 
 check("the builder's set is the object glyphs drawn, in equal families", () => {
   assert.deepStrictEqual(GLYPHS.slice().sort(), sets.objects);
@@ -104,7 +134,7 @@ check("the builder's set is the object glyphs drawn, in equal families", () => {
 
 check('the same path gives the same glyph: on any run, on any machine', () => {
   // Written down once: if one of these moves, every unpicked folder in every vault changes its face.
-  const fixed = { Inbox: 'flag', 'Projects/Thesis': 'saltire', 'Reading/Political theory': 'fish', 'Logic/Week 03': 'heart', 'Été/Café': 'mountain' };
+  const fixed = { Inbox: 'chair', 'Projects/Thesis': 'anchor', 'Reading/Political theory': 'fish', 'Logic/Week 03': 'fence', 'Logic': 'stairs', 'Été/Café': 'cup' };
   Object.keys(fixed).forEach((p) => assert.strictEqual(glyphFor(p), fixed[p], p));
   assert.strictEqual(hashText('Inbox'), 1588962792);
   // One name, composed or decomposed (as a Mac's disk gives it), is one folder.
@@ -125,9 +155,23 @@ function samplePaths(n) {
   return out;
 }
 
+check('a folder named for something in the set takes it, unless a sibling has it', () => {
+  const named = { Music: 'tune', 'School/Reading': 'book', Recipes: 'bowl', 'Été/Café': 'cup', 'Projects/Garden': 'flower', 'Home/Pets': 'cat', '02 Travel notes': 'boat', Daily: 'sun' };
+  Object.keys(named).forEach((p) => assert.strictEqual(glyphFor(p), named[p], p));
+  assert.strictEqual(glyphMeant('Logic'), null);
+  assert.strictEqual(glyphMeant('Music/Logic'), null, 'a parent\'s name was read as the folder\'s');
+  // Two siblings asking for one glyph: the first in the builder's order has it, the other a pick of its own.
+  const both = glyphsAmong(['Lib/Reading', 'Lib/Books']);
+  assert.deepStrictEqual(Object.values(both).filter((g) => g === 'book').length, 1);
+  assert.strictEqual(new Set(Object.values(both)).size, 2);
+  // A choice already made keeps the glyph, even from a name that asks for it.
+  assert.notStrictEqual(glyphsAmong(['Lib/Music', 'Lib/Old'], { 'Lib/Old': 'tune' })['Lib/Music'], 'tune');
+});
+
 check('1,000 paths spread across the set without clustering', () => {
+  // The hashed pick only: names that ask for a glyph (Journal, Recipes) are meant to gather.
   const counts = new Map(GLYPHS.map((g) => [g, 0]));
-  samplePaths(1000).forEach((p) => counts.set(glyphFor(p), counts.get(glyphFor(p)) + 1));
+  samplePaths(3000).filter((p) => !glyphMeant(p)).slice(0, 1000).forEach((p) => counts.set(glyphFor(p), counts.get(glyphFor(p)) + 1));
   const expected = 1000 / GLYPHS.length;
   const chi = Array.from(counts.values()).reduce((sum, n) => sum + ((n - expected) ** 2) / expected, 0);
   // 47 degrees of freedom: an even spread stays under 82.7 999 times in 1,000.

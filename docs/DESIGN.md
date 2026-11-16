@@ -32,11 +32,13 @@ called done.
    and gap a multiple of it. Object cells are square and equal. Lists,
    tables and grids snap to the same columns. Empty space is used on purpose
    and is not filled: a screen that looks sparse is right.
-3. **Words only where they earn it.** Object grids show no labels at rest.
-   The name appears under the object on hover, keyboard focus or selection,
-   and always to screen readers (`aria-label`). A setting, "Always show
-   labels", shows them permanently for those who want them. Lists, tables,
-   the note and anything that is reading show their words normally.
+3. **Words only where they earn it.** An object's name earns its place: a
+   grid of unnamed glyphs can't be read. Each object shows its name under
+   it, one line, cut with an ellipsis, and always to screen readers
+   (`aria-label`). A setting, "Always show labels" (on by default), leaves
+   the names to the pointer, the keyboard and the pick when turned off.
+   Lists, tables, the note and anything that is reading show their words
+   normally.
 4. **Labels are small and quiet.** Plugin-owned labels (object names,
    counts, column headers, section titles) are set small, in capitals, with
    wide tracking, in ink or muted. Reading text (notes, rows, menus) is
@@ -298,9 +300,9 @@ exactly as it does without the plugin.
 - **Library sidebar: three zoom levels in one place.** A header row with the
   word "Library" as a small label, a search icon, and a three-part zoom
   control (objects, shelves, words).
-  - *Objects:* folders as glyphs in a three-column grid of square cells. No
-    labels at rest; the picked folder shows its name and count under it in
-    small capitals. Opening a folder fills the sidebar with its own grid of
+  - *Objects:* folders as glyphs in a three-column grid of square cells,
+    each named under its glyph on one line; the picked folder shows its
+    count too. Opening a folder fills the sidebar with its own grid of
     subfolders and notes, with a back icon and the folder's label.
   - *Shelves:* each folder a row: its label and count above, and its notes
     as vertical bars standing on a hairline, one per note, bar height from
@@ -310,8 +312,9 @@ exactly as it does without the plugin.
     under it, other folders collapsed to one line each.
   - The level, the open folder and the scroll position are kept per window.
 - **Folder glyphs (covers).** Every folder gets a solid glyph: one the user
-  picked from the plugin's glyph set, or, by default, one generated from the
-  folder (see Icons, the glyph builder). A user's own cover image is shown
+  picked from the plugin's glyph set, or, by default, the one its name asks
+  for (Music, a tune) or else one generated from its path (see Icons, the
+  glyph builder). A user's own cover image is shown
   instead when set: native aspect, square corners, no filter, as an object
   on the ground with nothing around it. The old generated cover art is not
   used.
@@ -324,9 +327,11 @@ exactly as it does without the plugin.
   columns, the same zoom control; the notes table is a 1px ink grid with one
   header for the whole table, small-capital headers, no zebra. The preview
   is the folder-picked layout.
-- **Note page:** the folder label, title, chips and the line under the header
-  stay, restyled: the folder as a small-capital label above the title, the
-  chips as plain text with hairline borders, the line as 1px ink. The page
+- **Note page:** in the note's own column, wherever it is laid out (the
+  editor, reading view), so it scrolls with the text: the folder as a label
+  over the title; under the title (and under Obsidian's own properties, when
+  they are shown) the properties, the page tabs and a 1px ink line exactly as
+  wide as the text. The order is folder, title, properties, pages, text. The page
   control is a row of small-capital text tabs separated by hairlines; the
   open page is a clay fill with ink text.
 - **Strip:** a full-width bar at the foot of the note with a top hairline,
@@ -367,10 +372,15 @@ Two families, kept apart:
    - at least 60 glyphs: every action the plugin has (open, back, search,
      zoom levels, new note, new folder, pin, more, sort, filter, move, delete,
      undo, pages, properties, map tools and the rest found in the inventory)
-     and a set of at least 40 object glyphs for folders (geometric forms,
-     everyday objects, signs), all drawn to the same rules;
+     and a set of at least 40 object glyphs for folders (things: everyday
+     objects, tools, plants and animals, a few cut forms), all drawn to the
+     same rules. An object glyph is never a form that reads as an action or
+     a sign (an X, a plus, a lock, a hash, a box in a box, a plain square,
+     disc, diamond, star, heart, bell, flag, pin, arrow, cloud, camera), and
+     its outline is never close to an action glyph's;
    - **the glyph builder:** a pure function in `core` that gives each folder
-     a glyph deterministically from its path (stable across sessions and
+     the glyph its name asks for where the set has one (a folder named Music,
+     a tune), and otherwise one hashed from its path (stable across sessions and
      machines, unchanged when the folder's contents change, kept through
      renames because it is stored once chosen), spreading neighbours across
      visibly different glyphs; the user can pick another from a grid of the

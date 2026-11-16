@@ -62,10 +62,13 @@ from edge to edge of its pane (`.dr-table.is-flush`). The preview is the
 folder-picked layout at a sidebar's width.
 
 **The note.** The text column is Obsidian's own readable line, as wide as the
-person set it. What the plugin adds to a note — the folder's label over the
-title, the chips, the page control — starts at that column's left edge and is
-never wider than it. The strip is the exception: it spans the pane, with the
-sidebar's gutter, because it belongs to the pane and not to the text.
+person set it. What the plugin adds round a note's title is put inside that
+column, wherever the note is laid out (the editor's sizer, reading view's
+header), so it scrolls with the text: the folder's label over the title; under
+it (and under Obsidian's own properties, when they are shown) the properties,
+the page tabs, and a hairline exactly as wide as the text. The order is folder,
+title, properties, pages, text. The strip is the exception: it spans the pane,
+with the sidebar's gutter, because it belongs to the pane and not to the text.
 
 ## 2. Two voices
 
@@ -219,7 +222,10 @@ exactly twelve units wide. Arrow keys move between levels.
 ### Tabs · `.dr-segments.dr-tabs` > `.dr-segment[role=tab]` · `20-controls.css`
 
 A note's pages. The same frame; segments are words in the label voice, two
-units of padding either side. More tabs than fit scroll sideways.
+units of padding either side. More tabs than fit scroll sideways, a whole tab
+at a time: a tab the edge would cut is not drawn (`is-cut`), and an ellipsis
+stands at that edge (`is-more-before`, `is-more-after`), so no word is ever
+cut in half. A fade would be a gradient, which the look refuses.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
@@ -283,21 +289,24 @@ fill on a screen stays the mark of where you are.
 
 ### Object cell · `.dr-grid` > `.dr-cell` · `21-objects.css`
 
-A folder or a note as a glyph on the ground: no frame, no fill, no words at
-rest. The cell is square; the glyph half of it, centred; the name and count
-(`.dr-cell-label`, the label voice) wait in the foot, unseen, so nothing moves
-when they appear. The whole name and count are the cell's `aria-label`, and so
+A folder or a note as a glyph on the ground: no frame, no fill, its name
+under it. The cell is square; the glyph half of it, centred; the name
+(`.dr-cell-label`) stands in the foot on one line, cut with an ellipsis, and
+the count joins it under the pointer, the ring or the pick. That is the
+default (`alwaysShowLabels`, `.dr-grid.is-labelled`); with it off, the name
+waits there unseen until the pointer, the ring or the pick, so nothing moves
+when it appears. The whole name and count are the cell's `aria-label`, and so
 its tooltip. A cover of the person's own takes the glyph's place: its own
 shape, square corners, no filter (`.dr-cell-cover`).
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
-| rest | glyph `ink` on `bg` | — |
-| hover | fill `surface` | its name and count appear |
+| rest | glyph `ink` on `bg`, its name under it | — |
+| hover | fill `surface` | its count appears (and its name, with labels off) |
 | focus | ring inside the cell | the ring; its name and count appear |
 | selected | fill `clay`, glyph `on-clay` | its name and count stay |
 | open (`aria-current`) | fill `clay` | the mark in its corner; its name bold |
-| labels always shown (`.dr-grid.is-labelled`) | every name shown; the count with the pointer, the ring or the pick | — |
+| labels off (`.dr-grid` without `.is-labelled`) | no words at rest; name and count with the pointer, the ring or the pick | — |
 | disabled | glyph `muted`, no hover | — |
 | error | `alert` glyph in its corner, `error` (`.dr-cell-flag`) | the glyph; the reason in its tooltip |
 | loading | the glyph stands until a cover has loaded | nothing flashes |
@@ -467,14 +476,19 @@ Where the head names a note (the panel, a map of a note, the 3D graph round
 a note) it is set in the reading voice (`text: true`): a note's name is the
 person's and is never capitals. A folder's name, an object's, stays a label.
 
-### Note head band · `.dr-note-head` · `31-note.css`
+### Note head · `.dr-note-place`, `.dr-note-head` · `31-note.css`
 
-The plugin's own band at the top of a note's pane, in the text's column:
-the folder as a label (a press opens it in the browse view), the note's
-main properties as chips (a value in its tone; one its folder's schema
-finds wrong, `aria-invalid`), the page tabs and a `plus` to add a page, and
-a hairline under it all. A part with nothing in it is not drawn; a band
-with nothing in it is taken away. Nothing of Obsidian's is moved.
+The plugin's own parts round a note's title, inside the note's column in
+each place it is laid out (the editor's `.cm-sizer`, reading view's
+`.mod-header`), so they scroll with the text. Over the inline title, the
+folder as a label (`.dr-note-place`; a press opens it in the browse view).
+Under it, or under Obsidian's own properties where they follow the title,
+the head (`.dr-note-head`): the note's main properties as chips (a value in
+its tone; one its folder's schema finds wrong, `aria-invalid`), the page
+tabs and a `plus` to add a page, and a hairline under it all, with no
+padding at its sides, so the line is exactly as wide as the text. A part
+with nothing in it is not drawn; a head with nothing in it is taken away.
+Nothing of Obsidian's is moved.
 
 ### Filter bar · `.dr-filter-bar` · `30-library.css`
 
@@ -545,12 +559,13 @@ one SVG file each, and is the only thing a plugin control or object shows.
 
 | | Action (`assets/icons/actions/`, 102) | Object (`assets/icons/objects/`, 48) |
 | --- | --- | --- |
-| Stands for | something to do, or a state | a folder: a thing |
+| Stands for | something to do, or a state | a folder: a thing, never a sign |
 | Built from | bars and small masses: arrows, lines, a simple body with a sign | one closed shape, with holes where the thing has them |
 | Fills its box | lightly: mostly ground | heavily: mostly ink |
 | A sign on a thing | the thing keeps its upper left; the sign (plus, minus, check, arrow) takes a square of six steps at the lower right, two steps clear of it | never: an object is not acted on in its own glyph |
 | Drawn at | 16px in a control of 32 | 48, 64 and 96px, and 32 in the strip |
-| Named for | what it does (`move`, `note-new`) | what it is (`boat`, `ring`) |
+| Named for | what it does (`move`, `note-new`) | what it is (`boat`, `anvil`) |
+| Never | — | a form that reads as an action or a sign: an X, a plus, a lock, a hash, a box in a box, a plain square, disc, diamond, octagon, ring, star, heart, bell, flag, pin, arrow, cloud, camera (`FORBIDDEN_FORMS` in `tests/test_glyphs.js`); nor an outline 90% the same as an action glyph's, each scaled to its own box |
 
 A note, as an object, is the action set's `note`. Each command's glyph is
 listed in `assets/icons/actions.json`, and the suite fails if a command has
@@ -566,6 +581,10 @@ drawn with `setIcon`; `.dr-glyph` sizes and paints it.
 
 `src/core/glyphs.js`: text in, glyph names out; no Obsidian, no DOM.
 
+- **What the name asks for.** A folder whose own name holds a word for
+  something in the set takes that glyph (`glyphMeant`: Music a tune, Reading
+  a book, Recipes a bowl, Café a cup), unless a sibling has it; accents, case
+  and a plural's s are no part of it. Only then the hash.
 - **From the path alone.** `glyphFor(path)` hashes the folder's path (FNV-1a
   with a last mix, over the name in one Unicode form, so a Mac's spelling and
   a synced one agree) and scores every glyph against it; the best is the
@@ -621,8 +640,11 @@ theme and keep their structure.
   nothing.
 - **Colour as the only sign.** Clay on bone is 2.47 to 1. Every state has a
   sign that is a shape, a weight or a word.
-- **A label at rest in a grid of objects.** If every object is named the eye
-  reads instead of looks. The name is one pointer or key away.
+- **An object nobody can name.** A grid of unnamed glyphs is a puzzle, and
+  a glyph picked at random says nothing. The name stands under each object;
+  the glyph is what its name asks for where the set has it.
+- **An object glyph that looks like a control.** An X beside a folder reads
+  as close, a lock as locked, a plus as add. Objects are things.
 - **Words on a control.** A control is a glyph; its word is its tooltip. The
   exceptions are a confirmation and a first choice.
 - **An outline icon, a stroke, a detail under the bar.** At 16px a hairline

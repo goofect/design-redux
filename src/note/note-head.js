@@ -1,10 +1,12 @@
 /* ------------------------------------------------------------------ */
-/* The note's head: its folder above it, its properties as chips       */
+/* The note's head: its folder over the title, its properties under it */
 /*                                                                     */
-/* A band the plugin adds at the top of a note's pane (its own         */
-/* element; nothing of Obsidian's is moved): the folder as a small     */
-/* label that opens it, the note's main properties as plain chips, a   */
-/* place for the page control, and a hairline under it all.            */
+/* The plugin's own parts, put in the note's own column wherever the   */
+/* note is laid out (the editor's sizer, reading view's header), so    */
+/* they scroll with the text: the folder as a label over the inline    */
+/* title; under it the properties, the page tabs and a hairline. The   */
+/* order is folder, title, properties, pages, text. Nothing of         */
+/* Obsidian's is moved.                                                */
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
@@ -14,23 +16,57 @@ import { propOf, valueTone, valuesOf } from '../core/notes.js';
 import { listOf } from '../core/text.js';
 import { chip } from '../ui/field.js';
 
-/** A note view's head band, made if it has none. Any feature may ask for it and fill its own part. */
-export function noteHead(view) {
-  const host = view.contentEl;
-  let head = Array.from(host.children).find((c) => c.classList.contains('dr-note-head'));
-  if (!head) {
-    head = host.ownerDocument.createElement('div');
-    head.className = 'dr dr-note-head';
-    host.insertBefore(head, host.firstChild);
-    ['dr-note-place', 'dr-note-chips', 'dr-note-pages'].forEach((cls) => el(head, 'div', cls));
-  }
-  return head;
+/** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
+function placesOf(view) {
+  const own = (node) => !node.parentElement || !node.parentElement.closest('.cm-sizer, .markdown-preview-sizer, .embedded-backlinks');
+  const root = view.contentEl;
+  const editing = Array.from(root.querySelectorAll('.markdown-source-view .cm-sizer')).filter(own);
+  const reading = Array.from(root.querySelectorAll('.markdown-preview-view .markdown-preview-sizer')).filter(own)
+    .map((sizer) => sizer.querySelector(':scope > .mod-header')).filter(Boolean);
+  return editing.concat(reading);
 }
 
-/** Takes the head band off a view when nothing is left in it. */
-export function tidyNoteHead(view) {
-  const head = Array.from(view.contentEl.children).find((c) => c.classList.contains('dr-note-head'));
-  if (head && !Array.from(head.children).some((part) => part.firstChild)) head.remove();
+const childOf = (parent, cls) => Array.from(parent.children).find((c) => c.classList.contains(cls)) || null;
+
+/**
+ * The plugin's parts round a note's title, in every place the note is laid
+ * out, made where missing: [{ folder, head }]. The folder goes right before
+ * the title; the head right after it, or after Obsidian's own properties
+ * when they follow the title, so the page tabs stand over the text they
+ * switch. Any feature may fill its own part of the head.
+ */
+export function noteHeads(view) {
+  return placesOf(view).map((place) => {
+    const doc = place.ownerDocument;
+    const title = childOf(place, 'inline-title');
+    let folder = childOf(place, 'dr-note-place');
+    if (!folder) {
+      folder = doc.createElement('div');
+      folder.className = 'dr dr-note-place';
+    }
+    const before = title || place.firstChild;
+    if (folder.nextSibling !== before || folder.parentNode !== place) place.insertBefore(folder, before);
+    let head = childOf(place, 'dr-note-head');
+    if (!head) {
+      head = doc.createElement('div');
+      head.className = 'dr dr-note-head';
+      ['dr-note-chips', 'dr-note-pages'].forEach((cls) => el(head, 'div', cls));
+    }
+    let after = title || folder;
+    if (after.nextElementSibling && after.nextElementSibling !== head && after.nextElementSibling.classList.contains('metadata-container')) after = after.nextElementSibling;
+    if (after.nextSibling !== head) place.insertBefore(head, after.nextSibling);
+    return { folder, head };
+  });
+}
+
+/** Takes away the parts round a note's title that have nothing in them. */
+export function tidyNoteHeads(view) {
+  placesOf(view).forEach((place) => {
+    const folder = childOf(place, 'dr-note-place');
+    if (folder && !folder.firstChild) folder.remove();
+    const head = childOf(place, 'dr-note-head');
+    if (head && !Array.from(head.children).some((part) => part.firstChild)) head.remove();
+  });
 }
 
 /** Every note view open in the workspace. */
@@ -42,12 +78,13 @@ export class NotePage extends Feature {
   enable() {
     const ws = this.app.workspace;
     const draw = () => this.drawAll();
-    ['file-open', 'layout-change', 'design-redux:props', 'design-redux:settings', 'design-redux:renamed'].forEach((name) => this.listen(ws, name, draw));
+    ['file-open', 'layout-change', 'design-redux:props', 'design-redux:settings', 'design-redux:renamed', 'design-redux:page'].forEach((name) => this.listen(ws, name, draw));
     this.add(() => noteViews(this.app).forEach((view) => {
-      const head = noteHead(view);
-      clear(head.querySelector('.dr-note-place'));
-      clear(head.querySelector('.dr-note-chips'));
-      tidyNoteHead(view);
+      noteHeads(view).forEach(({ folder, head }) => {
+        clear(folder);
+        clear(head.querySelector('.dr-note-chips'));
+      });
+      tidyNoteHeads(view);
     }));
     this.drawAll();
   }
@@ -58,18 +95,19 @@ export class NotePage extends Feature {
 
   draw(view) {
     const file = view.file;
-    const head = noteHead(view);
-    const place = clear(head.querySelector('.dr-note-place'));
-    if (file.parent && file.parent.path !== '/') {
-      const label = el(place, 'span', 'dr-label dr-note-folder', file.parent.name);
-      asButton(label, `Open ${file.parent.name}`, () => {
-        const library = this.plugin.features.find((f) => typeof f.browse === 'function');
-        if (library) library.browse(file.parent);
-      });
-    }
-    const chips = clear(head.querySelector('.dr-note-chips'));
-    if (this.settings.notePageChips) {
-      const props = this.plugin.notes.props(file);
+    const parent = file.parent && file.parent.path !== '/' ? file.parent : null;
+    const props = this.settings.notePageChips ? this.plugin.notes.props(file) : null;
+    noteHeads(view).forEach(({ folder, head }) => {
+      clear(folder);
+      if (parent) {
+        const label = el(folder, 'span', 'dr-label dr-note-folder', parent.name);
+        asButton(label, `Open ${parent.name}`, () => {
+          const library = this.plugin.features.find((f) => typeof f.browse === 'function');
+          if (library) library.browse(parent);
+        });
+      }
+      const chips = clear(head.querySelector('.dr-note-chips'));
+      if (!props) return;
       listOf(this.settings.panelPrimaryProps).forEach((key) => {
         const values = valuesOf(propOf(props, key));
         if (!values.length) return;
@@ -79,8 +117,8 @@ export class NotePage extends Feature {
         if (wrong) c.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
         if (tone) c.dataset.tone = tone;
       });
-    }
-    tidyNoteHead(view);
+    });
+    tidyNoteHeads(view);
   }
 
   settingsRows() {

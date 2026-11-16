@@ -16,7 +16,7 @@ import { iconId } from '../core/icons.js';
 import { iconButton } from '../ui/button.js';
 import { segments } from '../ui/segments.js';
 import { ask } from '../ui/sheet.js';
-import { noteHead, noteViews, tidyNoteHead } from './note-head.js';
+import { noteHeads, noteViews, tidyNoteHeads } from './note-head.js';
 import { addPage, parsePages, removePage, renamePage } from './page-text.js';
 import { hiddenLines, pagesField, showPage } from './pages-editor.js';
 
@@ -40,8 +40,8 @@ export class NotePages extends Feature {
       this.extensions.length = 0;
       if (typeof ws.updateOptions === 'function') ws.updateOptions();
       noteViews(this.app).forEach((view) => {
-        clear(noteHead(view).querySelector('.dr-note-pages'));
-        tidyNoteHead(view);
+        noteHeads(view).forEach(({ head }) => clear(head.querySelector('.dr-note-pages')));
+        tidyNoteHeads(view);
         this.show(view, null);
       });
     });
@@ -68,10 +68,12 @@ export class NotePages extends Feature {
     const pages = parsePages(await this.textOf(view));
     if (view.file !== file) return;
     this.known.set(file.path, pages.map((p) => p.name));
-    const head = noteHead(view);
-    const slot = clear(head.querySelector('.dr-note-pages'));
     const open = this.openOf(file, pages);
-    if (pages.length) {
+    // Shown first: showing a page draws reading view again, and the tabs are drawn into what it draws.
+    this.show(view, pages.length ? open : null);
+    noteHeads(view).forEach(({ head }) => {
+      const slot = clear(head.querySelector('.dr-note-pages'));
+      if (!pages.length) return;
       const tabs = segments(slot, { tabs: true, label: 'Pages', options: pages.map((p) => ({ id: p.name, text: p.name })), value: open, onChange: (name) => this.open(file, name) });
       tabs.addEventListener('contextmenu', (e) => {
         const tab = e.target.closest ? e.target.closest('.dr-segment') : null;
@@ -80,9 +82,8 @@ export class NotePages extends Feature {
         this.pageMenu(file, tab.textContent).showAtMouseEvent(e);
       });
       iconButton(slot, { glyph: 'plus', label: 'Add a page', run: () => this.add_(file) });
-    }
-    tidyNoteHead(view);
-    this.show(view, pages.length ? open : null);
+    });
+    tidyNoteHeads(view);
   }
 
   /** Makes one view show one page (null: the whole note). */

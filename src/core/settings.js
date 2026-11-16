@@ -15,8 +15,11 @@ export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overla
 
 export const regionKey = (name) => `lookRegion${name[0].toUpperCase()}${name.slice(1)}`;
 
-/** Marks a data.json this plugin wrote; the old plugin's stopped at 34. */
-export const SETTINGS_VERSION = 100;
+/** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
+export const SETTINGS_VERSION = 101;
+
+/** A data.json marked lower is the old plugin's, converted once. */
+export const REWRITE_VERSION = 100;
 
 export const DEFAULTS = {
   settingsVersion: SETTINGS_VERSION,
@@ -24,7 +27,7 @@ export const DEFAULTS = {
   // The look
   look: 'redux', // 'theme' leaves the window to the person's theme
   lookScope: 'plugin', // 'window': Obsidian's own regions too; 'plugin': only what the plugin draws
-  alwaysShowLabels: false,
+  alwaysShowLabels: true, // names under the objects at rest; off leaves them to the pointer, the ring and the pick
   ...Object.fromEntries(REGIONS.map((r) => [regionKey(r), true])),
 
   // The library

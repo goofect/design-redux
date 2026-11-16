@@ -5,6 +5,8 @@
  * every level worked from the keys; a vault of 2,000 notes drawn at once.
  */
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
 
 const dr = load();
@@ -33,7 +35,21 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     const glyphs = Array.from(s.host.querySelectorAll('.dr-cell svg')).map((g) => g.getAttribute('data-glyph'));
     assert.strictEqual(new Set(glyphs.slice(0, 3)).size, 3, 'two folders share a glyph');
     assert.strictEqual(glyphs[3], 'note');
+    assert.strictEqual(glyphs[2], 'book', 'Reading was not given the glyph its name asks for');
     assert.strictEqual(s.host.querySelector('[data-path="Logic"]').getAttribute('aria-label'), 'Logic, 5 notes');
+    // Labels show at rest by default, one line each, cut with an ellipsis; turning them off stays possible.
+    assert.ok(s.host.querySelector('.dr-grid').classList.contains('is-labelled'), 'labels are not shown at rest by default');
+    assert.strictEqual(s.host.querySelector('[data-path="Logic"] .dr-cell-name').textContent, 'Logic');
+    const css = fs.readFileSync(path.join(__dirname, '..', 'styles.css'), 'utf8');
+    assert.match(css, /\.dr-grid\.is-labelled \.dr-cell-label \{\s*visibility: visible;/);
+    assert.ok(s.host.querySelector('[data-path="Logic"] .dr-cell-name').classList.contains('dr-clip'), 'a long name is not cut');
+    w.plugin.settings.alwaysShowLabels = false;
+    await w.plugin.saveSettings();
+    s.draw();
+    assert.ok(!s.host.querySelector('.dr-grid').classList.contains('is-labelled'), 'labels could not be turned off');
+    w.plugin.settings.alwaysShowLabels = true;
+    await w.plugin.saveSettings();
+    s.draw();
     assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-head .dr-segment')).map((x) => x.getAttribute('aria-checked')), ['true', 'false', 'false']);
     await settle();
     assert.deepStrictEqual(Object.keys(w.plugin._data.folderGlyphs).sort(), ['Inbox', 'Logic', 'Reading'], 'the glyphs given were not stored');

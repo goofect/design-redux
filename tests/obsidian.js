@@ -287,9 +287,23 @@ class ItemView extends View {
   addAction() { return this.headerEl.appendChild(this.headerEl.ownerDocument.createElement('div')); }
 }
 class MarkdownView extends ItemView {
+  constructor(leaf) {
+    super(leaf);
+    // Laid out as Obsidian lays a note: the editor's sizer holds the inline title, then the text; reading view's sizer a header with the title, the blocks, a footer.
+    const div = (parent, cls) => { const n = parent.appendChild(parent.ownerDocument.createElement('div')); n.className = cls; return n; };
+    const sizer = div(div(div(div(this.contentEl, 'markdown-source-view cm-s-obsidian mod-cm6'), 'cm-editor'), 'cm-scroller'), 'cm-sizer');
+    this.titleEls = [div(sizer, 'inline-title')];
+    div(div(sizer, 'cm-contentContainer'), 'cm-content');
+    const reading = div(div(div(this.contentEl, 'markdown-reading-view'), 'markdown-preview-view markdown-rendered'), 'markdown-preview-sizer markdown-preview-section');
+    this.titleEls.push(div(div(reading, 'mod-header'), 'inline-title'));
+    div(reading, 'mod-footer');
+  }
   getViewType() { return 'markdown'; }
   getMode() { return this.mode || 'source'; }
-  async setState(state) { if (state && state.file) this.file = this.app.vault.getFileByPath(state.file); }
+  async setState(state) {
+    if (state && state.file) this.file = this.app.vault.getFileByPath(state.file);
+    if (this.file) this.titleEls.forEach((t) => (t.textContent = this.file.basename));
+  }
 }
 
 class Plugin extends Component {

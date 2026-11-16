@@ -7,7 +7,7 @@
 /* file beside the new one as data.legacy.json. Notes are not touched. */
 /* ------------------------------------------------------------------ */
 
-import { DEFAULTS, SETTINGS_VERSION } from './settings.js';
+import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
 /** Old keys whose thing is gone, and why. Their values stay in data.legacy.json. */
 export const RETIRED = {
@@ -61,7 +61,8 @@ export function migrateSettings(saved) {
   const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
   const settings = copy(DEFAULTS);
   if (!saved || typeof saved !== 'object') return { settings, legacy: null };
-  const old = (saved.settingsVersion || 1) < SETTINGS_VERSION;
+  const version = saved.settingsVersion || 1;
+  const old = version < REWRITE_VERSION;
   Object.keys(saved).forEach((key) => {
     const to = RENAMED[key] || key;
     if (key === 'settingsVersion' || !(to in DEFAULTS)) return;
@@ -76,6 +77,8 @@ export function migrateSettings(saved) {
     // The properties panel took over the inspector's switch.
     if (saved.propertyInspector === false) settings.inspector = false;
   }
+  // 101: names under the objects became the default, so a grid can be read without the pointer.
+  if (version < 101) settings.alwaysShowLabels = true;
   settings.settingsVersion = SETTINGS_VERSION;
   return { settings, legacy: old ? copy(saved) : null };
 }

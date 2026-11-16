@@ -95,7 +95,7 @@ h2,p,figure,pre{margin:0}
 .spec-screen .view-content{padding:0}
 .spec-screen.is-note>.spec-note{display:flex;flex-direction:column;height:100%}
 .spec-note-text{flex:1;width:100%;max-width:640px;margin:0 auto;padding:24px 32px;box-sizing:border-box;color:var(--dr-ink);font-family:var(--font-text);font-size:15px;line-height:24px}
-.spec-note-text h1{margin:0 0 16px;font-size:1.728em;line-height:1.2;font-weight:700}
+.spec-note-text .inline-title{margin:0 0 8px;font-size:1.728em;line-height:1.2;font-weight:700}
 .spec-note-text p{margin:0 0 16px}
 .spec-graph{display:block}
 .spec-graph-links{fill:none;stroke:var(--dr-muted);stroke-width:1}
