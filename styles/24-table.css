@@ -1,0 +1,147 @@
+/* ------------------------------------------------------------------ */
+/* The table                                                           */
+/*                                                                     */
+/* An ink grid, one header for the whole of it, no zebra.              */
+/* ------------------------------------------------------------------ */
+
+/* ---- The table: an ink grid, one header for the whole of it, no zebra. ---- */
+.dr-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--dr-ink);
+}
+
+.dr-table th,
+.dr-table td {
+  height: var(--dr-row);
+  padding: 0 var(--dr-u);
+  border: var(--dr-hair) solid var(--dr-ink);
+  text-align: left;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dr-table th {
+  font-size: var(--dr-label-size);
+  line-height: var(--dr-line);
+  font-weight: 700;
+  letter-spacing: var(--dr-label-track);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* A header's own row of name and arrow; the arrow says which way the column is sorted. */
+.dr-th {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--dr-u);
+}
+
+.dr-table .is-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The first column is the slot: three units, a number or the mark. */
+.dr-table .is-slot {
+  width: calc(5 * var(--dr-u));
+  color: var(--dr-muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dr-table tr[aria-selected="true"] > td,
+.dr-table tr[aria-current] > td {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+}
+
+.dr-table tr[aria-current] > td {
+  font-weight: 600;
+}
+
+.dr-table tr[aria-selected="true"] > .is-slot,
+.dr-table tr[aria-current] > .is-slot {
+  font-size: 0;
+}
+
+.dr-table tr[aria-selected="true"] > .is-slot::before,
+.dr-table tr[aria-current] > .is-slot::before {
+  content: "";
+  display: inline-block;
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+  border: var(--dr-ring) solid var(--dr-on-clay);
+  vertical-align: middle;
+}
+
+.dr-table tr[aria-current] > .is-slot::before {
+  background: var(--dr-on-clay);
+}
+
+/* A table that fills its pane from edge to edge leaves the pane's own lines to close it. */
+.dr-table.is-flush th:first-child,
+.dr-table.is-flush td:first-child {
+  border-left: 0;
+}
+
+.dr-table.is-flush th:last-child,
+.dr-table.is-flush td:last-child {
+  border-right: 0;
+}
+
+.dr-table.is-flush th {
+  border-top: 0;
+}
+
+.dr-table td:focus-visible,
+.dr-table th:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+.dr-table tr[aria-disabled="true"] > td {
+  color: var(--dr-muted);
+}
+
+.dr-table td[aria-invalid="true"] {
+  color: var(--dr-error);
+  text-decoration: underline wavy;
+  text-underline-offset: var(--dr-ring);
+}
+
+/* ---- Under a pointer that hovers: ash. ---- */
+@media (any-hover: hover) {
+  .dr-table tbody tr:hover > td,
+  .dr-table th:hover {
+    background: var(--dr-surface);
+  }
+
+  .dr-table tbody tr:hover > .is-slot {
+    color: var(--dr-ink);
+  }
+
+  /* What is picked or open keeps its clay under the pointer. */
+  .dr-table tbody tr[aria-selected="true"]:hover > td,
+  .dr-table tbody tr[aria-current]:hover > td {
+    background: var(--dr-clay);
+  }
+
+  .dr-table tbody tr[aria-selected="true"]:hover > .is-slot,
+  .dr-table tbody tr[aria-current]:hover > .is-slot {
+    color: var(--dr-on-clay);
+  }
+
+  /* A row that can't be acted on takes no ash: its words are muted, and muted is for the ground only. */
+  .dr-table tbody tr[aria-disabled="true"]:hover > td {
+    background: none;
+  }
+
+  .dr-table tbody tr[aria-disabled="true"]:hover > .is-slot {
+    color: var(--dr-muted);
+  }
+}

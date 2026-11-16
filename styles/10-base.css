@@ -1,0 +1,120 @@
+/* ------------------------------------------------------------------ */
+/* Base: the root of what the plugin draws, the two voices, the ring,  */
+/* a glyph, the mark                                                   */
+/*                                                                     */
+/* Everything here and after matches only the plugin's own dr- classes */
+/* (or says so where it doesn't), so the theme outside is untouched.   */
+/* State is read from the element's ARIA attributes wherever one says  */
+/* it: what a screen reader hears and what is drawn can't part ways.   */
+/* ------------------------------------------------------------------ */
+
+/* The root of any surface the plugin draws. */
+.dr {
+  font-family: var(--font-interface);
+  font-size: var(--dr-text-size);
+  line-height: var(--dr-line);
+  letter-spacing: 0;
+  color: var(--dr-ink);
+  background: var(--dr-bg);
+}
+
+.dr,
+.dr *,
+.dr *::before,
+.dr *::after {
+  box-sizing: border-box;
+}
+
+/* Stillness: nothing the plugin draws moves. */
+.dr,
+.dr *,
+.dr *::before,
+.dr *::after {
+  transition: none;
+  animation: none;
+}
+
+/* The label voice: object names, counts, column headers, section titles. */
+.dr-label {
+  font-size: var(--dr-label-size);
+  line-height: var(--dr-line);
+  font-weight: var(--dr-label-weight);
+  letter-spacing: var(--dr-label-track);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The reading voice: anything that is read. One line in a row; looser when it runs on. */
+.dr-text {
+  font-size: var(--dr-text-size);
+  line-height: var(--dr-line);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.dr-text.is-running {
+  line-height: var(--dr-line-loose);
+}
+
+/* The one larger size a region may use, for its title. */
+.dr-title {
+  font-size: var(--dr-title-size);
+  line-height: var(--dr-line-loose);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+/* Secondary words: only ever on the ground. */
+.dr-muted {
+  color: var(--dr-muted);
+}
+
+/* One line, cut with an ellipsis where it runs out. */
+.dr-clip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The focus ring: ink, two pixels, clear of the control. A control that sits flush against its neighbours wears it inside. */
+.dr:focus-visible,
+.dr :focus-visible {
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: var(--dr-ring);
+}
+
+/* A glyph of the plugin's set: solid, the colour of the words around it. --dr-glyph is its size where it isn't a control's. */
+.dr-glyph {
+  display: block;
+  flex: none;
+  width: var(--dr-glyph, var(--dr-icon));
+  height: var(--dr-glyph, var(--dr-icon));
+  fill: currentColor;
+  stroke: none;
+}
+
+/* The mark: one unit of ink. Solid beside what is open, hollow beside what is selected. */
+.dr-mark {
+  display: block;
+  flex: none;
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+  background: currentColor;
+}
+
+.dr-mark.is-hollow {
+  background: none;
+  border: var(--dr-ring) solid currentColor;
+}
+
+/* Words for a screen reader only. */
+.dr-unseen {
+  position: absolute;
+  width: var(--dr-hair);
+  height: var(--dr-hair);
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

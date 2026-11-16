@@ -41,3 +41,6 @@ graphify-out
 # Secrets and local environment
 .env
 .env.*
+
+# What a screenshot test saw when it differed from the approved image
+tests/screenshots/failed/

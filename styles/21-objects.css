@@ -1,0 +1,183 @@
+/* ------------------------------------------------------------------ */
+/* Objects: the grid and its cells                                     */
+/*                                                                     */
+/* A folder as a glyph on the ground, nothing round it. Three columns  */
+/* in the sidebar, as many as fit at the window's width; cells square, */
+/* equal, a whole number of units. No words at rest.                   */
+/* ------------------------------------------------------------------ */
+
+/* ---- The grid of objects. Three columns in the sidebar; cells square, equal, a whole number of units. ---- */
+.dr-grid {
+  --dr-columns: 3;
+  --dr-cell: round(down, calc((100cqi - 2 * var(--dr-gutter)) / var(--dr-columns)), var(--dr-u));
+  display: grid;
+  grid-template-columns: repeat(var(--dr-columns), var(--dr-cell));
+  justify-content: center;
+}
+
+/* At the window's width: cells of sixteen units, as many columns as fit. */
+.dr-grid.is-wide {
+  --dr-cell: calc(16 * var(--dr-u));
+  grid-template-columns: repeat(auto-fill, var(--dr-cell));
+}
+
+/* ---- An object: a glyph on the ground, nothing round it. Its name waits under it. ---- */
+.dr-cell {
+  --dr-glyph: var(--dr-object);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--dr-cell);
+  height: var(--dr-cell);
+  color: var(--dr-ink);
+  cursor: pointer;
+}
+
+.dr-grid.is-wide .dr-cell {
+  --dr-glyph: var(--dr-object-wide);
+}
+
+.dr-cell:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
+}
+
+/* A cover of the person's own: its own shape, square corners, no filter. */
+.dr-cell-cover {
+  display: block;
+  max-width: var(--dr-glyph);
+  max-height: var(--dr-glyph);
+  object-fit: contain;
+}
+
+/* The name and the count, in the foot of the cell. Unseen at rest; there under the pointer, the ring, and what is picked. */
+.dr-cell-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* Under the glyph, as near it as the unit allows: at the foot of a cell of ten units, a unit up in one of twelve. */
+  bottom: round(down, calc((var(--dr-cell) - var(--dr-glyph)) / 2 - var(--dr-line)), var(--dr-u));
+  display: flex;
+  justify-content: center;
+  gap: var(--dr-u);
+  visibility: hidden;
+}
+
+/* A name too long for its cell is cut; the whole of it is the cell's tooltip. */
+.dr-cell-name {
+  max-width: calc(100% - var(--dr-u));
+}
+
+.dr-cell-count {
+  flex: none;
+  color: var(--dr-muted);
+}
+
+/* Where labels are always shown, the count waits for the pointer, the ring or the pick: the name needs the room. */
+.dr-grid.is-labelled .dr-cell-count {
+  display: none;
+}
+
+.dr-grid.is-labelled .dr-cell:focus-visible .dr-cell-count,
+.dr-grid.is-labelled .dr-cell[aria-selected="true"] .dr-cell-count,
+.dr-grid.is-labelled .dr-cell[aria-current] .dr-cell-count {
+  display: block;
+}
+
+.dr-cell:focus-visible > .dr-cell-label,
+.dr-cell[aria-selected="true"] > .dr-cell-label,
+.dr-cell[aria-current] > .dr-cell-label,
+.dr-grid.is-labelled .dr-cell-label {
+  visibility: visible;
+}
+
+/* Picked: a clay fill behind the object, and its name. */
+.dr-cell[aria-selected="true"],
+.dr-cell[aria-current] {
+  background: var(--dr-clay);
+  color: var(--dr-on-clay);
+}
+
+.dr-cell[aria-selected="true"] .dr-cell-count,
+.dr-cell[aria-current] .dr-cell-count,
+.dr-cell:focus-visible .dr-cell-count {
+  color: inherit;
+}
+
+.dr-cell[aria-selected="true"]:focus-visible,
+.dr-cell[aria-current]:focus-visible {
+  outline-color: var(--dr-on-clay);
+}
+
+/* Open in the page: the mark in the cell's corner, and its name in bold. */
+.dr-cell[aria-current]::before {
+  content: "";
+  position: absolute;
+  top: var(--dr-u);
+  left: var(--dr-u);
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+  background: currentColor;
+}
+
+.dr-cell[aria-current] .dr-cell-name {
+  font-weight: 700;
+}
+
+.dr-cell[aria-disabled="true"] {
+  color: var(--dr-muted);
+  cursor: default;
+}
+
+/* Something wrong with it (a cover that can't be found): the alert glyph in its corner, the reason in its label. */
+.dr-cell-flag {
+  --dr-glyph: var(--dr-icon);
+  position: absolute;
+  top: var(--dr-u);
+  right: var(--dr-u);
+  color: var(--dr-error);
+}
+
+/* ---- Under a pointer that hovers: ash, and the name shown. ---- */
+@media (any-hover: hover) {
+  .dr-cell:hover {
+    background: var(--dr-surface);
+  }
+
+  .dr-cell:hover > .dr-cell-label {
+    visibility: visible;
+  }
+
+  .dr-grid.is-labelled .dr-cell:hover .dr-cell-count {
+    display: block;
+  }
+
+  .dr-cell:hover .dr-cell-count {
+    color: var(--dr-ink);
+  }
+
+  /* What is picked or open keeps its clay under the pointer. */
+  .dr-cell[aria-selected="true"]:hover,
+  .dr-cell[aria-current]:hover {
+    background: var(--dr-clay);
+  }
+
+  .dr-cell[aria-selected="true"]:hover .dr-cell-count,
+  .dr-cell[aria-current]:hover .dr-cell-count {
+    color: var(--dr-on-clay);
+  }
+
+  .dr-cell[aria-disabled="true"]:hover {
+    background: none;
+  }
+}
+
+/* ---- A folder given a tone: its glyph in that tone, on the ground. On clay it is the dark of clay like everything else. ---- */
+.dr-cell[data-tone="rust"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-rust); }
+.dr-cell[data-tone="ochre"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-ochre); }
+.dr-cell[data-tone="moss"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-moss); }
+.dr-cell[data-tone="slate"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-slate); }
+.dr-cell[data-tone="plum"]:not([aria-selected="true"]):not([aria-current]) { color: var(--dr-plum); }
+
+.dr-cell[data-tone] .dr-cell-label {
+  color: var(--dr-ink);
+}

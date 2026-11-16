@@ -1,13 +1,15 @@
 {
   "name": "design-redux",
   "private": true,
-  "description": "An Obsidian plugin: browse your vault as a library, folders as albums.",
+  "description": "An Obsidian plugin: the vault as a library of objects, at three levels of detail.",
   "scripts": {
     "build": "node build.mjs",
-    "pretest": "node build.mjs",
+    "pretest": "node build.mjs && node tools/specimen.mjs",
     "test": "node tests/run.js",
     "pretest:obsidian": "node build.mjs",
-    "test:obsidian": "wdio run ./wdio.conf.mjs"
+    "test:obsidian": "wdio run ./wdio.conf.mjs",
+    "specimen": "node tools/specimen.mjs",
+    "screenshots": "node tests/screenshots.js"
   },
   "devDependencies": {
     "@codemirror/commands": "^6.11.1",
@@ -23,6 +25,7 @@
     "js-yaml": "^4.3.2",
     "jsdom": "^24.1.3",
     "obsidian": "^1.13.1",
+    "playwright": "^1.65.1",
     "wdio-obsidian-reporter": "^3.2.1",
     "wdio-obsidian-service": "^3.2.1",
     "webdriverio": "^9.32.0"

@@ -1,115 +1,124 @@
-// Bundles the modules in src/ into main.js, the one file Obsidian loads.
+// Builds main.js and styles.css, the two files Obsidian loads.
 //
-// Each module, src/<area>/NNN-name.js, imports what it uses and exports what
-// it declares; src/main.js imports them all and exports the plugin. esbuild
-// joins them into one script, leaving obsidian and @codemirror/* to
-// Obsidian, as now. Before writing main.js the build refuses:
-//   - a file out of place, or in no area;
-//   - a name declared at the top of two modules (the bundle would rename one,
-//     and the tests reach the plugin's names by their own);
-//   - a name used from another module without importing it, an import of
-//     something that module doesn't declare, a module that needs a name as
-//     it loads from one that runs after it, or a use across the layers that
-//     isn't on the known list (tests/map.js --verify);
-//   - a module nothing imports (src/main.js imports only the plugin; the
-//     rest are reached through it);
-//   - a main.js that fails as it loads.
-// Then it joins the stylesheet's parts, styles/NN-name.css, in their order,
-// into styles.css, the one Obsidian loads.
-import fs from 'fs';
-import path from 'path';
-import vm from 'vm';
-import { execFileSync } from 'child_process';
-import { fileURLToPath } from 'url';
-import * as esbuild from 'esbuild';
+// main.js: esbuild bundles src/main.js. The glyphs under assets/icons come in
+// as the module `dr:icons`. Before bundling, the source is held to its shape:
+// a module sits in an area, is no longer than 400 lines, imports only from its
+// own area and those below, exports no name another module exports, and is
+// reached from src/main.js.
+// styles.css: the parts of styles/, joined in name order: the order is the cascade.
+// tests/_source.js: every module's exports as one object, for the suites.
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import esbuild from 'esbuild';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const dir = path.join(root, 'src');
-const AREAS = ['core', 'ui', 'library', 'note', 'tools', 'plugin'];
+const src = path.join(root, 'src');
+const LAYERS = [['core'], ['ui'], ['library', 'note', 'maps', 'tools'], ['plugin']];
+const AREAS = LAYERS.flat();
+const LIMIT = 400;
 const fail = (message) => {
   console.error(`build: ${message}`);
   process.exit(1);
 };
 
 const modules = [];
-fs.readdirSync(dir).forEach((entry) => {
-  if (entry === 'main.js') return;
-  if (!fs.statSync(path.join(dir, entry)).isDirectory()) fail(`src/${entry}: a module goes in its area's folder, src/<area>/NNN-name.js`);
-  if (!AREAS.includes(entry)) fail(`src/${entry}/ isn't an area: ${AREAS.join(', ')}`);
-  fs.readdirSync(path.join(dir, entry)).forEach((file) => modules.push(`${entry}/${file}`));
+fs.readdirSync(src).forEach((entry) => {
+  if (entry === 'main.js' || entry.startsWith('.')) return;
+  if (!AREAS.includes(entry)) fail(`src/${entry} isn't an area: ${AREAS.join(', ')}`);
+  fs.readdirSync(path.join(src, entry)).filter((f) => !f.startsWith('.')).forEach((file) => {
+    if (!/^[a-z][a-z0-9-]*\.js$/.test(file)) fail(`src/${entry}/${file}: a module is named name.js, lower case`);
+    modules.push(`${entry}/${file}`);
+  });
 });
-const strays = modules.filter((m) => !/^[a-z]+\/\d{3}-[a-z0-9-]+\.js$/.test(m));
-if (strays.length) fail(`modules are named src/<area>/NNN-name.js: ${strays.join(', ')}`);
 
-// Top-level names, each declared once across all the modules.
-const declared = new Map();
+const layerOf = (area) => LAYERS.findIndex((l) => l.includes(area));
+const exported = new Map();
 modules.forEach((file) => {
-  const text = fs.readFileSync(path.join(dir, file), 'utf8');
-  if (!text.endsWith('\n')) fail(`${file} must end with a line break`);
-  text.split('\n').forEach((line, i) => {
-    const m = /^(?:export\s+)?(?:async\s+)?(?:function\*?|class|const|let|var)\s+([A-Za-z_$][\w$]*)/.exec(line);
-    if (!m) return;
-    const at = `${file}:${i + 1}`;
-    if (declared.has(m[1])) fail(`${m[1]} is declared twice: ${declared.get(m[1])} and ${at}`);
-    declared.set(m[1], at);
+  const text = fs.readFileSync(path.join(src, file), 'utf8');
+  const lines = text.split('\n');
+  if (lines.length - 1 > LIMIT) fail(`src/${file} is ${lines.length - 1} lines: no module is over ${LIMIT}`);
+  const area = file.split('/')[0];
+  lines.forEach((line, i) => {
+    const from = /^\s*(?:import|export)\b[^'"]*from\s+['"](\.[^'"]+)['"]/.exec(line) || /^\s*import\s+['"](\.[^'"]+)['"]/.exec(line);
+    if (from) {
+      const target = path.relative(src, path.resolve(path.join(src, area), from[1])).split(path.sep);
+      const other = target[0];
+      if (target.length < 2 || !AREAS.includes(other)) fail(`src/${file}:${i + 1} imports ${from[1]}, which is in no area`);
+      if (other !== area && layerOf(other) >= layerOf(area)) fail(`src/${file}:${i + 1} imports from ${other}: ${area} may import only from its own area and those below (${LAYERS.slice(0, layerOf(area)).flat().join(', ') || 'none'})`);
+    }
+    const name = /^export\s+(?:async\s+)?(?:function\*?|class|const|let)\s+([A-Za-z_$][\w$]*)/.exec(line);
+    if (!name) return;
+    if (exported.has(name[1])) fail(`${name[1]} is exported twice: src/${exported.get(name[1])} and src/${file}`);
+    exported.set(name[1], file);
   });
 });
 
+/** The glyph files as a module: each name's paths, already wrapped for Obsidian's addIcon (a box of 100). */
+const icons = {
+  name: 'dr-icons',
+  setup(build) {
+    build.onResolve({ filter: /^dr:icons$/ }, () => ({ path: 'icons', namespace: 'dr' }));
+    build.onLoad({ filter: /.*/, namespace: 'dr' }, () => {
+      const out = {};
+      ['actions', 'objects'].forEach((kind) => {
+        const dir = path.join(root, 'assets', 'icons', kind);
+        fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).sort().forEach((f) => {
+          const paths = fs.readFileSync(path.join(dir, f), 'utf8').replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
+          out[f.slice(0, -4)] = `<g transform="scale(${(100 / 24).toFixed(6)})" fill="currentColor" stroke="none">${paths}</g>`;
+        });
+      });
+      return { contents: `export const ICONS = ${JSON.stringify(out)};`, loader: 'js' };
+    });
+  },
+};
+
+const common = {
+  bundle: true,
+  format: 'cjs',
+  target: 'es2021',
+  platform: 'browser',
+  external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*'],
+  plugins: [icons],
+  write: false,
+  metafile: true,
+  logLevel: 'silent',
+  legalComments: 'none',
+};
+
+let result;
 try {
-  execFileSync(process.execPath, [path.join(root, 'tests', 'map.js'), '--verify'], { cwd: root, encoding: 'utf8', stdio: 'pipe' });
+  result = await esbuild.build({ ...common, entryPoints: [path.join(src, 'main.js')] });
 } catch (err) {
-  fail(`\n${String(err.stdout || err.message).trim()}`);
+  fail(`${(err.errors || []).map((e) => `${e.location ? `${e.location.file}:${e.location.line} ` : ''}${e.text}`).join('\n') || err.message}`);
+}
+const reached = new Set(Object.keys(result.metafile.inputs).map((f) => path.relative(src, path.resolve(root, f))));
+const lost = modules.filter((m) => !reached.has(m));
+// A module nothing reaches is refused; `--loose` only tells it, for work in hand.
+if (lost.length) {
+  const message = `nothing imports ${lost.map((m) => `src/${m}`).join(', ')}: a module is reached from src/main.js or it goes`;
+  if (!process.argv.includes('--loose')) fail(message);
+  console.log(`build: (loose) ${message}`);
 }
 
-let code;
-try {
-  const result = await esbuild.build({
-    entryPoints: [path.join(dir, 'main.js')],
-    bundle: true,
-    format: 'cjs',
-    target: 'esnext',
-    external: ['obsidian', 'electron', '@codemirror/*', '@lezer/*'],
-    // Everything the modules declare stays, used or not: the tests reach it.
-    treeShaking: false,
-    charset: 'utf8',
-    legalComments: 'none',
-    // module.exports is the plugin class itself, as in 1.x, rather than { default }.
-    footer: { js: 'module.exports = module.exports.default;' },
-    logLevel: 'silent',
-    write: false,
-  });
-  code = result.outputFiles[0].text;
-} catch (err) {
-  fail(`esbuild: ${(err.errors || []).map((e) => `${e.text}${e.location ? ` (${e.location.file}:${e.location.line})` : ''}`).join('\n') || err.message}`);
-}
-
-// Loaded as Obsidian would, with what Obsidian provides stood in for: a
-// name a cycle leaves undefined fails here rather than in the app.
-const stand = () =>
-  new Proxy(function () {}, {
-    get: (target, key) => (key === 'prototype' ? {} : key === Symbol.toPrimitive ? () => '' : stand()),
-    apply: () => stand(),
-    construct: () => stand(),
-  });
-try {
-  const module = { exports: {} };
-  const sandbox = { module, exports: module.exports, require: () => stand(), console, window: stand(), document: stand(), navigator: stand(), setTimeout, clearTimeout };
-  new vm.Script(code, { filename: 'main.js' }).runInNewContext(sandbox);
-  if (typeof sandbox.module.exports !== 'function') fail('main.js loads, but exports no plugin');
-} catch (err) {
-  fail(`main.js wouldn't load: ${err.message}\n${(err.stack || '').split('\n').slice(0, 3).join('\n')}`);
-}
-
-const out = path.join(root, 'main.js');
-if (!fs.existsSync(out) || fs.readFileSync(out, 'utf8') !== code) fs.writeFileSync(out, code);
+const write = (file, text) => {
+  if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== text) fs.writeFileSync(file, text);
+};
+const code = result.outputFiles[0].text;
+write(path.join(root, 'main.js'), code);
 console.log(`build: main.js from ${modules.length} modules, ${code.split('\n').length - 1} lines`);
 
-// The stylesheet: its parts joined as they are, in order, so the cascade is the one they were written in.
+// For the suites: everything every module exports, by name.
+const all = await esbuild.build({
+  ...common,
+  stdin: { contents: `${modules.map((m) => `export * from './${m}';`).join('\n')}\nexport { default } from './main.js';`, resolveDir: src, sourcefile: 'all.js' },
+});
+write(path.join(root, 'tests', '_source.js'), all.outputFiles[0].text);
+
 const styleDir = path.join(root, 'styles');
 const parts = fs.readdirSync(styleDir).filter((f) => f.endsWith('.css')).sort();
 const misnamed = parts.filter((f) => !/^\d{2}-[a-z0-9-]+\.css$/.test(f));
 if (misnamed.length) fail(`styles/ holds a part not named NN-name.css: ${misnamed.join(', ')}`);
-const css = parts.map((f) => fs.readFileSync(path.join(styleDir, f), 'utf8')).join('');
-const cssOut = path.join(root, 'styles.css');
-if (!fs.existsSync(cssOut) || fs.readFileSync(cssOut, 'utf8') !== css) fs.writeFileSync(cssOut, css);
+const css = parts.map((f) => fs.readFileSync(path.join(styleDir, f), 'utf8')).join('\n');
+write(path.join(root, 'styles.css'), css);
 console.log(`build: styles.css from ${parts.length} parts, ${css.split('\n').length - 1} lines`);
