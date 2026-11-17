@@ -8,9 +8,8 @@ this file lacks adds it here and to the specimen first, then uses it.
 
 - See it: `docs/specimen.html` (light and dark side by side), built by
   `node tools/specimen.mjs` from the same sources the plugin ships.
-- Sources: `assets/icons/` (the glyphs, one SVG each), `styles/` (staged in
-  `next/styles/` until the old tree moves to `legacy/`), `src/core/glyphs.js`
-  (staged in `next/src/core/`).
+- Sources: `assets/icons/` (the glyphs, one SVG each), `styles/`, and
+  `src/core/glyphs.js`.
 - Checked by: `tests/test_glyphs.js`, `tests/test_tokens.js`,
   `tests/contrast.js`, `tests/screenshots.js`.
 
