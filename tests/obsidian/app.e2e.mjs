@@ -90,7 +90,7 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(panels.fits).toBe(true);
     const chrome = await browser.execute(() => {
       const left = document.querySelector('.workspace-split.mod-left-split');
-      const ribbon = document.querySelector('.workspace-ribbon.mod-left');
+      const ribbon = document.querySelector('.workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
       return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display };
     });
     expect(chrome.left).toBe('none');

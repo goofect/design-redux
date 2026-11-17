@@ -1,5 +1,6 @@
 /* Selector map: hide only the left ribbon and left dock while the library is active. */
 body.dr-browser-open .workspace-ribbon.mod-left,
+body.dr-browser-open .side-dock-ribbon.mod-left,
 body.dr-browser-open .workspace-split.mod-left-split {
   display: none;
 }
