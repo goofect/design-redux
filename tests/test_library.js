@@ -13,6 +13,7 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     const w = await world(files);
     const s = sidebar(w);
     assert.deepStrictEqual(paths(s.host), ['Empty', 'Philosophy', 'Loose.md']);
+    assert.strictEqual(s.host.querySelector('.dr-file-items').getAttribute('role'), 'tree');
     assert.ok(s.host.querySelector('input[aria-label="Search files"]'));
     assert.ok(!s.host.querySelector('[aria-label="Level of detail"]'));
     s.go(w.file('Philosophy'));
@@ -36,6 +37,7 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
   await check('the main view shows file types, details and synchronized navigation', async () => {
     const w = await world(files); const lib = w.plugin.features.find((f) => f.constructor.name === 'Library');
     const leaf = await lib.browse(w.file('Philosophy')); const s = leaf.view.screen;
+    assert.strictEqual(s.host.querySelector('.dr-file-items').getAttribute('role'), 'listbox');
     assert.deepStrictEqual(paths(s.host), ['Philosophy/Logic', 'Philosophy/Metaphysics', 'Philosophy/Arguments.md', 'Philosophy/Diagram.pdf']);
     assert.ok(s.host.textContent.includes('Markdown') && s.host.textContent.includes('PDF'));
     w.plugin.selection.pick(w.file('Philosophy/Diagram.pdf')); await settle();

@@ -78,7 +78,7 @@ export class BrowseView extends ScreenView {
     el(aside, 'h2', 'dr-file-details-title', 'Details');
     if (picked) {
       const name = el(aside, 'div', 'dr-file-details-name');
-      browserIcon(name, picked instanceof TFolder ? 'folder' : picked.extension === 'md' ? 'file-text' : 'file');
+      browserIcon(name, picked instanceof TFolder ? 'folder' : picked.extension === 'pdf' ? 'file-text' : 'file');
       el(name, 'span', 'dr-clip', picked.name);
       el(aside, 'div', 'dr-file-details-type', `File type: ${browserType(picked)}`);
     }

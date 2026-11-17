@@ -1,6 +1,6 @@
 /* The approved file browser's shared list of folders and files. */
 import { setIcon, TFolder } from 'obsidian';
-import { asButton, clear, el, flag, glyph } from '../core/dom.js';
+import { asButton, clear, el, glyph } from '../core/dom.js';
 import { sayso } from '../ui/state.js';
 
 /** A human-readable file type without assuming every file is a note. */
@@ -29,16 +29,21 @@ export function drawFileList(screen, host, folder, query = '') {
     ? plugin.index.folders().concat(folders.flatMap((f) => plugin.index.files(f))).filter((entry) => entry.name.toLowerCase().includes(wanted))
     : plugin.index.subfolders(folder).concat(plugin.index.files(folder));
   if (!entries.length) return void sayso(host, { label: wanted ? 'No matching files or folders' : 'Nothing in this folder yet', button: wanted ? null : { text: 'New note', run: () => plugin.files.newNote(folder) } });
-  const list = el(host, 'div', 'dr-file-list');
+  const container = el(host, 'div', 'dr-file-list');
   if (screen.opts.wide) {
-    const labels = el(list, 'div', 'dr-file-list-heading');
+    const labels = el(container, 'div', 'dr-file-list-heading');
     el(labels, 'span', '', 'Name');
     el(labels, 'span', '', 'Type');
   }
+  const list = el(container, 'div', 'dr-file-items');
+  list.setAttribute('role', screen.opts.wide ? 'listbox' : 'tree');
+  list.setAttribute('aria-label', wanted ? 'Search results' : `Files in ${folder.path === '/' ? 'vault' : folder.name}`);
   const drawEntry = (entry, depth = 0) => {
     const isFolder = entry instanceof TFolder;
     const node = el(list, 'div', 'dr-file-row');
     node.dataset.path = entry.path;
+    node.setAttribute('role', screen.opts.wide ? 'option' : 'treeitem');
+    if (!screen.opts.wide) node.setAttribute('aria-level', String(depth + 1));
     node.style.setProperty('--dr-depth', String(depth));
     asButton(node, entry.name, (event) => {
       const picked = plugin.selection.path === entry.path;
@@ -48,7 +53,7 @@ export function drawFileList(screen, host, folder, query = '') {
         else screen.openNote(entry, event);
       }
     });
-    flag(node, 'aria-selected', plugin.selection.is(entry));
+    node.setAttribute('aria-selected', String(plugin.selection.is(entry)));
     const name = el(node, 'span', 'dr-file-name');
     if (!screen.opts.wide && isFolder && !wanted) {
       const open = !!screen.expanded.get(entry.path);
@@ -65,7 +70,7 @@ export function drawFileList(screen, host, folder, query = '') {
         }
       });
     }
-    browserIcon(name, isFolder ? 'folder' : entry.extension === 'md' ? 'file-text' : 'file');
+    browserIcon(name, isFolder ? 'folder' : entry.extension === 'pdf' ? 'file-text' : 'file');
     el(name, 'span', 'dr-clip', entry.name);
     if (wanted) el(name, 'span', 'dr-file-result-path dr-clip', entry.path);
     if (screen.opts.wide) el(node, 'span', 'dr-file-type dr-clip', browserType(entry));
