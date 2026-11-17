@@ -84,20 +84,12 @@ export class Scripts extends Feature {
 
   actions() {
     return [
-      { id: 'superscript', name: 'Superscript', glyph: 'superscript', on: 'editor', menu: false, run: (ctx) => this.apply(ctx.editor, 'sup') },
-      { id: 'subscript', name: 'Subscript', glyph: 'subscript', on: 'editor', menu: false, run: (ctx) => this.apply(ctx.editor, 'sub') },
-    ];
-  }
-
-  settingsRows() {
-    return [
-      { key: 'scriptSyntax', name: 'Spelling', desc: 'What the commands write.', type: 'choice', options: { short: 'x^2^ and H~2~O', tags: '<sup> and <sub>' } },
-      { key: 'autoOrdinals', name: 'Raise 1st, 2nd, 3rd', desc: 'In reading view.', type: 'toggle' },
+      { id: 'superscript', name: 'Superscript', on: 'editor', menu: false, run: (ctx) => this.apply(ctx.editor, 'sup') },
+      { id: 'subscript', name: 'Subscript', on: 'editor', menu: false, run: (ctx) => this.apply(ctx.editor, 'sub') },
     ];
   }
 }
 Scripts.key = 'scripts';
 Scripts.title = 'Superscript and subscript';
-Scripts.glyph = 'superscript';
 Scripts.section = 'Notes';
 Scripts.about = 'x^2^ and H~2~O, raised and lowered.';

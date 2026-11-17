@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const first = (...dirs) => dirs.map((d) => path.join(root, d)).find((d) => fs.existsSync(d));
 export const stylesDir = first('styles/00-tokens.css', 'next/styles/00-tokens.css').replace(/00-tokens\.css$/, '');
-export const builderFile = first('src/core/glyphs.js', 'next/src/core/glyphs.js');
 const iconsDir = path.join(root, 'assets', 'icons');
 
 /** Every glyph of one set, by name: the paths inside its file. */
@@ -19,14 +18,12 @@ function readSet(kind) {
   return out;
 }
 export const actions = readSet('actions');
-export const objects = readSet('objects');
-export const commands = JSON.parse(fs.readFileSync(path.join(iconsDir, 'actions.json'), 'utf8'));
 
 /** A glyph as the plugin draws it. `px` sets its size where the place it stands in doesn't. */
 export function glyph(name, px) {
-  const body = actions[name] || objects[name];
+  const body = actions[name];
   if (!body) throw new Error(`no glyph named ${name}`);
-  return `<svg class="dr-glyph" viewBox="0 0 24 24" aria-hidden="true"${px ? ` style="--dr-glyph:${px}px"` : ''}>${body}</svg>`;
+  return `<svg class="dr-glyph" viewBox="0 0 24 24" aria-hidden="true"${px ? ` style="width:${px}px;height:${px}px"` : ''}>${body}</svg>`;
 }
 
 export const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -80,8 +77,8 @@ export function withHeldStates(css) {
 }
 
 /** A captioned example: what state it shows, and the thing itself. */
-export const shown = (caption, html, cls = '') => `<figure class="spec-shown ${cls}"><div class="spec-thing">${html}</div><figcaption class="dr-small dr-muted">${esc(caption)}</figcaption></figure>`;
+export const shown = (caption, html, cls = '') => `<figure class="spec-shown ${cls}"><div class="spec-thing">${html}</div><figcaption class="dr-muted">${esc(caption)}</figcaption></figure>`;
 /** A component: its name, a line on what it is for, and its states in a row. */
-export const component = (name, note, items) => `<div class="spec-component"><div class="spec-component-head"><span class="dr-label">${esc(name)}</span><span class="dr-text dr-muted">${esc(note)}</span></div><div class="spec-states">${items.join('')}</div></div>`;
+export const component = (name, note, items) => `<div class="spec-component"><div class="spec-component-head"><span>${esc(name)}</span><span class="dr-text dr-muted">${esc(note)}</span></div><div class="spec-states">${items.join('')}</div></div>`;
 /** A section of the page; `id` names its screenshot. */
-export const section = (id, title, note, html) => `<section class="spec-section" id="${id}" data-shot="${id}"><header class="spec-section-head"><h2 class="dr-label">${esc(title)}</h2><p class="dr-text dr-muted">${esc(note)}</p></header>${html}</section>`;
+export const section = (id, title, note, html) => `<section class="spec-section" id="${id}" data-shot="${id}"><header class="spec-section-head"><h2 class="dr-display">${esc(title)}</h2><p class="dr-text dr-muted">${esc(note)}</p></header>${html}</section>`;

@@ -100,10 +100,10 @@ export class PropertySchemas extends Feature {
     const sheet = new Sheet(this.app, {
       title: 'Notes against their schemas',
       build: (matter, s) => {
-        if (!found.length) return void sayso(matter, { glyph: 'check', label: 'Every note fits', text: Object.keys(this.settings.propertySchemas || {}).length ? '' : 'No folder has a schema yet.' });
+        if (!found.length) return void sayso(matter, { label: 'Every note fits', text: Object.keys(this.settings.propertySchemas || {}).length ? '' : 'No folder has a schema yet.' });
         sectionTitle(matter, { title: counted(found.length, 'note') });
         const list = rows(matter);
-        found.slice(0, 100).forEach((x) => row(list, { name: x.file.basename, error: true, endGlyph: 'alert', end: `${x.faults[0].key}: ${x.faults[0].fault}`.slice(0, 40), run: () => { s.close(); this.app.workspace.getLeaf(false).openFile(x.file); } }));
+        found.slice(0, 100).forEach((x) => row(list, { name: x.file.basename, error: true, end: `${x.faults[0].key}: ${x.faults[0].fault}`.slice(0, 40), run: () => { s.close(); this.app.workspace.getLeaf(false).openFile(x.file); } }));
       },
       actions: [{ text: 'Close' }],
     });
@@ -113,13 +113,12 @@ export class PropertySchemas extends Feature {
 
   actions() {
     return [
-      { id: 'folder-property-schema', name: 'Property schema for this folder…', glyph: 'schema', on: 'folder', menu: 'Schema…', run: (ctx) => this.edit(ctx.folder) },
-      { id: 'check-property-schemas', name: 'Check notes against their schemas…', glyph: 'list-check', run: () => this.check() },
+      { id: 'folder-property-schema', name: 'Property schema for this folder…', on: 'folder', menu: 'Schema…', run: (ctx) => this.edit(ctx.folder) },
+      { id: 'check-property-schemas', name: 'Check notes against their schemas…', run: () => this.check() },
     ];
   }
 }
 PropertySchemas.key = 'propertySchemaMarks';
 PropertySchemas.title = 'Folder schemas';
-PropertySchemas.glyph = 'schema';
 PropertySchemas.section = 'Tools';
 PropertySchemas.about = 'What a folder’s notes should have, and a mark where one falls short.';

@@ -3,15 +3,14 @@
 /* (docs/design-language.md, "Say-so")                                 */
 /* ------------------------------------------------------------------ */
 
-import { el, glyph } from '../core/dom.js';
+import { el } from '../core/dom.js';
 import { textButton } from './button.js';
 
-/** { glyph, label, text, button: { text, run }, error, busy }. Nothing here, working (its words alone, muted: nothing spins), or something wrong. */
+/** { label, text, button: { text, run }, error, busy }. A sentence in place of a screen's contents: nothing here, working (its words, grey), or something wrong (red, its words saying what). No glyph. */
 export function sayso(parent, opts) {
   const node = el(parent, 'div', `dr-state${opts.error ? ' is-error' : ''}${opts.busy ? ' is-busy' : ''}`);
   node.setAttribute('role', opts.error ? 'alert' : 'status');
   if (opts.busy) node.setAttribute('aria-busy', 'true');
-  else glyph(node, opts.glyph || (opts.error ? 'alert' : 'empty'));
   el(node, 'span', 'dr-state-label dr-text', opts.label);
   if (opts.text) el(node, 'span', 'dr-text is-running', opts.text);
   if (opts.button) textButton(node, opts.button);

@@ -154,7 +154,7 @@ export class PropertyRules extends Feature {
         const draw = () => {
           while (matter.childNodes.length > 1) matter.removeChild(matter.lastChild);
           const rules = Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : [];
-          if (!rules.length) sayso(matter, { glyph: 'rules', label: 'No rules yet' });
+          if (!rules.length) sayso(matter, { label: 'No rules yet' });
           else {
             const list = el(matter, 'div', 'dr-rules');
             list.setAttribute('role', 'list');
@@ -198,7 +198,7 @@ export class PropertyRules extends Feature {
     const key = input('property');
     el(line, 'span', '', 'to');
     const value = input('value');
-    const say = el(form, 'span', 'dr-field-note dr-small');
+    const say = el(form, 'span', 'dr-field-note dr-muted');
     textButton(form, { text: 'Add rule', run: async () => {
       const rule = ruleOf({ kind: kind.getValue(), what: what.value, key: key.value, value: value.value });
       if (!rule) return void (say.textContent = `Fill in the ${kind.getValue()} and the property.`);
@@ -210,16 +210,11 @@ export class PropertyRules extends Feature {
   }
 
   actions() {
-    return [{ id: 'property-rules', name: 'Property rules…', glyph: 'rules', run: () => this.edit() }];
-  }
-
-  settingsRows() {
-    return [{ key: 'propertyRulesDryRun', name: 'Dry run', desc: 'Rules say what they would set, and set nothing.', type: 'toggle' }];
+    return [{ id: 'property-rules', name: 'Property rules…', run: () => this.edit() }];
   }
 }
 PropertyRules.key = 'propertyRulesOn';
 PropertyRules.title = 'Property rules';
-PropertyRules.glyph = 'rules';
 PropertyRules.section = 'Tools';
 PropertyRules.about = 'When a note comes into a folder, gets a tag or a value, set other properties.';
 
@@ -247,12 +242,7 @@ export class PropertyHistory extends Feature {
   putBack(file, change) {
     return this.plugin.notes.write(file, (fm) => { if (change.was === undefined) delete fm[change.key]; else fm[change.key] = change.was; }, { undo: `${change.key} put back.` });
   }
-
-  settingsRows() {
-    return [{ key: 'propertyHistoryLimit', name: 'Changes kept a note', desc: '0 keeps none.', type: 'number' }];
-  }
 }
 PropertyHistory.title = 'Property history';
-PropertyHistory.glyph = 'undo';
 PropertyHistory.section = 'Tools';
 PropertyHistory.about = 'The last changes to a note’s properties, to put back one value at a time.';

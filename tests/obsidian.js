@@ -378,7 +378,16 @@ class Setting {
   setClass(c) { this.settingEl.classList.add(c); return this; }
   setDisabled() { return this; }
   _add(tag, fn) { const c = control(this, tag); this.components.push(c); if (fn) fn(c); return this; }
-  addToggle(fn) { return this._add('div', fn); }
+  addToggle(fn) {
+    // As Obsidian makes it: a .checkbox-container holding a checkbox, .is-enabled when on.
+    return this._add('div', (c) => {
+      c.el.className = 'checkbox-container';
+      c.el.appendChild(c.el.ownerDocument.createElement('input')).type = 'checkbox';
+      const set = c.setValue;
+      c.setValue = (v) => { c.el.classList.toggle('is-enabled', !!v); return set(v); };
+      if (fn) fn(c);
+    });
+  }
   addText(fn) { return this._add('input', fn); }
   addTextArea(fn) { return this._add('textarea', fn); }
   addDropdown(fn) { return this._add('select', fn); }

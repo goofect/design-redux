@@ -1,24 +1,22 @@
 /* ------------------------------------------------------------------ */
-/* Segments: one choice of a few, in one frame                         */
-/* (docs/design-language.md, "Zoom control", "Tabs")                   */
+/* Tabs: a note's pages, as words                                      */
 /*                                                                     */
-/* The zoom control is glyph segments (a radio group); a note's pages  */
-/* are word segments (tabs). The arrow keys move the choice, as they   */
-/* do in the native controls these stand for.                          */
+/* A tab list of words, the open one inverted. The arrow keys move the */
+/* choice, as they do in the native control this stands for. Many      */
+/* scroll a whole tab at a time, an ellipsis at the edge.              */
 /* ------------------------------------------------------------------ */
 
-import { el, flag, glyph, onActivate } from '../core/dom.js';
+import { el, flag, onActivate } from '../core/dom.js';
 
 /**
- * { label, options: [{ id, glyph, text, label, disabled }], value, onChange, tabs }.
+ * { label, options: [{ id, text, label, disabled }], value, onChange }.
  * Returns the element; `element.drSet(id)` shows another choice without telling `onChange`.
  */
 export function segments(parent, opts) {
-  const tabs = !!opts.tabs;
-  const group = el(parent, 'div', `dr-segments${tabs ? ' dr-tabs' : ''}`);
-  group.setAttribute('role', tabs ? 'tablist' : 'radiogroup');
+  const group = el(parent, 'div', 'dr-segments dr-tabs');
+  group.setAttribute('role', 'tablist');
   if (opts.label) group.setAttribute('aria-label', opts.label);
-  const state = tabs ? 'aria-selected' : 'aria-checked';
+  const state = 'aria-selected';
   const items = new Map();
   const show = (id) => {
     items.forEach((node, key) => {
@@ -33,16 +31,15 @@ export function segments(parent, opts) {
     const changed = group.dataset.value !== id;
     show(id);
     if (focus) {
-      if (tabs) reveal(group, node);
+      reveal(group, node);
       node.focus();
     }
     if (changed && opts.onChange) opts.onChange(id);
   };
   opts.options.forEach((option) => {
-    const node = el(group, 'div', `dr-segment${tabs ? ' dr-text' : ''}`);
-    node.setAttribute('role', tabs ? 'tab' : 'radio');
+    const node = el(group, 'div', 'dr-segment dr-text');
+    node.setAttribute('role', 'tab');
     if (option.label || option.glyph) node.setAttribute('aria-label', option.label || option.text);
-    if (option.glyph) glyph(node, option.glyph);
     if (option.text) el(node, 'span', '', option.text);
     flag(node, 'aria-disabled', option.disabled);
     onActivate(node, () => choose(option.id));
@@ -58,7 +55,7 @@ export function segments(parent, opts) {
   });
   show(opts.value);
   group.drSet = show;
-  if (tabs) keepWhole(group, items.get(opts.value));
+  keepWhole(group, items.get(opts.value));
   return group;
 }
 

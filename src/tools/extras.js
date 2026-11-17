@@ -5,7 +5,6 @@
 import { Menu, Notice } from 'obsidian';
 import { applies } from '../core/actions.js';
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
 
 /** What a bug report needs, as text: versions, what is on, how big the vault is. Nothing of the notes themselves. */
 export function diagnosticsText(plugin) {
@@ -25,7 +24,7 @@ export function diagnosticsText(plugin) {
 
 export class Diagnostics extends Feature {
   actions() {
-    return [{ id: 'copy-diagnostics', name: 'Copy diagnostics for a bug report', glyph: 'report', run: async () => {
+    return [{ id: 'copy-diagnostics', name: 'Copy diagnostics for a bug report', run: async () => {
       try {
         await navigator.clipboard.writeText(diagnosticsText(this.plugin));
         new Notice('Diagnostics copied.');
@@ -41,12 +40,12 @@ export class ActionsMenu extends Feature {
   menu() {
     const menu = new Menu();
     this.plugin.actions().filter((a) => (a.on || 'app') === 'app' && a.id !== 'open-actions' && a.palette !== false && applies(a, {})).forEach((a) =>
-      menu.addItem((item) => item.setTitle(a.name).setIcon(iconId(a.glyph)).setSection(a.feature.constructor.section || 'action').onClick(() => a.run({ from: 'menu' }))));
+      menu.addItem((item) => item.setTitle(a.name).setSection(a.feature.constructor.section || 'action').onClick(() => a.run({ from: 'menu' }))));
     return menu;
   }
 
   actions() {
-    return [{ id: 'open-actions', name: 'Open actions menu', glyph: 'more', run: () => {
+    return [{ id: 'open-actions', name: 'Open actions menu', run: () => {
       const e = this.app.lastEvent;
       const menu = this.menu();
       return e && typeof e.clientX === 'number' ? menu.showAtMouseEvent(e) : menu.showAtPosition({ x: 0, y: 0 });
@@ -55,7 +54,6 @@ export class ActionsMenu extends Feature {
 }
 ActionsMenu.key = 'navDropdown';
 ActionsMenu.title = 'Actions menu';
-ActionsMenu.glyph = 'more';
 ActionsMenu.section = 'Tools';
 ActionsMenu.about = 'One menu of everything the plugin can do.';
 
@@ -86,6 +84,5 @@ export class MenuFilter extends Feature {
 }
 MenuFilter.key = 'menuFilter';
 MenuFilter.title = 'Menu filter';
-MenuFilter.glyph = 'filter';
 MenuFilter.section = 'Tools';
 MenuFilter.about = 'Leaves the entries that only repeat the plugin’s own out of Obsidian’s menus.';

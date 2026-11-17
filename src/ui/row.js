@@ -4,8 +4,7 @@
 /* (docs/design-language.md, "Row", "Outline row", "Panel row")        */
 /* ------------------------------------------------------------------ */
 
-import { asButton, el, flag, glyph } from '../core/dom.js';
-import { rowNumber } from '../core/text.js';
+import { asButton, el, flag } from '../core/dom.js';
 import { iconButton } from './button.js';
 
 /** A list of rows, ruled. `outline` leaves the rules out. */
@@ -16,39 +15,22 @@ export function rows(parent, opts = {}) {
 }
 
 /**
- * A row. { number, slot (other words for the slot, as a footnote's id), name,
- * end (words), endGlyph, selected, current (true, or 'page', 'location'),
- * disabled, missing, error, child, run, path }. Only a numbered row has the
- * slot: numbers stand only where the order means something.
+ * A row. { slot (a footnote's own id: the one thing a row's slot holds; rows
+ * are never numbered), name, end (words, grey), selected, current (true, or
+ * 'page', 'location'), disabled, missing, error, child, run, path }.
  */
 export function row(list, opts) {
-  const numbered = opts.number != null || opts.slot != null;
-  const node = el(list, 'div', `dr-row${numbered ? ' is-numbered' : ''}${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
+  const slotted = opts.slot != null;
+  const node = el(list, 'div', `dr-row${slotted ? ' is-slotted' : ''}${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
   asButton(node, null, opts.run);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
-  if (numbered) el(el(node, 'span', 'dr-slot dr-small'), 'span', '', opts.number != null ? rowNumber(opts.number) : String(opts.slot));
+  if (slotted) el(node, 'span', 'dr-slot dr-muted', String(opts.slot));
   el(node, 'span', 'dr-row-name dr-text dr-clip', opts.name);
-  if (opts.end != null || opts.endGlyph) {
-    const end = el(node, 'span', 'dr-row-end dr-small');
-    if (opts.endGlyph) glyph(end, opts.endGlyph);
-    if (opts.end != null) el(end, 'span', '', opts.end);
-  }
+  if (opts.end != null && opts.end !== '') el(node, 'span', 'dr-row-end dr-muted', opts.end);
   flag(node, 'aria-selected', opts.selected);
   flag(node, 'aria-current', opts.current, opts.current === true ? 'true' : opts.current);
   flag(node, 'aria-disabled', opts.disabled);
-  return node;
-}
-
-/** A folder's line in the outline. { name, count, open, toggle, path }. */
-export function outlineFolder(list, opts) {
-  const node = el(list, 'div', 'dr-outline-folder');
-  asButton(node, null, opts.toggle);
-  node.setAttribute('aria-expanded', String(!!opts.open));
-  if (opts.path != null) node.dataset.path = opts.path;
-  glyph(el(node, 'span', 'dr-slot'), opts.open ? 'down' : 'next');
-  el(node, 'span', 'dr-text dr-clip', opts.name);
-  if (opts.count != null) el(node, 'span', 'dr-row-end dr-small', String(opts.count));
   return node;
 }
 
@@ -57,12 +39,13 @@ export function propRow(parent, opts) {
   const none = opts.value == null || opts.value === '';
   const node = el(parent, 'div', `dr-prop${none ? ' is-empty' : ''}`);
   if (opts.run) asButton(node, null, opts.run);
-  el(node, 'span', 'dr-label dr-clip', opts.name);
+  el(node, 'span', 'dr-prop-name dr-muted dr-clip', opts.name);
   el(node, 'span', 'dr-prop-value dr-text dr-clip', none ? '—' : String(opts.value));
   if (opts.invalid) {
+    // Wrong: the value red, and the words saying why after it.
     node.setAttribute('aria-invalid', 'true');
     node.setAttribute('aria-label', `${opts.name}: ${opts.invalid}`);
-    glyph(node, 'alert');
+    el(node, 'span', 'dr-prop-why', opts.invalid);
   }
   flag(node, 'aria-selected', opts.selected);
   flag(node, 'aria-disabled', opts.disabled);
@@ -76,7 +59,7 @@ export function propRow(parent, opts) {
  */
 export function sectionTitle(parent, opts) {
   const node = el(parent, 'div', 'dr-section');
-  const label = el(node, 'span', 'dr-label', opts.title);
+  const label = el(node, 'span', 'dr-section-name dr-muted', opts.title);
   if (opts.fold) {
     asButton(label, null, opts.fold.run);
     label.setAttribute('aria-expanded', String(!!opts.fold.open));

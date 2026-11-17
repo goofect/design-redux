@@ -14,7 +14,7 @@ import { asButton, el, flag, glyph } from '../core/dom.js';
  */
 export function field(parent, opts) {
   const node = el(parent, 'label', 'dr-field');
-  if (opts.label) el(node, 'span', 'dr-small', opts.label);
+  if (opts.label) el(node, 'span', 'dr-muted', opts.label);
   const box = el(node, 'div', 'dr-field-box');
   if (opts.glyph) glyph(box, opts.glyph);
   const input = el(box, 'input', 'dr-input');
@@ -26,13 +26,10 @@ export function field(parent, opts) {
   input.disabled = !!opts.disabled;
   flag(node, 'aria-disabled', opts.disabled);
   let note = null;
-  let mark = null;
   node.drInput = input;
   node.drSay = (text, invalid, busy) => {
     flag(node, 'aria-invalid', invalid);
     flag(node, 'aria-busy', busy);
-    if (mark) mark.remove();
-    mark = invalid ? glyph(box, 'alert') : null;
     if (note) note.remove();
     note = text ? el(node, 'span', 'dr-field-note dr-text', text) : null;
   };
@@ -50,7 +47,7 @@ export function field(parent, opts) {
  */
 export function chip(parent, opts) {
   const node = el(parent, 'span', 'dr-chip');
-  if (opts.name) el(node, 'span', 'dr-small', opts.name);
+  if (opts.name) el(node, 'span', 'dr-muted', opts.name);
   el(node, 'span', 'dr-text', opts.value);
   if (opts.checked !== undefined) {
     node.setAttribute('role', 'checkbox');

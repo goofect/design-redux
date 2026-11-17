@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* Base: the root of what the plugin draws, the two voices, the ring,  */
-/* a glyph, the mark                                                   */
+/* Base: the root of what the plugin draws, the one face at its two    */
+/* sizes, the grey, a link, the focus outline, a glyph                 */
 /*                                                                     */
 /* Everything here and after matches only the plugin's own dr- classes */
 /* (or says so where it doesn't), so the theme outside is untouched.   */
@@ -8,12 +8,14 @@
 /* it: what a screen reader hears and what is drawn can't part ways.   */
 /* ------------------------------------------------------------------ */
 
-/* The root of any surface the plugin draws. */
+/* The root of any surface the plugin draws: the one face, 13px, ink on the ground. */
 .dr {
-  font-family: var(--font-interface);
-  font-size: var(--dr-text-size);
+  font-family: var(--dr-font);
+  font-size: var(--dr-size);
   line-height: var(--dr-line);
+  font-weight: 400;
   letter-spacing: 0;
+  text-transform: none;
   color: var(--dr-ink);
   background: var(--dr-bg);
 }
@@ -34,49 +36,21 @@
   animation: none;
 }
 
-/* The label voice, the one in capitals: a section's title and a property's name, nothing else. */
-.dr-label {
-  font-size: var(--dr-label-size);
-  line-height: var(--dr-line);
-  font-weight: var(--dr-label-weight);
-  letter-spacing: var(--dr-label-track);
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The small voice: what trails or counts (a length, a count, a folder at the end of a row), a field's name,
-   a caption. Sentence case, the label's size, no tracking. */
-.dr-small {
-  font-size: var(--dr-label-size);
-  line-height: var(--dr-line);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  font-variant-numeric: tabular-nums;
-}
-
-/* The reading voice: anything that is read, and the person's own words (a folder's name, a page's). One line in a row; looser when it runs on. */
-.dr-text {
-  font-size: var(--dr-text-size);
-  line-height: var(--dr-line);
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
+/* Running text keeps the size and takes a looser line. */
 .dr-text.is-running {
   line-height: var(--dr-line-loose);
 }
 
-/* The one larger size a region may use, for its title. */
-.dr-title {
-  font-size: var(--dr-title-size);
-  line-height: var(--dr-line-loose);
+/* The other size: the one name that matters on a screen. */
+.dr-display {
+  display: block;
+  font-size: var(--dr-size-display);
+  line-height: var(--dr-line-display);
   font-weight: 400;
   letter-spacing: 0;
 }
 
-/* Secondary words: only ever on the ground. */
+/* The one grey: words that are secondary. */
 .dr-muted {
   color: var(--dr-muted);
 }
@@ -89,35 +63,35 @@
   white-space: nowrap;
 }
 
-/* The focus ring: ink, two pixels, clear of the control. A control that sits flush against its neighbours wears it inside. */
+/* A link: an underlined word that goes somewhere. One that goes nowhere is grey. */
+.dr-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
+  cursor: pointer;
+}
+
+.dr-link[aria-disabled="true"] {
+  color: var(--dr-muted);
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Focus: a 2px ink outline, clear of what it marks. What sits flush against its neighbours wears it inside. */
 .dr:focus-visible,
 .dr :focus-visible {
   outline: var(--dr-ring) solid var(--dr-ink);
   outline-offset: var(--dr-ring);
 }
 
-/* A glyph of the plugin's set: solid, the colour of the words around it. --dr-glyph is its size where it isn't a control's. */
+/* A glyph of the plugin's few: solid, the colour of the words around it. */
 .dr-glyph {
   display: block;
   flex: none;
-  width: var(--dr-glyph, var(--dr-icon));
-  height: var(--dr-glyph, var(--dr-icon));
+  width: var(--dr-icon);
+  height: var(--dr-icon);
   fill: currentColor;
   stroke: none;
-}
-
-/* The mark: one unit of ink. Solid beside what is open, hollow beside what is selected. */
-.dr-mark {
-  display: block;
-  flex: none;
-  width: var(--dr-mark);
-  height: var(--dr-mark);
-  background: currentColor;
-}
-
-.dr-mark.is-hollow {
-  background: none;
-  border: var(--dr-ring) solid currentColor;
 }
 
 /* Words for a screen reader only. */

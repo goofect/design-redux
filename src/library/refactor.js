@@ -126,16 +126,15 @@ export class AlbumRefactor extends Feature {
   actions() {
     const on = 'folder';
     return [
-      { id: 'album-rename', name: 'Rename this folder…', glyph: 'pencil', on, menu: false, run: (ctx) => renameEntry(this.plugin, ctx.folder) },
-      { id: 'album-move', name: 'Move this folder…', glyph: 'move', on, menu: false, run: (ctx) => moveEntry(this.plugin, ctx.folder) },
-      { id: 'album-merge', name: 'Merge this folder into another…', glyph: 'merge', on, menu: 'Merge into…', section: 'danger', run: (ctx) => this.merge(ctx.folder) },
-      { id: 'album-split', name: 'Split notes off into a new folder…', glyph: 'split', on, menu: 'Split notes off…', section: 'danger', run: (ctx) => this.split(ctx.folder) },
-      { id: 'album-delete', name: 'Delete this folder…', glyph: 'trash', on, menu: false, run: (ctx) => deleteEntry(this.plugin, ctx.folder) },
+      { id: 'album-rename', name: 'Rename this folder…', on, menu: false, run: (ctx) => renameEntry(this.plugin, ctx.folder) },
+      { id: 'album-move', name: 'Move this folder…', on, menu: false, run: (ctx) => moveEntry(this.plugin, ctx.folder) },
+      { id: 'album-merge', name: 'Merge this folder into another…', on, menu: 'Merge into…', section: 'danger', run: (ctx) => this.merge(ctx.folder) },
+      { id: 'album-split', name: 'Split notes off into a new folder…', on, menu: 'Split notes off…', section: 'danger', run: (ctx) => this.split(ctx.folder) },
+      { id: 'album-delete', name: 'Delete this folder…', on, menu: false, run: (ctx) => deleteEntry(this.plugin, ctx.folder) },
     ];
   }
 }
 AlbumRefactor.key = 'albumRefactor';
 AlbumRefactor.title = 'Reorganising folders';
-AlbumRefactor.glyph = 'merge';
 AlbumRefactor.section = 'Library';
 AlbumRefactor.about = 'Merge a folder into another or split notes off, said first and undone in one.';

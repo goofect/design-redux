@@ -16,7 +16,6 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const tokensFile = ['styles', 'next/styles'].map((d) => path.join(root, d, '00-tokens.css')).find((f) => fs.existsSync(f));
-const TONES = ['rust', 'ochre', 'moss', 'slate', 'plum'];
 
 /** The --dr- tokens one scheme's block declares, by name. */
 function schemeTokens(css, scheme) {
@@ -36,58 +35,20 @@ function ratio(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-/** One scheme's lines of the block, and what fails in it. */
+/** One scheme's lines of the block, and what fails in it: every pair the reset uses is words, so every one is held to 4.5. */
 function measureScheme(scheme, t) {
   const failures = [];
-  const says = (what, on, floor) => {
+  const says = (what, on) => {
     const r = ratio(t[what], t[on]);
-    if (floor && r < floor) failures.push(`${scheme}: ${what} on ${on} is ${r.toFixed(2)}, under ${floor}`);
+    if (r < 4.5) failures.push(`${scheme}: ${what} on ${on} is ${r.toFixed(2)}, under 4.5`);
     return `${what} on ${on} ${r.toFixed(2)}`;
   };
-  const text = [says('ink', 'bg', 4.5), says('ink', 'surface', 4.5), says('ink', 'press', 4.5), says('muted', 'bg', 4.5)];
-  const never = [];
-  // Muted on the hover fill is text only in the scheme where it measures as text.
-  (ratio(t.muted, t.surface) >= 4.5 ? text : never).push(says('muted', 'surface'));
-  text.push(says('on-clay', 'clay', 4.5));
-  // What marks a fill: the ink where it can be read on clay, the on-clay colour where it can't.
-  const line = [says('ink', 'bg', 3), says('ink', 'surface', 3)];
-  if (ratio(t.ink, t.clay) >= 3) line.push(says('ink', 'clay', 3));
-  else { line.push(says('on-clay', 'clay', 3)); never.push(says('ink', 'clay')); }
-  never.push(says('muted', 'clay'), `clay as text on bg ${ratio(t.clay, t.bg).toFixed(2)}`);
-  const fill = [says('clay', 'bg'), says('surface', 'bg'), says('press', 'surface'), says('clay', 'surface')];
-  const tones = TONES.map((tone) => {
-    const [onBg, onSurface] = [ratio(t[tone], t.bg), ratio(t[tone], t.surface)];
-    if (onBg < 4.5) failures.push(`${scheme}: ${tone} on bg is ${onBg.toFixed(2)}, under 4.5`);
-    if (onSurface < 4.5) failures.push(`${scheme}: ${tone} on surface is ${onSurface.toFixed(2)}, under 4.5`);
-    return `${tone} ${onBg.toFixed(2)}/${onSurface.toFixed(2)}`;
-  });
-  const soft = TONES.map((tone) => {
-    const r = ratio(t[`${tone}-soft`], t.bg);
-    if (r < 3) failures.push(`${scheme}: ${tone}-soft on bg is ${r.toFixed(2)}, under 3`);
-    return `${tone} ${r.toFixed(2)}`;
-  });
-  // The same colour written a second way must be the same colour.
-  Object.keys(t).filter((name) => name.endsWith('-rgb')).forEach((name) => {
-    const hex = t[name.slice(0, -4)];
-    if (!hex || rgb(hex).join(', ') !== t[name]) failures.push(`${scheme}: --dr-${name} (${t[name]}) is not --dr-${name.slice(0, -4)} (${hex})`);
-  });
-  const [r, g, b] = rgb(t.clay).map((c) => c / 255);
-  const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
-  const l = (max + min) / 2;
-  const s = (max - min) / (1 - Math.abs(2 * l - 1));
-  const h = 60 * (max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4);
-  const hsl = `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
-  if (`${t['clay-h']} ${t['clay-s']} ${t['clay-l']}` !== hsl) failures.push(`${scheme}: clay's hue, saturation and lightness should read ${hsl}`);
+  // The ink on the ground, the ground on the ink (what is selected or open, inverted), the grey and the red on the ground.
+  const text = [says('ink', 'bg'), says('bg', 'ink'), says('muted', 'bg'), says('error', 'bg')];
+  const names = Object.keys(t).sort();
+  if (names.join(' ') !== 'bg error ink muted') failures.push(`${scheme}: the palette is ${names.join(', ')}, not the four (bg, ink, muted, error)`);
   const pad = scheme.padEnd(5);
-  const lines = [
-    `${pad}  text   ${text.join(' · ')}`,
-    `${pad}  line   ${line.join(' · ')}`,
-    `${pad}  fill   ${fill.join(' · ')} (never the only sign: see "Selected and open")`,
-    `${pad}  never  ${never.join(' · ')}`,
-    `${pad}  tones  ${tones.join(' · ')} (on bg / on surface)`,
-    `${pad}  soft   ${soft.join(' · ')} (on bg: fills and lines only)`,
-  ];
-  return { lines, failures, pairs: text.length + line.length + fill.length + never.length + tones.length * 2 + soft.length };
+  return { lines: [`${pad}  ${text.join(' · ')}`], failures, pairs: text.length };
 }
 
 /** Both schemes measured: { block (the comment's text), failures, pairs, stale }. */

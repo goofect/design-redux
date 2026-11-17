@@ -1,58 +1,12 @@
 /* ------------------------------------------------------------------ */
-/* Faces: what a folder or a note is shown as                          */
+/* Faces: a folder's or a note's cover image, where the person set one */
 /*                                                                     */
-/* A folder is its glyph: the one stored for its path, or the one the  */
-/* builder gives it among its siblings, which is then stored, so a     */
-/* folder made later never changes another's face. A cover of the      */
-/* person's own (an image set for the folder, or named by a note's     */
-/* cover property) takes the glyph's place. A note is the sheet.       */
+/* An image set for the folder, or named by its folder note's (or a    */
+/* note's) cover property. Where there is none, a folder is its name.  */
 /* ------------------------------------------------------------------ */
 
 import { TFile } from 'obsidian';
-import { glyphsAmong, isGlyph } from '../core/glyphs.js';
 import { linkTarget } from '../core/notes.js';
-
-/**
- * The glyphs of the folders that share a parent, by path. Any the builder
- * had to choose are stored, and saved a moment later without redrawing.
- */
-export function folderGlyphs(plugin, folders) {
-  const stored = plugin.settings.folderGlyphs || (plugin.settings.folderGlyphs = {});
-  const given = glyphsAmong(folders.map((f) => f.path), stored);
-  let fresh = false;
-  folders.forEach((f) => {
-    if (isGlyph(stored[f.path])) return;
-    stored[f.path] = given[f.path];
-    fresh = true;
-  });
-  if (fresh) keepSoon(plugin);
-  return given;
-}
-
-/** One folder's glyph. */
-export function folderGlyph(plugin, folder) {
-  const stored = (plugin.settings.folderGlyphs || {})[folder.path];
-  if (isGlyph(stored)) return stored;
-  const siblings = folder.parent ? plugin.index.subfolders(folder.parent) : [folder];
-  return folderGlyphs(plugin, siblings.includes(folder) ? siblings : siblings.concat(folder))[folder.path];
-}
-
-/** Sets the glyph the person picked for a folder; `null` hands the choice back to the builder. */
-export async function pickGlyph(plugin, folder, name) {
-  const stored = plugin.settings.folderGlyphs || (plugin.settings.folderGlyphs = {});
-  if (name && isGlyph(name)) stored[folder.path] = name;
-  else delete stored[folder.path];
-  await plugin.saveSettings();
-}
-
-function keepSoon(plugin) {
-  if (plugin.keepingGlyphs) return;
-  plugin.keepingGlyphs = true;
-  Promise.resolve().then(() => {
-    plugin.keepingGlyphs = false;
-    if (!plugin.unloading) plugin.saveData(plugin.settings);
-  });
-}
 
 /** An image file's address for an <img>, or null. */
 function resource(plugin, path, from) {

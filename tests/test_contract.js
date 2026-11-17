@@ -43,30 +43,18 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
     });
   });
 
-  await check('every command has a name, a glyph of the plugin\'s set, and it in assets/icons/actions.json', () => {
-    const named = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'assets', 'icons', 'actions.json'), 'utf8'));
-    const wrong = w.plugin.actions().filter((a) => a.palette !== false).filter((a) => !a.name || !dr.GLYPH_NAMES.includes(a.glyph) || named[a.id] !== a.glyph).map((a) => `${a.id} (${a.glyph}, listed ${named[a.id]})`);
+  await check('every command has a name, and none a glyph: menus and commands are words', () => {
+    const wrong = w.plugin.actions().filter((a) => a.palette !== false).filter((a) => !a.name || a.glyph).map((a) => a.id);
     assert.deepStrictEqual(wrong, []);
   });
 
-  await check('a feature has at most ten settings of its own, each a real setting; a row belongs to one feature only', () => {
-    const owner = new Map();
-    const wrong = [];
-    w.plugin.features.forEach((f) => {
-      const rows = f.settingsRows();
-      const own = rows.filter((r) => !r.group);
-      const name = f.constructor.name;
-      if (own.length > 10) wrong.push(`${name}: ${own.length} settings`);
-      if (rows.length && !f.constructor.title) wrong.push(`${name}: settings, but no title to list them under`);
-      rows.filter((r) => r.key).forEach((r) => {
-        if (!(r.key in dr.DEFAULTS)) wrong.push(`${name}: ${r.key} is no setting`);
-        if (owner.has(r.key)) wrong.push(`${r.key}: in ${owner.get(r.key)} and ${name}`);
-        owner.set(r.key, name);
-      });
-      const key = f.constructor.key;
-      if (key && !(key in dr.DEFAULTS)) wrong.push(`${name}: its switch ${key} is no setting`);
-    });
-    assert.deepStrictEqual(wrong, []);
+  await check('the settings page is the features\' switches and nothing else: the look\'s two, then one a feature that has one', () => {
+    const tab = new dr.SettingsTab(w.app, w.plugin);
+    tab.display();
+    const names = Array.from(tab.containerEl.querySelectorAll('.setting-item')).map((r) => r.querySelector('.setting-item-name').textContent);
+    const switched = w.plugin.features.filter((f) => f.constructor.key && f.constructor.title);
+    assert.deepStrictEqual(names, ['The look', 'On Obsidian’s own interface too'].concat(switched.map((f) => f.constructor.title)));
+    assert.deepStrictEqual(switched.filter((f) => !(f.constructor.key in dr.DEFAULTS)).map((f) => f.constructor.name), [], 'a switch that is no setting');
   });
 
   await check('every setting is read by some module (a setting nothing reads silently does nothing)', () => {

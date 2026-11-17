@@ -73,13 +73,12 @@ export class SavedViews extends Feature {
 
   actions() {
     return [
-      { id: 'smart-album-open', name: 'Open a saved view…', glyph: 'bookmark', when: () => this.list().length > 0, run: () => this.open() },
-      { id: 'smart-album-save', name: 'Keep these filters as a saved view…', glyph: 'bookmark-add', run: () => this.save() },
+      { id: 'smart-album-open', name: 'Open a saved view…', when: () => this.list().length > 0, run: () => this.open() },
+      { id: 'smart-album-save', name: 'Keep these filters as a saved view…', run: () => this.save() },
     ];
   }
 }
 SavedViews.key = 'smartAlbums';
 SavedViews.title = 'Filters and saved views';
-SavedViews.glyph = 'bookmark';
 SavedViews.section = 'Library';
 SavedViews.about = 'Notes from anywhere by folder, tag, property or date, kept under a name.';

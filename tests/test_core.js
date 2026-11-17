@@ -59,12 +59,23 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     Object.keys(files).forEach((p) => assert.strictEqual(w.text(p), files[p], `${p} was rewritten`));
   });
 
+  await check('settings 102: what the direction reset cut is retired, its values kept under retired, nothing else touched', () => {
+    const saved = { settingsVersion: 101, alwaysShowLabels: false, libraryZoom: { sidebar: 'shelves' }, folderGlyphs: { Logic: 'cat' }, lookRegionTabs: false, stripPlace: false, tableColumns: 'status', look: 'redux', propertyRules: [{ id: 'r' }] };
+    const { settings, legacy } = dr.migrateSettings(saved);
+    assert.strictEqual(legacy, null, 'a 4.0 file was taken for the old plugin\'s');
+    ['alwaysShowLabels', 'libraryZoom', 'folderGlyphs', 'lookRegionTabs', 'stripPlace', 'tableColumns'].forEach((k) => assert.ok(!(k in settings), `${k} is still a setting`));
+    assert.deepStrictEqual(settings.retired, { alwaysShowLabels: false, libraryZoom: { sidebar: 'shelves' }, folderGlyphs: { Logic: 'cat' }, lookRegionTabs: false, stripPlace: false, tableColumns: 'status' });
+    assert.deepStrictEqual(settings.propertyRules, [{ id: 'r' }]);
+    assert.strictEqual(settings.settingsVersion, dr.SETTINGS_VERSION);
+    Object.keys(settings.retired).forEach((k) => assert.ok(dr.RETIRED[k], `${k} retired without a reason`));
+  });
+
   await check('path-keyed settings follow a rename and a delete', async () => {
     const w = await world({ 'School/Logic/A.md': '', 'School/Logic/B.md': '', 'Other/C.md': '' });
     const s = w.plugin.settings;
-    Object.assign(s, { folderGlyphs: { School: 'tower', 'School/Logic': 'key' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
+    Object.assign(s, { coverColors: { School: 'moss', 'School/Logic': 'rust' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
     await w.app.vault.rename(w.file('School'), 'University');
-    assert.deepStrictEqual([s.folderGlyphs.University, s.folderGlyphs['University/Logic'], s.folderGlyphs.School], ['tower', 'key', undefined]);
+    assert.deepStrictEqual([s.coverColors.University, s.coverColors['University/Logic'], s.coverColors.School], ['moss', 'rust', undefined]);
     assert.deepStrictEqual(s.folderCovers, { 'University/Logic': 'University/Logic/cover.png' });
     assert.deepStrictEqual(s.pinOrder, ['University/Logic/A.md']);
     assert.deepStrictEqual(s.albums.Other.includes, ['University/Logic/B.md']);
@@ -72,7 +83,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     await w.app.vault.rename(w.file('University/Logic/A.md'), 'University/Logic/Alpha.md');
     assert.deepStrictEqual(s.albumOrders['University/Logic'].names, ['B.md', 'Alpha.md']);
     await w.app.vault.delete(w.file('University/Logic'));
-    assert.deepStrictEqual([s.folderGlyphs.University, 'University/Logic' in s.folderGlyphs], ['tower', false]);
+    assert.deepStrictEqual([s.coverColors.University, 'University/Logic' in s.coverColors], ['moss', false]);
     assert.deepStrictEqual(s.folderCovers, {});
     assert.deepStrictEqual(s.pinOrder, []);
     assert.deepStrictEqual(s.albums.Other.includes, []);
@@ -133,10 +144,11 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     const other = new (require('jsdom').JSDOM)('<body class="theme-dark"></body>').window.document;
     w.app.workspace.trigger('window-open', { doc: other });
     assert.ok(other.body.classList.contains('dr-active'));
-    Object.assign(w.plugin.settings, { lookScope: 'window', lookRegionTabs: false, alwaysShowLabels: true });
+    // The look on the whole window: every region, Obsidian's too; no switch a region.
+    Object.assign(w.plugin.settings, { lookScope: 'window' });
     await w.plugin.saveSettings();
     [body, other.body].forEach((b) => {
-      assert.ok(b.classList.contains('dr-region-chrome') && !b.classList.contains('dr-region-tabs') && b.classList.contains('dr-labels'));
+      assert.ok(b.classList.contains('dr-region-chrome') && b.classList.contains('dr-region-tabs') && !b.classList.contains('dr-labels'));
     });
     w.plugin.settings.look = 'theme';
     await w.plugin.saveSettings();
@@ -144,7 +156,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     w.plugin.settings.look = 'redux';
     await w.plugin.saveSettings();
     const before = Object.keys(obsidian.icons).filter((id) => id.startsWith('dr-')).length;
-    assert.ok(before >= 150, `${before} glyphs registered`);
+    assert.ok(before >= 9 && before <= 12, `${before} glyphs registered`);
     w.plugin.unload();
     assert.strictEqual(body.className, 'theme-light');
     assert.strictEqual(other.body.className, 'theme-dark');

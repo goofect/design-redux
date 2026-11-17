@@ -39,7 +39,7 @@ function vault() {
 }
 
 const SETTINGS = {
-  settingsVersion: 100,
+  settingsVersion: 102,
   contextStrip: true,
   notePageChips: true,
   panelPrimaryProps: 'status, course, week',
@@ -83,17 +83,22 @@ export async function screens() {
   await settle();
   const panel = panelLeaf.view.contentEl.outerHTML;
 
-  // The library: search with nothing typed, then with something.
+  // The library: the sidebar at the vault's top, a folder's page, then searching.
   const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
-  library.search('');
-  const searchEmpty = library.host.outerHTML;
+  library.draw();
+  const sidebarTop = library.host.outerHTML;
+  library.go(w.file('Logic'));
+  const sidebarFolder = library.host.outerHTML;
+  library.go(null);
   library.query = 'tab';
   library.draw();
   const searchFound = library.host.outerHTML;
   library.search(null);
 
-  // The browse view with a filter on.
+  // The browse view: the grid of the folders' names, then a filter on.
   const browse = (await feature('Library').browse(null)).view.screen;
+  await settle();
+  const grid = browse.host.outerHTML;
   browse.setFilter({ folder: 'Logic', prop: 'status=draft' }, 'Drafts in Logic');
   await settle();
   const filtered = browse.host.outerHTML;
@@ -107,10 +112,13 @@ export async function screens() {
   map.draw();
   const mapHtml = map.contentEl.outerHTML;
 
-  // The rules sheet.
+  // The rules sheet, and the settings page.
   const sheet = feature('PropertyRules').edit();
   const rules = sheet.modalEl.outerHTML;
   sheet.close();
+  const tab = new dr.SettingsTab(w.app, w.plugin);
+  tab.display();
+  const settingsPage = `<div class="dr spec-settings">${tab.containerEl.innerHTML}</div>`;
 
   // The 3D graph: its notes laid out by the same code, drawn as it draws them.
   const n = 42;
@@ -123,15 +131,17 @@ export async function screens() {
   const order = Array.from({ length: n }, (_, i) => i).sort((a, b) => at[a * 3 + 2] - at[b * 3 + 2]);
   const [picked, current] = [order[n - 3], order[n - 8]];
   const sq = (i) => { const h = Math.round(Math.max(3, Math.min(12, 2 + Math.sqrt(degree[i]) * 1.5) * Math.max(0.6, Math.min(2, zoom)))) + (i === picked || i === current ? 2 : 0); return [Math.round(at[i * 3] - h), Math.round(at[i * 3 + 1] - h), h * 2]; };
-  const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-label dr-clip">3D graph <span class="dr-small dr-muted">${n} notes · ${links.length} links</span></span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return `<rect class="${mark ? 'is-clay' : 'is-ink'}" x="${x}" y="${y}" width="${s}" height="${s}"/>${mark ? `<rect class="spec-graph-ring${i === picked ? ' is-picked' : ''}" x="${x + 0.5}" y="${y + 0.5}" width="${s - 1}" height="${s - 1}"/>` : ''}`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
+  const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-head-name dr-clip">3D graph <span class="dr-muted">${n} notes · ${links.length} links</span></span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return mark ? `<rect class="spec-graph-ring" x="${x + 1}" y="${y + 1}" width="${s - 2}" height="${s - 2}"/>` : `<rect class="is-ink" x="${x}" y="${y}" width="${s}" height="${s}"/>`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
 
   w.plugin.unload();
-  return section('screens-note', 'The note, and the panel beside it', 'Drawn by the plugin itself on a sample vault. Round the note’s title, in its own column: its folder over it; under it its properties on one line of name and value (a value in its tone, one its folder’s schema finds wrong) and its pages; then the text; the strip at its foot. The panel, a sheet: properties in groups (a press on a title folds it), the wrong one marked, then where the note is named, mentioned and what it links to, and its history; no rule between its parts. No frame: each sits in a pane, its edge the pane’s.',
+  return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. The sidebar: its search field, its one control, then the folders’ names; a folder: back and more, its name large, what it holds. The browse view: search and more, then a grid of the folders’ names, nothing else in a cell. One view of a collection.',
+    `<div class="spec-states is-close">${frame('the sidebar', 320, 560, sidebarTop, 'is-side')}${frame('a folder', 320, 560, sidebarFolder, 'is-side')}${frame('the browse view', 760, 560, grid)}</div>`)
+    + section('screens-note', 'The note, and the panel beside it', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it its properties as one line of plain text (a value its folder’s schema finds wrong in red, with why) and its pages as words, the open one inverted; a line; the text; the strip at its foot, one line. The panel: name and value on a line, the name grey; a group’s title where there are groups; where the note is named, mentioned and what it links to as plain rows. No control on either.',
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel, 'is-panel')}</div>`)
-    + section('screens-library', 'Search, and a filter', 'The library’s search with nothing typed (the last searches, then a property’s values, each a filter) and with something; the browse view with a filter on, its parts as chips that take themselves off.',
-      `<div class="spec-states is-close">${frame('search, nothing typed', 320, 520, searchEmpty, 'is-side')}${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
-    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: every box an ink hairline, plain lines between, the one picked in clay and nothing else, a folded branch counted, a folder’s tone as a small square at the left of its box, a glyph only on a folder’s box. The 3D graph: ink squares on hairlines, the picked note and the open one in clay.',
+    + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
+      `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
+    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked inverted, a folded branch counted, a folder’s colour, the person’s own, a small square before its word. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',
       `<div class="spec-states is-close">${frame('the map of Projects, Thesis picked', 720, 440, mapHtml)}${frame('the 3D graph', 720, 448, graph)}</div>`)
-    + section('screens-sheets', 'A sheet of the tools', 'Property rules: each said as a sentence, its toggle beside it, no numbers; a new one written the same way, a sentence with fields.',
-      `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}</div>`);
+    + section('screens-sheets', 'A sheet, and the settings page', 'Property rules: each said as a sentence, its toggle beside it; a new one written as a sentence with fields. The settings page: the features’ switches in two columns, and nothing else.',
+      `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}${frame('the settings page', 680, null, settingsPage)}</div>`);
 }

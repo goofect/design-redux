@@ -90,12 +90,11 @@ export class GraphRoutes extends Feature {
   }
 
   actions() {
-    return [{ id: 'toggle-graph-routes', name: 'Graph: links through notes between, on or off', glyph: 'route', checked: () => this.active(this.currentType()), run: () => this.toggle() }];
+    return [{ id: 'toggle-graph-routes', name: 'Graph: links through notes between, on or off', checked: () => this.active(this.currentType()), run: () => this.toggle() }];
   }
 }
 GraphRoutes.key = 'graphRoutes';
 GraphRoutes.title = 'Graph routes';
-GraphRoutes.glyph = 'route';
 GraphRoutes.section = 'Tools';
 GraphRoutes.about = 'Leaves out a long line where a route through other notes says the same.';
 
@@ -142,6 +141,5 @@ export class GraphFilter extends Feature {
 }
 GraphFilter.key = 'graphProperties';
 GraphFilter.title = 'Graph filter';
-GraphFilter.glyph = 'filter';
 GraphFilter.section = 'Tools';
 GraphFilter.about = 'A field in the graph that filters it by a property.';

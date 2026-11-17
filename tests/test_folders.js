@@ -2,7 +2,7 @@
  * What a folder is and what can be done to it: its kind, description and
  * what it gathers (read from a folder note until changed, then kept by
  * path, with no note written); merging and splitting, said first and undone
- * in one; covers and tones; filters and saved views; the library check.
+ * in one; covers and colours; filters and saved views; the library check.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -71,7 +71,7 @@ const VAULT = {
     assert.ok(w.file('Tables/Truth tables.md') && w.file('Logic/Validity.md'));
   });
 
-  await check('covers: a note\'s in its property, a folder\'s by its path, the first image, a tone, a drop, a repair', async () => {
+  await check('covers: a note\'s in its property, a folder\'s by its path, the first image, a colour, a drop, a repair', async () => {
     const w = await world(VAULT);
     const covers = feature(w, 'Covers');
     const note = w.file('Logic/Truth tables.md');
@@ -87,9 +87,10 @@ const VAULT = {
     w.plugin.settings.folderCovers.Logic = 'gone/table.png';
     assert.deepStrictEqual(await covers.repair(), { fixed: 2, lost: 0 });
     assert.strictEqual(w.plugin.settings.folderCovers.Logic, 'pictures/table.png');
-    w.plugin.settings.coverColors = { Logic: '#fa2d48', Reading: 'moss', Empty: '#777777' };
-    assert.deepStrictEqual(['Logic', 'Reading', 'Empty'].map((p) => w.plugin.toneOf(w.file(p))), ['rust', 'moss', null]);
-    assert.deepStrictEqual(['#4f6d8f', '#b0703a', '#4d7f80', '#8a6f52'].map(dr.toneOf), ['slate', 'ochre', 'slate', 'ochre']);
+    w.plugin.settings.coverColors = { Logic: '#fa2d48', Reading: 'green', Empty: '#777777' };
+    // A folder's colour is one of Obsidian's names; an old hex becomes the nearest, a grey none.
+    assert.deepStrictEqual(['Logic', 'Reading', 'Empty'].map((p) => w.plugin.colourOf(w.file(p))), ['red', 'green', null]);
+    assert.deepStrictEqual(['#4f6d8f', '#b0703a', '#4d7f80', '#8a6f52', '#8040c0'].map(dr.colourOf), ['blue', 'orange', 'cyan', 'orange', 'purple']);
   });
 
   await check('a property for the whole folder: given where there is none, asked about where there is, one Undo', async () => {
@@ -126,7 +127,8 @@ const VAULT = {
     screen.back();
     assert.strictEqual(screen.filter, null);
     await views.open(w.plugin.settings.smartAlbumList[0]);
-    assert.strictEqual(screen.host.querySelector('.dr-head .dr-text').textContent, 'Drafts in Logic');
+    // A filter is its own page: its name set large over what passes.
+    assert.strictEqual(screen.host.querySelector('.dr-folder-name').textContent, 'Drafts in Logic');
   });
 
   await check('the library check: what it finds, in a report that changes nothing; and the inbox', async () => {

@@ -34,22 +34,19 @@ const VAULT = {
 };
 
 (async () => {
-  await check('the strip: the folder\'s glyph, the note, its place; previous and next; gone when turned off', async () => {
+  await check('the strip: one line, its place "2 / 3", Previous and Next as words, no control; gone when turned off', async () => {
     const w = await world(VAULT, { settingsVersion: 100, contextStrip: true });
     const leaf = w.app.workspace.getLeaf();
     await leaf.openFile(w.file('Logic/B.md'));
     await settle();
     const bar = leaf.view.contentEl.querySelector('.dr-strip');
-    assert.deepStrictEqual([bar.querySelector('.dr-strip-title').textContent, bar.querySelector('.dr-strip-place').textContent], ['B', 'Logic · 2 of 3']);
-    assert.strictEqual(bar.querySelector('svg.dr-glyph').getAttribute('data-glyph'), w.plugin.settings.folderGlyphs.Logic);
-    bar.querySelector('[aria-label="Next note"]').click();
+    const words = () => Array.from(leaf.view.contentEl.querySelectorAll('.dr-strip > *')).map((n) => `${n.textContent}${n.getAttribute('aria-disabled') === 'true' ? '(off)' : ''}`);
+    assert.deepStrictEqual(words(), ['2 / 3', 'Previous', 'Next']);
+    assert.ok(!bar.querySelector('svg, .dr-icon-button, .dr-button'), 'the strip has a glyph or a control');
+    Array.from(bar.querySelectorAll('.dr-link')).find((l) => l.textContent === 'Next').click();
     await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/C.md');
-    assert.strictEqual(leaf.view.contentEl.querySelector('.dr-strip [aria-label="Next note"]').getAttribute('aria-disabled'), 'true');
-    await leaf.openFile(w.file('Reading/E.md'));
-    w.plugin.settings.stripDetail = 'status';
-    await w.plugin.saveSettings();
-    assert.strictEqual(leaf.view.contentEl.querySelector('.dr-strip-place').textContent, 'Reading · 2 of 2');
+    assert.deepStrictEqual(words(), ['3 / 3', 'Previous', 'Next(off)']);
     w.plugin.settings.contextStrip = false;
     await w.plugin.saveSettings();
     assert.ok(!leaf.view.contentEl.querySelector('.dr-strip'));
@@ -345,12 +342,10 @@ const VAULT = {
     const node = (label) => Array.from(view.contentEl.querySelectorAll('.dr-map-node')).find((n) => n.textContent.startsWith(label));
     const root = node('Big');
     assert.strictEqual(root.getAttribute('aria-selected'), 'true');
-    // A glyph only on a folder's box; a note's box is its name. A folder's tone is a small square at the left, not its line.
-    assert.ok(node('F0').querySelector('svg.dr-glyph'), 'a folder\'s box lost its glyph');
-    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-map-node[data-path$=".md"]')).every((n) => !n.querySelector('svg.dr-glyph')), 'a note\'s box has a glyph');
-    view.root.children.find((c) => c.label === 'F0').tone = 'moss';
+    // Words on the ground: no glyph on any node. A folder's colour is a small square before its word.
+    view.root.children.find((c) => c.label === 'F0').colour = 'green';
     view.draw();
-    assert.ok(node('F0').querySelector(':scope > .dr-map-tone[data-tone="moss"]'), 'a folder\'s tone is not the square at the left of its box');
+    assert.ok(node('F0').querySelector(':scope > .dr-map-colour[data-colour="green"]'), 'a folder\'s colour is not the square before its word');
     key(root, 'ArrowRight');
     assert.ok(node('F0').getAttribute('aria-selected') === 'true' && w.doc.activeElement === node('F0'));
     key(node('F0'), 'ArrowDown');

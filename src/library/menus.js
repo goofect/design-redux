@@ -8,16 +8,14 @@
 
 import { Menu, TFolder } from 'obsidian';
 import { addActionItems } from '../core/actions.js';
-import { iconId } from '../core/icons.js';
 import { counted } from '../core/text.js';
 import { chooseFolder } from '../ui/choose.js';
 import { ask, confirm } from '../ui/sheet.js';
-import { pickGlyphSheet } from './glyph-picker.js';
 import { SORTS, isPinned, setSort, sortOf, togglePin } from './order.js';
 
-const entry = (menu, title, glyphName, run, section = 'action', more) =>
+const entry = (menu, title, run, section = 'action', more) =>
   menu.addItem((item) => {
-    item.setTitle(title).setIcon(iconId(glyphName)).setSection(section).onClick(run);
+    item.setTitle(title).setSection(section).onClick(run);
     if (more) more(item);
   });
 
@@ -56,25 +54,25 @@ export async function deleteEntry(plugin, target) {
 export function folderMenu(plugin, folder, screen) {
   const menu = new Menu();
   const top = folder.path === '/';
-  if (screen && !top) entry(menu, 'Open', 'open', () => screen.go(folder), 'open');
-  entry(menu, 'New note', 'note-new', () => plugin.files.newNote(folder), 'new');
-  entry(menu, 'New folder', 'folder-new', async () => {
+  if (screen && !top) entry(menu, 'Open', () => screen.go(folder), 'open');
+  entry(menu, 'New note', () => plugin.files.newNote(folder), 'new');
+  entry(menu, 'New folder', async () => {
     const name = await ask(plugin.app, { title: 'New folder', placeholder: 'Untitled', action: 'Make folder' });
     if (name) plugin.files.newFolder(folder, name);
   }, 'new');
-  if (!top) entry(menu, isPinned(plugin, folder) ? 'Unpin' : 'Pin', 'pin', () => togglePin(plugin, folder));
-  if (!top) entry(menu, 'Glyph…', 'shapes', () => pickGlyphSheet(plugin, folder));
+  if (!top) entry(menu, isPinned(plugin, folder) ? 'Unpin' : 'Pin', () => togglePin(plugin, folder));
+  if (screen && plugin.editFilter) entry(menu, 'Filter…', () => plugin.editFilter(screen), 'view');
   menu.addItem((item) => {
-    item.setTitle('Sort by').setIcon(iconId('sort')).setSection('action');
+    item.setTitle('Sort by').setSection('action');
     const sub = typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
     if (!sub) return void item.onClick(() => setSort(plugin, folder, 'name'));
     Object.keys(SORTS).forEach((by) => sub.addItem((s) => s.setTitle(SORTS[by]).setChecked(sortOf(plugin, folder) === by).onClick(() => setSort(plugin, folder, by))));
   });
   if (top) return menu;
   addActionItems(menu, plugin.actions(), 'folder', { folder });
-  entry(menu, 'Rename…', 'pencil', () => renameEntry(plugin, folder), 'danger');
-  entry(menu, 'Move to…', 'move', () => moveEntry(plugin, folder), 'danger');
-  entry(menu, 'Delete folder', 'trash', () => deleteEntry(plugin, folder), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
+  entry(menu, 'Rename…', () => renameEntry(plugin, folder), 'danger');
+  entry(menu, 'Move to…', () => moveEntry(plugin, folder), 'danger');
+  entry(menu, 'Delete folder', () => deleteEntry(plugin, folder), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
   return menu;
 }
 
@@ -82,13 +80,13 @@ export function folderMenu(plugin, folder, screen) {
 export function noteMenu(plugin, file, screen) {
   const menu = new Menu();
   const open = (leaf) => plugin.app.workspace.getLeaf(leaf).openFile(file);
-  entry(menu, 'Open', 'open', () => open(false), 'open');
-  entry(menu, 'Open in a new tab', 'pages', () => open('tab'), 'open');
-  entry(menu, isPinned(plugin, file) ? 'Unpin' : 'Pin', 'pin', () => togglePin(plugin, file));
+  entry(menu, 'Open', () => open(false), 'open');
+  entry(menu, 'Open in a new tab', () => open('tab'), 'open');
+  entry(menu, isPinned(plugin, file) ? 'Unpin' : 'Pin', () => togglePin(plugin, file));
   addActionItems(menu, plugin.actions(), 'note', { file });
-  entry(menu, 'Rename…', 'pencil', () => renameEntry(plugin, file), 'danger');
-  entry(menu, 'Move to…', 'move', () => moveEntry(plugin, file), 'danger');
-  entry(menu, 'Delete note', 'trash', () => deleteEntry(plugin, file), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
+  entry(menu, 'Rename…', () => renameEntry(plugin, file), 'danger');
+  entry(menu, 'Move to…', () => moveEntry(plugin, file), 'danger');
+  entry(menu, 'Delete note', () => deleteEntry(plugin, file), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
   plugin.app.workspace.trigger('file-menu', menu, file, 'design-redux-library');
   void screen;
   return menu;

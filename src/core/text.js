@@ -33,8 +33,6 @@ export const counted = (n, one, many) => `${n} ${n === 1 ? one : many || `${one}
 /** A list written in a setting ("type, domain, status") as its trimmed parts. */
 export const listOf = (text) => String(text || '').split(',').map((s) => s.trim()).filter(Boolean);
 
-/** A two-digit number for a row: 01, 02, … 100. */
-export const rowNumber = (n) => String(n).padStart(2, '0');
 
 /** For a list of notes, each one's folder by name, only where the list mixes folders: where they all share one, it says nothing. */
 export function foldersIfMixed(files) {

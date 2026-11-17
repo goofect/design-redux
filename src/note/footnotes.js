@@ -10,7 +10,6 @@
 import { ItemView, MarkdownView, Notice } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
 import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { row, rows } from '../ui/row.js';
@@ -36,16 +35,16 @@ export class FootnotesView extends ItemView {
 
   getViewType() { return FOOTNOTES_VIEW; }
   getDisplayText() { return 'Footnotes'; }
-  getIcon() { return iconId('footnote'); }
+  getIcon() { return 'superscript'; }
   async onOpen() { this.contentEl.classList.add('dr', 'dr-panel'); await this.draw(); }
 
   async draw() {
     const host = clear(this.contentEl);
     const file = this.app.workspace.getActiveFile();
-    if (!file || file.extension !== 'md') return void sayso(host, { glyph: 'footnote', label: 'No note open' });
+    if (!file || file.extension !== 'md') return void sayso(host, { label: 'No note open' });
     const { refs, defs } = findFootnotes(await this.app.vault.cachedRead(file));
     headRow(host, { label: 'Footnotes', muted: counted(defs.length, 'note') });
-    if (!defs.length) return void sayso(host, { glyph: 'footnote', label: 'No footnotes', text: 'Add footnote puts one at the cursor.' });
+    if (!defs.length) return void sayso(host, { label: 'No footnotes', text: 'Add footnote puts one at the cursor.' });
     const list = rows(host);
     defs.forEach((d) => {
       const ref = refs.find((r) => r.id === d.id);
@@ -108,21 +107,13 @@ export class Footnotes extends Feature {
 
   actions() {
     return [
-      { id: 'add-footnote', name: 'Add footnote', glyph: 'footnote', on: 'editor', menu: false, run: (ctx) => this.add_(ctx) },
-      { id: 'show-footnotes', name: 'Show footnotes', glyph: 'footnote', run: () => this.show() },
-      { id: 'tidy-footnotes', name: 'Put footnotes in order', glyph: 'ordered', on: 'editor', menu: false, run: (ctx) => this.tidy(ctx) },
-    ];
-  }
-
-  settingsRows() {
-    return [
-      { key: 'footnoteOrder', name: 'Keep numbers in order', desc: 'A footnote added between 1 and 2 becomes 2.', type: 'toggle' },
-      { key: 'footnotesAside', name: 'Show the list after adding one', type: 'toggle' },
+      { id: 'add-footnote', name: 'Add footnote', on: 'editor', menu: false, run: (ctx) => this.add_(ctx) },
+      { id: 'show-footnotes', name: 'Show footnotes', run: () => this.show() },
+      { id: 'tidy-footnotes', name: 'Put footnotes in order', on: 'editor', menu: false, run: (ctx) => this.tidy(ctx) },
     ];
   }
 }
 Footnotes.key = 'footnotes';
 Footnotes.title = 'Footnotes';
-Footnotes.glyph = 'footnote';
 Footnotes.section = 'Notes';
 Footnotes.about = 'Add a citation without leaving the sentence; keep the numbers in order.';

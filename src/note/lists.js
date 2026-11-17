@@ -138,19 +138,11 @@ export class MarkedLists extends Feature {
 
   actions() {
     return [
-      { id: 'make-lettered-list', name: 'Make a lettered list', glyph: 'list-lettered', on: 'editor', menu: false, when: () => this.settings.letterLists !== false, run: (ctx) => this.convert(ctx.editor, 'letter') },
-      { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', glyph: 'list-roman', on: 'editor', menu: false, when: () => this.settings.romanLists !== false, run: (ctx) => this.convert(ctx.editor, 'roman') },
-    ];
-  }
-
-  settingsRows() {
-    return [
-      { key: 'letterLists', name: 'Lettered lists', desc: 'a., b., c.', type: 'toggle' },
-      { key: 'romanLists', name: 'Roman numeral lists', desc: 'i., ii., iii.', type: 'toggle' },
+      { id: 'make-lettered-list', name: 'Make a lettered list', on: 'editor', menu: false, when: () => this.settings.letterLists !== false, run: (ctx) => this.convert(ctx.editor, 'letter') },
+      { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, when: () => this.settings.romanLists !== false, run: (ctx) => this.convert(ctx.editor, 'roman') },
     ];
   }
 }
 MarkedLists.title = 'Lettered and roman lists';
-MarkedLists.glyph = 'list-lettered';
 MarkedLists.section = 'Notes';
 MarkedLists.about = 'Lists marked a, b, c or i, ii, iii, carried on as you write.';

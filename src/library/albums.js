@@ -148,30 +148,12 @@ export class Albums extends Feature {
 
   actions() {
     return [
-      { id: 'album-set-type', name: 'Set what kind of folder this is…', glyph: 'shapes', on: 'folder', menu: 'Kind…', run: (ctx) => this.chooseKind(ctx.folder) },
-      { id: 'album-include-note', name: 'Show this note in another folder too…', glyph: 'folder-into', on: 'note', menu: 'Show in another folder too…', run: (ctx) => this.includeNote(ctx.file) },
+      { id: 'album-set-type', name: 'Set what kind of folder this is…', on: 'folder', menu: 'Kind…', run: (ctx) => this.chooseKind(ctx.folder) },
+      { id: 'album-include-note', name: 'Show this note in another folder too…', on: 'note', menu: 'Show in another folder too…', run: (ctx) => this.includeNote(ctx.file) },
     ];
-  }
-
-  settingsRows() {
-    return [
-      { key: 'albumRollups', name: 'Progress of every folder', desc: 'How many of a folder’s notes are done; a project shows it always.', type: 'toggle' },
-      { key: 'rollupDateKey', name: 'With the dates of', desc: 'A property holding dates; its first and last are shown beside the progress.', type: 'text' },
-      { key: 'albumStillToWrite', name: 'Notes still to write', desc: 'At a folder’s end, as words: what its notes link to that isn’t written yet.', type: 'toggle' },
-      { key: 'coverFromFolder', name: 'A note takes its folder’s cover', desc: 'Where it has none of its own.', type: 'toggle' },
-    ].concat(Object.keys(ALBUM_KEY_DEFAULTS).map((field) => ({
-      name: `Folder note property: ${field}`,
-      desc: `Read as “${ALBUM_KEY_DEFAULTS[field]}” unless named otherwise here.`,
-      type: 'custom',
-      get: () => (this.settings.albumKeyNames || {})[field] || '',
-      set: (v) => { (this.settings.albumKeyNames || (this.settings.albumKeyNames = {}))[field] = v.trim(); },
-      placeholder: ALBUM_KEY_DEFAULTS[field],
-      group: 'Folder note properties',
-    })));
   }
 }
 Albums.key = 'albumStructure';
 Albums.title = 'Folders as collections';
-Albums.glyph = 'shapes';
 Albums.section = 'Library';
 Albums.about = 'A folder’s kind and description, and the notes from elsewhere it takes in.';

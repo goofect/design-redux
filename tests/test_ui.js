@@ -47,161 +47,79 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy), busy.textContent], ['true', null, 'Moving…']);
   });
 
-  await check('zoom control: three glyph radios, one checked; a click and the arrows choose; a disabled level is passed over', () => {
-    const seen = [];
-    const options = [{ id: 'objects', glyph: 'zoom-objects', label: 'Objects' }, { id: 'shelves', glyph: 'zoom-shelves', label: 'Shelves', disabled: true }, { id: 'words', glyph: 'zoom-words', label: 'Words' }];
-    const z = dr.segments(fresh(), { label: 'Level of detail', options, value: 'objects', onChange: (id) => seen.push(id) });
-    const items = Array.from(z.children);
-    assert.deepStrictEqual([z.getAttribute('role'), z.getAttribute('aria-label')], ['radiogroup', 'Level of detail']);
-    assert.deepStrictEqual(items.map((i) => [i.getAttribute('role'), i.getAttribute('aria-checked'), i.getAttribute('tabindex'), i.getAttribute('aria-label')]), [['radio', 'true', '0', 'Objects'], ['radio', 'false', '-1', 'Shelves'], ['radio', 'false', '-1', 'Words']]);
-    items[1].click();
-    assert.deepStrictEqual(seen, [], 'a disabled level was chosen');
-    key(items[0], 'ArrowRight');
-    assert.deepStrictEqual(seen, ['words']);
-    assert.strictEqual(items[2].getAttribute('aria-checked'), 'true');
-    items[0].click(); items[0].click();
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'choosing the level shown told again');
-    z.drSet('words');
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'drSet told');
-  });
-
   await check('tabs: word segments, the open one selected', () => {
     const t = dr.segments(fresh(), { tabs: true, options: [{ id: 'a', text: 'Notes' }, { id: 'b', text: 'Proofs' }], value: 'b' });
     assert.deepStrictEqual([t.className, t.getAttribute('role')], ['dr-segments dr-tabs', 'tablist']);
     assert.deepStrictEqual(Array.from(t.children).map((i) => [i.getAttribute('role'), i.getAttribute('aria-selected'), i.textContent]), [['tab', 'false', 'Notes'], ['tab', 'true', 'Proofs']]);
   });
 
-  await check('object cell: no words drawn at rest but always named; picked, open, disabled, wrong; a click picks, a second opens', () => {
-    const log = [];
-    const g = dr.grid(fresh(), { labelled: true });
-    assert.strictEqual(g.className, 'dr-grid is-labelled');
-    const c = dr.cell(g, { glyph: 'pie', name: 'Logic', count: 24, counted: '24 notes', path: 'Logic', pick: () => log.push('pick'), open: () => log.push('open') });
-    assert.deepStrictEqual([c.getAttribute('aria-label'), glyphOf(c), c.querySelector('.dr-cell-name').textContent, c.querySelector('.dr-cell-count').textContent, c.dataset.path], ['Logic, 24 notes', 'pie', 'Logic', '24', 'Logic']);
+  await check('grid cell: a folder\'s name set large, or its cover; nothing else; always named; picked, open, disabled; a press opens', () => {
+    const g = dr.grid(fresh(), { label: 'Folders' });
+    const opened = [];
+    const c = dr.cell(g, { name: 'Logic', path: 'Logic', open: () => opened.push('Logic') });
+    assert.deepStrictEqual([g.className, g.getAttribute('role'), c.getAttribute('aria-label'), c.querySelector('.dr-display').textContent], ['dr-grid', 'list', 'Logic', 'Logic']);
+    assert.ok(!c.querySelector('svg, .dr-cell-count'), 'a glyph or a count in a cell');
     c.click();
-    c.setAttribute('aria-selected', 'true');
-    c.click(); key(c, 'Enter'); key(c, ' ');
-    assert.deepStrictEqual(log, ['pick', 'open', 'open', 'pick']);
-    const cur = dr.cell(g, { glyph: 'pie', name: 'Open', current: true, selected: true });
-    assert.deepStrictEqual([cur.getAttribute('aria-current'), cur.getAttribute('aria-selected')], ['true', 'true']);
-    const off = dr.cell(g, { glyph: 'pie', name: 'Off', disabled: true, pick: () => log.push('off') });
-    off.click();
-    assert.ok(!log.includes('off'));
-    const bad = dr.cell(g, { glyph: 'pie', name: 'Bad', flag: 'cover not found' });
-    assert.ok(bad.querySelector('.dr-cell-flag svg') && bad.getAttribute('aria-label').includes('cover not found'));
-    const cover = dr.cell(g, { glyph: 'pie', name: 'Covered', cover: 'app://x/a.png' });
-    assert.ok(cover.querySelector('img.dr-cell-cover') && !glyphOf(cover));
-    cover.querySelector('img').dispatchEvent(new window.Event('error'));
-    assert.ok(!cover.querySelector('img') && glyphOf(cover) === 'pie' && cover.querySelector('.dr-cell-flag'), 'a cover that fails does not give way to the glyph');
+    assert.deepStrictEqual(opened, ['Logic']);
+    const covered = dr.cell(g, { name: 'Reading', cover: 'app://cover.png' });
+    assert.ok(covered.querySelector('img.dr-cell-cover') && !covered.querySelector('.dr-display'));
+    covered.querySelector('img').dispatchEvent(new window.Event('error'));
+    assert.strictEqual(covered.querySelector('.dr-display').textContent, 'Reading', 'a lost cover did not give way to the name');
+    assert.strictEqual(dr.cell(g, { name: 'A', selected: true }).getAttribute('aria-selected'), 'true');
+    assert.strictEqual(dr.cell(g, { name: 'A', current: true }).getAttribute('aria-current'), 'true');
+    assert.strictEqual(dr.cell(g, { name: 'A', disabled: true }).getAttribute('aria-disabled'), 'true');
   });
 
-  await check('row: numbered; selected, open, disabled, missing, wrong, a heading', () => {
+  await check('row: a name and what trails it; a footnote\'s slot; selected, open, disabled, missing, wrong, a heading', () => {
     const list = dr.rows(fresh());
-    const r = dr.row(list, { number: 5, name: 'Truth tables', end: '9 min', path: 'L/T.md' });
-    assert.deepStrictEqual([list.className, r.className, r.querySelector('.dr-slot').textContent, r.querySelector('.dr-row-name').textContent, r.querySelector('.dr-row-end').textContent], ['dr-rows', 'dr-row is-numbered', '05', 'Truth tables', '9 min']);
-    // Without a number a row has no slot: it starts at the gutter.
-    assert.ok(!dr.row(list, { name: 'Unnumbered' }).querySelector('.dr-slot'), 'an unnumbered row keeps an empty slot');
-    assert.strictEqual(dr.row(list, { number: 1, name: 'a', selected: true }).getAttribute('aria-selected'), 'true');
-    assert.strictEqual(dr.row(list, { number: 1, name: 'a', current: 'page' }).getAttribute('aria-current'), 'page');
-    assert.strictEqual(dr.row(list, { number: 1, name: 'a', disabled: true }).getAttribute('aria-disabled'), 'true');
-    assert.ok(dr.row(list, { number: 1, name: 'a', missing: true }).classList.contains('is-missing'));
-    const bad = dr.row(list, { number: 1, name: 'a', error: true, end: 'unreadable', endGlyph: 'alert' });
-    assert.ok(bad.classList.contains('is-error') && glyphOf(bad) === 'alert');
+    const r = dr.row(list, { name: 'Truth tables', end: '9 min', path: 'L/T.md' });
+    assert.deepStrictEqual([list.className, r.className, r.querySelector('.dr-row-name').textContent, r.querySelector('.dr-row-end').textContent], ['dr-rows', 'dr-row', 'Truth tables', '9 min']);
+    // Rows are never numbered: a row starts at the gutter. A footnote's row holds its own id in the slot, the one thing a slot holds.
+    assert.ok(!r.querySelector('.dr-slot'), 'a row has a slot without a footnote');
+    const note = dr.row(list, { slot: 'a', name: 'A footnote' });
+    assert.ok(note.classList.contains('is-slotted') && note.querySelector('.dr-slot').textContent === 'a');
+    assert.strictEqual(dr.row(list, { name: 'a', selected: true }).getAttribute('aria-selected'), 'true');
+    assert.strictEqual(dr.row(list, { name: 'a', current: 'page' }).getAttribute('aria-current'), 'page');
+    assert.strictEqual(dr.row(list, { name: 'a', disabled: true }).getAttribute('aria-disabled'), 'true');
+    assert.ok(dr.row(list, { name: 'a', missing: true }).classList.contains('is-missing'));
+    // Wrong: its words say so, red; no glyph.
+    const bad = dr.row(list, { name: 'a', error: true, end: 'unreadable' });
+    assert.ok(bad.classList.contains('is-error') && !glyphOf(bad) && bad.querySelector('.dr-row-end').textContent === 'unreadable');
     const child = dr.row(dr.rows(root, { outline: true }), { name: 'A heading', child: true, current: 'location' });
     assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline' && !child.querySelector('.dr-slot'));
   });
 
-  await check('outline folder: closed and open, by its chevron and aria-expanded', () => {
-    let n = 0;
-    const closed = dr.outlineFolder(fresh(), { name: 'Inbox', count: 7, open: false, toggle: () => n++ });
-    assert.deepStrictEqual([closed.getAttribute('aria-expanded'), glyphOf(closed), closed.querySelector('.dr-row-end').textContent], ['false', 'next', '7']);
-    closed.click();
-    assert.strictEqual(n, 1);
-    assert.deepStrictEqual([dr.outlineFolder(root, { name: 'Logic', open: true }).getAttribute('aria-expanded'), glyphOf(root.lastChild)], ['true', 'down']);
-  });
-
-  await check('shelf: a bar a note, as tall as it is long; the open note and the picked one marked; one listener', () => {
-    const got = [];
-    const s = dr.shelf(fresh(), { name: 'Logic', count: 3, onHead: () => got.push('head'), onNote: (p) => got.push(p), notes: [{ size: 1, label: 'A, 200 words', path: 'a' }, { size: 4, label: 'B', path: 'b', current: true }, { size: 2, label: 'C', path: 'c', selected: true }] });
-    const bars = Array.from(s.querySelectorAll('.dr-bar'));
-    assert.deepStrictEqual(bars.map((b) => [b.style.getPropertyValue('--dr-size'), b.getAttribute('aria-label'), b.getAttribute('aria-current'), b.getAttribute('aria-selected'), b.getAttribute('tabindex')]), [['1', 'A, 200 words', null, null, '-1'], ['4', 'B', 'page', null, '0'], ['2', 'C', null, 'true', '-1']]);
-    bars[2].click(); key(bars[0], 'Enter'); s.querySelector('.dr-shelf-head').click();
-    assert.deepStrictEqual(got, ['c', 'a', 'head']);
-    assert.strictEqual(dr.shelf(root, { name: 'Open', count: 0, current: true, notes: [] }).querySelector('.dr-shelf-head').getAttribute('aria-current'), 'true');
-    assert.strictEqual(root.lastChild.querySelector('.dr-shelf-bars').childNodes.length, 0, 'an empty shelf must be empty for its bare line to show');
-    // The bar under the pointer or the ring names its note on the line under the shelf.
-    const named = () => s.querySelector('.dr-shelf-name').textContent;
-    bars[0].dataset.name = 'A';
-    bars[0].dispatchEvent(new window.Event('pointerover', { bubbles: true }));
-    assert.strictEqual(named(), 'A');
-    s.querySelector('.dr-shelf-bars').dispatchEvent(new window.Event('pointerleave'));
-    assert.strictEqual(named(), '');
-    bars[2].dispatchEvent(new window.Event('focusin', { bubbles: true }));
-    assert.strictEqual(named(), 'C');
-    // One row a folder: past what fits, "+N"; the open note's bar always stands.
-    const many = dr.shelf(root, { name: 'Many', count: 50, notes: Array.from({ length: 50 }, (_, i) => ({ size: 1, name: `N${i}`, label: `N${i}`, path: `n${i}`, current: i === 45 })) });
-    const hiddenAt = () => Array.from(many.querySelectorAll('.dr-bar')).map((b, i) => (b.hidden ? i : -1)).filter((i) => i >= 0);
-    assert.strictEqual(dr.fitShelf(many, 160), 33);
-    assert.strictEqual(many.querySelector('.dr-shelf-more').textContent, '+33');
-    assert.ok(!hiddenAt().includes(45) && hiddenAt().includes(16), 'the open note\'s bar was not kept in the row');
-    assert.strictEqual(dr.fitShelf(many, 1000), 0);
-    assert.strictEqual(many.querySelector('.dr-shelf-more').textContent, '');
-  });
-
   await check('panel row and section: a dash for no value, the reason when wrong, selected, disabled', () => {
     const p = dr.propRow(fresh(), { name: 'Status', value: 'Draft' });
-    assert.deepStrictEqual([p.className, p.querySelector('.dr-label').textContent, p.querySelector('.dr-prop-value').textContent], ['dr-prop', 'Status', 'Draft']);
+    assert.deepStrictEqual([p.className, p.querySelector('.dr-prop-name').textContent, p.querySelector('.dr-prop-value').textContent], ['dr-prop', 'Status', 'Draft']);
     const none = dr.propRow(root, { name: 'Sources', value: '' });
     assert.ok(none.classList.contains('is-empty') && none.querySelector('.dr-prop-value').textContent === '—');
     const bad = dr.propRow(root, { name: 'Week', value: 'six', invalid: 'not a number' });
-    assert.deepStrictEqual([bad.getAttribute('aria-invalid'), glyphOf(bad), bad.getAttribute('aria-label')], ['true', 'alert', 'Week: not a number']);
+    assert.deepStrictEqual([bad.getAttribute('aria-invalid'), glyphOf(bad), bad.getAttribute('aria-label'), bad.querySelector('.dr-prop-why').textContent], ['true', null, 'Week: not a number', 'not a number']);
     assert.strictEqual(dr.propRow(root, { name: 'a', value: 'b', selected: true }).getAttribute('aria-selected'), 'true');
     assert.strictEqual(dr.propRow(root, { name: 'a', value: 'b', disabled: true }).getAttribute('aria-disabled'), 'true');
     const sec = dr.sectionTitle(root, { title: 'Properties', buttons: [{ glyph: 'plus', label: 'Add a property' }] });
     assert.ok(sec.className === 'dr-section' && sec.querySelector('.dr-icon-button[aria-label="Add a property"]'));
   });
 
-  await check('table: one header, the sorted column says which way, rows carry their state, an empty one says so', () => {
-    const sorts = [];
-    const picked = [];
-    const cols = [{ id: 'name', name: 'Name' }, { id: 'words', name: 'Words', number: true }];
-    const t = dr.table(fresh(), { flush: true, numbered: true, columns: cols, sort: { id: 'name', down: false }, onSort: (id) => sorts.push(id), onRow: (r) => picked.push(r.path), rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 420 } }, { number: 2, path: 'b', cells: { name: 'B', words: 'many' }, current: true, invalid: ['words'] }, { number: 3, path: 'c', cells: { name: 'C' }, selected: true }, { number: 4, path: 'd', cells: { name: 'D' }, disabled: true }] });
-    assert.strictEqual(t.className, 'dr-table is-flush');
-    const heads = Array.from(t.querySelectorAll('th'));
-    assert.deepStrictEqual(heads.map((h) => h.getAttribute('aria-sort')), [null, 'ascending', null]);
-    assert.strictEqual(glyphOf(heads[1]), 'up');
-    heads[2].click();
-    const trs = Array.from(t.querySelectorAll('tbody tr'));
-    trs[0].click(); trs[3].click();
-    assert.deepStrictEqual([sorts, picked], [['words'], ['a']]);
-    assert.deepStrictEqual(trs.map((r) => [r.getAttribute('aria-current'), r.getAttribute('aria-selected'), r.getAttribute('aria-disabled')]), [[null, null, null], ['page', null, null], [null, 'true', null], [null, null, 'true']]);
-    assert.strictEqual(trs[1].children[2].getAttribute('aria-invalid'), 'true');
-    assert.strictEqual(trs[0].children[0].textContent, '01');
-    // No number column unless the order means something.
-    const plain = dr.table(root, { columns: cols, rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 1 } }] });
-    assert.deepStrictEqual(Array.from(plain.querySelectorAll('th')).map((h) => h.textContent), ['Name', 'Words']);
-    assert.ok(!plain.querySelector('.is-slot'), 'a number column where no order was set');
-    const empty = dr.table(root, { columns: cols, rows: [], empty: { label: 'No notes' } });
-    assert.ok(empty.querySelector('td[colspan="2"] .dr-state .dr-state-label').textContent === 'No notes');
-  });
-
   await check('field: empty, filled, wrong with its reason, loading, disabled; it tells what is typed', () => {
     const typed = [];
     const f = dr.field(fresh(), { label: 'Name', placeholder: 'Untitled', onInput: (v) => typed.push(v), onEnter: (v) => typed.push(`enter:${v}`) });
-    assert.deepStrictEqual([f.className, f.querySelector('.dr-small').textContent, f.drInput.placeholder, f.drInput.className], ['dr-field', 'Name', 'Untitled', 'dr-input']);
+    assert.deepStrictEqual([f.className, f.querySelector('.dr-muted').textContent, f.drInput.placeholder, f.drInput.className], ['dr-field', 'Name', 'Untitled', 'dr-input']);
     // No name over a field whose placeholder says what it is for: the placeholder names it.
     const bare = dr.field(root, { placeholder: 'Notes and folders' });
-    assert.ok(!bare.querySelector('.dr-small') && bare.drInput.getAttribute('aria-label') === 'Notes and folders');
+    assert.ok(!bare.querySelector('.dr-muted') && bare.drInput.getAttribute('aria-label') === 'Notes and folders');
     f.drInput.value = 'Set 4';
     f.drInput.dispatchEvent(new window.Event('input', { bubbles: true }));
     key(f.drInput, 'Enter');
     assert.deepStrictEqual(typed, ['Set 4', 'enter:Set 4']);
     f.drSay('A name can’t hold a colon.', true);
-    assert.deepStrictEqual([f.getAttribute('aria-invalid'), glyphOf(f), f.querySelector('.dr-field-note').textContent], ['true', 'alert', 'A name can’t hold a colon.']);
+    assert.deepStrictEqual([f.getAttribute('aria-invalid'), f.querySelectorAll('svg').length, f.querySelector('.dr-field-note').textContent], ['true', 0, 'A name can’t hold a colon.']);
     f.drSay('Looking…', false, true);
     // Working: the words, muted, under the box; no hourglass in it.
-    assert.deepStrictEqual([f.hasAttribute('aria-invalid'), f.getAttribute('aria-busy'), glyphOf(f), f.querySelector('.dr-field-note').textContent], [false, 'true', null, 'Looking…']);
+    assert.deepStrictEqual([f.hasAttribute('aria-invalid'), f.getAttribute('aria-busy'), f.querySelectorAll('svg').length, f.querySelector('.dr-field-note').textContent], [false, 'true', 0, 'Looking…']);
     f.drSay();
-    assert.ok(!f.querySelector('.dr-field-note') && !glyphOf(f));
+    assert.ok(!f.querySelector('.dr-field-note') && !f.querySelector('svg'));
     const off = dr.field(root, { label: 'Name', value: 'x', disabled: true, glyph: 'search' });
     assert.ok(off.getAttribute('aria-disabled') === 'true' && off.drInput.disabled && glyphOf(off) === 'search');
   });
@@ -221,14 +139,15 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
 
   await check('say-so: empty, loading, wrong; and the head row', () => {
     const e = dr.sayso(fresh(), { label: 'No notes yet', text: 'A folder’s notes are listed here.', button: { text: 'New note' } });
-    assert.deepStrictEqual([e.className, e.getAttribute('role'), glyphOf(e), e.querySelector('.dr-button').textContent], ['dr-state', 'status', 'empty', 'New note']);
-    assert.strictEqual(glyphOf(dr.sayso(root, { glyph: 'wait', label: 'Reading the vault' })), 'wait');
+    assert.deepStrictEqual([e.className, e.getAttribute('role'), glyphOf(e), e.querySelector('.dr-button').textContent], ['dr-state', 'status', null, 'New note']);
+    const busy = dr.sayso(root, { busy: true, label: 'Reading the vault…' });
+    assert.deepStrictEqual([busy.className, busy.getAttribute('aria-busy'), glyphOf(busy)], ['dr-state is-busy', 'true', null]);
     const bad = dr.sayso(root, { error: true, label: 'Couldn’t read Logic' });
-    assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state is-error', 'alert', 'alert']);
+    assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state is-error', 'alert', null]);
     let back = 0;
     const h = dr.headRow(root, { label: 'Logic', muted: '24 notes', back: () => back++, buttons: [{ glyph: 'search', label: 'Search' }] });
     assert.deepStrictEqual(Array.from(h.querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Back', 'Search']);
-    assert.strictEqual(h.querySelector('.dr-label').textContent, 'Logic 24 notes');
+    assert.strictEqual(h.querySelector('.dr-head-name').textContent, 'Logic 24 notes');
     h.querySelector('.dr-icon-button').click();
     assert.strictEqual(back, 1);
   });

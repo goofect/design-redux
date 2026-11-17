@@ -4,7 +4,7 @@
 /* The vault's notes and the links between them as a cloud to turn, in */
 /* a tab of its own. Drag to turn it, scroll to come closer, point at  */
 /* a note to name it, click to pick it and again to open it. The more  */
-/* a note links, the bigger it is drawn; the open note is clay. In the */
+/* a note links, the bigger it is drawn; the open note inverted. In the */
 /* look's terms: ink squares, hairlines, one fill. It is drawn when    */
 /* something changes and never by itself.                              */
 /* ------------------------------------------------------------------ */
@@ -12,7 +12,6 @@
 import { ItemView, TFile } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
 import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { sayso } from '../ui/state.js';
@@ -32,7 +31,7 @@ export class Graph3DView extends ItemView {
 
   getViewType() { return GRAPH_3D_VIEW; }
   getDisplayText() { return this.around ? `3D graph: ${this.around.basename}` : '3D graph'; }
-  getIcon() { return iconId('cube'); }
+  getIcon() { return 'box'; }
   getState() { return { around: this.around ? this.around.path : null }; }
 
   async setState(state) {
@@ -70,7 +69,7 @@ export class Graph3DView extends ItemView {
       { glyph: 'plus', label: 'Closer', run: () => this.zoom(1.25) },
       { glyph: 'minus', label: 'Further', run: () => this.zoom(0.8) },
     ] });
-    if (!n) return void sayso(host, { glyph: 'cube', label: 'No notes to draw' });
+    if (!n) return void sayso(host, { label: 'No notes to draw' });
     this.pos = layoutSpace(n, this.space.links);
     const box = el(host, 'div', 'dr-graph3d-box');
     this.canvas = el(box, 'canvas', 'dr-graph3d-canvas');
@@ -169,7 +168,7 @@ export class Graph3DView extends ItemView {
     if (!ctx) return;
     const css = getComputedStyle(this.contentEl);
     const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
-    const [ink, muted, clay, ground] = [token('--dr-ink', '#1A1A18'), token('--dr-muted', '#5E5C57'), token('--dr-clay', '#A58F7C'), token('--dr-bg', '#E9E6DF')];
+    const [ink, muted, ground] = [token('--dr-ink', '#000000'), token('--dr-muted', '#767676'), token('--dr-bg', '#FFFFFF')];
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.fillStyle = ground;
     ctx.fillRect(0, 0, w, h);
@@ -186,15 +185,16 @@ export class Graph3DView extends ItemView {
     const order = this.space.nodes.map((_, i) => i).sort((a, b) => this.screen[a * 3 + 2] - this.screen[b * 3 + 2]);
     order.forEach((i) => {
       const current = open && open.path === this.space.nodes[i].id;
-      // The picked note and the open one a little larger, so their clay is seen.
-      const half = this.half(i) + (current || i === this.picked ? 2 : 0);
+      // The picked note and the open one larger and inverted: the ground's colour, an ink line round it.
+      const marked = current || i === this.picked;
+      const half = this.half(i) + (marked ? 2 : 0);
       const [x, y] = [this.screen[i * 3], this.screen[i * 3 + 1]];
-      ctx.fillStyle = current || i === this.picked ? clay : ink;
+      ctx.fillStyle = marked ? ground : ink;
       ctx.fillRect(Math.round(x - half), Math.round(y - half), Math.round(half * 2), Math.round(half * 2));
-      if (current || i === this.picked || i === this.hover) {
+      if (marked || i === this.hover) {
         ctx.strokeStyle = ink;
-        ctx.lineWidth = i === this.picked ? 2 : 1;
-        ctx.strokeRect(Math.round(x - half) + 0.5, Math.round(y - half) + 0.5, Math.round(half * 2) - 1, Math.round(half * 2) - 1);
+        ctx.lineWidth = 2;
+        ctx.strokeRect(Math.round(x - half) + 1, Math.round(y - half) + 1, Math.round(half * 2) - 2, Math.round(half * 2) - 2);
       }
     });
   }
@@ -231,14 +231,13 @@ export class Graph3D extends Feature {
 
   actions() {
     return [
-      { id: 'open-graph-3d', name: 'Open 3D graph', glyph: 'cube', run: () => this.open(null) },
-      { id: 'open-graph-3d-local', name: 'Open 3D graph around this note', glyph: 'target', on: 'note', menu: '3D graph around this note', run: (ctx) => this.open(ctx.file) },
-      { id: 'toggle-graph-3d', name: 'Switch the graph between 2D and 3D', glyph: 'cube', run: () => this.swap() },
+      { id: 'open-graph-3d', name: 'Open 3D graph', run: () => this.open(null) },
+      { id: 'open-graph-3d-local', name: 'Open 3D graph around this note', on: 'note', menu: '3D graph around this note', run: (ctx) => this.open(ctx.file) },
+      { id: 'toggle-graph-3d', name: 'Switch the graph between 2D and 3D', run: () => this.swap() },
     ];
   }
 }
 Graph3D.key = 'graph3d';
 Graph3D.title = '3D graph';
-Graph3D.glyph = 'cube';
 Graph3D.section = 'Tools';
 Graph3D.about = 'The vault’s notes and links as a cloud to turn.';

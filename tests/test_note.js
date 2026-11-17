@@ -133,10 +133,11 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const sections = Object.fromEntries(panel.sections(w.file('Logic/A.md')).map((s) => [s.title, s.items.map((i) => `${i.name}${i.end ? `:${i.end}` : ''}`)]));
     // A note's folder trails it only where the list mixes folders.
     assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B'] });
-    // A sheet: no head naming the note again, no numbers, no fold buttons; the plus and the menu on the first title.
+    // No head naming the note again, no numbers, no control at all: a property is added by its command, the note's actions are a right press away.
     assert.ok(!view.contentEl.querySelector('.dr-head'), 'the panel names the note again');
-    assert.ok(!Array.from(view.contentEl.querySelectorAll('.dr-slot')).some((x) => x.textContent), 'the panel numbers its rows');
-    assert.deepStrictEqual(Array.from(view.contentEl.querySelector('.dr-section').querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Add a property', 'More']);
+    assert.ok(!view.contentEl.querySelector('.dr-slot'), 'the panel numbers its rows');
+    assert.ok(!view.contentEl.querySelector('.dr-icon-button, .dr-button'), 'the panel has a control');
+    assert.ok(w.app.commands.commands['design-redux:add-property'], 'no command adds a property');
     panel.addProperty(w.file('Logic/A.md'));
     await answer(w, 'course');
     assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
@@ -145,7 +146,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     // A group folds by a press on its title (no arrow, no button); folded, the title counts what it holds.
     Object.assign(w.plugin.settings, { panelPropertyGroups: 'on', panelGroupList: [{ title: 'Main', keys: 'status, week' }], panelFoldedGroups: [] });
     view.draw();
-    const title = () => Array.from(view.contentEl.querySelectorAll('.dr-section > .dr-label')).find((l) => l.textContent.startsWith('Main'));
+    const title = () => Array.from(view.contentEl.querySelectorAll('.dr-section > .dr-section-name')).find((l) => l.textContent.startsWith('Main'));
     assert.strictEqual(title().getAttribute('aria-expanded'), 'true');
     title().click();
     await settle();
@@ -156,7 +157,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'the group did not open again');
     w.plugin.selection.pick(w.file('Logic'));
     await settle();
-    assert.strictEqual(view.contentEl.querySelector('.dr-detail-name').textContent, 'Logic', 'a folder picked is not shown in the panel');
+    assert.strictEqual(view.contentEl.querySelector('.dr-folder-name').textContent, 'Logic', 'a folder picked is not shown in the panel as its page');
     await panel.toggle();
     assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-properties').length, 0);
   });

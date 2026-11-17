@@ -1,6 +1,6 @@
 // Builds main.js and styles.css, the two files Obsidian loads.
 //
-// main.js: esbuild bundles src/main.js. The glyphs under assets/icons come in
+// main.js: esbuild bundles src/main.js. The glyphs under assets/icons/actions come in
 // as the module `dr:icons`. Before bundling, the source is held to its shape:
 // a module sits in an area, is no longer than 400 lines, imports only from its
 // own area and those below, exports no name another module exports, and is
@@ -61,7 +61,8 @@ const icons = {
     build.onResolve({ filter: /^dr:icons$/ }, () => ({ path: 'icons', namespace: 'dr' }));
     build.onLoad({ filter: /.*/, namespace: 'dr' }, () => {
       const out = {};
-      ['actions', 'objects'].forEach((kind) => {
+      // The plugin's few glyphs: the controls' own (docs/direction-reset.md). There are no object glyphs.
+      ['actions'].forEach((kind) => {
         const dir = path.join(root, 'assets', 'icons', kind);
         fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).sort().forEach((f) => {
           const paths = fs.readFileSync(path.join(dir, f), 'utf8').replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');

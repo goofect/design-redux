@@ -155,19 +155,18 @@ export class PropertyClipboard extends Feature {
   actions() {
     const some = () => Object.keys(this.sets()).length > 0;
     return [
-      { id: 'copy-properties', name: 'Copy properties', glyph: 'copy', on: 'note', run: (ctx) => this.copyProps(ctx.file) },
-      { id: 'copy-some-properties', name: 'Copy some of this note’s properties…', glyph: 'copy-some', on: 'note', menu: false, run: (ctx) => this.copySome(ctx.file) },
-      { id: 'paste-properties', name: 'Paste properties', glyph: 'paste', on: 'note', run: (ctx) => this.paste(ctx.file) },
-      { id: 'sort-properties', name: 'Sort properties alphabetically', glyph: 'sort', on: 'note', menu: false, run: (ctx) => this.sort(ctx.file) },
-      { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', glyph: 'table', on: 'folder', menu: 'Copy properties as a table', run: (ctx) => this.copyTable(ctx.folder) },
-      { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', glyph: 'table-in', on: 'folder', menu: 'Update notes from a table', run: (ctx) => this.pasteTable(ctx.folder) },
-      { id: 'property-set-save', name: 'Keep this note’s properties as a set…', glyph: 'set-save', on: 'note', menu: false, run: (ctx) => this.saveSet(ctx.file) },
-      { id: 'property-set-apply', name: 'Apply a property set…', glyph: 'stamp', on: 'note', menu: 'Apply a property set…', when: some, run: (ctx) => this.applySet(ctx.file) },
-      { id: 'property-set-remove', name: 'Remove a property set…', glyph: 'set-remove', when: some, run: () => this.removeSet() },
+      { id: 'copy-properties', name: 'Copy properties', on: 'note', run: (ctx) => this.copyProps(ctx.file) },
+      { id: 'copy-some-properties', name: 'Copy some of this note’s properties…', on: 'note', menu: false, run: (ctx) => this.copySome(ctx.file) },
+      { id: 'paste-properties', name: 'Paste properties', on: 'note', run: (ctx) => this.paste(ctx.file) },
+      { id: 'sort-properties', name: 'Sort properties alphabetically', on: 'note', menu: false, run: (ctx) => this.sort(ctx.file) },
+      { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', on: 'folder', menu: 'Copy properties as a table', run: (ctx) => this.copyTable(ctx.folder) },
+      { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', on: 'folder', menu: 'Update notes from a table', run: (ctx) => this.pasteTable(ctx.folder) },
+      { id: 'property-set-save', name: 'Keep this note’s properties as a set…', on: 'note', menu: false, run: (ctx) => this.saveSet(ctx.file) },
+      { id: 'property-set-apply', name: 'Apply a property set…', on: 'note', menu: 'Apply a property set…', when: some, run: (ctx) => this.applySet(ctx.file) },
+      { id: 'property-set-remove', name: 'Remove a property set…', when: some, run: () => this.removeSet() },
     ];
   }
 }
 PropertyClipboard.title = 'Property clipboard and sets';
-PropertyClipboard.glyph = 'copy';
 PropertyClipboard.section = 'Tools';
 PropertyClipboard.about = 'Copy and paste properties, a folder’s as a table, and keep sets to stamp on a note.';

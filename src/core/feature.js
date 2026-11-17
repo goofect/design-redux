@@ -30,13 +30,8 @@ export class Feature {
     return !key || !!this.settings[key];
   }
 
-  /** What it can do: [{ id, name, glyph, on, when, run }] (core/actions.js). */
+  /** What it can do: [{ id, name, on, when, run }] (core/actions.js). */
   actions() {
-    return [];
-  }
-
-  /** Its rows on the settings page: [{ key, name, desc, type, options }]; the first is its switch. */
-  settingsRows() {
     return [];
   }
 

@@ -10,9 +10,9 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
-import { asButton, clear, el, glyph } from '../core/dom.js';
+import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { propOf, valueTone, valuesOf } from '../core/notes.js';
+import { propOf, valuesOf } from '../core/notes.js';
 import { listOf } from '../core/text.js';
 
 /** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
@@ -99,43 +99,34 @@ export class NotePage extends Feature {
     noteHeads(view).forEach(({ folder, head }) => {
       clear(folder);
       if (parent) {
-        const label = el(folder, 'span', 'dr-small dr-note-folder', parent.name);
+        const label = el(folder, 'span', 'dr-link dr-note-folder', parent.name);
         asButton(label, `Open ${parent.name}`, () => {
           const library = this.plugin.features.find((f) => typeof f.browse === 'function');
           if (library) library.browse(parent);
         });
       }
-      // The properties: one line of name and value, a dot between, no box. A value its folder's schema finds wrong is in the error's tone with the alert glyph beside it.
+      // The properties: one line of name and value, a dot between, no box. A value its folder's schema finds wrong is red, the reason after it.
       const line = clear(head.querySelector('.dr-note-props'));
       if (!props) return;
       listOf(this.settings.panelPrimaryProps).forEach((key) => {
         const values = valuesOf(propOf(props, key));
         if (!values.length) return;
-        const tone = values.length === 1 ? valueTone(this.settings, key, values[0]) : null;
         const wrong = this.plugin.checkValue ? this.plugin.checkValue(file, key, propOf(props, key)) : null;
         const prop = el(line, 'span', 'dr-note-prop');
-        el(prop, 'span', 'dr-label', key);
-        const value = el(prop, 'span', 'dr-text', values.join(', '));
-        if (tone) value.dataset.tone = tone;
+        el(prop, 'span', 'dr-note-prop-name dr-muted', key);
+        el(prop, 'span', 'dr-text', values.join(', '));
         if (wrong) {
+          // Wrong by its folder's schema: the value red, and the words saying why after it.
           prop.setAttribute('aria-invalid', 'true');
           prop.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
-          glyph(prop, 'alert');
+          el(prop, 'span', 'dr-note-prop-why', wrong);
         }
       });
     });
     tidyNoteHeads(view);
   }
-
-  settingsRows() {
-    return [
-      { key: 'notePageChips', name: 'Properties under the title', desc: 'The note’s main properties on one line under its title: name and value.', type: 'toggle' },
-      { key: 'panelPrimaryProps', name: 'Which properties', desc: 'By name, with commas between.', type: 'text' },
-    ];
-  }
 }
 NotePage.key = 'notePage';
 NotePage.title = 'Note page';
-NotePage.glyph = 'note';
 NotePage.section = 'Notes';
 NotePage.about = 'A note’s folder over its title, and its main properties on a line under it.';

@@ -1,20 +1,22 @@
 /* ------------------------------------------------------------------ */
-/* The note: the parts round its title, and a page that is not open   */
+/* The note: the parts round its title, a page that is not open, and   */
+/* the panel                                                           */
 /*                                                                     */
 /* The plugin's own elements in the note's own column, wherever the    */
 /* note is laid out (the editor's sizer, reading view's header), so    */
-/* they scroll with the text: the folder over the title; under it the  */
-/* properties, the page tabs and a hairline exactly as wide as the     */
-/* text. Nothing of Obsidian's is moved or restyled here.              */
+/* they scroll with the text: the folder's name as a link over the     */
+/* title; under it the properties as one line of plain text, the pages */
+/* as underlined words (the open one inverted), and a line exactly as  */
+/* wide as the text. Nothing of Obsidian's is moved or restyled here.  */
+/* The note's own text keeps the person's font.                        */
 /* ------------------------------------------------------------------ */
 
-/* Over the title: the folder, a label that opens it. */
+/* Over the title: the folder, a link to it. */
 .dr-note-place {
   padding-bottom: var(--dr-u);
 }
 
 /* Under the title: no padding at the sides, so the line under it is the text's column exactly. */
-/* One column no wider than the text, however many tabs: they scroll inside it. */
 .dr-note-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -28,14 +30,8 @@
   display: none;
 }
 
-.dr-note-folder {
-  color: var(--dr-muted);
-  cursor: pointer;
-}
-
-/* The properties: one line of name and value, a dot between them, no box. The name is the label voice, muted. */
+/* The properties: one line of plain text, name grey and value ink, a dot between. */
 .dr-note-props {
-  --dr-glyph: var(--dr-icon);
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -48,31 +44,17 @@
   white-space: nowrap;
 }
 
-.dr-note-prop > .dr-label,
-.dr-note-prop + .dr-note-prop::before {
-  color: var(--dr-muted);
-}
-
 .dr-note-prop + .dr-note-prop::before {
   content: "·";
   margin-left: var(--dr-u);
+  color: var(--dr-muted);
 }
 
-.dr-note-prop > .dr-glyph {
-  align-self: center;
-}
-
-/* Wrong, by its folder's schema: the value in the error's tone, the alert glyph beside it. */
-.dr-note-prop[aria-invalid="true"] > .dr-text,
-.dr-note-prop[aria-invalid="true"] > .dr-glyph {
+/* Wrong by its folder's schema: the value and the words saying why, red. */
+.dr-note-prop[aria-invalid="true"] > :not(.dr-muted),
+.dr-note-prop-why {
   color: var(--dr-error);
 }
-
-.dr-note-prop > .dr-text[data-tone="rust"] { color: var(--dr-rust); }
-.dr-note-prop > .dr-text[data-tone="ochre"] { color: var(--dr-ochre); }
-.dr-note-prop > .dr-text[data-tone="moss"] { color: var(--dr-moss); }
-.dr-note-prop > .dr-text[data-tone="slate"] { color: var(--dr-slate); }
-.dr-note-prop > .dr-text[data-tone="plum"] { color: var(--dr-plum); }
 
 .dr-note-pages {
   display: flex;
@@ -80,29 +62,16 @@
   gap: var(--dr-u);
 }
 
-/* ---- The panel: a sheet. A faint capital name, its value beside it; parts parted by space, never a rule. ---- */
+/* A block of another page, in reading view. The class is the plugin's, put on the block as it is drawn. */
+.dr-page-hidden {
+  display: none;
+}
+
+/* ---- The panel: name and value on a line; its parts parted by space; a group's title only where there are groups. ---- */
 .dr-panel {
   padding-top: var(--dr-u);
 }
 
 .dr-panel .dr-section:not(:first-child) {
   margin-top: calc(3 * var(--dr-u));
-  border-top: 0;
-}
-
-.dr-note-pages > .dr-tabs {
-  flex: 0 1 auto;
-  min-width: 0;
-}
-
-/* A block of another page, in reading view. The class is the plugin's, put on the block as it is drawn. */
-.dr-page-hidden {
-  display: none;
-}
-
-@media (any-hover: hover) {
-  .dr-note-folder:hover {
-    color: var(--dr-ink);
-    text-decoration: underline;
-  }
 }

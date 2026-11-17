@@ -13,33 +13,27 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'lib
 /** The regions that are Obsidian's own: off when the look is kept to what the plugin draws. */
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'compat'];
 
-export const regionKey = (name) => `lookRegion${name[0].toUpperCase()}${name.slice(1)}`;
-
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 101;
+export const SETTINGS_VERSION = 102;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
 
 export const DEFAULTS = {
   settingsVersion: SETTINGS_VERSION,
+  retired: {}, // values of keys the direction reset retired (settings 102), kept, not read
 
   // The look
   look: 'redux', // 'theme' leaves the window to the person's theme
   lookScope: 'plugin', // 'window': Obsidian's own regions too; 'plugin': only what the plugin draws
-  alwaysShowLabels: true, // names under the objects at rest; off leaves them to the pointer, the ring and the pick
-  ...Object.fromEntries(REGIONS.map((r) => [regionKey(r), true])),
 
   // The library
   library: true,
-  libraryZoom: {}, // by window: 'objects', 'shelves' or 'words'
-  folderGlyphs: {}, // by folder path: the glyph it is shown as
   folderCovers: {}, // by folder path: the image that is its cover
   coverProperty: 'cover',
   coverDrop: true,
   coverFromFirstImage: false,
-  coverFromFolder: false,
-  coverColors: {}, // by path: one of the semantic tones, or an old hex kept as it was
+  coverColors: {}, // by folder path: one of Obsidian's named colours (red, orange, yellow, green, cyan, blue, purple, pink), or an old hex kept as it was
   defaultSort: 'name',
   albumSorts: {}, // by folder path: the order chosen there
   albumSortMemory: true,
@@ -52,7 +46,6 @@ export const DEFAULTS = {
   sidebarDrop: true,
   searchNoteText: true,
   recentSearches: [],
-  tableColumns: 'domain, status',
   categoryProperty: 'domain',
   navDropdown: true,
 
@@ -61,7 +54,6 @@ export const DEFAULTS = {
   albumKeyNames: {},
   albums: {}, // by folder path: { includes, related, featured }
   albumNestBy: 'parent',
-  albumStillToWrite: true,
   albumRollups: false,
   rollupDateKey: '',
   albumRefactor: true,
@@ -104,16 +96,12 @@ export const DEFAULTS = {
 
   // The strip
   contextStrip: false,
-  stripPlace: true,
-  stripDetail: '',
 
   // Property tools
   propertySets: {},
   folderDefaults: {},
   propertySchemas: {},
   propertySchemaMarks: true,
-  propertyOptions: {},
-  propertyValueChips: true,
   propertyHistory: {},
   propertyHistoryLimit: 0,
   propertyRules: [],
@@ -133,7 +121,7 @@ export const DEFAULTS = {
 };
 
 /** Settings whose keys are paths: a rename moves the key, a delete drops it. */
-export const PATH_KEYED = ['albums', 'folderCovers', 'coverColors', 'albumSorts', 'albumOrders', 'folderGlyphs', 'folderDefaults', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['albums', 'folderCovers', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /** `path` after `from` became `to`: itself, or moved with the folder it was under. */
 export function movedPath(path, from, to) {

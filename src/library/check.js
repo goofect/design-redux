@@ -57,7 +57,7 @@ export class LibraryCheck extends Feature {
     const sheet = new Sheet(this.app, {
       title: 'The library, looked over',
       build: (matter, s) => {
-        if (!found.length) return void sayso(matter, { glyph: 'check', label: 'Nothing to look at', text: 'No empty folder, no loose note, no link that leads nowhere.' });
+        if (!found.length) return void sayso(matter, { label: 'Nothing to look at', text: 'No empty folder, no loose note, no link that leads nowhere.' });
         found.forEach((group) => {
           sectionTitle(matter, { title: `${group.title} · ${group.items.length}` });
           const list = rows(matter);
@@ -83,22 +83,14 @@ export class LibraryCheck extends Feature {
     if (screen) screen.setFilter({ loose: true }, 'Inbox');
   }
 
-  settingsRows() {
-    return [
-      { key: 'graphRouteProperty', name: 'Parent property', desc: 'The property a note names its parent in.', type: 'text' },
-      { key: 'libraryInbox', name: 'The inbox', desc: 'Notes in no folder, to be put in one.', type: 'toggle' },
-    ];
-  }
-
   actions() {
     return [
-      { id: 'library-check', name: 'Look the library over', glyph: 'checkup', run: () => this.report() },
-      { id: 'library-inbox', name: 'Open the inbox: notes in no folder', glyph: 'inbox', when: () => this.settings.libraryInbox !== false, run: () => this.inbox() },
+      { id: 'library-check', name: 'Look the library over', run: () => this.report() },
+      { id: 'library-inbox', name: 'Open the inbox: notes in no folder', when: () => this.settings.libraryInbox !== false, run: () => this.inbox() },
     ];
   }
 }
 LibraryCheck.key = 'libraryCheck';
 LibraryCheck.title = 'Library check';
-LibraryCheck.glyph = 'checkup';
 LibraryCheck.section = 'Library';
 LibraryCheck.about = 'A report of what a growing library loses track of, and an inbox of loose notes.';

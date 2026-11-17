@@ -1,11 +1,12 @@
 /* ------------------------------------------------------------------ */
-/* Covers: an image of the person's own in place of a glyph            */
+/* Covers: an image of the person's own in place of a folder's name    */
 /*                                                                     */
 /* A note's cover is a link in its cover property; a folder's is kept  */
-/* by the folder's path. Either shows instead of the glyph, in its own */
-/* shape, untouched. A folder can also be given one of the five        */
-/* tones, which its glyph is then drawn in. An image dropped on a      */
-/* folder becomes its cover.                                           */
+/* by the folder's path. A folder's shows in its cell of the grid, in  */
+/* its own shape, untouched. A folder can also be given one of         */
+/* Obsidian's named colours, the person's own, shown as a small square */
+/* before its word on a map. An image dropped on a folder becomes its  */
+/* cover.                                                              */
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile, normalizePath } from 'obsidian';
@@ -15,26 +16,27 @@ import { counted } from '../core/text.js';
 import { choose } from '../ui/choose.js';
 
 export const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'];
-export const TONES = ['rust', 'ochre', 'moss', 'slate', 'plum'];
+/** Obsidian's named colours, the ones a folder can be given: the plugin declares no colour of its own. */
+export const COLOURS = ['red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink'];
 
-/** The tone nearest a colour kept from the old plugin (a hex), by its hue; a grey has none. */
-export function toneOf(value) {
-  if (TONES.includes(value)) return value;
+/** The named colour nearest a colour kept from the old plugin (a hex), by its hue; a grey has none. */
+export function colourOf(value) {
+  if (COLOURS.includes(value)) return value;
   const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(value || ''));
   if (!m) return null;
   const [r, g, b] = m.slice(1).map((h) => parseInt(h, 16) / 255);
   const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
   if (max - min < 0.08) return null;
   const hue = (60 * (max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4) + 360) % 360;
-  return hue < 25 || hue >= 345 ? 'rust' : hue < 70 ? 'ochre' : hue < 170 ? 'moss' : hue < 260 ? 'slate' : 'plum';
+  return hue < 15 || hue >= 330 ? 'red' : hue < 45 ? 'orange' : hue < 70 ? 'yellow' : hue < 160 ? 'green' : hue < 200 ? 'cyan' : hue < 260 ? 'blue' : hue < 300 ? 'purple' : 'pink';
 }
 
 export class Covers extends Feature {
   enable() {
-    this.plugin.toneOf = (entry) => toneOf((this.settings.coverColors || {})[entry.path]);
+    this.plugin.colourOf = (entry) => colourOf((this.settings.coverColors || {})[entry.path]);
     this.plugin.coverDropped = (folder, blob) => (this.settings.coverDrop === false ? null : this.dropped(folder, blob));
     this.add(() => {
-      delete this.plugin.toneOf;
+      delete this.plugin.colourOf;
       delete this.plugin.coverDropped;
     });
   }
@@ -92,12 +94,12 @@ export class Covers extends Feature {
     await this.plugin.saveSettings();
   }
 
-  async chooseTone(folder) {
-    const tone = await choose(this.app, TONES.concat('none'), { placeholder: `A tone for ${folder.name}`, name: (t) => (t === 'none' ? 'No tone: ink' : t[0].toUpperCase() + t.slice(1)) });
-    if (!tone) return;
+  async chooseColour(folder) {
+    const colour = await choose(this.app, COLOURS.concat('none'), { placeholder: `A colour for ${folder.name}`, name: (c) => (c === 'none' ? 'No colour' : c[0].toUpperCase() + c.slice(1)) });
+    if (!colour) return;
     const colors = this.settings.coverColors || (this.settings.coverColors = {});
-    if (tone === 'none') delete colors[folder.path];
-    else colors[folder.path] = tone;
+    if (colour === 'none') delete colors[folder.path];
+    else colors[folder.path] = colour;
     await this.plugin.saveSettings();
   }
 
@@ -142,25 +144,16 @@ export class Covers extends Feature {
   actions() {
     const has = (file) => !!this.plugin.notes.get(file, this.property);
     return [
-      { id: 'set-cover-image', name: 'Set cover image', glyph: 'cover-add', on: 'note', menu: 'Cover…', run: (ctx) => this.setNoteCover(ctx.file) },
-      { id: 'remove-cover-image', name: 'Remove cover image', glyph: 'cover-remove', on: 'note', menu: 'Remove cover', when: (ctx) => has(ctx.file), run: (ctx) => this.removeNoteCover(ctx.file) },
-      { id: 'cover-from-first-image', name: 'Use the note’s first image as its cover', glyph: 'cover', on: 'note', menu: false, run: (ctx) => this.coverFromFirstImage(ctx.file) },
-      { id: 'set-folder-cover', name: 'Set cover image for a folder', glyph: 'cover-add', on: 'folder', menu: 'Cover…', run: (ctx) => this.setFolderCover(ctx.folder) },
-      { id: 'remove-folder-cover', name: 'Remove cover image from a folder', glyph: 'cover-remove', on: 'folder', menu: 'Remove cover', when: (ctx) => !!(this.settings.folderCovers || {})[ctx.folder.path], run: (ctx) => this.removeFolderCover(ctx.folder) },
-      { id: 'set-cover-color', name: 'Set a folder’s tone', glyph: 'color', on: 'folder', menu: 'Tone…', run: (ctx) => this.chooseTone(ctx.folder) },
-      { id: 'repair-cover-link', name: 'Relink covers that point nowhere', glyph: 'link', run: () => this.repair() },
-    ];
-  }
-
-  settingsRows() {
-    return [
-      { key: 'coverProperty', name: 'Cover property', desc: 'The property of a note that names its cover image.', type: 'text' },
-      { key: 'coverDrop', name: 'Drop an image on a folder to set its cover', type: 'toggle' },
-      { key: 'imageFolder', name: 'The images folder', desc: 'Where an image dropped on a folder, or pasted into a note with the image router on, is kept.', type: 'text' },
+      { id: 'set-cover-image', name: 'Set cover image', on: 'note', menu: 'Cover…', run: (ctx) => this.setNoteCover(ctx.file) },
+      { id: 'remove-cover-image', name: 'Remove cover image', on: 'note', menu: 'Remove cover', when: (ctx) => has(ctx.file), run: (ctx) => this.removeNoteCover(ctx.file) },
+      { id: 'cover-from-first-image', name: 'Use the note’s first image as its cover', on: 'note', menu: false, run: (ctx) => this.coverFromFirstImage(ctx.file) },
+      { id: 'set-folder-cover', name: 'Set cover image for a folder', on: 'folder', menu: 'Cover…', run: (ctx) => this.setFolderCover(ctx.folder) },
+      { id: 'remove-folder-cover', name: 'Remove cover image from a folder', on: 'folder', menu: 'Remove cover', when: (ctx) => !!(this.settings.folderCovers || {})[ctx.folder.path], run: (ctx) => this.removeFolderCover(ctx.folder) },
+      { id: 'set-cover-color', name: 'Set a folder’s colour', on: 'folder', menu: 'Colour…', run: (ctx) => this.chooseColour(ctx.folder) },
+      { id: 'repair-cover-link', name: 'Relink covers that point nowhere', run: () => this.repair() },
     ];
   }
 }
 Covers.title = 'Covers';
-Covers.glyph = 'cover';
 Covers.section = 'Library';
-Covers.about = 'An image of your own in place of a glyph, and a tone for a folder.';
+Covers.about = 'An image of your own as a folder’s cover, and a colour for it on a map.';

@@ -1,22 +1,13 @@
 /* ------------------------------------------------------------------ */
-/* The settings page: a row a feature                                  */
+/* The settings page: the features' switches, two columns              */
 /*                                                                     */
-/* Obsidian's own rows, marked by the plugin as it builds them: a      */
-/* feature's glyph before its name, and its other settings set in      */
-/* under it when its gear is pressed.                                  */
+/* Obsidian's own rows, laid in two columns by the plugin's own grid,  */
+/* so the page fits one screen.                                        */
 /* ------------------------------------------------------------------ */
 
-.dr-setting-feature .setting-item-name {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-u);
-}
-
-.dr-setting-more {
-  padding-left: calc(3 * var(--dr-u));
-  border-left: var(--dr-hair) solid var(--dr-ink);
-}
-
-.dr-setting-more[hidden] {
-  display: none;
+.dr-switches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: calc(4 * var(--dr-u));
+  background: none;
 }

@@ -231,21 +231,20 @@ export class PropertyTools extends Feature {
 
   actions() {
     return [
-      { id: 'rename-property-everywhere', name: 'Rename a property everywhere…', glyph: 'pencil', run: () => this.renameProperty() },
-      { id: 'merge-properties', name: 'Merge properties…', glyph: 'merge', run: () => this.mergeProperties() },
-      { id: 'rename-tag-everywhere', name: 'Rename a tag everywhere…', glyph: 'tag', run: () => this.renameTag() },
-      { id: 'rename-value-everywhere', name: 'Rename a property value everywhere…', glyph: 'replace', run: () => this.renameValue() },
-      { id: 'clean-up-property-values', name: 'Clean up a property’s values…', glyph: 'spark', run: () => this.cleanValues() },
-      { id: 'change-property-type', name: 'Change a property’s type…', glyph: 'shapes', run: () => this.changeType() },
-      { id: 'find-missing-properties', name: 'Find notes missing a property…', glyph: 'search', run: () => this.findMissing() },
-      { id: 'add-properties-to-folders', name: 'Add properties to folders…', glyph: 'list-add', run: () => this.addToFolder() },
-      { id: 'remove-properties-from-folders', name: 'Remove properties from folders…', glyph: 'list-remove', run: () => this.removeFromFolder() },
-      { id: 'folder-default-properties', name: 'Default properties for this folder…', glyph: 'folder-settings', on: 'folder', menu: 'Default properties…', run: (ctx) => this.folderDefaults(ctx.folder) },
-      { id: 'undo-bulk-change', name: 'Undo the last bulk change', glyph: 'undo', when: () => !!this.bulk.last, run: () => this.bulk.undo() },
+      { id: 'rename-property-everywhere', name: 'Rename a property everywhere…', run: () => this.renameProperty() },
+      { id: 'merge-properties', name: 'Merge properties…', run: () => this.mergeProperties() },
+      { id: 'rename-tag-everywhere', name: 'Rename a tag everywhere…', run: () => this.renameTag() },
+      { id: 'rename-value-everywhere', name: 'Rename a property value everywhere…', run: () => this.renameValue() },
+      { id: 'clean-up-property-values', name: 'Clean up a property’s values…', run: () => this.cleanValues() },
+      { id: 'change-property-type', name: 'Change a property’s type…', run: () => this.changeType() },
+      { id: 'find-missing-properties', name: 'Find notes missing a property…', run: () => this.findMissing() },
+      { id: 'add-properties-to-folders', name: 'Add properties to folders…', run: () => this.addToFolder() },
+      { id: 'remove-properties-from-folders', name: 'Remove properties from folders…', run: () => this.removeFromFolder() },
+      { id: 'folder-default-properties', name: 'Default properties for this folder…', on: 'folder', menu: 'Default properties…', run: (ctx) => this.folderDefaults(ctx.folder) },
+      { id: 'undo-bulk-change', name: 'Undo the last bulk change', when: () => !!this.bulk.last, run: () => this.bulk.undo() },
     ];
   }
 }
 PropertyTools.title = 'Property tools';
-PropertyTools.glyph = 'properties';
 PropertyTools.section = 'Tools';
 PropertyTools.about = 'Rename, merge, clean up and retype properties everywhere, each in one Undo.';

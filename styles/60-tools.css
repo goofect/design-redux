@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
-/* Tools: the 3D graph, the graph's filter, the map                    */
+/* Tools: the 3D graph, the graph's filter, the map, the rules sheet   */
 /* ------------------------------------------------------------------ */
 
-/* ---- The 3D graph: a head row, and the canvas filling what is left. Its colours are read from the tokens by the script that draws it. ---- */
+/* ---- The 3D graph: a head, and the canvas filling what is left. Its colours are read from the tokens by the script that draws it. ---- */
 .dr-graph3d {
   display: flex;
   flex-direction: column;
@@ -36,17 +36,16 @@
   pointer-events: none;
 }
 
-/* ---- The graph's filter: a field of the plugin's own at the head of Obsidian's graph. ---- */
+/* ---- The graph's filter: a field of the plugin's own at the head of Obsidian's graph, on the ground, nothing round it. ---- */
 .dr-graph-filter {
   position: absolute;
   top: var(--dr-u);
   left: var(--dr-u);
   width: calc(30 * var(--dr-u));
   padding: var(--dr-u);
-  border: var(--dr-hair) solid var(--dr-ink);
 }
 
-/* ---- The map: square boxes on the ground, ink lines between, the one picked in clay. ---- */
+/* ---- The map: words on the ground, joined by 1px lines; the one picked inverted. ---- */
 .dr-map {
   display: flex;
   flex-direction: column;
@@ -83,6 +82,7 @@
   stroke-width: var(--dr-hair);
 }
 
+/* A node: its word on the ground where its box would be, nothing round it. */
 .dr-map-node {
   --dr-x: 0;
   --dr-y: 0;
@@ -95,7 +95,6 @@
   width: calc(22 * var(--dr-u));
   height: var(--dr-row);
   padding: 0 var(--dr-u);
-  border: var(--dr-hair) solid var(--dr-ink);
   background: var(--dr-bg);
   color: var(--dr-ink);
   cursor: pointer;
@@ -105,35 +104,37 @@
   flex: 1;
 }
 
-.dr-map-count {
-  color: var(--dr-muted);
+.dr-map-node:focus-visible {
+  outline-offset: calc(-1 * var(--dr-ring));
 }
 
-.dr-map-node[aria-selected="true"] {
-  background: var(--dr-clay);
-  color: var(--dr-on-clay);
+/* Picked, or open in the page: inverted. */
+.dr-map-node[aria-selected="true"],
+.dr-map-node[aria-current] {
+  background: var(--dr-ink);
+  color: var(--dr-bg);
 }
 
-.dr-map-node[aria-selected="true"] > .dr-map-count {
+.dr-map-node[aria-selected="true"] > .dr-muted,
+.dr-map-node[aria-current] > .dr-muted {
   color: inherit;
 }
 
-.dr-map-node[aria-current] > .dr-clip {
-  font-weight: 600;
-}
-
-/* A folder's tone: a small square of it at the left of its box. The line round every box stays ink, so no box reads as focused. */
-.dr-map-tone {
+/* A folder's colour, the person's own: a small square of it before its word. The colour is Obsidian's name for it, not the plugin's. */
+.dr-map-colour {
   flex: none;
-  width: var(--dr-mark);
-  height: var(--dr-mark);
+  width: var(--dr-u);
+  height: var(--dr-u);
 }
 
-.dr-map-tone[data-tone="rust"] { background: var(--dr-rust); }
-.dr-map-tone[data-tone="ochre"] { background: var(--dr-ochre); }
-.dr-map-tone[data-tone="moss"] { background: var(--dr-moss); }
-.dr-map-tone[data-tone="slate"] { background: var(--dr-slate); }
-.dr-map-tone[data-tone="plum"] { background: var(--dr-plum); }
+.dr-map-colour[data-colour="red"] { background: var(--color-red); }
+.dr-map-colour[data-colour="orange"] { background: var(--color-orange); }
+.dr-map-colour[data-colour="yellow"] { background: var(--color-yellow); }
+.dr-map-colour[data-colour="green"] { background: var(--color-green); }
+.dr-map-colour[data-colour="cyan"] { background: var(--color-cyan); }
+.dr-map-colour[data-colour="blue"] { background: var(--color-blue); }
+.dr-map-colour[data-colour="purple"] { background: var(--color-purple); }
+.dr-map-colour[data-colour="pink"] { background: var(--color-pink); }
 
 /* ---- The rules sheet: each rule its sentence, its toggle beside it; a new one written as a sentence with fields. ---- */
 .dr-rule {
@@ -171,19 +172,8 @@
 }
 
 @media (any-hover: hover) {
-  .dr-map-node:hover {
-    background: var(--dr-surface);
-  }
-
-  .dr-map-node:hover > .dr-map-count {
-    color: var(--dr-ink);
-  }
-
-  .dr-map-node[aria-selected="true"]:hover {
-    background: var(--dr-clay);
-  }
-
-  .dr-map-node[aria-selected="true"]:hover > .dr-map-count {
-    color: var(--dr-on-clay);
+  .dr-map-node:hover > .dr-clip {
+    text-decoration: underline;
+    text-underline-offset: var(--dr-ring);
   }
 }

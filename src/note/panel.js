@@ -12,8 +12,7 @@
 import { ItemView, Menu, TFile, TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
-import { valueTone, valuesOf } from '../core/notes.js';
+import { valuesOf } from '../core/notes.js';
 import { foldersIfMixed, listOf } from '../core/text.js';
 import { propRow, row, rows, sectionTitle } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
@@ -47,15 +46,25 @@ export class PanelView extends ItemView {
 
   getViewType() { return PANEL_VIEW; }
   getDisplayText() { return 'Properties'; }
-  getIcon() { return iconId('properties'); }
-  async onOpen() { this.contentEl.classList.add('dr', 'dr-panel'); this.draw(); }
+  getIcon() { return 'list'; }
+  async onOpen() {
+    this.contentEl.classList.add('dr', 'dr-panel');
+    // The note's actions, a right press away anywhere but on a property (which has its own menu).
+    this.contentEl.addEventListener('contextmenu', (e) => {
+      const subject = this.feature.subject();
+      if (!(subject instanceof TFile) || (e.target.closest && e.target.closest('.dr-prop'))) return;
+      e.preventDefault();
+      this.feature.noteMenu(subject, e);
+    });
+    this.draw();
+  }
 
   draw() {
     const host = clear(this.contentEl);
     const plugin = this.feature.plugin;
     const subject = this.feature.subject();
     if (subject instanceof TFolder && plugin.drawFolder) return void plugin.drawFolder(host, subject);
-    if (!(subject instanceof TFile) || subject.extension !== 'md') return void sayso(host, { glyph: 'properties', label: 'Nothing picked', text: 'A note’s properties show here, and a folder picked in the library.' });
+    if (!(subject instanceof TFile) || subject.extension !== 'md') return void sayso(host, { label: 'Nothing picked', text: 'A note’s properties show here, and a folder picked in the library.' });
     // A sheet: the note's name is on the page beside it, so the panel starts at its properties.
     this.properties(host, subject);
     this.feature.sections(subject).forEach((section) => {
@@ -73,14 +82,11 @@ export class PanelView extends ItemView {
     const find = (k) => all.find((p) => p.toLowerCase() === k.toLowerCase());
     const first = listOf(this.feature.primaryProps(file)).map(find).filter(Boolean);
     const keys = first.concat(all.filter((k) => !first.includes(k)));
-    // The panel's two buttons stand at the end of its first title: add a property, and the note's own menu.
-    const buttons = [
-      { glyph: 'plus', label: 'Add a property', run: () => this.feature.addProperty(file) },
-      { glyph: 'more', label: 'More', run: (e) => this.feature.noteMenu(file, e) },
-    ];
+    // No buttons: a property is added by its command or a row's menu, and the note's actions are a right press away.
+    const buttons = [];
     if (!keys.length) {
       sectionTitle(host, { title: 'Properties', buttons });
-      return void sayso(host, { glyph: 'properties', label: 'No properties', button: { text: 'Add a property', run: () => this.feature.addProperty(file) } });
+      return void sayso(host, { label: 'No properties', button: { text: 'Add a property', run: () => this.feature.addProperty(file) } });
     }
     const grouped = settings.panelPropertyGroups && settings.panelPropertyGroups !== 'off' && Array.isArray(settings.panelGroupList);
     if (!grouped) {
@@ -99,15 +105,12 @@ export class PanelView extends ItemView {
     });
   }
 
-  /** One property's row: edited where it stands, a menu of its own, a mark where its folder's schema says it is wrong, the tone its value was given. */
+  /** One property's row: edited where it stands, a menu of its own, a mark where its folder's schema says it is wrong. */
   propertyRow(host, file, key, value) {
     const plugin = this.feature.plugin;
     const wrong = plugin.checkValue ? plugin.checkValue(file, key, value) : null;
     const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => this.edit(node, file, key, value) });
     node.dataset.key = key;
-    const values = valuesOf(value);
-    const tone = values.length === 1 ? valueTone(plugin.settings, key, values[0]) : null;
-    if (tone) node.querySelector('.dr-prop-value').dataset.tone = tone;
     node.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       this.feature.propertyMenu(file, key).showAtMouseEvent(e);
@@ -227,7 +230,7 @@ export class Panel extends Feature {
 
   propertyMenu(file, key) {
     const menu = new Menu();
-    menu.addItem((i) => i.setTitle('Rename property…').setIcon(iconId('pencil')).setSection('action').onClick(async () => {
+    menu.addItem((i) => i.setTitle('Rename property…').setSection('action').onClick(async () => {
       const to = await ask(this.app, { title: `Rename ${key}`, value: key, action: 'Rename', check: (v) => (v !== key && v in this.plugin.notes.props(file) ? 'This note already has it.' : null) });
       if (!to || to === key) return;
       await this.plugin.notes.write(file, (fm) => {
@@ -236,13 +239,13 @@ export class Panel extends Feature {
         entries.forEach(([k, v]) => (fm[k] = v));
       }, { undo: `${key} renamed to ${to}.` });
     }));
-    menu.addItem((i) => i.setTitle('Remove property').setIcon(iconId('trash')).setSection('danger').onClick(() => this.plugin.notes.write(file, (fm) => delete fm[key], { undo: `${key} removed.` })));
+    menu.addItem((i) => i.setTitle('Remove property').setSection('danger').onClick(() => this.plugin.notes.write(file, (fm) => delete fm[key], { undo: `${key} removed.` })));
     return menu;
   }
 
   noteMenu(file, event) {
     const menu = new Menu();
-    this.plugin.actions().filter((a) => a.on === 'note' && a.menu !== false && (!a.when || a.when({ file }))).forEach((a) => menu.addItem((i) => i.setTitle(typeof a.menu === 'string' ? a.menu : a.name).setIcon(iconId(a.glyph)).setSection('action').onClick(() => a.run({ file, from: 'panel' }))));
+    this.plugin.actions().filter((a) => a.on === 'note' && a.menu !== false && (!a.when || a.when({ file }))).forEach((a) => menu.addItem((i) => i.setTitle(typeof a.menu === 'string' ? a.menu : a.name).setSection('action').onClick(() => a.run({ file, from: 'panel' }))));
     return event && event.clientX ? menu.showAtMouseEvent(event) : menu.showAtPosition({ x: 0, y: 0 });
   }
 
@@ -277,31 +280,18 @@ export class Panel extends Feature {
 
   actions() {
     return [
-      { id: 'open-properties', name: 'Open properties', glyph: 'properties', run: () => this.reveal() },
-      { id: 'open-inspector', name: 'Show or hide the panel', glyph: 'inspector', run: () => this.toggle() },
-      { id: 'panel-folder-properties', name: 'Properties the panel lists first in this folder…', glyph: 'properties', on: 'folder', menu: 'Panel’s first properties…', run: async (ctx) => {
+      { id: 'open-properties', name: 'Open properties', run: () => this.reveal() },
+      { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property…', run: (ctx) => this.addProperty(ctx.file) },
+      { id: 'open-inspector', name: 'Show or hide the panel', run: () => this.toggle() },
+      { id: 'panel-folder-properties', name: 'Properties the panel lists first in this folder…', on: 'folder', menu: 'Panel’s first properties…', run: async (ctx) => {
         const now = (this.settings.panelFolderViews || {})[ctx.folder.path];
         const main = await ask(this.app, { title: `First in the panel, in ${ctx.folder.name}`, label: 'Properties, with commas between', value: now ? now.main : this.settings.panelPrimaryProps, action: 'Keep' });
         if (main !== null) await this.setFolderView(ctx.folder, main);
       } },
     ];
   }
-
-  settingsRows() {
-    return [
-      { key: 'inspector', name: 'Follow the library’s pick', desc: 'Off, the panel is always about the open note.', type: 'toggle' },
-      { key: 'propertyLinks', name: 'Named in', desc: 'Where other notes name this one in a property.', type: 'toggle' },
-      { key: 'showMentions', name: 'Mentioned in', type: 'toggle' },
-      { key: 'panelPropertyGroups', name: 'Properties in groups', type: 'choice', options: { off: 'One list', on: 'In groups' } },
-      { name: 'The groups', desc: 'A group a part, with semicolons between: its title, a colon, its properties.', type: 'custom', placeholder: 'General: type, status; Relationships: parent, related',
-        get: () => (Array.isArray(this.settings.panelGroupList) ? this.settings.panelGroupList : []).map((g) => `${g.title}: ${g.keys}`).join('; '),
-        set: (text) => { this.settings.panelGroupList = String(text).split(';').map((part) => { const at = part.indexOf(':'); return at < 0 ? null : { title: part.slice(0, at).trim(), keys: part.slice(at + 1).trim() }; }).filter((g) => g && g.title); } },
-      { key: 'propertyValueChips', name: 'Values in their tones', desc: 'A value given a colour is drawn in its tone.', type: 'toggle' },
-    ];
-  }
 }
 Panel.key = 'propertiesDropdown';
 Panel.title = 'Properties panel';
-Panel.glyph = 'properties';
 Panel.section = 'Panel';
 Panel.about = 'The open note’s properties and connections, or the folder picked, in the right sidebar.';

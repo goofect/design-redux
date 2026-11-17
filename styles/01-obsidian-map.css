@@ -11,61 +11,47 @@
 /* ------------------------------------------------------------------ */
 
 body.dr-active {
-  /* One surface, parted by ink hairlines. */
+  /* One surface, parted by ink lines where the structure divides. No fill under the pointer: hover is an underline. */
   --background-primary: var(--dr-bg);
   --background-primary-alt: var(--dr-bg);
   --background-secondary: var(--dr-bg);
   --background-secondary-alt: var(--dr-bg);
-  --background-modifier-hover: var(--dr-surface);
-  --background-modifier-active-hover: var(--dr-clay);
+  --background-modifier-hover: var(--dr-bg);
+  --background-modifier-active-hover: var(--dr-ink);
   --background-modifier-border: var(--dr-ink);
   --background-modifier-border-hover: var(--dr-ink);
   --background-modifier-border-focus: var(--dr-ink);
   --background-modifier-form-field: var(--dr-bg);
   --background-modifier-form-field-hover: var(--dr-bg);
-  --background-modifier-error: var(--dr-rust);
-  --background-modifier-error-hover: var(--dr-rust);
-  --background-modifier-success: var(--dr-moss);
-  --background-modifier-warning: var(--dr-ochre);
-  --background-modifier-cover: var(--dr-dim);
-  --background-modifier-box-shadow: transparent;
+  --background-modifier-error: var(--dr-error);
+  --background-modifier-error-hover: var(--dr-error);
+  --background-modifier-success: var(--dr-ink);
+  --background-modifier-warning: var(--dr-ink);
+  --background-modifier-box-shadow: var(--dr-bg);
   --divider-color: var(--dr-ink);
   --divider-color-hover: var(--dr-ink);
   --divider-width: var(--dr-hair);
   --border-width: var(--dr-hair);
 
-  /* Text: ink, and one quieter tone. */
+  /* Text: ink, and the one grey. Red only for an error. */
   --text-normal: var(--dr-ink);
   --text-muted: var(--dr-muted);
   --text-faint: var(--dr-muted);
   --text-accent: var(--dr-ink);
   --text-accent-hover: var(--dr-ink);
-  --text-on-accent: var(--dr-on-clay);
-  --text-on-accent-inverted: var(--dr-on-clay);
-  --text-selection: var(--dr-clay);
-  --text-error: var(--dr-rust);
-  --text-warning: var(--dr-ochre);
-  --text-success: var(--dr-moss);
+  --text-on-accent: var(--dr-bg);
+  --text-on-accent-inverted: var(--dr-bg);
+  --text-error: var(--dr-error);
+  --text-warning: var(--dr-ink);
+  --text-success: var(--dr-ink);
   --caret-color: var(--dr-ink);
 
-  /* The one accent, clay: Obsidian builds its accent from these three. */
-  --accent-h: var(--dr-clay-h);
-  --accent-s: var(--dr-clay-s);
-  --accent-l: var(--dr-clay-l);
-  --interactive-accent: var(--dr-clay);
-  --interactive-accent-hover: var(--dr-clay);
+  /* What is selected or open: inverted, the ink as a fill and the ground's colour for its words. */
+  --interactive-accent: var(--dr-ink);
+  --interactive-accent-hover: var(--dr-ink);
   --interactive-normal: var(--dr-bg);
-  --interactive-hover: var(--dr-surface);
+  --interactive-hover: var(--dr-bg);
 
-  /* The person's own colours and the meanings (callouts, cards, groups, highlights): the semantic set, eight names kept apart. */
-  --color-red: var(--dr-rust); --color-red-rgb: var(--dr-rust-rgb);
-  --color-orange: var(--dr-ochre); --color-orange-rgb: var(--dr-ochre-rgb);
-  --color-yellow: var(--dr-ochre-soft); --color-yellow-rgb: var(--dr-ochre-soft-rgb);
-  --color-green: var(--dr-moss); --color-green-rgb: var(--dr-moss-rgb);
-  --color-cyan: var(--dr-slate-soft); --color-cyan-rgb: var(--dr-slate-soft-rgb);
-  --color-blue: var(--dr-slate); --color-blue-rgb: var(--dr-slate-rgb);
-  --color-purple: var(--dr-plum); --color-purple-rgb: var(--dr-plum-rgb);
-  --color-pink: var(--dr-plum-soft); --color-pink-rgb: var(--dr-plum-soft-rgb);
 
   /* Shape: square. */
   --radius-s: var(--dr-radius);
@@ -178,15 +164,15 @@ body.dr-active.dr-region-chrome {
   --vault-profile-color-hover: var(--dr-ink);
 }
 
-/* Tabs: rectangles parted by hairlines; the open one a clay fill. */
+/* Tabs: rectangles; the open one inverted. */
 body.dr-active.dr-region-tabs {
   --tab-container-background: var(--dr-bg);
-  --tab-background-active: var(--dr-clay);
+  --tab-background-active: var(--dr-ink);
   --tab-text-color: var(--dr-muted);
-  --tab-text-color-active: var(--dr-ink);
+  --tab-text-color-active: var(--dr-bg);
   --tab-text-color-focused: var(--dr-muted);
-  --tab-text-color-focused-active: var(--dr-ink);
-  --tab-text-color-focused-active-current: var(--dr-on-clay);
+  --tab-text-color-focused-active: var(--dr-bg);
+  --tab-text-color-focused-active-current: var(--dr-bg);
   --tab-text-color-focused-highlighted: var(--dr-ink);
   --tab-divider-color: var(--dr-ink);
   --tab-outline-color: var(--dr-ink);
@@ -196,16 +182,16 @@ body.dr-active.dr-region-tabs {
   --tab-switcher-menubar-background: var(--dr-bg);
 }
 
-/* Sidebars and the file explorer: plain rows; ash under the pointer, clay under the open one. */
+/* Sidebars and the file explorer: plain rows; the open one inverted. */
 body.dr-active.dr-region-sidebars {
   --nav-item-color: var(--dr-ink);
   --nav-item-color-hover: var(--dr-ink);
-  --nav-item-color-active: var(--dr-on-clay);
-  --nav-item-color-selected: var(--dr-on-clay);
+  --nav-item-color-active: var(--dr-bg);
+  --nav-item-color-selected: var(--dr-bg);
   --nav-item-color-highlighted: var(--dr-ink);
-  --nav-item-background-hover: var(--dr-surface);
-  --nav-item-background-active: var(--dr-clay);
-  --nav-item-background-selected: var(--dr-clay);
+  --nav-item-background-hover: var(--dr-bg);
+  --nav-item-background-active: var(--dr-ink);
+  --nav-item-background-selected: var(--dr-ink);
   --nav-indentation-guide-color: var(--dr-muted);
   --nav-collapse-icon-color: var(--dr-ink);
   --nav-collapse-icon-color-collapsed: var(--dr-muted);
@@ -233,7 +219,7 @@ body.dr-active.dr-region-editor {
   --inline-title-color: var(--dr-ink);
   --bold-color: var(--dr-ink);
   --italic-color: var(--dr-ink);
-  /* Links: ink, underlined; one not yet written, a dashed line under muted. */
+  /* Links: ink, underlined; one not yet written, grey. */
   --link-color: var(--dr-ink);
   --link-color-hover: var(--dr-ink);
   --link-decoration: underline;
@@ -244,50 +230,49 @@ body.dr-active.dr-region-editor {
   --link-external-decoration-hover: underline;
   --link-unresolved-color: var(--dr-muted);
   --link-unresolved-opacity: 1;
-  --link-unresolved-decoration-style: dashed;
+  --link-unresolved-decoration-style: solid;
   --link-unresolved-decoration-color: var(--dr-muted);
-  /* Tags: plain text in a hairline, no pill. */
+  /* Tags: plain text in a line, no pill. */
   --tag-color: var(--dr-ink);
   --tag-color-hover: var(--dr-ink);
-  --tag-background: transparent;
-  --tag-background-hover: var(--dr-surface);
+  --tag-background: var(--dr-bg);
+  --tag-background-hover: var(--dr-bg);
   --tag-border-color: var(--dr-ink);
   --tag-border-color-hover: var(--dr-ink);
   --tag-border-width: var(--dr-hair);
   --tag-decoration: none;
   --tag-decoration-hover: none;
-  /* Quotes and rules: a hairline, no tint. */
+  /* Quotes and rules: a line, no tint. */
   --blockquote-border-color: var(--dr-ink);
   --blockquote-border-thickness: var(--dr-hair);
-  --blockquote-background-color: transparent;
+  --blockquote-background-color: var(--dr-bg);
   --blockquote-color: var(--dr-ink);
   --hr-color: var(--dr-ink);
   --hr-thickness: var(--dr-hair);
-  /* Lists and tasks: native markers, square boxes, the tick on a clay fill. */
+  /* Lists and tasks: native markers, square boxes, a ticked one inverted. */
   --list-marker-color: var(--dr-ink);
   --list-marker-color-hover: var(--dr-ink);
   --list-marker-color-collapsed: var(--dr-ink);
-  --checkbox-color: var(--dr-clay);
-  --checkbox-color-hover: var(--dr-clay);
+  --checkbox-color: var(--dr-ink);
+  --checkbox-color-hover: var(--dr-ink);
   --checkbox-border-color: var(--dr-ink);
   --checkbox-border-color-hover: var(--dr-ink);
-  --checkbox-marker-color: var(--dr-on-clay);
-  /* Tables: an ink grid, no zebra, a bold header. */
-  --table-background: transparent;
+  --checkbox-marker-color: var(--dr-bg);
+  /* Tables: ink lines, no zebra, a bold header. */
+  --table-background: var(--dr-bg);
   --table-border-color: var(--dr-ink);
   --table-border-width: var(--dr-hair);
-  --table-header-background: transparent;
-  --table-header-background-hover: var(--dr-surface);
+  --table-header-background: var(--dr-bg);
+  --table-header-background-hover: var(--dr-bg);
   --table-header-border-color: var(--dr-ink);
   --table-header-border-width: var(--dr-hair);
   --table-header-color: var(--dr-ink);
-  --table-row-alt-background: transparent;
-  --table-row-alt-background-hover: var(--dr-surface);
-  --table-row-background-hover: var(--dr-surface);
-  --table-column-alt-background: transparent;
-  --table-selection: var(--dr-surface);
+  --table-row-alt-background: var(--dr-bg);
+  --table-row-alt-background-hover: var(--dr-bg);
+  --table-row-background-hover: var(--dr-bg);
+  --table-column-alt-background: var(--dr-bg);
   --table-selection-border-color: var(--dr-ink);
-  /* Code: square, a hairline round it. Hue goes; kinds of token are told by the semantic tones (all measured on the ground). */
+  /* Code: square, a line round it. Ink and grey; no hue. */
   --code-background: var(--dr-bg);
   --code-border-color: var(--dr-ink);
   --code-border-width: var(--dr-hair);
@@ -295,20 +280,20 @@ body.dr-active.dr-region-editor {
   --code-comment: var(--dr-muted);
   --code-punctuation: var(--dr-muted);
   --code-operator: var(--dr-ink);
-  --code-keyword: var(--dr-rust);
-  --code-important: var(--dr-rust);
-  --code-tag: var(--dr-rust);
-  --code-function: var(--dr-slate);
-  --code-string: var(--dr-moss);
-  --code-value: var(--dr-plum);
-  --code-property: var(--dr-ochre);
-  /* Callouts: a hairline box. */
+  --code-keyword: var(--dr-ink);
+  --code-important: var(--dr-ink);
+  --code-tag: var(--dr-ink);
+  --code-function: var(--dr-ink);
+  --code-string: var(--dr-muted);
+  --code-value: var(--dr-ink);
+  --code-property: var(--dr-muted);
+  /* Callouts: a line round them. */
   --callout-border-width: var(--dr-hair);
   --callout-border-opacity: 1;
   --callout-blend-mode: normal;
   --callout-title-color: var(--dr-ink);
   /* Embeds and the properties block. */
-  --embed-background: transparent;
+  --embed-background: var(--dr-bg);
   --embed-border-start: var(--dr-hair) solid var(--dr-ink);
   --metadata-border-color: var(--dr-ink);
   --metadata-divider-color: var(--dr-ink);
@@ -317,7 +302,7 @@ body.dr-active.dr-region-editor {
   --metadata-label-text-color: var(--dr-muted);
   --metadata-label-text-color-hover: var(--dr-ink);
   --metadata-input-text-color: var(--dr-ink);
-  --metadata-property-background-hover: var(--dr-surface);
+  --metadata-property-background-hover: var(--dr-bg);
   --footnote-divider-color: var(--dr-ink);
 }
 
@@ -350,7 +335,7 @@ body.dr-active.dr-region-overlays {
   --input-text-fg-color: var(--dr-ink);
   --input-placeholder-color: var(--dr-muted);
   --dropdown-background: var(--dr-bg);
-  --dropdown-background-hover: var(--dr-surface);
+  --dropdown-background-hover: var(--dr-bg);
   --slider-track-background: var(--dr-ink);
   --slider-thumb-border-color: var(--dr-ink);
   --slider-thumb-border-width: var(--dr-hair);
@@ -377,18 +362,18 @@ body.dr-active.dr-region-icons {
   --icon-xl-stroke-width: 1.75px;
 }
 
-/* The graph: ink nodes, hairline links, the current node in clay. Only what Obsidian's renderer reads from variables. */
+/* The graph: ink nodes, grey links. Only what Obsidian's renderer reads from variables; group colours are the person's. */
 body.dr-active.dr-region-graph {
   --graph-node: var(--dr-ink);
   --graph-line: var(--dr-muted);
   --graph-text: var(--dr-ink);
-  --graph-node-focused: var(--dr-clay);
+  --graph-node-focused: var(--dr-ink);
   --graph-node-unresolved: var(--dr-muted);
-  --graph-node-tag: var(--dr-moss);
-  --graph-node-attachment: var(--dr-slate);
+  --graph-node-tag: var(--dr-muted);
+  --graph-node-attachment: var(--dr-muted);
 }
 
-/* Canvas: bone cards with an ink line; a card's colour is one of the semantic tones through the names above. */
+/* Canvas: cards on the ground with an ink line; a card's colour is the person's, left to the theme. */
 body.dr-active.dr-region-canvas {
   --canvas-background: var(--dr-bg);
   --canvas-card-label-color: var(--dr-muted);

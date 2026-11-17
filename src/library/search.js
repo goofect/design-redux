@@ -56,17 +56,19 @@ export function rememberSearch(plugin, query) {
   plugin.saveData(plugin.settings);
 }
 
-export function drawSearch(screen, host) {
+/** The search field and what it finds. `idle(host)`, given, draws what stands there while nothing is typed (the sidebar: the folders). */
+export function drawSearch(screen, host, idle) {
   const plugin = screen.plugin;
   const top = el(host, 'div', 'dr-search');
   const results = el(host, 'div', 'dr-search-results');
   const show = (query) => {
     clear(results);
     if (!query.trim()) {
+      if (idle) return void idle(results);
       const recent = plugin.settings.recentSearches || [];
       const key = String(plugin.settings.categoryProperty || '').trim();
       const categories = key ? categoryValues(plugin, key) : [];
-      if (!recent.length && !categories.length) return void sayso(results, { glyph: 'search', label: 'Search the library', text: 'Folders and notes by name; notes by a heading or a property.' });
+      if (!recent.length && !categories.length) return void sayso(results, { label: 'Folders and notes by name; notes by a heading or a property.' });
       if (recent.length) {
         sectionTitle(results, { title: 'Recent' });
         const list = rows(results);
@@ -80,7 +82,7 @@ export function drawSearch(screen, host) {
       return;
     }
     const found = searchLibrary(plugin, query);
-    if (!found.folders.length && !found.notes.length && !found.inside.length) return void sayso(results, { glyph: 'search', label: 'Nothing found', text: `No folder or note matches “${query.trim()}”.` });
+    if (!found.folders.length && !found.notes.length && !found.inside.length) return void sayso(results, { label: `No folder or note matches “${query.trim()}”.` });
     const group = (title, items, draw) => {
       if (!items.length) return;
       sectionTitle(results, { title });
@@ -89,13 +91,13 @@ export function drawSearch(screen, host) {
       screen.roving(list, '.dr-row', () => 1);
     };
     const done = () => rememberSearch(plugin, query);
-    group('Folders', found.folders, (list, f) => row(list, { name: f.path, end: String(plugin.index.count(f)), path: f.path, run: () => { done(); screen.go(f); } }));
+    group('Folders', found.folders, (list, f) => row(list, { name: f.path, path: f.path, run: () => { done(); screen.go(f); } }));
     const folders = foldersIfMixed(found.notes);
     group('Notes', found.notes, (list, f, i) => row(list, { name: f.basename, end: folders[i], path: f.path, run: (e) => { done(); screen.openNote(f, e); } }));
     group('In notes', found.inside, (list, hit) => row(list, { name: hit.file.basename, end: hit.where, path: hit.file.path, run: (e) => { done(); screen.openNote(hit.file, e, hit.subpath); } }));
   };
   // No name over the field: its placeholder says what it is for.
-  const input = field(top, { glyph: 'search', value: screen.query || '', placeholder: 'Notes and folders', onInput: (v) => { screen.query = v; show(v); }, onEnter: () => { const first = results.querySelector('.dr-row'); if (first) first.click(); } });
+  const input = field(top, { value: screen.query || '', placeholder: 'Notes and folders', onInput: (v) => { screen.query = v; show(v); }, onEnter: () => { const first = results.querySelector('.dr-row'); if (first) first.click(); } });
   input.drInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') screen.search(null);
     if (e.key === 'ArrowDown') { const first = results.querySelector('.dr-row'); if (first) { e.preventDefault(); first.focus(); } }

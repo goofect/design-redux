@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* Actions: what can be done, written once                             */
 /*                                                                     */
-/* A feature lists what it can do as { id, name, glyph, on, when(ctx), */
+/* A feature lists what it can do as { id, name, on, when(ctx),        */
 /* run(ctx), menu, section }. `on` says what it acts on, and so where  */
 /* it is offered:                                                      */
 /*   app     nothing in particular: ctx {}                             */
@@ -16,7 +16,6 @@
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile, TFolder } from 'obsidian';
-import { iconId } from './icons.js';
 
 /** What an action of each kind acts on right now, or null when there is nothing of that kind. */
 export const ACTION_CONTEXTS = {
@@ -57,7 +56,6 @@ export function actionCommand(plugin, action) {
   return {
     id: action.id,
     name: action.name,
-    icon: action.glyph ? iconId(action.glyph) : undefined,
     ...(action.hotkeys ? { hotkeys: action.hotkeys } : {}),
     checkCallback: (checking) => {
       const ctx = actionContext(plugin, action);
@@ -74,7 +72,6 @@ export function addActionItems(menu, actions, on, ctx, section = 'action') {
   apply.forEach((action) =>
     menu.addItem((item) => {
       item.setTitle(typeof action.menu === 'string' ? action.menu : action.name).setSection(action.section || section);
-      if (action.glyph) item.setIcon(iconId(action.glyph));
       if (action.danger && typeof item.setWarning === 'function') item.setWarning(true);
       if (action.checked && typeof item.setChecked === 'function') item.setChecked(!!action.checked(ctx));
       item.onClick(() => action.run(Object.assign({ from: 'menu' }, ctx)));

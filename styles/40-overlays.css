@@ -6,14 +6,13 @@
 /*   .menu  .menu-scroll  .menu-item  .menu-item.selected              */
 /*   .menu-item.is-disabled  .menu-item.is-label  .menu-item-icon      */
 /*   .menu-separator                                                   */
-/*   .modal  .modal-title  .modal-close-button                         */
 /*   .checkbox-container  .checkbox-container.is-enabled  its ::after  */
 /* Every rule is gated by the master switch and the overlays region.   */
 /* ------------------------------------------------------------------ */
 
 body.dr-active.dr-region-overlays {
   --menu-padding: 0;
-  /* The toggle: 40 by 20, square, an ink knob of two units two pixels in, on the side that is true. */
+  /* The toggle: Obsidian's own, squared: 40 by 20, a knob of two units two pixels in, on the side that is true. */
   --toggle-width: calc(5 * var(--dr-u));
   --toggle-s-width: calc(5 * var(--dr-u));
   --toggle-thumb-width: var(--dr-icon);
@@ -29,7 +28,7 @@ body.dr-active.dr-region-overlays {
   --toggle-thumb-color: var(--dr-ink);
 }
 
-/* A menu's items are rows: four units, edge to edge, a hairline where the menu parts them. */
+/* A menu's items are rows: four units, edge to edge; the one under the pointer or the keys inverted. */
 body.dr-active.dr-region-overlays .menu-item {
   min-height: var(--dr-row);
   padding: 0 var(--dr-gutter);
@@ -44,23 +43,13 @@ body.dr-active.dr-region-overlays .menu-separator {
   margin: 0;
 }
 
-/* The item under the pointer or the arrow keys: clay, and a line round it so the fill isn't the only sign. */
 body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) {
-  background-color: var(--dr-clay);
-  color: var(--dr-on-clay);
-  outline: var(--dr-hair) solid var(--dr-ink);
-  outline-offset: calc(-1 * var(--dr-hair));
+  background-color: var(--dr-ink);
+  color: var(--dr-bg);
 }
 
-/* A modal's title is the one larger size of its region. */
-body.dr-active.dr-region-overlays .modal-title {
-  font-size: var(--dr-title-size);
-  line-height: var(--dr-line-loose);
-  font-weight: 400;
-}
-
-/* The toggle: a bone track in a hairline, the ink knob at its start; on, the track is clay and the knob at its end.
-   The knob stays ink in both: its place says which, and the setting's words beside it say what it does. */
+/* The toggle: off, the ground in a line and an ink knob at its start; on, inverted: an ink track and the knob, the
+   ground's colour, at its end. Its place says which; the setting's words beside it say what it does. */
 body.dr-active.dr-region-overlays .checkbox-container {
   background-color: var(--dr-bg);
   box-shadow: none;
@@ -68,7 +57,11 @@ body.dr-active.dr-region-overlays .checkbox-container {
 }
 
 body.dr-active.dr-region-overlays .checkbox-container.is-enabled {
-  background-color: var(--dr-clay);
+  background-color: var(--dr-ink);
+}
+
+body.dr-active.dr-region-overlays .checkbox-container.is-enabled::after {
+  background-color: var(--dr-bg);
 }
 
 body.dr-active.dr-region-overlays .checkbox-container:focus-visible,

@@ -3,7 +3,7 @@
 /* (docs/design-language.md, "Icon button", "Text button")             */
 /* ------------------------------------------------------------------ */
 
-import { asButton, el, flag, glyph } from '../core/dom.js';
+import { asButton, el, flag, glyph, onActivate } from '../core/dom.js';
 
 /**
  * An icon button: the plugin's control. { glyph, label, run, pressed,
@@ -17,6 +17,17 @@ export function iconButton(parent, opts) {
   flag(button, 'aria-disabled', opts.disabled);
   flag(button, 'aria-busy', opts.busy);
   return button;
+}
+
+/** A link: an underlined word that goes somewhere (a folder, a page, the next note). Content, not a control. No `run`: it goes nowhere, grey. */
+export function link(parent, text, run) {
+  const node = el(parent, 'span', 'dr-link', text);
+  node.setAttribute('role', 'link');
+  if (run) {
+    node.setAttribute('tabindex', '0');
+    onActivate(node, run);
+  } else node.setAttribute('aria-disabled', 'true');
+  return node;
 }
 
 /** Turns an icon button that stays on, on or off. */

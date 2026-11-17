@@ -47,7 +47,23 @@ export const RETIRED = {
   inspectorClick: 'a click picks and a second opens, always',
   hideNativeProperties: 'the look hides nothing of Obsidian\'s own (docs/DESIGN.md, Conflicts 1)',
   propertiesSort: 'the old screen of every property',
+  // Retired by the direction reset (docs/direction-reset.md); their values are kept under `retired` (settings 102).
+  alwaysShowLabels: 'the reset: a folder is its name, always shown',
+  libraryZoom: 'the reset: one view of a collection, no zoom levels',
+  folderGlyphs: 'the reset: no generated glyphs; a folder is its name or its cover image',
+  tableColumns: 'the reset: a folder\'s notes are one list, not a table',
+  coverFromFolder: 'the reset: a note is its name; covers stand for folders only',
+  stripPlace: 'the reset: the strip is one line, its place always "21 / 24"',
+  stripDetail: 'the reset: the strip is one line, with no property beside it',
+  albumStillToWrite: 'the reset: no switch that only chose what a page showed',
+  propertyValueChips: 'the reset: no colour on a value; a value is its words',
+  propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
+  ...Object.fromEntries(['Chrome', 'Tabs', 'Sidebars', 'Editor', 'Overlays', 'Library', 'Note', 'Strip', 'Panel', 'Canvas', 'Graph', 'Maps', 'Icons', 'Compat']
+    .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
 };
+
+/** The 4.0 keys the direction reset retired: their values are moved under `retired` once, not dropped. */
+const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions)/.test(k));
 
 /** Old keys that live on under another name. */
 export const RENAMED = {};
@@ -77,8 +93,12 @@ export function migrateSettings(saved) {
     // The properties panel took over the inspector's switch.
     if (saved.propertyInspector === false) settings.inspector = false;
   }
-  // 101: names under the objects became the default, so a grid can be read without the pointer.
-  if (version < 101) settings.alwaysShowLabels = true;
+  // 102: the direction reset retired what it cut; a 4.0 file's values for those keys are kept under `retired`.
+  if (version >= REWRITE_VERSION && version < 102) {
+    const kept = {};
+    RESET_RETIRED.forEach((k) => { if (saved[k] !== undefined) kept[k] = copy(saved[k]); });
+    if (Object.keys(kept).length) settings.retired = Object.assign({}, settings.retired, kept);
+  }
   settings.settingsVersion = SETTINGS_VERSION;
   return { settings, legacy: old ? copy(saved) : null };
 }

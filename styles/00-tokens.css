@@ -1,33 +1,28 @@
 /* ------------------------------------------------------------------ */
-/* Tokens: the measures, the two voices, the palette, the semantic set */
+/* Tokens: the measures, the one face, the two sizes, the four colours */
 /*                                                                     */
 /* Everything the plugin draws is sized and coloured from here; no     */
-/* other part holds a hex value. The palette is docs/DESIGN.md's, per  */
-/* colour scheme, on the gated body. The ratios in the block below are */
+/* other part holds a colour value. Black, white, one grey, and red    */
+/* for an error, per colour scheme on the gated body                   */
+/* (docs/direction-reset.md). The ratios in the block below are        */
 /* measured, not typed: node tests/contrast.js --write puts them here, */
 /* and the suite fails when they no longer match the values.           */
+/*                                                                     */
+/* Lines: a border is drawn only by these classes, each where a        */
+/* screen's structure divides (tests/test_reset.js reads this list):   */
+/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box               */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin
- * light  text   ink on bg 13.98 · ink on surface 10.87 · ink on press 8.43 · muted on bg 5.36 · on-clay on clay 5.66
- * light  line   ink on bg 13.98 · ink on surface 10.87 · ink on clay 5.66
- * light  fill   clay on bg 2.47 · surface on bg 1.29 · press on surface 1.29 · clay on surface 1.92 (never the only sign: see "Selected and open")
- * light  never  muted on surface 4.16 · muted on clay 2.17 · clay as text on bg 2.47
- * light  tones  rust 5.96/4.63 · ochre 5.96/4.63 · moss 6.00/4.67 · slate 5.95/4.63 · plum 5.95/4.63 (on bg / on surface)
- * light  soft   rust 3.37 · ochre 3.36 · moss 3.33 · slate 3.34 · plum 3.34 (on bg: fills and lines only)
- * dark   text   ink on bg 13.81 · ink on surface 11.66 · ink on press 9.39 · muted on bg 7.00 · muted on surface 5.91 · on-clay on clay 5.66
- * dark   line   ink on bg 13.81 · ink on surface 11.66 · on-clay on clay 5.66
- * dark   fill   clay on bg 5.59 · surface on bg 1.18 · press on surface 1.24 · clay on surface 4.72 (never the only sign: see "Selected and open")
- * dark   never  ink on clay 2.47 · muted on clay 1.25 · clay as text on bg 5.59
- * dark   tones  rust 5.80/4.90 · ochre 5.77/4.87 · moss 5.77/4.87 · slate 5.76/4.86 · plum 5.80/4.90 (on bg / on surface)
- * dark   soft   rust 3.42 · ochre 3.40 · moss 3.44 · slate 3.40 · plum 3.38 (on bg: fills and lines only)
+ * light  ink on bg 21.00 · bg on ink 21.00 · muted on bg 4.54 · error on bg 6.48
+ * dark   ink on bg 21.00 · bg on ink 21.00 · muted on bg 6.00 · error on bg 6.94
  * contrast:end */
 
-/* The measures and the voices hold whether the look is on or off: they are the plugin's own structure. */
+/* The measures, the face and the sizes hold whether the look is on or off: they are the plugin's own structure. */
 body {
   /* One unit. Every size, position and gap the plugin draws is a whole number of these. */
   --dr-u: 8px;
-  /* The two exceptions, both lines: a hairline and the focus ring. */
+  /* The two exceptions, both lines: a line and the focus outline. */
   --dr-hair: 1px;
   --dr-ring: 2px;
   --dr-radius: 0;
@@ -35,96 +30,34 @@ body {
   --dr-gutter: calc(2 * var(--dr-u)); /* 16: the margin either side of a column */
   --dr-row: calc(4 * var(--dr-u)); /* 32: a row, a control */
   --dr-icon: calc(2 * var(--dr-u)); /* 16: a control's glyph */
-  --dr-mark: var(--dr-u); /* 8: the ink square that marks what is picked but not open */
-  --dr-object: calc(6 * var(--dr-u)); /* 48: an object in the sidebar's grid */
-  --dr-object-wide: calc(8 * var(--dr-u)); /* 64: in the browse view's grid */
-  --dr-object-large: calc(12 * var(--dr-u)); /* 96: the folder picked */
 
-  /* The label voice: small capitals, tracked. */
-  --dr-label-size: 11px;
-  --dr-label-track: 0.08em;
-  --dr-label-weight: 500;
-  /* The reading voice: sentence case, Obsidian's interface size. */
-  --dr-text-size: var(--font-ui-small);
-  /* The one larger size a region may use, for a title. */
-  --dr-title-size: var(--font-ui-large);
-  /* Lines of text sit on the unit too: 16 for a label or a row, 24 for running text and a title. */
+  /* One face, a system face as it comes; two sizes and nothing between. */
+  --dr-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --dr-size: 13px; /* everything */
+  --dr-size-display: 48px; /* the one name that matters on a screen */
+  /* Lines of text sit on the unit: 16 in a row, 24 running, 56 for the display size. */
   --dr-line: calc(2 * var(--dr-u));
   --dr-line-loose: calc(3 * var(--dr-u));
+  --dr-line-display: calc(7 * var(--dr-u)); /* 56: room for the display size's descenders */
 
   /* Without the look, the plugin's own surfaces take the theme's colours. */
   --dr-bg: var(--background-primary);
-  --dr-surface: var(--background-modifier-hover);
-  --dr-press: var(--background-modifier-active-hover);
   --dr-ink: var(--text-normal);
   --dr-muted: var(--text-muted);
-  --dr-clay: var(--interactive-accent);
-  --dr-on-clay: var(--text-on-accent);
-  --dr-dim: var(--background-modifier-cover);
-  --dr-rust: var(--color-red);
-  --dr-rust-soft: var(--color-red);
-  --dr-ochre: var(--color-orange);
-  --dr-ochre-soft: var(--color-yellow);
-  --dr-moss: var(--color-green);
-  --dr-moss-soft: var(--color-green);
-  --dr-slate: var(--color-blue);
-  --dr-slate-soft: var(--color-cyan);
-  --dr-plum: var(--color-purple);
-  --dr-plum-soft: var(--color-pink);
+  --dr-error: var(--text-error);
 }
 
-/* The palette. One surface colour; ash only under the pointer, a deeper ash only while pressed; clay only as a fill behind what is open or on. */
+/* The palette: black, white, one grey, and red for an error. Selected or open is the ink as a fill, its words the ground's colour. */
 body.dr-active.theme-light {
-  --dr-bg: #E9E6DF; /* bone: every surface */
-  --dr-surface: #CFCCC5; /* ash: the hover fill only; words on it are ink */
-  --dr-press: #B8B4AC; /* a deeper ash: the pressed fill only; words on it are ink */
-  --dr-ink: #1A1A18; /* text, glyphs, hairlines, the ring */
-  --dr-muted: #5E5C57; /* secondary text, only on bone */
-  --dr-clay: #A58F7C; /* the fill behind what is selected or open; never text */
-  --dr-on-clay: #1A1A18; /* text, glyphs and marks on clay */
-  --dr-dim: #1A1A1866; /* the flat dim behind a sheet */
-  --dr-clay-h: 28; --dr-clay-s: 19%; --dr-clay-l: 57%; /* clay again, for Obsidian's accent sliders */
-
-  /* The semantic set: five earth tones, for meaning the four neutrals can't hold (the person's own colours, callouts, error, warning, success).
-     A tone is text or a line on bone or ash, or a fill with bone words on it. Its soft form is a fill or a line on bone only, never under words. */
-  --dr-rust: #8A3F2C; --dr-rust-rgb: 138, 63, 44;
-  --dr-rust-soft: #BE614A; --dr-rust-soft-rgb: 190, 97, 74;
-  --dr-ochre: #6C5119; --dr-ochre-rgb: 108, 81, 25;
-  --dr-ochre-soft: #9B762C; --dr-ochre-soft-rgb: 155, 118, 44;
-  --dr-moss: #485B2B; --dr-moss-rgb: 72, 91, 43;
-  --dr-moss-soft: #6B8544; --dr-moss-soft-rgb: 107, 133, 68;
-  --dr-slate: #3A596D; --dr-slate-rgb: 58, 89, 109;
-  --dr-slate-soft: #59819B; --dr-slate-soft-rgb: 89, 129, 155;
-  --dr-plum: #764664; --dr-plum-rgb: 118, 70, 100;
-  --dr-plum-soft: #A36B8E; --dr-plum-soft-rgb: 163, 107, 142;
+  --dr-bg: #FFFFFF; /* the ground */
+  --dr-ink: #000000; /* words, lines, the inverted fill */
+  --dr-muted: #767676; /* the one grey: secondary words only, never a fill */
+  --dr-error: #C00000; /* an error's words, always with them */
 }
 
 body.dr-active.theme-dark {
-  --dr-bg: #1C1B19;
-  --dr-surface: #2A2927;
-  --dr-press: #3A3834;
-  --dr-ink: #E9E6DF;
-  --dr-muted: #A8A59E; /* on the ground and on the hover fill */
-  --dr-clay: #A58F7C;
-  --dr-on-clay: #1A1A18; /* dark on clay in both schemes: the light ink would not be read on it */
-  --dr-dim: #000000A6;
-  --dr-clay-h: 28; --dr-clay-s: 19%; --dr-clay-l: 57%;
-
-  --dr-rust: #D1816E; --dr-rust-rgb: 209, 129, 110;
-  --dr-rust-soft: #AE553F; --dr-rust-soft-rgb: 174, 85, 63;
-  --dr-ochre: #BE8D2D; --dr-ochre-rgb: 190, 141, 45;
-  --dr-ochre-soft: #8B6927; --dr-ochre-soft-rgb: 139, 105, 39;
-  --dr-moss: #7FA04C; --dr-moss-rgb: 127, 160, 76;
-  --dr-moss-soft: #5F773D; --dr-moss-soft-rgb: 95, 119, 61;
-  --dr-slate: #749AB4; --dr-slate-rgb: 116, 154, 180;
-  --dr-slate-soft: #4F738A; --dr-slate-soft-rgb: 79, 115, 138;
-  --dr-plum: #B987A6; --dr-plum-rgb: 185, 135, 166;
-  --dr-plum-soft: #955C80; --dr-plum-soft-rgb: 149, 92, 128;
-}
-
-/* What each tone means when the plugin says something. */
-body {
-  --dr-error: var(--dr-rust);
-  --dr-warning: var(--dr-ochre);
-  --dr-success: var(--dr-moss);
+  --dr-bg: #000000; /* the exact inverse */
+  --dr-ink: #FFFFFF;
+  --dr-muted: #898989;
+  --dr-error: #FF5C5C;
 }

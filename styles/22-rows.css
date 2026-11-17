@@ -1,27 +1,28 @@
 /* ------------------------------------------------------------------ */
-/* Rows: a note in a list, the outline, a panel row, a section's title */
+/* Rows: a name in a list, a property, a group's title                 */
 /*                                                                     */
-/* All keep to the same columns: a gutter of two units either side,    */
-/* a slot of three for a number or the mark, then the words. No rule   */
-/* between two rows of a group; a hairline between groups.             */
+/* Four units high, parted by their height and never by a rule. Hover  */
+/* underlines the name; open or picked, the row is inverted. No        */
+/* numbers, no marks: a slot holds only a footnote's own id.           */
 /* ------------------------------------------------------------------ */
 
-/* ---- A row: a slot for a number or the mark, the words, and what trails. Rows are parted by their
-   own height on the unit, never by a rule; a hairline parts groups only (a section's title, a folder). ---- */
+.dr-rows {
+  display: grid;
+}
+
 .dr-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   column-gap: var(--dr-u);
   align-items: center;
   min-height: var(--dr-row);
-  position: relative;
   padding: 0 var(--dr-gutter);
   color: var(--dr-ink);
   cursor: pointer;
 }
 
-/* A numbered row (a folder's notes in its own order, a footnote) holds its number in the slot before its name. */
-.dr-row.is-numbered {
+/* A footnote's row holds its id before its words. */
+.dr-row.is-slotted {
   grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
 }
 
@@ -29,130 +30,62 @@
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-/* The slot: a number, right against the words; or a glyph. */
-.dr-slot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  height: var(--dr-line);
-  color: var(--dr-muted);
-  font-variant-numeric: tabular-nums;
-}
-
+.dr-slot,
 .dr-row-end {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-u);
   color: var(--dr-muted);
 }
 
-/* One sign a state. Open: a clay fill and the words bold. Selected but not open: the mark, an ink square at the
-   left, in the gutter; nothing else. A heading under the open note takes neither. */
-.dr-row[aria-current]:not(.is-child) {
-  background: var(--dr-clay);
-  color: var(--dr-on-clay);
+/* Open or picked: inverted. */
+.dr-row[aria-current],
+.dr-row[aria-selected="true"] {
+  background: var(--dr-ink);
+  color: var(--dr-bg);
 }
 
-.dr-row[aria-current]:not(.is-child) > .dr-row-name {
-  font-weight: 600;
-}
-
-.dr-row[aria-current]:not(.is-child) > .dr-row-end,
-.dr-row[aria-current]:not(.is-child) > .dr-slot {
+.dr-row[aria-current] > .dr-slot,
+.dr-row[aria-current] > .dr-row-end,
+.dr-row[aria-selected="true"] > .dr-slot,
+.dr-row[aria-selected="true"] > .dr-row-end {
   color: inherit;
 }
 
-.dr-row[aria-current]:not(.is-child):focus-visible {
-  outline-color: var(--dr-on-clay);
+.dr-row[aria-current]:focus-visible,
+.dr-row[aria-selected="true"]:focus-visible {
+  outline-color: var(--dr-bg);
 }
 
-.dr-row[aria-selected="true"]::before,
-.dr-prop[aria-selected="true"]::before {
-  content: "";
-  position: absolute;
-  top: calc(50% - var(--dr-mark) / 2);
-  left: calc((var(--dr-gutter) - var(--dr-mark)) / 2);
-  width: var(--dr-mark);
-  height: var(--dr-mark);
-  background: var(--dr-ink);
-}
-
-.dr-row[aria-disabled="true"] {
-  color: var(--dr-muted);
-  cursor: default;
-}
-
-/* A note linked to but not written yet: a dashed line under its name. */
+.dr-row[aria-disabled="true"],
 .dr-row.is-missing > .dr-row-name {
   color: var(--dr-muted);
-  text-decoration: underline dashed;
-  text-underline-offset: var(--dr-ring);
+  cursor: default;
 }
 
 .dr-row.is-error > .dr-row-end {
   color: var(--dr-error);
 }
 
-/* ---- The outline (words): folders as labels, a hairline between them; the open note's headings under it. ---- */
-.dr-outline-folder {
-  display: grid;
-  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
-  column-gap: var(--dr-u);
-  align-items: center;
-  height: var(--dr-row);
-  padding: 0 var(--dr-gutter);
-  border-top: var(--dr-hair) solid var(--dr-ink);
-  color: var(--dr-ink);
-  cursor: pointer;
-}
-
-/* The first folder sits under a head row's own hairline. */
-.dr-outline > .dr-outline-folder:first-child {
-  border-top: 0;
-}
-
-.dr-outline-folder:focus-visible {
-  outline-offset: calc(-1 * var(--dr-ring));
-}
-
-.dr-outline-folder > .dr-slot {
-  color: inherit;
-}
-
-.dr-outline-folder > .dr-row-end {
-  color: var(--dr-muted);
-}
-
-/* A heading or a page of the open note: one step in (two units), muted, smaller, on a shorter row, so it reads as
-   the note's and not as a note; no mark, not even where you are. */
-.dr-row.is-child {
-  min-height: var(--dr-line-loose);
-  color: var(--dr-muted);
-}
-
-.dr-row.is-child > .dr-row-name {
-  padding-left: var(--dr-gutter);
-  font-size: var(--dr-label-size);
-}
-
-/* ---- A panel row: a property's name and its value. ---- */
+/* ---- A property: its name grey, its value beside it. ---- */
 .dr-prop {
   display: grid;
   grid-template-columns: calc(12 * var(--dr-u)) minmax(0, 1fr) auto;
   column-gap: var(--dr-u);
   align-items: center;
-  position: relative;
   min-height: var(--dr-row);
   padding: 0 var(--dr-gutter);
   color: var(--dr-ink);
 }
 
-.dr-prop > .dr-label {
-  color: var(--dr-muted);
-}
-
 .dr-prop:focus-visible {
   outline-offset: calc(-1 * var(--dr-ring));
+}
+
+.dr-prop[aria-selected="true"] {
+  background: var(--dr-ink);
+  color: var(--dr-bg);
+}
+
+.dr-prop[aria-selected="true"] > .dr-muted {
+  color: inherit;
 }
 
 .dr-prop[aria-disabled="true"],
@@ -160,89 +93,40 @@
   color: var(--dr-muted);
 }
 
+/* Wrong: the value and the words saying why, red. */
 .dr-prop[aria-invalid="true"] > .dr-prop-value,
-.dr-prop[aria-invalid="true"] > .dr-glyph {
+.dr-prop-why {
   color: var(--dr-error);
 }
 
-/* A section's title, over its rows: no rule under it. A group after another is parted from it by a hairline over its title. */
+/* ---- A group's title, over its rows, only where there is more than one group: a plain grey word. ---- */
 .dr-section {
   display: flex;
   align-items: center;
   gap: var(--dr-u);
   height: var(--dr-row);
-  padding: 0 var(--dr-gutter);
-  color: var(--dr-ink);
-}
-
-.dr-section:not(:first-child) {
   margin-top: var(--dr-u);
-  border-top: var(--dr-hair) solid var(--dr-ink);
+  padding: 0 var(--dr-gutter);
 }
 
-/* A title that folds its group is pressed itself: no arrow, no button. Folded, it is quieter and counts what it holds. */
+.dr-section:first-child {
+  margin-top: 0;
+}
+
+.dr-section-name {
+  flex: 1;
+}
+
+/* A title that folds its group is pressed itself. */
 .dr-section > [aria-expanded] {
   cursor: pointer;
 }
 
-.dr-section > [aria-expanded="false"] {
-  color: var(--dr-muted);
-}
-
-.dr-section > .dr-label {
-  flex: 1;
-}
-
-.dr-section > .dr-icon-button:last-child {
-  margin-right: calc(-1 * var(--dr-u));
-}
-
-/* ---- Under a pointer that hovers: ash, the words on it ink. ---- */
 @media (any-hover: hover) {
-  .dr-row:hover,
-  .dr-outline-folder:hover,
-  .dr-prop[tabindex]:hover {
-    background: var(--dr-surface);
-  }
-
+  .dr-row:not([aria-disabled="true"]):hover > .dr-row-name,
+  .dr-prop[tabindex]:hover > .dr-prop-value,
   .dr-section > [aria-expanded]:hover {
-    color: var(--dr-ink);
     text-decoration: underline;
-  }
-
-  .dr-row:hover > .dr-slot,
-  .dr-row:hover > .dr-row-end,
-  .dr-row.is-child:hover,
-  .dr-row.is-missing:hover > .dr-row-name,
-  .dr-outline-folder:hover > .dr-row-end,
-  .dr-prop[tabindex]:hover > .dr-label {
-    color: var(--dr-ink);
-  }
-
-  /* What is open keeps its clay under the pointer. */
-  .dr-row[aria-current]:not(.is-child):hover {
-    background: var(--dr-clay);
-  }
-
-  .dr-row[aria-current]:not(.is-child):hover > .dr-slot,
-  .dr-row[aria-current]:not(.is-child):hover > .dr-row-end {
-    color: var(--dr-on-clay);
-  }
-
-  .dr-row[aria-disabled="true"]:hover {
-    background: none;
-  }
-
-  .dr-row[aria-disabled="true"]:hover > .dr-slot,
-  .dr-row[aria-disabled="true"]:hover > .dr-row-end {
-    color: var(--dr-muted);
+    text-underline-offset: var(--dr-ring);
   }
 }
-
-/* ---- A value given a tone, in a property's row. On clay it is the dark of clay, like everything there. ---- */
-.dr-prop-value[data-tone="rust"] { color: var(--dr-rust); }
-.dr-prop-value[data-tone="ochre"] { color: var(--dr-ochre); }
-.dr-prop-value[data-tone="moss"] { color: var(--dr-moss); }
-.dr-prop-value[data-tone="slate"] { color: var(--dr-slate); }
-.dr-prop-value[data-tone="plum"] { color: var(--dr-plum); }
-

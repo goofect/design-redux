@@ -1,16 +1,16 @@
 /* ------------------------------------------------------------------ */
-/* Controls: icon button, text button, segments (the zoom control and  */
-/* tabs), field, chip. The toggle is Obsidian's own: 40-overlays.css.  */
+/* Controls: plain                                                     */
 /*                                                                     */
-/* A control is four units high and bare: no frame, no line in any    */
-/* state but the focus ring. Ash under the pointer, a deeper ash while */
-/* pressed; on or open, a clay fill; disabled, muted words and no      */
-/* border; loading, its word in muted ("Moving…"). No inner line, no   */
-/* bar along the foot, no dashes.                                      */
+/* An icon button is its glyph; a text button an underlined word; the  */
+/* one that commits black with white words; a field a line under its   */
+/* text; a page's tab a word. Hover underlines; focus is the outline;  */
+/* on, selected or open, inverted; disabled, grey. Nothing else: no    */
+/* box, no fill under the pointer, no inner line, no dashes.           */
 /* ------------------------------------------------------------------ */
 
-/* ---- Icon button: the plugin's controls are these. A square of four units, the glyph two. ---- */
+/* ---- Icon button: four units square, its glyph two, nothing round it. ---- */
 .dr-icon-button {
+  position: relative;
   display: grid;
   place-items: center;
   flex: none;
@@ -20,14 +20,9 @@
   cursor: pointer;
 }
 
-.dr-icon-button:active {
-  background: var(--dr-press);
-}
-
-/* On (a pin that holds, a panel that is showing): the clay square. */
 .dr-icon-button[aria-pressed="true"] {
-  background: var(--dr-clay);
-  color: var(--dr-on-clay);
+  background: var(--dr-ink);
+  color: var(--dr-bg);
 }
 
 .dr-icon-button[aria-disabled="true"] {
@@ -35,62 +30,58 @@
   cursor: default;
 }
 
+/* Working: grey; its word (its label) says what it is doing. */
 .dr-icon-button[aria-busy="true"] {
   color: var(--dr-muted);
   cursor: progress;
 }
 
-/* ---- Text button: only where a glyph would not say it (a confirmation, a first choice). ---- */
+/* ---- Text button: an underlined word. The one that commits: black, white words, one a screen. ---- */
 .dr-button,
 button.dr-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--dr-u);
   flex: none;
   height: var(--dr-row);
-  padding: 0 var(--dr-gutter);
-  border: var(--dr-hair) solid var(--dr-ink);
-  background: var(--dr-bg);
+  padding: 0;
+  border: 0;
+  background: none;
   color: var(--dr-ink);
-  font-size: var(--dr-text-size);
-  line-height: var(--dr-line);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
   white-space: nowrap;
   box-shadow: none;
   cursor: pointer;
 }
 
-.dr-button:active {
-  background: var(--dr-press);
-}
-
-/* The one a sheet proposes: ink, the words in the ground's colour. */
 .dr-button.is-primary {
+  padding: 0 var(--dr-gutter);
   background: var(--dr-ink);
   color: var(--dr-bg);
+  text-decoration: none;
 }
 
-/* The one that destroys: its word and a rust line say so. */
+/* The one that destroys: its word says so, in red. */
 .dr-button.is-danger {
-  border-color: var(--dr-error);
   color: var(--dr-error);
 }
 
 .dr-button[aria-disabled="true"],
-.dr-button:disabled {
-  border-color: transparent;
-  background: var(--dr-bg);
+.dr-button:disabled,
+.dr-button[aria-busy="true"] {
+  padding: 0;
+  background: none;
   color: var(--dr-muted);
+  text-decoration: none;
   cursor: default;
 }
 
-/* Working: its word says what it is doing ("Moving…"), muted; nothing spins. */
 .dr-button[aria-busy="true"] {
-  color: var(--dr-muted);
   cursor: progress;
 }
 
-/* ---- Segments: a row of bare choices, no frame and no line between them. The zoom control's are glyphs; tabs' are words. ---- */
+/* ---- A note's pages: words, underlined, the open one inverted. ---- */
 .dr-segments {
   display: inline-flex;
   flex: none;
@@ -100,51 +91,36 @@ button.dr-button {
 .dr-segment {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--dr-u);
-  min-width: var(--dr-row);
   padding: 0 var(--dr-u);
   color: var(--dr-ink);
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
+  white-space: nowrap;
   cursor: pointer;
-}
-
-/* A glyph segment is four units square: three of them are twelve units, to the pixel. */
-.dr-segments:not(.dr-tabs) > .dr-segment {
-  width: var(--dr-row);
-  padding: 0;
 }
 
 .dr-segment:focus-visible {
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-.dr-segment:active {
-  background: var(--dr-press);
-}
-
-/* The level shown, the page open: on a clay square, nothing round it. */
-.dr-segment[aria-checked="true"],
 .dr-segment[aria-selected="true"] {
-  background: var(--dr-clay);
-  color: var(--dr-on-clay);
+  background: var(--dr-ink);
+  color: var(--dr-bg);
+  text-decoration: none;
 }
 
-.dr-segment[aria-selected="true"] {
-  font-weight: 700;
-}
-
-.dr-segment[aria-checked="true"]:focus-visible,
 .dr-segment[aria-selected="true"]:focus-visible {
-  outline-color: var(--dr-on-clay);
+  outline-color: var(--dr-bg);
 }
 
 .dr-segment[aria-disabled="true"] {
   color: var(--dr-muted);
+  text-decoration: none;
   cursor: default;
 }
 
-/* Tabs: the page control. Many scroll sideways, a whole tab at a time; a tab the edge would cut is not
-   drawn, and an ellipsis stands at that edge, so no word is cut in half (the script sets the classes). */
+/* Many scroll sideways, a whole tab at a time; a tab the edge would cut is not drawn, and an ellipsis stands at that
+   edge, so no word is cut in half (the script sets the classes). */
 .dr-tabs {
   display: flex;
   max-width: 100%;
@@ -156,7 +132,6 @@ button.dr-button {
 
 .dr-tabs > .dr-segment {
   flex: none;
-  padding: 0 var(--dr-u);
   scroll-snap-align: start;
 }
 
@@ -184,14 +159,10 @@ button.dr-button {
   right: 0;
 }
 
-/* ---- Field: a label over a square box. ---- */
+/* ---- Field: a line under its text, nothing round it. ---- */
 .dr-field {
   display: grid;
   gap: var(--dr-u);
-}
-
-.dr-field > .dr-small {
-  color: var(--dr-muted);
 }
 
 .dr-field-box {
@@ -199,9 +170,7 @@ button.dr-button {
   align-items: center;
   gap: var(--dr-u);
   height: var(--dr-row);
-  padding: 0 var(--dr-u);
-  border: var(--dr-hair) solid var(--dr-ink);
-  background: var(--dr-bg);
+  border-bottom: var(--dr-hair) solid var(--dr-ink);
   color: var(--dr-ink);
 }
 
@@ -210,7 +179,7 @@ button.dr-button {
   outline-offset: var(--dr-ring);
 }
 
-/* The input itself is bare inside its box: the box carries the border and the ring. */
+/* The input is bare inside its line. */
 input.dr-input {
   flex: 1;
   min-width: 0;
@@ -234,21 +203,20 @@ input.dr-input::placeholder {
 }
 
 .dr-field[aria-disabled="true"] .dr-field-box {
-  border-color: transparent;
+  border-bottom-color: var(--dr-muted);
   color: var(--dr-muted);
 }
 
-/* Wrong: a rust line, the alert glyph, and the reason in words under it. */
+/* Wrong: the line and the words saying why, red. */
 .dr-field[aria-invalid="true"] .dr-field-box {
-  border-color: var(--dr-error);
+  border-bottom-color: var(--dr-error);
 }
 
-.dr-field[aria-invalid="true"] .dr-field-box > .dr-glyph,
 .dr-field[aria-invalid="true"] .dr-field-note {
   color: var(--dr-error);
 }
 
-/* ---- Chip: plain words, no box. A filter's part (it closes) or a filter that can be on. ---- */
+/* ---- Chip: plain words. A filter's part that takes itself off, or a filter that can be on. ---- */
 .dr-chip {
   display: inline-flex;
   align-items: center;
@@ -261,26 +229,17 @@ input.dr-input::placeholder {
   white-space: nowrap;
 }
 
-.dr-chip > .dr-small {
-  color: var(--dr-muted);
-}
-
 .dr-chip[role="button"],
 .dr-chip[role="checkbox"] {
   cursor: pointer;
 }
 
-.dr-chip:active {
-  background: var(--dr-press);
-}
-
 .dr-chip[aria-checked="true"] {
-  background: var(--dr-clay);
-  color: var(--dr-on-clay);
+  background: var(--dr-ink);
+  color: var(--dr-bg);
 }
 
-.dr-chip[aria-checked="true"] > .dr-small,
-.dr-chip:active > .dr-small {
+.dr-chip[aria-checked="true"] > .dr-muted {
   color: inherit;
 }
 
@@ -293,55 +252,21 @@ input.dr-input::placeholder {
   color: var(--dr-error);
 }
 
-.dr-chip[aria-invalid="true"] > .dr-small {
-  color: inherit;
-}
-
-/* ---- Under a pointer that hovers: ash, and the words on it ink. ---- */
+/* ---- Under a pointer that hovers: an underline (a glyph: a line under it). ---- */
 @media (any-hover: hover) {
-  .dr-icon-button:hover,
-  .dr-button:hover,
-  .dr-segment:hover,
-  .dr-chip[role="button"]:hover,
-  .dr-chip[role="checkbox"]:hover {
-    background: var(--dr-surface);
+  .dr-icon-button:not([aria-disabled="true"]):hover::after {
+    content: "";
+    position: absolute;
+    left: var(--dr-u);
+    right: var(--dr-u);
+    bottom: calc(var(--dr-u) - var(--dr-ring));
+    height: var(--dr-hair);
+    background: currentColor;
   }
 
-  .dr-chip[role="button"]:hover > .dr-small,
-  .dr-chip[role="checkbox"]:hover > .dr-small {
-    color: inherit;
+  .dr-button.is-primary:not([aria-disabled="true"]):hover,
+  .dr-chip[role]:not([aria-disabled="true"]):hover > .dr-text {
+    text-decoration: underline;
+    text-underline-offset: var(--dr-ring);
   }
-
-  /* What is on, open, primary or disabled keeps its own fill under the pointer. */
-  .dr-icon-button[aria-pressed="true"]:hover,
-  .dr-segment[aria-checked="true"]:hover,
-  .dr-segment[aria-selected="true"]:hover,
-  .dr-chip[aria-checked="true"]:hover {
-    background: var(--dr-clay);
-  }
-
-  /* The one a sheet proposes keeps its ink under the pointer: no line drawn inside it. */
-  .dr-button.is-primary:hover {
-    background: var(--dr-ink);
-  }
-
-  .dr-icon-button[aria-disabled="true"]:hover,
-  .dr-segment[aria-disabled="true"]:hover,
-  .dr-button[aria-disabled="true"]:hover,
-  .dr-button:disabled:hover,
-  .dr-chip[aria-disabled="true"]:hover {
-    background: none;
-  }
-}
-
-/* ---- A chip whose value was given a tone: its words in it. ---- */
-.dr-chip[data-tone="rust"] { color: var(--dr-rust); }
-.dr-chip[data-tone="ochre"] { color: var(--dr-ochre); }
-.dr-chip[data-tone="moss"] { color: var(--dr-moss); }
-.dr-chip[data-tone="slate"] { color: var(--dr-slate); }
-.dr-chip[data-tone="plum"] { color: var(--dr-plum); }
-
-/* A chip that takes itself off: its close glyph after its words. */
-.dr-chip > .dr-glyph {
-  margin-right: calc(-1 * var(--dr-hair));
 }

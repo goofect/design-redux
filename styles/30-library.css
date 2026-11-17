@@ -1,15 +1,12 @@
 /* ------------------------------------------------------------------ */
-/* The library sidebar: one place, three levels of detail, and a       */
-/* folder picked                                                       */
+/* The library: one place, one view of it                              */
 /*                                                                     */
-/* The head holds the word Library, search, and the zoom control. The  */
-/* body under it shows the same folders as objects, as shelves or as   */
-/* words. The sidebar is its own container: the grid's cells are cut   */
-/* from its width, whatever it is dragged to.                          */
+/* The sidebar: its search field, then the folders' names. A folder:   */
+/* its head (back, more), its name large, what it holds. The browse    */
+/* view: its head (search, more), then the grid.                       */
 /* ------------------------------------------------------------------ */
 
 .dr-library {
-  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -22,121 +19,28 @@
   overflow-y: auto;
 }
 
-/* Objects: the grid, a gutter clear above and below. */
-.dr-library-body > .dr-grid {
-  padding: var(--dr-gutter) 0;
-}
-
-/* Shelves: a gutter over the first. */
-.dr-shelves {
-  padding-top: var(--dr-u);
-}
-
-/* The notes of a folder picked: a group of their own under the folder, so a hairline parts them. */
-.dr-detail + .dr-rows {
-  border-top: var(--dr-hair) solid var(--dr-ink);
-}
-
-/* ---- A folder picked: its glyph large, wide space round it, its name and counts, what can be done, then its notes. ---- */
-.dr-detail {
-  --dr-glyph: var(--dr-object-large);
-  display: grid;
-  justify-items: center;
-  padding: calc(6 * var(--dr-u)) var(--dr-gutter) calc(4 * var(--dr-u));
-  color: var(--dr-ink);
-  text-align: center;
-}
-
-.dr-detail-cover {
-  display: block;
-  max-width: var(--dr-glyph);
-  max-height: var(--dr-glyph);
-  object-fit: contain;
-}
-
-.dr-detail-name {
-  max-width: 100%;
-  margin-top: calc(3 * var(--dr-u));
-}
-
-.dr-detail-counts {
-  display: flex;
-  justify-content: center;
-  gap: var(--dr-gutter);
-  color: var(--dr-muted);
-}
-
-.dr-detail-actions {
-  --dr-glyph: var(--dr-icon);
-  display: flex;
-  justify-content: center;
-  gap: var(--dr-u);
-  margin-top: calc(3 * var(--dr-u));
-}
-
-/* ---- The browse view: the screen, and the folder picked beside it. ---- */
-.dr-browse {
-  display: flex;
-  height: 100%;
-}
-
-.dr-browse-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.dr-browse-aside {
-  flex: none;
-  width: calc(40 * var(--dr-u));
-  border-left: var(--dr-hair) solid var(--dr-ink);
-  overflow-y: auto;
-}
-
-.dr-browse-aside[hidden] {
-  display: none;
-}
-
-.dr-library.is-wide .dr-library-body > .dr-grid {
-  padding: calc(4 * var(--dr-u)) 0;
-}
-
-/* ---- Search: its field under the head, what it finds under that. ---- */
+/* The sidebar's search field, its one control, at its top. */
 .dr-search {
-  padding: var(--dr-gutter) var(--dr-gutter) var(--dr-u);
+  padding: var(--dr-u) var(--dr-gutter) var(--dr-gutter);
 }
 
-/* ---- Where a dragged note would land. ---- */
+/* A folder's name on its page: the display size, left, wrapped where it is long. */
+.dr-folder-name {
+  padding: var(--dr-gutter) var(--dr-gutter) var(--dr-u);
+  overflow-wrap: anywhere;
+}
+
+/* Where a dragged note would land: the focus outline, inside. */
 .dr-library [data-drop] {
-  background: var(--dr-surface);
   outline: var(--dr-ring) solid var(--dr-ink);
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-/* ---- The glyph picker: the set, six across, at four units. ---- */
-.dr-grid.dr-picker {
-  --dr-cell: calc(8 * var(--dr-u));
-  grid-template-columns: repeat(6, var(--dr-cell));
-}
-
-.dr-picker .dr-cell {
-  --dr-glyph: calc(4 * var(--dr-u));
-}
-
-.dr-detail-about {
-  max-width: 100%;
-  margin: var(--dr-u) 0 0;
-  color: var(--dr-muted);
-}
-
-/* ---- A filter, as chips under the head row: a press on one takes it off. ---- */
+/* A filter's parts, under its name: plain words that take themselves off, then how many notes pass. */
 .dr-filter-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-u);
-  padding: var(--dr-u) var(--dr-gutter);
-}
-
-.dr-filter-bar > .dr-small {
-  margin-left: var(--dr-u);
+  padding: 0 var(--dr-gutter) var(--dr-u);
 }

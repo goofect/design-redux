@@ -12,8 +12,6 @@
 import { Menu, Notice } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
-import { iconButton } from '../ui/button.js';
 import { segments } from '../ui/segments.js';
 import { ask } from '../ui/sheet.js';
 import { noteHeads, noteViews, tidyNoteHeads } from './note-head.js';
@@ -74,14 +72,13 @@ export class NotePages extends Feature {
     noteHeads(view).forEach(({ head }) => {
       const slot = clear(head.querySelector('.dr-note-pages'));
       if (!pages.length) return;
-      const tabs = segments(slot, { tabs: true, label: 'Pages', options: pages.map((p) => ({ id: p.name, text: p.name })), value: open, onChange: (name) => this.open(file, name) });
+      const tabs = segments(slot, { label: 'Pages', options: pages.map((p) => ({ id: p.name, text: p.name })), value: open, onChange: (name) => this.open(file, name) });
       tabs.addEventListener('contextmenu', (e) => {
         const tab = e.target.closest ? e.target.closest('.dr-segment') : null;
         if (!tab) return;
         e.preventDefault();
         this.pageMenu(file, tab.textContent).showAtMouseEvent(e);
       });
-      iconButton(slot, { glyph: 'plus', label: 'Add a page', run: () => this.add_(file) });
     });
     tidyNoteHeads(view);
   }
@@ -149,13 +146,13 @@ export class NotePages extends Feature {
 
   pageMenu(file, name) {
     const menu = new Menu();
-    menu.addItem((i) => i.setTitle('Rename page…').setIcon(iconId('pencil')).setSection('action').onClick(async () => {
+    menu.addItem((i) => i.setTitle('Rename page…').setSection('action').onClick(async () => {
       const to = await ask(this.app, { title: 'Rename page', value: name, action: 'Rename' });
       if (!to || to === name) return;
       await this.app.vault.process(file, (text) => renamePage(text, name, to));
       await this.open(file, to);
     }));
-    menu.addItem((i) => i.setTitle('Join with the page before').setIcon(iconId('merge')).setSection('danger').onClick(async () => {
+    menu.addItem((i) => i.setTitle('Join with the page before').setSection('danger').onClick(async () => {
       await this.app.vault.process(file, (text) => removePage(text, name));
       new Notice(`“${name}” is part of the page before it now.`);
       await this.drawAll();
@@ -174,14 +171,13 @@ export class NotePages extends Feature {
   actions() {
     const has = (ctx) => this.hasPages(ctx.file);
     return [
-      { id: 'next-page', name: 'Next page of this note', glyph: 'next', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, 1) },
-      { id: 'previous-page', name: 'Previous page of this note', glyph: 'previous', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, -1) },
-      { id: 'add-page', name: 'Add a page to this note', glyph: 'plus', on: 'note', menu: 'Add a page…', run: (ctx) => this.add_(ctx.file) },
+      { id: 'next-page', name: 'Next page of this note', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, 1) },
+      { id: 'previous-page', name: 'Previous page of this note', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, -1) },
+      { id: 'add-page', name: 'Add a page to this note', on: 'note', menu: 'Add a page…', run: (ctx) => this.add_(ctx.file) },
     ];
   }
 }
 NotePages.key = 'notePages';
 NotePages.title = 'Pages in a note';
-NotePages.glyph = 'pages';
 NotePages.section = 'Notes';
 NotePages.about = 'One note, several pages, one open at a time.';
