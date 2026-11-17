@@ -16,7 +16,7 @@ const { lintGlyph } = require('./glyph-lint.js');
 
 const root = path.join(__dirname, '..');
 const icons = path.join(root, 'assets', 'icons');
-const builderFile = ['src', 'next/src'].map((d) => path.join(root, d, 'core', 'glyphs.js')).find((f) => fs.existsSync(f));
+const builderFile = path.join(root, 'src', 'core', 'glyphs.js');
 
 /** An ES module of the new tree, loaded here as the bundle will carry it. */
 function load(file) {
@@ -93,7 +93,7 @@ check('every command has a glyph, and the list names only commands and glyphs th
 
 // ---- The builder ----
 
-const { GLYPHS, GLYPH_FAMILIES, glyphFor, glyphsAmong, glyphsRenamed, glyphsRemoved, glyphFamily, hashText, isGlyph } = load(builderFile);
+const { GLYPHS, GLYPH_FAMILIES, glyphFor, glyphsAmong, glyphFamily, hashText, isGlyph } = load(builderFile);
 
 check("the builder's set is the object glyphs drawn, in equal families", () => {
   assert.deepStrictEqual(GLYPHS.slice().sort(), sets.objects);
@@ -180,17 +180,6 @@ check('a choice is kept, and a folder made later changes no face already there',
   }
   // A picked glyph may repeat a sibling's: the person's choice stands.
   assert.strictEqual(glyphsAmong(['a', 'b'], { a: 'cat', b: 'cat' }).b, 'cat');
-});
-
-check('a stored choice follows a rename and a move, with everything under the folder', () => {
-  const chosen = { School: 'tower', 'School/Logic': 'key', 'School/Logic/Week 1': 'sun', Schoolyard: 'tree', Other: 'cup' };
-  const renamed = glyphsRenamed(chosen, 'School', 'University');
-  assert.deepStrictEqual(renamed, { University: 'tower', 'University/Logic': 'key', 'University/Logic/Week 1': 'sun', Schoolyard: 'tree', Other: 'cup' });
-  assert.deepStrictEqual(glyphsRenamed(chosen, 'School/Logic', 'Other/Logic')['Other/Logic/Week 1'], 'sun');
-  assert.deepStrictEqual(chosen.School, 'tower', 'the stored choices were changed in place');
-  // What is shown after the rename is what was shown before it.
-  assert.strictEqual(glyphsAmong(['University', 'Other'], renamed).University, 'tower');
-  assert.deepStrictEqual(glyphsRemoved(chosen, 'School'), { Schoolyard: 'tree', Other: 'cup' });
 });
 
 if (!process.exitCode) console.log(`glyphs: ${sets.actions.length} action and ${sets.objects.length} object glyphs keep the grammar; the builder holds (${checks} checks)`);

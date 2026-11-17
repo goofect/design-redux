@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const tokensFile = ['styles', 'next/styles'].map((d) => path.join(root, d, '00-tokens.css')).find((f) => fs.existsSync(f));
+const tokensFile = path.join(root, 'styles', '00-tokens.css');
 const TONES = ['rust', 'ochre', 'moss', 'slate', 'plum'];
 
 /** The --dr- tokens one scheme's block declares, by name. */

@@ -12,7 +12,7 @@ const assert = require('assert');
 const { measure } = require('./contrast.js');
 
 const root = path.join(__dirname, '..');
-const dir = ['styles', 'next/styles'].map((d) => path.join(root, d)).find((d) => fs.existsSync(path.join(d, '00-tokens.css')));
+const dir = path.join(root, 'styles');
 const parts = fs.readdirSync(dir).filter((f) => f.endsWith('.css')).sort();
 const read = (f) => fs.readFileSync(path.join(dir, f), 'utf8');
 const bare = (css) => css.replace(/\/\*[\s\S]*?\*\//g, '');
