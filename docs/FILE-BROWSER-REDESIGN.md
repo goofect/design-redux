@@ -28,7 +28,9 @@ way back. Keyboard activation and focus must work without a pointer. Existing
 Obsidian chrome, native file access and the editor remain Obsidian's own.
 
 The plugin closes existing native File explorer views when enabled and removes
-the left dock and ribbon from its workspace while enabled. The browser is opened
+the side docks, ribbons, and status bar from its workspace while enabled. The
+neutral design applies to the full Obsidian window; the duplicate native browser
+header is removed. The browser is opened
 with the Open library command. Obsidian's File explorer remains a core plugin;
 the plugin does not delete or disable Obsidian's application code. Disabling
 Design Redux restores the dock and ribbon, and Obsidian's File explorer can be

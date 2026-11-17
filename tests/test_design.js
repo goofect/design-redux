@@ -51,7 +51,7 @@ function rules(css) {
         head.split(',').map((s) => s.trim()).forEach((sel) => {
           if (/^body\.dr-active(\.theme-(light|dark))?$/.test(sel) || sel === 'body') return; // tokens and the map
           const gated = /^body\.dr-active\.dr-region-[a-z]+(\s|::|$)/.test(sel);
-          const browserChrome = /^body\.dr-browser-open \.(workspace-ribbon\.(mod-left|mod-primary)|side-dock-ribbon\.mod-left|workspace-split\.mod-left-split)$/.test(sel);
+          const browserChrome = /^body\.dr-browser-open \.(workspace-ribbon\.(mod-left|mod-primary|mod-secondary)|side-dock-ribbon\.mod-left|workspace-split\.mod-(left|right)-split|status-bar|workspace-leaf-content\[data-type="design-redux-browse"\] > \.view-header)$/.test(sel);
           // Plugin-owned: its first compound is a dr- class (an element the plugin made or marked).
           const own = /^(?:[a-z]+)?\.dr[-\w]*/.test(sel) || /^\.dr(?![\w-])/.test(sel);
           if (!gated && !own && !browserChrome) wrong.push(`${f}: ${sel}`);

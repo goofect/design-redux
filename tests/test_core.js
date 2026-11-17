@@ -141,7 +141,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     const w = await world({});
     const body = w.doc.body;
     assert.ok(body.classList.contains('dr-active') && body.classList.contains('dr-region-library'));
-    assert.ok(!body.classList.contains('dr-region-chrome'), 'Obsidian\'s regions are on though the look is kept to the plugin');
+    assert.ok(body.classList.contains('dr-region-chrome'), 'the redesign must cover Obsidian’s workspace');
     const other = new (require('jsdom').JSDOM)('<body class="theme-dark"></body>').window.document;
     w.app.workspace.trigger('window-open', { doc: other });
     assert.ok(other.body.classList.contains('dr-active'));

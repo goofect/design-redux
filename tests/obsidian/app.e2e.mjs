@@ -19,6 +19,7 @@ suite('Design Redux in Obsidian: the app', function () {
   it('puts the look on the main window, and takes it off on unload', async function () {
     const has = () => browser.execute(() => document.body.classList.contains('dr-active'));
     expect(await readUntil(has, (v) => v)).toBe(true);
+    expect(await browser.execute(() => ['chrome', 'tabs', 'editor', 'graph', 'overlays'].every((r) => document.body.classList.contains(`dr-region-${r}`)))).toBe(true);
     await shot('look-main');
     await browser.executeObsidian(async ({ app }) => { await app.plugins.disablePlugin('design-redux'); });
     const left = await browser.execute(() => Array.from(document.body.classList).filter((c) => c.startsWith('dr-')));
@@ -91,10 +92,14 @@ suite('Design Redux in Obsidian: the app', function () {
     const chrome = await browser.execute(() => {
       const left = document.querySelector('.workspace-split.mod-left-split');
       const ribbon = document.querySelector('.workspace-ribbon.mod-primary, .workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
-      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display };
+      const right = document.querySelector('.workspace-split.mod-right-split');
+      const header = document.querySelector('.workspace-leaf-content[data-type="design-redux-browse"] > .view-header');
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, right: right && getComputedStyle(right).display, header: header && getComputedStyle(header).display };
     });
     expect(chrome.left).toBe('none');
     expect(chrome.ribbon).toBe('none');
+    expect(chrome.right).toBe('none');
+    expect(chrome.header).toBe('none');
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;

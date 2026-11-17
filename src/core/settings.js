@@ -23,7 +23,7 @@ export const DEFAULTS = {
 
   // The look
   look: 'redux', // 'theme' leaves the window to the person's theme
-  lookScope: 'plugin', // 'window': Obsidian's own regions too; 'plugin': only what the plugin draws
+  lookScope: 'window', // retained for compatibility; the redesign covers the whole workspace
   alwaysShowLabels: false,
   ...Object.fromEntries(REGIONS.map((r) => [regionKey(r), true])),
 
