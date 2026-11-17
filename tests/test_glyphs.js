@@ -5,7 +5,7 @@
  * the one allowed form, points on the grid's rules, 45° or level or upright,
  * one step of margin, centred, nothing finer than the bar. Then the set as a
  * whole: enough of each kind, one name each, a glyph for every command. Then
- * the builder (next/src/core/glyphs.js): the same glyph for the same path on
+ * the builder (src/core/glyphs.js): the same glyph for the same path on
  * any run, spread evenly, siblings told apart, and a choice kept through a rename.
  */
 const fs = require('fs');
