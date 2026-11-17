@@ -1,7 +1,7 @@
 {
   "id": "design-redux",
   "name": "Design Redux",
-  "version": "3.1.89",
+  "version": "4.0.0",
   "minAppVersion": "1.7.2",
   "description": "Browse folders and notes in a minimal library, organize notes into pages, and explore a 3D graph.",
   "author": "",
