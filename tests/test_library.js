@@ -32,7 +32,7 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     assert.deepStrictEqual(paths(s.host), ['/', 'Empty', 'Philosophy']);
     assert.strictEqual(s.host.querySelector('.dr-file-items').getAttribute('role'), 'tree');
     assert.ok(!s.host.querySelector('input, .dr-file-details-title'));
-    s.host.querySelector('[aria-label="Expand Philosophy"]').click();
+    s.host.querySelector('[data-path="Philosophy"] .dr-file-disclosure').click();
     assert.deepStrictEqual(paths(s.host), ['/', 'Empty', 'Philosophy', 'Philosophy/Logic', 'Philosophy/Metaphysics']);
     assert.ok(!s.host.querySelector('[data-path="Philosophy/Arguments.md"]'));
   });

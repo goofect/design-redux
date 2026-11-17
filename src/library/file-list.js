@@ -23,14 +23,19 @@ export function drawFileList(screen, host, folder) {
       if (isFolder) screen.go(entry.path === '/' ? null : entry);
       else screen.openNote(entry, event);
     });
+    // Obsidian turns aria-label into a visual tooltip. Name the row through
+    // its visible text instead, preserving its full accessible name.
+    node.removeAttribute('aria-label');
     node.setAttribute('aria-selected', String(isFolder ? folder.path === entry.path : plugin.selection.is(entry)));
     const name = el(node, 'span', 'dr-file-name');
+    plugin.browserLabelId = (plugin.browserLabelId || 0) + 1;
+    name.id = `dr-file-label-${plugin.browserLabelId}`;
+    node.setAttribute('aria-labelledby', name.id);
     if (isFolder && !screen.opts.wide) {
       const open = entry.path === '/' || !!screen.expanded.get(entry.path);
       node.setAttribute('aria-expanded', String(open));
       const toggle = el(name, 'span', 'dr-file-disclosure');
       toggle.setAttribute('aria-hidden', 'true');
-      toggle.setAttribute('aria-label', `${open ? 'Collapse' : 'Expand'} ${entry.path === '/' ? 'Vault' : entry.name}`);
       glyph(toggle, open ? 'down' : 'next');
       if (entry.path !== '/') {
         toggle.addEventListener('click', (e) => { e.stopPropagation(); screen.toggle(entry.path, !open); });
