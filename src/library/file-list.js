@@ -10,7 +10,10 @@ export function drawFileList(screen, host, folder) {
   const list = el(host, 'div', 'dr-file-list');
   const items = el(list, 'div', 'dr-file-items');
   items.setAttribute('role', screen.opts.wide ? 'listbox' : 'tree');
-  items.setAttribute('aria-label', screen.opts.wide ? `Notes in ${folder.path === '/' ? 'vault' : folder.name}` : 'Folders');
+  const listName = el(list, 'span', 'dr-unseen', screen.opts.wide ? `Notes in ${folder.path === '/' ? 'vault' : folder.name}` : 'Folders');
+  plugin.browserLabelId = (plugin.browserLabelId || 0) + 1;
+  listName.id = `dr-file-label-${plugin.browserLabelId}`;
+  items.setAttribute('aria-labelledby', listName.id);
   const add = (entry, depth = 0) => {
     const isFolder = entry instanceof TFolder;
     const node = el(items, 'div', 'dr-file-row');

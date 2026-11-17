@@ -104,6 +104,9 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(chrome.right).toBe('none');
     expect(chrome.header).toBe('none');
     expect(chrome.tabs).toBe('none');
+    await browser.$('.dr-library:not(.is-wide) .dr-file-row').moveTo();
+    await browser.pause(1200);
+    expect(await browser.execute(() => Array.from(document.querySelectorAll('.tooltip')).some((node) => node.getBoundingClientRect().width > 0 && getComputedStyle(node).visibility !== 'hidden'))).toBe(false);
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;
