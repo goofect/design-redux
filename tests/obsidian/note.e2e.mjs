@@ -3,7 +3,7 @@ import { browser, expect } from '@wdio/globals';
 import { readUntil, shot, suite } from './helpers.mjs';
 
 suite('Design Redux in Obsidian: notes and graphs', function () {
-  it('hides the other pages in reading view', async function () {
+  it('shows all note text in reading view', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const file = app.vault.getAbstractFileByPath('Politics/Pages.md');
       const leaf = app.workspace.getLeaf(false);
@@ -11,10 +11,10 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     });
     const text = await readUntil(
       () => browser.execute(() => (document.querySelector('.workspace-leaf.mod-active .markdown-preview-view') || {}).innerText || ''),
-      (t) => t.includes('First page text')
+      (t) => t.includes('First page text') && t.includes('Second page text')
     );
     expect(text).toContain('First page text');
-    expect(text).not.toContain('Second page text');
+    expect(text).toContain('Second page text');
     await shot('pages-reading');
   });
 

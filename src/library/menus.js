@@ -93,18 +93,6 @@ export function noteMenu(plugin, file, screen) {
   return menu;
 }
 
-/** A non-Markdown file gets file actions, not note-specific property actions. */
-export function attachmentMenu(plugin, file) {
-  const menu = new Menu();
-  entry(menu, 'Open', 'open', () => plugin.app.workspace.getLeaf(false).openFile(file), 'open');
-  entry(menu, 'Open in a new tab', 'pages', () => plugin.app.workspace.getLeaf('tab').openFile(file), 'open');
-  entry(menu, 'Rename…', 'pencil', () => renameEntry(plugin, file));
-  entry(menu, 'Move to…', 'move', () => moveEntry(plugin, file));
-  entry(menu, 'Delete file', 'trash', () => deleteEntry(plugin, file), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
-  plugin.app.workspace.trigger('file-menu', menu, file, 'design-redux-library');
-  return menu;
-}
-
 /** Shows a menu where it was asked for: at the pointer, or by the element the keyboard is on. */
 export function showMenu(menu, event) {
   if (event && typeof event.clientX === 'number' && (event.clientX || event.clientY)) return menu.showAtMouseEvent(event);

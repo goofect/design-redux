@@ -54,27 +54,6 @@ const VAULT = {
     }
   });
 
-  await check('the strip: the folder\'s glyph, the note, its place; previous and next; gone when turned off', async () => {
-    const w = await world(VAULT, { settingsVersion: 100, contextStrip: true });
-    const leaf = w.app.workspace.getLeaf();
-    await leaf.openFile(w.file('Logic/B.md'));
-    await settle();
-    const bar = leaf.view.contentEl.querySelector('.dr-strip');
-    assert.deepStrictEqual([bar.querySelector('.dr-strip-title').textContent, bar.querySelector('.dr-strip-place').textContent], ['B', 'Logic · 2 of 3']);
-    assert.strictEqual(bar.querySelector('svg.dr-glyph').getAttribute('data-glyph'), w.plugin.settings.folderGlyphs.Logic);
-    bar.querySelector('[aria-label="Next note"]').click();
-    await settle();
-    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/C.md');
-    assert.strictEqual(leaf.view.contentEl.querySelector('.dr-strip [aria-label="Next note"]').getAttribute('aria-disabled'), 'true');
-    await leaf.openFile(w.file('Reading/E.md'));
-    w.plugin.settings.stripDetail = 'status';
-    await w.plugin.saveSettings();
-    assert.strictEqual(leaf.view.contentEl.querySelector('.dr-strip-place').textContent, 'Reading · 2 of 2');
-    w.plugin.settings.contextStrip = false;
-    await w.plugin.saveSettings();
-    assert.ok(!leaf.view.contentEl.querySelector('.dr-strip'));
-  });
-
   await check('rename a property everywhere: its place kept, joined where the new name is taken, one Undo', async () => {
     const w = await world(VAULT);
     const tools = feature(w, 'PropertyTools');
@@ -119,7 +98,7 @@ const VAULT = {
     assert.deepStrictEqual(props(w, 'Logic/A.md').tags, ['formal', 'logic/proof']);
   });
 
-  await check('properties added and removed in a folder; a folder\'s defaults given to a note made there; notes missing one found', async () => {
+  await check('properties added and removed in a folder; a folder\'s defaults given to a note made there', async () => {
     const w = await world(VAULT);
     const tools = feature(w, 'PropertyTools');
     await tools.addToFolder(w.file('Logic'), { reviewed: 'no', status: 'x' });
@@ -134,10 +113,7 @@ const VAULT = {
     assert.deepStrictEqual(props(w, 'Reading/New.md'), { source: 'book' });
     w.plugin.settings.folderDefaults.Logic = { kind: 'lecture' };
     assert.deepStrictEqual(dr.defaultsOf(w.plugin.settings, 'Logic'), { kind: 'lecture' }, 'the old way of keeping defaults is not read');
-    const missing = await tools.findMissing('status');
-    assert.deepStrictEqual(missing.map((f) => f.path).sort(), ['Reading/E.md', 'Reading/New.md'], 'S was given a status above');
-    const screen = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
-    assert.deepStrictEqual(screen.filter, { prop: '!status' });
+
   });
 
   await check('the clipboard: properties copied and pasted; a folder\'s as a table and back; sorted; sets kept and stamped', async () => {
@@ -173,10 +149,7 @@ const VAULT = {
     assert.deepStrictEqual(schemas.faults(w.file('Logic/Sub/S.md')), [{ key: 'status', fault: 'required here, and missing' }, { key: 'week', fault: 'not a number' }]);
     assert.deepStrictEqual(schemas.check().map((x) => x.file.basename).sort(), ['G', 'S']);
     obsidian.Modal.open[0].close();
-    await w.app.workspace.getLeaf().openFile(w.file('Logic/G.md'));
-    const leaf = await feature(w, 'Panel').reveal();
-    const row = leaf.view.contentEl.querySelector('.dr-prop[data-key="status"]');
-    assert.deepStrictEqual([row.getAttribute('aria-invalid'), row.getAttribute('aria-label')], ['true', 'status: “drafty” is not one of draft, done']);
+    assert.ok(w.plugin.checkValue(w.file('Logic/G.md'), 'status', 'drafty'));
   });
 
   await check('rules: read from a line; a dry run says and sets nothing; live, one write, which fires no rule of its own', async () => {
@@ -217,10 +190,7 @@ const VAULT = {
     for (const s of ['one', 'two', 'three']) await w.plugin.notes.write(file, (fm) => (fm.status = s));
     const kept = w.plugin.historyOf(file);
     assert.deepStrictEqual(kept.map((h) => [h.was, h.now]), [['two', 'three'], ['one', 'two']]);
-    await w.app.workspace.getLeaf().openFile(file);
-    const panel = feature(w, 'Panel');
-    const history = panel.sections(file).find((s) => s.title === 'History');
-    await history.items[1].run();
+    await w.plugin.putBackChange(file, kept[1]);
     assert.strictEqual(props(w, 'Reading/D.md').status, 'one');
   });
 
@@ -312,7 +282,7 @@ const VAULT = {
     const w = await world({ 'Private thoughts.md': 'secret words' });
     w.app.commands.executeCommandById('design-redux:open-actions');
     const titles = obsidian.Menu.shown.titles();
-    ['Open library', 'Open 3D graph', 'Look the library over', 'Rename a property everywhere…'].forEach((t) => assert.ok(titles.includes(t), `${t} is not on the actions menu`));
+    ['Open library', 'Open 3D graph', 'Rename a property everywhere…'].forEach((t) => assert.ok(titles.includes(t), `${t} is not on the actions menu`));
     assert.ok(!titles.includes('Open actions menu'));
     const text = dr.diagnosticsText(w.plugin);
     assert.ok(/^Design Redux 4\.0\.0/.test(text) && /Notes: 1;/.test(text));

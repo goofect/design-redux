@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
-const { measure } = require('./contrast.js');
+const { measure, ratio, schemeTokens } = require('./contrast.js');
 
 const root = path.join(__dirname, '..');
 const dir = path.join(root, 'styles');
@@ -32,6 +32,19 @@ check('parts are named NN-name.css', () => assert.deepStrictEqual(parts.filter((
 
 check('every pair of the palette is at or over its floor, and the ratios written down are the measured ones', () => {
   assert.deepStrictEqual(measure().failures, []);
+});
+
+check('the library palette is monochrome and readable in both schemes', () => {
+  const css = read('00-tokens.css');
+  for (const scheme of ['light', 'dark']) {
+    const tokens = schemeTokens(css, scheme);
+    for (const key of ['browser-bg', 'browser-ink', 'browser-muted', 'browser-rule', 'browser-selected', 'browser-selected-ink']) {
+      assert.match(tokens[key], /^#([0-9a-f]{2})\1\1$/i, `${scheme}: ${key} is not neutral`);
+    }
+    assert.ok(ratio(tokens['browser-ink'], tokens['browser-bg']) >= 4.5);
+    assert.ok(ratio(tokens['browser-selected-ink'], tokens['browser-selected']) >= 4.5);
+    assert.ok(ratio(tokens['browser-muted'], tokens['browser-bg']) >= 4.5);
+  }
 });
 
 check('the variable map sets only names Obsidian declares', () => {

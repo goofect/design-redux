@@ -8,7 +8,10 @@
   flex-direction: column;
   height: 100%;
   padding: 0;
+  background: var(--dr-browser-bg);
+  color: var(--dr-browser-ink);
 }
+.dr-graph3d .dr-head { color: var(--dr-browser-ink); border-color: var(--dr-browser-rule); }
 
 .dr-graph3d-box {
   position: relative;
@@ -32,7 +35,7 @@
   position: absolute;
   left: var(--dr-gutter);
   bottom: var(--dr-gutter);
-  color: var(--dr-ink);
+  color: var(--dr-browser-ink);
   pointer-events: none;
 }
 

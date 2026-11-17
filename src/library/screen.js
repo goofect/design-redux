@@ -13,10 +13,8 @@ import { Keymap, TFile, TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { browserIcon, drawFileList } from './file-list.js';
-import { attachmentMenu, folderMenu, noteMenu, showMenu } from './menus.js';
-import { drawFiltered, isFiltering } from './filters.js';
-import { drawSearch } from './search.js';
+import { drawFileList } from './file-list.js';
+import { folderMenu, noteMenu, showMenu } from './menus.js';
 
 export class LibraryScreen {
   /** `opts`: { wide, place (the key its level is remembered under), buttons(screen): extra head buttons }. */
@@ -29,10 +27,6 @@ export class LibraryScreen {
     this.ahead = [];
     this.expanded = new Map(); // in words: the folders opened or closed by hand, by path
     this.scrolls = new Map();
-    this.query = null;
-    this.fileQuery = '';
-    this.filter = null;
-    this.filterName = null;
     this.pending = false;
     this.stops = [];
     host.classList.add('dr', 'dr-library');
@@ -52,31 +46,22 @@ export class LibraryScreen {
   /** Goes into a folder (or back out to the vault with null). */
   go(folder, quiet) {
     const path = folder ? folder.path : '/';
-    if (path === this.at) return;
+    if (path === this.at) {
+      if (!quiet && this.opts.onGo) this.opts.onGo(this.folder());
+      return;
+    }
     this.remember();
     if (!quiet) {
       this.past.push(this.at);
       this.ahead.length = 0;
     }
     this.at = path;
-    this.query = null;
-    this.fileQuery = '';
     if (this.opts.onGo) this.opts.onGo(this.folder());
     this.draw();
     if (!quiet) (this.plugin.screens || []).forEach((screen) => { if (screen !== this) screen.go(folder, true); });
   }
 
-  /** Shows the notes a filter lets through in place of the folder; null puts the folder back. */
-  setFilter(filter, name) {
-    this.filter = isFiltering(filter) ? filter : null;
-    this.filterName = this.filter ? name || null : null;
-    this.query = null;
-    this.draw();
-  }
-
   back() {
-    if (this.query !== null) return void this.search(null);
-    if (this.filter) return void this.setFilter(null);
     if (this.past.length) {
       this.ahead.push(this.at);
       return this.go(this.app.vault.getAbstractFileByPath(this.past.pop()), true);
@@ -95,13 +80,6 @@ export class LibraryScreen {
   toggle(path, open) {
     this.expanded.set(path, !!open);
     this.draw();
-  }
-
-  /** Opens or closes the search: a string (even empty) shows it, null puts the folder back. */
-  search(query) {
-    this.query = query;
-    this.draw();
-    if (query !== null && this.searchInput) this.searchInput.focus();
   }
 
   /** Opens a note: in the page, or in a new tab with the modifier held. */
@@ -142,18 +120,8 @@ export class LibraryScreen {
     clear(host);
     const folder = this.folder();
     const inside = folder.path !== '/';
-    headRow(host, { label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : this.opts.wide ? (inside ? folder.name : 'Files') : 'Files' });
-    if (!this.opts.wide && this.query === null && !this.filter) {
-      const box = el(host, 'div', 'dr-file-search');
-      browserIcon(box, 'search');
-      const search = el(box, 'input', 'dr-file-search-input');
-      search.type = 'search';
-      search.value = this.fileQuery;
-      search.placeholder = 'Search files...';
-      search.setAttribute('aria-label', 'Search files');
-      search.addEventListener('input', () => { this.fileQuery = search.value; drawFileList(this, this.body, this.folder(), this.fileQuery); });
-    }
-    if (this.query === null && !this.filter) {
+    headRow(host, { label: this.opts.wide ? (inside ? folder.name : 'Vault') : 'Library' });
+    if (this.opts.wide) {
       const breadcrumb = el(host, 'div', 'dr-file-breadcrumb');
       const parts = [];
       for (let f = folder; f && f.path !== '/'; f = f.parent) parts.unshift(f);
@@ -168,9 +136,7 @@ export class LibraryScreen {
       });
     }
     this.body = el(host, 'div', 'dr-library-body');
-    if (this.query !== null) drawSearch(this, this.body);
-    else if (this.filter) drawFiltered(this, this.body);
-    else drawFileList(this, this.body, folder, this.opts.wide ? '' : this.fileQuery);
+    drawFileList(this, this.body, folder);
     this.body.addEventListener('contextmenu', (e) => this.menuFor(e));
     this.body.addEventListener('keydown', (e) => {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);
@@ -200,9 +166,10 @@ export class LibraryScreen {
     const node = event.target.closest ? event.target.closest('[data-path]') : null;
     const entry = node ? this.app.vault.getAbstractFileByPath(node.dataset.path) : null;
     if (!entry) return;
+    if (entry instanceof TFolder && entry.path === '/') return;
     event.preventDefault();
     this.pick(entry);
-    const menu = entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : entry.extension === 'md' ? noteMenu(this.plugin, entry, this) : attachmentMenu(this.plugin, entry);
+    const menu = entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : noteMenu(this.plugin, entry, this);
     showMenu(menu, event);
   }
 }

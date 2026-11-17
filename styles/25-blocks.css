@@ -29,34 +29,6 @@
   margin-right: calc(-1 * var(--dr-u));
 }
 
-/* ---- The strip: a bar across the foot of the note. What you are in, where you are in it, and on. ---- */
-.dr-strip {
-  --dr-glyph: calc(4 * var(--dr-u));
-  display: flex;
-  align-items: center;
-  gap: var(--dr-u);
-  height: calc(6 * var(--dr-u));
-  padding: 0 var(--dr-u) 0 var(--dr-gutter);
-  border-top: var(--dr-hair) solid var(--dr-ink);
-  background: var(--dr-bg);
-  color: var(--dr-ink);
-}
-
-.dr-strip-words {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-  padding-left: var(--dr-u);
-}
-
-.dr-strip-place {
-  color: var(--dr-muted);
-}
-
-.dr-strip .dr-icon-button {
-  --dr-glyph: var(--dr-icon);
-}
-
 /* ---- The say-so block: what a surface shows in place of its contents. A glyph, a label, a line if it helps, one button at most. ---- */
 .dr-state {
   --dr-glyph: var(--dr-object);

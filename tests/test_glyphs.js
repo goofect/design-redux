@@ -87,7 +87,7 @@ check('at least 60 action glyphs and 40 object glyphs', () => {
 check('every command has a glyph, and the list names only commands and glyphs there are', () => {
   const uses = JSON.parse(fs.readFileSync(path.join(icons, 'actions.json'), 'utf8'));
   const { commands } = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', 'lifecycle.json'), 'utf8'));
-  assert.deepStrictEqual(commands.filter((id) => !uses[id]), [], 'commands without a glyph');
+  assert.deepStrictEqual(commands.filter((id) => !uses[id] && !require('./harness.js').load().RETIRED_COMMANDS.includes(id)), [], 'commands without a glyph');
   assert.deepStrictEqual(Object.keys(uses).filter((id) => !sets.actions.includes(uses[id])), [], 'commands naming a glyph that is not drawn');
 });
 

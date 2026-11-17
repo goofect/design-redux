@@ -6,11 +6,9 @@
 /* folder picked in it is shown beside the grid.                       */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, TFolder } from 'obsidian';
-import { el } from '../core/dom.js';
+import { ItemView } from 'obsidian';
 import { iconId } from '../core/icons.js';
 import { enableDrop } from './drop.js';
-import { browserIcon, browserType } from './file-list.js';
 import { LibraryScreen } from './screen.js';
 
 export const LIBRARY_VIEW = 'design-redux-library';
@@ -49,7 +47,14 @@ export class LibraryView extends ScreenView {
   getIcon() { return iconId('library'); }
 
   makeScreen() {
-    return new LibraryScreen(this.plugin, this.contentEl, { place: 'sidebar' });
+    return new LibraryScreen(this.plugin, this.contentEl, {
+      place: 'sidebar',
+      onGo: (folder) => {
+        if (this.app.workspace.getLeavesOfType(BROWSE_VIEW).length) return;
+        const library = this.plugin.features.find((feature) => typeof feature.browse === 'function');
+        if (library) library.browse(folder.path === '/' ? null : folder);
+      },
+    });
   }
 }
 
@@ -59,29 +64,11 @@ export class BrowseView extends ScreenView {
   getIcon() { return iconId('grid'); }
 
   makeScreen() {
-    this.pane = el(this.contentEl, 'div', 'dr dr-browse');
-    const main = el(this.pane, 'div', 'dr-browse-main');
-    this.aside = el(this.pane, 'aside', 'dr dr-browse-aside');
-    return new LibraryScreen(this.plugin, main, {
+    return new LibraryScreen(this.plugin, this.contentEl, {
       wide: true,
       place: 'browse',
       onGo: (folder) => { this.plugin.openFolder = folder.path === '/' ? null : folder; },
     });
-  }
-
-  /** The preview: the folder picked, beside the grid. */
-  afterDraw() {
-    const aside = this.aside;
-    while (aside.firstChild) aside.removeChild(aside.firstChild);
-    const picked = this.plugin.selection.item;
-    aside.hidden = false;
-    el(aside, 'h2', 'dr-file-details-title', 'Details');
-    if (picked) {
-      const name = el(aside, 'div', 'dr-file-details-name');
-      browserIcon(name, picked instanceof TFolder ? 'folder' : picked.extension === 'pdf' ? 'file-text' : 'file');
-      el(name, 'span', 'dr-clip', picked.name);
-      el(aside, 'div', 'dr-file-details-type', `File type: ${browserType(picked)}`);
-    }
   }
 
   getState() { return { at: this.screen ? this.screen.at : '/' }; }

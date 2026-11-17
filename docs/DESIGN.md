@@ -1,5 +1,8 @@
 # DESIGN.md: Design Redux, the new look
 
+> The library, folder and note screen descriptions below are historical.
+> Their current reduced design is specified in [FILE-BROWSER-REDESIGN.md](FILE-BROWSER-REDESIGN.md).
+
 Design Redux changes the whole Obsidian interface to one new look: Obsidian's
 own chrome, the editor and reading view, overlays, settings, Canvas, Graph,
 and icons, and every surface the plugin draws itself (library, browse

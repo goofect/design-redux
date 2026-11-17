@@ -1,5 +1,9 @@
 # The design language
 
+> The former library layouts, note header, page controls and strip described
+> below have been retired. See [FILE-BROWSER-REDESIGN.md](FILE-BROWSER-REDESIGN.md)
+> for the current screens.
+
 How Design Redux looks, as a system: the unit, the two voices, the palette as
 measured, every component in every state, the icon grammar and the glyph
 builder. `docs/DESIGN.md` says what the look is; this file says how it is

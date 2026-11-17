@@ -12,8 +12,8 @@ suite('Design Redux in Obsidian: the app', function () {
         legacy: p ? p.legacyKept : null,
       };
     });
-    expect(got.features).toBe(28);
-    expect(got.commands).toBeGreaterThanOrEqual(71);
+    expect(got.features).toBe(22);
+    expect(got.commands).toBeGreaterThanOrEqual(60);
   });
 
   it('puts the look on the main window, and takes it off on unload', async function () {
@@ -67,26 +67,13 @@ suite('Design Redux in Obsidian: the app', function () {
     );
     expect(type).toBe('design-redux-browse');
     const browserState = await browser.execute(() => ({
-      rows: document.querySelectorAll('.dr-browse .dr-file-row').length,
-      details: !!document.querySelector('.dr-browse .dr-file-details-title'),
-      layouts: !!document.querySelector('.dr-library [aria-label="Level of detail"]'),
+      notes: document.querySelectorAll('.dr-library.is-wide .dr-file-row').length,
+      details: !!document.querySelector('.dr-file-details-title'),
+      search: !!document.querySelector('.dr-file-search'),
     }));
-    expect(browserState.rows).toBeGreaterThan(0);
-    expect(browserState.details).toBe(true);
-    expect(browserState.layouts).toBe(false);
-    await browser.executeObsidian(({ app }) => {
-      const plugin = app.plugins.plugins['design-redux'];
-      const folder = app.vault.getAbstractFileByPath('Politics');
-      const file = app.vault.getAbstractFileByPath('Politics/Anarchy.md');
-      const view = app.workspace.getLeavesOfType('design-redux-browse')[0].view;
-      view.screen.go(folder);
-      plugin.selection.pick(file);
-    });
-    const detail = await readUntil(
-      () => browser.execute(() => document.querySelector('.dr-file-details-name')?.textContent || ''),
-      (v) => v.includes('Anarchy.md')
-    );
-    expect(detail).toContain('Anarchy.md');
+    expect(browserState.notes).toBeGreaterThan(0);
+    expect(browserState.details).toBe(false);
+    expect(browserState.search).toBe(false);
     await shot('files-browser');
   });
 });

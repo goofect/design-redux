@@ -17,115 +17,18 @@ const PAGED = '---\nstatus: draft\n---\n%%page: Notes%%\n# Notes\nfirst\n\n```\n
 const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); await leaf.openFile(w.file(path)); if (ed) leaf.view.editor = ed; await settle(); return leaf.view; };
 
 (async () => {
-  await check('pages, from the text: a marker a page, none inside a fence, a name used twice numbered, the first takes what comes before', () => {
-    const pages = dr.parsePages(PAGED);
-    assert.deepStrictEqual(pages.map((p) => [p.name, p.line, p.from, p.to]), [['Notes', 3, 3, 10], ['Proofs', 10, 11, 12], ['Notes 2', 12, 13, 15]]);
-    assert.deepStrictEqual(dr.parsePages('# plain\ntext'), []);
-    const added = dr.addPage('---\na: 1\n---\n# Logic\nbody\n', 'Sources');
-    assert.strictEqual(added.text, '---\na: 1\n---\n%%page: Logic%%\n# Logic\nbody\n\n%%page: Sources%%\n');
-    assert.strictEqual(dr.addPage(PAGED, 'Notes').name, 'Notes 3');
-    assert.strictEqual(dr.renamePage(PAGED, 'Proofs', 'Lemmas').split('\n')[10], '%%page: Lemmas%%');
-    assert.deepStrictEqual(dr.parsePages(dr.removePage(PAGED, 'Proofs')).map((p) => p.name), ['Notes', 'Notes 2']);
-    assert.strictEqual(dr.cleanPageName('a %% b\nc'), 'a b c');
-  });
-
-  await check('pages, in the editor: every line outside the open page is folded, the text untouched', () => {
-    assert.deepStrictEqual(dr.hiddenLines(PAGED, 'Proofs'), [[3, 11], [12, 15]]);
-    assert.deepStrictEqual(dr.hiddenLines(PAGED, 'Notes'), [[3, 4], [10, 15]]);
-    assert.deepStrictEqual(dr.hiddenLines('no pages', 'x'), []);
-    let state = EditorState.create({ doc: PAGED, extensions: [dr.pagesField] });
-    assert.strictEqual(state.field(dr.pagesField).deco.size, 0);
-    state = state.update({ effects: dr.showPage.of('Proofs') }).state;
-    const folds = [];
-    state.field(dr.pagesField).deco.between(0, state.doc.length, (from, to) => void folds.push([state.doc.lineAt(from).number - 1, state.doc.lineAt(Math.max(from, to - 1)).number - 1]));
-    assert.deepStrictEqual(folds, [[3, 10], [12, 13]]);
-    assert.strictEqual(state.doc.toString(), PAGED);
-    state = state.update({ changes: { from: state.doc.length, insert: '%%page: New%%\nx\n' } }).state;
-    assert.strictEqual(state.field(dr.pagesField).deco.size, 2, 'a page typed in was not folded');
-  });
-
-  await check('pages, in the note: tabs in its head, the page opened remembered, stepped through, added and renamed', async () => {
-    const w = await world({ 'Logic/Paged.md': PAGED, 'Logic/Plain.md': 'x' });
-    const view = await open(w, 'Logic/Paged.md');
-    const pages = feature(w, 'NotePages');
-    const tabs = () => Array.from(view.contentEl.querySelectorAll('.dr-note-pages .dr-segment')).map((t) => `${t.textContent}${t.getAttribute('aria-selected') === 'true' ? '*' : ''}`);
-    assert.deepStrictEqual(tabs(), ['Notes*', 'Proofs', 'Notes 2']);
-    view.contentEl.querySelectorAll('.dr-note-pages .dr-segment')[1].click();
+  await check('notes show their complete text without plugin header, page controls, or strip', async () => {
+    const text = '%%page: One%%\nFirst page\n%%page: Two%%\nSecond page\n';
+    const w = await world({ 'A.md': text }, { settingsVersion: 100, notePages: true, pagesOpen: { 'A.md': 'Two' }, notePage: true, contextStrip: true });
+    const leaf = w.app.workspace.getLeaf();
+    await leaf.openFile(w.file('A.md'));
     await settle();
-    assert.deepStrictEqual(tabs(), ['Notes', 'Proofs*', 'Notes 2']);
-    assert.strictEqual(w.plugin._data.pagesOpen['Logic/Paged.md'], 'Proofs');
-    assert.strictEqual(view.contentEl.dataset.drPage, 'Proofs');
-    w.app.commands.executeCommandById('design-redux:next-page');
-    await settle();
-    assert.strictEqual(w.plugin.settings.pagesOpen['Logic/Paged.md'], 'Notes 2');
-    assert.deepStrictEqual(w.plugin.partsOf(w.file('Logic/Paged.md')).map((p) => [p.name, p.current]), [['Notes', false], ['Proofs', false], ['Notes 2', true]]);
-    pages.add_(w.file('Logic/Paged.md'));
-    await answer(w, 'Sources');
-    assert.ok(w.text('Logic/Paged.md').endsWith('%%page: Sources%%\n'));
-    assert.deepStrictEqual(tabs(), ['Notes', 'Proofs', 'Notes 2', 'Sources*']);
-    await w.app.vault.rename(w.file('Logic/Paged.md'), 'Logic/Renamed.md');
-    assert.strictEqual(w.plugin.settings.pagesOpen['Logic/Renamed.md'], 'Sources', 'the open page did not follow the rename');
-    const hidden = { classList: { toggle(c, on) { this[c] = on; } } };
-    pages.onRendered(hidden, { sourcePath: 'Logic/Renamed.md', getSectionInfo: () => ({ text: w.text('Logic/Renamed.md'), lineStart: 5, lineEnd: 5 }) });
-    assert.strictEqual(hidden.classList['dr-page-hidden'], true, 'reading view shows a block of another page');
-    const plain = await open(w, 'Logic/Plain.md');
-    assert.ok(!plain.contentEl.querySelector('.dr-note-pages .dr-segment'), 'a note without pages has tabs');
-    assert.strictEqual(w.text('Logic/Plain.md'), 'x', 'a note without pages was written to');
-  });
-
-  await check('the note\'s head: its folder as a label that opens it, its properties as chips; gone when the feature is off', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\ndomain: [logic, proof]\n---\n', 'Loose.md': '' });
-    w.plugin.settings.notePageChips = true;
-    const view = await open(w, 'Logic/A.md');
+    assert.strictEqual(w.text('A.md'), text);
+    assert.ok(!leaf.view.contentEl.querySelector('.dr-note-head, .dr-strip, .dr-page-hidden'));
+    assert.ok(!w.plugin.features.some((f) => ['NotePage', 'NotePages', 'Panel', 'Strip'].includes(f.constructor.name)));
     await w.plugin.saveSettings();
-    const head = view.contentEl.querySelector('.dr-note-head');
-    assert.strictEqual(view.contentEl.firstChild, head);
-    assert.strictEqual(head.querySelector('.dr-note-folder').textContent, 'Logic');
-    assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-chip')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
-    w.plugin.settings.notePage = false;
-    await w.plugin.saveSettings();
-    assert.ok(!view.contentEl.querySelector('.dr-note-head'), 'the head was left behind');
-    w.plugin.settings.notePage = true;
-    await w.plugin.saveSettings();
-    view.contentEl.querySelector('.dr-note-folder').click();
-    await settle();
-    assert.strictEqual(w.plugin.openFolder.path, 'Logic');
-  });
-
-  await check('the panel: a note\'s properties edited in place with an Undo; a value keeps its kind; named in, mentioned in, links to', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n[[B]]', 'Logic/B.md': '---\nparent: "[[A]]"\n---\n[[A]]', 'C.md': '[[A]]' });
-    await open(w, 'Logic/A.md');
-    const panel = feature(w, 'Panel');
-    const leaf = await panel.reveal();
-    const view = leaf.view;
-    const keys = () => Array.from(view.contentEl.querySelectorAll('.dr-prop')).map((p) => `${p.dataset.key}=${p.querySelector('.dr-prop-value').textContent}`);
-    assert.deepStrictEqual(keys(), ['status=draft', 'week=3', 'tags=a, b']);
-    const edit = async (key, value) => {
-      view.contentEl.querySelector(`.dr-prop[data-key="${key}"]`).click();
-      const input = view.contentEl.querySelector('.dr-prop input');
-      input.value = value;
-      input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      await settle();
-    };
-    await edit('week', '4');
-    await edit('tags', 'a, c , d');
-    assert.deepStrictEqual(w.plugin.notes.props(w.file('Logic/A.md')), { status: 'draft', week: 4, tags: ['a', 'c', 'd'] });
-    await w.plugin.lastUndo.run();
-    assert.deepStrictEqual(w.plugin.notes.get(w.file('Logic/A.md'), 'tags'), ['a', 'b']);
-    assert.deepStrictEqual([dr.parseValue('yes', true), dr.parseValue('x', 3), dr.parseValue('', ['a'])], [true, 'x', []]);
-    await settle();
-    const sections = Object.fromEntries(panel.sections(w.file('Logic/A.md')).map((s) => [s.title, s.items.map((i) => `${i.name}${i.end ? `:${i.end}` : ''}`)]));
-    assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B:Logic'] });
-    panel.addProperty(w.file('Logic/A.md'));
-    await answer(w, 'course');
-    assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
-    await panel.propertyMenu(w.file('Logic/A.md'), 'course').click('Remove property');
-    assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))));
-    w.plugin.selection.pick(w.file('Logic'));
-    await settle();
-    assert.strictEqual(view.contentEl.querySelector('.dr-detail-name').textContent, 'Logic', 'a folder picked is not shown in the panel');
-    await panel.toggle();
-    assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-properties').length, 0);
+    assert.strictEqual(w.text('A.md'), text);
+    assert.deepStrictEqual(w.plugin._data.pagesOpen, { 'A.md': 'Two' });
   });
 
   await check('footnotes, from the text: found outside fences, put in order by where they appear, named ones kept', () => {

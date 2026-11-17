@@ -11,6 +11,6 @@ class RetiredView extends ItemView {
 
 export class RetiredViews extends Feature {
   register() {
-    ['design-redux-mindmap', 'design-redux-outline'].forEach((type) => this.plugin.registerView(type, (leaf) => new RetiredView(leaf, type)));
+    ['design-redux-mindmap', 'design-redux-outline', 'design-redux-properties'].forEach((type) => this.plugin.registerView(type, (leaf) => new RetiredView(leaf, type)));
   }
 }

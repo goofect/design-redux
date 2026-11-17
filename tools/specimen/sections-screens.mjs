@@ -72,48 +72,14 @@ export async function screens() {
   const feature = (name) => w.plugin.features.find((f) => f.constructor.name === name);
   const tt = w.file('Logic/Truth tables.md');
 
-  // A note open on its second page, with a change or two in its history.
-  const leaf = ws.getLeaf();
-  await leaf.openFile(tt);
-  await w.plugin.notes.write(tt, (fm) => (fm.status = 'review'));
-  await w.plugin.notes.write(tt, (fm) => (fm.status = 'draft'));
-  await feature('NotePages').open(tt, 'Proofs');
-  await settle(6);
-  const note = leaf.view.contentEl;
-  const head = note.querySelector('.dr-note-head').outerHTML;
-  const strip = note.querySelector('.dr-strip').outerHTML;
-  const page = `<div class="spec-note">${head}<div class="spec-note-text"><h1>Proofs</h1><p>A proof that the table and the rules agree: whatever the rules let you write from some premises, every row of the table that makes the premises true makes it true as well.</p><p>The other way round needs more, and it is the next chapter’s.</p></div>${strip}</div>`;
-
-  // The panel beside it.
-  const panelLeaf = await feature('Panel').reveal();
-  await settle();
-  const panel = panelLeaf.view.contentEl.outerHTML;
-
-  // The library: search with nothing typed, then with something.
+  // The library contains folders; the folder view contains notes.
   const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
-  library.search('');
-  const searchEmpty = library.host.outerHTML;
-  library.query = 'tab';
-  library.draw();
-  const searchFound = library.host.outerHTML;
-  library.search(null);
-
-  // The default file browser, shown at sidebar and workspace widths.
-  library.go(w.file('Logic'));
-  const browseLeaf = await feature('Library').browse(w.file('Logic'));
-  w.plugin.selection.pick(w.file('Logic/Arguments and their parts.md'));
+  const folder = w.file('Logic');
+  const browseLeaf = await feature('Library').browse(folder);
+  library.go(folder);
   await settle();
   const fileSidebar = library.host.outerHTML;
   const fileBrowse = browseLeaf.view.contentEl.outerHTML;
-  const browse = browseLeaf.view.screen;
-  browse.setFilter({ folder: 'Logic', prop: 'status=draft' }, 'Drafts in Logic');
-  await settle();
-  const filtered = browse.host.outerHTML;
-
-  // The rules sheet.
-  const sheet = feature('PropertyRules').edit();
-  const rules = sheet.modalEl.outerHTML;
-  sheet.close();
 
   // The 3D graph: its notes laid out by the same code, drawn as it draws them.
   const n = 42;
@@ -129,13 +95,6 @@ export async function screens() {
   const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-label dr-clip">3D graph <span class="dr-muted">${n} notes · ${links.length} links</span></span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return `<rect class="${mark ? 'is-clay' : 'is-ink'}" x="${x}" y="${y}" width="${s}" height="${s}"/>${mark ? `<rect class="spec-graph-ring${i === picked ? ' is-picked' : ''}" x="${x + 0.5}" y="${y + 0.5}" width="${s - 1}" height="${s - 1}"/>` : ''}`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
 
   w.plugin.unload();
-  return section('files', 'File browser', 'The sidebar tree and workspace file list use the same vault model.', `<div class="spec-states is-close">${frame('sidebar', 320, 560, fileSidebar)}${frame('workspace', 960, 560, fileBrowse)}</div>`)
-    + section('screens-note', 'The note, and the panel beside it', 'Drawn by the plugin itself on a sample vault. The note’s head band: its folder, its properties as chips (a value in its tone, one its folder’s schema finds wrong), its pages; the strip at its foot. The panel: properties in groups, the wrong one marked, then where the note is named, mentioned and what it links to, and its history.',
-    `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel)}</div>`)
-    + section('screens-library', 'Search, and a filter', 'The library’s search with nothing typed (the last searches, then a property’s values, each a filter) and with something; the browse view with a filter on, its parts as chips that take themselves off.',
-      `<div class="spec-states is-close">${frame('search, nothing typed', 320, 520, searchEmpty)}${frame('search: “tab”', 320, 520, searchFound)}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
-    + section('screens-maps', 'The 3D graph', 'The 3D graph: ink squares on hairlines, the picked note and the open one in clay.',
-      `<div class="spec-states is-close">${frame('the 3D graph', 720, 448, graph)}</div>`)
-    + section('screens-sheets', 'A sheet of the tools', 'Property rules: each a row (a press turns it off or on), and a line to write a new one.',
-      `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}</div>`);
+  return section('files', 'Library and folder', 'The library lists folders. The selected folder lists notes.', `<div class="spec-states is-close">${frame('library', 320, 560, fileSidebar)}${frame('folder', 720, 560, fileBrowse)}</div>`)
+    + section('screens-maps', 'The 3D graph', 'The graph retains its separate view.', `<div class="spec-states is-close">${frame('the 3D graph', 720, 448, graph)}</div>`);
 }

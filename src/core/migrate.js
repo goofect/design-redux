@@ -9,6 +9,13 @@
 
 import { DEFAULTS, SETTINGS_VERSION } from './settings.js';
 
+/** Removed commands whose former interfaces no longer exist. */
+export const RETIRED_COMMANDS = [
+  'add-page', 'next-page', 'previous-page', 'open-properties', 'open-inspector',
+  'panel-folder-properties', 'library-check', 'smart-album-open', 'smart-album-save',
+  'find-missing-properties',
+];
+
 /** Old keys whose thing is gone, and why. Their values stay in data.legacy.json. */
 export const RETIRED = {
   singleArea: 'cut: the one-page layout',
@@ -72,6 +79,12 @@ export function migrateSettings(saved) {
   });
   // The removed custom sort falls back to name; keep its saved order data intact.
   // albumNestBy, hideEmptyFolders, and albumStillToWrite remain in saved data for older vaults.
+  // Preserve the removed screen settings and saved views without activating them:
+  // notePage, notePageChips, notePages, pagesOpen, propertiesDropdown, inspector,
+  // panelPrimaryProps, panelPropertyGroups, panelGroupList, panelFoldedGroups,
+  // panelFolderViews, showMentions, propertyLinks, contextStrip, stripPlace,
+  // stripDetail, smartAlbums, smartAlbumList, libraryCheck, libraryInbox,
+  // recentSearches, searchNoteText, categoryProperty, and graphRouteProperty.
   if (settings.defaultSort === 'own') settings.defaultSort = 'name';
   Object.keys(settings.albumSorts || {}).forEach((path) => {
     const sort = settings.albumSorts[path];

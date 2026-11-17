@@ -156,7 +156,7 @@ export class Graph3DView extends ScheduledView {
     if (!ctx) return;
     const css = getComputedStyle(this.contentEl);
     const token = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
-    const [ink, muted, clay, ground] = [token('--dr-ink', '#1A1A18'), token('--dr-muted', '#5E5C57'), token('--dr-clay', '#A58F7C'), token('--dr-bg', '#E9E6DF')];
+    const [ink, muted, clay, ground] = [token('--dr-browser-ink', '#000000'), token('--dr-browser-muted', '#555555'), token('--dr-browser-selected', '#E5E5E5'), token('--dr-browser-bg', '#FFFFFF')];
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.fillStyle = ground;
     ctx.fillRect(0, 0, w, h);

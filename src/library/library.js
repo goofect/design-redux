@@ -8,7 +8,6 @@
 
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
-import { drawDetail } from './detail.js';
 import { folderGlyph } from './faces.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
@@ -30,9 +29,6 @@ export class Library extends Feature {
       ws.detachLeavesOfType(LIBRARY_VIEW);
       ws.detachLeavesOfType(BROWSE_VIEW);
     });
-    // For the panel, which may not import the library: a folder picked, drawn.
-    this.plugin.drawFolder = (host, folder) => drawDetail(this.plugin, host, folder, { open: (f) => this.browse(f), note: (file) => ws.getLeaf(false).openFile(file) });
-    this.add(() => delete this.plugin.drawFolder);
     // For the strip: where a note stands in its folder, and the folder's face.
     this.plugin.placeOf = (file) => neighbours(this.plugin, file);
     this.plugin.faceOf = (folder) => folderGlyph(this.plugin, folder);
@@ -85,6 +81,7 @@ export class Library extends Feature {
     const screen = () => this.activeScreen();
     return [
       { id: 'open-library', name: 'Open library', glyph: 'library', run: () => this.openSidebar() },
+      { id: 'library-inbox', name: 'Open vault notes', glyph: 'inbox', run: () => this.browse(null) },
       { id: 'browse-vault', name: 'Browse files', glyph: 'grid', run: () => this.browse(null) },
       { id: 'reset-layout', name: 'Put the library back in place', glyph: 'layout', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
@@ -108,8 +105,6 @@ export class Library extends Feature {
       { key: 'folderNoteName', name: 'A folder note’s name', desc: '{{folder}} stands for the folder’s name.', type: 'text' },
       { key: 'typeToJump', name: 'Type to jump', desc: 'Typing the start of a name goes to it.', type: 'toggle' },
       { key: 'sidebarDrop', name: 'Drag onto a folder to move', type: 'toggle' },
-      { key: 'searchNoteText', name: 'Search headings and properties', desc: 'As well as names.', type: 'toggle' },
-      { key: 'categoryProperty', name: 'Search by', desc: 'A property whose values are offered as filters before anything is typed.', type: 'text' },
     ];
   }
 }

@@ -117,50 +117,5 @@ const VAULT = {
     assert.strictEqual(await give.give(w.file('Logic/Truth tables.md'), 'status', true), 2);
   });
 
-  await check('filters: by folder, tag, property (has, lacks, equals), date and looseness; kept as a saved view and opened again', async () => {
-    const w = await world(VAULT);
-    const names = (f) => dr.matchNotes(w.plugin, f, 1e6).map((n) => n.path).sort();
-    assert.deepStrictEqual(names({ folder: 'Reading' }), ['Reading/Hume.md', 'Reading/Validity.md']);
-    assert.deepStrictEqual(names({ tag: '#formal' }), ['Logic/Truth tables.md']);
-    assert.deepStrictEqual(names({ prop: 'status=DRAFT' }), ['Logic/Truth tables.md', 'Reading/Hume.md']);
-    assert.deepStrictEqual(names({ prop: 'parent' }), ['Logic/Validity.md']);
-    assert.deepStrictEqual(names({ prop: '!status', folder: 'Reading' }), ['Reading/Validity.md']);
-    assert.deepStrictEqual(names({ loose: true }), ['Loose.md']);
-    assert.deepStrictEqual(dr.matchNotes(w.plugin, { date: 'week' }, 40 * 864e5).length, 0);
-    const views = feature(w, 'SavedViews');
-    const screen = await views.screen();
-    screen.setFilter({ prop: 'status=draft', folder: 'Logic' });
-    assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-rows .dr-row')).map((r) => r.dataset.path), ['Logic/Truth tables.md']);
-    assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-filter-bar .dr-chip')).map((c) => [c.textContent, c.getAttribute('role'), c.hasAttribute('aria-checked')]), [['InLogic', 'button', false], ['Propertystatus=draft', 'button', false]]);
-    views.save();
-    await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Drafts in Logic'; m.contentEl.querySelector('.is-primary').click(); });
-    assert.deepStrictEqual(w.plugin.settings.smartAlbumList.map((v) => [v.name, v.prop, v.folder]), [['Drafts in Logic', 'status=draft', 'Logic']]);
-    screen.host.querySelector('.dr-filter-bar .dr-chip').click();
-    assert.deepStrictEqual(screen.filter, { prop: 'status=draft' });
-    screen.back();
-    assert.strictEqual(screen.filter, null);
-    await views.open(w.plugin.settings.smartAlbumList[0]);
-    assert.strictEqual(screen.host.querySelector('.dr-head .dr-label').textContent, 'Drafts in Logic');
-  });
-
-  await check('the library check: what it finds, in a report that changes nothing; and the inbox', async () => {
-    const w = await world(Object.assign({}, VAULT, { 'A.md': '---\nparent: "[[B]]"\n---\n', 'B.md': '---\nparent: "[[A]]"\n---\n', 'Sub/Logic/x.md': '' }));
-    const lc = feature(w, 'LibraryCheck');
-    const found = Object.fromEntries(lc.findings().map((g) => [g.title, g.items.map((i) => i.name)]));
-    assert.deepStrictEqual(found['Folders with nothing in them'], ['Empty']);
-    assert.deepStrictEqual(found['Folders of one name'].sort(), ['Logic', 'Sub/Logic']);
-    assert.deepStrictEqual(found['Notes in no folder'], ['A', 'B', 'Loose']);
-    assert.deepStrictEqual(found['Notes whose parents lead round in a circle'].sort(), ['A', 'B']);
-    assert.ok(found['Links that lead nowhere'].includes('Validity'));
-    const before = JSON.stringify(Array.from(w.app.vault.text.entries()));
-    const sheet = lc.report();
-    assert.ok(sheet.contentEl.querySelectorAll('.dr-section').length >= 5);
-    sheet.close();
-    assert.strictEqual(JSON.stringify(Array.from(w.app.vault.text.entries())), before);
-    await lc.inbox();
-    const screen = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
-    assert.deepStrictEqual([screen.filterName, screen.host.querySelectorAll('.dr-rows .dr-row').length], ['Inbox', 3]);
-  });
-
   check.done();
 })();

@@ -97,16 +97,11 @@ export function lists(faces) {
 
 const menuItem = (g, title, cls = '', sub = false) => `<div class="menu-item ${cls}"><div class="menu-item-icon">${glyph(g)}</div><div class="menu-item-title">${title}</div>${sub ? `<div class="menu-item-icon">${glyph('next')}</div>` : ''}</div>`;
 const state = (g, label, text, extra = '', cls = '') => `<div class="dr-state ${cls}">${glyph(g)}<span class="dr-label">${label}</span>${text ? `<span class="dr-text is-running">${text}</span>` : ''}${extra}</div>`;
-export const strip = (f, n, faces, a = {}) => `<div class="dr-strip">${glyph(f ? face(faces, f) : 'note')}<div class="dr-strip-words"><span class="dr-strip-title dr-text dr-clip">${esc(n.title)}</span><span class="dr-strip-place dr-label dr-clip">${f ? `${esc(f.name)} · ${n.number} of ${f.count}` : 'No folder'}</span></div>${iconButton('previous-note', 'Previous note', a.first || !f ? { 'aria-disabled': 'true' } : {})}${iconButton('next-note', 'Next note', f ? {} : { 'aria-disabled': 'true' })}${iconButton('more', 'More')}</div>`;
 
 export function blocks(faces) {
   const f = folders[2];
   const sheet = (title, text, inner, actions) => `<div class="modal"><div class="modal-close-button">${iconButton('close', 'Close')}</div><div class="modal-title">${title}</div><div class="modal-content"><div class="dr dr-sheet"><p class="dr-text is-running">${text}</p>${inner}<div class="dr-sheet-actions">${actions}</div></div></div></div>`;
-  return section('blocks', 'Strip, menu, sheet, say-so', 'The larger pieces, built from the ones above.', [
-    component('Strip', 'Across the foot of the note: the folder, the note, its place, and on. Nothing floats, nothing waits for the pointer.', [
-      shown('rest', `<div style="width:560px">${strip(f, logic[4], faces)}</div>`), shown('at the first note · back is quiet', `<div style="width:400px">${strip(f, logic[0], faces, { first: true })}</div>`),
-      shown('a note in no folder', `<div style="width:320px">${strip(null, { title: 'Quick note' }, faces)}</div>`),
-    ]),
+  return section('blocks', 'Menu, sheet, say-so', 'The larger pieces, built from the ones above.', [
     component('Menu', "Obsidian's own, restyled: rows of four units; the item under the pointer or the keys in clay with a line round it.", [
       shown('rest, selected, disabled, a submenu, one that destroys', `<div class="menu"><div class="menu-scroll">${menuItem('open', 'Open')}${menuItem('note-new', 'New note here', 'selected')}${menuItem('pin', 'Pin')}${menuItem('move', 'Move to…', 'is-disabled')}<div class="menu-separator"></div>${menuItem('sort', 'Sort by', '', true)}${menuItem('shapes', 'Glyph…')}<div class="menu-separator"></div>${menuItem('trash', 'Delete folder', 'is-warning')}</div></div>`),
     ]),

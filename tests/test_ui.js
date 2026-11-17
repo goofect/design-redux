@@ -46,30 +46,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'wait']);
   });
 
-  await check('zoom control: three glyph radios, one checked; a click and the arrows choose; a disabled level is passed over', () => {
-    const seen = [];
-    const options = [{ id: 'objects', glyph: 'zoom-objects', label: 'Objects' }, { id: 'shelves', glyph: 'zoom-shelves', label: 'Shelves', disabled: true }, { id: 'words', glyph: 'zoom-words', label: 'Words' }];
-    const z = dr.segments(fresh(), { label: 'Level of detail', options, value: 'objects', onChange: (id) => seen.push(id) });
-    const items = Array.from(z.children);
-    assert.deepStrictEqual([z.getAttribute('role'), z.getAttribute('aria-label')], ['radiogroup', 'Level of detail']);
-    assert.deepStrictEqual(items.map((i) => [i.getAttribute('role'), i.getAttribute('aria-checked'), i.getAttribute('tabindex'), i.getAttribute('aria-label')]), [['radio', 'true', '0', 'Objects'], ['radio', 'false', '-1', 'Shelves'], ['radio', 'false', '-1', 'Words']]);
-    items[1].click();
-    assert.deepStrictEqual(seen, [], 'a disabled level was chosen');
-    key(items[0], 'ArrowRight');
-    assert.deepStrictEqual(seen, ['words']);
-    assert.strictEqual(items[2].getAttribute('aria-checked'), 'true');
-    items[0].click(); items[0].click();
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'choosing the level shown told again');
-    z.drSet('words');
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'drSet told');
-  });
-
-  await check('tabs: word segments, the open one selected', () => {
-    const t = dr.segments(fresh(), { tabs: true, options: [{ id: 'a', text: 'Notes' }, { id: 'b', text: 'Proofs' }], value: 'b' });
-    assert.deepStrictEqual([t.className, t.getAttribute('role')], ['dr-segments dr-tabs', 'tablist']);
-    assert.deepStrictEqual(Array.from(t.children).map((i) => [i.getAttribute('role'), i.getAttribute('aria-selected'), i.textContent]), [['tab', 'false', 'Notes'], ['tab', 'true', 'Proofs']]);
-  });
-
   await check('object cell: no words drawn at rest but always named; picked, open, disabled, wrong; a click picks, a second opens', () => {
     const log = [];
     const g = dr.grid(fresh(), { labelled: true });

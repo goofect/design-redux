@@ -1,13 +1,4 @@
-/* ------------------------------------------------------------------ */
-/* The library sidebar: one place, three levels of detail, and a       */
-/* folder picked                                                       */
-/*                                                                     */
-/* The head holds the word Library, search, and the zoom control. The  */
-/* body under it shows the same folders as objects, as shelves or as   */
-/* words. The sidebar is its own container: the grid's cells are cut   */
-/* from its width, whatever it is dragged to.                          */
-/* ------------------------------------------------------------------ */
-
+/* Library: folders in the sidebar, notes in the selected folder. */
 .dr-library {
   container-type: inline-size;
   display: flex;
@@ -15,179 +6,26 @@
   min-width: 0;
   height: 100%;
   background: var(--dr-browser-bg);
+  color: var(--dr-browser-ink);
+  font-family: var(--font-monospace, monospace);
 }
-
-.dr-library-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-
-/* The new file-list preview, shared by sidebar and workspace. */
+.dr-library .dr-head { color: var(--dr-browser-ink); }
+.dr-library-body { flex: 1; min-height: 0; overflow-y: auto; }
 .dr-file-list { padding: var(--dr-gutter); }
-.dr-file-search { display: flex; align-items: center; gap: var(--dr-u); margin: var(--dr-gutter); padding: 0 var(--dr-u); border: var(--dr-hair) solid var(--dr-ink); }
-.dr-file-search input.dr-file-search-input[type="search"] { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
-.dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-muted); }
+.dr-file-row { --dr-depth: 0; display: flex; align-items: center; min-height: calc(4 * var(--dr-u)); cursor: pointer; font-size: var(--font-ui-small); }
+.dr-file-name { display: flex; align-items: center; gap: var(--dr-u); min-width: 0; padding-left: calc(var(--dr-depth) * 2 * var(--dr-u)); }
+.dr-file-disclosure { display: inline-flex; flex: none; }
+.dr-file-row[aria-selected="true"] { background: var(--dr-browser-selected); color: var(--dr-browser-selected-ink); }
+.dr-file-row:focus-visible { outline: var(--dr-ring) solid var(--dr-browser-ink); outline-offset: calc(-1 * var(--dr-ring)); }
+.dr-library.is-wide .dr-file-row { border-bottom: var(--dr-hair) solid var(--dr-browser-rule); }
+.dr-library > .dr-head { height: calc(5 * var(--dr-u)); border-color: var(--dr-browser-rule); }
+.dr-library > .dr-head > .dr-label { font-size: var(--font-ui-small); font-weight: 600; line-height: var(--dr-line); letter-spacing: normal; text-transform: none; }
+.dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-browser-muted); }
 .dr .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; box-shadow: none; }
-.dr-file-list-heading, .dr-file-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) calc(20 * var(--dr-u));
-  align-items: center;
-  min-height: calc(6 * var(--dr-u));
-  border-bottom: var(--dr-hair) solid var(--dr-surface);
-}
-.dr-file-list-heading { border-color: var(--dr-ink); }
-.dr-file-row { --dr-depth: 0; cursor: pointer; font-size: var(--font-ui-medium); }
-.dr-file-name { display: flex; align-items: center; gap: calc(2 * var(--dr-u)); min-width: 0; }
-.dr-library:not(.is-wide) .dr-file-name { padding-left: calc(var(--dr-depth, 0) * 2 * var(--dr-u)); }
-.dr-file-disclosure { padding: 0; border: 0; background: none; }
-.dr-file-name .dr-glyph { flex: none; }
-.dr-file-icon { display: inline-flex; flex: none; width: calc(3 * var(--dr-u)); height: calc(3 * var(--dr-u)); }
-.dr-file-icon svg { width: 100%; height: 100%; }
-.dr-file-result-path { color: var(--dr-muted); }
-.dr-file-row[aria-selected="true"] { background: var(--dr-browser-selected); color: var(--dr-on-clay); }
-.dr-file-row:focus-visible { outline: var(--dr-ring) solid var(--dr-ink); outline-offset: calc(-1 * var(--dr-ring)); }
-.dr-library:not(.is-wide) .dr-file-row { grid-template-columns: minmax(0, 1fr); border-bottom: 0; }
-.dr-file-details-title { margin: 0 var(--dr-gutter); padding: calc(3 * var(--dr-u)) 0; border-bottom: var(--dr-hair) solid var(--dr-ink); text-transform: uppercase; }
-.dr-file-details-name { display: flex; align-items: center; gap: var(--dr-u); padding: calc(3 * var(--dr-u)) var(--dr-gutter) var(--dr-u); font-size: var(--font-ui-medium); font-weight: 700; }
-.dr-file-details-type { padding: 0 var(--dr-gutter); }
-.dr-library.is-wide > .dr-head { height: calc(12 * var(--dr-u)); border-bottom: 0; }
-.dr-library.is-wide > .dr-head > .dr-label { font-size: calc(5 * var(--dr-u)); font-weight: 700; line-height: 1; letter-spacing: normal; text-transform: none; }
-.dr-library:not(.is-wide) > .dr-head > .dr-label { font-size: calc(2 * var(--dr-u)); font-weight: 700; letter-spacing: normal; }
+.dr-file-empty { margin: var(--dr-gutter); color: var(--dr-browser-muted); }
+.dr-library [data-drop] { background: var(--dr-surface); outline: var(--dr-ring) solid var(--dr-ink); outline-offset: calc(-1 * var(--dr-ring)); }
+.dr-grid.dr-picker { --dr-cell: calc(8 * var(--dr-u)); grid-template-columns: repeat(6, var(--dr-cell)); }
+.dr-picker .dr-cell { --dr-glyph: calc(4 * var(--dr-u)); }
 @media (any-hover: hover) {
-  .dr-file-row:hover:not([aria-selected="true"]) { background: var(--dr-surface); }
-}
-
-/* Objects: the grid, a gutter clear above and below. */
-.dr-library-body > .dr-grid {
-  padding: var(--dr-gutter) 0;
-}
-
-/* Shelves: a gutter over the first. */
-.dr-shelves {
-  padding-top: var(--dr-u);
-}
-
-/* Words: the outline ends on a hairline. */
-.dr-outline {
-  margin-bottom: calc(-1 * var(--dr-hair));
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
-}
-
-/* ---- A folder picked: its glyph large, wide space round it, its name and counts, what can be done, then its notes. ---- */
-.dr-detail {
-  --dr-glyph: var(--dr-object-large);
-  display: grid;
-  justify-items: center;
-  padding: calc(6 * var(--dr-u)) var(--dr-gutter) calc(4 * var(--dr-u));
-  color: var(--dr-ink);
-  text-align: center;
-}
-
-.dr-detail-cover {
-  display: block;
-  max-width: var(--dr-glyph);
-  max-height: var(--dr-glyph);
-  object-fit: contain;
-}
-
-.dr-detail-name {
-  max-width: 100%;
-  margin-top: calc(3 * var(--dr-u));
-}
-
-.dr-detail-counts {
-  display: flex;
-  justify-content: center;
-  gap: var(--dr-gutter);
-  color: var(--dr-muted);
-}
-
-.dr-detail-actions {
-  --dr-glyph: var(--dr-icon);
-  display: flex;
-  justify-content: center;
-  gap: var(--dr-u);
-  margin-top: calc(3 * var(--dr-u));
-}
-
-/* ---- The browse view: the screen, and the folder picked beside it. ---- */
-.dr-browse {
-  display: flex;
-  container-type: inline-size;
-  height: 100%;
-  background: var(--dr-browser-bg);
-}
-
-.dr-browse-main {
-  flex: 1;
-  min-width: 0;
-}
-
-.dr-browse-aside {
-  flex: none;
-  width: clamp(calc(20 * var(--dr-u)), 25%, calc(40 * var(--dr-u)));
-  border-left: var(--dr-hair) solid var(--dr-ink);
-  overflow-y: auto;
-  background: var(--dr-browser-bg);
-}
-
-@container (max-width: 600px) {
-  .dr-browse-aside { width: calc(24 * var(--dr-u)); }
-}
-
-.dr-browse-aside[hidden] {
-  display: none;
-}
-
-.dr-library.is-wide .dr-library-body > .dr-grid {
-  padding: calc(4 * var(--dr-u)) 0;
-}
-
-/* ---- Search: its field under the head, what it finds under that. ---- */
-.dr-search {
-  padding: var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
-}
-
-/* ---- Where a dragged note would land. ---- */
-.dr-library [data-drop] {
-  background: var(--dr-surface);
-  outline: var(--dr-ring) solid var(--dr-ink);
-  outline-offset: calc(-1 * var(--dr-ring));
-}
-
-/* ---- The glyph picker: the set, six across, at four units. ---- */
-.dr-grid.dr-picker {
-  --dr-cell: calc(8 * var(--dr-u));
-  grid-template-columns: repeat(6, var(--dr-cell));
-}
-
-.dr-picker .dr-cell {
-  --dr-glyph: calc(4 * var(--dr-u));
-}
-
-.dr-detail-about {
-  max-width: 100%;
-  margin: var(--dr-u) 0 0;
-  color: var(--dr-muted);
-}
-
-/* ---- A filter, as chips under the head row: a press on one takes it off. ---- */
-.dr-filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--dr-u);
-  padding: var(--dr-u) var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
-}
-
-.dr-filter-bar > .dr-label {
-  margin-left: var(--dr-u);
-}
-
-.dr-filter-bar + .dr-rows {
-  margin-top: 0;
-  border-top: 0;
+  .dr-file-row:hover:not([aria-selected="true"]) { background: var(--dr-browser-selected); }
 }
