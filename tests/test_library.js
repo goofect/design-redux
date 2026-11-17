@@ -53,7 +53,7 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
     assert.deepStrictEqual(paths(view.screen.host), ['Philosophy/Arguments.md']);
     await w.app.workspace.getLeaf().openFile(w.file('Loose.md'));
-    assert.ok(!w.doc.body.classList.contains('dr-browser-open'), 'normal Obsidian controls must return on leaving the browser');
+    assert.ok(w.doc.body.classList.contains('dr-browser-open'), 'the native chrome stays out of the plugin workspace');
   });
 
   await check('arrow keys expand folders and focus survives redraws', async () => {

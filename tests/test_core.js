@@ -152,7 +152,8 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     });
     w.plugin.settings.look = 'theme';
     await w.plugin.saveSettings();
-    assert.strictEqual(body.className, 'theme-light', 'the theme is not left untouched');
+    assert.ok(!body.classList.contains('dr-active'), 'the appearance setting must leave the theme colors alone');
+    assert.ok(body.classList.contains('dr-browser-open'), 'the replacement browser still removes the native chrome');
     w.plugin.settings.look = 'redux';
     await w.plugin.saveSettings();
     const before = Object.keys(obsidian.icons).filter((id) => id.startsWith('dr-')).length;

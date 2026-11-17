@@ -27,6 +27,13 @@ its note list; selecting a note opens it through Obsidian. Breadcrumbs provide a
 way back. Keyboard activation and focus must work without a pointer. Existing
 Obsidian chrome, native file access and the editor remain Obsidian's own.
 
+The plugin closes existing native File explorer views when enabled and removes
+the left dock and ribbon from its workspace while enabled. The browser is opened
+with the Open library command. Obsidian's File explorer remains a core plugin;
+the plugin does not delete or disable Obsidian's application code. Disabling
+Design Redux restores the dock and ribbon, and Obsidian's File explorer can be
+reopened through Obsidian.
+
 ## Compatibility
 
 Existing notes are not rewritten by migration. Notes created with old page markers

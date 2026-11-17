@@ -90,10 +90,9 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(panels.fits).toBe(true);
     const chrome = await browser.execute(() => {
       const left = document.querySelector('.workspace-split.mod-left-split');
-      const ribbon = document.querySelector('.workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
-      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, candidates: Array.from(document.querySelectorAll('[class*="ribbon"], [class*="dock"]')).map((n) => n.className).filter((v) => typeof v === 'string').slice(0, 30) };
+      const ribbon = document.querySelector('.workspace-ribbon.mod-primary, .workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display };
     });
-    console.log('Obsidian left chrome:', JSON.stringify(chrome));
     expect(chrome.left).toBe('none');
     expect(chrome.ribbon).toBe('none');
     await shot('files-browser');
@@ -112,6 +111,7 @@ suite('Design Redux in Obsidian: the app', function () {
     await shot('files-browser-dark');
     await browser.execute(() => { document.body.classList.remove('theme-dark'); if (window.__drWasLight) document.body.classList.add('theme-light'); delete window.__drWasLight; });
     await browser.executeObsidian(async ({ app }) => { await app.workspace.getLeaf(false).openFile(app.vault.getAbstractFileByPath('Home.md')); });
-    expect(await readUntil(() => browser.execute(() => document.body.classList.contains('dr-browser-open')), (active) => !active)).toBe(false);
+    expect(await browser.execute(() => document.body.classList.contains('dr-browser-open'))).toBe(true);
+    expect(await browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('file-explorer').length)).toBe(0);
   });
 });

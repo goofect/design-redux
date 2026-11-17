@@ -7,7 +7,6 @@
 /* ------------------------------------------------------------------ */
 
 import { Feature } from '../core/feature.js';
-import { iconId } from '../core/icons.js';
 import { folderGlyph } from './faces.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
@@ -21,25 +20,17 @@ export class Library extends Feature {
   enable() {
     const ws = this.app.workspace;
     const marked = new Set();
-    const syncChrome = () => {
-      marked.forEach((doc) => doc.body.classList.remove('dr-browser-open'));
-      marked.clear();
-      const leaf = ws.activeLeaf;
-      const view = leaf && leaf.view;
-      if (!view || view.getViewType() !== BROWSE_VIEW || !view.contentEl) return;
-      const doc = view.contentEl.ownerDocument;
+    const mark = (doc) => {
       if (!doc || !doc.body) return;
       doc.body.classList.add('dr-browser-open');
       marked.add(doc);
     };
-    this.listen(ws, 'active-leaf-change', syncChrome);
-    this.listen(ws, 'layout-change', syncChrome);
+    if (typeof document !== 'undefined') mark(document);
+    if (typeof activeDocument !== 'undefined') mark(activeDocument);
+    this.listen(ws, 'window-open', (win) => mark(win && (win.doc || (win.win && win.win.document))));
     this.add(() => { marked.forEach((doc) => doc.body.classList.remove('dr-browser-open')); marked.clear(); });
-    syncChrome();
     const redraw = () => this.screens().forEach((s) => s.refresh());
     ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'design-redux:props', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
-    const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.browse(null));
-    this.add(() => ribbon && ribbon.remove && ribbon.remove());
     this.add(() => {
       if (this.plugin.unloading) return;
       ws.detachLeavesOfType(LIBRARY_VIEW);
@@ -50,6 +41,7 @@ export class Library extends Feature {
     this.plugin.faceOf = (folder) => folderGlyph(this.plugin, folder);
     this.add(() => { delete this.plugin.placeOf; delete this.plugin.faceOf; });
     ws.detachLeavesOfType(LIBRARY_VIEW);
+    ws.detachLeavesOfType('file-explorer');
   }
 
   screens() {
@@ -61,19 +53,6 @@ export class Library extends Feature {
     const view = this.app.workspace.activeLeaf && this.app.workspace.activeLeaf.view;
     if (view && view.screen) return view.screen;
     return this.screens()[0] || null;
-  }
-
-  /** Shows the library in the left sidebar; `quiet` makes it without bringing it forward. */
-  async openSidebar(quiet) {
-    const ws = this.app.workspace;
-    let leaf = ws.getLeavesOfType(LIBRARY_VIEW)[0];
-    if (!leaf) {
-      leaf = ws.getLeftLeaf(false);
-      if (!leaf) return null;
-      await leaf.setViewState({ type: LIBRARY_VIEW, active: !quiet });
-    }
-    if (!quiet) ws.revealLeaf(leaf);
-    return leaf;
   }
 
   /** Shows a folder (or the whole vault) in the browse view, in the page. */

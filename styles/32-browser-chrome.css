@@ -1,6 +1,7 @@
-/* Selector map: hide only the left ribbon and left dock while the library is active. */
+/* Selector map: remove the left ribbon and dock from the plugin's workspace. */
 body.dr-browser-open .workspace-ribbon.mod-left,
 body.dr-browser-open .side-dock-ribbon.mod-left,
+body.dr-browser-open .workspace-ribbon.mod-primary,
 body.dr-browser-open .workspace-split.mod-left-split {
   display: none;
 }
