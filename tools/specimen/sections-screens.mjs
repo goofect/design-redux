@@ -100,10 +100,10 @@ export async function screens() {
 
   // The default file browser, shown at sidebar and workspace widths.
   library.go(w.file('Logic'));
-  const fileSidebar = library.host.outerHTML;
   const browseLeaf = await feature('Library').browse(w.file('Logic'));
-  w.plugin.selection.pick(tt);
+  w.plugin.selection.pick(w.file('Logic/Arguments and their parts.md'));
   await settle();
+  const fileSidebar = library.host.outerHTML;
   const fileBrowse = browseLeaf.view.contentEl.outerHTML;
   const browse = browseLeaf.view.screen;
   browse.setFilter({ folder: 'Logic', prop: 'status=draft' }, 'Drafts in Logic');

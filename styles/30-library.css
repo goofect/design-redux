@@ -28,7 +28,7 @@
 .dr-file-search { display: flex; align-items: center; gap: var(--dr-u); margin: var(--dr-gutter); padding: 0 var(--dr-u); border: var(--dr-hair) solid var(--dr-ink); }
 .dr-file-search input.dr-file-search-input[type="search"] { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-muted); }
-.dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; }
+.dr .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; box-shadow: none; }
 .dr-file-list-heading, .dr-file-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) calc(20 * var(--dr-u));

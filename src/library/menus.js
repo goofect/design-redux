@@ -42,11 +42,12 @@ export async function moveEntry(plugin, target) {
 /** Asks, then sends to the bin. */
 export async function deleteEntry(plugin, target) {
   const isFolder = target instanceof TFolder;
+  const kind = isFolder ? 'folder' : target.extension === 'md' ? 'note' : 'file';
   const n = isFolder ? plugin.index.count(target) : 0;
   const yes = await confirm(plugin.app, {
     title: `Delete ${isFolder ? target.name : target.basename}`,
-    text: isFolder ? `The folder and its ${counted(n, 'note')} go to the bin.` : 'The note goes to the bin.',
-    action: isFolder ? 'Delete folder' : 'Delete note',
+    text: isFolder ? `The folder and its ${counted(n, 'note')} go to the bin.` : `The ${kind} goes to the bin.`,
+    action: `Delete ${kind}`,
     danger: true,
   });
   return yes ? plugin.files.trash(target) : false;
@@ -99,6 +100,7 @@ export function attachmentMenu(plugin, file) {
   entry(menu, 'Open in a new tab', 'pages', () => plugin.app.workspace.getLeaf('tab').openFile(file), 'open');
   entry(menu, 'Rename…', 'pencil', () => renameEntry(plugin, file));
   entry(menu, 'Move to…', 'move', () => moveEntry(plugin, file));
+  entry(menu, 'Delete file', 'trash', () => deleteEntry(plugin, file), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
   plugin.app.workspace.trigger('file-menu', menu, file, 'design-redux-library');
   return menu;
 }
