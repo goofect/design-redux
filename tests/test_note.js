@@ -2,7 +2,7 @@
  * The note: its head, pages in one note (the text, the editor's folds, the
  * tabs, the page remembered), the panel (properties edited in place with an
  * Undo, where a note is named and mentioned), footnotes kept in order,
- * superscript and subscript, lettered and roman lists, the image router.
+ * superscript and subscript, and lettered and roman lists.
  */
 const assert = require('assert');
 const { EditorState } = require('@codemirror/state');
@@ -68,64 +68,12 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const hidden = { classList: { toggle(c, on) { this[c] = on; } } };
     pages.onRendered(hidden, { sourcePath: 'Logic/Renamed.md', getSectionInfo: () => ({ text: w.text('Logic/Renamed.md'), lineStart: 5, lineEnd: 5 }) });
     assert.strictEqual(hidden.classList['dr-page-hidden'], true, 'reading view shows a block of another page');
+    const marker = dr.parsePages(w.text('Logic/Renamed.md')).find((p) => p.name === 'Sources').line;
+    pages.onRendered(hidden, { sourcePath: 'Logic/Renamed.md', getSectionInfo: () => ({ text: w.text('Logic/Renamed.md'), lineStart: marker, lineEnd: marker + 1 }) });
+    assert.strictEqual(hidden.classList['dr-page-hidden'], false, 'a section spanning the current marker and text must remain visible');
     const plain = await open(w, 'Logic/Plain.md');
     assert.ok(!plain.contentEl.querySelector('.dr-note-pages .dr-segment'), 'a note without pages has tabs');
     assert.strictEqual(w.text('Logic/Plain.md'), 'x', 'a note without pages was written to');
-  });
-
-  await check('the note\'s head: its folder as a label that opens it, its properties as chips; gone when the feature is off', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\ndomain: [logic, proof]\n---\n', 'Loose.md': '' });
-    w.plugin.settings.notePageChips = true;
-    const view = await open(w, 'Logic/A.md');
-    await w.plugin.saveSettings();
-    const head = view.contentEl.querySelector('.dr-note-head');
-    assert.strictEqual(view.contentEl.firstChild, head);
-    assert.strictEqual(head.querySelector('.dr-note-folder').textContent, 'Logic');
-    assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-chip')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
-    w.plugin.settings.notePage = false;
-    await w.plugin.saveSettings();
-    assert.ok(!view.contentEl.querySelector('.dr-note-head'), 'the head was left behind');
-    w.plugin.settings.notePage = true;
-    await w.plugin.saveSettings();
-    view.contentEl.querySelector('.dr-note-folder').click();
-    await settle();
-    assert.strictEqual(w.plugin.openFolder.path, 'Logic');
-  });
-
-  await check('the panel: a note\'s properties edited in place with an Undo; a value keeps its kind; named in, mentioned in, links to', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n[[B]]', 'Logic/B.md': '---\nparent: "[[A]]"\n---\n[[A]]', 'C.md': '[[A]]' });
-    await open(w, 'Logic/A.md');
-    const panel = feature(w, 'Panel');
-    const leaf = await panel.reveal();
-    const view = leaf.view;
-    const keys = () => Array.from(view.contentEl.querySelectorAll('.dr-prop')).map((p) => `${p.dataset.key}=${p.querySelector('.dr-prop-value').textContent}`);
-    assert.deepStrictEqual(keys(), ['status=draft', 'week=3', 'tags=a, b']);
-    const edit = async (key, value) => {
-      view.contentEl.querySelector(`.dr-prop[data-key="${key}"]`).click();
-      const input = view.contentEl.querySelector('.dr-prop input');
-      input.value = value;
-      input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      await settle();
-    };
-    await edit('week', '4');
-    await edit('tags', 'a, c , d');
-    assert.deepStrictEqual(w.plugin.notes.props(w.file('Logic/A.md')), { status: 'draft', week: 4, tags: ['a', 'c', 'd'] });
-    await w.plugin.lastUndo.run();
-    assert.deepStrictEqual(w.plugin.notes.get(w.file('Logic/A.md'), 'tags'), ['a', 'b']);
-    assert.deepStrictEqual([dr.parseValue('yes', true), dr.parseValue('x', 3), dr.parseValue('', ['a'])], [true, 'x', []]);
-    await settle();
-    const sections = Object.fromEntries(panel.sections(w.file('Logic/A.md')).map((s) => [s.title, s.items.map((i) => `${i.name}${i.end ? `:${i.end}` : ''}`)]));
-    assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B:Logic'] });
-    panel.addProperty(w.file('Logic/A.md'));
-    await answer(w, 'course');
-    assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
-    await panel.propertyMenu(w.file('Logic/A.md'), 'course').click('Remove property');
-    assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))));
-    w.plugin.selection.pick(w.file('Logic'));
-    await settle();
-    assert.strictEqual(view.contentEl.querySelector('.dr-detail-name').textContent, 'Logic', 'a folder picked is not shown in the panel');
-    await panel.toggle();
-    assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-properties').length, 0);
   });
 
   await check('footnotes, from the text: found outside fences, put in order by where they appear, named ones kept', () => {
@@ -199,15 +147,13 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(p.classList.contains('dr-marked-list') && p.classList.contains('is-roman'));
   });
 
-  await check('the image router: an image that arrives after a paste goes to the images folder; any other stays', async () => {
+  await check('pasted images are not routed by the plugin', async () => {
     const w = await world({ 'A.md': '' }, { settingsVersion: 100, routeImages: true });
-    await w.app.vault.create('before.png', 'x');
-    await settle();
-    assert.ok(w.file('before.png'), 'an image made with no paste was moved');
     w.app.workspace.trigger('editor-paste', {});
     await w.app.vault.create('Pasted image.png', 'x');
     await settle();
-    assert.ok(w.file('attachments/Pasted image.png') && !w.file('Pasted image.png'));
+    assert.ok(w.file('Pasted image.png'));
+    assert.ok(!w.file('attachments/Pasted image.png'));
   });
 
   check.done();

@@ -5,9 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const first = (...dirs) => dirs.map((d) => path.join(root, d)).find((d) => fs.existsSync(d));
-export const stylesDir = first('styles/00-tokens.css', 'next/styles/00-tokens.css').replace(/00-tokens\.css$/, '');
-export const builderFile = first('src/core/glyphs.js', 'next/src/core/glyphs.js');
+export const stylesDir = path.join(root, 'styles');
+export const builderFile = path.join(root, 'src', 'core', 'glyphs.js');
 const iconsDir = path.join(root, 'assets', 'icons');
 
 /** Every glyph of one set, by name: the paths inside its file. */

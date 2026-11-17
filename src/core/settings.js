@@ -40,7 +40,7 @@ export const DEFAULTS = {
   defaultSort: 'name',
   albumSorts: {}, // by folder path: the order chosen there
   albumSortMemory: true,
-  albumOrders: {}, // by folder path: { names: [...] }, the person's own order
+  albumOrders: {}, // retained from older versions so existing saved data is not discarded
   pinOrder: [],
   hideEmptyFolders: true,
   hideFolderNotes: true,

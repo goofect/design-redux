@@ -14,6 +14,16 @@ const check = suite('core');
 const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', 'lifecycle.json'), 'utf8'));
 
 (async () => {
+  await check('the file index includes attachments without changing note-only queries', async () => {
+    const w = await world({ 'Logic/Logic.md': '', 'Logic/Note.md': '', 'Logic/Diagram.pdf': 'pdf', 'Logic/.hidden': '', 'Empty/.keep': '' });
+    const folder = w.file('Logic');
+    assert.deepStrictEqual(w.plugin.index.files(folder).map((f) => f.name), ['Diagram.pdf', 'Logic.md', 'Note.md']);
+    assert.deepStrictEqual(w.plugin.index.notes(folder).map((f) => f.name), ['Note.md']);
+    assert.ok(w.plugin.index.subfolders(w.app.vault.getRoot()).some((f) => f.name === 'Empty'));
+    await w.app.vault.create('Logic/Second.pdf', 'pdf');
+    assert.deepStrictEqual(w.plugin.index.files(folder).map((f) => f.name), ['Diagram.pdf', 'Logic.md', 'Note.md', 'Second.pdf']);
+  });
+
   await check('every key the old plugin kept is kept, renamed, or retired with a reason', () => {
     const lost = lifecycle.settings.filter((k) => !(k in dr.DEFAULTS) && !(k in dr.RENAMED) && !(k in dr.RETIRED));
     assert.deepStrictEqual(lost, []);
@@ -62,9 +72,10 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
   await check('path-keyed settings follow a rename and a delete', async () => {
     const w = await world({ 'School/Logic/A.md': '', 'School/Logic/B.md': '', 'Other/C.md': '' });
     const s = w.plugin.settings;
-    Object.assign(s, { folderGlyphs: { School: 'tower', 'School/Logic': 'key' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
+    Object.assign(s, { folderGlyphs: { School: 'tower', 'School/Logic': 'key', Schoolyard: 'tree' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
     await w.app.vault.rename(w.file('School'), 'University');
     assert.deepStrictEqual([s.folderGlyphs.University, s.folderGlyphs['University/Logic'], s.folderGlyphs.School], ['tower', 'key', undefined]);
+    assert.strictEqual(s.folderGlyphs.Schoolyard, 'tree', 'a similarly named folder must not move');
     assert.deepStrictEqual(s.folderCovers, { 'University/Logic': 'University/Logic/cover.png' });
     assert.deepStrictEqual(s.pinOrder, ['University/Logic/A.md']);
     assert.deepStrictEqual(s.albums.Other.includes, ['University/Logic/B.md']);
@@ -73,6 +84,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.deepStrictEqual(s.albumOrders['University/Logic'].names, ['B.md', 'Alpha.md']);
     await w.app.vault.delete(w.file('University/Logic'));
     assert.deepStrictEqual([s.folderGlyphs.University, 'University/Logic' in s.folderGlyphs], ['tower', false]);
+    assert.strictEqual(s.folderGlyphs.Schoolyard, 'tree');
     assert.deepStrictEqual(s.folderCovers, {});
     assert.deepStrictEqual(s.pinOrder, []);
     assert.deepStrictEqual(s.albums.Other.includes, []);

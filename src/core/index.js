@@ -31,22 +31,26 @@ export class LibraryIndex {
     if (this.tree) return this.tree;
     const files = this.plugin.files;
     const hide = !!this.plugin.settings.hideFolderNotes;
-    const tree = { folders: [], notes: new Map(), subfolders: new Map(), totals: new Map() };
+    const tree = { folders: [], notes: new Map(), files: new Map(), subfolders: new Map(), totals: new Map() };
     const visit = (folder) => {
       if (folder.path !== '/') tree.folders.push(folder);
       const notes = [];
+      const entries = [];
       const subs = [];
       folder.children.forEach((child) => {
         if (child instanceof TFolder) {
           if (!child.name.startsWith('.')) subs.push(child);
-        } else if (child instanceof TFile && child.extension === 'md') {
-          if (!(hide && files.isFolderNote(child))) notes.push(child);
+        } else if (child instanceof TFile) {
+          if (!child.name.startsWith('.')) entries.push(child);
+          if (child.extension === 'md' && !(hide && files.isFolderNote(child))) notes.push(child);
         }
       });
       notes.sort((a, b) => byName(a.basename, b.basename));
+      entries.sort((a, b) => byName(a.name, b.name));
       subs.sort((a, b) => byName(a.name, b.name));
       const total = notes.length + subs.reduce((n, sub) => n + visit(sub), 0);
       tree.notes.set(folder.path, notes);
+      tree.files.set(folder.path, entries);
       tree.subfolders.set(folder.path, subs);
       tree.totals.set(folder.path, total);
       return total;
@@ -64,6 +68,11 @@ export class LibraryIndex {
   /** A folder's own notes, by name; its own note left out when those are hidden. */
   notes(folder) {
     return this.build().notes.get(folder ? folder.path : '/') || [];
+  }
+
+  /** All visible files directly in a folder, including non-Markdown files. */
+  files(folder) {
+    return this.build().files.get(folder ? folder.path : '/') || [];
   }
 
   /** A folder's folders, by name. */

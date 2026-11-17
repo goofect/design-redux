@@ -25,7 +25,7 @@ const entry = (menu, title, glyphName, run, section = 'action', more) =>
 export async function renameEntry(plugin, target) {
   const isFolder = target instanceof TFolder;
   const name = await ask(plugin.app, {
-    title: `Rename ${isFolder ? 'folder' : 'note'}`,
+    title: `Rename ${isFolder ? 'folder' : target.extension === 'md' ? 'note' : 'file'}`,
     value: isFolder ? target.name : target.basename,
     action: 'Rename',
     check: (v) => (/[\\/:]/.test(v) ? 'A name can’t hold a slash or a colon.' : null),
@@ -42,11 +42,12 @@ export async function moveEntry(plugin, target) {
 /** Asks, then sends to the bin. */
 export async function deleteEntry(plugin, target) {
   const isFolder = target instanceof TFolder;
+  const kind = isFolder ? 'folder' : target.extension === 'md' ? 'note' : 'file';
   const n = isFolder ? plugin.index.count(target) : 0;
   const yes = await confirm(plugin.app, {
     title: `Delete ${isFolder ? target.name : target.basename}`,
-    text: isFolder ? `The folder and its ${counted(n, 'note')} go to the bin.` : 'The note goes to the bin.',
-    action: isFolder ? 'Delete folder' : 'Delete note',
+    text: isFolder ? `The folder and its ${counted(n, 'note')} go to the bin.` : `The ${kind} goes to the bin.`,
+    action: `Delete ${kind}`,
     danger: true,
   });
   return yes ? plugin.files.trash(target) : false;

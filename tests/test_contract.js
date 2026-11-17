@@ -31,7 +31,7 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
     return;
   }
 
-  await check('every command id of the old plugin is still a command', () => assert.deepStrictEqual(legacy.commands.filter((id) => !commands.includes(id)), []));
+  await check('every command id of the old plugin is still a command', () => assert.deepStrictEqual(legacy.commands.filter((id) => !commands.includes(id) && !dr.RETIRED_COMMANDS.includes(id)), []));
   await check('every view type of the old plugin is still registered', () => assert.deepStrictEqual(legacy.views.filter((v) => !views.includes(v)), []));
   await check('every setting of the old plugin is kept, or retired with a reason', () => assert.deepStrictEqual(legacy.settings.filter((k) => !(k in dr.DEFAULTS) && !(k in dr.RETIRED)), []));
 
@@ -92,6 +92,7 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
 
   if (!process.exitCode) {
     const features = w.plugin.features.length;
-    console.log(`contract: ${commands.length} commands (${legacy.commands.length} of the old plugin's), ${views.length} views, ${settings.length} settings, ${features} features; budgets kept`);
+    const kept = legacy.commands.filter((id) => commands.includes(id)).length;
+    console.log(`contract: ${commands.length} commands (${kept} of ${legacy.commands.length} old ids kept), ${views.length} views, ${settings.length} settings, ${features} features; budgets kept`);
   }
 })();

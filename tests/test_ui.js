@@ -46,30 +46,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'wait']);
   });
 
-  await check('zoom control: three glyph radios, one checked; a click and the arrows choose; a disabled level is passed over', () => {
-    const seen = [];
-    const options = [{ id: 'objects', glyph: 'zoom-objects', label: 'Objects' }, { id: 'shelves', glyph: 'zoom-shelves', label: 'Shelves', disabled: true }, { id: 'words', glyph: 'zoom-words', label: 'Words' }];
-    const z = dr.segments(fresh(), { label: 'Level of detail', options, value: 'objects', onChange: (id) => seen.push(id) });
-    const items = Array.from(z.children);
-    assert.deepStrictEqual([z.getAttribute('role'), z.getAttribute('aria-label')], ['radiogroup', 'Level of detail']);
-    assert.deepStrictEqual(items.map((i) => [i.getAttribute('role'), i.getAttribute('aria-checked'), i.getAttribute('tabindex'), i.getAttribute('aria-label')]), [['radio', 'true', '0', 'Objects'], ['radio', 'false', '-1', 'Shelves'], ['radio', 'false', '-1', 'Words']]);
-    items[1].click();
-    assert.deepStrictEqual(seen, [], 'a disabled level was chosen');
-    key(items[0], 'ArrowRight');
-    assert.deepStrictEqual(seen, ['words']);
-    assert.strictEqual(items[2].getAttribute('aria-checked'), 'true');
-    items[0].click(); items[0].click();
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'choosing the level shown told again');
-    z.drSet('words');
-    assert.deepStrictEqual(seen, ['words', 'objects'], 'drSet told');
-  });
-
-  await check('tabs: word segments, the open one selected', () => {
-    const t = dr.segments(fresh(), { tabs: true, options: [{ id: 'a', text: 'Notes' }, { id: 'b', text: 'Proofs' }], value: 'b' });
-    assert.deepStrictEqual([t.className, t.getAttribute('role')], ['dr-segments dr-tabs', 'tablist']);
-    assert.deepStrictEqual(Array.from(t.children).map((i) => [i.getAttribute('role'), i.getAttribute('aria-selected'), i.textContent]), [['tab', 'false', 'Notes'], ['tab', 'true', 'Proofs']]);
-  });
-
   await check('object cell: no words drawn at rest but always named; picked, open, disabled, wrong; a click picks, a second opens', () => {
     const log = [];
     const g = dr.grid(fresh(), { labelled: true });
@@ -116,17 +92,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([dr.outlineFolder(root, { name: 'Logic', open: true }).getAttribute('aria-expanded'), glyphOf(root.lastChild)], ['true', 'down']);
   });
 
-  await check('shelf: a bar a note, as tall as it is long; the open note and the picked one marked; one listener', () => {
-    const got = [];
-    const s = dr.shelf(fresh(), { name: 'Logic', count: 3, onHead: () => got.push('head'), onNote: (p) => got.push(p), notes: [{ size: 1, label: 'A, 200 words', path: 'a' }, { size: 4, label: 'B', path: 'b', current: true }, { size: 2, label: 'C', path: 'c', selected: true }] });
-    const bars = Array.from(s.querySelectorAll('.dr-bar'));
-    assert.deepStrictEqual(bars.map((b) => [b.style.getPropertyValue('--dr-size'), b.getAttribute('aria-label'), b.getAttribute('aria-current'), b.getAttribute('aria-selected'), b.getAttribute('tabindex')]), [['1', 'A, 200 words', null, null, '-1'], ['4', 'B', 'page', null, '0'], ['2', 'C', null, 'true', '-1']]);
-    bars[2].click(); key(bars[0], 'Enter'); s.querySelector('.dr-shelf-head').click();
-    assert.deepStrictEqual(got, ['c', 'a', 'head']);
-    assert.strictEqual(dr.shelf(root, { name: 'Open', count: 0, current: true, notes: [] }).querySelector('.dr-shelf-head').getAttribute('aria-current'), 'true');
-    assert.strictEqual(root.lastChild.querySelector('.dr-shelf-bars').childNodes.length, 0, 'an empty shelf must be empty for its bare line to show');
-  });
-
   await check('panel row and section: a dash for no value, the reason when wrong, selected, disabled', () => {
     const p = dr.propRow(fresh(), { name: 'Status', value: 'Draft' });
     assert.deepStrictEqual([p.className, p.querySelector('.dr-label').textContent, p.querySelector('.dr-prop-value').textContent], ['dr-prop', 'Status', 'Draft']);
@@ -138,26 +103,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.strictEqual(dr.propRow(root, { name: 'a', value: 'b', disabled: true }).getAttribute('aria-disabled'), 'true');
     const sec = dr.sectionTitle(root, { title: 'Properties', buttons: [{ glyph: 'plus', label: 'Add a property' }] });
     assert.ok(sec.className === 'dr-section' && sec.querySelector('.dr-icon-button[aria-label="Add a property"]'));
-  });
-
-  await check('table: one header, the sorted column says which way, rows carry their state, an empty one says so', () => {
-    const sorts = [];
-    const picked = [];
-    const cols = [{ id: 'name', name: 'Name' }, { id: 'words', name: 'Words', number: true, width: 72 }];
-    const t = dr.table(fresh(), { flush: true, columns: cols, sort: { id: 'name', down: false }, onSort: (id) => sorts.push(id), onRow: (r) => picked.push(r.path), rows: [{ number: 1, path: 'a', cells: { name: 'A', words: 420 } }, { number: 2, path: 'b', cells: { name: 'B', words: 'many' }, current: true, invalid: ['words'] }, { number: 3, path: 'c', cells: { name: 'C' }, selected: true }, { number: 4, path: 'd', cells: { name: 'D' }, disabled: true }] });
-    assert.strictEqual(t.className, 'dr-table is-flush');
-    const heads = Array.from(t.querySelectorAll('th'));
-    assert.deepStrictEqual(heads.map((h) => h.getAttribute('aria-sort')), [null, 'ascending', null]);
-    assert.strictEqual(glyphOf(heads[1]), 'up');
-    heads[2].click();
-    const trs = Array.from(t.querySelectorAll('tbody tr'));
-    trs[0].click(); trs[3].click();
-    assert.deepStrictEqual([sorts, picked], [['words'], ['a']]);
-    assert.deepStrictEqual(trs.map((r) => [r.getAttribute('aria-current'), r.getAttribute('aria-selected'), r.getAttribute('aria-disabled')]), [[null, null, null], ['page', null, null], [null, 'true', null], [null, null, 'true']]);
-    assert.strictEqual(trs[1].children[2].getAttribute('aria-invalid'), 'true');
-    assert.strictEqual(trs[0].children[0].textContent, '01');
-    const empty = dr.table(root, { columns: cols, rows: [], empty: { label: 'No notes' } });
-    assert.ok(empty.querySelector('td[colspan="3"] .dr-state .dr-label').textContent === 'No notes');
   });
 
   await check('field: empty, filled, wrong with its reason, loading, disabled; it tells what is typed', () => {

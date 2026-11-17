@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const tokensFile = ['styles', 'next/styles'].map((d) => path.join(root, d, '00-tokens.css')).find((f) => fs.existsSync(f));
+const tokensFile = path.join(root, 'styles', '00-tokens.css');
 const TONES = ['rust', 'ochre', 'moss', 'slate', 'plum'];
 
 /** The --dr- tokens one scheme's block declares, by name. */
@@ -74,8 +74,8 @@ function measureScheme(scheme, t) {
   const [r, g, b] = rgb(t.clay).map((c) => c / 255);
   const [max, min] = [Math.max(r, g, b), Math.min(r, g, b)];
   const l = (max + min) / 2;
-  const s = (max - min) / (1 - Math.abs(2 * l - 1));
-  const h = 60 * (max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4);
+  const s = max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
+  const h = max === min ? 0 : 60 * (max === r ? ((g - b) / (max - min) + 6) % 6 : max === g ? (b - r) / (max - min) + 2 : (r - g) / (max - min) + 4);
   const hsl = `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
   if (`${t['clay-h']} ${t['clay-s']} ${t['clay-l']}` !== hsl) failures.push(`${scheme}: clay's hue, saturation and lightness should read ${hsl}`);
   const pad = scheme.padEnd(5);

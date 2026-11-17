@@ -173,15 +173,6 @@ export class PropertyTools extends Feature {
     return n;
   }
 
-  async findMissing(key) {
-    const k = key || (await this.chooseKey('Notes missing which property?'));
-    if (!k) return null;
-    const views = this.plugin.features.find((f) => typeof f.screen === 'function' && typeof f.list === 'function');
-    const screen = views ? await views.screen() : null;
-    if (screen) screen.setFilter({ prop: `!${k}` }, `Missing ${k}`);
-    return this.notes().filter((f) => propOf(noteProps(this.app, f), k) === undefined);
-  }
-
   /** Asks for "key: value" lines. Resolves { key: value }, or null. */
   askProps(title, text, start) {
     return new Promise((resolve) => {
@@ -237,7 +228,6 @@ export class PropertyTools extends Feature {
       { id: 'rename-value-everywhere', name: 'Rename a property value everywhere…', glyph: 'replace', run: () => this.renameValue() },
       { id: 'clean-up-property-values', name: 'Clean up a property’s values…', glyph: 'spark', run: () => this.cleanValues() },
       { id: 'change-property-type', name: 'Change a property’s type…', glyph: 'shapes', run: () => this.changeType() },
-      { id: 'find-missing-properties', name: 'Find notes missing a property…', glyph: 'search', run: () => this.findMissing() },
       { id: 'add-properties-to-folders', name: 'Add properties to folders…', glyph: 'list-add', run: () => this.addToFolder() },
       { id: 'remove-properties-from-folders', name: 'Remove properties from folders…', glyph: 'list-remove', run: () => this.removeFromFolder() },
       { id: 'folder-default-properties', name: 'Default properties for this folder…', glyph: 'folder-settings', on: 'folder', menu: 'Default properties…', run: (ctx) => this.folderDefaults(ctx.folder) },

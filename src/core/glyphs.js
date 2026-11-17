@@ -121,24 +121,3 @@ export function glyphsAmong(paths, chosen = {}) {
     });
   return out;
 }
-
-/** The choices after a folder is renamed or moved: its own and those of everything under it go with it. */
-export function glyphsRenamed(chosen, from, to) {
-  const out = {};
-  const moved = {};
-  Object.keys(chosen).forEach((path) => {
-    if (path === from) moved[to] = chosen[path];
-    else if (path.startsWith(`${from}/`)) moved[to + path.slice(from.length)] = chosen[path];
-    else out[path] = chosen[path];
-  });
-  return Object.assign(out, moved);
-}
-
-/** The choices after a folder is deleted: its own and those of everything under it are dropped. */
-export function glyphsRemoved(chosen, gone) {
-  const out = {};
-  Object.keys(chosen).forEach((path) => {
-    if (path !== gone && !path.startsWith(`${gone}/`)) out[path] = chosen[path];
-  });
-  return out;
-}

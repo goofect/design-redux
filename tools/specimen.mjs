@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { root, builderFile, stylesheet, withHeldStates } from './specimen/kit.mjs';
 import { palette, glyphs, commandList } from './specimen/sections-system.mjs';
-import { controls, lists, blocks, library, browse } from './specimen/sections-parts.mjs';
+import { controls, lists, blocks } from './specimen/sections-parts.mjs';
 import { screens } from './specimen/sections-screens.mjs';
 import { folders, subfolders } from './specimen/data.mjs';
 
@@ -136,7 +136,7 @@ const SCRIPT = `
 })();
 `;
 
-const sections = [palette(), glyphs(GLYPH_FAMILIES), commandList(), controls(), lists(faces), blocks(faces), library(faces, facesIn), browse(faces), await screens()].join('\n');
+const sections = [palette(), glyphs(GLYPH_FAMILIES), commandList(), controls(), lists(faces), blocks(faces), await screens()].join('\n');
 
 const html = `<!doctype html>
 <html lang="en">

@@ -1,5 +1,9 @@
 # The design language
 
+> The former library layouts, note header, page controls and strip described
+> below have been retired. See [FILE-BROWSER-REDESIGN.md](FILE-BROWSER-REDESIGN.md)
+> for the current screens.
+
 How Design Redux looks, as a system: the unit, the two voices, the palette as
 measured, every component in every state, the icon grammar and the glyph
 builder. `docs/DESIGN.md` says what the look is; this file says how it is
@@ -580,9 +584,9 @@ drawn with `setIcon`; `.dr-glyph` sizes and paints it.
   glyph none of its siblings has. So the library stores what the builder gave
   the first time it showed a folder (by path, in `data.json`), and from then
   on a folder's face changes only when the person picks another.
-- **Through a rename.** `glyphsRenamed(chosen, from, to)` carries a folder's
-  choice, and those of everything under it, to the new path;
-  `glyphsRemoved` drops them.
+- **Through a rename.** The settings path tracking in `src/core/settings.js`
+  carries a folder's choice and those below it to the new path, and removes
+  them when the folder is deleted.
 - **The set can grow.** Scores are per glyph, so a glyph added later takes
   only the folders that score it highest; no other unpicked folder moves.
 

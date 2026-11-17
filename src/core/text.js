@@ -1,18 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* Text: counting, ordering and naming                                 */
+/* Text: ordering, naming and displaying counts                        */
 /* ------------------------------------------------------------------ */
-
-/** A note's body without its frontmatter. */
-export function bodyOf(text) {
-  const fm = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(text || '');
-  return fm ? text.slice(fm[0].length) : text || '';
-}
-
-/** How many words a note's text holds. */
-export function countWords(text) {
-  const words = bodyOf(text).match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu);
-  return words ? words.length : 0;
-}
 
 /** Minutes to read so many words, at 250 a minute; never less than one. */
 export const readingMinutes = (words) => Math.max(1, Math.round(words / 250));

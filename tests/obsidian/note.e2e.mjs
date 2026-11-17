@@ -3,7 +3,7 @@ import { browser, expect } from '@wdio/globals';
 import { readUntil, shot, suite } from './helpers.mjs';
 
 suite('Design Redux in Obsidian: notes and graphs', function () {
-  it('hides the other pages in reading view', async function () {
+  it('switches pages in reading view without changing the file', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const file = app.vault.getAbstractFileByPath('Politics/Pages.md');
       const leaf = app.workspace.getLeaf(false);
@@ -11,10 +11,16 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     });
     const text = await readUntil(
       () => browser.execute(() => (document.querySelector('.workspace-leaf.mod-active .markdown-preview-view') || {}).innerText || ''),
-      (t) => t.includes('First page text')
+      (t) => t.includes('First page text') && !t.includes('Second page text')
     );
     expect(text).toContain('First page text');
     expect(text).not.toContain('Second page text');
+    await browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .dr-note-pages [role="tab"]')).find((tab) => tab.textContent === 'Sources').click());
+    const second = await readUntil(
+      () => browser.execute(() => (document.querySelector('.workspace-leaf.mod-active .markdown-preview-view') || {}).innerText || ''),
+      (t) => t.includes('Second page text') && !t.includes('First page text')
+    );
+    expect(second).toContain('Second page text');
     await shot('pages-reading');
   });
 
@@ -52,14 +58,5 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(kinds).toEqual([true, false]);
   });
 
-  it('opens the map of the vault', async function () {
-    await browser.executeObsidian(({ app }) => { app.commands.executeCommandById('design-redux:open-map'); });
-    const n = await readUntil(
-      () => browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-mindmap').length),
-      (v) => v > 0
-    );
-    expect(n).toBeGreaterThan(0);
-    await browser.pause(1000);
-    await shot('map');
-  });
+
 });

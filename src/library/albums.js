@@ -157,7 +157,6 @@ export class Albums extends Feature {
     return [
       { key: 'albumRollups', name: 'Progress of every folder', desc: 'How many of a folder’s notes are done; a project shows it always.', type: 'toggle' },
       { key: 'rollupDateKey', name: 'With the dates of', desc: 'A property holding dates; its first and last are shown beside the progress.', type: 'text' },
-      { key: 'albumStillToWrite', name: 'Notes still to write', desc: 'At a folder’s end, as words: what its notes link to that isn’t written yet.', type: 'toggle' },
       { key: 'coverFromFolder', name: 'A note takes its folder’s cover', desc: 'Where it has none of its own.', type: 'toggle' },
     ].concat(Object.keys(ALBUM_KEY_DEFAULTS).map((field) => ({
       name: `Folder note property: ${field}`,

@@ -12,8 +12,8 @@ suite('Design Redux in Obsidian: the app', function () {
         legacy: p ? p.legacyKept : null,
       };
     });
-    expect(got.features).toBe(28);
-    expect(got.commands).toBeGreaterThanOrEqual(74);
+    expect(got.features).toBe(22);
+    expect(got.commands).toBeGreaterThanOrEqual(60);
   });
 
   it('puts the look on the main window, and takes it off on unload', async function () {
@@ -66,5 +66,14 @@ suite('Design Redux in Obsidian: the app', function () {
       (t) => t === 'design-redux-browse'
     );
     expect(type).toBe('design-redux-browse');
+    const browserState = await browser.execute(() => ({
+      notes: document.querySelectorAll('.dr-library.is-wide .dr-file-row').length,
+      details: !!document.querySelector('.dr-file-details-title'),
+      search: !!document.querySelector('.dr-file-search'),
+    }));
+    expect(browserState.notes).toBeGreaterThan(0);
+    expect(browserState.details).toBe(false);
+    expect(browserState.search).toBe(false);
+    await shot('files-browser');
   });
 });
