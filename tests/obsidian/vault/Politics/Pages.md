@@ -1,6 +1,7 @@
 ---
 album: Politics
 ---
+%%page: First%%
 First page text.
 
 %%page: Sources%%

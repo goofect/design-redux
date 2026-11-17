@@ -1,5 +1,6 @@
 {
   "add-footnote": "footnote",
+  "add-page": "plus",
   "add-properties-to-folders": "list-add",
   "album-delete": "trash",
   "album-include-note": "folder-into",
@@ -29,6 +30,7 @@
   "new-folder-here": "folder-new",
   "new-note-here": "note-new",
   "next-in-album": "next-note",
+  "next-page": "next",
   "open-actions": "more",
   "open-graph-3d": "cube",
   "open-graph-3d-local": "target",
@@ -36,6 +38,7 @@
   "paste-properties": "paste",
   "paste-properties-table": "table-in",
   "previous-in-album": "previous-note",
+  "previous-page": "previous",
   "property-rules": "rules",
   "property-set-apply": "stamp",
   "property-set-remove": "set-remove",

@@ -1,6 +1,7 @@
 {
   "commands": [
     "add-footnote",
+    "add-page",
     "add-properties-to-folders",
     "album-delete",
     "album-include-note",
@@ -30,6 +31,7 @@
     "new-folder-here",
     "new-note-here",
     "next-in-album",
+    "next-page",
     "open-actions",
     "open-graph-3d",
     "open-graph-3d-local",
@@ -37,6 +39,7 @@
     "paste-properties",
     "paste-properties-table",
     "previous-in-album",
+    "previous-page",
     "property-rules",
     "property-set-apply",
     "property-set-remove",

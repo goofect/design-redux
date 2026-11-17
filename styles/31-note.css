@@ -1,0 +1,16 @@
+.dr-note-head {
+  width: 100%;
+  max-width: var(--file-line-width);
+  margin: 0 auto;
+  padding: var(--dr-u) var(--file-margins, var(--dr-gutter));
+  border-bottom: 1px solid var(--dr-browser-rule);
+}
+
+.dr-note-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-u);
+}
+
+.dr-page-hidden { display: none; }

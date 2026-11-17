@@ -11,7 +11,7 @@ import { DEFAULTS, SETTINGS_VERSION } from './settings.js';
 
 /** Removed commands whose former interfaces no longer exist. */
 export const RETIRED_COMMANDS = [
-  'add-page', 'next-page', 'previous-page', 'open-properties', 'open-inspector',
+  'open-properties', 'open-inspector',
   'panel-folder-properties', 'library-check', 'smart-album-open', 'smart-album-save',
   'find-missing-properties',
 ];
@@ -80,7 +80,7 @@ export function migrateSettings(saved) {
   // The removed custom sort falls back to name; keep its saved order data intact.
   // albumNestBy, hideEmptyFolders, and albumStillToWrite remain in saved data for older vaults.
   // Preserve the removed screen settings and saved views without activating them:
-  // notePage, notePageChips, notePages, pagesOpen, propertiesDropdown, inspector,
+  // notePage, notePageChips, propertiesDropdown, inspector,
   // panelPrimaryProps, panelPropertyGroups, panelGroupList, panelFoldedGroups,
   // panelFolderViews, showMentions, propertyLinks, contextStrip, stripPlace,
   // stripDetail, smartAlbums, smartAlbumList, libraryCheck, libraryInbox,

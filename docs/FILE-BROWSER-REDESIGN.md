@@ -5,12 +5,13 @@
 - **Library:** list the vault's folders. Expand a folder to reach nested folders.
 - **Folder:** list that folder's Markdown notes. The vault root is also a folder,
   so notes outside a named folder remain accessible.
-- **Note:** show the complete note in Obsidian's own editor or reading view.
+- **Note:** show its text in Obsidian's own editor or reading view. Paged notes
+  show one page at a time with a compact page selector.
 
 The library does not show files, search, metadata, counts or a details panel.
 The folder screen does not show attachments, subfolders, file types, covers or
-alternate layouts. The plugin adds no note header, property chips, page tabs or
-bottom strip. The 3D graph remains a separate view.
+alternate layouts. Paged notes have page tabs; the plugin adds no folder header,
+property chips or bottom strip. The 3D graph remains a separate view.
 
 ## Interaction and appearance
 
@@ -26,8 +27,8 @@ Obsidian chrome, native file access and the editor remain Obsidian's own.
 
 ## Compatibility
 
-Existing notes are never rewritten. Notes created with old page markers now show
-all their text; their markers remain in the file. Stored settings and saved
+Existing notes are not rewritten by migration. Notes created with old page markers
+use those markers and their remembered page selections. Stored settings and saved
 views remain in plugin data but no longer create removed screens. The retired
 map, outline and properties-panel view identifiers close old saved tabs safely.
 Commands for removed screens have been retired; the 3D graph and its commands
