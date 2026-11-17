@@ -7,10 +7,11 @@
 /* ------------------------------------------------------------------ */
 
 import { ItemView, TFolder } from 'obsidian';
-import { el } from '../core/dom.js';
+import { el, glyph } from '../core/dom.js';
 import { iconId } from '../core/icons.js';
 import { drawDetail } from './detail.js';
 import { enableDrop } from './drop.js';
+import { browserType } from './file-list.js';
 import { drawTable } from './level-table.js';
 import { folderMenu, showMenu } from './menus.js';
 import { LibraryScreen } from './screen.js';
@@ -81,6 +82,17 @@ export class BrowseView extends ScreenView {
     const aside = this.aside;
     while (aside.firstChild) aside.removeChild(aside.firstChild);
     const picked = this.plugin.selection.item;
+    if (this.screen.level === 'files') {
+      aside.hidden = false;
+      el(aside, 'h2', 'dr-file-details-title', 'Details');
+      if (picked) {
+        const name = el(aside, 'div', 'dr-file-details-name');
+        glyph(name, picked instanceof TFolder ? 'folder' : 'note');
+        el(name, 'span', 'dr-clip', picked.name);
+        el(aside, 'div', 'dr-file-details-type', `File type: ${browserType(picked)}`);
+      }
+      return;
+    }
     aside.hidden = !(picked instanceof TFolder);
     if (aside.hidden) return;
     drawDetail(this.plugin, aside, picked, { open: (f) => this.screen.go(f), note: (file, e) => this.screen.openNote(file, e) });

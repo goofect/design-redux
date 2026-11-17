@@ -25,6 +25,32 @@ const sidebar = (w) => w.app.workspace.getLeavesOfType('design-redux-library')[0
 const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n.dataset.path);
 
 (async () => {
+  await check('the file browser preview lists folders and non-Markdown files and opens files', async () => {
+    const w = await world(Object.assign({}, VAULT, { 'Logic/Diagram.pdf': 'pdf' }));
+    const screen = sidebar(w);
+    screen.go(w.file('Logic'));
+    await screen.setLevel('files');
+    assert.deepStrictEqual(paths(screen.host, '.dr-file-row'), ['Logic/Sets', 'Logic/Diagram.pdf', 'Logic/Logic.md', 'Logic/Truth tables.md', 'Logic/Validity.md', 'Logic/Week 2.md', 'Logic/Week 10.md']);
+    const search = screen.host.querySelector('input[aria-label="Search files"]');
+    search.value = 'diagram';
+    search.dispatchEvent(new window.Event('input', { bubbles: true }));
+    assert.deepStrictEqual(paths(screen.host, '.dr-file-row'), ['Logic/Diagram.pdf']);
+    search.value = '';
+    search.dispatchEvent(new window.Event('input', { bubbles: true }));
+    const pdf = screen.host.querySelector('[data-path="Logic/Diagram.pdf"]');
+    assert.strictEqual(dr.browserType(w.file('Logic/Diagram.pdf')), 'PDF');
+    pdf.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    assert.deepStrictEqual(obsidian.Menu.shown.titles().slice(0, 4), ['Open', 'Open in a new tab', 'Rename…', 'Move to…']);
+    pdf.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle();
+    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Diagram.pdf');
+    const leaf = await w.plugin.features.find((f) => f.constructor.name === 'Library').browse(w.file('Logic'));
+    await leaf.view.screen.setLevel('files');
+    w.plugin.selection.pick(w.file('Logic/Diagram.pdf'));
+    await settle();
+    assert.ok(leaf.view.aside.textContent.includes('Diagram.pdf') && leaf.view.aside.textContent.includes('PDF'));
+  });
+
   await check('the sidebar opens with the plugin; objects: folders as glyphs, no folder twice, empty ones left out, loose notes after', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
@@ -34,7 +60,7 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     assert.strictEqual(new Set(glyphs.slice(0, 3)).size, 3, 'two folders share a glyph');
     assert.strictEqual(glyphs[3], 'note');
     assert.strictEqual(s.host.querySelector('[data-path="Logic"]').getAttribute('aria-label'), 'Logic, 5 notes');
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-head .dr-segment')).map((x) => x.getAttribute('aria-checked')), ['true', 'false', 'false']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-head .dr-segment')).map((x) => x.getAttribute('aria-checked')), ['true', 'false', 'false', 'false']);
     await settle();
     assert.deepStrictEqual(Object.keys(w.plugin._data.folderGlyphs).sort(), ['Inbox', 'Logic', 'Reading'], 'the glyphs given were not stored');
   });

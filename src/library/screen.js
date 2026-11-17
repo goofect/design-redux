@@ -17,7 +17,8 @@ import { segments } from '../ui/segments.js';
 import { drawObjects } from './level-objects.js';
 import { drawShelves } from './level-shelves.js';
 import { drawWords } from './level-words.js';
-import { folderMenu, noteMenu, showMenu } from './menus.js';
+import { drawFileList } from './file-list.js';
+import { attachmentMenu, folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
 
@@ -25,6 +26,7 @@ export const LEVELS = [
   { id: 'objects', glyph: 'zoom-objects', label: 'Objects' },
   { id: 'shelves', glyph: 'zoom-shelves', label: 'Shelves' },
   { id: 'words', glyph: 'zoom-words', label: 'Words' },
+  { id: 'files', glyph: 'folder', label: 'Files (preview)' },
 ];
 
 export class LibraryScreen {
@@ -39,6 +41,7 @@ export class LibraryScreen {
     this.expanded = new Map(); // in words: the folders opened or closed by hand, by path
     this.scrolls = new Map();
     this.query = null;
+    this.fileQuery = '';
     this.filter = null;
     this.filterName = null;
     this.pending = false;
@@ -81,6 +84,7 @@ export class LibraryScreen {
     }
     this.at = path;
     this.query = null;
+    this.fileQuery = '';
     if (this.opts.onGo) this.opts.onGo(this.folder());
     this.draw();
   }
@@ -167,9 +171,32 @@ export class LibraryScreen {
       buttons: [{ glyph: 'search', label: 'Search', pressed: this.query !== null, run: () => this.search(this.query === null ? '' : null) }].concat(this.opts.buttons ? this.opts.buttons(this) : []),
     });
     segments(head, { label: 'Level of detail', options: LEVELS, value: this.level, onChange: (id) => this.setLevel(id) });
+    if (this.level === 'files' && !this.opts.wide && this.query === null && !this.filter) {
+      const search = el(host, 'input', 'dr-file-search');
+      search.type = 'search';
+      search.value = this.fileQuery;
+      search.placeholder = 'Search files...';
+      search.setAttribute('aria-label', 'Search files');
+      search.addEventListener('input', () => { this.fileQuery = search.value; drawFileList(this, this.body, this.folder(), this.fileQuery); });
+    }
+    if (this.level === 'files' && this.query === null && !this.filter) {
+      const breadcrumb = el(host, 'div', 'dr-file-breadcrumb');
+      const parts = [];
+      for (let f = folder; f && f.path !== '/'; f = f.parent) parts.unshift(f);
+      const root = el(breadcrumb, 'button', '', 'Vault');
+      root.type = 'button';
+      root.addEventListener('click', () => this.go(null));
+      parts.forEach((part) => {
+        el(breadcrumb, 'span', '', ' / ');
+        const button = el(breadcrumb, 'button', '', part.name);
+        button.type = 'button';
+        button.addEventListener('click', () => this.go(part));
+      });
+    }
     this.body = el(host, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
     else if (this.filter) drawFiltered(this, this.body);
+    else if (this.level === 'files') drawFileList(this, this.body, folder, this.opts.wide ? '' : this.fileQuery);
     else if (this.level === 'shelves') drawShelves(this, this.body, folder);
     else if (this.level === 'words') (this.opts.words || drawWords)(this, this.body, folder);
     else drawObjects(this, this.body, folder);
@@ -204,6 +231,7 @@ export class LibraryScreen {
     if (!entry) return;
     event.preventDefault();
     this.pick(entry);
-    showMenu(entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : noteMenu(this.plugin, entry, this), event);
+    const menu = entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : entry.extension === 'md' ? noteMenu(this.plugin, entry, this) : attachmentMenu(this.plugin, entry);
+    showMenu(menu, event);
   }
 }

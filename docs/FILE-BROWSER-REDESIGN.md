@@ -5,7 +5,9 @@
 Replace the separate objects, shelves, words and table presentations with one
 coherent file browser for an Obsidian vault. Keep the 3D graph as a separate
 view. This is the target design; the existing browser still implements the
-older layouts until the replacement is built and tested.
+older layouts until the replacement is built and tested. A transitional
+`Files (preview)` level now exercises the new file list in both views; it is
+not the finished or default interface.
 
 ## What the browser shows
 
