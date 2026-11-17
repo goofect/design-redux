@@ -5,16 +5,22 @@
 # the ci-results branch, where they can be read without opening Actions. On
 # the default branch, once the simulation tests and the tests in Obsidian pass and src/ or styles/
 # changed since the last release, main.js and styles.css are built and a new
-# release is published for BRAT: the patch version goes up by one. A commit on
-# the default branch with a "Release-As: X.Y.Z" line releases that version
-# instead (for a minor or major step), even with no change to src/.
+# release is published for BRAT: the patch version goes up by one. A
+# "Release-As: X.Y.Z" line in any commit since the last release, on a line of
+# its own anywhere in the message (a trailer before Co-Authored-By is fine),
+# releases that version instead (for a minor or major step), even with no
+# change to src/. It is read again after main is taken in, so one pushed while
+# a run was testing is not passed over (4.0.0 was: it rode an empty commit,
+# which starts no run, and the merge's run read only its own message).
 name: Test and release
 
 # Not on pull requests: a branch's own push already runs it. Not for changes
 # to the docs, agent notes or agent tools alone. A newer push to a branch cancels its run still going,
 # except on the default branch, where each run may release.
 # An empty commit doesn't start it (paths-ignore skips a push with no files
-# changed): to run it again, re-run it from Actions or dispatch it.
+# changed): to run it again, re-run it from Actions or dispatch it. A dispatch
+# on the default branch releases too, so an empty Release-As commit can be
+# sent on its way that way.
 on:
   push:
     branches-ignore: [ci-results, ci-snapshots]
@@ -200,7 +206,7 @@ jobs:
     needs: [simulation, obsidian]
     if: >-
       always() && needs.simulation.result == 'success' && needs.obsidian.result == 'success' &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     permissions:
@@ -214,7 +220,8 @@ jobs:
         id: changed
         run: |
           last=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          want=$(git log -1 --format=%B | sed -n 's/^Release-As: *\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\) *$/\1/p' | tail -n 1)
+          # Every commit since the last release, newest first; the newest Release-As line wins.
+          want=$(git log --format=%B ${last:+"$last"..}HEAD | sed -n 's/^Release-As: *\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\) *$/\1/p' | head -n 1)
           if [ -n "$want" ] && ! git rev-parse -q --verify "refs/tags/$want" >/dev/null; then
             echo "want=$want" >> "$GITHUB_OUTPUT"
             echo "release=yes" >> "$GITHUB_OUTPUT"
@@ -226,8 +233,16 @@ jobs:
         if: steps.changed.outputs.release == 'yes'
         id: version
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Main may have moved while the tests ran (a merge, or a Release-As
+          # pushed just after this one): take it in first, so the version is
+          # decided on all of it and the bump goes on top.
+          git pull -q --rebase origin "$GITHUB_REF_NAME"
+          last=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          want=$(git log --format=%B ${last:+"$last"..}HEAD | sed -n 's/^Release-As: *\([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\) *$/\1/p' | head -n 1)
+          if [ -n "$want" ] && git rev-parse -q --verify "refs/tags/$want" >/dev/null; then want=""; fi
           current=$(node -p "require('./manifest.json').version")
-          want="${{ steps.changed.outputs.want }}"
           if [ -n "$want" ] && [ "$want" != "$current" ] || git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
             WANT="$want" node -e "
               const fs = require('fs');
@@ -240,11 +255,8 @@ jobs:
               fs.writeFileSync('versions.json', JSON.stringify(v, null, 2) + '\n');
             "
             next=$(node -p "require('./manifest.json').version")
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git commit -q -am "Release $next"
-            # Main may have moved while the tests ran (a merge just after
-            # this one): the bump goes on top of it rather than failing.
+            # And if it moved again since: the bump still goes on top rather than failing.
             git pull -q --rebase origin "$GITHUB_REF_NAME"
             git push -q origin "HEAD:$GITHUB_REF_NAME"
           else
