@@ -1,6 +1,5 @@
 /*
- * The new stylesheet's parts (styles/, staged in next/styles until the old
- * tree moves to legacy/), held to docs/DESIGN.md where a machine can check:
+ * The stylesheet's parts (styles/), held to docs/DESIGN.md where a machine can check:
  * the palette's pairs measure up (tests/contrast.js), the variable map sets
  * only names Obsidian declares, colour values live in the tokens part alone,
  * every token used is one declared, and no part rounds a corner, casts a
