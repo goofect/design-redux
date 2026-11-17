@@ -10,10 +10,10 @@
 /* ------------------------------------------------------------------ */
 
 import { Keymap, TFile, TFolder } from 'obsidian';
-import { clear, el, glyph } from '../core/dom.js';
+import { clear, el } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { drawFileList } from './file-list.js';
+import { browserIcon, drawFileList } from './file-list.js';
 import { attachmentMenu, folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
@@ -145,7 +145,7 @@ export class LibraryScreen {
     headRow(host, { label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : this.opts.wide ? (inside ? folder.name : 'Files') : 'Files' });
     if (!this.opts.wide && this.query === null && !this.filter) {
       const box = el(host, 'div', 'dr-file-search');
-      glyph(box, 'search');
+      browserIcon(box, 'search');
       const search = el(box, 'input', 'dr-file-search-input');
       search.type = 'search';
       search.value = this.fileQuery;

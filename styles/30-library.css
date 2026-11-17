@@ -26,7 +26,7 @@
 /* The new file-list preview, shared by sidebar and workspace. */
 .dr-file-list { padding: var(--dr-gutter); }
 .dr-file-search { display: flex; align-items: center; gap: var(--dr-u); margin: var(--dr-gutter); padding: 0 var(--dr-u); border: var(--dr-hair) solid var(--dr-ink); }
-.dr-file-search-input { flex: 1; min-width: 0; border: 0; background: none; }
+.dr-file-search input.dr-file-search-input[type="search"] { flex: 1; min-width: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-muted); }
 .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; }
 .dr-file-list-heading, .dr-file-row {
@@ -126,7 +126,7 @@
 
 .dr-browse-aside {
   flex: none;
-  width: calc(40 * var(--dr-u));
+  width: clamp(calc(20 * var(--dr-u)), 25%, calc(40 * var(--dr-u)));
   border-left: var(--dr-hair) solid var(--dr-ink);
   overflow-y: auto;
 }
