@@ -96,6 +96,17 @@ body {
 
 
 
+.dr.dr-library {
+  --dr-browser-bg: #FFFFFF;
+  --dr-browser-ink: #000000;
+  --dr-browser-muted: #555555;
+  --dr-browser-rule: #D0D0D0;
+  --dr-browser-selected: #E5E5E5;
+  --dr-browser-selected-ink: #000000;
+}
+
+
+
 body.dr-active.theme-light {
   --dr-browser-bg: #FFFFFF;
   --dr-browser-ink: #000000;
@@ -1804,10 +1815,14 @@ input.dr-input::placeholder {
   height: 100%;
   background: var(--dr-browser-bg);
   color: var(--dr-browser-ink);
-  font-family: var(--font-monospace, monospace);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-.dr.dr-library.is-wide { background: var(--dr-browser-bg); }
+.dr.dr-library { background: var(--dr-browser-bg); color: var(--dr-browser-ink); }
+
+.dr-library button { font-family: inherit; }
+
+.dr-library .dr-file-row, .dr-library .dr-file-breadcrumb { font-size: 13px; font-weight: 400; }
 
 .dr-library .dr-head { color: var(--dr-browser-ink); }
 

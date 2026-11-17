@@ -63,7 +63,10 @@ export class BrowseView extends ScreenView {
     return new LibraryScreen(this.plugin, this.contentEl, {
       wide: true,
       place: 'browse',
-      onGo: (folder) => { this.plugin.openFolder = folder.path === '/' ? null : folder; },
+      onGo: (folder) => {
+        this.plugin.openFolder = folder.path === '/' ? null : folder;
+        if (typeof this.leaf.updateHeader === 'function') this.leaf.updateHeader();
+      },
     });
   }
 

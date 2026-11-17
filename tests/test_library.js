@@ -33,8 +33,11 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     const w = await world(files); const s = sidebar(w);
     const lib = w.plugin.features.find((f) => f.constructor.name === 'Library');
     const leaf = await lib.browse(null);
+    let updates = 0; leaf.updateHeader = () => { updates++; };
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
     assert.strictEqual(leaf.view.screen.at, 'Philosophy');
+    assert.strictEqual(leaf.view.getDisplayText(), 'Philosophy');
+    assert.ok(updates > 0, 'folder changes must refresh the tab title');
     const note = leaf.view.screen.host.querySelector('[data-path="Philosophy/Arguments.md"]');
     key(note, 'Enter'); await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Philosophy/Arguments.md');

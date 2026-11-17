@@ -7,9 +7,11 @@
   height: 100%;
   background: var(--dr-browser-bg);
   color: var(--dr-browser-ink);
-  font-family: var(--font-monospace, monospace);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.dr.dr-library.is-wide { background: var(--dr-browser-bg); }
+.dr.dr-library { background: var(--dr-browser-bg); color: var(--dr-browser-ink); }
+.dr-library button { font-family: inherit; }
+.dr-library .dr-file-row, .dr-library .dr-file-breadcrumb { font-size: 13px; font-weight: 400; }
 .dr-library .dr-head { color: var(--dr-browser-ink); }
 .dr-library-body { flex: 1; min-height: 0; overflow-y: auto; }
 .dr-file-list { padding: var(--dr-gutter); }

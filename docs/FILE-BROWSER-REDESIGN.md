@@ -16,8 +16,8 @@ property chips or bottom strip. The 3D graph remains a separate view.
 ## Interaction and appearance
 
 Use actual folder and note names, not invented codes. The interface is a dense,
-neutral directory: white, black and light grays in light mode, corresponding
-neutral values in dark mode, straight rules, small monospaced type, and no
+neutral directory: white, black and light grays even when Obsidian uses dark mode,
+straight rules, small monospaced type, and no
 decorative photography, marketing, animation, or promotional UI. Selection and
 keyboard focus remain distinct and readable. Do not add commerce concepts.
 The folder tree uses disclosure marks only where needed. A folder selection opens

@@ -65,7 +65,7 @@ check('colour values live in the tokens part, inside the scheme blocks', () => {
   const wrong = [];
   parts.forEach((f) => {
     let css = bare(read(f));
-    if (f === '00-tokens.css') css = css.replace(/body\.dr-active\.theme-(light|dark)\s*\{[^}]*\}/g, '');
+    if (f === '00-tokens.css') css = css.replace(/body\.dr-active\.theme-(light|dark)\s*\{[^}]*\}/g, '').replace(/\.dr\.dr-library\s*\{[^}]*\}/g, '');
     (css.match(colour) || []).forEach((c) => wrong.push(`${f}: ${c}`));
   });
   assert.deepStrictEqual(wrong, []);

@@ -75,5 +75,18 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(browserState.details).toBe(false);
     expect(browserState.search).toBe(false);
     await shot('files-browser');
+    const dark = await browser.execute(() => {
+      const body = document.body;
+      const wasLight = body.classList.contains('theme-light');
+      body.classList.remove('theme-light'); body.classList.add('theme-dark');
+      const pane = document.querySelector('.dr-library.is-wide');
+      const row = pane.querySelector('.dr-file-row');
+      const out = { background: getComputedStyle(pane).backgroundColor, color: getComputedStyle(row).color, font: getComputedStyle(row).fontFamily };
+      body.classList.remove('theme-dark'); if (wasLight) body.classList.add('theme-light');
+      return out;
+    });
+    expect(dark.background).toBe('rgb(255, 255, 255)');
+    expect(dark.color).toBe('rgb(0, 0, 0)');
+    expect(dark.font).toContain('monospace');
   });
 });
