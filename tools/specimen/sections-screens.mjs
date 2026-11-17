@@ -9,7 +9,14 @@ import { logic } from './data.mjs';
 const require = createRequire(import.meta.url);
 
 /** The stand-in's empty icons, as the glyphs they name. */
-const glyphs = (html) => html.replace(/<svg[^>]*data-glyph="([a-z-]+)"[^>]*><\/svg>/g, (all, name) => glyph(name));
+const native = {
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4"/>',
+  'file-text': '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v4h4M9 12h6M9 16h6"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/>',
+};
+const glyphs = (html) => html.replace(/<svg[^>]*data-glyph="([a-z-]+)"[^>]*><\/svg>/g, (all, name) => glyph(name))
+  .replace(/<svg[^>]*data-icon="(folder|file|file-text|search)"[^>]*><\/svg>/g, (all, name) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${native[name]}</svg>`);
 /** One screen in a frame of a set size. */
 const frame = (caption, w, h, html, cls = '') => `<figure class="spec-shown"><div class="spec-screen ${cls}" style="width:${w}px;${h ? `height:${h}px` : ''}">${glyphs(html)}</div><figcaption class="dr-label dr-muted">${esc(caption)}</figcaption></figure>`;
 
