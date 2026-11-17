@@ -13,6 +13,7 @@ import { ItemView, TFile, TFolder } from 'obsidian';
 import { clear, el, flag, glyph } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
+import { ScheduledView } from '../core/scheduled-view.js';
 import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { MAP, foldAll, folderMap, layoutMap, noteMap, shownNodes } from './map-model.js';
@@ -20,7 +21,7 @@ import { MAP, foldAll, folderMap, layoutMap, noteMap, shownNodes } from './map-m
 export const MAP_VIEW = 'design-redux-mindmap';
 export const RETIRED_VIEWS = ['design-redux-outline'];
 
-export class MapView extends ItemView {
+export class MapView extends ScheduledView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -42,20 +43,6 @@ export class MapView extends ItemView {
   async onOpen() {
     this.contentEl.classList.add('dr', 'dr-map');
     this.schedule();
-  }
-
-  /** Builds once the view is open and its state is known: Obsidian opens a view, then gives it its state. */
-  schedule() {
-    if (this.pending) return;
-    this.pending = window.setTimeout(() => {
-      this.pending = null;
-      if (this.leaf && this.contentEl.isConnected) this.build();
-    }, 0);
-  }
-
-  async onClose() {
-    if (this.pending) window.clearTimeout(this.pending);
-    this.pending = null;
   }
 
   /** Makes the tree for what the map is of, and draws it. */

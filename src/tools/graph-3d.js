@@ -9,10 +9,11 @@
 /* something changes and never by itself.                              */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, TFile } from 'obsidian';
+import { TFile } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
+import { ScheduledView } from '../core/scheduled-view.js';
 import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { sayso } from '../ui/state.js';
@@ -20,7 +21,7 @@ import { fitZoom, graphSpace, layoutSpace, project } from './graph-space.js';
 
 export const GRAPH_3D_VIEW = 'design-redux-graph-3d';
 
-export class Graph3DView extends ItemView {
+export class Graph3DView extends ScheduledView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -44,20 +45,6 @@ export class Graph3DView extends ItemView {
   async onOpen() {
     this.contentEl.classList.add('dr', 'dr-graph3d');
     this.schedule();
-  }
-
-  /** Lays the cloud out once the view is open and knows what it is of: a layout is the costly part, so never twice. */
-  schedule() {
-    if (this.pending) return;
-    this.pending = window.setTimeout(() => {
-      this.pending = null;
-      if (this.leaf && this.contentEl.isConnected) this.build();
-    }, 0);
-  }
-
-  async onClose() {
-    if (this.pending) window.clearTimeout(this.pending);
-    this.pending = null;
   }
 
   /** Gathers the notes, lays them out, and draws. */

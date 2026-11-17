@@ -34,6 +34,26 @@ const VAULT = {
 };
 
 (async () => {
+  await check('map and graph views coalesce rebuilds and cancel them on close', async () => {
+    const w = await world(VAULT);
+    for (const View of [dr.MapView, dr.Graph3DView]) {
+      const leaf = w.app.workspace.getLeaf();
+      const view = new View(leaf, w.plugin);
+      leaf.containerEl.appendChild(view.containerEl);
+      let builds = 0;
+      view.build = () => { builds++; };
+      view.schedule();
+      view.schedule();
+      await settle();
+      assert.strictEqual(builds, 1, `${View.name} did not coalesce rebuilds`);
+      view.schedule();
+      await view.onClose();
+      await settle();
+      assert.strictEqual(builds, 1, `${View.name} rebuilt after close`);
+      view.containerEl.remove();
+    }
+  });
+
   await check('the strip: the folder\'s glyph, the note, its place; previous and next; gone when turned off', async () => {
     const w = await world(VAULT, { settingsVersion: 100, contextStrip: true });
     const leaf = w.app.workspace.getLeaf();
