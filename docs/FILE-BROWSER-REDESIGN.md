@@ -9,6 +9,20 @@ older layouts until the replacement is built and tested.
 
 ## What the browser shows
 
+The approved mockup is the visual target. Its composition is a narrow Obsidian
+ribbon, a files sidebar, a wide central browser and a right-hand details
+region, separated by straight hairlines. Keep the warm off-white ground,
+near-black type and muted clay selection, square corners and unadorned controls.
+Use the actual Obsidian workspace and tabs rather than reproducing the mockup's
+application chrome inside a plugin view.
+
+The sidebar has a `FILES` heading, an always-visible search field, a breadcrumb
+and an expandable folder tree with persistent labels and folder/file icons.
+The main browser has a large current-folder title, breadcrumb and a ruled list
+of names with file types. The details region has a `DETAILS` heading and shows
+the selected item's icon, filename and type. Match the mockup's alignment,
+spacing and relative proportions while allowing panels to resize in Obsidian.
+
 Use a labelled, compact list in both the sidebar and the main workspace. The
 current folder is the context for the list. Each row identifies a folder or
 file by name, has a distinct selected and keyboard-focus state, and opens it
@@ -17,8 +31,8 @@ control return to an ancestor. An empty folder stays visible and opens to an
 empty state with a create-note action. Search is a single explicit field; the
 results say where each file is located and open in Obsidian.
 
-The main workspace may use its extra width for a restrained detail region for
-the selected item, but it uses the same model and actions as the sidebar. Do
+The main workspace uses its extra width for the details region for the selected
+item, and uses the same model and actions as the sidebar. Do
 not introduce a second set of grid, shelf, table, or custom-order modes. Use
 clear names at rest, square controls, hairlines, flat surfaces and a small type
 hierarchy. Keep Obsidian's note editor and file-opening behavior rather than
