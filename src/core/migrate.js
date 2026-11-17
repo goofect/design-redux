@@ -11,7 +11,7 @@ import { DEFAULTS, SETTINGS_VERSION } from './settings.js';
 
 /** Removed commands whose former interfaces no longer exist. */
 export const RETIRED_COMMANDS = [
-  'open-properties', 'open-inspector',
+  'album-merge', 'album-split', 'open-properties', 'open-inspector',
   'panel-folder-properties', 'library-check', 'smart-album-open', 'smart-album-save',
   'find-missing-properties',
 ];
@@ -84,7 +84,8 @@ export function migrateSettings(saved) {
   // panelPrimaryProps, panelPropertyGroups, panelGroupList, panelFoldedGroups,
   // panelFolderViews, showMentions, propertyLinks, contextStrip, stripPlace,
   // stripDetail, smartAlbums, smartAlbumList, libraryCheck, libraryInbox,
-  // recentSearches, searchNoteText, categoryProperty, and graphRouteProperty.
+  // recentSearches, searchNoteText, categoryProperty, graphRouteProperty, and
+  // routeImages. Obsidian now handles pasted images using its own settings.
   if (settings.defaultSort === 'own') settings.defaultSort = 'name';
   Object.keys(settings.albumSorts || {}).forEach((path) => {
     const sort = settings.albumSorts[path];

@@ -9,7 +9,6 @@ import { Covers } from '../library/covers.js';
 import { Library } from '../library/library.js';
 import { AlbumRefactor } from '../library/refactor.js';
 import { Footnotes } from '../note/footnotes.js';
-import { ImageRouter } from '../note/image-router.js';
 import { MarkedLists } from '../note/lists.js';
 import { NotePages } from '../note/pages.js';
 import { Scripts } from '../note/scripts.js';
@@ -22,5 +21,5 @@ import { PropertyTools } from '../tools/property-tools.js';
 import { PropertyHistory, PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
 
-export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, Covers, Footnotes, Scripts, MarkedLists, ImageRouter, NotePages,
+export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, Covers, Footnotes, Scripts, MarkedLists, NotePages,
   PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, PropertyHistory, GraphFilter, GraphRoutes, Graph3D, RetiredViews, MenuFilter, ActionsMenu, Diagnostics];

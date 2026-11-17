@@ -117,7 +117,9 @@ export class NotePages extends Feature {
     const pages = parsePages(info.text);
     if (!pages.length) return;
     const hidden = hiddenLines(info.text, this.openOf(file, pages));
-    el.classList.toggle('dr-page-hidden', hidden.some(([from, to]) => info.lineStart >= from && info.lineStart < to));
+    // A rendered block may include its marker and visible text. Hide only
+    // sections wholly inside a hidden range, not a section starting there.
+    el.classList.toggle('dr-page-hidden', hidden.some(([from, to]) => info.lineStart >= from && info.lineEnd < to));
   }
 
   /** Steps to the page before or after the one open. */

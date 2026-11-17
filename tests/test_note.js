@@ -2,7 +2,7 @@
  * The note: its head, pages in one note (the text, the editor's folds, the
  * tabs, the page remembered), the panel (properties edited in place with an
  * Undo, where a note is named and mentioned), footnotes kept in order,
- * superscript and subscript, lettered and roman lists, the image router.
+ * superscript and subscript, and lettered and roman lists.
  */
 const assert = require('assert');
 const { EditorState } = require('@codemirror/state');
@@ -68,6 +68,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const hidden = { classList: { toggle(c, on) { this[c] = on; } } };
     pages.onRendered(hidden, { sourcePath: 'Logic/Renamed.md', getSectionInfo: () => ({ text: w.text('Logic/Renamed.md'), lineStart: 5, lineEnd: 5 }) });
     assert.strictEqual(hidden.classList['dr-page-hidden'], true, 'reading view shows a block of another page');
+    const marker = dr.parsePages(w.text('Logic/Renamed.md')).find((p) => p.name === 'Sources').line;
+    pages.onRendered(hidden, { sourcePath: 'Logic/Renamed.md', getSectionInfo: () => ({ text: w.text('Logic/Renamed.md'), lineStart: marker, lineEnd: marker + 1 }) });
+    assert.strictEqual(hidden.classList['dr-page-hidden'], false, 'a section spanning the current marker and text must remain visible');
     const plain = await open(w, 'Logic/Plain.md');
     assert.ok(!plain.contentEl.querySelector('.dr-note-pages .dr-segment'), 'a note without pages has tabs');
     assert.strictEqual(w.text('Logic/Plain.md'), 'x', 'a note without pages was written to');
@@ -144,15 +147,13 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(p.classList.contains('dr-marked-list') && p.classList.contains('is-roman'));
   });
 
-  await check('the image router: an image that arrives after a paste goes to the images folder; any other stays', async () => {
+  await check('pasted images are not routed by the plugin', async () => {
     const w = await world({ 'A.md': '' }, { settingsVersion: 100, routeImages: true });
-    await w.app.vault.create('before.png', 'x');
-    await settle();
-    assert.ok(w.file('before.png'), 'an image made with no paste was moved');
     w.app.workspace.trigger('editor-paste', {});
     await w.app.vault.create('Pasted image.png', 'x');
     await settle();
-    assert.ok(w.file('attachments/Pasted image.png') && !w.file('Pasted image.png'));
+    assert.ok(w.file('Pasted image.png'));
+    assert.ok(!w.file('attachments/Pasted image.png'));
   });
 
   check.done();

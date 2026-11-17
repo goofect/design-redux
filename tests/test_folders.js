@@ -1,8 +1,7 @@
 /*
  * What a folder is and what can be done to it: its kind, description and
  * what it gathers (read from a folder note until changed, then kept by
- * path, with no note written); merging and splitting, said first and undone
- * in one; covers and tones; filters and saved views; the library check.
+ * path, with no note written); basic folder actions, covers and tones.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -60,29 +59,11 @@ const VAULT = {
     assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).type, undefined, 'a renamed property is still read under its old name');
   });
 
-  await check('merging: said first, names taken get a number, the emptied folder goes, and one Undo puts it all back', async () => {
+  await check('folder merge and split commands are retired', async () => {
     const w = await world(VAULT);
-    const refactor = feature(w, 'AlbumRefactor');
-    const plan = dr.planMoves(w.app, w.file('Logic').children, 'Reading');
-    assert.deepStrictEqual(plan.map((m) => [m.from, m.to, m.renamed]), [['Logic/Logic.md', 'Reading/Logic.md', false], ['Logic/Truth tables.md', 'Reading/Truth tables.md', false], ['Logic/Validity.md', 'Reading/Validity 1.md', true]]);
-    const merging = refactor.merge(w.file('Logic'));
-    await answer(w, (m) => m.pick(w.file('Reading')));
-    const said = obsidian.Modal.open[0].contentEl.querySelector('p').textContent;
-    assert.ok(/3 items move into Reading/.test(said) && /1 name is taken/.test(said), said);
-    obsidian.Modal.open[0].contentEl.querySelector('.is-primary').click();
-    await merging;
-    assert.ok(w.file('Reading/Validity 1.md') && !w.file('Logic'));
-    await w.plugin.lastUndo.run();
-    assert.ok(w.file('Logic/Validity.md') && w.file('Logic/Logic.md') && !w.file('Reading/Validity 1.md'), 'the merge was not put back');
-  });
-
-  await check('splitting: the picked notes move into a new folder beside the old one', async () => {
-    const w = await world(VAULT);
-    const splitting = feature(w, 'AlbumRefactor').split(w.file('Logic'));
-    await answer(w, (m) => { m.contentEl.querySelectorAll('.dr-row')[0].click(); m.contentEl.querySelector('.is-primary').click(); });
-    await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Tables'; m.contentEl.querySelector('.is-primary').click(); });
-    await splitting;
-    assert.ok(w.file('Tables/Truth tables.md') && w.file('Logic/Validity.md'));
+    assert.ok(!w.app.commands.commands['design-redux:album-merge']);
+    assert.ok(!w.app.commands.commands['design-redux:album-split']);
+    assert.deepStrictEqual(feature(w, 'AlbumRefactor').actions().map((a) => a.id), ['album-rename', 'album-move', 'album-delete']);
   });
 
   await check('covers: a note\'s in its property, a folder\'s by its path, the first image, a tone, a drop, a repair', async () => {
