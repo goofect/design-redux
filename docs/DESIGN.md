@@ -8,60 +8,63 @@ properties panel, mind maps). This look replaces the plugin's earlier looks.
 The plugin is being rewritten from scratch at the same time: `REWRITE.md`
 says how the code is rebuilt, and this file says how everything looks.
 
-Direction: raw, utilitarian, unadorned, and object-led. The reference is the
-stark, icon-led storefront design of the Yeezy website: a flat ground, single
-objects in a strict grid with large empty space around them, almost no words,
-tiny labels, and nothing that is not the thing itself. Here the objects are
-folders and notes, drawn as glyphs. Flat earth tones, 1px ink hairlines
-instead of surfaces, zero radius, no shadows, no motion. The notes are the
-content, and everything around them is deliberately austere.
+Direction: reduction and brutalism (`docs/direction-reset.md`). Reduction
+removes until a screen breaks, then puts one thing back; brutalism shows the
+raw material and doesn't apologise for it: one system typeface used as it
+comes, black, white and one grey, two sizes, lines only where the structure
+divides, plain underlined words for controls. The notes are the content;
+everything around them is as little as can still work.
 
-Take the aesthetic only. No third-party wordmarks, logos, imagery, product
-photos or copied layouts.
+Take nothing of another's: no wordmarks, logos, imagery or copied layouts.
 
 ## The language in detail
 
 These rules are the look. Every screen is judged against them before it is
-called done.
+called done; the checks in `docs/direction-reset.md` hold the countable ones.
 
-1. **Objects, not chrome.** A folder or a note appears as an object: a solid
-   glyph on the ground, centered in its grid cell, with nothing around it.
-   No cards, panels, frames or backgrounds behind objects. The interface
-   around them is a few bare icon buttons, and hairlines only where they
-   part one thing from another: one under a header, one between groups,
-   never round what already sits in a pane, never between two rows.
-2. **The grid is the structure.** An 8px base unit; every position, size
-   and gap a multiple of it. Object cells are square and equal. Lists,
-   tables and grids snap to the same columns. Empty space is used on purpose
-   and is not filled: a screen that looks sparse is right.
-3. **Words only where they earn it.** An object's name earns its place: a
-   grid of unnamed glyphs can't be read. Each object shows its name under
-   it, one line, cut with an ellipsis, and always to screen readers
-   (`aria-label`). A setting, "Always show labels" (on by default), leaves
-   the names to the pointer, the keyboard and the pick when turned off.
-   Lists, tables, the note and anything that is reading show their words
-   normally.
-4. **Labels are small and quiet.** Capitals for two things only: a
-   section's title and a property's name, set small with wide tracking, in
-   ink or muted. Everything else the plugin names (counts, lengths, column
-   heads, a field's name, captions) is small and in sentence case; the
-   person's own words (notes, folders, pages) are read as written. Numbers
-   only where the order means something. Reading text (notes, rows, menus)
-   is sentence case at normal size. Obsidian's own labels keep their case.
-5. **Icons are the controls.** Toolbars and actions are icon buttons, one
-   size, one weight, square hit areas, ink on bone; the word is the
-   tooltip and the `aria-label`. Text buttons appear only where an icon
-   would be unclear (a destructive confirmation, a first-run choice).
-6. **One accent, used as a fill.** Clay marks what is open, as a flat fill
-   behind an object or a row, its words bold; what is picked but not open is
-   the mark, an ink square at its left. One sign a state. Nothing else is
-   colored except the user's own semantic colors.
-7. **Zoom instead of navigation.** Collections are seen at three levels of
-   detail in the same place (objects, shelves, words), switched by a
-   three-part control, rather than by opening and closing pages.
-8. **Stillness.** Nothing moves. State changes are instant swaps.
-9. **Every screen squints well.** Blurred, a screen should read as a few
-   objects in a calm grid with one fill marking where you are.
+**Reduction**
+1. **One job per screen.** The library lists folders. A folder shows its
+   notes. A note shows its text. Nothing else lives on those screens.
+2. **A budget of visible controls**, counted at rest by a test: the library
+   sidebar 1 (search), a folder 2 (back, more), a note 0 (everything else is
+   in Obsidian's own menus and the command palette), the browse view 2
+   (search, more), a sheet its fields and one button. Links that go
+   somewhere (a folder's name, a note's, a page's) are content, not controls.
+3. **One view of a collection.** No zoom levels, no shelves, no objects in
+   the sidebar: the sidebar is a list of names, the browse view one grid, a
+   folder's notes one list.
+4. **No ornament that carries no information.** No generated glyphs (a
+   folder is its name, or the image the person set as its cover), no counts
+   on grid items, no row numbers, no group header that repeats its rows, no
+   section title where there is one section.
+5. **One way to show each state.** Hover: an underline. Focus: a 2px black
+   outline. Selected or open: inverted, black ground and white words.
+   Disabled: grey words. Nothing else.
+6. **Fewer settings.** The settings tab is the features' switches and fits
+   one screen. Everything else is a fixed value (or, in a vault that had set
+   it, the value it had).
+7. **Fewer icons.** About ten (search, back, close, more, add, the map's
+   tools); everything else is a word.
+
+**Brutalism**
+1. **Raw material.** One typeface for all the plugin draws, a system face as
+   it comes (`Helvetica Neue, Helvetica, Arial, sans-serif`). No tracking, no
+   capitals for effect, no small sizes for elegance.
+2. **Black, white, one grey.** Light: white ground, black ink, grey `#767676`
+   for what is secondary; dark: the exact inverse. The only other colour is
+   red, for an error, always with its word.
+3. **Blunt scale.** Two sizes: 13px for everything, 48px for the one name
+   that matters on a screen (a folder's on its page, the names of the browse
+   view's grid). Nothing between.
+4. **Structure, not decoration.** A line only where the screen's structure
+   divides (under a header, between a list and its detail): 1px black, full
+   width. No frames, no boxes round controls, no rules between rows.
+5. **Plain controls.** Links and text buttons are underlined words; a field
+   is a line under its text; a toggle is Obsidian's own, squared; the one
+   button that commits is black with white words, one a screen at most.
+6. **Left and ragged.** Left-aligned, unjustified; only a single object
+   alone on its page is centred.
+7. **No motion, no shadow, no radius, no blur.**
 
 Read `AGENTS.md` first. Its rules still hold; where this file and `AGENTS.md`
 seem to disagree, the "Conflicts, resolved" section below decides.
@@ -155,8 +158,9 @@ change summary.
   the plugin's own regions stay on.
 - One new boolean key per region, `lookRegion<Name>`, default on. They sit in
   one settings row whose gear opens them.
-- New: `alwaysShowLabels` (on since settings 101), the library's zoom level per window, and the
-  glyph chosen per folder (path-keyed, so it follows renames).
+- Retired by the reset (settings 102, values kept under `retired`):
+  `alwaysShowLabels`, the library's zoom level, the glyph chosen per folder,
+  the table's columns, the regions' switches; see `src/core/migrate.js`.
 - The `--dr-*` names stay. The old look's token values (radii, shadows,
   glass, motion) are not carried into the new `styles.css`; the palette
   below is the new set.
@@ -165,65 +169,43 @@ change summary.
 
 ## Palette tokens
 
-Defined once per color scheme on the gated body, then mapped onto Obsidian's
-variables. Components use Obsidian's variables (or these tokens), never hex
-values.
+Defined once per colour scheme on the gated body, then mapped onto
+Obsidian's variables. Components use these tokens, never colour values.
 
 ```css
-body.dr-active {
-  --dr-radius: 0;
-  --dr-hair: 1px;
-}
 body.dr-active.theme-light {
-  --dr-bg:      #E9E6DF; /* bone: every surface */
-  --dr-surface: #CFCCC5; /* ash: the hover fill only */
-  --dr-press:   #B8B4AC; /* a deeper ash: the pressed fill only (ink 8.4:1) */
-  --dr-ink:     #1A1A18; /* text and hairlines */
-  --dr-muted:   #5E5C57; /* secondary text, ONLY on --dr-bg (5.4:1) */
-  --dr-clay:    #A58F7C; /* the fill behind what is open or on */
-  --dr-on-clay: #1A1A18; /* text on clay (5.7:1) */
+  --dr-bg:    #FFFFFF; /* the ground */
+  --dr-ink:   #000000; /* words, lines, the inverted fill */
+  --dr-muted: #767676; /* the one grey, for what is secondary (4.54:1) */
+  --dr-error: #C00000; /* an error, always with its word */
 }
 body.dr-active.theme-dark {
-  --dr-bg:      #1C1B19;
-  --dr-surface: #2A2927;
-  --dr-press:   #3A3834; /* ink 9.4:1 */
-  --dr-ink:     #E9E6DF;
-  --dr-muted:   #A8A59E; /* 7.0:1 on bg, 5.9:1 on surface */
-  --dr-clay:    #A58F7C;
-  --dr-on-clay: #1A1A18;
+  --dr-bg:    #000000; /* the exact inverse */
+  --dr-ink:   #FFFFFF;
+  --dr-muted: #898989;
+  --dr-error: #FF5C5C;
 }
 ```
 
-Rules: one surface color. Sidebars, tabs, ribbon, titlebar, panes, the editor
-and every plugin surface are `--dr-bg`, separated by 1px ink hairlines, not
-by tone. Ash is the hover fill and a deeper ash the pressed one, and text on
-them is ink, never muted (muted on ash is 4.2:1 in light mode and fails). Clay is a fill, never a
-text color. The contrast ratios in the comments are re-measured by the
-contrast script before they ship.
-
-### Semantic colors (the one exception)
-
-Some meaning cannot live in four neutrals: user-assigned colors (Canvas
-cards, mind map branches, Graph groups, highlights, album and cover colors),
-callout types, tag colors, and error, warning and success. For these only,
-define a small earth-tone set (at most 5 hues, flat, no gradients) per color
-scheme. A script computes every pair before use: 4.5:1 for text, 3:1 for
-fills and borders; the measured ratios go in `styles.css` comments. Semantic
-color is never the only carrier of meaning: pair it with a label, shape,
-border style or position. Keep the user's colors distinct from each other
-rather than collapsing them into one.
+Rules: one surface colour. Panes are the ground, parted by 1px black lines
+where the structure divides, not by tone. Selected or open is the ink as a
+fill with the ground's colour for its words. The grey is for words only. The
+person's own colours (Canvas cards, graph groups, a folder's colour on a
+map) are not the plugin's: they stay the theme's, through Obsidian's own
+colour names, and the plugin declares none of them.
 
 ## Variable map (starting point; confirm each name in `app.css`)
 
 Inside the gated block:
 - backgrounds: `--background-primary`, `--background-secondary` (and
-  `-alt`) to `--dr-bg`; `--background-modifier-hover` to `--dr-surface`;
-  `--background-modifier-border` and `--divider-color` to `--dr-ink`;
-  `--divider-width` to `--dr-hair`
+  `-alt`) and `--background-modifier-hover` to `--dr-bg` (hover is an
+  underline, not a fill); `--background-modifier-border` and
+  `--divider-color` to `--dr-ink`; `--divider-width` to `--dr-hair`
 - text: `--text-normal` to `--dr-ink`; `--text-muted` and `--text-faint`
-  to `--dr-muted`; `--text-on-accent` to `--dr-on-clay`;
-  `--interactive-accent` to `--dr-clay`; link color to `--dr-ink`,
-  underlined; error, warning and success from the semantic set
+  to `--dr-muted`; `--interactive-accent` to `--dr-ink` and
+  `--text-on-accent` to `--dr-bg` (what is selected is inverted); link
+  color to `--dr-ink`, underlined; error to `--dr-error`. The person's own
+  colours (`--color-red` and the rest) are left to the theme
 - chrome: titlebar, ribbon, tab container and active tab, nav item hover and
   active, status bar background and text variables to the same tokens
 - shape: `--radius-s/m/l/xl`, tab radii, `--clickable-icon-radius`,
@@ -253,15 +235,13 @@ exactly as it does without the plugin.
 ### Obsidian chrome
 - Titlebar: hidden where the platform setting allows it, otherwise one plain
   line with a bottom hairline.
-- Ribbon: flat vertical strip, right-edge hairline, monochrome icons, square
-  ash hover fill, no radius or glow.
-- Tabs: rectangular, separated by hairlines, no pills. Active tab: clay fill,
-  ink text. Pinned and unsaved states shown with text or underline, not
-  color alone.
-- Sidebars and file explorer: bone background, hairline divider with the
-  editor. Rows are plain text, no radius; hover is an ash fill with ink text,
-  active is a clay fill with ink text. Indent with `--size-4-*` spacing. Keep
-  the collapse chevrons.
+- Ribbon: flat vertical strip, right-edge line, monochrome icons, no fill
+  under the pointer, no radius or glow.
+- Tabs: rectangular, no pills. Active tab: inverted. Pinned and unsaved
+  states shown with text or underline, not color alone.
+- Sidebars and file explorer: the ground, a line dividing them from the
+  editor. Rows are plain text, no radius; the active one inverted. Indent
+  with `--size-4-*` spacing. Keep the collapse chevrons.
 - Panes and splits: 1px ink dividers, zero gap, zero radius, no floating
   panes.
 - View headers and breadcrumbs: one plain text line, a hairline below.
@@ -282,12 +262,10 @@ exactly as it does without the plugin.
   by fill and mark. The plugin's lettered and roman lists follow the same
   markers.
 - Tables: 1px ink grid, no zebra tint, bold header.
-- Code: square, hairline border, bone or ash fill, monospace. Syntax
-  highlighting loses hue, so token types differ by weight, italics,
-  underline and the semantic set; check that code stays legible and flag any
-  tradeoff.
+- Code: square, a 1px line, the ground, monospace. Syntax highlighting is
+  ink and grey; check that code stays legible and flag any tradeoff.
 - Callouts: square, 1px ink border, no tint, no icon fill; the type shows in
-  its title text, with a semantic accent where useful.
+  its title text.
 - Embeds and media: square corners, hairline border, no shadow, no filters,
   native size.
 - Properties: plain key and value rows with hairlines. The plugin's
@@ -295,119 +273,63 @@ exactly as it does without the plugin.
 
 ### Overlays and settings
 - Modals, command palette, suggesters, menus, popovers, notices: square, 1px
-  ink border, bone fill, no shadow, no blur. The selected item is a clay fill
-  with ink text. This covers every menu and modal the plugin opens.
+  black line, the ground, no shadow, no blur. The selected item inverted.
+  This covers every menu and modal the plugin opens.
 - Controls (buttons, inputs, selects, toggles, checkboxes, sliders): native
-  elements restyled through variables, square, 1px ink border. A toggle's
-  on-state is clay. No custom-built controls.
-- Settings window: the same rules, its structure kept, including the
-  plugin's tabs, feature rows and gears.
-- Scrollbars: thin, square, ink thumb on a bone track.
+  elements restyled through variables, square. A toggle's on-state is black.
+  No custom-built controls.
+- Settings window: the same rules; the plugin's tab is its features'
+  switches in two columns and fits one screen.
+- Scrollbars: thin, square, an ink thumb on the ground.
 
 ### Design Redux surfaces
-- **Library sidebar: three zoom levels in one place.** A header row with the
-  word "Library" as a small label, a search icon, and a three-part zoom
-  control (objects, shelves, words).
-  - *Objects:* folders as glyphs in a three-column grid of square cells,
-    each named under its glyph on one line; the picked folder shows its
-    count too. Opening a folder fills the sidebar with its own grid of
-    subfolders and notes, with a back icon and the folder's label.
-  - *Shelves:* each folder one row, never wrapped ("+12" where it runs
-    out): its name and count above, and its notes as vertical bars standing
-    on a hairline, one per note, bar height from the note's length, the open
-    note's bar in clay and the rest muted; the bar under the pointer or the
-    keyboard names its note on a line under the shelf.
-  - *Words:* a plain outline: folders by name, notes as rows (numbered only
-    in a folder's own order), and only under the open note its pages or
-    headings, one step in, muted, smaller, with no mark; other folders
-    collapsed to one line each.
-  - The level, the open folder and the scroll position are kept per window.
-- **Folder glyphs (covers).** Every folder gets a solid glyph: one the user
-  picked from the plugin's glyph set, or, by default, the one its name asks
-  for (Music, a tune) or else one generated from its path (see Icons, the
-  glyph builder). A user's own cover image is shown
-  instead when set: native aspect, square corners, no filter, as an object
-  on the ground with nothing around it. The old generated cover art is not
-  used.
-- **A folder picked (detail).** The glyph large and centered with wide space
-  around it, the name and counts under it, what can be done in words (Open,
-  New note, Pin as text buttons) and more as its glyph, a hairline, then its notes as a
-  list with no lines between rows, numbered only in the folder's own order.
-  The open note is a clay fill.
-- **Home and browse view:** the same object grid at window width, more
-  columns, the same zoom control; at most four things in its head (search,
-  filter, the zoom control, more; new note and the order are in more); the notes table has one line under its
-  header and none between columns or rows, columns as wide as their
-  content, the sort mark beside the column's name, and a number column only
-  in the folder's own order. The preview is the folder-picked layout.
-- **Note page:** in the note's own column, wherever it is laid out (the
-  editor, reading view), so it scrolls with the text: the folder as a label
-  over the title; under the title (and under Obsidian's own properties, when
-  they are shown) the properties, the page tabs and a 1px ink line exactly as
-  wide as the text. The order is folder, title, properties, pages, text. The page
-  control is a row of small-capital text tabs separated by hairlines; the
-  open page is a clay fill with ink text.
-- **Strip:** a full-width bar at the foot of the note with a top hairline,
-  not a floating capsule: the folder glyph small, the title and place in the
-  collection as text, previous, next and more as icon buttons. It never
-  covers text and needs no hover to show its actions.
-- **Properties panel:** a specification sheet: a faint capital name, its
-  value beside it; no rules between its parts, no head repeating the note's
-  name, no arrows or fold buttons on its titles (a press on a group's title
-  folds it); mentions and links as plain rows without numbers.
-- **Mind maps:** nodes square, every one with a 1px ink border on bone,
-  links as plain ink lines, the selected node a clay fill and nothing else;
-  user branch colors kept as semantic colors, shown as a small square at the
-  node's left (never as its border); glyphs only on folder nodes; toolbar, minimap and legend follow the overlay rules and
-  use the plugin's icons.
-- **Settings:** each feature a row with its glyph, name, switch and a gear;
-  small-capital section labels; nothing else.
+- **Library sidebar:** a list of folder names (and the vault's loose notes
+  after them), 13px, the open one inverted; search is the only control. A
+  folder pressed shows that folder's page in the sidebar.
+- **A folder:** its name at 48px, left, then its folders and notes as one
+  plain list; back and more are its only controls. Numbers nowhere.
+- **Browse view:** one grid of the folders, each cell the folder's name at
+  48px or the cover image the person set; nothing else in a cell. Search
+  and more are its only controls; a folder pressed opens its page.
+- **Note head:** in the note's column, scrolling with it: the folder's name
+  as a link, the title, the properties as one line of plain text (name grey,
+  value ink), the pages as underlined words, the open one inverted, a line
+  under it all. No control.
+- **Strip:** one line at the note's foot: "21 / 24", and Previous and Next
+  as underlined words.
+- **Properties panel:** name and value on a line, the name grey; where it
+  is named, mentioned and what it links to as plain lists; a header only
+  where there is more than one group.
+- **Maps:** words on the ground joined by 1px lines; the picked node
+  inverted; a folder's colour only as a small square before its word.
+- **Sheets and menus:** Obsidian's own, flattened by the variable map; a
+  sheet's fields are a line under their text, its one committing button
+  black.
+- **Settings:** the features' switches, two columns, no descriptions, no
+  gears; it fits one screen.
 
 ### Canvas
-- Cards: square, 1px ink border, no shadow, bone fill; edges are plain ink
+- Cards: square, 1px ink line, no shadow, the ground; edges are plain ink
   lines; the toolbar and popups follow the overlay rules. Card colors are
-  kept as semantic colors.
+  the person's, left to the theme.
 
 ### Graph
-- Monochrome: ink nodes and hairline links, the current node in clay, labels
-  in ink on bone, no glow. Group colors kept as semantic colors, distinct
-  from each other and from ink. The graph is drawn by Obsidian's renderer:
+- Monochrome: ink nodes and hairline links, the current node larger, labels
+  in ink on the ground, no glow. Group colors are the person's, left to the
+  theme. The graph is drawn by Obsidian's renderer:
   use only the supported graph variables, and confirm what is stylable in
   `app.css` before promising a look. The plugin's graph filter keeps working.
 
 ### Icons
 Two families, kept apart:
-1. **Obsidian's own icons** are restyled only: one color (ink), one stroke
-   width and size, through variables and gated selectors. Never depend on the
-   inner markup of an icon's SVG.
-2. **The plugin's own icon set**, drawn for this look and registered with
-   Obsidian's supported API (`addIcon`, checked against the current
-   developer docs), used for every control and object the plugin draws:
-   - one 24-unit grid, solid shapes (not outlines), one optical weight, no
-     detail smaller than 2 units, every glyph legible at 16px and 48px;
-   - at least 60 glyphs: every action the plugin has (open, back, search,
-     zoom levels, new note, new folder, pin, more, sort, filter, move, delete,
-     undo, pages, properties, map tools and the rest found in the inventory)
-     and a set of at least 40 object glyphs for folders (things: everyday
-     objects, tools, plants and animals, a few cut forms), all drawn to the
-     same rules. An object glyph is never a form that reads as an action or
-     a sign (an X, a plus, a lock, a hash, a box in a box, a plain square,
-     disc, diamond, star, heart, bell, flag, pin, arrow, cloud, camera), and
-     its outline is never close to an action glyph's;
-   - **the glyph builder:** a pure function in `core` that gives each folder
-     the glyph its name asks for where the set has one (a folder named Music,
-     a tune), and otherwise one hashed from its path (stable across sessions and
-     machines, unchanged when the folder's contents change, kept through
-     renames because it is stored once chosen), spreading neighbours across
-     visibly different glyphs; the user can pick another from a grid of the
-     set;
-   - a specimen page (`docs/specimen.html`, built by a script from the same
-     SVG sources) showing every glyph at 16, 24 and 48px in light and dark,
-     every component in every state, and the three library zoom levels with
-     sample data. It is the visual reference for the owner and the source of
-     the screenshot tests.
-Every icon-only control keeps an `aria-label` (`asButton(el, label)` in the
-plugin).
+1. **Obsidian's own icons** are restyled only: one colour (ink), one stroke
+   width and size, through variables and gated selectors.
+2. **The plugin's own set**, about ten glyphs (search, back, close, more,
+   add, and the map's tools: fold, unfold, fit, zoom out), drawn to the icon
+   grammar (`docs/design-language.md`) and registered with `addIcon`. There
+   are no object glyphs and no glyph builder: a folder is its name, or the
+   cover image the person set. Everything else is a word.
+Every icon-only control keeps an `aria-label` (`asButton(el, label)`).
 
 ### Other plugins
 - Most plugins inherit Obsidian's variables and get the look for free. A
@@ -417,15 +339,13 @@ plugin).
 - Never restyle another plugin with `!important`, and never touch its data.
 
 ## Typography summary
-- Chrome text uses `--font-interface` at `--font-ui-small` or
-  `--font-ui-smaller`; note text uses `--font-text`; code uses
+- Everything the plugin draws: `Helvetica Neue, Helvetica, Arial,
+  sans-serif` (`--dr-font`), at 13px (`--dr-size`) or, for the one name
+  that matters on a screen, 48px (`--dr-size-display`). No third size.
+- No tracking, no capitals for effect, no italics; bold only where the
+  note's own text has it. Obsidian's own labels keep their case.
+- The note's own text keeps the person's font (`--font-text`); code keeps
   `--font-monospace`.
-- Two voices only. Labels: plugin-owned, small, capitals, tracking about
-  0.08em. Reading: sentence case, normal size, tracking 0.
-- At most one larger size per region, used for a title. No bold except to
-  mark what is open or a table header. No italics outside the note's own
-  text. Obsidian's own labels keep their `text-transform` (changing it
-  breaks translated UI).
 
 ## Motion
 - None. `transition: none` and no animations inside the gated body,
@@ -444,15 +364,15 @@ Where `AGENTS.md`, the plugin's code and this file disagree:
    (`el.style.setProperty('--x', …)`), never as colors or other style. No
    style is ever set on Obsidian's own nodes.
 3. Earlier plans (the Apple redesign, the pages doc's look sections) are
-   superseded. The zoomable, icon-led sidebar is adopted and specified here.
+   superseded, and so is 4.0's zoomable, icon-led sidebar: the reset makes it a list of names.
    Pages in a note and settings rows with gears are built if the owner keeps
    those features in the inventory.
 
 ## Accessibility and compatibility guardrails
 - Every control is keyboard operable, with a visible focus ring:
   `:focus-visible { outline: 2px solid var(--dr-ink); outline-offset: 2px; }`
-- Text 4.5:1 or better, hairlines and focus rings 3:1 or better; semantic
-  colors measured by script and recorded.
+- Text 4.5:1 or better, lines and focus rings 3:1 or better; the error red
+  measured by script and recorded.
 - State never relies on color alone (selected, unsaved, pinned, error, link,
   the open note, the open page).
 - Checked by eye once, at cutover, by the owner in their own vault: light
@@ -468,12 +388,16 @@ Where `AGENTS.md`, the plugin's code and this file disagree:
   geometry properties), and checks that enabling then disabling the look
   leaves no class, attribute or listener behind, in the main window and in a
   second document.
-- `tests/contrast.js` (new): computes every token and semantic pair and
-  fails below the guardrails; its output is what goes in the comments.
-- `tests/test_glyphs.js` (new): every SVG in the set parses, sits on the
-  24-unit grid and uses only allowed elements; the glyph builder is
-  deterministic, spreads 1,000 sample paths across the set without visible
-  clustering, and keeps a stored choice through a rename.
+- `tests/contrast.js`: computes every token pair (ink, grey and red on the
+  ground, the ground on ink) and fails below 4.5; its output is what goes in
+  the comments.
+- `tests/test_glyphs.js`: every SVG in the set parses, sits on the 24-unit
+  grid and uses only allowed elements, and the set stays at about ten.
+- `tests/test_reset.js`: the reset's checks: the controls on each screen at
+  rest within its budget, exactly four colours a scheme, exactly two font
+  sizes, no border on a control or a row (borders only on the structural
+  classes listed in `styles/00-tokens.css`), at most twelve icons, and a
+  settings tab that fits a 900px window without scrolling.
 - Screenshot tests of `docs/specimen.html` in light and dark with Playwright
   (Chromium), compared against approved images, so a change to the look is
   seen before it ships.
@@ -487,11 +411,10 @@ Where `AGENTS.md`, the plugin's code and this file disagree:
 - `docs/design-language.md`, written before any screen is built: the grid,
   the type voices with sizes, the full component inventory with every state
   (rest, hover, focus, selected, open, disabled, empty, loading, error), the
-  icon grammar, the glyph builder's rules, and how each rule above maps to
+  icon grammar, and how each rule above maps to
   tokens and classes. Screens are built from it, and it is updated when a
   screen teaches something new.
-- The plugin icon set as SVG sources, the glyph builder with its tests, and
-  `docs/specimen.html`.
+- The plugin's few icons as SVG sources, and `docs/specimen.html`.
 - Per session, a few lines: what changed, any readability tradeoff, any
   risky selector, and any rule of the language a screen could not keep.
 
@@ -499,24 +422,18 @@ Where `AGENTS.md`, the plugin's code and this file disagree:
 - a rule not gated by `body.dr-active` (and its region class)
 - unloading the plugin leaves classes, attributes, listeners, icons or styles
   behind, in any window
-- a hex color outside the token and semantic blocks, any `!important`
-  outside the labeled exception block, any inline style beyond the allowed
-  geometry properties, any `innerHTML`
+- a colour value outside the token blocks, any `!important`, any inline
+  style beyond the allowed geometry properties, any `innerHTML`
 - JS that moves, replaces or removes Obsidian's DOM nodes
 - an invented variable or class name that is not in the installed `app.css`
 - a border-radius other than 0, any box-shadow, gradient or blur
-- muted text on `--dr-surface`, or clay used as a text color
-- meaning carried by color alone; an unmeasured semantic color
-- a feature hidden or unreachable
-- a readability regression: line length, code legibility, link visibility,
-  focus visibility, or the font-size setting no longer working
-- a break in `REWRITE.md`'s data contract
-- a style copied over from the old `styles.css` instead of written to this
-  file
-- an object grid that shows labels at rest when "Always show labels" is off,
-  or an object whose name is not available on focus and to screen readers
-- a size, position or gap off the 8px grid in plugin-owned UI
-- a plugin control drawn with an Obsidian icon where the plugin's set has one,
-  or a glyph that breaks the icon grammar
-- the glyph builder giving a folder a different glyph on another run or
-  machine
+- a colour beyond black, white, the grey and the error's red; meaning
+  carried by colour alone
+- a third font size, a second typeface, tracking, or capitals for effect
+- a control over its screen's budget, or a second committing button
+- a border on a control or a row; a line that divides nothing
+- more than twelve icons; an icon where a word would do
+- a settings tab that scrolls
+- a feature hidden or unreachable; a break in `REWRITE.md`'s data contract
+- a readability regression: line length, link visibility, focus visibility,
+  or the font-size setting no longer working

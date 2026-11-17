@@ -46,6 +46,10 @@ and lines only where they separate something.
    *Fix:* overflowing tabs scroll with a fade or ellipsis at the edge, never
    clip a glyph.
 
+> Sections B to E below are replaced by `docs/direction-reset.md`
+> (reduction and brutalism). They stay as the record of 4.0's corrections;
+> A (broken) and F (the release) still apply.
+
 ## B. Too many boxes and rules
 
 5. **Frames everywhere.** The sidebar, panel, browse view, sheets and maps
