@@ -1,0 +1,21 @@
+name: Visual review
+on:
+  push:
+    branches: [cleanup/visual-review]
+jobs:
+  screenshots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node tests/screenshots.js --update commands
+      - uses: actions/upload-artifact@v4
+        with:
+          name: updated-commands
+          path: tests/screenshots/commands-*.png
+          retention-days: 1
