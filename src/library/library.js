@@ -77,6 +77,7 @@ export class Library extends Feature {
       leaf.view.folderScreen.go(folder, true);
     } else await leaf.setViewState({ type: BROWSE_VIEW, active: true, state: { at: folder ? folder.path : '/' } });
     await ws.revealLeaf(leaf);
+    ws.setActiveLeaf(leaf, { focus: true });
     return leaf;
   }
 
