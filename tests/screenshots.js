@@ -9,8 +9,9 @@
  *   node tests/screenshots.js library     only the sections whose name holds a word
  *
  * A section that differs leaves what was seen in tests/screenshots/failed/.
- * Not one of the test_*.js suites: it needs a browser, and the images are
- * this Mac's fonts. Playwright: npm i -D playwright && npx playwright install chromium.
+ * Not one of the test_*.js suites: it needs a browser. Baselines use the
+ * GitHub Actions Ubuntu image and its fonts; other platforms may render differently.
+ * Playwright: npm i -D playwright && npx playwright install chromium.
  */
 const fs = require('fs');
 const path = require('path');
