@@ -82,11 +82,12 @@ suite('Design Redux in Obsidian: the app', function () {
       const layout = document.querySelector('.dr-browser-layout');
       const folder = layout && layout.querySelector('.dr-library:not(.is-wide)');
       const notes = layout && layout.querySelector('.dr-library.is-wide');
-      return { panels: layout ? layout.querySelectorAll(':scope > .dr-library').length : 0, selected: folder?.querySelector('[aria-selected="true"]')?.dataset.path, notes: notes?.querySelectorAll('.dr-file-row').length || 0 };
+      return { panels: layout ? layout.querySelectorAll(':scope > .dr-library').length : 0, selected: folder?.querySelector('[aria-selected="true"]')?.dataset.path, notes: notes?.querySelectorAll('.dr-file-row').length || 0, fits: !!notes && notes.getBoundingClientRect().right <= layout.getBoundingClientRect().right };
     }), (s) => s.panels === 2 && s.selected === 'Politics' && s.notes > 0);
     expect(panels.panels).toBe(2);
     expect(panels.selected).toBe('Politics');
     expect(panels.notes).toBeGreaterThan(0);
+    expect(panels.fits).toBe(true);
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;

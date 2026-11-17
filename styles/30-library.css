@@ -1,5 +1,5 @@
 /* Library: the reference's two bordered panels inside one workspace view. */
-.dr-browser-layout {
+.dr-browser-layout.dr-browser-layout.dr-browser-layout {
   display: flex;
   align-items: stretch;
   gap: calc(3 * var(--dr-u));
@@ -12,8 +12,8 @@
   height: 100%;
   min-height: 320px;
 }
-.dr-browser-layout > .dr-library:not(.is-wide) { flex: 0 0 320px; }
-.dr-browser-layout > .dr-library.is-wide { flex: 1 0 480px; max-width: 720px; }
+.dr-browser-layout > .dr-library:not(.is-wide) { flex: 0 1 320px; min-width: 160px; }
+.dr-browser-layout > .dr-library.is-wide { flex: 1 1 720px; min-width: 240px; max-width: 720px; }
 .dr-library {
   container-type: inline-size;
   display: flex;
