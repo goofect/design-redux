@@ -10,6 +10,7 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .dr.dr-library { background: var(--dr-browser-bg); color: var(--dr-browser-ink); }
+.dr.dr-library .dr-head, .dr.dr-library .dr-file-row, .dr.dr-library .dr-file-breadcrumb, .dr.dr-library .dr-file-empty { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .dr-library button { font-family: inherit; }
 .dr-library .dr-file-row, .dr-library .dr-file-breadcrumb { font-size: 13px; font-weight: 400; }
 .dr-library .dr-head { color: var(--dr-browser-ink); }
