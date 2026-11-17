@@ -91,8 +91,9 @@ suite('Design Redux in Obsidian: the app', function () {
     const chrome = await browser.execute(() => {
       const left = document.querySelector('.workspace-split.mod-left-split');
       const ribbon = document.querySelector('.workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
-      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display };
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, candidates: Array.from(document.querySelectorAll('[class*="ribbon"], [class*="dock"]')).map((n) => n.className).filter((v) => typeof v === 'string').slice(0, 30) };
     });
+    console.log('Obsidian left chrome:', JSON.stringify(chrome));
     expect(chrome.left).toBe('none');
     expect(chrome.ribbon).toBe('none');
     await shot('files-browser');
