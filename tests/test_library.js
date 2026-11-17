@@ -49,8 +49,11 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     const view = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view;
     assert.ok(view.contentEl.classList.contains('dr-browser-layout'));
     assert.strictEqual(view.contentEl.querySelectorAll('.dr-library').length, 2);
+    assert.ok(w.doc.body.classList.contains('dr-browser-open'));
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
     assert.deepStrictEqual(paths(view.screen.host), ['Philosophy/Arguments.md']);
+    await w.app.workspace.getLeaf().openFile(w.file('Loose.md'));
+    assert.ok(!w.doc.body.classList.contains('dr-browser-open'), 'normal Obsidian controls must return on leaving the browser');
   });
 
   await check('arrow keys expand folders and focus survives redraws', async () => {

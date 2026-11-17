@@ -20,6 +20,22 @@ export class Library extends Feature {
 
   enable() {
     const ws = this.app.workspace;
+    const marked = new Set();
+    const syncChrome = () => {
+      marked.forEach((doc) => doc.body.classList.remove('dr-browser-open'));
+      marked.clear();
+      const leaf = ws.activeLeaf;
+      const view = leaf && leaf.view;
+      if (!view || view.getViewType() !== BROWSE_VIEW || !view.contentEl) return;
+      const doc = view.contentEl.ownerDocument;
+      if (!doc || !doc.body) return;
+      doc.body.classList.add('dr-browser-open');
+      marked.add(doc);
+    };
+    this.listen(ws, 'active-leaf-change', syncChrome);
+    this.listen(ws, 'layout-change', syncChrome);
+    this.add(() => { marked.forEach((doc) => doc.body.classList.remove('dr-browser-open')); marked.clear(); });
+    syncChrome();
     const redraw = () => this.screens().forEach((s) => s.refresh());
     ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'design-redux:props', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
     const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.browse(null));

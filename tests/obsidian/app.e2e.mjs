@@ -88,6 +88,13 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(panels.selected).toBe('Politics');
     expect(panels.notes).toBeGreaterThan(0);
     expect(panels.fits).toBe(true);
+    const chrome = await browser.execute(() => {
+      const left = document.querySelector('.workspace-split.mod-left-split');
+      const ribbon = document.querySelector('.workspace-ribbon.mod-left');
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display };
+    });
+    expect(chrome.left).toBe('none');
+    expect(chrome.ribbon).toBe('none');
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;
@@ -103,5 +110,7 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(dark.font).toContain('monospace');
     await shot('files-browser-dark');
     await browser.execute(() => { document.body.classList.remove('theme-dark'); if (window.__drWasLight) document.body.classList.add('theme-light'); delete window.__drWasLight; });
+    await browser.executeObsidian(async ({ app }) => { await app.workspace.getLeaf(false).openFile(app.vault.getAbstractFileByPath('Home.md')); });
+    expect(await readUntil(() => browser.execute(() => document.body.classList.contains('dr-browser-open')), (active) => !active)).toBe(false);
   });
 });
