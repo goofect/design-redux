@@ -14,6 +14,16 @@ const check = suite('core');
 const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', 'lifecycle.json'), 'utf8'));
 
 (async () => {
+  await check('the file index includes attachments without changing note-only queries', async () => {
+    const w = await world({ 'Logic/Logic.md': '', 'Logic/Note.md': '', 'Logic/Diagram.pdf': 'pdf', 'Logic/.hidden': '', 'Empty/.keep': '' });
+    const folder = w.file('Logic');
+    assert.deepStrictEqual(w.plugin.index.files(folder).map((f) => f.name), ['Diagram.pdf', 'Logic.md', 'Note.md']);
+    assert.deepStrictEqual(w.plugin.index.notes(folder).map((f) => f.name), ['Note.md']);
+    assert.ok(w.plugin.index.subfolders(w.app.vault.getRoot()).some((f) => f.name === 'Empty'));
+    await w.app.vault.create('Logic/Second.pdf', 'pdf');
+    assert.deepStrictEqual(w.plugin.index.files(folder).map((f) => f.name), ['Diagram.pdf', 'Logic.md', 'Note.md', 'Second.pdf']);
+  });
+
   await check('every key the old plugin kept is kept, renamed, or retired with a reason', () => {
     const lost = lifecycle.settings.filter((k) => !(k in dr.DEFAULTS) && !(k in dr.RENAMED) && !(k in dr.RETIRED));
     assert.deepStrictEqual(lost, []);
