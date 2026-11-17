@@ -28,13 +28,15 @@ interface; stored order data is retained for existing vaults.
 
 ## Candidates for a subsequent feature decision
 
-These are candidates, not removals in this change:
+The 3D graph stays. The file-browser replacement is specified in
+`docs/FILE-BROWSER-REDESIGN.md`; its implementation and removal of the old
+tree-map view are still to be done. The following are further candidates, not
+removals in this change:
 
 | Candidate | Simplification | Consequence to assess |
 | --- | --- | --- |
-| Separate 3D graph | Rely on Obsidian's graph and the plugin's map. | Removes the plugin's 3D view, its commands, settings and view state. |
 | Property rules, schemas and history | Reduce overlapping property-management systems. | May remove automated changes, validation or history people rely on. |
-| Library detail levels and saved views | Reduce alternate ways of presenting or filtering the same vault. | Changes navigation and can make saved views inaccessible. |
+| Saved views | Reduce ways of storing filtered vault views. | Can make existing saved views inaccessible. |
 | Plugin-wide appearance | Limit styling to plugin-owned surfaces. | Stops changing Obsidian's chrome and other plugins' appearance. |
 
 Before removing a candidate, specify its replacement or the lost behavior,
