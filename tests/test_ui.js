@@ -128,6 +128,23 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual(got, ['c', 'a', 'head']);
     assert.strictEqual(dr.shelf(root, { name: 'Open', count: 0, current: true, notes: [] }).querySelector('.dr-shelf-head').getAttribute('aria-current'), 'true');
     assert.strictEqual(root.lastChild.querySelector('.dr-shelf-bars').childNodes.length, 0, 'an empty shelf must be empty for its bare line to show');
+    // The bar under the pointer or the ring names its note on the line under the shelf.
+    const named = () => s.querySelector('.dr-shelf-name').textContent;
+    bars[0].dataset.name = 'A';
+    bars[0].dispatchEvent(new window.Event('pointerover', { bubbles: true }));
+    assert.strictEqual(named(), 'A');
+    s.querySelector('.dr-shelf-bars').dispatchEvent(new window.Event('pointerleave'));
+    assert.strictEqual(named(), '');
+    bars[2].dispatchEvent(new window.Event('focusin', { bubbles: true }));
+    assert.strictEqual(named(), 'C');
+    // One row a folder: past what fits, "+N"; the open note's bar always stands.
+    const many = dr.shelf(root, { name: 'Many', count: 50, notes: Array.from({ length: 50 }, (_, i) => ({ size: 1, name: `N${i}`, label: `N${i}`, path: `n${i}`, current: i === 45 })) });
+    const hiddenAt = () => Array.from(many.querySelectorAll('.dr-bar')).map((b, i) => (b.hidden ? i : -1)).filter((i) => i >= 0);
+    assert.strictEqual(dr.fitShelf(many, 160), 33);
+    assert.strictEqual(many.querySelector('.dr-shelf-more').textContent, '+33');
+    assert.ok(!hiddenAt().includes(45) && hiddenAt().includes(16), 'the open note\'s bar was not kept in the row');
+    assert.strictEqual(dr.fitShelf(many, 1000), 0);
+    assert.strictEqual(many.querySelector('.dr-shelf-more').textContent, '');
   });
 
   await check('panel row and section: a dash for no value, the reason when wrong, selected, disabled', () => {

@@ -159,16 +159,46 @@ const VAULT = {
     assert.deepStrictEqual([row.getAttribute('aria-invalid'), row.getAttribute('aria-label')], ['true', 'status: “drafty” is not one of draft, done']);
   });
 
+  await check('the rules sheet: each rule its sentence and a toggle beside it, no numbers; a new one written as a sentence with fields', async () => {
+    const w = await world(VAULT, { settingsVersion: 100, propertyRules: [dr.parseRule('folder Reading -> shelf=reading')] });
+    const sheet = feature(w, 'PropertyRules').edit();
+    const m = sheet.modalEl;
+    const said = () => Array.from(m.querySelectorAll('.dr-rule-name')).map((n) => n.textContent);
+    assert.deepStrictEqual(said(), ['When a note comes into Reading, set shelf to reading']);
+    assert.ok(!m.querySelector('.dr-slot'), 'the rules are numbered');
+    const toggle = m.querySelector('.dr-rule .checkbox-container');
+    assert.ok(toggle.classList.contains('is-enabled'), 'a rule that is on shows off');
+    toggle.click();
+    await settle();
+    assert.strictEqual(w.plugin.settings.propertyRules[0].on, false);
+    const kind = m.querySelector('.dr-rule-sentence select');
+    kind.value = 'tag';
+    kind.dispatchEvent(new window.Event('change'));
+    const [what, key, value] = Array.from(m.querySelectorAll('.dr-rule-sentence input'));
+    assert.strictEqual(what.placeholder, 'tag');
+    Object.assign(what, { value: 'formal' });
+    Object.assign(key, { value: 'reviewed' });
+    Object.assign(value, { value: 'yes' });
+    Array.from(m.querySelectorAll('.dr-button')).find((b) => b.textContent === 'Add rule').click();
+    await settle();
+    assert.deepStrictEqual(said(), ['When a note comes into Reading, set shelf to reading', 'When a note gets #formal, set reviewed to yes']);
+    sheet.close();
+  });
+
   await check('rules: read from a line; a dry run says and sets nothing; live, one write, which fires no rule of its own', async () => {
     const rule = dr.parseRule('tag formal -> reviewed=yes, stage=1');
-    assert.deepStrictEqual([rule.when, rule.set, rule.name], [{ kind: 'tag', tag: 'formal' }, [{ key: 'reviewed', value: 'yes' }, { key: 'stage', value: '1' }], 'When a note gets #formal, set reviewed, stage']);
+    assert.deepStrictEqual([rule.when, rule.set, rule.name], [{ kind: 'tag', tag: 'formal' }, [{ key: 'reviewed', value: 'yes' }, { key: 'stage', value: '1' }], 'When a note gets #formal, set reviewed to yes and stage to 1']);
+    // Written in the sheet's sentence: "When a note [comes into] [Logic], set [status] to [draft]".
+    const made = dr.ruleOf({ kind: 'folder', what: '/Logic/', key: 'status', value: 'draft' });
+    assert.deepStrictEqual([made.when, made.set, made.name], [{ kind: 'folder', folder: 'Logic' }, [{ key: 'status', value: 'draft' }], 'When a note comes into Logic, set status to draft']);
+    assert.strictEqual(dr.ruleOf({ kind: 'tag', what: '', key: 'x' }), null);
     assert.strictEqual(dr.parseRule('folder Logic'), null);
     const w = await world(VAULT, { settingsVersion: 100, propertyRulesOn: true, propertyRules: [rule, dr.parseRule('folder Reading -> shelf=reading')] });
     let writes = 0;
     w.plugin.notes.watch(() => writes++);
     await w.plugin.notes.write(w.file('Reading/E.md'), (fm) => (fm.tags = ['formal']));
     await settle();
-    assert.ok(obsidian.Notice.log.some((m) => /^Dry run: When a note gets #formal, set reviewed, stage would set reviewed, stage on E/.test(m)));
+    assert.ok(obsidian.Notice.log.some((m) => /^Dry run: “When a note gets #formal, set reviewed to yes and stage to 1” would set reviewed, stage on E/.test(m)));
     assert.ok(!('reviewed' in props(w, 'Reading/E.md')));
     w.plugin.settings.propertyRulesDryRun = false;
     await w.plugin.saveSettings();
@@ -315,6 +345,12 @@ const VAULT = {
     const node = (label) => Array.from(view.contentEl.querySelectorAll('.dr-map-node')).find((n) => n.textContent.startsWith(label));
     const root = node('Big');
     assert.strictEqual(root.getAttribute('aria-selected'), 'true');
+    // A glyph only on a folder's box; a note's box is its name. A folder's tone is a small square at the left, not its line.
+    assert.ok(node('F0').querySelector('svg.dr-glyph'), 'a folder\'s box lost its glyph');
+    assert.ok(Array.from(view.contentEl.querySelectorAll('.dr-map-node[data-path$=".md"]')).every((n) => !n.querySelector('svg.dr-glyph')), 'a note\'s box has a glyph');
+    view.root.children.find((c) => c.label === 'F0').tone = 'moss';
+    view.draw();
+    assert.ok(node('F0').querySelector(':scope > .dr-map-tone[data-tone="moss"]'), 'a folder\'s tone is not the square at the left of its box');
     key(root, 'ArrowRight');
     assert.ok(node('F0').getAttribute('aria-selected') === 'true' && w.doc.activeElement === node('F0'));
     key(node('F0'), 'ArrowDown');

@@ -387,6 +387,23 @@ class Setting {
   addSlider(fn) { return this._add('input', fn); }
 }
 Setting.made = [];
+/** Obsidian's toggle and dropdown, as they are made: a .checkbox-container holding a checkbox, a select.dropdown. */
+class ToggleComponent {
+  constructor(containerEl) { const d = containerEl.ownerDocument; this.toggleEl = containerEl.appendChild(d.createElement('div')); this.toggleEl.className = 'checkbox-container'; const input = this.toggleEl.appendChild(d.createElement('input')); input.type = 'checkbox'; input.tabIndex = 0; this.on = false; this.toggleEl.addEventListener('click', () => this.setValue(!this.on)); }
+  getValue() { return this.on; }
+  setValue(on) { this.on = !!on; this.toggleEl.classList.toggle('is-enabled', this.on); if (this.changed) this.changed(this.on); return this; }
+  onChange(fn) { this.changed = fn; return this; }
+  setDisabled(off) { this.toggleEl.classList.toggle('is-disabled', !!off); return this; }
+  setTooltip(t) { this.toggleEl.setAttribute('aria-label', t); return this; }
+}
+class DropdownComponent {
+  constructor(containerEl) { this.selectEl = containerEl.appendChild(containerEl.ownerDocument.createElement('select')); this.selectEl.className = 'dropdown'; this.selectEl.addEventListener('change', () => this.changed && this.changed(this.selectEl.value)); }
+  addOption(value, text) { const o = this.selectEl.appendChild(this.selectEl.ownerDocument.createElement('option')); o.value = value; o.textContent = text; return this; }
+  addOptions(map) { Object.keys(map).forEach((k) => this.addOption(k, map[k])); return this; }
+  getValue() { return this.selectEl.value; }
+  setValue(v) { this.selectEl.value = v; return this; }
+  onChange(fn) { this.changed = fn; return this; }
+}
 class PluginSettingTab { constructor(app, plugin) { this.app = app; this.plugin = plugin; this.containerEl = app.workspace.doc.createElement('div'); } }
 
 class Notice { constructor(message) { this.message = message; Notice.log.push(String(message && message.textContent != null ? message.textContent : message)); } hide() {} setMessage(m) { this.message = m; } }
@@ -407,7 +424,7 @@ const debounce = (fn) => { const run = (...a) => fn(...a); run.cancel = () => {}
 
 module.exports = {
   Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
-  View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, Menu, MenuItem, Setting, PluginSettingTab, Notice,
+  View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
   addIcon, removeIcon, setIcon, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
   Platform: { isMobile: false, isDesktop: true, isDesktopApp: true, isMacOS: true },
   parseYaml: (s) => yaml.load(s), stringifyYaml: (o) => yaml.dump(o, { lineWidth: -1 }),

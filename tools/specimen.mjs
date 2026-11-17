@@ -45,6 +45,7 @@ body{--file-line-width:640px;--file-margins:32px;--font-text:-apple-system,Blink
 .checkbox-container.is-enabled::after{transform:translate3d(calc(var(--toggle-s-width) - var(--toggle-s-thumb-width) - var(--toggle-s-border-width)),0,0)}
 .checkbox-container input{position:absolute;inset:0;margin:0;opacity:0}
 .spec-setting{display:flex;align-items:center;gap:8px}
+.dropdown{height:32px;padding:0 8px;border:1px solid var(--dr-ink);border-radius:0;background:var(--dr-bg);color:var(--dr-ink);font:inherit;font-size:13px;appearance:none}
 `;
 
 // The page's own layout. spec- classes are the specimen's, never the plugin's.

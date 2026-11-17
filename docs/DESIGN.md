@@ -312,12 +312,15 @@ exactly as it does without the plugin.
     each named under its glyph on one line; the picked folder shows its
     count too. Opening a folder fills the sidebar with its own grid of
     subfolders and notes, with a back icon and the folder's label.
-  - *Shelves:* each folder a row: its label and count above, and its notes
-    as vertical bars standing on a hairline, one per note, bar height from
-    the note's length, the open note in ink and the rest muted.
+  - *Shelves:* each folder one row, never wrapped ("+12" where it runs
+    out): its name and count above, and its notes as vertical bars standing
+    on a hairline, one per note, bar height from the note's length, the open
+    note's bar in clay and the rest muted; the bar under the pointer or the
+    keyboard names its note on a line under the shelf.
   - *Words:* a plain outline: folders by name, notes as rows (numbered only
-    in a folder's own order), the open note's pages or headings indented
-    under it, muted, with no mark; other folders collapsed to one line each.
+    in a folder's own order), and only under the open note its pages or
+    headings, one step in, muted, smaller, with no mark; other folders
+    collapsed to one line each.
   - The level, the open folder and the scroll position are kept per window.
 - **Folder glyphs (covers).** Every folder gets a solid glyph: one the user
   picked from the plugin's glyph set, or, by default, the one its name asks
@@ -352,9 +355,10 @@ exactly as it does without the plugin.
   value beside it; no rules between its parts, no head repeating the note's
   name, no arrows or fold buttons on its titles (a press on a group's title
   folds it); mentions and links as plain rows without numbers.
-- **Mind maps:** nodes square with a 1px ink border on bone, links as plain
-  ink lines, the selected node a clay fill; user branch colors kept as
-  semantic colors; toolbar, minimap and legend follow the overlay rules and
+- **Mind maps:** nodes square, every one with a 1px ink border on bone,
+  links as plain ink lines, the selected node a clay fill and nothing else;
+  user branch colors kept as semantic colors, shown as a small square at the
+  node's left (never as its border); glyphs only on folder nodes; toolbar, minimap and legend follow the overlay rules and
   use the plugin's icons.
 - **Settings:** each feature a row with its glyph, name, switch and a gear;
   small-capital section labels; nothing else.

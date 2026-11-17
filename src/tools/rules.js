@@ -14,19 +14,33 @@
 /* back one value at a time.                                           */
 /* ------------------------------------------------------------------ */
 
-import { Notice, TFile } from 'obsidian';
+import { DropdownComponent, Notice, TFile, ToggleComponent } from 'obsidian';
+import { el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { noteProps, propOf, sameValue, tagsOf, valuesOf } from '../core/notes.js';
-import { field } from '../ui/field.js';
-import { row, rows } from '../ui/row.js';
+import { textButton } from '../ui/button.js';
 import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
 
-/** A rule said plainly. */
+/** A rule said plainly, as a sentence: "When a note comes into Logic, set status to draft". */
 export function ruleName(rule) {
   const w = rule.when || {};
   const what = w.kind === 'folder' ? `comes into ${w.folder}` : w.kind === 'tag' ? `gets #${w.tag}` : w.value ? `has ${w.key} set to ${w.value}` : `gets ${w.key}`;
-  return `When a note ${what}, set ${(rule.set || []).map((s) => s.key).join(', ')}`;
+  return `When a note ${what}, set ${(rule.set || []).map((s) => (s.value !== '' && s.value != null ? `${s.key} to ${s.value}` : s.key)).join(' and ')}`;
+}
+
+/** A rule from the sentence's fields: { kind: folder | tag | property, what, key, value }, or null when a field it needs is empty. */
+export function ruleOf(parts) {
+  const what = String(parts.what || '').trim();
+  const key = String(parts.key || '').trim();
+  if (!what || !key || !['folder', 'tag', 'property'].includes(parts.kind)) return null;
+  const when = { kind: parts.kind };
+  if (parts.kind === 'folder') when.folder = what.replace(/^\/+|\/+$/g, '');
+  else if (parts.kind === 'tag') when.tag = what.replace(/^#/, '').toLowerCase();
+  else { const [k, ...v] = what.split('='); when.key = k.trim(); when.value = v.join('=').trim(); }
+  const rule = { id: `rule-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, on: true, when, set: [{ key, value: String(parts.value || '').trim() }] };
+  rule.name = ruleName(rule);
+  return rule;
 }
 
 /** What a rule's condition is read from: a note's tags and properties, as they stand. */
@@ -118,7 +132,7 @@ export class PropertyRules extends Feature {
     const due = rules.map((rule) => ({ rule, set: ruleWould(this.app, rule, file) })).filter((d) => Object.keys(d.set).length);
     if (!due.length) return [];
     if (this.settings.propertyRulesDryRun !== false) {
-      new Notice(`Dry run: ${due[0].rule.name || ruleName(due[0].rule)} would set ${Object.keys(due[0].set).join(', ')} on ${file.basename}.`);
+      new Notice(`Dry run: “${ruleName(due[0].rule)}” would set ${Object.keys(due[0].set).join(', ')} on ${file.basename}.`);
       return due;
     }
     this.quiet.add(file.path);
@@ -127,7 +141,11 @@ export class PropertyRules extends Feature {
     return due;
   }
 
-  /** The rules, in a sheet: each on a row (a press turns it off or on), and a line to add one. */
+  /**
+   * The rules, in a sheet: each said as a sentence, its toggle beside it, no
+   * numbers; then a new one written the same way, a sentence with fields:
+   * "When a note [comes into] [folder], set [property] to [value]".
+   */
   edit() {
     const sheet = new Sheet(this.app, {
       title: 'Property rules',
@@ -138,16 +156,18 @@ export class PropertyRules extends Feature {
           const rules = Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : [];
           if (!rules.length) sayso(matter, { glyph: 'rules', label: 'No rules yet' });
           else {
-            const list = rows(matter);
-            rules.forEach((rule, i) => row(list, { number: i + 1, name: rule.name || ruleName(rule), end: rule.on === false ? 'off' : 'on', run: async () => { rule.on = rule.on === false; await this.plugin.saveSettings(); draw(); } }));
+            const list = el(matter, 'div', 'dr-rules');
+            list.setAttribute('role', 'list');
+            rules.forEach((rule) => {
+              const line = el(list, 'div', 'dr-rule');
+              line.setAttribute('role', 'listitem');
+              const said = el(line, 'span', 'dr-text dr-rule-name', ruleName(rule));
+              const toggle = new ToggleComponent(line).setValue(rule.on !== false);
+              toggle.toggleEl.setAttribute('aria-label', `${said.textContent}: on`);
+              toggle.onChange(async (on) => { rule.on = on; await this.plugin.saveSettings(); });
+            });
           }
-          const add = field(matter, { label: 'A new rule', placeholder: 'folder Logic -> status=draft', note: 'Folder, tag or property; then ->; then what to set.', onEnter: async (v) => {
-            const rule = parseRule(v);
-            if (!rule) return void add.drSay('Write it as: folder Logic -> status=draft', true);
-            this.settings.propertyRules = (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).concat(rule);
-            await this.plugin.saveSettings();
-            draw();
-          } });
+          this.newRule(matter, draw);
         };
         draw();
       },
@@ -155,6 +175,38 @@ export class PropertyRules extends Feature {
     });
     sheet.open();
     return sheet;
+  }
+
+  /** The sentence a new rule is written in, its fields where its words go, and Add. */
+  newRule(matter, done) {
+    const form = el(matter, 'div', 'dr-rule-new');
+    const line = el(form, 'div', 'dr-rule-sentence dr-text');
+    const input = (placeholder) => {
+      const box = el(line, 'span', 'dr-field-box dr-rule-field');
+      const i = el(box, 'input', 'dr-input');
+      i.type = 'text';
+      i.placeholder = placeholder;
+      i.setAttribute('aria-label', placeholder);
+      return i;
+    };
+    el(line, 'span', '', 'When a note');
+    const kind = new DropdownComponent(line).addOptions({ folder: 'comes into', tag: 'gets the tag', property: 'gets the property' }).setValue('folder');
+    kind.selectEl.setAttribute('aria-label', 'When');
+    const what = input('folder');
+    kind.onChange((k) => { what.placeholder = k; what.setAttribute('aria-label', k); });
+    el(line, 'span', 'dr-rule-tight', ', set');
+    const key = input('property');
+    el(line, 'span', '', 'to');
+    const value = input('value');
+    const say = el(form, 'span', 'dr-field-note dr-small');
+    textButton(form, { text: 'Add rule', run: async () => {
+      const rule = ruleOf({ kind: kind.getValue(), what: what.value, key: key.value, value: value.value });
+      if (!rule) return void (say.textContent = `Fill in the ${kind.getValue()} and the property.`);
+      this.settings.propertyRules = (Array.isArray(this.settings.propertyRules) ? this.settings.propertyRules : []).concat(rule);
+      await this.plugin.saveSettings();
+      done();
+    } });
+    return form;
   }
 
   actions() {

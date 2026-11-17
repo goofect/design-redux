@@ -2,12 +2,15 @@
 /* Shelves: a folder as a row of bars                                  */
 /*                                                                     */
 /* One bar a note, as tall as the note is long, a unit wide, standing  */
-/* on a hairline that is its own.                                      */
+/* on a hairline that is its own. One row a folder, never wrapped:     */
+/* "+12" where it runs out. The bar under the pointer or the ring      */
+/* names its note on a line under the shelf; the open note's bar is    */
+/* clay.                                                               */
 /* ------------------------------------------------------------------ */
 
 /* ---- A shelf: a folder's label and count, and its notes as bars standing on a hairline. ---- */
 .dr-shelf {
-  padding: 0 var(--dr-gutter) var(--dr-gutter);
+  padding: 0 var(--dr-gutter) var(--dr-u);
 }
 
 .dr-shelf-head {
@@ -46,10 +49,33 @@
 
 .dr-shelf-bars {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-end;
-  row-gap: var(--dr-gutter);
+  overflow: hidden;
   padding-bottom: var(--dr-u);
+}
+
+.dr-bar[hidden] {
+  display: none;
+}
+
+/* How many are not drawn, where the row runs out: three units, on the line's foot. */
+.dr-shelf-more {
+  flex: none;
+  min-width: calc(3 * var(--dr-u));
+  color: var(--dr-muted);
+  text-align: right;
+}
+
+.dr-shelf-more:empty {
+  display: none;
+}
+
+/* The name of the bar under the pointer or the ring. A line kept for it, so nothing moves when it appears. */
+.dr-shelf-name {
+  display: block;
+  height: var(--dr-line);
+  color: var(--dr-ink);
 }
 
 /* A folder with no notes: the line, and nothing standing on it. */
@@ -84,29 +110,18 @@
   background: var(--dr-muted);
 }
 
-/* The open note: a clay fill behind its bar, the bar dark on it, and the mark under the line. Selected: the same, the mark hollow. */
-.dr-bar[aria-current],
-.dr-bar[aria-selected="true"] {
+/* One sign a state. The open note: its bar in clay. Picked but not open: the mark, an ink square under the line. */
+.dr-bar[aria-current]::before {
   background: var(--dr-clay);
 }
 
-.dr-bar[aria-current]::before,
-.dr-bar[aria-selected="true"]::before {
-  background: var(--dr-on-clay);
-}
-
-.dr-bar[aria-current]::after,
-.dr-bar[aria-selected="true"]::after {
+.dr-bar[aria-selected="true"]:not([aria-current])::after {
   content: "";
   position: absolute;
   left: 0;
   top: calc(100% + var(--dr-hair));
   width: calc(var(--dr-u) - var(--dr-hair));
   height: var(--dr-mark);
-  border: var(--dr-ring) solid var(--dr-ink);
-}
-
-.dr-bar[aria-current]::after {
   background: var(--dr-ink);
 }
 
@@ -134,13 +149,7 @@
     color: var(--dr-on-clay);
   }
 
-  .dr-bar[aria-current]:hover,
-  .dr-bar[aria-selected="true"]:hover {
+  .dr-bar[aria-current]:hover::before {
     background: var(--dr-clay);
-  }
-
-  .dr-bar[aria-current]:hover::before,
-  .dr-bar[aria-selected="true"]:hover::before {
-    background: var(--dr-on-clay);
   }
 }

@@ -2,7 +2,8 @@
 /* The map's view                                                      */
 /*                                                                     */
 /* Nodes are square boxes with an ink hairline, links plain ink lines, */
-/* the node picked a clay fill; a folder's tone is its box's line.     */
+/* the node picked a clay fill, nothing else; a folder's tone a small  */
+/* square at the left of its box; a glyph only on a folder's box.      */
 /* The toolbar is the plugin's icon buttons. Each node is placed by    */
 /* two custom properties the script sets (its column and row in        */
 /* units), the one kind of inline style the plugin allows itself. The  */
@@ -116,7 +117,10 @@ export class MapView extends ItemView {
     box.style.setProperty('--dr-y', String(p.y));
     box.dataset.id = node.id;
     box.dataset.path = node.path;
-    if (node.tone) box.dataset.tone = node.tone;
+    if (node.tone) {
+      box.dataset.tone = node.tone;
+      el(box, 'span', 'dr-map-tone', '').dataset.tone = node.tone;
+    }
     // A press picks (a second folds); the keys are the tree's alone (onKey), so none is handled twice.
     box.addEventListener('click', () => this.pick(node, true));
     box.setAttribute('role', 'treeitem');
@@ -125,7 +129,8 @@ export class MapView extends ItemView {
     flag(box, 'aria-selected', node.id === this.picked);
     const open = this.app.workspace.getActiveFile();
     flag(box, 'aria-current', !!open && open.path === node.path, 'page');
-    glyph(box, node.kind === 'folder' ? (this.plugin.faceOf && node.path !== '/' && this.app.vault.getAbstractFileByPath(node.path) ? this.plugin.faceOf(this.app.vault.getAbstractFileByPath(node.path)) : 'folder') : 'note');
+    // A glyph only on a folder's box: a note is its name.
+    if (node.kind === 'folder') glyph(box, this.plugin.faceOf && node.path !== '/' && this.app.vault.getAbstractFileByPath(node.path) ? this.plugin.faceOf(this.app.vault.getAbstractFileByPath(node.path)) : 'folder');
     el(box, 'span', 'dr-text dr-clip', node.label);
     if (node.children.length) {
       const count = el(box, 'span', 'dr-map-count dr-small', node.folded ? `+${node.children.length}` : '');

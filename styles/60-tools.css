@@ -112,8 +112,6 @@
 .dr-map-node[aria-selected="true"] {
   background: var(--dr-clay);
   color: var(--dr-on-clay);
-  outline: var(--dr-hair) solid var(--dr-ink);
-  outline-offset: calc(-2 * var(--dr-ring));
 }
 
 .dr-map-node[aria-selected="true"] > .dr-map-count {
@@ -124,13 +122,53 @@
   font-weight: 600;
 }
 
-/* A folder's tone: the line round its box, thickened so it is told from ink without the hue. */
-.dr-map-node[data-tone] { border-width: var(--dr-ring); }
-.dr-map-node[data-tone="rust"] { border-color: var(--dr-rust); }
-.dr-map-node[data-tone="ochre"] { border-color: var(--dr-ochre); }
-.dr-map-node[data-tone="moss"] { border-color: var(--dr-moss); }
-.dr-map-node[data-tone="slate"] { border-color: var(--dr-slate); }
-.dr-map-node[data-tone="plum"] { border-color: var(--dr-plum); }
+/* A folder's tone: a small square of it at the left of its box. The line round every box stays ink, so no box reads as focused. */
+.dr-map-tone {
+  flex: none;
+  width: var(--dr-mark);
+  height: var(--dr-mark);
+}
+
+.dr-map-tone[data-tone="rust"] { background: var(--dr-rust); }
+.dr-map-tone[data-tone="ochre"] { background: var(--dr-ochre); }
+.dr-map-tone[data-tone="moss"] { background: var(--dr-moss); }
+.dr-map-tone[data-tone="slate"] { background: var(--dr-slate); }
+.dr-map-tone[data-tone="plum"] { background: var(--dr-plum); }
+
+/* ---- The rules sheet: each rule its sentence, its toggle beside it; a new one written as a sentence with fields. ---- */
+.dr-rule {
+  display: flex;
+  align-items: center;
+  gap: var(--dr-gutter);
+  min-height: var(--dr-row);
+}
+
+.dr-rule-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.dr-rule-new {
+  display: grid;
+  justify-items: start;
+  gap: var(--dr-u);
+}
+
+.dr-rule-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-u);
+}
+
+.dr-rule-field {
+  width: calc(14 * var(--dr-u));
+}
+
+/* The comma after a field sits against it, the sentence's gap taken back. */
+.dr-rule-tight {
+  margin-left: calc(-1 * var(--dr-u));
+}
 
 @media (any-hover: hover) {
   .dr-map-node:hover {

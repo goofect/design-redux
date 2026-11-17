@@ -4,7 +4,7 @@
 
 import { barSize, counted } from '../core/text.js';
 import { el } from '../core/dom.js';
-import { shelf } from '../ui/shelf.js';
+import { fitShelf, shelf } from '../ui/shelf.js';
 import { sayso } from '../ui/state.js';
 import { shownFolders } from './level-objects.js';
 import { listedNotes } from './order.js';
@@ -23,7 +23,7 @@ export function drawShelves(screen, host, folder) {
       onNote: (path, e) => screen.openNote(plugin.app.vault.getAbstractFileByPath(path), e),
       notes: notes.map((n) => {
         const words = plugin.index.words(n);
-        return { size: barSize(words), label: `${n.basename}, about ${counted(words, 'word')}`, path: n.path, current: n === open, selected: plugin.selection.is(n) };
+        return { size: barSize(words), name: n.basename, label: `${n.basename}, about ${counted(words, 'word')}`, path: n.path, current: n === open, selected: plugin.selection.is(n) };
       }),
     }).dataset.path = f.path;
   };
@@ -32,6 +32,15 @@ export function drawShelves(screen, host, folder) {
   folders.forEach((f) => one(f, f.name));
   if (!list.firstChild) return void sayso(host, { label: 'Nothing in this folder yet', button: { text: 'New note', run: () => plugin.files.newNote(folder) } });
   screen.roving(list, '.dr-shelf-head', () => 1);
+  // One row a folder: fitted to the sidebar's width now, and again whenever it is dragged.
+  const fit = () => list.querySelectorAll('.dr-shelf').forEach((s) => fitShelf(s, s.querySelector('.dr-shelf-bars').clientWidth));
+  fit();
+  const win = host.ownerDocument.defaultView;
+  if (win && typeof win.ResizeObserver === 'function') {
+    const watch = new win.ResizeObserver(fit);
+    watch.observe(list);
+    screen.stops.push(() => watch.disconnect());
+  }
   Array.from(list.querySelectorAll('.dr-shelf-bars')).forEach((bars) => screen.stops.push(rovingBars(screen, bars)));
 }
 

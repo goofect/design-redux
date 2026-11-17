@@ -123,13 +123,16 @@
   color: var(--dr-muted);
 }
 
-/* A heading or a page of the open note: set in two units under its name, and quieter; no mark, not even where you are. */
+/* A heading or a page of the open note: one step in (two units), muted, smaller, on a shorter row, so it reads as
+   the note's and not as a note; no mark, not even where you are. */
 .dr-row.is-child {
+  min-height: var(--dr-line-loose);
   color: var(--dr-muted);
 }
 
 .dr-row.is-child > .dr-row-name {
   padding-left: var(--dr-gutter);
+  font-size: var(--dr-label-size);
 }
 
 /* ---- A panel row: a property's name and its value. ---- */

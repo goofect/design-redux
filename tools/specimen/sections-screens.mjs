@@ -130,8 +130,8 @@ export async function screens() {
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel, 'is-panel')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The library’s search with nothing typed (the last searches, then a property’s values, each a filter) and with something; the browse view with a filter on, its parts as chips that take themselves off.',
       `<div class="spec-states is-close">${frame('search, nothing typed', 320, 520, searchEmpty, 'is-side')}${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
-    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: boxes with a hairline, plain lines between, the one picked in clay, a folded branch counted, a folder’s tone as the line round its box. The 3D graph: ink squares on hairlines, the picked note and the open one in clay.',
+    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: every box an ink hairline, plain lines between, the one picked in clay and nothing else, a folded branch counted, a folder’s tone as a small square at the left of its box, a glyph only on a folder’s box. The 3D graph: ink squares on hairlines, the picked note and the open one in clay.',
       `<div class="spec-states is-close">${frame('the map of Projects, Thesis picked', 720, 440, mapHtml)}${frame('the 3D graph', 720, 448, graph)}</div>`)
-    + section('screens-sheets', 'A sheet of the tools', 'Property rules: each a row (a press turns it off or on), and a line to write a new one.',
+    + section('screens-sheets', 'A sheet of the tools', 'Property rules: each said as a sentence, its toggle beside it, no numbers; a new one written the same way, a sentence with fields.',
       `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}</div>`);
 }

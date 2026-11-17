@@ -121,7 +121,9 @@ Measured: ink on bone 13.98 (dark 13.81); ink on ash 10.87 (11.66); ink on the
 deeper ash 8.43 (9.39); muted on
 bone 5.36 (7.00); on-clay on clay 5.66. Clay on bone is a fill at 2.47 in
 light (5.59 in dark), and ash on bone 1.29: a fill has no floor, so **a fill
-is never the only sign of a state** (next section). Three pairs are refused:
+is never the only sign of a state where there are words** (they turn bold;
+next section). A map's picked box is the one place the clay stands alone, and
+there the focus ring carries the keyboard. Three pairs are refused:
 muted on ash (4.16 in light), anything but on-clay on clay (the dark scheme's
 ink on clay is 2.47), and clay as a text colour.
 
@@ -352,21 +354,27 @@ between a folder picked and its notes).
 
 ### Shelf · `.dr-shelf` > `.dr-shelf-head`, `.dr-shelf-bars` > `.dr-bar` · `23-shelves.css`
 
-A folder as a row of bars: its label and count over them (the head, a row of
-four units that opens the folder), one bar a note. A bar is a unit wide less a
-hairline of ground, and one to five units tall by the note's length
+A folder as one row of bars: its name and count over them (the head, a row
+of four units that opens the folder), one bar a note. A bar is a unit wide
+less a hairline of ground, and one to five units tall by the note's length
 (`--dr-size`, set by the script: 1 up to 300 words, then a unit more each
-time the length doubles). It stands on a hairline that is its own, so a shelf
-is as long as its notes and wraps into as many lines as it needs.
+time the length doubles). It stands on a hairline that is its own. A shelf
+is never wrapped: as many bars stand as the row holds, and where it runs out
+the last three units say how many more there are ("+12", `.dr-shelf-more`;
+`fitShelf` fits it to the sidebar's width whenever that changes, and keeps
+the open note's bar in the row). Under the bars, a line is kept
+(`.dr-shelf-name`) where the bar under the pointer or the ring names its
+note.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
 | rest | bar `muted`, line `hair` `ink` | — |
-| hover (a bar) | bar `ink` on a column of `surface` | the pointer; its name is its tooltip |
-| focus (a bar) | ring round its column | the ring |
-| selected (a bar) | fill `clay` behind the bar, bar `on-clay` | the hollow mark under the line |
-| open (a bar: the open note) | fill `clay` behind the bar, bar `on-clay` | the solid mark under the line |
+| hover (a bar) | bar `ink` on a column of `surface` | the pointer; its note's name on the line under the shelf |
+| focus (a bar) | ring round its column | the ring; its note's name on the line under the shelf |
+| selected (a bar: picked, not open) | — | the mark, an ink square under the line |
+| open (a bar: the open note) | the bar in `clay` | — |
 | open (the head: the folder in the page) | head fill `clay`, label `on-clay` | label bold |
+| more than fit | "+N" in the small voice, `muted`, where the row ends | the count |
 | empty | the line with nothing on it | the bare line; the count reads 0 |
 | disabled, loading, error | — | a bar is a note that exists |
 
@@ -375,7 +383,9 @@ is as long as its notes and wraps into as many lines as it needs.
 Words: the plain outline. A folder is one line (`.dr-outline-folder`): a
 chevron in the slot, its label, its count, a hairline over it. Open
 (`aria-expanded`), its notes follow as rows without rules. Under the open
-note, its headings or pages (`.is-child`), set in two units, muted.
+note, and only there, its headings or pages (`.is-child`): one step in (two
+units), muted, in the small voice's size, on rows of three units, with no
+mark.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
@@ -483,6 +493,12 @@ Square, a hairline, a flat dim behind it (`--dr-dim`), no blur.
 | error | the field that is wrong says why; a failure that is the sheet's own is a say-so block in its matter | glyph and words |
 | empty | a sheet with nothing to ask is not opened | — |
 
+A list in a sheet is plain rows without numbers: the property rules each said
+as a sentence ("When a note comes into Logic, set status to draft"), with
+Obsidian's toggle beside it. A new one is written the same way, as a sentence
+with fields where its words go: "When a note [comes into] [folder], set
+[property] to [value]", then Add rule.
+
 ### Say-so · `.dr-state` · `25-blocks.css`
 
 What a surface shows in place of its contents: a glyph at six units, a label,
@@ -529,17 +545,19 @@ pass, as a muted label. No line of its own: the head's is the one line.
 
 A tree laid out in columns, a level a column, a leaf a row; every link one
 path of ink hairlines, out of the parent, down, into the child. A node is a
-box of 22 units by 4 with a hairline, its glyph and its name.
+box of 22 units by 4 with an ink hairline, every one alike: a folder's box
+holds its glyph and its name, a note's its name alone; a folder given a tone
+has a small square of it at the left of its box (`.dr-map-tone`).
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
 | rest | `ink` on `bg`, border `hair` `ink` | — |
 | hover | fill `surface` | the pointer |
 | focus | ring `ink` | the ring; the arrow keys walk the tree, Space folds, Enter opens |
-| picked (`aria-selected`) | fill `clay`, `on-clay`, an inner ink line | the line |
+| picked (`aria-selected`) | fill `clay`, `on-clay` | nothing else: the clay alone (the ring carries the keys) |
 | open in the page (`aria-current`) | — | its name bold |
 | folded (`aria-expanded="false"`) | a count, `+3`, `muted` | the count |
-| a folder's tone (`data-tone`) | border `ring` in the tone | the line is twice as thick |
+| a folder's tone (`data-tone`) | a square of the tone, a unit, at the left of the box; the line stays ink | the square |
 
 ### 3D graph · `.dr-graph3d` · `60-tools.css`
 

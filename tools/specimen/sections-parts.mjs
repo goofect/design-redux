@@ -65,7 +65,14 @@ export const cell = (faces, f, a = {}) => `<div class="dr-cell ${a.class || ''}"
 export const noteCell = (n, a = {}) => `<div class="dr-cell" role="button" tabindex="0" aria-label="${esc(n.title)}"${attrs(a)}>${glyph('note')}<span class="dr-cell-label dr-small"><span class="dr-cell-name dr-clip">${esc(n.title)}</span></span></div>`;
 export const row = (n, a = {}) => `<div class="dr-row${a.numbered ? ' is-numbered' : ''} ${a.class || ''}" role="button" tabindex="0"${attrs({ ...a, class: false, end: false, numbered: false })}>${a.numbered ? `<span class="dr-slot dr-small"><span>${pad(n.number)}</span></span>` : ''}<span class="dr-row-name dr-text dr-clip">${esc(n.title)}</span><span class="dr-row-end dr-small">${a.end || mins(n.words)}</span></div>`;
 const bar = (s, a = {}) => `<span class="dr-bar ${a.class || ''}" style="--dr-size:${s}" role="button" tabindex="-1"${attrs({ ...a, class: false })}></span>`;
-export const shelf = (f, sizes, marks = {}, headAttrs = {}) => `<div class="dr-shelf"><div class="dr-shelf-head" role="button" tabindex="0"${attrs(headAttrs)}><span class="dr-text dr-clip">${esc(f.name)}</span><span class="dr-shelf-count dr-small">${f.count}</span></div><div class="dr-shelf-bars">${sizes.map((s, i) => bar(s, marks[i] || {})).join('')}</div></div>`;
+// A shelf as the plugin draws it, fitted to `room` bars as fitShelf fits it (one row; past that "+N", the open note's bar kept); `name` is what the line under it says.
+export const shelf = (f, sizes, marks = {}, headAttrs = {}, room = 0, name = '') => {
+  const open = sizes.findIndex((x, i) => marks[i] && marks[i]['aria-current']);
+  const shown = !room || sizes.length <= room ? sizes.length : Math.max(1, room - 3);
+  const hidden = (i) => i >= shown && i !== open ? true : open >= shown && i === shown - 1;
+  const hid = sizes.filter((x, i) => hidden(i)).length;
+  return `<div class="dr-shelf"><div class="dr-shelf-head" role="button" tabindex="0"${attrs(headAttrs)}><span class="dr-text dr-clip">${esc(f.name)}</span><span class="dr-shelf-count dr-small">${f.count}</span></div><div class="dr-shelf-bars">${sizes.map((x, i) => (hidden(i) ? '' : bar(x, marks[i] || {}))).join('')}${sizes.length ? `<span class="dr-shelf-more dr-small">${hid ? `+${hid}` : ''}</span>` : ''}</div><span class="dr-shelf-name dr-text dr-clip">${esc(name)}</span></div>`;
+};
 export const outlineFolder = (f, open) => `<div class="dr-outline-folder" role="button" tabindex="0" aria-expanded="${open}"><span class="dr-slot">${glyph(open ? 'down' : 'next')}</span><span class="dr-text dr-clip">${esc(f.name)}</span><span class="dr-row-end dr-small">${f.count}</span></div>`;
 const child = (text, a = {}) => `<div class="dr-row is-child" role="button" tabindex="-1"${attrs(a)}><span class="dr-row-name dr-text dr-clip">${esc(text)}</span></div>`;
 const prop = (key, value, a = {}) => `<div class="dr-prop ${a.class || ''}" tabindex="0"${attrs({ ...a, class: false, end: false })}><span class="dr-label dr-clip">${key}</span><span class="dr-prop-value dr-text dr-clip">${value}</span>${a.end || ''}</div>`;
@@ -91,11 +98,12 @@ export function lists(faces) {
       shown('disabled · quiet', rows(row(n, { 'aria-disabled': 'true' }))), shown('not written yet · dashed line', rows(row({ ...n, title: 'Modal logic' }, { class: 'is-missing', end: '—' }))),
       shown('wrong · alert, a word', rows(row(n, { class: 'is-error', end: `${glyph('alert')}unreadable` }))),
     ]),
-    component('Shelf', "A folder as a row of bars: one a note, as tall as the note is long, standing on a hairline.", [
-      shown('rest', `<div class="spec-shelf">${shelf(f, sizes)}</div>`), shown('hover on a note · ink bar on ash', `<div class="spec-shelf">${shelf(f, sizes, { 3: { class: 'spec-hover' } })}</div>`),
-      shown('focus on a note', `<div class="spec-shelf">${shelf(f, sizes, { 6: { class: 'spec-focus' } })}</div>`), shown('a note selected · clay behind, hollow mark', `<div class="spec-shelf">${shelf(f, sizes, { 2: { 'aria-selected': 'true' } })}</div>`),
-      shown('the open note · clay behind, mark under the line', `<div class="spec-shelf">${shelf(f, sizes, { 4: { 'aria-current': 'page' } })}</div>`),
+    component('Shelf', "A folder as one row of bars, never wrapped: one a note, as tall as the note is long, standing on a hairline; \"+N\" where the row runs out. The bar under the pointer or the ring names its note on the line under the shelf.", [
+      shown('rest', `<div class="spec-shelf">${shelf(f, sizes)}</div>`), shown('hover on a note · ink bar on ash, its name below', `<div class="spec-shelf">${shelf(f, sizes, { 3: { class: 'spec-hover' } }, {}, 0, logic[3].title)}</div>`),
+      shown('focus on a note · the ring, its name below', `<div class="spec-shelf">${shelf(f, sizes, { 6: { class: 'spec-focus' } }, {}, 0, logic[6].title)}</div>`), shown('a note picked · the mark under the line', `<div class="spec-shelf">${shelf(f, sizes, { 2: { 'aria-selected': 'true' } })}</div>`),
+      shown('the open note · its bar in clay', `<div class="spec-shelf">${shelf(f, sizes, { 4: { 'aria-current': 'page' } })}</div>`),
       shown('the folder open in the page', `<div class="spec-shelf">${shelf(f, sizes, {}, { 'aria-current': 'true' })}</div>`),
+      shown('more than fit · one row, +N', `<div class="spec-shelf">${shelf({ name: 'Reading', count: 48 }, lengths('Reading', 48), {}, {}, 18)}</div>`),
       shown('empty', `<div class="spec-shelf">${shelf({ name: 'Drafts', count: 0 }, [])}</div>`),
     ]),
     component('Outline row', 'Words: folders by name, a hairline between them; notes as rows, numbered only in a folder’s own order; the open note’s headings under it, muted, with no mark.', [
@@ -157,7 +165,7 @@ export function library(faces, facesIn) {
   const picked = 'Logic';
   const grid = (extra = 'is-labelled', pick = picked) => `<div class="dr-grid ${extra}" role="list">${folders.map((f) => cell(faces, f, f.name === pick ? { 'aria-selected': 'true' } : {})).join('')}</div>`;
   const openAt = logic.findIndex((n) => n.title === OPEN);
-  const shelves = `<div class="dr-shelves">${folders.slice(0, 7).map((f) => (f.name === 'Logic' ? shelf(f, logic.map((n) => size(n.words)), { [openAt]: { 'aria-current': 'page' } }) : shelf(f, lengths(f.name, f.count)))).join('')}</div>`;
+  const shelves = `<div class="dr-shelves">${folders.slice(0, 7).map((f) => (f.name === 'Logic' ? shelf(f, logic.map((n) => size(n.words)), { [openAt]: { 'aria-current': 'page' } }, {}, 36) : shelf(f, lengths(f.name, f.count), {}, {}, 36))).join('')}</div>`;
   const words = `<div class="dr-outline">${folders.map((f) => (f.name !== 'Logic' ? outlineFolder(f, false) : outlineFolder(f, true) + logic.map((n) => (n.title === OPEN ? row(n, { 'aria-current': 'page' }) + headings.map((h, i) => child(h, i === 1 ? { 'aria-current': 'location' } : {})).join('') : row(n))).join(''))).join('')}</div>`;
   const f = folders[2];
   const detail = `<div class="dr-detail">${glyph(faces[f.path])}<span class="dr-detail-name dr-text dr-clip">${f.name}</span><span class="dr-detail-counts dr-small"><span>${f.count} notes</span><span>${subfolders.length} folders</span></span><div class="dr-detail-actions">${button('Open')}${button('New note')}${button('Pin')}${iconButton('more', 'More')}</div></div><div class="dr-rows" role="list">${logic.map((n) => (n.title === OPEN ? row(n, { 'aria-current': 'page' }) : row(n))).join('')}</div>`;
