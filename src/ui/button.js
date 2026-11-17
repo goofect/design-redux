@@ -12,7 +12,7 @@ import { asButton, el, flag, glyph } from '../core/dom.js';
 export function iconButton(parent, opts) {
   const button = el(parent, 'div', 'dr-icon-button');
   asButton(button, opts.label, opts.run);
-  glyph(button, opts.busy ? 'wait' : opts.glyph);
+  glyph(button, opts.glyph);
   if (opts.pressed !== undefined) button.setAttribute('aria-pressed', String(!!opts.pressed));
   flag(button, 'aria-disabled', opts.disabled);
   flag(button, 'aria-busy', opts.busy);
@@ -24,11 +24,10 @@ export function setPressed(button, on) {
   button.setAttribute('aria-pressed', String(!!on));
 }
 
-/** A text button: only where a glyph would not say it. { text, run, kind: 'primary' | 'danger', disabled, busy }. */
+/** A text button: only where a glyph would not say it. { text, run, kind: 'primary' | 'danger', disabled, busy (its text says what it is doing: "Moving…") }. */
 export function textButton(parent, opts) {
   const button = el(parent, 'div', `dr-button${opts.kind ? ` is-${opts.kind}` : ''}`);
   asButton(button, null, opts.run);
-  if (opts.busy) glyph(button, 'wait');
   el(button, 'span', '', opts.text);
   flag(button, 'aria-disabled', opts.disabled);
   flag(button, 'aria-busy', opts.busy);

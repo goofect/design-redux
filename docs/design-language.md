@@ -103,20 +103,22 @@ with the sidebar's gutter, because it belongs to the pane and not to the text.
 
 ## 3. Colour
 
-Six neutrals, from `docs/DESIGN.md`, unchanged: every pair it uses measured at
+Seven neutrals: the six of `docs/DESIGN.md`, and a deeper ash for the press. Every pair it uses measured at
 or over its floor (`node tests/contrast.js`; the ratios are written into
 `00-tokens.css` by the script and the suite fails if they drift).
 
 | Token | Light | Dark | Use |
 | --- | --- | --- | --- |
 | `--dr-bg` | `#E9E6DF` | `#1C1B19` | bone: every surface |
-| `--dr-surface` | `#CFCCC5` | `#2A2927` | ash: under the pointer, and pressed; words on it are ink |
+| `--dr-surface` | `#CFCCC5` | `#2A2927` | ash: under the pointer; words on it are ink |
+| `--dr-press` | `#B8B4AC` | `#3A3834` | a deeper ash: while pressed; words on it are ink |
 | `--dr-ink` | `#1A1A18` | `#E9E6DF` | text, glyphs, hairlines, the ring, the mark on the ground |
 | `--dr-muted` | `#5E5C57` | `#A8A59E` | secondary words, on the ground only |
 | `--dr-clay` | `#A58F7C` | `#A58F7C` | the fill behind what is selected or open; never text |
 | `--dr-on-clay` | `#1A1A18` | `#1A1A18` | words, glyphs and marks on clay, dark in both schemes |
 
-Measured: ink on bone 13.98 (dark 13.81); ink on ash 10.87 (11.66); muted on
+Measured: ink on bone 13.98 (dark 13.81); ink on ash 10.87 (11.66); ink on the
+deeper ash 8.43 (9.39); muted on
 bone 5.36 (7.00); on-clay on clay 5.66. Clay on bone is a fill at 2.47 in
 light (5.59 in dark), and ash on bone 1.29: a fill has no floor, so **a fill
 is never the only sign of a state** (next section). Three pairs are refused:
@@ -153,14 +155,14 @@ a screen reader hears cannot part ways.
 | State | Attribute | Drawn as | The sign that is not colour |
 | --- | --- | --- | --- |
 | rest | — | ink on bone | — |
-| hover | `:hover`, where a pointer hovers | ash fill, words on it ink | the pointer itself; an object's name appears |
-| pressed | `:active` | ash fill | an inner ink line |
+| hover | `:hover`, where a pointer hovers | ash fill, words on it ink | the pointer itself |
+| pressed | `:active` | a deeper ash (`press`), words on it ink | the press itself; no inner line |
 | focus | `:focus-visible` | — | the ring: 2px ink, 2px clear; inside the edge on anything flush with its neighbours (a row, a cell, a segment), and on-clay where that is clay |
 | selected (picked, not open) | `aria-selected="true"` | no fill | the mark, an ink square at the left: a row, a table row, a property in the gutter; a cell in its corner. A menu item, Obsidian's own: clay and a line round it |
 | open | `aria-current` (a note, a folder); `aria-selected` on a tab; `aria-checked` on a level | clay fill, on-clay words | its words bold; a level of the zoom control has no words, and is the clay square alone. A heading under the open note takes nothing |
 | on | `aria-pressed="true"`, `aria-checked="true"` | clay fill | — (a toggle: its knob's side) |
-| disabled | `aria-disabled="true"`, `:disabled` | muted | a dashed line where there is a border; no hover; a default cursor |
-| loading | `aria-busy="true"` | — | the glass (`wait`) and a word |
+| disabled | `aria-disabled="true"`, `:disabled` | muted words, no border | no hover; a default cursor. Never a dashed line: dashes read as a drop target or a placeholder |
+| loading | `aria-busy="true"` | muted | the word for what it is doing ("Moving…", "Looking…"); nothing spins, no hourglass |
 | error | `aria-invalid="true"`, `.is-error` | rust line or words | the `alert` glyph and the reason in words |
 | empty | `.is-empty`, `:empty`, the say-so block | muted | a dash for a value; a shelf's bare line; the say-so block |
 
@@ -190,11 +192,11 @@ Its word is its `aria-label`, which Obsidian also shows as its tooltip.
 | --- | --- | --- |
 | rest | glyph `ink` on `bg` | — |
 | hover | fill `surface` | the pointer |
-| pressed | fill `surface` | the press itself |
+| pressed | fill `press`, a deeper ash | the press itself |
 | focus | ring `ink`, 2px clear | the ring, the only line it ever has |
 | on (`aria-pressed`) | fill `clay`, glyph `on-clay` | the clay square: no bar, no border |
 | disabled | glyph `muted`, no hover | default cursor; the control stays in place |
-| loading (`aria-busy`) | the `wait` glyph | the glyph changes |
+| loading (`aria-busy`) | glyph `muted` | its word says what it is doing; the glyph stays |
 | selected, open, empty, error | — | a button acts; it holds no state but on |
 
 ### Text button · `.dr-button` · `20-controls.css`
@@ -205,13 +207,13 @@ units high, two of padding either side, a hairline, the reading voice.
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
 | rest | `ink` on `bg`, border `hair` `ink` | — |
-| hover | fill `surface` | the pointer |
-| pressed | fill `surface` | inner line, `ring` `ink` |
+| hover | fill `surface` | the pointer (the one proposed keeps its ink) |
+| pressed | fill `press`, a deeper ash | the press itself; no inner line |
 | focus | ring `ink`, 2px clear | the ring |
 | proposed (`.is-primary`) | fill `ink`, words `bg` | reversed; it is the only one in its sheet |
 | destroys (`.is-danger`) | border and words `error` | its word says what it destroys |
-| disabled | border and words `muted` | border dashed |
-| loading | the `wait` glyph before its word | glyph, and the word changes ("Moving…") |
+| disabled | words `muted`, no border | no hover |
+| loading | words `muted` | the word changes ("Moving…"); no glyph |
 | selected, open, empty | — | — |
 
 ### Zoom control · `.dr-segments` > `.dr-segment[role=radio]` · `20-controls.css`
@@ -224,7 +226,7 @@ shown stands on a clay square with no border. Arrow keys move between levels.
 | --- | --- | --- |
 | rest | glyph `ink` on `bg`, nothing round it | — |
 | hover | fill `surface` | the pointer |
-| pressed | fill `surface` | — (it becomes open at once) |
+| pressed | fill `press` | — (it becomes open at once) |
 | focus | ring inside the segment | the ring |
 | open (`aria-checked`) | fill `clay`, glyph `on-clay` | the clay square, no border |
 | disabled | glyph `muted`, no hover | — |
@@ -250,16 +252,19 @@ cut in half. A fade would be a gradient, which the look refuses.
 
 ### Toggle · Obsidian's `.checkbox-container` · `40-overlays.css`
 
-Not built by the plugin: Obsidian's own, restyled, wherever a setting or a
-sheet has one. Two squares of two units; the ink square stands on the side
-that is true.
+Not built by the plugin: Obsidian's own, restyled through its `--toggle-s-*`
+variables, wherever a setting or a sheet has one. Square, 40 by 20 (five
+units by two and a half: Obsidian's own control, the one size off the unit),
+an ink knob of two units two pixels in, on the side that is true; on, the
+track is clay. The setting's words stand beside it and say what it does, so
+which side is on never has to be guessed.
 
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
-| off | track `bg` in a `hair` `ink` line, square `ink` at the start | the square's side |
-| on (`.is-enabled`) | track `clay`, square `ink` at the end | the square's side |
+| off | track `bg` in a `hair` `ink` line, knob `ink` at the start | the knob's side |
+| on (`.is-enabled`) | track `clay`, knob `ink` at the end | the knob's side |
 | focus | ring `ink`, 2px clear | the ring |
-| disabled (`.is-disabled`) | square `muted` | the line dashed |
+| disabled (`.is-disabled`) | knob and line `muted` | no hover; never dashed |
 | hover, selected, open, empty, loading, error | — | — |
 
 ### Field · `.dr-field` > `.dr-field-box` > `input.dr-input` · `20-controls.css`
@@ -272,9 +277,9 @@ the box carries the border and the ring, and may hold a glyph before or after.
 | rest | box `hair` `ink` on `bg`; label `muted`; words `ink` | — |
 | empty | placeholder `muted` | the placeholder's words |
 | focus (`:focus-within`) | ring `ink`, 2px clear of the box | the ring |
-| loading | `wait` glyph at the end; a note under ("Looking…") | glyph and words |
+| loading (`aria-busy`) | a note under, `muted` ("Looking…") | the words; no glyph |
 | error (`aria-invalid`) | box and note `error` | the `alert` glyph and the reason in words |
-| disabled | box and words `muted` | box dashed |
+| disabled | words `muted`, no border | the box's line goes |
 | hover, selected, open | — | a field is typed in, not picked |
 
 ### Chip · `.dr-chip` · `20-controls.css`
@@ -486,7 +491,7 @@ a line of running text if it helps, and one text button at most.
 | State | Drawn with | Besides colour |
 | --- | --- | --- |
 | empty | `empty` glyph and line `muted`; label `ink` | the label says what is not there |
-| loading | `wait` glyph; label ("Reading the vault") | glyph and label; nothing spins |
+| loading (`.is-busy`) | its words alone, `muted` ("Reading the vault…") | the words; no glyph, nothing spins |
 | error (`.is-error`) | `alert` glyph `error`; label `ink` | the label says what failed, the line why, the button what to do |
 
 ### Head row · `.dr-head` · `25-blocks.css`
@@ -662,7 +667,10 @@ theme and keep their structure.
 - **A rounded corner, a shadow, a gradient, a blur.** Depth is a claim that
   one thing is above another. Nothing is.
 - **Movement.** A state is a fact, and a fact is shown at once. A spinner is
-  refused with it: waiting is the glass and a word.
+  refused with it: waiting is a word, muted ("Moving…").
+- **A second cue for one state.** Hover is ash, pressed a deeper ash, focus
+  the ring, on clay, disabled muted words. No inner line, no bar along the
+  foot, no dashes.
 - **A second accent, or clay as text.** One fill says where you are. Two say
   nothing.
 - **Colour as the only sign.** Clay on bone is 2.47 to 1. Every state has a
@@ -673,7 +681,9 @@ theme and keep their structure.
 - **An object glyph that looks like a control.** An X beside a folder reads
   as close, a lock as locked, a plus as add. Objects are things.
 - **Words on a control.** A control is a glyph; its word is its tooltip. The
-  exceptions are a confirmation and a first choice.
+  exceptions are a confirmation, a first choice, and the few things a folder
+  picked offers (Open, New note, Pin), where a row of glyphs would say
+  nothing without the pointer.
 - **An outline icon, a stroke, a detail under the bar.** At 16px a hairline
   is noise, and two weights are two hands.
 - **A slope that isn't 45°, a softened corner.** Every glyph shares one set

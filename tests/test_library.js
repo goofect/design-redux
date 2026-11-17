@@ -298,6 +298,13 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
     assert.deepStrictEqual(Array.from(view.aside.querySelectorAll('.dr-detail-counts span')).map((x) => x.textContent), ['5 notes', '1 folder']);
     assert.strictEqual(view.aside.querySelectorAll('.dr-rows .dr-row').length, 4);
     assert.strictEqual(sidebar(w).host.querySelector('[data-path="Logic"]').getAttribute('aria-selected'), 'true', 'the sidebar does not show the pick');
+    // A folder picked says what can be done with it in words, the rest under More.
+    const said = (b) => (b.classList.contains('dr-button') ? b.textContent : `[${b.getAttribute('aria-label')}]`);
+    assert.deepStrictEqual(Array.from(view.aside.querySelectorAll('.dr-detail-actions > *')).map(said).filter((x) => x !== 'Open'), ['New note', 'Pin', '[More]']);
+    // The browse view's head: search, filter, more and the zoom control, nothing else but Back; new note and the order are in More.
+    const tools = Array.from(view.screen.host.querySelectorAll('.dr-head > .dr-icon-button')).map((b) => b.getAttribute('aria-label')).filter((x) => x !== 'Back');
+    assert.ok(tools.length <= 3 && !tools.includes('New note') && !tools.includes('Sort') && tools.includes('Search') && tools.includes('More'), `the head holds ${tools}`);
+    assert.strictEqual(view.screen.host.querySelectorAll('.dr-head > .dr-segments').length, 1);
   });
 
   await check('commands: the old ids, and turning the library off takes its views away', async () => {

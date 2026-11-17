@@ -52,23 +52,25 @@ export async function deleteEntry(plugin, target) {
   return yes ? plugin.files.trash(target) : false;
 }
 
-/** The menu of a folder. `screen` is the library screen it was asked from, if any. */
+/** The menu of a folder. `screen` is the library screen it was asked from, if any. The vault's top has only what applies to it: new, and its order. */
 export function folderMenu(plugin, folder, screen) {
   const menu = new Menu();
-  if (screen) entry(menu, 'Open', 'open', () => screen.go(folder), 'open');
+  const top = folder.path === '/';
+  if (screen && !top) entry(menu, 'Open', 'open', () => screen.go(folder), 'open');
   entry(menu, 'New note', 'note-new', () => plugin.files.newNote(folder), 'new');
   entry(menu, 'New folder', 'folder-new', async () => {
     const name = await ask(plugin.app, { title: 'New folder', placeholder: 'Untitled', action: 'Make folder' });
     if (name) plugin.files.newFolder(folder, name);
   }, 'new');
-  entry(menu, isPinned(plugin, folder) ? 'Unpin' : 'Pin', 'pin', () => togglePin(plugin, folder));
-  entry(menu, 'Glyph…', 'shapes', () => pickGlyphSheet(plugin, folder));
+  if (!top) entry(menu, isPinned(plugin, folder) ? 'Unpin' : 'Pin', 'pin', () => togglePin(plugin, folder));
+  if (!top) entry(menu, 'Glyph…', 'shapes', () => pickGlyphSheet(plugin, folder));
   menu.addItem((item) => {
     item.setTitle('Sort by').setIcon(iconId('sort')).setSection('action');
     const sub = typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
     if (!sub) return void item.onClick(() => setSort(plugin, folder, 'name'));
     Object.keys(SORTS).forEach((by) => sub.addItem((s) => s.setTitle(SORTS[by]).setChecked(sortOf(plugin, folder) === by).onClick(() => setSort(plugin, folder, by))));
   });
+  if (top) return menu;
   addActionItems(menu, plugin.actions(), 'folder', { folder });
   entry(menu, 'Rename…', 'pencil', () => renameEntry(plugin, folder), 'danger');
   entry(menu, 'Move to…', 'move', () => moveEntry(plugin, folder), 'danger');

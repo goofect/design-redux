@@ -40,10 +40,11 @@ body{--file-line-width:640px;--file-margins:32px;--font-text:-apple-system,Blink
 .modal-title{margin-bottom:16px;padding-right:32px;font-size:var(--font-ui-large)}
 .modal-close-button{position:absolute;top:8px;right:8px}
 .checkbox-container{display:inline-block;flex-shrink:0;position:relative;width:var(--toggle-s-width);height:calc(var(--toggle-s-thumb-height) + var(--toggle-s-border-width) * 2);background-color:var(--background-modifier-border-hover)}
-.checkbox-container::after{content:"";display:block;position:absolute;width:var(--toggle-s-thumb-width);height:var(--toggle-s-thumb-height);background-color:var(--toggle-thumb-color);transform:translate3d(var(--toggle-s-border-width),0,0)}
+.checkbox-container::after{content:"";display:block;position:absolute;width:var(--toggle-s-thumb-width);height:var(--toggle-s-thumb-height);margin:var(--toggle-s-border-width) 0 0 0;background-color:var(--toggle-thumb-color);transform:translate3d(var(--toggle-s-border-width),0,0)}
 .checkbox-container.is-enabled{background-color:var(--interactive-accent)}
 .checkbox-container.is-enabled::after{transform:translate3d(calc(var(--toggle-s-width) - var(--toggle-s-thumb-width) - var(--toggle-s-border-width)),0,0)}
 .checkbox-container input{position:absolute;inset:0;margin:0;opacity:0}
+.spec-setting{display:flex;align-items:center;gap:8px}
 `;
 
 // The page's own layout. spec- classes are the specimen's, never the plugin's.

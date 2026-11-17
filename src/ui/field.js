@@ -30,8 +30,9 @@ export function field(parent, opts) {
   node.drInput = input;
   node.drSay = (text, invalid, busy) => {
     flag(node, 'aria-invalid', invalid);
+    flag(node, 'aria-busy', busy);
     if (mark) mark.remove();
-    mark = invalid ? glyph(box, 'alert') : busy ? glyph(box, 'wait') : null;
+    mark = invalid ? glyph(box, 'alert') : null;
     if (note) note.remove();
     note = text ? el(node, 'span', 'dr-field-note dr-text', text) : null;
   };

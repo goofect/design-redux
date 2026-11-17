@@ -155,7 +155,7 @@ change summary.
   the plugin's own regions stay on.
 - One new boolean key per region, `lookRegion<Name>`, default on. They sit in
   one settings row whose gear opens them.
-- New: `alwaysShowLabels` (off), the library's zoom level per window, and the
+- New: `alwaysShowLabels` (on since settings 101), the library's zoom level per window, and the
   glyph chosen per folder (path-keyed, so it follows renames).
 - The `--dr-*` names stay. The old look's token values (radii, shadows,
   glass, motion) are not carried into the new `styles.css`; the palette
@@ -176,15 +176,17 @@ body.dr-active {
 }
 body.dr-active.theme-light {
   --dr-bg:      #E9E6DF; /* bone: every surface */
-  --dr-surface: #CFCCC5; /* ash: hover and pressed fills only */
+  --dr-surface: #CFCCC5; /* ash: the hover fill only */
+  --dr-press:   #B8B4AC; /* a deeper ash: the pressed fill only (ink 8.4:1) */
   --dr-ink:     #1A1A18; /* text and hairlines */
   --dr-muted:   #5E5C57; /* secondary text, ONLY on --dr-bg (5.4:1) */
-  --dr-clay:    #A58F7C; /* active and selected fill */
+  --dr-clay:    #A58F7C; /* the fill behind what is open or on */
   --dr-on-clay: #1A1A18; /* text on clay (5.7:1) */
 }
 body.dr-active.theme-dark {
   --dr-bg:      #1C1B19;
   --dr-surface: #2A2927;
+  --dr-press:   #3A3834; /* ink 9.4:1 */
   --dr-ink:     #E9E6DF;
   --dr-muted:   #A8A59E; /* 7.0:1 on bg, 5.9:1 on surface */
   --dr-clay:    #A58F7C;
@@ -194,8 +196,8 @@ body.dr-active.theme-dark {
 
 Rules: one surface color. Sidebars, tabs, ribbon, titlebar, panes, the editor
 and every plugin surface are `--dr-bg`, separated by 1px ink hairlines, not
-by tone. Ash is a hover or pressed fill only, and text on it is ink, never
-muted (muted on ash is 4.2:1 in light mode and fails). Clay is a fill, never a
+by tone. Ash is the hover fill and a deeper ash the pressed one, and text on
+them is ink, never muted (muted on ash is 4.2:1 in light mode and fails). Clay is a fill, never a
 text color. The contrast ratios in the comments are re-measured by the
 contrast script before they ship.
 
@@ -325,12 +327,13 @@ exactly as it does without the plugin.
   on the ground with nothing around it. The old generated cover art is not
   used.
 - **A folder picked (detail).** The glyph large and centered with wide space
-  around it, the name and counts under it, a row of
-  icon buttons (open, new note, pin, more), a hairline, then its notes as a
+  around it, the name and counts under it, what can be done in words (Open,
+  New note, Pin as text buttons) and more as its glyph, a hairline, then its notes as a
   list with no lines between rows, numbered only in the folder's own order.
   The open note is a clay fill.
 - **Home and browse view:** the same object grid at window width, more
-  columns, the same zoom control; the notes table has one line under its
+  columns, the same zoom control; at most four things in its head (search,
+  filter, the zoom control, more; new note and the order are in more); the notes table has one line under its
   header and none between columns or rows, columns as wide as their
   content, the sort mark beside the column's name, and a number column only
   in the folder's own order. The preview is the folder-picked layout.

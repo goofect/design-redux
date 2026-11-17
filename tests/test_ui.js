@@ -33,7 +33,8 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.strictEqual(ran, 3, 'a disabled button ran');
     assert.strictEqual(off.getAttribute('aria-disabled'), 'true');
     const busy = dr.iconButton(root, { glyph: 'move', label: 'Moving', busy: true });
-    assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'wait']);
+    // Working: no hourglass; the glyph stays, muted, and its word says what it is doing.
+    assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'move']);
   });
 
   await check('text button: rest, proposed, destroys, disabled, loading', () => {
@@ -43,7 +44,7 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.ok(dr.textButton(root, { text: 'Delete', kind: 'danger' }).classList.contains('is-danger'));
     assert.strictEqual(dr.textButton(root, { text: 'Move', disabled: true }).getAttribute('aria-disabled'), 'true');
     const busy = dr.textButton(root, { text: 'Moving…', busy: true });
-    assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'wait']);
+    assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy), busy.textContent], ['true', null, 'Moving…']);
   });
 
   await check('zoom control: three glyph radios, one checked; a click and the arrows choose; a disabled level is passed over', () => {
@@ -180,7 +181,8 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     f.drSay('A name can’t hold a colon.', true);
     assert.deepStrictEqual([f.getAttribute('aria-invalid'), glyphOf(f), f.querySelector('.dr-field-note').textContent], ['true', 'alert', 'A name can’t hold a colon.']);
     f.drSay('Looking…', false, true);
-    assert.deepStrictEqual([f.hasAttribute('aria-invalid'), glyphOf(f)], [false, 'wait']);
+    // Working: the words, muted, under the box; no hourglass in it.
+    assert.deepStrictEqual([f.hasAttribute('aria-invalid'), f.getAttribute('aria-busy'), glyphOf(f), f.querySelector('.dr-field-note').textContent], [false, 'true', null, 'Looking…']);
     f.drSay();
     assert.ok(!f.querySelector('.dr-field-note') && !glyphOf(f));
     const off = dr.field(root, { label: 'Name', value: 'x', disabled: true, glyph: 'search' });

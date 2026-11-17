@@ -13,15 +13,19 @@
 
 body.dr-active.dr-region-overlays {
   --menu-padding: 0;
-  /* The toggle: two squares of two units, the ink one on the side that is true. */
-  --toggle-width: var(--dr-row);
-  --toggle-s-width: var(--dr-row);
+  /* The toggle: 40 by 20, square, an ink knob of two units two pixels in, on the side that is true. */
+  --toggle-width: calc(5 * var(--dr-u));
+  --toggle-s-width: calc(5 * var(--dr-u));
   --toggle-thumb-width: var(--dr-icon);
   --toggle-s-thumb-width: var(--dr-icon);
   --toggle-thumb-height: var(--dr-icon);
   --toggle-s-thumb-height: var(--dr-icon);
-  --toggle-border-width: 0px;
-  --toggle-s-border-width: 0px;
+  --toggle-border-width: var(--dr-ring);
+  --toggle-s-border-width: var(--dr-ring);
+  --toggle-radius: 0;
+  --toggle-s-radius: 0;
+  --toggle-thumb-radius: 0;
+  --toggle-s-thumb-radius: 0;
   --toggle-thumb-color: var(--dr-ink);
 }
 
@@ -55,8 +59,8 @@ body.dr-active.dr-region-overlays .modal-title {
   font-weight: 400;
 }
 
-/* The toggle: a bone track in a hairline, the ink square at its start; on, the track is clay and the square at its end.
-   The square stays ink in both: it is its place, read against the ground, that says which. */
+/* The toggle: a bone track in a hairline, the ink knob at its start; on, the track is clay and the knob at its end.
+   The knob stays ink in both: its place says which, and the setting's words beside it say what it does. */
 body.dr-active.dr-region-overlays .checkbox-container {
   background-color: var(--dr-bg);
   box-shadow: none;
@@ -74,7 +78,6 @@ body.dr-active.dr-region-overlays .checkbox-container:focus-within {
 }
 
 body.dr-active.dr-region-overlays .checkbox-container.is-disabled {
-  outline-style: dashed;
   outline-color: var(--dr-muted);
 }
 

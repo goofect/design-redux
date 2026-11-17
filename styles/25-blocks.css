@@ -81,6 +81,11 @@
   color: var(--dr-error);
 }
 
+/* Working: the words alone, muted. Nothing spins, no hourglass. */
+.dr-state.is-busy > .dr-state-label {
+  color: var(--dr-muted);
+}
+
 /* ---- A sheet: what the plugin puts inside one of Obsidian's modals. A title, the matter, the buttons at the foot. ---- */
 .dr-sheet {
   display: grid;

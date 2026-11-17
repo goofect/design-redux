@@ -3,8 +3,10 @@
 /* tabs), field, chip. The toggle is Obsidian's own: 40-overlays.css.  */
 /*                                                                     */
 /* A control is four units high and bare: no frame, no line in any    */
-/* state but the focus ring. Ash under the pointer and pressed; on or  */
-/* open, a clay fill; disabled, quieter.                               */
+/* state but the focus ring. Ash under the pointer, a deeper ash while */
+/* pressed; on or open, a clay fill; disabled, muted words and no      */
+/* border; loading, its word in muted ("Moving…"). No inner line, no   */
+/* bar along the foot, no dashes.                                      */
 /* ------------------------------------------------------------------ */
 
 /* ---- Icon button: the plugin's controls are these. A square of four units, the glyph two. ---- */
@@ -19,7 +21,7 @@
 }
 
 .dr-icon-button:active {
-  background: var(--dr-surface);
+  background: var(--dr-press);
 }
 
 /* On (a pin that holds, a panel that is showing): the clay square. */
@@ -34,6 +36,7 @@
 }
 
 .dr-icon-button[aria-busy="true"] {
+  color: var(--dr-muted);
   cursor: progress;
 }
 
@@ -58,9 +61,7 @@ button.dr-button {
 }
 
 .dr-button:active {
-  background: var(--dr-surface);
-  outline: var(--dr-ring) solid var(--dr-ink);
-  outline-offset: calc(-1 * var(--dr-ring));
+  background: var(--dr-press);
 }
 
 /* The one a sheet proposes: ink, the words in the ground's colour. */
@@ -77,14 +78,15 @@ button.dr-button {
 
 .dr-button[aria-disabled="true"],
 .dr-button:disabled {
-  border-style: dashed;
-  border-color: var(--dr-muted);
+  border-color: transparent;
   background: var(--dr-bg);
   color: var(--dr-muted);
   cursor: default;
 }
 
+/* Working: its word says what it is doing ("Moving…"), muted; nothing spins. */
 .dr-button[aria-busy="true"] {
+  color: var(--dr-muted);
   cursor: progress;
 }
 
@@ -117,7 +119,7 @@ button.dr-button {
 }
 
 .dr-segment:active {
-  background: var(--dr-surface);
+  background: var(--dr-press);
 }
 
 /* The level shown, the page open: on a clay square, nothing round it. */
@@ -232,8 +234,7 @@ input.dr-input::placeholder {
 }
 
 .dr-field[aria-disabled="true"] .dr-field-box {
-  border-style: dashed;
-  border-color: var(--dr-muted);
+  border-color: transparent;
   color: var(--dr-muted);
 }
 
@@ -270,7 +271,7 @@ input.dr-input::placeholder {
 }
 
 .dr-chip:active {
-  background: var(--dr-surface);
+  background: var(--dr-press);
 }
 
 .dr-chip[aria-checked="true"] {
@@ -319,10 +320,9 @@ input.dr-input::placeholder {
     background: var(--dr-clay);
   }
 
+  /* The one a sheet proposes keeps its ink under the pointer: no line drawn inside it. */
   .dr-button.is-primary:hover {
     background: var(--dr-ink);
-    outline: var(--dr-hair) solid var(--dr-bg);
-    outline-offset: calc(-2 * var(--dr-ring));
   }
 
   .dr-icon-button[aria-disabled="true"]:hover,

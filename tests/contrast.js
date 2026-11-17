@@ -44,7 +44,7 @@ function measureScheme(scheme, t) {
     if (floor && r < floor) failures.push(`${scheme}: ${what} on ${on} is ${r.toFixed(2)}, under ${floor}`);
     return `${what} on ${on} ${r.toFixed(2)}`;
   };
-  const text = [says('ink', 'bg', 4.5), says('ink', 'surface', 4.5), says('muted', 'bg', 4.5)];
+  const text = [says('ink', 'bg', 4.5), says('ink', 'surface', 4.5), says('ink', 'press', 4.5), says('muted', 'bg', 4.5)];
   const never = [];
   // Muted on the hover fill is text only in the scheme where it measures as text.
   (ratio(t.muted, t.surface) >= 4.5 ? text : never).push(says('muted', 'surface'));
@@ -54,7 +54,7 @@ function measureScheme(scheme, t) {
   if (ratio(t.ink, t.clay) >= 3) line.push(says('ink', 'clay', 3));
   else { line.push(says('on-clay', 'clay', 3)); never.push(says('ink', 'clay')); }
   never.push(says('muted', 'clay'), `clay as text on bg ${ratio(t.clay, t.bg).toFixed(2)}`);
-  const fill = [says('clay', 'bg'), says('surface', 'bg'), says('clay', 'surface')];
+  const fill = [says('clay', 'bg'), says('surface', 'bg'), says('press', 'surface'), says('clay', 'surface')];
   const tones = TONES.map((tone) => {
     const [onBg, onSurface] = [ratio(t[tone], t.bg), ratio(t[tone], t.surface)];
     if (onBg < 4.5) failures.push(`${scheme}: ${tone} on bg is ${onBg.toFixed(2)}, under 4.5`);

@@ -7,7 +7,7 @@
 
 import { counted, readingMinutes } from '../core/text.js';
 import { el, glyph } from '../core/dom.js';
-import { iconButton } from '../ui/button.js';
+import { iconButton, textButton } from '../ui/button.js';
 import { row, rows } from '../ui/row.js';
 import { rove } from '../ui/keys.js';
 import { folderCover, folderGlyph } from './faces.js';
@@ -35,10 +35,11 @@ export function drawDetail(plugin, host, folder, hooks = {}) {
   if (subs.length) el(counts, 'span', '', counted(subs.length, 'folder'));
   const about = plugin.describe ? plugin.describe(folder) : null;
   if (about) el(top, 'p', 'dr-detail-about dr-text is-running', about);
+  // Here words earn their place: what can be done with a folder said in words, and the rest under More.
   const actions = el(top, 'div', 'dr-detail-actions');
-  if (hooks.open) iconButton(actions, { glyph: 'open', label: 'Open', run: () => hooks.open(folder) });
-  iconButton(actions, { glyph: 'note-new', label: 'New note', run: () => plugin.files.newNote(folder) });
-  const pin = iconButton(actions, { glyph: 'pin', label: 'Pin', pressed: isPinned(plugin, folder), run: async () => pin.setAttribute('aria-pressed', String(await togglePin(plugin, folder))) });
+  if (hooks.open) textButton(actions, { text: 'Open', run: () => hooks.open(folder) });
+  textButton(actions, { text: 'New note', run: () => plugin.files.newNote(folder) });
+  const pin = textButton(actions, { text: isPinned(plugin, folder) ? 'Unpin' : 'Pin', run: async () => { pin.firstChild.textContent = (await togglePin(plugin, folder)) ? 'Unpin' : 'Pin'; } });
   iconButton(actions, { glyph: 'more', label: 'More', run: (e) => showMenu(folderMenu(plugin, folder, null), e) });
   const open = plugin.app.workspace.getActiveFile();
   const list = rows(node);
