@@ -36,6 +36,7 @@ const VAULT = {
 (async () => {
   await check('the graph view coalesces rebuilds and cancels them on close', async () => {
     const w = await world(VAULT);
+    await settle(); // Let the automatic browser finish before mounting an isolated view.
     for (const View of [dr.Graph3DView]) {
       const leaf = w.app.workspace.getLeaf();
       const view = new View(leaf, w.plugin);

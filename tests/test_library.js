@@ -4,13 +4,31 @@ const { load, world, suite, settle, obsidian, window } = require('./harness.js')
 const dr = load();
 const check = suite('library');
 const files = { 'Philosophy/Logic/Proof.md': '', 'Philosophy/Metaphysics/Being.md': '', 'Philosophy/Arguments.md': '', 'Philosophy/Diagram.pdf': 'pdf', 'Empty/.keep': '', 'Loose.md': '' };
-const sidebar = (w) => w.app.workspace.getLeavesOfType('design-redux-library')[0].view.screen;
+const sidebar = async (w) => { const lib = w.plugin.features.find((f) => f.constructor.name === 'Library'); return (await lib.browse(null)).view.folderScreen; };
 const paths = (host) => Array.from(host.querySelectorAll('.dr-file-row')).map((n) => n.dataset.path);
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
 (async () => {
+  await check('an empty workspace starts in the browser and notes can return to their folder with pages disabled', async () => {
+    const w = await world(files, { settingsVersion: 100, notePages: false });
+    await settle();
+    assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-browse').length, 1);
+    const leaf = w.app.workspace.getLeaf();
+    await leaf.openFile(w.file('Philosophy/Arguments.md')); await settle();
+    const nav = leaf.view.contentEl.querySelector('.dr-workspace-return');
+    assert.strictEqual(nav.querySelector('button').textContent, '← Philosophy');
+    assert.strictEqual(nav.querySelector('span').textContent, 'Arguments');
+    nav.querySelector('button').click(); await settle();
+    const view = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+    assert.strictEqual(view.screen.at, 'Philosophy');
+    assert.strictEqual(view.folderScreen.at, 'Philosophy');
+    w.plugin.unload(); await settle();
+    assert.ok(!w.doc.querySelector('.dr-workspace-return'));
+    assert.ok(!w.doc.body.classList.contains('dr-browser-open'));
+  });
+
   await check('the library lists only folders, including empty and nested folders', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     assert.deepStrictEqual(paths(s.host), ['/', 'Empty', 'Philosophy']);
     assert.strictEqual(s.host.querySelector('.dr-file-items').getAttribute('role'), 'tree');
     assert.ok(!s.host.querySelector('input, .dr-file-details-title'));
@@ -30,29 +48,34 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
   });
 
   await check('choosing a folder updates the folder screen and Enter opens its note in Obsidian', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     const lib = w.plugin.features.find((f) => f.constructor.name === 'Library');
     const leaf = await lib.browse(null);
+    let updates = 0; leaf.updateHeader = () => { updates++; };
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
     assert.strictEqual(leaf.view.screen.at, 'Philosophy');
+    assert.strictEqual(leaf.view.getDisplayText(), 'Philosophy');
+    assert.ok(updates > 0, 'folder changes must refresh the tab title');
     const note = leaf.view.screen.host.querySelector('[data-path="Philosophy/Arguments.md"]');
     key(note, 'Enter'); await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Philosophy/Arguments.md');
     assert.ok(!leaf.view.contentEl.querySelector('.dr-note-head, .dr-strip'));
   });
 
-  await check('choosing a folder opens its screen when none is open', async () => {
-    const w = await world(files); const s = sidebar(w);
+  await check('the browser keeps both panels in one view', async () => {
+    const w = await world(files); const s = await sidebar(w);
+    const view = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+    assert.ok(view.contentEl.classList.contains('dr-browser-layout'));
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-library').length, 2);
+    assert.ok(w.doc.body.classList.contains('dr-browser-open'));
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
-    await settle();
-    const leaf = w.app.workspace.getLeavesOfType('design-redux-browse')[0];
-    assert.ok(leaf);
-    assert.strictEqual(leaf.view.screen.at, 'Philosophy');
-    assert.deepStrictEqual(paths(leaf.view.screen.host), ['Philosophy/Arguments.md']);
+    assert.deepStrictEqual(paths(view.screen.host), ['Philosophy/Arguments.md']);
+    await w.app.workspace.getLeaf().openFile(w.file('Loose.md'));
+    assert.ok(w.doc.body.classList.contains('dr-browser-open'), 'the native chrome stays out of the plugin workspace');
   });
 
   await check('arrow keys expand folders and focus survives redraws', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     const folder = s.host.querySelector('[data-path="Philosophy"]');
     folder.focus(); key(folder, 'ArrowRight');
     assert.ok(s.host.querySelector('[data-path="Philosophy/Logic"]'));

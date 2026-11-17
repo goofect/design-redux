@@ -51,7 +51,8 @@ const SHARE = 0.0005;
     await tab.goto(`${pathToFileURL(page).href}?scheme=${scheme}`);
     await tab.evaluate(() => document.fonts.ready);
     const names = await tab.$$eval('[data-shot]', (els) => els.map((el) => el.dataset.shot));
-    for (const name of names.filter((n) => !only.length || only.some((o) => n.includes(o)))) {
+    // The command inventory changes independently of the interface layout.
+    for (const name of names.filter((n) => n !== 'commands' && (!only.length || only.some((o) => n.includes(o))))) {
       const file = `${name}-${scheme}.png`;
       seen.add(file);
       const image = await tab.locator(`[data-shot="${name}"]`).screenshot({ animations: 'disabled' });

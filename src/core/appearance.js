@@ -4,10 +4,9 @@
 /* The look is a handful of classes on a window's body: `dr-active`    */
 /* (the master switch) and `dr-region-<name>` for each region that is  */
 /* on. Every window gets them — the main one, a popout, the settings   */
-/* window — and every one loses them when the plugin unloads. With the */
-/* look kept to what the plugin draws, Obsidian's own regions stay     */
-/* off; with look set to 'theme' the switch itself is off and the      */
-/* window is the person's theme, untouched.                            */
+/* window — and every one loses them when the plugin unloads. The look */
+/* covers Obsidian's regions and plugin surfaces together. The theme  */
+/* option still lets the person opt out of the palette.                */
 /* ------------------------------------------------------------------ */
 
 import { Feature } from './feature.js';
@@ -19,8 +18,9 @@ export const regionClass = (name) => `dr-region-${name}`;
 /** The classes a body should carry for these settings. */
 export function lookClasses(settings) {
   if (settings.look === 'theme') return [];
-  const whole = settings.lookScope === 'window';
-  const regions = REGIONS.filter((r) => settings[regionKey(r)] !== false && (whole || !OBSIDIAN_REGIONS.includes(r)));
+  // The redesign covers the entire workspace, including existing installations
+  // that saved the former plugin-only scope.
+  const regions = REGIONS.filter((r) => settings[regionKey(r)] !== false);
   return [LOOK_CLASS].concat(regions.map(regionClass), settings.alwaysShowLabels ? ['dr-labels'] : []);
 }
 
@@ -63,7 +63,6 @@ export class Appearance extends Feature {
   settingsRows() {
     return [
       { key: 'look', name: 'Look', desc: 'Redux is the plugin’s look. Theme leaves the window to your theme; the plugin’s own surfaces then take its colours.', type: 'choice', options: { redux: 'Redux', theme: 'Theme' } },
-      { key: 'lookScope', name: 'Where it applies', desc: 'The whole window, Obsidian’s own interface included, or only what the plugin draws.', type: 'choice', options: { window: 'The whole window', plugin: 'Only what the plugin draws' } },
     ].concat(REGIONS.map((r) => ({ key: regionKey(r), name: `Region: ${r}`, desc: OBSIDIAN_REGIONS.includes(r) ? 'Obsidian’s own. Off, it keeps your theme.' : 'The plugin’s own.', type: 'toggle', group: 'Regions' })));
   }
 }

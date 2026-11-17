@@ -1,4 +1,19 @@
-/* Library: folders in the sidebar, notes in the selected folder. */
+/* Library: the reference's two bordered panels inside one workspace view. */
+.dr-browser-layout.dr-browser-layout.dr-browser-layout {
+  display: flex;
+  align-items: stretch;
+  gap: calc(3 * var(--dr-u));
+  padding: calc(4 * var(--dr-u));
+  overflow: auto;
+  background: var(--dr-browser-bg);
+}
+.dr-browser-layout > .dr-library {
+  border: var(--dr-hair) solid var(--dr-browser-ink);
+  height: 100%;
+  min-height: 320px;
+}
+.dr-browser-layout > .dr-library:not(.is-wide) { flex: 0 1 320px; min-width: 160px; }
+.dr-browser-layout > .dr-library.is-wide { flex: 1 1 720px; min-width: 240px; max-width: 720px; }
 .dr-library {
   container-type: inline-size;
   display: flex;
@@ -7,9 +22,12 @@
   height: 100%;
   background: var(--dr-browser-bg);
   color: var(--dr-browser-ink);
-  font-family: var(--font-monospace, monospace);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
-.dr.dr-library.is-wide { background: var(--dr-browser-bg); }
+.dr.dr-library { background: var(--dr-browser-bg); color: var(--dr-browser-ink); }
+.dr.dr-library .dr-head, .dr.dr-library .dr-file-row, .dr.dr-library .dr-file-breadcrumb, .dr.dr-library .dr-file-empty { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.dr-library button { font-family: inherit; }
+.dr-library .dr-file-row, .dr-library .dr-file-breadcrumb { font-size: 13px; font-weight: 400; }
 .dr-library .dr-head { color: var(--dr-browser-ink); }
 .dr-library-body { flex: 1; min-height: 0; overflow-y: auto; }
 .dr-file-list { padding: var(--dr-gutter); }
@@ -22,7 +40,7 @@
 .dr-library > .dr-head { height: calc(5 * var(--dr-u)); border-color: var(--dr-browser-rule); }
 .dr-library > .dr-head > .dr-label { font-size: var(--font-ui-small); font-weight: 600; line-height: var(--dr-line); letter-spacing: normal; text-transform: none; }
 .dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-browser-muted); }
-.dr .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; box-shadow: none; }
+.dr .dr-file-breadcrumb button { height: var(--dr-line); min-height: 0; padding: 0; border: var(--dr-hair) solid var(--dr-browser-ink); background: none; color: inherit; box-shadow: none; font-size: 13px; line-height: 14px; vertical-align: middle; }
 .dr-file-empty { margin: var(--dr-gutter); color: var(--dr-browser-muted); }
 .dr-library [data-drop] { background: var(--dr-surface); outline: var(--dr-ring) solid var(--dr-ink); outline-offset: calc(-1 * var(--dr-ring)); }
 .dr-grid.dr-picker { --dr-cell: calc(8 * var(--dr-u)); grid-template-columns: repeat(6, var(--dr-cell)); }

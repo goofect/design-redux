@@ -73,13 +73,13 @@ export async function screens() {
   const tt = w.file('Logic/Truth tables.md');
 
   // The library contains folders; the folder view contains notes.
-  const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
   const folder = w.file('Logic');
   const browseLeaf = await feature('Library').browse(folder);
+  const library = browseLeaf.view.folderScreen;
   library.go(folder);
   await settle();
   const fileSidebar = library.host.outerHTML;
-  const fileBrowse = browseLeaf.view.contentEl.outerHTML;
+  const fileBrowse = browseLeaf.view.screen.host.outerHTML;
 
   // The 3D graph: its notes laid out by the same code, drawn as it draws them.
   const n = 42;

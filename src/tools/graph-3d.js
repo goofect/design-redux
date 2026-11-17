@@ -53,6 +53,7 @@ export class Graph3DView extends ScheduledView {
     this.space = graphSpace(this.plugin, this.around);
     const n = this.space.nodes.length;
     headRow(host, { label: this.around ? this.around.basename : '3D graph', text: !!this.around, muted: `${counted(n, 'note')} · ${counted(this.space.links.length, 'link')}`, buttons: [
+      { glyph: 'back', label: 'Back to folders', run: () => this.plugin.actions().find((action) => action.id === 'open-library')?.run() },
       { glyph: 'fit', label: 'Fit', run: () => { this.look = { yaw: 0.6, pitch: 0.35, zoom: fitZoom(this.pos, ...this.size()) }; this.draw(); } },
       { glyph: 'plus', label: 'Closer', run: () => this.zoom(1.25) },
       { glyph: 'minus', label: 'Further', run: () => this.zoom(0.8) },
@@ -139,7 +140,7 @@ export class Graph3DView extends ScheduledView {
 
   openNote(i) {
     const file = this.app.vault.getAbstractFileByPath(this.space.nodes[i].id);
-    if (file instanceof TFile) this.app.workspace.getLeaf('tab').openFile(file);
+    if (file instanceof TFile) this.app.workspace.getLeaf(false).openFile(file);
   }
 
   draw() {
@@ -201,7 +202,7 @@ export class Graph3D extends Feature {
   }
 
   async open(around) {
-    const leaf = this.app.workspace.getLeaf('tab');
+    const leaf = this.app.workspace.getLeavesOfType(GRAPH_3D_VIEW)[0] || this.app.workspace.getLeaf(false);
     await leaf.setViewState({ type: GRAPH_3D_VIEW, active: true, state: { around: around ? around.path : null } });
     this.app.workspace.revealLeaf(leaf);
     return leaf;

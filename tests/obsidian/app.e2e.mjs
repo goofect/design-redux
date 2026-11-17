@@ -19,6 +19,7 @@ suite('Design Redux in Obsidian: the app', function () {
   it('puts the look on the main window, and takes it off on unload', async function () {
     const has = () => browser.execute(() => document.body.classList.contains('dr-active'));
     expect(await readUntil(has, (v) => v)).toBe(true);
+    expect(await browser.execute(() => ['chrome', 'tabs', 'editor', 'graph', 'overlays'].every((r) => document.body.classList.contains(`dr-region-${r}`)))).toBe(true);
     await shot('look-main');
     await browser.executeObsidian(async ({ app }) => { await app.plugins.disablePlugin('design-redux'); });
     const left = await browser.execute(() => Array.from(document.body.classList).filter((c) => c.startsWith('dr-')));
@@ -56,7 +57,9 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(on).toBe(false);
   });
 
-  it('opens the library sidebar and the browse view', async function () {
+  it('uses the browser for an empty workspace and removes native tab and sidebar navigation', async function () {
+    await browser.executeObsidian(async ({ app }) => { await app.workspace.getLeaf(false).setViewState({ type: 'empty', active: true }); });
+    expect(await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeLeaf?.view.getViewType()), (type) => type === 'design-redux-browse')).toBe('design-redux-browse');
     await browser.executeObsidian(async ({ app }) => { app.commands.executeCommandById('design-redux:open-library'); });
     await browser.$('.dr-library, [class*="dr-lib"]').waitForExist({ timeout: 10000 });
     await shot('library');
@@ -74,6 +77,50 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(browserState.notes).toBeGreaterThan(0);
     expect(browserState.details).toBe(false);
     expect(browserState.search).toBe(false);
+    await browser.executeObsidian(({ app }) => {
+      const view = app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+      view.folderScreen.go(app.vault.getAbstractFileByPath('Politics'));
+    });
+    const panels = await readUntil(() => browser.execute(() => {
+      const layout = document.querySelector('.dr-browser-layout');
+      const folder = layout && layout.querySelector('.dr-library:not(.is-wide)');
+      const notes = layout && layout.querySelector('.dr-library.is-wide');
+      return { panels: layout ? layout.querySelectorAll(':scope > .dr-library').length : 0, selected: folder?.querySelector('[aria-selected="true"]')?.dataset.path, notes: notes?.querySelectorAll('.dr-file-row').length || 0, fits: !!notes && notes.getBoundingClientRect().right <= layout.getBoundingClientRect().right };
+    }), (s) => s.panels === 2 && s.selected === 'Politics' && s.notes > 0);
+    expect(panels.panels).toBe(2);
+    expect(panels.selected).toBe('Politics');
+    expect(panels.notes).toBeGreaterThan(0);
+    expect(panels.fits).toBe(true);
+    const chrome = await browser.execute(() => {
+      const left = document.querySelector('.workspace-split.mod-left-split');
+      const ribbon = document.querySelector('.workspace-ribbon.mod-primary, .workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
+      const right = document.querySelector('.workspace-split.mod-right-split');
+      const header = document.querySelector('.workspace-leaf-content[data-type="design-redux-browse"] > .view-header');
+      const tabs = document.querySelector('.workspace-tab-header-container-inner');
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, right: right && getComputedStyle(right).display, header: header && getComputedStyle(header).display, tabs: tabs && getComputedStyle(tabs).display };
+    });
+    expect(chrome.left).toBe('none');
+    expect(chrome.ribbon).toBe('none');
+    expect(chrome.right).toBe('none');
+    expect(chrome.header).toBe('none');
+    expect(chrome.tabs).toBe('none');
     await shot('files-browser');
+    const dark = await browser.execute(() => {
+      const body = document.body;
+      window.__drWasLight = body.classList.contains('theme-light');
+      body.classList.remove('theme-light'); body.classList.add('theme-dark');
+      const pane = document.querySelector('.dr-library.is-wide');
+      const row = pane.querySelector('.dr-file-row');
+      const out = { background: getComputedStyle(pane).backgroundColor, color: getComputedStyle(row).color, font: getComputedStyle(row).fontFamily };
+      return out;
+    });
+    expect(dark.background).toBe('rgb(18, 18, 18)');
+    expect(dark.color).toBe('rgb(245, 245, 245)');
+    expect(dark.font).toContain('monospace');
+    await shot('files-browser-dark');
+    await browser.execute(() => { document.body.classList.remove('theme-dark'); if (window.__drWasLight) document.body.classList.add('theme-light'); delete window.__drWasLight; });
+    await browser.executeObsidian(async ({ app }) => { await app.workspace.getLeaf(false).openFile(app.vault.getAbstractFileByPath('Home.md')); });
+    expect(await browser.execute(() => document.body.classList.contains('dr-browser-open'))).toBe(true);
+    expect(await browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('file-explorer').length)).toBe(0);
   });
 });

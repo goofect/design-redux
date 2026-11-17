@@ -20,10 +20,32 @@ neutral directory: white, black and light grays in light mode, corresponding
 neutral values in dark mode, straight rules, small monospaced type, and no
 decorative photography, marketing, animation, or promotional UI. Selection and
 keyboard focus remain distinct and readable. Do not add commerce concepts.
-The folder tree uses disclosure marks only where needed. A folder selection opens
+The workspace browser contains two bordered panels: folders on the left and
+notes on the right, with the proportions and spacing of the reference. The
+folder tree uses disclosure marks only where needed. A folder selection updates
 its note list; selecting a note opens it through Obsidian. Breadcrumbs provide a
 way back. Keyboard activation and focus must work without a pointer. Existing
 Obsidian chrome, native file access and the editor remain Obsidian's own.
+
+The plugin owns the browsing workflow across the workspace. An empty workspace
+opens the folder browser automatically, including after the last note closes.
+Opening a note shows its text, a small return button to its folder, and its page
+selector when the note has pages. The return button also works with pages turned
+off. The 3D graph opens in the current workspace and has a return-to-folders
+control. The Open library command remains available from every screen.
+
+Native File explorer leaves are detached on enable and if opened again. Native
+side docks, ribbons, tab navigation, and the status bar are suppressed while the
+plugin is enabled. The window drag area and operating-system window buttons
+remain usable. Existing open documents are preserved and can still be reached
+with Obsidian's quick switcher and keyboard commands.
+
+The neutral design applies to the full Obsidian window. The duplicate browser
+and graph headers, note header, inline title and native properties block are
+removed from view. Note text and properties remain in the files. Obsidian's File
+explorer remains a core plugin: Design Redux does not delete Obsidian's code.
+Disabling Design Redux removes its navigation and styling, restores the native
+chrome, and allows the native File explorer to be reopened.
 
 ## Compatibility
 
