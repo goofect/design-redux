@@ -40,7 +40,7 @@
 .dr-library > .dr-head { height: calc(5 * var(--dr-u)); border-color: var(--dr-browser-rule); }
 .dr-library > .dr-head > .dr-label { font-size: var(--font-ui-small); font-weight: 600; line-height: var(--dr-line); letter-spacing: normal; text-transform: none; }
 .dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-browser-muted); }
-.dr .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; box-shadow: none; }
+.dr .dr-file-breadcrumb button { padding: 0; border: var(--dr-hair) solid var(--dr-browser-ink); background: none; color: inherit; box-shadow: none; }
 .dr-file-empty { margin: var(--dr-gutter); color: var(--dr-browser-muted); }
 .dr-library [data-drop] { background: var(--dr-surface); outline: var(--dr-ring) solid var(--dr-ink); outline-offset: calc(-1 * var(--dr-ring)); }
 .dr-grid.dr-picker { --dr-cell: calc(8 * var(--dr-u)); grid-template-columns: repeat(6, var(--dr-cell)); }
