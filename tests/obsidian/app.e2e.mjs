@@ -74,6 +74,19 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(browserState.notes).toBeGreaterThan(0);
     expect(browserState.details).toBe(false);
     expect(browserState.search).toBe(false);
+    await browser.executeObsidian(({ app }) => {
+      const view = app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+      view.folderScreen.go(app.vault.getAbstractFileByPath('Politics'));
+    });
+    const panels = await readUntil(() => browser.execute(() => {
+      const layout = document.querySelector('.dr-browser-layout');
+      const folder = layout && layout.querySelector('.dr-library:not(.is-wide)');
+      const notes = layout && layout.querySelector('.dr-library.is-wide');
+      return { panels: layout ? layout.querySelectorAll(':scope > .dr-library').length : 0, selected: folder?.querySelector('[aria-selected="true"]')?.dataset.path, notes: notes?.querySelectorAll('.dr-file-row').length || 0 };
+    }), (s) => s.panels === 2 && s.selected === 'Politics' && s.notes > 0);
+    expect(panels.panels).toBe(2);
+    expect(panels.selected).toBe('Politics');
+    expect(panels.notes).toBeGreaterThan(0);
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;

@@ -1,4 +1,19 @@
-/* Library: folders in the sidebar, notes in the selected folder. */
+/* Library: the reference's two bordered panels inside one workspace view. */
+.dr-browser-layout {
+  display: flex;
+  align-items: stretch;
+  gap: calc(3 * var(--dr-u));
+  padding: calc(4 * var(--dr-u));
+  overflow: auto;
+  background: var(--dr-browser-bg);
+}
+.dr-browser-layout > .dr-library {
+  border: var(--dr-hair) solid var(--dr-browser-ink);
+  height: 100%;
+  min-height: 320px;
+}
+.dr-browser-layout > .dr-library:not(.is-wide) { flex: 0 0 320px; }
+.dr-browser-layout > .dr-library.is-wide { flex: 1 0 480px; max-width: 720px; }
 .dr-library {
   container-type: inline-size;
   display: flex;

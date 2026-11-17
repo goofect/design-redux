@@ -22,7 +22,7 @@ export class Library extends Feature {
     const ws = this.app.workspace;
     const redraw = () => this.screens().forEach((s) => s.refresh());
     ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'design-redux:props', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
-    const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.openSidebar());
+    const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.browse(null));
     this.add(() => ribbon && ribbon.remove && ribbon.remove());
     this.add(() => {
       if (this.plugin.unloading) return;
@@ -33,7 +33,7 @@ export class Library extends Feature {
     this.plugin.placeOf = (file) => neighbours(this.plugin, file);
     this.plugin.faceOf = (folder) => folderGlyph(this.plugin, folder);
     this.add(() => { delete this.plugin.placeOf; delete this.plugin.faceOf; });
-    if (!ws.getLeavesOfType(LIBRARY_VIEW).length) this.openSidebar(true);
+    ws.detachLeavesOfType(LIBRARY_VIEW);
   }
 
   screens() {
@@ -63,8 +63,10 @@ export class Library extends Feature {
   /** Shows a folder (or the whole vault) in the browse view, in the page. */
   async browse(folder) {
     const ws = this.app.workspace;
-    const leaf = ws.getLeavesOfType(BROWSE_VIEW)[0] || ws.getLeaf(false);
-    await leaf.setViewState({ type: BROWSE_VIEW, active: true, state: { at: folder ? folder.path : '/' } });
+    const existing = ws.getLeavesOfType(BROWSE_VIEW)[0];
+    const leaf = existing || ws.getLeaf(false);
+    if (existing && leaf.view.screen) leaf.view.screen.go(folder);
+    else await leaf.setViewState({ type: BROWSE_VIEW, active: true, state: { at: folder ? folder.path : '/' } });
     ws.revealLeaf(leaf);
     return leaf;
   }
@@ -80,12 +82,12 @@ export class Library extends Feature {
   actions() {
     const screen = () => this.activeScreen();
     return [
-      { id: 'open-library', name: 'Open library', glyph: 'library', run: () => this.openSidebar() },
+      { id: 'open-library', name: 'Open library', glyph: 'library', run: () => this.browse(null) },
       { id: 'library-inbox', name: 'Open vault notes', glyph: 'inbox', run: () => this.browse(null) },
       { id: 'browse-vault', name: 'Browse files', glyph: 'grid', run: () => this.browse(null) },
       { id: 'reset-layout', name: 'Put the library back in place', glyph: 'layout', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
-        await this.openSidebar();
+        await this.browse(null);
         this.app.workspace.trigger('design-redux:reset-layout');
       } },
       { id: 'cycle-cover-size', name: 'Open files', glyph: 'density', when: () => !!screen(), run: () => this.browse(screen().folder()) },

@@ -18,7 +18,7 @@ class ScreenView extends ItemView {
   }
 
   async onOpen() {
-    this.screen = this.makeScreen();
+    this.screen = this.makeScreen(this.screenHost || this.contentEl);
     const draw = this.screen.draw.bind(this.screen);
     this.screen.draw = () => {
       draw();
@@ -42,8 +42,8 @@ export class LibraryView extends ScreenView {
   getDisplayText() { return 'Library'; }
   getIcon() { return iconId('library'); }
 
-  makeScreen() {
-    return new LibraryScreen(this.plugin, this.contentEl, {
+  makeScreen(host = this.contentEl) {
+    return new LibraryScreen(this.plugin, host, {
       place: 'sidebar',
       onGo: (folder) => {
         if (this.app.workspace.getLeavesOfType(BROWSE_VIEW).length) return;
@@ -59,8 +59,8 @@ export class BrowseView extends ScreenView {
   getDisplayText() { return this.screen && this.screen.folder().path !== '/' ? this.screen.folder().name : 'Library'; }
   getIcon() { return iconId('grid'); }
 
-  makeScreen() {
-    return new LibraryScreen(this.plugin, this.contentEl, {
+  makeScreen(host = this.contentEl) {
+    return new LibraryScreen(this.plugin, host, {
       wide: true,
       place: 'browse',
       onGo: (folder) => {
@@ -78,12 +78,32 @@ export class BrowseView extends ScreenView {
   }
 
   async onOpen() {
+    this.contentEl.classList.add('dr-browser-layout');
+    const folderHost = this.contentEl.ownerDocument.createElement('div');
+    this.screenHost = this.contentEl.ownerDocument.createElement('div');
+    this.contentEl.append(folderHost, this.screenHost);
+    this.folderScreen = new LibraryScreen(this.plugin, folderHost, { place: 'sidebar' });
+    const draw = this.folderScreen.draw.bind(this.folderScreen);
+    this.folderScreen.draw = () => {
+      draw();
+      if (this.plugin.settings.sidebarDrop !== false) enableDrop(this.folderScreen, this.folderScreen.body);
+    };
+    (this.plugin.screens || (this.plugin.screens = new Set())).add(this.folderScreen);
+    this.folderScreen.draw();
     await super.onOpen();
-    if (this.wanted && this.wanted !== '/') this.screen.go(this.app.vault.getAbstractFileByPath(this.wanted));
+    if (this.wanted && this.wanted !== '/') {
+      const folder = this.app.vault.getAbstractFileByPath(this.wanted);
+      this.screen.go(folder, true);
+      this.folderScreen.go(folder, true);
+    }
   }
 
   async onClose() {
     this.plugin.openFolder = null;
+    if (this.plugin.screens) this.plugin.screens.delete(this.folderScreen);
+    this.folderScreen = null;
+    this.screenHost = null;
+    this.contentEl.classList.remove('dr-browser-layout');
     await super.onClose();
   }
 }

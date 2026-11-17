@@ -4,13 +4,13 @@ const { load, world, suite, settle, obsidian, window } = require('./harness.js')
 const dr = load();
 const check = suite('library');
 const files = { 'Philosophy/Logic/Proof.md': '', 'Philosophy/Metaphysics/Being.md': '', 'Philosophy/Arguments.md': '', 'Philosophy/Diagram.pdf': 'pdf', 'Empty/.keep': '', 'Loose.md': '' };
-const sidebar = (w) => w.app.workspace.getLeavesOfType('design-redux-library')[0].view.screen;
+const sidebar = async (w) => { const lib = w.plugin.features.find((f) => f.constructor.name === 'Library'); return (await lib.browse(null)).view.folderScreen; };
 const paths = (host) => Array.from(host.querySelectorAll('.dr-file-row')).map((n) => n.dataset.path);
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
 (async () => {
   await check('the library lists only folders, including empty and nested folders', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     assert.deepStrictEqual(paths(s.host), ['/', 'Empty', 'Philosophy']);
     assert.strictEqual(s.host.querySelector('.dr-file-items').getAttribute('role'), 'tree');
     assert.ok(!s.host.querySelector('input, .dr-file-details-title'));
@@ -30,7 +30,7 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
   });
 
   await check('choosing a folder updates the folder screen and Enter opens its note in Obsidian', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     const lib = w.plugin.features.find((f) => f.constructor.name === 'Library');
     const leaf = await lib.browse(null);
     let updates = 0; leaf.updateHeader = () => { updates++; };
@@ -44,18 +44,17 @@ const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { ke
     assert.ok(!leaf.view.contentEl.querySelector('.dr-note-head, .dr-strip'));
   });
 
-  await check('choosing a folder opens its screen when none is open', async () => {
-    const w = await world(files); const s = sidebar(w);
+  await check('the browser keeps both panels in one view', async () => {
+    const w = await world(files); const s = await sidebar(w);
+    const view = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+    assert.ok(view.contentEl.classList.contains('dr-browser-layout'));
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-library').length, 2);
     key(s.host.querySelector('[data-path="Philosophy"]'), 'Enter');
-    await settle();
-    const leaf = w.app.workspace.getLeavesOfType('design-redux-browse')[0];
-    assert.ok(leaf);
-    assert.strictEqual(leaf.view.screen.at, 'Philosophy');
-    assert.deepStrictEqual(paths(leaf.view.screen.host), ['Philosophy/Arguments.md']);
+    assert.deepStrictEqual(paths(view.screen.host), ['Philosophy/Arguments.md']);
   });
 
   await check('arrow keys expand folders and focus survives redraws', async () => {
-    const w = await world(files); const s = sidebar(w);
+    const w = await world(files); const s = await sidebar(w);
     const folder = s.host.querySelector('[data-path="Philosophy"]');
     folder.focus(); key(folder, 'ArrowRight');
     assert.ok(s.host.querySelector('[data-path="Philosophy/Logic"]'));

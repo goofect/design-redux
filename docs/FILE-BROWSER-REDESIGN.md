@@ -20,7 +20,9 @@ neutral directory: white, black and light grays in light mode, corresponding
 neutral values in dark mode, straight rules, small monospaced type, and no
 decorative photography, marketing, animation, or promotional UI. Selection and
 keyboard focus remain distinct and readable. Do not add commerce concepts.
-The folder tree uses disclosure marks only where needed. A folder selection opens
+The workspace browser contains two bordered panels: folders on the left and
+notes on the right, with the proportions and spacing of the reference. The
+folder tree uses disclosure marks only where needed. A folder selection updates
 its note list; selecting a note opens it through Obsidian. Breadcrumbs provide a
 way back. Keyboard activation and focus must work without a pointer. Existing
 Obsidian chrome, native file access and the editor remain Obsidian's own.
