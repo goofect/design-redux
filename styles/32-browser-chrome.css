@@ -6,6 +6,41 @@ body.dr-browser-open .workspace-split.mod-left-split,
 body.dr-browser-open .workspace-ribbon.mod-secondary,
 body.dr-browser-open .workspace-split.mod-right-split,
 body.dr-browser-open .status-bar,
-body.dr-browser-open .workspace-leaf-content[data-type="design-redux-browse"] > .view-header {
+body.dr-browser-open .workspace-tab-header-container-inner,
+body.dr-browser-open .workspace-tab-header-new-tab,
+body.dr-browser-open .workspace-tab-header-tab-list,
+body.dr-browser-open .sidebar-toggle-button,
+body.dr-browser-open .workspace-leaf-content[data-type="design-redux-browse"] > .view-header,
+body.dr-browser-open .workspace-leaf-content[data-type="design-redux-graph-3d"] > .view-header,
+body.dr-browser-open .workspace-leaf-content[data-type="markdown"] > .view-header,
+body.dr-browser-open .workspace-leaf-content[data-type="markdown"] .metadata-container,
+body.dr-browser-open .workspace-leaf-content[data-type="markdown"] .inline-title {
   display: none;
+}
+
+/* Keep the native window drag area and OS window buttons usable. */
+body.dr-browser-open .workspace-tab-header-container {
+  border-bottom: 0;
+}
+
+.dr-workspace-return {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--dr-gutter);
+  margin: calc(4 * var(--dr-u));
+  margin-bottom: 0;
+  padding-bottom: var(--dr-gutter);
+  border-bottom: var(--dr-hair) solid var(--dr-browser-rule);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.dr .dr-return-button {
+  height: var(--dr-row);
+  padding: 0 var(--dr-u);
+  border: var(--dr-hair) solid var(--dr-browser-ink);
+  border-radius: 0;
+  background: var(--dr-browser-bg);
+  color: var(--dr-browser-ink);
+  box-shadow: none;
+  font: inherit;
 }

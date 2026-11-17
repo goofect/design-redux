@@ -11,7 +11,8 @@ export function noteHead(view) {
     const pages = host.ownerDocument.createElement('div');
     pages.className = 'dr-note-pages';
     head.appendChild(pages);
-    host.insertBefore(head, host.firstChild);
+    const navigation = host.querySelector(':scope > .dr-workspace-return');
+    host.insertBefore(head, navigation ? navigation.nextSibling : host.firstChild);
   }
   return head;
 }

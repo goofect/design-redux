@@ -9,6 +9,24 @@ const paths = (host) => Array.from(host.querySelectorAll('.dr-file-row')).map((n
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 
 (async () => {
+  await check('an empty workspace starts in the browser and notes can return to their folder with pages disabled', async () => {
+    const w = await world(files, { settingsVersion: 100, notePages: false });
+    await settle();
+    assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-browse').length, 1);
+    const leaf = w.app.workspace.getLeaf();
+    await leaf.openFile(w.file('Philosophy/Arguments.md')); await settle();
+    const nav = leaf.view.contentEl.querySelector('.dr-workspace-return');
+    assert.strictEqual(nav.querySelector('button').textContent, '← Philosophy');
+    assert.strictEqual(nav.querySelector('span').textContent, 'Arguments');
+    nav.querySelector('button').click(); await settle();
+    const view = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view;
+    assert.strictEqual(view.screen.at, 'Philosophy');
+    assert.strictEqual(view.folderScreen.at, 'Philosophy');
+    w.plugin.unload(); await settle();
+    assert.ok(!w.doc.querySelector('.dr-workspace-return'));
+    assert.ok(!w.doc.body.classList.contains('dr-browser-open'));
+  });
+
   await check('the library lists only folders, including empty and nested folders', async () => {
     const w = await world(files); const s = await sidebar(w);
     assert.deepStrictEqual(paths(s.host), ['/', 'Empty', 'Philosophy']);

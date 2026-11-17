@@ -21,7 +21,20 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       (t) => t.includes('Second page text') && !t.includes('First page text')
     );
     expect(second).toContain('Second page text');
+    const noteChrome = await browser.execute(() => {
+      const note = document.querySelector('.workspace-leaf-content[data-type="markdown"]');
+      const header = note?.querySelector(':scope > .view-header');
+      const properties = note?.querySelector('.metadata-container');
+      return { header: header && getComputedStyle(header).display, properties: properties && getComputedStyle(properties).display };
+    });
+    expect(noteChrome.header).toBe('none');
+    expect(noteChrome.properties).toBe('none');
     await shot('pages-reading');
+    await browser.execute(() => { document.body.classList.remove('theme-light'); document.body.classList.add('theme-dark'); });
+    await shot('pages-reading-dark');
+    await browser.execute(() => { document.body.classList.remove('theme-dark'); document.body.classList.add('theme-light'); });
+    await browser.$('.workspace-leaf.mod-active .dr-return-button').click();
+    expect(await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-browse')[0]?.view.screen?.at), (path) => path === 'Politics')).toBe('Politics');
   });
 
   it('shows every page as plain text in the file on disk', async function () {
@@ -39,6 +52,8 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(type).toBeGreaterThan(0);
     await browser.pause(1500);
     await shot('graph-3d');
+    await browser.$('.dr-graph3d [aria-label="Back to folders"]').click();
+    expect(await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeLeaf?.view.getViewType()), (type) => type === 'design-redux-browse')).toBe('design-redux-browse');
   });
 
   it('turns routes on the real graph on and off without errors', async function () {

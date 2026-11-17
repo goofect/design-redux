@@ -57,7 +57,9 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(on).toBe(false);
   });
 
-  it('opens the library sidebar and the browse view', async function () {
+  it('uses the browser for an empty workspace and removes native tab and sidebar navigation', async function () {
+    await browser.executeObsidian(async ({ app }) => { await app.workspace.getLeaf(false).setViewState({ type: 'empty', active: true }); });
+    expect(await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeLeaf?.view.getViewType()), (type) => type === 'design-redux-browse')).toBe('design-redux-browse');
     await browser.executeObsidian(async ({ app }) => { app.commands.executeCommandById('design-redux:open-library'); });
     await browser.$('.dr-library, [class*="dr-lib"]').waitForExist({ timeout: 10000 });
     await shot('library');
@@ -94,12 +96,14 @@ suite('Design Redux in Obsidian: the app', function () {
       const ribbon = document.querySelector('.workspace-ribbon.mod-primary, .workspace-ribbon.mod-left, .side-dock-ribbon.mod-left');
       const right = document.querySelector('.workspace-split.mod-right-split');
       const header = document.querySelector('.workspace-leaf-content[data-type="design-redux-browse"] > .view-header');
-      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, right: right && getComputedStyle(right).display, header: header && getComputedStyle(header).display };
+      const tabs = document.querySelector('.workspace-tab-header-container-inner');
+      return { left: left && getComputedStyle(left).display, ribbon: ribbon && getComputedStyle(ribbon).display, right: right && getComputedStyle(right).display, header: header && getComputedStyle(header).display, tabs: tabs && getComputedStyle(tabs).display };
     });
     expect(chrome.left).toBe('none');
     expect(chrome.ribbon).toBe('none');
     expect(chrome.right).toBe('none');
     expect(chrome.header).toBe('none');
+    expect(chrome.tabs).toBe('none');
     await shot('files-browser');
     const dark = await browser.execute(() => {
       const body = document.body;

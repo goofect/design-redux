@@ -10,6 +10,7 @@ import { Feature } from '../core/feature.js';
 import { folderGlyph } from './faces.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
+import { reducedWorkspace } from './workspace.js';
 
 export class Library extends Feature {
   register() {
@@ -42,6 +43,7 @@ export class Library extends Feature {
     this.add(() => { delete this.plugin.placeOf; delete this.plugin.faceOf; });
     ws.detachLeavesOfType(LIBRARY_VIEW);
     ws.detachLeavesOfType('file-explorer');
+    reducedWorkspace(this);
   }
 
   screens() {
@@ -56,13 +58,25 @@ export class Library extends Feature {
   }
 
   /** Shows a folder (or the whole vault) in the browse view, in the page. */
-  async browse(folder) {
+  browse(folder, onlyEmpty = false) {
+    const pending = (this.browsing || Promise.resolve()).catch(() => {}).then(() => this.openBrowser(folder, onlyEmpty));
+    this.browsing = pending;
+    return pending.finally(() => { if (this.browsing === pending) this.browsing = null; });
+  }
+
+  async openBrowser(folder, onlyEmpty) {
+    if (!this.on) return null;
     const ws = this.app.workspace;
+    const type = ws.activeLeaf?.getViewState().type;
+    if (onlyEmpty && (type ? !['empty', 'file-explorer'].includes(type) : ws.getLeavesOfType('markdown').length > 0)) return null;
     const existing = ws.getLeavesOfType(BROWSE_VIEW)[0];
     const leaf = existing || ws.getLeaf(false);
-    if (existing && leaf.view.screen) leaf.view.screen.go(folder);
-    else await leaf.setViewState({ type: BROWSE_VIEW, active: true, state: { at: folder ? folder.path : '/' } });
-    ws.revealLeaf(leaf);
+    if (existing) await ws.revealLeaf(leaf);
+    if (leaf.view instanceof BrowseView && leaf.view.screen) {
+      leaf.view.screen.go(folder);
+      leaf.view.folderScreen.go(folder, true);
+    } else await leaf.setViewState({ type: BROWSE_VIEW, active: true, state: { at: folder ? folder.path : '/' } });
+    await ws.revealLeaf(leaf);
     return leaf;
   }
 
@@ -109,4 +123,4 @@ Library.key = 'library';
 Library.title = 'Library';
 Library.glyph = 'library';
 Library.section = 'Library';
-Library.about = 'Browse the vault in the sidebar and workspace.';
+Library.about = 'The workspace: folders, notes, and a way back.';
