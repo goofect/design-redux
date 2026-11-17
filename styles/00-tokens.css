@@ -58,6 +58,8 @@ body {
   --dr-ink: var(--text-normal);
   --dr-muted: var(--text-muted);
   --dr-clay: var(--interactive-accent);
+  --dr-browser-bg: var(--dr-bg);
+  --dr-browser-selected: var(--dr-clay);
   --dr-on-clay: var(--text-on-accent);
   --dr-dim: var(--background-modifier-cover);
   --dr-rust: var(--color-red);
@@ -74,6 +76,8 @@ body {
 
 /* The palette. One surface colour; ash only under the pointer; clay only as a fill behind what is selected or open. */
 body.dr-active.theme-light {
+  --dr-browser-bg: #F2EDE6;
+  --dr-browser-selected: #D29B8C;
   --dr-bg: #E9E6DF; /* bone: every surface */
   --dr-surface: #CFCCC5; /* ash: hover and pressed fills only; words on it are ink */
   --dr-ink: #1A1A18; /* text, glyphs, hairlines, the ring */
@@ -98,6 +102,8 @@ body.dr-active.theme-light {
 }
 
 body.dr-active.theme-dark {
+  --dr-browser-bg: var(--dr-bg);
+  --dr-browser-selected: var(--dr-clay);
   --dr-bg: #1C1B19;
   --dr-surface: #2A2927;
   --dr-ink: #E9E6DF;

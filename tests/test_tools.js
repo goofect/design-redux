@@ -34,9 +34,9 @@ const VAULT = {
 };
 
 (async () => {
-  await check('map and graph views coalesce rebuilds and cancel them on close', async () => {
+  await check('the graph view coalesces rebuilds and cancels them on close', async () => {
     const w = await world(VAULT);
-    for (const View of [dr.MapView, dr.Graph3DView]) {
+    for (const View of [dr.Graph3DView]) {
       const leaf = w.app.workspace.getLeaf();
       const view = new View(leaf, w.plugin);
       leaf.containerEl.appendChild(view.containerEl);
@@ -293,59 +293,6 @@ const VAULT = {
     w.app.commands.executeCommandById('design-redux:toggle-graph-3d');
     await settle();
     assert.strictEqual(view.leaf.getViewState().type, 'graph');
-  });
-
-  await check('maps: one model of a tree; laid out with no two boxes on each other; folded and unfolded; a note\'s map follows its parents and stops at a circle', async () => {
-    const files = { 'Logic/A.md': '', 'Logic/B.md': '', 'Logic/Sets/S1.md': '', 'Logic/Sets/Deep/D.md': '', 'Root.md': '', 'Kid.md': '---\nparent: "[[Root]]"\n---\n', 'Grandkid.md': '---\nparent: "[[Kid]]"\n---\n', 'X.md': '---\nparent: "[[Y]]"\n---\n', 'Y.md': '---\nparent: "[[X]]"\n---\n' };
-    const w = await world(files);
-    const tree = dr.folderMap(w.plugin, w.file('Logic'));
-    assert.deepStrictEqual(tree.children.map((c) => c.label), ['Sets', 'A', 'B']);
-    assert.strictEqual(tree.children[0].children.find((c) => c.label === 'Deep').folded, true);
-    const boxes = (root) => Array.from(dr.layoutMap(root).at.values());
-    const overlap = (list) => list.some((p, i) => list.some((q, j) => j > i && p.x === q.x && Math.abs(p.y - q.y) < dr.MAP.nodeH));
-    assert.ok(!overlap(boxes(tree)));
-    dr.foldAll(tree, false);
-    assert.strictEqual(dr.shownNodes(tree).length, 7);
-    assert.ok(!overlap(boxes(tree)));
-    const kin = dr.noteMap(w.plugin, w.file('Root.md'));
-    assert.deepStrictEqual([kin.label, kin.children[0].label, kin.children[0].children[0].label], ['Root', 'Kid', 'Grandkid']);
-    assert.strictEqual(dr.shownNodes(dr.noteMap(w.plugin, w.file('X.md'))).length, 2, 'a circle of parents did not stop');
-  });
-
-  await check('the map\'s view: the toolbar the plugin\'s glyphs, the keys walk the tree, Space folds, Enter opens; 500 nodes at once', async () => {
-    const files = {};
-    for (let f = 0; f < 10; f++) for (let n = 0; n < 49; n++) files[`Big/F${f}/N${n}.md`] = '';
-    files['Big/Top.md'] = '';
-    const w = await world(files);
-    const maps = feature(w, 'Maps');
-    const t = Date.now();
-    const leaf = await maps.open(w.file('Big'));
-    await settle();
-    const view = leaf.view;
-    dr.foldAll(view.root, false);
-    view.draw();
-    const took = Date.now() - t;
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-map-node').length, 502, 'the folder, its 10 folders, their 490 notes and its own note');
-    assert.ok(took < 1500, `500 nodes took ${took}ms`);
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-map-links path').length, 1, 'the links are not one path');
-    const tools = Array.from(view.contentEl.querySelectorAll('.dr-head .dr-icon-button'));
-    assert.deepStrictEqual(tools.map((b) => b.querySelector('svg').getAttribute('data-icon')), ['dr-fold', 'dr-unfold', 'dr-fit', 'dr-minus', 'dr-plus']);
-    tools[0].click();
-    assert.strictEqual(view.contentEl.querySelectorAll('.dr-map-node').length, 12);
-    const node = (label) => Array.from(view.contentEl.querySelectorAll('.dr-map-node')).find((n) => n.textContent.startsWith(label));
-    const root = node('Big');
-    assert.strictEqual(root.getAttribute('aria-selected'), 'true');
-    key(root, 'ArrowRight');
-    assert.ok(node('F0').getAttribute('aria-selected') === 'true' && w.doc.activeElement === node('F0'));
-    key(node('F0'), 'ArrowDown');
-    assert.strictEqual(node('F1').getAttribute('aria-selected'), 'true');
-    key(node('F1'), ' ');
-    assert.strictEqual(node('F1').getAttribute('aria-expanded'), 'true');
-    key(node('F1'), 'ArrowRight');
-    key(w.doc.activeElement, 'Enter');
-    await settle();
-    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Big/F1/N0.md');
-    assert.ok(w.app.viewRegistry['design-redux-outline'], 'a retired view type is not registered');
   });
 
   await check('the menu filter marks an unwanted entry of Obsidian\'s menus, and takes its mark off when turned off', async () => {

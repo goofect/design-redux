@@ -11,7 +11,6 @@ import { iconId } from '../core/icons.js';
 import { drawDetail } from './detail.js';
 import { folderGlyph } from './faces.js';
 import { neighbours } from './order.js';
-import { LEVELS } from './screen.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
 
 export class Library extends Feature {
@@ -86,17 +85,13 @@ export class Library extends Feature {
     const screen = () => this.activeScreen();
     return [
       { id: 'open-library', name: 'Open library', glyph: 'library', run: () => this.openSidebar() },
-      { id: 'browse-vault', name: 'Browse vault as a grid', glyph: 'grid', run: () => this.browse(null) },
+      { id: 'browse-vault', name: 'Browse files', glyph: 'grid', run: () => this.browse(null) },
       { id: 'reset-layout', name: 'Put the library back in place', glyph: 'layout', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
         await this.openSidebar();
         this.app.workspace.trigger('design-redux:reset-layout');
       } },
-      { id: 'cycle-cover-size', name: 'Next level of detail: objects, shelves, words', glyph: 'density', when: () => !!screen(), run: () => {
-        const s = screen();
-        const at = LEVELS.findIndex((l) => l.id === s.level);
-        s.setLevel(LEVELS[(at + 1) % LEVELS.length].id);
-      } },
+      { id: 'cycle-cover-size', name: 'Open files', glyph: 'density', when: () => !!screen(), run: () => this.browse(screen().folder()) },
       { id: 'go-back', name: 'Go back', glyph: 'back', when: () => !!screen(), run: () => screen().back() },
       { id: 'go-forward', name: 'Go forward', glyph: 'forward', when: () => !!screen() && screen().ahead.length > 0, run: () => screen().forward() },
       { id: 'new-note-here', name: 'New note in the current folder', glyph: 'note-new', on: 'folder', menu: false, run: (ctx) => this.plugin.files.newNote(ctx.folder) },
@@ -109,10 +104,8 @@ export class Library extends Feature {
   settingsRows() {
     return [
       { key: 'defaultSort', name: 'Order of notes', desc: 'Where a folder has no order of its own.', type: 'choice', options: { name: 'Name', modified: 'Last edited', created: 'Date made' } },
-      { key: 'hideEmptyFolders', name: 'Leave out empty folders', type: 'toggle' },
       { key: 'hideFolderNotes', name: 'Leave out folder notes', desc: 'A folder’s own note is not listed among its notes.', type: 'toggle' },
       { key: 'folderNoteName', name: 'A folder note’s name', desc: '{{folder}} stands for the folder’s name.', type: 'text' },
-      { key: 'tableColumns', name: 'Columns of the table', desc: 'Properties, by name, with commas between.', type: 'text' },
       { key: 'typeToJump', name: 'Type to jump', desc: 'Typing the start of a name goes to it.', type: 'toggle' },
       { key: 'sidebarDrop', name: 'Drag onto a folder to move', type: 'toggle' },
       { key: 'searchNoteText', name: 'Search headings and properties', desc: 'As well as names.', type: 'toggle' },
@@ -124,4 +117,4 @@ Library.key = 'library';
 Library.title = 'Library';
 Library.glyph = 'library';
 Library.section = 'Library';
-Library.about = 'Folders and notes as objects, shelves or words, in the sidebar and the page.';
+Library.about = 'Browse the vault in the sidebar and workspace.';

@@ -7,13 +7,10 @@
 /* ------------------------------------------------------------------ */
 
 import { ItemView, TFolder } from 'obsidian';
-import { el, glyph } from '../core/dom.js';
+import { el } from '../core/dom.js';
 import { iconId } from '../core/icons.js';
-import { drawDetail } from './detail.js';
 import { enableDrop } from './drop.js';
-import { browserType } from './file-list.js';
-import { drawTable } from './level-table.js';
-import { folderMenu, showMenu } from './menus.js';
+import { browserIcon, browserType } from './file-list.js';
 import { LibraryScreen } from './screen.js';
 
 export const LIBRARY_VIEW = 'design-redux-library';
@@ -68,12 +65,7 @@ export class BrowseView extends ScreenView {
     return new LibraryScreen(this.plugin, main, {
       wide: true,
       place: 'browse',
-      words: drawTable,
       onGo: (folder) => { this.plugin.openFolder = folder.path === '/' ? null : folder; },
-      buttons: (screen) => (this.plugin.editFilter ? [{ glyph: 'filter', label: 'Filter', pressed: !!screen.filter, run: () => this.plugin.editFilter(screen) }] : []).concat([
-        { glyph: 'note-new', label: 'New note', run: () => this.plugin.files.newNote(screen.folder()) },
-        { glyph: 'more', label: 'More', run: (e) => (screen.folder().path === '/' ? null : showMenu(folderMenu(this.plugin, screen.folder(), null), e)), disabled: screen.folder().path === '/' },
-      ]),
     });
   }
 
@@ -82,20 +74,14 @@ export class BrowseView extends ScreenView {
     const aside = this.aside;
     while (aside.firstChild) aside.removeChild(aside.firstChild);
     const picked = this.plugin.selection.item;
-    if (this.screen.level === 'files') {
-      aside.hidden = false;
-      el(aside, 'h2', 'dr-file-details-title', 'Details');
-      if (picked) {
-        const name = el(aside, 'div', 'dr-file-details-name');
-        glyph(name, picked instanceof TFolder ? 'folder' : 'note');
-        el(name, 'span', 'dr-clip', picked.name);
-        el(aside, 'div', 'dr-file-details-type', `File type: ${browserType(picked)}`);
-      }
-      return;
+    aside.hidden = false;
+    el(aside, 'h2', 'dr-file-details-title', 'Details');
+    if (picked) {
+      const name = el(aside, 'div', 'dr-file-details-name');
+      browserIcon(name, picked instanceof TFolder ? 'folder' : picked.extension === 'md' ? 'file-text' : 'file');
+      el(name, 'span', 'dr-clip', picked.name);
+      el(aside, 'div', 'dr-file-details-type', `File type: ${browserType(picked)}`);
     }
-    aside.hidden = !(picked instanceof TFolder);
-    if (aside.hidden) return;
-    drawDetail(this.plugin, aside, picked, { open: (f) => this.screen.go(f), note: (file, e) => this.screen.openNote(file, e) });
   }
 
   getState() { return { at: this.screen ? this.screen.at : '/' }; }

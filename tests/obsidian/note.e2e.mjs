@@ -52,14 +52,5 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(kinds).toEqual([true, false]);
   });
 
-  it('opens the map of the vault', async function () {
-    await browser.executeObsidian(({ app }) => { app.commands.executeCommandById('design-redux:open-map'); });
-    const n = await readUntil(
-      () => browser.executeObsidian(({ app }) => app.workspace.getLeavesOfType('design-redux-mindmap').length),
-      (v) => v > 0
-    );
-    expect(n).toBeGreaterThan(0);
-    await browser.pause(1000);
-    await shot('map');
-  });
+
 });

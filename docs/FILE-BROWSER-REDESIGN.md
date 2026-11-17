@@ -4,10 +4,9 @@
 
 Replace the separate objects, shelves, words and table presentations with one
 coherent file browser for an Obsidian vault. Keep the 3D graph as a separate
-view. This is the target design; the existing browser still implements the
-older layouts until the replacement is built and tested. A transitional
-`Files (preview)` level now exercises the new file list in both views; it is
-not the finished or default interface.
+view. The replacement file list is now the default in the sidebar and the
+workspace. Real-Obsidian and visual comparison against the approved mockup
+remain required before this work is released.
 
 ## What the browser shows
 
@@ -75,8 +74,8 @@ building a replacement editor.
    saved Obsidian workspaces reopen. Migrate layout preferences to the single
    browser without discarding saved data. Preserve note and vault contents.
 6. Retire the separate tree-map feature and its controls, while preserving the
-   3D graph. Account for saved workspace view identifiers, old command IDs,
-   tests and the design specimen before deleting the map implementation.
+   3D graph. Its saved workspace identifiers remain registered as retired views
+   that close on opening; the former map command IDs are removed.
 
 ## Verification before cutover
 

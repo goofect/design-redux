@@ -18,19 +18,17 @@ alone is not evidence that a feature or a user's data is unused.
 
 - `core/`: Obsidian-facing services, data, settings migration, and lifecycle.
 - `ui/`: shared controls used by plugin-owned surfaces.
-- `library/`, `note/`, `maps/`, `tools/`: feature-specific behavior.
+- `library/`, `note/`, `tools/`: feature-specific behavior.
 - `plugin/`: feature registration and the settings tab.
 
-The map and 3D graph previously had identical deferred-build and close
-lifecycle code. They now share one Obsidian view lifecycle, while each keeps
-its own model and rendering. Custom note ordering has been removed from the
-interface; stored order data is retained for existing vaults.
+The separate tree map has been removed; saved map and outline tabs close through
+a compatibility view. The 3D graph remains. Custom note ordering has been
+removed from the interface; stored order data is retained for existing vaults.
 
 ## Candidates for a subsequent feature decision
 
 The 3D graph stays. The file-browser replacement is specified in
-`docs/FILE-BROWSER-REDESIGN.md`; its implementation and removal of the old
-tree-map view are still to be done. The following are further candidates, not
+`docs/FILE-BROWSER-REDESIGN.md`. The following are further candidates, not
 removals in this change:
 
 | Candidate | Simplification | Consequence to assess |

@@ -20,7 +20,7 @@ export const RETIRED = {
   pinsExpanded: 'the old sidebar\'s folded Pinned section',
   librarySections: 'the old sidebar\'s sections: the library is one place at three levels now',
   homeShelves: 'the old home screen\'s shelves',
-  libraryLayout: 'covers or lists: now the zoom control, kept by window (libraryZoom)',
+  libraryLayout: 'the old library layout; libraryZoom is retained as saved data',
   gridDensity: 'the old cover sizes: cells are cut from the width now',
   artworkSize: 'the old artwork size',
   tileGroups: 'the old tiles\' grouping',
@@ -41,7 +41,7 @@ export const RETIRED = {
   propertyInspector: 'folded into the inspector setting',
   propertyInlineEdit: 'a value is always edited in place now',
   homePath: 'the old home screen\'s note: the library\'s top level is home now',
-  albumColumns: 'the old album page\'s columns: a folder\'s table takes tableColumns',
+  albumColumns: 'the old album page\'s columns; tableColumns is retained as saved data',
   notePageShelves: 'moved: what a note links to and where it is mentioned are in the panel',
   notePageNext: 'moved: the notes before and after are the strip\'s',
   inspectorClick: 'a click picks and a second opens, always',
@@ -71,6 +71,7 @@ export function migrateSettings(saved) {
     if (fits) settings[to] = copy(value);
   });
   // The removed custom sort falls back to name; keep its saved order data intact.
+  // albumNestBy, hideEmptyFolders, and albumStillToWrite remain in saved data for older vaults.
   if (settings.defaultSort === 'own') settings.defaultSort = 'name';
   Object.keys(settings.albumSorts || {}).forEach((path) => {
     const sort = settings.albumSorts[path];

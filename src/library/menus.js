@@ -25,7 +25,7 @@ const entry = (menu, title, glyphName, run, section = 'action', more) =>
 export async function renameEntry(plugin, target) {
   const isFolder = target instanceof TFolder;
   const name = await ask(plugin.app, {
-    title: `Rename ${isFolder ? 'folder' : 'note'}`,
+    title: `Rename ${isFolder ? 'folder' : target.extension === 'md' ? 'note' : 'file'}`,
     value: isFolder ? target.name : target.basename,
     action: 'Rename',
     check: (v) => (/[\\/:]/.test(v) ? 'A name can’t hold a slash or a colon.' : null),

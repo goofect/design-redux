@@ -10,24 +10,13 @@
 /* ------------------------------------------------------------------ */
 
 import { Keymap, TFile, TFolder } from 'obsidian';
-import { clear, el } from '../core/dom.js';
+import { clear, el, glyph } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { segments } from '../ui/segments.js';
-import { drawObjects } from './level-objects.js';
-import { drawShelves } from './level-shelves.js';
-import { drawWords } from './level-words.js';
 import { drawFileList } from './file-list.js';
 import { attachmentMenu, folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
-
-export const LEVELS = [
-  { id: 'objects', glyph: 'zoom-objects', label: 'Objects' },
-  { id: 'shelves', glyph: 'zoom-shelves', label: 'Shelves' },
-  { id: 'words', glyph: 'zoom-words', label: 'Words' },
-  { id: 'files', glyph: 'folder', label: 'Files (preview)' },
-];
 
 export class LibraryScreen {
   /** `opts`: { wide, place (the key its level is remembered under), buttons(screen): extra head buttons }. */
@@ -54,23 +43,10 @@ export class LibraryScreen {
     return this.plugin.app;
   }
 
-  get level() {
-    const kept = (this.plugin.settings.libraryZoom || {})[this.opts.place || 'main'];
-    return LEVELS.some((l) => l.id === kept) ? kept : 'objects';
-  }
-
   /** The folder being shown: the vault itself when the one remembered is gone. */
   folder() {
     const f = this.app.vault.getAbstractFileByPath(this.at);
     return f instanceof TFolder ? f : this.app.vault.getRoot();
-  }
-
-  async setLevel(id) {
-    if (id === this.level) return;
-    this.remember();
-    (this.plugin.settings.libraryZoom || (this.plugin.settings.libraryZoom = {}))[this.opts.place || 'main'] = id;
-    this.draw();
-    await this.plugin.saveData(this.plugin.settings);
   }
 
   /** Goes into a folder (or back out to the vault with null). */
@@ -87,6 +63,7 @@ export class LibraryScreen {
     this.fileQuery = '';
     if (this.opts.onGo) this.opts.onGo(this.folder());
     this.draw();
+    if (!quiet) (this.plugin.screens || []).forEach((screen) => { if (screen !== this) screen.go(folder, true); });
   }
 
   /** Shows the notes a filter lets through in place of the folder; null puts the folder back. */
@@ -145,7 +122,7 @@ export class LibraryScreen {
   }
 
   remember() {
-    if (this.body) this.scrolls.set(`${this.at}|${this.level}`, this.body.scrollTop);
+    if (this.body) this.scrolls.set(this.at, this.body.scrollTop);
   }
 
   /** Asks for a redraw; many asks in one turn are one redraw. */
@@ -165,21 +142,18 @@ export class LibraryScreen {
     clear(host);
     const folder = this.folder();
     const inside = folder.path !== '/';
-    const head = headRow(host, {
-      label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : inside ? folder.name : 'Library',
-      back: inside || this.query !== null || this.filter || this.past.length ? () => this.back() : null,
-      buttons: [{ glyph: 'search', label: 'Search', pressed: this.query !== null, run: () => this.search(this.query === null ? '' : null) }].concat(this.opts.buttons ? this.opts.buttons(this) : []),
-    });
-    segments(head, { label: 'Level of detail', options: LEVELS, value: this.level, onChange: (id) => this.setLevel(id) });
-    if (this.level === 'files' && !this.opts.wide && this.query === null && !this.filter) {
-      const search = el(host, 'input', 'dr-file-search');
+    headRow(host, { label: this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : this.opts.wide ? (inside ? folder.name : 'Files') : 'Files' });
+    if (!this.opts.wide && this.query === null && !this.filter) {
+      const box = el(host, 'div', 'dr-file-search');
+      glyph(box, 'search');
+      const search = el(box, 'input', 'dr-file-search-input');
       search.type = 'search';
       search.value = this.fileQuery;
       search.placeholder = 'Search files...';
       search.setAttribute('aria-label', 'Search files');
       search.addEventListener('input', () => { this.fileQuery = search.value; drawFileList(this, this.body, this.folder(), this.fileQuery); });
     }
-    if (this.level === 'files' && this.query === null && !this.filter) {
+    if (this.query === null && !this.filter) {
       const breadcrumb = el(host, 'div', 'dr-file-breadcrumb');
       const parts = [];
       for (let f = folder; f && f.path !== '/'; f = f.parent) parts.unshift(f);
@@ -196,10 +170,7 @@ export class LibraryScreen {
     this.body = el(host, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
     else if (this.filter) drawFiltered(this, this.body);
-    else if (this.level === 'files') drawFileList(this, this.body, folder, this.opts.wide ? '' : this.fileQuery);
-    else if (this.level === 'shelves') drawShelves(this, this.body, folder);
-    else if (this.level === 'words') (this.opts.words || drawWords)(this, this.body, folder);
-    else drawObjects(this, this.body, folder);
+    else drawFileList(this, this.body, folder, this.opts.wide ? '' : this.fileQuery);
     this.body.addEventListener('contextmenu', (e) => this.menuFor(e));
     this.body.addEventListener('keydown', (e) => {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);
@@ -219,7 +190,7 @@ export class LibraryScreen {
     const find = (path) => (path == null ? null : Array.from(body.querySelectorAll('[data-path]')).find((n) => n.dataset.path === path));
     const open = this.openFile();
     const marked = find(focusPath) || find(this.plugin.selection.path) || (open ? find(open.path) : null);
-    const kept = this.scrolls.get(`${this.at}|${this.level}`);
+    const kept = this.scrolls.get(this.at);
     if (kept != null) body.scrollTop = kept;
     else if (marked && typeof marked.scrollIntoView === 'function') marked.scrollIntoView({ block: 'nearest' });
     if (focusPath !== undefined && marked) marked.focus();

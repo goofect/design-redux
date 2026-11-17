@@ -14,6 +14,7 @@
   flex-direction: column;
   min-width: 0;
   height: 100%;
+  background: var(--dr-browser-bg);
 }
 
 .dr-library-body {
@@ -24,7 +25,8 @@
 
 /* The new file-list preview, shared by sidebar and workspace. */
 .dr-file-list { padding: var(--dr-gutter); }
-.dr-file-search { margin: var(--dr-gutter); width: calc(100% - 2 * var(--dr-gutter)); }
+.dr-file-search { display: flex; align-items: center; gap: var(--dr-u); margin: var(--dr-gutter); padding: 0 var(--dr-u); border: var(--dr-hair) solid var(--dr-ink); }
+.dr-file-search-input { flex: 1; min-width: 0; border: 0; background: none; }
 .dr-file-breadcrumb { padding: var(--dr-u) var(--dr-gutter); color: var(--dr-muted); }
 .dr-file-breadcrumb button { padding: 0; border: 0; background: none; color: inherit; }
 .dr-file-list-heading, .dr-file-row {
@@ -35,16 +37,23 @@
   border-bottom: var(--dr-hair) solid var(--dr-surface);
 }
 .dr-file-list-heading { border-color: var(--dr-ink); }
-.dr-file-row { cursor: pointer; }
+.dr-file-row { --dr-depth: 0; cursor: pointer; font-size: var(--font-ui-medium); }
 .dr-file-name { display: flex; align-items: center; gap: calc(2 * var(--dr-u)); min-width: 0; }
+.dr-library:not(.is-wide) .dr-file-name { padding-left: calc(var(--dr-depth, 0) * 2 * var(--dr-u)); }
+.dr-file-disclosure { padding: 0; border: 0; background: none; }
 .dr-file-name .dr-glyph { flex: none; }
+.dr-file-icon { display: inline-flex; flex: none; width: calc(3 * var(--dr-u)); height: calc(3 * var(--dr-u)); }
+.dr-file-icon svg { width: 100%; height: 100%; }
 .dr-file-result-path { color: var(--dr-muted); }
-.dr-file-row[aria-selected="true"] { background: var(--dr-clay); color: var(--dr-on-clay); }
+.dr-file-row[aria-selected="true"] { background: var(--dr-browser-selected); color: var(--dr-on-clay); }
 .dr-file-row:focus-visible { outline: var(--dr-ring) solid var(--dr-ink); outline-offset: calc(-1 * var(--dr-ring)); }
-.dr-library:not(.is-wide) .dr-file-row { grid-template-columns: minmax(0, 1fr); }
+.dr-library:not(.is-wide) .dr-file-row { grid-template-columns: minmax(0, 1fr); border-bottom: 0; }
 .dr-file-details-title { margin: 0 var(--dr-gutter); padding: calc(3 * var(--dr-u)) 0; border-bottom: var(--dr-hair) solid var(--dr-ink); }
 .dr-file-details-name { display: flex; align-items: center; gap: var(--dr-u); padding: calc(3 * var(--dr-u)) var(--dr-gutter) var(--dr-u); }
 .dr-file-details-type { padding: 0 var(--dr-gutter); }
+.dr-library.is-wide > .dr-head { height: calc(12 * var(--dr-u)); border-bottom: 0; }
+.dr-library.is-wide > .dr-head > .dr-label { font-size: calc(5 * var(--dr-u)); font-weight: 700; line-height: 1; letter-spacing: normal; text-transform: none; }
+.dr-library:not(.is-wide) > .dr-head > .dr-label { font-size: calc(2 * var(--dr-u)); font-weight: 700; letter-spacing: normal; }
 @media (any-hover: hover) {
   .dr-file-row:hover:not([aria-selected="true"]) { background: var(--dr-surface); }
 }
@@ -105,7 +114,9 @@
 /* ---- The browse view: the screen, and the folder picked beside it. ---- */
 .dr-browse {
   display: flex;
+  container-type: inline-size;
   height: 100%;
+  background: var(--dr-browser-bg);
 }
 
 .dr-browse-main {
@@ -118,6 +129,10 @@
   width: calc(40 * var(--dr-u));
   border-left: var(--dr-hair) solid var(--dr-ink);
   overflow-y: auto;
+}
+
+@container (max-width: 600px) {
+  .dr-browse-aside { width: calc(24 * var(--dr-u)); }
 }
 
 .dr-browse-aside[hidden] {
