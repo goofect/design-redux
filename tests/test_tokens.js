@@ -38,7 +38,7 @@ check('the library palette is monochrome and readable in both schemes', () => {
   const css = read('00-tokens.css');
   for (const scheme of ['light', 'dark']) {
     const tokens = schemeTokens(css, scheme);
-    for (const key of ['browser-bg', 'browser-ink', 'browser-muted', 'browser-rule', 'browser-selected', 'browser-selected-ink']) {
+    for (const key of ['bg', 'surface', 'ink', 'muted', 'clay', 'on-clay', 'browser-bg', 'browser-ink', 'browser-muted', 'browser-rule', 'browser-selected', 'browser-selected-ink']) {
       assert.match(tokens[key], /^#([0-9a-f]{2})\1\1$/i, `${scheme}: ${key} is not neutral`);
     }
     assert.ok(ratio(tokens['browser-ink'], tokens['browser-bg']) >= 4.5);

@@ -9,18 +9,18 @@
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin
- * light  text   ink on bg 13.98 · ink on surface 10.87 · muted on bg 5.36 · on-clay on clay 5.66
- * light  line   ink on bg 13.98 · ink on surface 10.87 · ink on clay 5.66
- * light  fill   clay on bg 2.47 · surface on bg 1.29 · clay on surface 1.92 (never the only sign: see "Selected and open")
- * light  never  muted on surface 4.16 · muted on clay 2.17 · clay as text on bg 2.47
- * light  tones  rust 5.96/4.63 · ochre 5.96/4.63 · moss 6.00/4.67 · slate 5.95/4.63 · plum 5.95/4.63 (on bg / on surface)
- * light  soft   rust 3.37 · ochre 3.36 · moss 3.33 · slate 3.34 · plum 3.34 (on bg: fills and lines only)
- * dark   text   ink on bg 13.81 · ink on surface 11.66 · muted on bg 7.00 · muted on surface 5.91 · on-clay on clay 5.66
- * dark   line   ink on bg 13.81 · ink on surface 11.66 · on-clay on clay 5.66
- * dark   fill   clay on bg 5.59 · surface on bg 1.18 · clay on surface 4.72 (never the only sign: see "Selected and open")
- * dark   never  ink on clay 2.47 · muted on clay 1.25 · clay as text on bg 5.59
- * dark   tones  rust 5.80/4.90 · ochre 5.77/4.87 · moss 5.77/4.87 · slate 5.76/4.86 · plum 5.80/4.90 (on bg / on surface)
- * dark   soft   rust 3.42 · ochre 3.40 · moss 3.44 · slate 3.40 · plum 3.38 (on bg: fills and lines only)
+ * light  text   ink on bg 21.00 · ink on surface 16.67 · muted on bg 7.46 · muted on surface 5.92 · on-clay on clay 13.62
+ * light  line   ink on bg 21.00 · ink on surface 16.67 · ink on clay 13.62
+ * light  fill   clay on bg 1.54 · surface on bg 1.26 · clay on surface 1.22 (never the only sign: see "Selected and open")
+ * light  never  muted on clay 4.83 · clay as text on bg 1.54
+ * light  tones  rust 7.43/5.89 · ochre 7.42/5.89 · moss 7.48/5.94 · slate 7.42/5.89 · plum 7.42/5.89 (on bg / on surface)
+ * light  soft   rust 4.20 · ochre 4.18 · moss 4.15 · slate 4.17 · plum 4.16 (on bg: fills and lines only)
+ * dark   text   ink on bg 17.18 · ink on surface 12.99 · muted on bg 8.06 · muted on surface 6.09 · on-clay on clay 8.03
+ * dark   line   ink on bg 17.18 · ink on surface 12.99 · on-clay on clay 8.03
+ * dark   fill   clay on bg 7.16 · surface on bg 1.32 · clay on surface 5.41 (never the only sign: see "Selected and open")
+ * dark   never  ink on clay 2.40 · muted on clay 1.13 · clay as text on bg 7.16
+ * dark   tones  rust 6.31/4.77 · ochre 6.28/4.74 · moss 6.28/4.74 · slate 6.27/4.74 · plum 6.32/4.77 (on bg / on surface)
+ * dark   soft   rust 3.72 · ochre 3.70 · moss 3.74 · slate 3.70 · plum 3.68 (on bg: fills and lines only)
  * contrast:end */
 
 /* The measures and the voices hold whether the look is on or off: they are the plugin's own structure. */
@@ -86,14 +86,14 @@ body.dr-active.theme-light {
   --dr-browser-rule: #D0D0D0;
   --dr-browser-selected: #E5E5E5;
   --dr-browser-selected-ink: #000000;
-  --dr-bg: #E9E6DF; /* bone: every surface */
-  --dr-surface: #CFCCC5; /* ash: hover and pressed fills only; words on it are ink */
-  --dr-ink: #1A1A18; /* text, glyphs, hairlines, the ring */
-  --dr-muted: #5E5C57; /* secondary text, only on bone */
-  --dr-clay: #A58F7C; /* the fill behind what is selected or open; never text */
-  --dr-on-clay: #1A1A18; /* text, glyphs and marks on clay */
-  --dr-dim: #1A1A1866; /* the flat dim behind a sheet */
-  --dr-clay-h: 28; --dr-clay-s: 19%; --dr-clay-l: 57%; /* clay again, for Obsidian's accent sliders */
+  --dr-bg: #FFFFFF;
+  --dr-surface: #E5E5E5;
+  --dr-ink: #000000;
+  --dr-muted: #555555;
+  --dr-clay: #D0D0D0;
+  --dr-on-clay: #000000;
+  --dr-dim: #00000066;
+  --dr-clay-h: 0; --dr-clay-s: 0%; --dr-clay-l: 82%;
 
   /* The semantic set: five earth tones, for meaning the four neutrals can't hold (the person's own colours, callouts, error, warning, success).
      A tone is text or a line on bone or ash, or a fill with bone words on it. Its soft form is a fill or a line on bone only, never under words. */
@@ -116,14 +116,14 @@ body.dr-active.theme-dark {
   --dr-browser-rule: #555555;
   --dr-browser-selected: #383838;
   --dr-browser-selected-ink: #F5F5F5;
-  --dr-bg: #1C1B19;
-  --dr-surface: #2A2927;
-  --dr-ink: #E9E6DF;
-  --dr-muted: #A8A59E; /* on the ground and on the hover fill */
-  --dr-clay: #A58F7C;
-  --dr-on-clay: #1A1A18; /* dark on clay in both schemes: the light ink would not be read on it */
+  --dr-bg: #121212;
+  --dr-surface: #2B2B2B;
+  --dr-ink: #F5F5F5;
+  --dr-muted: #AAAAAA;
+  --dr-clay: #A0A0A0;
+  --dr-on-clay: #000000;
   --dr-dim: #000000A6;
-  --dr-clay-h: 28; --dr-clay-s: 19%; --dr-clay-l: 57%;
+  --dr-clay-h: 0; --dr-clay-s: 0%; --dr-clay-l: 63%;
 
   --dr-rust: #D1816E; --dr-rust-rgb: 209, 129, 110;
   --dr-rust-soft: #AE553F; --dr-rust-soft-rgb: 174, 85, 63;

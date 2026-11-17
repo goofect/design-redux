@@ -1,12 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* The library screen: one place, three levels of detail               */
-/*                                                                     */
-/* What the sidebar and the browse view both are: a folder you are in  */
-/* (`at`), shown as objects, as shelves or as words, under a head row  */
-/* with the zoom control. Switching level keeps the folder, the pick   */
-/* and the open note, and brings whichever is marked back into sight.  */
-/* Drawing reads the index and nothing else, and is put off to one     */
-/* turn however many things changed at once.                           */
+/* The library lists folders; the selected folder lists its notes.     */
+/* Both views use one screen and the cached vault index.                */
 /* ------------------------------------------------------------------ */
 
 import { Keymap, TFile, TFolder } from 'obsidian';
@@ -17,7 +11,7 @@ import { drawFileList } from './file-list.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
 
 export class LibraryScreen {
-  /** `opts`: { wide, place (the key its level is remembered under), buttons(screen): extra head buttons }. */
+  /** `opts`: { wide, place, onGo(folder) }. */
   constructor(plugin, host, opts = {}) {
     this.plugin = plugin;
     this.host = host;

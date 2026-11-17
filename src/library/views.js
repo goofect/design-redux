@@ -1,9 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* The library's two views: the sidebar, and the browse view           */
-/*                                                                     */
-/* Both are one LibraryScreen. The sidebar is three columns wide; the  */
-/* browse view is the window's width, its words are the table, and a   */
-/* folder picked in it is shown beside the grid.                       */
+/* The library's two views: folders in the sidebar, notes in a folder. */
 /* ------------------------------------------------------------------ */
 
 import { ItemView } from 'obsidian';
