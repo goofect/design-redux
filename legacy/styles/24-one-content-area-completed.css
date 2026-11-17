@@ -1,9 +1,0 @@
-/* The sidebar holds one view, so its tab chip names something you
-   can't switch away from. The action icons beside it stay. */
-body.dr-single-area
-  .workspace-split.mod-left-split
-  .workspace-tab-header-container-inner {
-  display: none;
-}
-
-

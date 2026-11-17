@@ -146,16 +146,10 @@ jobs:
             echo "obsidian tests: ${{ needs.obsidian.result }}"
             echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           } > ci-output/summary.txt
-          # The screenshots compared with main's last (the ci-snapshots
-          # branch): snapshots/diff/summary.txt, and a picture of each change.
+          # The screenshots; on main they are kept on the ci-snapshots branch.
           mkdir -p ci-output/snapshots
           find ci-output -maxdepth 1 -name '*.png' ! -name '*-FAILED-*' -exec cp {} ci-output/snapshots/ \;
           if [ -n "$(ls ci-output/snapshots)" ]; then
-            mkdir -p /tmp/snapshots-main
-            if git fetch -q origin ci-snapshots 2>/dev/null; then
-              git archive FETCH_HEAD | tar -x -C /tmp/snapshots-main
-              node tools/snapshot-diff.mjs /tmp/snapshots-main ci-output/snapshots --out ci-output/snapshots/diff || true
-            fi
             # On main, these become the ones the next runs are compared with.
             if [ "$GITHUB_REF_NAME" = "${{ github.event.repository.default_branch }}" ]; then
               rm -rf /tmp/snapshots-new && cp -r ci-output/snapshots /tmp/snapshots-new && rm -rf /tmp/snapshots-new/diff

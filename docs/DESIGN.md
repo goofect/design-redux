@@ -5,8 +5,8 @@ own chrome, the editor and reading view, overlays, settings, Canvas, Graph,
 and icons, and every surface the plugin draws itself (library, browse
 view, album pages, the note page and its page control, the strip, the
 properties panel, mind maps). This look replaces the plugin's earlier looks.
-The plugin is being rewritten from scratch at the same time: `REWRITE.md`
-says how the code is rebuilt, and this file says how everything looks.
+The code was rewritten for 4.0 (see `AGENTS.md` for its layout); this file
+says how everything looks.
 
 Direction: raw, utilitarian, unadorned, and object-led. The reference is the
 stark, icon-led storefront design of the Yeezy website: a flat ground, single
@@ -74,18 +74,16 @@ In scope, all visual:
   legend), and every menu and modal the plugin opens.
 
 Fixed. Tell the owner if any of these should change:
-- the data contract in `REWRITE.md` (what is read from and written to
-  notes and `data.json`, and the command ids of kept features)
+- the data contract: what is read from and written to notes and
+  `data.json` (`core/migrate.js`), and the command ids
+  (`tests/test_contract.js`)
 - no kept feature may be hidden or made unreachable, nor any of Obsidian's
   (search, file operations, sync status, properties, backlinks)
 - readability and accessibility must not regress (see guardrails)
 
 ## Delivery
 
-The look is built inside the rewrite's phases (`REWRITE.md`, Build order):
-the foundation, then Obsidian's regions, then each feature drawn in this look
-as it is rebuilt. No old style is carried over: `styles.css` is written new.
-Each phase ends with the self-audit below, the tests passing, and a short
+Each change to the look ends with the self-audit below, the tests passing, and a short
 change summary.
 
 ## Architecture rules
@@ -152,8 +150,7 @@ change summary.
 - The `--dr-*` names stay. The old look's token values (radii, shadows,
   glass, motion) are not carried into the new `styles.css`; the palette
   below is the new set.
-- The migration of these keys is part of `REWRITE.md`'s settings migration
-  and is tested with the owner's real `data.json`.
+- The migration of these keys is in `core/migrate.js`, with its test.
 
 ## Palette tokens
 
@@ -484,7 +481,7 @@ Where `AGENTS.md`, the plugin's code and this file disagree:
 - a feature hidden or unreachable
 - a readability regression: line length, code legibility, link visibility,
   focus visibility, or the font-size setting no longer working
-- a break in `REWRITE.md`'s data contract
+- a break in the data contract
 - a style copied over from the old `styles.css` instead of written to this
   file
 - an object grid that shows labels at rest when "Always show labels" is off,
