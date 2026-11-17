@@ -108,7 +108,7 @@ export class Library extends Feature {
 
   settingsRows() {
     return [
-      { key: 'defaultSort', name: 'Order of notes', desc: 'Where a folder has no order of its own.', type: 'choice', options: { name: 'Name', modified: 'Last edited', created: 'Date made', own: 'Your order' } },
+      { key: 'defaultSort', name: 'Order of notes', desc: 'Where a folder has no order of its own.', type: 'choice', options: { name: 'Name', modified: 'Last edited', created: 'Date made' } },
       { key: 'hideEmptyFolders', name: 'Leave out empty folders', type: 'toggle' },
       { key: 'hideFolderNotes', name: 'Leave out folder notes', desc: 'A folder’s own note is not listed among its notes.', type: 'toggle' },
       { key: 'folderNoteName', name: 'A folder note’s name', desc: '{{folder}} stands for the folder’s name.', type: 'text' },

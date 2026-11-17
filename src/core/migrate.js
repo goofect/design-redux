@@ -70,6 +70,13 @@ export function migrateSettings(saved) {
     const fits = fallback === null || value === null ? value !== undefined : Array.isArray(fallback) === Array.isArray(value) && typeof fallback === typeof value;
     if (fits) settings[to] = copy(value);
   });
+  // The removed custom sort falls back to name; keep its saved order data intact.
+  if (settings.defaultSort === 'own') settings.defaultSort = 'name';
+  Object.keys(settings.albumSorts || {}).forEach((path) => {
+    const sort = settings.albumSorts[path];
+    if (sort === 'own') settings.albumSorts[path] = 'name';
+    else if (sort && typeof sort === 'object' && sort.by === 'own') sort.by = 'name';
+  });
   if (old) {
     // The old looks (classic, editorial and the rest) all become the one new look; lookScope is kept as it was.
     settings.look = 'redux';

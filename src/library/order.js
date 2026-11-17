@@ -1,15 +1,13 @@
 /* ------------------------------------------------------------------ */
 /* Order: how a folder's notes and folders are sorted, and pins        */
 /*                                                                     */
-/* A folder's notes come by name, by date, or in the person's own      */
-/* order (kept by the folder's path as a list of file names; a note    */
-/* not on the list goes after those that are). The order chosen in a   */
+/* A folder's notes come by name or date. The order chosen in a        */
 /* folder is remembered for it.                                        */
 /* ------------------------------------------------------------------ */
 
 import { byName } from '../core/text.js';
 
-export const SORTS = { name: 'Name', modified: 'Last edited', created: 'Date made', own: 'Your order' };
+export const SORTS = { name: 'Name', modified: 'Last edited', created: 'Date made' };
 
 /** The order a folder's notes are shown in: its own if one was chosen there, else the default. */
 export function sortOf(plugin, folder) {
@@ -33,21 +31,7 @@ export function sortedNotes(plugin, folder) {
   const by = sortOf(plugin, folder);
   if (by === 'modified') return notes.sort((a, b) => b.stat.mtime - a.stat.mtime || byName(a.basename, b.basename));
   if (by === 'created') return notes.sort((a, b) => b.stat.ctime - a.stat.ctime || byName(a.basename, b.basename));
-  if (by === 'own') {
-    const saved = (plugin.settings.albumOrders || {})[folder ? folder.path : '/'];
-    const names = saved && Array.isArray(saved.names) ? saved.names : [];
-    const place = (f) => { const i = names.indexOf(f.name); return i < 0 ? names.length : i; };
-    return notes.sort((a, b) => place(a) - place(b) || byName(a.basename, b.basename));
-  }
   return notes;
-}
-
-/** Moves a note to another place in its folder's own order, and makes that the folder's order. */
-export async function moveInOrder(plugin, folder, file, toIndex) {
-  const names = sortedNotes(plugin, folder).map((f) => f.name).filter((n) => n !== file.name);
-  names.splice(Math.max(0, Math.min(names.length, toIndex)), 0, file.name);
-  (plugin.settings.albumOrders || (plugin.settings.albumOrders = {}))[folder.path] = { names };
-  await setSort(plugin, folder, 'own');
 }
 
 /** The pinned files and folders that still exist, in the person's order. */

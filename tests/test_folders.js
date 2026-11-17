@@ -24,6 +24,20 @@ const VAULT = {
 };
 
 (async () => {
+  await check('the removed custom order falls back to name, while saved data is preserved', async () => {
+    const saved = { settingsVersion: dr.SETTINGS_VERSION, defaultSort: 'own', albumSorts: { Logic: 'own', Reading: { by: 'own' }, Other: 'modified' }, albumOrders: { Logic: { names: ['Validity.md', 'Truth tables.md'] } } };
+    const w = await world(VAULT, saved);
+    const s = w.plugin.settings;
+    assert.strictEqual(s.defaultSort, 'name');
+    assert.deepStrictEqual(s.albumSorts, { Logic: 'name', Reading: { by: 'name' }, Other: 'modified' });
+    assert.deepStrictEqual(s.albumOrders, saved.albumOrders);
+    assert.strictEqual(saved.albumSorts.Reading.by, 'own', 'migration changed its input');
+    assert.strictEqual(dr.sortOf(w.plugin, w.file('Logic')), 'name');
+    assert.deepStrictEqual(dr.sortedNotes(w.plugin, w.file('Logic')).map((f) => f.basename), ['Truth tables', 'Validity']);
+    assert.ok(!('own' in dr.SORTS));
+    assert.ok(!('own' in feature(w, 'Library').settingsRows().find((r) => r.key === 'defaultSort').options));
+  });
+
   await check('a folder note is read by the old property names; a change is kept by path and writes no note', async () => {
     const w = await world(VAULT);
     const albums = feature(w, 'Albums');
