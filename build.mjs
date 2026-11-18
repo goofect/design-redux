@@ -9,7 +9,7 @@
 // tests/_source.js: every module's exports as one object, for the suites.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import esbuild from 'esbuild';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -89,7 +89,9 @@ const common = {
 
 let result;
 try {
-  result = await esbuild.build({ ...common, entryPoints: [path.join(src, 'main.js')] });
+  // `--dev`: a sourcemap inside main.js whose sources are the files under src/, so a debugger attached to Obsidian stops in them.
+  const dev = process.argv.includes('--dev') ? { sourcemap: 'inline', outfile: path.join(root, 'main.js'), sourceRoot: `${pathToFileURL(root).href}/` } : {};
+  result = await esbuild.build({ ...common, ...dev, entryPoints: [path.join(src, 'main.js')] });
 } catch (err) {
   fail(`${(err.errors || []).map((e) => `${e.location ? `${e.location.file}:${e.location.line} ` : ''}${e.text}`).join('\n') || err.message}`);
 }
@@ -105,7 +107,7 @@ if (lost.length) {
 const write = (file, text) => {
   if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== text) fs.writeFileSync(file, text);
 };
-const code = result.outputFiles[0].text;
+const code = (result.outputFiles.find((f) => f.path.endsWith('.js')) || result.outputFiles[0]).text;
 write(path.join(root, 'main.js'), code);
 console.log(`build: main.js from ${modules.length} modules, ${code.split('\n').length - 1} lines`);
 

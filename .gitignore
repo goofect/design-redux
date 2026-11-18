@@ -44,3 +44,6 @@ graphify-out
 
 # What a screenshot test saw when it differed from the approved image
 tests/screenshots/failed/
+
+# The sandbox vault tools/dev.mjs runs the plugin in
+.dev-vault
