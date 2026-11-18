@@ -130,7 +130,7 @@ export class PropertyClipboard extends Feature {
   actions() {
     const some = () => Object.keys(this.sets()).length > 0;
     return [
-      ...retiredActions(['copy-properties', 'copy-some-properties', 'paste-properties'], 'Add a property takes another note\'s'),
+      ...retiredActions(['copy-properties', 'copy-some-properties', 'paste-properties'], 'properties copy and paste as text does, in the note'),
       { id: 'sort-properties', name: 'Sort properties alphabetically', on: 'note', menu: false, run: (ctx) => this.sort(ctx.file) },
       { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', on: 'folder', menu: 'Copy properties as a table', run: (ctx) => this.copyTable(ctx.folder) },
       { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', on: 'folder', menu: 'Update notes from a table', run: (ctx) => this.pasteTable(ctx.folder) },

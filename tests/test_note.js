@@ -116,8 +116,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.plugin.openFolder.path, 'Logic');
   });
 
-  await check('the ledger: values keep their kind, one Undo a change; a property added by its command (a name, name: value, or another note\'s) and removed by its menu; the panel gone, its view and commands kept quiet', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n', 'Logic/B.md': '---\nstatus: done\nauthor: Frege\n---\n' });
+  await check('the ledger: values keep their kind, one Undo a change; a property added by its command (a name, or name: value), copied and pasted as text is, and removed by its menu; the panel gone, its view and commands kept quiet', async () => {
+    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n' });
     const file = w.file('Logic/A.md');
     const host = w.doc.body.appendChild(w.doc.createElement('div'));
     const draw = () => { host.textContent = ''; dr.drawLedger(w.plugin, host, file, draw); };
@@ -144,15 +144,48 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     dr.addProperty(w.plugin, file);
     await answer(w, 'year: 1879');
     assert.strictEqual(w.plugin.notes.get(file, 'year'), '1879');
-    // From another note: what this one has, it keeps.
+    // Copied and pasted as text is: "name: value" lines, no menu and no glyph.
+    let board = '';
+    Object.defineProperty(window.navigator, 'clipboard', { configurable: true, value: { writeText: async (t) => { board = String(t); }, readText: async () => board } });
+    const cmd = (node, k) => node.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, metaKey: true, bubbles: true, cancelable: true }));
+    const row = (k) => host.querySelector(`.dr-prop[data-key="${k}"]`);
+    cmd(row('status'), 'c');
+    await settle();
+    assert.strictEqual(board, 'status: draft\n');
+    // Rows selected as text: those the selection touches.
+    const sel = w.doc.getSelection();
+    const range = w.doc.createRange();
+    range.setStart(row('status').querySelector('.dr-prop-name').firstChild, 0);
+    range.setEnd(row('week').querySelector('.dr-prop-value').firstChild, 1);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    const data = {};
+    const copy = new window.Event('copy', { bubbles: true, cancelable: true });
+    copy.clipboardData = { setData: (type, t) => (data[type] = t) };
+    row('status').dispatchEvent(copy);
+    sel.removeAllRanges();
+    assert.deepStrictEqual(dr.readProps(data['text/plain']), { status: 'draft', week: 4 });
+    // ⌘V on a row: what is pasted is set, one Undo.
+    board = 'status: done\nauthor: Frege\n';
+    cmd(row('week'), 'v');
+    await settle();
+    assert.deepStrictEqual([w.plugin.notes.get(file, 'status'), w.plugin.notes.get(file, 'author')], ['done', 'Frege']);
+    await w.plugin.lastUndo.run();
+    assert.ok(!('author' in w.plugin.notes.props(file)), 'the paste was not one Undo');
+    // Several lines pasted into the Add field are added at once; one line stays the field's text.
+    const paste = (input, text) => {
+      const e = new window.Event('paste', { bubbles: true, cancelable: true });
+      e.clipboardData = { getData: () => text };
+      input.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
     const adding = dr.addProperty(w.plugin, file);
     await settle();
-    const sheet = obsidian.Modal.open[obsidian.Modal.open.length - 1];
-    Array.from(sheet.contentEl.querySelectorAll('.dr-button')).find((b) => b.textContent === 'From another note…').click();
-    await settle();
-    obsidian.Modal.open[obsidian.Modal.open.length - 1].pick(w.file('Logic/B.md'));
+    const field = obsidian.Modal.open[obsidian.Modal.open.length - 1].contentEl.querySelector('input');
+    assert.strictEqual(paste(field, 'author: Frege'), false, 'one line pasted was not left as text');
+    assert.strictEqual(paste(field, 'author: Frege\nborn: 1848\n'), true);
     await adding;
-    assert.deepStrictEqual([w.plugin.notes.get(file, 'status'), w.plugin.notes.get(file, 'author')], ['draft', 'Frege']);
+    assert.deepStrictEqual([w.plugin.notes.get(file, 'author'), w.plugin.notes.get(file, 'born')], ['Frege', 1848]);
     await dr.propertyMenu(w.plugin, file, 'course').click('Remove property');
     assert.ok(!('course' in w.plugin.notes.props(file)));
     // The panel is gone: its view type still opens (a saved layout names it) and closes itself; its commands are kept, never offered.

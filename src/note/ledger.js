@@ -7,15 +7,16 @@
 /* (Enter writes it, with an Undo; Escape leaves it); a row's menu     */
 /* renames or removes it; a value the folder's schema finds wrong is   */
 /* red, the reason after it. No heading, no buttons, no icons: a       */
-/* property is added by its command, as "name" or "name: value", or    */
-/* all of another note's at once.                                      */
+/* property is added by its command, as "name" or "name: value".      */
+/* Properties copy and paste as text does: rows selected, or one       */
+/* focused, and ⌘C; ⌘V on a row, or several lines pasted into a field. */
+/* They travel as "name: value" lines.                                 */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Notice } from 'obsidian';
+import { Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
-import { choose } from '../ui/choose.js';
 import { propRow, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 
@@ -56,31 +57,40 @@ export function parseAdded(text) {
   return at < 0 ? { key: t, value: '' } : { key: t.slice(0, at).trim(), value: t.slice(at + 1).trim() };
 }
 
-/** Adds another note's properties to this one: what this note has, it keeps. Resolves the undo, or null when none was added. */
-export async function addPropertiesFrom(plugin, file, from) {
-  const have = plugin.notes.props(file);
-  const props = plugin.notes.props(from);
-  const keys = Object.keys(props).filter((k) => !(k in have));
-  if (!keys.length) return void new Notice(`${file.basename} has every property of ${from.basename} already.`), null;
-  return plugin.notes.write(file, (fm) => keys.forEach((k) => (fm[k] = JSON.parse(JSON.stringify(props[k])))), { undo: `${counted(keys.length, 'property', 'properties')} added from ${from.basename}.` });
+/** Properties as the text they are copied as: "name: value" lines, as a note's own head has them. */
+export const propsText = (props) => stringifyYaml(props);
+
+/** Text read back as properties, { name: value }, or null when it is not any. */
+export function readProps(text) {
+  let props = null;
+  try {
+    props = parseYaml(String(text || ''));
+  } catch (err) {
+    props = null;
+  }
+  return props && typeof props === 'object' && !Array.isArray(props) && Object.keys(props).length ? props : null;
 }
 
-/** Asks for a property, "name" or "name: value", and adds it; or, by the word beside Cancel, takes another note's. */
+/** Several lines of properties, as pasted: what a paste into a field gives way to. One line stays text. */
+const pastedProps = (text) => (/\n\s*\S/.test(String(text).trim()) ? readProps(text) : null);
+
+/** Pastes properties onto a note, as text is pasted: one it has gives way to the pasted one. One Undo. */
+export function pasteProps(plugin, file, props) {
+  return plugin.notes.write(file, (fm) => Object.assign(fm, JSON.parse(JSON.stringify(props))), { undo: `${counted(Object.keys(props).length, 'property', 'properties')} pasted.` });
+}
+
+/** Asks for a property, "name" or "name: value", and adds it; properties pasted into its field, several lines of them, are added at once. */
 export async function addProperty(plugin, file) {
-  let fromNote = false;
+  let pasted = null;
   const text = await ask(plugin.app, {
     title: 'Add a property',
     label: 'Its name, or name: value',
     placeholder: 'status: draft',
     action: 'Add',
     check: (v) => (!parseAdded(v).key ? 'It needs a name.' : parseAdded(v).key in plugin.notes.props(file) ? 'This note already has it.' : null),
-    more: [{ text: 'From another note…', run: () => void (fromNote = true) }],
+    onPaste: (t) => !!(pasted = pastedProps(t)),
   });
-  if (fromNote) {
-    const others = plugin.index.markdown().filter((f) => f !== file && Object.keys(plugin.notes.props(f)).length);
-    const from = await choose(plugin.app, others, { placeholder: `Add the properties of which note to ${file.basename}?`, name: (f) => f.path.replace(/\.md$/, '') });
-    return from ? addPropertiesFrom(plugin, file, from) : null;
-  }
+  if (pasted) return pasteProps(plugin, file, pasted);
   if (!text) return null;
   const { key, value } = parseAdded(text);
   return plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} added.` });
@@ -114,8 +124,25 @@ export function ledgerKeys(plugin, file) {
 /** One property's row: edited where it stands, a menu of its own, red where its folder's schema says it is wrong. */
 export function ledgerRow(plugin, host, file, key, value, redraw) {
   const wrong = plugin.checkValue ? plugin.checkValue(file, key, value) : null;
-  const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => editValue(plugin, node, file, key, value, redraw) });
+  const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => selecting(node) || editValue(plugin, node, file, key, value, redraw) });
   node.dataset.key = key;
+  // As text is copied and pasted: on a row, ⌘C copies it, ⌘V pastes properties onto the note.
+  node.addEventListener('keydown', async (e) => {
+    if (e.target !== node || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'c' && k !== 'v') return;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      if (k === 'c') await navigator.clipboard.writeText(propsText({ [key]: value }));
+      else {
+        const props = readProps(await navigator.clipboard.readText());
+        if (props) await pasteProps(plugin, file, props);
+      }
+    } catch (err) {
+      new Notice('Could not reach the clipboard.');
+    }
+  });
   node.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -132,7 +159,22 @@ export function drawLedger(plugin, host, file, redraw) {
   const list = rows(host);
   list.classList.add('dr-ledger');
   keys.forEach((key) => ledgerRow(plugin, list, file, key, props[key], redraw));
+  // Rows selected as text are copied as properties: "name: value", a line each.
+  list.addEventListener('copy', (e) => {
+    const sel = list.ownerDocument.getSelection();
+    if (!sel || sel.isCollapsed || !e.clipboardData || (e.target.closest && e.target.closest('input'))) return;
+    const picked = Array.from(list.querySelectorAll('.dr-prop')).filter((r) => Array.from({ length: sel.rangeCount }, (_, i) => sel.getRangeAt(i)).some((range) => range.intersectsNode(r))).map((r) => r.dataset.key);
+    if (!picked.length) return;
+    e.preventDefault();
+    e.clipboardData.setData('text/plain', propsText(Object.fromEntries(picked.map((k) => [k, props[k]]))));
+  });
   return list;
+}
+
+/** Whether text is being selected in a row, so a press there is not taken for an edit. */
+function selecting(node) {
+  const sel = node.ownerDocument.getSelection();
+  return !!sel && !sel.isCollapsed && node.contains(sel.anchorNode);
 }
 
 /** Edits a value where it stands: Enter (or leaving the field) writes it, Escape leaves it as it was. */
@@ -158,6 +200,15 @@ function editValue(plugin, node, file, key, was, redraw) {
     e.stopPropagation();
   });
   input.addEventListener('blur', () => finish(true));
+  // Several lines of properties pasted here are pasted onto the note; anything else is the value's text.
+  input.addEventListener('paste', async (e) => {
+    const props = e.clipboardData ? pastedProps(e.clipboardData.getData('text/plain')) : null;
+    if (!props) return;
+    e.preventDefault();
+    done = true;
+    await pasteProps(plugin, file, props);
+    redraw();
+  });
   input.addEventListener('click', (e) => e.stopPropagation());
   input.focus();
   input.select();

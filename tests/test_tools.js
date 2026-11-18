@@ -121,7 +121,7 @@ const VAULT = {
     const w = await world(VAULT);
     const clip = feature(w, 'PropertyClipboard');
     ['copy-properties', 'copy-some-properties', 'paste-properties'].forEach((id) => assert.strictEqual(w.app.commands.commands[`design-redux:${id}`].checkCallback(true), false, `${id} still offers itself`));
-    await dr.addPropertiesFrom(w.plugin, w.file('Reading/E.md'), w.file('Reading/D.md'));
+    await dr.pasteProps(w.plugin, w.file('Reading/E.md'), dr.readProps(dr.propsText(props(w, 'Reading/D.md'))));
     assert.deepStrictEqual(props(w, 'Reading/E.md'), { status: 'done', domain: ['ethics'] });
     await clip.copyTable(w.file('Reading'));
     const table = dr.readTable(board);

@@ -57,7 +57,7 @@ export function confirm(app, opts) {
   });
 }
 
-/** Asks for a line of text. { title, text, label, value, placeholder, action, check(value): a reason it won't do, more: [{ text, run }] (words beside Cancel) }. Resolves the text, or null. */
+/** Asks for a line of text. { title, text, label, value, placeholder, action, check(value): a reason it won't do, onPaste(text): true when it took what was pasted (the sheet then closes) }. Resolves the text, or null. */
 export function ask(app, opts) {
   return new Promise((resolve) => {
     let answer = null;
@@ -75,9 +75,12 @@ export function ask(app, opts) {
       text: opts.text,
       build: (matter, s) => {
         input = field(matter, { label: opts.label || 'Name', value: opts.value, placeholder: opts.placeholder, onEnter: () => accept(s) });
+        if (opts.onPaste) input.drInput.addEventListener('paste', (e) => {
+          if (e.clipboardData && opts.onPaste(e.clipboardData.getData('text/plain'))) { e.preventDefault(); s.close(); }
+        });
         setTimeout(() => { input.drInput.focus(); input.drInput.select(); }, 0);
       },
-      actions: [{ text: 'Cancel' }].concat(opts.more || [], [{ text: opts.action || 'OK', kind: 'primary', run: () => accept(null) }]),
+      actions: [{ text: 'Cancel' }, { text: opts.action || 'OK', kind: 'primary', run: () => accept(null) }],
     });
     sheet.closed = () => resolve(answer);
     sheet.open();
