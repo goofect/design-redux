@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* What a place in the library holds, drawn the one way it is drawn    */
 /*                                                                     */
-/* A folder's page, the vault's top among them: the path to it as     */
+/* A folder's page (the vault's own is empty): the path to it as      */
 /* boxed words, then its notes as ruled rows, pinned ones first at the */
 /* top. Its folders are in the sidebar's tree. One view of a           */
 /* collection: no grid, no covers, no glyphs, counts or numbers.       */
@@ -68,6 +68,6 @@ export function crumbs(screen, host, folder) {
 export function drawFolderPage(screen, host, folder) {
   crumbs(screen, host, folder);
   const notes = pinnedFirst(screen.plugin, folder, listedNotes(screen.plugin, folder));
-  if (!notes.length) return void sayso(host, { label: folder.path === '/' ? 'No notes at the top of the vault.' : 'No notes in this folder.', button: { text: 'New note', run: () => screen.plugin.files.newNote(folder) } });
+  if (!notes.length) return void sayso(host, { label: 'No notes in this folder.', button: { text: 'New note', run: () => screen.plugin.files.newNote(folder) } });
   return noteRows(screen, host, notes);
 }

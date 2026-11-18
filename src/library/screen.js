@@ -148,7 +148,8 @@ export class LibraryScreen {
     if (this.query !== null) drawSearch(this, this.body);
     else if (!this.opts.wide) drawTree(this, this.body);
     else if (this.filter) drawFiltered(this, this.body);
-    else drawFolderPage(this, this.body, folder);
+    // The vault itself shows nothing: the sidebar is where one goes from it.
+    else if (!top) drawFolderPage(this, this.body, folder);
     this.body.addEventListener('contextmenu', (e) => this.menuFor(e));
     this.body.addEventListener('keydown', (e) => {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);

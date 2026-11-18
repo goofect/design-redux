@@ -190,7 +190,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Week 2.md');
     assert.deepStrictEqual(w.plugin.settings.recentSearches, ['week']);
     key(p.host.querySelector('input.dr-input'), 'Escape');
-    assert.strictEqual(p.host.querySelector('.dr-crumb[aria-current]').textContent, 'Vault', 'the vault did not come back');
+    assert.ok(!p.host.querySelector('input.dr-input') && !p.body.firstChild, 'the vault did not come back, empty');
   });
 
   await check('a folder\'s menu and a note\'s: every entry sectioned, pin, sort, rename, move and delete do what they say', async () => {
@@ -220,26 +220,26 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   await check('dropping a note on a folder moves it there, with an Undo', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
-    const p = await page(w, null);
+    const p = await page(w, w.file('Inbox'));
     const data = { store: {}, types: [], setData(t, v) { this.store[t] = v; this.types.push(t); }, getData(t) { return this.store[t] || ''; } };
     const fire = (el, type) => { const e = new window.Event(type, { bubbles: true, cancelable: true }); e.dataTransfer = data; el.dispatchEvent(e); return e; };
-    fire(p.host.querySelector('[data-path="Loose.md"]'), 'dragstart');
+    fire(p.host.querySelector('[data-path="Inbox/Scrap.md"]'), 'dragstart');
     const target = s.host.querySelector('[data-path="Reading"]');
     assert.ok(fire(target, 'dragover').defaultPrevented && target.hasAttribute('data-drop'));
     fire(target, 'drop');
     await settle();
-    assert.ok(w.file('Reading/Loose.md') && !w.file('Loose.md'));
+    assert.ok(w.file('Reading/Scrap.md') && !w.file('Inbox/Scrap.md'));
     await w.plugin.lastUndo.run();
-    assert.ok(w.file('Loose.md'));
+    assert.ok(w.file('Inbox/Scrap.md'));
   });
 
-  await check('the vault\'s top is a page like any folder\'s: headed Vault, its loose notes as ruled rows, pinned ones first; no grid, no buttons', async () => {
-    const w = await world(Object.assign({}, VAULT, { 'Alpha.md': '', 'Zed.md': '' }), { settingsVersion: 103, pinOrder: ['Zed.md'] });
-    const host = (await page(w, null)).host;
-    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-crumb')).map((c) => [c.textContent, c.getAttribute('aria-current')]), [['Vault', 'location']]);
-    assert.deepStrictEqual(paths(host, '.dr-rows .dr-row'), ['Zed.md', 'Alpha.md', 'Loose.md']);
-    assert.ok(!host.querySelector('.dr-grid, .dr-cell, img'), 'a grid or a cover');
-    assert.deepStrictEqual(controls(host), []);
+  await check('the vault in the page shows nothing: no path, no notes, no buttons; the sidebar is where one goes from it', async () => {
+    const w = await world(Object.assign({}, VAULT, { 'Alpha.md': '' }));
+    const p = await page(w, null);
+    assert.strictEqual(p.at, '/');
+    assert.ok(!p.body.firstChild, 'the vault\'s page shows something');
+    assert.ok(!p.host.querySelector('.dr-head, .dr-crumb, .dr-row, .dr-state'), 'a head, a path, a row or a say-so on the vault\'s page');
+    assert.deepStrictEqual(controls(p.host), []);
   });
 
   await check('commands: the old ids, the levels\' one kept but quiet, and turning the library off takes its views away', async () => {
