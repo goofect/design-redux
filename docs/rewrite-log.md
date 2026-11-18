@@ -256,3 +256,5 @@ Open, for session 5 (they need the real app):
 - Monospace at 13px, one size; a name that matters is bold. Six colours a scheme: ground, ink, a grey for words, a light rule, a lighter fill for open or picked, red.
 - Two framed panes. The sidebar: "Library", the folders as a tree (a chevron glyph, the eleventh). The page: the folder's name, the path as boxed words, only its notes as ruled rows. No buttons at rest; search is the command search-library.
 - Cut completely: the grid and covers (faces, cells, image drop, the cover check). folderCovers, coverProperty, coverDrop, coverFromFirstImage retired at settings 103, values kept under `retired`; the six cover command ids kept, quiet. Folder colours for maps stay (library/colours.js).
+
+- The settings cut (settings 104): the tab is eight switches (look, Obsidian interface, Library, Note head and pages, Properties panel, Strip, Property rules, Image router). Thirteen features that only add commands or marks lost their switch and are always on; their keys retired, values kept.

@@ -237,7 +237,6 @@ export class Graph3D extends Feature {
     ];
   }
 }
-Graph3D.key = 'graph3d';
 Graph3D.title = '3D graph';
 Graph3D.section = 'Tools';
 Graph3D.about = 'The vault’s notes and links as a cloud to turn.';

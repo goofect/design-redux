@@ -89,7 +89,6 @@ export class Scripts extends Feature {
     ];
   }
 }
-Scripts.key = 'scripts';
 Scripts.title = 'Superscript and subscript';
 Scripts.section = 'Notes';
 Scripts.about = 'x^2^ and H~2~O, raised and lowered.';

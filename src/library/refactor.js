@@ -134,7 +134,6 @@ export class AlbumRefactor extends Feature {
     ];
   }
 }
-AlbumRefactor.key = 'albumRefactor';
 AlbumRefactor.title = 'Reorganising folders';
 AlbumRefactor.section = 'Library';
 AlbumRefactor.about = 'Merge a folder into another or split notes off, said first and undone in one.';

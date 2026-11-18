@@ -367,8 +367,7 @@ const VAULT = {
     w.doc.body.appendChild(menu);
     await settle();
     assert.deepStrictEqual(Array.from(menu.children).map((i) => i.classList.contains('dr-menu-hidden')), [false, true]);
-    w.plugin.settings.menuFilter = false;
-    await w.plugin.saveSettings();
+    w.plugin.features.find((f) => f.constructor.name === 'MenuFilter').off();
     assert.ok(!menu.querySelector('.dr-menu-hidden'));
   });
 

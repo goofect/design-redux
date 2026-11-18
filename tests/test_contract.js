@@ -48,13 +48,13 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
     assert.deepStrictEqual(wrong, []);
   });
 
-  await check('the settings page is the features\' switches and nothing else: the look\'s two, then one a feature that has one', () => {
+  await check('the settings page is eight switches and nothing else; every feature with a key has one, the rest are always on', () => {
     const tab = new dr.SettingsTab(w.app, w.plugin);
     tab.display();
     const names = Array.from(tab.containerEl.querySelectorAll('.setting-item')).map((r) => r.querySelector('.setting-item-name').textContent);
-    const switched = w.plugin.features.filter((f) => f.constructor.key && f.constructor.title);
-    assert.deepStrictEqual(names, ['The look', 'On Obsidian’s own interface too'].concat(switched.map((f) => f.constructor.title)));
-    assert.deepStrictEqual(switched.filter((f) => !(f.constructor.key in dr.DEFAULTS)).map((f) => f.constructor.name), [], 'a switch that is no setting');
+    assert.deepStrictEqual(names, ['The look', 'On Obsidian’s own interface too', 'Library', 'Note head and pages', 'Properties panel', 'Strip', 'Property rules', 'Image router']);
+    const keys = ['library', 'notePage', 'notePages', 'propertiesDropdown', 'contextStrip', 'propertyRulesOn', 'routeImages'];
+    assert.deepStrictEqual(w.plugin.features.filter((f) => f.constructor.key && !keys.includes(f.constructor.key)).map((f) => f.constructor.name), [], 'a feature with a key the page has no switch for');
   });
 
   await check('every setting is read by some module (a setting nothing reads silently does nothing)', () => {

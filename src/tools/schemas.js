@@ -118,7 +118,6 @@ export class PropertySchemas extends Feature {
     ];
   }
 }
-PropertySchemas.key = 'propertySchemaMarks';
 PropertySchemas.title = 'Folder schemas';
 PropertySchemas.section = 'Tools';
 PropertySchemas.about = 'What a folder’s notes should have, and a mark where one falls short.';

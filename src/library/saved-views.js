@@ -78,7 +78,6 @@ export class SavedViews extends Feature {
     ];
   }
 }
-SavedViews.key = 'smartAlbums';
 SavedViews.title = 'Filters and saved views';
 SavedViews.section = 'Library';
 SavedViews.about = 'Notes from anywhere by folder, tag, property or date, kept under a name.';

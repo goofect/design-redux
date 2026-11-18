@@ -88,7 +88,6 @@ export class LibraryCheck extends Feature {
     ];
   }
 }
-LibraryCheck.key = 'libraryCheck';
 LibraryCheck.title = 'Library check';
 LibraryCheck.section = 'Library';
 LibraryCheck.about = 'A report of what a growing library loses track of, and an inbox of loose notes.';

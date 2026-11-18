@@ -49,7 +49,6 @@ export class AlbumProperty extends Feature {
     return [{ id: 'property-to-album', name: 'Give a property of this note to its whole folder…', on: 'note', menu: 'Give a property to the folder…', when: (ctx) => !!ctx.file.parent, run: (ctx) => this.ask(ctx.file) }];
   }
 }
-AlbumProperty.key = 'propertyForAlbum';
 AlbumProperty.title = 'A property for the whole folder';
 AlbumProperty.section = 'Library';
 AlbumProperty.about = 'Give one note’s value to every note beside it.';

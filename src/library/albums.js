@@ -153,7 +153,6 @@ export class Albums extends Feature {
     ];
   }
 }
-Albums.key = 'albumStructure';
 Albums.title = 'Folders as collections';
 Albums.section = 'Library';
 Albums.about = 'A folder’s kind and description, and the notes from elsewhere it takes in.';

@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'lib
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'compat'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 103;
+export const SETTINGS_VERSION = 104;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -43,30 +43,22 @@ export const DEFAULTS = {
   searchNoteText: true,
   recentSearches: [],
   categoryProperty: 'domain',
-  navDropdown: true,
 
   // Folders as collections
-  albumStructure: true,
   albumKeyNames: {},
   albums: {}, // by folder path: { includes, related, featured }
   albumNestBy: 'parent',
   albumRollups: false,
   rollupDateKey: '',
-  albumRefactor: true,
-  propertyForAlbum: true,
-  smartAlbums: true,
   smartAlbumList: [],
-  libraryCheck: true,
   libraryInbox: true,
 
   // The note
   notePage: true,
   notePages: true,
   pagesOpen: {}, // by note path: the page left open
-  footnotes: true,
   footnoteOrder: true,
   footnotesAside: true,
-  scripts: true,
   scriptSyntax: 'short',
   autoOrdinals: false,
   letterLists: true,
@@ -96,7 +88,6 @@ export const DEFAULTS = {
   propertySets: {},
   folderDefaults: {},
   propertySchemas: {},
-  propertySchemaMarks: true,
   propertyHistory: {},
   propertyHistoryLimit: 0,
   propertyRules: [],
@@ -104,15 +95,11 @@ export const DEFAULTS = {
   propertyRulesDryRun: true,
 
   // The graph
-  graphProperties: true,
   graphFilters: {},
-  graphRoutes: true,
   graphRouting: {},
   graphRouteProperty: 'parent',
-  graph3d: true,
 
   // Obsidian's menus
-  menuFilter: true,
 };
 
 /** Settings whose keys are paths: a rename moves the key, a delete drops it. */

@@ -52,7 +52,6 @@ export class ActionsMenu extends Feature {
     } }];
   }
 }
-ActionsMenu.key = 'navDropdown';
 ActionsMenu.title = 'Actions menu';
 ActionsMenu.section = 'Tools';
 ActionsMenu.about = 'One menu of everything the plugin can do.';
@@ -82,7 +81,6 @@ export class MenuFilter extends Feature {
     this.add(() => Array.from(doc.querySelectorAll('.dr-menu-hidden')).forEach((n) => n.classList.remove('dr-menu-hidden')));
   }
 }
-MenuFilter.key = 'menuFilter';
 MenuFilter.title = 'Menu filter';
 MenuFilter.section = 'Tools';
 MenuFilter.about = 'Leaves the entries that only repeat the plugin’s own out of Obsidian’s menus.';

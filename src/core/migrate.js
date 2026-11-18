@@ -58,6 +58,8 @@ export const RETIRED = {
   albumStillToWrite: 'the reset: no switch that only chose what a page showed',
   propertyValueChips: 'the reset: no colour on a value; a value is its words',
   propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
+  ...Object.fromEntries(['albumStructure', 'albumRefactor', 'propertyForAlbum', 'smartAlbums', 'libraryCheck', 'footnotes', 'scripts', 'graph3d', 'propertySchemaMarks', 'graphRoutes', 'graphProperties', 'navDropdown', 'menuFilter']
+    .map((k) => [k, 'the settings cut: a feature that only adds commands or marks has no switch; it is always there'])),
   folderCovers: 'covers are gone: the library is one ruled list, with no grid to show an image in',
   coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
   coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
@@ -68,7 +70,7 @@ export const RETIRED = {
 };
 
 /** The 4.0 keys the direction reset retired: their values are moved under `retired` once, not dropped. */
-const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions|notePageChips|folderCovers|coverProperty|coverDrop|coverFromFirstImage)/.test(k));
+const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions|notePageChips|folderCovers|coverProperty|coverDrop|coverFromFirstImage|albumStructure|albumRefactor|propertyForAlbum|smartAlbums|libraryCheck|footnotes|scripts|graph3d|propertySchemaMarks|graphRoutes|graphProperties|navDropdown|menuFilter)$/.test(k) || /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion)/.test(k));
 
 /** Old keys that live on under another name. */
 export const RENAMED = {};
@@ -98,7 +100,7 @@ export function migrateSettings(saved) {
     // The properties panel took over the inspector's switch.
     if (saved.propertyInspector === false) settings.inspector = false;
   }
-  // 102: the direction reset retired what it cut; 103: covers. A 4.0 file's values for those keys are kept under `retired`.
+  // 102: the direction reset retired what it cut; 103: covers; 104: the settings cut. A 4.0 file's values for those keys are kept under `retired`.
   if (version >= REWRITE_VERSION && version < SETTINGS_VERSION) {
     const kept = {};
     RESET_RETIRED.forEach((k) => { if (saved[k] !== undefined) kept[k] = copy(saved[k]); });

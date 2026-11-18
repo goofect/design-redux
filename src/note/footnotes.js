@@ -113,7 +113,6 @@ export class Footnotes extends Feature {
     ];
   }
 }
-Footnotes.key = 'footnotes';
 Footnotes.title = 'Footnotes';
 Footnotes.section = 'Notes';
 Footnotes.about = 'Add a citation without leaving the sentence; keep the numbers in order.';
