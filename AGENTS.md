@@ -29,7 +29,10 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    images, no counts, no numbers, no decoration that carries nothing.
 3. **One job per pane.** The sidebar is the folders as a tree, nothing else.
    A folder's page is its path, then only the notes directly in it; its
-   subfolders live in the tree. A note shows its text.
+   subfolders live in the tree. A note shows its text, and under its title
+   its properties as a ledger: ruled rows, name grey, value ink, edited
+   where they stand. That is the one place properties are shown; Obsidian's
+   own properties block is hidden, and nothing returns the right sidebar.
 4. **Small, plain type.** One monospace face at 13px for everything the
    plugin draws. A name that matters (a pane's head) is bold, never bigger.
    No capitals for effect, no tracking, no italics.

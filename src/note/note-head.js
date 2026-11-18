@@ -1,19 +1,18 @@
 /* ------------------------------------------------------------------ */
-/* The note's head: its folder over the title, its properties under it */
+/* The note's head: its folder over the title, the ledger under it     */
 /*                                                                     */
 /* The plugin's own parts, put in the note's own column wherever the   */
 /* note is laid out (the editor's sizer, reading view's header), so    */
 /* they scroll with the text: the folder as a label over the inline    */
-/* title; under it the properties, the page tabs and a hairline. The   */
-/* order is folder, title, properties, pages, text. Nothing of         */
-/* Obsidian's is moved.                                                */
+/* title; under it the ledger of properties, the page tabs, a line.    */
+/* The order is folder, title, properties, pages, text. Nothing of     */
+/* Obsidian's is moved; its own properties block is hidden by the look.*/
 /* ------------------------------------------------------------------ */
 
 import { MarkdownView, TFile } from 'obsidian';
 import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { propOf, valuesOf } from '../core/notes.js';
-import { listOf } from '../core/text.js';
+import { addProperty, drawLedger } from './ledger.js';
 
 /** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
 function placesOf(view) {
@@ -95,7 +94,6 @@ export class NotePage extends Feature {
   draw(view) {
     const file = view.file;
     const parent = file.parent && file.parent.path !== '/' ? file.parent : null;
-    const props = this.plugin.notes.props(file);
     noteHeads(view).forEach(({ folder, head }) => {
       clear(folder);
       if (parent) {
@@ -105,25 +103,17 @@ export class NotePage extends Feature {
           if (library) library.browse(parent);
         });
       }
-      // The properties: one line of name and value, a dot between, no box. A value its folder's schema finds wrong is red, the reason after it.
-      const line = clear(head.querySelector('.dr-note-props'));
-      if (!props) return;
-      listOf(this.settings.panelPrimaryProps).forEach((key) => {
-        const values = valuesOf(propOf(props, key));
-        if (!values.length) return;
-        const wrong = this.plugin.checkValue ? this.plugin.checkValue(file, key, propOf(props, key)) : null;
-        const prop = el(line, 'span', 'dr-note-prop');
-        el(prop, 'span', 'dr-note-prop-name dr-muted', key);
-        el(prop, 'span', 'dr-text', values.join(', '));
-        if (wrong) {
-          // Wrong by its folder's schema: the value red, and the words saying why after it.
-          prop.setAttribute('aria-invalid', 'true');
-          prop.setAttribute('aria-label', `${key}: ${values.join(', ')}, ${wrong}`);
-          el(prop, 'span', 'dr-note-prop-why', wrong);
-        }
-      });
+      // The properties: the ledger, a ruled row each, edited where they stand.
+      const ledger = clear(head.querySelector('.dr-note-props'));
+      drawLedger(this.plugin, ledger, file, () => this.draw(view));
     });
     tidyNoteHeads(view);
+  }
+
+  actions() {
+    return [
+      { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property…', run: (ctx) => addProperty(this.plugin, ctx.file) },
+    ];
   }
 }
 NotePage.key = 'notePage';

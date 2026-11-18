@@ -52,15 +52,15 @@ const rows = (html) => `<div class="dr-rows spec-rows">${html}</div>`;
 const n = logic.find((x) => x.title === 'Truth tables');
 
 export function lists() {
-  return section('lists', 'Rows', 'A name in a list, four units high, parted by its height and never by a rule. Open or picked is inverted; nothing else marks it: no number, no mark, no bold.', [
+  return section('lists', 'Rows', 'A name in a list, four units high, a light rule under it, like a stock list. Open or picked is filled light grey; nothing else marks it: no number, no mark, no bold.', [
     component('Row', 'A folder or a note: its name, and what trails it in grey where it says something.', [
       shown('rest', rows(row(n.title))), shown('hover · underlined', rows(row(n.title, { class: 'spec-hover' }))), shown('focus · the outline, inside', rows(row(n.title, { class: 'spec-focus' }))),
-      shown('open · inverted', rows(row(n.title, { 'aria-current': 'page' }))), shown('picked · inverted', rows(row(n.title, { 'aria-selected': 'true' }))),
+      shown('open · filled', rows(row(n.title, { 'aria-current': 'page' }))), shown('picked · filled', rows(row(n.title, { 'aria-selected': 'true' }))),
       shown('disabled · grey', rows(row(n.title, { 'aria-disabled': 'true' }))), shown('wrong · red, its word', rows(row(n.title, { class: 'is-error', end: 'unreadable' }))),
     ]),
-    component('Property', 'Name and value on a line, the name grey. A group’s title over its rows only where there is more than one group.', [
+    component('Property', 'The ledger’s row: name grey in a fixed column, value ink, a light rule under it; a value edited where it stands. A group’s title only in the panel, where there is more than one group.', [
       shown('a group', `<div class="spec-rows"><div class="dr-section"><span class="dr-section-name dr-muted" role="button" tabindex="0" aria-expanded="true">General</span></div>${properties.slice(0, 2).map(([k, v]) => prop(k, v)).join('')}</div>`),
-      shown('hover', rows(prop('Status', 'Draft', { class: 'spec-hover' }))), shown('picked · inverted', rows(prop('Status', 'Draft', { 'aria-selected': 'true' }))),
+      shown('hover', rows(prop('Status', 'Draft', { class: 'spec-hover' }))), shown('picked · filled', rows(prop('Status', 'Draft', { 'aria-selected': 'true' }))),
       shown('no value · a dash', rows(prop('Sources', '—', { class: 'is-empty' }))), shown('wrong · red, the words saying why', rows(prop('Week', 'six', { 'aria-invalid': 'true', why: 'not a number' }))),
     ]),
   ].join(''));

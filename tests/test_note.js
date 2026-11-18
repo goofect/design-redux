@@ -75,7 +75,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.text('Logic/Plain.md'), 'x', 'a note without pages was written to');
   });
 
-  await check('the note\'s head: in the note\'s own column, folder over the title, properties and pages under it; gone when the feature is off', async () => {
+  await check('the note\'s head: in the note\'s own column, folder over the title, the ledger and pages under it, a value edited where it stands; gone when the feature is off', async () => {
     const w = await world({ 'Logic/A.md': '---\nstatus: draft\ndomain: [logic, proof]\n---\n', 'Loose.md': '' });
     const view = await open(w, 'Logic/A.md');
     await w.plugin.saveSettings();
@@ -94,9 +94,18 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual(order('.cm-sizer'), ['folder', 'title', 'properties', 'head', 'text']);
     const head = view.contentEl.querySelector('.dr-note-head');
     assert.strictEqual(view.contentEl.querySelector('.dr-note-folder').textContent, 'Logic');
-    // The properties as one line of name and value, no box.
-    assert.deepStrictEqual(Array.from(head.querySelectorAll('.dr-note-props > .dr-note-prop')).map((c) => c.textContent), ['domainlogic, proof', 'statusdraft']);
-    assert.ok(!head.querySelector('.dr-chip'), 'a property drawn as a chip');
+    // The properties as the ledger: a ruled row each, name and value, no box, no heading, no button.
+    const ledger = () => Array.from(head.querySelectorAll('.dr-note-props .dr-ledger > .dr-prop')).map((c) => [c.dataset.key, c.querySelector('.dr-prop-value').textContent]);
+    assert.deepStrictEqual(ledger(), [['domain', 'logic, proof'], ['status', 'draft']]);
+    assert.ok(!head.querySelector('.dr-chip, .dr-section, .dr-button, .dr-icon-button, svg'), 'a chip, a heading, a button or a glyph in the ledger');
+    // A value is edited where it stands: Enter writes it, a list stays a list.
+    head.querySelector('.dr-prop[data-key="domain"]').click();
+    const input = head.querySelector('.dr-prop[data-key="domain"] input');
+    input.value = 'logic, proof, sets';
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await settle();
+    assert.deepStrictEqual(w.plugin.notes.get(w.file('Logic/A.md'), 'domain'), ['logic', 'proof', 'sets']);
+    assert.deepStrictEqual(ledger()[0], ['domain', 'logic, proof, sets']);
     w.plugin.settings.notePage = false;
     await w.plugin.saveSettings();
     assert.ok(!view.contentEl.querySelector('.dr-note-head'), 'the head was left behind');
@@ -137,10 +146,10 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(!view.contentEl.querySelector('.dr-slot'), 'the panel numbers its rows');
     assert.ok(!view.contentEl.querySelector('.dr-icon-button, .dr-button'), 'the panel has a control');
     assert.ok(w.app.commands.commands['design-redux:add-property'], 'no command adds a property');
-    panel.addProperty(w.file('Logic/A.md'));
+    dr.addProperty(w.plugin, w.file('Logic/A.md'));
     await answer(w, 'course');
     assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
-    await panel.propertyMenu(w.file('Logic/A.md'), 'course').click('Remove property');
+    await dr.propertyMenu(w.plugin, w.file('Logic/A.md'), 'course').click('Remove property');
     assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))));
     // A group folds by a press on its title (no arrow, no button); folded, the title counts what it holds.
     Object.assign(w.plugin.settings, { panelPropertyGroups: 'on', panelGroupList: [{ title: 'Main', keys: 'status, week' }], panelFoldedGroups: [] });

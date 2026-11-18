@@ -5,8 +5,8 @@
 /* The plugin's own elements in the note's own column, wherever the    */
 /* note is laid out (the editor's sizer, reading view's header), so    */
 /* they scroll with the text: the folder's name as a link over the     */
-/* title; under it the properties as one line of plain text, the pages */
-/* as underlined words (the open one inverted), and a line exactly as  */
+/* title; under it the ledger (each property a ruled row, name grey,   */
+/* value ink), the pages as underlined words, and a line exactly as    */
 /* wide as the text. Nothing of Obsidian's is moved or restyled here.  */
 /* The note's own text keeps the person's font.                        */
 /* ------------------------------------------------------------------ */
@@ -30,30 +30,16 @@
   display: none;
 }
 
-/* The properties: one line of plain text, name grey and value ink, a dot between. */
+/* The ledger: the plugin's face and size, its rows flush with the text's column, so their rules are the text's width. */
 .dr-note-props {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  font-family: var(--dr-font);
+  font-size: var(--dr-size);
+  line-height: var(--dr-line);
 }
 
-.dr-note-prop {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--dr-u);
-  white-space: nowrap;
-}
-
-.dr-note-prop + .dr-note-prop::before {
-  content: "·";
-  margin-left: var(--dr-u);
-  color: var(--dr-muted);
-}
-
-/* Wrong by its folder's schema: the value and the words saying why, red. */
-.dr-note-prop[aria-invalid="true"] > :not(.dr-muted),
-.dr-note-prop-why {
-  color: var(--dr-error);
+.dr-note-props .dr-prop {
+  padding: 0;
+  cursor: pointer;
 }
 
 .dr-note-pages {

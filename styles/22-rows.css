@@ -10,7 +10,8 @@
   display: grid;
 }
 
-.dr-rows > .dr-row {
+.dr-rows > .dr-row,
+.dr-rows > .dr-prop {
   border-bottom: var(--dr-hair) solid var(--dr-rule);
 }
 

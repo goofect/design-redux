@@ -78,11 +78,6 @@ export async function screens() {
   const strip = note.querySelector('.dr-strip').outerHTML;
   const page = `<div class="spec-note"><div class="spec-note-text">${sizer}</div>${strip}</div>`;
 
-  // The panel beside it.
-  const panelLeaf = await feature('Panel').reveal();
-  await settle();
-  const panel = panelLeaf.view.contentEl.outerHTML;
-
   // The library: the sidebar at the vault's top, a folder's page, then searching.
   const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
   library.draw();
@@ -139,8 +134,8 @@ export async function screens() {
   w.plugin.unload();
   return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. Two framed panes, no buttons at rest. The sidebar: the vault’s folders as a tree. The page: a folder’s path as boxed words, then only the notes in it, as ruled rows; its subfolders are in the tree.',
     `<div class="spec-states is-close">${frame('the sidebar, a folder open', 320, 560, sidebarFolder, 'is-side')}${frame('a folder, in the page', 640, 560, folderPage)}</div>`)
-    + section('screens-note', 'The note, and the panel beside it', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it its properties as one line of plain text (a value its folder’s schema finds wrong in red, with why) and its pages as words, the open one inverted; a line; the text; the strip at its foot, one line. The panel: name and value on a line, the name grey; a group’s title where there are groups; where the note is named, mentioned and what it links to as plain rows. No control on either.',
-    `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel, 'is-panel')}</div>`)
+    + section('screens-note', 'The note', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it the ledger, each property a ruled row, name grey and value ink, edited where it stands (a value its folder’s schema finds wrong is red, with why); its pages as words, the open one inverted; a line; the text; the strip at its foot, one line. No control, no heading, no panel.',
+    `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
       `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
     + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked inverted, a folded branch counted, a folder’s colour, the person’s own, a small square before its word. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',

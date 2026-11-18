@@ -70,8 +70,8 @@ function rules(css) {
         if (/^\.dr-(row|prop|rows)(?![\w-])/.test(subject) && !parted && /(^|[;{\s])border(-top|-bottom)?\s*:/.test(body)) lined.push(`${f}: ${one}`);
       });
     }));
-    assert.deepStrictEqual(lined, ['22-rows.css: .dr-rows > .dr-row']);
-    assert.ok(/\.dr-rows > \.dr-row \{\s*border-bottom: var\(--dr-hair\) solid var\(--dr-rule\);\s*\}/.test(fs.readFileSync(path.join(root, 'styles', '22-rows.css'), 'utf8')), 'the rule under a row is not the light rule');
+    assert.deepStrictEqual(lined, ['22-rows.css: .dr-rows > .dr-row', '22-rows.css: .dr-rows > .dr-prop']);
+    assert.ok(/\.dr-rows > \.dr-prop \{\s*border-bottom: var\(--dr-hair\) solid var\(--dr-rule\);\s*\}/.test(fs.readFileSync(path.join(root, 'styles', '22-rows.css'), 'utf8')), 'the rule under a row is not the light rule');
   });
 
   await check('a part with rules on Obsidian\'s DOM opens with its selector map', () => {
