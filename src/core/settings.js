@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 /** The regions of the look, each with a body class and a setting of its own. */
-export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'library', 'note', 'strip', 'panel', 'canvas', 'graph', 'maps', 'icons', 'compat'];
+export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'library', 'note', 'strip', 'panel', 'canvas', 'graph', 'maps', 'icons', 'compat', 'workspace'];
 
 /** The regions that are Obsidian's own: off when the look is kept to what the plugin draws. */
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'compat'];

@@ -259,3 +259,4 @@ Open, for session 5 (they need the real app):
 
 - The settings cut (settings 104): the tab is eight switches (look, Obsidian interface, Library, Note head and pages, Properties panel, Strip, Property rules, Image router). Thirteen features that only add commands or marks lost their switch and are always on; their keys retired, values kept.
 - The tree loses its chevrons (2026-11-17): a folder that holds folders ends in a slash, "Politics/"; the tree follows the open folder (the path down to it and its subfolders unfolded, nothing else), so it has no open or close of its own. Glyphs back, chevron, more and search cut: seven left.
+- The workspace bare (after 4.1.0): with the look on, Obsidian's ribbons, right sidebar, status bar, tab strip and view headers are hidden (styles/42-workspace.css, region workspace), as origin's 4.0 did; the left sidebar stays, it holds the library.
