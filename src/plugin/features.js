@@ -11,7 +11,6 @@ import { Library } from '../library/library.js';
 import { AlbumRefactor } from '../library/refactor.js';
 import { SavedViews } from '../library/saved-views.js';
 import { Footnotes } from '../note/footnotes.js';
-import { ImageRouter } from '../note/image-router.js';
 import { MarkedLists } from '../note/lists.js';
 import { NotePage } from '../note/note-head.js';
 import { NotePages } from '../note/pages.js';
@@ -27,5 +26,5 @@ import { PropertyHistory, PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
 import { Strip } from '../tools/strip.js';
 
-export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, FolderColours, SavedViews, LibraryCheck, NotePage, NotePages, Panel, Footnotes, Scripts, MarkedLists, ImageRouter,
+export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, FolderColours, SavedViews, LibraryCheck, NotePage, NotePages, Panel, Footnotes, Scripts, MarkedLists,
   Strip, PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, PropertyHistory, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];

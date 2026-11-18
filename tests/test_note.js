@@ -232,16 +232,5 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(p.classList.contains('dr-marked-list') && p.classList.contains('is-roman'));
   });
 
-  await check('the image router: an image that arrives after a paste goes to the images folder; any other stays', async () => {
-    const w = await world({ 'A.md': '' }, { settingsVersion: 100, routeImages: true });
-    await w.app.vault.create('before.png', 'x');
-    await settle();
-    assert.ok(w.file('before.png'), 'an image made with no paste was moved');
-    w.app.workspace.trigger('editor-paste', {});
-    await w.app.vault.create('Pasted image.png', 'x');
-    await settle();
-    assert.ok(w.file('attachments/Pasted image.png') && !w.file('Pasted image.png'));
-  });
-
   check.done();
 })();

@@ -9,7 +9,7 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut): a 4.0 file's values for them are kept under `retired`, not dropped. */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router): a 4.0 file's values for them are kept under `retired`, not dropped. */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -27,6 +27,8 @@ const RETIRED_SINCE_4 = {
   coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
   coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
   coverFromFirstImage: 'covers are gone',
+  routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
+  imageFolder: 'the image router is gone',
   notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
   ...Object.fromEntries(['Chrome', 'Tabs', 'Sidebars', 'Editor', 'Overlays', 'Library', 'Note', 'Strip', 'Panel', 'Canvas', 'Graph', 'Maps', 'Icons', 'Compat']
     .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
