@@ -45,10 +45,23 @@ export function pinnedFirst(plugin, folder, list) {
   return list.filter((e) => at(e) >= 0).sort((x, y) => at(x) - at(y)).concat(list.filter((e) => at(e) < 0));
 }
 
+/**
+ * Names a region for a screen reader without an aria-label: Obsidian draws a
+ * tooltip for every aria-label under the pointer. The name is unseen text the
+ * region points at instead.
+ */
+let named = 0;
+export function nameRegion(node, text) {
+  const label = el(node, 'span', 'dr-unseen', text);
+  label.id = `dr-region-name-${++named}`;
+  node.setAttribute('aria-labelledby', label.id);
+  return node;
+}
+
 /** The path to a folder as boxed words, "Vault / Politics": each goes there; the last is where you are. */
 export function crumbs(screen, host, folder) {
   const nav = el(host, 'nav', 'dr-crumbs');
-  nav.setAttribute('aria-label', 'Path');
+  nameRegion(nav, 'Path');
   const chain = [];
   for (let f = folder; f && f.path !== '/'; f = f.parent) chain.unshift(f);
   [null].concat(chain).forEach((f, i) => {

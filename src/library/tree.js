@@ -10,7 +10,7 @@
 
 import { asButton, el, flag } from '../core/dom.js';
 import { rows } from '../ui/row.js';
-import { pinnedFirst, shownFolders } from './contents.js';
+import { nameRegion, pinnedFirst, shownFolders } from './contents.js';
 
 /** Draws the tree into `host`: the vault, the path down to the open folder, and the open folder's own subfolders. */
 export function drawTree(screen, host) {
@@ -22,7 +22,7 @@ export function drawTree(screen, host) {
   const list = rows(host, { outline: true });
   list.classList.add('dr-tree');
   list.setAttribute('role', 'tree');
-  list.setAttribute('aria-label', 'Folders');
+  nameRegion(list, 'Folders');
   const branch = (folder, depth) => {
     const top = folder.path === '/';
     const kids = pinnedFirst(plugin, folder, shownFolders(plugin, folder));
