@@ -10,7 +10,7 @@
 /*                                                                     */
 /* Lines: a border is drawn only by these classes, each where a        */
 /* screen's structure divides (tests/test_reset.js reads this list):   */
-/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box .dr-pane .dr-rows .dr-crumb */
+/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box .dr-pane .dr-rows .dr-crumb .workspace-leaf-content */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin

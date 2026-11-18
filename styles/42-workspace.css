@@ -21,6 +21,7 @@
 /*   .sidebar-toggle-button             the sidebars' toggles          */
 /*   .workspace-leaf-content > .view-header   a view's header          */
 /*   .metadata-container                the properties block in a note */
+/*   .mod-root .workspace-leaf-content  a pane in the page, framed     */
 /*   .mod-left-split > .workspace-leaf-resize-handle  the sidebar's    */
 /*                                      edge, a line beside the frame  */
 /*   .workspace-sidedock-vault-profile  the vault's name, help and     */
@@ -46,6 +47,15 @@ body.dr-active.dr-region-workspace .workspace-split.mod-left-split .workspace-si
 /* The tabs' strip stays only as the window's drag area: no line under it. */
 body.dr-active.dr-region-workspace .workspace-tab-header-container {
   border-bottom: 0;
+}
+
+/* Every pane in the page is framed as the library is: 16px in, a 1px ink line, so a note opened keeps the frame the folder had. The folder's page frames itself. */
+body.dr-active.dr-region-workspace .mod-root .workspace-leaf-content:not([data-type="design-redux-browse"]) {
+  box-sizing: border-box;
+  width: calc(100% - 2 * var(--dr-gutter));
+  height: calc(100% - 2 * var(--dr-gutter));
+  margin: var(--dr-gutter);
+  border: var(--dr-hair) solid var(--dr-ink);
 }
 
 /* The sidebar's edge draws no line: the library's frame is the line. Its handle still resizes it. */
