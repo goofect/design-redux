@@ -1,6 +1,5 @@
 /*
- * The icon grammar, checked on one SVG file's text (docs/design-language.md,
- * "Icons"): what the file may hold, where its points may sit, and how fine its
+ * The icon grammar, checked on one SVG file's text: what the file may hold, where its points may sit, and how fine its
  * detail may be. Used by tests/test_glyphs.js; `lintGlyph(text)` returns the
  * list of what's wrong (empty when it's right) and what it measured.
  */

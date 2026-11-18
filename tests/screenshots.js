@@ -1,5 +1,5 @@
 /*
- * Screenshot tests of docs/specimen.html (docs/DESIGN.md, "Tests"): every
+ * Screenshot tests of the specimen page (tests/_specimen.html): every
  * section of the page, in light and in dark, photographed with Playwright's
  * Chromium and compared with the approved images in tests/screenshots/. A
  * change to the look is seen here before it ships.
@@ -18,7 +18,7 @@ const { execFileSync } = require('child_process');
 const { pathToFileURL } = require('url');
 
 const root = path.join(__dirname, '..');
-const page = path.join(root, 'docs', 'specimen.html');
+const page = path.join(root, 'tests', '_specimen.html');
 const approved = path.join(__dirname, 'screenshots');
 const failed = path.join(approved, 'failed');
 const args = process.argv.slice(2);

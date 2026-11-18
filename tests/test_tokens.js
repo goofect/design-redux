@@ -1,6 +1,5 @@
 /*
- * The new stylesheet's parts (styles/, staged in next/styles until the old
- * tree moves to legacy/), held to docs/DESIGN.md where a machine can check:
+ * The stylesheet's parts (styles/), held to the look where a machine can check:
  * the palette's pairs measure up (tests/contrast.js), the variable map sets
  * only names Obsidian declares, colour values live in the tokens part alone,
  * every token used is one declared, and no part rounds a corner, casts a
@@ -105,17 +104,6 @@ check('no rounded corner, shadow, gradient, blur, motion or !important; hover on
     });
   });
   assert.deepStrictEqual(wrong, []);
-});
-
-check('docs/specimen.html is what the sources build', () => {
-  const tool = path.join(root, 'tools', 'specimen.mjs');
-  let out = '';
-  try {
-    out = require('child_process').execFileSync(process.execPath, [tool, '--check'], { encoding: 'utf8', stdio: 'pipe' });
-  } catch (err) {
-    out = `${err.stdout || ''}${err.stderr || ''}`;
-  }
-  assert.ok(/is current/.test(out), 'the specimen is out of date: node tools/specimen.mjs');
 });
 
 if (!process.exitCode) console.log(`tokens: ${parts.length} parts keep the design's rules; the palette measures up (${checks} checks)`);

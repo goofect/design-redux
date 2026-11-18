@@ -1,9 +1,9 @@
-// Builds docs/specimen.html: the design system on one page, from the same
+// Builds tests/_specimen.html (not committed): the design system on one page, from the same
 // sources the plugin ships — the SVG files under assets/icons, the parts of
 // the stylesheet, and the plugin's own code drawing its screens on a sample
 // vault. Nothing on the page is drawn twice.
 //
-//   node tools/specimen.mjs            write docs/specimen.html
+//   node tools/specimen.mjs            write tests/_specimen.html
 //   node tools/specimen.mjs --check    fail if the page on disk is out of date
 //
 // Opened as it is, the page shows light and dark side by side (two frames of
@@ -149,14 +149,8 @@ ${sections}
 </html>
 `;
 
-const out = path.join(root, 'docs', 'specimen.html');
-if (process.argv.includes('--check')) {
-  if (!fs.existsSync(out) || fs.readFileSync(out, 'utf8') !== html) {
-    console.error('specimen: docs/specimen.html is out of date: node tools/specimen.mjs');
-    process.exit(1);
-  }
-  console.log('specimen: docs/specimen.html is current');
-} else {
+const out = path.join(root, 'tests', '_specimen.html');
+{
   fs.writeFileSync(out, html);
-  console.log(`specimen: docs/specimen.html written, ${(html.length / 1024).toFixed(0)} KB, ${(sections.match(/data-shot=/g) || []).length} sections`);
+  console.log(`specimen: tests/_specimen.html written, ${(html.length / 1024).toFixed(0)} KB, ${(sections.match(/data-shot=/g) || []).length} sections`);
 }

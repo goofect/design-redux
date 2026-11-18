@@ -4,7 +4,7 @@
 /* Everything the plugin draws is sized and coloured from here; no     */
 /* other part holds a colour value. Black, white, a grey for words,    */
 /* two light greys (a rule, a fill), and red for an error, per colour  */
-/* scheme on the gated body (docs/DESIGN.md). The ratios below are     */
+/* scheme on the gated body. The ratios below are                     */
 /* measured, not typed: node tests/contrast.js --write puts them here, */
 /* and the suite fails when they no longer match the values.           */
 /*                                                                     */

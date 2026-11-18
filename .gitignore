@@ -47,3 +47,6 @@ tests/screenshots/failed/
 
 # The sandbox vault tools/dev.mjs runs the plugin in
 .dev-vault
+
+# The specimen page, built by tools/specimen.mjs for the screenshot tests
+tests/_specimen.html

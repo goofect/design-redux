@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
 /* The say-so block: what a surface shows in place of its contents     */
-/* (docs/design-language.md, "Say-so")                                 */
 /* ------------------------------------------------------------------ */
 
 import { el } from '../core/dom.js';

@@ -70,7 +70,7 @@ export const RETIRED = {
   notePageShelves: 'moved: what a note links to and where it is mentioned are in the panel',
   notePageNext: 'moved: the notes before and after are the strip\'s',
   inspectorClick: 'a click picks and a second opens, always',
-  hideNativeProperties: 'the look hides nothing of Obsidian\'s own (docs/DESIGN.md, Conflicts 1)',
+  hideNativeProperties: 'the look hides nothing of Obsidian\'s own',
   propertiesSort: 'the old screen of every property',
   ...RETIRED_SINCE_4,
 };

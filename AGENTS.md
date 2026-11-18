@@ -1,15 +1,13 @@
 # Design Redux
 
-An Obsidian plugin that turns the vault into a library of objects: folders and
-notes as solid glyphs in a strict grid, seen at three levels of detail
-(objects, shelves, words), with a note page, a strip along the foot of the
-note, a properties panel and property tools. One look, raw and quiet, laid
-over Obsidian's own interface too. Desktop only.
+An Obsidian plugin that turns the vault into a library: the folders as a tree
+in the left sidebar, a folder's notes as a ruled list in the page, a note head
+and pages, a strip at the note's foot, a properties panel and property tools.
+One look, reduced and raw: monospace at one size, black, white and greys,
+framed panes, and Obsidian's chrome hidden. Desktop only.
 
-This is the rewrite, merged to `main` for 4.0. `docs/REWRITE.md` says how the
-code was rebuilt and what must survive; `docs/DESIGN.md` what the look is;
-`docs/design-language.md` how the look is built (read it before drawing
-anything); `docs/rewrite-log.md` holds the decisions, a few lines each.
+There are no design documents: the look is in `styles/` (tokens first) and
+its rules are held by the tests (`test_reset`, `test_design`, `test_tokens`).
 The old plugin (`legacy/`) is gone from the tree; to learn what a feature
 did, read it in git history (before 4.0.4). Never build or copy it.
 
@@ -30,11 +28,11 @@ did, read it in git history (before 4.0.4). Never build or copy it.
   variables, 10–29 the shared components, 30–39 the plugin's places, 40–59
   Obsidian's own regions, 60+ features. The order is the cascade. The first
   comment of each part says what it holds.
-- `assets/icons/actions/*.svg`, `assets/icons/objects/*.svg` — the plugin's
+- `assets/icons/actions/*.svg` — the plugin's
   glyphs, one file each, held to the icon grammar by `tests/test_glyphs.js`.
   A plugin control never shows one of Obsidian's icons.
-- `docs/specimen.html` — every glyph, component and screen, built by
-  `npm run specimen` from the same sources; `npm run screenshots` compares it
+- `tests/_specimen.html` — every glyph, component and screen, built (not
+  committed) by `npm run specimen` from the same sources; `npm run screenshots` compares it
   with the approved images. A new screen is added to it (`tools/specimen/`).
 - `tests/test_*.js` — simulation suites: jsdom, with Obsidian stood in for by
   `tests/obsidian.js`. `npm test`, or `node tests/run.js settings library`.

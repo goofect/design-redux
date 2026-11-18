@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
 /* Buttons: the icon button and the text button                        */
-/* (docs/design-language.md, "Icon button", "Text button")             */
 /* ------------------------------------------------------------------ */
 
 import { asButton, el, flag, glyph, onActivate } from '../core/dom.js';

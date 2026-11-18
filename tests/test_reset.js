@@ -1,5 +1,5 @@
 /*
- * The look's checks (docs/DESIGN.md), so the plugin stays reduced: each
+ * The look's checks, so the plugin stays reduced: each
  * screen's controls at rest within its budget; exactly six colours a scheme;
  * one size; a line only on the structural classes the tokens part lists; at
  * most twelve glyphs, and only the plugin's own on its controls; the

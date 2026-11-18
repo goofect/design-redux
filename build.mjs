@@ -61,7 +61,7 @@ const icons = {
     build.onResolve({ filter: /^dr:icons$/ }, () => ({ path: 'icons', namespace: 'dr' }));
     build.onLoad({ filter: /.*/, namespace: 'dr' }, () => {
       const out = {};
-      // The plugin's few glyphs: the controls' own (docs/direction-reset.md). There are no object glyphs.
+      // The plugin's few glyphs: the controls' own. There are no object glyphs.
       ['actions'].forEach((kind) => {
         const dir = path.join(root, 'assets', 'icons', kind);
         fs.readdirSync(dir).filter((f) => f.endsWith('.svg')).sort().forEach((f) => {

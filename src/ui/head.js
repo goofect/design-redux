@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
 /* The head row: a label and the few icon buttons a surface needs      */
-/* (docs/design-language.md, "Head row")                               */
 /* ------------------------------------------------------------------ */
 
 import { el } from '../core/dom.js';

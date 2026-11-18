@@ -1,6 +1,5 @@
 /*
- * The design's self-audit, where a machine can run it (docs/DESIGN.md,
- * "Self-audit"): on the stylesheet's parts — a rule on Obsidian's own DOM is
+ * The design's self-audit, where a machine can run it: on the stylesheet's parts — a rule on Obsidian's own DOM is
  * gated by the master switch and a region, and listed in a selector map —
  * and on the source — no innerHTML, no inline style but a geometry property,
  * no regex lookbehind, no `scope` on a Modal, nothing of Obsidian's DOM

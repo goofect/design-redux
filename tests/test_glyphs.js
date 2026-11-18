@@ -1,8 +1,8 @@
 /*
- * The plugin's own icons (docs/design-language.md, "Icons").
+ * The plugin's own icons.
  *
- * The set is the few glyphs the controls need: search, back, close, more,
- * add, and the map's tools (docs/direction-reset.md: about ten). Every SVG
+ * The set is the few glyphs the controls need: close, the ribbon's library,
+ * and the map's tools. Every SVG
  * is held to the icon grammar by tests/glyph-lint.js: the one allowed form,
  * points on the grid's rules, 45° or level or upright, one step of margin,
  * centred, nothing finer than the bar. There are no object glyphs and no

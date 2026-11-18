@@ -1,5 +1,5 @@
 /*
- * The palette, measured (docs/DESIGN.md, "Palette tokens" and the guardrails).
+ * The palette, measured.
  *
  * Reads the colour tokens of each scheme from the tokens part of the
  * stylesheet, computes the contrast of every pair the design uses, and fails

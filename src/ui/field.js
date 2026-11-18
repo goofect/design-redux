@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
 /* Fields and chips                                                    */
-/* (docs/design-language.md, "Field", "Chip")                          */
 /* ------------------------------------------------------------------ */
 
 import { asButton, el, flag, glyph } from '../core/dom.js';

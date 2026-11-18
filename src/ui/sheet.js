@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
 /* Sheets: what the plugin puts in one of Obsidian's modals            */
-/* (docs/design-language.md, "Sheet")                                  */
 /* ------------------------------------------------------------------ */
 
 import { Modal } from 'obsidian';

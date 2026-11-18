@@ -1,6 +1,5 @@
 /*
- * The shared UI pieces, a check per state: each is built as
- * docs/design-language.md says, and says its state with the ARIA attribute
+ * The shared UI pieces, a check per state: each says its state with the ARIA attribute
  * the styles read. Also: one Tab stop a list, the arrows inside it.
  */
 const assert = require('assert');

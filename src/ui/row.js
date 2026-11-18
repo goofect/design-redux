@@ -1,7 +1,6 @@
 /* ------------------------------------------------------------------ */
 /* Rows: a note in a list, a folder's line in the outline, a property, */
 /* a section's title                                                   */
-/* (docs/design-language.md, "Row", "Outline row", "Panel row")        */
 /* ------------------------------------------------------------------ */
 
 import { asButton, el, flag } from '../core/dom.js';
