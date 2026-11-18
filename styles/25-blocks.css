@@ -20,6 +20,23 @@
   font-weight: 700;
 }
 
+/* A name that goes where it says (the sidebar's Vault): only its words are pressed; what follows it sits at the end. */
+.dr-head > .dr-head-name[role="button"] {
+  flex: 0 1 auto;
+  cursor: pointer;
+}
+
+.dr-head > .dr-head-link {
+  margin-left: auto;
+}
+
+@media (any-hover: hover) {
+  .dr-head > .dr-head-name[role="button"]:hover {
+    text-decoration: underline;
+    text-underline-offset: var(--dr-ring);
+  }
+}
+
 /* An icon button at either end sits a unit out, so its glyph, not its box, stands on the gutter. */
 .dr-head > .dr-icon-button:first-child {
   margin-left: calc(-1 * var(--dr-u));

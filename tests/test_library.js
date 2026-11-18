@@ -1,6 +1,6 @@
 /*
- * The library: two framed panes. The sidebar is headed "Library" and holds
- * the vault's folders as a tree (a slash after one that holds more; a name
+ * The library: two framed panes. The sidebar is headed "Vault" and holds
+ * its folders as a tree (a slash after one that holds more; a name
  * shows the folder in the page, and the tree unfolds to it); the page is headed by the folder's name and holds the
  * path to it as boxed words and its notes as ruled rows; the vault's top the
  * same. No buttons at rest;
@@ -33,13 +33,18 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   const library = (w) => w.plugin.features.find((f) => f.constructor.name === 'Library');
   const page = async (w, folder) => (await library(w).browse(folder)).view.screen;
 
-  await check('the sidebar opens with the plugin: headed Library, the vault\'s folders as a tree, a slash after one that holds more, no glyph, no notes, no control', async () => {
+  await check('the sidebar opens with the plugin: headed Vault (pressed, the vault in the page), its folders as a tree, a slash after one that holds more, no glyph, no notes, no control', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
-    assert.strictEqual(s.host.querySelector('.dr-pane > .dr-head .dr-head-name').textContent, 'Library');
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading']);
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Vault', 'Inbox', 'Logic/', 'Reading']);
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), [null, null, 'false', null]);
+    const head = s.host.querySelector('.dr-pane > .dr-head .dr-head-name');
+    assert.strictEqual(head.textContent, 'Vault');
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['Inbox', 'Logic', 'Reading'], 'the vault is the head, not a row of the tree');
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Inbox', 'Logic/', 'Reading']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), [null, 'false', null]);
+    head.click();
+    await settle();
+    const page = w.app.workspace.getLeavesOfType('design-redux-browse')[0];
+    assert.ok(page && page.view.screen.at === '/', 'Vault pressed did not show the vault in the page');
     assert.ok(!s.host.querySelector('svg'), 'a glyph in the tree');
     assert.deepStrictEqual(controls(s.host), []);
     // Its head holds one word, Settings, for Obsidian's own.
@@ -58,14 +63,14 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const s = sidebar(w);
     s.host.querySelector('.dr-tree-row[data-path="Logic"]').click();
     await settle();
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Reading']);
-    assert.strictEqual(s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').getAttribute('aria-level'), '3');
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['Inbox', 'Logic', 'Logic/Sets', 'Reading']);
+    assert.strictEqual(s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').getAttribute('aria-level'), '2');
     s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').click();
     await settle();
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Logic/Sets/Finite', 'Reading']);
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['Inbox', 'Logic', 'Logic/Sets', 'Logic/Sets/Finite', 'Reading']);
     s.host.querySelector('.dr-tree-row[data-path="Reading"]').click();
     await settle();
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading', 'Reading/Old']);
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['Inbox', 'Logic', 'Reading', 'Reading/Old']);
   });
 
   await check('with the look on, the library is kept the tab the left sidebar shows: brought forward after a layout change, and opened again if gone', async () => {
@@ -127,8 +132,10 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(stops().length, 1);
     const first = stops()[0];
     first.focus();
+    assert.strictEqual(first.dataset.path, 'Inbox');
     key(first, 'ArrowDown');
-    assert.strictEqual(w.doc.activeElement.dataset.path, 'Inbox');
+    assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic');
+    key(w.doc.activeElement, 'ArrowUp');
     key(w.doc.activeElement, 'l');
     assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic');
     key(w.doc.activeElement, 'Enter');
