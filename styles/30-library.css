@@ -52,27 +52,37 @@
 }
 
 /* ---- The path: boxed words, a slash between, the last one where you are. ---- */
-.dr-crumbs {
+/* Every property is set here, at the library's own weight, so a theme's rules for nav, spans or buttons can't reach them. */
+.dr-library .dr-crumbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-u);
-  padding-bottom: calc(3 * var(--dr-u));
+  margin: 0;
+  padding: 0 0 calc(3 * var(--dr-u));
 }
 
-.dr-crumb {
+.dr-library .dr-crumbs > .dr-crumb {
+  display: inline-block;
+  margin: 0;
   padding: 0 calc(0.5 * var(--dr-u));
   border: var(--dr-hair) solid var(--dr-ink);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  line-height: var(--dr-line);
   color: var(--dr-muted);
+  text-decoration: none;
   cursor: pointer;
 }
 
-.dr-crumb[aria-current] {
+.dr-library .dr-crumbs > .dr-crumb[aria-current] {
   color: var(--dr-ink);
 }
 
 @media (any-hover: hover) {
-  .dr-crumb:hover {
+  .dr-library .dr-crumbs > .dr-crumb:hover {
     text-decoration: underline;
     text-underline-offset: var(--dr-ring);
   }
