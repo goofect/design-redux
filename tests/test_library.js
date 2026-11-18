@@ -59,6 +59,25 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading', 'Reading/Old']);
   });
 
+  await check('with the look on, the library is kept the tab the left sidebar shows: brought forward after a layout change, and opened again if gone', async () => {
+    const w = await world(VAULT);
+    const ws = w.app.workspace;
+    const library = ws.getLeavesOfType('design-redux-library')[0];
+    ws.revealed = null;
+    ws.trigger('layout-change');
+    await settle();
+    assert.strictEqual(ws.revealed, library, 'the library was not brought forward');
+    library.detach();
+    await settle();
+    assert.strictEqual(ws.getLeavesOfType('design-redux-library').length, 1, 'the library was not opened again');
+    w.plugin.settings.look = 'theme';
+    await w.plugin.saveSettings();
+    ws.revealed = null;
+    ws.trigger('layout-change');
+    await settle();
+    assert.strictEqual(ws.revealed, null, 'the library was pushed forward with the look off');
+  });
+
   await check('a folder\'s name pressed in the tree shows it in the page: headed by its name, the path boxed, its notes as ruled rows; the tree marks it', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);

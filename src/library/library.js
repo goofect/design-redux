@@ -14,6 +14,9 @@ import { drawFolderPage } from './contents.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
 
+/** Is an element on screen: Obsidian's own isShown() where there is one, else whether it has a box. */
+const shown = (el) => !!el && (typeof el.isShown === 'function' ? el.isShown() : !!el.offsetParent);
+
 export class Library extends Feature {
   register() {
     this.plugin.registerView(LIBRARY_VIEW, (leaf) => new LibraryView(leaf, this.plugin));
@@ -46,7 +49,22 @@ export class Library extends Feature {
     // For the strip: where a note stands in its folder.
     this.plugin.placeOf = (file) => neighbours(this.plugin, file);
     this.add(() => delete this.plugin.placeOf);
-    if (!ws.getLeavesOfType(LIBRARY_VIEW).length) this.openSidebar(true);
+    // With the look on, Obsidian's tab strip and the sidebars' toggles are hidden, so nothing could bring the
+    // library forward again: it is kept the tab the left sidebar shows, from the start and after any layout change.
+    this.keepShown();
+    this.listen(ws, 'layout-change', () => this.keepShown());
+  }
+
+  /** Opens the library if it is gone and, with the look on, brings it to the front of the left sidebar. */
+  keepShown() {
+    if (this.plugin.unloading || this.keeping) return;
+    const ws = this.app.workspace;
+    const leaf = ws.getLeavesOfType(LIBRARY_VIEW)[0];
+    const look = this.settings.look !== 'theme';
+    if (leaf && (!look || shown(leaf.view && leaf.view.containerEl))) return;
+    this.keeping = true;
+    const open = leaf ? Promise.resolve(leaf) : this.openSidebar(true);
+    open.then((l) => (l && look ? ws.revealLeaf(l) : null)).finally(() => { this.keeping = false; });
   }
 
   screens() {
