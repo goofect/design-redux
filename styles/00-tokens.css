@@ -1,21 +1,21 @@
 /* ------------------------------------------------------------------ */
-/* Tokens: the measures, the one face, the one size, the colours       */
+/* Tokens: the measures, the one face, the one size, the four colours  */
 /*                                                                     */
 /* Everything the plugin draws is sized and coloured from here; no     */
-/* other part holds a colour value. Black, white, a grey for words,    */
-/* two light greys (a rule, a fill), and red for an error, per colour  */
+/* other part holds a colour value. Black, white, one grey for what is */
+/* not here (FEMALE beside MALE), and red for an error, per colour     */
 /* scheme on the gated body. The ratios below are                     */
 /* measured, not typed: node tests/contrast.js --write puts them here, */
 /* and the suite fails when they no longer match the values.           */
 /*                                                                     */
 /* Lines: a border is drawn only by these classes, each where a        */
 /* screen's structure divides (tests/test_reset.js reads this list):   */
-/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box .dr-pane .dr-rows .dr-crumb .workspace-leaf-content */
+/* lines: .dr-field-box */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin
- * light  ink on bg 21.00 · ink on fill 16.67 · muted on bg 7.00 · muted on fill 5.56 · error on bg 6.48
- * dark   ink on bg 21.00 · ink on fill 15.13 · muted on bg 8.03 · muted on fill 5.79 · error on bg 6.94
+ * light  ink on bg 21.00 · muted on bg 4.54 · error on bg 6.48
+ * dark   ink on bg 21.00 · muted on bg 6.08 · error on bg 6.94
  * contrast:end */
 
 /* The measures, the face and the sizes hold whether the look is on or off: they are the plugin's own structure. */
@@ -34,6 +34,8 @@ body {
   /* One face, the system's monospace as it comes; one small size. A name that matters is bold, never bigger. */
   --dr-font: ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", Consolas, monospace;
   --dr-size: 13px; /* everything */
+  /* A label (a pane's name, a folder's, a note's in a list, the path): capitals, a little apart, as a catalogue's codes. */
+  --dr-tracking: 0.06em;
   /* Lines of text sit on the unit: 16 in a row, 24 running. */
   --dr-line: calc(2 * var(--dr-u));
   --dr-line-loose: calc(3 * var(--dr-u));
@@ -42,26 +44,20 @@ body {
   --dr-bg: var(--background-primary);
   --dr-ink: var(--text-normal);
   --dr-muted: var(--text-muted);
-  --dr-rule: var(--background-modifier-border);
-  --dr-fill: var(--background-modifier-hover);
   --dr-error: var(--text-error);
 }
 
-/* The palette: black, white, a grey for words, a light grey for a rule between rows, a lighter one to fill what is open or picked, red for an error. */
+/* The palette: black, white, one grey, red for an error. No lines, no fills: what is here is black, what is not is grey. */
 body.dr-active.theme-light {
   --dr-bg: #FFFFFF; /* the ground */
-  --dr-ink: #000000; /* words, frames, the focus outline */
-  --dr-muted: #595959; /* secondary words */
-  --dr-rule: #D4D4D4; /* the rule between rows */
-  --dr-fill: #E5E5E5; /* open or picked */
+  --dr-ink: #000000; /* words, what is here, the focus outline */
+  --dr-muted: #767676; /* what is not here, and secondary words */
   --dr-error: #C00000; /* an error's words, always with them */
 }
 
 body.dr-active.theme-dark {
   --dr-bg: #000000; /* the exact inverse */
   --dr-ink: #FFFFFF;
-  --dr-muted: #A0A0A0;
-  --dr-rule: #333333;
-  --dr-fill: #262626;
+  --dr-muted: #8A8A8A;
   --dr-error: #FF5C5C;
 }

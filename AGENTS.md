@@ -1,11 +1,12 @@
 # Design Redux
 
 An Obsidian plugin that turns the vault into a library: the folders as a tree
-in the left sidebar, a folder's notes as a ruled list in the page, a note head
+in the left sidebar, a folder's notes as a list in the page, a note head
 (its properties as a ledger) and pages, a strip at the note's foot, and
 property tools.
-One look, reduced and raw: monospace at one size, black, white and greys,
-framed panes, and Obsidian's chrome hidden. Desktop only.
+One look, reduced and raw, a catalogue site's: small capital labels in one
+monospace, black, white and one grey, space instead of lines, and
+Obsidian's chrome hidden. Desktop only.
 
 This file is the only document. The principles below are the design; the
 look's values are in `styles/00-tokens.css`, and the tests (`test_reset`,
@@ -34,16 +35,20 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    its properties as a ledger: ruled rows, name grey, value ink, edited
    where they stand. That is the one place properties are shown; Obsidian's
    own properties block is hidden, and nothing returns the right sidebar.
-4. **Small, plain type.** One monospace face at 13px for everything the
-   plugin draws. A name that matters (a pane's head) is bold, never bigger.
-   No capitals for effect, no tracking, no italics.
-5. **Black, white and greys.** White ground, black ink, one grey for
-   secondary words, a light rule, a lighter fill for what is open or picked;
-   dark mode the inverse. The only other colour is red for an error, with its
-   words. Colour in the person's content is theirs, not the interface's.
-6. **Structure is the only line.** A pane is framed by 1px ink; its head is
-   ruled off under it; rows are ruled; the path is boxed words separated by
-   slashes. Nothing else has a border, a radius, a shadow or a blur.
+4. **Labels, like a catalogue's codes.** One monospace face at 13px for
+   everything the plugin draws. A label (a pane's name, a folder's, a note's
+   in a list, the path, a property's name) is in capitals, a little apart,
+   regular weight; never bold, never bigger. The person's own words (a
+   note's title and text, a property's value) stay as written. It must read
+   as a catalogue site, never as a terminal.
+5. **Black, white, one grey.** Following Obsidian's mode: white ground and
+   black ink, or the inverse. Grey is what is not here (FEMALE beside MALE):
+   the folders not open, the path above. The only other colour is red for an
+   error, with its words. Colour in the person's content is theirs.
+6. **No lines, no boxes: space.** No frame round a pane, no rule under a
+   head, no rule between rows, no box round a word. Panes, heads and rows are
+   parted by space alone. Nothing has a border (but a field's line), a
+   radius, a shadow or a blur. A folder's page has no head: its path is it.
 7. **Say it with characters before glyphs.** A folder that holds more ends in
    a slash ("Politics/"). Where a word or a character will do, no icon. The
    plugin's few glyphs are for tools that have no plain word (a map's fit,
@@ -54,8 +59,8 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    in the command palette and Obsidian's own menus. Search is a command, not
    a field.
 9. **One cue per state.** Hover underlines. Focus is a 2px ink outline. Open
-   or picked is the light fill. Disabled is grey. Nothing else, nothing
-   doubled.
+   or picked is black where its list is grey (in the tree and the path), or
+   underlined where its list is black. Disabled is grey. No fills.
 10. **The panes are the whole window.** With the look on, Obsidian's chrome
     goes: ribbons, the right sidebar, the status bar, the tab strip, view
     headers. The look off puts it all back. Hide, never move or remove

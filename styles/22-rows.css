@@ -1,8 +1,9 @@
 /* ------------------------------------------------------------------ */
 /* Rows: a name in a list, a property, a group's title                 */
 /*                                                                     */
-/* Four units high, a light rule under each, like a stock list. Hover  */
-/* underlines the name; open or picked, the row is filled light grey.  */
+/* Four units high, parted by space alone. Hover underlines the name; */
+/* open or picked, it is underlined too, and black where its list is  */
+/* grey.                                                               */
 /* No numbers, no marks: a slot holds only a footnote's own id.        */
 /* ------------------------------------------------------------------ */
 
@@ -10,10 +11,6 @@
   display: grid;
 }
 
-.dr-rows > .dr-row,
-.dr-rows > .dr-prop {
-  border-bottom: var(--dr-hair) solid var(--dr-rule);
-}
 
 .dr-row {
   display: grid;
@@ -40,10 +37,12 @@
   color: var(--dr-muted);
 }
 
-/* Open or picked: filled light grey, the words as they were. */
-.dr-row[aria-current],
-.dr-row[aria-selected="true"] {
-  background: var(--dr-fill);
+/* Open or picked: its name underlined, and black in a list that is grey. */
+.dr-row[aria-current] > .dr-row-name,
+.dr-row[aria-selected="true"] > .dr-row-name {
+  color: var(--dr-ink);
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 .dr-row[aria-disabled="true"],
@@ -71,8 +70,9 @@
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-.dr-prop[aria-selected="true"] {
-  background: var(--dr-fill);
+.dr-prop[aria-selected="true"] > .dr-prop-value {
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 .dr-prop[aria-disabled="true"],

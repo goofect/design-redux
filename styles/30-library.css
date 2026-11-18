@@ -1,10 +1,10 @@
 /* ------------------------------------------------------------------ */
-/* The library: two framed panes                                       */
+/* The library: two panes on the ground, no frame, no line            */
 /*                                                                     */
-/* Each a box ruled in ink, set in from its edges, its name bold in    */
-/* its head. The sidebar: the folders as a tree. The page: the path    */
-/* as boxed words, then the folder's notes as ruled rows; the vault's  */
-/* top the same. No buttons at rest.                                   */
+/* Like a catalogue: labels in capitals, a little apart, parted by     */
+/* space. The sidebar: the folders as a tree, grey, the open one       */
+/* black. The page: the path as words, the folders above grey and this */
+/* one black, then the folder's notes, one to a line, with air.        */
 /* ------------------------------------------------------------------ */
 
 .dr-library {
@@ -20,13 +20,12 @@
   padding: var(--dr-gutter);
 }
 
-/* The pane: a box with a 1px ink rule, the same frame as every pane the look draws. */
+/* The pane: no frame; space is what parts it from the rest. */
 .dr-library .dr-pane {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  border: var(--dr-hair) solid var(--dr-ink);
 }
 
 .dr-library-body {
@@ -36,9 +35,15 @@
   padding: var(--dr-u) var(--dr-gutter) var(--dr-gutter);
 }
 
-/* Rows in a pane run between its gutters, so their rules do too. */
+/* Rows in a pane: labels, one to a line, with air between. */
 .dr-library-body .dr-row {
+  min-height: calc(5 * var(--dr-u));
   padding: 0;
+}
+
+.dr-library-body .dr-row-name {
+  text-transform: uppercase;
+  letter-spacing: var(--dr-tracking);
 }
 
 /* The search field, when the command asks for it. */
@@ -46,14 +51,23 @@
   padding: 0 0 var(--dr-u);
 }
 
-/* ---- The tree: names, each level a step in; a slash after one that holds more. ---- */
+/* ---- The tree: names, each level a step in; a slash after one that holds more; grey but the one open, as a catalogue's sections. ---- */
 .dr-library-body .dr-tree-row {
   --dr-depth: 0; /* how many steps in; the tree sets it on each row */
   grid-template-columns: minmax(0, 1fr);
+  min-height: calc(4 * var(--dr-u));
   padding-left: calc(var(--dr-u) + var(--dr-depth) * 2 * var(--dr-u));
+  color: var(--dr-muted);
 }
 
-/* ---- The path: boxed words, a slash between, the last one where you are. ---- */
+/* The open folder and the one picked: black, nothing else marks them. */
+.dr-library-body .dr-tree-row[aria-current] > .dr-row-name,
+.dr-library-body .dr-tree-row[aria-selected="true"] > .dr-row-name {
+  color: var(--dr-ink);
+  text-decoration: none;
+}
+
+/* ---- The path: words, a slash between; the folders above grey, this one black. ---- */
 /* Every property is set here, at the library's own weight, so a theme's rules for nav, spans or buttons can't reach them. */
 .dr-library .dr-crumbs {
   display: flex;
@@ -61,19 +75,29 @@
   align-items: center;
   gap: var(--dr-u);
   margin: 0;
-  padding: 0 0 calc(3 * var(--dr-u));
+  padding: 0 0 calc(4 * var(--dr-u));
+}
+
+/* Where the path is the page's head, it stands where a head would, on one line with the sidebar's. */
+.dr-library-body > .dr-crumbs:first-child {
+  min-height: calc(5 * var(--dr-u));
+  margin: calc(-1 * var(--dr-u)) 0 calc(3 * var(--dr-u));
+  padding: 0;
+  align-content: center;
 }
 
 .dr-library .dr-crumbs > .dr-crumb {
   display: inline-block;
   margin: 0;
-  padding: 0 calc(0.5 * var(--dr-u));
-  border: var(--dr-hair) solid var(--dr-ink);
+  padding: 0;
+  border: 0;
   border-radius: 0;
   background: none;
   box-shadow: none;
   font: inherit;
   line-height: var(--dr-line);
+  text-transform: uppercase;
+  letter-spacing: var(--dr-tracking);
   color: var(--dr-muted);
   text-decoration: none;
   cursor: pointer;

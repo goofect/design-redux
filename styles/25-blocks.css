@@ -2,7 +2,7 @@
 /* Blocks: a screen's head, the strip, the say-so, a sheet's layout    */
 /* ------------------------------------------------------------------ */
 
-/* ---- A head: a screen's few controls, and the one line a header has, under it. ---- */
+/* ---- A head: a pane's name as a label, and its few controls; no line under it. ---- */
 .dr-head {
   display: flex;
   align-items: center;
@@ -10,14 +10,18 @@
   flex: none;
   height: calc(5 * var(--dr-u));
   padding: 0 var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-rule);
   color: var(--dr-ink);
 }
 
-/* The pane's name: bold, the one weight the plugin adds. */
+/* The pane's name and the word beside it: labels, capitals a little apart, no weight. */
+.dr-head > .dr-head-name,
+.dr-head > .dr-head-link {
+  text-transform: uppercase;
+  letter-spacing: var(--dr-tracking);
+}
+
 .dr-head > .dr-head-name {
   flex: 1;
-  font-weight: 700;
 }
 
 /* A name that goes where it says (the sidebar's Vault): only its words are pressed; what follows it sits at the end. */
@@ -53,7 +57,6 @@
   gap: var(--dr-gutter);
   height: calc(6 * var(--dr-u));
   padding: 0 var(--dr-gutter);
-  border-top: var(--dr-hair) solid var(--dr-ink);
   background: var(--dr-bg);
   color: var(--dr-ink);
 }

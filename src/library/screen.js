@@ -140,10 +140,10 @@ export class LibraryScreen {
     // The head: the pane's name, bold, a line under it.
     const name = !this.opts.wide ? 'Vault' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
     const pane = el(host, 'div', 'dr-pane');
-    // The sidebar's head holds one word: Settings, for Obsidian's own, whose button the bare workspace hides.
-    // In the sidebar the head is the vault: pressed, it shows the vault in the page.
+    // In the sidebar the head is the vault (pressed, it shows the vault in the page) and one word, Settings, for Obsidian's own,
+    // whose button the bare workspace hides. A folder's page has no head: its path says where it is.
     const side = !this.opts.wide;
-    headRow(pane, { label: name, run: side ? () => this.plugin.showFolder && this.plugin.showFolder(null) : null, link: side ? { text: 'Settings', run: () => openSettings(this.app) } : null });
+    if (side || this.query !== null || this.filter) headRow(pane, { label: name, run: side ? () => this.plugin.showFolder && this.plugin.showFolder(null) : null, link: side ? { text: 'Settings', run: () => openSettings(this.app) } : null });
     this.body = el(pane, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
     else if (!this.opts.wide) drawTree(this, this.body);

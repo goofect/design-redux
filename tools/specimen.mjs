@@ -75,7 +75,6 @@ h2,p,figure,pre{margin:0}
 .spec-unit-box{background:var(--dr-ink)}
 .spec-wide{width:100%;margin-bottom:32px}
 .spec-screen{box-sizing:content-box;overflow:hidden;position:relative;background:var(--dr-bg)}
-.spec-screen.is-side{border-right:1px solid var(--dr-ink)}
 .spec-screen.is-panel{border-left:1px solid var(--dr-ink)}
 .spec-screen>.dr-library,.spec-screen>.dr-panel,.spec-screen>.dr-map{height:100%}
 .spec-screen .view-content{padding:0}

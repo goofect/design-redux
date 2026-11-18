@@ -104,7 +104,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     await settle();
     const p = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
     assert.strictEqual(p.at, 'Logic');
-    assert.strictEqual(p.host.querySelector('.dr-head-name').textContent, 'Logic');
+    assert.ok(!p.host.querySelector('.dr-head'), 'a folder\'s page names itself twice: a head over its path');
     assert.deepStrictEqual(Array.from(p.host.querySelectorAll('.dr-crumb')).map((c) => [c.textContent, c.getAttribute('aria-current')]), [['Vault', null], ['Logic', 'location']]);
     assert.deepStrictEqual(paths(p.host, '.dr-rows .dr-row'), ['Logic/Truth tables.md', 'Logic/Validity.md', 'Logic/Week 2.md', 'Logic/Week 10.md']);
     assert.deepStrictEqual(controls(p.host), []);
@@ -190,7 +190,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Week 2.md');
     assert.deepStrictEqual(w.plugin.settings.recentSearches, ['week']);
     key(p.host.querySelector('input.dr-input'), 'Escape');
-    assert.strictEqual(p.host.querySelector('.dr-head-name').textContent, 'Vault', 'the vault did not come back');
+    assert.strictEqual(p.host.querySelector('.dr-crumb[aria-current]').textContent, 'Vault', 'the vault did not come back');
   });
 
   await check('a folder\'s menu and a note\'s: every entry sectioned, pin, sort, rename, move and delete do what they say', async () => {
@@ -236,8 +236,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   await check('the vault\'s top is a page like any folder\'s: headed Vault, its loose notes as ruled rows, pinned ones first; no grid, no buttons', async () => {
     const w = await world(Object.assign({}, VAULT, { 'Alpha.md': '', 'Zed.md': '' }), { settingsVersion: 103, pinOrder: ['Zed.md'] });
     const host = (await page(w, null)).host;
-    assert.strictEqual(host.querySelector('.dr-head-name').textContent, 'Vault');
-    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-crumb')).map((c) => c.textContent), ['Vault']);
+    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-crumb')).map((c) => [c.textContent, c.getAttribute('aria-current')]), [['Vault', 'location']]);
     assert.deepStrictEqual(paths(host, '.dr-rows .dr-row'), ['Zed.md', 'Alpha.md', 'Loose.md']);
     assert.ok(!host.querySelector('.dr-grid, .dr-cell, img'), 'a grid or a cover');
     assert.deepStrictEqual(controls(host), []);

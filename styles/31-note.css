@@ -4,9 +4,9 @@
 /* The plugin's own elements in the note's own column, wherever the    */
 /* note is laid out (the editor's sizer, reading view's header), so    */
 /* they scroll with the text: the folder's name as a link over the     */
-/* title; under it the ledger (each property a ruled row, name grey,   */
-/* value ink), the pages as underlined words, and a line exactly as    */
-/* wide as the text. Nothing of Obsidian's is moved or restyled here.  */
+/* title; under it the ledger (each property a row, its name a grey   */
+/* label, its value ink), the pages as underlined words, then space.   */
+/* Nothing of Obsidian's is moved or restyled here.                    */
 /* The note's own text keeps the person's font.                        */
 /* ------------------------------------------------------------------ */
 
@@ -15,14 +15,13 @@
   padding-bottom: var(--dr-u);
 }
 
-/* Under the title: no padding at the sides, so the line under it is the text's column exactly. */
+/* Under the title: no line; space parts it from the text. */
 .dr-note-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--dr-u);
   padding: var(--dr-u) 0;
-  margin-bottom: var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  margin-bottom: calc(3 * var(--dr-u));
 }
 
 .dr-note-head > :empty {
@@ -39,6 +38,13 @@
 .dr-note-props .dr-prop {
   padding: 0;
   cursor: pointer;
+}
+
+/* A property's name and the folder over the title: labels, capitals a little apart. The values are the person's words, as written. */
+.dr-note-props .dr-prop-name,
+.dr-note-place .dr-note-folder {
+  text-transform: uppercase;
+  letter-spacing: var(--dr-tracking);
 }
 
 .dr-note-pages {

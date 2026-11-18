@@ -85,17 +85,17 @@ const VAULT = {
     sheet.close();
   });
 
-  check('each scheme declares exactly six colours: the ground, the ink, the grey, the rule, the fill, the error\'s red', () => {
+  check('each scheme declares exactly four colours: the ground, the ink, the grey, the error\'s red', () => {
     const tokens = bare(part('00-tokens.css'));
     const schemes = ['light', 'dark'].map((mode) => {
       const m = new RegExp(`body\\.dr-active\\.theme-${mode}\\s*\\{([^}]*)\\}`).exec(tokens);
       assert.ok(m, `no ${mode} scheme`);
       return Object.fromEntries(Array.from(m[1].matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)).map((x) => [x[1], x[2].toUpperCase()]));
     });
-    assert.deepStrictEqual(schemes.map((s) => Object.keys(s)), [['dr-bg', 'dr-ink', 'dr-muted', 'dr-rule', 'dr-fill', 'dr-error'], ['dr-bg', 'dr-ink', 'dr-muted', 'dr-rule', 'dr-fill', 'dr-error']]);
+    assert.deepStrictEqual(schemes.map((s) => Object.keys(s)), [['dr-bg', 'dr-ink', 'dr-muted', 'dr-error'], ['dr-bg', 'dr-ink', 'dr-muted', 'dr-error']]);
     assert.deepStrictEqual([schemes[0]['dr-bg'], schemes[0]['dr-ink'], schemes[1]['dr-bg'], schemes[1]['dr-ink']], ['#FFFFFF', '#000000', '#000000', '#FFFFFF']);
     const values = (tokens.match(/#[0-9A-Fa-f]{3,8}\b/g) || []).length;
-    assert.strictEqual(values, 12, `${values} colour values in the tokens part, not the schemes' twelve`);
+    assert.strictEqual(values, 8, `${values} colour values in the tokens part, not the schemes' eight`);
     parts.filter((p) => p !== '00-tokens.css').forEach((p) => assert.ok(!/#[0-9A-Fa-f]{3,8}\b|rgba?\(|hsla?\(/.test(bare(part(p))), `a colour value in ${p}`));
   });
 
