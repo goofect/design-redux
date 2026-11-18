@@ -19,6 +19,11 @@ import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
 import { drawTree } from './tree.js';
 
+/** Opens Obsidian's settings, through its own command (an internal, so behind a check). */
+function openSettings(app) {
+  if (app.commands && typeof app.commands.executeCommandById === 'function') app.commands.executeCommandById('app:open-settings');
+}
+
 export class LibraryScreen {
   /** `opts`: { wide (the page, not the sidebar), onGo(folder) }. */
   constructor(plugin, host, opts = {}) {
@@ -135,7 +140,8 @@ export class LibraryScreen {
     // The head: the pane's name, bold, a line under it, no buttons.
     const name = !this.opts.wide ? 'Library' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
     const pane = el(host, 'div', 'dr-pane');
-    headRow(pane, { label: name });
+    // The sidebar's head holds one word: Settings, for Obsidian's own, whose button the bare workspace hides.
+    headRow(pane, { label: name, link: this.opts.wide ? null : { text: 'Settings', run: () => openSettings(this.app) } });
     this.body = el(pane, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
     else if (!this.opts.wide) drawTree(this, this.body);

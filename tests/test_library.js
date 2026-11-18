@@ -42,6 +42,15 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), [null, null, 'false', null]);
     assert.ok(!s.host.querySelector('svg'), 'a glyph in the tree');
     assert.deepStrictEqual(controls(s.host), []);
+    // Its head holds one word, Settings, for Obsidian's own.
+    const ran = [];
+    const run = w.app.commands.executeCommandById;
+    w.app.commands.executeCommandById = (id) => ran.push(id);
+    const link = s.host.querySelector('.dr-head .dr-head-link');
+    assert.strictEqual(link.textContent, 'Settings');
+    link.click();
+    w.app.commands.executeCommandById = run;
+    assert.deepStrictEqual(ran, ['app:open-settings']);
   });
 
   await check('the tree follows what is open: the open folder\'s subfolders and the path down to it, nothing else unfolded', async () => {
@@ -67,6 +76,11 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     ws.trigger('layout-change');
     await settle();
     assert.strictEqual(ws.revealed, library, 'the library was not brought forward');
+    // A second library, as a reload of the plugin can leave, goes.
+    await ws.getLeftLeaf(false).setViewState({ type: 'design-redux-library' });
+    ws.trigger('layout-change');
+    await settle();
+    assert.strictEqual(ws.getLeavesOfType('design-redux-library').length, 1, 'two libraries');
     library.detach();
     await settle();
     assert.strictEqual(ws.getLeavesOfType('design-redux-library').length, 1, 'the library was not opened again');

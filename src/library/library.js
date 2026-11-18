@@ -50,7 +50,10 @@ export class Library extends Feature {
   keepShown() {
     if (this.plugin.unloading || this.keeping) return;
     const ws = this.app.workspace;
-    const leaf = ws.getLeavesOfType(LIBRARY_VIEW)[0];
+    // One library: a reload of the plugin can leave a second behind it, which goes.
+    const leaves = ws.getLeavesOfType(LIBRARY_VIEW);
+    const leaf = leaves.find((l) => shown(l.view && l.view.containerEl)) || leaves[0];
+    leaves.filter((l) => l !== leaf).forEach((l) => l.detach());
     const look = this.settings.look !== 'theme';
     if (leaf && (!look || shown(leaf.view && leaf.view.containerEl))) return;
     this.keeping = true;

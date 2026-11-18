@@ -48,7 +48,9 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    a slash ("Politics/"). Where a word or a character will do, no icon. The
    plugin's few glyphs are for tools that have no plain word (a map's fit,
    zoom, fold).
-8. **No buttons at rest.** The library's panes show none. Everything else is
+8. **No buttons at rest.** The library's panes show none; the sidebar's head
+   holds one underlined word, Settings, since the bare workspace hides
+   Obsidian's own. Everything else is
    in the command palette and Obsidian's own menus. Search is a command, not
    a field.
 9. **One cue per state.** Hover underlines. Focus is a 2px ink outline. Open

@@ -2,9 +2,11 @@
 /* The workspace, bare: only the panes                                 */
 /*                                                                     */
 /* With the look on, Obsidian's chrome around the panes is taken away: */
-/* the ribbons, the right sidebar, the status bar, the tabs' strip and */
-/* every view's header, and Obsidian's properties block (the note's    */
-/* ledger holds them). What is left is the library in the left         */
+/* the ribbons, the right sidebar, the status bar, the tabs' strip,    */
+/* every view's header, the vault's name at the sidebar's foot (its    */
+/* settings are a word in the library's head), and Obsidian's         */
+/* properties block (the note's ledger holds them). What is left is   */
+/* the library in the left                                             */
 /* sidebar and the page beside it. The look off puts it all back.      */
 /* Kept: the tab strip's container, which holds the window's drag area */
 /* and its buttons, and the note's own title (the note head needs it). */
@@ -19,6 +21,10 @@
 /*   .sidebar-toggle-button             the sidebars' toggles          */
 /*   .workspace-leaf-content > .view-header   a view's header          */
 /*   .metadata-container                the properties block in a note */
+/*   .mod-left-split > .workspace-leaf-resize-handle  the sidebar's    */
+/*                                      edge, a line beside the frame  */
+/*   .workspace-sidedock-vault-profile  the vault's name, help and     */
+/*                                      settings at the sidebar's foot */
 /* ------------------------------------------------------------------ */
 
 body.dr-active.dr-region-workspace .workspace-ribbon.mod-left,
@@ -32,11 +38,17 @@ body.dr-active.dr-region-workspace .workspace-tab-header-new-tab,
 body.dr-active.dr-region-workspace .workspace-tab-header-tab-list,
 body.dr-active.dr-region-workspace .sidebar-toggle-button,
 body.dr-active.dr-region-workspace .workspace-leaf-content > .view-header,
-body.dr-active.dr-region-workspace .workspace-leaf-content[data-type="markdown"] .metadata-container {
+body.dr-active.dr-region-workspace .workspace-leaf-content[data-type="markdown"] .metadata-container,
+body.dr-active.dr-region-workspace .workspace-split.mod-left-split .workspace-sidedock-vault-profile {
   display: none;
 }
 
 /* The tabs' strip stays only as the window's drag area: no line under it. */
 body.dr-active.dr-region-workspace .workspace-tab-header-container {
   border-bottom: 0;
+}
+
+/* The sidebar's edge draws no line: the library's frame is the line. Its handle still resizes it. */
+body.dr-active.dr-region-workspace .workspace-split.mod-left-split > .workspace-leaf-resize-handle {
+  border-inline-end-color: transparent;
 }

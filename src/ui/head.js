@@ -2,13 +2,14 @@
 /* The head row: a label and the few icon buttons a surface needs      */
 /* ------------------------------------------------------------------ */
 
-import { el } from '../core/dom.js';
+import { asButton, el } from '../core/dom.js';
 import { iconButton } from './button.js';
 
 /**
  * { label, text (the label is a name the person wrote, a note's: set in
  * the reading voice, not capitals), muted (quieter words after the label),
- * buttons: [what iconButton takes] }. Returns the row; what is
+ * link: { text, run } (an underlined word at the end, where a word says
+ * it better than a glyph), buttons: [what iconButton takes] }. Returns the row; what is
  * appended after (the zoom control) follows the buttons.
  */
 export function headRow(parent, opts) {
@@ -18,6 +19,7 @@ export function headRow(parent, opts) {
     label.appendChild(node.ownerDocument.createTextNode(' '));
     el(label, 'span', 'dr-muted', opts.muted);
   }
+  if (opts.link) asButton(el(node, 'span', 'dr-link dr-head-link', opts.link.text), null, opts.link.run);
   (opts.buttons || []).forEach((b) => iconButton(node, b));
   return node;
 }

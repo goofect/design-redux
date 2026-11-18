@@ -15,6 +15,11 @@
   padding: var(--dr-gutter);
 }
 
+/* Inside one of Obsidian's leaves, the same inset on every side: its own padding for a view (12, and 32 at the foot) gives way. */
+.dr-library.view-content {
+  padding: var(--dr-gutter);
+}
+
 /* The pane: a box with a 1px ink rule, the same frame as every pane the look draws. */
 .dr-library .dr-pane {
   display: flex;
