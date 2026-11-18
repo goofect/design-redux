@@ -65,7 +65,6 @@ export const DEFAULTS = {
 
   // The note
   notePage: true,
-  notePageChips: false,
   notePages: true,
   pagesOpen: {}, // by note path: the page left open
   footnotes: true,

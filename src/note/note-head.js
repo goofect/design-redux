@@ -95,7 +95,7 @@ export class NotePage extends Feature {
   draw(view) {
     const file = view.file;
     const parent = file.parent && file.parent.path !== '/' ? file.parent : null;
-    const props = this.settings.notePageChips ? this.plugin.notes.props(file) : null;
+    const props = this.plugin.notes.props(file);
     noteHeads(view).forEach(({ folder, head }) => {
       clear(folder);
       if (parent) {

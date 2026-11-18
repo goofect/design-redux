@@ -8,6 +8,7 @@
 
 import { Keymap } from 'obsidian';
 import { Feature } from '../core/feature.js';
+import { iconId } from '../core/icons.js';
 import { drawFolderPage } from './contents.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
@@ -22,7 +23,7 @@ export class Library extends Feature {
     const ws = this.app.workspace;
     const redraw = () => this.screens().forEach((s) => s.refresh());
     ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'design-redux:props', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
-    const ribbon = this.plugin.addRibbonIcon('library', 'Open library', () => this.openSidebar());
+    const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.openSidebar());
     this.add(() => ribbon && ribbon.remove && ribbon.remove());
     this.add(() => {
       if (this.plugin.unloading) return;

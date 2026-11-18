@@ -58,12 +58,13 @@ export const RETIRED = {
   albumStillToWrite: 'the reset: no switch that only chose what a page showed',
   propertyValueChips: 'the reset: no colour on a value; a value is its words',
   propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
+  notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
   ...Object.fromEntries(['Chrome', 'Tabs', 'Sidebars', 'Editor', 'Overlays', 'Library', 'Note', 'Strip', 'Panel', 'Canvas', 'Graph', 'Maps', 'Icons', 'Compat']
     .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
 };
 
 /** The 4.0 keys the direction reset retired: their values are moved under `retired` once, not dropped. */
-const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions)/.test(k));
+const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions|notePageChips)/.test(k));
 
 /** Old keys that live on under another name. */
 export const RENAMED = {};

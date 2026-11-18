@@ -35,7 +35,7 @@ check('assets/icons holds the one small set, nothing else', () => {
 
 check('the set is the controls\' few: at most twelve, and these', () => {
   assert.ok(names.length <= 12, `${names.length} glyphs`);
-  assert.deepStrictEqual(names, ['back', 'close', 'fit', 'fold', 'minus', 'more', 'plus', 'search', 'unfold']);
+  assert.deepStrictEqual(names, ['back', 'close', 'fit', 'fold', 'library', 'minus', 'more', 'plus', 'search', 'unfold']);
 });
 
 check('every glyph keeps the icon grammar', () => {

@@ -77,7 +77,6 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
 
   await check('the note\'s head: in the note\'s own column, folder over the title, properties and pages under it; gone when the feature is off', async () => {
     const w = await world({ 'Logic/A.md': '---\nstatus: draft\ndomain: [logic, proof]\n---\n', 'Loose.md': '' });
-    w.plugin.settings.notePageChips = true;
     const view = await open(w, 'Logic/A.md');
     await w.plugin.saveSettings();
     const names = { 'dr-note-place': 'folder', 'inline-title': 'title', 'dr-note-head': 'head', 'metadata-container': 'properties', 'cm-contentContainer': 'text' };
