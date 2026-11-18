@@ -153,7 +153,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     w.plugin.settings.look = 'redux';
     await w.plugin.saveSettings();
     const before = Object.keys(obsidian.icons).filter((id) => id.startsWith('dr-')).length;
-    assert.ok(before >= 9 && before <= 12, `${before} glyphs registered`);
+    assert.strictEqual(before, dr.GLYPH_NAMES.length, `${before} glyphs registered`);
     w.plugin.unload();
     assert.strictEqual(body.className, 'theme-light');
     assert.strictEqual(other.body.className, 'theme-dark');

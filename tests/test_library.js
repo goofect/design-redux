@@ -1,7 +1,7 @@
 /*
  * The library: two framed panes. The sidebar is headed "Library" and holds
- * the vault's folders as a tree (a chevron opens a branch, a name shows the
- * folder in the page); the page is headed by the folder's name and holds the
+ * the vault's folders as a tree (a slash after one that holds more; a name
+ * shows the folder in the page, and the tree unfolds to it); the page is headed by the folder's name and holds the
  * path to it as boxed words and its notes as ruled rows; the vault's top the
  * same. No buttons at rest;
  * search is a command. Worked from the keys; a vault of 2,000 notes drawn
@@ -33,17 +33,30 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   const library = (w) => w.plugin.features.find((f) => f.constructor.name === 'Library');
   const page = async (w, folder) => (await library(w).browse(folder)).view.screen;
 
-  await check('the sidebar opens with the plugin: headed Library, the vault\'s folders as a tree, empty ones left out, no notes, no control', async () => {
+  await check('the sidebar opens with the plugin: headed Library, the vault\'s folders as a tree, a slash after one that holds more, no glyph, no notes, no control', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
     assert.strictEqual(s.host.querySelector('.dr-pane > .dr-head .dr-head-name').textContent, 'Library');
     assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading']);
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Vault', 'Inbox', 'Logic', 'Reading']);
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), ['true', null, 'false', null], 'a chevron only where a folder holds folders');
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Vault', 'Inbox', 'Logic/', 'Reading']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), [null, null, 'false', null]);
+    assert.ok(!s.host.querySelector('svg'), 'a glyph in the tree');
     assert.deepStrictEqual(controls(s.host), []);
-    s.host.querySelector('.dr-tree-row[data-path="Logic"] .dr-twist').click();
+  });
+
+  await check('the tree follows what is open: the open folder\'s subfolders and the path down to it, nothing else unfolded', async () => {
+    const w = await world(Object.assign({}, VAULT, { 'Logic/Sets/Finite/a.md': '', 'Reading/Old/b.md': '' }));
+    const s = sidebar(w);
+    s.host.querySelector('.dr-tree-row[data-path="Logic"]').click();
+    await settle();
     assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Reading']);
     assert.strictEqual(s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').getAttribute('aria-level'), '3');
+    s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').click();
+    await settle();
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Logic/Sets/Finite', 'Reading']);
+    s.host.querySelector('.dr-tree-row[data-path="Reading"]').click();
+    await settle();
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading', 'Reading/Old']);
   });
 
   await check('a folder\'s name pressed in the tree shows it in the page: headed by its name, the path boxed, its notes as ruled rows; the tree marks it', async () => {
@@ -74,7 +87,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.ok(!p.host.querySelector('.dr-slot, .dr-mark'), 'a mark beside a row');
   });
 
-  await check('from the keys: one Tab stop, arrows, Right opens a branch and Left closes it, Enter shows a folder, a letter jumps', async () => {
+  await check('from the keys: one Tab stop, arrows, Enter shows a folder, a letter jumps', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
     const stops = () => Array.from(s.body.querySelectorAll('.dr-tree [tabindex="0"]'));
@@ -85,11 +98,6 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(w.doc.activeElement.dataset.path, 'Inbox');
     key(w.doc.activeElement, 'l');
     assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic');
-    key(w.doc.activeElement, 'ArrowRight');
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Reading']);
-    assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic', 'the focus left the row');
-    key(w.doc.activeElement, 'ArrowLeft');
-    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading']);
     key(w.doc.activeElement, 'Enter');
     await settle();
     const p = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;

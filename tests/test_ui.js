@@ -103,8 +103,8 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([f.hasAttribute('aria-invalid'), f.getAttribute('aria-busy'), f.querySelectorAll('svg').length, f.querySelector('.dr-field-note').textContent], [false, 'true', 0, 'Looking…']);
     f.drSay();
     assert.ok(!f.querySelector('.dr-field-note') && !f.querySelector('svg'));
-    const off = dr.field(root, { label: 'Name', value: 'x', disabled: true, glyph: 'search' });
-    assert.ok(off.getAttribute('aria-disabled') === 'true' && off.drInput.disabled && glyphOf(off) === 'search');
+    const off = dr.field(root, { label: 'Name', value: 'x', disabled: true, glyph: 'close' });
+    assert.ok(off.getAttribute('aria-disabled') === 'true' && off.drInput.disabled && glyphOf(off) === 'close');
   });
 
   await check('chip: a property, a filter off and on, disabled, wrong', () => {
@@ -127,12 +127,9 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.className, busy.getAttribute('aria-busy'), glyphOf(busy)], ['dr-state is-busy', 'true', null]);
     const bad = dr.sayso(root, { error: true, label: 'Couldn’t read Logic' });
     assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state is-error', 'alert', null]);
-    let back = 0;
-    const h = dr.headRow(root, { label: 'Logic', muted: '24 notes', back: () => back++, buttons: [{ glyph: 'search', label: 'Search' }] });
-    assert.deepStrictEqual(Array.from(h.querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Back', 'Search']);
+    const h = dr.headRow(root, { label: 'Logic', muted: '24 notes', buttons: [{ glyph: 'fit', label: 'Fit' }] });
+    assert.deepStrictEqual(Array.from(h.querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Fit']);
     assert.strictEqual(h.querySelector('.dr-head-name').textContent, 'Logic 24 notes');
-    h.querySelector('.dr-icon-button').click();
-    assert.strictEqual(back, 1);
   });
 
   await check('sheet: a question answered yes or no, a name asked for and checked', async () => {

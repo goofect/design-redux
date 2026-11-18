@@ -14,9 +14,9 @@ const chip = (key, value, a = {}) => `<span class="dr-chip ${a.class || ''}"${at
 export function controls() {
   return section('controls', 'Controls', 'Plain. An icon button is its glyph; a text button an underlined word; the one that commits black with white words; a field a line under its text; a page a word. Hover underlines, focus is a 2px outline, on or open is inverted, disabled is grey. Nothing else.', [
     component('Icon button', 'Only where a glyph is plainer than a word. Its word is its tooltip and its aria-label.', [
-      shown('rest', iconButton('more', 'More')), shown('hover · a line under it', iconButton('more', 'More', { class: 'spec-hover' })),
-      shown('focus · the outline', iconButton('more', 'More', { class: 'spec-focus' })), shown('on · inverted', iconButton('search', 'Search', { 'aria-pressed': 'true' })),
-      shown('disabled · grey', iconButton('back', 'Back', { 'aria-disabled': 'true' })),
+      shown('rest', iconButton('fit', 'Fit')), shown('hover · a line under it', iconButton('fit', 'Fit', { class: 'spec-hover' })),
+      shown('focus · the outline', iconButton('fit', 'Fit', { class: 'spec-focus' })), shown('on · inverted', iconButton('fold', 'Fold all', { 'aria-pressed': 'true' })),
+      shown('disabled · grey', iconButton('plus', 'Larger', { 'aria-disabled': 'true' })),
     ]),
     component('Text button and link', 'An underlined word: a link goes somewhere, a text button does something. The one that commits is black, one a screen.', [
       shown('a link', link('Logic')), shown('a text button', button('New note')), shown('focus', button('New note', { class: 'spec-focus' })),
@@ -34,8 +34,8 @@ export function controls() {
     ]),
     component('Field', 'A line under its text. Its name above, grey, only where the placeholder doesn’t say the same.', [
       shown('empty', field('Name', input('', 'Untitled'))), shown('filled', field('Name', input('Problem set 4'))),
-      shown('focus', field('Name', input('Problem set 4'), '', { box: 'spec-focus' })), shown('search · the placeholder names it', field('', `${glyph('search')}${input('', 'Notes and folders')}`)),
-      shown('working · its words, grey', field('', `${glyph('search')}${input('deduc')}`, 'Looking…', { 'aria-busy': 'true' })),
+      shown('focus', field('Name', input('Problem set 4'), '', { box: 'spec-focus' })), shown('search · the placeholder names it', field('', input('', 'Notes and folders'))),
+      shown('working · its words, grey', field('', input('deduc'), 'Looking…', { 'aria-busy': 'true' })),
       shown('wrong · red, the words saying why', field('Name', input('Logic/Week: 6'), 'A name can’t hold a colon.', { 'aria-invalid': 'true' })),
       shown('disabled · grey', field('Name', input('Truth tables', '', { disabled: true }), '', { 'aria-disabled': 'true' })),
     ]),
@@ -72,9 +72,8 @@ const state = (label, text, extra = '', cls = '') => `<div class="dr-state ${cls
 export function blocks() {
   const sheet = (title, text, inner, actions) => `<div class="modal"><div class="modal-close-button">${iconButton('close', 'Close')}</div><div class="modal-title">${title}</div><div class="modal-content"><div class="dr dr-sheet"><p class="dr-text is-running">${text}</p>${inner}<div class="dr-sheet-actions">${actions}</div></div></div></div>`;
   return section('blocks', 'Head, strip, menu, sheet, say-so', 'The larger pieces. A line only where the structure divides: under a head, over the strip.', [
-    component('Head', 'A screen’s few controls, and the one line a header has, under it.', [
-      shown('a folder · back and more', `<div style="width:320px"><div class="dr-head">${iconButton('back', 'Back')}<span class="dr-head-name"></span>${iconButton('more', 'More')}</div></div>`),
-      shown('the browse view · search and more', `<div style="width:320px"><div class="dr-head"><span class="dr-head-name"></span>${iconButton('search', 'Search')}${iconButton('more', 'More')}</div></div>`),
+    component('Head', 'A pane’s name in bold, and a light line under it. No buttons.', [
+      shown('a pane', `<div style="width:320px"><div class="dr-head"><span class="dr-head-name">Library</span></div></div>`),
     ]),
     component('Strip', 'One line at the foot of the note: where it stands in its folder, Previous and Next.', [
       shown('in a folder', `<div style="width:480px"><div class="dr-strip"><span class="dr-strip-place">21 / 24</span>${link('Previous')}${link('Next')}</div></div>`),

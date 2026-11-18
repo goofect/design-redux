@@ -41,32 +41,14 @@
   padding: 0 0 var(--dr-u);
 }
 
-/* ---- The tree: a chevron and a name, each level a step in. ---- */
+/* ---- The tree: names, each level a step in; a slash after one that holds more. ---- */
 .dr-tree-row {
   --dr-depth: 0; /* how many steps in; the tree sets it on each row */
-  grid-template-columns: var(--dr-icon) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .dr-library-body .dr-tree-row {
-  padding-left: calc(var(--dr-depth) * 2 * var(--dr-u));
-}
-
-.dr-twist {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--dr-icon);
-  height: var(--dr-icon);
-}
-
-.dr-twist > .dr-glyph {
-  width: calc(1.5 * var(--dr-u));
-  height: calc(1.5 * var(--dr-u));
-}
-
-/* Open: the chevron points down. A quarter turn is not motion: it is drawn that way. */
-.dr-tree-row[aria-expanded="true"] > .dr-twist > .dr-glyph {
-  transform: rotate(90deg);
+  padding-left: calc(var(--dr-u) + var(--dr-depth) * 2 * var(--dr-u));
 }
 
 /* ---- The path: boxed words, a slash between, the last one where you are. ---- */

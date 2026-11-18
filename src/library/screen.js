@@ -34,7 +34,6 @@ export class LibraryScreen {
     this.filterName = null;
     this.pending = false;
     this.stops = [];
-    this.expanded = new Set(['/']);
     host.classList.add('dr', 'dr-library');
     if (opts.wide) host.classList.add('is-wide');
   }
