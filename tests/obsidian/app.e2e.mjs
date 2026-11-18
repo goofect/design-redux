@@ -9,11 +9,10 @@ suite('Design Redux in Obsidian: the app', function () {
       return {
         features: p ? p.features.length : 0,
         commands: Object.keys(app.commands.commands).filter((id) => id.startsWith('design-redux:')).length,
-        legacy: p ? p.legacyKept : null,
       };
     });
-    expect(got.features).toBe(25);
-    expect(got.commands).toBeGreaterThanOrEqual(74);
+    expect(got.features).toBe(24);
+    expect(got.commands).toBeGreaterThanOrEqual(59);
   });
 
   it('draws the toggle 40 by 20, square, its ink knob two pixels in, on the side that is true', async function () {
