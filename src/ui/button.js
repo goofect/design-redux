@@ -30,11 +30,6 @@ export function link(parent, text, run) {
   return node;
 }
 
-/** Turns an icon button that stays on, on or off. */
-export function setPressed(button, on) {
-  button.setAttribute('aria-pressed', String(!!on));
-}
-
 /** A text button: only where a glyph would not say it. { text, run, kind: 'primary' | 'danger', disabled, busy (its text says what it is doing: "Moving…") }. */
 export function textButton(parent, opts) {
   const button = el(parent, 'div', `dr-button${opts.kind ? ` is-${opts.kind}` : ''}`);

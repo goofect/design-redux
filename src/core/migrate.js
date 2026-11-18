@@ -9,6 +9,29 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut): a 4.0 file's values for them are kept under `retired`, not dropped. */
+const RETIRED_SINCE_4 = {
+  alwaysShowLabels: 'the reset: a folder is its name, always shown',
+  libraryZoom: 'the reset: one view of a collection, no zoom levels',
+  folderGlyphs: 'the reset: no generated glyphs; a folder is its name or its cover image',
+  tableColumns: 'the reset: a folder\'s notes are one list, not a table',
+  coverFromFolder: 'the reset: a note is its name; covers stand for folders only',
+  stripPlace: 'the reset: the strip is one line, its place always "21 / 24"',
+  stripDetail: 'the reset: the strip is one line, with no property beside it',
+  albumStillToWrite: 'the reset: no switch that only chose what a page showed',
+  propertyValueChips: 'the reset: no colour on a value; a value is its words',
+  propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
+  ...Object.fromEntries(['albumStructure', 'albumRefactor', 'propertyForAlbum', 'smartAlbums', 'libraryCheck', 'footnotes', 'scripts', 'graph3d', 'propertySchemaMarks', 'graphRoutes', 'graphProperties', 'navDropdown', 'menuFilter']
+    .map((k) => [k, 'the settings cut: a feature that only adds commands or marks has no switch; it is always there'])),
+  folderCovers: 'covers are gone: the library is one ruled list, with no grid to show an image in',
+  coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
+  coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
+  coverFromFirstImage: 'covers are gone',
+  notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
+  ...Object.fromEntries(['Chrome', 'Tabs', 'Sidebars', 'Editor', 'Overlays', 'Library', 'Note', 'Strip', 'Panel', 'Canvas', 'Graph', 'Maps', 'Icons', 'Compat']
+    .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
+};
+
 /** Old keys whose thing is gone, and why. Their values stay in data.legacy.json. */
 export const RETIRED = {
   singleArea: 'cut: the one-page layout',
@@ -47,30 +70,9 @@ export const RETIRED = {
   inspectorClick: 'a click picks and a second opens, always',
   hideNativeProperties: 'the look hides nothing of Obsidian\'s own (docs/DESIGN.md, Conflicts 1)',
   propertiesSort: 'the old screen of every property',
-  // Retired by the direction reset (docs/direction-reset.md); their values are kept under `retired` (settings 102).
-  alwaysShowLabels: 'the reset: a folder is its name, always shown',
-  libraryZoom: 'the reset: one view of a collection, no zoom levels',
-  folderGlyphs: 'the reset: no generated glyphs; a folder is its name or its cover image',
-  tableColumns: 'the reset: a folder\'s notes are one list, not a table',
-  coverFromFolder: 'the reset: a note is its name; covers stand for folders only',
-  stripPlace: 'the reset: the strip is one line, its place always "21 / 24"',
-  stripDetail: 'the reset: the strip is one line, with no property beside it',
-  albumStillToWrite: 'the reset: no switch that only chose what a page showed',
-  propertyValueChips: 'the reset: no colour on a value; a value is its words',
-  propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
-  ...Object.fromEntries(['albumStructure', 'albumRefactor', 'propertyForAlbum', 'smartAlbums', 'libraryCheck', 'footnotes', 'scripts', 'graph3d', 'propertySchemaMarks', 'graphRoutes', 'graphProperties', 'navDropdown', 'menuFilter']
-    .map((k) => [k, 'the settings cut: a feature that only adds commands or marks has no switch; it is always there'])),
-  folderCovers: 'covers are gone: the library is one ruled list, with no grid to show an image in',
-  coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
-  coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
-  coverFromFirstImage: 'covers are gone',
-  notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
-  ...Object.fromEntries(['Chrome', 'Tabs', 'Sidebars', 'Editor', 'Overlays', 'Library', 'Note', 'Strip', 'Panel', 'Canvas', 'Graph', 'Maps', 'Icons', 'Compat']
-    .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
+  ...RETIRED_SINCE_4,
 };
 
-/** The 4.0 keys the direction reset retired: their values are moved under `retired` once, not dropped. */
-const RESET_RETIRED = Object.keys(RETIRED).filter((k) => /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion|coverFromFolder|stripPlace|stripDetail|albumStillToWrite|propertyValueChips|propertyOptions|notePageChips|folderCovers|coverProperty|coverDrop|coverFromFirstImage|albumStructure|albumRefactor|propertyForAlbum|smartAlbums|libraryCheck|footnotes|scripts|graph3d|propertySchemaMarks|graphRoutes|graphProperties|navDropdown|menuFilter)$/.test(k) || /^(alwaysShowLabels|libraryZoom|folderGlyphs|tableColumns|lookRegion)/.test(k));
 
 /** Old keys that live on under another name. */
 export const RENAMED = {};
@@ -103,7 +105,7 @@ export function migrateSettings(saved) {
   // 102: the direction reset retired what it cut; 103: covers; 104: the settings cut. A 4.0 file's values for those keys are kept under `retired`.
   if (version >= REWRITE_VERSION && version < SETTINGS_VERSION) {
     const kept = {};
-    RESET_RETIRED.forEach((k) => { if (saved[k] !== undefined) kept[k] = copy(saved[k]); });
+    Object.keys(RETIRED_SINCE_4).forEach((k) => { if (saved[k] !== undefined) kept[k] = copy(saved[k]); });
     if (Object.keys(kept).length) settings.retired = Object.assign({}, settings.retired, kept);
   }
   settings.settingsVersion = SETTINGS_VERSION;

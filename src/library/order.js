@@ -42,14 +42,6 @@ export function sortedNotes(plugin, folder) {
   return notes;
 }
 
-/** Moves a note to another place in its folder's own order, and makes that the folder's order. */
-export async function moveInOrder(plugin, folder, file, toIndex) {
-  const names = sortedNotes(plugin, folder).map((f) => f.name).filter((n) => n !== file.name);
-  names.splice(Math.max(0, Math.min(names.length, toIndex)), 0, file.name);
-  (plugin.settings.albumOrders || (plugin.settings.albumOrders = {}))[folder.path] = { names };
-  await setSort(plugin, folder, 'own');
-}
-
 /** The pinned files and folders that still exist, in the person's order. */
 export function pins(plugin) {
   const list = Array.isArray(plugin.settings.pinOrder) ? plugin.settings.pinOrder : [];

@@ -6,6 +6,7 @@
 /* their command ids stay, quiet, so a hotkey on one breaks nothing.   */
 /* ------------------------------------------------------------------ */
 
+import { retiredActions } from '../core/actions.js';
 import { Feature } from '../core/feature.js';
 import { choose } from '../ui/choose.js';
 
@@ -45,7 +46,7 @@ export class FolderColours extends Feature {
   actions() {
     return [
       { id: 'set-cover-color', name: 'Set a folder’s colour', on: 'folder', menu: 'Colour…', run: (ctx) => this.chooseColour(ctx.folder) },
-      ...RETIRED_COVER_COMMANDS.map((id) => ({ id, name: `${id.replace(/-/g, ' ')} (retired: covers are gone)`, when: () => false, run: () => {} })),
+      ...retiredActions(RETIRED_COVER_COMMANDS, 'covers are gone'),
     ];
   }
 }

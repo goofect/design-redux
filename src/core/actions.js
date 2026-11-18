@@ -46,6 +46,11 @@ export function actionContext(plugin, action) {
   return ctx ? Object.assign(ctx, { from: 'palette' }) : null;
 }
 
+/** Commands kept only so a hotkey on one is quiet, not broken: never offered, they do nothing. */
+export function retiredActions(ids, why) {
+  return ids.map((id) => ({ id, name: `${id.replace(/-/g, ' ')} (retired: ${why})`, menu: false, when: () => false, run: () => {} }));
+}
+
 /** Whether an action applies to a context. */
 export function applies(action, ctx) {
   return !!ctx && (!action.when || !!action.when(ctx));

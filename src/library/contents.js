@@ -7,7 +7,6 @@
 /* collection: no grid, no covers, no glyphs, counts or numbers.       */
 /* ------------------------------------------------------------------ */
 
-import { TFolder } from 'obsidian';
 import { asButton, el } from '../core/dom.js';
 import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
@@ -19,19 +18,12 @@ export function shownFolders(plugin, folder) {
   return plugin.settings.hideEmptyFolders ? all.filter((f) => plugin.index.count(f) > 0 || plugin.index.subfolders(f).length > 0 || plugin.selection.is(f)) : all;
 }
 
-/** Is this folder or note open (in the page, or as the folder shown) or picked? Either way it is inverted. */
-function marks(screen, entry) {
-  const plugin = screen.plugin;
-  const open = entry instanceof TFolder ? !!plugin.openFolder && plugin.openFolder.path === entry.path : screen.openFile() === entry;
-  return { current: open ? (entry instanceof TFolder ? 'true' : 'page') : false, selected: !open && plugin.selection.is(entry) };
-}
-
-/** Rows for some folders and notes: a folder pressed is gone into, a note opened. */
-function entryRows(screen, host, entries) {
+/** A note's rows, ruled: one pressed opens; the one open is marked, and so is the one picked. */
+function noteRows(screen, host, notes) {
   const list = rows(host);
-  entries.forEach((entry) => {
-    const isFolder = entry instanceof TFolder;
-    row(list, Object.assign({ name: isFolder ? entry.name : entry.basename, path: entry.path, run: (e) => (isFolder ? screen.go(entry) : screen.openNote(entry, e)) }, marks(screen, entry)));
+  notes.forEach((note) => {
+    const open = screen.openFile() === note;
+    row(list, { name: note.basename, path: note.path, run: (e) => screen.openNote(note, e), current: open ? 'page' : false, selected: !open && screen.plugin.selection.is(note) });
   });
   screen.roving(list, '.dr-row', () => 1);
   return list;
@@ -77,5 +69,5 @@ export function drawFolderPage(screen, host, folder) {
   crumbs(screen, host, folder);
   const notes = pinnedFirst(screen.plugin, folder, listedNotes(screen.plugin, folder));
   if (!notes.length) return void sayso(host, { label: folder.path === '/' ? 'No notes at the top of the vault.' : 'No notes in this folder.', button: { text: 'New note', run: () => screen.plugin.files.newNote(folder) } });
-  return entryRows(screen, host, notes);
+  return noteRows(screen, host, notes);
 }

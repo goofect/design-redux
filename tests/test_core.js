@@ -136,7 +136,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
   await check('the look: classes on every window, changed with the settings, gone when the plugin unloads', async () => {
     const w = await world({});
     const body = w.doc.body;
-    assert.ok(body.classList.contains('dr-active') && body.classList.contains('dr-region-library'));
+    assert.ok(body.classList.contains('dr-active') && body.classList.contains('dr-region-workspace'));
     assert.ok(!body.classList.contains('dr-region-chrome'), 'Obsidian\'s regions are on though the look is kept to the plugin');
     const other = new (require('jsdom').JSDOM)('<body class="theme-dark"></body>').window.document;
     w.app.workspace.trigger('window-open', { doc: other });

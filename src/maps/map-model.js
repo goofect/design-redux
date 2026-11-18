@@ -9,7 +9,7 @@
 /* overlaps: a node is a box of fixed size, a level is a column.       */
 /* ------------------------------------------------------------------ */
 
-import { TFile, TFolder } from 'obsidian';
+import { TFile } from 'obsidian';
 import { linkTarget, valuesOf } from '../core/notes.js';
 
 /** In units of the stylesheet's 8px: a node's box, the room between levels and between neighbours. */
@@ -96,4 +96,3 @@ export function foldAll(root, folded) {
   walk(root, true);
 }
 
-export const isFolderPath = (app, path) => app.vault.getAbstractFileByPath(path) instanceof TFolder;

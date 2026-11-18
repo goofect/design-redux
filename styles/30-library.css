@@ -42,12 +42,9 @@
 }
 
 /* ---- The tree: names, each level a step in; a slash after one that holds more. ---- */
-.dr-tree-row {
+.dr-library-body .dr-tree-row {
   --dr-depth: 0; /* how many steps in; the tree sets it on each row */
   grid-template-columns: minmax(0, 1fr);
-}
-
-.dr-library-body .dr-tree-row {
   padding-left: calc(var(--dr-u) + var(--dr-depth) * 2 * var(--dr-u));
 }
 

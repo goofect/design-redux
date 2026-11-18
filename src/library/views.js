@@ -42,7 +42,7 @@ export class LibraryView extends ScreenView {
   getIcon() { return 'library'; }
 
   makeScreen() {
-    return new LibraryScreen(this.plugin, this.contentEl, { place: 'sidebar' });
+    return new LibraryScreen(this.plugin, this.contentEl);
   }
 }
 
@@ -54,7 +54,6 @@ export class BrowseView extends ScreenView {
   makeScreen() {
     return new LibraryScreen(this.plugin, this.contentEl, {
       wide: true,
-      place: 'browse',
       onGo: (folder) => {
         this.plugin.openFolder = folder.path === '/' ? null : folder;
         (this.plugin.screens || []).forEach((s) => s !== this.screen && s.refresh());

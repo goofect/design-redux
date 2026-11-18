@@ -20,7 +20,7 @@ import { drawSearch } from './search.js';
 import { drawTree } from './tree.js';
 
 export class LibraryScreen {
-  /** `opts`: { wide (the browse view), place, onGo(folder) }. */
+  /** `opts`: { wide (the page, not the sidebar), onGo(folder) }. */
   constructor(plugin, host, opts = {}) {
     this.plugin = plugin;
     this.host = host;
@@ -35,7 +35,6 @@ export class LibraryScreen {
     this.pending = false;
     this.stops = [];
     host.classList.add('dr', 'dr-library');
-    if (opts.wide) host.classList.add('is-wide');
   }
 
   get app() {

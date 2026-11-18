@@ -26,8 +26,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.strictEqual(ran, 3);
     const on = dr.iconButton(root, { glyph: 'pin', label: 'Unpin', pressed: true });
     assert.strictEqual(on.getAttribute('aria-pressed'), 'true');
-    dr.setPressed(on, false);
-    assert.strictEqual(on.getAttribute('aria-pressed'), 'false');
     const off = dr.iconButton(root, { glyph: 'next', label: 'Next', disabled: true, run: () => ran++ });
     off.click(); key(off, 'Enter');
     assert.strictEqual(ran, 3, 'a disabled button ran');
