@@ -16,9 +16,9 @@ import { linkTarget, valuesOf } from '../core/notes.js';
 export const MAP = { nodeW: 22, nodeH: 4, gapX: 6, gapY: 1 };
 
 let serial = 0;
-/** A node: { id, label, path, kind: 'folder' | 'note', children, folded, colour }. */
+/** A node: { id, label, path, kind: 'folder' | 'note', children, folded }. */
 export function mapNode(label, path, kind, children = []) {
-  return { id: `n${++serial}`, label, path, kind, children, folded: false, colour: null };
+  return { id: `n${++serial}`, label, path, kind, children, folded: false };
 }
 
 /** A folder as a map: its folders, then its notes, all the way down. Below `open` levels, branches start folded. */
@@ -27,7 +27,6 @@ export function folderMap(plugin, folder, open = 2) {
     const node = mapNode(f.path === '/' ? plugin.app.vault.getName ? plugin.app.vault.getName() : 'Vault' : f.name, f.path, 'folder',
       plugin.index.subfolders(f).map((sub) => build(sub, depth + 1)).concat(plugin.index.notes(f).map((n) => mapNode(n.basename, n.path, 'note'))));
     node.folded = depth >= open && node.children.length > 0;
-    node.colour = plugin.colourOf ? plugin.colourOf(f) : null;
     return node;
   };
   return build(folder, 0);

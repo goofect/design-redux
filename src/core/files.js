@@ -2,7 +2,7 @@
 /* Files: made, moved, put back; and a folder's own note               */
 /*                                                                     */
 /* A folder note is the note inside a folder that is named for it (the */
-/* pattern is a setting). It holds what the folder is: its kind, its   */
+/* pattern is a setting). It holds what the folder is: its            */
 /* description, what it gathers. When the folder is renamed its note   */
 /* is renamed with it.                                                 */
 /* ------------------------------------------------------------------ */

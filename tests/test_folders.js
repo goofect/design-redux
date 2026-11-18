@@ -1,8 +1,8 @@
 /*
- * What a folder is and what can be done to it: its kind, description and
- * what it gathers (read from a folder note until changed, then kept by
- * path, with no note written); merging and splitting, said first and undone
- * in one; a folder's colour; filters and saved views; the library check.
+ * What a folder is and what can be done to it: its description and what
+ * it gathers (read from a folder note, or kept by path, with no note
+ * written); no kind, no colour, no merging or splitting, their commands
+ * kept quiet; filters and saved views; the library check.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -24,62 +24,29 @@ const VAULT = {
 };
 
 (async () => {
-  await check('a folder note is read by the old property names; a change is kept by path and writes no note', async () => {
+  await check('a folder note is read by the old property names, and no note is written', async () => {
     const w = await world(VAULT);
     const albums = feature(w, 'Albums');
     const logic = w.file('Logic');
     const info = albums.info(logic);
-    assert.deepStrictEqual([info.type, info.label, info.description], ['subject', 'Subject', 'Arguments and their forms.']);
+    assert.strictEqual(info.description, 'Arguments and their forms.');
+    assert.ok(!('type' in info) && !('label' in info), 'a folder still has a kind');
     assert.deepStrictEqual([info.includes.map((f) => f.path), info.featured.map((f) => f.path), info.related.map((f) => f.path)], [['Reading/Hume.md'], ['Logic/Validity.md'], ['Reading']]);
     assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables'], 'featured first, then its own, and nothing from elsewhere');
     assert.strictEqual(w.app.commands.commands['design-redux:album-include-note'].checkCallback(true), false, 'a note is still shown in another folder');
-    assert.strictEqual(w.plugin.describe(logic), 'Subject · Arguments and their forms.');
-    const before = w.text('Logic/Logic.md');
-    albums.chooseKind(logic);
-    await answer(w, (m) => m.pick(dr.ALBUM_KINDS[1]));
-    assert.strictEqual(albums.info(logic).type, 'project');
-    assert.deepStrictEqual(w.plugin.settings.albums.Logic.includes, ['Reading/Hume.md'], 'the change did not carry over what the note said');
-    assert.strictEqual(w.text('Logic/Logic.md'), before, 'the folder note was rewritten');
-    w.plugin.settings.albumKeyNames = { type: 'kind' };
-    assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).type, undefined, 'a renamed property is still read under its old name');
+    assert.strictEqual(w.plugin.describe(logic), 'Arguments and their forms.');
+    w.plugin.settings.albumKeyNames = { description: 'about' };
+    assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).description, undefined, 'a renamed property is still read under its old name');
   });
 
-  await check('merging: said first, names taken get a number, the emptied folder goes, and one Undo puts it all back', async () => {
+  await check('no kind, no colour, no merging or splitting, no covers: their commands kept but never offered', async () => {
     const w = await world(VAULT);
-    const refactor = feature(w, 'AlbumRefactor');
-    const plan = dr.planMoves(w.app, w.file('Logic').children, 'Reading');
-    assert.deepStrictEqual(plan.map((m) => [m.from, m.to, m.renamed]), [['Logic/Logic.md', 'Reading/Logic.md', false], ['Logic/Truth tables.md', 'Reading/Truth tables.md', false], ['Logic/Validity.md', 'Reading/Validity 1.md', true]]);
-    const merging = refactor.merge(w.file('Logic'));
-    await answer(w, (m) => m.pick(w.file('Reading')));
-    const said = obsidian.Modal.open[0].contentEl.querySelector('p').textContent;
-    assert.ok(/3 items move into Reading/.test(said) && /1 name is taken/.test(said), said);
-    obsidian.Modal.open[0].contentEl.querySelector('.is-primary').click();
-    await merging;
-    assert.ok(w.file('Reading/Validity 1.md') && !w.file('Logic'));
-    await w.plugin.lastUndo.run();
-    assert.ok(w.file('Logic/Validity.md') && w.file('Logic/Logic.md') && !w.file('Reading/Validity 1.md'), 'the merge was not put back');
-  });
-
-  await check('splitting: the picked notes move into a new folder beside the old one', async () => {
-    const w = await world(VAULT);
-    const splitting = feature(w, 'AlbumRefactor').split(w.file('Logic'));
-    await answer(w, (m) => { m.contentEl.querySelectorAll('.dr-row')[0].click(); m.contentEl.querySelector('.is-primary').click(); });
-    await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Tables'; m.contentEl.querySelector('.is-primary').click(); });
-    await splitting;
-    assert.ok(w.file('Tables/Truth tables.md') && w.file('Logic/Validity.md'));
-  });
-
-  await check('a folder\'s colour, for a map; covers gone, their commands kept but never offered', async () => {
-    const w = await world(VAULT);
-    ['set-cover-image', 'set-folder-cover', 'repair-cover-link'].forEach((id) => {
+    ['album-set-type', 'set-cover-color', 'album-merge', 'album-split', 'set-cover-image', 'set-folder-cover', 'repair-cover-link'].forEach((id) => {
       const c = w.app.commands.commands[`design-redux:${id}`];
       assert.ok(c, `${id} is not kept`);
       assert.strictEqual(c.checkCallback ? c.checkCallback(true) : false, false, `${id} still offers itself`);
     });
-    w.plugin.settings.coverColors = { Logic: '#fa2d48', Reading: 'green', Empty: '#777777' };
-    // A folder's colour is one of Obsidian's names; an old hex becomes the nearest, a grey none.
-    assert.deepStrictEqual(['Logic', 'Reading', 'Empty'].map((p) => w.plugin.colourOf(w.file(p))), ['red', 'green', null]);
-    assert.deepStrictEqual(['#4f6d8f', '#b0703a', '#4d7f80', '#8a6f52', '#8040c0'].map(dr.colourOf), ['blue', 'orange', 'cyan', 'orange', 'purple']);
+    assert.strictEqual(w.plugin.colourOf, undefined, 'a folder still has a colour');
   });
 
   await check('a property for the whole folder: given where there is none, asked about where there is, one Undo', async () => {

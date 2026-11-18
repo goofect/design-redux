@@ -1,39 +1,34 @@
 /* ------------------------------------------------------------------ */
-/* What a folder is: its kind, its description, what it gathers        */
+/* What a folder is: its description, what it gathers                 */
 /*                                                                     */
-/* A folder can say what it is (a subject, a project, a reference, an  */
-/* index), what it is for, which folders sit beside it, and which of   */
-/* its notes to start with. The plugin keeps this by the folder's      */
+/* A folder can say what it is for, which folders sit beside it, and   */
+/* which of its notes to start with. The plugin keeps this by the folder's      */
 /* path (settings.albums); a folder note from before is read, by the   */
-/* same property names as ever, until the first change carries what    */
-/* it says over. Nothing is written into a note.                       */
+/* same property names as ever. Nothing is written into a note. A      */
+/* folder's kind is gone; its command id stays, quiet. So are the old  */
+/* cover and colour commands.                                          */
 /* ------------------------------------------------------------------ */
 
 import { TFile, TFolder } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { linkTarget, noteProps, propOf, valuesOf } from '../core/notes.js';
 import { retiredActions } from '../core/actions.js';
-import { choose } from '../ui/choose.js';
 
-export const ALBUM_KINDS = [
-  { id: 'subject', label: 'Subject' },
-  { id: 'project', label: 'Project' },
-  { id: 'reference', label: 'Reference' },
-  { id: 'index', label: 'Index' },
-];
+/** The old cover and colour commands: kept so a hotkey on one is quiet, not broken; never offered. */
+const RETIRED_COVER_COMMANDS = ['set-cover-image', 'remove-cover-image', 'cover-from-first-image', 'set-folder-cover', 'remove-folder-cover', 'repair-cover-link', 'set-cover-color'];
 
 /** The statuses that mean a note is done. */
 export const DONE_VALUES = ['done', 'complete', 'completed', 'finished', 'read'];
 
 /** The folder-note properties a folder's structure is read from; a vault may have renamed them (settings.albumKeyNames). */
-export const ALBUM_KEY_DEFAULTS = { type: 'album', description: 'description', includes: 'includes', related: 'related', featured: 'featured' };
+export const ALBUM_KEY_DEFAULTS = { description: 'description', includes: 'includes', related: 'related', featured: 'featured' };
 
 export class Albums extends Feature {
   enable() {
     this.plugin.gathering = (folder) => this.info(folder);
     this.plugin.describe = (folder) => {
       const info = this.info(folder);
-      return [info.label, info.description, this.progress(folder, info)].filter(Boolean).join(' · ') || null;
+      return [info.description, this.progress(folder)].filter(Boolean).join(' · ') || null;
     };
     this.add(() => {
       delete this.plugin.gathering;
@@ -51,8 +46,6 @@ export class Albums extends Feature {
     if (!note) return null;
     const fm = noteProps(this.app, note);
     const out = {};
-    const one = (field) => String(valuesOf(propOf(fm, this.key(field)))[0] || '');
-    if (one('type')) out.type = one('type').toLowerCase();
     const description = valuesOf(propOf(fm, this.key('description'))).join(' ');
     if (description) out.description = description;
     ['includes', 'related', 'featured'].forEach((field) => {
@@ -71,13 +64,11 @@ export class Albums extends Feature {
     return (this.settings.albums || {})[folder.path] || this.fromNote(this.plugin.files.folderNote(folder)) || {};
   }
 
-  /** { type, label, description, includes, related, featured, missing }: files and folders that still exist, and the names of those that don't. */
+  /** { description, includes, related, featured, missing }: files and folders that still exist, and the names of those that don't. */
   info(folder) {
-    const empty = { type: '', label: '', description: '', includes: [], related: [], featured: [], missing: [] };
+    const empty = { description: '', includes: [], related: [], featured: [], missing: [] };
     if (!folder || folder.path === '/') return empty;
     const data = this.data(folder);
-    const type = String(data.type || '').toLowerCase();
-    const known = ALBUM_KINDS.find((k) => k.id === type);
     const missing = [];
     const links = (field) => (Array.isArray(data[field]) ? data[field] : []).map((p) => {
       const target = this.app.vault.getAbstractFileByPath(p) || this.app.vault.getAbstractFileByPath(`${p}.md`);
@@ -85,8 +76,6 @@ export class Albums extends Feature {
       return target;
     }).filter((t, i, all) => t && t !== folder && all.indexOf(t) === i);
     return {
-      type,
-      label: known ? known.label : type ? type.charAt(0).toUpperCase() + type.slice(1) : '',
       description: String(data.description || ''),
       includes: links('includes').flatMap((t) => (t instanceof TFolder ? this.plugin.index.notes(t) : [t])),
       related: links('related').filter((t) => t instanceof TFolder),
@@ -101,17 +90,16 @@ export class Albums extends Feature {
     return valuesOf(this.plugin.notes.get(file, 'status')).some((v) => DONE_VALUES.includes(v.toLowerCase()));
   }
 
-  /** A project's "8 of 20 done"; with rollups on, any folder's, and the span of dates one property holds. */
-  progress(folder, info) {
-    const rollups = !!this.settings.albumRollups;
-    if (info.type !== 'project' && !rollups) return null;
+  /** With rollups on, a folder's "8 of 20 done", and the span of dates one property holds. */
+  progress(folder) {
+    if (!this.settings.albumRollups) return null;
     const notes = this.plugin.index.notes(folder);
     if (!notes.length) return null;
     const parts = [];
     const done = notes.filter((f) => this.isDone(f)).length;
-    if (info.type === 'project' || done) parts.push(`${done} of ${notes.length} done`);
+    if (done) parts.push(`${done} of ${notes.length} done`);
     const key = String(this.settings.rollupDateKey || '').trim();
-    if (rollups && key) {
+    if (key) {
       const dates = notes.flatMap((f) => valuesOf(this.plugin.notes.get(f, key))).filter((v) => /^\d{4}-\d{2}-\d{2}/.test(v)).map((v) => v.slice(0, 10)).sort();
       const day = (iso) => new Date(`${iso}T12:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
       if (dates.length) parts.push(dates[0] === dates[dates.length - 1] ? `${key} ${day(dates[0])}` : `${key} ${day(dates[0])} – ${day(dates[dates.length - 1])}`);
@@ -119,29 +107,14 @@ export class Albums extends Feature {
     return parts.join(' · ') || null;
   }
 
-  /** Changes what a folder is. The first change carries over whatever its folder note said. */
-  async change(folder, edit) {
-    const albums = this.settings.albums || (this.settings.albums = {});
-    const data = Object.assign({}, this.data(folder));
-    edit(data);
-    Object.keys(data).forEach((k) => (data[k] == null || data[k] === '' || (Array.isArray(data[k]) && !data[k].length)) && delete data[k]);
-    albums[folder.path] = data;
-    await this.plugin.saveSettings();
-  }
-
-  async chooseKind(folder) {
-    const none = { id: '', label: 'No kind' };
-    const kind = await choose(this.app, ALBUM_KINDS.concat(none), { placeholder: `What kind of folder is ${folder.name}?`, name: (k) => k.label });
-    if (kind) await this.change(folder, (d) => (d.type = kind.id));
-  }
-
   actions() {
     return [
-      { id: 'album-set-type', name: 'Set what kind of folder this is…', on: 'folder', menu: 'Kind…', run: (ctx) => this.chooseKind(ctx.folder) },
+      ...retiredActions(['album-set-type'], 'a folder has no kind'),
+      ...retiredActions(RETIRED_COVER_COMMANDS, 'covers and colours are gone'),
       ...retiredActions(['album-include-note'], 'a folder shows only the notes directly in it'),
     ];
   }
 }
 Albums.title = 'Folders as collections';
 Albums.section = 'Library';
-Albums.about = 'A folder’s kind and description, and the notes to start with.';
+Albums.about = 'A folder’s description, and the notes to start with.';

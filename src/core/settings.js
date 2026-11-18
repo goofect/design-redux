@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'can
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 106;
+export const SETTINGS_VERSION = 107;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -29,7 +29,6 @@ export const DEFAULTS = {
 
   // The library
   library: true,
-  coverColors: {}, // by folder path: one of Obsidian's named colours (red, orange, yellow, green, cyan, blue, purple, pink), or an old hex kept as it was
   defaultSort: 'name',
   albumSorts: {}, // by folder path: the order chosen there
   albumSortMemory: true,
@@ -88,7 +87,7 @@ export const DEFAULTS = {
 };
 
 /** Settings whose keys are paths: a rename moves the key, a delete drops it. */
-export const PATH_KEYED = ['albums', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['albums', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'panelFolderViews', 'pagesOpen'];
 
 /** `path` after `from` became `to`: itself, or moved with the folder it was under. */
 export function movedPath(path, from, to) {

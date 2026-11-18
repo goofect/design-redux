@@ -202,8 +202,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const base = ['Open', 'New note', 'New folder', 'Pin', 'Sort by', 'Rename…', 'Move to…', 'Delete folder'];
     assert.deepStrictEqual(menu.titles().filter((t) => base.includes(t)), base);
     assert.ok(!menu.titles().includes('Glyph…'), 'a folder still offers a glyph');
-    ['Kind…', 'Merge into…', 'Split notes off…'].forEach((t) => assert.ok(menu.titles().includes(t), `the folder menu lacks ${t}`));
-    assert.ok(!menu.titles().includes('Cover…'), 'a folder still offers a cover');
+    ['Cover…', 'Colour…', 'Kind…', 'Merge into…', 'Split notes off…'].forEach((t) => assert.ok(!menu.titles().includes(t), `a folder still offers ${t}`));
     await menu.click('Pin');
     assert.deepStrictEqual(w.plugin.settings.pinOrder, ['Logic']);
     // A pin counts in its own folder: first there, and nowhere else.

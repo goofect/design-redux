@@ -328,10 +328,8 @@ const VAULT = {
     const node = (label) => Array.from(view.contentEl.querySelectorAll('.dr-map-node')).find((n) => n.textContent.startsWith(label));
     const root = node('Big');
     assert.strictEqual(root.getAttribute('aria-selected'), 'true');
-    // Words on the ground: no glyph on any node. A folder's colour is a small square before its word.
-    view.root.children.find((c) => c.label === 'F0').colour = 'green';
-    view.draw();
-    assert.ok(node('F0').querySelector(':scope > .dr-map-colour[data-colour="green"]'), 'a folder\'s colour is not the square before its word');
+    // Words on the ground: no glyph and no colour on any node.
+    assert.strictEqual(view.contentEl.querySelectorAll('.dr-map-node svg, .dr-map-node [data-colour]').length, 0);
     key(root, 'ArrowRight');
     assert.ok(node('F0').getAttribute('aria-selected') === 'true' && w.doc.activeElement === node('F0'));
     key(node('F0'), 'ArrowDown');

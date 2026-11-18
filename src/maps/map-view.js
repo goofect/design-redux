@@ -2,8 +2,7 @@
 /* The map's view                                                      */
 /*                                                                     */
 /* Nodes are words on the ground, links 1px ink lines, the node picked  */
-/* inverted, nothing else; a folder's colour, the person's own, a small */
-/* square before its word.                                              */
+/* inverted, nothing else.                                             */
 /* The toolbar is the plugin's icon buttons. Each node is placed by    */
 /* two custom properties the script sets (its column and row in        */
 /* units), the one kind of inline style the plugin allows itself. The  */
@@ -116,10 +115,6 @@ export class MapView extends ItemView {
     box.style.setProperty('--dr-y', String(p.y));
     box.dataset.id = node.id;
     box.dataset.path = node.path;
-    if (node.colour) {
-      box.dataset.colour = node.colour;
-      el(box, 'span', 'dr-map-colour', '').dataset.colour = node.colour;
-    }
     // A press picks (a second folds); the keys are the tree's alone (onKey), so none is handled twice.
     box.addEventListener('click', () => this.pick(node, true));
     box.setAttribute('role', 'treeitem');

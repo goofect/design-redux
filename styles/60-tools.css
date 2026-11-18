@@ -120,22 +120,6 @@
   color: inherit;
 }
 
-/* A folder's colour, the person's own: a small square of it before its word. The colour is Obsidian's name for it, not the plugin's. */
-.dr-map-colour {
-  flex: none;
-  width: var(--dr-u);
-  height: var(--dr-u);
-}
-
-.dr-map-colour[data-colour="red"] { background: var(--color-red); }
-.dr-map-colour[data-colour="orange"] { background: var(--color-orange); }
-.dr-map-colour[data-colour="yellow"] { background: var(--color-yellow); }
-.dr-map-colour[data-colour="green"] { background: var(--color-green); }
-.dr-map-colour[data-colour="cyan"] { background: var(--color-cyan); }
-.dr-map-colour[data-colour="blue"] { background: var(--color-blue); }
-.dr-map-colour[data-colour="purple"] { background: var(--color-purple); }
-.dr-map-colour[data-colour="pink"] { background: var(--color-pink); }
-
 /* ---- The rules sheet: each rule its sentence, its toggle beside it; a new one written as a sentence with fields. ---- */
 .dr-rule {
   display: flex;

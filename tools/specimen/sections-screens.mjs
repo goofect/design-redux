@@ -45,7 +45,6 @@ const SETTINGS = {
   panelPrimaryProps: 'status, course, week',
   propertyOptions: { status: { draft: { color: 'orange' }, done: { color: 'green' } } },
   propertySchemas: { Logic: [{ key: 'week', type: 'number' }] },
-  coverColors: { 'Projects/Garden': 'moss' },
   recentSearches: ['truth', 'hume'],
   propertyRules: [
     { id: 'r1', on: true, name: 'When a note comes into Logic, set course', when: { kind: 'folder', folder: 'Logic' }, set: [{ key: 'course', value: 'Logic' }] },
@@ -134,7 +133,7 @@ export async function screens() {
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
       `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)
-    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked inverted, a folded branch counted, a folder’s colour, the person’s own, a small square before its word. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',
+    + section('screens-maps', 'The map and the 3D graph', 'A folder as a tree: words on the ground joined by 1px lines, the one picked inverted, a folded branch counted. The 3D graph: ink squares on lines; the picked note and the open one larger, inverted.',
       `<div class="spec-states is-close">${frame('the map of Projects, Thesis picked', 720, 440, mapHtml)}${frame('the 3D graph', 720, 448, graph)}</div>`)
     + section('screens-sheets', 'A sheet, and the settings page', 'Property rules: each said as a sentence, its toggle beside it; a new one written as a sentence with fields. The settings page: the features’ switches in two columns, and nothing else.',
       `<div class="spec-states is-close">${frame('property rules', 400, null, rules)}${frame('the settings page', 680, null, settingsPage)}</div>`);
