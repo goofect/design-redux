@@ -251,3 +251,8 @@ Open, for session 5 (they need the real app):
 ## Session 5 (cutover)
 - Real Obsidian 1.15.1 (`tests/obsidian/`: `app`, `note`): the look on main and popout windows and gone on unload, theme mode, library and browse view, pages hidden in reading view, 3D graph, routes on the real graph, the map. It found a bug the simulation could not: `Graph3DView.open` and `MapView.open` overrode Obsidian's own `View.open`, so neither opened. Renamed `openNote` / `openNode`.
 - Not done: the migration on the owner's vault copy (the path was never given), and a real paste for the image router and the graph filter field.
+
+## The look from the owner's screenshot (2026-11-17)
+- Monospace at 13px, one size; a name that matters is bold. Six colours a scheme: ground, ink, a grey for words, a light rule, a lighter fill for open or picked, red.
+- Two framed panes. The sidebar: "Library", the folders as a tree (a chevron glyph, the eleventh). The page: the folder's name, the path as boxed words, only its notes as ruled rows. No buttons at rest; search is the command search-library.
+- Cut completely: the grid and covers (faces, cells, image drop, the cover check). folderCovers, coverProperty, coverDrop, coverFromFirstImage retired at settings 103, values kept under `retired`; the six cover command ids kept, quiet. Folder colours for maps stay (library/colours.js).

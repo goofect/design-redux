@@ -1,22 +1,23 @@
 /* ------------------------------------------------------------------ */
 /* The library screen: one place, one view of it                       */
 /*                                                                     */
-/* What the sidebar and the browse view both are: a place you are in   */
-/* (`at`). At the vault's top the sidebar is its search field and the  */
-/* folders' names; the browse view a head (search, more) and the grid. */
-/* A folder is its page: a head (back, more), its name large, and what */
-/* it holds as rows. Drawing reads the index and nothing else, and is  */
-/* put off to one turn however many things changed at once.            */
+/* The sidebar is a pane headed "Library" holding the vault's folders  */
+/* as a tree. The browse view is a place you are in (`at`), headed by  */
+/* its name: the path to it as boxed words, then its notes as ruled    */
+/* rows, the vault's top like any folder. No buttons at rest;          */
+/* search is a command. Drawing reads the index and nothing else, and  */
+/* is put off to one turn however many things changed at once.         */
 /* ------------------------------------------------------------------ */
 
 import { Keymap, TFile, TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { headRow } from '../ui/head.js';
 import { rove } from '../ui/keys.js';
-import { contentRows, drawFolderPage, drawGrid } from './contents.js';
+import { drawFolderPage } from './contents.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
 import { drawSearch } from './search.js';
+import { drawTree } from './tree.js';
 
 export class LibraryScreen {
   /** `opts`: { wide (the browse view), place, onGo(folder) }. */
@@ -33,6 +34,7 @@ export class LibraryScreen {
     this.filterName = null;
     this.pending = false;
     this.stops = [];
+    this.expanded = new Set(['/']);
     host.classList.add('dr', 'dr-library');
     if (opts.wide) host.classList.add('is-wide');
   }
@@ -132,19 +134,15 @@ export class LibraryScreen {
     clear(host);
     const folder = this.folder();
     const top = folder.path === '/' && !this.filter;
-    const wide = !!this.opts.wide;
-    const more = { glyph: 'more', label: 'More', run: (e) => showMenu(folderMenu(this.plugin, folder, this), e) };
-    // The head holds a screen's few controls and a line under it; the sidebar's top has none: its search field is its one control.
-    if (top && wide) headRow(host, { buttons: [{ glyph: 'search', label: 'Search', pressed: this.query !== null, run: () => this.search(this.query === null ? '' : null) }, more] });
-    else if (!top) headRow(host, { back: () => this.back(), buttons: [more] });
-    this.body = el(host, 'div', 'dr-library-body');
-    if (top && !wide) drawSearch(this, this.body, (idle) => contentRows(this, idle, folder));
-    else if (top && this.query !== null) drawSearch(this, this.body);
-    else if (top) drawGrid(this, this.body, folder);
-    else if (this.filter) {
-      el(this.body, 'div', 'dr-display dr-folder-name', this.filterName || 'Filtered');
-      drawFiltered(this, this.body);
-    } else drawFolderPage(this, this.body, folder);
+    // The head: the pane's name, bold, a line under it, no buttons.
+    const name = !this.opts.wide ? 'Library' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
+    const pane = el(host, 'div', 'dr-pane');
+    headRow(pane, { label: name });
+    this.body = el(pane, 'div', 'dr-library-body');
+    if (this.query !== null) drawSearch(this, this.body);
+    else if (!this.opts.wide) drawTree(this, this.body);
+    else if (this.filter) drawFiltered(this, this.body);
+    else drawFolderPage(this, this.body, folder);
     this.body.addEventListener('contextmenu', (e) => this.menuFor(e));
     this.body.addEventListener('keydown', (e) => {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);

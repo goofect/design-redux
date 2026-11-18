@@ -16,7 +16,7 @@ export function diagnosticsText(plugin) {
     `Look: ${s.look}, ${s.lookScope}`,
     `Features on: ${on.join(', ')}`,
     `Notes: ${plugin.index.markdown().length}; folders: ${plugin.index.folders().length}`,
-    `Settings: ${Object.keys(s).length} keys; path-keyed entries: ${['folderGlyphs', 'folderCovers', 'albums', 'albumOrders', 'propertySchemas'].map((k) => `${k} ${Object.keys(s[k] || {}).length}`).join(', ')}`,
+    `Settings: ${Object.keys(s).length} keys; path-keyed entries: ${['albums', 'albumOrders', 'propertySchemas'].map((k) => `${k} ${Object.keys(s[k] || {}).length}`).join(', ')}`,
     `Old settings converted: ${plugin.legacyKept === true ? 'yes, copy kept' : plugin.legacyKept === false ? 'no: the copy could not be written' : 'none to convert'}`,
   ];
   return lines.join('\n');

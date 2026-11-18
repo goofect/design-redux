@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* The library's two views: the sidebar, and the browse view           */
 /*                                                                     */
-/* Both are one LibraryScreen: the sidebar a list of names, the browse */
-/* view the window's width, its folders a grid. One job each.          */
+/* Both are one LibraryScreen: the sidebar the folders as a tree, the  */
+/* browse view the folder shown in the page. One job each.             */
 /* ------------------------------------------------------------------ */
 
 import { ItemView } from 'obsidian';
@@ -55,7 +55,10 @@ export class BrowseView extends ScreenView {
     return new LibraryScreen(this.plugin, this.contentEl, {
       wide: true,
       place: 'browse',
-      onGo: (folder) => { this.plugin.openFolder = folder.path === '/' ? null : folder; },
+      onGo: (folder) => {
+        this.plugin.openFolder = folder.path === '/' ? null : folder;
+        (this.plugin.screens || []).forEach((s) => s !== this.screen && s.refresh());
+      },
     });
   }
 
@@ -73,6 +76,7 @@ export class BrowseView extends ScreenView {
 
   async onClose() {
     this.plugin.openFolder = null;
+    (this.plugin.screens || []).forEach((s) => s !== this.screen && s.refresh());
     await super.onClose();
   }
 }

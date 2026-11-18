@@ -1,9 +1,9 @@
 /*
- * The direction reset's checks (docs/direction-reset.md, "Checks"), so the
- * plugin stays reduced: each screen's controls at rest within its budget;
- * exactly four colours a scheme; exactly two sizes; a line only on the
- * structural classes the tokens part lists; at most twelve glyphs, and only
- * the plugin's own on its controls; the settings tab on one screen.
+ * The look's checks (docs/DESIGN.md), so the plugin stays reduced: each
+ * screen's controls at rest within its budget; exactly six colours a scheme;
+ * one size; a line only on the structural classes the tokens part lists; at
+ * most twelve glyphs, and only the plugin's own on its controls; the
+ * settings tab on one screen.
  */
 const fs = require('fs');
 const path = require('path');
@@ -53,15 +53,15 @@ const VAULT = {
 };
 
 (async () => {
-  await check('the budget of controls at rest: sidebar 1, a folder 2, the browse view 2, a note 0, the panel 0', async () => {
+  await check('the budget of controls at rest: none on the sidebar, a folder, the vault\'s grid, a note, the panel', async () => {
     const w = await world(VAULT, { settingsVersion: 102, contextStrip: true, notePages: true, notePage: true });
     const sidebar = w.app.workspace.getLeavesOfType('design-redux-library')[0].view.screen;
-    assert.deepStrictEqual(labels(sidebar.host), ['Notes and folders'], 'the sidebar');
-    sidebar.go(w.file('Logic'));
-    assert.deepStrictEqual(labels(sidebar.host), ['Back', 'More'], 'a folder');
+    assert.deepStrictEqual(labels(sidebar.host), [], 'the sidebar');
     const library = w.plugin.features.find((f) => f.constructor.name === 'Library');
     const browse = (await library.browse(null)).view.screen;
-    assert.deepStrictEqual(labels(browse.host), ['Search', 'More'], 'the browse view');
+    assert.deepStrictEqual(labels(browse.host), [], 'the vault\'s grid');
+    browse.go(w.file('Logic'));
+    assert.deepStrictEqual(labels(browse.host), [], 'a folder');
     const leaf = w.app.workspace.getLeaf();
     await leaf.openFile(w.file('Logic/Truth tables.md'));
     await settle();
@@ -89,27 +89,27 @@ const VAULT = {
     sheet.close();
   });
 
-  check('each scheme declares exactly four colours: the ground, the ink, the grey, the error\'s red', () => {
+  check('each scheme declares exactly six colours: the ground, the ink, the grey, the rule, the fill, the error\'s red', () => {
     const tokens = bare(part('00-tokens.css'));
     const schemes = ['light', 'dark'].map((mode) => {
       const m = new RegExp(`body\\.dr-active\\.theme-${mode}\\s*\\{([^}]*)\\}`).exec(tokens);
       assert.ok(m, `no ${mode} scheme`);
       return Object.fromEntries(Array.from(m[1].matchAll(/--([a-z-]+):\s*(#[0-9A-Fa-f]{6})/g)).map((x) => [x[1], x[2].toUpperCase()]));
     });
-    assert.deepStrictEqual(schemes.map((s) => Object.keys(s)), [['dr-bg', 'dr-ink', 'dr-muted', 'dr-error'], ['dr-bg', 'dr-ink', 'dr-muted', 'dr-error']]);
+    assert.deepStrictEqual(schemes.map((s) => Object.keys(s)), [['dr-bg', 'dr-ink', 'dr-muted', 'dr-rule', 'dr-fill', 'dr-error'], ['dr-bg', 'dr-ink', 'dr-muted', 'dr-rule', 'dr-fill', 'dr-error']]);
     assert.deepStrictEqual([schemes[0]['dr-bg'], schemes[0]['dr-ink'], schemes[1]['dr-bg'], schemes[1]['dr-ink']], ['#FFFFFF', '#000000', '#000000', '#FFFFFF']);
     const values = (tokens.match(/#[0-9A-Fa-f]{3,8}\b/g) || []).length;
-    assert.strictEqual(values, 8, `${values} colour values in the tokens part, not the schemes' eight`);
+    assert.strictEqual(values, 12, `${values} colour values in the tokens part, not the schemes' twelve`);
     parts.filter((p) => p !== '00-tokens.css').forEach((p) => assert.ok(!/#[0-9A-Fa-f]{3,8}\b|rgba?\(|hsla?\(/.test(bare(part(p))), `a colour value in ${p}`));
   });
 
-  check('exactly two font sizes, and nothing between', () => {
+  check('one font size: a name that matters is bold, never bigger', () => {
     const sizes = (bare(part('00-tokens.css')).match(/--dr-size[a-z-]*:\s*[^;]+/g) || []);
-    assert.deepStrictEqual(sizes, ['--dr-size: 13px', '--dr-size-display: 48px']);
+    assert.deepStrictEqual(sizes, ['--dr-size: 13px']);
     parts.forEach((p) => {
       (bare(part(p)).match(/(?:^|[^-a-z])font(?:-size)?\s*:[^;]+/gm) || []).forEach((decl) => {
         const d = decl.trim().replace(/^[^a-z]+/, '');
-        assert.ok(/^font-size\s*:\s*var\(--dr-size(?:-display)?\)$|^font: inherit$/.test(d), `${p}: ${d}`);
+        assert.ok(/^font-size\s*:\s*var\(--dr-size\)$|^font: inherit$/.test(d), `${p}: ${d}`);
       });
     });
   });

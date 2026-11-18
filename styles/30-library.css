@@ -1,9 +1,10 @@
 /* ------------------------------------------------------------------ */
-/* The library: one place, one view of it                              */
+/* The library: two framed panes                                       */
 /*                                                                     */
-/* The sidebar: its search field, then the folders' names. A folder:   */
-/* its head (back, more), its name large, what it holds. The browse    */
-/* view: its head (search, more), then the grid.                       */
+/* Each a box ruled in ink, set in from its edges, its name bold in    */
+/* its head. The sidebar: the folders as a tree. The page: the path    */
+/* as boxed words, then the folder's notes as ruled rows; the vault's  */
+/* top the same. No buttons at rest.                                   */
 /* ------------------------------------------------------------------ */
 
 .dr-library {
@@ -11,23 +12,88 @@
   flex-direction: column;
   min-width: 0;
   height: 100%;
+  padding: var(--dr-gutter);
+}
+
+/* The pane: a box with a 1px ink rule, the same frame as every pane the look draws. */
+.dr-library .dr-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  border: var(--dr-hair) solid var(--dr-ink);
 }
 
 .dr-library-body {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-}
-
-/* The sidebar's search field, its one control, at its top. */
-.dr-search {
   padding: var(--dr-u) var(--dr-gutter) var(--dr-gutter);
 }
 
-/* A folder's name on its page: the display size, left, wrapped where it is long. */
-.dr-folder-name {
-  padding: var(--dr-gutter) var(--dr-gutter) var(--dr-u);
-  overflow-wrap: anywhere;
+/* Rows in a pane run between its gutters, so their rules do too. */
+.dr-library-body .dr-row {
+  padding: 0;
+}
+
+/* The search field, when the command asks for it. */
+.dr-search {
+  padding: 0 0 var(--dr-u);
+}
+
+/* ---- The tree: a chevron and a name, each level a step in. ---- */
+.dr-tree-row {
+  --dr-depth: 0; /* how many steps in; the tree sets it on each row */
+  grid-template-columns: var(--dr-icon) minmax(0, 1fr);
+}
+
+.dr-library-body .dr-tree-row {
+  padding-left: calc(var(--dr-depth) * 2 * var(--dr-u));
+}
+
+.dr-twist {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dr-icon);
+  height: var(--dr-icon);
+}
+
+.dr-twist > .dr-glyph {
+  width: calc(1.5 * var(--dr-u));
+  height: calc(1.5 * var(--dr-u));
+}
+
+/* Open: the chevron points down. A quarter turn is not motion: it is drawn that way. */
+.dr-tree-row[aria-expanded="true"] > .dr-twist > .dr-glyph {
+  transform: rotate(90deg);
+}
+
+/* ---- The path: boxed words, a slash between, the last one where you are. ---- */
+.dr-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--dr-u);
+  padding-bottom: calc(3 * var(--dr-u));
+}
+
+.dr-crumb {
+  padding: 0 calc(0.5 * var(--dr-u));
+  border: var(--dr-hair) solid var(--dr-ink);
+  color: var(--dr-muted);
+  cursor: pointer;
+}
+
+.dr-crumb[aria-current] {
+  color: var(--dr-ink);
+}
+
+@media (any-hover: hover) {
+  .dr-crumb:hover {
+    text-decoration: underline;
+    text-underline-offset: var(--dr-ring);
+  }
 }
 
 /* Where a dragged note would land: the focus outline, inside. */
@@ -42,5 +108,5 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--dr-u);
-  padding: 0 var(--dr-gutter) var(--dr-u);
+  padding: 0 0 var(--dr-u);
 }

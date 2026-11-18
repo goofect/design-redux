@@ -39,6 +39,9 @@ export class Library extends Feature {
       roving: () => {},
     }, host, folder);
     this.add(() => delete this.plugin.drawFolder);
+    // For the sidebar's tree: a folder's name pressed shows it in the page.
+    this.plugin.showFolder = (folder) => this.browse(folder);
+    this.add(() => delete this.plugin.showFolder);
     // For the strip: where a note stands in its folder.
     this.plugin.placeOf = (file) => neighbours(this.plugin, file);
     this.add(() => delete this.plugin.placeOf);
@@ -90,7 +93,8 @@ export class Library extends Feature {
     const screen = () => this.activeScreen();
     return [
       { id: 'open-library', name: 'Open library', run: () => this.openSidebar() },
-      { id: 'browse-vault', name: 'Browse vault as a grid', run: () => this.browse(null) },
+      { id: 'browse-vault', name: 'Show the vault in the page', run: () => this.browse(null) },
+      { id: 'search-library', name: 'Search the library', run: async () => { const leaf = await this.browse(null); if (leaf && leaf.view.screen) leaf.view.screen.search(''); } },
       { id: 'reset-layout', name: 'Put the library back in place', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
         await this.openSidebar();
@@ -110,4 +114,4 @@ export class Library extends Feature {
 Library.key = 'library';
 Library.title = 'Library';
 Library.section = 'Library';
-Library.about = 'Folders and notes: a list in the sidebar, a grid in the page.';
+Library.about = 'Folders and notes: a tree in the sidebar, a folder\'s notes in the page.';

@@ -1,19 +1,16 @@
 /* ------------------------------------------------------------------ */
 /* What a place in the library holds, drawn the one way it is drawn    */
 /*                                                                     */
-/* The vault's top: its folders' names as rows (pinned ones first),    */
-/* its loose notes after them; at the window's width, its folders as a */
-/* grid of names set large, or the cover images the person set. A      */
-/* folder's page: its name large, then its folders and notes as rows.  */
-/* No levels, no glyphs, no counts, no numbers.                        */
+/* A folder's page, the vault's top among them: the path to it as     */
+/* boxed words, then its notes as ruled rows, pinned ones first at the */
+/* top. Its folders are in the sidebar's tree. One view of a           */
+/* collection: no grid, no covers, no glyphs, counts or numbers.       */
 /* ------------------------------------------------------------------ */
 
 import { TFolder } from 'obsidian';
-import { el } from '../core/dom.js';
-import { cell, grid } from '../ui/cell.js';
-import { row, rows, sectionTitle } from '../ui/row.js';
+import { asButton, el } from '../core/dom.js';
+import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
-import { folderCover } from './faces.js';
 import { listedNotes, pins } from './order.js';
 
 /** The folders of `folder` that are shown: empty ones left out when that is the setting. */
@@ -40,39 +37,32 @@ function entryRows(screen, host, entries) {
   return list;
 }
 
-/** What a folder holds, as rows: its folders, then its notes. At the vault's top, pinned ones first, under their own word. */
-export function contentRows(screen, host, folder) {
-  const plugin = screen.plugin;
-  const folders = shownFolders(plugin, folder);
-  const notes = listedNotes(plugin, folder);
-  const pinned = folder.path === '/' ? pins(plugin) : [];
-  if (!folders.length && !notes.length && !pinned.length) {
-    return void sayso(host, { label: folder.path === '/' ? 'Nothing in the vault yet.' : 'Nothing in this folder yet.', button: { text: 'New note', run: () => plugin.files.newNote(folder) } });
-  }
-  if (pinned.length) {
-    sectionTitle(host, { title: 'Pinned' });
-    entryRows(screen, host, pinned);
-    sectionTitle(host, { title: 'Folders' });
-  }
-  return entryRows(screen, host, folders.concat(notes));
+/** Pinned ones first, in the person's order, at the vault's top; elsewhere the list as it is. */
+export function pinnedFirst(plugin, folder, list) {
+  if (folder.path !== '/') return list;
+  const pinned = pins(plugin).map((e) => e.path);
+  const at = (e) => pinned.indexOf(e.path);
+  return list.filter((e) => at(e) >= 0).sort((x, y) => at(x) - at(y)).concat(list.filter((e) => at(e) < 0));
 }
 
-/** A folder's page: its name at the display size, left, then what it holds. */
-export function drawFolderPage(screen, host, folder) {
-  el(host, 'div', 'dr-display dr-folder-name', folder.name);
-  return contentRows(screen, host, folder);
-}
-
-/** At the window's width: a folder's folders as a grid, each its name set large, or the cover image the person set; nothing else in a cell. */
-export function drawGrid(screen, host, folder) {
-  const plugin = screen.plugin;
-  const folders = shownFolders(plugin, folder);
-  if (!folders.length) return contentRows(screen, host, folder);
-  const g = grid(host, { label: 'Folders' });
-  folders.forEach((f) => cell(g, Object.assign({ name: f.name, cover: folderCover(plugin, f), path: f.path, open: () => screen.go(f) }, marks(screen, f))));
-  screen.roving(g, '.dr-cell', () => {
-    const cols = typeof getComputedStyle === 'function' ? getComputedStyle(g).gridTemplateColumns : '';
-    return cols && cols !== 'none' ? cols.split(' ').length : 1;
+/** The path to a folder as boxed words, "Vault / Politics": each goes there; the last is where you are. */
+export function crumbs(screen, host, folder) {
+  const nav = el(host, 'nav', 'dr-crumbs');
+  nav.setAttribute('aria-label', 'Path');
+  const chain = [];
+  for (let f = folder; f && f.path !== '/'; f = f.parent) chain.unshift(f);
+  [null].concat(chain).forEach((f, i) => {
+    if (i) el(nav, 'span', 'dr-muted', '/');
+    const crumb = asButton(el(nav, 'span', 'dr-crumb', f ? f.name : 'Vault'), null, () => screen.go(f));
+    if (i === chain.length) crumb.setAttribute('aria-current', 'location');
   });
-  return g;
+  return nav;
+}
+
+/** A folder's page: the path to it, then its notes as ruled rows. */
+export function drawFolderPage(screen, host, folder) {
+  crumbs(screen, host, folder);
+  const notes = pinnedFirst(screen.plugin, folder, listedNotes(screen.plugin, folder));
+  if (!notes.length) return void sayso(host, { label: folder.path === '/' ? 'No notes at the top of the vault.' : 'No notes in this folder.', button: { text: 'New note', run: () => screen.plugin.files.newNote(folder) } });
+  return entryRows(screen, host, notes);
 }

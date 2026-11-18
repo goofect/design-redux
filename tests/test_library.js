@@ -1,9 +1,11 @@
 /*
- * The library: one place, one view of it (docs/direction-reset.md). The
- * sidebar is its search field and the folders' names; a folder is its page
- * (back, more, its name large, what it holds as rows); the browse view a
- * grid of the folders' names or their cover images. Worked from the keys;
- * a vault of 2,000 notes drawn at once.
+ * The library: two framed panes. The sidebar is headed "Library" and holds
+ * the vault's folders as a tree (a chevron opens a branch, a name shows the
+ * folder in the page); the page is headed by the folder's name and holds the
+ * path to it as boxed words and its notes as ruled rows; the vault's top the
+ * same. No buttons at rest;
+ * search is a command. Worked from the keys; a vault of 2,000 notes drawn
+ * at once.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -28,68 +30,82 @@ const paths = (root, sel) => Array.from(root.querySelectorAll(sel)).map((n) => n
 const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .dr-button, input, select, .checkbox-container, .dr-chip[role]'));
 
 (async () => {
-  await check('the sidebar opens with the plugin: its search field, then the folders\' names as rows, empty ones left out, loose notes after; one control', async () => {
+  const library = (w) => w.plugin.features.find((f) => f.constructor.name === 'Library');
+  const page = async (w, folder) => (await library(w).browse(folder)).view.screen;
+
+  await check('the sidebar opens with the plugin: headed Library, the vault\'s folders as a tree, empty ones left out, no notes, no control', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
-    assert.deepStrictEqual(paths(s.host, '.dr-row'), ['Inbox', 'Logic', 'Reading', 'Loose.md']);
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-row')).map((r) => r.textContent), ['Inbox', 'Logic', 'Reading', 'Loose']);
-    assert.ok(!s.host.querySelector('.dr-row svg, .dr-head, .dr-segments, .dr-row-end, .dr-slot'), 'a glyph, a head, a level, a count or a number in the sidebar');
-    assert.deepStrictEqual(controls(s.host).map((c) => c.getAttribute('aria-label') || c.tagName), ['Notes and folders']);
+    assert.strictEqual(s.host.querySelector('.dr-pane > .dr-head .dr-head-name').textContent, 'Library');
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.textContent), ['Vault', 'Inbox', 'Logic', 'Reading']);
+    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-tree-row')).map((r) => r.getAttribute('aria-expanded')), ['true', null, 'false', null], 'a chevron only where a folder holds folders');
+    assert.deepStrictEqual(controls(s.host), []);
+    s.host.querySelector('.dr-tree-row[data-path="Logic"] .dr-twist').click();
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Reading']);
+    assert.strictEqual(s.host.querySelector('.dr-tree-row[data-path="Logic/Sets"]').getAttribute('aria-level'), '3');
   });
 
-  await check('a folder is its page: back and more, its name large, its folders and notes as rows; Back comes out', async () => {
+  await check('a folder\'s name pressed in the tree shows it in the page: headed by its name, the path boxed, its notes as ruled rows; the tree marks it', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
-    s.host.querySelector('.dr-row[data-path="Logic"]').click();
-    assert.strictEqual(s.at, 'Logic');
-    assert.deepStrictEqual(controls(s.host).map((c) => c.getAttribute('aria-label')), ['Back', 'More']);
-    assert.strictEqual(s.host.querySelector('.dr-display.dr-folder-name').textContent, 'Logic');
-    assert.deepStrictEqual(paths(s.host, '.dr-row'), ['Logic/Sets', 'Logic/Truth tables.md', 'Logic/Validity.md', 'Logic/Week 2.md', 'Logic/Week 10.md']);
-    s.host.querySelector('[aria-label="Back"]').click();
-    assert.strictEqual(s.at, '/');
-  });
-
-  await check('what is open is inverted, and so is what is picked: one sign, nothing beside it', async () => {
-    const w = await world(VAULT);
-    const s = sidebar(w);
-    await w.app.workspace.getLeaf().openFile(w.file('Logic/Validity.md'));
-    s.go(w.file('Logic'));
+    s.host.querySelector('.dr-tree-row[data-path="Logic"]').click();
     await settle();
-    assert.strictEqual(s.host.querySelector('.dr-row[data-path="Logic/Validity.md"]').getAttribute('aria-current'), 'page');
+    const p = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
+    assert.strictEqual(p.at, 'Logic');
+    assert.strictEqual(p.host.querySelector('.dr-head-name').textContent, 'Logic');
+    assert.deepStrictEqual(Array.from(p.host.querySelectorAll('.dr-crumb')).map((c) => [c.textContent, c.getAttribute('aria-current')]), [['Vault', null], ['Logic', 'location']]);
+    assert.deepStrictEqual(paths(p.host, '.dr-rows .dr-row'), ['Logic/Truth tables.md', 'Logic/Validity.md', 'Logic/Week 2.md', 'Logic/Week 10.md']);
+    assert.deepStrictEqual(controls(p.host), []);
+    assert.strictEqual(s.host.querySelector('.dr-tree-row[data-path="Logic"]').getAttribute('aria-current'), 'location');
+    p.host.querySelector('.dr-crumb').click();
+    assert.strictEqual(p.at, '/');
+  });
+
+  await check('what is open is filled, and so is what is picked: one sign, nothing beside it', async () => {
+    const w = await world(VAULT);
+    await w.app.workspace.getLeaf().openFile(w.file('Logic/Validity.md'));
+    const p = await page(w, w.file('Logic'));
+    await settle();
+    assert.strictEqual(p.host.querySelector('.dr-row[data-path="Logic/Validity.md"]').getAttribute('aria-current'), 'page');
     w.plugin.selection.pick(w.file('Logic/Week 2.md'));
     await settle();
-    assert.strictEqual(s.host.querySelector('.dr-row[data-path="Logic/Week 2.md"]').getAttribute('aria-selected'), 'true');
-    assert.ok(!s.host.querySelector('.dr-slot, .dr-mark'), 'a mark beside a row');
+    assert.strictEqual(p.host.querySelector('.dr-row[data-path="Logic/Week 2.md"]').getAttribute('aria-selected'), 'true');
+    assert.ok(!p.host.querySelector('.dr-slot, .dr-mark'), 'a mark beside a row');
   });
 
-  await check('from the keys: one Tab stop, arrows, Enter goes in or opens, Backspace comes out, a letter jumps', async () => {
+  await check('from the keys: one Tab stop, arrows, Right opens a branch and Left closes it, Enter shows a folder, a letter jumps', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
-    const stops = () => Array.from(s.body.querySelectorAll('.dr-rows [tabindex="0"]'));
+    const stops = () => Array.from(s.body.querySelectorAll('.dr-tree [tabindex="0"]'));
     assert.strictEqual(stops().length, 1);
     const first = stops()[0];
     first.focus();
     key(first, 'ArrowDown');
+    assert.strictEqual(w.doc.activeElement.dataset.path, 'Inbox');
+    key(w.doc.activeElement, 'l');
     assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic');
-    key(w.doc.activeElement, 'r');
-    assert.strictEqual(w.doc.activeElement.dataset.path, 'Reading');
-    key(w.doc.activeElement, 'ArrowUp');
+    key(w.doc.activeElement, 'ArrowRight');
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Logic/Sets', 'Reading']);
+    assert.strictEqual(w.doc.activeElement.dataset.path, 'Logic', 'the focus left the row');
+    key(w.doc.activeElement, 'ArrowLeft');
+    assert.deepStrictEqual(paths(s.host, '.dr-tree-row'), ['/', 'Inbox', 'Logic', 'Reading']);
     key(w.doc.activeElement, 'Enter');
-    assert.strictEqual(s.at, 'Logic');
-    const row = s.body.querySelector('.dr-row[data-path="Logic/Validity.md"]');
+    await settle();
+    const p = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
+    assert.strictEqual(p.at, 'Logic');
+    const row = p.body.querySelector('.dr-row[data-path="Logic/Validity.md"]');
     row.focus();
     key(row, 'Enter');
     await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Validity.md');
-    key(s.body.querySelector('.dr-row'), 'Backspace');
-    assert.strictEqual(s.at, '/');
   });
 
   await check('2,000 notes: drawn at once, and a redraw asked many times is one', async () => {
     const files = {};
     for (let f = 0; f < 40; f++) for (let n = 0; n < 50; n++) files[`Folder ${f}/Note ${n}.md`] = 'x'.repeat((n % 9) * 700);
     const w = await world(files);
-    const s = sidebar(w);
+    const s = await page(w, null);
     const t = Date.now();
     for (let f = 0; f < 40; f++) s.go(w.file(`Folder ${f}`));
     const took = Date.now() - t;
@@ -107,24 +123,26 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.strictEqual(w.plugin.index.build(), built, 'the vault was walked again for a draw');
   });
 
-  await check('search: folders and notes by name, notes by a heading or a property; the last searches kept; its field the sidebar\'s top', async () => {
+  await check('search: folders and notes by name, notes by a heading or a property; the last searches kept; a command, its field the page\'s', async () => {
     const w = await world(VAULT);
     const found = dr.searchLibrary(w.plugin, 'tab');
     assert.deepStrictEqual(found.notes.map((f) => f.path), ['Logic/Truth tables.md']);
     assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'miracles').inside.map((h) => [h.file.path, h.subpath]), [['Reading/Hume.md', '#Of miracles']]);
     assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'epistem').inside.map((h) => h.where), ['domain'], 'a hit says where, not the person\'s words');
     assert.deepStrictEqual(dr.searchLibrary(w.plugin, 'log').folders.map((f) => f.path), ['Logic']);
-    const s = sidebar(w);
-    const input = s.host.querySelector('input.dr-input');
+    w.app.commands.executeCommandById('design-redux:search-library');
+    await settle();
+    const p = w.app.workspace.getLeavesOfType('design-redux-browse')[0].view.screen;
+    const input = p.host.querySelector('input.dr-input');
     input.value = 'week';
     input.dispatchEvent(new window.Event('input', { bubbles: true }));
-    assert.deepStrictEqual(paths(s.host, '.dr-search-results .dr-row'), ['Logic/Week 2.md', 'Logic/Week 10.md']);
+    assert.deepStrictEqual(paths(p.host, '.dr-search-results .dr-row'), ['Logic/Week 2.md', 'Logic/Week 10.md']);
     key(input, 'Enter');
     await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Week 2.md');
     assert.deepStrictEqual(w.plugin.settings.recentSearches, ['week']);
-    key(s.host.querySelector('input.dr-input'), 'Escape');
-    assert.deepStrictEqual(paths(s.host, '.dr-row'), ['Inbox', 'Logic', 'Reading', 'Loose.md'], 'the folders did not come back');
+    key(p.host.querySelector('input.dr-input'), 'Escape');
+    assert.strictEqual(p.host.querySelector('.dr-head-name').textContent, 'Vault', 'the vault did not come back');
   });
 
   await check('a folder\'s menu and a note\'s: every entry sectioned, pin, sort, rename, move and delete do what they say', async () => {
@@ -136,11 +154,10 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const base = ['Open', 'New note', 'New folder', 'Pin', 'Sort by', 'Rename…', 'Move to…', 'Delete folder'];
     assert.deepStrictEqual(menu.titles().filter((t) => base.includes(t)), base);
     assert.ok(!menu.titles().includes('Glyph…'), 'a folder still offers a glyph');
-    ['Kind…', 'Merge into…', 'Split notes off…', 'Cover…'].forEach((t) => assert.ok(menu.titles().includes(t), `the folder menu lacks ${t}`));
+    ['Kind…', 'Merge into…', 'Split notes off…'].forEach((t) => assert.ok(menu.titles().includes(t), `the folder menu lacks ${t}`));
+    assert.ok(!menu.titles().includes('Cover…'), 'a folder still offers a cover');
     await menu.click('Pin');
     assert.deepStrictEqual(w.plugin.settings.pinOrder, ['Logic']);
-    await settle();
-    assert.deepStrictEqual(Array.from(s.host.querySelectorAll('.dr-section')).map((x) => x.textContent), ['Pinned', 'Folders']);
     menu.items.find((i) => i.title === 'Sort by').submenu.click('Last edited');
     await settle();
     assert.strictEqual(dr.sortOf(w.plugin, w.file('Logic')), 'modified');
@@ -155,9 +172,10 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   await check('dropping a note on a folder moves it there, with an Undo', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);
+    const p = await page(w, null);
     const data = { store: {}, types: [], setData(t, v) { this.store[t] = v; this.types.push(t); }, getData(t) { return this.store[t] || ''; } };
     const fire = (el, type) => { const e = new window.Event(type, { bubbles: true, cancelable: true }); e.dataTransfer = data; el.dispatchEvent(e); return e; };
-    fire(s.host.querySelector('[data-path="Loose.md"]'), 'dragstart');
+    fire(p.host.querySelector('[data-path="Loose.md"]'), 'dragstart');
     const target = s.host.querySelector('[data-path="Reading"]');
     assert.ok(fire(target, 'dragover').defaultPrevented && target.hasAttribute('data-drop'));
     fire(target, 'drop');
@@ -167,28 +185,20 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.ok(w.file('Loose.md'));
   });
 
-  await check('the browse view: a grid of the folders\' names (or their covers), nothing else in a cell; search and more; a folder pressed is its page', async () => {
-    const w = await world(Object.assign({}, VAULT, { 'Reading/cover.png': '' }), { settingsVersion: 102, folderCovers: { Reading: 'Reading/cover.png' } });
-    const leaf = await w.plugin.features.find((f) => f.constructor.name === 'Library').browse(null);
-    const view = leaf.view;
-    const host = view.screen.host;
-    assert.deepStrictEqual(controls(host).map((c) => c.getAttribute('aria-label')), ['Search', 'More']);
-    assert.deepStrictEqual(paths(host, '.dr-grid .dr-cell'), ['Inbox', 'Logic', 'Reading']);
-    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-cell .dr-display')).map((n) => n.textContent), ['Inbox', 'Logic']);
-    assert.ok(host.querySelector('.dr-cell[data-path="Reading"] img'), 'a folder\'s cover is not in its cell');
-    assert.ok(!host.querySelector('.dr-cell svg, .dr-cell-count, .dr-segments'), 'a glyph, a count or a level in the grid');
-    host.querySelector('.dr-cell[data-path="Logic"]').click();
-    assert.strictEqual(view.screen.at, 'Logic');
-    assert.strictEqual(w.plugin.openFolder.path, 'Logic');
-    assert.deepStrictEqual(leaf.getViewState().state, { at: 'Logic' });
-    assert.deepStrictEqual(controls(host).map((c) => c.getAttribute('aria-label')), ['Back', 'More']);
-    assert.strictEqual(host.querySelector('.dr-folder-name').textContent, 'Logic');
+  await check('the vault\'s top is a page like any folder\'s: headed Vault, its loose notes as ruled rows, pinned ones first; no grid, no buttons', async () => {
+    const w = await world(Object.assign({}, VAULT, { 'Alpha.md': '', 'Zed.md': '' }), { settingsVersion: 103, pinOrder: ['Zed.md'] });
+    const host = (await page(w, null)).host;
+    assert.strictEqual(host.querySelector('.dr-head-name').textContent, 'Vault');
+    assert.deepStrictEqual(Array.from(host.querySelectorAll('.dr-crumb')).map((c) => c.textContent), ['Vault']);
+    assert.deepStrictEqual(paths(host, '.dr-rows .dr-row'), ['Zed.md', 'Alpha.md', 'Loose.md']);
+    assert.ok(!host.querySelector('.dr-grid, .dr-cell, img'), 'a grid or a cover');
+    assert.deepStrictEqual(controls(host), []);
   });
 
   await check('commands: the old ids, the levels\' one kept but quiet, and turning the library off takes its views away', async () => {
     const w = await world(VAULT);
     const ids = Object.keys(w.app.commands.commands).map((c) => c.split(':')[1]);
-    ['open-library', 'browse-vault', 'reset-layout', 'cycle-cover-size', 'go-back', 'go-forward', 'new-note-here', 'new-folder-here', 'previous-in-album', 'next-in-album'].forEach((id) => assert.ok(ids.includes(id), `${id} is not a command`));
+    ['open-library', 'browse-vault', 'search-library', 'reset-layout', 'cycle-cover-size', 'go-back', 'go-forward', 'new-note-here', 'new-folder-here', 'previous-in-album', 'next-in-album'].forEach((id) => assert.ok(ids.includes(id), `${id} is not a command`));
     await w.app.workspace.getLeaf().openFile(w.file('Logic/Validity.md'));
     w.app.commands.executeCommandById('design-redux:next-in-album');
     await settle();

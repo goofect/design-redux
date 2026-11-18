@@ -156,7 +156,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.ok(view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'the group did not open again');
     w.plugin.selection.pick(w.file('Logic'));
     await settle();
-    assert.strictEqual(view.contentEl.querySelector('.dr-folder-name').textContent, 'Logic', 'a folder picked is not shown in the panel as its page');
+    assert.strictEqual(view.contentEl.querySelector('.dr-crumb[aria-current]').textContent, 'Logic', 'a folder picked is not shown in the panel as its page');
     await panel.toggle();
     assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-properties').length, 0);
   });

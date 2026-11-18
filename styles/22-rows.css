@@ -1,13 +1,17 @@
 /* ------------------------------------------------------------------ */
 /* Rows: a name in a list, a property, a group's title                 */
 /*                                                                     */
-/* Four units high, parted by their height and never by a rule. Hover  */
-/* underlines the name; open or picked, the row is inverted. No        */
-/* numbers, no marks: a slot holds only a footnote's own id.           */
+/* Four units high, a light rule under each, like a stock list. Hover  */
+/* underlines the name; open or picked, the row is filled light grey.  */
+/* No numbers, no marks: a slot holds only a footnote's own id.        */
 /* ------------------------------------------------------------------ */
 
 .dr-rows {
   display: grid;
+}
+
+.dr-rows > .dr-row {
+  border-bottom: var(--dr-hair) solid var(--dr-rule);
 }
 
 .dr-row {
@@ -35,23 +39,10 @@
   color: var(--dr-muted);
 }
 
-/* Open or picked: inverted. */
+/* Open or picked: filled light grey, the words as they were. */
 .dr-row[aria-current],
 .dr-row[aria-selected="true"] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-}
-
-.dr-row[aria-current] > .dr-slot,
-.dr-row[aria-current] > .dr-row-end,
-.dr-row[aria-selected="true"] > .dr-slot,
-.dr-row[aria-selected="true"] > .dr-row-end {
-  color: inherit;
-}
-
-.dr-row[aria-current]:focus-visible,
-.dr-row[aria-selected="true"]:focus-visible {
-  outline-color: var(--dr-bg);
+  background: var(--dr-fill);
 }
 
 .dr-row[aria-disabled="true"],
@@ -80,12 +71,7 @@
 }
 
 .dr-prop[aria-selected="true"] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-}
-
-.dr-prop[aria-selected="true"] > .dr-muted {
-  color: inherit;
+  background: var(--dr-fill);
 }
 
 .dr-prop[aria-disabled="true"],

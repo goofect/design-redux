@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
-/* Base: the root of what the plugin draws, the one face at its two    */
-/* sizes, the grey, a link, the focus outline, a glyph                 */
+/* Base: the root of what the plugin draws, the one face at its one    */
+/* size, the grey, a link, the focus outline, a glyph                  */
 /*                                                                     */
 /* Everything here and after matches only the plugin's own dr- classes */
 /* (or says so where it doesn't), so the theme outside is untouched.   */
@@ -41,13 +41,10 @@
   line-height: var(--dr-line-loose);
 }
 
-/* The other size: the one name that matters on a screen. */
+/* The one name that matters on a screen: bold, never bigger. */
 .dr-display {
   display: block;
-  font-size: var(--dr-size-display);
-  line-height: var(--dr-line-display);
-  font-weight: 400;
-  letter-spacing: 0;
+  font-weight: 700;
 }
 
 /* The one grey: words that are secondary. */

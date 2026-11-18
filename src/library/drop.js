@@ -36,7 +36,7 @@ export function enableDrop(screen, body) {
   body.addEventListener('dragover', (e) => {
     const [node, entry] = entryOf(e.target);
     const types = e.dataTransfer ? Array.from(e.dataTransfer.types || []) : [];
-    if (!(entry instanceof TFolder) || !(types.includes(TYPE) || (types.includes('Files') && plugin.coverDropped))) return void mark(null);
+    if (!(entry instanceof TFolder) || !types.includes(TYPE)) return void mark(null);
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     mark(node);
@@ -45,11 +45,6 @@ export function enableDrop(screen, body) {
   body.addEventListener('drop', async (e) => {
     const [, folder] = entryOf(e.target);
     mark(null);
-    const image = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-    if (image && folder instanceof TFolder && plugin.coverDropped) {
-      e.preventDefault();
-      return void plugin.coverDropped(folder, image);
-    }
     const path = e.dataTransfer ? e.dataTransfer.getData(TYPE) : '';
     const moved = path ? plugin.app.vault.getAbstractFileByPath(path) : null;
     if (!(folder instanceof TFolder) || !moved || moved === folder) return;

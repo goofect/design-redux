@@ -26,8 +26,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     const w = await world({ 'Logic/A.md': '' }, old);
     const s = w.plugin.settings;
     assert.strictEqual(s.library, false);
-    assert.strictEqual(s.coverProperty, 'art');
-    assert.deepStrictEqual(s.folderCovers, { Logic: 'img/a.png' });
+    assert.ok(!('coverProperty' in s) && !('folderCovers' in s), 'covers came through');
     assert.deepStrictEqual(s.albumOrders, { Logic: { names: ['B.md', 'A.md'] } });
     assert.deepStrictEqual(s.propertyRules, [{ id: 1 }]);
     assert.strictEqual(s.contextStrip, true);
@@ -73,10 +72,9 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
   await check('path-keyed settings follow a rename and a delete', async () => {
     const w = await world({ 'School/Logic/A.md': '', 'School/Logic/B.md': '', 'Other/C.md': '' });
     const s = w.plugin.settings;
-    Object.assign(s, { coverColors: { School: 'moss', 'School/Logic': 'rust' }, folderCovers: { 'School/Logic': 'School/Logic/cover.png' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
+    Object.assign(s, { coverColors: { School: 'moss', 'School/Logic': 'rust' }, pinOrder: ['School/Logic/A.md'], albums: { Other: { includes: ['School/Logic/B.md'] } }, albumOrders: { 'School/Logic': { names: ['B.md', 'A.md'] } }, pagesOpen: { 'School/Logic/A.md': 'Two' } });
     await w.app.vault.rename(w.file('School'), 'University');
     assert.deepStrictEqual([s.coverColors.University, s.coverColors['University/Logic'], s.coverColors.School], ['moss', 'rust', undefined]);
-    assert.deepStrictEqual(s.folderCovers, { 'University/Logic': 'University/Logic/cover.png' });
     assert.deepStrictEqual(s.pinOrder, ['University/Logic/A.md']);
     assert.deepStrictEqual(s.albums.Other.includes, ['University/Logic/B.md']);
     assert.deepStrictEqual(s.pagesOpen, { 'University/Logic/A.md': 'Two' });
@@ -84,7 +82,6 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.deepStrictEqual(s.albumOrders['University/Logic'].names, ['B.md', 'Alpha.md']);
     await w.app.vault.delete(w.file('University/Logic'));
     assert.deepStrictEqual([s.coverColors.University, 'University/Logic' in s.coverColors], ['moss', false]);
-    assert.deepStrictEqual(s.folderCovers, {});
     assert.deepStrictEqual(s.pinOrder, []);
     assert.deepStrictEqual(s.albums.Other.includes, []);
   });

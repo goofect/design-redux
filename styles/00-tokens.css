@@ -1,21 +1,21 @@
 /* ------------------------------------------------------------------ */
-/* Tokens: the measures, the one face, the two sizes, the four colours */
+/* Tokens: the measures, the one face, the one size, the colours       */
 /*                                                                     */
 /* Everything the plugin draws is sized and coloured from here; no     */
-/* other part holds a colour value. Black, white, one grey, and red    */
-/* for an error, per colour scheme on the gated body                   */
-/* (docs/direction-reset.md). The ratios in the block below are        */
+/* other part holds a colour value. Black, white, a grey for words,    */
+/* two light greys (a rule, a fill), and red for an error, per colour  */
+/* scheme on the gated body (docs/DESIGN.md). The ratios below are     */
 /* measured, not typed: node tests/contrast.js --write puts them here, */
 /* and the suite fails when they no longer match the values.           */
 /*                                                                     */
 /* Lines: a border is drawn only by these classes, each where a        */
 /* screen's structure divides (tests/test_reset.js reads this list):   */
-/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box               */
+/* lines: .dr-head .dr-note-head .dr-strip .dr-field-box .dr-pane .dr-rows .dr-crumb */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin
- * light  ink on bg 21.00 · bg on ink 21.00 · muted on bg 4.54 · error on bg 6.48
- * dark   ink on bg 21.00 · bg on ink 21.00 · muted on bg 6.00 · error on bg 6.94
+ * light  ink on bg 21.00 · ink on fill 16.67 · muted on bg 7.00 · muted on fill 5.56 · error on bg 6.48
+ * dark   ink on bg 21.00 · ink on fill 15.13 · muted on bg 8.03 · muted on fill 5.79 · error on bg 6.94
  * contrast:end */
 
 /* The measures, the face and the sizes hold whether the look is on or off: they are the plugin's own structure. */
@@ -31,33 +31,37 @@ body {
   --dr-row: calc(4 * var(--dr-u)); /* 32: a row, a control */
   --dr-icon: calc(2 * var(--dr-u)); /* 16: a control's glyph */
 
-  /* One face, a system face as it comes; two sizes and nothing between. */
-  --dr-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* One face, the system's monospace as it comes; one small size. A name that matters is bold, never bigger. */
+  --dr-font: ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", Consolas, monospace;
   --dr-size: 13px; /* everything */
-  --dr-size-display: 48px; /* the one name that matters on a screen */
-  /* Lines of text sit on the unit: 16 in a row, 24 running, 56 for the display size. */
+  /* Lines of text sit on the unit: 16 in a row, 24 running. */
   --dr-line: calc(2 * var(--dr-u));
   --dr-line-loose: calc(3 * var(--dr-u));
-  --dr-line-display: calc(7 * var(--dr-u)); /* 56: room for the display size's descenders */
 
   /* Without the look, the plugin's own surfaces take the theme's colours. */
   --dr-bg: var(--background-primary);
   --dr-ink: var(--text-normal);
   --dr-muted: var(--text-muted);
+  --dr-rule: var(--background-modifier-border);
+  --dr-fill: var(--background-modifier-hover);
   --dr-error: var(--text-error);
 }
 
-/* The palette: black, white, one grey, and red for an error. Selected or open is the ink as a fill, its words the ground's colour. */
+/* The palette: black, white, a grey for words, a light grey for a rule between rows, a lighter one to fill what is open or picked, red for an error. */
 body.dr-active.theme-light {
   --dr-bg: #FFFFFF; /* the ground */
   --dr-ink: #000000; /* words, lines, the inverted fill */
-  --dr-muted: #767676; /* the one grey: secondary words only, never a fill */
+  --dr-muted: #595959; /* secondary words */
+  --dr-rule: #D4D4D4; /* the rule between rows */
+  --dr-fill: #E5E5E5; /* open or picked */
   --dr-error: #C00000; /* an error's words, always with them */
 }
 
 body.dr-active.theme-dark {
   --dr-bg: #000000; /* the exact inverse */
   --dr-ink: #FFFFFF;
-  --dr-muted: #898989;
+  --dr-muted: #A0A0A0;
+  --dr-rule: #333333;
+  --dr-fill: #262626;
   --dr-error: #FF5C5C;
 }

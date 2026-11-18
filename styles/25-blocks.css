@@ -8,14 +8,16 @@
   align-items: center;
   gap: var(--dr-u);
   flex: none;
-  height: calc(6 * var(--dr-u));
+  height: calc(5 * var(--dr-u));
   padding: 0 var(--dr-gutter);
-  border-bottom: var(--dr-hair) solid var(--dr-ink);
+  border-bottom: var(--dr-hair) solid var(--dr-rule);
   color: var(--dr-ink);
 }
 
+/* The pane's name: bold, the one weight the plugin adds. */
 .dr-head > .dr-head-name {
   flex: 1;
+  font-weight: 700;
 }
 
 /* An icon button at either end sits a unit out, so its glyph, not its box, stands on the gutter. */

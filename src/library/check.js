@@ -46,8 +46,6 @@ export class LibraryCheck extends Feature {
     add('Notes whose parents lead round in a circle', circular.map((f) => ({ name: f.basename, end: key, file: f })));
     const unresolved = app.metadataCache.unresolvedLinks || {};
     add('Links that lead nowhere', Object.keys(unresolved).filter((p) => Object.keys(unresolved[p]).length).map((p) => ({ name: p.split('/').pop().replace(/\.md$/, ''), end: Object.keys(unresolved[p]).slice(0, 2).join(', '), file: app.vault.getFileByPath(p) })).filter((i) => i.file && !files.isFolderNote(i.file) || i.file));
-    const covers = settings.folderCovers || {};
-    add('Covers that point nowhere', Object.keys(covers).filter((p) => !app.vault.getAbstractFileByPath(covers[p])).map((p) => ({ name: p, end: String(covers[p]).split('/').pop(), folder: app.vault.getAbstractFileByPath(p) })).filter((i) => i.folder));
     return out;
   }
 

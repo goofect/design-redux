@@ -53,23 +53,6 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual(Array.from(t.children).map((i) => [i.getAttribute('role'), i.getAttribute('aria-selected'), i.textContent]), [['tab', 'false', 'Notes'], ['tab', 'true', 'Proofs']]);
   });
 
-  await check('grid cell: a folder\'s name set large, or its cover; nothing else; always named; picked, open, disabled; a press opens', () => {
-    const g = dr.grid(fresh(), { label: 'Folders' });
-    const opened = [];
-    const c = dr.cell(g, { name: 'Logic', path: 'Logic', open: () => opened.push('Logic') });
-    assert.deepStrictEqual([g.className, g.getAttribute('role'), c.getAttribute('aria-label'), c.querySelector('.dr-display').textContent], ['dr-grid', 'list', 'Logic', 'Logic']);
-    assert.ok(!c.querySelector('svg, .dr-cell-count'), 'a glyph or a count in a cell');
-    c.click();
-    assert.deepStrictEqual(opened, ['Logic']);
-    const covered = dr.cell(g, { name: 'Reading', cover: 'app://cover.png' });
-    assert.ok(covered.querySelector('img.dr-cell-cover') && !covered.querySelector('.dr-display'));
-    covered.querySelector('img').dispatchEvent(new window.Event('error'));
-    assert.strictEqual(covered.querySelector('.dr-display').textContent, 'Reading', 'a lost cover did not give way to the name');
-    assert.strictEqual(dr.cell(g, { name: 'A', selected: true }).getAttribute('aria-selected'), 'true');
-    assert.strictEqual(dr.cell(g, { name: 'A', current: true }).getAttribute('aria-current'), 'true');
-    assert.strictEqual(dr.cell(g, { name: 'A', disabled: true }).getAttribute('aria-disabled'), 'true');
-  });
-
   await check('row: a name and what trails it; a footnote\'s slot; selected, open, disabled, missing, wrong, a heading', () => {
     const list = dr.rows(fresh());
     const r = dr.row(list, { name: 'Truth tables', end: '9 min', path: 'L/T.md' });
@@ -174,8 +157,13 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
   });
 
   await check('keys: one Tab stop, the arrows by row and column, Home and End, a typed name', () => {
-    const g = dr.grid(fresh());
-    ['Inbox', 'Essays', 'Logic', 'Reading', 'Lectures', 'Seminar', 'Field notes'].forEach((name, i) => dr.cell(g, { glyph: 'pie', name, current: i === 2 }));
+    const g = fresh();
+    ['Inbox', 'Essays', 'Logic', 'Reading', 'Lectures', 'Seminar', 'Field notes'].forEach((name, i) => {
+      const c = g.appendChild(w.doc.createElement('div'));
+      c.className = 'dr-cell';
+      c.textContent = name;
+      if (i === 2) c.setAttribute('aria-current', 'true');
+    });
     const cells = Array.from(g.children);
     const stop = dr.rove(g, '.dr-cell', { columns: () => 3, jump: true });
     assert.deepStrictEqual(cells.map((c) => c.getAttribute('tabindex')), ['-1', '-1', '0', '-1', '-1', '-1', '-1'], 'the open one should be the Tab stop');

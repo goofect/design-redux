@@ -30,15 +30,14 @@ called done; the checks in `docs/direction-reset.md` hold the countable ones.
    in Obsidian's own menus and the command palette), the browse view 2
    (search, more), a sheet its fields and one button. Links that go
    somewhere (a folder's name, a note's, a page's) are content, not controls.
-3. **One view of a collection.** No zoom levels, no shelves, no objects in
-   the sidebar: the sidebar is a list of names, the browse view one grid, a
-   folder's notes one list.
+3. **One view of a collection.** No zoom levels, no shelves, no grid, no
+   covers: the sidebar is the folders as a tree, a folder's page its notes
+   as one ruled list (its subfolders only in the tree).
 4. **No ornament that carries no information.** No generated glyphs (a
-   folder is its name, or the image the person set as its cover), no counts
-   on grid items, no row numbers, no group header that repeats its rows, no
+   folder is its name), no counts, no row numbers, no group header that repeats its rows, no
    section title where there is one section.
 5. **One way to show each state.** Hover: an underline. Focus: a 2px black
-   outline. Selected or open: inverted, black ground and white words.
+   outline. Selected or open: filled light grey, the words as they were.
    Disabled: grey words. Nothing else.
 6. **Fewer settings.** The settings tab is the features' switches and fits
    one screen. Everything else is a fixed value (or, in a vault that had set
@@ -47,18 +46,18 @@ called done; the checks in `docs/direction-reset.md` hold the countable ones.
    tools); everything else is a word.
 
 **Brutalism**
-1. **Raw material.** One typeface for all the plugin draws, a system face as
-   it comes (`Helvetica Neue, Helvetica, Arial, sans-serif`). No tracking, no
-   capitals for effect, no small sizes for elegance.
-2. **Black, white, one grey.** Light: white ground, black ink, grey `#767676`
-   for what is secondary; dark: the exact inverse. The only other colour is
-   red, for an error, always with its word.
-3. **Blunt scale.** Two sizes: 13px for everything, 48px for the one name
-   that matters on a screen (a folder's on its page, the names of the browse
-   view's grid). Nothing between.
-4. **Structure, not decoration.** A line only where the screen's structure
-   divides (under a header, between a list and its detail): 1px black, full
-   width. No frames, no boxes round controls, no rules between rows.
+1. **Raw material.** One typeface for all the plugin draws, the system's
+   monospace as it comes (`ui-monospace, SF Mono, Menlo, …`), like an
+   inventory sheet. No tracking, no capitals for effect.
+2. **Black, white, greys.** Light: white ground, black ink, grey `#595959`
+   for what is secondary, a light rule `#D4D4D4` between rows, a lighter
+   fill `#E5E5E5` for what is open or picked; dark: the inverse. The only
+   other colour is red, for an error, always with its word.
+3. **One small size.** 13px for everything. The name that matters (a pane's
+   head) is bold, never bigger.
+4. **Structure, not decoration.** Each pane is framed by a 1px ink line, its
+   head ruled off under it; rows are ruled like a stock list; the path is
+   boxed words. Nothing else has a line.
 5. **Plain controls.** Links and text buttons are underlined words; a field
    is a line under its text; a toggle is Obsidian's own, squared; the one
    button that commits is black with white words, one a screen at most.
@@ -175,14 +174,18 @@ Obsidian's variables. Components use these tokens, never colour values.
 ```css
 body.dr-active.theme-light {
   --dr-bg:    #FFFFFF; /* the ground */
-  --dr-ink:   #000000; /* words, lines, the inverted fill */
-  --dr-muted: #767676; /* the one grey, for what is secondary (4.54:1) */
+  --dr-ink:   #000000; /* words, frames */
+  --dr-muted: #595959; /* secondary words (7.00:1; 5.56:1 on the fill) */
+  --dr-rule:  #D4D4D4; /* the rule between rows, under a head */
+  --dr-fill:  #E5E5E5; /* open or picked */
   --dr-error: #C00000; /* an error, always with its word */
 }
 body.dr-active.theme-dark {
   --dr-bg:    #000000; /* the exact inverse */
   --dr-ink:   #FFFFFF;
-  --dr-muted: #898989;
+  --dr-muted: #A0A0A0;
+  --dr-rule:  #333333;
+  --dr-fill:  #262626;
   --dr-error: #FF5C5C;
 }
 ```
@@ -283,14 +286,14 @@ exactly as it does without the plugin.
 - Scrollbars: thin, square, an ink thumb on the ground.
 
 ### Design Redux surfaces
-- **Library sidebar:** a list of folder names (and the vault's loose notes
-  after them), 13px, the open one inverted; search is the only control. A
-  folder pressed shows that folder's page in the sidebar.
-- **A folder:** its name at 48px, left, then its folders and notes as one
-  plain list; back and more are its only controls. Numbers nowhere.
-- **Browse view:** one grid of the folders, each cell the folder's name at
-  48px or the cover image the person set; nothing else in a cell. Search
-  and more are its only controls; a folder pressed opens its page.
+- **Library sidebar:** a framed pane headed "Library" (bold), the vault's
+  folders as a tree: a chevron where a folder holds folders, then its name;
+  the open folder filled light grey. No notes, no controls; search is a
+  command. A folder's name pressed shows it in the page.
+- **A folder, in the page:** a framed pane headed by its name (bold), the
+  path to it as boxed words (Vault / Politics), then only the notes directly
+  in it, as ruled rows. Its subfolders are in the tree, not here. The
+  vault's top is the same page, headed Vault. No buttons at rest.
 - **Note head:** in the note's column, scrolling with it: the folder's name
   as a link, the title, the properties as one line of plain text (name grey,
   value ink), the pages as underlined words, the open one inverted, a line
@@ -327,8 +330,8 @@ Two families, kept apart:
 2. **The plugin's own set**, about ten glyphs (search, back, close, more,
    add, and the map's tools: fold, unfold, fit, zoom out), drawn to the icon
    grammar (`docs/design-language.md`) and registered with `addIcon`. There
-   are no object glyphs and no glyph builder: a folder is its name, or the
-   cover image the person set. Everything else is a word.
+   are no object glyphs and no glyph builder: a folder is its name.
+   Everything else is a word.
 Every icon-only control keeps an `aria-label` (`asButton(el, label)`).
 
 ### Other plugins
@@ -339,11 +342,10 @@ Every icon-only control keeps an `aria-label` (`asButton(el, label)`).
 - Never restyle another plugin with `!important`, and never touch its data.
 
 ## Typography summary
-- Everything the plugin draws: `Helvetica Neue, Helvetica, Arial,
-  sans-serif` (`--dr-font`), at 13px (`--dr-size`) or, for the one name
-  that matters on a screen, 48px (`--dr-size-display`). No third size.
-- No tracking, no capitals for effect, no italics; bold only where the
-  note's own text has it. Obsidian's own labels keep their case.
+- Everything the plugin draws: the system's monospace (`--dr-font`), at
+  13px (`--dr-size`). No second size.
+- No tracking, no capitals for effect, no italics; bold for a pane's head
+  and where the note's own text has it. Obsidian's own labels keep their case.
 - The note's own text keeps the person's font (`--font-text`); code keeps
   `--font-monospace`.
 

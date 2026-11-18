@@ -98,15 +98,8 @@ height, never by a rule. Hover underlines the name; selected or open, the row
 is inverted. No numbers, no marks.
 
 ### Head · `.dr-head` · `25-blocks.css`
-The top of a screen: its few icon buttons, a line under it (the one line a
-header has). A folder's page puts its name under the head at 48px
-(`.dr-display`), left.
-
-### Grid · `.dr-grid` > `.dr-cell` · `21-objects.css`
-The browse view's folders: as many columns of cells as fit, a cell a
-folder's name at 48px (`.dr-display`), or the cover image the person set.
-Nothing else in a cell: no glyph, no count. Hover underlines the name;
-selected or open, the cell is inverted.
+The top of a pane: its name in bold, a light line under it. The library's
+heads hold no buttons.
 
 ### Say-so · `.dr-state` · `25-blocks.css`
 What a screen shows in place of its contents: a sentence, and one text

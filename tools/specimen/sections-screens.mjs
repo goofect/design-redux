@@ -86,10 +86,6 @@ export async function screens() {
   // The library: the sidebar at the vault's top, a folder's page, then searching.
   const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
   library.draw();
-  const sidebarTop = library.host.outerHTML;
-  library.go(w.file('Logic'));
-  const sidebarFolder = library.host.outerHTML;
-  library.go(null);
   library.query = 'tab';
   library.draw();
   const searchFound = library.host.outerHTML;
@@ -98,7 +94,14 @@ export async function screens() {
   // The browse view: the grid of the folders' names, then a filter on.
   const browse = (await feature('Library').browse(null)).view.screen;
   await settle();
-  const grid = browse.host.outerHTML;
+  // A folder shown in the page, the tree marking it: the two panes side by side.
+  browse.go(w.file('Logic'));
+  await settle();
+  library.draw();
+  const sidebarFolder = library.host.outerHTML;
+  const folderPage = browse.host.outerHTML;
+  browse.go(null);
+  await settle();
   browse.setFilter({ folder: 'Logic', prop: 'status=draft' }, 'Drafts in Logic');
   await settle();
   const filtered = browse.host.outerHTML;
@@ -134,8 +137,8 @@ export async function screens() {
   const graph = `<div class="dr dr-graph3d"><div class="dr-head"><span class="dr-head-name dr-clip">3D graph <span class="dr-muted">${n} notes · ${links.length} links</span></span>${['fit', 'plus', 'minus'].map((g) => `<div class="dr-icon-button" role="button" aria-label="${g}">${glyph(g)}</div>`).join('')}</div><div class="dr-graph3d-box"><svg class="spec-graph" viewBox="0 0 720 400" width="720" height="400"><path class="spec-graph-links" d="${links.map(([a, b]) => `M${at[a * 3].toFixed(1)} ${at[a * 3 + 1].toFixed(1)}L${at[b * 3].toFixed(1)} ${at[b * 3 + 1].toFixed(1)}`).join('')}"/>${order.map((i) => { const [x, y, s] = sq(i); const mark = i === picked || i === current; return mark ? `<rect class="spec-graph-ring" x="${x + 1}" y="${y + 1}" width="${s - 2}" height="${s - 2}"/>` : `<rect class="is-ink" x="${x}" y="${y}" width="${s}" height="${s}"/>`; }).join('')}</svg><div class="dr-graph3d-name dr-text">Proof by contradiction</div></div></div>`;
 
   w.plugin.unload();
-  return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. The sidebar: its search field, its one control, then the folders’ names; a folder: back and more, its name large, what it holds. The browse view: search and more, then a grid of the folders’ names, nothing else in a cell. One view of a collection.',
-    `<div class="spec-states is-close">${frame('the sidebar', 320, 560, sidebarTop, 'is-side')}${frame('a folder', 320, 560, sidebarFolder, 'is-side')}${frame('the browse view', 760, 560, grid)}</div>`)
+  return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. Two framed panes, no buttons at rest. The sidebar: the vault’s folders as a tree. The page: a folder’s path as boxed words, then only the notes in it, as ruled rows; its subfolders are in the tree.',
+    `<div class="spec-states is-close">${frame('the sidebar, a folder open', 320, 560, sidebarFolder, 'is-side')}${frame('a folder, in the page', 640, 560, folderPage)}</div>`)
     + section('screens-note', 'The note, and the panel beside it', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it its properties as one line of plain text (a value its folder’s schema finds wrong in red, with why) and its pages as words, the open one inverted; a line; the text; the strip at its foot, one line. The panel: name and value on a line, the name grey; a group’s title where there are groups; where the note is named, mentioned and what it links to as plain rows. No control on either.',
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}${frame('the panel: the open note', 320, 560, panel, 'is-panel')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',

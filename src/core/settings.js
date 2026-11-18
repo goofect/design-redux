@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'lib
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'compat'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 102;
+export const SETTINGS_VERSION = 103;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -29,10 +29,6 @@ export const DEFAULTS = {
 
   // The library
   library: true,
-  folderCovers: {}, // by folder path: the image that is its cover
-  coverProperty: 'cover',
-  coverDrop: true,
-  coverFromFirstImage: false,
   coverColors: {}, // by folder path: one of Obsidian's named colours (red, orange, yellow, green, cyan, blue, purple, pink), or an old hex kept as it was
   defaultSort: 'name',
   albumSorts: {}, // by folder path: the order chosen there
@@ -120,7 +116,7 @@ export const DEFAULTS = {
 };
 
 /** Settings whose keys are paths: a rename moves the key, a delete drops it. */
-export const PATH_KEYED = ['albums', 'folderCovers', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['albums', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
 
 /** `path` after `from` became `to`: itself, or moved with the folder it was under. */
 export function movedPath(path, from, to) {
@@ -150,13 +146,6 @@ export function followRename(settings, from, to, isFolder) {
       changed = true;
     }
   });
-  Object.keys(settings.folderCovers || {}).forEach((p) => {
-    const moved = movedPath(settings.folderCovers[p], from, to);
-    if (moved !== settings.folderCovers[p]) {
-      settings.folderCovers[p] = moved;
-      changed = true;
-    }
-  });
   if (!isFolder) {
     // A note keeps its place in its folder's own order when renamed there, and leaves it when moved away.
     const parent = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '/');
@@ -180,11 +169,6 @@ export function followDelete(settings, gone) {
       delete kept[p];
       changed = true;
     });
-  });
-  Object.keys(settings.folderCovers || {}).forEach((p) => {
-    if (!under(settings.folderCovers[p])) return;
-    delete settings.folderCovers[p];
-    changed = true;
   });
   const lists = [[settings, 'pinOrder']].concat(Object.values(settings.albums || {}).flatMap((a) => ['includes', 'related', 'featured'].map((f) => [a, f])));
   lists.forEach(([holder, field]) => {

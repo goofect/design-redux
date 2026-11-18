@@ -6,7 +6,7 @@ import { Appearance } from '../core/appearance.js';
 import { AlbumProperty } from '../library/album-property.js';
 import { Albums } from '../library/albums.js';
 import { LibraryCheck } from '../library/check.js';
-import { Covers } from '../library/covers.js';
+import { FolderColours } from '../library/colours.js';
 import { Library } from '../library/library.js';
 import { AlbumRefactor } from '../library/refactor.js';
 import { SavedViews } from '../library/saved-views.js';
@@ -27,5 +27,5 @@ import { PropertyHistory, PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
 import { Strip } from '../tools/strip.js';
 
-export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, Covers, SavedViews, LibraryCheck, NotePage, NotePages, Panel, Footnotes, Scripts, MarkedLists, ImageRouter,
+export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, FolderColours, SavedViews, LibraryCheck, NotePage, NotePages, Panel, Footnotes, Scripts, MarkedLists, ImageRouter,
   Strip, PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, PropertyHistory, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];

@@ -43,10 +43,10 @@ function measureScheme(scheme, t) {
     if (r < 4.5) failures.push(`${scheme}: ${what} on ${on} is ${r.toFixed(2)}, under 4.5`);
     return `${what} on ${on} ${r.toFixed(2)}`;
   };
-  // The ink on the ground, the ground on the ink (what is selected or open, inverted), the grey and the red on the ground.
-  const text = [says('ink', 'bg'), says('bg', 'ink'), says('muted', 'bg'), says('error', 'bg')];
+  // The ink on the ground and on the fill (what is open or picked), the grey on both, the red on the ground. The rule is a line, not words: no floor.
+  const text = [says('ink', 'bg'), says('ink', 'fill'), says('muted', 'bg'), says('muted', 'fill'), says('error', 'bg')];
   const names = Object.keys(t).sort();
-  if (names.join(' ') !== 'bg error ink muted') failures.push(`${scheme}: the palette is ${names.join(', ')}, not the four (bg, ink, muted, error)`);
+  if (names.join(' ') !== 'bg error fill ink muted rule') failures.push(`${scheme}: the palette is ${names.join(', ')}, not the six (bg, ink, muted, rule, fill, error)`);
   const pad = scheme.padEnd(5);
   return { lines: [`${pad}  ${text.join(' · ')}`], failures, pairs: text.length };
 }

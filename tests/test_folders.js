@@ -2,7 +2,7 @@
  * What a folder is and what can be done to it: its kind, description and
  * what it gathers (read from a folder note until changed, then kept by
  * path, with no note written); merging and splitting, said first and undone
- * in one; covers and colours; filters and saved views; the library check.
+ * in one; a folder's colour; filters and saved views; the library check.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -71,22 +71,13 @@ const VAULT = {
     assert.ok(w.file('Tables/Truth tables.md') && w.file('Logic/Validity.md'));
   });
 
-  await check('covers: a note\'s in its property, a folder\'s by its path, the first image, a colour, a drop, a repair', async () => {
+  await check('a folder\'s colour, for a map; covers gone, their commands kept but never offered', async () => {
     const w = await world(VAULT);
-    const covers = feature(w, 'Covers');
-    const note = w.file('Logic/Truth tables.md');
-    await covers.coverFromFirstImage(note);
-    assert.strictEqual(w.plugin.notes.get(note, 'cover'), '[[img/table.png]]');
-    assert.strictEqual(dr.noteCover(w.plugin, note), 'img/table.png');
-    await covers.setFolderCover(w.file('Logic'), w.file('img/table.png'));
-    assert.strictEqual(dr.folderCover(w.plugin, w.file('Logic')), 'img/table.png');
-    await covers.dropped(w.file('Reading'), { name: 'photo.JPG', arrayBuffer: async () => new ArrayBuffer(8) });
-    assert.strictEqual(w.plugin.settings.folderCovers.Reading, 'attachments/Reading cover.jpg');
-    await w.app.vault.rename(w.file('img'), 'pictures');
-    assert.strictEqual(w.plugin.settings.folderCovers.Logic, 'pictures/table.png', 'a folder\'s cover did not follow its image');
-    w.plugin.settings.folderCovers.Logic = 'gone/table.png';
-    assert.deepStrictEqual(await covers.repair(), { fixed: 2, lost: 0 });
-    assert.strictEqual(w.plugin.settings.folderCovers.Logic, 'pictures/table.png');
+    ['set-cover-image', 'set-folder-cover', 'repair-cover-link'].forEach((id) => {
+      const c = w.app.commands.commands[`design-redux:${id}`];
+      assert.ok(c, `${id} is not kept`);
+      assert.strictEqual(c.checkCallback ? c.checkCallback(true) : false, false, `${id} still offers itself`);
+    });
     w.plugin.settings.coverColors = { Logic: '#fa2d48', Reading: 'green', Empty: '#777777' };
     // A folder's colour is one of Obsidian's names; an old hex becomes the nearest, a grey none.
     assert.deepStrictEqual(['Logic', 'Reading', 'Empty'].map((p) => w.plugin.colourOf(w.file(p))), ['red', 'green', null]);
@@ -127,8 +118,8 @@ const VAULT = {
     screen.back();
     assert.strictEqual(screen.filter, null);
     await views.open(w.plugin.settings.smartAlbumList[0]);
-    // A filter is its own page: its name set large over what passes.
-    assert.strictEqual(screen.host.querySelector('.dr-folder-name').textContent, 'Drafts in Logic');
+    // A filter is its own page: its name in the head over what passes.
+    assert.strictEqual(screen.host.querySelector('.dr-head-name').textContent, 'Drafts in Logic');
   });
 
   await check('the library check: what it finds, in a report that changes nothing; and the inbox', async () => {
