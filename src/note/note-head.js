@@ -75,9 +75,25 @@ export function noteViews(app) {
 }
 
 export class NotePage extends Feature {
+  register() {
+    // Reading view builds the header that holds the title as it renders, after file-open and layout-change have fired:
+    // each render asks for one redraw a moment later, so the head is drawn once that header is there.
+    this.plugin.registerMarkdownPostProcessor(() => this.on && this.soon());
+  }
+
+  /** One redraw a moment from now, however many ask for it in between. */
+  soon() {
+    if (this.pending) return;
+    this.pending = setTimeout(() => {
+      this.pending = null;
+      if (this.on) this.drawAll();
+    }, 50);
+  }
+
   enable() {
     const ws = this.app.workspace;
     const draw = () => this.drawAll();
+    this.add(() => { clearTimeout(this.pending); this.pending = null; });
     ['file-open', 'layout-change', 'design-redux:props', 'design-redux:settings', 'design-redux:renamed', 'design-redux:page'].forEach((name) => this.listen(ws, name, draw));
     this.add(() => noteViews(this.app).forEach((view) => {
       noteHeads(view).forEach(({ folder, head }) => {
