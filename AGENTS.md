@@ -25,7 +25,8 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    has no switch. When asked to change something, prefer removing it. Gone so
    far, and staying gone: the grid and covers, zoom levels and shelves, the
    glyph builder, the image router, the properties panel and property
-   history, most settings, arrows in the tree, the design docs.
+   history, most settings, arrows in the tree, the design docs, a note shown in
+   another folder too, copying and pasting a note's properties.
 2. **An inventory, not a showcase.** A collection is one ruled list, like a
    stock sheet: names in rows, a light rule under each. No grid of cards, no
    images, no counts, no numbers, no decoration that carries nothing.

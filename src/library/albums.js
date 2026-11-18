@@ -2,9 +2,8 @@
 /* What a folder is: its kind, its description, what it gathers        */
 /*                                                                     */
 /* A folder can say what it is (a subject, a project, a reference, an  */
-/* index), what it is for, which notes from elsewhere belong to it     */
-/* too (shown in it, not moved), which folders sit beside it, and      */
-/* which notes to start with. The plugin keeps this by the folder's    */
+/* index), what it is for, which folders sit beside it, and which of   */
+/* its notes to start with. The plugin keeps this by the folder's      */
 /* path (settings.albums); a folder note from before is read, by the   */
 /* same property names as ever, until the first change carries what    */
 /* it says over. Nothing is written into a note.                       */
@@ -13,7 +12,8 @@
 import { TFile, TFolder } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { linkTarget, noteProps, propOf, valuesOf } from '../core/notes.js';
-import { choose, chooseFolder } from '../ui/choose.js';
+import { retiredActions } from '../core/actions.js';
+import { choose } from '../ui/choose.js';
 
 export const ALBUM_KINDS = [
   { id: 'subject', label: 'Subject' },
@@ -129,30 +129,19 @@ export class Albums extends Feature {
     await this.plugin.saveSettings();
   }
 
-  /** The folders that take a note in from elsewhere. */
-  including(file) {
-    return this.plugin.index.folders().filter((f) => this.info(f).includes.includes(file));
-  }
-
   async chooseKind(folder) {
     const none = { id: '', label: 'No kind' };
     const kind = await choose(this.app, ALBUM_KINDS.concat(none), { placeholder: `What kind of folder is ${folder.name}?`, name: (k) => k.label });
     if (kind) await this.change(folder, (d) => (d.type = kind.id));
   }
 
-  async includeNote(file) {
-    const folder = await chooseFolder(this.plugin, { placeholder: `Show ${file.basename} in…`, except: (f) => f.path === '/' || f === file.parent });
-    if (!folder) return;
-    await this.change(folder, (d) => (d.includes = Array.from(new Set((d.includes || []).concat(file.path)))));
-  }
-
   actions() {
     return [
       { id: 'album-set-type', name: 'Set what kind of folder this is…', on: 'folder', menu: 'Kind…', run: (ctx) => this.chooseKind(ctx.folder) },
-      { id: 'album-include-note', name: 'Show this note in another folder too…', on: 'note', menu: 'Show in another folder too…', run: (ctx) => this.includeNote(ctx.file) },
+      ...retiredActions(['album-include-note'], 'a folder shows only the notes directly in it'),
     ];
   }
 }
 Albums.title = 'Folders as collections';
 Albums.section = 'Library';
-Albums.about = 'A folder’s kind and description, and the notes from elsewhere it takes in.';
+Albums.about = 'A folder’s kind and description, and the notes to start with.';

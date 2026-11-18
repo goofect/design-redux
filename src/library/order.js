@@ -50,7 +50,7 @@ export function pins(plugin) {
 
 export const isPinned = (plugin, entry) => (plugin.settings.pinOrder || []).includes(entry.path);
 
-/** Pins or unpins a file or folder. */
+/** Pins or unpins a file or folder: a pin puts it first in its own folder, nowhere else. */
 export async function togglePin(plugin, entry) {
   const list = (plugin.settings.pinOrder || []).slice();
   const at = list.indexOf(entry.path);
@@ -69,15 +69,14 @@ export function neighbours(plugin, file) {
 }
 
 /**
- * What a folder lists: the notes to start with first, then its own in its
- * order, then the notes from elsewhere it takes in. Without the feature that
- * knows what a folder gathers (`plugin.gathering`), just its own.
+ * What a folder lists: only the notes directly in it, those to start with
+ * first, then the rest in its order. Without the feature that knows what a
+ * folder gathers (`plugin.gathering`), just its order.
  */
 export function listedNotes(plugin, folder) {
   const own = sortedNotes(plugin, folder);
   const info = typeof plugin.gathering === 'function' ? plugin.gathering(folder) : null;
   if (!info) return own;
-  const first = info.featured.filter((f) => own.includes(f) || info.includes.includes(f));
-  const rest = own.concat(info.includes.filter((f) => f.extension === 'md' && !own.includes(f)));
-  return first.concat(rest.filter((f) => !first.includes(f)));
+  const first = info.featured.filter((f) => own.includes(f));
+  return first.concat(own.filter((f) => !first.includes(f)));
 }

@@ -57,7 +57,7 @@ export function confirm(app, opts) {
   });
 }
 
-/** Asks for a line of text. { title, text, label, value, placeholder, action, check(value): a reason it won't do }. Resolves the text, or null. */
+/** Asks for a line of text. { title, text, label, value, placeholder, action, check(value): a reason it won't do, more: [{ text, run }] (words beside Cancel) }. Resolves the text, or null. */
 export function ask(app, opts) {
   return new Promise((resolve) => {
     let answer = null;
@@ -77,7 +77,7 @@ export function ask(app, opts) {
         input = field(matter, { label: opts.label || 'Name', value: opts.value, placeholder: opts.placeholder, onEnter: () => accept(s) });
         setTimeout(() => { input.drInput.focus(); input.drInput.select(); }, 0);
       },
-      actions: [{ text: 'Cancel' }, { text: opts.action || 'OK', kind: 'primary', run: () => accept(null) }],
+      actions: [{ text: 'Cancel' }].concat(opts.more || [], [{ text: opts.action || 'OK', kind: 'primary', run: () => accept(null) }]),
     });
     sheet.closed = () => resolve(answer);
     sheet.open();

@@ -1,14 +1,14 @@
 /* ------------------------------------------------------------------ */
 /* The property clipboard, and property sets                           */
 /*                                                                     */
-/* A note's properties copied as YAML and pasted onto another; a       */
-/* folder's as a table (tab-separated, a row a note) that can be       */
-/* edited in a spreadsheet and pasted back; a note's properties sorted */
-/* by name; and sets of properties kept under a name, to stamp on a    */
-/* note. Every write is one Undo.                                      */
+/* A folder's properties as a table (tab-separated, a row a note) that */
+/* can be edited in a spreadsheet and pasted back; a note's properties */
+/* sorted by name; and sets of properties kept under a name, to stamp  */
+/* on a note. Every write is one Undo.                                 */
 /* ------------------------------------------------------------------ */
 
-import { Notice, parseYaml, stringifyYaml } from 'obsidian';
+import { Notice } from 'obsidian';
+import { retiredActions } from '../core/actions.js';
 import { Feature } from '../core/feature.js';
 import { noteProps, valuesOf } from '../core/notes.js';
 import { counted } from '../core/text.js';
@@ -63,31 +63,6 @@ export class PropertyClipboard extends Feature {
       new Notice('Could not reach the clipboard.');
       return '';
     }
-  }
-
-  copyProps(file, keys) {
-    const props = noteProps(this.app, file);
-    const picked = keys ? Object.fromEntries(keys.filter((k) => k in props).map((k) => [k, props[k]])) : props;
-    if (!Object.keys(picked).length) return void new Notice('This note has no properties to copy.');
-    return this.copy(stringifyYaml(picked), `${counted(Object.keys(picked).length, 'property', 'properties')} copied.`);
-  }
-
-  async copySome(file) {
-    const props = noteProps(this.app, file);
-    const key = await choose(this.app, Object.keys(props), { placeholder: 'Copy which property?' });
-    return key ? this.copyProps(file, [key]) : false;
-  }
-
-  /** Pastes copied properties onto a note: its own values give way to the pasted ones. */
-  async paste(file, text) {
-    let props = null;
-    try {
-      props = parseYaml(text === undefined ? await this.read() : text);
-    } catch (err) {
-      props = null;
-    }
-    if (!props || typeof props !== 'object' || Array.isArray(props)) return void new Notice('The clipboard holds no properties.'), null;
-    return this.plugin.notes.write(file, (fm) => Object.assign(fm, props), { undo: `${counted(Object.keys(props).length, 'property', 'properties')} pasted onto ${file.basename}.` });
   }
 
   sort(file) {
@@ -155,9 +130,7 @@ export class PropertyClipboard extends Feature {
   actions() {
     const some = () => Object.keys(this.sets()).length > 0;
     return [
-      { id: 'copy-properties', name: 'Copy properties', on: 'note', run: (ctx) => this.copyProps(ctx.file) },
-      { id: 'copy-some-properties', name: 'Copy some of this note’s properties…', on: 'note', menu: false, run: (ctx) => this.copySome(ctx.file) },
-      { id: 'paste-properties', name: 'Paste properties', on: 'note', run: (ctx) => this.paste(ctx.file) },
+      ...retiredActions(['copy-properties', 'copy-some-properties', 'paste-properties'], 'Add a property takes another note\'s'),
       { id: 'sort-properties', name: 'Sort properties alphabetically', on: 'note', menu: false, run: (ctx) => this.sort(ctx.file) },
       { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', on: 'folder', menu: 'Copy properties as a table', run: (ctx) => this.copyTable(ctx.folder) },
       { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', on: 'folder', menu: 'Update notes from a table', run: (ctx) => this.pasteTable(ctx.folder) },
@@ -169,4 +142,4 @@ export class PropertyClipboard extends Feature {
 }
 PropertyClipboard.title = 'Property clipboard and sets';
 PropertyClipboard.section = 'Tools';
-PropertyClipboard.about = 'Copy and paste properties, a folder’s as a table, and keep sets to stamp on a note.';
+PropertyClipboard.about = 'A folder’s properties as a table to copy and paste back, and sets to stamp on a note.';

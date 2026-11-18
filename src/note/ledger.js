@@ -7,13 +7,15 @@
 /* (Enter writes it, with an Undo; Escape leaves it); a row's menu     */
 /* renames or removes it; a value the folder's schema finds wrong is   */
 /* red, the reason after it. No heading, no buttons, no icons: a       */
-/* property is added by its command. The panel draws the same rows.    */
+/* property is added by its command, as "name" or "name: value", or    */
+/* all of another note's at once.                                      */
 /* ------------------------------------------------------------------ */
 
-import { Menu } from 'obsidian';
+import { Menu, Notice } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { valuesOf } from '../core/notes.js';
-import { listOf } from '../core/text.js';
+import { counted, listOf } from '../core/text.js';
+import { choose } from '../ui/choose.js';
 import { propRow, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 
@@ -47,11 +49,41 @@ export function primaryProps(settings, file) {
 
 export const setValue = (plugin, file, key, value) => plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} changed.` });
 
-/** Asks for a new property's name and adds it, empty, to the note. */
+/** What was typed to add a property: "name", or "name: value". */
+export function parseAdded(text) {
+  const t = String(text).trim();
+  const at = t.indexOf(':');
+  return at < 0 ? { key: t, value: '' } : { key: t.slice(0, at).trim(), value: t.slice(at + 1).trim() };
+}
+
+/** Adds another note's properties to this one: what this note has, it keeps. Resolves the undo, or null when none was added. */
+export async function addPropertiesFrom(plugin, file, from) {
+  const have = plugin.notes.props(file);
+  const props = plugin.notes.props(from);
+  const keys = Object.keys(props).filter((k) => !(k in have));
+  if (!keys.length) return void new Notice(`${file.basename} has every property of ${from.basename} already.`), null;
+  return plugin.notes.write(file, (fm) => keys.forEach((k) => (fm[k] = JSON.parse(JSON.stringify(props[k])))), { undo: `${counted(keys.length, 'property', 'properties')} added from ${from.basename}.` });
+}
+
+/** Asks for a property, "name" or "name: value", and adds it; or, by the word beside Cancel, takes another note's. */
 export async function addProperty(plugin, file) {
-  const key = await ask(plugin.app, { title: 'Add a property', label: 'Its name', placeholder: 'status', action: 'Add', check: (v) => (v in plugin.notes.props(file) ? 'This note already has it.' : null) });
-  if (!key) return;
-  await plugin.notes.write(file, (fm) => (fm[key] = ''), { undo: `${key} added.` });
+  let fromNote = false;
+  const text = await ask(plugin.app, {
+    title: 'Add a property',
+    label: 'Its name, or name: value',
+    placeholder: 'status: draft',
+    action: 'Add',
+    check: (v) => (!parseAdded(v).key ? 'It needs a name.' : parseAdded(v).key in plugin.notes.props(file) ? 'This note already has it.' : null),
+    more: [{ text: 'From another note…', run: () => void (fromNote = true) }],
+  });
+  if (fromNote) {
+    const others = plugin.index.markdown().filter((f) => f !== file && Object.keys(plugin.notes.props(f)).length);
+    const from = await choose(plugin.app, others, { placeholder: `Add the properties of which note to ${file.basename}?`, name: (f) => f.path.replace(/\.md$/, '') });
+    return from ? addPropertiesFrom(plugin, file, from) : null;
+  }
+  if (!text) return null;
+  const { key, value } = parseAdded(text);
+  return plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} added.` });
 }
 
 /** A property's own menu: rename it, remove it. */

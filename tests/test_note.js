@@ -116,8 +116,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.plugin.openFolder.path, 'Logic');
   });
 
-  await check('the ledger: values keep their kind, one Undo a change; a property added by its command and removed by its menu; the panel gone, its view and commands kept quiet', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n' });
+  await check('the ledger: values keep their kind, one Undo a change; a property added by its command (a name, name: value, or another note\'s) and removed by its menu; the panel gone, its view and commands kept quiet', async () => {
+    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n', 'Logic/B.md': '---\nstatus: done\nauthor: Frege\n---\n' });
     const file = w.file('Logic/A.md');
     const host = w.doc.body.appendChild(w.doc.createElement('div'));
     const draw = () => { host.textContent = ''; dr.drawLedger(w.plugin, host, file, draw); };
@@ -141,6 +141,18 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     dr.addProperty(w.plugin, file);
     await answer(w, 'course');
     assert.ok('course' in w.plugin.notes.props(file));
+    dr.addProperty(w.plugin, file);
+    await answer(w, 'year: 1879');
+    assert.strictEqual(w.plugin.notes.get(file, 'year'), '1879');
+    // From another note: what this one has, it keeps.
+    const adding = dr.addProperty(w.plugin, file);
+    await settle();
+    const sheet = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    Array.from(sheet.contentEl.querySelectorAll('.dr-button')).find((b) => b.textContent === 'From another note…').click();
+    await settle();
+    obsidian.Modal.open[obsidian.Modal.open.length - 1].pick(w.file('Logic/B.md'));
+    await adding;
+    assert.deepStrictEqual([w.plugin.notes.get(file, 'status'), w.plugin.notes.get(file, 'author')], ['draft', 'Frege']);
     await dr.propertyMenu(w.plugin, file, 'course').click('Remove property');
     assert.ok(!('course' in w.plugin.notes.props(file)));
     // The panel is gone: its view type still opens (a saved layout names it) and closes itself; its commands are kept, never offered.

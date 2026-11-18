@@ -206,6 +206,12 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.ok(!menu.titles().includes('Cover…'), 'a folder still offers a cover');
     await menu.click('Pin');
     assert.deepStrictEqual(w.plugin.settings.pinOrder, ['Logic']);
+    // A pin counts in its own folder: first there, and nowhere else.
+    const pinned = w.file('Logic/Validity.md');
+    await dr.togglePin(w.plugin, pinned);
+    assert.strictEqual(dr.pinnedFirst(w.plugin, w.file('Logic'), dr.listedNotes(w.plugin, w.file('Logic')))[0], pinned);
+    assert.ok(!dr.pinnedFirst(w.plugin, w.app.vault.getRoot(), dr.listedNotes(w.plugin, w.app.vault.getRoot())).includes(pinned), 'a pin shows outside its folder');
+    await dr.togglePin(w.plugin, pinned);
     menu.items.find((i) => i.title === 'Sort by').submenu.click('Last edited');
     await settle();
     assert.strictEqual(dr.sortOf(w.plugin, w.file('Logic')), 'modified');

@@ -2,8 +2,8 @@
 /* What a place in the library holds, drawn the one way it is drawn    */
 /*                                                                     */
 /* A folder's page (the vault's own is empty): the path to it as      */
-/* boxed words, then its notes as ruled rows, pinned ones first at the */
-/* top. Its folders are in the sidebar's tree. One view of a           */
+/* boxed words, then its notes as ruled rows, pinned ones first. Its   */
+/* folders are in the sidebar's tree. One view of a                    */
 /* collection: no grid, no covers, no glyphs, counts or numbers.       */
 /* ------------------------------------------------------------------ */
 
@@ -29,9 +29,8 @@ function noteRows(screen, host, notes) {
   return list;
 }
 
-/** Pinned ones first, in the person's order, at the vault's top; elsewhere the list as it is. */
+/** A folder's own pinned entries first, in the person's order. A list holds only a folder's own, so a pin counts in its folder alone. */
 export function pinnedFirst(plugin, folder, list) {
-  if (folder.path !== '/') return list;
   const pinned = pins(plugin).map((e) => e.path);
   const at = (e) => pinned.indexOf(e.path);
   return list.filter((e) => at(e) >= 0).sort((x, y) => at(x) - at(y)).concat(list.filter((e) => at(e) < 0));

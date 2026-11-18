@@ -117,12 +117,11 @@ const VAULT = {
     assert.deepStrictEqual(screen.filter, { prop: '!status' });
   });
 
-  await check('the clipboard: properties copied and pasted; a folder\'s as a table and back; sorted; sets kept and stamped', async () => {
+  await check('the clipboard: a folder\'s properties as a table and back; sorted; sets kept and stamped', async () => {
     const w = await world(VAULT);
     const clip = feature(w, 'PropertyClipboard');
-    await clip.copyProps(w.file('Reading/D.md'));
-    assert.ok(/status: done/.test(board) && /domain:/.test(board));
-    await clip.paste(w.file('Reading/E.md'));
+    ['copy-properties', 'copy-some-properties', 'paste-properties'].forEach((id) => assert.strictEqual(w.app.commands.commands[`design-redux:${id}`].checkCallback(true), false, `${id} still offers itself`));
+    await dr.addPropertiesFrom(w.plugin, w.file('Reading/E.md'), w.file('Reading/D.md'));
     assert.deepStrictEqual(props(w, 'Reading/E.md'), { status: 'done', domain: ['ethics'] });
     await clip.copyTable(w.file('Reading'));
     const table = dr.readTable(board);

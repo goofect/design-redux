@@ -31,7 +31,8 @@ const VAULT = {
     const info = albums.info(logic);
     assert.deepStrictEqual([info.type, info.label, info.description], ['subject', 'Subject', 'Arguments and their forms.']);
     assert.deepStrictEqual([info.includes.map((f) => f.path), info.featured.map((f) => f.path), info.related.map((f) => f.path)], [['Reading/Hume.md'], ['Logic/Validity.md'], ['Reading']]);
-    assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables', 'Hume'], 'featured first, then its own, then what it takes in');
+    assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables'], 'featured first, then its own, and nothing from elsewhere');
+    assert.strictEqual(w.app.commands.commands['design-redux:album-include-note'].checkCallback(true), false, 'a note is still shown in another folder');
     assert.strictEqual(w.plugin.describe(logic), 'Subject · Arguments and their forms.');
     const before = w.text('Logic/Logic.md');
     albums.chooseKind(logic);
@@ -39,9 +40,6 @@ const VAULT = {
     assert.strictEqual(albums.info(logic).type, 'project');
     assert.deepStrictEqual(w.plugin.settings.albums.Logic.includes, ['Reading/Hume.md'], 'the change did not carry over what the note said');
     assert.strictEqual(w.text('Logic/Logic.md'), before, 'the folder note was rewritten');
-    albums.includeNote(w.file('Loose.md'));
-    await answer(w, (m) => m.pick(w.file('Reading')));
-    assert.deepStrictEqual(albums.including(w.file('Loose.md')).map((f) => f.path), ['Reading']);
     w.plugin.settings.albumKeyNames = { type: 'kind' };
     assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).type, undefined, 'a renamed property is still read under its old name');
   });
