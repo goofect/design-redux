@@ -140,7 +140,7 @@ const VAULT = {
     assert.deepStrictEqual(w.plugin.settings.propertySets, {});
   });
 
-  await check('schemas: written as lines and read back; a value that doesn\'t fit says why, in the panel too; folders below inherit', async () => {
+  await check('schemas: written as lines and read back; a value that doesn\'t fit says why, in the ledger too; folders below inherit', async () => {
     const entries = dr.parseSchema('status: text, required, draft | done; week: number');
     assert.deepStrictEqual(entries, [{ key: 'status', type: 'text', required: true, values: ['draft', 'done'] }, { key: 'week', type: 'number' }]);
     assert.deepStrictEqual(dr.parseSchema(dr.schemaText(entries)), entries);
@@ -150,9 +150,9 @@ const VAULT = {
     assert.deepStrictEqual(schemas.faults(w.file('Logic/Sub/S.md')), [{ key: 'status', fault: 'required here, and missing' }, { key: 'week', fault: 'not a number' }]);
     assert.deepStrictEqual(schemas.check().map((x) => x.file.basename).sort(), ['G', 'S']);
     obsidian.Modal.open[0].close();
-    await w.app.workspace.getLeaf().openFile(w.file('Logic/G.md'));
-    const leaf = await feature(w, 'Panel').reveal();
-    const row = leaf.view.contentEl.querySelector('.dr-prop[data-key="status"]');
+    const host = w.doc.createElement('div');
+    dr.drawLedger(w.plugin, host, w.file('Logic/G.md'), () => {});
+    const row = host.querySelector('.dr-prop[data-key="status"]');
     assert.deepStrictEqual([row.getAttribute('aria-invalid'), row.getAttribute('aria-label')], ['true', 'status: “drafty” is not one of draft, done']);
   });
 
@@ -216,19 +216,6 @@ const VAULT = {
     await w.app.vault.rename(w.file('Logic/B.md'), 'Reading/B.md');
     await settle();
     assert.strictEqual(props(w, 'Reading/B.md').shelf, 'reading', 'a rule did not fire for a note moved into its folder');
-  });
-
-  await check('history: the last changes kept by the note, newest first; one value put back from the panel', async () => {
-    const w = await world(VAULT, { settingsVersion: 100, propertyHistoryLimit: 2 });
-    const file = w.file('Reading/D.md');
-    for (const s of ['one', 'two', 'three']) await w.plugin.notes.write(file, (fm) => (fm.status = s));
-    const kept = w.plugin.historyOf(file);
-    assert.deepStrictEqual(kept.map((h) => [h.was, h.now]), [['two', 'three'], ['one', 'two']]);
-    await w.app.workspace.getLeaf().openFile(file);
-    const panel = feature(w, 'Panel');
-    const history = panel.sections(file).find((s) => s.title === 'History');
-    await history.items[1].run();
-    assert.strictEqual(props(w, 'Reading/D.md').status, 'one');
   });
 
   await check('graph routes: the long lines worked out from links alone; left out of a graph only once turned on for its kind', async () => {

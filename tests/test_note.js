@@ -116,58 +116,40 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.plugin.openFolder.path, 'Logic');
   });
 
-  await check('the panel: a note\'s properties edited in place with an Undo; a value keeps its kind; named in, mentioned in, links to', async () => {
-    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n[[B]]', 'Logic/B.md': '---\nparent: "[[A]]"\n---\n[[A]]', 'C.md': '[[A]]' });
-    await open(w, 'Logic/A.md');
-    const panel = feature(w, 'Panel');
-    const leaf = await panel.reveal();
-    const view = leaf.view;
-    const keys = () => Array.from(view.contentEl.querySelectorAll('.dr-prop')).map((p) => `${p.dataset.key}=${p.querySelector('.dr-prop-value').textContent}`);
+  await check('the ledger: values keep their kind, one Undo a change; a property added by its command and removed by its menu; the panel gone, its view and commands kept quiet', async () => {
+    const w = await world({ 'Logic/A.md': '---\nstatus: draft\nweek: 3\ntags: [a, b]\n---\n' });
+    const file = w.file('Logic/A.md');
+    const host = w.doc.body.appendChild(w.doc.createElement('div'));
+    const draw = () => { host.textContent = ''; dr.drawLedger(w.plugin, host, file, draw); };
+    draw();
+    const keys = () => Array.from(host.querySelectorAll('.dr-prop')).map((p) => `${p.dataset.key}=${p.querySelector('.dr-prop-value').textContent}`);
     assert.deepStrictEqual(keys(), ['status=draft', 'week=3', 'tags=a, b']);
     const edit = async (key, value) => {
-      view.contentEl.querySelector(`.dr-prop[data-key="${key}"]`).click();
-      const input = view.contentEl.querySelector('.dr-prop input');
+      host.querySelector(`.dr-prop[data-key="${key}"]`).click();
+      const input = host.querySelector('.dr-prop input');
       input.value = value;
       input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       await settle();
     };
     await edit('week', '4');
     await edit('tags', 'a, c , d');
-    assert.deepStrictEqual(w.plugin.notes.props(w.file('Logic/A.md')), { status: 'draft', week: 4, tags: ['a', 'c', 'd'] });
+    assert.deepStrictEqual(w.plugin.notes.props(file), { status: 'draft', week: 4, tags: ['a', 'c', 'd'] });
     await w.plugin.lastUndo.run();
-    assert.deepStrictEqual(w.plugin.notes.get(w.file('Logic/A.md'), 'tags'), ['a', 'b']);
+    assert.deepStrictEqual(w.plugin.notes.get(file, 'tags'), ['a', 'b']);
     assert.deepStrictEqual([dr.parseValue('yes', true), dr.parseValue('x', 3), dr.parseValue('', ['a'])], [true, 'x', []]);
-    await settle();
-    const sections = Object.fromEntries(panel.sections(w.file('Logic/A.md')).map((s) => [s.title, s.items.map((i) => `${i.name}${i.end ? `:${i.end}` : ''}`)]));
-    // A note's folder trails it only where the list mixes folders.
-    assert.deepStrictEqual(sections, { 'Named in': ['B:parent'], 'Mentioned in': ['B:Logic', 'C'], 'Links to': ['B'] });
-    // No head naming the note again, no numbers, no control at all: a property is added by its command, the note's actions are a right press away.
-    assert.ok(!view.contentEl.querySelector('.dr-head'), 'the panel names the note again');
-    assert.ok(!view.contentEl.querySelector('.dr-slot'), 'the panel numbers its rows');
-    assert.ok(!view.contentEl.querySelector('.dr-icon-button, .dr-button'), 'the panel has a control');
     assert.ok(w.app.commands.commands['design-redux:add-property'], 'no command adds a property');
-    dr.addProperty(w.plugin, w.file('Logic/A.md'));
+    dr.addProperty(w.plugin, file);
     await answer(w, 'course');
-    assert.ok('course' in w.plugin.notes.props(w.file('Logic/A.md')));
-    await dr.propertyMenu(w.plugin, w.file('Logic/A.md'), 'course').click('Remove property');
-    assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))));
-    // A group folds by a press on its title (no arrow, no button); folded, the title counts what it holds.
-    Object.assign(w.plugin.settings, { panelPropertyGroups: 'on', panelGroupList: [{ title: 'Main', keys: 'status, week' }], panelFoldedGroups: [] });
-    view.draw();
-    const title = () => Array.from(view.contentEl.querySelectorAll('.dr-section > .dr-section-name')).find((l) => l.textContent.startsWith('Main'));
-    assert.strictEqual(title().getAttribute('aria-expanded'), 'true');
-    title().click();
-    await settle();
-    assert.deepStrictEqual([title().textContent, title().getAttribute('aria-expanded')], ['Main · 2', 'false']);
-    assert.ok(!view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'a folded group still shows its rows');
-    title().click();
-    await settle();
-    assert.ok(view.contentEl.querySelector('.dr-prop[data-key="status"]'), 'the group did not open again');
-    w.plugin.selection.pick(w.file('Logic'));
-    await settle();
-    assert.strictEqual(view.contentEl.querySelector('.dr-crumb[aria-current]').textContent, 'Logic', 'a folder picked is not shown in the panel as its page');
-    await panel.toggle();
-    assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-properties').length, 0);
+    assert.ok('course' in w.plugin.notes.props(file));
+    await dr.propertyMenu(w.plugin, file, 'course').click('Remove property');
+    assert.ok(!('course' in w.plugin.notes.props(file)));
+    // The panel is gone: its view type still opens (a saved layout names it) and closes itself; its commands are kept, never offered.
+    assert.ok(w.app.viewRegistry['design-redux-properties'], 'the panel\'s view type is no longer registered');
+    ['open-properties', 'open-inspector'].forEach((id) => {
+      const c = w.app.commands.commands[`design-redux:${id}`];
+      assert.ok(c && c.checkCallback(true) === false, `${id} still offers itself`);
+    });
+    host.remove();
   });
 
   await check('footnotes, from the text: found outside fences, put in order by where they appear, named ones kept', () => {

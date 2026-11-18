@@ -58,8 +58,7 @@ export function lists() {
       shown('open · filled', rows(row(n.title, { 'aria-current': 'page' }))), shown('picked · filled', rows(row(n.title, { 'aria-selected': 'true' }))),
       shown('disabled · grey', rows(row(n.title, { 'aria-disabled': 'true' }))), shown('wrong · red, its word', rows(row(n.title, { class: 'is-error', end: 'unreadable' }))),
     ]),
-    component('Property', 'The ledger’s row: name grey in a fixed column, value ink, a light rule under it; a value edited where it stands. A group’s title only in the panel, where there is more than one group.', [
-      shown('a group', `<div class="spec-rows"><div class="dr-section"><span class="dr-section-name dr-muted" role="button" tabindex="0" aria-expanded="true">General</span></div>${properties.slice(0, 2).map(([k, v]) => prop(k, v)).join('')}</div>`),
+    component('Property', 'The ledger’s row: name grey in a fixed column, value ink, a light rule under it; a value edited where it stands.', [
       shown('hover', rows(prop('Status', 'Draft', { class: 'spec-hover' }))), shown('picked · filled', rows(prop('Status', 'Draft', { 'aria-selected': 'true' }))),
       shown('no value · a dash', rows(prop('Sources', '—', { class: 'is-empty' }))), shown('wrong · red, the words saying why', rows(prop('Week', 'six', { 'aria-invalid': 'true', why: 'not a number' }))),
     ]),

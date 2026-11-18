@@ -217,32 +217,3 @@ PropertyRules.key = 'propertyRulesOn';
 PropertyRules.title = 'Property rules';
 PropertyRules.section = 'Tools';
 PropertyRules.about = 'When a note comes into a folder, gets a tag or a value, set other properties.';
-
-export class PropertyHistory extends Feature {
-  get wanted() {
-    return Number(this.settings.propertyHistoryLimit) > 0;
-  }
-
-  enable() {
-    this.add(this.plugin.notes.watch((record) => this.keep(record)));
-    this.plugin.historyOf = (file) => ((this.settings.propertyHistory || {})[file.path] || []).slice().reverse();
-    this.plugin.putBackChange = (file, change) => this.putBack(file, change);
-    this.add(() => { delete this.plugin.historyOf; delete this.plugin.putBackChange; });
-  }
-
-  keep(record) {
-    const all = this.settings.propertyHistory || (this.settings.propertyHistory = {});
-    const list = all[record.file.path] || (all[record.file.path] = []);
-    Object.keys(record.before).forEach((key) => list.push({ key, was: record.before[key], now: record.after[key], at: Date.now() }));
-    list.splice(0, Math.max(0, list.length - Number(this.settings.propertyHistoryLimit)));
-    this.plugin.saveData(this.settings);
-  }
-
-  /** Puts one value back as a kept change had it, the rest left as they are. */
-  putBack(file, change) {
-    return this.plugin.notes.write(file, (fm) => { if (change.was === undefined) delete fm[change.key]; else fm[change.key] = change.was; }, { undo: `${change.key} put back.` });
-  }
-}
-PropertyHistory.title = 'Property history';
-PropertyHistory.section = 'Tools';
-PropertyHistory.about = 'The last changes to a note’s properties, to put back one value at a time.';

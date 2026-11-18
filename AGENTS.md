@@ -2,7 +2,8 @@
 
 An Obsidian plugin that turns the vault into a library: the folders as a tree
 in the left sidebar, a folder's notes as a ruled list in the page, a note head
-and pages, a strip at the note's foot, a properties panel and property tools.
+(its properties as a ledger) and pages, a strip at the note's foot, and
+property tools.
 One look, reduced and raw: monospace at one size, black, white and greys,
 framed panes, and Obsidian's chrome hidden. Desktop only.
 
@@ -22,8 +23,8 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    or line that the screen works without. A feature that only adds commands
    has no switch. When asked to change something, prefer removing it. Gone so
    far, and staying gone: the grid and covers, zoom levels and shelves, the
-   glyph builder, the image router, most settings, arrows in the tree, the
-   design docs.
+   glyph builder, the image router, the properties panel and property
+   history, most settings, arrows in the tree, the design docs.
 2. **An inventory, not a showcase.** A collection is one ruled list, like a
    stock sheet: names in rows, a light rule under each. No grid of cards, no
    images, no counts, no numbers, no decoration that carries nothing.

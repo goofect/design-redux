@@ -9,7 +9,7 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router): a 4.0 file's values for them are kept under `retired`, not dropped. */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history): a 4.0 file's values for them are kept under `retired`, not dropped. */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -27,6 +27,10 @@ const RETIRED_SINCE_4 = {
   coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
   coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
   coverFromFirstImage: 'covers are gone',
+  ...Object.fromEntries(['propertiesDropdown', 'inspector', 'panelPropertyGroups', 'panelGroupList', 'panelFoldedGroups', 'showMentions', 'propertyLinks']
+    .map((k) => [k, 'the panel is gone: a note\'s properties are its ledger, under its title; the right sidebar stays hidden'])),
+  propertyHistory: 'property history is gone: it had no place to be seen without the panel',
+  propertyHistoryLimit: 'property history is gone',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
   imageFolder: 'the image router is gone',
   notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
@@ -101,8 +105,6 @@ export function migrateSettings(saved) {
   if (old) {
     // The old looks (classic, editorial and the rest) all become the one new look; lookScope is kept as it was.
     settings.look = 'redux';
-    // The properties panel took over the inspector's switch.
-    if (saved.propertyInspector === false) settings.inspector = false;
   }
   // 102: the direction reset retired what it cut; 103: covers; 104: the settings cut. A 4.0 file's values for those keys are kept under `retired`.
   if (version >= REWRITE_VERSION && version < SETTINGS_VERSION) {

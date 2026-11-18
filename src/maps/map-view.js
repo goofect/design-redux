@@ -18,7 +18,7 @@ import { headRow } from '../ui/head.js';
 import { MAP, foldAll, folderMap, layoutMap, noteMap, shownNodes } from './map-model.js';
 
 export const MAP_VIEW = 'design-redux-mindmap';
-export const RETIRED_VIEWS = ['design-redux-outline'];
+export const RETIRED_VIEWS = ['design-redux-outline', 'design-redux-properties'];
 
 export class MapView extends ItemView {
   constructor(leaf, plugin) {

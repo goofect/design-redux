@@ -14,7 +14,6 @@ import { Footnotes } from '../note/footnotes.js';
 import { MarkedLists } from '../note/lists.js';
 import { NotePage } from '../note/note-head.js';
 import { NotePages } from '../note/pages.js';
-import { Panel } from '../note/panel.js';
 import { Scripts } from '../note/scripts.js';
 import { Maps } from '../maps/map-view.js';
 import { PropertyClipboard } from '../tools/clipboard.js';
@@ -22,9 +21,9 @@ import { ActionsMenu, Diagnostics, MenuFilter } from '../tools/extras.js';
 import { Graph3D } from '../tools/graph-3d.js';
 import { GraphFilter, GraphRoutes } from '../tools/graph-routes.js';
 import { PropertyTools } from '../tools/property-tools.js';
-import { PropertyHistory, PropertyRules } from '../tools/rules.js';
+import { PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
 import { Strip } from '../tools/strip.js';
 
-export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, FolderColours, SavedViews, LibraryCheck, NotePage, NotePages, Panel, Footnotes, Scripts, MarkedLists,
-  Strip, PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, PropertyHistory, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];
+export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, FolderColours, SavedViews, LibraryCheck, NotePage, NotePages, Footnotes, Scripts, MarkedLists,
+  Strip, PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];

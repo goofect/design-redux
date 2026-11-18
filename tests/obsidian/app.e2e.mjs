@@ -12,7 +12,7 @@ suite('Design Redux in Obsidian: the app', function () {
         legacy: p ? p.legacyKept : null,
       };
     });
-    expect(got.features).toBe(27);
+    expect(got.features).toBe(25);
     expect(got.commands).toBeGreaterThanOrEqual(74);
   });
 

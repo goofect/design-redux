@@ -1,6 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* The note: the parts round its title, a page that is not open, and   */
-/* the panel                                                           */
+/* The note: the parts round its title, and a page that is not open   */
 /*                                                                     */
 /* The plugin's own elements in the note's own column, wherever the    */
 /* note is laid out (the editor's sizer, reading view's header), so    */
@@ -51,13 +50,4 @@
 /* A block of another page, in reading view. The class is the plugin's, put on the block as it is drawn. */
 .dr-page-hidden {
   display: none;
-}
-
-/* ---- The panel: name and value on a line; its parts parted by space; a group's title only where there are groups. ---- */
-.dr-panel {
-  padding-top: var(--dr-u);
-}
-
-.dr-panel .dr-section:not(:first-child) {
-  margin-top: calc(3 * var(--dr-u));
 }

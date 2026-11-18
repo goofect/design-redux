@@ -43,12 +43,8 @@ const SETTINGS = {
   contextStrip: true,
   notePageChips: true,
   panelPrimaryProps: 'status, course, week',
-  panelPropertyGroups: 'on',
-  panelGroupList: [{ title: 'General', keys: 'status, course, week, domain' }, { title: 'Relationships', keys: 'parent, related' }],
-  panelFoldedGroups: [],
   propertyOptions: { status: { draft: { color: 'orange' }, done: { color: 'green' } } },
   propertySchemas: { Logic: [{ key: 'week', type: 'number' }] },
-  propertyHistoryLimit: 5,
   coverColors: { 'Projects/Garden': 'moss' },
   recentSearches: ['truth', 'hume'],
   propertyRules: [

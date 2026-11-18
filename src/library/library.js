@@ -34,15 +34,6 @@ export class Library extends Feature {
       ws.detachLeavesOfType(LIBRARY_VIEW);
       ws.detachLeavesOfType(BROWSE_VIEW);
     });
-    // For the panel, which may not import the library: a folder picked, drawn as its page.
-    this.plugin.drawFolder = (host, folder) => drawFolderPage({
-      plugin: this.plugin,
-      go: (f) => this.browse(f),
-      openNote: (file, e) => ws.getLeaf(e && Keymap.isModEvent(e) ? 'tab' : false).openFile(file),
-      openFile: () => ws.getActiveFile(),
-      roving: () => {},
-    }, host, folder);
-    this.add(() => delete this.plugin.drawFolder);
     // For the sidebar's tree: a folder's name pressed shows it in the page.
     this.plugin.showFolder = (folder) => this.browse(folder);
     this.add(() => delete this.plugin.showFolder);

@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'can
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 105;
+export const SETTINGS_VERSION = 106;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -64,20 +64,9 @@ export const DEFAULTS = {
   letterLists: true,
   romanLists: true,
 
-  // The panel
-  propertiesDropdown: true,
-  inspector: true,
+  // The ledger: the properties listed first, everywhere and by folder
   panelPrimaryProps: 'type, domain, status',
-  panelPropertyGroups: 'off',
-  panelGroupList: [
-    { title: 'General', keys: 'type, domain, status' },
-    { title: 'Relationships', keys: 'parent, broader, narrower, related' },
-    { title: 'Information', keys: 'created, modified' },
-  ],
-  panelFoldedGroups: [],
   panelFolderViews: {},
-  showMentions: true,
-  propertyLinks: true,
 
   // The strip
   contextStrip: false,
@@ -86,8 +75,6 @@ export const DEFAULTS = {
   propertySets: {},
   folderDefaults: {},
   propertySchemas: {},
-  propertyHistory: {},
-  propertyHistoryLimit: 0,
   propertyRules: [],
   propertyRulesOn: false,
   propertyRulesDryRun: true,
@@ -101,7 +88,7 @@ export const DEFAULTS = {
 };
 
 /** Settings whose keys are paths: a rename moves the key, a delete drops it. */
-export const PATH_KEYED = ['albums', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'propertyHistory', 'panelFolderViews', 'pagesOpen'];
+export const PATH_KEYED = ['albums', 'coverColors', 'albumSorts', 'albumOrders', 'folderDefaults', 'propertySchemas', 'panelFolderViews', 'pagesOpen'];
 
 /** `path` after `from` became `to`: itself, or moved with the folder it was under. */
 export function movedPath(path, from, to) {

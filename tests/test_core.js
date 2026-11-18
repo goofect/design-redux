@@ -22,7 +22,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
   });
 
   await check('an old data.json is converted once, its values kept, and the whole of it copied to data.legacy.json', async () => {
-    const old = { settingsVersion: 34, library: false, coverProperty: 'art', folderCovers: { Logic: 'img/a.png' }, albumOrders: { Logic: { names: ['B.md', 'A.md'] } }, pinOrder: ['Logic/A.md'], gridDensity: 'large', coverDesigns: { Logic: { kind: 3 } }, lookScope: 'window', propertyRules: [{ id: 1 }], contextStrip: true, panelGroupList: 'broken' };
+    const old = { settingsVersion: 34, library: false, coverProperty: 'art', folderCovers: { Logic: 'img/a.png' }, albumOrders: { Logic: { names: ['B.md', 'A.md'] } }, pinOrder: ['Logic/A.md'], gridDensity: 'large', coverDesigns: { Logic: { kind: 3 } }, lookScope: 'window', propertyRules: [{ id: 1 }], contextStrip: true, pagesOpen: 'broken' };
     const w = await world({ 'Logic/A.md': '' }, old);
     const s = w.plugin.settings;
     assert.strictEqual(s.library, false);
@@ -34,7 +34,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.strictEqual(s.look, 'redux');
     assert.strictEqual(s.settingsVersion, dr.SETTINGS_VERSION);
     assert.ok(!('gridDensity' in s) && !('coverDesigns' in s), 'a retired key came through');
-    assert.deepStrictEqual(s.panelGroupList, dr.DEFAULTS.panelGroupList, 'a value of the wrong kind was taken');
+    assert.deepStrictEqual(s.pagesOpen, dr.DEFAULTS.pagesOpen, 'a value of the wrong kind was taken');
     const legacy = JSON.parse(w.app.vault.adapter.files.get('.obsidian/plugins/design-redux/data.legacy.json'));
     assert.deepStrictEqual(legacy, old, 'the copy is not the old file');
     assert.strictEqual(w.plugin._data.settingsVersion, dr.SETTINGS_VERSION);

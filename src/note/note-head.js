@@ -12,6 +12,8 @@
 import { MarkdownView, TFile } from 'obsidian';
 import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
+import { retiredActions } from '../core/actions.js';
+import { ask } from '../ui/sheet.js';
 import { addProperty, drawLedger } from './ledger.js';
 
 /** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
@@ -113,6 +115,17 @@ export class NotePage extends Feature {
   actions() {
     return [
       { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property…', run: (ctx) => addProperty(this.plugin, ctx.file) },
+      { id: 'panel-folder-properties', name: 'Properties listed first in this folder…', on: 'folder', menu: 'Properties listed first…', run: async (ctx) => {
+        const views = Object.assign({}, this.settings.panelFolderViews);
+        const now = views[ctx.folder.path];
+        const main = await ask(this.app, { title: `Listed first, in ${ctx.folder.name}`, label: 'Properties, with commas between', value: now ? now.main : this.settings.panelPrimaryProps, action: 'Keep' });
+        if (main === null) return;
+        if (String(main).trim()) views[ctx.folder.path] = { main: String(main).trim() };
+        else delete views[ctx.folder.path];
+        this.settings.panelFolderViews = views;
+        await this.plugin.saveSettings();
+      } },
+      ...retiredActions(['open-properties', 'open-inspector'], 'the panel is gone; properties are under the note\'s title'),
     ];
   }
 }

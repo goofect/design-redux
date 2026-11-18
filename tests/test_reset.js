@@ -53,7 +53,7 @@ const VAULT = {
 };
 
 (async () => {
-  await check('the budget of controls at rest: none on the sidebar, a folder, the vault\'s grid, a note, the panel', async () => {
+  await check('the budget of controls at rest: none on the sidebar, a folder, the vault\'s grid, a note', async () => {
     const w = await world(VAULT, { settingsVersion: 102, contextStrip: true, notePages: true, notePage: true });
     const sidebar = w.app.workspace.getLeavesOfType('design-redux-library')[0].view.screen;
     assert.deepStrictEqual(labels(sidebar.host), [], 'the sidebar');
@@ -68,10 +68,6 @@ const VAULT = {
     const note = leaf.view.contentEl;
     assert.ok(note.querySelector('.dr-note-head') && note.querySelector('.dr-strip'), 'the note\'s head and strip are not drawn');
     assert.deepStrictEqual(labels(note), [], 'a note');
-    const panel = w.plugin.features.find((f) => f.constructor.name === 'Panel');
-    const pane = (await panel.reveal()).view.contentEl;
-    assert.ok(pane.querySelectorAll('.dr-prop').length >= 2, 'the panel shows no properties');
-    assert.deepStrictEqual(labels(pane), [], 'the panel');
   });
 
   await check('a sheet: its fields, Cancel as a word, and one button that commits', async () => {
