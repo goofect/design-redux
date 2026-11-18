@@ -32,10 +32,12 @@
 
 .dr-head > .dr-head-link {
   margin-left: auto;
+  text-decoration: none;
 }
 
 @media (any-hover: hover) {
-  .dr-head > .dr-head-name[role="button"]:hover {
+  .dr-head > .dr-head-name[role="button"]:hover,
+  .dr-head > .dr-head-link:hover {
     text-decoration: underline;
     text-underline-offset: var(--dr-ring);
   }
