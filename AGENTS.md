@@ -6,10 +6,63 @@ and pages, a strip at the note's foot, a properties panel and property tools.
 One look, reduced and raw: monospace at one size, black, white and greys,
 framed panes, and Obsidian's chrome hidden. Desktop only.
 
-There are no design documents: the look is in `styles/` (tokens first) and
-its rules are held by the tests (`test_reset`, `test_design`, `test_tokens`).
+This file is the only document. The principles below are the design; the
+look's values are in `styles/00-tokens.css`, and the tests (`test_reset`,
+`test_design`, `test_tokens`) hold what a machine can check. Don't add a
+docs folder or a design document: a principle that changes is changed here.
 The old plugin (`legacy/`) is gone from the tree; to learn what a feature
 did, read it in git history (before 4.0.4). Never build or copy it.
+
+## Principles
+
+The author's own, from a catalogue site's six rules and a screenshot of two
+framed panes. Treat them as law; when one is in doubt, take something away.
+
+1. **Subtract until it breaks.** No feature, control, setting, glyph, label
+   or line that the screen works without. A feature that only adds commands
+   has no switch. When asked to change something, prefer removing it. Gone so
+   far, and staying gone: the grid and covers, zoom levels and shelves, the
+   glyph builder, the image router, most settings, arrows in the tree, the
+   design docs.
+2. **An inventory, not a showcase.** A collection is one ruled list, like a
+   stock sheet: names in rows, a light rule under each. No grid of cards, no
+   images, no counts, no numbers, no decoration that carries nothing.
+3. **One job per pane.** The sidebar is the folders as a tree, nothing else.
+   A folder's page is its path, then only the notes directly in it; its
+   subfolders live in the tree. A note shows its text.
+4. **Small, plain type.** One monospace face at 13px for everything the
+   plugin draws. A name that matters (a pane's head) is bold, never bigger.
+   No capitals for effect, no tracking, no italics.
+5. **Black, white and greys.** White ground, black ink, one grey for
+   secondary words, a light rule, a lighter fill for what is open or picked;
+   dark mode the inverse. The only other colour is red for an error, with its
+   words. Colour in the person's content is theirs, not the interface's.
+6. **Structure is the only line.** A pane is framed by 1px ink; its head is
+   ruled off under it; rows are ruled; the path is boxed words separated by
+   slashes. Nothing else has a border, a radius, a shadow or a blur.
+7. **Say it with characters before glyphs.** A folder that holds more ends in
+   a slash ("Politics/"). Where a word or a character will do, no icon. The
+   plugin's few glyphs are for tools that have no plain word (a map's fit,
+   zoom, fold).
+8. **No buttons at rest.** The library's panes show none. Everything else is
+   in the command palette and Obsidian's own menus. Search is a command, not
+   a field.
+9. **One cue per state.** Hover underlines. Focus is a 2px ink outline. Open
+   or picked is the light fill. Disabled is grey. Nothing else, nothing
+   doubled.
+10. **The panes are the whole window.** With the look on, Obsidian's chrome
+    goes: ribbons, the right sidebar, the status bar, the tab strip, view
+    headers. The look off puts it all back. Hide, never move or remove
+    Obsidian's own nodes.
+11. **Fast and still.** No motion, no transitions, no carousels; draw from
+    the index, never walk the vault for a screen; one redraw for many
+    changes.
+12. **Honest about what it is.** A tool for notes that looks like one: plain
+    words that say what a thing does ("Show the vault in the page"), no
+    marketing voice, no analogies to other products. Desktop only.
+
+What these left out on purpose: product-style codes on items (`POL-01`):
+invented labels carry no information.
 
 ## Files
 
@@ -64,7 +117,7 @@ did, read it in git history (before 4.0.4). Never build or copy it.
   `plugin.index` is what screens read of the vault instead of walking it;
   `plugin.selection` is the pick. Notes are never rewritten by an upgrade.
 - A screen is built only from the shared pieces in `src/ui/` (button, row,
-  cell, shelf, segments, table, field, sheet, say-so) and the plugin's
+  head, segments, field, sheet, say-so) and the plugin's
   glyphs (`glyph(el, name)`). State is the element's ARIA attribute; the
   styles read nothing else.
 - The look: `body.dr-active` and a `dr-region-<name>` class a region, added

@@ -50,7 +50,7 @@ body {
 /* The palette: black, white, a grey for words, a light grey for a rule between rows, a lighter one to fill what is open or picked, red for an error. */
 body.dr-active.theme-light {
   --dr-bg: #FFFFFF; /* the ground */
-  --dr-ink: #000000; /* words, lines, the inverted fill */
+  --dr-ink: #000000; /* words, frames, the focus outline */
   --dr-muted: #595959; /* secondary words */
   --dr-rule: #D4D4D4; /* the rule between rows */
   --dr-fill: #E5E5E5; /* open or picked */
