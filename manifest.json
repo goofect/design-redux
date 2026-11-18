@@ -1,9 +1,9 @@
 {
   "id": "design-redux",
   "name": "Design Redux",
-  "version": "3.1.89",
+  "version": "4.0.4",
   "minAppVersion": "1.7.2",
-  "description": "Browse your vault as a library: folders as collections, with properties, with the ribbon, file explorer actions and note properties tucked into the header.",
+  "description": "Browse folders and notes in a minimal library, organize notes into pages, and explore a 3D graph.",
   "author": "",
   "isDesktopOnly": true
 }

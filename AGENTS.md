@@ -10,8 +10,8 @@ This is the rewrite, merged to `main` for 4.0. `docs/REWRITE.md` says how the
 code was rebuilt and what must survive; `docs/DESIGN.md` what the look is;
 `docs/design-language.md` how the look is built (read it before drawing
 anything); `docs/rewrite-log.md` holds the decisions, a few lines each.
-`legacy/` is the old plugin: read it to learn what a feature did, with grep
-and narrow reads. Never build it, import it, or copy its styles.
+The old plugin (`legacy/`) is gone from the tree; to learn what a feature
+did, read it in git history (before 4.0.4). Never build or copy it.
 
 ## Files
 
