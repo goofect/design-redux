@@ -21,7 +21,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.deepStrictEqual(both, [], 'retired and kept at once');
   });
 
-  await check('an old data.json is converted once, its values kept, and the whole of it copied to data.legacy.json', async () => {
+  await check('an old data.json is converted once and saved: what is still read kept, the rest dropped, no copy written', async () => {
     const old = { settingsVersion: 34, library: false, coverProperty: 'art', folderCovers: { Logic: 'img/a.png' }, albumOrders: { Logic: { names: ['B.md', 'A.md'] } }, pinOrder: ['Logic/A.md'], gridDensity: 'large', coverDesigns: { Logic: { kind: 3 } }, lookScope: 'window', propertyRules: [{ id: 1 }], contextStrip: true, pagesOpen: 'broken' };
     const w = await world({ 'Logic/A.md': '' }, old);
     const s = w.plugin.settings;
@@ -35,17 +35,16 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.strictEqual(s.settingsVersion, dr.SETTINGS_VERSION);
     assert.ok(!('gridDensity' in s) && !('coverDesigns' in s), 'a retired key came through');
     assert.deepStrictEqual(s.pagesOpen, dr.DEFAULTS.pagesOpen, 'a value of the wrong kind was taken');
-    const legacy = JSON.parse(w.app.vault.adapter.files.get('.obsidian/plugins/design-redux/data.legacy.json'));
-    assert.deepStrictEqual(legacy, old, 'the copy is not the old file');
+    assert.ok(!w.app.vault.adapter.files.has('.obsidian/plugins/design-redux/data.legacy.json'), 'a copy of the old settings was written');
+    assert.ok(!('gridDensity' in w.plugin._data) && !('retired' in w.plugin._data), 'an unused value was saved');
     assert.strictEqual(w.plugin._data.settingsVersion, dr.SETTINGS_VERSION);
-    // A second load converts nothing and leaves the copy alone.
-    w.app.vault.adapter.files.set('.obsidian/plugins/design-redux/data.legacy.json', 'kept');
+    // A second load converts nothing.
     const again = dr.migrateSettings(w.plugin._data);
-    assert.strictEqual(again.legacy, null);
+    assert.strictEqual(again.converted, false);
     assert.deepStrictEqual(again.settings, s);
   });
 
-  await check('a first run starts from the defaults and writes no legacy copy', async () => {
+  await check('a first run starts from the defaults and writes no file', async () => {
     const w = await world({});
     assert.deepStrictEqual(w.plugin.settings, dr.DEFAULTS);
     assert.strictEqual(w.app.vault.adapter.files.size, 0);
@@ -58,15 +57,14 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     Object.keys(files).forEach((p) => assert.strictEqual(w.text(p), files[p], `${p} was rewritten`));
   });
 
-  await check('settings 102: what the direction reset cut is retired, its values kept under retired, nothing else touched', () => {
-    const saved = { settingsVersion: 101, alwaysShowLabels: false, libraryZoom: { sidebar: 'shelves' }, folderGlyphs: { Logic: 'cat' }, lookRegionTabs: false, stripPlace: false, tableColumns: 'status', look: 'redux', propertyRules: [{ id: 'r' }] };
-    const { settings, legacy } = dr.migrateSettings(saved);
-    assert.strictEqual(legacy, null, 'a 4.0 file was taken for the old plugin\'s');
-    ['alwaysShowLabels', 'libraryZoom', 'folderGlyphs', 'lookRegionTabs', 'stripPlace', 'tableColumns'].forEach((k) => assert.ok(!(k in settings), `${k} is still a setting`));
-    assert.deepStrictEqual(settings.retired, { alwaysShowLabels: false, libraryZoom: { sidebar: 'shelves' }, folderGlyphs: { Logic: 'cat' }, lookRegionTabs: false, stripPlace: false, tableColumns: 'status' });
+  await check('a 4.x file: what was cut since is dropped, the values kept before under retired too, nothing else touched', () => {
+    const saved = { settingsVersion: 106, alwaysShowLabels: false, coverColors: { Logic: 'red' }, albumRollups: true, retired: { folderGlyphs: { Logic: 'cat' } }, look: 'redux', propertyRules: [{ id: 'r' }] };
+    const { settings, converted } = dr.migrateSettings(saved);
+    assert.strictEqual(converted, true);
+    ['alwaysShowLabels', 'coverColors', 'albumRollups', 'retired'].forEach((k) => assert.ok(!(k in settings), `${k} is still kept`));
+    ['alwaysShowLabels', 'coverColors', 'albumRollups', 'retired'].forEach((k) => assert.ok(dr.RETIRED[k], `${k} retired without a reason`));
     assert.deepStrictEqual(settings.propertyRules, [{ id: 'r' }]);
     assert.strictEqual(settings.settingsVersion, dr.SETTINGS_VERSION);
-    Object.keys(settings.retired).forEach((k) => assert.ok(dr.RETIRED[k], `${k} retired without a reason`));
   });
 
   await check('path-keyed settings follow a rename and a delete', async () => {

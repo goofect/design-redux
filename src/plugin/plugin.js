@@ -88,24 +88,11 @@ export class DesignRedux extends Plugin {
     this.registerEvent(metadataCache.on('changed', (file) => workspace.trigger('design-redux:props', file)));
   }
 
-  /** Reads data.json. The old plugin's is converted once, and kept whole beside it as data.legacy.json. */
+  /** Reads data.json. One written by an older version is converted once and saved, so nothing unused stays in it. */
   async loadSettings() {
-    const saved = await this.loadData();
-    const { settings, legacy } = migrateSettings(saved);
+    const { settings, converted } = migrateSettings(await this.loadData());
     this.settings = settings;
-    if (!legacy) return;
-    const adapter = this.app.vault.adapter;
-    const file = `${this.manifest.dir}/data.legacy.json`;
-    try {
-      if (!(await adapter.exists(file))) await adapter.write(file, JSON.stringify(legacy, null, 2));
-    } catch (err) {
-      // Without the copy the old file is left as it is: better the old settings than none.
-      console.error('Design Redux: could not keep a copy of the old settings; they are left untouched', err);
-      this.legacyKept = false;
-      return;
-    }
-    this.legacyKept = true;
-    await this.saveData(this.settings);
+    if (converted) await this.saveData(this.settings);
   }
 
   /** Saves the settings and brings every feature to what they now say. */

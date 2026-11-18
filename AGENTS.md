@@ -123,10 +123,10 @@ invented labels carry no information.
   them, and `tests/test_contract.js` holds every kept id. A command that
   goes is removed, never kept as a stub that does nothing.
 - Settings: `core/settings.js` holds every key and its default. A key that
-  holds paths is in `PATH_KEYED`, so it follows renames and deletes. The old
-  plugin's `data.json` is converted once by `core/migrate.js` and kept whole
-  as `data.legacy.json`; every old key is read, migrated, or listed there as
-  retired. Never drop a key without that.
+  holds paths is in `PATH_KEYED`, so it follows renames and deletes. An
+  older `data.json` is converted once by `core/migrate.js` and saved: every
+  old key is read, migrated, or listed there as retired with why, and a
+  retired key's value is dropped, never kept unread.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties (`write(file, change)` returns an undo that keeps later edits);
   `plugin.files` makes, moves and restores files and folder notes;

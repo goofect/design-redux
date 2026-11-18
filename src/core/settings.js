@@ -14,14 +14,13 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'can
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 107;
+export const SETTINGS_VERSION = 108;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
 
 export const DEFAULTS = {
   settingsVersion: SETTINGS_VERSION,
-  retired: {}, // values of keys the direction reset retired (settings 102), kept, not read
 
   // The look
   look: 'redux', // 'theme' leaves the window to the person's theme

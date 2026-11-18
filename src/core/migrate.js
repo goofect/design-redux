@@ -3,13 +3,13 @@
 /*                                                                     */
 /* Every key the old plugin kept is here in one of three lists: kept   */
 /* under the same name (it is in DEFAULTS), renamed, or retired with   */
-/* the reason. Nothing is thrown away: the caller keeps the whole old  */
-/* file beside the new one as data.legacy.json. Notes are not touched. */
+/* the reason. A retired key's value is dropped, not kept unread.      */
+/* Notes are not touched.                                              */
 /* ------------------------------------------------------------------ */
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups): a 4.0 file's values for them are kept under `retired`, not dropped. */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept). */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -20,20 +20,21 @@ const RETIRED_SINCE_4 = {
   stripDetail: 'the reset: the strip is one line, with no property beside it',
   albumStillToWrite: 'the reset: no switch that only chose what a page showed',
   propertyValueChips: 'the reset: no colour on a value; a value is its words',
-  propertyOptions: 'the reset: no colour on a value; the colours the old plugin gave values are kept here, unread',
+  propertyOptions: 'the reset: no colour on a value',
   ...Object.fromEntries(['albumStructure', 'albumRefactor', 'propertyForAlbum', 'smartAlbums', 'libraryCheck', 'footnotes', 'scripts', 'graph3d', 'propertySchemaMarks', 'graphRoutes', 'graphProperties', 'navDropdown', 'menuFilter']
     .map((k) => [k, 'the settings cut: a feature that only adds commands or marks has no switch; it is always there'])),
   folderCovers: 'covers are gone: the library is one ruled list, with no grid to show an image in',
-  coverProperty: 'covers are gone: a note\'s cover property is left in the note, unread',
+  coverProperty: 'covers are gone: a note\'s cover property is left in the note',
   coverDrop: 'covers are gone: an image dropped on a folder is no longer its cover',
   coverFromFirstImage: 'covers are gone',
   ...Object.fromEntries(['propertiesDropdown', 'inspector', 'panelPropertyGroups', 'panelGroupList', 'panelFoldedGroups', 'showMentions', 'propertyLinks']
     .map((k) => [k, 'the panel is gone: a note\'s properties are its ledger, under its title; the right sidebar stays hidden'])),
   propertyHistory: 'property history is gone: it had no place to be seen without the panel',
   propertyHistoryLimit: 'property history is gone',
-  coverColors: 'a folder\'s colour is gone: black, white and one grey; the colours are kept here, unread',
+  coverColors: 'a folder\'s colour is gone: black, white and one grey',
   albumRollups: 'counts are gone: a folder shows no "8 of 20 done"',
   rollupDateKey: 'counts are gone',
+  retired: 'unused values are not kept: a retired key\'s value is dropped',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
   imageFolder: 'the image router is gone',
   notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',
@@ -41,7 +42,7 @@ const RETIRED_SINCE_4 = {
     .map((r) => [`lookRegion${r}`, 'the reset: no switch a region; the look is on or off, on what the plugin draws or the whole window'])),
 };
 
-/** Old keys whose thing is gone, and why. Their values stay in data.legacy.json. */
+/** Old keys whose thing is gone, and why. Their values are dropped. */
 export const RETIRED = {
   singleArea: 'cut: the one-page layout',
   onePage: 'cut: the one-page layout',
@@ -87,14 +88,14 @@ export const RETIRED = {
 export const RENAMED = {};
 
 /**
- * The new settings from what data.json held. Returns { settings, legacy }:
- * `legacy` is the old file's contents when it was the old plugin's (to be
- * kept as data.legacy.json), or null when there is nothing to convert.
+ * The new settings from what data.json held. Returns { settings, converted }:
+ * `converted` when the file was written by an older version (to be saved
+ * at once, so what it held that is no longer read goes).
  */
 export function migrateSettings(saved) {
   const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
   const settings = copy(DEFAULTS);
-  if (!saved || typeof saved !== 'object') return { settings, legacy: null };
+  if (!saved || typeof saved !== 'object') return { settings, converted: false };
   const version = saved.settingsVersion || 1;
   const old = version < REWRITE_VERSION;
   Object.keys(saved).forEach((key) => {
@@ -109,12 +110,6 @@ export function migrateSettings(saved) {
     // The old looks (classic, editorial and the rest) all become the one new look; lookScope is kept as it was.
     settings.look = 'redux';
   }
-  // 102: the direction reset retired what it cut; 103: covers; 104: the settings cut. A 4.0 file's values for those keys are kept under `retired`.
-  if (version >= REWRITE_VERSION && version < SETTINGS_VERSION) {
-    const kept = {};
-    Object.keys(RETIRED_SINCE_4).forEach((k) => { if (saved[k] !== undefined) kept[k] = copy(saved[k]); });
-    if (Object.keys(kept).length) settings.retired = Object.assign({}, settings.retired, kept);
-  }
   settings.settingsVersion = SETTINGS_VERSION;
-  return { settings, legacy: old ? copy(saved) : null };
+  return { settings, converted: version < SETTINGS_VERSION };
 }
