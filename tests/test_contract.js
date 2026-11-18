@@ -1,8 +1,9 @@
 /*
  * What must not change without being meant: the commands (hotkeys hang on
  * their ids), the view types (a saved layout names them) and the settings
- * (data.json holds them). Every one of the old plugin's is kept
- * (tests/snapshots/lifecycle.json, the old plugin's own record). The new
+ * (data.json holds them). The old plugin's views and settings are kept
+ * (tests/snapshots/lifecycle.json, the old plugin's own record); a command
+ * that is gone is gone, not kept as a stub. The new
  * plugin's are recorded in tests/snapshots/contract.json: one dropped fails,
  * one added must be recorded on purpose (node tests/test_contract.js --update).
  * And the budgets: a feature has at most ten settings of its own, every
@@ -31,7 +32,6 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
     return;
   }
 
-  await check('every command id of the old plugin is still a command', () => assert.deepStrictEqual(legacy.commands.filter((id) => !commands.includes(id)), []));
   await check('every view type of the old plugin is still registered', () => assert.deepStrictEqual(legacy.views.filter((v) => !views.includes(v)), []));
   await check('every setting of the old plugin is kept, or retired with a reason', () => assert.deepStrictEqual(legacy.settings.filter((k) => !(k in dr.DEFAULTS) && !(k in dr.RETIRED)), []));
 
@@ -80,6 +80,6 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
 
   if (!process.exitCode) {
     const features = w.plugin.features.length;
-    console.log(`contract: ${commands.length} commands (${legacy.commands.length} of the old plugin's), ${views.length} views, ${settings.length} settings, ${features} features; budgets kept`);
+    console.log(`contract: ${commands.length} commands (${legacy.commands.filter((id) => commands.includes(id)).length} of the old plugin's), ${views.length} views, ${settings.length} settings, ${features} features; budgets kept`);
   }
 })();

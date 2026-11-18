@@ -28,7 +28,8 @@ framed panes. Treat them as law; when one is in doubt, take something away.
    history, most settings, arrows in the tree, the design docs, a note shown in
    another folder too, commands to copy and paste a note's properties (they
    copy and paste as text does: ⌘C, ⌘V), a folder's kind and colour,
-   merging and splitting folders.
+   merging and splitting folders, counts on any screen (a folded branch on
+   a map is marked +), commands kept as stubs that do nothing.
 2. **An inventory, not a showcase.** A collection is one ruled list, like a
    stock sheet: names in rows, a light rule under each. No grid of cards, no
    images, no counts, no numbers, no decoration that carries nothing.
@@ -119,12 +120,13 @@ invented labels carry no information.
   on, when, run }`. `on` says what it acts on (app, note, file, editor,
   folder). Commands and menu entries are both made from that list
   (`core/actions.js`). Command ids are the old plugin's: hotkeys hang on
-  them, and `tests/test_contract.js` holds every kept id.
+  them, and `tests/test_contract.js` holds every kept id. A command that
+  goes is removed, never kept as a stub that does nothing.
 - Settings: `core/settings.js` holds every key and its default. A key that
   holds paths is in `PATH_KEYED`, so it follows renames and deletes. The old
   plugin's `data.json` is converted once by `core/migrate.js` and kept whole
   as `data.legacy.json`; every old key is read, migrated, or listed there as
-  retired. Never drop a key or a command id without that.
+  retired. Never drop a key without that.
 - Core services on the plugin: `plugin.notes` reads and writes a note's
   properties (`write(file, change)` returns an undo that keeps later edits);
   `plugin.files` makes, moves and restores files and folder notes;

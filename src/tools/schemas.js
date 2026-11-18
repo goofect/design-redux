@@ -10,7 +10,6 @@
 
 import { Feature } from '../core/feature.js';
 import { noteProps, propOf, valuesOf } from '../core/notes.js';
-import { counted } from '../core/text.js';
 import { field } from '../ui/field.js';
 import { row, rows, sectionTitle } from '../ui/row.js';
 import { Sheet } from '../ui/sheet.js';
@@ -101,7 +100,6 @@ export class PropertySchemas extends Feature {
       title: 'Notes against their schemas',
       build: (matter, s) => {
         if (!found.length) return void sayso(matter, { label: 'Every note fits', text: Object.keys(this.settings.propertySchemas || {}).length ? '' : 'No folder has a schema yet.' });
-        sectionTitle(matter, { title: counted(found.length, 'note') });
         const list = rows(matter);
         found.slice(0, 100).forEach((x) => row(list, { name: x.file.basename, error: true, end: `${x.faults[0].key}: ${x.faults[0].fault}`.slice(0, 40), run: () => { s.close(); this.app.workspace.getLeaf(false).openFile(x.file); } }));
       },

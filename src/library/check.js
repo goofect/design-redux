@@ -10,7 +10,6 @@
 
 import { Feature } from '../core/feature.js';
 import { linkTarget, valuesOf } from '../core/notes.js';
-import { counted } from '../core/text.js';
 import { row, rows, sectionTitle } from '../ui/row.js';
 import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
@@ -57,14 +56,14 @@ export class LibraryCheck extends Feature {
       build: (matter, s) => {
         if (!found.length) return void sayso(matter, { label: 'Nothing to look at', text: 'No empty folder, no loose note, no link that leads nowhere.' });
         found.forEach((group) => {
-          sectionTitle(matter, { title: `${group.title} · ${group.items.length}` });
+          sectionTitle(matter, { title: group.title });
           const list = rows(matter);
           group.items.slice(0, 50).forEach((item) => row(list, { name: item.name, end: item.end, run: () => {
             s.close();
             if (item.file) this.app.workspace.getLeaf(false).openFile(item.file);
             else if (item.folder && library) library.browse(item.folder);
           } }));
-          if (group.items.length > 50) row(list, { name: `and ${counted(group.items.length - 50, 'more', 'more')}`, disabled: true });
+          if (group.items.length > 50) row(list, { name: 'and more', disabled: true });
         });
       },
       actions: [{ text: 'Close' }],

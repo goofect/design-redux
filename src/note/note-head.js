@@ -12,7 +12,6 @@
 import { MarkdownView, TFile } from 'obsidian';
 import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { retiredActions } from '../core/actions.js';
 import { ask } from '../ui/sheet.js';
 import { addProperty, drawLedger } from './ledger.js';
 
@@ -141,7 +140,6 @@ export class NotePage extends Feature {
         this.settings.panelFolderViews = views;
         await this.plugin.saveSettings();
       } },
-      ...retiredActions(['open-properties', 'open-inspector'], 'the panel is gone; properties are under the note\'s title'),
     ];
   }
 }

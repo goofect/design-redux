@@ -120,7 +120,7 @@ const VAULT = {
   await check('the clipboard: a folder\'s properties as a table and back; sorted; sets kept and stamped', async () => {
     const w = await world(VAULT);
     const clip = feature(w, 'PropertyClipboard');
-    ['copy-properties', 'copy-some-properties', 'paste-properties'].forEach((id) => assert.strictEqual(w.app.commands.commands[`design-redux:${id}`].checkCallback(true), false, `${id} still offers itself`));
+    ['copy-properties', 'copy-some-properties', 'paste-properties'].forEach((id) => assert.ok(!w.app.commands.commands[`design-redux:${id}`], `${id} is still a command`));
     await dr.pasteProps(w.plugin, w.file('Reading/E.md'), dr.readProps(dr.propsText(props(w, 'Reading/D.md'))));
     assert.deepStrictEqual(props(w, 'Reading/E.md'), { status: 'done', domain: ['ethics'] });
     await clip.copyTable(w.file('Reading'));
@@ -268,7 +268,7 @@ const VAULT = {
     const leaf = await g3.open(null);
     await settle();
     const view = leaf.view;
-    assert.ok(view.canvas && /30 notes/.test(view.canvas.getAttribute('aria-label')));
+    assert.ok(view.canvas && !/\d/.test(view.canvas.getAttribute("aria-label")) && !view.contentEl.querySelector(".dr-head .dr-muted"), "a count on the 3D graph");
     assert.ok(drawn.rects >= 31 && drawn.strokes >= 1, 'nothing was drawn');
     const [x, y] = [view.screen[0], view.screen[1]];
     const at = (type) => view.canvas.dispatchEvent(new window.MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));

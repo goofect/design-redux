@@ -7,7 +7,6 @@
 /* ------------------------------------------------------------------ */
 
 import { Keymap } from 'obsidian';
-import { retiredActions } from '../core/actions.js';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { drawFolderPage } from './contents.js';
@@ -113,7 +112,6 @@ export class Library extends Feature {
         await this.openSidebar();
         this.app.workspace.trigger('design-redux:reset-layout');
       } },
-      ...retiredActions(['cycle-cover-size'], 'the library has one view'),
       { id: 'go-back', name: 'Go back', when: () => !!screen(), run: () => screen().back() },
       { id: 'go-forward', name: 'Go forward', when: () => !!screen() && screen().ahead.length > 0, run: () => screen().forward() },
       { id: 'new-note-here', name: 'New note in the current folder', on: 'folder', menu: false, run: (ctx) => this.plugin.files.newNote(ctx.folder) },

@@ -9,7 +9,7 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours): a 4.0 file's values for them are kept under `retired`, not dropped. */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups): a 4.0 file's values for them are kept under `retired`, not dropped. */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -32,6 +32,8 @@ const RETIRED_SINCE_4 = {
   propertyHistory: 'property history is gone: it had no place to be seen without the panel',
   propertyHistoryLimit: 'property history is gone',
   coverColors: 'a folder\'s colour is gone: black, white and one grey; the colours are kept here, unread',
+  albumRollups: 'counts are gone: a folder shows no "8 of 20 done"',
+  rollupDateKey: 'counts are gone',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
   imageFolder: 'the image router is gone',
   notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',

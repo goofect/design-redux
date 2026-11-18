@@ -47,8 +47,6 @@ export const DEFAULTS = {
   albumKeyNames: {},
   albums: {}, // by folder path: { includes, related, featured }
   albumNestBy: 'parent',
-  albumRollups: false,
-  rollupDateKey: '',
   smartAlbumList: [],
   libraryInbox: true,
 

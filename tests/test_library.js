@@ -247,16 +247,15 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.deepStrictEqual(controls(p.host), []);
   });
 
-  await check('commands: the old ids, the levels\' one kept but quiet, and turning the library off takes its views away', async () => {
+  await check('commands: the old ids, the levels\' one gone, and turning the library off takes its views away', async () => {
     const w = await world(VAULT);
     const ids = Object.keys(w.app.commands.commands).map((c) => c.split(':')[1]);
-    ['open-library', 'browse-vault', 'search-library', 'reset-layout', 'cycle-cover-size', 'go-back', 'go-forward', 'new-note-here', 'new-folder-here', 'previous-in-album', 'next-in-album'].forEach((id) => assert.ok(ids.includes(id), `${id} is not a command`));
+    ['open-library', 'browse-vault', 'search-library', 'reset-layout', 'go-back', 'go-forward', 'new-note-here', 'new-folder-here', 'previous-in-album', 'next-in-album'].forEach((id) => assert.ok(ids.includes(id), `${id} is not a command`));
     await w.app.workspace.getLeaf().openFile(w.file('Logic/Validity.md'));
     w.app.commands.executeCommandById('design-redux:next-in-album');
     await settle();
     assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/Week 2.md');
-    const levels = w.app.commands.commands['design-redux:cycle-cover-size'];
-    assert.strictEqual(levels.checkCallback ? levels.checkCallback(true) : false, false, 'the retired levels command still offers itself');
+    assert.ok(!ids.includes('cycle-cover-size'), 'the levels command is still a command');
     w.plugin.settings.library = false;
     await w.plugin.saveSettings();
     assert.strictEqual(w.app.workspace.getLeavesOfType('design-redux-library').length, 0);

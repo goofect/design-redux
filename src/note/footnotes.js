@@ -10,7 +10,6 @@
 import { ItemView, MarkdownView, Notice } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { row, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
@@ -43,7 +42,7 @@ export class FootnotesView extends ItemView {
     const file = this.app.workspace.getActiveFile();
     if (!file || file.extension !== 'md') return void sayso(host, { label: 'No note open' });
     const { refs, defs } = findFootnotes(await this.app.vault.cachedRead(file));
-    headRow(host, { label: 'Footnotes', muted: counted(defs.length, 'note') });
+    headRow(host, { label: 'Footnotes' });
     if (!defs.length) return void sayso(host, { label: 'No footnotes', text: 'Add footnote puts one at the cursor.' });
     const list = rows(host);
     defs.forEach((d) => {

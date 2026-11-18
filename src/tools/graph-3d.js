@@ -12,7 +12,6 @@
 import { ItemView, TFile } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { sayso } from '../ui/state.js';
 import { fitZoom, graphSpace, layoutSpace, project } from './graph-space.js';
@@ -64,7 +63,7 @@ export class Graph3DView extends ItemView {
     const host = clear(this.contentEl);
     this.space = graphSpace(this.plugin, this.around);
     const n = this.space.nodes.length;
-    headRow(host, { label: this.around ? this.around.basename : '3D graph', text: !!this.around, muted: `${counted(n, 'note')} · ${counted(this.space.links.length, 'link')}`, buttons: [
+    headRow(host, { label: this.around ? this.around.basename : '3D graph', text: !!this.around, buttons: [
       { glyph: 'fit', label: 'Fit', run: () => { this.look = { yaw: 0.6, pitch: 0.35, zoom: fitZoom(this.pos, ...this.size()) }; this.draw(); } },
       { glyph: 'plus', label: 'Closer', run: () => this.zoom(1.25) },
       { glyph: 'minus', label: 'Further', run: () => this.zoom(0.8) },
@@ -75,7 +74,7 @@ export class Graph3DView extends ItemView {
     this.canvas = el(box, 'canvas', 'dr-graph3d-canvas');
     this.canvas.setAttribute('tabindex', '0');
     this.canvas.setAttribute('role', 'img');
-    this.canvas.setAttribute('aria-label', `A graph of ${counted(n, 'note')}. Arrow keys turn it; plus and minus come closer and go further.`);
+    this.canvas.setAttribute('aria-label', `A graph of the notes. Arrow keys turn it; plus and minus come closer and go further.`);
     this.name = el(box, 'div', 'dr-graph3d-name dr-text');
     this.look.zoom = fitZoom(this.pos, ...this.size());
     this.listen();

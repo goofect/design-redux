@@ -1,8 +1,8 @@
 /*
  * What a folder is and what can be done to it: its description and what
  * it gathers (read from a folder note, or kept by path, with no note
- * written); no kind, no colour, no merging or splitting, their commands
- * kept quiet; filters and saved views; the library check.
+ * written); no kind, no colour, no merging or splitting; filters and
+ * saved views; the library check.
  */
 const assert = require('assert');
 const { load, world, suite, settle, obsidian } = require('./harness.js');
@@ -33,19 +33,13 @@ const VAULT = {
     assert.ok(!('type' in info) && !('label' in info), 'a folder still has a kind');
     assert.deepStrictEqual([info.includes.map((f) => f.path), info.featured.map((f) => f.path), info.related.map((f) => f.path)], [['Reading/Hume.md'], ['Logic/Validity.md'], ['Reading']]);
     assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables'], 'featured first, then its own, and nothing from elsewhere');
-    assert.strictEqual(w.app.commands.commands['design-redux:album-include-note'].checkCallback(true), false, 'a note is still shown in another folder');
-    assert.strictEqual(w.plugin.describe(logic), 'Arguments and their forms.');
     w.plugin.settings.albumKeyNames = { description: 'about' };
     assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).description, undefined, 'a renamed property is still read under its old name');
   });
 
-  await check('no kind, no colour, no merging or splitting, no covers: their commands kept but never offered', async () => {
+  await check('no kind, no colour, no merging or splitting, no covers: their commands are gone', async () => {
     const w = await world(VAULT);
-    ['album-set-type', 'set-cover-color', 'album-merge', 'album-split', 'set-cover-image', 'set-folder-cover', 'repair-cover-link'].forEach((id) => {
-      const c = w.app.commands.commands[`design-redux:${id}`];
-      assert.ok(c, `${id} is not kept`);
-      assert.strictEqual(c.checkCallback ? c.checkCallback(true) : false, false, `${id} still offers itself`);
-    });
+    ['album-set-type', 'set-cover-color', 'album-merge', 'album-split', 'set-cover-image', 'set-folder-cover', 'repair-cover-link', 'album-include-note'].forEach((id) => assert.ok(!w.app.commands.commands[`design-redux:${id}`], `${id} is still a command`));
     assert.strictEqual(w.plugin.colourOf, undefined, 'a folder still has a colour');
   });
 

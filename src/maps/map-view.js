@@ -12,7 +12,6 @@
 import { ItemView, TFile, TFolder } from 'obsidian';
 import { clear, el, flag, glyph } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
-import { counted } from '../core/text.js';
 import { headRow } from '../ui/head.js';
 import { MAP, foldAll, folderMap, layoutMap, noteMap, shownNodes } from './map-model.js';
 
@@ -68,7 +67,7 @@ export class MapView extends ItemView {
   draw() {
     const host = clear(this.contentEl);
     const shown = shownNodes(this.root);
-    const head = headRow(host, { label: this.root.label, text: true, muted: counted(shown.length, 'node'), buttons: [
+    const head = headRow(host, { label: this.root.label, text: true, buttons: [
       { glyph: 'fold', label: 'Fold all', run: () => { foldAll(this.root, true); this.draw(); } },
       { glyph: 'unfold', label: 'Unfold all', run: () => { foldAll(this.root, false); this.draw(); } },
       { glyph: 'fit', label: 'Fit', run: () => this.fit() },
@@ -125,8 +124,7 @@ export class MapView extends ItemView {
     flag(box, 'aria-current', !!open && open.path === node.path, 'page');
     el(box, 'span', 'dr-text dr-clip', node.label);
     if (node.children.length) {
-      const count = el(box, 'span', 'dr-map-count dr-muted', node.folded ? `+${node.children.length}` : '');
-      if (node.folded) count.setAttribute('aria-label', `${counted(node.children.length, 'child', 'children')} folded`);
+      el(box, 'span', 'dr-map-count dr-muted', node.folded ? '+' : '');
     }
     box.addEventListener('dblclick', () => this.openNode(node));
   }

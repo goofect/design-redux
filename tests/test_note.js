@@ -188,12 +188,9 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([w.plugin.notes.get(file, 'author'), w.plugin.notes.get(file, 'born')], ['Frege', 1848]);
     await dr.propertyMenu(w.plugin, file, 'course').click('Remove property');
     assert.ok(!('course' in w.plugin.notes.props(file)));
-    // The panel is gone: its view type still opens (a saved layout names it) and closes itself; its commands are kept, never offered.
+    // The panel is gone: its view type still opens (a saved layout names it) and closes itself; its commands are gone.
     assert.ok(w.app.viewRegistry['design-redux-properties'], 'the panel\'s view type is no longer registered');
-    ['open-properties', 'open-inspector'].forEach((id) => {
-      const c = w.app.commands.commands[`design-redux:${id}`];
-      assert.ok(c && c.checkCallback(true) === false, `${id} still offers itself`);
-    });
+    ['open-properties', 'open-inspector'].forEach((id) => assert.ok(!w.app.commands.commands[`design-redux:${id}`], `${id} is still a command`));
     host.remove();
   });
 

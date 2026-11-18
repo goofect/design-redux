@@ -9,7 +9,7 @@
 
 import { el, glyph } from '../core/dom.js';
 import { noteProps, propOf, tagsOf, valuesOf } from '../core/notes.js';
-import { counted, foldersIfMixed, readingMinutes } from '../core/text.js';
+import { foldersIfMixed, readingMinutes } from '../core/text.js';
 import { chip } from '../ui/field.js';
 import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
@@ -65,7 +65,6 @@ export function drawFiltered(screen, host) {
     glyph(c, 'close');
   });
   const notes = matchNotes(plugin, screen.filter);
-  el(bar, 'span', 'dr-muted', counted(notes.length, 'note'));
   if (!notes.length) return void sayso(host, { label: 'No note passes the filter', text: 'Take a part of it off above.' });
   const list = rows(host);
   // A note's folder trails it only where what passes mixes folders; otherwise its length does.
