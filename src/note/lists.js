@@ -5,116 +5,27 @@
 /* written a., b., c. or i., ii., iii. is plain paragraphs to          */
 /* Obsidian. Two commands turn the selected lines into one or the      */
 /* other; Enter at the end of an item carries on with the next letter  */
-/* or numeral; in reading view such a paragraph is marked so it is     */
-/* set as a list. The note's text is what was written.                 */
+/* or numeral, Tab and Shift-Tab nest it; in the editor and in reading */
+/* view a long item hangs under its words, as a list's does. The       */
+/* note's text is what was written.                                    */
 /* ------------------------------------------------------------------ */
 
 import { Feature } from '../core/feature.js';
-
-const ROMAN = [[1000, 'm'], [900, 'cm'], [500, 'd'], [400, 'cd'], [100, 'c'], [90, 'xc'], [50, 'l'], [40, 'xl'], [10, 'x'], [9, 'ix'], [5, 'v'], [4, 'iv'], [1, 'i']];
-
-/** 1 → i, 4 → iv, 14 → xiv. */
-export function toRoman(n) {
-  let out = '';
-  ROMAN.forEach(([value, mark]) => { while (n >= value) { out += mark; n -= value; } });
-  return out;
-}
-
-/** i → 1, xiv → 14; 0 for what is not a numeral as it would be written. */
-export function fromRoman(text) {
-  const s = String(text).toLowerCase();
-  let n = 0;
-  let at = 0;
-  ROMAN.forEach(([value, mark]) => { while (s.startsWith(mark, at)) { n += value; at += mark.length; } });
-  return at === s.length && n > 0 && toRoman(n) === s ? n : 0;
-}
-
-/** 1 → a, 26 → z, 27 → aa. */
-export function toLetters(n) {
-  let out = '';
-  for (; n > 0; n = Math.floor((n - 1) / 26)) out = String.fromCharCode(97 + ((n - 1) % 26)) + out;
-  return out;
-}
-
-export function fromLetters(text) {
-  return /^[a-z]+$/.test(text) ? Array.from(text).reduce((n, c) => n * 26 + (c.charCodeAt(0) - 96), 0) : 0;
-}
-
-export const LIST_ITEM = /^([ \t]*)([a-z]+)([.)])([ \t]+)(.*)$/i;
-// Any item a lettered one can sit beside or under: a dash, a number, a letter or numeral.
-const ANY_ITEM = /^([ \t]*)([-*+]|\d+[.)]|[a-z]+[.)])[ \t]/i;
-
-/** How deep a line's indent is, a tab as four spaces. */
-const depth = (ws) => ws.replace(/\t/g, '    ').length;
-
-/**
- * The items around line `at` for an item `deep` in: `sibling`, the marker of
- * the nearest item above at that depth; `parent`, of the nearest shallower one.
- */
-export function around(editor, at, deep) {
-  for (let i = at - 1; i >= 0; i--) {
-    const line = editor.getLine(i);
-    if (!line.trim()) continue;
-    const m = ANY_ITEM.exec(line);
-    const d = depth(/^[ \t]*/.exec(line)[0]);
-    if (d < deep) return { sibling: null, parent: m ? m[2].replace(/[.)]$/, '') : null };
-    if (d === deep) {
-      if (!m) return { sibling: null, parent: null };
-      return { sibling: m[2].replace(/[.)]$/, ''), parent: null, siblingAt: i };
-    }
-  }
-  return { sibling: null, parent: null };
-}
-
-/**
- * How a marker is read. Some letters are numerals too (i, v, x…), so what
- * one is depends on the item before it: "i" after "h" is the ninth letter.
- * `before` is the marker of the item above, if there is one.
- */
-export function readMarker(marker, before) {
-  if (/^\d+$/.test(marker)) return { kind: 'number', n: Number(marker), upper: false };
-  if (/^[-*+]$/.test(marker)) return { kind: 'bullet', n: 0, upper: false };
-  const m = marker.toLowerCase();
-  const roman = fromRoman(m);
-  if (before) {
-    const b = readMarker(before);
-    if (b.kind === 'letter' && fromLetters(m) === b.n + 1) return { kind: 'letter', n: fromLetters(m), upper: marker !== m };
-    if (b.kind === 'roman' && roman === b.n + 1) return { kind: 'roman', n: roman, upper: marker !== m };
-  }
-  if (roman && (m.length > 1 || m === 'i')) return { kind: 'roman', n: roman, upper: marker !== m };
-  return { kind: 'letter', n: fromLetters(m), upper: marker !== m };
-}
-
-/** The marker that follows one. */
-export function nextMarker(marker, before) {
-  const r = readMarker(marker, before);
-  if (r.kind === 'number') return String(r.n + 1);
-  if (r.kind === 'bullet') return marker;
-  const next = r.kind === 'roman' ? toRoman(r.n + 1) : toLetters(r.n + 1);
-  return r.upper ? next.toUpperCase() : next;
-}
-
-/** The first marker of a list under an item: a, then i, then a again; under "I" a capital "A". */
-export function firstUnder(parent, before) {
-  const r = parent ? readMarker(parent, before) : { kind: 'number' };
-  if (r.kind === 'letter') return 'i';
-  return r.kind === 'roman' && r.upper ? 'A' : 'a';
-}
-
-/** Lines made a list of a kind: any marker they had (a dash, a number, a letter) gives way to the new one. */
-export function makeList(lines, kind) {
-  let n = 0;
-  return lines.map((line) => {
-    if (!line.trim()) return line;
-    const m = /^([ \t]*)(?:[-*+]|\d+[.)]|[a-z]+[.)])?[ \t]*(.*)$/i.exec(line);
-    n++;
-    return `${m[1]}${kind === 'roman' ? toRoman(n) : toLetters(n)}. ${m[2]}`;
-  });
-}
+import { listLines } from './lists-editor.js';
+import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nextMarker, readMarker } from './list-markers.js';
 
 export class MarkedLists extends Feature {
   register() {
+    this.extensions = [];
+    this.fonts = new Map(); // a measurer by font
+    this.plugin.registerEditorExtension(this.extensions);
     this.plugin.registerMarkdownPostProcessor((el) => this.on && this.render(el));
+  }
+
+  /** A measurer in a font, made once. */
+  measure(doc, font, size) {
+    if (!this.fonts.has(font)) this.fonts.set(font, measurer(doc, font, size));
+    return this.fonts.get(font);
   }
 
   get wanted() {
@@ -122,6 +33,17 @@ export class MarkedLists extends Feature {
   }
 
   enable() {
+    const ws = this.app.workspace;
+    this.extensions.push(listLines((view) => {
+      const style = view.contentDOM.ownerDocument.defaultView.getComputedStyle(view.contentDOM);
+      const size = parseFloat(style.fontSize) || 16;
+      return this.measure(view.contentDOM.ownerDocument, [style.fontStyle, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' '), size);
+    }));
+    if (typeof ws.updateOptions === 'function') ws.updateOptions();
+    this.add(() => {
+      this.extensions.length = 0;
+      if (typeof ws.updateOptions === 'function') ws.updateOptions();
+    });
     // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
     const keys = (e) => {
       if (e.isComposing || e.altKey || e.metaKey || e.ctrlKey) return;
@@ -148,9 +70,7 @@ export class MarkedLists extends Feature {
     const m = LIST_ITEM.exec(line);
     if (!m) return null;
     const near = around(editor, at.line, depth(m[1]));
-    // "Mr. Smith" is no item: a marker is one letter, a numeral, or the letters after the item above (z, aa).
-    const sibling = near.sibling && /^[a-z]+$/i.test(near.sibling) ? fromLetters(near.sibling.toLowerCase()) : 0;
-    if (m[2].length > 1 && !fromRoman(m[2]) && !(sibling && fromLetters(m[2].toLowerCase()) === sibling + 1)) return null;
+    if (!isMarker(m[2], near.sibling)) return null;
     const kind = readMarker(m[2], near.sibling).kind;
     if ((kind === 'roman' && this.settings.romanLists === false) || (kind === 'letter' && this.settings.letterLists === false)) return null;
     return { at, line, m, near };
@@ -221,13 +141,25 @@ export class MarkedLists extends Feature {
     editor.replaceRange(makeList(lines, kind).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
   }
 
-  /** Reading view: a paragraph whose every line is an item is marked as a list of its kind. */
+  /**
+   * Reading view: a paragraph whose every line is an item is marked as a
+   * list, each line hung by the widest marker so a long item wraps under
+   * its words.
+   */
   render(root) {
+    const doc = root.ownerDocument;
     Array.from(root.querySelectorAll('p')).concat(root.tagName === 'P' ? [root] : []).forEach((p) => {
-      const lines = p.textContent.split('\n').filter((l) => l.trim());
-      if (lines.length < 2 || !lines.every((l) => LIST_ITEM.test(l))) return;
-      const kind = readMarker(LIST_ITEM.exec(lines[1])[2], LIST_ITEM.exec(lines[0])[2]).kind;
-      p.classList.add('dr-marked-list', kind === 'roman' ? 'is-roman' : 'is-lettered');
+      const lines = linesOf(p).filter((l) => l.trim());
+      if (lines.length < 2) return;
+      const items = lines.map((l) => LIST_ITEM.exec(l.trimStart()));
+      if (!items.every((m, i) => m && isMarker(m[2], i ? items[i - 1][2] : null))) return;
+      const style = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
+      const size = parseFloat(style && style.getPropertyValue('--font-text-size')) || 16;
+      const family = (style && style.getPropertyValue('--font-text').trim()) || 'sans-serif';
+      const width = this.measure(doc, `${size}px ${family}`, size);
+      const hang = Math.max(...items.map((m) => width(`${m[2]}${m[3]} `)));
+      p.classList.add('dr-marked-list');
+      p.style.setProperty('--dr-hang', `${hang}px`);
     });
   }
 
@@ -238,6 +170,12 @@ export class MarkedLists extends Feature {
     ];
   }
 }
-MarkedLists.title = 'Lettered and roman lists';
-MarkedLists.section = 'Notes';
-MarkedLists.about = 'Lists marked a, b, c or i, ii, iii, carried on as you write.';
+
+/** A paragraph's lines, whether its breaks are <br> or the newlines of the text. */
+function linesOf(p) {
+  let text = '';
+  p.childNodes.forEach((node) => {
+    text += node.nodeName === 'BR' ? '\n' : node.textContent;
+  });
+  return text.split(/\n+/);
+}

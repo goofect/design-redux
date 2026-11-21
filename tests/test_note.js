@@ -282,7 +282,28 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const p = w.doc.createElement('p');
     p.textContent = 'i. one\nii. two';
     lists.render(p);
-    assert.ok(p.classList.contains('dr-marked-list') && p.classList.contains('is-roman'));
+    assert.ok(p.classList.contains('dr-marked-list'));
+    assert.ok(/^\d+(\.\d)?px$/.test(p.style.getPropertyValue('--dr-hang')), 'a list paragraph hangs by its widest marker');
+    const br = w.doc.createElement('p');
+    br.append('a. one', w.doc.createElement('br'), 'b. two');
+    lists.render(br);
+    assert.ok(br.classList.contains('dr-marked-list'), 'lines parted by <br> are items too');
+    const prose = w.doc.createElement('p');
+    prose.textContent = 'Mr. Smith\nDr. Who';
+    lists.render(prose);
+    assert.ok(!prose.classList.contains('dr-marked-list'), 'words with full stops are no list');
+  });
+
+  await check('lists in the editor: an item line hangs by its prefix, its tabs held in a span; prose is left be', () => {
+    const doc = 'a. one\n\ti) sub\nMr. Smith\nplain';
+    const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
+    const got = [];
+    for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class, (it.value.spec.attributes || {}).style]);
+    assert.deepStrictEqual(got, [
+      [0, 0, 'dr-marked-item', '--dr-hang: 30px'],
+      [7, 7, 'dr-marked-item', '--dr-hang: 70px'],
+      [7, 8, 'dr-list-indent', undefined],
+    ]);
   });
 
   check.done();

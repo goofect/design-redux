@@ -23,6 +23,7 @@ Object.defineProperty(global, 'navigator', { value: window.navigator, configurab
 global.activeDocument = window.document;
 global.activeWindow = window;
 window.matchMedia = window.matchMedia || (() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+window.HTMLCanvasElement.prototype.getContext = () => null; // no canvas: text is measured by estimate
 window.ResizeObserver = window.ResizeObserver || class { observe() {} unobserve() {} disconnect() {} };
 global.ResizeObserver = window.ResizeObserver;
 
