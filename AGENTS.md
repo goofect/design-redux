@@ -151,7 +151,10 @@ invented labels carry no information.
 - Hover styles only inside `@media (any-hover: hover)`. No `!important`, no
   inline style but the geometry properties a script must set
   (`--dr-size`, positions on a map), no `innerHTML`.
-- JS never moves, clones or removes Obsidian's own DOM nodes.
+- JS never moves, clones or removes Obsidian's own DOM nodes: its interface
+  holds them and the plugin could not put them back. A note's rendered text,
+  handed to a post-processor, is not that: it is drawn from the note, changed
+  by plugins and drawn again, so a post-processor may rebuild it.
 
 ## Working here
 

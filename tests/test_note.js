@@ -279,19 +279,57 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     await open(w, 'A.md', sel);
     w.app.commands.executeCommandById('design-redux:make-lettered-list');
     assert.strictEqual(sel.text, 'a. one\nb. two');
-    const p = w.doc.createElement('p');
+  });
+
+  await check('lists in reading view: the items made a list in place, nested by the source, links moved not copied, prose left be', async () => {
+    const w = await world({ 'A.md': '' });
+    const lists = feature(w, 'MarkedLists');
+    const d = w.doc;
+    // A list as [marker, words, [its sub-list]].
+    const shape = (list) => Array.from(list.children).map((row) => {
+      const sub = row.querySelector(':scope > .dr-marked-list');
+      const out = [row.querySelector('.dr-list-marker').textContent, row.querySelector('.dr-list-text').textContent];
+      return sub ? out.concat([shape(sub)]) : out;
+    });
+    const section = (...nodes) => { const el = d.createElement('div'); el.append(...nodes); return el; };
+
+    const p = d.createElement('p');
     p.textContent = 'i. one\nii. two';
-    lists.render(p);
-    assert.ok(p.classList.contains('dr-marked-list'));
-    assert.ok(/^\d+(\.\d)?px$/.test(p.style.getPropertyValue('--dr-hang')), 'a list paragraph hangs by its widest marker');
-    const br = w.doc.createElement('p');
-    br.append('a. one', w.doc.createElement('br'), 'b. two');
-    lists.render(br);
-    assert.ok(br.classList.contains('dr-marked-list'), 'lines parted by <br> are items too');
-    const prose = w.doc.createElement('p');
+    lists.render(section(p));
+    assert.deepStrictEqual(shape(p.querySelector('.dr-marked-list')), [['i.', 'one'], ['ii.', 'two']]);
+    assert.strictEqual(p.firstChild.className, 'dr-marked-list', 'nothing is left before a list that was the whole paragraph');
+
+    const link = d.createElement('a');
+    link.textContent = 'Note';
+    const lead = d.createElement('p');
+    lead.append('Choose:', d.createElement('br'), 'A) see ', link, d.createElement('br'), 'B) two');
+    lists.render(section(lead));
+    assert.strictEqual(lead.firstChild.data, 'Choose:');
+    assert.strictEqual(lead.childNodes[1].className, 'dr-marked-list', 'no break is left between the lead and the list');
+    assert.deepStrictEqual(shape(lead.childNodes[1]), [['A)', 'see Note'], ['B)', 'two']]);
+    assert.ok(lead.contains(link), 'the link is the same node, moved');
+
+    const nested = d.createElement('p');
+    nested.append('A) one', d.createElement('br'), '\ni) sub', d.createElement('br'), '\nii) more', d.createElement('br'), '\nB) two');
+    const root = section(nested);
+    lists.render(root, { getSectionInfo: () => ({ text: 'A) one\n\ti) sub\n\tii) more\nB) two', lineStart: 0, lineEnd: 3 }) });
+    assert.deepStrictEqual(shape(nested.querySelector('.dr-marked-list')), [['A)', 'one', [['i)', 'sub'], ['ii)', 'more']]], ['B)', 'two']]);
+
+    const li = d.createElement('li');
+    const indicator = d.createElement('div');
+    const own = d.createElement('ul');
+    li.append(indicator, 'Topic\na. sub\nb. more', own);
+    lists.render(section(li));
+    assert.deepStrictEqual(Array.from(li.childNodes).map((n) => n.className || n.nodeName), ['DIV', '#text', 'dr-marked-list', 'UL']);
+    assert.strictEqual(li.childNodes[1].data, 'Topic');
+    assert.ok(li.firstChild === indicator && li.lastChild === own, "Obsidian's own nodes in the item stay where they were");
+
+    const prose = d.createElement('p');
     prose.textContent = 'Mr. Smith\nDr. Who';
-    lists.render(prose);
-    assert.ok(!prose.classList.contains('dr-marked-list'), 'words with full stops are no list');
+    const one = d.createElement('p');
+    one.textContent = 'Intro\na. only one';
+    lists.render(section(prose, one));
+    assert.deepStrictEqual([prose.textContent, prose.childNodes.length, one.textContent, one.childNodes.length], ['Mr. Smith\nDr. Who', 1, 'Intro\na. only one', 1], 'words with full stops, or a lone item, are no list');
   });
 
   await check('lists in the editor: an item line hangs by its prefix, its tabs held in a span; prose is left be', () => {

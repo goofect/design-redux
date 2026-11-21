@@ -5,13 +5,14 @@
 /* written a., b., c. or i., ii., iii. is plain paragraphs to          */
 /* Obsidian. Two commands turn the selected lines into one or the      */
 /* other; Enter at the end of an item carries on with the next letter  */
-/* or numeral, Tab and Shift-Tab nest it; in the editor and in reading */
-/* view a long item hangs under its words, as a list's does. The       */
+/* or numeral, Tab and Shift-Tab nest it; in the editor a long item    */
+/* hangs under its words, and reading view makes the items a list. The */
 /* note's text is what was written.                                    */
 /* ------------------------------------------------------------------ */
 
 import { Feature } from '../core/feature.js';
 import { listLines } from './lists-editor.js';
+import { rebuildList } from './lists-reading.js';
 import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nextMarker, readMarker } from './list-markers.js';
 
 export class MarkedLists extends Feature {
@@ -19,7 +20,7 @@ export class MarkedLists extends Feature {
     this.extensions = [];
     this.fonts = new Map(); // a measurer by font
     this.plugin.registerEditorExtension(this.extensions);
-    this.plugin.registerMarkdownPostProcessor((el) => this.on && this.render(el));
+    this.plugin.registerMarkdownPostProcessor((el, ctx) => this.on && this.render(el, ctx));
   }
 
   /** A measurer in a font, made once. */
@@ -40,9 +41,11 @@ export class MarkedLists extends Feature {
       return this.measure(view.contentDOM.ownerDocument, [style.fontStyle, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' '), size);
     }));
     if (typeof ws.updateOptions === 'function') ws.updateOptions();
+    this.redrawReading();
     this.add(() => {
       this.extensions.length = 0;
       if (typeof ws.updateOptions === 'function') ws.updateOptions();
+      this.redrawReading(); // the feature is off by now: the lists go back to the paragraphs they were
     });
     // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
     const keys = (e) => {
@@ -141,25 +144,18 @@ export class MarkedLists extends Feature {
     editor.replaceRange(makeList(lines, kind).join('\n'), { line: from, ch: 0 }, { line: to, ch: editor.getLine(to).length });
   }
 
-  /**
-   * Reading view: a paragraph whose every line is an item is marked as a
-   * list, each line hung by the widest marker so a long item wraps under
-   * its words.
-   */
-  render(root) {
-    const doc = root.ownerDocument;
-    Array.from(root.querySelectorAll('p')).concat(root.tagName === 'P' ? [root] : []).forEach((p) => {
-      const lines = linesOf(p).filter((l) => l.trim());
-      if (lines.length < 2) return;
-      const items = lines.map((l) => LIST_ITEM.exec(l.trimStart()));
-      if (!items.every((m, i) => m && isMarker(m[2], i ? items[i - 1][2] : null))) return;
-      const style = doc.defaultView ? doc.defaultView.getComputedStyle(doc.body) : null;
-      const size = parseFloat(style && style.getPropertyValue('--font-text-size')) || 16;
-      const family = (style && style.getPropertyValue('--font-text').trim()) || 'sans-serif';
-      const width = this.measure(doc, `${size}px ${family}`, size);
-      const hang = Math.max(...items.map((m) => width(`${m[2]}${m[3]} `)));
-      p.classList.add('dr-marked-list');
-      p.style.setProperty('--dr-hang', `${hang}px`);
+  /** Reading view: each paragraph or numbered item whose lines end in lettered or roman items has them made a list. */
+  render(root, ctx) {
+    const info = ctx && typeof ctx.getSectionInfo === 'function' ? ctx.getSectionInfo(root) : null;
+    const source = info ? info.text.split('\n').slice(info.lineStart, info.lineEnd + 1) : null;
+    Array.from(root.querySelectorAll('p, li')).concat(/^(P|LI)$/.test(root.tagName) ? [root] : []).forEach((block) => rebuildList(block, source));
+  }
+
+  /** Reading views drawn again, so a list is made, or undone, in what is already open. */
+  redrawReading() {
+    this.app.workspace.getLeavesOfType('markdown').forEach((leaf) => {
+      const preview = leaf.view && leaf.view.previewMode;
+      if (preview && typeof preview.rerender === 'function') preview.rerender(true);
     });
   }
 
@@ -169,13 +165,4 @@ export class MarkedLists extends Feature {
       { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, when: () => this.settings.romanLists !== false, run: (ctx) => this.convert(ctx.editor, 'roman') },
     ];
   }
-}
-
-/** A paragraph's lines, whether its breaks are <br> or the newlines of the text. */
-function linesOf(p) {
-  let text = '';
-  p.childNodes.forEach((node) => {
-    text += node.nodeName === 'BR' ? '\n' : node.textContent;
-  });
-  return text.split(/\n+/);
 }
