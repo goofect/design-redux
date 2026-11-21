@@ -1,0 +1,28 @@
+Running: obsidian v1.15.1 (installer: v1.15.1, platform: linux)
+
+» tests/obsidian/app.e2e.mjs
+Design Redux in Obsidian: the app
+   ✓ loads with its features, commands and views
+   ✓ draws the toggle 40 by 20, square, its ink knob two pixels in, on the side that is true
+   ✓ puts the look on the main window, and takes it off on unload
+   ✓ puts the look on a popout window and the settings window
+   ✓ keeps the look off when the setting says theme
+   ✓ opens the library sidebar and the browse view
+   ✓ logged no errors of its own along the way
+
+7 passing (6.3s)
+
+Running: obsidian v1.15.1 (installer: v1.15.1, platform: linux)
+
+» tests/obsidian/note.e2e.mjs
+Design Redux in Obsidian: notes and graphs
+   ✓ puts the folder over the title and the head under it, in both views, as wide as the text, scrolling with it
+   ✓ shows many page tabs whole: one the edge would cut is not drawn, and an ellipsis stands there
+   ✓ hides the other pages in reading view
+   ✓ shows every page as plain text in the file on disk
+   ✓ opens the 3D graph
+   ✓ turns routes on the real graph on and off without errors
+   ✓ opens the map of the vault
+   ✓ logged no errors of its own along the way
+
+8 passing (13.1s)

@@ -1,0 +1,15 @@
+  3.6s  turns routes on the real graph on and off without errors
+  3.3s  puts the folder over the title and the head under it, in both views, as wide as the text, scrolling with it
+  2.0s  opens the 3D graph
+  1.6s  puts the look on a popout window and the settings window
+  1.5s  opens the map of the vault
+  1.4s  puts the look on the main window, and takes it off on unload
+  0.9s  draws the toggle 40 by 20, square, its ink knob two pixels in, on the side that is true
+  0.6s  shows many page tabs whole: one the edge would cut is not drawn, and an ellipsis stands there
+  0.6s  hides the other pages in reading view
+  0.5s  opens the library sidebar and the browse view
+  0.4s  keeps the look off when the setting says theme
+  0.0s  loads with its features, commands and views
+  0.0s  shows every page as plain text in the file on disk
+  0.0s  logged no errors of its own along the way
+  0.0s  logged no errors of its own along the way
