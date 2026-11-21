@@ -175,9 +175,11 @@ something away.
   the author's vault or Obsidian settings to try something.
 - Commit locally; push only when the author asks, after a fetch and rebase.
   A push to main releases: CI runs every test, in the real app too, and
-  publishes the next patch. Its results are on the `ci-results` branch:
-  `git fetch origin ci-results`, then `git show
-  origin/ci-results:summary.txt` (and `obsidian-tests.txt`, the screenshots).
+  publishes the next patch. After a push, `node tools/ci.mjs --wait` waits
+  quietly for its run and prints the result in a few lines: each failing
+  test with its error, and the release. Don't poll Actions or read logs;
+  only when the summary isn't enough, read that file on the `ci-results`
+  branch (`git show origin/ci-results:obsidian-tests.txt`).
 - Keep usage down: grep before reading, read the lines needed, long output
   through `tail`. A long task keeps `.claude-cache/checkpoint.md` current.
 - Replies to the author: short, plain.

@@ -2,7 +2,8 @@
 # Obsidian (the only version that matters), a job for each spec in
 # tests/obsidian/. Then the results (summary, test output, timings, screenshots, a
 # compatibility report, and the screenshots compared with main's last) go to
-# the ci-results branch, where they can be read without opening Actions. On
+# the ci-results branch, where they can be read without opening Actions: the
+# summary says it all in a few lines (node tools/ci.mjs --wait prints it here). On
 # the default branch, once the simulation tests and the tests in Obsidian pass and src/ or styles/
 # changed since the last release, main.js and styles.css are built and a new
 # release is published for BRAT: the patch version goes up by one. A
@@ -139,19 +140,18 @@ jobs:
       - name: Publish results to the ci-results branch
         env:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SIMULATION: ${{ needs.simulation.result }}
+          OBSIDIAN: ${{ needs.obsidian.result }}
         run: |
           mkdir -p ci-output
-          # The specs' output as one file, and their timings and errors joined.
-          cat ci-output/obsidian-tests-*.txt > ci-output/obsidian-tests.txt 2>/dev/null || true
-          rm -f ci-output/obsidian-tests-*.txt
+          # summary.txt, a few lines that say it all (each failing test and its
+          # error on a failure); the specs' output as one file, the runner's
+          # noise taken out; their timings and errors joined.
+          node tools/ci.mjs summarize ci-output
           node -e "import('./tests/obsidian/parts.mjs').then((m) => m.joinParts())"
-          {
-            echo "commit: $GITHUB_SHA"
-            echo "branch: $GITHUB_REF_NAME"
-            echo "simulation tests: ${{ needs.simulation.result }}"
-            echo "obsidian tests: ${{ needs.obsidian.result }}"
-            echo "run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          } > ci-output/summary.txt
           # The screenshots compared with main's last (the ci-snapshots
           # branch): snapshots/diff/summary.txt, and a picture of each change.
           mkdir -p ci-output/snapshots
