@@ -84,6 +84,11 @@ function local(wait) {
   const short = sha.slice(0, 7);
   const find = () => JSON.parse(run('gh', ['run', 'list', '--commit', sha, '--workflow', 'ci.yml', '--json', 'databaseId,status,conclusion,url', '-L', '1']))[0];
   let found = find();
+  // Just after a push, GitHub takes a few seconds to make the run: with --wait, give it a minute.
+  for (let i = 0; !found && wait && i < 12; i++) {
+    execFileSync('sleep', ['5']);
+    found = find();
+  }
   if (!found) return console.log(`${short}: no CI run (not pushed, or only ignored paths changed)`);
   if (found.status !== 'completed') {
     if (!wait) return console.log(`${short}: running ${found.url}`);
