@@ -9,27 +9,27 @@ monospace, black, white and one grey, space instead of lines, and
 Obsidian's chrome hidden. Desktop only.
 
 This file is the only document. The principles below are the design; the
-look's values are in `styles/00-tokens.css`, and the tests (`test_reset`,
-`test_design`, `test_tokens`) hold what a machine can check. Don't add a
-docs folder or a design document: a principle that changes is changed here.
+look's values are in `styles/00-tokens.css`, and the tests hold what a
+machine can check (`test_reset`, `test_design`, `test_tokens` the look;
+`tests/obsidian/` the plugin in the real app). Don't add a docs folder or a
+design document: a principle that changes is changed here.
 The old plugin (`legacy/`) is gone from the tree; to learn what a feature
 did, read it in git history (before 4.0.4). Never build or copy it.
 
 ## Principles
 
 The author's own, from a catalogue site's six rules and a screenshot of two
-framed panes. Treat them as law; when one is in doubt, take something away.
+framed panes. They are law for how the plugin looks and how quiet it is, not
+a cap on what it can do: a new ability is welcome when it lives in the
+person's text, the keys, the command palette or Obsidian's menus, and the
+screen at rest shows nothing more. When a principle is in doubt, take
+something away.
 
 1. **Subtract until it breaks.** No feature, control, setting, glyph, label
    or line that the screen works without. A feature that only adds commands
-   has no switch. When asked to change something, prefer removing it. Gone so
-   far, and staying gone: the grid and covers, zoom levels and shelves, the
-   glyph builder, the image router, the properties panel and property
-   history, most settings, arrows in the tree, the design docs, a note shown in
-   another folder too, commands to copy and paste a note's properties (they
-   copy and paste as text does: ⌘C, ⌘V), a folder's kind and colour,
-   merging and splitting folders, counts on any screen (a folded branch on
-   a map is marked +), commands kept as stubs that do nothing.
+   has no switch. When asked to change something, see first whether taking
+   it away serves; when something is missing, build it so it adds nothing
+   to look at.
 2. **An inventory, not a showcase.** A collection is one ruled list, like a
    stock sheet: names in rows, a light rule under each. No grid of cards, no
    images, no counts, no numbers, no decoration that carries nothing.
@@ -72,12 +72,6 @@ framed panes. Treat them as law; when one is in doubt, take something away.
 11. **Fast and still.** No motion, no transitions, no carousels; draw from
     the index, never walk the vault for a screen; one redraw for many
     changes.
-12. **Honest about what it is.** A tool for notes that looks like one: plain
-    words that say what a thing does ("Show the vault in the page"), no
-    marketing voice, no analogies to other products. Desktop only.
-
-What these left out on purpose: product-style codes on items (`POL-01`):
-invented labels carry no information.
 
 ## Files
 
@@ -103,9 +97,16 @@ invented labels carry no information.
   committed) by `npm run specimen` from the same sources; `npm run screenshots` compares it
   with the approved images. A new screen is added to it (`tools/specimen/`).
 - `tests/test_*.js` — simulation suites: jsdom, with Obsidian stood in for by
-  `tests/obsidian.js`. `npm test`, or `node tests/run.js settings library`.
-  `tests/harness.js` gives a suite the whole source as one object (`load()`)
-  and a vault to try it in (`world()`).
+  `tests/obsidian.js`. `npm test` builds and runs them all; `node tests/run.js
+  note` runs some against the last build. `tests/harness.js` gives a suite
+  the whole source as one object (`load()`) and a vault to try it in
+  (`world()`). A stand-in can't show how Obsidian's own styles and editor
+  meet the plugin's.
+- `tests/obsidian/*.e2e.mjs` — the plugin in the real, latest Obsidian
+  (WebdriverIO; the app is cached in `.obsidian-cache/`): `npm run
+  test:obsidian`, or one spec with `-- --spec tests/obsidian/note.e2e.mjs`.
+  What draws in the note's text, the editor or Obsidian's own regions gets
+  an `it` here.
 - `manifest.json`, `versions.json` — never edit versions by hand. `README.md`
   — don't update unless asked.
 
@@ -149,8 +150,15 @@ invented labels carry no information.
   `containerEl.ownerDocument` (Settings opens in a window of its own).
 - Menu entries need a section (`setSection('action')` and so on).
 - Hover styles only inside `@media (any-hover: hover)`. No `!important`, no
-  inline style but the geometry properties a script must set
-  (`--dr-size`, positions on a map), no `innerHTML`.
+  inline style but the geometry a script must set (`--dr-size`, positions
+  on a map, an editor line's hang), no `innerHTML`.
+- Obsidian's own styles outweigh a plain `dr-` class: `.markdown-source-view
+  .mod-cm6 .cm-line` zeroes every editor line's padding, and Obsidian puts
+  an inline style on indented lines. Before styling an element Obsidian
+  draws, read what it sets: `app.css` is in
+  `~/Library/Application Support/obsidian/obsidian-<version>.asar`. An
+  editor line's style is beaten only by a line decoration's, which comes
+  after it.
 - JS never moves, clones or removes Obsidian's own DOM nodes: its interface
   holds them and the plugin could not put them back. A note's rendered text,
   handed to a post-processor, is not that: it is drawn from the note, changed
@@ -159,10 +167,17 @@ invented labels carry no information.
 ## Working here
 
 - The smallest complete change. Report changed files and tests run, briefly.
-- Commit locally; push only when the author asks. Before a push, fetch and
-  rebase.
-- Test lightly: the suites the change touches while working, `npm test` once
-  at the end, `npm run screenshots` when the look changed.
+- Bring a better idea when you see one: say it in a line; build it when it
+  is small and keeps the principles; ask first when it is big.
+- Test in rising order: the suites the change touches while working, `npm
+  test` once at the end, `npm run screenshots` when the look changed, the
+  Obsidian specs when it meets Obsidian's DOM, styles or editor. Never use
+  the author's vault or Obsidian settings to try something.
+- Commit locally; push only when the author asks, after a fetch and rebase.
+  A push to main releases: CI runs every test, in the real app too, and
+  publishes the next patch. Its results are on the `ci-results` branch:
+  `git fetch origin ci-results`, then `git show
+  origin/ci-results:summary.txt` (and `obsidian-tests.txt`, the screenshots).
 - Keep usage down: grep before reading, read the lines needed, long output
   through `tail`. A long task keeps `.claude-cache/checkpoint.md` current.
 - Replies to the author: short, plain.
