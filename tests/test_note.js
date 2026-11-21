@@ -254,6 +254,26 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(ed.text, 'a. first\nb. second\n');
     const lone = editor('a. ', { line: 0, ch: 3 });
     assert.ok(!lists.carryOn(lone));
+    assert.ok(!lists.carryOn(editor('Mr. Smith', { line: 0, ch: 9 })), 'a word with a full stop is no marker');
+    // A) i) and the like: Tab nests a level down, a then i then a; Enter reads the item at its own depth; Shift-Tab steps back out.
+    const nest = editor('A) one\nB) ', { line: 1, ch: 3 });
+    assert.ok(lists.indent(nest));
+    assert.strictEqual(nest.text, 'A) one\n\ti) ');
+    nest.replaceSelection('sub');
+    assert.ok(lists.carryOn(nest));
+    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
+    assert.ok(lists.indent(nest));
+    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\t\ta) ');
+    assert.ok(lists.carryOn(nest), 'an empty nested item steps out');
+    assert.strictEqual(nest.text, 'A) one\n\ti) sub\n\tii) ');
+    assert.ok(lists.outdent(nest));
+    assert.strictEqual(nest.text, 'A) one\n\ti) sub\nB) ');
+    const deep = editor('h. eight\n\ti. one', { line: 1, ch: 7 });
+    assert.ok(lists.carryOn(deep), 'i under h is a numeral of its own list');
+    assert.strictEqual(deep.text, 'h. eight\n\ti. one\n\tii. ');
+    const under = editor('1. first\n\ta. sub\n\tb. ', { line: 2, ch: 4 });
+    assert.ok(lists.outdent(under));
+    assert.strictEqual(under.text, '1. first\n\ta. sub\n2. ', 'stepping out of a lettered list carries on the numbers');
     const sel = editor('one\ntwo');
     sel.select({ line: 0, ch: 0 }, { line: 1, ch: 3 });
     await open(w, 'A.md', sel);
