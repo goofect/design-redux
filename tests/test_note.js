@@ -332,16 +332,16 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([prose.textContent, prose.childNodes.length, one.textContent, one.childNodes.length], ['Mr. Smith\nDr. Who', 1, 'Intro\na. only one', 1], 'words with full stops, or a lone item, are no list');
   });
 
-  await check('lists in the editor: an item line hangs by its prefix, the prefix held in a span as wide; prose is left be', () => {
+  await check('lists in the editor: an item line hangs by its indent levels and its marker, the marker held in a span as wide; prose is left be', () => {
     const doc = 'a. one\n\ti) sub\nMr. Smith\nplain';
     const set = dr.itemLines(EditorState.create({ doc }), 0, doc.length, (t) => t.length * 10, 4);
     const got = [];
     for (let it = set.iter(); it.value; it.next()) got.push([it.from, it.to, it.value.spec.class, (it.value.spec.attributes || {}).style]);
     assert.deepStrictEqual(got, [
-      [0, 0, 'dr-marked-item', '--dr-hang: 30px'],
+      [0, 0, 'dr-marked-item', '--dr-mark: 30px; --dr-hang: calc(0 * var(--list-indent, 40px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
       [0, 3, 'dr-list-prefix', undefined],
-      [7, 7, 'dr-marked-item', '--dr-hang: 70px'],
-      [7, 11, 'dr-list-prefix', undefined],
+      [7, 7, 'dr-marked-item', '--dr-mark: 30px; --dr-hang: calc(1 * var(--list-indent, 40px) + 30px); padding-inline-start: var(--dr-hang); text-indent: calc(-1 * var(--dr-hang))'],
+      [8, 11, 'dr-list-prefix', undefined],
     ]);
   });
 
