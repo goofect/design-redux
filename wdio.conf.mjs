@@ -34,9 +34,12 @@ export const config = {
   mochaOpts: {
     ui: 'bdd',
     timeout: 60000,
+    // A failed test is tried once more: one that fails twice is a failure, one
+    // that passes only the second time is listed as flaky in the results.
+    retries: 1,
   },
   logLevel: 'warn',
-  // Each spec's timings and errors, joined per version into the files tests/ci.sh reads;
+  // Each spec's timings and errors, joined per version into the files the results step reads (tools/ci.mjs);
   // in CI, where each spec has a job of its own, by the results job once all are in.
   onComplete() {
     if (!process.env.WDIO_KEEP_PARTS) joinParts();

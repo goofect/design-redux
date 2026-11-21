@@ -7,7 +7,7 @@ import path from 'path';
 export const OUT = path.resolve('ci-output');
 export const PARTS = path.join(OUT, 'parts');
 
-/** Run by wdio.conf.mjs once every spec is done: each version's parts joined into the files ci.sh reads. */
+/** Run by wdio.conf.mjs once every spec is done: each version's parts joined into the files the results step reads (tools/ci.mjs). */
 export function joinParts() {
   if (!fs.existsSync(PARTS)) return;
   for (const v of fs.readdirSync(PARTS)) {
@@ -15,16 +15,20 @@ export function joinParts() {
     const perfs = [];
     const times = [];
     const errors = [];
+    const flaky = [];
     for (const f of fs.readdirSync(dir).sort()) {
       const data = JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8'));
       if (f.endsWith('.timings.json')) {
         perfs.push(...data.perf);
         times.push(...data.timings);
       } else if (f.endsWith('.errors.json')) errors.push(...data);
+      else if (f.endsWith('.flaky.json')) flaky.push(...data);
     }
     const lines = perfs.concat(times.sort((x, y) => y[0] - x[0]).map(([ms, title]) => `${(ms / 1000).toFixed(1).padStart(5)}s  ${title}`));
     fs.writeFileSync(path.join(OUT, `${v}-timings.txt`), lines.join('\n') + '\n');
     fs.writeFileSync(path.join(OUT, `${v}-errors.txt`), errors.join('\n\n') || 'none');
+    // Tests that failed once and passed when tried again: they pass, and want fixing.
+    if (flaky.length) fs.writeFileSync(path.join(OUT, `${v}-flaky.txt`), flaky.join('\n') + '\n');
   }
   fs.rmSync(PARTS, { recursive: true, force: true });
 }

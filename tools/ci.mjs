@@ -70,6 +70,10 @@ function summarize(dir) {
     `obsidian: ${job(env.OBSIDIAN, specs.map((s) => s.line).join(', ') || 'no specs ran', specs.flatMap((s) => s.fails))}`,
     ...specs.flatMap((s) => s.fails).map((f) => `  ✖ ${cut(f)}`),
   ];
+  // Passed only when tried again: not a failure, but named until fixed.
+  fs.readdirSync(dir).filter((f) => f.endsWith('-flaky.txt')).forEach((f) => {
+    read(f).split('\n').filter(Boolean).forEach((t) => out.push(`  ~ flaky, passed on a retry: ${cut(t)}`));
+  });
   if (!ok) out.push('more: simulation-tests.txt, obsidian-tests.txt, *-errors.txt on ci-results');
   fs.writeFileSync(path.join(dir, 'summary.txt'), out.join('\n') + '\n');
 }

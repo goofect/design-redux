@@ -48,17 +48,20 @@ export function suite(name, body) {
   const slug = name.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
   describe(name, function () {
     const timings = [];
+    const flaky = [];
     let started = 0;
     before(start);
     beforeEach(() => { started = Date.now(); });
     afterEach(async function () {
       if (this.currentTest) timings.push([Date.now() - started, this.currentTest.title]);
+      if (this.currentTest && this.currentTest.state === 'passed' && this.currentTest.currentRetry() > 0) flaky.push(this.currentTest.title);
       if (this.currentTest && this.currentTest.state === 'failed') await shot(`FAILED-${this.currentTest.title.replace(/[^a-z0-9]+/gi, '-').slice(0, 50)}`);
     });
     after(async function () {
       const dir = path.join(PARTS, version);
       fs.mkdirSync(dir, { recursive: true });
       fs.writeFileSync(path.join(dir, `${slug}.timings.json`), JSON.stringify({ perf: [], timings }));
+      fs.writeFileSync(path.join(dir, `${slug}.flaky.json`), JSON.stringify(flaky));
       const errors = await browser.executeObsidian(() => window.__drErrors || []);
       fs.writeFileSync(path.join(dir, `${slug}.errors.json`), JSON.stringify(errors));
     });

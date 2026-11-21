@@ -177,7 +177,9 @@ something away.
   A push to main releases: CI runs every test, in the real app too, and
   publishes the next patch. After a push, `node tools/ci.mjs --wait` waits
   quietly for its run and prints the result in a few lines: each failing
-  test with its error, and the release. Don't poll Actions or read logs;
+  test with its error, and the release. A test in Obsidian is tried twice;
+  one named flaky passed only the second time, and wants fixing. Don't poll
+  Actions or read logs;
   only when the summary isn't enough, read that file on the `ci-results`
   branch (`git show origin/ci-results:obsidian-tests.txt`).
 - Keep usage down: grep before reading, read the lines needed, long output

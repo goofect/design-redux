@@ -25,7 +25,10 @@ name: Test and release
 on:
   push:
     branches-ignore: [ci-results, ci-snapshots]
-    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', '.claude/**', 'tests/map.js', 'tests/tool-log.js']
+    # What no job reads: the docs, agent notes and tools, and the local-only
+    # screenshot and specimen tools with their approved images.
+    paths-ignore: ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE', '.editorconfig', '.claude/**', 'tests/map.js', 'tests/tool-log.js',
+      'tests/screenshots.js', 'tests/screenshots/**', 'tools/specimen.mjs', 'tools/specimen/**']
   workflow_dispatch:
 
 concurrency:
@@ -150,8 +153,8 @@ jobs:
           # summary.txt, a few lines that say it all (each failing test and its
           # error on a failure); the specs' output as one file, the runner's
           # noise taken out; their timings and errors joined.
-          node tools/ci.mjs summarize ci-output
           node -e "import('./tests/obsidian/parts.mjs').then((m) => m.joinParts())"
+          node tools/ci.mjs summarize ci-output
           # The screenshots compared with main's last (the ci-snapshots
           # branch): snapshots/diff/summary.txt, and a picture of each change.
           mkdir -p ci-output/snapshots
