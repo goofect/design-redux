@@ -2,9 +2,10 @@
 /* Lettered and roman lists: in the editor                             */
 /*                                                                     */
 /* An item's line hangs, as Obsidian's own list lines do: a long item  */
-/* wraps under its words, not under its marker. Its leading tabs are   */
-/* held in a span of their own, so they keep their width when the line */
-/* is drawn out to the left. Code, maths and frontmatter are left be.  */
+/* wraps under its words, not under its marker. Its prefix (indent,    */
+/* marker, space) is held in a span as wide as the hang, so the words  */
+/* start just where the wrap does, however a tab is laid out. Code,    */
+/* maths and frontmatter are left be.                                  */
 /* ------------------------------------------------------------------ */
 
 import { syntaxTree } from '@codemirror/language';
@@ -12,7 +13,7 @@ import { RangeSetBuilder } from '@codemirror/state';
 import { Decoration, ViewPlugin } from '@codemirror/view';
 import { around, depth, isMarker, LIST_ITEM } from './list-markers.js';
 
-const INDENT = Decoration.mark({ class: 'dr-list-indent' });
+const PREFIX = Decoration.mark({ class: 'dr-list-prefix' });
 
 /** Whether a position is in code, maths, a comment or frontmatter, by the names of Obsidian's syntax nodes. */
 function ignored(state, pos) {
@@ -40,7 +41,7 @@ export function itemLines(state, from, to, width, tab = 4) {
     const tabs = m[1].replace(/[^\t]/g, '').length;
     const hang = width(' '.repeat(tabs * tab + m[1].length - tabs)) + width(`${m[2]}${m[3]}${m[4]}`);
     out.add(line.from, line.from, Decoration.line({ class: 'dr-marked-item', attributes: { style: `--dr-hang: ${hang}px` } }));
-    if (tabs) out.add(line.from, line.from + m[1].length, INDENT);
+    out.add(line.from, line.from + m[1].length + m[2].length + m[3].length + m[4].length, PREFIX);
   }
   return out.finish();
 }

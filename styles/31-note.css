@@ -60,16 +60,18 @@
   display: none;
 }
 
-/* A lettered or roman item's line in the editor: a long one wraps under its words. */
-.dr-marked-item {
+/* A lettered or roman item's line in the editor: a long one wraps under its words. Obsidian sets every
+   line's padding to 0 with three classes (.markdown-source-view.mod-cm6 .cm-line); the class four times outweighs it. */
+.dr-marked-item.dr-marked-item.dr-marked-item.dr-marked-item {
   --dr-hang: 0px; /* measured by the script, on the line */
   padding-inline-start: var(--dr-hang);
   text-indent: calc(-1 * var(--dr-hang));
 }
 
-/* Its leading tabs keep their width with the line drawn out to the left. */
-.dr-list-indent {
+/* Its prefix (indent, marker, space) as wide as the hang, so the words start where the wrap does. */
+.dr-list-prefix {
   display: inline-block;
+  width: var(--dr-hang);
   white-space: pre;
   text-indent: 0;
 }
