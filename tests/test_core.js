@@ -131,6 +131,23 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.strictEqual(index.notes(w.file('Logic')).length, 4);
   });
 
+  await check('a feature reaches every window: the main one, a popout already open, one opened after; none once it is off', async () => {
+    const w = await world({});
+    const docs = () => new (require('jsdom').JSDOM)('<body></body>').window.document;
+    const [open, later, after] = [docs(), docs(), docs()];
+    w.app.workspace.leaves.push({ view: { getViewType: () => 'empty', containerEl: open.body } });
+    const f = new (class extends dr.Feature {})(w.plugin);
+    const seen = [];
+    f.on = true;
+    f.eachWindow((doc) => seen.push(doc));
+    w.app.workspace.trigger('window-open', { doc: later });
+    w.app.workspace.trigger('window-open', { doc: later });
+    f.off();
+    w.app.workspace.trigger('window-open', { doc: after });
+    assert.deepStrictEqual(seen, [w.doc, open, later]);
+    w.app.workspace.leaves.pop();
+  });
+
   await check('the look: classes on every window, changed with the settings, gone when the plugin unloads', async () => {
     const w = await world({});
     const body = w.doc.body;

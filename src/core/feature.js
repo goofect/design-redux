@@ -66,6 +66,25 @@ export class Feature {
     this.add(() => target.removeEventListener(type, fn, options));
   }
 
+  /**
+   * Runs `fn` on every window's document while the feature is on: the main
+   * one, the popouts already open, and each one opened after.
+   */
+  eachWindow(fn) {
+    const seen = new Set();
+    const visit = (doc) => {
+      if (!doc || seen.has(doc)) return;
+      seen.add(doc);
+      fn(doc);
+    };
+    const ws = this.app.workspace;
+    visit(activeDocument);
+    if (typeof document !== 'undefined') visit(document);
+    if (typeof ws.iterateAllLeaves === 'function') ws.iterateAllLeaves((leaf) => visit(leaf.view && leaf.view.containerEl && leaf.view.containerEl.ownerDocument));
+    this.listen(ws, 'window-open', (win) => visit(win && (win.doc || (win.win && win.win.document))));
+    this.listen(ws, 'window-close', (win) => seen.delete(win && (win.doc || (win.win && win.win.document))));
+  }
+
   /** Brings the feature to what its setting says. Safe to call on every save. */
   turn() {
     const want = this.wanted;

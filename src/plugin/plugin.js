@@ -30,8 +30,12 @@ export class DesignRedux extends Plugin {
       if (action.palette !== false) this.addCommand(actionCommand(this, action));
     });
     this.addSettingTab(new SettingsTab(this.app, this));
-    this.watchVault();
-    this.app.workspace.onLayoutReady(() => this.features.forEach((f) => f.turn()));
+    // Watched once the layout is ready: while it loads, Obsidian reports every file in the vault as made.
+    this.app.workspace.onLayoutReady(() => {
+      this.index.forget();
+      this.watchVault();
+      this.features.forEach((f) => f.turn());
+    });
   }
 
   onunload() {

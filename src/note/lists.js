@@ -57,11 +57,7 @@ export class MarkedLists extends Feature {
       const done = e.key === 'Enter' ? this.carryOn(editor) : e.shiftKey ? this.outdent(editor) : this.indent(editor);
       if (done) e.preventDefault();
     };
-    this.listenDom(activeDocument, 'keydown', keys, true);
-    this.listen(this.app.workspace, 'window-open', (win) => {
-      const doc = win && (win.doc || (win.win && win.win.document));
-      if (doc) this.listenDom(doc, 'keydown', keys, true);
-    });
+    this.eachWindow((doc) => this.listenDom(doc, 'keydown', keys, true));
   }
 
   /** The marked item the cursor is on, if its kind is turned on and nothing spans lines. */

@@ -33,6 +33,19 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
   const library = (w) => w.plugin.features.find((f) => f.constructor.name === 'Library');
   const page = async (w, folder) => (await library(w).browse(folder)).view.screen;
 
+  await check('a property changed leaves the tree and a folder\'s page as they are: only search and filters read properties', async () => {
+    const w = await world(VAULT);
+    const s = sidebar(w);
+    const p = await page(w, w.app.vault.getAbstractFileByPath('Logic'));
+    const [tree, list] = [s.host.firstChild, p.host.firstChild];
+    w.app.workspace.trigger('design-redux:props', w.app.vault.getMarkdownFiles()[0]);
+    await settle();
+    assert.ok(s.host.firstChild === tree && p.host.firstChild === list, 'a property change drew the tree or a folder page again');
+    w.app.workspace.trigger('design-redux:vault');
+    await settle();
+    assert.ok(s.host.firstChild !== tree, 'a change to the vault should still draw the tree again');
+  });
+
   await check('the sidebar opens with the plugin: headed Vault (pressed, the vault in the page), its folders as a tree, a slash after one that holds more, no glyph, no notes, no control', async () => {
     const w = await world(VAULT);
     const s = sidebar(w);

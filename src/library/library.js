@@ -25,7 +25,9 @@ export class Library extends Feature {
   enable() {
     const ws = this.app.workspace;
     const redraw = () => this.screens().forEach((s) => s.refresh());
-    ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'design-redux:props', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
+    ['design-redux:vault', 'design-redux:pick', 'design-redux:settings', 'file-open'].forEach((name) => this.listen(ws, name, redraw));
+    // A note's properties show only in search and a filter's list: the tree and a folder's page are left be while one is typed.
+    this.listen(ws, 'design-redux:props', () => this.screens().filter((s) => s.query !== null || s.filter).forEach((s) => s.refresh()));
     const ribbon = this.plugin.addRibbonIcon(iconId('library'), 'Open library', () => this.openSidebar());
     this.add(() => ribbon && ribbon.remove && ribbon.remove());
     this.add(() => {

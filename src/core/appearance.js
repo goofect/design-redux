@@ -30,9 +30,7 @@ export class Appearance extends Feature {
   }
 
   enable() {
-    this.dress(activeDocument);
-    if (typeof document !== 'undefined') this.dress(document);
-    this.listen(this.app.workspace, 'window-open', (win) => this.dress(win && (win.doc || (win.win && win.win.document))));
+    this.eachWindow((doc) => this.dress(doc));
     this.listen(this.app.workspace, 'window-close', (win) => this.undress(win && (win.doc || (win.win && win.win.document))));
   }
 

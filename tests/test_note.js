@@ -106,6 +106,17 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     await settle();
     assert.deepStrictEqual(w.plugin.notes.get(w.file('Logic/A.md'), 'domain'), ['logic', 'proof', 'sets']);
     assert.deepStrictEqual(ledger()[0], ['domain', 'logic, proof, sets']);
+    // A value being typed survives what would draw the head again: a change in another note, a layout change.
+    head.querySelector('.dr-prop[data-key="status"]').click();
+    const typing = head.querySelector('.dr-prop[data-key="status"] input');
+    typing.focus();
+    typing.value = 'half typed';
+    w.app.workspace.trigger('design-redux:props', w.file('Logic/A.md'));
+    w.app.workspace.trigger('layout-change');
+    await settle();
+    assert.ok(typing.isConnected && typing.value === 'half typed', 'a value being typed was drawn over');
+    typing.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    await settle();
     w.plugin.settings.notePage = false;
     await w.plugin.saveSettings();
     assert.ok(!view.contentEl.querySelector('.dr-note-head'), 'the head was left behind');

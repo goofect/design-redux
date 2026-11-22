@@ -93,7 +93,8 @@ export class NotePage extends Feature {
     const ws = this.app.workspace;
     const draw = () => this.drawAll();
     this.add(() => { clearTimeout(this.pending); this.pending = null; });
-    ['file-open', 'layout-change', 'design-redux:props', 'design-redux:settings', 'design-redux:renamed', 'design-redux:page'].forEach((name) => this.listen(ws, name, draw));
+    ['file-open', 'layout-change', 'design-redux:settings', 'design-redux:renamed', 'design-redux:page'].forEach((name) => this.listen(ws, name, draw));
+    this.listen(ws, 'design-redux:props', (file) => noteViews(this.app).filter((view) => view.file === file).forEach((view) => this.draw(view)));
     this.add(() => noteViews(this.app).forEach((view) => {
       noteHeads(view).forEach(({ folder, head }) => {
         clear(folder);
@@ -108,10 +109,14 @@ export class NotePage extends Feature {
     noteViews(this.app).forEach((view) => this.draw(view));
   }
 
-  draw(view) {
+  /** Draws a view's heads; `edited` when a value's own edit asks, which may draw over its field. */
+  draw(view, edited) {
     const file = view.file;
     const parent = file.parent && file.parent.path !== '/' ? file.parent : null;
     noteHeads(view).forEach(({ folder, head }) => {
+      // A value being typed is not drawn over: its own Enter, Escape or leaving draws the head again.
+      const typing = head.ownerDocument.activeElement;
+      if (!edited && typing && typing.tagName === 'INPUT' && head.contains(typing)) return;
       clear(folder);
       if (parent) {
         const label = el(folder, 'span', 'dr-link dr-note-folder', parent.name);
@@ -122,7 +127,7 @@ export class NotePage extends Feature {
       }
       // The properties: the ledger, a ruled row each, edited where they stand.
       const ledger = clear(head.querySelector('.dr-note-props'));
-      drawLedger(this.plugin, ledger, file, () => this.draw(view));
+      drawLedger(this.plugin, ledger, file, () => this.draw(view, true));
     });
     tidyNoteHeads(view);
   }

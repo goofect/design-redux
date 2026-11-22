@@ -42,7 +42,9 @@ suite('Design Redux in Obsidian: the app', function () {
       await p.saveSettings();
       return { off, on, region: document.body.classList.contains('dr-region-overlays') };
     });
-    (await import('node:fs')).writeFileSync('ci-output/toggle.json', JSON.stringify(seen, null, 1));
+    const fs = await import('node:fs');
+    fs.mkdirSync('ci-output', { recursive: true });
+    fs.writeFileSync('ci-output/toggle.json', JSON.stringify(seen, null, 1));
     expect([seen.off.w, seen.off.h, seen.off.radius]).toEqual([40, 20, '0px']);
     expect(seen.off.knob.slice(0, 2)).toEqual(['16px', '16px']);
     expect(seen.on.fill).not.toBe(seen.off.fill);
