@@ -18,6 +18,13 @@ exports.editor = (text = '', cursor = { line: 0, ch: 0 }) => {
     select: (from, to) => { e.from = from; e.to = to; },
     getSelection: () => e.text.slice(e.posToOffset(e.from), e.posToOffset(e.to)),
     replaceRange: (s, from, to = from) => { e.text = e.text.slice(0, e.posToOffset(from)) + s + e.text.slice(e.posToOffset(to)); },
+    // Obsidian's: every change at once, its places in the text as it was; `changes` keeps what each was given.
+    transaction: (tx) => {
+      const at = (tx.changes || []).map((c) => ({ from: e.posToOffset(c.from), to: e.posToOffset(c.to || c.from), text: c.text })).sort((x, y) => y.from - x.from);
+      e.changes = (e.changes || []).concat([at.slice().reverse()]);
+      at.forEach((c) => { e.text = e.text.slice(0, c.from) + c.text + e.text.slice(c.to); });
+      if (tx.selection) { e.from = tx.selection.from; e.to = tx.selection.to || tx.selection.from; }
+    },
     replaceSelection: (s) => { const at = e.posToOffset(e.from); e.replaceRange(s, e.from, e.to); e.from = e.to = e.offsetToPos(at + s.length); },
     getScrollInfo: () => ({ left: 0, top: 0 }),
     scrollTo: () => {},

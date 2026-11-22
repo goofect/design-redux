@@ -15,17 +15,17 @@
 
 import { MarkdownView, Notice } from 'obsidian';
 import { Feature } from '../core/feature.js';
+import { changesBetween } from '../core/text.js';
 import { choose } from '../ui/choose.js';
 import { ask } from '../ui/sheet.js';
 import { citationOf, citingIds, sourceOf, sourcesIn } from './cite.js';
 import { addFootnote, citationWords, findFootnotes, tidyFootnotes } from './footnote-text.js';
 
-/** Replaces an editor's text and puts the cursor back as near where it was as the new text allows. */
+/** Makes an editor's text the one given, changing only what differs (so a folded section stays folded), in one Undo; then puts the cursor where it is told. */
 function setText(editor, text, cursor) {
-  const scroll = typeof editor.getScrollInfo === 'function' ? editor.getScrollInfo() : null;
-  editor.setValue(text);
-  if (cursor && typeof editor.setCursor === 'function') editor.setCursor(cursor);
-  if (scroll && typeof editor.scrollTo === 'function') editor.scrollTo(scroll.left, scroll.top);
+  const changes = changesBetween(editor.getValue(), text).map((c) => ({ from: editor.offsetToPos(c.from), to: editor.offsetToPos(c.to), text: c.text }));
+  if (changes.length) editor.transaction({ changes });
+  if (cursor) editor.setCursor(cursor);
 }
 
 /** Puts the cursor at a place in an editor, in view, and the keys back in the text. */

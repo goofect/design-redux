@@ -177,5 +177,18 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     void window;
   });
 
+  await check('changes between two texts: only the lines that differ, and in them only the characters; applied, they make the second', () => {
+    const apply = (was, changes) => changes.slice().reverse().reduce((t, c) => t.slice(0, c.from) + c.text + t.slice(c.to), was);
+    const was = '# A\nkeep\nOne[^1].\nkeep\n\n[^1]: a\n';
+    const now = '# A\nkeep\nOne[^1] two[^2].\nkeep\n\n[^1]: a\n[^2]: b\n';
+    const changes = dr.changesBetween(was, now);
+    assert.deepStrictEqual(changes, [{ from: 16, to: 16, text: ' two[^2]' }, { from: 32, to: 32, text: '[^2]: b\n' }]);
+    // Footnotes renumbered: the numbers alone change, never a line's end.
+    assert.deepStrictEqual(dr.changesBetween('a[^2] b[^1]\n\n[^1]: x\n[^2]: y\n', 'a[^1] b[^2]\n\n[^1]: y\n[^2]: x\n').map((c) => c.text), ['1] b[^2', 'y', 'x']);
+    assert.strictEqual(apply(was, changes), now);
+    assert.deepStrictEqual(dr.changesBetween(now, now), []);
+    [['', 'a'], ['a', ''], ['a\nb', 'a\nb\n'], ['x\ny\nz\n', 'z\ny\nx\n']].forEach(([a, b]) => assert.strictEqual(apply(a, dr.changesBetween(a, b)), b));
+  });
+
   check.done();
 })();

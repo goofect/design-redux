@@ -224,6 +224,7 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     await answer(w, 'Hume, [[Sources/Enquiry|An Enquiry]] 1748');
     assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: Hume, [[Sources/Enquiry|An Enquiry]] 1748\n[^2]: old\n');
     assert.deepStrictEqual(ed.getCursor(), { line: 0, ch: 10 });
+    assert.deepStrictEqual(ed.changes.pop().map((c) => c.text), ['[^1] More[^2', 'Hume, [[Sources/Enquiry|An Enquiry]] 1748\n[^2]: '], 'more of the note rewritten than changed');
     assert.ok(!w.app.workspace.getLeavesOfType('design-redux-footnotes').length && w.app.workspace.getActiveViewOfType(obsidian.MarkdownView) === note, 'a list opened beside the note, or the note left');
     // Go to footnote: each as it reads, a link as its name; one used nowhere says so, and is gone to where it stands.
     ed.setValue(`${ed.text}[^3]: spare\n`);

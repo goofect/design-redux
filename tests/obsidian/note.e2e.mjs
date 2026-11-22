@@ -153,6 +153,28 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
   });
 
+  it('keeps a folded section the footnotes leave alone folded when they are put in order', async function () {
+    // Obsidian unfolds a section whose text changes; the footnotes change only One's and Three's, so Two stays folded.
+    const before = '# One\nBody[^2] then[^1].\n\n# Two\nMore text.\n\n# Three\n\n[^1]: a\n[^2]: b\n';
+    await browser.executeObsidian(async ({ app }, text) => {
+      const path = 'Politics/Folded.md';
+      const was = app.vault.getAbstractFileByPath(path);
+      // Out of order every time, a second try too.
+      const file = was ? (await app.vault.modify(was, text), was) : await app.vault.create(path, text);
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+    }, before);
+    const folded = () => browser.execute(() => Array.from(document.querySelectorAll('.workspace-leaf.mod-active .cm-editor .cm-line:has(.cm-foldPlaceholder)')).map((l) => l.textContent.replace(/…$/, '').trim()));
+    // A note just made is drawn a moment later: fold it once its headings are there.
+    await readUntil(() => browser.execute(() => document.querySelectorAll('.workspace-leaf.mod-active .cm-editor .HyperMD-header').length), (n) => n === 3);
+    const all = await readUntil(async () => { await browser.executeObsidian(({ app }) => app.commands.executeCommandById('editor:fold-all')); return folded(); }, (v) => v.length === 3);
+    expect(all.length).toBe(3);
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:tidy-footnotes'));
+    const text = await readUntil(() => browser.executeObsidian(({ app }) => app.workspace.activeEditor.editor.getValue()), (t) => t.startsWith('# One\nBody[^1]'));
+    expect(text).toBe('# One\nBody[^1] then[^2].\n\n# Two\nMore text.\n\n# Three\n\n[^1]: b\n[^2]: a\n');
+    await browser.pause(300);
+    expect(await folded()).toEqual(['Two']);
+  });
+
   it('offers the values used for a property under its field in the head, and writes the one taken with Enter', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);
