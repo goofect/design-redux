@@ -10,13 +10,16 @@
 /* property is added by its command, as "name" or "name: value".      */
 /* Properties copy and paste as text does: rows selected, or one       */
 /* focused, and ⌘C; ⌘V on a row, or several lines pasted into a field. */
-/* They travel as "name: value" lines.                                 */
+/* They travel as "name: value" lines. While a value is typed, the     */
+/* values it may take are offered: its folder's schema's, else those   */
+/* used for it across the vault, most used first.                      */
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
 import { clear } from '../core/dom.js';
 import { valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
+import { suggestInto } from '../ui/choose.js';
 import { propRow, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 
@@ -177,7 +180,13 @@ function selecting(node) {
   return !!sel && !sel.isCollapsed && node.contains(sel.anchorNode);
 }
 
-/** Edits a value where it stands: Enter (or leaving the field) writes it, Escape leaves it as it was. */
+/** The values offered while a property is typed: those its folder's schema allows, else those used across the vault. */
+export function valueWords(plugin, file, key) {
+  const allowed = plugin.allowedValues ? plugin.allowedValues(file, key) : null;
+  return (allowed || plugin.index.values(key).map(([v]) => v)).map((text) => ({ text, shown: valueShown(text) }));
+}
+
+/** Edits a value where it stands: Enter (or leaving the field) writes it, Escape leaves it as it was; a value offered and taken is written at once, or, in a list, added to it. */
 function editValue(plugin, node, file, key, was, redraw) {
   const cell = node.querySelector('.dr-prop-value');
   if (!cell || cell.querySelector('input')) return;
@@ -188,9 +197,12 @@ function editValue(plugin, node, file, key, was, redraw) {
   input.setAttribute('aria-label', key);
   clear(cell).appendChild(input);
   let done = false;
+  const list = Array.isArray(was);
+  const stop = suggestInto(plugin.app, input, { list, words: () => valueWords(plugin, file, key), picked: () => !list && finish(true) });
   const finish = async (write) => {
     if (done) return;
     done = true;
+    stop();
     if (write && input.value !== valueText(was)) await setValue(plugin, file, key, parseValue(input.value, was));
     redraw();
   };

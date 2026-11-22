@@ -24,11 +24,7 @@ export function propertyNames(plugin, files) {
 }
 
 /** The values a property takes, most used first: [[value, count]]. */
-export function propertyValues(plugin, key) {
-  const counts = new Map();
-  plugin.index.markdown().forEach((f) => valuesOf(propOf(noteProps(plugin.app, f), key)).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-}
+export const propertyValues = (plugin, key) => plugin.index.values(key);
 
 /** Values that are one value written several ways (capitals, spaces round it): Map(the way most used → the other ways). */
 export function valueVariants(values) {

@@ -132,4 +132,37 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await browser.pause(1000);
     await shot('map');
   });
+
+  it('offers the values used for a property under its field in the head, and writes the one taken with Enter', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);
+      await make('Politics/Phase one.md', '---\nphase: drafted\n---\n');
+      await make('Politics/Phase two.md', '---\nphase: done\n---\n');
+      const file = await make('Politics/Phase three.md', '---\nphase: new\n---\nText.\n');
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+    });
+    const value = await $('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="phase"]');
+    await value.waitForExist({ timeout: 8000 });
+    await value.click();
+    await browser.keys(['Backspace', 'd']);
+    const offered = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.suggestion-container .suggestion-item')).map((e) => e.textContent)),
+      (v) => v.length > 0
+    );
+    expect(offered).toEqual(['done', 'drafted']);
+    const look = await browser.execute(() => {
+      const box = getComputedStyle(document.querySelector('.suggestion-container'));
+      return { shadow: box.boxShadow, radius: box.borderRadius, font: getComputedStyle(document.querySelector('.suggestion-item')).fontFamily };
+    });
+    await shot('ledger-suggested-values');
+    expect(look.shadow).toBe('none');
+    expect(look.radius).toBe('0px');
+    await browser.keys(['ArrowDown', 'Enter']);
+    const written = await readUntil(
+      () => browser.executeObsidian(({ app }) => (app.metadataCache.getFileCache(app.vault.getAbstractFileByPath('Politics/Phase three.md')).frontmatter || {}).phase),
+      (v) => v === 'drafted'
+    );
+    expect(written).toBe('drafted');
+    expect(await browser.execute(() => document.querySelectorAll('.suggestion-container').length)).toBe(0);
+  });
 });

@@ -234,6 +234,73 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(ed.text, 'B[^1] A[^2]\n\n[^1]: b\n[^2]: a\n');
   });
 
+  await check('cite a source: a note picked (those with an author first, as each will read), where in it asked, its citation written with a link to it; cited again, its number again', async () => {
+    const w = await world({
+      'A.md': 'Claim. More[^1].\n\n[^1]: old\n',
+      'Sources/Enquiry.md': '---\nauthor: "[[David Hume]]"\ntitle: An Enquiry\ndate: 1748-01-01\n---\n',
+      'Sources/Federalist.md': '---\nauthors: [Hamilton, Madison, Jay]\nyear: 1788\n---\n',
+      'Sources/Loose.md': '',
+    });
+    const ed = editor('Claim. More[^1].\n\n[^1]: old\n', { line: 0, ch: 6 });
+    const note = await open(w, 'A.md', ed);
+    const cite = () => { w.app.workspace.setActiveLeaf(note.leaf); w.app.commands.executeCommandById('design-redux:cite-source'); };
+    const pickSource = async (name) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; const items = m.getItems(); assert.ok(!items.some((s) => s.file.path === 'A.md'), 'the note itself offered'); m.pick(items.find((s) => s.title === name)); await settle(); return items.map((s) => m.getItemText(s)); };
+    cite();
+    assert.deepStrictEqual(await pickSource('An Enquiry'), ['David Hume, An Enquiry, 1748', 'Hamilton et al., Federalist, 1788', 'Loose']);
+    await answer(w, '§10');
+    assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: David Hume, [[Sources/Enquiry|An Enquiry]], 1748, §10\n[^2]: old\n');
+    // Cited again, after the other: the same footnote, and still in order.
+    ed.setCursor({ line: 0, ch: ed.text.indexOf('.', 10) });
+    cite();
+    await pickSource('An Enquiry');
+    await answer(w, '§10');
+    assert.strictEqual(ed.text, 'Claim.[^1] More[^2][^1].\n\n[^1]: David Hume, [[Sources/Enquiry|An Enquiry]], 1748, §10\n[^2]: old\n');
+    // Nothing for where: the citation alone; a source with no properties, by its name.
+    cite();
+    await pickSource('Loose');
+    await answer(w, '');
+    assert.ok(ed.text.endsWith('[^3]: [[Sources/Loose]]\n'), ed.text);
+  });
+
+  await check('a value typed in the ledger: the values used for it offered, most used first, once a key is pressed; one taken is written, in a list added; a schema\'s values offered instead', async () => {
+    const w = await world({ 'Logic/A.md': '---\nstatus: draft\ntags: [a]\n---\n', 'Logic/B.md': '---\nstatus: done\ntags: [logic, sets]\n---\n', 'Logic/C.md': '---\nstatus: done\ntags: [logic]\n---\n', 'D.md': '---\nstatus: dormant\n---\n', 'E.md': '---\nstatus: ordered\n---\n' });
+    const file = w.file('Logic/A.md');
+    const host = w.doc.body.appendChild(w.doc.createElement('div'));
+    const draw = () => { host.textContent = ''; dr.drawLedger(w.plugin, host, file, draw); };
+    draw();
+    const type = (key, value) => {
+      const input = host.querySelector('.dr-prop input') || (host.querySelector(`.dr-prop[data-key="${key}"]`).click(), host.querySelector('.dr-prop input'));
+      input.value = value;
+      input.dispatchEvent(new window.Event('input', { bubbles: true }));
+      return obsidian.AbstractInputSuggest.last;
+    };
+    host.querySelector('.dr-prop[data-key="status"]').click();
+    assert.deepStrictEqual(obsidian.AbstractInputSuggest.last.shown, [], 'offered before a key was pressed');
+    const offered = (key, value) => type(key, value).shown.map((s) => s.text);
+    assert.deepStrictEqual(offered('status', ''), ['done', 'dormant', 'draft', 'ordered'], 'not most used first');
+    assert.deepStrictEqual(offered('status', 'O'), ['ordered', 'done', 'dormant'], 'not those it starts first, then those it is in');
+    assert.deepStrictEqual(offered('status', 'ra'), ['draft']);
+    assert.deepStrictEqual(offered('status', 'done'), [], 'the value typed offered again');
+    const suggest = type('status', 'do');
+    suggest.pick(suggest.shown[1]);
+    await settle();
+    assert.strictEqual(w.plugin.notes.get(file, 'status'), 'dormant', 'a value taken not written');
+    assert.ok(!host.querySelector('.dr-prop input'), 'still editing once written');
+    // A list: the part after the last comma is matched and replaced, those it has left out; it stays open for the next.
+    host.querySelector('.dr-prop[data-key="tags"]').click();
+    assert.deepStrictEqual(offered('tags', 'a, '), ['logic', 'sets']);
+    const tags = type('tags', 'a, l');
+    tags.pick(tags.shown[0]);
+    const input = host.querySelector('.dr-prop input');
+    assert.strictEqual(input.value, 'a, logic, ');
+    input.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+    assert.deepStrictEqual(w.plugin.notes.get(file, 'tags'), ['a', 'logic']);
+    // The folder's schema says which values: only those are offered.
+    w.plugin.settings.propertySchemas = { Logic: [{ key: 'status', type: 'text', values: ['draft', 'review', 'done'] }] };
+    assert.deepStrictEqual(offered('status', ''), ['draft', 'review', 'done']);
+  });
+
   await check('scripts: the short spelling found (not ~~struck~~), put on and taken off, raised in reading view', async () => {
     assert.deepStrictEqual(dr.findScripts('x^2^ and H~2~O, ~~no~~ and a ^ b').map((s) => [s.kind, s.text]), [['sup', '2'], ['sub', '2']]);
     assert.deepStrictEqual([dr.toggleScript('2', 'sup'), dr.toggleScript('^2^', 'sup'), dr.toggleScript('<sub>2</sub>', 'sub'), dr.toggleScript('2', 'sub', 'tags')], ['^2^', '2', '2', '<sub>2</sub>']);

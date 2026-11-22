@@ -10,6 +10,7 @@
     "browse-vault",
     "change-property-type",
     "check-property-schemas",
+    "cite-source",
     "clean-up-property-values",
     "copy-diagnostics",
     "copy-properties-table",

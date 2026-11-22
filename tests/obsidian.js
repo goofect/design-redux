@@ -336,6 +336,20 @@ class FuzzySuggestModal extends SuggestModal {
   onChooseSuggestion(s, evt) { this.onChooseItem(s.item, evt); }
   pick(item) { this.close(); this.onChooseItem(item, {}); }
 }
+// Obsidian's suggester under a field: asked on focus and on every input, as Obsidian asks; `shown` is what it offers, `pick` takes one.
+class AbstractInputSuggest {
+  constructor(app, input) {
+    this.app = app; this.textInputEl = input; this.limit = 100; this.shown = []; this.isOpen = false;
+    const ask = () => { const got = this.getSuggestions(input.value) || []; this.shown = this.limit > 0 ? got.slice(0, this.limit) : got; this.isOpen = this.shown.length > 0; AbstractInputSuggest.last = this; };
+    input.addEventListener('input', ask);
+    input.addEventListener('focus', ask);
+    input.addEventListener('blur', () => this.close());
+  }
+  open() { this.isOpen = true; }
+  close() { this.isOpen = false; this.shown = []; }
+  pick(item) { this.selectSuggestion(item, {}); }
+}
+AbstractInputSuggest.last = null;
 
 class MenuItem {
   constructor() { this.title = ''; }
@@ -433,7 +447,7 @@ const debounce = (fn) => { const run = (...a) => fn(...a); run.cancel = () => {}
 
 module.exports = {
   Events, TAbstractFile, TFile, TFolder, Vault, MetadataCache, FileManager, Component, Workspace, WorkspaceLeaf, App,
-  View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
+  View, ItemView, MarkdownView, Plugin, Modal, SuggestModal, FuzzySuggestModal, AbstractInputSuggest, Menu, MenuItem, Setting, PluginSettingTab, Notice, ToggleComponent, DropdownComponent,
   addIcon, removeIcon, setIcon, getIconIds: () => Object.keys(registered), icons: registered, normalizePath, debounce,
   Platform: { isMobile: false, isDesktop: true, isDesktopApp: true, isMacOS: true },
   parseYaml: (s) => yaml.load(s), stringifyYaml: (o) => yaml.dump(o, { lineWidth: -1 }),

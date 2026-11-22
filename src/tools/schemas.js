@@ -56,7 +56,12 @@ export class PropertySchemas extends Feature {
       const entry = this.schemaOf(file).find((e) => e.key.toLowerCase() === key.toLowerCase());
       return entry ? valueFault(entry, value) : null;
     };
-    this.add(() => delete this.plugin.checkValue);
+    // The values a folder's schema allows a property, for the ledger to offer while one is typed.
+    this.plugin.allowedValues = (file, key) => {
+      const entry = this.schemaOf(file).find((e) => e.key.toLowerCase() === key.toLowerCase());
+      return entry && entry.values && entry.values.length ? entry.values : null;
+    };
+    this.add(() => { delete this.plugin.checkValue; delete this.plugin.allowedValues; });
   }
 
   /** The schema that holds for a note: its folder's, or the nearest folder above that has one. */

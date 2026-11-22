@@ -57,14 +57,14 @@ export function confirm(app, opts) {
   });
 }
 
-/** Asks for a line of text. { title, text, label, value, placeholder, action, check(value): a reason it won't do, onPaste(text): true when it took what was pasted (the sheet then closes) }. Resolves the text, or null. */
+/** Asks for a line of text. { title, text, label, value, placeholder, action, optional (nothing will do too, as ''), check(value): a reason it won't do, onPaste(text): true when it took what was pasted (the sheet then closes) }. Resolves the text, or null. */
 export function ask(app, opts) {
   return new Promise((resolve) => {
     let answer = null;
     let input = null;
     const accept = (sheet) => {
       const value = input.drInput.value.trim();
-      const wrong = !value ? 'It needs a name.' : opts.check ? opts.check(value) : null;
+      const wrong = !value ? (opts.optional ? null : 'It needs a name.') : opts.check ? opts.check(value) : null;
       if (wrong) return void input.drSay(wrong, true), false;
       answer = value;
       if (sheet) sheet.close();

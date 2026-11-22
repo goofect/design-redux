@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile, TFolder } from 'obsidian';
+import { noteProps, propOf, valuesOf } from './notes.js';
 import { byName } from './text.js';
 
 export class LibraryIndex {
@@ -80,6 +81,13 @@ export class LibraryIndex {
   markdown() {
     const tree = this.build();
     return Array.from(tree.notes.values()).flat();
+  }
+
+  /** The values a property takes across the vault, most used first: [[value, count]]. From Obsidian's cache, so no file is read. */
+  values(key) {
+    const counts = new Map();
+    this.markdown().forEach((f) => valuesOf(propOf(noteProps(this.app, f), key)).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
+    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   }
 
   /** A note's length in words, near enough for a bar: from its size, so no file is read. */

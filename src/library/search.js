@@ -42,11 +42,7 @@ export function searchLibrary(plugin, query) {
 }
 
 /** The values a property takes across the vault, most used first: [[value, count]]. */
-export function categoryValues(plugin, key) {
-  const counts = new Map();
-  plugin.index.markdown().forEach((f) => valuesOf(noteProps(plugin.app, f)[key]).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 30);
-}
+export const categoryValues = (plugin, key) => plugin.index.values(key).slice(0, 30);
 
 /** Keeps a search among the last few, newest first. */
 export function rememberSearch(plugin, query) {
