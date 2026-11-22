@@ -2,8 +2,7 @@
 
 An Obsidian plugin that turns the vault into a library: the folders as a tree
 in the left sidebar, a folder's notes as a list in the page, a note head
-(its properties as a ledger) and pages, a strip at the note's foot, and
-property tools.
+(its properties as a ledger) and pages, and property tools.
 One look, reduced and raw, a catalogue site's: small capital labels in one
 monospace, black, white and one grey, space instead of lines, and
 Obsidian's chrome hidden. Desktop only.

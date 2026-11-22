@@ -65,7 +65,7 @@ export async function togglePin(plugin, entry) {
 export function neighbours(plugin, file) {
   const list = file.parent ? sortedNotes(plugin, file.parent) : [];
   const at = list.indexOf(file);
-  return at < 0 ? [null, null, 0, list.length] : [list[at - 1] || null, list[at + 1] || null, at + 1, list.length];
+  return at < 0 ? [null, null] : [list[at - 1] || null, list[at + 1] || null];
 }
 
 /**

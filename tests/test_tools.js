@@ -34,24 +34,6 @@ const VAULT = {
 };
 
 (async () => {
-  await check('the strip: one line, its place "2 / 3", Previous and Next as words, no control; gone when turned off', async () => {
-    const w = await world(VAULT, { settingsVersion: 100, contextStrip: true });
-    const leaf = w.app.workspace.getLeaf();
-    await leaf.openFile(w.file('Logic/B.md'));
-    await settle();
-    const bar = leaf.view.contentEl.querySelector('.dr-strip');
-    const words = () => Array.from(leaf.view.contentEl.querySelectorAll('.dr-strip > *')).map((n) => `${n.textContent}${n.getAttribute('aria-disabled') === 'true' ? '(off)' : ''}`);
-    assert.deepStrictEqual(words(), ['2 / 3', 'Previous', 'Next']);
-    assert.ok(!bar.querySelector('svg, .dr-icon-button, .dr-button'), 'the strip has a glyph or a control');
-    Array.from(bar.querySelectorAll('.dr-link')).find((l) => l.textContent === 'Next').click();
-    await settle();
-    assert.strictEqual(w.app.workspace.getActiveFile().path, 'Logic/C.md');
-    assert.deepStrictEqual(words(), ['3 / 3', 'Previous', 'Next(off)']);
-    w.plugin.settings.contextStrip = false;
-    await w.plugin.saveSettings();
-    assert.ok(!leaf.view.contentEl.querySelector('.dr-strip'));
-  });
-
   await check('rename a property everywhere: its place kept, joined where the new name is taken, one Undo', async () => {
     const w = await world(VAULT);
     const tools = feature(w, 'PropertyTools');

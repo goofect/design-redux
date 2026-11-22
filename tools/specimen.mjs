@@ -18,7 +18,7 @@ import { controls, lists, blocks } from './specimen/sections-parts.mjs';
 import { screens } from './specimen/sections-screens.mjs';
 
 
-const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'library', 'note', 'strip', 'panel', 'canvas', 'graph', 'maps', 'icons', 'compat'];
+const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'library', 'note', 'panel', 'canvas', 'graph', 'maps', 'icons', 'compat'];
 
 // What Obsidian itself provides and the page lacks: its fonts and sizes, and the bare structure of the three pieces of its own that the look restyles.
 const STAND_INS = `

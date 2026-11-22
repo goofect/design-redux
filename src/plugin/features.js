@@ -22,7 +22,6 @@ import { GraphFilter, GraphRoutes } from '../tools/graph-routes.js';
 import { PropertyTools } from '../tools/property-tools.js';
 import { PropertyRules } from '../tools/rules.js';
 import { PropertySchemas } from '../tools/schemas.js';
-import { Strip } from '../tools/strip.js';
 
 export const FEATURES = [Appearance, Library, Albums, AlbumRefactor, AlbumProperty, SavedViews, LibraryCheck, NotePage, NotePages, Footnotes, Scripts, MarkedLists,
-  Strip, PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];
+  PropertyTools, PropertyClipboard, PropertySchemas, PropertyRules, GraphFilter, GraphRoutes, Graph3D, Maps, MenuFilter, ActionsMenu, Diagnostics];

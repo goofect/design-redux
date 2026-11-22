@@ -29,7 +29,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.ok(!('coverProperty' in s) && !('folderCovers' in s), 'covers came through');
     assert.deepStrictEqual(s.albumOrders, { Logic: { names: ['B.md', 'A.md'] } });
     assert.deepStrictEqual(s.propertyRules, [{ id: 1 }]);
-    assert.strictEqual(s.contextStrip, true);
+    assert.ok(!('contextStrip' in s), 'the strip\'s switch, retired, came through');
     assert.strictEqual(s.lookScope, 'window');
     assert.strictEqual(s.look, 'redux');
     assert.strictEqual(s.settingsVersion, dr.SETTINGS_VERSION);

@@ -40,7 +40,6 @@ function vault() {
 
 const SETTINGS = {
   settingsVersion: 102,
-  contextStrip: true,
   notePageChips: true,
   panelPrimaryProps: 'status, course, week',
   propertyOptions: { status: { draft: { color: 'orange' }, done: { color: 'green' } } },
@@ -68,10 +67,9 @@ export async function screens() {
   await feature('NotePages').open(tt, 'Proofs');
   await settle(6);
   const note = leaf.view.contentEl;
-  // The editor's column as the plugin left it (folder, title, the head) with the open page's text in it, and the strip at the foot.
+  // The editor's column as the plugin left it (folder, title, the head) with the open page's text in it.
   const sizer = note.querySelector('.cm-sizer').outerHTML.replace('<div class="cm-content"></div>', '<div class="cm-content"><p>A proof that the table and the rules agree: whatever the rules let you write from some premises, every row of the table that makes the premises true makes it true as well.</p><p>The other way round needs more, and it is the next chapter’s.</p></div>');
-  const strip = note.querySelector('.dr-strip').outerHTML;
-  const page = `<div class="spec-note"><div class="spec-note-text">${sizer}</div>${strip}</div>`;
+  const page = `<div class="spec-note"><div class="spec-note-text">${sizer}</div></div>`;
 
   // The library: the sidebar at the vault's top, a folder's page, then searching.
   const library = ws.getLeavesOfType('design-redux-library')[0].view.screen;
@@ -129,7 +127,7 @@ export async function screens() {
   w.plugin.unload();
   return section('library', 'The library', 'Drawn by the plugin itself on a sample vault. Two panes on the ground, no frame, no line: labels in capitals, parted by space. The sidebar: VAULT and SETTINGS, then the folders, grey but the one open. The page: the path, the folders above grey and this one black, then only the notes in it.',
     `<div class="spec-states is-close">${frame('the sidebar, a folder open', 320, 560, sidebarFolder, 'is-side')}${frame('a folder, in the page', 640, 560, folderPage)}</div>`)
-    + section('screens-note', 'The note', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it the ledger, each property a row, its name a grey label and its value ink, edited where it stands (a value its folder’s schema finds wrong is red, with why); its pages as words, the open one inverted; a line; the text; the strip at its foot, one line. No control, no heading, no panel.',
+    + section('screens-note', 'The note', 'Round the note’s title, in its own column: the folder’s name as a link over it; under it the ledger, each property a row, its name a grey label and its value ink, edited where it stands (a value its folder’s schema finds wrong is red, with why); its pages as words, the open one inverted; a line; the text. No control, no heading, no panel.',
     `<div class="spec-states is-close">${frame('a note on its second page', 720, 560, page, 'is-note')}</div>`)
     + section('screens-library', 'Search, and a filter', 'The sidebar searching: what is typed, and what it finds by name and inside notes. A filter in the browse view: its name large, its parts as words that take themselves off, what passes as rows.',
       `<div class="spec-states is-close">${frame('search: “tab”', 320, 520, searchFound, 'is-side')}${frame('a filter, in the browse view', 640, 520, filtered)}</div>`)

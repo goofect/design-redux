@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'can
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 108;
+export const SETTINGS_VERSION = 109;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -64,8 +64,6 @@ export const DEFAULTS = {
   panelPrimaryProps: 'type, domain, status',
   panelFolderViews: {},
 
-  // The strip
-  contextStrip: false,
 
   // Property tools
   propertySets: {},

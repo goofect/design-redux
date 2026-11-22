@@ -6,7 +6,7 @@ import { logic, properties } from './data.mjs';
 const button = (text, a = {}) => `<div class="dr-button ${a.class || ''}" role="button" tabindex="0"${attrs({ ...a, class: false })}>${text}</div>`;
 const link = (text, a = {}) => `<span class="dr-link ${a.class || ''}" role="link" tabindex="0"${attrs({ ...a, class: false })}>${text}</span>`;
 const tabs = (names, on, extra = {}) => `<div class="dr-segments dr-tabs" role="tablist">${names.map((n, i) => `<div class="dr-segment dr-text ${extra[i]?.class || ''}" role="tab" tabindex="${i === on ? 0 : -1}" aria-selected="${i === on}"${attrs({ ...extra[i], class: false })}>${n}</div>`).join('')}</div>`;
-const toggle = (cls = '', words = 'Strip') => `<label class="spec-setting"><div class="checkbox-container ${cls}"><input type="checkbox" tabindex="0"></div><span>${words}</span></label>`;
+const toggle = (cls = '', words = 'Library') => `<label class="spec-setting"><div class="checkbox-container ${cls}"><input type="checkbox" tabindex="0"></div><span>${words}</span></label>`;
 const field = (label, inner, note = '', a = {}) => `<div class="dr-field"${attrs(a)}>${label ? `<span class="dr-muted">${label}</span>` : ''}<div class="dr-field-box ${a.box || ''}">${inner}</div>${note ? `<span class="dr-field-note dr-text">${note}</span>` : ''}</div>`;
 const input = (value, placeholder = '', a = {}) => `<input class="dr-input" type="text" value="${esc(value)}" placeholder="${esc(placeholder)}"${attrs(a)}>`;
 const chip = (key, value, a = {}) => `<span class="dr-chip ${a.class || ''}"${attrs({ ...a, class: false, close: false })}>${key ? `<span class="dr-muted">${key}</span>` : ''}<span class="dr-text">${value}</span>${a.close ? glyph('close') : ''}</span>`;
@@ -70,13 +70,9 @@ const state = (label, text, extra = '', cls = '') => `<div class="dr-state ${cls
 
 export function blocks() {
   const sheet = (title, text, inner, actions) => `<div class="modal"><div class="modal-close-button">${iconButton('close', 'Close')}</div><div class="modal-title">${title}</div><div class="modal-content"><div class="dr dr-sheet"><p class="dr-text is-running">${text}</p>${inner}<div class="dr-sheet-actions">${actions}</div></div></div></div>`;
-  return section('blocks', 'Head, strip, menu, sheet, say-so', 'The larger pieces. A line only where the structure divides: under a head, over the strip.', [
+  return section('blocks', 'Head, menu, sheet, say-so', 'The larger pieces. A line only where the structure divides: under a head.', [
     component('Head', 'A pane’s name in bold, and a light line under it. No buttons.', [
       shown('a pane', `<div style="width:320px"><div class="dr-head"><span class="dr-head-name">Library</span></div></div>`),
-    ]),
-    component('Strip', 'One line at the foot of the note: where it stands in its folder, Previous and Next.', [
-      shown('in a folder', `<div style="width:480px"><div class="dr-strip"><span class="dr-strip-place">21 / 24</span>${link('Previous')}${link('Next')}</div></div>`),
-      shown('the last note · Next goes nowhere', `<div style="width:480px"><div class="dr-strip"><span class="dr-strip-place">24 / 24</span>${link('Previous')}${link('Next', { 'aria-disabled': 'true', tabindex: false })}</div></div>`),
     ]),
     component('Menu', "Obsidian's own, flattened: rows of four units, words only; the one under the pointer or the keys inverted.", [
       shown('rest, selected, disabled, one that destroys', `<div class="menu"><div class="menu-scroll">${menuItem('Open')}${menuItem('New note here', 'selected')}${menuItem('Pin')}${menuItem('Move to…', 'is-disabled')}<div class="menu-separator"></div>${menuItem('Delete folder', 'is-warning')}</div></div>`),

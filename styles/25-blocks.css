@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Blocks: a screen's head, the strip, the say-so, a sheet's layout    */
+/* Blocks: a screen's head, the say-so, a sheet's layout              */
 /* ------------------------------------------------------------------ */
 
 /* ---- A head: a pane's name as a label, and its few controls; no line under it. ---- */
@@ -50,17 +50,6 @@
 
 .dr-head > .dr-icon-button:last-child {
   margin-right: calc(-1 * var(--dr-u));
-}
-
-/* ---- The strip: one line at the note's foot, a line over it: "21 / 24", Previous, Next. ---- */
-.dr-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--dr-gutter);
-  height: calc(6 * var(--dr-u));
-  padding: 0 var(--dr-gutter);
-  background: var(--dr-bg);
-  color: var(--dr-ink);
 }
 
 /* ---- The say-so: a sentence in place of a screen's contents, one text button at most. ---- */

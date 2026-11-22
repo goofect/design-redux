@@ -22,7 +22,7 @@ export function palette() {
     <div><div class="dr-display">Logic</div><div class="dr-muted">The display size, 48px on a 48px line: the one name that matters on a screen.</div></div>
     <div><div>Natural deduction: the conditional</div><div class="dr-muted">Everything else, 13px on a 16px line; 24px when it runs on. One face, Helvetica as it comes, no tracking, no capitals for effect.</div></div>
   </div>`;
-  const units = [[1, 'the unit'], [2, 'the gutter · a glyph · a line'], [4, 'a row · a control'], [6, 'a head · the strip · the display line']]
+  const units = [[1, 'the unit'], [2, 'the gutter · a glyph · a line'], [4, 'a row · a control'], [6, 'a head · the display line']]
     .map(([n, use]) => `<div class="spec-unit"><div class="spec-unit-box" style="width:${n * 8}px;height:${n * 8}px"></div><div>${n} · ${n * 8}px</div><div class="dr-muted">${use}</div></div>`).join('');
   return section('palette', 'Colour, type, unit', `Black, white, one grey, and red for an error, each scheme's values measured: ${pairs} pairs, none under 4.5. Light value · dark value under each. One face at two sizes, and the 8px unit.`,
     `<div class="spec-swatches">${swatches}</div><pre class="spec-measured dr-text">${esc(block.split('\n').slice(1, -1).map((l) => l.slice(3)).join('\n'))}</pre>${sizes}<div class="spec-units">${units}</div>`);

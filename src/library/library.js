@@ -38,9 +38,6 @@ export class Library extends Feature {
     // For the sidebar's tree: a folder's name pressed shows it in the page.
     this.plugin.showFolder = (folder) => this.browse(folder);
     this.add(() => delete this.plugin.showFolder);
-    // For the strip: where a note stands in its folder.
-    this.plugin.placeOf = (file) => neighbours(this.plugin, file);
-    this.add(() => delete this.plugin.placeOf);
     // With the look on, Obsidian's tab strip and the sidebars' toggles are hidden, so nothing could bring the
     // library forward again: it is kept the tab the left sidebar shows, from the start and after any layout change.
     this.keepShown();

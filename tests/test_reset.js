@@ -54,7 +54,7 @@ const VAULT = {
 
 (async () => {
   await check('the budget of controls at rest: none on the sidebar, a folder, the vault\'s grid, a note', async () => {
-    const w = await world(VAULT, { settingsVersion: 102, contextStrip: true, notePages: true, notePage: true });
+    const w = await world(VAULT, { settingsVersion: 102, notePages: true, notePage: true });
     const sidebar = w.app.workspace.getLeavesOfType('design-redux-library')[0].view.screen;
     assert.deepStrictEqual(labels(sidebar.host), [], 'the sidebar');
     const library = w.plugin.features.find((f) => f.constructor.name === 'Library');
@@ -66,7 +66,7 @@ const VAULT = {
     await leaf.openFile(w.file('Logic/Truth tables.md'));
     await settle();
     const note = leaf.view.contentEl;
-    assert.ok(note.querySelector('.dr-note-head') && note.querySelector('.dr-strip'), 'the note\'s head and strip are not drawn');
+    assert.ok(note.querySelector('.dr-note-head'), 'the note\'s head is not drawn');
     assert.deepStrictEqual(labels(note), [], 'a note');
   });
 

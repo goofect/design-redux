@@ -31,7 +31,6 @@ export class SettingsTab extends PluginSettingTab {
       { name: 'On Obsidian’s own interface too', on: s.lookScope === 'window', set: (on) => save(() => (s.lookScope = on ? 'window' : 'plugin')) },
       key('Library', 'library'),
       key('Note head and pages', 'notePage'),
-      key('Strip', 'contextStrip'),
       key('Property rules', 'propertyRulesOn'),
     ].map((sw) => (sw.name === 'Note head and pages' ? Object.assign(sw, { set: (on) => save(() => { s.notePage = on; s.notePages = on; }) }) : sw));
   }
