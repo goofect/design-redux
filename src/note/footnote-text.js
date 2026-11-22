@@ -102,3 +102,17 @@ export function addFootnote(text, offset, citation, inOrder = true) {
   const position = findFootnotes(text.slice(0, at)).refs.filter((r) => /^\d+$/.test(r.id)).map((r) => r.id).filter((id, i, all) => all.indexOf(id) === i).length + 1;
   return { text: out, id: String(position) };
 }
+
+/** The links in a citation, as the paths they name: "[[Folder/Note|alias]]" and "[alias](Folder/Note.md)" both read. */
+export function linkPaths(text) {
+  const wiki = Array.from(String(text).matchAll(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]/g)).map((m) => m[1].trim());
+  const md = Array.from(String(text).matchAll(/\[[^\]]*\]\(([^)\s#]+)(?:#[^)]*)?\)/g)).map((m) => decodeURIComponent(m[1]).replace(/^<|>$/g, ''));
+  return wiki.concat(md.filter((p) => !/^[a-z]+:/i.test(p)));
+}
+
+/** A citation as it reads: a link as its alias, else the name of what it links to. */
+export function citationWords(text) {
+  return String(text)
+    .replace(/\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]*))?\]\]/g, (all, path, alias) => alias || path.split('/').pop())
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1');
+}

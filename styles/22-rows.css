@@ -4,7 +4,7 @@
 /* Four units high, parted by space alone. Hover underlines the name; */
 /* open or picked, it is underlined too, and black where its list is  */
 /* grey.                                                               */
-/* No numbers, no marks: a slot holds only a footnote's own id.        */
+/* No numbers, no marks.                                              */
 /* ------------------------------------------------------------------ */
 
 .dr-rows {
@@ -23,16 +23,10 @@
   cursor: pointer;
 }
 
-/* A footnote's row holds its id before its words. */
-.dr-row.is-slotted {
-  grid-template-columns: calc(3 * var(--dr-u)) minmax(0, 1fr) auto;
-}
-
 .dr-row:focus-visible {
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-.dr-slot,
 .dr-row-end {
   color: var(--dr-muted);
 }

@@ -34,6 +34,7 @@ const RETIRED_SINCE_4 = {
   coverColors: 'a folder\'s colour is gone: black, white and one grey',
   albumRollups: 'counts are gone: a folder shows no "8 of 20 done"',
   rollupDateKey: 'counts are gone',
+  footnotesAside: 'the footnotes list beside the note is gone (it stood in the sidebar the look hides): Go to footnote picks one in the palette',
   contextStrip: 'the strip is gone: its place in the folder ("21 / 24") was a count; Previous and Next are commands',
   retired: 'unused values are not kept: a retired key\'s value is dropped',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',

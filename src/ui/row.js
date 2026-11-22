@@ -14,17 +14,14 @@ export function rows(parent, opts = {}) {
 }
 
 /**
- * A row. { slot (a footnote's own id: the one thing a row's slot holds; rows
- * are never numbered), name, end (words, grey), selected, current (true, or
+ * A row (never numbered). { name, end (words, grey), selected, current (true, or
  * 'page', 'location'), disabled, missing, error, child, run, path }.
  */
 export function row(list, opts) {
-  const slotted = opts.slot != null;
-  const node = el(list, 'div', `dr-row${slotted ? ' is-slotted' : ''}${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
+  const node = el(list, 'div', `dr-row${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
   asButton(node, null, opts.run);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
-  if (slotted) el(node, 'span', 'dr-slot dr-muted', String(opts.slot));
   el(node, 'span', 'dr-row-name dr-text dr-clip', opts.name);
   if (opts.end != null && opts.end !== '') el(node, 'span', 'dr-row-end dr-muted', opts.end);
   flag(node, 'aria-selected', opts.selected);

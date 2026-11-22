@@ -50,14 +50,12 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual(Array.from(t.children).map((i) => [i.getAttribute('role'), i.getAttribute('aria-selected'), i.textContent]), [['tab', 'false', 'Notes'], ['tab', 'true', 'Proofs']]);
   });
 
-  await check('row: a name and what trails it; a footnote\'s slot; selected, open, disabled, missing, wrong, a heading', () => {
+  await check('row: a name and what trails it, never a number; selected, open, disabled, missing, wrong, a heading', () => {
     const list = dr.rows(fresh());
     const r = dr.row(list, { name: 'Truth tables', end: '9 min', path: 'L/T.md' });
     assert.deepStrictEqual([list.className, r.className, r.querySelector('.dr-row-name').textContent, r.querySelector('.dr-row-end').textContent], ['dr-rows', 'dr-row', 'Truth tables', '9 min']);
-    // Rows are never numbered: a row starts at the gutter. A footnote's row holds its own id in the slot, the one thing a slot holds.
-    assert.ok(!r.querySelector('.dr-slot'), 'a row has a slot without a footnote');
-    const note = dr.row(list, { slot: 'a', name: 'A footnote' });
-    assert.ok(note.classList.contains('is-slotted') && note.querySelector('.dr-slot').textContent === 'a');
+    // Rows are never numbered: a row starts at the gutter, its name first.
+    assert.strictEqual(r.firstElementChild.className.split(' ')[0], 'dr-row-name');
     assert.strictEqual(dr.row(list, { name: 'a', selected: true }).getAttribute('aria-selected'), 'true');
     assert.strictEqual(dr.row(list, { name: 'a', current: 'page' }).getAttribute('aria-current'), 'page');
     assert.strictEqual(dr.row(list, { name: 'a', disabled: true }).getAttribute('aria-disabled'), 'true');
@@ -66,7 +64,7 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     const bad = dr.row(list, { name: 'a', error: true, end: 'unreadable' });
     assert.ok(bad.classList.contains('is-error') && !glyphOf(bad) && bad.querySelector('.dr-row-end').textContent === 'unreadable');
     const child = dr.row(dr.rows(root, { outline: true }), { name: 'A heading', child: true, current: 'location' });
-    assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline' && !child.querySelector('.dr-slot'));
+    assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline');
   });
 
   await check('panel row and section: a dash for no value, the reason when wrong, selected, disabled', () => {

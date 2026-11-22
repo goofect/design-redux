@@ -216,50 +216,77 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.deepStrictEqual([added.id, added.text], ['2', 'A[^1] B[^2] C[^3].\n\n[^1]: one\n[^2]: between\n[^3]: two\n']);
   });
 
-  await check('footnotes, in the note: one added at the cursor, the list of them, put in order', async () => {
+  await check('footnotes, in the note: one added at the cursor, gone to from the palette as it reads, put in order', async () => {
     const w = await world({ 'A.md': 'Claim. More[^1].\n\n[^1]: old\n' });
     const ed = editor('Claim. More[^1].\n\n[^1]: old\n', { line: 0, ch: 6 });
     const note = await open(w, 'A.md', ed);
     w.app.commands.executeCommandById('design-redux:add-footnote');
-    await answer(w, 'Hume 1748');
-    assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: Hume 1748\n[^2]: old\n');
+    await answer(w, 'Hume, [[Sources/Enquiry|An Enquiry]] 1748');
+    assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: Hume, [[Sources/Enquiry|An Enquiry]] 1748\n[^2]: old\n');
     assert.deepStrictEqual(ed.getCursor(), { line: 0, ch: 10 });
-    await w.app.vault.modify(w.file('A.md'), ed.text);
-    const leaf = await feature(w, 'Footnotes').show();
+    assert.ok(!w.app.workspace.getLeavesOfType('design-redux-footnotes').length && w.app.workspace.getActiveViewOfType(obsidian.MarkdownView) === note, 'a list opened beside the note, or the note left');
+    // Go to footnote: each as it reads, a link as its name; one used nowhere says so, and is gone to where it stands.
+    ed.setValue(`${ed.text}[^3]: spare\n`);
+    w.app.commands.executeCommandById('design-redux:show-footnotes');
     await settle();
-    assert.deepStrictEqual(Array.from(leaf.view.contentEl.querySelectorAll('.dr-row')).map((r) => r.textContent), ['1Hume 1748', '2old']);
+    const m = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    assert.deepStrictEqual(m.getItems().map((i) => m.getItemText(i)), ['1  Hume, An Enquiry 1748', '2  old', '3  spare  (used nowhere)']);
+    m.pick(m.getItems()[1]);
+    await settle();
+    assert.deepStrictEqual(ed.getCursor(), { line: 0, ch: 15 });
+    w.app.commands.executeCommandById('design-redux:show-footnotes');
+    await settle();
+    const again = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    again.pick(again.getItems()[2]);
+    await settle();
+    assert.deepStrictEqual(ed.getCursor(), { line: 4, ch: 0 });
     ed.setValue('B[^2] A[^1]\n\n[^1]: a\n[^2]: b\n');
-    w.app.workspace.setActiveLeaf(note.leaf);
     w.app.commands.executeCommandById('design-redux:tidy-footnotes');
     assert.strictEqual(ed.text, 'B[^1] A[^2]\n\n[^1]: b\n[^2]: a\n');
   });
 
-  await check('cite a source: a note picked (those with an author first, as each will read), where in it asked, its citation written with a link to it; cited again, its number again', async () => {
+  await check('cite a source: a note picked (those cited here first, then those with an author, as each will read), where in it asked; in full the first time, short after; cited again, its number again; the notes citing a source found from it', async () => {
     const w = await world({
       'A.md': 'Claim. More[^1].\n\n[^1]: old\n',
-      'Sources/Enquiry.md': '---\nauthor: "[[David Hume]]"\ntitle: An Enquiry\ndate: 1748-01-01\n---\n',
-      'Sources/Federalist.md': '---\nauthors: [Hamilton, Madison, Jay]\nyear: 1788\n---\n',
+      'Sources/Enquiry.md': '---\nauthor: "[[David Hume]]"\ntitle: "An Enquiry: Concerning Human Understanding"\ndate: 1748-01-01\n---\n',
+      'Sources/Federalist.md': '---\nauthors: [Alexander Hamilton, James Madison, John Jay]\nyear: 1788\n---\n',
       'Sources/Loose.md': '',
+      'B.md': 'Also[^1].\n\n[^1]: Compare [[Sources/Enquiry]].\n',
+      'C.md': 'Mentions [[Sources/Enquiry]] in the text only.\n',
     });
     const ed = editor('Claim. More[^1].\n\n[^1]: old\n', { line: 0, ch: 6 });
-    const note = await open(w, 'A.md', ed);
-    const cite = () => { w.app.workspace.setActiveLeaf(note.leaf); w.app.commands.executeCommandById('design-redux:cite-source'); };
-    const pickSource = async (name) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; const items = m.getItems(); assert.ok(!items.some((s) => s.file.path === 'A.md'), 'the note itself offered'); m.pick(items.find((s) => s.title === name)); await settle(); return items.map((s) => m.getItemText(s)); };
-    cite();
-    assert.deepStrictEqual(await pickSource('An Enquiry'), ['David Hume, An Enquiry, 1748', 'Hamilton et al., Federalist, 1788', 'Loose']);
-    await answer(w, '§10');
-    assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: David Hume, [[Sources/Enquiry|An Enquiry]], 1748, §10\n[^2]: old\n');
-    // Cited again, after the other: the same footnote, and still in order.
+    await open(w, 'A.md', ed);
+    const pickSource = async (name) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; const items = m.getItems(); assert.ok(!items.some((s) => s.file.path === 'A.md'), 'the note itself offered'); m.pick(items.find((s) => s.file.basename === name)); await settle(); return items.map((s) => m.getItemText(s)); };
+    const cite = async (name, where) => { w.app.commands.executeCommandById('design-redux:cite-source'); const offered = await pickSource(name); await answer(w, where); return offered; };
+    assert.deepStrictEqual((await cite('Federalist', 'no. 10')).slice(0, 2), ['David Hume, An Enquiry: Concerning Human Understanding, 1748', 'Alexander Hamilton et al., Federalist, 1788']);
+    assert.strictEqual(ed.text, 'Claim.[^1] More[^2].\n\n[^1]: Alexander Hamilton et al., [[Sources/Federalist]], 1788, no. 10\n[^2]: old\n');
+    // A source cited here is offered first; cited again further on, at another place, short: surnames, the title without its subtitle, where.
     ed.setCursor({ line: 0, ch: ed.text.indexOf('.', 10) });
-    cite();
-    await pickSource('An Enquiry');
-    await answer(w, '§10');
-    assert.strictEqual(ed.text, 'Claim.[^1] More[^2][^1].\n\n[^1]: David Hume, [[Sources/Enquiry|An Enquiry]], 1748, §10\n[^2]: old\n');
+    const offered = await cite('Federalist', 'no. 51');
+    assert.strictEqual(offered[0], 'Alexander Hamilton et al., Federalist, 1788');
+    assert.strictEqual(ed.text, 'Claim.[^1] More[^2][^3].\n\n[^1]: Alexander Hamilton et al., [[Sources/Federalist]], 1788, no. 10\n[^2]: old\n[^3]: Hamilton et al., [[Sources/Federalist]], no. 51\n');
+    ed.setCursor({ line: 0, ch: 0 });
+    await cite('Enquiry', '§10');
+    ed.setCursor({ line: 0, ch: ed.text.indexOf('.') });
+    await cite('Enquiry', '§12');
+    assert.deepStrictEqual(ed.text.split('\n').filter((l) => /Hume/.test(l)), ['[^1]: David Hume, [[Sources/Enquiry|An Enquiry: Concerning Human Understanding]], 1748, §10', '[^2]: Hume, [[Sources/Enquiry|An Enquiry]], §12']);
+    // The same place again: the same footnote, still in order.
+    ed.setCursor({ line: 0, ch: ed.text.length > 0 ? ed.text.indexOf('More') : 0 });
+    await cite('Enquiry', '§12');
+    assert.strictEqual((ed.text.match(/\[\^2\]/g) || []).length, 3, ed.text);
     // Nothing for where: the citation alone; a source with no properties, by its name.
-    cite();
-    await pickSource('Loose');
-    await answer(w, '');
-    assert.ok(ed.text.endsWith('[^3]: [[Sources/Loose]]\n'), ed.text);
+    await cite('Loose', '');
+    assert.ok(/\[\^\d+\]: \[\[Sources\/Loose\]\]\n/.test(ed.text), ed.text);
+    // From the source: the notes whose footnotes link to it, and only those; one taken opens.
+    await w.app.vault.modify(w.file('A.md'), ed.text);
+    await w.app.workspace.getLeaf().openFile(w.file('Sources/Enquiry.md'));
+    w.app.commands.executeCommandById('design-redux:notes-citing-this');
+    await settle();
+    const m = obsidian.Modal.open[obsidian.Modal.open.length - 1];
+    assert.deepStrictEqual(m.getItems().map((i) => m.getItemText(i)).sort(), ['A', 'B']);
+    m.pick(m.getItems().find((i) => i.note.path === 'A.md'));
+    await settle();
+    assert.strictEqual(w.app.workspace.getActiveFile().path, 'A.md');
   });
 
   await check('a value typed in the ledger: the values used for it offered, most used first, once a key is pressed; one taken is written, in a list added; a schema\'s values offered instead', async () => {

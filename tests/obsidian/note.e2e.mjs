@@ -133,6 +133,26 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     await shot('map');
   });
 
+  it('goes to a footnote picked in the palette, each as it reads, with the keys back in the text', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const path = 'Politics/Cited.md';
+      const file = app.vault.getAbstractFileByPath(path) || (await app.vault.create(path, 'One[^1] two[^2].\n\n[^1]: Compare [[Home|the home note]], 4.\n[^2]: Plain.\n'));
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+      app.commands.executeCommandById('design-redux:show-footnotes');
+    });
+    const offered = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.prompt .suggestion-item')).map((e) => e.textContent.replace(/\s+/g, ' '))),
+      (v) => v.length > 1
+    );
+    expect(offered).toEqual(['1 Compare the home note, 4.', '2 Plain.']);
+    await browser.keys(['ArrowDown', 'Enter']);
+    const at = await readUntil(
+      () => browser.executeObsidian(({ app }) => ({ cursor: app.workspace.activeEditor.editor.getCursor(), inText: !!document.activeElement.closest('.cm-editor') })),
+      (v) => v.cursor.ch === 11
+    );
+    expect(at).toEqual({ cursor: { line: 0, ch: 11 }, inText: true });
+  });
+
   it('offers the values used for a property under its field in the head, and writes the one taken with Enter', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);

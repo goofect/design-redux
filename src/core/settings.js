@@ -54,7 +54,6 @@ export const DEFAULTS = {
   notePages: true,
   pagesOpen: {}, // by note path: the page left open
   footnoteOrder: true,
-  footnotesAside: true,
   scriptSyntax: 'short',
   autoOrdinals: false,
   letterLists: true,
