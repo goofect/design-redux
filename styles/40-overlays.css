@@ -43,9 +43,14 @@ body.dr-active.dr-region-overlays .menu-separator {
   margin: 0;
 }
 
+/* The entry under the pointer or the keys: its words underlined, no fill. */
 body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) {
-  background-color: var(--dr-ink);
-  color: var(--dr-bg);
+  background-color: var(--dr-bg);
+}
+
+body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) .menu-item-title {
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 /* The toggle: off, the ground in a line and an ink knob at its start; on, inverted: an ink track and the knob, the

@@ -1,9 +1,9 @@
 /* ------------------------------------------------------------------ */
-/* The ledger: a note's properties as ruled rows                       */
+/* The ledger: a note's properties as rows                             */
 /*                                                                     */
 /* A spec sheet under the note's title: each property a row, its name  */
-/* grey in a fixed column and its value in ink, a light rule under it, */
-/* like the folder page's list. A value is edited where it stands      */
+/* grey in a fixed column and its value in ink, parted by space, like  */
+/* the folder page's list. A value is edited where it stands           */
 /* (Enter writes it, with an Undo; Escape leaves it); a row's menu     */
 /* renames or removes it; a value the folder's schema finds wrong is   */
 /* red, the reason after it. No heading, no buttons, no icons: a       */

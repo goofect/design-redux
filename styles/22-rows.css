@@ -39,13 +39,12 @@
   text-underline-offset: var(--dr-ring);
 }
 
-.dr-row[aria-disabled="true"],
-.dr-row.is-missing > .dr-row-name {
+.dr-row[aria-disabled="true"] {
   color: var(--dr-muted);
   cursor: default;
 }
 
-.dr-row.is-error > .dr-row-end {
+.dr-row[aria-invalid="true"] > .dr-row-end {
   color: var(--dr-error);
 }
 
@@ -69,8 +68,7 @@
   text-underline-offset: var(--dr-ring);
 }
 
-.dr-prop[aria-disabled="true"],
-.dr-prop.is-empty > .dr-prop-value {
+.dr-prop[aria-disabled="true"] {
   color: var(--dr-muted);
 }
 

@@ -14,7 +14,7 @@ export const SORTS = { name: 'Name', modified: 'Last edited', created: 'Date mad
 /** The order a folder's notes are shown in: its own if one was chosen there, else the default. */
 export function sortOf(plugin, folder) {
   const s = plugin.settings;
-  const own = folder && s.albumSortMemory !== false ? (s.albumSorts || {})[folder.path] : null;
+  const own = folder ? (s.albumSorts || {})[folder.path] : null;
   const chosen = own && typeof own === 'object' ? own.by : own;
   return chosen in SORTS ? chosen : s.defaultSort in SORTS ? s.defaultSort : 'name';
 }
@@ -22,7 +22,7 @@ export function sortOf(plugin, folder) {
 /** Chooses the order for a folder. */
 export async function setSort(plugin, folder, by) {
   const s = plugin.settings;
-  if (folder && s.albumSortMemory !== false) (s.albumSorts || (s.albumSorts = {}))[folder.path] = by;
+  if (folder) (s.albumSorts || (s.albumSorts = {}))[folder.path] = by;
   else s.defaultSort = by;
   await plugin.saveSettings();
 }

@@ -5,14 +5,12 @@
 import { asButton, el, flag, glyph, onActivate } from '../core/dom.js';
 
 /**
- * An icon button: the plugin's control. { glyph, label, run, pressed,
- * disabled, busy }. `pressed` given (true or false) makes it one that stays on.
+ * An icon button: the plugin's control. { glyph, label, run, disabled, busy }.
  */
 export function iconButton(parent, opts) {
   const button = el(parent, 'div', 'dr-icon-button');
   asButton(button, opts.label, opts.run);
   glyph(button, opts.glyph);
-  if (opts.pressed !== undefined) button.setAttribute('aria-pressed', String(!!opts.pressed));
   flag(button, 'aria-disabled', opts.disabled);
   flag(button, 'aria-busy', opts.busy);
   return button;
@@ -29,9 +27,9 @@ export function link(parent, text, run) {
   return node;
 }
 
-/** A text button: only where a glyph would not say it. { text, run, kind: 'primary' | 'danger', disabled, busy (its text says what it is doing: "Moving…") }. */
+/** A text button, an underlined word: only where a glyph would not say it. { text, run, disabled, busy (its text says what it is doing: "Moving…") }. */
 export function textButton(parent, opts) {
-  const button = el(parent, 'div', `dr-button${opts.kind ? ` is-${opts.kind}` : ''}`);
+  const button = el(parent, 'div', 'dr-button');
   asButton(button, null, opts.run);
   el(button, 'span', '', opts.text);
   flag(button, 'aria-disabled', opts.disabled);

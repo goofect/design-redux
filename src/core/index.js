@@ -31,7 +31,6 @@ export class LibraryIndex {
   build() {
     if (this.tree) return this.tree;
     const files = this.plugin.files;
-    const hide = !!this.plugin.settings.hideFolderNotes;
     const tree = { folders: [], notes: new Map(), subfolders: new Map(), totals: new Map() };
     const visit = (folder) => {
       if (folder.path !== '/') tree.folders.push(folder);
@@ -41,7 +40,7 @@ export class LibraryIndex {
         if (child instanceof TFolder) {
           if (!child.name.startsWith('.')) subs.push(child);
         } else if (child instanceof TFile && child.extension === 'md') {
-          if (!(hide && files.isFolderNote(child))) notes.push(child);
+          if (!files.isFolderNote(child)) notes.push(child);
         }
       });
       notes.sort((a, b) => byName(a.basename, b.basename));
@@ -88,11 +87,6 @@ export class LibraryIndex {
     const counts = new Map();
     this.markdown().forEach((f) => valuesOf(propOf(noteProps(this.app, f), key)).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
     return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  }
-
-  /** A note's length in words, near enough for a bar: from its size, so no file is read. */
-  words(file) {
-    return file && file.stat ? Math.round(file.stat.size / 6) : 0;
   }
 
   linkMaps() {

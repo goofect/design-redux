@@ -83,7 +83,7 @@ export class LibraryCheck extends Feature {
   actions() {
     return [
       { id: 'library-check', name: 'Look the library over', run: () => this.report() },
-      { id: 'library-inbox', name: 'Open the inbox: notes in no folder', when: () => this.settings.libraryInbox !== false, run: () => this.inbox() },
+      { id: 'library-inbox', name: 'Open the inbox: notes in no folder', run: () => this.inbox() },
     ];
   }
 }

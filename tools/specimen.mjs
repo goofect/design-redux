@@ -49,6 +49,7 @@ const PAGE = `
 html{background:var(--dr-bg)}
 body{margin:0;background:var(--dr-bg);color:var(--dr-ink)}
 h2,p,figure,pre{margin:0}
+h2{font:inherit}
 .spec-top-bar{display:flex;gap:16px;align-items:center;height:48px;padding:0 32px;border-bottom:1px solid var(--dr-ink)}
 .spec-top-bar a{color:inherit}
 .spec-section{padding:48px 32px;border-bottom:1px solid var(--dr-ink)}
@@ -70,6 +71,7 @@ h2,p,figure,pre{margin:0}
 .spec-measured{padding:16px;border:1px solid var(--dr-ink);overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:16px}
 .spec-voices{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:32px;margin:32px 0}
 .spec-voices>div{display:grid;gap:8px;align-content:start}
+.spec-label{text-transform:uppercase;letter-spacing:var(--dr-tracking)}
 .spec-units{display:flex;flex-wrap:wrap;gap:32px;align-items:flex-end}
 .spec-unit{display:grid;gap:8px;justify-items:start}
 .spec-unit-box{background:var(--dr-ink)}

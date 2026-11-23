@@ -14,8 +14,8 @@
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin
- * light  ink on bg 21.00 · muted on bg 4.54 · error on bg 6.48
- * dark   ink on bg 21.00 · muted on bg 6.08 · error on bg 6.94
+ * light  ink on bg 21.00 · muted on bg 4.54 · error on bg 6.48 · ink on muted 4.62
+ * dark   ink on bg 21.00 · muted on bg 6.08 · error on bg 6.94 · ink on muted 3.45
  * contrast:end */
 
 /* The measures, the face and the sizes hold whether the look is on or off: they are the plugin's own structure. */
@@ -31,7 +31,7 @@ body {
   --dr-row: calc(4 * var(--dr-u)); /* 32: a row, a control */
   --dr-icon: calc(2 * var(--dr-u)); /* 16: a control's glyph */
 
-  /* One face, the system's monospace as it comes; one small size. A name that matters is bold, never bigger. */
+  /* One face, the system's monospace as it comes; one small size, one regular weight: never bold, never bigger. */
   --dr-font: ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", Consolas, monospace;
   --dr-size: 13px; /* everything */
   /* A label (a pane's name, a folder's, a note's in a list, the path): capitals, a little apart, as a catalogue's codes. */

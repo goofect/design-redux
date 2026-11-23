@@ -3,10 +3,9 @@
  *
  * Reads the colour tokens of each scheme from the tokens part of the
  * stylesheet, computes the contrast of every pair the design uses, and fails
- * when one is under its floor: 4.5 for text, 3 for lines (hairlines, glyphs,
- * marks, the ring), and for the semantic tones 4.5 on the ground and on the
- * hover fill, 3 for their soft forms. Fills (clay, ash) have no floor: a fill
- * is never the only sign of a state, and what is drawn on it is measured.
+ * when one is under its floor: 4.5 for each colour on the ground (every one
+ * is words), and 3 for the ink against the grey, the one sign of what is
+ * open in a grey list (the tree, the path, a note's pages).
  *
  *   node tests/contrast.js           measure, and check the block of ratios in the tokens part is current
  *   node tests/contrast.js --write   measure, and write that block
@@ -45,6 +44,10 @@ function measureScheme(scheme, t) {
   };
   // The ink, the grey and the red, each on the ground: every colour is words, so every one is held to 4.5.
   const text = [says('ink', 'bg'), says('muted', 'bg'), says('error', 'bg')];
+  // Open against not open: the ink beside the grey.
+  const apart = ratio(t.ink, t.muted);
+  if (apart < 3) failures.push(`${scheme}: ink on muted is ${apart.toFixed(2)}, under 3`);
+  text.push(`ink on muted ${apart.toFixed(2)}`);
   const names = Object.keys(t).sort();
   if (names.join(' ') !== 'bg error ink muted') failures.push(`${scheme}: the palette is ${names.join(', ')}, not the four (bg, ink, muted, error)`);
   const pad = scheme.padEnd(5);

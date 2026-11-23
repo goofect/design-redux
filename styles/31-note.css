@@ -49,7 +49,9 @@
   letter-spacing: var(--dr-tracking);
 }
 
+/* The pages: the first word on the column's edge, the room its focus outline needs out in the margin. */
 .dr-note-pages {
+  margin-left: calc(-1 * var(--dr-u));
   display: flex;
   align-items: center;
   gap: var(--dr-u);

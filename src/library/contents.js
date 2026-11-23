@@ -2,7 +2,7 @@
 /* What a place in the library holds, drawn the one way it is drawn    */
 /*                                                                     */
 /* A folder's page (the vault's own is empty): the path to it as      */
-/* boxed words, then its notes as ruled rows, pinned ones first. Its   */
+/* words, then its notes in rows parted by space, pinned first. Its    */
 /* folders are in the sidebar's tree. One view of a                    */
 /* collection: no grid, no covers, no glyphs, counts or numbers.       */
 /* ------------------------------------------------------------------ */
@@ -12,13 +12,13 @@ import { row, rows } from '../ui/row.js';
 import { sayso } from '../ui/state.js';
 import { listedNotes, pins } from './order.js';
 
-/** The folders of `folder` that are shown: empty ones left out when that is the setting. */
+/** The folders of `folder` that are shown: empty ones left out (but the one picked). */
 export function shownFolders(plugin, folder) {
   const all = plugin.index.subfolders(folder);
-  return plugin.settings.hideEmptyFolders ? all.filter((f) => plugin.index.count(f) > 0 || plugin.index.subfolders(f).length > 0 || plugin.selection.is(f)) : all;
+  return all.filter((f) => plugin.index.count(f) > 0 || plugin.index.subfolders(f).length > 0 || plugin.selection.is(f));
 }
 
-/** A note's rows, ruled: one pressed opens; the one open is marked, and so is the one picked. */
+/** A folder's notes in rows: one pressed opens; the one open is marked, and so is the one picked. */
 function noteRows(screen, host, notes) {
   const list = rows(host);
   notes.forEach((note) => {
@@ -49,21 +49,21 @@ export function nameRegion(node, text) {
   return node;
 }
 
-/** The path to a folder as boxed words, "Vault / Politics": each goes there; the last is where you are. */
+/** The path to a folder as words, "Vault / Politics": each goes there; the last, ink, is where you are. */
 export function crumbs(screen, host, folder) {
   const nav = el(host, 'nav', 'dr-crumbs');
   nameRegion(nav, 'Path');
   const chain = [];
   for (let f = folder; f && f.path !== '/'; f = f.parent) chain.unshift(f);
   [null].concat(chain).forEach((f, i) => {
-    if (i) el(nav, 'span', 'dr-muted', '/');
+    if (i) el(nav, 'span', 'dr-muted', '/').setAttribute('aria-hidden', 'true');
     const crumb = asButton(el(nav, 'span', 'dr-crumb', f ? f.name : 'Vault'), null, () => screen.go(f));
     if (i === chain.length) crumb.setAttribute('aria-current', 'location');
   });
   return nav;
 }
 
-/** A folder's page: the path to it, then its notes as ruled rows. */
+/** A folder's page: the path to it, then its notes. */
 export function drawFolderPage(screen, host, folder) {
   crumbs(screen, host, folder);
   const notes = pinnedFirst(screen.plugin, folder, listedNotes(screen.plugin, folder));

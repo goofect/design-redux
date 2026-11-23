@@ -9,7 +9,7 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept, 109 the strip). */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept, 109 the strip, 110 the fixed defaults). */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -37,6 +37,9 @@ const RETIRED_SINCE_4 = {
   footnotesAside: 'the footnotes list beside the note is gone (it stood in the sidebar the look hides): Go to footnote picks one in the palette',
   contextStrip: 'the strip is gone: its place in the folder ("21 / 24") was a count; Previous and Next are commands',
   retired: 'unused values are not kept: a retired key\'s value is dropped',
+  ...Object.fromEntries(['albumSortMemory', 'hideEmptyFolders', 'hideFolderNotes', 'typeToJump', 'sidebarDrop', 'searchNoteText', 'albumNestBy', 'libraryInbox', 'footnoteOrder', 'scriptSyntax', 'letterLists', 'romanLists']
+    .map((k) => [k, 'the fixed defaults: a setting nothing could change is the behaviour it chose, always'])),
+  autoOrdinals: 'the fixed defaults: 1st and 2nd are left as written; it was off and nothing could turn it on',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
   imageFolder: 'the image router is gone',
   notePageChips: 'the reset: the note\'s head always shows its main properties on a line; no switch that only chose what a page showed',

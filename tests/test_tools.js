@@ -189,8 +189,10 @@ const VAULT = {
     await settle();
     assert.ok(obsidian.Notice.log.some((m) => /^Dry run: “When a note gets #formal, set reviewed to yes and stage to 1” would set reviewed, stage on E/.test(m)));
     assert.ok(!('reviewed' in props(w, 'Reading/E.md')));
-    w.plugin.settings.propertyRulesDryRun = false;
-    await w.plugin.saveSettings();
+    assert.ok(!w.app.commands.executeCommandById('design-redux:property-rules-dry-run'), 'already a dry run');
+    w.app.commands.executeCommandById('design-redux:property-rules-live');
+    await settle();
+    assert.strictEqual(w.plugin.settings.propertyRulesDryRun, false);
     writes = 0;
     await w.plugin.notes.write(w.file('Reading/D.md'), (fm) => (fm.tags = ['formal']));
     await settle();

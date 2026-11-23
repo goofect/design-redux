@@ -61,11 +61,11 @@
   color: var(--dr-ink);
 }
 
-.dr-state.is-busy > .dr-state-label {
+.dr-state[aria-busy="true"] > .dr-state-label {
   color: var(--dr-muted);
 }
 
-.dr-state.is-error > .dr-state-label {
+.dr-state[role="alert"] > .dr-state-label {
   color: var(--dr-error);
 }
 

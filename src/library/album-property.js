@@ -41,7 +41,7 @@ export class AlbumProperty extends Feature {
     new Sheet(this.app, {
       title: `${key} for the whole folder`,
       text: `${counted(own.length, 'note has', 'notes have')} a value of ${own.length === 1 ? 'its' : 'their'} own.`,
-      actions: [{ text: 'Cancel' }, { text: 'Keep theirs', run: () => void this.give(file, key, false) }, { text: 'Replace theirs', kind: 'primary', run: () => void this.give(file, key, true) }],
+      actions: [{ text: 'Cancel' }, { text: 'Keep theirs', run: () => void this.give(file, key, false) }, { text: 'Replace theirs', run: () => void this.give(file, key, true) }],
     }).open();
   }
 

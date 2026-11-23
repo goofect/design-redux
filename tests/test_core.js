@@ -126,9 +126,6 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.deepStrictEqual(index.outgoing(w.file('Inbox/B.md')).map((f) => f.path), ['Logic/Week 2.md']);
     await w.app.vault.create('Logic/New.md', '');
     assert.strictEqual(index.count(w.file('Logic')), 4);
-    w.plugin.settings.hideFolderNotes = false;
-    await w.plugin.saveSettings();
-    assert.strictEqual(index.notes(w.file('Logic')).length, 4);
   });
 
   await check('a feature reaches every window: the main one, a popout already open, one opened after; none once it is off', async () => {

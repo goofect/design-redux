@@ -14,7 +14,7 @@ export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'can
 export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
-export const SETTINGS_VERSION = 109;
+export const SETTINGS_VERSION = 110;
 
 /** A data.json marked lower is the old plugin's, converted once. */
 export const REWRITE_VERSION = 100;
@@ -24,40 +24,27 @@ export const DEFAULTS = {
 
   // The look
   look: 'redux', // 'theme' leaves the window to the person's theme
-  lookScope: 'plugin', // 'window': Obsidian's own regions too; 'plugin': only what the plugin draws
+  lookScope: 'plugin', // 'window': Obsidian's own regions restyled too; 'plugin': the palette and the bare workspace only
 
   // The library
   library: true,
   defaultSort: 'name',
   albumSorts: {}, // by folder path: the order chosen there
-  albumSortMemory: true,
   albumOrders: {}, // by folder path: { names: [...] }, the person's own order
   pinOrder: [],
-  hideEmptyFolders: true,
-  hideFolderNotes: true,
   folderNoteName: '{{folder}}',
-  typeToJump: true,
-  sidebarDrop: true,
-  searchNoteText: true,
   recentSearches: [],
   categoryProperty: 'domain',
 
   // Folders as collections
   albumKeyNames: {},
   albums: {}, // by folder path: { includes, related, featured }
-  albumNestBy: 'parent',
   smartAlbumList: [],
-  libraryInbox: true,
 
   // The note
   notePage: true,
   notePages: true,
   pagesOpen: {}, // by note path: the page left open
-  footnoteOrder: true,
-  scriptSyntax: 'short',
-  autoOrdinals: false,
-  letterLists: true,
-  romanLists: true,
 
   // The ledger: the properties listed first, everywhere and by folder
   panelPrimaryProps: 'type, domain, status',

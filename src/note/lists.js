@@ -29,10 +29,6 @@ export class MarkedLists extends Feature {
     return this.fonts.get(font);
   }
 
-  get wanted() {
-    return this.settings.letterLists !== false || this.settings.romanLists !== false;
-  }
-
   enable() {
     const ws = this.app.workspace;
     this.extensions.push(listLines((view) => {
@@ -71,7 +67,6 @@ export class MarkedLists extends Feature {
     const near = around(editor, at.line, depth(m[1]));
     if (!isMarker(m[2], near.sibling)) return null;
     const kind = readMarker(m[2], near.sibling).kind;
-    if ((kind === 'roman' && this.settings.romanLists === false) || (kind === 'letter' && this.settings.letterLists === false)) return null;
     return { at, line, m, near };
   }
 
@@ -157,8 +152,8 @@ export class MarkedLists extends Feature {
 
   actions() {
     return [
-      { id: 'make-lettered-list', name: 'Make a lettered list', on: 'editor', menu: false, when: () => this.settings.letterLists !== false, run: (ctx) => this.convert(ctx.editor, 'letter') },
-      { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, when: () => this.settings.romanLists !== false, run: (ctx) => this.convert(ctx.editor, 'roman') },
+      { id: 'make-lettered-list', name: 'Make a lettered list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'letter') },
+      { id: 'make-roman-numeral-list', name: 'Make a roman numeral list', on: 'editor', menu: false, run: (ctx) => this.convert(ctx.editor, 'roman') },
     ];
   }
 }

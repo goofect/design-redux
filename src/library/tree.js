@@ -5,7 +5,7 @@
 /* ends in a slash, "Politics/", as a path does. The tree follows     */
 /* what is open: the open folder's subfolders and the folders         */
 /* above it are shown, nothing else is unfolded, and there is nothing  */
-/* to open or close. Pinned first; the open folder filled grey.        */
+/* to open or close. Pinned first; grey, the open folder ink.          */
 /* ------------------------------------------------------------------ */
 
 import { asButton, el, flag } from '../core/dom.js';
@@ -34,7 +34,7 @@ export function drawTree(screen, host) {
     node.style.setProperty('--dr-depth', String(depth));
     const name = el(node, 'span', 'dr-row-name dr-text dr-clip', folder.name);
     if (kids.length) {
-      el(name, 'span', 'dr-muted', '/');
+      el(name, 'span', 'dr-muted', '/').setAttribute('aria-hidden', 'true'); // aria-expanded says it holds more
       node.setAttribute('aria-expanded', String(isOpen));
     }
     const current = !!open && open.path === folder.path;

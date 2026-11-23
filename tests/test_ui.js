@@ -16,15 +16,12 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
   root.className = 'dr';
   const fresh = () => dr.clear(root);
 
-  await check('icon button: its glyph, its word, a click and the keys; on, disabled and loading say so', () => {
+  await check('icon button: its glyph, its word, a click and the keys; disabled and loading say so', () => {
     let ran = 0;
     const b = dr.iconButton(fresh(), { glyph: 'pin', label: 'Pin', run: () => ran++ });
     assert.deepStrictEqual([b.className, b.getAttribute('role'), b.getAttribute('tabindex'), b.getAttribute('aria-label'), glyphOf(b)], ['dr-icon-button', 'button', '0', 'Pin', 'pin']);
-    assert.ok(!b.hasAttribute('aria-pressed'));
     b.click(); key(b, 'Enter'); key(b, ' ');
     assert.strictEqual(ran, 3);
-    const on = dr.iconButton(root, { glyph: 'pin', label: 'Unpin', pressed: true });
-    assert.strictEqual(on.getAttribute('aria-pressed'), 'true');
     const off = dr.iconButton(root, { glyph: 'next', label: 'Next', disabled: true, run: () => ran++ });
     off.click(); key(off, 'Enter');
     assert.strictEqual(ran, 3, 'a disabled button ran');
@@ -34,11 +31,9 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy)], ['true', 'move']);
   });
 
-  await check('text button: rest, proposed, destroys, disabled, loading', () => {
+  await check('text button: an underlined word; disabled, loading', () => {
     const rest = dr.textButton(fresh(), { text: 'Cancel' });
     assert.deepStrictEqual([rest.className, rest.textContent], ['dr-button', 'Cancel']);
-    assert.ok(dr.textButton(root, { text: 'Move', kind: 'primary' }).classList.contains('is-primary'));
-    assert.ok(dr.textButton(root, { text: 'Delete', kind: 'danger' }).classList.contains('is-danger'));
     assert.strictEqual(dr.textButton(root, { text: 'Move', disabled: true }).getAttribute('aria-disabled'), 'true');
     const busy = dr.textButton(root, { text: 'Moving…', busy: true });
     assert.deepStrictEqual([busy.getAttribute('aria-busy'), glyphOf(busy), busy.textContent], ['true', null, 'Moving…']);
@@ -59,19 +54,18 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.strictEqual(dr.row(list, { name: 'a', selected: true }).getAttribute('aria-selected'), 'true');
     assert.strictEqual(dr.row(list, { name: 'a', current: 'page' }).getAttribute('aria-current'), 'page');
     assert.strictEqual(dr.row(list, { name: 'a', disabled: true }).getAttribute('aria-disabled'), 'true');
-    assert.ok(dr.row(list, { name: 'a', missing: true }).classList.contains('is-missing'));
     // Wrong: its words say so, red; no glyph.
     const bad = dr.row(list, { name: 'a', error: true, end: 'unreadable' });
-    assert.ok(bad.classList.contains('is-error') && !glyphOf(bad) && bad.querySelector('.dr-row-end').textContent === 'unreadable');
-    const child = dr.row(dr.rows(root, { outline: true }), { name: 'A heading', child: true, current: 'location' });
-    assert.ok(child.classList.contains('is-child') && child.parentNode.className === 'dr-outline');
+    assert.ok(bad.getAttribute('aria-invalid') === 'true' && bad.className === 'dr-row' && !glyphOf(bad) && bad.querySelector('.dr-row-end').textContent === 'unreadable');
+    const child = dr.row(dr.rows(root, { outline: true }), { name: 'A heading', current: 'location' });
+    assert.ok(child.parentNode.className === 'dr-outline');
   });
 
   await check('panel row and section: a dash for no value, the reason when wrong, selected, disabled', () => {
     const p = dr.propRow(fresh(), { name: 'Status', value: 'Draft' });
     assert.deepStrictEqual([p.className, p.querySelector('.dr-prop-name').textContent, p.querySelector('.dr-prop-value').textContent], ['dr-prop', 'Status', 'Draft']);
     const none = dr.propRow(root, { name: 'Sources', value: '' });
-    assert.ok(none.classList.contains('is-empty') && none.querySelector('.dr-prop-value').textContent === '—');
+    assert.ok(none.className === 'dr-prop' && none.querySelector('.dr-prop-value.dr-muted').textContent === '—');
     const bad = dr.propRow(root, { name: 'Week', value: 'six', invalid: 'not a number' });
     assert.deepStrictEqual([bad.getAttribute('aria-invalid'), glyphOf(bad), bad.getAttribute('aria-label'), bad.querySelector('.dr-prop-why').textContent], ['true', null, 'Week: not a number', 'not a number']);
     assert.strictEqual(dr.propRow(root, { name: 'a', value: 'b', selected: true }).getAttribute('aria-selected'), 'true');
@@ -119,19 +113,19 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     const e = dr.sayso(fresh(), { label: 'No notes yet', text: 'A folder’s notes are listed here.', button: { text: 'New note' } });
     assert.deepStrictEqual([e.className, e.getAttribute('role'), glyphOf(e), e.querySelector('.dr-button').textContent], ['dr-state', 'status', null, 'New note']);
     const busy = dr.sayso(root, { busy: true, label: 'Reading the vault…' });
-    assert.deepStrictEqual([busy.className, busy.getAttribute('aria-busy'), glyphOf(busy)], ['dr-state is-busy', 'true', null]);
+    assert.deepStrictEqual([busy.className, busy.getAttribute('aria-busy'), glyphOf(busy)], ['dr-state', 'true', null]);
     const bad = dr.sayso(root, { error: true, label: 'Couldn’t read Logic' });
-    assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state is-error', 'alert', null]);
+    assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state', 'alert', null]);
     const h = dr.headRow(root, { label: 'Logic', muted: '24 notes', buttons: [{ glyph: 'fit', label: 'Fit' }] });
     assert.deepStrictEqual(Array.from(h.querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Fit']);
     assert.strictEqual(h.querySelector('.dr-head-name').textContent, 'Logic 24 notes');
   });
 
   await check('sheet: a question answered yes or no, a name asked for and checked', async () => {
-    const yes = dr.confirm(w.app, { title: 'Delete Seminar', text: 'It goes to the bin.', action: 'Delete folder', danger: true });
+    const yes = dr.confirm(w.app, { title: 'Delete Seminar', text: 'It goes to the bin.', action: 'Delete folder' });
     const open = obsidian.Modal.open[0];
-    assert.deepStrictEqual([open.titleEl.textContent, open.contentEl.querySelector('.dr-sheet p').textContent, Array.from(open.contentEl.querySelectorAll('.dr-button')).map((b) => b.className)], ['Delete Seminar', 'It goes to the bin.', ['dr-button', 'dr-button is-danger']]);
-    open.contentEl.querySelector('.is-danger').click();
+    assert.deepStrictEqual([open.titleEl.textContent, open.contentEl.querySelector('.dr-sheet p').textContent, Array.from(open.contentEl.querySelectorAll('.dr-button')).map((b) => b.className)], ['Delete Seminar', 'It goes to the bin.', ['dr-button', 'dr-button']]);
+    open.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     assert.strictEqual(await yes, true);
     const no = dr.confirm(w.app, { title: 'x' });
     obsidian.Modal.open[0].close();
@@ -140,7 +134,7 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     const sheet = obsidian.Modal.open[0];
     const input = sheet.contentEl.querySelector('input');
     input.value = 'a:b';
-    sheet.contentEl.querySelector('.is-primary').click();
+    sheet.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     await new Promise((r) => setTimeout(r, 0));
     assert.ok(obsidian.Modal.open.includes(sheet) && sheet.contentEl.querySelector('.dr-field').getAttribute('aria-invalid') === 'true', 'a wrong name closed the sheet');
     input.value = 'Sets';

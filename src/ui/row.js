@@ -6,7 +6,7 @@
 import { asButton, el, flag } from '../core/dom.js';
 import { iconButton } from './button.js';
 
-/** A list of rows, ruled. `outline` leaves the rules out. */
+/** A list of rows, parted by space. `outline`: the tree's list. */
 export function rows(parent, opts = {}) {
   const node = el(parent, 'div', opts.outline ? 'dr-outline' : 'dr-rows');
   node.setAttribute('role', 'list');
@@ -15,10 +15,10 @@ export function rows(parent, opts = {}) {
 
 /**
  * A row (never numbered). { name, end (words, grey), selected, current (true, or
- * 'page', 'location'), disabled, missing, error, child, run, path }.
+ * 'page', 'location'), disabled, error (its end red: what is wrong), run, path }.
  */
 export function row(list, opts) {
-  const node = el(list, 'div', `dr-row${opts.child ? ' is-child' : ''}${opts.missing ? ' is-missing' : ''}${opts.error ? ' is-error' : ''}`);
+  const node = el(list, 'div', 'dr-row');
   asButton(node, null, opts.run);
   node.setAttribute('role', 'listitem');
   if (opts.path != null) node.dataset.path = opts.path;
@@ -27,16 +27,17 @@ export function row(list, opts) {
   flag(node, 'aria-selected', opts.selected);
   flag(node, 'aria-current', opts.current, opts.current === true ? 'true' : opts.current);
   flag(node, 'aria-disabled', opts.disabled);
+  flag(node, 'aria-invalid', opts.error);
   return node;
 }
 
 /** A property's row. { name, value, selected, invalid (the reason), disabled, run }. An empty value shows a dash. */
 export function propRow(parent, opts) {
   const none = opts.value == null || opts.value === '';
-  const node = el(parent, 'div', `dr-prop${none ? ' is-empty' : ''}`);
+  const node = el(parent, 'div', 'dr-prop');
   if (opts.run) asButton(node, null, opts.run);
   el(node, 'span', 'dr-prop-name dr-muted dr-clip', opts.name);
-  el(node, 'span', 'dr-prop-value dr-text dr-clip', none ? '—' : String(opts.value));
+  el(node, 'span', `dr-prop-value dr-text dr-clip${none ? ' dr-muted' : ''}`, none ? '—' : String(opts.value));
   if (opts.invalid) {
     // Wrong: the value red, and the words saying why after it.
     node.setAttribute('aria-invalid', 'true');

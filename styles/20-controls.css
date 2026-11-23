@@ -20,11 +20,6 @@
   cursor: pointer;
 }
 
-.dr-icon-button[aria-pressed="true"] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-}
-
 .dr-icon-button[aria-disabled="true"] {
   color: var(--dr-muted);
   cursor: default;
@@ -36,7 +31,7 @@
   cursor: progress;
 }
 
-/* ---- Text button: an underlined word. The one that commits: black, white words, one a screen. ---- */
+/* ---- Text button: an underlined word. The one that commits says so in its word, and stands last. ---- */
 .dr-button,
 button.dr-button {
   display: inline-flex;
@@ -55,23 +50,9 @@ button.dr-button {
   cursor: pointer;
 }
 
-.dr-button.is-primary {
-  padding: 0 var(--dr-gutter);
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-  text-decoration: none;
-}
-
-/* The one that destroys: its word says so, in red. */
-.dr-button.is-danger {
-  color: var(--dr-error);
-}
-
 .dr-button[aria-disabled="true"],
 .dr-button:disabled,
 .dr-button[aria-busy="true"] {
-  padding: 0;
-  background: none;
   color: var(--dr-muted);
   text-decoration: none;
   cursor: default;
@@ -81,7 +62,7 @@ button.dr-button {
   cursor: progress;
 }
 
-/* ---- A note's pages: words, underlined, the open one inverted. ---- */
+/* ---- A note's pages: words, grey; the open one ink, as the path's last word is. ---- */
 .dr-segments {
   display: inline-flex;
   flex: none;
@@ -92,9 +73,7 @@ button.dr-button {
   display: flex;
   align-items: center;
   padding: 0 var(--dr-u);
-  color: var(--dr-ink);
-  text-decoration: underline;
-  text-underline-offset: var(--dr-ring);
+  color: var(--dr-muted);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -104,18 +83,10 @@ button.dr-button {
 }
 
 .dr-segment[aria-selected="true"] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-  text-decoration: none;
-}
-
-.dr-segment[aria-selected="true"]:focus-visible {
-  outline-color: var(--dr-bg);
+  color: var(--dr-ink);
 }
 
 .dr-segment[aria-disabled="true"] {
-  color: var(--dr-muted);
-  text-decoration: none;
   cursor: default;
 }
 
@@ -234,15 +205,6 @@ input.dr-input::placeholder {
   cursor: pointer;
 }
 
-.dr-chip[aria-checked="true"] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-}
-
-.dr-chip[aria-checked="true"] > .dr-muted {
-  color: inherit;
-}
-
 .dr-chip[aria-disabled="true"] {
   color: var(--dr-muted);
   cursor: default;
@@ -264,7 +226,7 @@ input.dr-input::placeholder {
     background: currentColor;
   }
 
-  .dr-button.is-primary:not([aria-disabled="true"]):hover,
+  .dr-segment:not([aria-disabled="true"]):hover,
   .dr-chip[role]:not([aria-disabled="true"]):hover > .dr-text {
     text-decoration: underline;
     text-underline-offset: var(--dr-ring);

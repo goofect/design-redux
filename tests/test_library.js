@@ -228,7 +228,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     await settle();
     assert.strictEqual(dr.sortOf(w.plugin, w.file('Logic')), 'modified');
     const del = dr.deleteEntry(w.plugin, w.file('Inbox'));
-    obsidian.Modal.open[0].contentEl.querySelector('.is-danger').click();
+    obsidian.Modal.open[0].contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click();
     await del;
     assert.ok(!w.file('Inbox'));
     const note = dr.noteMenu(w.plugin, w.file('Logic/Validity.md'));

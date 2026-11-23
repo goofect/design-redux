@@ -70,18 +70,17 @@ const VAULT = {
     assert.deepStrictEqual(labels(note), [], 'a note');
   });
 
-  await check('a sheet: its fields, Cancel as a word, and one button that commits', async () => {
+  await check('a sheet: its fields, then underlined words, Cancel and the one that commits last; no fill', async () => {
     const w = await world(VAULT);
     const sheet = new dr.Sheet(w.app, {
       title: 'New folder',
       build: (matter) => { dr.field(matter, { placeholder: 'Name' }); dr.field(matter, { label: 'Inside', placeholder: 'Logic' }); },
-      actions: [{ text: 'Cancel' }, { text: 'Make it', kind: 'primary' }],
+      actions: [{ text: 'Cancel' }, { text: 'Make it' }],
     });
     sheet.open();
     const node = sheet.contentEl.querySelector('.dr-sheet');
     assert.strictEqual(node.querySelectorAll('input').length, 2);
-    assert.strictEqual(node.querySelectorAll('.dr-button.is-primary').length, 1);
-    assert.deepStrictEqual(Array.from(node.querySelectorAll('.dr-button:not(.is-primary)')).map((b) => b.textContent), ['Cancel']);
+    assert.deepStrictEqual(Array.from(node.querySelectorAll('.dr-sheet-actions > .dr-button')).map((b) => [b.className, b.textContent]), [['dr-button', 'Cancel'], ['dr-button', 'Make it']]);
     sheet.close();
   });
 
@@ -99,7 +98,7 @@ const VAULT = {
     parts.filter((p) => p !== '00-tokens.css').forEach((p) => assert.ok(!/#[0-9A-Fa-f]{3,8}\b|rgba?\(|hsla?\(/.test(bare(part(p))), `a colour value in ${p}`));
   });
 
-  check('one font size: a name that matters is bold, never bigger', () => {
+  check('one font size: never bigger', () => {
     const sizes = (bare(part('00-tokens.css')).match(/--dr-size[a-z-]*:\s*[^;]+/g) || []);
     assert.deepStrictEqual(sizes, ['--dr-size: 13px']);
     parts.forEach((p) => {
@@ -121,6 +120,31 @@ const VAULT = {
         if (borders.length && !structural.some((cls) => selector.includes(cls))) wrong.push(`${p}: ${selector} { ${borders.join('; ')} }`);
       });
     });
+    assert.deepStrictEqual(wrong, []);
+  });
+
+  check('no fill: what is open, picked or under the pointer is ink or underlined, never a block of ink or grey', () => {
+    const wrong = [];
+    // Allowed: selected text, and Obsidian's toggle, whose knob's place says on or off.
+    const allowed = (selector) => /::selection|\.checkbox-container/.test(selector);
+    parts.forEach((p) => rules(part(p)).forEach(([selector, body]) => {
+      if (/(?:^|;)\s*background(?:-color)?\s*:\s*var\(--dr-(?:ink|muted)\)/.test(body) && !allowed(selector)) wrong.push(`${p}: ${selector}`);
+      (body.match(/--(?:tab-background-active|nav-item-background-[a-z]+|background-modifier-(?:hover|active-hover))\s*:\s*var\(--dr-(?:ink|muted)\)/g) || []).forEach((d) => wrong.push(`${p}: ${d}`));
+    }));
+    assert.deepStrictEqual(wrong, []);
+  });
+
+  check('one weight: never bold', () => {
+    const weights = parts.flatMap((p) => (bare(part(p)).match(/font-weight\s*:\s*[^;}]+/g) || []).map((d) => `${p}: ${d}`));
+    assert.deepStrictEqual(weights.filter((d) => !/:\s*(?:400|normal|inherit)$/.test(d)), []);
+  });
+
+  check('state is an ARIA attribute: the plugin\'s own rules read no is- class', () => {
+    // Allowed: where a scrolling row of tabs is cut, which is geometry the script measures, not a state.
+    const wrong = [];
+    parts.forEach((p) => rules(part(p)).forEach(([selector]) => selector.split(',').map((s) => s.trim()).forEach((s) => {
+      if (!s.includes('dr-active') && /\.is-(?!cut\b|more-)[a-z]/.test(s)) wrong.push(`${p}: ${s}`);
+    })));
     assert.deepStrictEqual(wrong, []);
   });
 

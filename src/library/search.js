@@ -26,7 +26,6 @@ export function searchLibrary(plugin, query) {
   out.folders = ranked(plugin.index.folders(), (f) => f.name).slice(0, LIMIT);
   const all = plugin.index.markdown();
   out.notes = ranked(all, (f) => f.basename).slice(0, LIMIT);
-  if (plugin.settings.searchNoteText === false) return out;
   const named = new Set(out.notes);
   for (const file of all) {
     if (out.inside.length >= LIMIT) break;
@@ -73,7 +72,7 @@ export function drawSearch(screen, host, idle) {
       if (categories.length) {
         sectionTitle(results, { title: `By ${key}` });
         const list = rows(results);
-        categories.forEach(([value, n]) => row(list, { name: value, end: String(n), run: () => screen.setFilter({ prop: `${key}=${value}` }, value) }));
+        categories.forEach(([value]) => row(list, { name: value, run: () => screen.setFilter({ prop: `${key}=${value}` }, value) }));
       }
       return;
     }

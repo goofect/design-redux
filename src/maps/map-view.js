@@ -59,7 +59,7 @@ export class MapView extends ItemView {
   /** Makes the tree for what the map is of, and draws it. */
   build() {
     const target = this.app.vault.getAbstractFileByPath(this.rootPath) || this.app.vault.getRoot();
-    this.root = target instanceof TFile ? noteMap(this.plugin, target, this.plugin.settings.albumNestBy || 'parent') : folderMap(this.plugin, target instanceof TFolder ? target : this.app.vault.getRoot());
+    this.root = target instanceof TFile ? noteMap(this.plugin, target, 'parent') : folderMap(this.plugin, target instanceof TFolder ? target : this.app.vault.getRoot());
     this.picked = this.root.id;
     this.draw();
   }

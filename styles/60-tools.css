@@ -108,16 +108,11 @@
   outline-offset: calc(-1 * var(--dr-ring));
 }
 
-/* Picked, or open in the page: inverted. */
-.dr-map-node[aria-selected="true"],
-.dr-map-node[aria-current] {
-  background: var(--dr-ink);
-  color: var(--dr-bg);
-}
-
-.dr-map-node[aria-selected="true"] > .dr-muted,
-.dr-map-node[aria-current] > .dr-muted {
-  color: inherit;
+/* Picked, or open in the page: its word underlined, as a row's is. */
+.dr-map-node[aria-selected="true"] > .dr-clip,
+.dr-map-node[aria-current] > .dr-clip {
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 /* ---- The rules sheet: each rule its sentence, its toggle beside it; a new one written as a sentence with fields. ---- */

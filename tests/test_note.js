@@ -12,7 +12,7 @@ const { editor } = require('./editor.js');
 const dr = load();
 const check = suite('note');
 const feature = (w, name) => w.plugin.features.find((f) => f.constructor.name === name);
-const answer = async (w, value) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; m.contentEl.querySelector('input').value = value; m.contentEl.querySelector('.is-primary').click(); await settle(); };
+const answer = async (w, value) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; m.contentEl.querySelector('input').value = value; m.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click(); await settle(); };
 const PAGED = '---\nstatus: draft\n---\n%%page: Notes%%\n# Notes\nfirst\n\n```\n%%page: not one%%\n```\n%%page: Proofs%%\nsecond\n%%page: Notes%%\nthird\n';
 const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); await leaf.openFile(w.file(path)); if (ed) leaf.view.editor = ed; await settle(); return leaf.view; };
 
@@ -354,9 +354,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     const p = w.doc.createElement('p');
     p.appendChild(w.doc.createTextNode('E = mc^2^, H~2~O, the 1st, '));
     p.appendChild(w.doc.createElement('code')).textContent = 'a^b^';
-    w.plugin.settings.autoOrdinals = true;
     feature(w, 'Scripts').render(p);
-    assert.deepStrictEqual(Array.from(p.querySelectorAll('sup, sub')).map((e) => `${e.tagName}:${e.textContent}`), ['SUP:2', 'SUB:2', 'SUP:st']);
+    assert.deepStrictEqual(Array.from(p.querySelectorAll('sup, sub')).map((e) => `${e.tagName}:${e.textContent}`), ['SUP:2', 'SUB:2']);
     assert.strictEqual(p.textContent, 'E = mc2, H2O, the 1st, a^b^');
   });
 

@@ -43,15 +43,15 @@ export class Scripts extends Feature {
 
   apply(editor, kind) {
     const selected = editor.getSelection();
-    const out = toggleScript(selected, kind, this.settings.scriptSyntax);
+    const out = toggleScript(selected, kind);
     editor.replaceSelection(out);
     if (!selected && typeof editor.setCursor === 'function') {
       const at = editor.getCursor();
-      editor.setCursor({ line: at.line, ch: at.ch - SCRIPT_MARKS[kind][this.settings.scriptSyntax === 'tags' ? 'tags' : 'short'][1].length });
+      editor.setCursor({ line: at.line, ch: at.ch - SCRIPT_MARKS[kind].short[1].length });
     }
   }
 
-  /** Reading view: the short spelling in a block's text raised and lowered; with the setting on, 1st and 2nd too. */
+  /** Reading view: the short spelling in a block's text raised and lowered. */
   render(root) {
     const doc = root.ownerDocument;
     const walker = doc.createTreeWalker(root, 4 /* text */);
@@ -63,7 +63,6 @@ export class Scripts extends Feature {
     nodes.forEach((node) => {
       const text = node.nodeValue;
       const found = findScripts(text);
-      if (this.settings.autoOrdinals) Array.from(text.matchAll(/(\d)(st|nd|rd|th)\b/g)).forEach((m) => found.push({ kind: 'sup', from: m.index + 1, to: m.index + m[0].length, text: m[2] }));
       if (!found.length) return;
       found.sort((a, b) => a.from - b.from);
       const frag = doc.createDocumentFragment();

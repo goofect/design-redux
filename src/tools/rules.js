@@ -149,7 +149,7 @@ export class PropertyRules extends Feature {
   edit() {
     const sheet = new Sheet(this.app, {
       title: 'Property rules',
-      text: this.settings.propertyRulesDryRun !== false ? 'A dry run: a rule that would fire says what it would set, and sets nothing.' : 'Live: a rule sets what it says, in one Undo.',
+      text: this.settings.propertyRulesDryRun !== false ? 'A dry run: a rule that would fire says what it would set, and sets nothing. The command “Let property rules write” makes them live.' : 'Live: a rule sets what it says, in one Undo.',
       build: (matter) => {
         const draw = () => {
           while (matter.childNodes.length > 1) matter.removeChild(matter.lastChild);
@@ -210,7 +210,17 @@ export class PropertyRules extends Feature {
   }
 
   actions() {
-    return [{ id: 'property-rules', name: 'Property rules…', run: () => this.edit() }];
+    const dry = () => this.settings.propertyRulesDryRun !== false;
+    const live = async (on) => {
+      this.settings.propertyRulesDryRun = !on;
+      await this.plugin.saveSettings();
+      new Notice(on ? 'Property rules now set what they say, each with an Undo.' : 'Property rules are a dry run: they say what they would set, and set nothing.');
+    };
+    return [
+      { id: 'property-rules', name: 'Property rules…', run: () => this.edit() },
+      { id: 'property-rules-live', name: 'Let property rules write', when: dry, run: () => live(true) },
+      { id: 'property-rules-dry-run', name: 'Make property rules a dry run', when: () => !dry(), run: () => live(false) },
+    ];
   }
 }
 PropertyRules.key = 'propertyRulesOn';

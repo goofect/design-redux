@@ -24,7 +24,7 @@ body.dr-active.dr-region-overlays ::selection {
   color: var(--dr-bg);
 }
 
-/* Buttons: plain underlined words, no box. The one a dialog proposes is black with white words. */
+/* Buttons: plain underlined words, no box, the one a dialog proposes too; one that destroys says so in red. */
 body.dr-active.dr-region-overlays button:not(.clickable-icon) {
   border: 0;
   box-shadow: none;
@@ -33,10 +33,9 @@ body.dr-active.dr-region-overlays button:not(.clickable-icon) {
 }
 
 body.dr-active.dr-region-overlays button.mod-cta {
-  --text-color: var(--dr-bg);
-  background-color: var(--dr-ink);
-  color: var(--dr-bg);
-  text-decoration: none;
+  --text-color: var(--dr-ink);
+  background-color: var(--dr-bg);
+  color: var(--dr-ink);
 }
 
 body.dr-active.dr-region-overlays button.mod-warning {
@@ -45,10 +44,12 @@ body.dr-active.dr-region-overlays button.mod-warning {
   color: var(--dr-error);
 }
 
-/* The item the arrow keys are on, in the palette and every suggester: inverted. */
+/* The item the arrow keys are on, in the palette and every suggester: underlined, no fill. */
 body.dr-active.dr-region-overlays .suggestion-item.is-selected {
-  background-color: var(--dr-ink);
-  color: var(--dr-bg);
+  background-color: var(--dr-bg);
+  color: var(--dr-ink);
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 /* Highlights: an ink underline under the words, no fill. */

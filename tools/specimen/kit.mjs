@@ -81,4 +81,4 @@ export const shown = (caption, html, cls = '') => `<figure class="spec-shown ${c
 /** A component: its name, a line on what it is for, and its states in a row. */
 export const component = (name, note, items) => `<div class="spec-component"><div class="spec-component-head"><span>${esc(name)}</span><span class="dr-text dr-muted">${esc(note)}</span></div><div class="spec-states">${items.join('')}</div></div>`;
 /** A section of the page; `id` names its screenshot. */
-export const section = (id, title, note, html) => `<section class="spec-section" id="${id}" data-shot="${id}"><header class="spec-section-head"><h2 class="dr-display">${esc(title)}</h2><p class="dr-text dr-muted">${esc(note)}</p></header>${html}</section>`;
+export const section = (id, title, note, html) => `<section class="spec-section" id="${id}" data-shot="${id}"><header class="spec-section-head"><h2 class="dr-text">${esc(title)}</h2><p class="dr-text dr-muted">${esc(note)}</p></header>${html}</section>`;

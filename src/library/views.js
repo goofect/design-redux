@@ -24,7 +24,7 @@ class ScreenView extends ItemView {
     const draw = this.screen.draw.bind(this.screen);
     this.screen.draw = () => {
       draw();
-      if (this.plugin.settings.sidebarDrop !== false) enableDrop(this.screen, this.screen.body);
+      enableDrop(this.screen, this.screen.body);
     };
     (this.plugin.screens || (this.plugin.screens = new Set())).add(this.screen);
     this.screen.draw();

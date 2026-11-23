@@ -70,7 +70,7 @@ const VAULT = {
     assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-rows .dr-row')).map((r) => r.dataset.path), ['Logic/Truth tables.md']);
     assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-filter-bar .dr-chip')).map((c) => [c.textContent, c.getAttribute('role'), c.hasAttribute('aria-checked')]), [['InLogic', 'button', false], ['Propertystatus=draft', 'button', false]]);
     views.save();
-    await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Drafts in Logic'; m.contentEl.querySelector('.is-primary').click(); });
+    await answer(w, (m) => { m.contentEl.querySelector('input').value = 'Drafts in Logic'; m.contentEl.querySelector('.dr-sheet-actions > .dr-button:last-child').click(); });
     assert.deepStrictEqual(w.plugin.settings.smartAlbumList.map((v) => [v.name, v.prop, v.folder]), [['Drafts in Logic', 'status=draft', 'Logic']]);
     screen.host.querySelector('.dr-filter-bar .dr-chip').click();
     assert.deepStrictEqual(screen.filter, { prop: 'status=draft' });

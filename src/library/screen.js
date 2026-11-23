@@ -1,9 +1,9 @@
 /* ------------------------------------------------------------------ */
 /* The library screen: one place, one view of it                       */
 /*                                                                     */
-/* The sidebar is a pane headed "Library" holding the vault's folders  */
+/* The sidebar is a pane headed "Vault" holding the vault's folders    */
 /* as a tree. The browse view is a place you are in (`at`), headed by  */
-/* its name: the path to it as boxed words, then its notes as ruled    */
+/* the path to it, grey words and its own name ink, then its notes in  */
 /* rows, the vault's top like any folder. No buttons at rest;          */
 /* search is a command. Drawing reads the index and nothing else, and  */
 /* is put off to one turn however many things changed at once.         */
@@ -160,7 +160,7 @@ export class LibraryScreen {
 
   /** One Tab stop a list in what was drawn; `selector` is what the arrows move among. */
   roving(container, selector, columns) {
-    this.stops.push(rove(container, selector, { columns, jump: this.plugin.settings.typeToJump !== false }));
+    this.stops.push(rove(container, selector, { columns, jump: true }));
   }
 
   /** After a draw: what is open or picked is brought into sight; failing that, where the list was left. */

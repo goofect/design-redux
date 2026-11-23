@@ -4,7 +4,7 @@
 /* The plugin's own parts, put in the note's own column wherever the   */
 /* note is laid out (the editor's sizer, reading view's header), so    */
 /* they scroll with the text: the folder as a label over the inline    */
-/* title; under it the ledger of properties, the page tabs, a line.    */
+/* title; under it the ledger of properties, the page tabs, space.     */
 /* The order is folder, title, properties, pages, text. Nothing of     */
 /* Obsidian's is moved; its own properties block is hidden by the look.*/
 /* ------------------------------------------------------------------ */

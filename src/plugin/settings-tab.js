@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* The settings page: the features' switches                           */
 /*                                                                     */
-/* Six of Obsidian's own toggles and nothing else: the look, whether */
+/* Five of Obsidian's own toggles and nothing else: the look, whether */
 /* it reaches Obsidian's interface, and the few features that change   */
 /* what you see or write to your notes. A feature that only adds       */
 /* commands has no switch: it is in the command palette, always.       */

@@ -67,20 +67,15 @@ export class Footnotes extends Feature {
     const cursor = editor.getCursor();
     const offset = editor.posToOffset(cursor);
     const text = editor.getValue();
-    const inOrder = this.settings.footnoteOrder !== false;
     const same = findFootnotes(text).defs.find((d) => d.text === citation.replace(/\s*\r?\n\s*/g, ' ').trim());
     if (same) {
       // The number again; in order, it is the one the footnotes come to once renumbered.
-      let again = `${text.slice(0, offset)}[^${same.id}]${text.slice(offset)}`;
-      let id = same.id;
-      if (inOrder) {
-        again = tidyFootnotes(again);
-        id = (findFootnotes(again).refs[findFootnotes(text.slice(0, offset)).refs.length] || same).id;
-      }
+      const again = tidyFootnotes(`${text.slice(0, offset)}[^${same.id}]${text.slice(offset)}`);
+      const id = (findFootnotes(again).refs[findFootnotes(text.slice(0, offset)).refs.length] || same).id;
       setText(editor, again, { line: cursor.line, ch: cursor.ch + `[^${id}]`.length });
       return id;
     }
-    const out = addFootnote(text, offset, citation, inOrder);
+    const out = addFootnote(text, offset, citation);
     setText(editor, out.text, { line: cursor.line, ch: cursor.ch + `[^${out.id}]`.length });
     return out.id;
   }

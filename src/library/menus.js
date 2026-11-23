@@ -45,7 +45,6 @@ export async function deleteEntry(plugin, target) {
     title: `Delete ${isFolder ? target.name : target.basename}`,
     text: isFolder ? `The folder and its ${counted(n, 'note')} go to the bin.` : 'The note goes to the bin.',
     action: isFolder ? 'Delete folder' : 'Delete note',
-    danger: true,
   });
   return yes ? plugin.files.trash(target) : false;
 }

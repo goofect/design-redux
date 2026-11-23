@@ -14,13 +14,13 @@ const swatch = (name, use, on = 'ink') => `<div class="spec-swatch"><div class="
 
 export function palette() {
   const swatches = [
-    swatch('bg', 'The ground, and the words on what is inverted.'), swatch('ink', 'Words, lines, the inverted fill.', 'bg'),
-    swatch('muted', 'The one grey: secondary words only.', 'bg'), swatch('error', 'An error, always with its words.', 'bg'),
+    swatch('bg', 'The ground.'), swatch('ink', 'Words, what is open, a field\'s line, the focus outline.', 'bg'),
+    swatch('muted', 'The one grey: what is not here, and secondary words.', 'bg'), swatch('error', 'An error, always with its words.', 'bg'),
   ].join('');
   const { block, pairs } = measure();
   const sizes = `<div class="spec-voices">
-    <div><div class="dr-display">Logic</div><div class="dr-muted">The display size, 48px on a 48px line: the one name that matters on a screen.</div></div>
-    <div><div>Natural deduction: the conditional</div><div class="dr-muted">Everything else, 13px on a 16px line; 24px when it runs on. One face, Helvetica as it comes, no tracking, no capitals for effect.</div></div>
+    <div><div class="spec-label">Logic</div><div class="dr-muted">A label: capitals, a little apart, regular weight; never bold, never bigger.</div></div>
+    <div><div>Natural deduction: the conditional</div><div class="dr-muted">Everything, 13px on a 16px line; 24px when it runs on. One face, the system's monospace as it comes, one weight.</div></div>
   </div>`;
   const units = [[1, 'the unit'], [2, 'the gutter · a glyph · a line'], [4, 'a row · a control'], [6, 'a head · the display line']]
     .map(([n, use]) => `<div class="spec-unit"><div class="spec-unit-box" style="width:${n * 8}px;height:${n * 8}px"></div><div>${n} · ${n * 8}px</div><div class="dr-muted">${use}</div></div>`).join('');

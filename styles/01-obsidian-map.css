@@ -11,13 +11,13 @@
 /* ------------------------------------------------------------------ */
 
 body.dr-active {
-  /* One surface, parted by ink lines where the structure divides. No fill under the pointer: hover is an underline. */
+  /* One surface. No fill under the pointer or under what is open: hover is an underline, open is ink. */
   --background-primary: var(--dr-bg);
   --background-primary-alt: var(--dr-bg);
   --background-secondary: var(--dr-bg);
   --background-secondary-alt: var(--dr-bg);
   --background-modifier-hover: var(--dr-bg);
-  --background-modifier-active-hover: var(--dr-ink);
+  --background-modifier-active-hover: var(--dr-bg);
   --background-modifier-border: var(--dr-ink);
   --background-modifier-border-hover: var(--dr-ink);
   --background-modifier-border-focus: var(--dr-ink);
@@ -46,7 +46,7 @@ body.dr-active {
   --text-success: var(--dr-ink);
   --caret-color: var(--dr-ink);
 
-  /* What is selected or open: inverted, the ink as a fill and the ground's colour for its words. */
+  /* Obsidian's own controls that are on (a toggle, a checkbox): ink. */
   --interactive-accent: var(--dr-ink);
   --interactive-accent-hover: var(--dr-ink);
   --interactive-normal: var(--dr-bg);
@@ -164,15 +164,15 @@ body.dr-active.dr-region-chrome {
   --vault-profile-color-hover: var(--dr-ink);
 }
 
-/* Tabs: rectangles; the open one inverted. */
+/* Tabs: words, grey; the open one ink. */
 body.dr-active.dr-region-tabs {
   --tab-container-background: var(--dr-bg);
-  --tab-background-active: var(--dr-ink);
+  --tab-background-active: var(--dr-bg);
   --tab-text-color: var(--dr-muted);
-  --tab-text-color-active: var(--dr-bg);
+  --tab-text-color-active: var(--dr-ink);
   --tab-text-color-focused: var(--dr-muted);
-  --tab-text-color-focused-active: var(--dr-bg);
-  --tab-text-color-focused-active-current: var(--dr-bg);
+  --tab-text-color-focused-active: var(--dr-ink);
+  --tab-text-color-focused-active-current: var(--dr-ink);
   --tab-text-color-focused-highlighted: var(--dr-ink);
   --tab-divider-color: var(--dr-ink);
   --tab-outline-color: var(--dr-ink);
@@ -182,16 +182,16 @@ body.dr-active.dr-region-tabs {
   --tab-switcher-menubar-background: var(--dr-bg);
 }
 
-/* Sidebars and the file explorer: plain rows; the open one inverted. */
+/* Sidebars and the file explorer: rows, grey; the open one ink, as the library's tree. */
 body.dr-active.dr-region-sidebars {
-  --nav-item-color: var(--dr-ink);
+  --nav-item-color: var(--dr-muted);
   --nav-item-color-hover: var(--dr-ink);
-  --nav-item-color-active: var(--dr-bg);
-  --nav-item-color-selected: var(--dr-bg);
+  --nav-item-color-active: var(--dr-ink);
+  --nav-item-color-selected: var(--dr-ink);
   --nav-item-color-highlighted: var(--dr-ink);
   --nav-item-background-hover: var(--dr-bg);
-  --nav-item-background-active: var(--dr-ink);
-  --nav-item-background-selected: var(--dr-ink);
+  --nav-item-background-active: var(--dr-bg);
+  --nav-item-background-selected: var(--dr-bg);
   --nav-indentation-guide-color: var(--dr-muted);
   --nav-collapse-icon-color: var(--dr-ink);
   --nav-collapse-icon-color-collapsed: var(--dr-muted);

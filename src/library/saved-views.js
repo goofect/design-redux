@@ -62,7 +62,7 @@ export class SavedViews extends Feature {
         field(matter, { label: 'Property', value: draft.prop || '', placeholder: 'status=draft, status, or !status', note: 'A name alone: notes that have it. With ! before: notes that lack it.', onInput: (v) => (draft.prop = v.trim()) });
         field(matter, { label: 'Edited this', value: draft.date || '', placeholder: 'week, month or year', onInput: (v) => (draft.date = ['week', 'month', 'year'].includes(v.trim().toLowerCase()) ? v.trim().toLowerCase() : '') });
       },
-      actions: [{ text: 'Clear', run: () => void screen.setFilter(null) }, { text: 'Cancel' }, { text: 'Show', kind: 'primary', run: () => void screen.setFilter(isFiltering(draft) ? draft : null) }],
+      actions: [{ text: 'Clear', run: () => void screen.setFilter(null) }, { text: 'Cancel' }, { text: 'Show', run: () => void screen.setFilter(isFiltering(draft) ? draft : null) }],
     }).open();
   }
 

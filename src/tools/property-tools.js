@@ -187,7 +187,7 @@ export class PropertyTools extends Feature {
         title,
         text,
         build: (matter) => { box = field(matter, { label: 'Properties', value: start || '', placeholder: 'status: draft, course: Logic' }); },
-        actions: [{ text: 'Cancel' }, { text: 'OK', kind: 'primary', run: () => {
+        actions: [{ text: 'Cancel' }, { text: 'OK', run: () => {
           out = {};
           box.drInput.value.split(',').map((s) => s.trim()).filter(Boolean).forEach((part) => { const at = part.indexOf(':'); out[(at < 0 ? part : part.slice(0, at)).trim()] = at < 0 ? '' : part.slice(at + 1).trim(); });
           if (!Object.keys(out).length) return void box.drSay('Name at least one property.', true), false;

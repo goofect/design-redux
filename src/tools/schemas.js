@@ -88,7 +88,7 @@ export class PropertySchemas extends Feature {
       title: `Schema for ${folder.name}`,
       text: 'A property a part, with semicolons between: its name, then its type, “required”, and the values allowed with | between them.',
       build: (matter) => { box = field(matter, { label: 'Schema', value: schemaText(now), placeholder: 'status: text, required, draft | done; week: number' }); },
-      actions: [{ text: 'Cancel' }, { text: 'Keep', kind: 'primary', run: async () => {
+      actions: [{ text: 'Cancel' }, { text: 'Keep', run: async () => {
         const entries = parseSchema(box.drInput.value);
         const all = this.settings.propertySchemas || (this.settings.propertySchemas = {});
         if (entries.length) all[folder.path] = entries;
