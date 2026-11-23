@@ -135,12 +135,15 @@ export class NotePage extends Feature {
   actions() {
     return [
       { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property…', run: (ctx) => addProperty(this.plugin, ctx.file) },
+      // In a folder, the properties listed first there; at the vault's top, everywhere's.
       { id: 'panel-folder-properties', name: 'Properties listed first in this folder…', on: 'folder', menu: 'Properties listed first…', run: async (ctx) => {
+        const top = ctx.folder.path === '/';
         const views = Object.assign({}, this.settings.panelFolderViews);
         const now = views[ctx.folder.path];
-        const main = await ask(this.app, { title: `Listed first, in ${ctx.folder.name}`, label: 'Properties, with commas between', value: now ? now.main : this.settings.panelPrimaryProps, action: 'Keep' });
+        const main = await ask(this.app, { title: top ? 'Listed first, everywhere' : `Listed first, in ${ctx.folder.name}`, label: 'Properties, with commas between', value: now && !top ? now.main : this.settings.panelPrimaryProps, action: 'Keep' });
         if (main === null) return;
-        if (String(main).trim()) views[ctx.folder.path] = { main: String(main).trim() };
+        if (top) this.settings.panelPrimaryProps = String(main).trim();
+        else if (String(main).trim()) views[ctx.folder.path] = { main: String(main).trim() };
         else delete views[ctx.folder.path];
         this.settings.panelFolderViews = views;
         await this.plugin.saveSettings();

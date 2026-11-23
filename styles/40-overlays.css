@@ -3,7 +3,8 @@
 /* its toggle                                                          */
 /*                                                                     */
 /* Selector map (Obsidian's own DOM; check after an update):           */
-/*   .menu  .menu-scroll  .menu-item  .menu-item.selected              */
+/*   .menu  .menu-scroll  .menu-item                                   */
+/*   .menu-item.is-warning              an entry that destroys         */
 /*   .menu-item.is-disabled  .menu-item.is-label  .menu-item-icon      */
 /*   .menu-separator                                                   */
 /*   .checkbox-container  .checkbox-container.is-enabled  its ::after  */
@@ -28,7 +29,7 @@ body.dr-active.dr-region-overlays {
   --toggle-thumb-color: var(--dr-ink);
 }
 
-/* A menu's items are rows: four units, edge to edge; the one under the pointer or the keys inverted. */
+/* A menu's items are rows: four units, edge to edge; the one under the pointer or the keys underlined (42). */
 body.dr-active.dr-region-overlays .menu-item {
   min-height: var(--dr-row);
   padding: 0 var(--dr-gutter);
@@ -39,18 +40,15 @@ body.dr-active.dr-region-overlays .menu-item-icon {
   color: inherit;
 }
 
+/* Sections parted by a unit of space; the separator's line is transparent. */
 body.dr-active.dr-region-overlays .menu-separator {
-  margin: 0;
+  margin: 0 0 var(--dr-u);
 }
 
-/* The entry under the pointer or the keys: its words underlined, no fill. */
-body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) {
-  background-color: var(--dr-bg);
-}
-
-body.dr-active.dr-region-overlays .menu-item.selected:not(.is-label):not(.is-disabled) .menu-item-title {
-  text-decoration: underline;
-  text-underline-offset: var(--dr-ring);
+/* One that destroys: its word says so, in ink; red is for an error. */
+body.dr-active.dr-region-overlays .menu-item.is-warning,
+body.dr-active.dr-region-overlays .menu-item.is-warning .menu-item-icon {
+  color: var(--dr-ink);
 }
 
 /* The toggle: off, the ground in a line and an ink knob at its start; on, inverted: an ink track and the knob, the

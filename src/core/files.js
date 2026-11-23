@@ -51,9 +51,9 @@ export class Files {
     }
   }
 
-  /** The name a folder's own note has. */
+  /** The name a folder's own note has: the folder's. */
   folderNoteName(folderName) {
-    return (this.plugin.settings.folderNoteName || '{{folder}}').replace(/\{\{folder\}\}/g, folderName);
+    return folderName;
   }
 
   /** A folder's own note, or null. */
@@ -82,7 +82,7 @@ export class Files {
   async followFolderRename(folder, oldPath) {
     if (!(folder instanceof TFolder)) return;
     const oldName = oldPath.split('/').pop();
-    if (oldName === folder.name || !(this.plugin.settings.folderNoteName || '{{folder}}').includes('{{folder}}')) return;
+    if (oldName === folder.name) return;
     const note = this.app.vault.getFileByPath(`${folder.path}/${this.folderNoteName(oldName)}.md`);
     const target = normalizePath(`${folder.path}/${this.folderNoteName(folder.name)}.md`);
     if (!note || this.app.vault.getAbstractFileByPath(target)) return;

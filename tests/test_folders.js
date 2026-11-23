@@ -33,8 +33,6 @@ const VAULT = {
     assert.ok(!('type' in info) && !('label' in info), 'a folder still has a kind');
     assert.deepStrictEqual([info.includes.map((f) => f.path), info.featured.map((f) => f.path), info.related.map((f) => f.path)], [['Reading/Hume.md'], ['Logic/Validity.md'], ['Reading']]);
     assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables'], 'featured first, then its own, and nothing from elsewhere');
-    w.plugin.settings.albumKeyNames = { description: 'about' };
-    assert.strictEqual(albums.fromNote(w.file('Logic/Logic.md')).description, undefined, 'a renamed property is still read under its old name');
   });
 
   await check('no kind, no colour, no merging or splitting, no covers: their commands are gone', async () => {

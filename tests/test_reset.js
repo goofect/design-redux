@@ -110,7 +110,7 @@ const VAULT = {
   });
 
   check('a line only where the structure divides: borders on the classes the tokens part lists, nowhere else', () => {
-    const listed = /lines:((?:\s+\.[a-z-]+)+)/.exec(part('00-tokens.css'));
+    const listed = /lines:((?:\s+[.a-z][\w.[=-]*)+)/.exec(part('00-tokens.css'));
     assert.ok(listed, 'the tokens part lists no structural classes');
     const structural = listed[1].trim().split(/\s+/);
     const wrong = [];

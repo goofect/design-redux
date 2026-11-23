@@ -11,14 +11,16 @@
 /* ------------------------------------------------------------------ */
 
 body.dr-active {
-  /* One surface. No fill under the pointer or under what is open: hover is an underline, open is ink. */
+  /* One surface. No fill under the pointer or under what is open: hover is an underline, open is ink. No line
+     between rows or panes: Obsidian's own rules are transparent; a layer that floats keeps its ink edge (the hover
+     colour, which menus, modals and the palette draw theirs in), a field its line under the text (42-workspace). */
   --background-primary: var(--dr-bg);
   --background-primary-alt: var(--dr-bg);
   --background-secondary: var(--dr-bg);
   --background-secondary-alt: var(--dr-bg);
   --background-modifier-hover: var(--dr-bg);
   --background-modifier-active-hover: var(--dr-bg);
-  --background-modifier-border: var(--dr-ink);
+  --background-modifier-border: transparent;
   --background-modifier-border-hover: var(--dr-ink);
   --background-modifier-border-focus: var(--dr-ink);
   --background-modifier-form-field: var(--dr-bg);
@@ -28,7 +30,7 @@ body.dr-active {
   --background-modifier-success: var(--dr-ink);
   --background-modifier-warning: var(--dr-ink);
   --background-modifier-box-shadow: var(--dr-bg);
-  --divider-color: var(--dr-ink);
+  --divider-color: transparent;
   --divider-color-hover: var(--dr-ink);
   --divider-width: var(--dr-hair);
   --border-width: var(--dr-hair);

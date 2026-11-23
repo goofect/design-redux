@@ -8,9 +8,9 @@
 /* measured, not typed: node tests/contrast.js --write puts them here, */
 /* and the suite fails when they no longer match the values.           */
 /*                                                                     */
-/* Lines: a border is drawn only by these classes, each where a        */
-/* screen's structure divides (tests/test_reset.js reads this list):   */
-/* lines: .dr-field-box */
+/* Lines: a border is drawn only by these selectors: a field's line,   */
+/* and the edge of a layer that floats (tests/test_reset.js reads it): */
+/* lines: .dr-field-box input[type= textarea .popover .suggestion-container */
 /* ------------------------------------------------------------------ */
 
 /* contrast:begin

@@ -25,6 +25,12 @@
 /*                                      edge, a line beside the frame  */
 /*   .workspace-sidedock-vault-profile  the vault's name, help and     */
 /*                                      settings at the sidebar's foot */
+/*   input[type=text|search|email|password|number]  textarea           */
+/*                                      Obsidian's fields              */
+/*   .popover  .suggestion-container    a hover preview, a suggester   */
+/*   .suggestion-item.is-selected  .suggestion-title  the palette's    */
+/*   and every suggester's item the keys are on                        */
+/*   .menu-item.selected  .menu-item-title  a menu's                   */
 /* ------------------------------------------------------------------ */
 
 body.dr-active.dr-region-workspace .workspace-ribbon.mod-left,
@@ -46,6 +52,38 @@ body.dr-active.dr-region-workspace .workspace-split.mod-left-split .workspace-si
 /* The tabs' strip stays only as the window's drag area: no line under it. */
 body.dr-active.dr-region-workspace .workspace-tab-header-container {
   border-bottom: 0;
+}
+
+/* Obsidian's fields: a line under the text, nothing round it, as the plugin's own (its own input is in its box). */
+body.dr-active.dr-region-workspace input[type="text"]:not(.dr-input),
+body.dr-active.dr-region-workspace input[type="search"],
+body.dr-active.dr-region-workspace input[type="email"],
+body.dr-active.dr-region-workspace input[type="password"],
+body.dr-active.dr-region-workspace input[type="number"],
+body.dr-active.dr-region-workspace textarea {
+  border-width: 0 0 var(--dr-hair);
+  border-color: var(--dr-ink);
+}
+
+/* A layer that floats over the page draws its edge in the base colour, which is transparent: ink, the one thing
+   that parts it from what is under it, as a menu's and a modal's. */
+body.dr-active.dr-region-workspace .popover,
+body.dr-active.dr-region-workspace .suggestion-container {
+  border-color: var(--dr-ink);
+}
+
+/* The item the keys or the pointer are on, in the palette, a suggester or a menu: its words underlined. The look
+   makes Obsidian's hover fill the ground's colour, so this goes wherever the look is, or nothing would mark it. */
+body.dr-active.dr-region-workspace .suggestion-item.is-selected,
+body.dr-active.dr-region-workspace .menu-item.selected:not(.is-label):not(.is-disabled) {
+  background-color: var(--dr-bg);
+}
+
+body.dr-active.dr-region-workspace .suggestion-item.is-selected,
+body.dr-active.dr-region-workspace .suggestion-item.is-selected .suggestion-title,
+body.dr-active.dr-region-workspace .menu-item.selected:not(.is-label):not(.is-disabled) .menu-item-title {
+  text-decoration: underline;
+  text-underline-offset: var(--dr-ring);
 }
 
 /* The sidebar's edge draws no line: space parts the panes. Its handle still resizes it. */

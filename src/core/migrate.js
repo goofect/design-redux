@@ -9,7 +9,7 @@
 
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
-/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept, 109 the strip, 110 the fixed defaults). */
+/** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept, 109 the strip, 110 and 111 the fixed defaults). */
 const RETIRED_SINCE_4 = {
   alwaysShowLabels: 'the reset: a folder is its name, always shown',
   libraryZoom: 'the reset: one view of a collection, no zoom levels',
@@ -39,6 +39,9 @@ const RETIRED_SINCE_4 = {
   retired: 'unused values are not kept: a retired key\'s value is dropped',
   ...Object.fromEntries(['albumSortMemory', 'hideEmptyFolders', 'hideFolderNotes', 'typeToJump', 'sidebarDrop', 'searchNoteText', 'albumNestBy', 'libraryInbox', 'footnoteOrder', 'scriptSyntax', 'letterLists', 'romanLists']
     .map((k) => [k, 'the fixed defaults: a setting nothing could change is the behaviour it chose, always'])),
+  folderNoteName: 'the fixed defaults: a folder\'s own note has the folder\'s name, the one convention',
+  albumKeyNames: 'the fixed defaults: a folder note\'s description, includes, related and featured are read by those names',
+  categoryProperty: 'the fixed defaults: an empty search shows the recent ones only; Filter… finds notes by a property\'s value',
   autoOrdinals: 'the fixed defaults: 1st and 2nd are left as written; it was off and nothing could turn it on',
   routeImages: 'the image router is gone: Obsidian\'s own setting says where a pasted image goes',
   imageFolder: 'the image router is gone',

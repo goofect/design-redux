@@ -5,7 +5,6 @@
 /*   body::before  body::after          a theme's decoration           */
 /*   ::selection                        selected text                  */
 /*   button:not(.clickable-icon)  button.mod-cta  button.mod-warning   */
-/*   .suggestion-item.is-selected       the palette, suggesters        */
 /*   .markdown-rendered mark  .cm-s-obsidian span.cm-highlight         */
 /* Every rule is gated by the master switch and its region. The rest   */
 /* of each region comes from 01-obsidian-map.css.                      */
@@ -24,7 +23,7 @@ body.dr-active.dr-region-overlays ::selection {
   color: var(--dr-bg);
 }
 
-/* Buttons: plain underlined words, no box, the one a dialog proposes too; one that destroys says so in red. */
+/* Buttons: plain underlined words, no box, the one a dialog proposes and one that destroys too: the word says it. */
 body.dr-active.dr-region-overlays button:not(.clickable-icon) {
   border: 0;
   box-shadow: none;
@@ -39,17 +38,9 @@ body.dr-active.dr-region-overlays button.mod-cta {
 }
 
 body.dr-active.dr-region-overlays button.mod-warning {
-  --text-color: var(--dr-error);
-  background-color: var(--dr-bg);
-  color: var(--dr-error);
-}
-
-/* The item the arrow keys are on, in the palette and every suggester: underlined, no fill. */
-body.dr-active.dr-region-overlays .suggestion-item.is-selected {
+  --text-color: var(--dr-ink);
   background-color: var(--dr-bg);
   color: var(--dr-ink);
-  text-decoration: underline;
-  text-underline-offset: var(--dr-ring);
 }
 
 /* Highlights: an ink underline under the words, no fill. */

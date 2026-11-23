@@ -74,14 +74,11 @@
     "design-redux-properties"
   ],
   "settings": [
-    "albumKeyNames",
     "albumOrders",
     "albumSorts",
     "albums",
-    "categoryProperty",
     "defaultSort",
     "folderDefaults",
-    "folderNoteName",
     "graphFilters",
     "graphRouteProperty",
     "graphRouting",

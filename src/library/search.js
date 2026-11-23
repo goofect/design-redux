@@ -40,9 +40,6 @@ export function searchLibrary(plugin, query) {
   return out;
 }
 
-/** The values a property takes across the vault, most used first: [[value, count]]. */
-export const categoryValues = (plugin, key) => plugin.index.values(key).slice(0, 30);
-
 /** Keeps a search among the last few, newest first. */
 export function rememberSearch(plugin, query) {
   const q = query.trim();
@@ -61,19 +58,10 @@ export function drawSearch(screen, host, idle) {
     if (!query.trim()) {
       if (idle) return void idle(results);
       const recent = plugin.settings.recentSearches || [];
-      const key = String(plugin.settings.categoryProperty || '').trim();
-      const categories = key ? categoryValues(plugin, key) : [];
-      if (!recent.length && !categories.length) return void sayso(results, { label: 'Folders and notes by name; notes by a heading or a property.' });
-      if (recent.length) {
-        sectionTitle(results, { title: 'Recent' });
-        const list = rows(results);
-        recent.forEach((q) => row(list, { name: q, run: () => { input.drInput.value = q; screen.query = q; show(q); } }));
-      }
-      if (categories.length) {
-        sectionTitle(results, { title: `By ${key}` });
-        const list = rows(results);
-        categories.forEach(([value]) => row(list, { name: value, run: () => screen.setFilter({ prop: `${key}=${value}` }, value) }));
-      }
+      if (!recent.length) return void sayso(results, { label: 'Folders and notes by name; notes by a heading or a property.' });
+      sectionTitle(results, { title: 'Recent' });
+      const list = rows(results);
+      recent.forEach((q) => row(list, { name: q, run: () => { input.drInput.value = q; screen.query = q; show(q); } }));
       return;
     }
     const found = searchLibrary(plugin, query);

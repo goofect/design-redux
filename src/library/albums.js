@@ -11,9 +11,6 @@ import { TFile, TFolder } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { linkTarget, noteProps, propOf, valuesOf } from '../core/notes.js';
 
-/** The folder-note properties a folder's structure is read from; a vault may have renamed them (settings.albumKeyNames). */
-export const ALBUM_KEY_DEFAULTS = { description: 'description', includes: 'includes', related: 'related', featured: 'featured' };
-
 export class Albums extends Feature {
   enable() {
     this.plugin.gathering = (folder) => this.info(folder);
@@ -22,20 +19,15 @@ export class Albums extends Feature {
     });
   }
 
-  key(field) {
-    const own = (this.settings.albumKeyNames || {})[field];
-    return (typeof own === 'string' && own.trim()) || ALBUM_KEY_DEFAULTS[field];
-  }
-
-  /** What a folder note says, in the shape settings.albums keeps. */
+  /** What a folder note says, in the shape settings.albums keeps: its description, includes, related and featured properties. */
   fromNote(note) {
     if (!note) return null;
     const fm = noteProps(this.app, note);
     const out = {};
-    const description = valuesOf(propOf(fm, this.key('description'))).join(' ');
+    const description = valuesOf(propOf(fm, 'description')).join(' ');
     if (description) out.description = description;
     ['includes', 'related', 'featured'].forEach((field) => {
-      const list = valuesOf(propOf(fm, this.key(field))).map((v) => {
+      const list = valuesOf(propOf(fm, field)).map((v) => {
         const plain = linkTarget(v) || v;
         const file = this.app.metadataCache.getFirstLinkpathDest(plain, note.path);
         const target = file && this.plugin.files.isFolderNote(file) ? file.parent : file;

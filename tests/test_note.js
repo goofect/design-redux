@@ -463,5 +463,18 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     ]);
   });
 
+  await check('the properties listed first: a folder\'s own, and at the vault\'s top everywhere\'s', async () => {
+    const w = await world({ 'Logic/A.md': '', 'B.md': '' });
+    const run = () => w.app.commands.commands['design-redux:panel-folder-properties'].checkCallback(false);
+    w.plugin.selection.pick(w.file('Logic'));
+    run();
+    await answer(w, 'week, status');
+    assert.deepStrictEqual(w.plugin.settings.panelFolderViews, { Logic: { main: 'week, status' } });
+    w.plugin.selection.pick(w.app.vault.getRoot());
+    run();
+    await answer(w, 'course');
+    assert.deepStrictEqual([w.plugin.settings.panelPrimaryProps, dr.primaryProps(w.plugin.settings, w.file('B.md')), dr.primaryProps(w.plugin.settings, w.file('Logic/A.md'))], ['course', 'course', 'week, status']);
+  });
+
   check.done();
 })();
