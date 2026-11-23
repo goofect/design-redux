@@ -2,14 +2,15 @@
 /* The workspace, bare: only the panes                                 */
 /*                                                                     */
 /* With the look on, Obsidian's chrome around the panes is taken away: */
-/* the ribbons, the right sidebar, the status bar, the tabs' strip,    */
+/* the ribbons, the right sidebar, the status bar, the sidebar's tab,  */
 /* every view's header, the vault's name at the sidebar's foot (its    */
 /* settings are a word in the library's head), and Obsidian's         */
 /* properties block (the note's ledger holds them). What is left is   */
-/* the library in the left                                             */
-/* sidebar and the page beside it. The look off puts it all back.      */
-/* Kept: the tab strip's container, which holds the window's drag area */
-/* and its buttons, and the note's own title (the note head needs it). */
+/* the library in the left sidebar and the page beside it, its open   */
+/* notes over it as a row of labels: grey, the one in front ink; no    */
+/* box, icon, close button or +: Cmd-W closes, Ctrl-Tab moves, a tab's */
+/* menu does the rest. The look off puts it all back. Kept too: the    */
+/* note's own title (the note head needs it).                          */
 /*                                                                     */
 /* Selector map (Obsidian's own DOM; check after an update):           */
 /*   .workspace-ribbon.mod-left  .side-dock-ribbon.mod-left             */
@@ -18,6 +19,9 @@
 /*   .status-bar                        the foot of the window         */
 /*   .workspace-tab-header-container(-inner)  .workspace-tab-header-   */
 /*   new-tab  .workspace-tab-header-tab-list   the tabs' strip         */
+/*   .mod-root .workspace-tab-header(-inner, -inner-title, -inner-icon, */
+/*   -inner-close-button, -status-container)   a tab in the main area */
+/*   .mod-left-split                    the sidebar, whose tab is hid  */
 /*   .sidebar-toggle-button             the sidebars' toggles          */
 /*   .workspace-leaf-content > .view-header   a view's header          */
 /*   .metadata-container                the properties block in a note */
@@ -39,7 +43,10 @@ body.dr-active.dr-region-workspace .workspace-ribbon.mod-primary,
 body.dr-active.dr-region-workspace .workspace-ribbon.mod-secondary,
 body.dr-active.dr-region-workspace .workspace-split.mod-right-split,
 body.dr-active.dr-region-workspace .status-bar,
-body.dr-active.dr-region-workspace .workspace-tab-header-container-inner,
+body.dr-active.dr-region-workspace .workspace-split.mod-left-split .workspace-tab-header-container-inner,
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-inner-icon,
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-status-container,
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-inner-close-button,
 body.dr-active.dr-region-workspace .workspace-tab-header-new-tab,
 body.dr-active.dr-region-workspace .workspace-tab-header-tab-list,
 body.dr-active.dr-region-workspace .sidebar-toggle-button,
@@ -49,9 +56,58 @@ body.dr-active.dr-region-workspace .workspace-split.mod-left-split .workspace-si
   display: none;
 }
 
-/* The tabs' strip stays only as the window's drag area: no line under it. */
+/* The tabs' strip: no line under it; in the sidebar only the window's drag area. */
 body.dr-active.dr-region-workspace .workspace-tab-header-container {
   border-bottom: 0;
+}
+
+/* The main area's open notes: a row of words that scrolls, whole words, two units apart, on the page's gutter. */
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-container-inner {
+  align-items: center;
+  gap: var(--dr-gutter);
+  margin: 0;
+  padding: 0 var(--dr-gutter);
+  overflow-x: auto;
+}
+
+/* Each as wide as its word: Obsidian sizes tabs alike and measures them as containers, which a word can't widen. Its
+   colour comes from the tab variables (01): grey, the one in front ink. */
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header {
+  container-type: normal;
+  flex: none;
+  width: auto;
+  max-width: none;
+  padding: 0;
+  background: none;
+}
+
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-inner {
+  padding: 0;
+  background: none;
+}
+
+/* No line between two tabs. */
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-inner::after {
+  content: none;
+}
+
+/* A tab's name is a label, as a note's in the library's list: the plugin's face, capitals a little apart, never cut. */
+body.dr-active.dr-region-workspace .mod-root .workspace-tab-header-inner-title {
+  width: auto;
+  overflow: visible;
+  font-family: var(--dr-font);
+  font-size: var(--dr-size);
+  font-weight: 400;
+  letter-spacing: var(--dr-tracking);
+  text-transform: uppercase;
+  text-overflow: clip;
+}
+
+@media (any-hover: hover) {
+  body.dr-active.dr-region-workspace .mod-root .workspace-tab-header:hover .workspace-tab-header-inner-title {
+    text-decoration: underline;
+    text-underline-offset: var(--dr-ring);
+  }
 }
 
 /* Obsidian's fields: a line under the text, nothing round it, as the plugin's own (its own input is in its box). */

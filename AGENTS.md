@@ -65,9 +65,11 @@ something away.
    or picked is black where its list is grey (in the tree and the path), or
    underlined where its list is black. Disabled is grey. No fills.
 10. **The panes are the whole window.** With the look on, Obsidian's chrome
-    goes: ribbons, the right sidebar, the status bar, the tab strip, view
-    headers. The look off puts it all back. Hide, never move or remove
-    Obsidian's own nodes.
+    goes: ribbons, the right sidebar, the status bar, view headers, the
+    sidebar's tab. The main area's tabs stay, as a row of labels like the
+    tree's: grey, the one in front ink, each as wide as its name; no box,
+    icon, close button or +. The look off puts it all back. Hide, never
+    move or remove Obsidian's own nodes.
 11. **Fast and still.** No motion, no transitions, no carousels; draw from
     the index, never walk the vault for a screen; one redraw for many
     changes.

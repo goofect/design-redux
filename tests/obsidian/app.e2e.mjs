@@ -101,4 +101,38 @@ suite('Design Redux in Obsidian: the app', function () {
     );
     expect(type).toBe('design-redux-browse');
   });
+
+  it('shows the main area\'s tabs as words: each as wide as its name, grey, the one in front ink; no close button, and no tab in the sidebar', async function () {
+    const seen = await browser.executeObsidian(async ({ app }) => {
+      const files = app.vault.getMarkdownFiles().slice(0, 3);
+      for (const [i, f] of files.entries()) await app.workspace.getLeaf(i ? 'tab' : false).openFile(f);
+      await new Promise((r) => setTimeout(r, 500));
+      const all = (s) => Array.from(document.querySelectorAll(s));
+      const ink = getComputedStyle(document.body).getPropertyValue('--dr-ink').trim();
+      const tabs = all('.mod-root .workspace-tab-header').map((h) => {
+        const title = h.querySelector('.workspace-tab-header-inner-title');
+        const style = getComputedStyle(title);
+        return { front: h.classList.contains('is-active'), width: h.getBoundingClientRect().width, fits: title.scrollWidth <= title.clientWidth + 1, case: style.textTransform, colour: style.color };
+      });
+      const probe = document.body.appendChild(document.createElement('span'));
+      probe.style.color = ink;
+      const inkRgb = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        tabs,
+        inkRgb,
+        closes: all('.mod-root .workspace-tab-header-inner-close-button').filter((c) => getComputedStyle(c).display !== 'none').length,
+        sidebar: all('.mod-left-split .workspace-tab-header-container-inner').filter((c) => getComputedStyle(c).display !== 'none').length,
+      };
+    });
+    expect(seen.tabs.length).toBeGreaterThanOrEqual(3);
+    seen.tabs.forEach((t) => {
+      expect(t.width).toBeGreaterThan(0);
+      expect(t.fits).toBe(true);
+      expect(t.case).toBe('uppercase');
+      expect(t.colour === seen.inkRgb).toBe(t.front);
+    });
+    expect(seen.closes).toBe(0);
+    expect(seen.sidebar).toBe(0);
+  });
 });

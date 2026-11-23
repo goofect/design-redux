@@ -157,7 +157,7 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     Object.assign(w.plugin.settings, { lookScope: 'window' });
     await w.plugin.saveSettings();
     [body, other.body].forEach((b) => {
-      assert.ok(b.classList.contains('dr-region-chrome') && b.classList.contains('dr-region-tabs') && !b.classList.contains('dr-labels'));
+      assert.ok(b.classList.contains('dr-region-chrome') && b.classList.contains('dr-region-overlays') && !b.classList.contains('dr-labels'));
     });
     w.plugin.settings.look = 'theme';
     await w.plugin.saveSettings();

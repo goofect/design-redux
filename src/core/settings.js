@@ -8,10 +8,10 @@
 /* ------------------------------------------------------------------ */
 
 /** The regions of the look, each with a body class and a setting of its own. */
-export const REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'workspace'];
+export const REGIONS = ['chrome', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons', 'workspace'];
 
 /** The regions that are Obsidian's own: off when the look is kept to what the plugin draws. */
-export const OBSIDIAN_REGIONS = ['chrome', 'tabs', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
+export const OBSIDIAN_REGIONS = ['chrome', 'sidebars', 'editor', 'overlays', 'canvas', 'graph', 'icons'];
 
 /** Marks a data.json this plugin wrote; the old plugin's stopped at 34. Each step past 100 is one change of a default, made once (core/migrate.js). */
 export const SETTINGS_VERSION = 111;

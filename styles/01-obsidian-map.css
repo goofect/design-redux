@@ -166,8 +166,9 @@ body.dr-active.dr-region-chrome {
   --vault-profile-color-hover: var(--dr-ink);
 }
 
-/* Tabs: words, grey; the open one ink. */
-body.dr-active.dr-region-tabs {
+/* The main area's tabs, part of the bare workspace (42), so wherever the look is: words, grey; the one in front
+   ink; no line between them or under them. */
+body.dr-active.dr-region-workspace {
   --tab-container-background: var(--dr-bg);
   --tab-background-active: var(--dr-bg);
   --tab-text-color: var(--dr-muted);
@@ -176,9 +177,11 @@ body.dr-active.dr-region-tabs {
   --tab-text-color-focused-active: var(--dr-ink);
   --tab-text-color-focused-active-current: var(--dr-ink);
   --tab-text-color-focused-highlighted: var(--dr-ink);
-  --tab-divider-color: var(--dr-ink);
-  --tab-outline-color: var(--dr-ink);
-  --tab-outline-width: var(--dr-hair);
+  --tab-divider-color: transparent;
+  --tab-outline-color: transparent;
+  --tab-outline-width: 0;
+  --tab-inner-background-hover: transparent;
+  --tab-inner-background-active: transparent;
   --tab-curve: 0;
   --tab-switcher-background: var(--dr-bg);
   --tab-switcher-menubar-background: var(--dr-bg);
