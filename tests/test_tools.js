@@ -286,6 +286,7 @@ const VAULT = {
   await check('maps: one model of a tree; laid out with no two boxes on each other; folded and unfolded; a note\'s map follows its parents and stops at a circle', async () => {
     const files = { 'Logic/A.md': '', 'Logic/B.md': '', 'Logic/Sets/S1.md': '', 'Logic/Sets/Deep/D.md': '', 'Root.md': '', 'Kid.md': '---\nparent: "[[Root]]"\n---\n', 'Grandkid.md': '---\nparent: "[[Kid]]"\n---\n', 'X.md': '---\nparent: "[[Y]]"\n---\n', 'Y.md': '---\nparent: "[[X]]"\n---\n' };
     const w = await world(files);
+    assert.strictEqual(dr.folderMap(w.plugin, w.app.vault.getRoot()).label, 'Seminar', 'the vault\'s map is not named after the vault');
     const tree = dr.folderMap(w.plugin, w.file('Logic'));
     assert.deepStrictEqual(tree.children.map((c) => c.label), ['Sets', 'A', 'B']);
     assert.strictEqual(tree.children[0].children.find((c) => c.label === 'Deep').folded, true);

@@ -73,6 +73,7 @@ class Vault extends Events {
     return file;
   }
   getRoot() { return this.root; }
+  getName() { return 'Seminar'; }
   getAbstractFileByPath(p) { return this.items.get(normalizePath(p)) || null; }
   getFileByPath(p) { const f = this.getAbstractFileByPath(p); return f instanceof TFile ? f : null; }
   getFolderByPath(p) { const f = this.getAbstractFileByPath(p); return f instanceof TFolder ? f : null; }
