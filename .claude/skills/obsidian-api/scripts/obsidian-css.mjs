@@ -5,7 +5,7 @@
 //   node obsidian-css.mjs --vars [filter]       every CSS variable and its value
 //   node obsidian-css.mjs --selector ".cm-line" every rule whose selector has it
 //   node obsidian-css.mjs --uses "--file-line-width"   every rule that reads it
-//   node obsidian-css.mjs --dump out.css        write app.css out whole
+//   node obsidian-css.mjs --dump [out.css]      write app.css out whole (no file: to stdout)
 //
 // The .asar is found in (first hit wins): --asar <path>; $OBSIDIAN_ASAR;
 // ~/Library/Application Support/obsidian/obsidian-*.asar (newest);
@@ -22,7 +22,7 @@ const opt = (name) => {
   return i === -1 ? null : args[i + 1] === undefined || args[i + 1].startsWith('--') ? '' : args[i + 1];
 };
 
-function walk(dir, hits, depth = 0) {
+function walk(dir, hits = [], depth = 0) {
   if (depth > 6 || !fs.existsSync(dir)) return hits;
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, e.name);
@@ -101,7 +101,9 @@ const css = readAsarFile(asar, 'app.css');
 console.error(`app.css from ${asar} (${Math.round(css.length / 1024)} KB)`);
 
 if (opt('--dump') !== null) {
-  fs.writeFileSync(opt('--dump') || 'app.css', css);
+  // No file named: to stdout, so nothing lands in the folder the script was run from.
+  if (opt('--dump')) fs.writeFileSync(opt('--dump'), css);
+  else process.stdout.write(css);
 } else if (opt('--vars') !== null) {
   const filter = opt('--vars');
   const seen = new Map();
@@ -128,5 +130,5 @@ if (opt('--dump') !== null) {
   }
   console.error(`${n} rules`);
 } else {
-  console.log('Use --vars [filter], --selector <text>, --uses <--variable>, or --dump [file].');
+  console.log('Use --vars [filter], --selector <text>, --uses <--variable>, or --dump [file] (stdout when no file).');
 }

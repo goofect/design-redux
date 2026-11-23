@@ -16,7 +16,7 @@ memory.
 | --- | --- |
 | `scripts/obsidian-api.mjs <name>` | A declaration's signature, owner, `@since`, `@deprecated` and summary. `--class Workspace` lists a class; `--since 1.13` what was added from a version; `--deprecated` everything deprecated; `--full` the whole doc comment. A name it can't find is not public API. |
 | `scripts/obsidian-audit.mjs [src]` | Deprecated APIs in use, APIs newer than `minAppVersion`, data-loss and window risks, slow patterns, unguarded internals, with file:line. `--stand-in tests/obsidian.js` also lists API methods a test stand-in lacks. |
-| `scripts/obsidian-css.mjs` | Obsidian's own `app.css`: `--vars [filter]` every variable and value, `--selector ".cm-line"` the rules for a selector, `--uses --file-line-width` the rules that read a variable, `--dump` the file. Finds the app's `.asar` on macOS and Linux, or take `--asar <path>`. |
+| `scripts/obsidian-css.mjs` | Obsidian's own `app.css`: `--vars [filter]` every variable and value, `--selector ".cm-line"` the rules for a selector, `--uses --file-line-width` the rules that read a variable, `--dump [file]` the file (to stdout without one). Finds the app's `.asar` on macOS and Linux, or take `--asar <path>`. |
 
 Use them: before using an API (`obsidian-api.mjs`), before styling anything
 Obsidian draws (`obsidian-css.mjs --selector`), and after a change
