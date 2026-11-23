@@ -10,6 +10,12 @@
 import { Notice, TFile, TFolder, normalizePath } from 'obsidian';
 import { offerUndo } from './notes.js';
 
+/** A name someone typed, made one name in its folder: no slash, backslash or colon, and not only dots (".." would lead out of the folder). Empty when nothing is left. */
+export function cleanName(name) {
+  const clean = String(name || '').replace(/[\\/:]/g, ' ').trim();
+  return /^\.*$/.test(clean) ? '' : clean;
+}
+
 export class Files {
   constructor(plugin) {
     this.plugin = plugin;
@@ -22,7 +28,8 @@ export class Files {
   /** A path in `folder` that nothing has yet: "Untitled.md", "Untitled 1.md", … */
   freePath(folder, base, ext) {
     const dir = !folder || folder.path === '/' ? '' : `${folder.path}/`;
-    const make = (n) => normalizePath(`${dir}${n ? `${base} ${n}` : base}${ext ? `.${ext}` : ''}`);
+    const name = cleanName(base) || 'Untitled';
+    const make = (n) => normalizePath(`${dir}${n ? `${name} ${n}` : name}${ext ? `.${ext}` : ''}`);
     let n = 0;
     while (this.app.vault.getAbstractFileByPath(make(n))) n++;
     return make(n);
@@ -143,7 +150,7 @@ export class Files {
 
   /** Renames a file or folder in place. Returns whether it did. */
   async rename(entry, name) {
-    const clean = String(name || '').replace(/[\\/:]/g, ' ').trim();
+    const clean = cleanName(name);
     if (!clean) return false;
     const dir = entry.parent && entry.parent.path !== '/' ? `${entry.parent.path}/` : '';
     const target = normalizePath(`${dir}${clean}${entry instanceof TFile ? `.${entry.extension}` : ''}`);

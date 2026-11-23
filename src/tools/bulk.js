@@ -76,7 +76,7 @@ export function renameTagInText(text, from, to) {
     if (/^ {0,3}(```|~~~)/.test(line)) { fence = !fence; return line; }
     if (fence) return line;
     // Inline code keeps what it says: only the parts between code spans are tags.
-    return line.split(/(`[^`]*`)/).map((part, i) => (i % 2 ? part : part.replace(new RegExp(`(^|[^\\w/#])#${esc}(?=$|[^\\w/-]|/)`, 'gi'), `$1#${to}`))).join('');
+    return line.split(/(`[^`]*`)/).map((part, i) => (i % 2 ? part : part.replace(new RegExp(`(^|[^\\w/#])#${esc}(?=$|[^\\w/-]|/)`, 'gi'), (m, before) => `${before}#${to}`))).join('');
   }).join('\n');
 }
 

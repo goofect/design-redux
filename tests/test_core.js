@@ -187,5 +187,13 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     [['', 'a'], ['a', ''], ['a\nb', 'a\nb\n'], ['x\ny\nz\n', 'z\ny\nx\n']].forEach(([a, b]) => assert.strictEqual(apply(a, dr.changesBetween(a, b)), b));
   });
 
+  await check('a typed name stays one name in its folder: no slash, and not only dots', async () => {
+    assert.deepStrictEqual(['../x', '..', ' . ', 'a/b:c', 'Week 2'].map(dr.cleanName), ['.. x', '', '', 'a b c', 'Week 2']);
+    const w = await world({ 'Logic/A.md': '' });
+    assert.strictEqual(await w.plugin.files.rename(w.file('Logic/A.md'), '..'), false);
+    assert.strictEqual((await w.plugin.files.newFolder(w.file('Logic'), '../../Out')).path, 'Logic/.. .. Out');
+    assert.strictEqual(dr.renameTagInText('#old and #old/x', 'old', 'new$&'), '#new$& and #new$&/x');
+  });
+
   check.done();
 })();
