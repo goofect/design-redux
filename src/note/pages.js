@@ -22,6 +22,7 @@ export class NotePages extends Feature {
   register() {
     this.extensions = [];
     this.known = new Map(); // by path: the pages last read from the note
+    this.drawn = new WeakMap(); // by view: the note, page open and pages it was last drawn with
     this.plugin.registerEditorExtension(this.extensions);
     this.plugin.registerMarkdownPostProcessor((el, ctx) => this.onRendered(el, ctx));
   }
@@ -31,10 +32,13 @@ export class NotePages extends Feature {
     this.extensions.push(pagesField);
     if (typeof ws.updateOptions === 'function') ws.updateOptions();
     const draw = () => this.drawAll();
-    ['file-open', 'layout-change', 'design-redux:modified', 'design-redux:renamed'].forEach((name) => this.listen(ws, name, draw));
+    ['file-open', 'layout-change', 'design-redux:renamed'].forEach((name) => this.listen(ws, name, draw));
+    // Saved while typing: only that note's views, and drawn again only if its pages are not as they were.
+    this.listen(ws, 'design-redux:modified', (file) => noteViews(this.app).filter((view) => view.file === file).forEach((view) => this.draw(view, true)));
     this.plugin.partsOf = (file) => this.parts(file);
     this.add(() => {
       delete this.plugin.partsOf;
+      this.drawn = new WeakMap();
       this.extensions.length = 0;
       if (typeof ws.updateOptions === 'function') ws.updateOptions();
       noteViews(this.app).forEach((view) => {
@@ -61,12 +65,17 @@ export class NotePages extends Feature {
     return Promise.all(noteViews(this.app).map((view) => this.draw(view)));
   }
 
-  async draw(view) {
+  /** Draws a note's pages in a view: its tabs, and the page open. `ifChanged`, only when the pages or the page open are not what the view shows. */
+  async draw(view, ifChanged) {
     const file = view.file;
     const pages = parsePages(await this.textOf(view));
     if (view.file !== file) return;
     this.known.set(file.path, pages.map((p) => p.name));
     const open = this.openOf(file, pages);
+    const drawn = [file.path, open].concat(pages.map((p) => p.name)).join('\n');
+    const shown = this.drawn.get(view) === drawn;
+    if (ifChanged && shown && noteHeads(view).every(({ head }) => !pages.length || head.querySelector('.dr-note-pages').firstChild)) return void tidyNoteHeads(view);
+    this.drawn.set(view, drawn);
     // Shown first: showing a page draws reading view again, and the tabs are drawn into what it draws.
     this.show(view, pages.length ? open : null);
     noteHeads(view).forEach(({ head }) => {
