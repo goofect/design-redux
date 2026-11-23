@@ -518,6 +518,24 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     assert.strictEqual(w.plugin.notes.get(w.file('Logic/C.md'), 'week'), '3');
   });
 
+  await check('a link in a property\'s value opens what it links to, Enter on it too; the rest of the row still edits the value', async () => {
+    const w = await world({ 'Logic/A.md': '---\nrelated: "[[B]]"\nsee: ["[[Logic/C#Part|the part]]", plain]\n---\n', 'Logic/B.md': '', 'Logic/C.md': '' });
+    const view = await open(w, 'Logic/A.md');
+    const row = (k) => view.contentEl.querySelector(`.markdown-source-view .dr-prop[data-key="${k}"]`);
+    const links = (k) => Array.from(row(k).querySelectorAll('.dr-prop-value .dr-link')).map((l) => [l.textContent, l.getAttribute('role'), l.getAttribute('tabindex')]);
+    assert.deepStrictEqual([links('related'), links('see'), row('see').querySelector('.dr-prop-value').textContent], [[['B', 'link', '0']], [['the part', 'link', '0']], 'the part, plain']);
+    const opened = [];
+    const was = w.app.workspace.openLinkText;
+    w.app.workspace.openLinkText = async (to, from, tab) => opened.push([to, from, tab]);
+    row('related').querySelector('.dr-link').click();
+    row('see').querySelector('.dr-link').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }));
+    w.app.workspace.openLinkText = was;
+    assert.deepStrictEqual(opened, [['B', 'Logic/A.md', false], ['Logic/C#Part', 'Logic/A.md', true]]);
+    assert.ok(!row('related').querySelector('input'), 'a link pressed opened the value for editing');
+    row('related').click();
+    assert.strictEqual(row('related').querySelector('input').value, '[[B]]', 'the row no longer edits its value');
+  });
+
   await check('the properties listed first: a folder\'s own, and at the vault\'s top everywhere\'s', async () => {
     const w = await world({ 'Logic/A.md': '', 'B.md': '' });
     const run = () => w.app.commands.commands['design-redux:panel-folder-properties'].checkCallback(false);

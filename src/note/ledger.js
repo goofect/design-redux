@@ -16,10 +16,11 @@
 /* used for it across the vault, most used first.                      */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
+import { Keymap, Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { namesIn, valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
+import { link } from '../ui/button.js';
 import { suggestInto } from '../ui/choose.js';
 import { propRow, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
@@ -36,11 +37,14 @@ export function parseValue(text, was) {
 /** A value as the text it is edited as. */
 export const valueText = (value) => valuesOf(value).join(', ');
 
+/** One value that is a link, "[[Note#Part|shown]]": { to (what it links to, a heading's part too), shown }; else null. */
+export function linkOf(value) {
+  const m = /^\s*\[\[([^\]|]+)(?:\|([^\]]*))?\]\]\s*$/.exec(String(value));
+  return m ? { to: m[1].trim(), shown: m[2] || m[1].split('#')[0].split('/').pop() } : null;
+}
+
 /** A value as it is shown: a link as the name of what it links to. */
-export const valueShown = (value) => valuesOf(value).map((v) => {
-  const m = /^\s*\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|([^\]]*))?\]\]\s*$/.exec(v);
-  return m ? (m[2] || m[1].split('/').pop()) : v;
-}).join(', ');
+export const valueShown = (value) => valuesOf(value).map((v) => (linkOf(v) || { shown: v }).shown).join(', ');
 
 /** The properties listed first: those set for the note's folder (or the nearest above it that has some), else everywhere's. */
 export function primaryProps(settings, file) {
@@ -215,6 +219,21 @@ export function ledgerRow(plugin, host, file, key, value, redraw) {
   const wrong = plugin.checkValue ? plugin.checkValue(file, key, value) : null;
   const node = propRow(host, { name: key, value: valueShown(value), invalid: wrong, run: () => selecting(node) || editValue(plugin, node, file, key, value, redraw) });
   node.dataset.key = key;
+  // A link in the value is a link: pressed, or Enter on it, it opens what it links to (with Cmd, in a new tab); the
+  // rest of the row still edits the value.
+  const parts = valuesOf(value);
+  if (parts.some(linkOf)) {
+    const cell = clear(node.querySelector('.dr-prop-value'));
+    parts.forEach((v, i) => {
+      if (i) cell.appendChild(cell.ownerDocument.createTextNode(', '));
+      const to = linkOf(v);
+      if (!to) return void cell.appendChild(cell.ownerDocument.createTextNode(v));
+      link(cell, to.shown, (e) => {
+        e.stopPropagation();
+        plugin.app.workspace.openLinkText(to.to, file.path, Keymap.isModEvent(e));
+      });
+    });
+  }
   // As text is copied and pasted: on a row, ⌘C copies it, ⌘V pastes properties onto the note.
   node.addEventListener('keydown', async (e) => {
     if (e.target !== node || !(e.metaKey || e.ctrlKey) || e.altKey || e.shiftKey) return;

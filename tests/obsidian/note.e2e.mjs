@@ -208,6 +208,21 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(await browser.execute(() => document.querySelectorAll('.suggestion-container').length)).toBe(0);
   });
 
+  it('opens what a link in a property\'s value links to when it is pressed', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);
+      await make('Politics/Linked.md', 'Linked to.');
+      const file = await make('Politics/Linking.md', '---\nrelated: "[[Linked]]"\n---\nText.\n');
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+    });
+    const link = await $('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="related"] .dr-link');
+    await link.waitForExist({ timeout: 8000 });
+    expect(await link.getText()).toBe('Linked');
+    await link.click();
+    const open = await readUntil(() => browser.executeObsidian(({ app }) => (app.workspace.getActiveFile() || {}).path), (p) => p === 'Politics/Linked.md');
+    expect(open).toBe('Politics/Linked.md');
+  });
+
   it('adds a property where the properties stand: a row at the ledger\'s foot, typed with the keys, its name offered, Enter to the value and Enter writes it', async function () {
     await browser.executeObsidian(async ({ app }) => {
       const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);
