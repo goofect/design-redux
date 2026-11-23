@@ -11,6 +11,7 @@
 /* way in: both reach it behind checks, and do nothing if it changes.  */
 /* ------------------------------------------------------------------ */
 
+import { View } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { el } from '../core/dom.js';
 import { field } from '../ui/field.js';
@@ -53,7 +54,7 @@ export class GraphRoutes extends Feature {
 
   /** The kind of graph a command means: the one in the page, else the vault's. */
   currentType() {
-    const view = this.app.workspace.activeLeaf && this.app.workspace.activeLeaf.view;
+    const view = this.app.workspace.getActiveViewOfType(View);
     const type = view && typeof view.getViewType === 'function' ? view.getViewType() : '';
     return GRAPH_TYPES.includes(type) ? type : 'graph';
   }

@@ -78,6 +78,17 @@ const VAULT = {
     assert.deepStrictEqual(props(w, 'Logic/A.md').tags, ['formal', 'logic/proof']);
   });
 
+  await check('a note written after a bulk change keeps what was written: Undo leaves its text alone', async () => {
+    const w = await world(VAULT);
+    const tools = feature(w, 'PropertyTools');
+    await tools.renameTag('formal', 'rigorous');
+    const file = w.app.vault.getAbstractFileByPath('Logic/A.md');
+    await w.app.vault.process(file, (t) => `${t}\nWritten since.`);
+    await tools.bulk.undo();
+    assert.ok(w.text('Logic/A.md').includes('Written since.'));
+    assert.ok(w.text('Logic/A.md').includes('Text #rigorous'));
+  });
+
   await check('properties added and removed in a folder; a folder\'s defaults given to a note made there; notes missing one found', async () => {
     const w = await world(VAULT);
     const tools = feature(w, 'PropertyTools');

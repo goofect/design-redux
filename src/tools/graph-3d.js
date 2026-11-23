@@ -9,7 +9,7 @@
 /* something changes and never by itself.                              */
 /* ------------------------------------------------------------------ */
 
-import { ItemView, TFile } from 'obsidian';
+import { ItemView, TFile, View } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { headRow } from '../ui/head.js';
@@ -221,8 +221,9 @@ export class Graph3D extends Feature {
 
   /** In Obsidian's graph: the same in 3D. In the 3D graph: Obsidian's. */
   async swap() {
-    const leaf = this.app.workspace.activeLeaf;
-    const type = leaf && leaf.view ? leaf.view.getViewType() : '';
+    const view = this.app.workspace.getActiveViewOfType(View);
+    const leaf = view && view.leaf;
+    const type = leaf ? view.getViewType() : '';
     if (type === GRAPH_3D_VIEW) return leaf.setViewState({ type: 'graph', active: true });
     if (type === 'graph' || type === 'localgraph') return leaf.setViewState({ type: GRAPH_3D_VIEW, active: true, state: { around: null } });
     return this.open(null);

@@ -96,11 +96,13 @@ export class Bulk {
     const texts = [];
     for (const file of files) {
       if (text) {
-        const before = await this.plugin.app.vault.cachedRead(file);
-        const after = text(before, file);
-        if (after !== before) {
-          await this.plugin.app.vault.modify(file, after);
-          texts.push({ file, before, after });
+        // Written through process, from the text as it is then, so an edit made meanwhile is kept.
+        const vault = this.plugin.app.vault;
+        const seen = await vault.cachedRead(file);
+        if (text(seen, file) !== seen) {
+          let before = seen;
+          const after = await vault.process(file, (now) => text((before = now), file));
+          if (after !== before) texts.push({ file, before, after });
         }
       }
       if (!change) continue;
@@ -120,12 +122,9 @@ export class Bulk {
     if (!last) return void new Notice('There is no bulk change to undo.'), false;
     this.last = null;
     for (const t of last.texts) {
-      const now = await this.plugin.app.vault.cachedRead(t.file);
-      // A note's text is put back only if nothing has been written in it since.
-      if (now.replace(/^---\n[\s\S]*?\n---\n?/, '') === t.after.replace(/^---\n[\s\S]*?\n---\n?/, '')) {
-        const head = (/^---\n[\s\S]*?\n---\n?/.exec(now) || [''])[0];
-        await this.plugin.app.vault.modify(t.file, head + t.before.replace(/^---\n[\s\S]*?\n---\n?/, ''));
-      }
+      // A note's text is put back only if nothing has been written in it since; its properties stay as they are now.
+      const head = /^---\n[\s\S]*?\n---\n?/;
+      await this.plugin.app.vault.process(t.file, (now) => (now.replace(head, '') === t.after.replace(head, '') ? (head.exec(now) || [''])[0] + t.before.replace(head, '') : now));
     }
     await this.plugin.notes.undo(last.records);
     new Notice(`Undone: ${last.title}.`);

@@ -6,7 +6,7 @@
 /* library can do.                                                     */
 /* ------------------------------------------------------------------ */
 
-import { Keymap } from 'obsidian';
+import { Keymap, View } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
 import { drawFolderPage } from './contents.js';
@@ -65,7 +65,7 @@ export class Library extends Feature {
 
   /** The screen an action means: the browse view if it has the page, else the sidebar's. */
   activeScreen() {
-    const view = this.app.workspace.activeLeaf && this.app.workspace.activeLeaf.view;
+    const view = this.app.workspace.getActiveViewOfType(View);
     if (view && view.screen) return view.screen;
     return this.screens()[0] || null;
   }
