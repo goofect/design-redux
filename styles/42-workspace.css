@@ -22,6 +22,8 @@
 /*   .mod-root .workspace-tab-header(-inner, -inner-title, -inner-icon, */
 /*   -inner-close-button, -status-container)   a tab in the main area */
 /*   .mod-left-split                    the sidebar, whose tab is hid  */
+/*   .menu-item (marked .dr-menu-hidden)  an entry for the hidden      */
+/*                                      properties block               */
 /*   .sidebar-toggle-button             the sidebars' toggles          */
 /*   .workspace-leaf-content > .view-header   a view's header          */
 /*   .metadata-container                the properties block in a note */
@@ -140,6 +142,12 @@ body.dr-active.dr-region-workspace .suggestion-item.is-selected .suggestion-titl
 body.dr-active.dr-region-workspace .menu-item.selected:not(.is-label):not(.is-disabled) .menu-item-title {
   text-decoration: underline;
   text-underline-offset: var(--dr-ring);
+}
+
+/* An entry of Obsidian's menus for its own properties block, which the look hides (Add file property, Rename
+   property): the menu filter marks it, and it goes while the block is gone; the ledger's own entries stand for it. */
+body.dr-active.dr-region-workspace .dr-menu-hidden {
+  display: none;
 }
 
 /* The sidebar's edge draws no line: space parts the panes. Its handle still resizes it. */

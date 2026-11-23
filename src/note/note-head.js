@@ -95,6 +95,10 @@ export class NotePage extends Feature {
     this.add(() => { clearTimeout(this.pending); this.pending = null; });
     ['file-open', 'layout-change', 'design-redux:settings', 'design-redux:renamed', 'design-redux:page'].forEach((name) => this.listen(ws, name, draw));
     this.listen(ws, 'design-redux:props', (file) => noteViews(this.app).filter((view) => view.file === file).forEach((view) => this.draw(view)));
+    // In the note itself: its text's menu and its tab's offer Add a property, which opens the row under its title.
+    const offer = (menu, file) => file instanceof TFile && file.extension === 'md' && menu.addItem((i) => i.setTitle('Add a property').setSection('action').onClick(() => this.addTo(file)));
+    this.listen(ws, 'editor-menu', (menu, editor, info) => offer(menu, info && info.file));
+    this.listen(ws, 'file-menu', (menu, file, source) => (source === 'tab-header' || source === 'more-options') && offer(menu, file));
     this.add(() => noteViews(this.app).forEach((view) => {
       noteHeads(view).forEach(({ folder, head }) => {
         clear(folder);

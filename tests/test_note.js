@@ -494,6 +494,19 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     run();
     key(fresh().querySelector('input'), 'Escape');
     assert.ok(!fresh(), 'Escape left the row');
+    // Within the note: its text's menu and its tab's offer it; the library's own note menu, which says file-menu too, is not given it twice.
+    const textMenu = new obsidian.Menu();
+    w.app.workspace.trigger('editor-menu', textMenu, view.editor, view);
+    textMenu.click('Add a property');
+    assert.ok(fresh(), 'the text\'s menu did not open the row');
+    key(fresh().querySelector('input'), 'Escape');
+    const tabMenu = new obsidian.Menu();
+    w.app.workspace.trigger('file-menu', tabMenu, w.file('Logic/A.md'), 'tab-header');
+    assert.deepStrictEqual(tabMenu.titles(), ['Add a property']);
+    const libraryMenu = new obsidian.Menu();
+    w.app.workspace.trigger('file-menu', libraryMenu, w.file('Logic/A.md'), 'design-redux-library');
+    w.app.workspace.trigger('file-menu', libraryMenu, w.file('Logic/A.md'), 'file-explorer-context-menu');
+    assert.deepStrictEqual(libraryMenu.titles(), [], 'offered outside the note');
     // A note with no properties: the row is the ledger, and "name: value" in the name writes at once.
     const plain = await open(w, 'Logic/C.md');
     run();

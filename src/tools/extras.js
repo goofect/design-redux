@@ -55,8 +55,8 @@ ActionsMenu.title = 'Actions menu';
 ActionsMenu.section = 'Tools';
 ActionsMenu.about = 'One menu of everything the plugin can do.';
 
-/** Entries of Obsidian's own menus that are not wanted. */
-export const HIDDEN_MENU_ITEMS = ['Rename property'];
+/** Entries of Obsidian's own menus for its properties block, which the look hides: they would act on nothing to be seen. */
+export const HIDDEN_MENU_ITEMS = ['Rename property', 'Add file property'];
 
 /**
  * The menu filter. Obsidian's own context menu is the better menu, so it is

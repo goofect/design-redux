@@ -343,10 +343,10 @@ const VAULT = {
     const w = await world({});
     const menu = w.doc.createElement('div');
     menu.className = 'menu';
-    ['Copy', 'Rename property'].forEach((t) => { const item = menu.appendChild(w.doc.createElement('div')); item.className = 'menu-item'; item.appendChild(w.doc.createElement('div')).className = 'menu-item-title'; item.firstChild.textContent = t; });
+    ['Copy', 'Rename property', 'Add file property'].forEach((t) => { const item = menu.appendChild(w.doc.createElement('div')); item.className = 'menu-item'; item.appendChild(w.doc.createElement('div')).className = 'menu-item-title'; item.firstChild.textContent = t; });
     w.doc.body.appendChild(menu);
     await settle();
-    assert.deepStrictEqual(Array.from(menu.children).map((i) => i.classList.contains('dr-menu-hidden')), [false, true]);
+    assert.deepStrictEqual(Array.from(menu.children).map((i) => i.classList.contains('dr-menu-hidden')), [false, true, true]);
     w.plugin.features.find((f) => f.constructor.name === 'MenuFilter').off();
     assert.ok(!menu.querySelector('.dr-menu-hidden'));
   });
