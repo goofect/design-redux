@@ -13,7 +13,7 @@ import { MarkdownView, TFile } from 'obsidian';
 import { asButton, clear, el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { ask } from '../ui/sheet.js';
-import { addProperty, drawLedger } from './ledger.js';
+import { addProperty, addRow, drawLedger } from './ledger.js';
 
 /** Where a note is laid out, each holding its inline title: the editor's sizer and reading view's header. The note's own, not an embed's. */
 function placesOf(view) {
@@ -132,9 +132,23 @@ export class NotePage extends Feature {
     tidyNoteHeads(view);
   }
 
+  /** Adds a property under the note's title, in the view that shows it (the one in front first); a sheet asks where none does. */
+  addTo(file) {
+    if (this.on) {
+      const front = this.app.workspace.getActiveViewOfType(MarkdownView);
+      const views = noteViews(this.app).filter((v) => v.file === file).sort((a, b) => (b === front) - (a === front));
+      for (const view of views) {
+        const shown = typeof view.getMode === 'function' && view.getMode() === 'preview' ? '.markdown-preview-view' : '.markdown-source-view';
+        const head = noteHeads(view).map((h) => h.head).find((h) => h.closest(shown));
+        if (head) return addRow(this.plugin, head.querySelector('.dr-note-props'), file);
+      }
+    }
+    return addProperty(this.plugin, file);
+  }
+
   actions() {
     return [
-      { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property…', run: (ctx) => addProperty(this.plugin, ctx.file) },
+      { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property', run: (ctx) => this.addTo(ctx.file) },
       // In a folder, the properties listed first there; at the vault's top, everywhere's.
       { id: 'panel-folder-properties', name: 'Properties listed first in this folder…', on: 'folder', menu: 'Properties listed first…', run: async (ctx) => {
         const top = ctx.folder.path === '/';

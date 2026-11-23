@@ -56,9 +56,10 @@ export function lists() {
       shown('open · underlined', rows(row(n.title, { 'aria-current': 'page' }))), shown('picked · underlined', rows(row(n.title, { 'aria-selected': 'true' }))),
       shown('disabled · grey', rows(row(n.title, { 'aria-disabled': 'true' }))), shown('wrong · red, its word', rows(row(n.title, { 'aria-invalid': 'true', end: 'unreadable' }))),
     ]),
-    component('Property', 'The ledger’s row: name grey in a fixed column, value ink, parted by space; a value edited where it stands.', [
+    component('Property', 'The ledger’s row: name grey in a fixed column, value ink, parted by space; a value edited where it stands, and a property added there, a field each.', [
       shown('hover', rows(prop('Status', 'Draft', { class: 'spec-hover' }))), shown('picked · underlined', rows(prop('Status', 'Draft', { 'aria-selected': 'true' }))),
       shown('no value · a dash', rows(prop('Sources', '—', { none: true }))), shown('wrong · red, the words saying why', rows(prop('Week', 'six', { 'aria-invalid': 'true', why: 'not a number' }))),
+      shown('added · a field each, where it will stand', `<div class="dr-note-props" style="width:360px">${rows(`<div class="dr-prop dr-prop-new"><span class="dr-prop-name dr-field-box"><input class="dr-input" type="text" value="source"></span><span class="dr-prop-value dr-field-box spec-focus"><input class="dr-input" type="text" placeholder="value"></span><span class="dr-prop-why"></span></div>`)}</div>`),
     ]),
   ].join(''));
 }

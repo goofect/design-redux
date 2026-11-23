@@ -50,6 +50,26 @@
 }
 
 /* The pages: the first word on the column's edge, the room its focus outline needs out in the margin. */
+/* A property being added: its name and value typed where they will stand, each a field (a line under it), the
+   name as it is typed; the placeholders, grey, say which is which. */
+.dr-note-props .dr-prop-new {
+  cursor: default;
+}
+
+.dr-prop-new input.dr-input {
+  width: 100%;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* A field in the ledger, a value edited or a property added: Obsidian's own box round a focused text input is not
+   drawn; the field's line and the focus outline are the plugin's. */
+.dr-prop input.dr-input,
+.dr-prop input.dr-input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
 .dr-note-pages {
   margin-left: calc(-1 * var(--dr-u));
   display: flex;

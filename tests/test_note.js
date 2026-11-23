@@ -463,6 +463,48 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     ]);
   });
 
+  await check('a property added where the properties stand: a row at the ledger\'s foot, Enter from the name to the value and Enter writes it; a name the note has is said in red; Escape takes it away; with none, the row is the ledger', async () => {
+    const w = await world({ 'Logic/A.md': '---\nstatus: draft\n---\n', 'Logic/B.md': '---\ncourse: Logic\n---\n', 'Logic/C.md': 'x' });
+    const sheets = obsidian.Modal.open.length;
+    const run = () => w.app.commands.commands['design-redux:add-property'].checkCallback(false);
+    const key = (input, k) => input.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    const typed = (input, text) => { input.value = text; input.dispatchEvent(new window.Event('input', { bubbles: true })); };
+    const view = await open(w, 'Logic/A.md');
+    const fresh = () => view.contentEl.querySelector('.markdown-source-view .dr-note-props .dr-ledger > .dr-prop-new');
+    run();
+    const row = fresh();
+    assert.ok(row && row.previousElementSibling.dataset.key === 'status', 'the new row is not at the ledger\'s foot');
+    assert.strictEqual(obsidian.Modal.open.length, sheets, 'a sheet opened');
+    const [name, value] = row.querySelectorAll('input');
+    assert.deepStrictEqual([w.doc.activeElement, name.placeholder, value.placeholder], [name, 'name', 'value']);
+    typed(name, 'status');
+    key(name, 'Enter');
+    assert.strictEqual(w.doc.activeElement, value, 'Enter in the name did not go to the value');
+    key(value, 'Enter');
+    await settle();
+    assert.deepStrictEqual([row.getAttribute('aria-invalid'), row.querySelector('.dr-prop-why').textContent, w.plugin.notes.get(w.file('Logic/A.md'), 'status')], ['true', 'This note already has it.', 'draft']);
+    typed(name, 'course');
+    assert.ok(!row.hasAttribute('aria-invalid'), 'the red stayed once the name changed');
+    typed(value, 'Logic');
+    key(value, 'Enter');
+    await settle();
+    assert.deepStrictEqual([w.plugin.notes.get(w.file('Logic/A.md'), 'course'), !!fresh()], ['Logic', false]);
+    await w.plugin.lastUndo.run();
+    assert.ok(!('course' in w.plugin.notes.props(w.file('Logic/A.md'))), 'adding was not one Undo');
+    run();
+    key(fresh().querySelector('input'), 'Escape');
+    assert.ok(!fresh(), 'Escape left the row');
+    // A note with no properties: the row is the ledger, and "name: value" in the name writes at once.
+    const plain = await open(w, 'Logic/C.md');
+    run();
+    const first = plain.contentEl.querySelector('.markdown-source-view .dr-note-props .dr-ledger > .dr-prop-new');
+    assert.ok(first, 'no row for a note without properties');
+    typed(first.querySelector('input'), 'week: 3');
+    key(first.querySelector('input'), 'Enter');
+    await settle();
+    assert.strictEqual(w.plugin.notes.get(w.file('Logic/C.md'), 'week'), '3');
+  });
+
   await check('the properties listed first: a folder\'s own, and at the vault\'s top everywhere\'s', async () => {
     const w = await world({ 'Logic/A.md': '', 'B.md': '' });
     const run = () => w.app.commands.commands['design-redux:panel-folder-properties'].checkCallback(false);

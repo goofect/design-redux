@@ -10,18 +10,14 @@
 
 import { Notice, TFile } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { noteProps, propOf, valuesOf } from '../core/notes.js';
+import { namesIn, noteProps, propOf, valuesOf } from '../core/notes.js';
 import { choose, chooseFolder } from '../ui/choose.js';
 import { field } from '../ui/field.js';
 import { Sheet, ask } from '../ui/sheet.js';
 import { Bulk, VALUE_TYPES, joinValues, renameKey, renameTagInText, replaceValue, retype } from './bulk.js';
 
 /** Every property name in use, most used first: [[name, count]]. */
-export function propertyNames(plugin, files) {
-  const counts = new Map();
-  (files || plugin.index.markdown()).forEach((f) => Object.keys(noteProps(plugin.app, f)).forEach((k) => counts.set(k, (counts.get(k) || 0) + 1)));
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-}
+export const propertyNames = (plugin, files) => namesIn(plugin.app, files || plugin.index.markdown());
 
 /** The values a property takes, most used first: [[value, count]]. */
 export const propertyValues = (plugin, key) => plugin.index.values(key);

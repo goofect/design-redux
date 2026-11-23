@@ -24,6 +24,13 @@ export function noteProps(app, file) {
 }
 
 /** A property by name, whatever its capitals. */
+/** Every property name the notes have, most used first: [[name, count]]. From Obsidian's cache, so no file is read. */
+export function namesIn(app, files) {
+  const counts = new Map();
+  files.forEach((f) => Object.keys(noteProps(app, f)).forEach((k) => counts.set(k, (counts.get(k) || 0) + 1)));
+  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
+
 export function propOf(props, key) {
   if (key in props) return props[key];
   const lower = String(key).toLowerCase();

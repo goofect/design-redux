@@ -7,7 +7,8 @@
 /* (Enter writes it, with an Undo; Escape leaves it); a row's menu     */
 /* renames or removes it; a value the folder's schema finds wrong is   */
 /* red, the reason after it. No heading, no buttons, no icons: a       */
-/* property is added by its command, as "name" or "name: value".      */
+/* property is added where they stand, a row at the ledger's foot that */
+/* its command or a row's menu opens, name and value typed in place.   */
 /* Properties copy and paste as text does: rows selected, or one       */
 /* focused, and ⌘C; ⌘V on a row, or several lines pasted into a field. */
 /* They travel as "name: value" lines. While a value is typed, the     */
@@ -16,8 +17,8 @@
 /* ------------------------------------------------------------------ */
 
 import { Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
-import { clear } from '../core/dom.js';
-import { valuesOf } from '../core/notes.js';
+import { clear, el } from '../core/dom.js';
+import { namesIn, valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
 import { suggestInto } from '../ui/choose.js';
 import { propRow, rows } from '../ui/row.js';
@@ -82,7 +83,7 @@ export function pasteProps(plugin, file, props) {
   return plugin.notes.write(file, (fm) => Object.assign(fm, JSON.parse(JSON.stringify(props))), { undo: `${counted(Object.keys(props).length, 'property', 'properties')} pasted.` });
 }
 
-/** Asks for a property, "name" or "name: value", and adds it; properties pasted into its field, several lines of them, are added at once. */
+/** Asks for a property in a sheet, "name" or "name: value", and adds it: where the note shows no ledger to add it in. Properties pasted into its field, several lines of them, are added at once. */
 export async function addProperty(plugin, file) {
   let pasted = null;
   const text = await ask(plugin.app, {
@@ -99,8 +100,93 @@ export async function addProperty(plugin, file) {
   return plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} added.` });
 }
 
-/** A property's own menu: rename it, remove it. */
-export function propertyMenu(plugin, file, key) {
+/**
+ * Adds a property where the properties stand: a new row at the foot of the
+ * ledger in `host` (made if the note has none), its name and value typed in
+ * place. Names the vault uses are offered, then that property's values. Enter
+ * in the name goes to the value, Enter there writes it (one Undo); "name:
+ * value" in the name writes at once. Escape, or leaving it with no name, takes
+ * it away. Several lines of properties pasted into it are added at once.
+ */
+export function addRow(plugin, host, file) {
+  const open = host.querySelector('.dr-prop-new input');
+  if (open) return void open.focus();
+  let list = host.querySelector('.dr-ledger');
+  if (!list) {
+    list = rows(host);
+    list.classList.add('dr-ledger');
+  }
+  const node = el(list, 'div', 'dr-prop dr-prop-new');
+  const field = (cls, label, placeholder) => {
+    const input = el(el(node, 'span', cls), 'input', 'dr-input');
+    input.type = 'text';
+    input.placeholder = placeholder;
+    input.setAttribute('aria-label', label);
+    return input;
+  };
+  // Each a field as the plugin draws one: a line under its text, the focus outline round it while typed in.
+  const name = field('dr-prop-name dr-field-box', 'Property name', 'name');
+  const value = field('dr-prop-value dr-field-box', 'Value', 'value');
+  const why = el(node, 'span', 'dr-prop-why');
+  const has = () => plugin.notes.props(file);
+  const stops = [
+    suggestInto(plugin.app, name, { words: () => namesIn(plugin.app, plugin.index.markdown()).filter(([k]) => !(k in has())).map(([k]) => ({ text: k, shown: k })), picked: () => value.focus() }),
+    suggestInto(plugin.app, value, { words: () => valueWords(plugin, file, name.value.trim()) }),
+  ];
+  let done = false;
+  const close = () => {
+    if (done) return;
+    done = true;
+    stops.forEach((stop) => stop());
+    node.remove();
+    if (!list.querySelector('.dr-prop')) list.remove();
+  };
+  // `leaving`: focus went elsewhere, so a name the note has already is dropped rather than asked again.
+  const commit = async (leaving) => {
+    const typed = name.value.includes(':') && !value.value.trim() ? parseAdded(name.value) : { key: name.value.trim(), value: value.value.trim() };
+    if (!typed.key) return close();
+    if (typed.key in has()) {
+      if (leaving) return close();
+      node.setAttribute('aria-invalid', 'true');
+      why.textContent = 'This note already has it.';
+      return void name.focus();
+    }
+    close();
+    await plugin.notes.write(file, (fm) => (fm[typed.key] = typed.value), { undo: `${typed.key} added.` });
+  };
+  [name, value].forEach((input) => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (input === name && name.value.trim() && !name.value.includes(':')) value.focus();
+        else commit(false);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        close();
+      }
+      e.stopPropagation();
+    });
+    input.addEventListener('input', () => {
+      node.removeAttribute('aria-invalid');
+      why.textContent = '';
+    });
+    input.addEventListener('paste', async (e) => {
+      const props = e.clipboardData ? pastedProps(e.clipboardData.getData('text/plain')) : null;
+      if (!props) return;
+      e.preventDefault();
+      close();
+      await pasteProps(plugin, file, props);
+    });
+    input.addEventListener('click', (e) => e.stopPropagation());
+  });
+  node.addEventListener('focusout', (e) => {
+    if (!e.relatedTarget || !node.contains(e.relatedTarget)) setTimeout(() => !done && !node.contains(node.ownerDocument.activeElement) && commit(true), 0);
+  });
+  name.focus();
+}
+
+/** A property's own menu: rename it, remove it, add another in the ledger at `host` (or in a sheet). */
+export function propertyMenu(plugin, file, key, host) {
   const menu = new Menu();
   menu.addItem((i) => i.setTitle('Rename property…').setSection('action').onClick(async () => {
     const to = await ask(plugin.app, { title: `Rename ${key}`, value: key, action: 'Rename', check: (v) => (v !== key && v in plugin.notes.props(file) ? 'This note already has it.' : null) });
@@ -111,7 +197,7 @@ export function propertyMenu(plugin, file, key) {
       entries.forEach(([k, v]) => (fm[k] = v));
     }, { undo: `${key} renamed to ${to}.` });
   }));
-  menu.addItem((i) => i.setTitle('Add a property…').setSection('action').onClick(() => addProperty(plugin, file)));
+  menu.addItem((i) => i.setTitle('Add a property').setSection('action').onClick(() => (host ? addRow(plugin, host, file) : addProperty(plugin, file))));
   menu.addItem((i) => i.setTitle('Remove property').setSection('danger').onClick(() => plugin.notes.write(file, (fm) => delete fm[key], { undo: `${key} removed.` })));
   return menu;
 }
@@ -149,7 +235,7 @@ export function ledgerRow(plugin, host, file, key, value, redraw) {
   node.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    propertyMenu(plugin, file, key).showAtMouseEvent(e);
+    propertyMenu(plugin, file, key, host.parentElement).showAtMouseEvent(e);
   });
   return node;
 }

@@ -207,4 +207,37 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
     expect(written).toBe('drafted');
     expect(await browser.execute(() => document.querySelectorAll('.suggestion-container').length)).toBe(0);
   });
+
+  it('adds a property where the properties stand: a row at the ledger\'s foot, typed with the keys, its name offered, Enter to the value and Enter writes it', async function () {
+    await browser.executeObsidian(async ({ app }) => {
+      const make = async (path, text) => app.vault.getAbstractFileByPath(path) || app.vault.create(path, text);
+      await make('Politics/Course one.md', '---\ncourse: IR\n---\n');
+      const file = await make('Politics/Course two.md', '---\nstatus: draft\n---\nText.\n');
+      await app.workspace.getLeaf(false).openFile(file, { state: { mode: 'source' } });
+    });
+    await (await $('.workspace-leaf.mod-active .dr-note-head .dr-prop[data-key="status"]')).waitForExist({ timeout: 8000 });
+    await browser.executeObsidian(({ app }) => app.commands.executeCommandById('design-redux:add-property'));
+    const row = await $('.workspace-leaf.mod-active .dr-note-head .dr-prop-new');
+    await row.waitForExist({ timeout: 4000 });
+    const at = await browser.execute(() => {
+      const r = document.querySelector('.workspace-leaf.mod-active .dr-prop-new');
+      return { foot: r.previousElementSibling && r.previousElementSibling.dataset.key, focused: document.activeElement === r.querySelector('input') };
+    });
+    expect(at).toEqual({ foot: 'status', focused: true });
+    await browser.keys(['c', 'o', 'u']);
+    const offered = await readUntil(
+      () => browser.execute(() => Array.from(document.querySelectorAll('.suggestion-container .suggestion-item')).map((e) => e.textContent)),
+      (v) => v.length > 0
+    );
+    expect(offered[0]).toBe('course');
+    await shot('ledger-adding');
+    await browser.keys(['ArrowDown', 'Enter']);
+    await browser.keys(['I', 'R', 'Enter']);
+    const written = await readUntil(
+      () => browser.executeObsidian(({ app }) => (app.metadataCache.getFileCache(app.vault.getAbstractFileByPath('Politics/Course two.md')).frontmatter || {}).course),
+      (v) => v === 'IR'
+    );
+    expect(written).toBe('IR');
+    expect(await browser.execute(() => document.querySelectorAll('.dr-prop-new').length)).toBe(0);
+  });
 });
