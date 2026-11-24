@@ -98,6 +98,28 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(type).toBe('design-redux-browse');
   });
 
+  it('opens Obsidian\'s graph of a folder from its menu, its search the folder\'s path', async function () {
+    const seen = await browser.executeObsidian(async ({ app }) => {
+      const folder = app.vault.getAllLoadedFiles().find((f) => f.children && f.path !== '/');
+      if (!folder) return null;
+      const before = app.workspace.getLeavesOfType('graph').length;
+      await app.plugins.plugins['design-redux'].features.find((f) => typeof f.openFolder === 'function').openFolder(folder);
+      await new Promise((r) => setTimeout(r, 1000));
+      const leaves = app.workspace.getLeavesOfType('graph');
+      const view = leaves[leaves.length - 1] && leaves[leaves.length - 1].view;
+      const options = (view && view.dataEngine && view.dataEngine.getOptions()) || {};
+      const nodes = view && view.renderer && Array.isArray(view.renderer.nodes) ? view.renderer.nodes.map((n) => n.id) : [];
+      const out = { opened: leaves.length - before, path: folder.path, search: options.search, nodes };
+      leaves.forEach((l) => l.detach());
+      return out;
+    });
+    expect(seen).not.toBe(null);
+    expect(seen.opened).toBe(1);
+    expect(seen.search).toBe(`path:"${seen.path}/"`);
+    expect(seen.nodes.length).toBeGreaterThan(0);
+    expect(seen.nodes.filter((id) => !id.startsWith(`${seen.path}/`))).toEqual([]);
+  });
+
   it('shows the main area\'s tabs as words: each as wide as its name, grey, the one in front ink; no close button, and no tab in the sidebar', async function () {
     const seen = await browser.executeObsidian(async ({ app }) => {
       const files = app.vault.getMarkdownFiles().slice(0, 3);

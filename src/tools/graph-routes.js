@@ -11,7 +11,7 @@
 /* way in: both reach it behind checks, and do nothing if it changes.  */
 /* ------------------------------------------------------------------ */
 
-import { View } from 'obsidian';
+import { Notice, View } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { el } from '../core/dom.js';
 import { field } from '../ui/field.js';
@@ -130,6 +130,23 @@ export class GraphFilter extends Feature {
     } });
   }
 
+  /** Obsidian's graph in a new tab, cut to a folder's notes: its search set to the folder's path, as a bookmarked graph is opened. */
+  async openFolder(folder) {
+    const core = this.app.internalPlugins;
+    if (core && typeof core.getEnabledPluginById === 'function' && !core.getEnabledPluginById('graph')) return void new Notice('Obsidian’s graph is turned off in its core plugins.');
+    const leaf = this.app.workspace.getLeaf('tab');
+    await leaf.setViewState({ type: 'graph', active: true });
+    const view = leaf.view;
+    const query = folder && folder.path !== '/' ? `path:"${folder.path.replace(/"/g, '')}/"` : '';
+    if (view && view.dataEngine && typeof view.dataEngine.setOptions === 'function') view.dataEngine.setOptions({ search: query });
+    else if (view && view.contentEl) this.write(view, query);
+    return leaf;
+  }
+
+  actions() {
+    return [{ id: 'open-graph-folder', name: 'Open the graph of this folder', on: 'folder', menu: 'Graph', run: (ctx) => this.openFolder(ctx.folder) }];
+  }
+
   /** Puts a query into the graph's own search field, if it still has one where it was. */
   write(view, query) {
     const input = view.contentEl.querySelector('.graph-controls input[type="search"], .graph-controls .search-input-container input');
@@ -141,4 +158,4 @@ export class GraphFilter extends Feature {
 }
 GraphFilter.title = 'Graph filter';
 GraphFilter.section = 'Tools';
-GraphFilter.about = 'A field in the graph that filters it by a property.';
+GraphFilter.about = 'A field in the graph that filters it by a property, and a folder’s graph from its menu.';

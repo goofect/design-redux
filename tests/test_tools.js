@@ -243,6 +243,13 @@ const VAULT = {
     await settle();
     assert.strictEqual(leaf.view.contentEl.querySelector('.graph-controls input').value, '[domain:Law] [status]');
     assert.deepStrictEqual(w.plugin.settings.graphFilters.graph, { text: 'domain=Law, status' });
+    // A folder's graph, from its menu: Obsidian's own, in a new tab, its search the folder's path.
+    await w.app.vault.createFolder('Law');
+    const opened = await w.plugin.features.find((f) => f instanceof dr.GraphFilter).openFolder(w.app.vault.getAbstractFileByPath('Law'));
+    assert.strictEqual(opened.view.getViewType(), 'graph');
+    assert.notStrictEqual(opened, leaf, 'the folder’s graph took the open one’s tab');
+    assert.strictEqual(opened.view.contentEl.querySelector('.graph-controls input').value, 'path:"Law/"');
+    assert.ok(w.app.commands.commands['design-redux:open-graph-folder']);
     w.plugin.unload();
     assert.deepStrictEqual(renderer.links.map((l) => l.line.visible), [true, true, true], 'unloading left lines out');
     assert.ok(!leaf.view.contentEl.querySelector('.dr-graph-filter'));
