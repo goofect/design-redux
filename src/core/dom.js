@@ -4,10 +4,11 @@
 /* Elements are made with createElement and filled with textContent,   */
 /* never innerHTML. State goes on as an ARIA attribute (`flag`), which */
 /* is what the styles read. A glyph is one of the plugin's own, drawn  */
-/* through Obsidian's setIcon.                                         */
+/* through Obsidian's setIcon. Text goes to and from the clipboard     */
+/* here, saying so when it can't be reached.                           */
 /* ------------------------------------------------------------------ */
 
-import { setIcon } from 'obsidian';
+import { Notice, setIcon } from 'obsidian';
 
 /** A new element, appended to `parent` (or made in a document, when one is given). */
 export function el(parent, tag, cls, text) {
@@ -66,4 +67,26 @@ export function glyph(parent, name) {
   svg.setAttribute('data-glyph', name);
   parent.appendChild(svg);
   return svg;
+}
+
+/** Puts text on the clipboard, and says `said` when given. Resolves whether it could. */
+export async function copyText(text, said) {
+  try {
+    await navigator.clipboard.writeText(text);
+    if (said) new Notice(said);
+    return true;
+  } catch (err) {
+    new Notice('Could not reach the clipboard.');
+    return false;
+  }
+}
+
+/** The clipboard's text; '' when it can't be reached, which is said. */
+export async function clipboardText() {
+  try {
+    return await navigator.clipboard.readText();
+  } catch (err) {
+    new Notice('Could not reach the clipboard.');
+    return '';
+  }
 }

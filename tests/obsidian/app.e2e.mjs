@@ -11,7 +11,7 @@ suite('Design Redux in Obsidian: the app', function () {
         commands: Object.keys(app.commands.commands).filter((id) => id.startsWith('design-redux:')).length,
       };
     });
-    expect(got.features).toBe(23);
+    expect(got.features).toBe(22);
     expect(got.commands).toBeGreaterThanOrEqual(59);
   });
 

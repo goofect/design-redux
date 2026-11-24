@@ -106,12 +106,12 @@ button.dr-button {
   scroll-snap-align: start;
 }
 
-.dr-tabs > .dr-segment.is-cut {
+.dr-tabs > .dr-segment[data-cut] {
   visibility: hidden;
 }
 
-.dr-tabs.is-more-before::before,
-.dr-tabs.is-more-after::after {
+.dr-tabs[data-more-before]::before,
+.dr-tabs[data-more-after]::after {
   content: "…";
   position: sticky;
   flex: none;
@@ -122,11 +122,11 @@ button.dr-button {
   color: var(--dr-muted);
 }
 
-.dr-tabs.is-more-before::before {
+.dr-tabs[data-more-before]::before {
   left: 0;
 }
 
-.dr-tabs.is-more-after::after {
+.dr-tabs[data-more-after]::after {
   right: 0;
 }
 

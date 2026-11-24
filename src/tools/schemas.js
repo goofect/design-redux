@@ -4,7 +4,7 @@
 /* A folder's schema says, a property at a time, its type, whether it  */
 /* is required, and the values allowed. Kept by the folder's path, as  */
 /* the old plugin kept it: [{ key, type, required, values, default }]. */
-/* Where a note falls short the panel marks the row and says why; a    */
+/* Where a note falls short its ledger marks the row and says why; a   */
 /* command lists every note that does.                                 */
 /* ------------------------------------------------------------------ */
 

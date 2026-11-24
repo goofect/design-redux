@@ -16,9 +16,9 @@
 /* used for it across the vault, most used first.                      */
 /* ------------------------------------------------------------------ */
 
-import { Keymap, Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
-import { clear, el } from '../core/dom.js';
-import { copyValue, keyOf, linkOf, namesIn, valueShown, valuesOf } from '../core/notes.js';
+import { Keymap, Menu, parseYaml, stringifyYaml } from 'obsidian';
+import { clear, clipboardText, copyText, el } from '../core/dom.js';
+import { copyValue, keyOf, linkOf, namesIn, setInOrder, valueShown, valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
 import { link } from '../ui/button.js';
 import { suggestInto } from '../ui/choose.js';
@@ -188,11 +188,7 @@ export function propertyMenu(plugin, file, key, host) {
   menu.addItem((i) => i.setTitle('Rename property…').setSection('action').onClick(async () => {
     const to = await ask(plugin.app, { title: `Rename ${key}`, value: key, action: 'Rename', check: (v) => (v !== key && v in plugin.notes.props(file) ? 'This note already has it.' : null) });
     if (!to || to === key) return;
-    await plugin.notes.write(file, (fm) => {
-      const entries = Object.keys(fm).map((k) => [k === key ? to : k, fm[k]]);
-      Object.keys(fm).forEach((k) => delete fm[k]);
-      entries.forEach(([k, v]) => (fm[k] = v));
-    }, { undo: `${key} renamed to ${to}.` });
+    await plugin.notes.write(file, (fm) => setInOrder(fm, Object.keys(fm).map((k) => [k === key ? to : k, fm[k]])), { undo: `${key} renamed to ${to}.` });
   }));
   menu.addItem((i) => i.setTitle('Add a property').setSection('action').onClick(() => (host ? addRow(plugin, host, file) : addProperty(plugin, file))));
   menu.addItem((i) => i.setTitle('Remove property').setSection('danger').onClick(() => plugin.notes.write(file, (fm) => delete fm[key], { undo: `${key} removed.` })));
@@ -234,15 +230,9 @@ export function ledgerRow(plugin, host, file, key, value, redraw) {
     if (k !== 'c' && k !== 'v') return;
     e.preventDefault();
     e.stopPropagation();
-    try {
-      if (k === 'c') await navigator.clipboard.writeText(propsText({ [key]: value }));
-      else {
-        const props = readProps(await navigator.clipboard.readText());
-        if (props) await pasteProps(plugin, file, props);
-      }
-    } catch (err) {
-      new Notice('Could not reach the clipboard.');
-    }
+    if (k === 'c') return void (await copyText(propsText({ [key]: value })));
+    const props = readProps(await clipboardText());
+    if (props) await pasteProps(plugin, file, props);
   });
   node.addEventListener('contextmenu', (e) => {
     e.preventDefault();

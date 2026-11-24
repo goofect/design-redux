@@ -2,8 +2,9 @@
 /* Small tools: diagnostics, the actions menu, the menu filter         */
 /* ------------------------------------------------------------------ */
 
-import { Menu, Notice } from 'obsidian';
+import { Menu } from 'obsidian';
 import { applies } from '../core/actions.js';
+import { copyText } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 
 /** What a bug report needs, as text: versions, what is on, how big the vault is. Nothing of the notes themselves. */
@@ -23,14 +24,7 @@ export function diagnosticsText(plugin) {
 
 export class Diagnostics extends Feature {
   actions() {
-    return [{ id: 'copy-diagnostics', name: 'Copy diagnostics for a bug report', run: async () => {
-      try {
-        await navigator.clipboard.writeText(diagnosticsText(this.plugin));
-        new Notice('Diagnostics copied.');
-      } catch (err) {
-        new Notice('Could not reach the clipboard.');
-      }
-    } }];
+    return [{ id: 'copy-diagnostics', name: 'Copy diagnostics for a bug report', run: () => copyText(diagnosticsText(this.plugin), 'Diagnostics copied.') }];
   }
 }
 

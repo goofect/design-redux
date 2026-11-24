@@ -10,7 +10,7 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { copyValue, keyOf, offerUndo, sameValue, valuesOf } from '../core/notes.js';
+import { copyValue, keyOf, offerUndo, sameValue, setInOrder, valuesOf } from '../core/notes.js';
 import { counted } from '../core/text.js';
 import { confirm } from '../ui/sheet.js';
 
@@ -25,8 +25,7 @@ export function renameKey(fm, from, to) {
     if (k === key) entries.push([have || to, have ? joinValues(fm[have], fm[key]) : fm[key]]);
     else entries.push([k, fm[k]]);
   });
-  Object.keys(fm).forEach((k) => delete fm[k]);
-  entries.forEach(([k, v]) => (fm[k] = v));
+  setInOrder(fm, entries);
   return true;
 }
 

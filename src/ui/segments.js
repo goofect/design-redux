@@ -1,8 +1,8 @@
 /* ------------------------------------------------------------------ */
 /* Tabs: a note's pages, as words                                      */
 /*                                                                     */
-/* A tab list of words, the open one inverted. The arrow keys move the */
-/* choice, as they do in the native control this stands for. Many      */
+/* A tab list of words, grey, the open one ink. The arrow keys move    */
+/* the choice, as they do in the native control this stands for. Many  */
 /* scroll a whole tab at a time, an ellipsis at the edge.              */
 /* ------------------------------------------------------------------ */
 
@@ -61,17 +61,17 @@ export function segments(parent, opts) {
 
 /** Scrolls a row of tabs, and only it, so one tab is whole in view. */
 function reveal(group, node) {
-  node.classList.remove('is-cut');
+  node.removeAttribute('data-cut');
   const [start, end] = [node.offsetLeft - group.offsetLeft, node.offsetLeft - group.offsetLeft + node.offsetWidth];
-  const edge = group.classList.contains('is-more-before') || group.classList.contains('is-more-after') ? 4 * 8 : 0;
+  const edge = group.hasAttribute('data-more-before') || group.hasAttribute('data-more-after') ? 4 * 8 : 0;
   if (start - edge < group.scrollLeft) group.scrollLeft = Math.max(0, start - edge);
   else if (end + edge > group.scrollLeft + group.clientWidth) group.scrollLeft = end + edge - group.clientWidth;
 }
 
 /**
  * Tabs that don't all fit scroll sideways, a whole tab at a time. A tab the
- * edge would cut is not drawn (`is-cut`), and an ellipsis stands at that edge
- * (`is-more-before`, `is-more-after`), so no word is ever cut in half.
+ * edge would cut is not drawn (`data-cut`), and an ellipsis stands at that
+ * edge (`data-more-before`, `data-more-after`), so no word is ever cut in half.
  */
 function keepWhole(group, open) {
   const win = group.ownerDocument.defaultView;
@@ -81,14 +81,14 @@ function keepWhole(group, open) {
     const more = group.scrollWidth > group.clientWidth + 1;
     const before = more && group.scrollLeft > 1;
     const after = more && group.scrollLeft + group.clientWidth < group.scrollWidth - 1;
-    group.classList.toggle('is-more-before', before);
-    group.classList.toggle('is-more-after', after);
+    flag(group, 'data-more-before', before);
+    flag(group, 'data-more-after', after);
     const box = group.getBoundingClientRect();
     const mark = 4 * 8; // the ellipsis's room: four units
     const [left, right] = [box.left + (before ? mark : 0), box.right - (after ? mark : 0)];
     Array.from(group.children).forEach((tab) => {
       const r = tab.getBoundingClientRect();
-      tab.classList.toggle('is-cut', more && (r.left < left - 0.5 || r.right > right + 0.5));
+      flag(tab, 'data-cut', more && (r.left < left - 0.5 || r.right > right + 0.5));
     });
   };
   const watch = new win.ResizeObserver(fit);

@@ -2,7 +2,7 @@
 /* Selection: the pick                                                 */
 /*                                                                     */
 /* One thing at a time is picked, a folder or a note, by path. The     */
-/* library marks it, the panel is about it. Whoever cares listens for  */
+/* library marks it and acts on it. Whoever cares listens for          */
 /* 'design-redux:pick' on the workspace.                               */
 /* ------------------------------------------------------------------ */
 

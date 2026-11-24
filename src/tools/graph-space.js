@@ -16,8 +16,7 @@ export function graphSpace(plugin, around, depth = 2) {
   if (around) {
     const near = new Set([around.path]);
     let frontier = [around.path];
-    const back = new Map();
-    Object.keys(resolved).forEach((from) => Object.keys(resolved[from]).forEach((to) => back.set(to, (back.get(to) || []).concat(from))));
+    const back = plugin.index.linkMaps().incoming;
     for (let d = 0; d < depth; d++) {
       const next = [];
       frontier.forEach((p) => Object.keys(resolved[p] || {}).concat(back.get(p) || []).forEach((q) => { if (!near.has(q)) { near.add(q); next.push(q); } }));

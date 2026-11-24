@@ -26,7 +26,7 @@ export function controls() {
     component('Pages', "A note's pages: words, grey; the open one ink. Many scroll a whole tab at a time, an ellipsis at the edge where more are.", [
       shown('the first open', tabs(['Notes', 'Proofs', 'Exercises'], 0)), shown('hover on another', tabs(['Notes', 'Proofs', 'Exercises'], 0, { 2: { class: 'spec-hover' } })),
       shown('focus', tabs(['Notes', 'Proofs', 'Exercises'], 1, { 1: { class: 'spec-focus' } })),
-      shown('many · whole words, an ellipsis', `<div style="width:200px">${tabs(['Notes', 'Proofs', 'Exercises', 'Sources', 'Scraps'], 0, { 2: { class: 'is-cut' }, 3: { class: 'is-cut' }, 4: { class: 'is-cut' } }).replace('dr-tabs"', 'dr-tabs is-more-after"')}</div>`),
+      shown('many · whole words, an ellipsis', `<div style="width:200px">${tabs(['Notes', 'Proofs', 'Exercises', 'Sources', 'Scraps'], 0, { 2: { 'data-cut': 'true' }, 3: { 'data-cut': 'true' }, 4: { 'data-cut': 'true' } }).replace('dr-tabs"', 'dr-tabs" data-more-after="true"')}</div>`),
     ]),
     component('Toggle', "Obsidian's own, squared: 40 by 20, the knob on the side that is true. The setting's words beside it.", [
       shown('off', toggle()), shown('on · the knob at the end', toggle('is-enabled')), shown('focus', toggle('spec-focus')), shown('disabled · grey', toggle('is-disabled')),

@@ -69,6 +69,12 @@ export function linkTarget(value) {
 /** A value as it is shown: a link as the name of what it links to. */
 export const valueShown = (value) => valuesOf(value).map((v) => (linkOf(v) || { shown: v }).shown).join(', ');
 
+/** Writes a note's properties anew in the order given, [[key, value]]: Obsidian keeps them in the order they were set. */
+export function setInOrder(fm, entries) {
+  Object.keys(fm).forEach((k) => delete fm[k]);
+  entries.forEach(([k, v]) => (fm[k] = v));
+}
+
 /** A note's tags, from its properties and its text, lower case, without the #. */
 export function tagsOf(app, file) {
   const cache = app.metadataCache.getFileCache(file) || {};

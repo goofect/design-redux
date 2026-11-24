@@ -9,7 +9,8 @@
 
 import { Notice } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { copyValue, noteProps, valuesOf } from '../core/notes.js';
+import { clipboardText, copyText } from '../core/dom.js';
+import { copyValue, noteProps, setInOrder, valuesOf } from '../core/notes.js';
 import { counted } from '../core/text.js';
 import { choose } from '../ui/choose.js';
 import { ask } from '../ui/sheet.js';
@@ -44,43 +45,19 @@ export class PropertyClipboard extends Feature {
     this.bulk = new Bulk(plugin);
   }
 
-  async copy(text, said) {
-    try {
-      await navigator.clipboard.writeText(text);
-      new Notice(said);
-      return true;
-    } catch (err) {
-      new Notice('Could not reach the clipboard.');
-      return false;
-    }
-  }
-
-  async read() {
-    try {
-      return await navigator.clipboard.readText();
-    } catch (err) {
-      new Notice('Could not reach the clipboard.');
-      return '';
-    }
-  }
-
   sort(file) {
-    return this.plugin.notes.write(file, (fm) => {
-      const entries = Object.keys(fm).sort((a, b) => a.localeCompare(b)).map((k) => [k, fm[k]]);
-      Object.keys(fm).forEach((k) => delete fm[k]);
-      entries.forEach(([k, v]) => (fm[k] = v));
-    }, { undo: 'Properties sorted.' });
+    return this.plugin.notes.write(file, (fm) => setInOrder(fm, Object.keys(fm).sort((a, b) => a.localeCompare(b)).map((k) => [k, fm[k]])), { undo: 'Properties sorted.' });
   }
 
   copyTable(folder) {
     const files = this.plugin.index.notes(folder);
     if (!files.length) return void new Notice('This folder has no notes.');
-    return this.copy(propsTable(this.app, files), `The properties of ${counted(files.length, 'note')} copied as a table.`);
+    return copyText(propsTable(this.app, files), `The properties of ${counted(files.length, 'note')} copied as a table.`);
   }
 
   /** Updates a folder's notes from a table: a cell that differs is written, an empty one removes the property. */
   async pasteTable(folder, text) {
-    const table = readTable(text === undefined ? await this.read() : text);
+    const table = readTable(text === undefined ? await clipboardText() : text);
     if (!table) return void new Notice('The clipboard holds no table: copy one first, edit it, and paste it back.'), 0;
     const files = this.plugin.index.notes(folder).filter((f) => table.rows.has(f.basename));
     return this.bulk.run(files, `Notes updated from a table`, (fm, file) => {

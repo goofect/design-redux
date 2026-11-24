@@ -61,11 +61,11 @@ suite('Design Redux in Obsidian: notes and graphs', function () {
       if (!row) return null;
       const box = row.getBoundingClientRect();
       const column = row.closest('.dr-note-head').getBoundingClientRect();
-      const room = row.classList.contains('is-more-after') ? 32 : 0;
+      const room = row.hasAttribute('data-more-after') ? 32 : 0;
       const tabs = Array.from(row.children);
-      const shown = tabs.filter((t) => !t.classList.contains('is-cut'));
+      const shown = tabs.filter((t) => !t.hasAttribute('data-cut'));
       const cut = shown.filter((t) => { const r = t.getBoundingClientRect(); return r.left < box.left - 0.5 || r.right > box.right - room + 0.5; });
-      return { tabs: tabs.length, shown: shown.length, cut: cut.length, after: row.classList.contains('is-more-after'), inColumn: box.right <= column.right + 0.5 };
+      return { tabs: tabs.length, shown: shown.length, cut: cut.length, after: row.hasAttribute('data-more-after'), inColumn: box.right <= column.right + 0.5 };
     }), (r) => r && r.tabs === 12 && r.shown < 12);
     await shot('many-tabs');
     expect(seen.inColumn).toBe(true);
