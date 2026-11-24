@@ -9,7 +9,7 @@
 
 import { Notice } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { noteProps, valuesOf } from '../core/notes.js';
+import { copyValue, noteProps, valuesOf } from '../core/notes.js';
 import { counted } from '../core/text.js';
 import { choose } from '../ui/choose.js';
 import { ask } from '../ui/sheet.js';
@@ -103,7 +103,7 @@ export class PropertyClipboard extends Feature {
     if (!Object.keys(props).length) return void new Notice('This note has no properties to keep.');
     const as = name || (await ask(this.app, { title: 'Keep these properties as a set', placeholder: 'Lecture note', action: 'Keep' }));
     if (!as) return false;
-    this.settings.propertySets = Object.assign({}, this.sets(), { [as]: JSON.parse(JSON.stringify(props)) });
+    this.settings.propertySets = Object.assign({}, this.sets(), { [as]: copyValue(props) });
     await this.plugin.saveSettings();
     return true;
   }
@@ -113,7 +113,7 @@ export class PropertyClipboard extends Feature {
     const as = name || (await choose(this.app, Object.keys(this.sets()), { placeholder: 'Apply which set?' }));
     const set = as ? this.sets()[as] : null;
     if (!set) return null;
-    return this.plugin.notes.write(file, (fm) => Object.keys(set).forEach((k) => { if (!(k in fm)) fm[k] = JSON.parse(JSON.stringify(set[k])); }), { undo: `${as} applied to ${file.basename}.` });
+    return this.plugin.notes.write(file, (fm) => Object.keys(set).forEach((k) => { if (!(k in fm)) fm[k] = copyValue(set[k]); }), { undo: `${as} applied to ${file.basename}.` });
   }
 
   async removeSet(name) {

@@ -66,6 +66,24 @@ export class Feature {
     this.add(() => target.removeEventListener(type, fn, options));
   }
 
+  /** Keeps a place among the editors' extensions, once, in register(): `useEditor` fills it while the feature is on. */
+  registerEditor() {
+    this.editorSlot = [];
+    this.plugin.registerEditorExtension(this.editorSlot);
+  }
+
+  /** Puts extensions in every editor for as long as the feature is on. */
+  useEditor(...extensions) {
+    const ws = this.app.workspace;
+    const rebuild = () => typeof ws.updateOptions === 'function' && ws.updateOptions();
+    this.editorSlot.push(...extensions);
+    rebuild();
+    this.add(() => {
+      this.editorSlot.length = 0;
+      rebuild();
+    });
+  }
+
   /**
    * Runs `fn` on every window's document while the feature is on: the main
    * one, the popouts already open, and each one opened after.

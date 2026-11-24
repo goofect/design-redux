@@ -3,15 +3,17 @@
 /*                                                                     */
 /* A filter is { folder, tag, prop, date, loose }: `prop` is "key"     */
 /* (has it), "!key" (lacks it) or "key=value"; `date` is week, month   */
-/* or year since last edited; `loose` is notes in no folder. Kept with */
-/* a name, a filter is a saved view.                                   */
+/* or year since last edited; `loose` is notes in no folder. A sheet   */
+/* sets it; kept with a name, a filter is a saved view.                */
 /* ------------------------------------------------------------------ */
 
 import { el, glyph } from '../core/dom.js';
 import { noteProps, propOf, tagsOf, valuesOf } from '../core/notes.js';
 import { foldersIfMixed } from '../core/text.js';
-import { chip } from '../ui/field.js';
+import { chooseFolder } from '../ui/choose.js';
+import { chip, field } from '../ui/field.js';
 import { row, rows } from '../ui/row.js';
+import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
 
 const DAYS = { week: 7, month: 31, year: 366 };
@@ -71,4 +73,20 @@ export function drawFiltered(screen, host) {
   const folders = foldersIfMixed(notes);
   notes.forEach((note, i) => row(list, { name: note.basename, end: folders[i], path: note.path, current: note === open ? 'page' : false, run: (e) => screen.openNote(note, e) }));
   screen.roving(list, '.dr-row', () => 1);
+}
+
+/** The sheet that sets a screen's filter. */
+export function editFilter(plugin, screen) {
+  const draft = Object.assign({}, screen.filter || {});
+  new Sheet(plugin.app, {
+    title: 'Filter',
+    build: (matter) => {
+      const folder = field(matter, { label: 'In the folder', value: draft.folder || '', placeholder: 'Anywhere', onInput: (v) => (draft.folder = v.trim().replace(/\/$/, '')) });
+      folder.drInput.addEventListener('dblclick', async () => { const f = await chooseFolder(plugin, { placeholder: 'In the folder…' }); if (f) folder.drInput.value = draft.folder = f.path === '/' ? '' : f.path; });
+      field(matter, { label: 'With the tag', value: draft.tag || '', placeholder: 'Any', onInput: (v) => (draft.tag = v.trim()) });
+      field(matter, { label: 'Property', value: draft.prop || '', placeholder: 'status=draft, status, or !status', note: 'A name alone: notes that have it. With ! before: notes that lack it.', onInput: (v) => (draft.prop = v.trim()) });
+      field(matter, { label: 'Edited this', value: draft.date || '', placeholder: 'week, month or year', onInput: (v) => (draft.date = ['week', 'month', 'year'].includes(v.trim().toLowerCase()) ? v.trim().toLowerCase() : '') });
+    },
+    actions: [{ text: 'Clear', run: () => void screen.setFilter(null) }, { text: 'Cancel' }, { text: 'Show', run: () => void screen.setFilter(isFiltering(draft) ? draft : null) }],
+  }).open();
 }

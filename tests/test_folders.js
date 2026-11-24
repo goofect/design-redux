@@ -24,14 +24,10 @@ const VAULT = {
 };
 
 (async () => {
-  await check('a folder note is read by the old property names, and no note is written', async () => {
+  await check('a folder note names the notes the folder starts with, and no note is written', async () => {
     const w = await world(VAULT);
-    const albums = feature(w, 'Albums');
     const logic = w.file('Logic');
-    const info = albums.info(logic);
-    assert.strictEqual(info.description, 'Arguments and their forms.');
-    assert.ok(!('type' in info) && !('label' in info), 'a folder still has a kind');
-    assert.deepStrictEqual([info.includes.map((f) => f.path), info.featured.map((f) => f.path), info.related.map((f) => f.path)], [['Reading/Hume.md'], ['Logic/Validity.md'], ['Reading']]);
+    assert.deepStrictEqual(dr.featuredNotes(w.plugin, logic).map((f) => f.path), ['Logic/Validity.md']);
     assert.deepStrictEqual(dr.listedNotes(w.plugin, logic).map((f) => f.basename), ['Validity', 'Truth tables'], 'featured first, then its own, and nothing from elsewhere');
   });
 
@@ -63,7 +59,7 @@ const VAULT = {
     assert.deepStrictEqual(names({ loose: true }), ['Loose.md']);
     assert.deepStrictEqual(dr.matchNotes(w.plugin, { date: 'week' }, 40 * 864e5).length, 0);
     const views = feature(w, 'SavedViews');
-    const screen = await views.screen();
+    const screen = await w.plugin.libraryPage();
     screen.setFilter({ prop: 'status=draft', folder: 'Logic' });
     assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-rows .dr-row')).map((r) => r.dataset.path), ['Logic/Truth tables.md']);
     assert.deepStrictEqual(Array.from(screen.host.querySelectorAll('.dr-filter-bar .dr-chip')).map((c) => [c.textContent, c.getAttribute('role'), c.hasAttribute('aria-checked')]), [['InLogic', 'button', false], ['Propertystatus=draft', 'button', false]]);

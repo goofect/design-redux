@@ -11,6 +11,7 @@ import { addActionItems } from '../core/actions.js';
 import { counted } from '../core/text.js';
 import { chooseFolder } from '../ui/choose.js';
 import { ask, confirm } from '../ui/sheet.js';
+import { editFilter } from './filters.js';
 import { SORTS, isPinned, setSort, sortOf, togglePin } from './order.js';
 
 const entry = (menu, title, run, section = 'action', more) =>
@@ -60,7 +61,7 @@ export function folderMenu(plugin, folder, screen) {
     if (name) plugin.files.newFolder(folder, name);
   }, 'new');
   if (!top) entry(menu, isPinned(plugin, folder) ? 'Unpin' : 'Pin', () => togglePin(plugin, folder));
-  if (screen && plugin.editFilter) entry(menu, 'Filter…', () => plugin.editFilter(screen), 'view');
+  if (screen) entry(menu, 'Filter…', () => editFilter(plugin, screen), 'view');
   menu.addItem((item) => {
     item.setTitle('Sort by').setSection('action');
     const sub = typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
@@ -76,7 +77,7 @@ export function folderMenu(plugin, folder, screen) {
 }
 
 /** The menu of a note. */
-export function noteMenu(plugin, file, screen) {
+export function noteMenu(plugin, file) {
   const menu = new Menu();
   const open = (leaf) => plugin.app.workspace.getLeaf(leaf).openFile(file);
   entry(menu, 'Open', () => open(false), 'open');
@@ -87,7 +88,6 @@ export function noteMenu(plugin, file, screen) {
   entry(menu, 'Move to…', () => moveEntry(plugin, file), 'danger');
   entry(menu, 'Delete note', () => deleteEntry(plugin, file), 'danger', (item) => typeof item.setWarning === 'function' && item.setWarning(true));
   plugin.app.workspace.trigger('file-menu', menu, file, 'design-redux-library');
-  void screen;
   return menu;
 }
 

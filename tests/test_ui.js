@@ -116,9 +116,9 @@ const glyphOf = (el) => { const svg = el.querySelector('svg.dr-glyph'); return s
     assert.deepStrictEqual([busy.className, busy.getAttribute('aria-busy'), glyphOf(busy)], ['dr-state', 'true', null]);
     const bad = dr.sayso(root, { error: true, label: 'Couldn’t read Logic' });
     assert.deepStrictEqual([bad.className, bad.getAttribute('role'), glyphOf(bad)], ['dr-state', 'alert', null]);
-    const h = dr.headRow(root, { label: 'Logic', muted: '24 notes', buttons: [{ glyph: 'fit', label: 'Fit' }] });
+    const h = dr.headRow(root, { label: 'Logic', buttons: [{ glyph: 'fit', label: 'Fit' }] });
     assert.deepStrictEqual(Array.from(h.querySelectorAll('.dr-icon-button')).map((b) => b.getAttribute('aria-label')), ['Fit']);
-    assert.strictEqual(h.querySelector('.dr-head-name').textContent, 'Logic 24 notes');
+    assert.strictEqual(h.querySelector('.dr-head-name').textContent, 'Logic');
   });
 
   await check('sheet: a question answered yes or no, a name asked for and checked', async () => {

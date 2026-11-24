@@ -60,8 +60,8 @@ const open = async (w, path, ed) => { const leaf = w.app.workspace.getLeaf(); aw
     w.app.commands.executeCommandById('design-redux:next-page');
     await settle();
     assert.strictEqual(w.plugin.settings.pagesOpen['Logic/Paged.md'], 'Notes 2');
-    assert.deepStrictEqual(w.plugin.partsOf(w.file('Logic/Paged.md')).map((p) => [p.name, p.current]), [['Notes', false], ['Proofs', false], ['Notes 2', true]]);
-    pages.add_(w.file('Logic/Paged.md'));
+    assert.deepStrictEqual(tabs(), ['Notes', 'Proofs', 'Notes 2*']);
+    pages.addPageTo(w.file('Logic/Paged.md'));
     await answer(w, 'Sources');
     assert.ok(w.text('Logic/Paged.md').endsWith('%%page: Sources%%\n'));
     assert.deepStrictEqual(tabs(), ['Notes', 'Proofs', 'Notes 2', 'Sources*']);

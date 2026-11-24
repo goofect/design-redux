@@ -9,9 +9,8 @@
 /* drawn here.                                                         */
 /* ------------------------------------------------------------------ */
 
-import { noteProps, propOf, valuesOf } from '../core/notes.js';
+import { noteProps, propOf, valueShown, valuesOf } from '../core/notes.js';
 import { findFootnotes, linkPaths } from './footnote-text.js';
-import { valueShown } from './ledger.js';
 
 /** A name's surname: before its comma when written "Hume, David", else its last word. */
 const surname = (name) => (name.includes(',') ? name.split(',')[0] : name.split(/\s+/).pop()).trim();

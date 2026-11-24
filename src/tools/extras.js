@@ -65,7 +65,6 @@ export const HIDDEN_MENU_ITEMS = ['Rename property', 'Add file property'];
  */
 export class MenuFilter extends Feature {
   enable() {
-    const doc = activeDocument;
     const mark = (menu) => {
       if (!menu.classList || !menu.classList.contains('menu')) return;
       Array.from(menu.querySelectorAll('.menu-item')).forEach((item) => {
@@ -73,11 +72,14 @@ export class MenuFilter extends Feature {
         if (title && HIDDEN_MENU_ITEMS.includes(title.textContent.trim())) item.classList.add('dr-menu-hidden');
       });
     };
-    // A menu is added straight to the body: only the body's own children are watched, never what is under them.
-    const observer = new MutationObserver((changes) => changes.forEach((c) => Array.from(c.addedNodes).forEach(mark))); // scoped
-    observer.observe(doc.body, { childList: true });
-    this.add(() => observer.disconnect());
-    this.add(() => Array.from(doc.querySelectorAll('.dr-menu-hidden')).forEach((n) => n.classList.remove('dr-menu-hidden')));
+    // In every window, a menu is added straight to the body: only the body's own children are watched, never what is under them.
+    this.eachWindow((doc) => {
+      const Observer = (doc.defaultView && doc.defaultView.MutationObserver) || MutationObserver;
+      const observer = new Observer((changes) => changes.forEach((c) => Array.from(c.addedNodes).forEach(mark))); // scoped
+      observer.observe(doc.body, { childList: true });
+      this.add(() => observer.disconnect());
+      this.add(() => Array.from(doc.querySelectorAll('.dr-menu-hidden')).forEach((n) => n.classList.remove('dr-menu-hidden')));
+    });
   }
 }
 MenuFilter.title = 'Menu filter';

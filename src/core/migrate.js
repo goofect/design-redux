@@ -7,6 +7,7 @@
 /* Notes are not touched.                                              */
 /* ------------------------------------------------------------------ */
 
+import { copyValue } from './notes.js';
 import { DEFAULTS, REWRITE_VERSION, SETTINGS_VERSION } from './settings.js';
 
 /** The 4.0 keys retired since (102 the reset, 103 covers, 104 the settings cut, 105 the image router, 106 the panel and property history, 107 folder colours and rollups, and unused values no longer kept, 109 the strip, 110 and 111 the fixed defaults). */
@@ -101,8 +102,7 @@ export const RENAMED = {};
  * at once, so what it held that is no longer read goes).
  */
 export function migrateSettings(saved) {
-  const copy = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)));
-  const settings = copy(DEFAULTS);
+  const settings = copyValue(DEFAULTS);
   if (!saved || typeof saved !== 'object') return { settings, converted: false };
   const version = saved.settingsVersion || 1;
   const old = version < REWRITE_VERSION;
@@ -112,7 +112,7 @@ export function migrateSettings(saved) {
     const [value, fallback] = [saved[key], DEFAULTS[to]];
     // A value of the wrong kind (a hand-edited file) gives way to the default.
     const fits = fallback === null || value === null ? value !== undefined : Array.isArray(fallback) === Array.isArray(value) && typeof fallback === typeof value;
-    if (fits) settings[to] = copy(value);
+    if (fits) settings[to] = copyValue(value);
   });
   if (old) {
     // The old looks (classic, editorial and the rest) all become the one new look; lookScope is kept as it was.

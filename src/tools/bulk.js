@@ -10,13 +10,13 @@
 /* ------------------------------------------------------------------ */
 
 import { Notice } from 'obsidian';
-import { copyValue, offerUndo, sameValue, valuesOf } from '../core/notes.js';
+import { copyValue, keyOf, offerUndo, sameValue, valuesOf } from '../core/notes.js';
 import { counted } from '../core/text.js';
 import { confirm } from '../ui/sheet.js';
 
 /** Renames a property in one note's properties, keeping its place; joins the values if the new name is taken. */
 export function renameKey(fm, from, to) {
-  const key = Object.keys(fm).find((k) => k.toLowerCase() === from.toLowerCase());
+  const key = keyOf(fm, from);
   if (!key || key === to) return false;
   const entries = [];
   const have = Object.keys(fm).find((k) => k !== key && k.toLowerCase() === to.toLowerCase());
@@ -40,7 +40,7 @@ export function joinValues(a, b) {
 
 /** Replaces one value of a property (in a list, that item), whatever its capitals. Returns whether it did. */
 export function replaceValue(fm, key, from, to) {
-  const k = Object.keys(fm).find((x) => x.toLowerCase() === key.toLowerCase());
+  const k = keyOf(fm, key);
   if (!k) return false;
   const same = (v) => String(v).trim().toLowerCase() === String(from).trim().toLowerCase();
   if (Array.isArray(fm[k])) {
@@ -53,6 +53,9 @@ export function replaceValue(fm, key, from, to) {
   fm[k] = to;
   return true;
 }
+
+/** A note's properties block at the head of its text, "---" to "---". */
+export const FRONTMATTER = /^---\n[\s\S]*?\n---\n?/;
 
 export const VALUE_TYPES = { text: 'Text', number: 'Number', checkbox: 'Checkbox', multitext: 'List' };
 
@@ -123,8 +126,8 @@ export class Bulk {
     this.last = null;
     for (const t of last.texts) {
       // A note's text is put back only if nothing has been written in it since; its properties stay as they are now.
-      const head = /^---\n[\s\S]*?\n---\n?/;
-      await this.plugin.app.vault.process(t.file, (now) => (now.replace(head, '') === t.after.replace(head, '') ? (head.exec(now) || [''])[0] + t.before.replace(head, '') : now));
+      const body = (text) => text.replace(FRONTMATTER, '');
+      await this.plugin.app.vault.process(t.file, (now) => (body(now) === body(t.after) ? (FRONTMATTER.exec(now) || [''])[0] + body(t.before) : now));
     }
     await this.plugin.notes.undo(last.records);
     new Notice(`Undone: ${last.title}.`);

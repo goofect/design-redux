@@ -10,11 +10,11 @@
 
 import { Notice, TFile } from 'obsidian';
 import { Feature } from '../core/feature.js';
-import { namesIn, noteProps, propOf, valuesOf } from '../core/notes.js';
+import { keyOf, namesIn, noteProps, propOf, valuesOf } from '../core/notes.js';
 import { choose, chooseFolder } from '../ui/choose.js';
 import { field } from '../ui/field.js';
 import { Sheet, ask } from '../ui/sheet.js';
-import { Bulk, VALUE_TYPES, joinValues, renameKey, renameTagInText, replaceValue, retype } from './bulk.js';
+import { Bulk, FRONTMATTER, VALUE_TYPES, joinValues, renameKey, renameTagInText, replaceValue, retype } from './bulk.js';
 
 /** Every property name in use, most used first: [[name, count]]. */
 export const propertyNames = (plugin, files) => namesIn(plugin.app, files || plugin.index.markdown());
@@ -95,8 +95,8 @@ export class PropertyTools extends Feature {
     const files = this.having(a);
     if (!into && !(await this.bulk.ask(`Merge ${a} into ${b}`, files, `${a}’s values join ${b}’s and ${a} goes`))) return 0;
     return this.bulk.run(files, `${a} merged into ${b}`, (fm) => {
-      const ka = Object.keys(fm).find((k) => k.toLowerCase() === a.toLowerCase());
-      const kb = Object.keys(fm).find((k) => k.toLowerCase() === b.toLowerCase()) || b;
+      const ka = keyOf(fm, a);
+      const kb = keyOf(fm, b) || b;
       if (!ka) return;
       fm[kb] = joinValues(fm[kb], fm[ka]);
       delete fm[ka];
@@ -109,13 +109,13 @@ export class PropertyTools extends Feature {
     if (!old || !name || old === name) return 0;
     const files = this.notes();
     const inProps = (fm) => ['tags', 'tag'].forEach((key) => {
-      const k = Object.keys(fm).find((x) => x.toLowerCase() === key);
+      const k = keyOf(fm, key);
       if (!k) return;
       const list = valuesOf(fm[k]).map((t) => { const bare = t.replace(/^#/, ''); return bare.toLowerCase() === old.toLowerCase() ? name : bare.toLowerCase().startsWith(`${old.toLowerCase()}/`) ? name + bare.slice(old.length) : t; });
       if (list.join('\n') !== valuesOf(fm[k]).join('\n')) fm[k] = Array.isArray(fm[k]) ? list : list[0];
     });
     return this.bulk.run(files, `#${old} renamed to #${name}`, inProps, (text) => {
-      const fm = /^---\n[\s\S]*?\n---\n?/.exec(text);
+      const fm = FRONTMATTER.exec(text);
       const head = fm ? fm[0] : '';
       return head + renameTagInText(text.slice(head.length), old, name);
     });
@@ -139,7 +139,7 @@ export class PropertyTools extends Feature {
     const said = Array.from(variants.entries()).map(([best, others]) => `${others.join(', ')} → ${best}`).join('; ');
     if (!key && !(await this.bulk.ask(`Clean up ${k}`, this.having(k), said))) return 0;
     return this.bulk.run(this.having(k), `${k} cleaned up`, (fm) => variants.forEach((others, best) => others.forEach((o) => {
-      const kk = Object.keys(fm).find((x) => x.toLowerCase() === k.toLowerCase());
+      const kk = keyOf(fm, k);
       const exact = (v) => String(v) === o;
       if (!kk) return;
       if (Array.isArray(fm[kk])) { if (fm[kk].some(exact)) fm[kk] = fm[kk].map((v) => (exact(v) ? best : v)).filter((v, i, all) => all.indexOf(v) === i); }
@@ -154,7 +154,7 @@ export class PropertyTools extends Feature {
     const files = this.having(k);
     const unreadable = files.filter((f) => retype(propOf(noteProps(this.app, f), k), t) === undefined);
     const n = await this.bulk.run(files, `${k} made ${VALUE_TYPES[t].toLowerCase()}`, (fm) => {
-      const kk = Object.keys(fm).find((x) => x.toLowerCase() === k.toLowerCase());
+      const kk = keyOf(fm, k);
       const next = kk ? retype(fm[kk], t) : undefined;
       if (next !== undefined) fm[kk] = next;
     });
@@ -168,9 +168,7 @@ export class PropertyTools extends Feature {
   async findMissing(key) {
     const k = key || (await this.chooseKey('Notes missing which property?'));
     if (!k) return null;
-    const views = this.plugin.features.find((f) => typeof f.screen === 'function' && typeof f.list === 'function');
-    const screen = views ? await views.screen() : null;
-    if (screen) screen.setFilter({ prop: `!${k}` }, `Missing ${k}`);
+    await this.plugin.showFiltered({ prop: `!${k}` }, `Missing ${k}`);
     return this.notes().filter((f) => propOf(noteProps(this.app, f), k) === undefined);
   }
 
@@ -199,7 +197,7 @@ export class PropertyTools extends Feature {
     const dir = folder || (await chooseFolder(this.plugin, { placeholder: 'Add properties to the notes in…' }));
     const add = dir ? props || (await this.askProps(`Add properties in ${dir.path === '/' ? 'the vault' : dir.name}`, 'A note that already has one keeps its own value.')) : null;
     if (!dir || !add) return 0;
-    return this.bulk.run(this.notes(dir.path === '/' ? null : dir), `Properties added in ${dir.name || 'the vault'}`, (fm) => Object.keys(add).forEach((k) => { if (!(Object.keys(fm).some((x) => x.toLowerCase() === k.toLowerCase()))) fm[k] = add[k]; }));
+    return this.bulk.run(this.notes(dir.path === '/' ? null : dir), `Properties added in ${dir.name || 'the vault'}`, (fm) => Object.keys(add).forEach((k) => { if (keyOf(fm, k) === undefined) fm[k] = add[k]; }));
   }
 
   async removeFromFolder(folder, keys) {

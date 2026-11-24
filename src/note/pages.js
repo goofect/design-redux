@@ -20,27 +20,21 @@ import { hiddenLines, pagesField, showPage } from './pages-editor.js';
 
 export class NotePages extends Feature {
   register() {
-    this.extensions = [];
+    this.registerEditor();
     this.known = new Map(); // by path: the pages last read from the note
     this.drawn = new WeakMap(); // by view: the note, page open and pages it was last drawn with
-    this.plugin.registerEditorExtension(this.extensions);
     this.plugin.registerMarkdownPostProcessor((el, ctx) => this.onRendered(el, ctx));
   }
 
   enable() {
     const ws = this.app.workspace;
-    this.extensions.push(pagesField);
-    if (typeof ws.updateOptions === 'function') ws.updateOptions();
+    this.useEditor(pagesField);
     const draw = () => this.drawAll();
     ['file-open', 'layout-change', 'design-redux:renamed'].forEach((name) => this.listen(ws, name, draw));
     // Saved while typing: only that note's views, and drawn again only if its pages are not as they were.
     this.listen(ws, 'design-redux:modified', (file) => noteViews(this.app).filter((view) => view.file === file).forEach((view) => this.draw(view, true)));
-    this.plugin.partsOf = (file) => this.parts(file);
     this.add(() => {
-      delete this.plugin.partsOf;
       this.drawn = new WeakMap();
-      this.extensions.length = 0;
-      if (typeof ws.updateOptions === 'function') ws.updateOptions();
       noteViews(this.app).forEach((view) => {
         noteHeads(view).forEach(({ head }) => clear(head.querySelector('.dr-note-pages')));
         tidyNoteHeads(view);
@@ -140,7 +134,8 @@ export class NotePages extends Feature {
     return (this.known.get(file.path) || []).length > 0;
   }
 
-  async add_(file) {
+  /** Asks for a new page's name and adds it at the note's end, open. */
+  async addPageTo(file) {
     const name = await ask(this.app, { title: 'A new page', placeholder: 'Sources', action: 'Add page', check: (v) => (/%%/.test(v) ? 'A page’s name can’t hold %%.' : null) });
     if (!name) return null;
     let made = null;
@@ -169,20 +164,12 @@ export class NotePages extends Feature {
     return menu;
   }
 
-  /** For the library's outline: a note's pages, in place of its headings. */
-  parts(file) {
-    const names = this.known.get(file.path) || [];
-    if (!names.length) return null;
-    const open = this.openOf(file, names.map((name) => ({ name })));
-    return names.map((name) => ({ name, current: name === open, run: () => this.open(file, name) }));
-  }
-
   actions() {
     const has = (ctx) => this.hasPages(ctx.file);
     return [
       { id: 'next-page', name: 'Next page of this note', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, 1) },
       { id: 'previous-page', name: 'Previous page of this note', on: 'note', menu: false, when: has, run: (ctx) => this.step(ctx.file, -1) },
-      { id: 'add-page', name: 'Add a page to this note', on: 'note', menu: 'Add a page…', run: (ctx) => this.add_(ctx.file) },
+      { id: 'add-page', name: 'Add a page to this note', on: 'note', menu: 'Add a page…', run: (ctx) => this.addPageTo(ctx.file) },
     ];
   }
 }

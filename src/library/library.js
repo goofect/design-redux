@@ -6,10 +6,9 @@
 /* library can do.                                                     */
 /* ------------------------------------------------------------------ */
 
-import { Keymap, View } from 'obsidian';
+import { View } from 'obsidian';
 import { Feature } from '../core/feature.js';
 import { iconId } from '../core/icons.js';
-import { drawFolderPage } from './contents.js';
 import { neighbours } from './order.js';
 import { BROWSE_VIEW, BrowseView, LIBRARY_VIEW, LibraryView } from './views.js';
 
@@ -35,9 +34,6 @@ export class Library extends Feature {
       ws.detachLeavesOfType(LIBRARY_VIEW);
       ws.detachLeavesOfType(BROWSE_VIEW);
     });
-    // For the sidebar's tree: a folder's name pressed shows it in the page.
-    this.plugin.showFolder = (folder) => this.browse(folder);
-    this.add(() => delete this.plugin.showFolder);
     // With the look on, Obsidian's tab strip and the sidebars' toggles are hidden, so nothing could bring the
     // library forward again: it is kept the tab the left sidebar shows, from the start and after any layout change.
     this.keepShown();
@@ -92,6 +88,14 @@ export class Library extends Feature {
     return leaf;
   }
 
+  /** The library's page, opened in the vault if it isn't the one in front: its screen. */
+  async pageScreen() {
+    const active = this.activeScreen();
+    if (active && active.opts.wide) return active;
+    const leaf = await this.browse(null);
+    return (leaf.view && leaf.view.screen) || null;
+  }
+
   /** Steps to the note before or after the open one in its folder. */
   step(file, by) {
     const [previous, next] = neighbours(this.plugin, file);
@@ -105,7 +109,7 @@ export class Library extends Feature {
     return [
       { id: 'open-library', name: 'Open library', run: () => this.openSidebar() },
       { id: 'browse-vault', name: 'Show the vault in the page', run: () => this.browse(null) },
-      { id: 'search-library', name: 'Search the library', run: async () => { const leaf = await this.browse(null); if (leaf && leaf.view.screen) leaf.view.screen.search(''); } },
+      { id: 'search-library', name: 'Search the library', run: async () => { const leaf = await this.browse(null); if (leaf.view.screen) leaf.view.screen.search(''); } },
       { id: 'reset-layout', name: 'Put the library back in place', run: async () => {
         this.app.workspace.detachLeavesOfType(LIBRARY_VIEW);
         await this.openSidebar();

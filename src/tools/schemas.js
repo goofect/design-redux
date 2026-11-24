@@ -11,7 +11,7 @@
 import { Feature } from '../core/feature.js';
 import { noteProps, propOf, valuesOf } from '../core/notes.js';
 import { field } from '../ui/field.js';
-import { row, rows, sectionTitle } from '../ui/row.js';
+import { row, rows } from '../ui/row.js';
 import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
 import { retype } from './bulk.js';

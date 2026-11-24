@@ -6,7 +6,6 @@
 /* ------------------------------------------------------------------ */
 
 import { ItemView } from 'obsidian';
-import { enableDrop } from './drop.js';
 import { LibraryScreen } from './screen.js';
 
 export const LIBRARY_VIEW = 'design-redux-library';
@@ -21,11 +20,6 @@ class ScreenView extends ItemView {
 
   async onOpen() {
     this.screen = this.makeScreen();
-    const draw = this.screen.draw.bind(this.screen);
-    this.screen.draw = () => {
-      draw();
-      enableDrop(this.screen, this.screen.body);
-    };
     (this.plugin.screens || (this.plugin.screens = new Set())).add(this.screen);
     this.screen.draw();
   }

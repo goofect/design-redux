@@ -14,6 +14,8 @@ const feature = (w, name) => w.plugin.features.find((f) => f.constructor.name ==
 const answer = async (pick) => { await settle(); const m = obsidian.Modal.open[obsidian.Modal.open.length - 1]; pick(m); await settle(); };
 const key = (el, k) => el.dispatchEvent(new window.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
 const props = (w, p) => w.plugin.notes.props(w.file(p));
+// A rule as settings keep it: { id, on, when, set, name }.
+const keptRule = (when, set) => ({ id: `rule-${when.kind}`, on: true, when, set, name: dr.ruleName({ when, set }) });
 
 // The clipboard, stood in for.
 let board = '';
@@ -149,7 +151,7 @@ const VAULT = {
   });
 
   await check('the rules sheet: each rule its sentence and a toggle beside it, no numbers; a new one written as a sentence with fields', async () => {
-    const w = await world(VAULT, { settingsVersion: 100, propertyRules: [dr.parseRule('folder Reading -> shelf=reading')] });
+    const w = await world(VAULT, { settingsVersion: 100, propertyRules: [keptRule({ kind: 'folder', folder: 'Reading' }, [{ key: 'shelf', value: 'reading' }])] });
     const sheet = feature(w, 'PropertyRules').edit();
     const m = sheet.modalEl;
     const said = () => Array.from(m.querySelectorAll('.dr-rule-name')).map((n) => n.textContent);
@@ -174,17 +176,17 @@ const VAULT = {
     sheet.close();
   });
 
-  await check('rules: read from a line; a dry run says and sets nothing; live, one write, which fires no rule of its own', async () => {
-    const rule = dr.parseRule('tag formal -> reviewed=yes, stage=1');
+  await check('rules: said as a sentence; a dry run says and sets nothing; live, one write, which fires no rule of its own', async () => {
+    const rule = keptRule({ kind: 'tag', tag: 'formal' }, [{ key: 'reviewed', value: 'yes' }, { key: 'stage', value: '1' }]);
     assert.deepStrictEqual([rule.when, rule.set, rule.name], [{ kind: 'tag', tag: 'formal' }, [{ key: 'reviewed', value: 'yes' }, { key: 'stage', value: '1' }], 'When a note gets #formal, set reviewed to yes and stage to 1']);
     // Written in the sheet's sentence: "When a note [comes into] [Logic], set [status] to [draft]".
     const made = dr.ruleOf({ kind: 'folder', what: '/Logic/', key: 'status', value: 'draft' });
     assert.deepStrictEqual([made.when, made.set, made.name], [{ kind: 'folder', folder: 'Logic' }, [{ key: 'status', value: 'draft' }], 'When a note comes into Logic, set status to draft']);
     assert.strictEqual(dr.ruleOf({ kind: 'tag', what: '', key: 'x' }), null);
-    assert.strictEqual(dr.parseRule('folder Logic'), null);
-    const w = await world(VAULT, { settingsVersion: 100, propertyRulesOn: true, propertyRules: [rule, dr.parseRule('folder Reading -> shelf=reading')] });
+    const w = await world(VAULT, { settingsVersion: 100, propertyRulesOn: true, propertyRules: [rule, keptRule({ kind: 'folder', folder: 'Reading' }, [{ key: 'shelf', value: 'reading' }])] });
     let writes = 0;
-    w.plugin.notes.watch(() => writes++);
+    const write = w.plugin.notes.write.bind(w.plugin.notes);
+    w.plugin.notes.write = async (...a) => { const r = await write(...a); if (r && Object.keys(r.before).length) writes++; return r; };
     await w.plugin.notes.write(w.file('Reading/E.md'), (fm) => (fm.tags = ['formal']));
     await settle();
     assert.ok(obsidian.Notice.log.some((m) => /^Dry run: “When a note gets #formal, set reviewed to yes and stage to 1” would set reviewed, stage on E/.test(m)));

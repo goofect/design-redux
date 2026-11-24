@@ -1,10 +1,9 @@
 /* ------------------------------------------------------------------ */
 /* Files: made, moved, put back; and a folder's own note               */
 /*                                                                     */
-/* A folder note is the note inside a folder that is named for it (the */
-/* pattern is a setting). It holds what the folder is: its            */
-/* description, what it gathers. When the folder is renamed its note   */
-/* is renamed with it.                                                 */
+/* A folder note is the note inside a folder that has the folder's    */
+/* name. It is left out of the folder's list, and when the folder is   */
+/* renamed its note is renamed with it.                                */
 /* ------------------------------------------------------------------ */
 
 import { Notice, TFile, TFolder, normalizePath } from 'obsidian';
@@ -25,9 +24,10 @@ export class Files {
     return this.plugin.app;
   }
 
-  /** A path in `folder` that nothing has yet: "Untitled.md", "Untitled 1.md", … */
+  /** A path in a folder (or a folder's path) that nothing has yet: "Untitled.md", "Untitled 1.md", … */
   freePath(folder, base, ext) {
-    const dir = !folder || folder.path === '/' ? '' : `${folder.path}/`;
+    const at = typeof folder === 'string' ? folder : folder ? folder.path : '';
+    const dir = !at || at === '/' ? '' : `${at}/`;
     const name = cleanName(base) || 'Untitled';
     const make = (n) => normalizePath(`${dir}${n ? `${name} ${n}` : name}${ext ? `.${ext}` : ''}`);
     let n = 0;
@@ -58,31 +58,14 @@ export class Files {
     }
   }
 
-  /** The name a folder's own note has: the folder's. */
-  folderNoteName(folderName) {
-    return folderName;
-  }
-
   /** A folder's own note, or null. */
   folderNote(folder) {
     if (!folder || folder.path === '/') return null;
-    return this.app.vault.getFileByPath(`${folder.path}/${this.folderNoteName(folder.name)}.md`);
+    return this.app.vault.getFileByPath(`${folder.path}/${folder.name}.md`);
   }
 
   isFolderNote(file) {
     return file instanceof TFile && !!file.parent && this.folderNote(file.parent) === file;
-  }
-
-  /** A folder's own note, made if it has none. */
-  async ensureFolderNote(folder) {
-    const have = this.folderNote(folder);
-    if (have) return have;
-    try {
-      return await this.app.vault.create(normalizePath(`${folder.path}/${this.folderNoteName(folder.name)}.md`), '');
-    } catch (err) {
-      console.error('Design Redux: could not create the folder note', err);
-      return null;
-    }
   }
 
   /** After a folder was renamed: its note, still under the old name, takes the new one. */
@@ -90,8 +73,8 @@ export class Files {
     if (!(folder instanceof TFolder)) return;
     const oldName = oldPath.split('/').pop();
     if (oldName === folder.name) return;
-    const note = this.app.vault.getFileByPath(`${folder.path}/${this.folderNoteName(oldName)}.md`);
-    const target = normalizePath(`${folder.path}/${this.folderNoteName(folder.name)}.md`);
+    const note = this.app.vault.getFileByPath(`${folder.path}/${oldName}.md`);
+    const target = normalizePath(`${folder.path}/${folder.name}.md`);
     if (!note || this.app.vault.getAbstractFileByPath(target)) return;
     try {
       await this.app.fileManager.renameFile(note, target);
@@ -112,11 +95,8 @@ export class Files {
     const isFolder = file instanceof TFolder;
     if (isFolder && (dir === file.path || dir.startsWith(`${file.path}/`))) return false;
     const from = file.path;
-    const at = (name) => (dir ? `${dir}/${name}` : name);
-    let candidate = at(file.name);
-    for (let n = 1; this.app.vault.getAbstractFileByPath(candidate); n++) candidate = at(isFolder ? `${file.name} ${n}` : `${file.basename} ${n}.${file.extension}`);
     try {
-      await this.app.fileManager.renameFile(file, candidate);
+      await this.app.fileManager.renameFile(file, this.freePath(dir, isFolder ? file.name : file.basename, isFolder ? '' : file.extension));
     } catch (err) {
       console.error('Design Redux: could not move the file', err);
       new Notice(`Could not move “${file.name}”.`);

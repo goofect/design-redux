@@ -8,6 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { byName } from '../core/text.js';
+import { featuredNotes } from './featured.js';
 
 export const SORTS = { name: 'Name', modified: 'Last edited', created: 'Date made', own: 'Your order' };
 
@@ -68,15 +69,9 @@ export function neighbours(plugin, file) {
   return at < 0 ? [null, null] : [list[at - 1] || null, list[at + 1] || null];
 }
 
-/**
- * What a folder lists: only the notes directly in it, those to start with
- * first, then the rest in its order. Without the feature that knows what a
- * folder gathers (`plugin.gathering`), just its order.
- */
+/** What a folder lists: only the notes directly in it, those it starts with first, then the rest in its order. */
 export function listedNotes(plugin, folder) {
   const own = sortedNotes(plugin, folder);
-  const info = typeof plugin.gathering === 'function' ? plugin.gathering(folder) : null;
-  if (!info) return own;
-  const first = info.featured.filter((f) => own.includes(f));
+  const first = featuredNotes(plugin, folder).filter((f) => own.includes(f));
   return first.concat(own.filter((f) => !first.includes(f)));
 }

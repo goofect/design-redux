@@ -8,7 +8,7 @@
 /* ------------------------------------------------------------------ */
 
 import { TFile, TFolder } from 'obsidian';
-import { noteProps, propOf, valuesOf } from './notes.js';
+import { noteProps, propOf, tally, valuesOf } from './notes.js';
 import { byName } from './text.js';
 
 export class LibraryIndex {
@@ -61,7 +61,7 @@ export class LibraryIndex {
     return this.build().folders;
   }
 
-  /** A folder's own notes, by name; its own note left out when those are hidden. */
+  /** A folder's own notes, by name; its folder note left out. */
   notes(folder) {
     return this.build().notes.get(folder ? folder.path : '/') || [];
   }
@@ -84,9 +84,7 @@ export class LibraryIndex {
 
   /** The values a property takes across the vault, most used first: [[value, count]]. From Obsidian's cache, so no file is read. */
   values(key) {
-    const counts = new Map();
-    this.markdown().forEach((f) => valuesOf(propOf(noteProps(this.app, f), key)).forEach((v) => counts.set(v, (counts.get(v) || 0) + 1)));
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return tally(this.markdown().map((f) => valuesOf(propOf(noteProps(this.app, f), key))));
   }
 
   linkMaps() {
@@ -106,10 +104,5 @@ export class LibraryIndex {
   /** The notes that link to a file. */
   incoming(file) {
     return (this.linkMaps().incoming.get(file.path) || []).map((p) => this.app.vault.getFileByPath(p)).filter(Boolean);
-  }
-
-  /** The files a note links to. */
-  outgoing(file) {
-    return Object.keys(this.linkMaps().resolved[file.path] || {}).map((p) => this.app.vault.getFileByPath(p)).filter(Boolean);
   }
 }

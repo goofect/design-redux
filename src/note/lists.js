@@ -17,9 +17,8 @@ import { around, depth, firstUnder, isMarker, LIST_ITEM, makeList, measurer, nex
 
 export class MarkedLists extends Feature {
   register() {
-    this.extensions = [];
     this.fonts = new Map(); // a measurer by font
-    this.plugin.registerEditorExtension(this.extensions);
+    this.registerEditor();
     this.plugin.registerMarkdownPostProcessor((el, ctx) => this.on && this.render(el, ctx));
   }
 
@@ -30,19 +29,13 @@ export class MarkedLists extends Feature {
   }
 
   enable() {
-    const ws = this.app.workspace;
-    this.extensions.push(listLines((view) => {
+    this.useEditor(listLines((view) => {
       const style = view.contentDOM.ownerDocument.defaultView.getComputedStyle(view.contentDOM);
       const size = parseFloat(style.fontSize) || 16;
       return this.measure(view.contentDOM.ownerDocument, [style.fontStyle, style.fontWeight, style.fontSize, style.fontFamily].filter(Boolean).join(' '), size);
     }));
-    if (typeof ws.updateOptions === 'function') ws.updateOptions();
     this.redrawReading();
-    this.add(() => {
-      this.extensions.length = 0;
-      if (typeof ws.updateOptions === 'function') ws.updateOptions();
-      this.redrawReading(); // the feature is off by now: the lists go back to the paragraphs they were
-    });
+    this.add(() => this.redrawReading()); // the feature is off by now: the lists go back to the paragraphs they were
     // Enter at the end of an item carries the list on; Tab and Shift-Tab nest it, as in Obsidian's own lists.
     const keys = (e) => {
       if (e.isComposing || e.altKey || e.metaKey || e.ctrlKey) return;

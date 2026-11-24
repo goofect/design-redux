@@ -123,7 +123,6 @@ const lifecycle = JSON.parse(fs.readFileSync(path.join(__dirname, 'snapshots', '
     assert.strictEqual(index.count(w.file('Logic')), 3);
     assert.deepStrictEqual(index.subfolders(w.file('Logic')).map((f) => f.name), ['Sets']);
     assert.deepStrictEqual(index.incoming(w.file('Logic/Week 2.md')).map((f) => f.path).sort(), ['Inbox/B.md', 'Logic/Week 10.md']);
-    assert.deepStrictEqual(index.outgoing(w.file('Inbox/B.md')).map((f) => f.path), ['Logic/Week 2.md']);
     await w.app.vault.create('Logic/New.md', '');
     assert.strictEqual(index.count(w.file('Logic')), 4);
   });

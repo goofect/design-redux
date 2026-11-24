@@ -4,8 +4,18 @@
 
 import { asButton, el, flag, glyph } from '../core/dom.js';
 
+/** A bare text input, the plugin's: { cls (of what holds it, made when given), label (for a screen reader), placeholder, value }. */
+export function textInput(parent, opts = {}) {
+  const input = el(opts.cls ? el(parent, 'span', opts.cls) : parent, 'input', 'dr-input');
+  input.type = 'text';
+  if (opts.value != null) input.value = String(opts.value);
+  if (opts.placeholder) input.placeholder = opts.placeholder;
+  if (opts.label) input.setAttribute('aria-label', opts.label);
+  return input;
+}
+
 /**
- * A field: its name over a square box, in the small voice; no name where the
+ * A field: its name over its input, a line under it; no name where the
  * placeholder says the same (the input is then named by it). { label, value,
  * placeholder, glyph, note, invalid (the reason), disabled, busy,
  * onInput(value), onEnter(value) }.
@@ -16,12 +26,9 @@ export function field(parent, opts) {
   if (opts.label) el(node, 'span', 'dr-muted', opts.label);
   const box = el(node, 'div', 'dr-field-box');
   if (opts.glyph) glyph(box, opts.glyph);
-  const input = el(box, 'input', 'dr-input');
-  input.type = 'text';
+  const input = textInput(box, { label: opts.label ? null : opts.placeholder, placeholder: opts.placeholder });
   input.defaultValue = opts.value || '';
-  if (!opts.label && opts.placeholder) input.setAttribute('aria-label', opts.placeholder);
   input.value = opts.value || '';
-  if (opts.placeholder) input.placeholder = opts.placeholder;
   input.disabled = !!opts.disabled;
   flag(node, 'aria-disabled', opts.disabled);
   let note = null;

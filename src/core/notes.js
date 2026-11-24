@@ -23,19 +23,29 @@ export function noteProps(app, file) {
   return out;
 }
 
-/** A property by name, whatever its capitals. */
 /** Every property name the notes have, most used first: [[name, count]]. From Obsidian's cache, so no file is read. */
 export function namesIn(app, files) {
+  return tally(files.map((f) => Object.keys(noteProps(app, f))));
+}
+
+/** Words counted across lists, most used first: [[word, count]]. */
+export function tally(lists) {
   const counts = new Map();
-  files.forEach((f) => Object.keys(noteProps(app, f)).forEach((k) => counts.set(k, (counts.get(k) || 0) + 1)));
+  lists.forEach((list) => list.forEach((w) => counts.set(w, (counts.get(w) || 0) + 1)));
   return Array.from(counts.entries()).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 }
 
-export function propOf(props, key) {
-  if (key in props) return props[key];
+/** The name a property has in `props`, whatever its capitals: "Status" for "status". Undefined when it has none. */
+export function keyOf(props, key) {
+  if (key in props) return key;
   const lower = String(key).toLowerCase();
-  const found = Object.keys(props).find((k) => k.toLowerCase() === lower);
-  return found ? props[found] : undefined;
+  return Object.keys(props).find((k) => k.toLowerCase() === lower);
+}
+
+/** A property by name, whatever its capitals. */
+export function propOf(props, key) {
+  const k = keyOf(props, key);
+  return k === undefined ? undefined : props[k];
 }
 
 /** A value as a list of plain strings: "a", ["a", "b"], "[[a]]" all read. */
@@ -44,11 +54,20 @@ export function valuesOf(value) {
   return (Array.isArray(value) ? value : [value]).filter((v) => v != null && v !== '').map((v) => String(v));
 }
 
-/** What a link written as a value points at: "[[Folder/Note|alias]]" gives "Folder/Note". */
-export function linkTarget(value) {
-  const m = /^\s*\[\[([^\]|#]+)(?:#[^\]|]*)?(?:\|[^\]]*)?\]\]\s*$/.exec(String(value));
-  return m ? m[1].trim() : null;
+/** One value that is a link, "[[Folder/Note#Part|shown]]": { to (what it links to, a heading's part too), shown }; else null. */
+export function linkOf(value) {
+  const m = /^\s*\[\[([^\]|]+)(?:\|([^\]]*))?\]\]\s*$/.exec(String(value));
+  return m ? { to: m[1].trim(), shown: m[2] || m[1].split('#')[0].split('/').pop() } : null;
 }
+
+/** The note a link written as a value points at: "[[Folder/Note#Part|alias]]" gives "Folder/Note". */
+export function linkTarget(value) {
+  const link = linkOf(value);
+  return (link && link.to.split('#')[0].trim()) || null;
+}
+
+/** A value as it is shown: a link as the name of what it links to. */
+export const valueShown = (value) => valuesOf(value).map((v) => (linkOf(v) || { shown: v }).shown).join(', ');
 
 /** A note's tags, from its properties and its text, lower case, without the #. */
 export function tagsOf(app, file) {
@@ -77,17 +96,10 @@ export function offerUndo(plugin, message, run) {
 export class Notes {
   constructor(plugin) {
     this.plugin = plugin;
-    this.watchers = new Set();
   }
 
   get app() {
     return this.plugin.app;
-  }
-
-  /** Told of every write that changed something: fn(record). Returns how to stop. */
-  watch(fn) {
-    this.watchers.add(fn);
-    return () => this.watchers.delete(fn);
   }
 
   props(file) {
@@ -128,7 +140,6 @@ export class Notes {
     if (!record) record = { file, before: {}, after: {}, order: [] };
     const changed = Object.keys(record.before).length > 0;
     if (changed && opts.undo) offerUndo(this.plugin, opts.undo, () => this.undo([record]));
-    if (changed) this.watchers.forEach((fn) => fn(record));
     return record;
   }
 

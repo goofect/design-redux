@@ -63,7 +63,7 @@ export class Graph3DView extends ItemView {
     const host = clear(this.contentEl);
     this.space = graphSpace(this.plugin, this.around);
     const n = this.space.nodes.length;
-    headRow(host, { label: this.around ? this.around.basename : '3D graph', text: !!this.around, buttons: [
+    headRow(host, { label: this.around ? this.around.basename : '3D graph', buttons: [
       { glyph: 'fit', label: 'Fit', run: () => { this.look = { yaw: 0.6, pitch: 0.35, zoom: fitZoom(this.pos, ...this.size()) }; this.draw(); } },
       { glyph: 'plus', label: 'Closer', run: () => this.zoom(1.25) },
       { glyph: 'minus', label: 'Further', run: () => this.zoom(0.8) },

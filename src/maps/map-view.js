@@ -67,7 +67,7 @@ export class MapView extends ItemView {
   draw() {
     const host = clear(this.contentEl);
     const shown = shownNodes(this.root);
-    const head = headRow(host, { label: this.root.label, text: true, buttons: [
+    const head = headRow(host, { label: this.root.label, buttons: [
       { glyph: 'fold', label: 'Fold all', run: () => { foldAll(this.root, true); this.draw(); } },
       { glyph: 'unfold', label: 'Unfold all', run: () => { foldAll(this.root, false); this.draw(); } },
       { glyph: 'fit', label: 'Fit', run: () => this.fit() },
@@ -143,8 +143,7 @@ export class MapView extends ItemView {
   openNode(node) {
     const entry = this.app.vault.getAbstractFileByPath(node.path);
     if (entry instanceof TFile) return this.app.workspace.getLeaf('tab').openFile(entry);
-    const library = this.plugin.features.find((f) => typeof f.browse === 'function');
-    return entry instanceof TFolder && library ? library.browse(entry) : null;
+    return entry instanceof TFolder ? this.plugin.showFolder(entry) : null;
   }
 
   onKey(e) {

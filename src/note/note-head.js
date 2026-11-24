@@ -124,10 +124,7 @@ export class NotePage extends Feature {
       clear(folder);
       if (parent) {
         const label = el(folder, 'span', 'dr-link dr-note-folder', parent.name);
-        asButton(label, `Open ${parent.name}`, () => {
-          const library = this.plugin.features.find((f) => typeof f.browse === 'function');
-          if (library) library.browse(parent);
-        });
+        asButton(label, `Open ${parent.name}`, () => this.plugin.showFolder(parent));
       }
       // The properties: the ledger, a ruled row each, edited where they stand.
       const ledger = clear(head.querySelector('.dr-note-props'));

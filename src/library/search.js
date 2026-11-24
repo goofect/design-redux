@@ -6,7 +6,6 @@
 /* the vault's size. The last few searches are offered again.          */
 /* ------------------------------------------------------------------ */
 
-import { TFolder } from 'obsidian';
 import { clear, el } from '../core/dom.js';
 import { noteProps, valuesOf } from '../core/notes.js';
 import { foldersIfMixed } from '../core/text.js';
@@ -48,15 +47,14 @@ export function rememberSearch(plugin, query) {
   plugin.saveData(plugin.settings);
 }
 
-/** The search field and what it finds. `idle(host)`, given, draws what stands there while nothing is typed (the sidebar: the folders). */
-export function drawSearch(screen, host, idle) {
+/** The search field and what it finds; while nothing is typed, the last few searches. */
+export function drawSearch(screen, host) {
   const plugin = screen.plugin;
   const top = el(host, 'div', 'dr-search');
   const results = el(host, 'div', 'dr-search-results');
   const show = (query) => {
     clear(results);
     if (!query.trim()) {
-      if (idle) return void idle(results);
       const recent = plugin.settings.recentSearches || [];
       if (!recent.length) return void sayso(results, { label: 'Folders and notes by name; notes by a heading or a property.' });
       sectionTitle(results, { title: 'Recent' });
@@ -87,5 +85,4 @@ export function drawSearch(screen, host, idle) {
   });
   screen.searchInput = input.drInput;
   show(screen.query || '');
-  void TFolder;
 }

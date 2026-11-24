@@ -4,8 +4,8 @@
 /* What a growing library loses track of, in a report to go through:   */
 /* folders with nothing in them, folders of one name, notes in no      */
 /* folder, notes whose parents lead round in a circle, links that lead */
-/* nowhere, covers that point nowhere. Things to look at, not rules:   */
-/* the report changes nothing. And an inbox: the notes in no folder.   */
+/* nowhere. Things to look at, not rules: the report changes nothing.  */
+/* And an inbox: the notes in no folder.                               */
 /* ------------------------------------------------------------------ */
 
 import { Feature } from '../core/feature.js';
@@ -17,7 +17,7 @@ import { sayso } from '../ui/state.js';
 export class LibraryCheck extends Feature {
   /** The findings: [{ title, items: [{ name, end, folder | file }] }], only those with something in them. */
   findings() {
-    const { index, notes, files, settings } = this.plugin;
+    const { index, notes, settings } = this.plugin;
     const app = this.app;
     const out = [];
     const add = (title, items) => items.length && out.push({ title, items });
@@ -44,13 +44,12 @@ export class LibraryCheck extends Feature {
     });
     add('Notes whose parents lead round in a circle', circular.map((f) => ({ name: f.basename, end: key, file: f })));
     const unresolved = app.metadataCache.unresolvedLinks || {};
-    add('Links that lead nowhere', Object.keys(unresolved).filter((p) => Object.keys(unresolved[p]).length).map((p) => ({ name: p.split('/').pop().replace(/\.md$/, ''), end: Object.keys(unresolved[p]).slice(0, 2).join(', '), file: app.vault.getFileByPath(p) })).filter((i) => i.file && !files.isFolderNote(i.file) || i.file));
+    add('Links that lead nowhere', Object.keys(unresolved).filter((p) => Object.keys(unresolved[p]).length).map((p) => ({ name: p.split('/').pop().replace(/\.md$/, ''), end: Object.keys(unresolved[p]).slice(0, 2).join(', '), file: app.vault.getFileByPath(p) })).filter((i) => i.file));
     return out;
   }
 
   report() {
     const found = this.findings();
-    const library = this.plugin.features.find((f) => typeof f.browse === 'function');
     const sheet = new Sheet(this.app, {
       title: 'The library, looked over',
       build: (matter, s) => {
@@ -61,7 +60,7 @@ export class LibraryCheck extends Feature {
           group.items.slice(0, 50).forEach((item) => row(list, { name: item.name, end: item.end, run: () => {
             s.close();
             if (item.file) this.app.workspace.getLeaf(false).openFile(item.file);
-            else if (item.folder && library) library.browse(item.folder);
+            else if (item.folder) this.plugin.showFolder(item.folder);
           } }));
           if (group.items.length > 50) row(list, { name: 'and more', disabled: true });
         });
@@ -73,11 +72,8 @@ export class LibraryCheck extends Feature {
   }
 
   /** The notes in no folder, in the browse view, to be put in one a few at a time. */
-  async inbox() {
-    const views = this.plugin.features.find((f) => typeof f.screen === 'function' && typeof f.list === 'function');
-    const library = this.plugin.features.find((f) => typeof f.browse === 'function');
-    const screen = views ? await views.screen() : library ? (await library.browse(null)).view.screen : null;
-    if (screen) screen.setFilter({ loose: true }, 'Inbox');
+  inbox() {
+    return this.plugin.showFiltered({ loose: true }, 'Inbox');
   }
 
   actions() {

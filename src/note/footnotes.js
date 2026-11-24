@@ -36,7 +36,8 @@ function goTo(editor, pos) {
 }
 
 export class Footnotes extends Feature {
-  async add_(ctx) {
+  /** Asks for a citation and puts it at the cursor as a footnote. */
+  async askFootnote(ctx) {
     const citation = await ask(this.app, { title: 'Add footnote', label: 'The citation', placeholder: 'Hume, Enquiry, §10', action: 'Add' });
     return citation ? this.put(ctx.editor, citation) : null;
   }
@@ -121,7 +122,7 @@ export class Footnotes extends Feature {
 
   actions() {
     return [
-      { id: 'add-footnote', name: 'Add footnote', on: 'editor', menu: false, run: (ctx) => this.add_(ctx) },
+      { id: 'add-footnote', name: 'Add footnote', on: 'editor', menu: false, run: (ctx) => this.askFootnote(ctx) },
       { id: 'cite-source', name: 'Cite a source', on: 'editor', menu: false, run: (ctx) => this.cite(ctx) },
       { id: 'show-footnotes', name: 'Go to footnote', on: 'editor', menu: false, run: (ctx) => this.goToFootnote(ctx) },
       { id: 'notes-citing-this', name: 'Notes citing this', on: 'note', menu: false, run: (ctx) => this.citingThis(ctx) },

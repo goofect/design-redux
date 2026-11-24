@@ -18,10 +18,11 @@
 
 import { Keymap, Menu, Notice, parseYaml, stringifyYaml } from 'obsidian';
 import { clear, el } from '../core/dom.js';
-import { namesIn, valuesOf } from '../core/notes.js';
+import { copyValue, keyOf, linkOf, namesIn, valueShown, valuesOf } from '../core/notes.js';
 import { counted, listOf } from '../core/text.js';
 import { link } from '../ui/button.js';
 import { suggestInto } from '../ui/choose.js';
+import { textInput } from '../ui/field.js';
 import { propRow, rows } from '../ui/row.js';
 import { ask } from '../ui/sheet.js';
 
@@ -37,15 +38,6 @@ export function parseValue(text, was) {
 /** A value as the text it is edited as. */
 export const valueText = (value) => valuesOf(value).join(', ');
 
-/** One value that is a link, "[[Note#Part|shown]]": { to (what it links to, a heading's part too), shown }; else null. */
-export function linkOf(value) {
-  const m = /^\s*\[\[([^\]|]+)(?:\|([^\]]*))?\]\]\s*$/.exec(String(value));
-  return m ? { to: m[1].trim(), shown: m[2] || m[1].split('#')[0].split('/').pop() } : null;
-}
-
-/** A value as it is shown: a link as the name of what it links to. */
-export const valueShown = (value) => valuesOf(value).map((v) => (linkOf(v) || { shown: v }).shown).join(', ');
-
 /** The properties listed first: those set for the note's folder (or the nearest above it that has some), else everywhere's. */
 export function primaryProps(settings, file) {
   const views = settings.panelFolderViews || {};
@@ -56,7 +48,8 @@ export function primaryProps(settings, file) {
   return settings.panelPrimaryProps;
 }
 
-export const setValue = (plugin, file, key, value) => plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} changed.` });
+/** Writes one property, with an Undo that says what was done to it. */
+export const setValue = (plugin, file, key, value, done = 'changed') => plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} ${done}.` });
 
 /** What was typed to add a property: "name", or "name: value". */
 export function parseAdded(text) {
@@ -82,9 +75,19 @@ export function readProps(text) {
 /** Several lines of properties, as pasted: what a paste into a field gives way to. One line stays text. */
 const pastedProps = (text) => (/\n\s*\S/.test(String(text).trim()) ? readProps(text) : null);
 
+/** Takes several lines of properties pasted into an input, as `run(props)`; anything else pastes as text. */
+function onPastedProps(input, run) {
+  input.addEventListener('paste', (e) => {
+    const props = e.clipboardData ? pastedProps(e.clipboardData.getData('text/plain')) : null;
+    if (!props) return;
+    e.preventDefault();
+    run(props);
+  });
+}
+
 /** Pastes properties onto a note, as text is pasted: one it has gives way to the pasted one. One Undo. */
 export function pasteProps(plugin, file, props) {
-  return plugin.notes.write(file, (fm) => Object.assign(fm, JSON.parse(JSON.stringify(props))), { undo: `${counted(Object.keys(props).length, 'property', 'properties')} pasted.` });
+  return plugin.notes.write(file, (fm) => Object.assign(fm, copyValue(props)), { undo: `${counted(Object.keys(props).length, 'property', 'properties')} pasted.` });
 }
 
 /** Asks for a property in a sheet, "name" or "name: value", and adds it: where the note shows no ledger to add it in. Properties pasted into its field, several lines of them, are added at once. */
@@ -101,7 +104,7 @@ export async function addProperty(plugin, file) {
   if (pasted) return pasteProps(plugin, file, pasted);
   if (!text) return null;
   const { key, value } = parseAdded(text);
-  return plugin.notes.write(file, (fm) => (fm[key] = value), { undo: `${key} added.` });
+  return setValue(plugin, file, key, value, 'added');
 }
 
 /**
@@ -121,16 +124,9 @@ export function addRow(plugin, host, file) {
     list.classList.add('dr-ledger');
   }
   const node = el(list, 'div', 'dr-prop dr-prop-new');
-  const field = (cls, label, placeholder) => {
-    const input = el(el(node, 'span', cls), 'input', 'dr-input');
-    input.type = 'text';
-    input.placeholder = placeholder;
-    input.setAttribute('aria-label', label);
-    return input;
-  };
   // Each a field as the plugin draws one: a line under its text, the focus outline round it while typed in.
-  const name = field('dr-prop-name dr-field-box', 'Property name', 'name');
-  const value = field('dr-prop-value dr-field-box', 'Value', 'value');
+  const name = textInput(node, { cls: 'dr-prop-name dr-field-box', label: 'Property name', placeholder: 'name' });
+  const value = textInput(node, { cls: 'dr-prop-value dr-field-box', label: 'Value', placeholder: 'value' });
   const why = el(node, 'span', 'dr-prop-why');
   const has = () => plugin.notes.props(file);
   const stops = [
@@ -156,7 +152,7 @@ export function addRow(plugin, host, file) {
       return void name.focus();
     }
     close();
-    await plugin.notes.write(file, (fm) => (fm[typed.key] = typed.value), { undo: `${typed.key} added.` });
+    await setValue(plugin, file, typed.key, typed.value, 'added');
   };
   [name, value].forEach((input) => {
     input.addEventListener('keydown', (e) => {
@@ -174,12 +170,9 @@ export function addRow(plugin, host, file) {
       node.removeAttribute('aria-invalid');
       why.textContent = '';
     });
-    input.addEventListener('paste', async (e) => {
-      const props = e.clipboardData ? pastedProps(e.clipboardData.getData('text/plain')) : null;
-      if (!props) return;
-      e.preventDefault();
+    onPastedProps(input, (props) => {
       close();
-      await pasteProps(plugin, file, props);
+      return pasteProps(plugin, file, props);
     });
     input.addEventListener('click', (e) => e.stopPropagation());
   });
@@ -208,9 +201,9 @@ export function propertyMenu(plugin, file, key, host) {
 
 /** A note's property keys, those listed first at the top. */
 export function ledgerKeys(plugin, file) {
-  const all = Object.keys(plugin.notes.props(file));
-  const find = (k) => all.find((p) => p.toLowerCase() === k.toLowerCase());
-  const first = listOf(primaryProps(plugin.settings, file)).map(find).filter(Boolean);
+  const props = plugin.notes.props(file);
+  const all = Object.keys(props);
+  const first = listOf(primaryProps(plugin.settings, file)).map((k) => keyOf(props, k)).filter(Boolean);
   return first.concat(all.filter((k) => !first.includes(k)));
 }
 
@@ -295,12 +288,7 @@ export function valueWords(plugin, file, key) {
 function editValue(plugin, node, file, key, was, redraw) {
   const cell = node.querySelector('.dr-prop-value');
   if (!cell || cell.querySelector('input')) return;
-  const input = node.ownerDocument.createElement('input');
-  input.className = 'dr-input';
-  input.type = 'text';
-  input.value = valueText(was);
-  input.setAttribute('aria-label', key);
-  clear(cell).appendChild(input);
+  const input = textInput(clear(cell), { label: key, value: valueText(was) });
   let done = false;
   const list = Array.isArray(was);
   const stop = suggestInto(plugin.app, input, { list, words: () => valueWords(plugin, file, key), picked: () => !list && finish(true) });
@@ -318,11 +306,9 @@ function editValue(plugin, node, file, key, was, redraw) {
   });
   input.addEventListener('blur', () => finish(true));
   // Several lines of properties pasted here are pasted onto the note; anything else is the value's text.
-  input.addEventListener('paste', async (e) => {
-    const props = e.clipboardData ? pastedProps(e.clipboardData.getData('text/plain')) : null;
-    if (!props) return;
-    e.preventDefault();
+  onPastedProps(input, async (props) => {
     done = true;
+    stop();
     await pasteProps(plugin, file, props);
     redraw();
   });

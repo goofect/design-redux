@@ -11,6 +11,8 @@ import { migrateSettings } from '../core/migrate.js';
 import { Notes } from '../core/notes.js';
 import { Selection } from '../core/selection.js';
 import { followDelete, followRename } from '../core/settings.js';
+import { Appearance } from '../core/appearance.js';
+import { Library } from '../library/library.js';
 import { FEATURES } from './features.js';
 import { SettingsTab } from './settings-tab.js';
 
@@ -51,6 +53,28 @@ export class DesignRedux extends Plugin {
   /** Everything every feature can do. */
   actions() {
     return this.features.flatMap((f) => f.actions().map((a) => Object.assign({ feature: f }, a)));
+  }
+
+  /** The look, the feature that dresses a window. */
+  get look() {
+    return this.feature(Appearance);
+  }
+
+  /** Shows a folder (null: the vault) in the library's page. */
+  showFolder(folder) {
+    return this.feature(Library).browse(folder);
+  }
+
+  /** The library's page, opened if it isn't the one in front: its screen. */
+  libraryPage() {
+    return this.feature(Library).pageScreen();
+  }
+
+  /** Shows in the library's page the notes a filter lets through, under a name. Resolves the screen. */
+  async showFiltered(filter, name) {
+    const screen = await this.libraryPage();
+    if (screen) screen.setFilter(filter, name);
+    return screen;
   }
 
   /** The folder an action on a folder means: the one picked, else the one open, else the open note's. */

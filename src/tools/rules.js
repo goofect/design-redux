@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Property rules, and a note's history                                */
+/* Property rules                                                      */
 /*                                                                     */
 /* A rule: when a note comes into a folder, gets a tag or has a        */
 /* property set, set others. Kept as the old plugin kept them:         */
@@ -9,9 +9,7 @@
 /* what it would set, and sets nothing. A rule's own writes fire no    */
 /* rule. A rule fires on a change — a note coming into the folder, a   */
 /* tag newly added, a value newly set — so an Undo, which is none of   */
-/* those, is not undone again. History: each change to a note's        */
-/* properties kept by the note's path, the last so many, to be put     */
-/* back one value at a time.                                           */
+/* those, is not undone again.                                         */
 /* ------------------------------------------------------------------ */
 
 import { DropdownComponent, Notice, TFile, ToggleComponent } from 'obsidian';
@@ -19,6 +17,7 @@ import { el } from '../core/dom.js';
 import { Feature } from '../core/feature.js';
 import { noteProps, propOf, sameValue, tagsOf, valuesOf } from '../core/notes.js';
 import { textButton } from '../ui/button.js';
+import { textInput } from '../ui/field.js';
 import { Sheet } from '../ui/sheet.js';
 import { sayso } from '../ui/state.js';
 
@@ -69,23 +68,6 @@ export function ruleWould(app, rule, file) {
     if ((empty || rule.replace) && !sameValue(have, s.value)) out[s.key] = s.value;
   });
   return out;
-}
-
-/** A rule read from one line: "folder Logic -> status=draft, course=Logic". */
-export function parseRule(text) {
-  const [left, right] = String(text).split('->').map((s) => (s || '').trim());
-  const m = /^(folder|tag|property)\s+(.+)$/i.exec(left || '');
-  if (!m || !right) return null;
-  const kind = m[1].toLowerCase();
-  const when = { kind };
-  if (kind === 'folder') when.folder = m[2].replace(/^\/+|\/+$/g, '');
-  else if (kind === 'tag') when.tag = m[2].replace(/^#/, '').toLowerCase();
-  else { const [key, value] = m[2].split('=').map((s) => s.trim()); when.key = key; when.value = value || ''; }
-  const set = right.split(',').map((part) => { const [key, ...rest] = part.split('='); return { key: key.trim(), value: rest.join('=').trim() }; }).filter((s) => s.key);
-  if (!set.length) return null;
-  const rule = { id: `rule-${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`, on: true, when, set };
-  rule.name = ruleName(rule);
-  return rule;
 }
 
 export class PropertyRules extends Feature {
@@ -181,14 +163,7 @@ export class PropertyRules extends Feature {
   newRule(matter, done) {
     const form = el(matter, 'div', 'dr-rule-new');
     const line = el(form, 'div', 'dr-rule-sentence dr-text');
-    const input = (placeholder) => {
-      const box = el(line, 'span', 'dr-field-box dr-rule-field');
-      const i = el(box, 'input', 'dr-input');
-      i.type = 'text';
-      i.placeholder = placeholder;
-      i.setAttribute('aria-label', placeholder);
-      return i;
-    };
+    const input = (placeholder) => textInput(line, { cls: 'dr-field-box dr-rule-field', label: placeholder, placeholder });
     el(line, 'span', '', 'When a note');
     const kind = new DropdownComponent(line).addOptions({ folder: 'comes into', tag: 'gets the tag', property: 'gets the property' }).setValue('folder');
     kind.selectEl.setAttribute('aria-label', 'When');

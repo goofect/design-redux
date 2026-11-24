@@ -16,6 +16,7 @@ import { rove } from '../ui/keys.js';
 import { drawFolderPage } from './contents.js';
 import { folderMenu, noteMenu, showMenu } from './menus.js';
 import { drawFiltered, isFiltering } from './filters.js';
+import { enableDrop } from './drop.js';
 import { drawSearch } from './search.js';
 import { drawTree } from './tree.js';
 
@@ -137,13 +138,13 @@ export class LibraryScreen {
     clear(host);
     const folder = this.folder();
     const top = folder.path === '/' && !this.filter;
-    // The head: the pane's name, bold, a line under it.
+    // The head: the pane's name, a label.
     const name = !this.opts.wide ? 'Vault' : this.query !== null ? 'Search' : this.filter ? this.filterName || 'Filtered' : top ? 'Vault' : folder.name;
     const pane = el(host, 'div', 'dr-pane');
     // In the sidebar the head is the vault (pressed, it shows the vault in the page) and one word, Settings, for Obsidian's own,
     // whose button the bare workspace hides. A folder's page has no head: its path says where it is.
     const side = !this.opts.wide;
-    if (side || this.query !== null || this.filter) headRow(pane, { label: name, run: side ? () => this.plugin.showFolder && this.plugin.showFolder(null) : null, link: side ? { text: 'Settings', run: () => openSettings(this.app) } : null });
+    if (side || this.query !== null || this.filter) headRow(pane, { label: name, run: side ? () => this.plugin.showFolder(null) : null, link: side ? { text: 'Settings', run: () => openSettings(this.app) } : null });
     this.body = el(pane, 'div', 'dr-library-body');
     if (this.query !== null) drawSearch(this, this.body);
     else if (!this.opts.wide) drawTree(this, this.body);
@@ -155,6 +156,7 @@ export class LibraryScreen {
       if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) this.menuFor(e);
       else if (e.key === 'Backspace' && e.target.tagName !== 'INPUT') this.back();
     });
+    enableDrop(this, this.body);
     this.keepPlace(hadFocus);
   }
 
@@ -181,6 +183,6 @@ export class LibraryScreen {
     if (!entry) return;
     event.preventDefault();
     this.pick(entry);
-    showMenu(entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : noteMenu(this.plugin, entry, this), event);
+    showMenu(entry instanceof TFolder ? folderMenu(this.plugin, entry, this) : noteMenu(this.plugin, entry), event);
   }
 }
