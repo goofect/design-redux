@@ -212,8 +212,14 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     const row = s.host.querySelector('[data-path="Logic"]');
     row.dispatchEvent(new window.MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }));
     const menu = obsidian.Menu.shown;
-    const base = ['Open', 'New note', 'New folder', 'Pin', 'Sort by', 'Rename…', 'Move to…', 'Delete folder'];
+    const base = ['Open', 'New', 'Pin', 'Sort by', 'Properties', 'Open as', 'Rename…', 'Move to…', 'Delete folder'];
+    assert.strictEqual(menu.items.find((i) => i.title === 'Open as').section, 'open', 'Open as is not with Open');
     assert.deepStrictEqual(menu.titles().filter((t) => base.includes(t)), base);
+    assert.ok(menu.titles().length <= 10, `a folder's menu has ${menu.titles().length} entries: ${menu.titles().join(', ')}`);
+    const sub = (t) => menu.items.find((i) => i.title === t).submenu.titles();
+    assert.deepStrictEqual(sub('New'), ['Note', 'Folder']);
+    assert.deepStrictEqual(sub('Open as').slice().sort(), ['Graph', 'Map']);
+    assert.deepStrictEqual(sub('Properties').slice().sort(), ['Copy as a table', 'Defaults…', 'Listed first…', 'Schema…', 'Update from a table']);
     assert.ok(!menu.titles().includes('Glyph…'), 'a folder still offers a glyph');
     ['Cover…', 'Colour…', 'Kind…', 'Merge into…', 'Split notes off…'].forEach((t) => assert.ok(!menu.titles().includes(t), `a folder still offers ${t}`));
     await menu.click('Pin');
@@ -233,6 +239,7 @@ const controls = (root) => Array.from(root.querySelectorAll('.dr-icon-button, .d
     assert.ok(!w.file('Inbox'));
     const note = dr.noteMenu(w.plugin, w.file('Logic/Validity.md'));
     assert.deepStrictEqual(note.titles().slice(0, 3), ['Open', 'Open in a new tab', 'Pin']);
+    assert.deepStrictEqual(note.items.find((i) => i.title === 'Properties').submenu.titles().slice().sort(), ['Add a property', 'Give a property to the folder…']);
   });
 
   await check('dropping a note on a folder moves it there, with an Undo', async () => {

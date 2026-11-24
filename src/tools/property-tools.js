@@ -230,7 +230,7 @@ export class PropertyTools extends Feature {
       { id: 'find-missing-properties', name: 'Find notes missing a property…', run: () => this.findMissing() },
       { id: 'add-properties-to-folders', name: 'Add properties to folders…', run: () => this.addToFolder() },
       { id: 'remove-properties-from-folders', name: 'Remove properties from folders…', run: () => this.removeFromFolder() },
-      { id: 'folder-default-properties', name: 'Default properties for this folder…', on: 'folder', menu: 'Default properties…', run: (ctx) => this.folderDefaults(ctx.folder) },
+      { id: 'folder-default-properties', name: 'Default properties for this folder…', on: 'folder', group: 'Properties', menu: 'Defaults…', run: (ctx) => this.folderDefaults(ctx.folder) },
       { id: 'undo-bulk-change', name: 'Undo the last bulk change', when: () => !!this.bulk.last, run: () => this.bulk.undo() },
     ];
   }

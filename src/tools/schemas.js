@@ -116,7 +116,7 @@ export class PropertySchemas extends Feature {
 
   actions() {
     return [
-      { id: 'folder-property-schema', name: 'Property schema for this folder…', on: 'folder', menu: 'Schema…', run: (ctx) => this.edit(ctx.folder) },
+      { id: 'folder-property-schema', name: 'Property schema for this folder…', on: 'folder', group: 'Properties', menu: 'Schema…', run: (ctx) => this.edit(ctx.folder) },
       { id: 'check-property-schemas', name: 'Check notes against their schemas…', run: () => this.check() },
     ];
   }

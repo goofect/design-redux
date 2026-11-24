@@ -107,10 +107,10 @@ export class PropertyClipboard extends Feature {
     const some = () => Object.keys(this.sets()).length > 0;
     return [
       { id: 'sort-properties', name: 'Sort properties alphabetically', on: 'note', menu: false, run: (ctx) => this.sort(ctx.file) },
-      { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', on: 'folder', menu: 'Copy properties as a table', run: (ctx) => this.copyTable(ctx.folder) },
-      { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', on: 'folder', menu: 'Update notes from a table', run: (ctx) => this.pasteTable(ctx.folder) },
+      { id: 'copy-properties-table', name: 'Copy the properties of this folder’s notes as a table', on: 'folder', group: 'Properties', menu: 'Copy as a table', run: (ctx) => this.copyTable(ctx.folder) },
+      { id: 'paste-properties-table', name: 'Update notes from a table on the clipboard…', on: 'folder', group: 'Properties', menu: 'Update from a table', run: (ctx) => this.pasteTable(ctx.folder) },
       { id: 'property-set-save', name: 'Keep this note’s properties as a set…', on: 'note', menu: false, run: (ctx) => this.saveSet(ctx.file) },
-      { id: 'property-set-apply', name: 'Apply a property set…', on: 'note', menu: 'Apply a property set…', when: some, run: (ctx) => this.applySet(ctx.file) },
+      { id: 'property-set-apply', name: 'Apply a property set…', on: 'note', group: 'Properties', menu: 'Apply a property set…', when: some, run: (ctx) => this.applySet(ctx.file) },
       { id: 'property-set-remove', name: 'Remove a property set…', when: some, run: () => this.removeSet() },
     ];
   }

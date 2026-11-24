@@ -149,9 +149,9 @@ export class NotePage extends Feature {
 
   actions() {
     return [
-      { id: 'add-property', name: 'Add a property to this note', on: 'note', menu: 'Add a property', run: (ctx) => this.addTo(ctx.file) },
+      { id: 'add-property', name: 'Add a property to this note', on: 'note', group: 'Properties', menu: 'Add a property', run: (ctx) => this.addTo(ctx.file) },
       // In a folder, the properties listed first there; at the vault's top, everywhere's.
-      { id: 'panel-folder-properties', name: 'Properties listed first in this folder…', on: 'folder', menu: 'Properties listed first…', run: async (ctx) => {
+      { id: 'panel-folder-properties', name: 'Properties listed first in this folder…', on: 'folder', group: 'Properties', menu: 'Listed first…', run: async (ctx) => {
         const top = ctx.folder.path === '/';
         const views = Object.assign({}, this.settings.panelFolderViews);
         const now = views[ctx.folder.path];

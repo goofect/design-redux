@@ -207,7 +207,7 @@ export class Maps extends Feature {
   actions() {
     return [
       { id: 'open-map', name: 'Open the map of the vault', run: () => this.open(null) },
-      { id: 'open-map-here', name: 'Open the map of this folder', on: 'folder', menu: 'Map', run: (ctx) => this.open(ctx.folder) },
+      { id: 'open-map-here', name: 'Open the map of this folder', on: 'folder', group: 'Open as', section: 'open', menu: 'Map', run: (ctx) => this.open(ctx.folder) },
       { id: 'open-map-note', name: 'Open the map under this note', on: 'note', menu: false, run: (ctx) => this.open(ctx.file) },
     ];
   }

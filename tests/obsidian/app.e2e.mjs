@@ -120,6 +120,35 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(seen.nodes.filter((id) => !id.startsWith(`${seen.path}/`))).toEqual([]);
   });
 
+  it('fuses a folder\'s kin entries into one each: New, Open as, Properties', async function () {
+    // Obsidian may draw its menus natively, out of the page, so the menu is read as it is shown, not from the DOM.
+    const seen = await browser.executeObsidian(async ({ app, obsidian }) => {
+      app.commands.executeCommandById('design-redux:open-library');
+      await new Promise((r) => setTimeout(r, 500));
+      const row = document.querySelector('[role="treeitem"][data-path]:not([data-path="/"])');
+      if (!row) return null;
+      const proto = obsidian.Menu.prototype;
+      const was = proto.showAtMouseEvent;
+      let shown = null;
+      proto.showAtMouseEvent = function () { shown = this; return this; };
+      try {
+        row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 20, clientY: 20 }));
+      } finally {
+        proto.showAtMouseEvent = was;
+      }
+      const titles = (m) => (m && Array.isArray(m.items) ? m.items.filter((i) => i.titleEl).map((i) => i.titleEl.textContent) : []);
+      const sub = (t) => titles((shown.items.find((i) => i.titleEl && i.titleEl.textContent === t) || {}).submenu);
+      return shown && { titles: titles(shown), open: sub('Open as'), props: sub('Properties'), made: sub('New') };
+    });
+    expect(seen).not.toBe(null);
+    ['New', 'Open as', 'Properties', 'Sort by'].forEach((t) => expect(seen.titles).toContain(t));
+    ['New note', 'Map', 'Schema…'].forEach((t) => expect(seen.titles).not.toContain(t));
+    expect(seen.titles.length).toBeLessThanOrEqual(10);
+    expect(seen.made).toEqual(['Note', 'Folder']);
+    expect(seen.open.slice().sort()).toEqual(['Graph', 'Map']);
+    expect(seen.props).toContain('Schema…');
+  });
+
   it('shows the main area\'s tabs as words: each as wide as its name, grey, the one in front ink; no close button, and no tab in the sidebar', async function () {
     const seen = await browser.executeObsidian(async ({ app }) => {
       const files = app.vault.getMarkdownFiles().slice(0, 3);

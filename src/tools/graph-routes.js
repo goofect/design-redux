@@ -144,7 +144,7 @@ export class GraphFilter extends Feature {
   }
 
   actions() {
-    return [{ id: 'open-graph-folder', name: 'Open the graph of this folder', on: 'folder', menu: 'Graph', run: (ctx) => this.openFolder(ctx.folder) }];
+    return [{ id: 'open-graph-folder', name: 'Open the graph of this folder', on: 'folder', group: 'Open as', section: 'open', menu: 'Graph', run: (ctx) => this.openFolder(ctx.folder) }];
   }
 
   /** Puts a query into the graph's own search field, if it still has one where it was. */

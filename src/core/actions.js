@@ -66,16 +66,38 @@ export function actionCommand(plugin, action) {
   };
 }
 
-/** Adds to a menu the actions that act on `on` and apply to `ctx`. Returns how many. */
+/** A menu entry's own menu, where Obsidian gives one (not public, so behind a check); null where it doesn't. */
+export function submenu(item) {
+  return typeof item.setSubmenu === 'function' ? item.setSubmenu() : null;
+}
+
+/**
+ * Adds to a menu the actions that act on `on` and apply to `ctx`. Actions of
+ * one `group` ("Properties") are fused into one entry that opens them; where
+ * there is no such entry, they stand in the menu, the group's name before
+ * each. Returns how many actions.
+ */
 export function addActionItems(menu, actions, on, ctx, section = 'action') {
   const apply = actions.filter((a) => (a.on || 'app') === on && a.menu !== false && applies(a, ctx));
-  apply.forEach((action) =>
+  const dress = (item, action, before = '') => {
+    item.setTitle(before + (typeof action.menu === 'string' ? action.menu : action.name)).setSection(action.section || section);
+    if (action.danger && typeof item.setWarning === 'function') item.setWarning(true);
+    if (action.checked && typeof item.setChecked === 'function') item.setChecked(!!action.checked(ctx));
+    item.onClick(() => action.run(Object.assign({ from: 'menu' }, ctx)));
+  };
+  const fused = new Set();
+  apply.forEach((action) => {
+    const kin = action.group ? apply.filter((a) => a.group === action.group) : [];
+    if (kin.length < 2) return void menu.addItem((item) => dress(item, action));
+    if (fused.has(action.group)) return;
+    fused.add(action.group);
+    let sub = null;
     menu.addItem((item) => {
-      item.setTitle(typeof action.menu === 'string' ? action.menu : action.name).setSection(action.section || section);
-      if (action.danger && typeof item.setWarning === 'function') item.setWarning(true);
-      if (action.checked && typeof item.setChecked === 'function') item.setChecked(!!action.checked(ctx));
-      item.onClick(() => action.run(Object.assign({ from: 'menu' }, ctx)));
-    })
-  );
+      item.setTitle(action.group).setSection(action.section || section);
+      sub = submenu(item);
+      if (!sub) dress(item, kin[0], `${action.group}: `);
+    });
+    (sub ? kin : kin.slice(1)).forEach((a) => (sub || menu).addItem((item) => dress(item, a, sub ? '' : `${action.group}: `)));
+  });
   return apply.length;
 }
