@@ -1,32 +1,16 @@
 /* ------------------------------------------------------------------ */
-/* Overlays, where variables don't reach: Obsidian's menu, its modal,  */
-/* its toggle                                                          */
+/* Overlays, where variables don't reach: Obsidian's menu and modal    */
 /*                                                                     */
 /* Selector map (Obsidian's own DOM; check after an update):           */
 /*   .menu  .menu-scroll  .menu-item                                   */
 /*   .menu-item.is-warning              an entry that destroys         */
 /*   .menu-item.is-disabled  .menu-item.is-label  .menu-item-icon      */
 /*   .menu-separator                                                   */
-/*   .checkbox-container  .checkbox-container.is-enabled  its ::after  */
 /* Every rule is gated by the master switch and the overlays region.   */
 /* ------------------------------------------------------------------ */
 
 body.dr-active.dr-region-overlays {
   --menu-padding: 0;
-  /* The toggle: Obsidian's own, squared: 40 by 20, a knob of two units two pixels in, on the side that is true. */
-  --toggle-width: calc(5 * var(--dr-u));
-  --toggle-s-width: calc(5 * var(--dr-u));
-  --toggle-thumb-width: var(--dr-icon);
-  --toggle-s-thumb-width: var(--dr-icon);
-  --toggle-thumb-height: var(--dr-icon);
-  --toggle-s-thumb-height: var(--dr-icon);
-  --toggle-border-width: var(--dr-ring);
-  --toggle-s-border-width: var(--dr-ring);
-  --toggle-radius: 0;
-  --toggle-s-radius: 0;
-  --toggle-thumb-radius: 0;
-  --toggle-s-thumb-radius: 0;
-  --toggle-thumb-color: var(--dr-ink);
 }
 
 /* A menu's items are rows: four units, edge to edge; the one under the pointer or the keys underlined (42). */
@@ -50,34 +34,3 @@ body.dr-active.dr-region-overlays .menu-item.is-warning,
 body.dr-active.dr-region-overlays .menu-item.is-warning .menu-item-icon {
   color: var(--dr-ink);
 }
-
-/* The toggle: off, the ground in a line and an ink knob at its start; on, inverted: an ink track and the knob, the
-   ground's colour, at its end. Its place says which; the setting's words beside it say what it does. */
-body.dr-active.dr-region-overlays .checkbox-container {
-  background-color: var(--dr-bg);
-  box-shadow: none;
-  outline: var(--dr-hair) solid var(--dr-ink);
-}
-
-body.dr-active.dr-region-overlays .checkbox-container.is-enabled {
-  background-color: var(--dr-ink);
-}
-
-body.dr-active.dr-region-overlays .checkbox-container.is-enabled::after {
-  background-color: var(--dr-bg);
-}
-
-body.dr-active.dr-region-overlays .checkbox-container:focus-visible,
-body.dr-active.dr-region-overlays .checkbox-container:focus-within {
-  outline: var(--dr-ring) solid var(--dr-ink);
-  outline-offset: var(--dr-ring);
-}
-
-body.dr-active.dr-region-overlays .checkbox-container.is-disabled {
-  outline-color: var(--dr-muted);
-}
-
-body.dr-active.dr-region-overlays .checkbox-container.is-disabled::after {
-  background-color: var(--dr-muted);
-}
-

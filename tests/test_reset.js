@@ -3,7 +3,7 @@
  * screen's controls at rest within its budget; exactly six colours a scheme;
  * one size; a line only on the structural classes the tokens part lists; at
  * most twelve glyphs, and only the plugin's own on its controls; the
- * settings tab on one screen.
+ * settings tab as Obsidian's own.
  */
 const fs = require('fs');
 const path = require('path');
@@ -160,15 +160,15 @@ const VAULT = {
     assert.deepStrictEqual(Array.from(named).filter((n) => !dr.GLYPH_NAMES.includes(n)), [], 'a control names a glyph the plugin does not have');
   });
 
-  await check('the settings tab fits a 900px window without scrolling', async () => {
+  await check('the settings tab is Obsidian’s own: its rows, each a name, what it does and a toggle, under a heading; nothing in the plugin’s look', async () => {
     const w = await world(VAULT);
     const tab = new dr.SettingsTab(w.app, w.plugin);
     tab.display();
-    const rows = tab.containerEl.querySelectorAll('.setting-item').length;
-    assert.ok(tab.containerEl.querySelector('.dr-switches'), 'the switches are not in the two-column grid');
-    // Two columns of Obsidian's own rows, each at most 48px high, under 160px of the window's and the tab's own chrome.
-    const height = Math.ceil(rows / 2) * 48 + 160;
-    assert.ok(height <= 900, `${rows} switches: about ${height}px, past a 900px window`);
+    const rows = Array.from(tab.containerEl.querySelectorAll('.setting-item:not(.setting-item-heading)'));
+    assert.ok(rows.length === 5 && rows.every((r) => r.querySelector('.setting-item-description').textContent.length > 0), 'a switch without words saying what it does');
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('.setting-item-heading')).map((h) => h.textContent), ['Features']);
+    assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('[class*="dr"]')).map((n) => n.className), [], 'the plugin’s own look on the settings tab');
+    assert.ok(!tab.containerEl.classList.contains('dr-settings'));
     assert.deepStrictEqual(Array.from(tab.containerEl.querySelectorAll('input, select, textarea, .dr-icon-button, .dr-button')).filter((c) => !c.closest('.checkbox-container')), [], 'a control on the settings tab that is not a switch');
   });
 

@@ -15,15 +15,10 @@ suite('Design Redux in Obsidian: the app', function () {
     expect(got.commands).toBeGreaterThanOrEqual(59);
   });
 
-  it('draws the toggle 40 by 20, square, its ink knob two pixels in, on the side that is true', async function () {
-    // One of Obsidian's own toggles, made in the main window for the measuring and taken away after. It is
-    // Obsidian's, so the look reaches it only with the look on the whole window: on for this, then as it was.
-    const seen = await browser.executeObsidian(async ({ obsidian, plugins }) => {
-      const p = plugins.designRedux;
-      const was = p.settings.lookScope;
-      p.settings.lookScope = 'window';
-      await p.saveSettings();
-      await new Promise((r) => setTimeout(r, 300));
+  it('draws the toggle 40 by 20, square, its knob two pixels in, on the side that is true, and apart from its track', async function () {
+    // One of Obsidian's own toggles, made in the main window for the measuring and taken away after. The look's
+    // colours reach every toggle (a settings page's), so it is drawn with the look on the plugin alone, the default.
+    const seen = await browser.executeObsidian(async ({ obsidian }) => {
       const host = document.body.appendChild(document.createElement('div'));
       const toggle = new obsidian.ToggleComponent(host);
       const t = toggle.toggleEl;
@@ -31,15 +26,13 @@ suite('Design Redux in Obsidian: the app', function () {
       const read = () => {
         const box = t.getBoundingClientRect();
         const knob = getComputedStyle(t, '::after');
-        return { w: Math.round(box.width), h: Math.round(box.height), radius: getComputedStyle(t).borderTopLeftRadius, knob: [knob.width, knob.height, knob.top, knob.marginTop, knob.left, knob.transform, knob.borderTopLeftRadius], fill: getComputedStyle(t).backgroundColor };
+        return { w: Math.round(box.width), h: Math.round(box.height), radius: getComputedStyle(t).borderTopLeftRadius, knob: [knob.width, knob.height, knob.top, knob.marginTop, knob.left, knob.transform, knob.borderTopLeftRadius], knobFill: knob.backgroundColor, fill: getComputedStyle(t).backgroundColor };
       };
       const off = read();
       toggle.setValue(true);
       await new Promise((r) => setTimeout(r, 300));
       const on = read();
       host.remove();
-      p.settings.lookScope = was;
-      await p.saveSettings();
       return { off, on, region: document.body.classList.contains('dr-region-overlays') };
     });
     const fs = await import('node:fs');
@@ -48,6 +41,9 @@ suite('Design Redux in Obsidian: the app', function () {
     expect([seen.off.w, seen.off.h, seen.off.radius]).toEqual([40, 20, '0px']);
     expect(seen.off.knob.slice(0, 2)).toEqual(['16px', '16px']);
     expect(seen.on.fill).not.toBe(seen.off.fill);
+    expect(seen.region).toBe(false);
+    expect(seen.on.knobFill).not.toBe(seen.on.fill);
+    expect(seen.off.knobFill).not.toBe(seen.off.fill);
   });
 
   it('puts the look on the main window, and takes it off on unload', async function () {

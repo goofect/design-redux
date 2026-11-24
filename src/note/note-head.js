@@ -169,4 +169,4 @@ export class NotePage extends Feature {
 NotePage.key = 'notePage';
 NotePage.title = 'Note page';
 NotePage.section = 'Notes';
-NotePage.about = 'A note’s folder over its title, and its main properties on a line under it.';
+NotePage.about = 'A note’s folder over its title, and its properties under it, edited where they stand.';

@@ -51,7 +51,7 @@ const recordFile = path.join(__dirname, 'snapshots', 'contract.json');
   await check('the settings page is five switches and nothing else; every feature with a key has one, the rest are always on', () => {
     const tab = new dr.SettingsTab(w.app, w.plugin);
     tab.display();
-    const names = Array.from(tab.containerEl.querySelectorAll('.setting-item')).map((r) => r.querySelector('.setting-item-name').textContent);
+    const names = Array.from(tab.containerEl.querySelectorAll('.setting-item:not(.setting-item-heading)')).map((r) => r.querySelector('.setting-item-name').textContent);
     assert.deepStrictEqual(names, ['The look', 'On Obsidian’s own interface too', 'Library', 'Note head and pages', 'Property rules']);
     const keys = ['library', 'notePage', 'notePages', 'propertyRulesOn'];
     assert.deepStrictEqual(w.plugin.features.filter((f) => f.constructor.key && !keys.includes(f.constructor.key)).map((f) => f.constructor.name), [], 'a feature with a key the page has no switch for');

@@ -37,6 +37,8 @@
 /*   .suggestion-item.is-selected  .suggestion-title  the palette's    */
 /*   and every suggester's item the keys are on                        */
 /*   .menu-item.selected  .menu-item-title  a menu's                   */
+/*   .checkbox-container  .checkbox-container.is-enabled  its ::after   */
+/*                                      Obsidian's toggle, everywhere  */
 /* ------------------------------------------------------------------ */
 
 body.dr-active.dr-region-workspace .workspace-ribbon.mod-left,
@@ -153,4 +155,51 @@ body.dr-active.dr-region-workspace .dr-menu-hidden {
 /* The sidebar's edge draws no line: space parts the panes. Its handle still resizes it. */
 body.dr-active.dr-region-workspace .workspace-split.mod-left-split > .workspace-leaf-resize-handle {
   border-inline-end-color: transparent;
+}
+
+body.dr-active.dr-region-workspace {
+  --toggle-width: calc(5 * var(--dr-u));
+  --toggle-s-width: calc(5 * var(--dr-u));
+  --toggle-thumb-width: var(--dr-icon);
+  --toggle-s-thumb-width: var(--dr-icon);
+  --toggle-thumb-height: var(--dr-icon);
+  --toggle-s-thumb-height: var(--dr-icon);
+  --toggle-border-width: var(--dr-ring);
+  --toggle-s-border-width: var(--dr-ring);
+  --toggle-radius: 0;
+  --toggle-s-radius: 0;
+  --toggle-thumb-radius: 0;
+  --toggle-s-thumb-radius: 0;
+  --toggle-thumb-color: var(--dr-ink);
+}
+
+/* Obsidian's toggle, wherever it is (a settings page, a sheet), since the look's colours reach it: squared, 40 by
+   20, a knob of two units two pixels in. Off, the ground in a line and an ink knob at its start; on, inverted: an
+   ink track and the knob, the ground's colour, at its end. Its place says which; the words beside it say what. */
+body.dr-active.dr-region-workspace .checkbox-container {
+  background-color: var(--dr-bg);
+  box-shadow: none;
+  outline: var(--dr-hair) solid var(--dr-ink);
+}
+
+body.dr-active.dr-region-workspace .checkbox-container.is-enabled {
+  background-color: var(--dr-ink);
+}
+
+body.dr-active.dr-region-workspace .checkbox-container.is-enabled::after {
+  background-color: var(--dr-bg);
+}
+
+body.dr-active.dr-region-workspace .checkbox-container:focus-visible,
+body.dr-active.dr-region-workspace .checkbox-container:focus-within {
+  outline: var(--dr-ring) solid var(--dr-ink);
+  outline-offset: var(--dr-ring);
+}
+
+body.dr-active.dr-region-workspace .checkbox-container.is-disabled {
+  outline-color: var(--dr-muted);
+}
+
+body.dr-active.dr-region-workspace .checkbox-container.is-disabled::after {
+  background-color: var(--dr-muted);
 }
